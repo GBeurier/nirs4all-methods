@@ -17,10 +17,17 @@
  * and wrapper overhead, not the algorithm. We time at the dashboard sizes
  * (250x50, 50x250) instead, keeping the fixtures as the parity gate only.
  *
+ * Each operator is a `DonorOp`: a `make(rng, n, p)` that builds the handle
+ * with curated default params (lifted from the parity / smoke tests), a
+ * `run(handle, BenchCtx&)` that performs the *timed* operation, and a
+ * `destroy`. BenchCtx carries the input view, a 1xP wavelength axis (edge
+ * augmenters take it as an explicit apply() argument), the output buffer and
+ * scratch — so a single uniform table covers every apply shape.
+ *
  * Usage:
  *   n4m_donor_bench --method aug_gaussian_noise --n 250 --p 50 \
  *                   --runs 40 --seed 1234567890
- *   n4m_donor_bench --list      # print the registered method ids, one per line
+ *   n4m_donor_bench --list      # registered method ids, one per line
  */
 #include "n4m/n4m.h"
 
@@ -41,8 +48,6 @@ constexpr double kWarmupAbortMs = 5.0 * 60.0 * 1000.0;  /* 5 min  */
 constexpr double kProbeAbortMs = 60.0 * 1000.0;         /* 60 s   */
 constexpr int kDefaultMaxRuns = 40;
 
-/* (target_total, statistic, decision) chosen from the probe run, exactly as
- * _common.adaptive_target() does. */
 struct AdaptiveTarget {
     int total;
     const char* statistic;
@@ -74,8 +79,6 @@ double mean(const std::vector<double>& v) {
 }
 
 /* ----- deterministic input generation ---------------------------------- */
-/* splitmix64 → reproducible standard-normal-ish F64 fill. The exact values
- * don't matter for timing; determinism (per seed) does. */
 uint64_t splitmix64(uint64_t& state) {
     uint64_t z = (state += 0x9E3779B97F4A7C15ULL);
     z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
@@ -86,113 +89,330 @@ uint64_t splitmix64(uint64_t& state) {
 void fill_matrix(std::vector<double>& buf, uint64_t seed) {
     uint64_t state = seed ? seed : 0x1234567890ULL;
     for (double& x : buf) {
-        /* uniform in [0,1), then shifted to a spectra-like band [0.2, 1.0) */
         const uint64_t r = splitmix64(state);
         const double u = static_cast<double>(r >> 11) * (1.0 / 9007199254740992.0);
-        x = 0.2 + 0.8 * u;
+        x = 0.2 + 0.8 * u;  /* spectra-like band [0.2, 1.0) */
     }
 }
 
+/* A NIRS-like wavelength axis (linspace 1000..2500 nm) of length p. */
+std::vector<double> wavelength_axis(int64_t p) {
+    std::vector<double> wl(static_cast<size_t>(p));
+    if (p == 1) { wl[0] = 1000.0; return wl; }
+    const double step = 1500.0 / static_cast<double>(p - 1);
+    for (int64_t j = 0; j < p; ++j) wl[static_cast<size_t>(j)] = 1000.0 + step * static_cast<double>(j);
+    return wl;
+}
+
+/* ----- bench context handed to each op's timed run --------------------- */
+struct BenchCtx {
+    n4m_matrix_view_t X;    /* n x p input  */
+    n4m_matrix_view_t wl;   /* 1 x p wavelength axis (edge augmenters use it) */
+    n4m_matrix_view_t out;  /* n x p output */
+};
+
 /* ----- donor operator registry ----------------------------------------- */
-/* Each op exposes the universal augmenter triple via type-erased function
- * pointers. `make` constructs the handle with curated default params (taken
- * from the parity fixtures / smoke tests); `apply` is the timed operation;
- * `destroy` releases the handle. Captureless lambdas decay to function
- * pointers, so no std::function / allocation is involved on the hot path. */
 struct DonorOp {
     const char* name;
-    void* (*make)(n4m_rng_pcg64_state_t* rng);
-    n4m_status_t (*apply)(void* h, n4m_matrix_view_t X, n4m_matrix_view_t out);
+    void* (*make)(n4m_rng_pcg64_state_t* rng, int64_t n, int64_t p);
+    n4m_status_t (*run)(void* h, BenchCtx& c);
     void (*destroy)(void* h);
 };
 
+/* Convenience macros to keep the table readable. Each op is one CREATE_*
+ * (with curated params), a RUN_* (the timed apply), and a DESTROY_. */
+#define DESTROY(fn, T) [](void* h) { fn(static_cast<T*>(h)); }
+#define RUN_APPLY(fn, T) \
+    [](void* h, BenchCtx& c) { return fn(static_cast<T*>(h), c.X, c.out); }
+#define RUN_APPLY_WL(fn, T) \
+    [](void* h, BenchCtx& c) { return fn(static_cast<T*>(h), c.X, c.wl, c.out); }
+
 const DonorOp kOps[] = {
+    /* ---- noise / drift (Phase 15) -------------------------------------- */
     {"aug_gaussian_noise",
-     [](n4m_rng_pcg64_state_t* rng) -> void* {
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_gaussian_noise_handle_t* h = nullptr;
-         if (n4m_aug_gaussian_noise_create(&h, rng, 0.01) != N4M_OK) return nullptr;
-         return h;
-     },
-     [](void* h, n4m_matrix_view_t X, n4m_matrix_view_t out) {
-         return n4m_aug_gaussian_noise_apply(
-             static_cast<n4m_aug_gaussian_noise_handle_t*>(h), X, out);
-     },
-     [](void* h) { n4m_aug_gaussian_noise_destroy(static_cast<n4m_aug_gaussian_noise_handle_t*>(h)); }},
+         return n4m_aug_gaussian_noise_create(&h, r, 0.01) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_gaussian_noise_apply, n4m_aug_gaussian_noise_handle_t),
+     DESTROY(n4m_aug_gaussian_noise_destroy, n4m_aug_gaussian_noise_handle_t)},
 
     {"aug_multiplicative_noise",
-     [](n4m_rng_pcg64_state_t* rng) -> void* {
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_multiplicative_noise_handle_t* h = nullptr;
-         if (n4m_aug_multiplicative_noise_create(&h, rng, 0.05) != N4M_OK) return nullptr;
-         return h;
-     },
-     [](void* h, n4m_matrix_view_t X, n4m_matrix_view_t out) {
-         return n4m_aug_multiplicative_noise_apply(
-             static_cast<n4m_aug_multiplicative_noise_handle_t*>(h), X, out);
-     },
-     [](void* h) { n4m_aug_multiplicative_noise_destroy(static_cast<n4m_aug_multiplicative_noise_handle_t*>(h)); }},
+         return n4m_aug_multiplicative_noise_create(&h, r, 0.05) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_multiplicative_noise_apply, n4m_aug_multiplicative_noise_handle_t),
+     DESTROY(n4m_aug_multiplicative_noise_destroy, n4m_aug_multiplicative_noise_handle_t)},
 
     {"aug_spike_noise",
-     [](n4m_rng_pcg64_state_t* rng) -> void* {
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_spike_noise_handle_t* h = nullptr;
-         if (n4m_aug_spike_noise_create(&h, rng, 1, 3, -0.5, 0.5) != N4M_OK) return nullptr;
-         return h;
-     },
-     [](void* h, n4m_matrix_view_t X, n4m_matrix_view_t out) {
-         return n4m_aug_spike_noise_apply(
-             static_cast<n4m_aug_spike_noise_handle_t*>(h), X, out);
-     },
-     [](void* h) { n4m_aug_spike_noise_destroy(static_cast<n4m_aug_spike_noise_handle_t*>(h)); }},
+         return n4m_aug_spike_noise_create(&h, r, 1, 3, -0.5, 0.5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_spike_noise_apply, n4m_aug_spike_noise_handle_t),
+     DESTROY(n4m_aug_spike_noise_destroy, n4m_aug_spike_noise_handle_t)},
 
     {"aug_hetero_noise",
-     [](n4m_rng_pcg64_state_t* rng) -> void* {
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_hetero_noise_handle_t* h = nullptr;
-         if (n4m_aug_hetero_noise_create(&h, rng, 1e-3, 5e-3) != N4M_OK) return nullptr;
-         return h;
-     },
-     [](void* h, n4m_matrix_view_t X, n4m_matrix_view_t out) {
-         return n4m_aug_hetero_noise_apply(
-             static_cast<n4m_aug_hetero_noise_handle_t*>(h), X, out);
-     },
-     [](void* h) { n4m_aug_hetero_noise_destroy(static_cast<n4m_aug_hetero_noise_handle_t*>(h)); }},
+         return n4m_aug_hetero_noise_create(&h, r, 1e-3, 5e-3) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_hetero_noise_apply, n4m_aug_hetero_noise_handle_t),
+     DESTROY(n4m_aug_hetero_noise_destroy, n4m_aug_hetero_noise_handle_t)},
 
     {"aug_linear_drift",
-     [](n4m_rng_pcg64_state_t* rng) -> void* {
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_linear_drift_handle_t* h = nullptr;
-         if (n4m_aug_linear_drift_create(&h, rng, -0.1, 0.1, -0.001, 0.001) != N4M_OK) return nullptr;
-         return h;
-     },
-     [](void* h, n4m_matrix_view_t X, n4m_matrix_view_t out) {
-         return n4m_aug_linear_drift_apply(
-             static_cast<n4m_aug_linear_drift_handle_t*>(h), X, out);
-     },
-     [](void* h) { n4m_aug_linear_drift_destroy(static_cast<n4m_aug_linear_drift_handle_t*>(h)); }},
+         return n4m_aug_linear_drift_create(&h, r, -0.1, 0.1, -0.001, 0.001) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_linear_drift_apply, n4m_aug_linear_drift_handle_t),
+     DESTROY(n4m_aug_linear_drift_destroy, n4m_aug_linear_drift_handle_t)},
 
     {"aug_poly_drift",
-     [](n4m_rng_pcg64_state_t* rng) -> void* {
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          static const double lo[3] = {-0.1, -0.05, -0.033};
          static const double hi[3] = {0.1, 0.05, 0.033};
          n4m_aug_poly_drift_handle_t* h = nullptr;
-         if (n4m_aug_poly_drift_create(&h, rng, 2, lo, hi) != N4M_OK) return nullptr;
-         return h;
-     },
-     [](void* h, n4m_matrix_view_t X, n4m_matrix_view_t out) {
-         return n4m_aug_poly_drift_apply(
-             static_cast<n4m_aug_poly_drift_handle_t*>(h), X, out);
-     },
-     [](void* h) { n4m_aug_poly_drift_destroy(static_cast<n4m_aug_poly_drift_handle_t*>(h)); }},
+         return n4m_aug_poly_drift_create(&h, r, 2, lo, hi) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_poly_drift_apply, n4m_aug_poly_drift_handle_t),
+     DESTROY(n4m_aug_poly_drift_destroy, n4m_aug_poly_drift_handle_t)},
 
     {"aug_path_length",
-     [](n4m_rng_pcg64_state_t* rng) -> void* {
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_path_length_handle_t* h = nullptr;
-         if (n4m_aug_path_length_create(&h, rng, 0.05, 0.5) != N4M_OK) return nullptr;
-         return h;
-     },
-     [](void* h, n4m_matrix_view_t X, n4m_matrix_view_t out) {
-         return n4m_aug_path_length_apply(
-             static_cast<n4m_aug_path_length_handle_t*>(h), X, out);
-     },
-     [](void* h) { n4m_aug_path_length_destroy(static_cast<n4m_aug_path_length_handle_t*>(h)); }},
+         return n4m_aug_path_length_create(&h, r, 0.05, 0.5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_path_length_apply, n4m_aug_path_length_handle_t),
+     DESTROY(n4m_aug_path_length_destroy, n4m_aug_path_length_handle_t)},
+
+    /* ---- wavelength / spectral (Phase 16) ------------------------------ */
+    {"aug_wavelength_shift",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_wavelength_shift_handle_t* h = nullptr;
+         return n4m_aug_wavelength_shift_create(&h, r, -2.0, 2.0, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_wavelength_shift_apply, n4m_aug_wavelength_shift_handle_t),
+     DESTROY(n4m_aug_wavelength_shift_destroy, n4m_aug_wavelength_shift_handle_t)},
+
+    {"aug_wavelength_stretch",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_wavelength_stretch_handle_t* h = nullptr;
+         return n4m_aug_wavelength_stretch_create(&h, r, 0.98, 1.02, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_wavelength_stretch_apply, n4m_aug_wavelength_stretch_handle_t),
+     DESTROY(n4m_aug_wavelength_stretch_destroy, n4m_aug_wavelength_stretch_handle_t)},
+
+    {"aug_local_warp",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_local_warp_handle_t* h = nullptr;
+         return n4m_aug_local_warp_create(&h, r, 5, 2.0, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_local_warp_apply, n4m_aug_local_warp_handle_t),
+     DESTROY(n4m_aug_local_warp_destroy, n4m_aug_local_warp_handle_t)},
+
+    {"aug_band_perturb",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_band_perturb_handle_t* h = nullptr;
+         return n4m_aug_band_perturb_create(&h, r, 3, 5, 15, 0.9, 1.1, -0.05, 0.05) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_band_perturb_apply, n4m_aug_band_perturb_handle_t),
+     DESTROY(n4m_aug_band_perturb_destroy, n4m_aug_band_perturb_handle_t)},
+
+    {"aug_band_mask",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_band_mask_handle_t* h = nullptr;
+         return n4m_aug_band_mask_create(&h, r, 1, 3, 5, 15, 0) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_band_mask_apply, n4m_aug_band_mask_handle_t),
+     DESTROY(n4m_aug_band_mask_destroy, n4m_aug_band_mask_handle_t)},
+
+    {"aug_channel_dropout",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_channel_dropout_handle_t* h = nullptr;
+         return n4m_aug_channel_dropout_create(&h, r, 0.1, 0) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_channel_dropout_apply, n4m_aug_channel_dropout_handle_t),
+     DESTROY(n4m_aug_channel_dropout_destroy, n4m_aug_channel_dropout_handle_t)},
+
+    {"aug_gauss_jitter",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_gauss_jitter_handle_t* h = nullptr;
+         return n4m_aug_gauss_jitter_create(&h, r, 0.5, 2.0, 5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_gauss_jitter_apply, n4m_aug_gauss_jitter_handle_t),
+     DESTROY(n4m_aug_gauss_jitter_destroy, n4m_aug_gauss_jitter_handle_t)},
+
+    {"aug_unsharp_mask",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_unsharp_mask_handle_t* h = nullptr;
+         return n4m_aug_unsharp_mask_create(&h, r, 0.5, 1.5, 1.0, 5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_unsharp_mask_apply, n4m_aug_unsharp_mask_handle_t),
+     DESTROY(n4m_aug_unsharp_mask_destroy, n4m_aug_unsharp_mask_handle_t)},
+
+    {"aug_magnitude_warp",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_magnitude_warp_handle_t* h = nullptr;
+         return n4m_aug_magnitude_warp_create(&h, r, 5, 0.9, 1.1, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_magnitude_warp_apply, n4m_aug_magnitude_warp_handle_t),
+     DESTROY(n4m_aug_magnitude_warp_destroy, n4m_aug_magnitude_warp_handle_t)},
+
+    {"aug_local_clip",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_local_clip_handle_t* h = nullptr;
+         return n4m_aug_local_clip_create(&h, r, 2, 3, 10) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_local_clip_apply, n4m_aug_local_clip_handle_t),
+     DESTROY(n4m_aug_local_clip_destroy, n4m_aug_local_clip_handle_t)},
+
+    /* ---- mixup / physical / environmental (Phase 17) ------------------- */
+    {"aug_mixup",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_mixup_handle_t* h = nullptr;
+         return n4m_aug_mixup_create(&h, r, 0.4) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_mixup_apply, n4m_aug_mixup_handle_t),
+     DESTROY(n4m_aug_mixup_destroy, n4m_aug_mixup_handle_t)},
+
+    {"aug_local_mixup",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_local_mixup_handle_t* h = nullptr;
+         return n4m_aug_local_mixup_create(&h, r, 0.4, 5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_local_mixup_apply, n4m_aug_local_mixup_handle_t),
+     DESTROY(n4m_aug_local_mixup_destroy, n4m_aug_local_mixup_handle_t)},
+
+    {"aug_scatter_sim",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_scatter_sim_handle_t* h = nullptr;
+         return n4m_aug_scatter_sim_create(&h, r, 0.8, 1.2, -0.05, 0.05) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_scatter_sim_apply, n4m_aug_scatter_sim_handle_t),
+     DESTROY(n4m_aug_scatter_sim_destroy, n4m_aug_scatter_sim_handle_t)},
+
+    {"aug_particle_size",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_particle_size_handle_t* h = nullptr;
+         return n4m_aug_particle_size_create(&h, r, 50.0, 10.0, 0, 10.0, 100.0, 50.0,
+                                              1.0, 0.1, 0, 0.1, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_particle_size_apply, n4m_aug_particle_size_handle_t),
+     DESTROY(n4m_aug_particle_size_destroy, n4m_aug_particle_size_handle_t)},
+
+    {"aug_emsc_distort",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_emsc_distort_handle_t* h = nullptr;
+         return n4m_aug_emsc_distort_create(&h, r, 0.95, 1.05, -0.02, 0.02, 2, 0.1, 0.5,
+                                            wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_emsc_distort_apply, n4m_aug_emsc_distort_handle_t),
+     DESTROY(n4m_aug_emsc_distort_destroy, n4m_aug_emsc_distort_handle_t)},
+
+    {"aug_batch_effect",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_batch_effect_handle_t* h = nullptr;
+         return n4m_aug_batch_effect_create(&h, r, 0.01, 0.001, 0.02, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_batch_effect_apply, n4m_aug_batch_effect_handle_t),
+     DESTROY(n4m_aug_batch_effect_destroy, n4m_aug_batch_effect_handle_t)},
+
+    {"aug_instrument_broaden",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_instrument_broaden_handle_t* h = nullptr;
+         return n4m_aug_instrument_broaden_create(&h, r, 5.0, 0, 3.0, 8.0, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_instrument_broaden_apply, n4m_aug_instrument_broaden_handle_t),
+     DESTROY(n4m_aug_instrument_broaden_destroy, n4m_aug_instrument_broaden_handle_t)},
+
+    {"aug_dead_band",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_dead_band_handle_t* h = nullptr;
+         return n4m_aug_dead_band_create(&h, r, 2, 3, 10, 0.01, 0.5, 0) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_dead_band_apply, n4m_aug_dead_band_handle_t),
+     DESTROY(n4m_aug_dead_band_destroy, n4m_aug_dead_band_handle_t)},
+
+    {"aug_temperature",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_temperature_handle_t* h = nullptr;
+         return n4m_aug_temperature_create(&h, r, 5.0, 0, -10.0, 10.0, 1, 1, 1, 0,
+                                           wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_temperature_apply, n4m_aug_temperature_handle_t),
+     DESTROY(n4m_aug_temperature_destroy, n4m_aug_temperature_handle_t)},
+
+    {"aug_moisture",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_aug_moisture_handle_t* h = nullptr;
+         return n4m_aug_moisture_create(&h, r, 0.1, 0, 0.2, 0.9, 0.5, 0.5, 0.01, 0.15, 1, 1,
+                                        wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_moisture_apply, n4m_aug_moisture_handle_t),
+     DESTROY(n4m_aug_moisture_destroy, n4m_aug_moisture_handle_t)},
+
+    /* ---- edge / spline / random (Phase 18). Edge ops take the wavelength
+     *      axis as an explicit apply() argument. The two simplification
+     *      splines are v2-deferred (apply → NOT_IMPLEMENTED) and omitted. -- */
+    {"aug_detector_rolloff",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_detector_rolloff_handle_t* h = nullptr;
+         return n4m_aug_detector_rolloff_create(&h, r, 0, 0.5, 1.0, 0) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_aug_detector_rolloff_apply, n4m_aug_detector_rolloff_handle_t),
+     DESTROY(n4m_aug_detector_rolloff_destroy, n4m_aug_detector_rolloff_handle_t)},
+
+    {"aug_stray_light",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_stray_light_handle_t* h = nullptr;
+         return n4m_aug_stray_light_create(&h, r, 0.001, 2.0, 0.1, 1) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_aug_stray_light_apply, n4m_aug_stray_light_handle_t),
+     DESTROY(n4m_aug_stray_light_destroy, n4m_aug_stray_light_handle_t)},
+
+    {"aug_edge_curve",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_edge_curve_handle_t* h = nullptr;
+         return n4m_aug_edge_curve_create(&h, r, 0.1, 0, 0.0, 0.5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_aug_edge_curve_apply, n4m_aug_edge_curve_handle_t),
+     DESTROY(n4m_aug_edge_curve_destroy, n4m_aug_edge_curve_handle_t)},
+
+    {"aug_truncated_peak",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_truncated_peak_handle_t* h = nullptr;
+         return n4m_aug_truncated_peak_create(&h, r, 0.5, 0.1, 0.5, 2.0, 10.0, 1, 1) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_aug_truncated_peak_apply, n4m_aug_truncated_peak_handle_t),
+     DESTROY(n4m_aug_truncated_peak_destroy, n4m_aug_truncated_peak_handle_t)},
+
+    {"aug_edge_artifacts",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_edge_artifacts_handle_t* h = nullptr;
+         return n4m_aug_edge_artifacts_create(&h, r, 0xF, 1.0, 0) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_aug_edge_artifacts_apply, n4m_aug_edge_artifacts_handle_t),
+     DESTROY(n4m_aug_edge_artifacts_destroy, n4m_aug_edge_artifacts_handle_t)},
+
+    {"aug_spline_smooth",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_spline_smooth_handle_t* h = nullptr;
+         return n4m_aug_spline_smooth_create(&h, r) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_spline_smooth_apply, n4m_aug_spline_smooth_handle_t),
+     DESTROY(n4m_aug_spline_smooth_destroy, n4m_aug_spline_smooth_handle_t)},
+
+    {"aug_spline_x_perturb",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_spline_x_perturb_handle_t* h = nullptr;
+         return n4m_aug_spline_x_perturb_create(&h, r, 3, 0.1, -0.05, 0.05) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_spline_x_perturb_apply, n4m_aug_spline_x_perturb_handle_t),
+     DESTROY(n4m_aug_spline_x_perturb_destroy, n4m_aug_spline_x_perturb_handle_t)},
+
+    {"aug_spline_y_perturb",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_spline_y_perturb_handle_t* h = nullptr;
+         return n4m_aug_spline_y_perturb_create(&h, r, 0, 0.1) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_spline_y_perturb_apply, n4m_aug_spline_y_perturb_handle_t),
+     DESTROY(n4m_aug_spline_y_perturb_destroy, n4m_aug_spline_y_perturb_handle_t)},
+
+    {"aug_rotate_translate",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_rotate_translate_handle_t* h = nullptr;
+         return n4m_aug_rotate_translate_create(&h, r, 0.1, 0.1) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_rotate_translate_apply, n4m_aug_rotate_translate_handle_t),
+     DESTROY(n4m_aug_rotate_translate_destroy, n4m_aug_rotate_translate_handle_t)},
+
+    {"aug_random_x_op",
+     [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
+         n4m_aug_random_x_op_handle_t* h = nullptr;
+         return n4m_aug_random_x_op_create(&h, r, 0, 0.9, 1.1) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_aug_random_x_op_apply, n4m_aug_random_x_op_handle_t),
+     DESTROY(n4m_aug_random_x_op_destroy, n4m_aug_random_x_op_handle_t)},
 };
+
+#undef DESTROY
+#undef RUN_APPLY
+#undef RUN_APPLY_WL
 
 const DonorOp* find_op(const std::string& name) {
     for (const DonorOp& op : kOps) {
@@ -246,33 +466,33 @@ int main(int argc, char** argv) {
 
     /* Thread count is honoured via the OMP_NUM_THREADS / *_NUM_THREADS env
      * vars the orchestrator sets per cell; the augmenter ABI takes no
-     * context, and these ops are element-wise single-threaded anyway, so we
-     * only record `threads` in the output for the dashboard cell key. */
+     * context, so we only record `threads` in the output for the cell key. */
 
-    /* One input matrix + one output buffer, reused across timed runs. The
-     * timed operation is the operator's apply(): create/destroy is one-time
-     * setup, not part of the per-call cost the dashboard reports. */
     std::vector<double> X(static_cast<size_t>(n) * static_cast<size_t>(p));
     std::vector<double> out(X.size());
+    std::vector<double> wl = wavelength_axis(p);
     fill_matrix(X, seed);
 
-    n4m_matrix_view_t Xv, outv;
-    if (n4m_matrix_view_init_rowmajor(&Xv, X.data(), n, p, N4M_DTYPE_F64) != N4M_OK ||
-        n4m_matrix_view_init_rowmajor(&outv, out.data(), n, p, N4M_DTYPE_F64) != N4M_OK) {
+    BenchCtx ctx;
+    if (n4m_matrix_view_init_rowmajor(&ctx.X, X.data(), n, p, N4M_DTYPE_F64) != N4M_OK ||
+        n4m_matrix_view_init_rowmajor(&ctx.out, out.data(), n, p, N4M_DTYPE_F64) != N4M_OK ||
+        n4m_matrix_view_init_rowmajor(&ctx.wl, wl.data(), 1, p, N4M_DTYPE_F64) != N4M_OK) {
         die("matrix view init failed");
     }
 
     n4m_rng_pcg64_state_t* rng = nullptr;
     if (n4m_rng_pcg64_create(seed, &rng) != N4M_OK) die("rng create failed");
-    void* handle = op->make(rng);
+    void* handle = op->make(rng, n, p);
     if (handle == nullptr) {
         n4m_rng_pcg64_destroy(rng);
-        die("operator create failed");
+        std::printf("{\"ok\":false,\"algorithm\":\"%s\",\"n\":%ld,\"p\":%ld,"
+                    "\"threads\":%ld,\"reason\":\"operator create failed\"}\n",
+                    method.c_str(), n, p, threads);
+        return 1;
     }
 
-    auto one_run = [&]() -> bool { return op->apply(handle, Xv, outv) == N4M_OK; };
+    auto one_run = [&]() -> bool { return op->run(handle, ctx) == N4M_OK; };
 
-    /* warm-up (discarded) */
     double t0 = now_ms();
     bool ok = one_run();
     double warmup_ms = now_ms() - t0;
@@ -307,7 +527,7 @@ int main(int argc, char** argv) {
 
     if (!ok) {
         std::printf("{\"ok\":false,\"algorithm\":\"%s\",\"n\":%ld,\"p\":%ld,"
-                    "\"threads\":%ld,\"reason\":\"apply returned non-OK\"}\n",
+                    "\"threads\":%ld,\"reason\":\"run returned non-OK\"}\n",
                     method.c_str(), n, p, threads);
         return 1;
     }
@@ -315,7 +535,6 @@ int main(int argc, char** argv) {
     if (samples.size() == 1) statistic = "single";
     const double reported = (std::strcmp(statistic, "mean") == 0) ? mean(samples) : median(samples);
     const int n_runs = static_cast<int>(samples.size());
-
     const char* ver = n4m_get_version_string();
 
     std::printf(

@@ -34,6 +34,34 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_BENCH = REPO / "build/blas-omp/bench/cpp/n4m_donor_bench"
+
+# The dashboard donor method names come from the n4m_tests test-group names
+# (via append_n4m_tests_to_dashboard.py), which sometimes differ from the C
+# ABI op id the bench tool exposes. Map dashboard-name -> bench-op where they
+# diverge; identical names need no entry. Dashboard rows with no timeable ABI
+# op (e.g. the `aug_phase17` bundle group, or the v2-deferred *_simplify_stub
+# ops) are left parity-only.
+DASHBOARD_TO_BENCH = {
+    # augmenter test-group name -> ABI op id (where they diverge)
+    "aug_edge_curvature": "aug_edge_curve",
+    "aug_edge_artifacts_combined": "aug_edge_artifacts",
+    "aug_random_x_operation": "aug_random_x_op",
+    "aug_spline_smoothing": "aug_spline_smooth",
+    "aug_spline_x_perturbations": "aug_spline_x_perturb",
+    "aug_spline_y_perturbations": "aug_spline_y_perturb",
+    # wavelength/spectral augmenters are listed without the `aug_` prefix in
+    # the fixtures (their n4m_tests group names drop it)
+    "band_mask": "aug_band_mask",
+    "band_perturb": "aug_band_perturb",
+    "channel_dropout": "aug_channel_dropout",
+    "gauss_jitter": "aug_gauss_jitter",
+    "local_clip": "aug_local_clip",
+    "local_warp": "aug_local_warp",
+    "magnitude_warp": "aug_magnitude_warp",
+    "unsharp_mask": "aug_unsharp_mask",
+    "wavelength_shift": "aug_wavelength_shift",
+    "wavelength_stretch": "aug_wavelength_stretch",
+}
 DEFAULT_FIXTURES = REPO / "benchmarks/cross_binding/results/dashboard_refresh_2026_05_22_n4m_fixtures.csv"
 DEFAULT_OUT = REPO / "benchmarks/cross_binding/results/dashboard_refresh_2026_05_26_donor_timing.csv"
 
@@ -109,38 +137,52 @@ def main() -> int:
         fieldnames = reader.fieldnames or []
         fixture_rows = list(reader)
 
-    # Index the fixture cpp rows we can time: (method, n, p) -> row
-    cpp_rows: dict[tuple, dict] = {}
+    # Fixture-driven: iterate the cpp parity rows (the dashboard's donor
+    # cells) and time each via its mapped ABI op. The output row keeps the
+    # dashboard `algorithm` name; only the timing columns are filled.
+    requested_sizes = {(str(n), str(p)) for n, p in sizes}
+    cells: list[tuple[dict, str]] = []  # (fixture row, bench op id)
+    skipped_unmapped: set[str] = set()
     for r in fixture_rows:
-        if r.get("backend") == "cpp" and r.get("algorithm") in timeable:
-            cpp_rows[(r["algorithm"], str(r["n"]), str(r["p"]))] = r
+        if r.get("backend") != "cpp":
+            continue
+        if (str(r.get("n")), str(r.get("p"))) not in requested_sizes:
+            continue
+        method = r["algorithm"]
+        bench_op = DASHBOARD_TO_BENCH.get(method, method)
+        if bench_op not in timeable:
+            skipped_unmapped.add(method)
+            continue
+        cells.append((r, bench_op))
 
     # Resume: keep previously-timed cells; --force re-times everything.
     out: dict[tuple, dict] = {} if args.force else load_existing(args.out_csv)
 
     timed = skipped = failed = 0
-    for method in sorted(timeable):
-        for n, p in sizes:
-            base = cpp_rows.get((method, str(n), str(p)))
-            if base is None:
-                continue  # no fixture parity row for this cell; nothing to anchor to
-            key = cell_key(base)
-            if key in out and not args.force:
-                skipped += 1
-                continue
-            rec = run_cell(args.bench_bin, method, n, p, args.runs, args.seed)
-            if not rec.get("ok"):
-                failed += 1
-                print(f"  FAIL {method} {n}x{p}: {rec.get('reason', 'unknown')}", file=sys.stderr)
-                continue
-            row = dict(base)
-            for col in TIMING_FIELDS:
-                if col in rec:
-                    row[col] = rec[col]
-            out[key] = row
-            timed += 1
-            print(f"  timed {method} {n}x{p}: {rec['reported_ms']:.4f} ms "
-                  f"({rec['timing_statistic']}, {rec['n_runs']} runs)")
+    for base, bench_op in cells:
+        n, p = int(base["n"]), int(base["p"])
+        key = cell_key(base)
+        if key in out and not args.force:
+            skipped += 1
+            continue
+        rec = run_cell(args.bench_bin, bench_op, n, p, args.runs, args.seed)
+        if not rec.get("ok"):
+            failed += 1
+            print(f"  FAIL {base['algorithm']} ({bench_op}) {n}x{p}: "
+                  f"{rec.get('reason', 'unknown')}", file=sys.stderr)
+            continue
+        row = dict(base)
+        for col in TIMING_FIELDS:
+            if col in rec:
+                row[col] = rec[col]
+        out[key] = row
+        timed += 1
+        print(f"  timed {base['algorithm']:30s} {n}x{p}: {rec['reported_ms']:.4f} ms "
+              f"({rec['timing_statistic']}, {rec['n_runs']} runs)")
+
+    if skipped_unmapped:
+        print(f"  (no ABI op for {len(skipped_unmapped)} dashboard method(s), "
+              f"left parity-only: {', '.join(sorted(skipped_unmapped))})", file=sys.stderr)
 
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
     with args.out_csv.open("w", newline="") as f:
