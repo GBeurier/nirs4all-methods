@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""Donor-operator timing pipeline.
+
+The cross-binding orchestrator times the PLS-family methods; the donor
+operators (augmentation / preprocessing / filters / splitters) are only
+parity-validated by `n4m_tests` and shipped to the dashboard with blank
+timing by ``parity/scripts/append_n4m_tests_to_dashboard.py``. This script
+fills the C++ (``cpp`` backend) timing for every donor method the
+``n4m_donor_bench`` tool can run, while preserving the parity verdicts that
+the fixture suite already established.
+
+Design (mirrors the orchestrator's resume contract):
+  * The C++ timing primitive is ``bench/cpp/n4m_donor_bench`` — one adaptive
+    timing JSON record per (method, size) cell.
+  * For each cell we take the matching ``cpp`` row from the fixtures CSV
+    (so all parity / divergence / reference columns stay exactly as the
+    1e-12 fixture gate recorded them) and fill in only the timing columns.
+  * ``--resume-existing`` loads the output CSV and skips any cell already
+    timed (``ok`` and a non-empty ``reported_ms``), so re-runs only do the
+    missing/failed cells. ``--force`` re-times everything.
+
+The output is a ``dashboard_refresh_*.csv`` delta; ``build_landing.py`` merges
+it ahead of the parity-only fixture rows (same adaptive-v1 schema, newer file
+wins the per-cell dedup), so the matrix shows real ms for these methods.
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+DEFAULT_BENCH = REPO / "build/blas-omp/bench/cpp/n4m_donor_bench"
+DEFAULT_FIXTURES = REPO / "benchmarks/cross_binding/results/dashboard_refresh_2026_05_22_n4m_fixtures.csv"
+DEFAULT_OUT = REPO / "benchmarks/cross_binding/results/dashboard_refresh_2026_05_26_donor_timing.csv"
+
+# Timing columns the bench JSON supplies; everything else is copied verbatim
+# from the fixture row so parity/divergence/reference stay authoritative.
+TIMING_FIELDS = (
+    "reported_ms", "median_ms", "sample_median_ms", "mean_ms", "min_ms",
+    "max_ms", "n_runs", "total_runs", "max_runs", "warmup_ms",
+    "warmup_included", "timing_statistic", "timing_decision",
+)
+
+
+def bench_methods(bench_bin: Path) -> set[str]:
+    out = subprocess.run([str(bench_bin), "--list"], capture_output=True, text=True, check=True)
+    return {line.strip() for line in out.stdout.splitlines() if line.strip()}
+
+
+def run_cell(bench_bin: Path, method: str, n: int, p: int, runs: int, seed: int) -> dict:
+    proc = subprocess.run(
+        [str(bench_bin), "--method", method, "--n", str(n), "--p", str(p),
+         "--runs", str(runs), "--seed", str(seed)],
+        capture_output=True, text=True, timeout=600,
+    )
+    last = proc.stdout.strip().splitlines()[-1] if proc.stdout.strip() else "{}"
+    return json.loads(last)
+
+
+def cell_key(row: dict) -> tuple:
+    return (row.get("algorithm"), row.get("backend"), row.get("libp4a_build", ""),
+            str(row.get("n")), str(row.get("p")), str(row.get("threads")))
+
+
+def load_existing(path: Path) -> dict[tuple, dict]:
+    """Previously-timed rows keyed by cell, so a resume run preserves them
+    (and never rewrites the output down to only the freshly-timed cells)."""
+    if not path.exists():
+        return {}
+    existing: dict[tuple, dict] = {}
+    with path.open(newline="") as f:
+        for row in csv.DictReader(f):
+            if str(row.get("ok")).lower() == "true" and (row.get("reported_ms") or "").strip():
+                existing[cell_key(row)] = row
+    return existing
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--bench-bin", type=Path, default=DEFAULT_BENCH)
+    ap.add_argument("--fixtures-csv", type=Path, default=DEFAULT_FIXTURES)
+    ap.add_argument("--out-csv", type=Path, default=DEFAULT_OUT)
+    ap.add_argument("--sizes", nargs="+", default=["250x50", "50x250"],
+                    help="dashboard cell sizes as NxP")
+    ap.add_argument("--runs", type=int, default=40)
+    ap.add_argument("--seed", type=int, default=1_234_567_890)
+    ap.add_argument("--resume-existing", action="store_true",
+                    help="skip cells already timed in --out-csv")
+    ap.add_argument("--force", action="store_true",
+                    help="re-time every cell even if already present")
+    args = ap.parse_args()
+
+    if not args.bench_bin.exists():
+        print(f"bench tool not built at {args.bench_bin}; "
+              f"`cmake --preset blas-omp -DN4M_BUILD_BENCH=ON && "
+              f"cmake --build --preset blas-omp --target n4m_donor_bench`",
+              file=sys.stderr)
+        return 1
+
+    timeable = bench_methods(args.bench_bin)
+    sizes = [tuple(int(x) for x in s.lower().split("x")) for s in args.sizes]
+
+    with args.fixtures_csv.open(newline="") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames or []
+        fixture_rows = list(reader)
+
+    # Index the fixture cpp rows we can time: (method, n, p) -> row
+    cpp_rows: dict[tuple, dict] = {}
+    for r in fixture_rows:
+        if r.get("backend") == "cpp" and r.get("algorithm") in timeable:
+            cpp_rows[(r["algorithm"], str(r["n"]), str(r["p"]))] = r
+
+    # Resume: keep previously-timed cells; --force re-times everything.
+    out: dict[tuple, dict] = {} if args.force else load_existing(args.out_csv)
+
+    timed = skipped = failed = 0
+    for method in sorted(timeable):
+        for n, p in sizes:
+            base = cpp_rows.get((method, str(n), str(p)))
+            if base is None:
+                continue  # no fixture parity row for this cell; nothing to anchor to
+            key = cell_key(base)
+            if key in out and not args.force:
+                skipped += 1
+                continue
+            rec = run_cell(args.bench_bin, method, n, p, args.runs, args.seed)
+            if not rec.get("ok"):
+                failed += 1
+                print(f"  FAIL {method} {n}x{p}: {rec.get('reason', 'unknown')}", file=sys.stderr)
+                continue
+            row = dict(base)
+            for col in TIMING_FIELDS:
+                if col in rec:
+                    row[col] = rec[col]
+            out[key] = row
+            timed += 1
+            print(f"  timed {method} {n}x{p}: {rec['reported_ms']:.4f} ms "
+                  f"({rec['timing_statistic']}, {rec['n_runs']} runs)")
+
+    args.out_csv.parent.mkdir(parents=True, exist_ok=True)
+    with args.out_csv.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(out.values())
+    print(f"\nWrote {len(out)} timed cpp rows "
+          f"(timed={timed}, skipped={skipped}, failed={failed}) to {args.out_csv}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
