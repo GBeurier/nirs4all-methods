@@ -341,22 +341,6 @@ void matmul(const std::vector<double>& A, const std::vector<double>& B,
     }
 }
 
-// matmul_TN: C (m × n) = A^T (m × k) @ B (k × n). A is stored as (k × m).
-void matmul_TN(const std::vector<double>& A, const std::vector<double>& B,
-               std::size_t m, std::size_t k, std::size_t n,
-               std::vector<double>& C) {
-    C.assign(m * n, 0.0);
-    for (std::size_t i = 0; i < m; ++i) {
-        for (std::size_t l = 0; l < k; ++l) {
-            const double a = A[l * m + i];   // A^T[i, l] = A[l, i]
-            if (a == 0.0) continue;
-            for (std::size_t j = 0; j < n; ++j) {
-                C[i * n + j] += a * B[l * n + j];
-            }
-        }
-    }
-}
-
 // matmul_NT: C (m × n) = A (m × k) @ B^T (k × n). B is stored as (n × k).
 void matmul_NT(const std::vector<double>& A, const std::vector<double>& B,
                std::size_t m, std::size_t k, std::size_t n,

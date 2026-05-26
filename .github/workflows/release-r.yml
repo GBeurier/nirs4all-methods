@@ -1,11 +1,16 @@
-# Build, check, and (eventually) submit the pls4all R package.
+# Build, check, and (eventually) submit the n4m R package.
 #
 # Triggers
 # --------
-# - push to main or release/m2-cran    → full R CMD check matrix
-# - pull_request touching the R subtree → full R CMD check matrix
-# - workflow_dispatch                  → on-demand re-check
-# - push tag v*.*.*                    → tag-time release artefact upload
+# - workflow_dispatch → on-demand R CMD check + tarball build.
+#
+# NOTE: The R CRAN package is a Phase-F deliverable and is NOT yet wired for an
+# isolated build — its src/Makevars still references a pre-rename vendored
+# `libp4a/` tree (no committed sources, old PLS4ALL_STATIC/p4a_export.h macros,
+# a flat core/*.cpp glob that cannot match the current nested C/C++/Fortran
+# layout). Until that vendoring is implemented, this workflow is **manual-only**
+# so it does not gate the cpp/Python core CI on an incomplete binding. Re-enable
+# the push/pull_request/tag triggers once `bindings/r/n4m` builds standalone.
 #
 # CRAN submission itself is a manual web-form step at
 # https://cran.r-project.org/submit.html — that's the irreducible
@@ -15,17 +20,7 @@
 name: release-r
 
 on:
-  push:
-    branches: [main, "release/m2-cran"]
-    tags: ["v*.*.*"]
-    paths:
-      - "bindings/r/**"
-      - "cpp/**"
-      - ".github/workflows/release-r.yml"
-  pull_request:
-    paths:
-      - "bindings/r/**"
-      - "cpp/**"
+  workflow_dispatch:
       - ".github/workflows/release-r.yml"
   workflow_dispatch: {}
 
@@ -79,7 +74,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: bindings/r/pls4all
+          working-directory: bindings/r/n4m
           extra-packages: |
             any::rcmdcheck
             any::knitr
@@ -89,7 +84,7 @@ jobs:
       - name: R CMD check --as-cran
         uses: r-lib/actions/check-r-package@v2
         with:
-          working-directory: bindings/r/pls4all
+          working-directory: bindings/r/n4m
           # r-lib/actions/check-r-package interpolates these values into
           # rcmdcheck::rcmdcheck(args = ..., error_on = ...) as literal R
           # code, so they must be valid R syntax.
@@ -102,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rcheck-${{ matrix.cfg.label }}
-          path: bindings/r/pls4all.Rcheck/
+          path: bindings/r/n4m.Rcheck/
 
   # =========================================================================
   # Build the source tarball that the maintainer uploads to CRAN.
@@ -125,24 +120,24 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: bindings/r/pls4all
+          working-directory: bindings/r/n4m
           extra-packages: any::knitr any::rmarkdown
 
-      - name: R CMD build (produces pls4all_${VER}.tar.gz)
-        working-directory: bindings/r/pls4all
+      - name: R CMD build (produces n4m_${VER}.tar.gz)
+        working-directory: bindings/r/n4m
         run: R CMD build .
 
       - name: Stage tarball
-        working-directory: bindings/r/pls4all
+        working-directory: bindings/r/n4m
         run: |
           set -euo pipefail
           mkdir -p ../../../dist-r
-          mv pls4all_*.tar.gz ../../../dist-r/
+          mv n4m_*.tar.gz ../../../dist-r/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pls4all-cran-tarball
-          path: dist-r/pls4all_*.tar.gz
+          name: n4m-cran-tarball
+          path: dist-r/n4m_*.tar.gz
           if-no-files-found: error
           retention-days: 90
 
@@ -161,11 +156,11 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: pls4all-cran-tarball
+          name: n4m-cran-tarball
           path: dist-r/
 
       - name: Upload to the matching Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist-r/pls4all_*.tar.gz
+          files: dist-r/n4m_*.tar.gz
           fail_on_unmatched_files: true

@@ -1,7 +1,7 @@
 # Fail the PR if any downstream manifest (pyproject.toml, DESCRIPTION,
 # Cargo.toml, Project.toml, package.json, csproj, CITATION.cff, docs/conf.py,
 # README.md) drifts from the canonical version in
-# cpp/include/pls4all/n4m_version.h.
+# cpp/include/n4m/n4m_version.h.
 #
 # Local equivalent:  scripts/bump_version.sh --check
 #

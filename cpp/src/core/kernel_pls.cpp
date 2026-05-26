@@ -17,8 +17,6 @@ namespace n4m::core {
 
 namespace {
 
-constexpr double kEps = 1e-12;
-
 [[nodiscard]] n4m_status_t copy_matrix(Context& ctx,
                                         const n4m_matrix_view_t& V,
                                         const char* name,

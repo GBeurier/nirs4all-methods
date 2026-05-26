@@ -254,7 +254,7 @@ jobs:
           print('version =', v)
           assert v.startswith(expected + '+abi.'), v
           assert pls4all.__version__ == expected, (pls4all.__version__, expected)
-          assert pls4all.abi_version() == (1, 16, 0), pls4all.abi_version()
+          assert pls4all.abi_version() == (1, 9, 0), pls4all.abi_version()
           print('SMOKE OK')
           "
 
@@ -404,7 +404,7 @@ jobs:
           print('TestPyPI smoke: version =', v)
           assert v.startswith('${{ steps.ver.outputs.version }}+abi.'), v
           assert pls4all.__version__ == '${{ steps.ver.outputs.version }}', pls4all.__version__
-          assert pls4all.abi_version() == (1, 16, 0), pls4all.abi_version()
+          assert pls4all.abi_version() == (1, 9, 0), pls4all.abi_version()
           print('POST-PUBLISH OK')
           "
 

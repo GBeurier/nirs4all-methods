@@ -3,7 +3,7 @@
 ## Submission summary
 
 * This is a **new submission** to CRAN.
-* `n4m` 0.97.3 — a portable Partial Least Squares (PLS) and
+* `n4m` 0.98.0 — a portable Partial Least Squares (PLS) and
   Near-Infrared Spectroscopy (NIRS) engine. The C++17 numerical core is
   vendored under `src/libn4m/` and compiled from source at install time.
   No external system library is required.
