@@ -1,7 +1,7 @@
 Package: n4m
 Type: Package
 Title: Portable Partial Least Squares and NIRS Engine
-Version: 0.97.3
+Version: 0.98.0
 Date: 2026-05-20
 Authors@R: c(person("Gregory", "Beurier", role = c("aut", "cre"),
                     email = "gregory.beurier@cirad.fr"),
