@@ -43,25 +43,31 @@
 
 namespace {
 
-/* ----- adaptive timing protocol (mirror of _common.py) ----------------- */
+/* ----- adaptive timing protocol ---------------------------------------- *
+ *
+ * Warm-up (one discarded run) + a timed probe, then enough timed runs for a
+ * stable median: many reps for sub-millisecond ops, few for slow ones. The
+ * count follows a fixed time budget (~target wall-clock per cell), so a ~2 ms
+ * op gets ~100+ reps, a ~1 s op ~5-6, and anything over 30 s runs once. This
+ * keeps the cheap-op medians robust while bounding total benchmark time. */
 constexpr double kWarmupAbortMs = 5.0 * 60.0 * 1000.0;  /* 5 min  */
-constexpr double kProbeAbortMs = 60.0 * 1000.0;         /* 60 s   */
-constexpr int kDefaultMaxRuns = 40;
+constexpr int kDefaultMaxRuns = 200;                    /* cap for ultra-fast ops */
+constexpr double kTimeBudgetMs = 400.0;                 /* ~per-cell measurement budget */
 
 struct AdaptiveTarget {
-    int total;
+    int total;            /* total timed executions incl. the probe */
     const char* statistic;
     const char* decision;
 };
 
 AdaptiveTarget adaptive_target(double probe_ms, int max_runs) {
-    max_runs = std::max(2, max_runs);
-    if (probe_ms > kProbeAbortMs) return {2, "single", "probe_gt_60s"};
-    if (probe_ms > 30000.0) return {std::min(max_runs, 2), "single", "probe_gt_30s"};
-    if (probe_ms > 5000.0) return {std::min(max_runs, 3), "mean", "probe_gt_5s"};
-    if (probe_ms > 1000.0) return {std::min(max_runs, 10), "median", "probe_gt_1s"};
-    if (probe_ms > 100.0) return {std::min(max_runs, 20), "median", "probe_gt_100ms"};
-    return {std::min(max_runs, kDefaultMaxRuns), "median", "probe_le_100ms"};
+    max_runs = std::max(1, max_runs);
+    if (probe_ms > 30000.0) return {std::min(max_runs, 1), "single", "probe_gt_30s"};
+    if (probe_ms > 5000.0)  return {std::min(max_runs, 3), "mean",   "probe_gt_5s"};
+    /* time-budget: target ≈ budget / probe, clamped to [6, max_runs]. */
+    int target = static_cast<int>(std::lround(kTimeBudgetMs / probe_ms));
+    target = std::max(6, std::min(target, max_runs));
+    return {target, "median", "time_budget"};
 }
 
 double median(std::vector<double> v) {
@@ -640,6 +646,10 @@ const DonorOp kOps[] = {
     {"pp_beads", PP_MAKE(beads, 0.5, 5.0, 4.0, 20, 1e-2), PP_T(beads), PP_D(beads)},
     {"pp_snip", PP_MAKE(snip, 20), PP_T(snip), PP_D(snip)},
     {"pp_rolling_ball", PP_MAKE(rolling_ball, 10, 5), PP_T(rolling_ball), PP_D(rolling_ball)},
+    {"pp_wavelet_denoise",  /* dim-preserving denoise (n×p out) */
+     PP_MAKE(wavelet_denoise, N4M_PP_WAVELET_HAAR, N4M_PP_WAVELET_BOUNDARY_PERIODIZATION,
+             3, N4M_PP_WAVELET_THRESHOLD_SOFT, N4M_PP_WAVELET_NOISE_MEDIAN),
+     PP_T(wavelet_denoise), PP_D(wavelet_denoise)},
     /* stateful, X-only fit */
     {"pp_msc", PP_MAKE0(msc), PP_FT(msc), PP_D(msc)},
     {"pp_emsc", PP_MAKE(emsc, 2), PP_FT(emsc), PP_D(emsc)},
@@ -661,6 +671,182 @@ const DonorOp kOps[] = {
     /* pp_epo: EPO needs a calibrated difference/clutter direction set for
      * fit(); a synthetic spectrum yields a degenerate projection, so it is
      * left parity-only until a representative `d` is wired in. */
+
+    /* ---- preprocessing, dim-changing. transform() writes n × out_cols, so
+     *      each run queries the op's output-column count and transforms into
+     *      a correctly-sized scratch buffer. That alloc is part of the timed
+     *      op (these transforms produce a freshly-shaped array). Stateful
+     *      ops fit() first. */
+    {"pp_crop",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t p) -> void* {
+         n4m_pp_crop_handle_t* h = nullptr;
+         return n4m_pp_crop_create(&h, 1, p - 1) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_crop_handle_t*>(h);
+         int64_t oc = n4m_pp_crop_output_cols(H, c.p);
+         if (oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_crop_transform(H, c.X, ov); },
+     PP_D(crop)},
+
+    {"pp_derivate",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_pp_derivate_handle_t* h = nullptr;
+         return n4m_pp_derivate_create(&h, 1, 1.0) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_derivate_handle_t*>(h);
+         n4m_status_t fs = n4m_pp_derivate_fit(H, c.X);
+         if (fs != N4M_OK) return fs;
+         int64_t oc = n4m_pp_derivate_output_cols(1, c.p);
+         if (oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_derivate_transform(H, c.X, ov); },
+     PP_D(derivate)},
+
+    {"pp_haar",
+     PP_MAKE0(haar),
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_haar_handle_t*>(h);
+         int64_t oc = 0;
+         if (n4m_pp_haar_output_cols(c.p, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_haar_transform(H, c.X, ov); },
+     PP_D(haar)},
+
+    {"pp_resample",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         n4m_pp_resample_handle_t* h = nullptr;
+         return n4m_pp_resample_create(&h, 128) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_resample_handle_t*>(h);
+         int64_t oc = n4m_pp_resample_output_cols(H, c.p);
+         if (oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_resample_transform(H, c.X, ov); },
+     PP_D(resample)},
+
+    {"pp_resampler",
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t p) -> void* {
+         auto wl = wavelength_axis(p);
+         n4m_pp_resampler_handle_t* h = nullptr;
+         return n4m_pp_resampler_create(&h, wl.data(), p, 0, 0.0, 0.0, 0, 0.0, 0, 1) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_resampler_handle_t*>(h);
+         /* resampler fits the source→target wavelength map from the source axis */
+         n4m_status_t s = n4m_pp_resampler_fit(H, static_cast<const double*>(c.wl.data), c.p);
+         if (s != N4M_OK) return s;
+         int64_t oc = n4m_pp_resampler_output_cols(H);
+         if (oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_resampler_transform(H, c.X, ov); },
+     PP_D(resampler)},
+
+    {"pp_wavelet",
+     PP_MAKE(wavelet, N4M_PP_WAVELET_HAAR, N4M_PP_WAVELET_BOUNDARY_PERIODIZATION),
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_wavelet_handle_t*>(h);
+         int64_t oc = 0;
+         if (n4m_pp_wavelet_output_cols(H, c.p, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_wavelet_transform(H, c.X, ov); },
+     PP_D(wavelet)},
+
+    {"pp_wavelet_features",
+     PP_MAKE(wavelet_features, N4M_PP_WAVELET_HAAR, N4M_PP_WAVELET_BOUNDARY_PERIODIZATION, 3),
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_wavelet_features_handle_t*>(h);
+         int64_t oc = 0;
+         if (n4m_pp_wavelet_features_output_cols(H, c.p, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_wavelet_features_transform(H, c.X, ov); },
+     PP_D(wavelet_features)},
+
+    {"pp_wavelet_pca",
+     PP_MAKE(wavelet_pca, N4M_PP_WAVELET_HAAR, N4M_PP_WAVELET_BOUNDARY_PERIODIZATION, 3, 5.0),
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_wavelet_pca_handle_t*>(h);
+         n4m_status_t s = n4m_pp_wavelet_pca_fit(H, c.X);
+         if (s != N4M_OK) return s;
+         int64_t oc = 0;
+         if (n4m_pp_wavelet_pca_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_wavelet_pca_transform(H, c.X, ov); },
+     PP_D(wavelet_pca)},
+
+    {"pp_wavelet_svd",
+     PP_MAKE(wavelet_svd, N4M_PP_WAVELET_HAAR, N4M_PP_WAVELET_BOUNDARY_PERIODIZATION, 3, 5.0),
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_wavelet_svd_handle_t*>(h);
+         n4m_status_t s = n4m_pp_wavelet_svd_fit(H, c.X);
+         if (s != N4M_OK) return s;
+         int64_t oc = 0;
+         if (n4m_pp_wavelet_svd_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_wavelet_svd_transform(H, c.X, ov); },
+     PP_D(wavelet_svd)},
+
+    {"pp_flex_pca",
+     PP_MAKE(flex_pca, 5.0),
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_flex_pca_handle_t*>(h);
+         n4m_status_t s = n4m_pp_flex_pca_fit(H, c.X);
+         if (s != N4M_OK) return s;
+         int64_t oc = 0;
+         if (n4m_pp_flex_pca_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_flex_pca_transform(H, c.X, ov); },
+     PP_D(flex_pca)},
+
+    {"pp_flex_svd",
+     PP_MAKE(flex_svd, 5.0),
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_flex_svd_handle_t*>(h);
+         n4m_status_t s = n4m_pp_flex_svd_fit(H, c.X);
+         if (s != N4M_OK) return s;
+         int64_t oc = 0;
+         if (n4m_pp_flex_svd_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_flex_svd_transform(H, c.X, ov); },
+     PP_D(flex_svd)},
+
+    {"pp_fck_static",  /* FCK static transformer (n_kernels = n_orders × n_scales) */
+     [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
+         static const double orders[3] = {0.0, 1.0, 2.0};
+         static const double scales[2] = {1.0, 2.0};
+         n4m_pp_fck_static_handle_t* h = nullptr;
+         return n4m_pp_fck_static_create(&h, 5, orders, 3, scales, 2) == N4M_OK ? h : nullptr; },
+     [](void* h, BenchCtx& c) {
+         auto* H = static_cast<n4m_pp_fck_static_handle_t*>(h);
+         int32_t oc = 0;  /* 6 kernels (3 orders × 2 scales) */
+         if (n4m_pp_fck_static_output_cols(6, static_cast<int32_t>(c.p), &oc) != N4M_OK || oc <= 0)
+             return N4M_ERR_INVALID_ARGUMENT;
+         std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
+         n4m_matrix_view_t ov;
+         n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
+         return n4m_pp_fck_static_transform(H, c.X, ov); },
+     PP_D(fck_static)},
 };
 
 #undef DESTROY

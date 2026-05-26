@@ -61,6 +61,8 @@ DASHBOARD_TO_BENCH = {
     "unsharp_mask": "aug_unsharp_mask",
     "wavelength_shift": "aug_wavelength_shift",
     "wavelength_stretch": "aug_wavelength_stretch",
+    # FCK static transformer: n4m_tests group name is "fck"
+    "fck": "pp_fck_static",
 }
 DEFAULT_FIXTURES = REPO / "benchmarks/cross_binding/results/dashboard_refresh_2026_05_22_n4m_fixtures.csv"
 DEFAULT_OUT = REPO / "benchmarks/cross_binding/results/dashboard_refresh_2026_05_26_donor_timing.csv"
@@ -114,7 +116,10 @@ def main() -> int:
     ap.add_argument("--out-csv", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--sizes", nargs="+", default=["250x50", "50x250"],
                     help="dashboard cell sizes as NxP")
-    ap.add_argument("--runs", type=int, default=40)
+    ap.add_argument("--runs", type=int, default=200,
+                    help="upper bound on timed reps; the bench tool picks the "
+                         "actual count adaptively (more for fast ops, fewer for "
+                         "slow), so this is just the cap for ultra-fast ops")
     ap.add_argument("--seed", type=int, default=1_234_567_890)
     ap.add_argument("--resume-existing", action="store_true",
                     help="skip cells already timed in --out-csv")
