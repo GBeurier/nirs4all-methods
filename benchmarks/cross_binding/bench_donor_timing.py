@@ -176,6 +176,31 @@ def main() -> int:
             continue
         cells.append((r, bench_op))
 
+    # Phase-17 augmenters are rolled into the fixture's single `aug_phase17`
+    # cpp row; give each its individual cpp timing by cloning that base row
+    # (inheriting its correctness verdict). donor_ops is the source of truth
+    # for which ops are on-dashboard but absent from the fixture.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import donor_ops as _D
+    fixture_cpp_algos = {r["algorithm"] for r in fixture_rows if r.get("backend") == "cpp"}
+    phase17_base = {(str(r["n"]), str(r["p"])): r for r in fixture_rows
+                    if r.get("backend") == "cpp" and r["algorithm"] == "aug_phase17"}
+    for spec in _D.all_specs():
+        if not spec.on_dashboard or spec.dashboard_id in fixture_cpp_algos:
+            continue
+        bench_op = DASHBOARD_TO_BENCH.get(spec.dashboard_id, spec.dashboard_id)
+        if bench_op not in timeable:
+            skipped_unmapped.add(spec.dashboard_id)
+            continue
+        for sn, sp in requested_sizes:
+            base = phase17_base.get((sn, sp))
+            if base is None:
+                continue
+            row = dict(base)
+            row["algorithm"] = spec.dashboard_id
+            row["reference_parity_note"] = "inherited from aug_phase17 fixture"
+            cells.append((row, bench_op))
+
     # Resume: keep previously-timed cells; --force re-times everything.
     out: dict[tuple, dict] = {} if args.force else load_existing(args.out_csv)
 

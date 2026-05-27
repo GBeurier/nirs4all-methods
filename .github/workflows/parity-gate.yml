@@ -104,6 +104,19 @@ jobs:
           print("python binding smoke OK from CI")
           PY
 
+      - name: Donor binding + reference integrity gate
+        # Gates that the donor cross-impl registry (donor_ops.py) stays in sync
+        # with `n4m_donor_bench --list`, that the raw n4m.python and idiomatic
+        # n4m.sklearn tiers agree bit-exact, and that the raw binding == the C++
+        # donor bench (via --dump-output). The Layer-3 nirs4all cross-parity
+        # checks skip automatically unless nirs4all is installable.
+        run: |
+          cmake --preset ci-linux-gcc12-release -DN4M_BUILD_BENCH=ON
+          cmake --build --preset ci-linux-gcc12-release --target n4m_donor_bench --parallel
+          pip install pytest
+          pip install nirs4all || echo "nirs4all unavailable — Layer-3 reference checks will skip"
+          pytest benchmarks/cross_binding/tests/test_donor_binding_specs.py -q
+
       - name: Verify parity-reference lockfile matches the registry
         # Structural gate over benchmarks/parity_timing/registry.py. The
         # lockfile records which methods declare a python / r / extra

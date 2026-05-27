@@ -339,25 +339,23 @@ AUG_SPECS: list[DonorOpSpec] = [
          raw=dict(n_control_points=5, gain_lo=0.9, gain_hi=1.1), wl=True),
     _aug("aug_local_clip", "aug_local_clip", "LocalClip",
          raw=dict(n_regions=2, width_lo=3, width_hi=10)),
-    # mixup / scatter_sim are param-exposing (dump-validatable) but are part of
-    # the Phase-17 bundle the fixture rolls up into the single `aug_phase17`
-    # row — they have no individual dashboard row, so on_dashboard=False.
-    _aug("aug_mixup", "aug_mixup", "MixupAugmenter", raw=dict(alpha=0.4), on_dashboard=False),
+    # The Phase-17 augmenters (mixup … moisture) are rolled up into the
+    # fixture's single `aug_phase17` aggregate, but get INDIVIDUAL dashboard
+    # rows here (on_dashboard default True): C++/binding/nirs4all timing is
+    # per-op, raw↔idiom parity is bit-exact, nirs4all is timing-only, and
+    # correctness provenance is the passing aug_phase17 fixture. `build_landing`
+    # hides the aug_phase17 aggregate so the individual rows are the surface.
+    _aug("aug_mixup", "aug_mixup", "MixupAugmenter", raw=dict(alpha=0.4)),
     _aug("aug_local_mixup", "aug_local_mixup", "LocalMixupAugmenter",
-         raw=dict(alpha=0.4, k_neighbors=5), on_dashboard=False),
+         raw=dict(alpha=0.4, k_neighbors=5)),
     # scatter_sim: the four ctor positions map straight onto the ABI create
     # args, so the C++ positional values (0.8, 1.2, -0.05, 0.05) land on
     # (a_low, a_high, b_low, b_high). The dump check proves this mapping.
     _aug("aug_scatter_sim", "aug_scatter_sim", "ScatterSimulationMSC",
-         raw=dict(a_low=0.8, a_high=1.2, b_low=-0.05, b_high=0.05), on_dashboard=False),
+         raw=dict(a_low=0.8, a_high=1.2, b_low=-0.05, b_high=0.05)),
     # --- param-fixed raw fns: idiom reproduces the raw effective values -----
-    # dashboard_id comes from _DASHBOARD_ALIAS; the Phase-17 physical/
-    # environmental augmenters (particle_size … moisture) are bundled into the
-    # fixture's `aug_phase17` row → on_dashboard=False (no individual row).
-    _aug("aug_particle_size", "aug_particle_size", "ParticleSizeAugmenter",
-         wl=True, dump=False, on_dashboard=False),
-    _aug("aug_emsc_distort", "aug_emsc_distort", "EMSCDistortionAugmenter",
-         wl=True, dump=False, on_dashboard=False),
+    _aug("aug_particle_size", "aug_particle_size", "ParticleSizeAugmenter", wl=True, dump=False),
+    _aug("aug_emsc_distort", "aug_emsc_distort", "EMSCDistortionAugmenter", wl=True, dump=False),
     _aug("aug_detector_rolloff", "aug_detector_rolloff", "DetectorRollOffAugmenter", wl=True, dump=False),
     _aug("aug_stray_light", "aug_stray_light", "StrayLightAugmenter", wl=True, dump=False),
     _aug("aug_edge_curve", "aug_edge_curve", "EdgeCurvatureAugmenter", wl=True, dump=False),
@@ -368,24 +366,20 @@ AUG_SPECS: list[DonorOpSpec] = [
     _aug("aug_spline_y_perturb", "aug_spline_y_perturb", "SplineYPerturbationAugmenter", dump=False),
     _aug("aug_rotate_translate", "aug_rotate_translate", "RotateTranslateAugmenter", dump=False),
     _aug("aug_random_x_op", "aug_random_x_op", "RandomXOperation", dump=False),
-    # param-fixed AND Phase-17 bundled (idiom kwargs reproduce the raw fixed
-    # configuration; on_dashboard=False):
+    # param-fixed (idiom kwargs reproduce the raw fixed configuration):
     _aug("aug_batch_effect", "aug_batch_effect", "BatchEffectAugmenter", wl=True, dump=False,
-         on_dashboard=False,
          idiom=dict(offset_std=0.02, slope_std=0.01, gain_std=0.03, variation_scope=0)),
     _aug("aug_instrument_broaden", "aug_instrument_broaden", "InstrumentalBroadeningAugmenter",
-         wl=True, dump=False, on_dashboard=False,
+         wl=True, dump=False,
          idiom=dict(fwhm=3.0, use_fwhm_range=False, fwhm_low=3.0, fwhm_high=8.0, variation_scope=0)),
-    _aug("aug_dead_band", "aug_dead_band", "DeadBandAugmenter", dump=False, on_dashboard=False,
+    _aug("aug_dead_band", "aug_dead_band", "DeadBandAugmenter", dump=False,
          idiom=dict(n_bands=1, width_low=5, width_high=10, noise_std=0.05,
                     probability=1.0, variation_scope=0)),
     _aug("aug_temperature", "aug_temperature", "TemperatureAugmenter", wl=True, dump=False,
-         on_dashboard=False,
          idiom=dict(temperature_delta=5.0, use_temp_range=False, temp_low=-5.0, temp_high=5.0,
                     enable_shift=True, enable_intensity=True, enable_broadening=True,
                     region_specific=True)),
     _aug("aug_moisture", "aug_moisture", "MoistureAugmenter", wl=True, dump=False,
-         on_dashboard=False,
          idiom=dict(water_activity_delta=0.1, use_aw_range=False, aw_low=0.0, aw_high=1.0,
                     reference_water_activity=0.5, free_water_fraction=0.3, bound_water_shift=25.0,
                     moisture_content=0.10, enable_shift=True, enable_intensity=True)),
@@ -742,6 +736,24 @@ _N4_EXPECTED_DIVERGENCE: dict[str, str] = {
     "split_spxy_fold": "fold-0 assignment differs from n4m",
     "split_spxy_g_fold": "group fold-0 assignment differs from n4m",
 }
+
+# Donor methods deliberately NOT timed at any layer (parity-only). They are not
+# in `n4m_donor_bench --list` (the registry == --list), so they never reach the
+# binding or reference pipelines; the dashboard keeps their fixture parity row:
+#   - filter_composite  — needs externally-owned sub-filters (no standalone op)
+#   - pp_epo            — a synthetic spectrum yields a degenerate EPO projection
+#   - filter_y_outlier_constant_input / _nan_exclusion — validation-only scenarios
+#
+# Second references (scipy / sklearn / R / Julia) are intentionally NOT added:
+# nirs4all is the universal donor baseline and already wraps scipy/sklearn for
+# the common ops (savgol→scipy, pca/isolation_forest/lof→sklearn), so a separate
+# scipy/sklearn column would mostly measure "without the nirs4all wrapper", not
+# an independent algorithm. The only future exception worth adding is a TRUE
+# independent implementation (e.g. R `prospectr` Kennard-Stone/SPXY).
+PARITY_ONLY_DONOR_METHODS = (
+    "filter_composite", "pp_epo",
+    "filter_y_outlier_constant_input", "filter_y_outlier_nan_exclusion",
+)
 
 
 def reference_for(spec: DonorOpSpec) -> Optional[ReferenceSpec]:

@@ -881,6 +881,41 @@ def build_payload(results_dir: Path) -> dict:
         for r in preferred.values()
     }
 
+    # Layer-3 overlay (donor-only, field-only): surface the LIVE n4m↔nirs4all
+    # cross-parity on the donor n4m cells. The canonical `ref_python_nirs4all`
+    # donor row carries the live verdict but suppresses its own δ (basis=self),
+    # so copy its reference_parity_* fields onto the same donor method's n4m
+    # rows (cpp + python tiers) at the same size. No timing changes, no PLS
+    # rows (gated on the donor_ops dashboard-id set; degrades gracefully if
+    # donor_ops is unavailable, e.g. a docs-only build).
+    try:
+        import sys as _sys
+        _cb = Path(__file__).resolve().parents[2] / "benchmarks" / "cross_binding"
+        if str(_cb) not in _sys.path:
+            _sys.path.insert(0, str(_cb))
+        import donor_ops as _donor
+        _donor_algos = {s.dashboard_id for s in _donor.all_specs()}
+    except Exception:
+        _donor_algos = set()
+    if _donor_algos:
+        _ref_fields = ("reference_parity_ref", "reference_parity_rmse_abs",
+                       "reference_parity_rmse_rel", "reference_parity_ok",
+                       "reference_parity_note")
+        _live = {(r["algorithm"], int(r["n"]), int(r["p"]), int(r["threads"])): r
+                 for r in seen.values()
+                 if r.get("backend") == "ref_python_nirs4all"
+                 and r.get("algorithm") in _donor_algos}
+        _n4m_be = {"cpp", "python_tier1", "python_tier2"}
+        for r in seen.values():
+            if r.get("backend") not in _n4m_be or r.get("algorithm") not in _donor_algos:
+                continue
+            src = _live.get((r["algorithm"], int(r["n"]), int(r["p"]), int(r["threads"])))
+            if src is None:
+                continue
+            for f in _ref_fields:
+                if str(src.get(f, "")).strip():
+                    r[f] = src[f]
+
     # Collect columns actually present. Track the backend(s) that
     # contributed to each column id so the column metadata builder can
     # tell when a registry-driven `ref_*` row collapsed onto a legacy
@@ -1017,7 +1052,13 @@ def build_payload(results_dir: Path) -> dict:
     # so the dashboard surfaces the "this algo is unimplemented
     # everywhere" case (e.g. ds, pds, pls_cox, weighted_pls).
     pivot: dict[tuple, dict] = defaultdict(dict)
+    # Non-method aggregates rolled out into individual rows elsewhere — hide
+    # them so they don't double-count (the 10 Phase-17 augmenters now have
+    # individual rows; `aug_phase17` was their fixture bundle).
+    hidden_aggregates = {"aug_phase17"}
     for r in seen.values():
+        if r.get("algorithm") in hidden_aggregates:
+            continue
         n = int(r["n"]); p_ = int(r["p"]); t = int(r["threads"])
         rkey = (r["algorithm"], n, p_, t)
         if rkey not in pivot:
@@ -1292,7 +1333,6 @@ def build_payload(results_dir: Path) -> dict:
     by_group = defaultdict(list)
     for c in columns:
         by_group[c["group"]].append(c["id"])
-    pls4all_groups = ("cpp", "python", "r", "matlab")
 
     def by_lang(lang_value: str) -> list:
         """All columns (pls4all bindings + externals) for a host language,
@@ -1305,6 +1345,9 @@ def build_payload(results_dir: Path) -> dict:
         # add the canonical registry column too — it's the new "pls4all"
         # entry point in the registry-driven runs
         "pls4all.registry",
+        # nirs4all: the universal donor reference (Layer 3) — default-visible
+        # so the donor cross-impl timing + parity is surfaced out of the box.
+        "nirs4all",
         "sklearn", "pls", "plsregress",
     ]
     headline = [c for c in headline_candidates if c and c in all_cols]

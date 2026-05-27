@@ -32,16 +32,16 @@ ALLOWED_IDIOM_REASONS = {D.NO_ESTIMATOR, D.SEMANTIC_MISMATCH, D.BINDING_DEFERRED
 
 
 def _find_bench() -> tuple[Path, Path] | None:
-    """Return (n4m_donor_bench, libn4m) for a build that has both, or None.
+    """Return (n4m_donor_bench, libn4m) for any build that has both, or None.
 
-    Prefers dev-release (cheapest CI build); the lib is matched to the binary's
-    build so the dump comparison is bit-exact.
+    Globs every `build/*/` dir (so it finds whatever the local dev or CI
+    preset produced); the lib is matched to the binary's own build so the
+    dump comparison is bit-exact.
     """
-    for tier in ("dev-release", "blas-omp", "blas-on", "omp-on", "dev-debug"):
-        binary = REPO / f"build/{tier}/bench/cpp/n4m_donor_bench"
-        libs = sorted((REPO / f"build/{tier}/cpp/src").glob("libn4m.so.*"))
-        libs = [p for p in libs if p.name.count(".") >= 3]  # libn4m.so.X.Y.Z
-        if binary.exists() and libs:
+    for binary in sorted(REPO.glob("build/*/bench/cpp/n4m_donor_bench")):
+        src = binary.parents[2] / "cpp" / "src"        # build/<tier>/cpp/src
+        libs = [p for p in sorted(src.glob("libn4m.so.*")) if p.name.count(".") >= 3]
+        if libs:
             return binary, libs[0]
     return None
 
