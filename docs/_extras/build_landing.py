@@ -902,7 +902,7 @@ def build_payload(results_dir: Path) -> dict:
     if _donor_algos:
         _ref_fields = ("reference_parity_ref", "reference_parity_rmse_abs",
                        "reference_parity_rmse_rel", "reference_parity_ok",
-                       "reference_parity_note")
+                       "reference_parity_note", "reference_parity_tolerance")
         _live = {(r["algorithm"], int(r["n"]), int(r["p"]), int(r["threads"])): r
                  for r in seen.values()
                  if r.get("backend") == "ref_python_nirs4all"
