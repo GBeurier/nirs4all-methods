@@ -133,3 +133,7 @@ docs/_build/
 # Self-consistency gate run artifact (verdict JSON; the gate is the exit code,
 # nothing consumes the file — regenerated each `make parity-paper-only`).
 parity/results/self_consistency.json
+
+# Generated dual-package dirs (bindings/python/scripts/make_python_package.py)
+bindings/python_nirs4all_methods/
+bindings/python_pls4all/

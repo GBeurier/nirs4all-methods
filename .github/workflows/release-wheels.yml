@@ -40,13 +40,15 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+'
 
-# This workflow is currently INACTIVE because cibuildwheel needs the M9/M10
-# scaffolds to be activated first (vendored sources + setup.py / pyproject
-# in their final form). Gate via `if:` to make the dry-run intent explicit:
+# ACTIVE: the per-package build machinery is in place — prepare_wheel_packages.sh
+# builds libn4m, generates the two self-contained package dirs
+# (make_python_package.py: nirs4all-methods=full n4m, pls4all=slim), and stages
+# libn4m into each. Verified locally on Linux (both wheels build/install/import);
+# macOS/Windows/aarch64 build on this matrix. Publish is input-gated below and
+# uses PyPI Trusted Publishing (one-time maintainer setup of the publisher).
 jobs:
   matrix:
     name: ${{ matrix.package }} / ${{ matrix.os }} / ${{ matrix.arch }}
-    if: false  # M15 SCAFFOLD ONLY — flip to true once M5+M6+M9+M10 land.
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -85,9 +87,15 @@ jobs:
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-*
           CIBW_SKIP: "*-musllinux_*"
-          CIBW_BEFORE_BUILD: |
-            python -m pip install setuptools wheel
-            python catalog/scripts/render_subset.py ${{ matrix.package == 'pls4all' && 'pls4all' || 'nirs4all_methods' }} --copy
+          # Once per platform (in the build container): build libn4m, generate the
+          # two self-contained package dirs (make_python_package.py), and stage
+          # libn4m into each module's lib/. Verified locally on Linux: both wheels
+          # build, install, and import (nirs4all-methods ships n4m + libn4m;
+          # pls4all ships the slim PLS module only).
+          CIBW_BEFORE_ALL_LINUX:   bash bindings/python/scripts/prepare_wheel_packages.sh
+          CIBW_BEFORE_ALL_MACOS:   bash bindings/python/scripts/prepare_wheel_packages.sh
+          CIBW_BEFORE_ALL_WINDOWS: bash bindings/python/scripts/prepare_wheel_packages.sh
+          CIBW_BEFORE_BUILD: python -m pip install setuptools wheel
           CIBW_TEST_REQUIRES: pytest numpy
           CIBW_TEST_COMMAND: pytest {project}/bindings/python_${{ matrix.package == 'pls4all' && 'pls4all' || 'nirs4all_methods' }}/tests
 
@@ -99,7 +107,10 @@ jobs:
   publish:
     name: Publish to PyPI
     needs: matrix
-    if: github.event.inputs.publish == 'true' && false  # M15 SCAFFOLD — flip once activated
+    # Input-gated: only on an explicit workflow_dispatch with publish=true. Uses
+    # PyPI Trusted Publishing (id-token below) — requires the one-time publisher
+    # setup for nirs4all-methods + pls4all on PyPI.
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true'
     runs-on: ubuntu-latest
     environment:
       name: pypi
