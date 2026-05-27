@@ -1,23 +1,18 @@
-# Cross-binding parity — harness + Python self-consistency smoke.
+# Cross-binding parity — the "one C ABI → identical numbers across bindings" gate.
 #
-# HONEST SCOPE: this CI job is NOT the full cross-binding parity proof. The
-# `cpp` baseline and `python_tier1` both route through the same
-# `MethodSpec.pls4all_fn` ctypes path (see the bench_python_tier1.py header), so
-# requiring only Python here proves the harness runs and the Python path
-# reproduces the canonical registry call deterministically — a smoke check, not
-# a cross-LANGUAGE guarantee.
-#
-# The real cross-language gate (R / Octave / JS reproduce the C++ core) is
-# delivered by the SAME script (benchmarks/cross_binding/ci_parity_gate.py) and
-# is validated locally / pre-release at rmse_rel <= 2.5e-15. It is not in CI yet
-# because those bindings have no CI-buildable packaging:
-#   - R   : bindings/r/n4m src/Makevars still references the pre-rename vendored
-#           tree, so the package does not build standalone in CI (see the note
-#           atop release-r.yml).
-#   - Octave: the +pls4all MEX dispatcher needs an equivalent CI build step.
-#   - JS  : no benchmarks/cross_binding/scripts/bench_js.* driver yet (WASM).
-# When a binding's CI build lands, install its toolchain here and add it to
-# --require to promote it from local-only to a hard CI gate.
+# Each binding builds against libn4m and runs its parity test in its own job:
+#   - harness-and-python-smoke : the parity harness + Python self-consistency
+#       smoke (the `cpp` baseline and `python_tier1` share the same
+#       MethodSpec.pls4all_fn ctypes path, so this leg is a harness/determinism
+#       check, not a cross-LANGUAGE proof — that's what the other jobs provide).
+#   - js-wasm     : Emscripten WASM build + npm smoke/parity (rmse_rel ~1e-16).
+#   - octave-mex  : +pls4all MEX build + test_parity (rmse_rel ~4e-16).
+#   - r-binding   : standalone R CMD INSTALL (configure + prebuilt-link) +
+#                   test_parity.R (rmse_rel ~9.4e-18).
+# All four legs were verified locally before wiring. MATLAB stays manual (no
+# licensed runner — bindings/matlab/COMPAT.md). The CRAN self-contained R build
+# and the multi-platform wheels remain separate, deferred release paths
+# (release-r.yml / release-wheels.yml).
 name: Cross-binding parity
 
 on:
@@ -153,3 +148,36 @@ jobs:
         run: |
           octave --no-gui --no-history --eval "cd bindings/matlab; build_mex"
           octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_parity"
+
+  r-binding:
+    # R binding: build libn4m, install the package standalone (configure +
+    # prebuilt-link Makevars), run the parity test. Verified locally:
+    # R CMD INSTALL succeeds + test_parity.R gives rmse_rel ~9.4e-18. This is the
+    # dev/CI build path; the CRAN self-contained vendored build stays separate
+    # (release-r.yml, manual). MATLAB stays manual (COMPAT.md).
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+
+      - name: Install build toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
+
+      - name: Build libn4m (Linux gcc-12 Release)
+        run: |
+          cmake --preset ci-linux-gcc12-release
+          cmake --build --preset ci-linux-gcc12-release --parallel
+
+      - name: R CMD INSTALL (standalone, prebuilt-link) + parity
+        env:
+          PLS4ALL_LIB_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
+          PLS4ALL_GENERATED_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/generated
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
+        run: |
+          R CMD INSTALL --no-multiarch --no-staged-install bindings/r/n4m
+          Rscript bindings/r/test_parity.R
