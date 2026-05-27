@@ -12,8 +12,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "$ROOT"
 
+# Windows runners (setup-python) provide `python`, not `python3`; Linux/macOS
+# provide `python3`. Resolve whichever exists.
+PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python)}"
+
 bash bindings/python/scripts/build_libn4m_in_wheel.sh
-python3 bindings/python/scripts/make_python_package.py --all
+"${PYTHON_BIN}" bindings/python/scripts/make_python_package.py --all
 
 stage() {  # <module> <generated-dir>
     mkdir -p "bindings/$2/src/$1/lib"

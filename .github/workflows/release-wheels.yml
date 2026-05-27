@@ -12,14 +12,13 @@
 #   - macOS:    delocate-wheel    → bundle libn4m.dylib
 #   - Windows:  delvewheel repair → bundle libn4m.dll
 #
-# Status: scaffold — pipeline declared, NOT activated. Activation happens
-# after M5+M6 (ABI rename) + M9+M10 (Python packages) land their build
-# glue. The current pls4all main has its own release pipeline at PRs
-# #1/#2/#3 (release/m0-baseline → m1-pypi → m2-cran) which M15 absorbs.
+# Status: ACTIVE. Builds run on tags / workflow_dispatch; the publish job is
+# input-gated (workflow_dispatch + publish=true).
 #
-# Required secrets (set up in M15 focused session, before any v1.0.0 tag):
-#   PYPI_TOKEN_NIRS4ALL_METHODS    — Trusted Publishing for nirs4all-methods
-#   PYPI_TOKEN_PLS4ALL             — Trusted Publishing for pls4all (slim)
+# Publishing uses PyPI Trusted Publishing (no API tokens). One-time maintainer
+# setup on PyPI for BOTH project names (nirs4all-methods, pls4all): owner/repo,
+# workflow file `release-wheels.yml`, environment `pypi`. A single Trusted
+# Publisher can cover both projects.
 
 name: release-wheels
 
@@ -36,9 +35,10 @@ on:
         type: boolean
         default: false
   push:
+    # GitHub tag filters are globs, not regex — '+' is literal there, so
+    # 'v[0-9]+.[0-9]+.[0-9]+' never matches v0.98.0. Use '*' wildcards.
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+'
+      - 'v[0-9]*.[0-9]*.[0-9]*'
 
 # ACTIVE: the per-package build machinery is in place — prepare_wheel_packages.sh
 # builds libn4m, generates the two self-contained package dirs
@@ -74,28 +74,56 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
       - name: Set up QEMU (Linux aarch64)
         if: runner.os == 'Linux' && matrix.arch == 'aarch64'
         uses: docker/setup-qemu-action@v3
 
+      # The two package dirs are generated and gitignored, so they must exist
+      # before cibuildwheel reads `package-dir`/pyproject.toml. Materialize them
+      # here METADATA-ONLY — make_python_package.py excludes lib/ (staged at
+      # build time), so this needs no compiler/toolchain on any OS. libn4m is
+      # built + staged inside each build env by CIBW_BEFORE_ALL (in the
+      # manylinux container on Linux) so the bundled lib matches the wheel.
+      - name: Materialize package dirs (metadata only)
+        run: python bindings/python/scripts/make_python_package.py --all
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3
+        with:
+          package-dir: bindings/python_${{ matrix.package == 'pls4all' && 'pls4all' || 'nirs4all_methods' }}
         env:
-          CIBW_PACKAGE_DIR: bindings/python_${{ matrix.package == 'pls4all' && 'pls4all' || 'nirs4all_methods' }}
           CIBW_ARCHS_LINUX:   ${{ matrix.arch }}
           CIBW_ARCHS_MACOS:   ${{ matrix.arch }}
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-*
           CIBW_SKIP: "*-musllinux_*"
-          # Once per platform (in the build container): build libn4m, generate the
-          # two self-contained package dirs (make_python_package.py), and stage
-          # libn4m into each module's lib/. Verified locally on Linux: both wheels
-          # build, install, and import (nirs4all-methods ships n4m + libn4m;
-          # pls4all ships the slim PLS module only).
+          # cibuildwheel 2.21.3 pins its build deps; `latest` lets the generated
+          # pyprojects' packaging>=24.2 requirement resolve.
+          CIBW_DEPENDENCY_VERSIONS: latest
+          CIBW_MANYLINUX_X86_64_IMAGE:  manylinux_2_28
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+          # Windows builds libn4m with the MSVC preset (Visual Studio generator,
+          # finds the toolchain itself); Linux/macOS use the default dev-release.
+          # This propagates to CIBW_BEFORE_ALL on the host-built platforms;
+          # the Linux container uses build_libn4m_in_wheel.sh's dev-release default.
+          PLS4ALL_BUILD_PRESET: ${{ runner.os == 'Windows' && 'ci-windows-msvc-release' || 'dev-release' }}
+          # Rebuild + re-stage libn4m inside each build environment so the bundled
+          # lib matches the wheel (in-container glibc on Linux).
           CIBW_BEFORE_ALL_LINUX:   bash bindings/python/scripts/prepare_wheel_packages.sh
           CIBW_BEFORE_ALL_MACOS:   bash bindings/python/scripts/prepare_wheel_packages.sh
           CIBW_BEFORE_ALL_WINDOWS: bash bindings/python/scripts/prepare_wheel_packages.sh
           CIBW_BEFORE_BUILD: python -m pip install setuptools wheel
+          # delvewheel is not bundled by cibuildwheel; install it for the Windows
+          # repair (this override replaces the generic CIBW_BEFORE_BUILD on Windows).
+          CIBW_BEFORE_BUILD_WINDOWS: python -m pip install setuptools wheel delvewheel
+          # libn4m is loaded via ctypes (not linked by any extension), so the
+          # Windows repair needs --analyze-existing to discover + vendor the DLL.
+          # Linux auditwheel / macOS delocate already pick up the bundled lib.
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --analyze-existing -w {dest_dir} -v {wheel}"
           CIBW_TEST_REQUIRES: pytest numpy
           CIBW_TEST_COMMAND: pytest {project}/bindings/python_${{ matrix.package == 'pls4all' && 'pls4all' || 'nirs4all_methods' }}/tests
 

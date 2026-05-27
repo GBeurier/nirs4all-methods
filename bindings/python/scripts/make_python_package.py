@@ -83,12 +83,14 @@ def generate(name: str) -> Path:
         name=name, version=_version(), module=module, description=spec["description"]))
     # Per-module smoke test (cibuildwheel CIBW_TEST_COMMAND target).
     (out / "tests").mkdir()
+    # abi_version() forces the embedded libn4m to load and respond, and is
+    # exposed by both modules (the slim pls4all subset has no `python`
+    # submodule, so importing it directly would fail there).
     (out / "tests" / "test_import.py").write_text(
         f'def test_import_and_load():\n'
         f'    import {module}\n'
         f'    assert {module}.__version__\n'
-        f'    from {module} import python  # loads the embedded libn4m\n'
-        f'    assert python is not None\n')
+        f'    assert {module}.abi_version()  # loads + queries the embedded libn4m\n')
     print(f"generated {out.relative_to(REPO)}  (name={name}, module={module})")
     return out
 

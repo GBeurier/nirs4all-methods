@@ -103,8 +103,6 @@ from .sklearn import (
 from .sklearn import *  # noqa: F403 - re-export full sklearn-style surface
 from .sklearn import __all__ as _sklearn_all
 
-__version__ = "0.1.0"
-
 
 def version() -> str:
     """Return the runtime libn4m version string, e.g. ``0.1.0+abi.1.9.0``."""
@@ -209,3 +207,8 @@ __all__ = [
 ]
 
 __all__ = sorted(set(__all__) | set(_sklearn_all))
+
+# Derive __version__ from the loaded native library so it stays in sync with the
+# C ABI version_string (shape "X.Y.Z+abi.A.B.C") — strip the "+abi.*" suffix.
+# Mirrors the pls4all subset; avoids a hardcoded version drifting from the lib.
+__version__ = version().split("+", 1)[0]

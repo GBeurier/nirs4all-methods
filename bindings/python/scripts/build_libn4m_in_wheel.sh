@@ -42,8 +42,11 @@ echo "::group::ensure cmake + ninja are present"
 # via pip is a no-op when the binaries already exist and gives us one
 # deterministic source. The pip wheels for cmake/ninja install entry-point
 # scripts onto PATH that `cmake --preset` picks up regardless of host.
-python3 -m pip install --quiet --upgrade pip
-python3 -m pip install --quiet "cmake>=3.21,<5" "ninja>=1.11"
+# Windows runners (setup-python) provide `python`, not `python3`; Linux/macOS
+# provide `python3`. Resolve whichever exists.
+PYTHON_BIN="${PYTHON_BIN:-$(command -v python3 || command -v python)}"
+"${PYTHON_BIN}" -m pip install --quiet --upgrade pip
+"${PYTHON_BIN}" -m pip install --quiet "cmake>=3.21,<5" "ninja>=1.11"
 echo "  cmake : $(command -v cmake) — $(cmake --version | head -n1)"
 echo "  ninja : $(command -v ninja) — $(ninja --version)"
 echo "::endgroup::"

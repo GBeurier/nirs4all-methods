@@ -51,6 +51,7 @@ env/
 dist/
 sdist/
 wheels/
+wheelhouse/
 
 # ============================================================
 # R (binding + parity generator)
