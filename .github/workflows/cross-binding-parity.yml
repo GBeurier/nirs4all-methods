@@ -123,3 +123,33 @@ jobs:
           npm run stage:wasm     # copy p4a.{js,wasm} into dist/
           npm test               # WASM smoke + parity vs native (rmse_rel ~1e-16)
           npm pack --dry-run     # confirm dist/p4a.{js,wasm} ship
+
+  octave-mex:
+    # Octave binding: build libn4m, compile the +pls4all MEX shims (build_mex.m),
+    # run the parity test. Verified locally (MEX compiles, test_parity PASS at
+    # rmse_rel ~4e-16); CI uses apt Octave (clean mkoctfile + system gcc, none of
+    # the conda-octave quirks). MATLAB stays manual (no licensed runner — COMPAT.md).
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain + Octave
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-12 g++-12 ninja-build cmake octave liboctave-dev
+
+      - name: Build libn4m (Linux gcc-12 Release)
+        run: |
+          cmake --preset ci-linux-gcc12-release
+          cmake --build --preset ci-linux-gcc12-release --parallel
+
+      - name: Build the Octave MEX + run the parity test
+        env:
+          PLS4ALL_INCLUDE_DIR: ${{ github.workspace }}/cpp/include
+          PLS4ALL_GENERATED_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/generated
+          PLS4ALL_LIB_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
+        run: |
+          octave --no-gui --no-history --eval "cd bindings/matlab; build_mex"
+          octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_parity"
