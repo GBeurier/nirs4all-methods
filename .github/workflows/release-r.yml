@@ -4,18 +4,17 @@
 # --------
 # - workflow_dispatch → on-demand R CMD check + tarball build.
 #
-# NOTE: The R CRAN package is a Phase-F deliverable and is NOT yet wired for an
-# isolated build — its src/Makevars still references a pre-rename vendored
-# `libp4a/` tree (no committed sources, old PLS4ALL_STATIC/p4a_export.h macros,
-# a flat core/*.cpp glob that cannot match the current nested C/C++/Fortran
-# layout). Until that vendoring is implemented, this workflow is **manual-only**
-# so it does not gate the cpp/Python core CI on an incomplete binding. Re-enable
-# the push/pull_request/tag triggers once `bindings/r/n4m` builds standalone.
+# The package builds standalone via the vendored configure mode (N4M_R_VENDOR=1,
+# set below): ./configure copies the full libn4m C/C++/Fortran core + the static
+# n4m_export.h into src/vendor/ and compiles it into a self-contained n4m.so (no
+# external libn4m). Verified locally: 221 TUs + Fortran build, test_parity.R
+# rmse_rel ~9.4e-18, ldd shows no external libn4m. Kept manual (workflow_dispatch)
+# because the --as-cran matrix + 221-TU compile is heavy; the fast prebuilt-link
+# R build runs on every push via cross-binding-parity.yml.
 #
-# CRAN submission itself is a manual web-form step at
-# https://cran.r-project.org/submit.html — that's the irreducible
-# human part. This workflow produces and validates the tarball; the
-# maintainer downloads the tarball from the workflow run and submits.
+# CRAN submission itself is the irreducible manual web-form step at
+# https://cran.r-project.org/submit.html — this workflow produces + validates the
+# self-contained tarball; the maintainer downloads it from the run and submits.
 
 name: release-r
 
@@ -54,6 +53,9 @@ jobs:
             r_version: "release"
     env:
       R_KEEP_PKG_SOURCE: yes
+      # CRAN self-contained build: ./configure vendors the libn4m core into
+      # src/vendor/ and compiles it statically (no external libn4m).
+      N4M_R_VENDOR: "1"
       # Some R CMD check stages need DESCRIPTION's URL fields to be
       # reachable; this CI builds offline-only, so disable that one
       # incoming-feasibility sub-check.
@@ -120,6 +122,15 @@ jobs:
         with:
           working-directory: bindings/r/n4m
           extra-packages: any::knitr any::rmarkdown
+
+      - name: Vendor the libn4m core into src/vendor (self-contained tarball)
+        working-directory: bindings/r/n4m
+        env:
+          N4M_R_VENDOR: "1"
+        # ./configure copies the full C/C++/Fortran core + the static export
+        # header from the checkout into src/vendor/, so the source tarball is
+        # self-contained (no external libn4m; CRAN's farm compiles from source).
+        run: ./configure
 
       - name: R CMD build (produces n4m_${VER}.tar.gz)
         working-directory: bindings/r/n4m

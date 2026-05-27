@@ -13,3 +13,4 @@
 ^src/.*\.a$
 ^src/Makevars\.local$
 ^src/symbols\.rds$
+^src/Makevars$

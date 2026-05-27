@@ -31,18 +31,25 @@ VENDORED_PRESENT=0
 [ -d "$VENDOR/cpp/src/core" ] && VENDORED_PRESENT=1
 
 if [ "${N4M_R_VENDOR:-0}" = "1" ] || [ "$VENDORED_PRESENT" = "1" ]; then
-    if [ "$VENDORED_PRESENT" = "0" ]; then
-        # In-repo vendoring: copy the C/C++/Fortran core + headers + the
-        # generated export header from the checkout into src/vendor/.
+    if [ "${N4M_R_VENDOR:-0}" = "1" ]; then
+        # In-repo vendoring (forced): (re)copy the C/C++/Fortran core + headers +
+        # the export header from the checkout into src/vendor/ (always fresh).
+        # Export header: prefer the cmake-generated copy; else fall back to the
+        # static template (cpp/include/n4m/n4m_export.h.in has no @-substitutions),
+        # so vendoring needs NO cmake — just the source tree.
+        EXPORT_HDR=""
         GEN="${PLS4ALL_GENERATED_DIR:-$REPO/build/dev-release/generated}"
-        if [ ! -f "$GEN/n4m/n4m_export.h" ]; then
+        if [ -f "$GEN/n4m/n4m_export.h" ]; then
+            EXPORT_HDR="$GEN/n4m/n4m_export.h"
+        else
             for d in "$REPO"/build/*/generated; do
-                [ -f "$d/n4m/n4m_export.h" ] && GEN="$d" && break
+                [ -f "$d/n4m/n4m_export.h" ] && EXPORT_HDR="$d/n4m/n4m_export.h" && break
             done
         fi
-        if [ ! -f "$GEN/n4m/n4m_export.h" ]; then
-            echo "n4m configure(vendor): ERROR — generated n4m/n4m_export.h not found." >&2
-            echo "  Run cmake --preset dev-release once (generates it), or set PLS4ALL_GENERATED_DIR." >&2
+        [ -z "$EXPORT_HDR" ] && [ -f "$REPO/cpp/include/n4m/n4m_export.h.in" ] \
+            && EXPORT_HDR="$REPO/cpp/include/n4m/n4m_export.h.in"
+        if [ -z "$EXPORT_HDR" ]; then
+            echo "n4m configure(vendor): ERROR — no n4m_export.h (generated) or .in template found." >&2
             exit 1
         fi
         echo "n4m configure: CRAN self-contained build — vendoring sources from the checkout"
@@ -51,7 +58,7 @@ if [ "${N4M_R_VENDOR:-0}" = "1" ] || [ "$VENDORED_PRESENT" = "1" ]; then
         cp -R "$REPO/cpp/src/core"    "$VENDOR/cpp/src/core"
         cp -R "$REPO/cpp/src/c_api"   "$VENDOR/cpp/src/c_api"
         cp -R "$REPO/cpp/include/n4m" "$VENDOR/cpp/include/n4m"
-        cp "$GEN/n4m/n4m_export.h"    "$VENDOR/generated/n4m/n4m_export.h"
+        cp "$EXPORT_HDR"              "$VENDOR/generated/n4m/n4m_export.h"
     else
         echo "n4m configure: CRAN self-contained build — using vendored sources from the tarball"
     fi
