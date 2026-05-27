@@ -85,3 +85,41 @@ jobs:
         run: |
           python parity/generators/run.py \
             --method all --check --lib-dir build/ci-linux-gcc12-release/cpp/src
+
+  js-wasm:
+    # JS/WASM binding: build the Emscripten module, build + stage + smoke-test the
+    # npm package. The build STEPS are verified locally (npm run build clean,
+    # npm test parity rmse_rel ~1e-16, npm pack ships dist/p4a.{js,wasm}); the
+    # CI-specific piece is the standard setup-emsdk action (emsdk pinned to 3.1.74
+    # to match .devcontainer/Dockerfile). This is the JS leg of the cross-binding
+    # promise (one C ABI → identical numbers in WASM).
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build cmake
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.74
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build the WASM module (emscripten preset)
+        run: |
+          cmake --preset emscripten
+          cmake --build --preset emscripten --target pls4all_wasm
+
+      - name: Build + stage + smoke the JS binding
+        working-directory: bindings/js
+        run: |
+          npm install
+          npm run build          # tsc — must compile clean
+          npm run stage:wasm     # copy p4a.{js,wasm} into dist/
+          npm test               # WASM smoke + parity vs native (rmse_rel ~1e-16)
+          npm pack --dry-run     # confirm dist/p4a.{js,wasm} ship
