@@ -78,3 +78,23 @@ clarification that the algorithms are derived from BSD-3-licensed
 reference implementations; the C code itself is original.
 ```
 
+
+## NumPy random (PCG64 / SeedSequence / Ziggurat / bounded + choice samplers)  (SPDX: BSD-3-Clause)
+
+**Upstream**: https://github.com/numpy/numpy (numpy/random)
+**Reproduced in**: `cpp/src/core/common/rng_pcg64.c`, `ziggurat*.{c,h}`,
+`cpp/src/core/augmentation/aug_rng_utils.c`
+**Notes**: The PCG64 bit generator, the NumPy `SeedSequence` pool expansion,
+the Ziggurat standard-normal sampler and its constants, and the bounded-integer
+and `choice(replace=False)` samplers reproduce NumPy's `numpy.random`
+algorithms and constants for bit-exact parity (verified by the parity
+fixtures + `n4m_internal_tests`). They are independent C reimplementations —
+no NumPy source is copied verbatim — derived under BSD-3 attribution. The PCG
+family is by Melissa O'Neill (https://www.pcg-random.org/).
+
+```
+Copyright (c) 2005-2024, NumPy Developers.
+Licensed under the BSD-3-Clause license; the algorithms reproduced here are
+attributed to the NumPy project. The n4m source files are CECILL-2.1 (see the
+repository LICENSE); BSD-3 is permissive and compatible.
+```

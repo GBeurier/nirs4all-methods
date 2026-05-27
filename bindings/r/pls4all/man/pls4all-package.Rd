@@ -4,12 +4,14 @@
 \name{pls4all-package}
 \alias{pls4all-package}
 \alias{pls4all}
-\title{pls4all: portable Partial Least Squares and NIRS engine}
+\title{pls4all: Partial Least Squares engine (PLS-core subset of nirs4all-methods)}
 \description{
-Implements a portable Partial Least Squares (PLS) and Near-Infrared
-Spectroscopy (NIRS) engine. The C++17 numerical core is vendored under
-the package's `src/vendor/` and compiled from source at install time;
-no external system library is required.
+The slim, PLS-focused distribution of the nirs4all-methods engine: every
+method built on the shared PLS core (NIPALS, SIMPLS, kernel, ...). The C++17
+numerical core is vendored under the package's `src/vendor/` and compiled from
+source at install time; no external system library is required. The
+spectroscopy surface (preprocessing, augmentation, filters, signal-type) lives
+in the full nirs4all-methods distribution.
 }
 \details{
 The package exposes:

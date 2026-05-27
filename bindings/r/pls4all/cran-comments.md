@@ -3,8 +3,9 @@
 ## Submission summary
 
 * This is a **new submission** to CRAN.
-* `pls4all` 0.98.0 — a portable Partial Least Squares (PLS) and
-  Near-Infrared Spectroscopy (NIRS) engine. The C++17/C/Fortran numerical
+* `pls4all` 0.98.0 — a portable Partial Least Squares engine for chemometrics:
+  the slim, PLS-focused distribution carved from the nirs4all-methods library
+  (every method built on the shared PLS core). The C++17/C/Fortran numerical
   core (222 translation units) is vendored under `src/vendor/` and compiled
   from source at install time. No external system library is required.
 * License: `CeCILL (== 2.1)` (a GPL-compatible French free-software
@@ -64,7 +65,7 @@ is within the acceptable budget.
 The original draft of this package also shipped optional tidymodels
 (`parsnip`) and mlr3 (`R6`) integrations. Both are archived under
 `bindings/r/archive/parsnip-mlr3/` and are not part of this submission.
-The active R surface is now NIRS-first: base formula/S3, `pls`-style
+The active R surface is PLS/chemometrics-first: base formula/S3, `pls`-style
 `plsr()` / `pcr()`, and `mdatools`-style matrix `pls(x, y, ...)`.
 
 ## Reviewer-facing notes

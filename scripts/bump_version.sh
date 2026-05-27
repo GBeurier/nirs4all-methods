@@ -334,6 +334,16 @@ update_with_sed \
     '`n4m`[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)' \
     "s/(\`n4m\`[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
 
+# R slim subset package: pls4all (DESCRIPTION + cran-comments summary line)
+update_with_sed \
+    "bindings/r/pls4all/DESCRIPTION" \
+    "^Version:[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)" \
+    "s/^(Version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
+update_with_sed \
+    "bindings/r/pls4all/cran-comments.md" \
+    '`pls4all`[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)' \
+    "s/(\`pls4all\`[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
+
 # Archived/frozen bindings under bindings/_archive/ (go, rust, dotnet, lua, nim,
 # ruby, jni, julia, android) are intentionally excluded from active version sync
 # — they are frozen at their last version and are not current target languages

@@ -11,7 +11,7 @@
 #     the canonical PLS variant (sparse_pls @ lambda=0 matches)
 
 skip_if_no_libp4a <- function() {
-    so <- tryCatch(getLoadedDLLs()[["n4m"]], error = function(e) NULL)
+    so <- tryCatch(getLoadedDLLs()[["pls4all"]], error = function(e) NULL)
     if (is.null(so)) testthat::skip("n4m DLL not loaded")
 }
 

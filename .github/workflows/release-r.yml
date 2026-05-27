@@ -33,11 +33,16 @@ jobs:
   # R CMD check --as-cran across the same matrix CRAN itself uses.
   # =========================================================================
   check:
-    name: R CMD check / ${{ matrix.cfg.label }}
+    name: R CMD check / ${{ matrix.pkg }} / ${{ matrix.cfg.label }}
     runs-on: ${{ matrix.cfg.runs_on }}
     strategy:
       fail-fast: false
       matrix:
+        # Both R packages: the full n4m surface and the slim pls4all subset.
+        # Each is self-contained (vendors + compiles its own libn4m).
+        pkg:
+          - n4m
+          - pls4all
         cfg:
           - label: linux-release
             runs_on: ubuntu-22.04
@@ -77,7 +82,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: bindings/r/n4m
+          working-directory: bindings/r/${{ matrix.pkg }}
           extra-packages: |
             any::rcmdcheck
             any::knitr
@@ -92,12 +97,12 @@ jobs:
       # the package ships src/Makevars.win for the actual Windows compile).
       - name: Vendor libn4m sources into the R package
         shell: bash
-        run: cd bindings/r/n4m && N4M_R_VENDOR=1 ./configure
+        run: cd bindings/r/${{ matrix.pkg }} && N4M_R_VENDOR=1 ./configure
 
       - name: R CMD check --as-cran
         uses: r-lib/actions/check-r-package@v2
         with:
-          working-directory: bindings/r/n4m
+          working-directory: bindings/r/${{ matrix.pkg }}
           # r-lib/actions/check-r-package interpolates these values into
           # rcmdcheck::rcmdcheck(args = ..., error_on = ...) as literal R
           # code, so they must be valid R syntax.
@@ -109,16 +114,22 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: rcheck-${{ matrix.cfg.label }}
-          path: bindings/r/n4m.Rcheck/
+          name: rcheck-${{ matrix.pkg }}-${{ matrix.cfg.label }}
+          path: bindings/r/${{ matrix.pkg }}.Rcheck/
 
   # =========================================================================
   # Build the source tarball that the maintainer uploads to CRAN.
   # =========================================================================
   build-tarball:
-    name: Build CRAN source tarball
+    name: Build CRAN source tarball (${{ matrix.pkg }})
     needs: check
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        pkg:
+          - n4m
+          - pls4all
     steps:
       - uses: actions/checkout@v4
         with:
@@ -133,11 +144,11 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: bindings/r/n4m
+          working-directory: bindings/r/${{ matrix.pkg }}
           extra-packages: any::knitr any::rmarkdown
 
       - name: Vendor the libn4m core into src/vendor (self-contained tarball)
-        working-directory: bindings/r/n4m
+        working-directory: bindings/r/${{ matrix.pkg }}
         env:
           N4M_R_VENDOR: "1"
         # ./configure copies the full C/C++/Fortran core + the static export
@@ -146,20 +157,20 @@ jobs:
         run: ./configure
 
       - name: R CMD build (produces n4m_${VER}.tar.gz)
-        working-directory: bindings/r/n4m
+        working-directory: bindings/r/${{ matrix.pkg }}
         run: R CMD build .
 
       - name: Stage tarball
-        working-directory: bindings/r/n4m
+        working-directory: bindings/r/${{ matrix.pkg }}
         run: |
           set -euo pipefail
           mkdir -p ../../../dist-r
-          mv n4m_*.tar.gz ../../../dist-r/
+          mv ${{ matrix.pkg }}_*.tar.gz ../../../dist-r/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: n4m-cran-tarball
-          path: dist-r/n4m_*.tar.gz
+          name: ${{ matrix.pkg }}-cran-tarball
+          path: dist-r/${{ matrix.pkg }}_*.tar.gz
           if-no-files-found: error
           retention-days: 90
 
@@ -178,11 +189,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: n4m-cran-tarball
+          pattern: '*-cran-tarball'
+          merge-multiple: true
           path: dist-r/
 
       - name: Upload to the matching Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist-r/n4m_*.tar.gz
+          files: dist-r/*.tar.gz
           fail_on_unmatched_files: true

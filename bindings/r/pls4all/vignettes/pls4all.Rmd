@@ -78,7 +78,7 @@ all.equal(n4m_predict(fit_simpls, X[1:5, ]),
 
 ## Further reading
 
-* The `dispatch_fit()` entry point exposes the full method catalogue
+* The `n4m_method()` entry point exposes the full method catalogue
   (sparse SIMPLS, CPPLS, weighted, robust, ridge, continuum,
   multi-block, GLM, MIR, PDS, DS, and others) with a unified
   parameter-list interface.

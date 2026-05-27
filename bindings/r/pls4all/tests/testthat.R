@@ -4,4 +4,4 @@
 library(testthat)
 library(pls4all)
 
-test_check("n4m")
+test_check("pls4all")

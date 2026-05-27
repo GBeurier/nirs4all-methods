@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: CECILL-2.1
 
 skip_if_no_libp4a <- function() {
-    so <- tryCatch(getLoadedDLLs()[["n4m"]], error = function(e) NULL)
+    so <- tryCatch(getLoadedDLLs()[["pls4all"]], error = function(e) NULL)
     if (is.null(so)) testthat::skip("n4m DLL not loaded")
 }
 

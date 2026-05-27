@@ -1,0 +1,29 @@
+COPYRIGHTS — third-party material vendored under src/vendor/
+
+The C/C++/Fortran sources under src/vendor/ are a copy of the nirs4all-methods
+(libn4m) numerical core, compiled into this package at install time. They are
+licensed CECILL-2.1 (see the LICENSE file) EXCEPT for the following vendored or
+reproduced third-party material:
+
+1. FITPACK — Fortran spline kernels (SPDX: BSD-3-Clause)
+   Copyright (c) 2001-2002 Enthought, Inc.; 2003 SciPy Developers.
+   Vendored from SciPy's interpolate/fitpack/. Full license text:
+     src/vendor/cpp/src/core/common/_vendored/fitpack/LICENSE.scipy.txt
+
+2. Outlier filters — Isolation Forest, Local Outlier Factor, and Minimum
+   Covariance Determinant (SPDX: BSD-3-Clause)
+   Independent C reimplementations DERIVED from the scikit-learn algorithms;
+   no scikit-learn source is copied verbatim. Attribution / license text:
+     src/vendor/cpp/src/core/filters/_vendored/LICENSE.scikit_learn.txt
+
+3. Random number generation — PCG64 bit generator, NumPy SeedSequence
+   expansion, the Ziggurat standard-normal sampler and its constants, and the
+   bounded-integer / choice-without-replacement samplers (SPDX: BSD-3-Clause).
+   These reproduce the algorithms and constants of NumPy's random module
+   (numpy.random, Copyright (c) 2005-2024 NumPy Developers) for bit-exact
+   parity with NumPy. Per-file attribution is in the source headers, e.g.
+     src/vendor/cpp/src/core/common/rng_pcg64.c
+     src/vendor/cpp/src/core/common/ziggurat_constants.h
+   The PCG family is by Melissa O'Neill (https://www.pcg-random.org/).
+
+See the project's THIRD_PARTY_LICENSES.md for the full attribution record.
