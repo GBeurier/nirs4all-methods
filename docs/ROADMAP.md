@@ -1,5 +1,12 @@
 # Roadmap
 
+> **⚠️ LEGACY (pre-rename).** This is the original phase log from before the
+> `pls4all`/`p4a` → `nirs4all-methods`/`n4m` rename (it still says `pls4all`,
+> references `Direction_Technique.md`/`Overview.md`, and stops at phase-49 /
+> v0.97). It is kept as a historical record of the shipped algorithm phases.
+> **The authoritative, current plan is [`REFACTOR_PLAN.md`](REFACTOR_PLAN.md)**
+> (phases A–F); do not treat anything below as current.
+
 `pls4all` is built in deliberate phases. Each delivered phase has a
 self-contained note under [`roadmap/`](roadmap/). The canonical technical
 spec is [`Direction_Technique.md`](Direction_Technique.md). The full algorithm
