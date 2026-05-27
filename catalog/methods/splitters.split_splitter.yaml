@@ -7,9 +7,9 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_splitter_split_splitter_create"
-  - "n4m_splitter_split_splitter_split"
-  - "n4m_splitter_split_splitter_destroy"
+  - "n4m_split_split_splitter_create"
+  - "n4m_split_split_splitter_destroy"
+  - "n4m_split_split_splitter_split"
 tu:
   - "cpp/src/core/splitters/split_splitter.c"
 headers:

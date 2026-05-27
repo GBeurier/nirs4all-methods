@@ -7,9 +7,9 @@ category: "preprocessing"
 subcategory: "smoothing"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_gaussian_fit"
-  - "n4m_preprocessing_gaussian_transform"
-  - "n4m_preprocessing_gaussian_destroy"
+  - "n4m_pp_gaussian_create"
+  - "n4m_pp_gaussian_destroy"
+  - "n4m_pp_gaussian_transform"
 tu:
   - "cpp/src/core/preprocessing/smoothing/gaussian.c"
 headers:

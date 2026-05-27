@@ -7,9 +7,11 @@ category: "filters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_filter_x_outlier_fit"
   - "n4m_filter_x_outlier_apply"
+  - "n4m_filter_x_outlier_create"
   - "n4m_filter_x_outlier_destroy"
+  - "n4m_filter_x_outlier_fit"
+  - "n4m_filter_x_outlier_is_fitted"
 tu:
   - "cpp/src/core/filters/x_outlier.c"
 headers:

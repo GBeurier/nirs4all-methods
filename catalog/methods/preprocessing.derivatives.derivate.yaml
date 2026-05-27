@@ -7,9 +7,11 @@ category: "preprocessing"
 subcategory: "derivatives"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_derivate_fit"
-  - "n4m_preprocessing_derivate_transform"
-  - "n4m_preprocessing_derivate_destroy"
+  - "n4m_pp_derivate_create"
+  - "n4m_pp_derivate_destroy"
+  - "n4m_pp_derivate_fit"
+  - "n4m_pp_derivate_output_cols"
+  - "n4m_pp_derivate_transform"
 tu:
   - "cpp/src/core/preprocessing/derivatives/derivate.c"
 headers:

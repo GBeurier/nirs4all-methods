@@ -1,19 +1,17 @@
 # Auto-generated from catalog/methods.yaml during the Phase B transition.
 # Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
 catalog_version: 1
-method_id: "augmentation.aug_rng_utils"
-family: "augmentation"
-category: "augmentation"
-subcategory: "general"
+method_id: "diagnostics.approximate_press"
+family: "diagnostics.validation"
+category: "diagnostics"
+subcategory: "validation"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_aug_rng_utils_create"
-  - "n4m_augmentation_aug_rng_utils_apply"
-  - "n4m_augmentation_aug_rng_utils_destroy"
+  - "n4m_approximate_press_compute"
 tu:
-  - "cpp/src/core/augmentation/aug_rng_utils.c"
+  - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/n4m.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -26,10 +24,10 @@ parity:
   references: []
   tolerances: []
 bench:
-  bench_id: "augmentation.aug_rng_utils"
+  bench_id: "diagnostics.approximate_press"
   registry_entry: null
 feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."

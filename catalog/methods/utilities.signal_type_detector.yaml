@@ -7,7 +7,7 @@ category: "utilities"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_utility_signal_type_detector"
+  - "n4m_signal_detect"
 tu:
   - "cpp/src/core/utilities/signal_type_detector.c"
 headers:

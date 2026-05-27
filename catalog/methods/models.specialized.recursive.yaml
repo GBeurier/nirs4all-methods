@@ -7,9 +7,7 @@ category: "models"
 subcategory: "specialized"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_models_specialized_recursive_fit"
-  - "n4m_models_specialized_recursive_predict"
-  - "n4m_models_specialized_recursive_destroy"
+  - "n4m_recursive_pls_run"
 tu:
   - "cpp/src/core/recursive_pls.cpp"
 headers:

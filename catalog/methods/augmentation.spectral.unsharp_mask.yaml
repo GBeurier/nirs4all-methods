@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "spectral"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_unsharp_mask_create"
-  - "n4m_augmentation_unsharp_mask_apply"
-  - "n4m_augmentation_unsharp_mask_destroy"
+  - "n4m_aug_unsharp_mask_apply"
+  - "n4m_aug_unsharp_mask_create"
+  - "n4m_aug_unsharp_mask_destroy"
 tu:
   - "cpp/src/core/augmentation/spectral/unsharp_mask.c"
 headers:

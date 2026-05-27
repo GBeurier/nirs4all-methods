@@ -7,7 +7,7 @@ category: "diagnostics"
 subcategory: "validation"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_diag_model_selection"
+  - "n4m_one_se_rule_compute"
 tu:
   - "cpp/src/core/model_selection.cpp"
 headers:

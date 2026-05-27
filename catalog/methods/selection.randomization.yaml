@@ -7,8 +7,7 @@ category: "selection"
 subcategory: "wrapper"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_selection_randomization_run"
-  - "n4m_selection_randomization_destroy"
+  - "n4m_randomization_select"
 tu:
   - "cpp/src/core/randomization_selection.cpp"
 headers:

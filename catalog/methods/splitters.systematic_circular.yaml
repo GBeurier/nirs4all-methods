@@ -7,9 +7,9 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_splitter_systematic_circular_create"
-  - "n4m_splitter_systematic_circular_split"
-  - "n4m_splitter_systematic_circular_destroy"
+  - "n4m_split_systematic_circular_create"
+  - "n4m_split_systematic_circular_destroy"
+  - "n4m_split_systematic_circular_split"
 tu:
   - "cpp/src/core/splitters/systematic_circular.c"
 headers:

@@ -7,9 +7,9 @@ category: "preprocessing"
 subcategory: "wavelets"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_wavelet_denoise_fit"
-  - "n4m_preprocessing_wavelet_denoise_transform"
-  - "n4m_preprocessing_wavelet_denoise_destroy"
+  - "n4m_pp_wavelet_denoise_create"
+  - "n4m_pp_wavelet_denoise_destroy"
+  - "n4m_pp_wavelet_denoise_transform"
 tu:
   - "cpp/src/core/preprocessing/wavelets/wavelet_denoise.c"
 headers:

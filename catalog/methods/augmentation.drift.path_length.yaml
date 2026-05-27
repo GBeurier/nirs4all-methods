@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "drift"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_path_length_create"
-  - "n4m_augmentation_path_length_apply"
-  - "n4m_augmentation_path_length_destroy"
+  - "n4m_aug_path_length_apply"
+  - "n4m_aug_path_length_create"
+  - "n4m_aug_path_length_destroy"
 tu:
   - "cpp/src/core/augmentation/drift/path_length.c"
 headers:

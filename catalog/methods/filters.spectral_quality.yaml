@@ -7,9 +7,9 @@ category: "filters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_filter_spectral_quality_fit"
-  - "n4m_filter_spectral_quality_apply"
-  - "n4m_filter_spectral_quality_destroy"
+  - "n4m_filter_quality_apply"
+  - "n4m_filter_quality_create"
+  - "n4m_filter_quality_destroy"
 tu:
   - "cpp/src/core/filters/spectral_quality.c"
 headers:

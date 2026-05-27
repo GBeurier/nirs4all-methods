@@ -1,0 +1,75 @@
+# Catalog methods that libn4m EXPORTS but the M2 auto-discovery missed.
+# Codex (thread 019e6a1c) ruled: add all of these as public catalog methods —
+# this makes the catalog honest about API already shipped + used by
+# bindings/benchmarks, it is NOT new API. reconcile_abi.py --add-missing appends
+# a full schema entry for each (abi_symbols from the prefix, tu grepped from the
+# c_api source, headers=n4m.h, since_abi mirrored from siblings).
+# Fields: prefix (ABI symbol prefix), category, subcategory, name (-> method_id).
+new_methods:
+  # ---- aom_pop ----
+  - {prefix: n4m_aom_per_component, category: aom_pop, subcategory: aom, name: pop_pls}
+
+  # ---- augmentation ----
+  - {prefix: n4m_aug_edge_artifacts, category: augmentation, subcategory: edge_artifacts, name: edge_artifacts}
+
+  # ---- diagnostics ----
+  - {prefix: n4m_approximate_press, category: diagnostics, subcategory: validation, name: approximate_press}
+
+  # ---- filters (feature filters) ----
+  - {prefix: n4m_filter_correlation, category: filters, subcategory: feature, name: correlation}
+  - {prefix: n4m_filter_variance, category: filters, subcategory: feature, name: variance}
+
+  # ---- models: pls ----
+  - {prefix: n4m_cppls, category: models, subcategory: pls, name: cppls}
+  - {prefix: n4m_pls_fit_simple, category: models, subcategory: pls, name: pls_fit_simple}
+  # ---- models: classification ----
+  - {prefix: n4m_pls_qda, category: models, subcategory: classification, name: pls_qda}
+  # ---- models: heads ----
+  - {prefix: n4m_pls_cox, category: models, subcategory: heads, name: pls_cox}
+  - {prefix: n4m_pls_glm, category: models, subcategory: heads, name: pls_glm}
+  # ---- models: multiblock ----
+  - {prefix: n4m_o2pls, category: models, subcategory: multiblock, name: o2pls}
+  - {prefix: n4m_on_pls, category: models, subcategory: multiblock, name: on_pls}
+  - {prefix: n4m_so_pls, category: models, subcategory: multiblock, name: so_pls}
+  - {prefix: n4m_mir_pls, category: models, subcategory: multiblock, name: mir_pls}
+  - {prefix: n4m_rosa, category: models, subcategory: multiblock, name: rosa}
+  # ---- models: regularized ----
+  - {prefix: n4m_ridge_pls, category: models, subcategory: regularized, name: ridge_pls}
+  - {prefix: n4m_robust_pls, category: models, subcategory: regularized, name: robust_pls}
+  - {prefix: n4m_weighted_pls, category: models, subcategory: regularized, name: weighted_pls}
+  - {prefix: n4m_continuum_regression, category: models, subcategory: regularized, name: continuum_regression}
+  # ---- models: ensembles ----
+  - {prefix: n4m_bagging_pls, category: models, subcategory: ensembles, name: bagging_pls}
+  - {prefix: n4m_boosting_pls, category: models, subcategory: ensembles, name: boosting_pls}
+  - {prefix: n4m_random_subspace_pls, category: models, subcategory: ensembles, name: random_subspace_pls}
+  # ---- models: sparse ----
+  - {prefix: n4m_fused_sparse_pls, category: models, subcategory: sparse, name: fused_sparse_pls}
+  - {prefix: n4m_group_sparse_pls, category: models, subcategory: sparse, name: group_sparse_pls}
+  - {prefix: n4m_sparse_simpls, category: models, subcategory: sparse, name: sparse_simpls}
+  - {prefix: n4m_sparse_pls_da, category: models, subcategory: sparse, name: sparse_pls_da}
+  # ---- models: specialized ----
+  - {prefix: n4m_missing_aware_nipals, category: models, subcategory: specialized, name: missing_aware_nipals}
+  # ---- models: transfer (calibration transfer) ----
+  - {prefix: n4m_di_pls, category: models, subcategory: transfer, name: di_pls}
+  - {prefix: n4m_ds, category: models, subcategory: transfer, name: ds}
+  - {prefix: n4m_pds, category: models, subcategory: transfer, name: pds}
+
+  # ---- preprocessing: transfer ----
+  - {prefix: n4m_pp_direct_standardization, category: preprocessing, subcategory: transfer, name: direct_standardization}
+  - {prefix: n4m_pp_piecewise_direct_standardization, category: preprocessing, subcategory: transfer, name: piecewise_direct_standardization}
+  - {prefix: n4m_pp_robust_direct_standardization, category: preprocessing, subcategory: transfer, name: robust_direct_standardization}
+  - {prefix: n4m_pp_slope_bias, category: preprocessing, subcategory: transfer, name: slope_bias}
+  # ---- preprocessing: alignment ----
+  - {prefix: n4m_pp_cow_align, category: preprocessing, subcategory: alignment, name: cow_align}
+  - {prefix: n4m_pp_dtw_align, category: preprocessing, subcategory: alignment, name: dtw_align}
+  - {prefix: n4m_pp_icoshift_align, category: preprocessing, subcategory: alignment, name: icoshift_align}
+  - {prefix: n4m_pp_xcorr_align, category: preprocessing, subcategory: alignment, name: xcorr_align}
+  # ---- preprocessing: scatter variants ----
+  - {prefix: n4m_pp_localized_msc, category: preprocessing, subcategory: scatter, name: localized_msc}
+  - {prefix: n4m_pp_piecewise_msc, category: preprocessing, subcategory: scatter, name: piecewise_msc}
+  - {prefix: n4m_pp_piecewise_snv, category: preprocessing, subcategory: scatter, name: piecewise_snv}
+  - {prefix: n4m_pp_weighted_snv, category: preprocessing, subcategory: scatter, name: weighted_snv}
+  - {prefix: n4m_pp_local_centering, category: preprocessing, subcategory: scatter, name: local_centering}
+  - {prefix: n4m_pp_vsn, category: preprocessing, subcategory: scatter, name: vsn}
+  # ---- preprocessing: baselines ----
+  - {prefix: n4m_pp_saps, category: preprocessing, subcategory: baselines, name: saps}

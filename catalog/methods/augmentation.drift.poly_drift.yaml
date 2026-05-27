@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "drift"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_poly_drift_create"
-  - "n4m_augmentation_poly_drift_apply"
-  - "n4m_augmentation_poly_drift_destroy"
+  - "n4m_aug_poly_drift_apply"
+  - "n4m_aug_poly_drift_create"
+  - "n4m_aug_poly_drift_destroy"
 tu:
   - "cpp/src/core/augmentation/drift/poly_drift.c"
 headers:

@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "mixup"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_local_mixup_create"
-  - "n4m_augmentation_local_mixup_apply"
-  - "n4m_augmentation_local_mixup_destroy"
+  - "n4m_aug_local_mixup_apply"
+  - "n4m_aug_local_mixup_create"
+  - "n4m_aug_local_mixup_destroy"
 tu:
   - "cpp/src/core/augmentation/mixup/local_mixup.c"
 headers:

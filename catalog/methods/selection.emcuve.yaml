@@ -7,8 +7,7 @@ category: "selection"
 subcategory: "wrapper"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_selection_emcuve_run"
-  - "n4m_selection_emcuve_destroy"
+  - "n4m_emcuve_select"
 tu:
   - "cpp/src/core/emcuve_selection.cpp"
 headers:

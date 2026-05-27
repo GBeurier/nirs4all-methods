@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "noise"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_hetero_noise_create"
-  - "n4m_augmentation_hetero_noise_apply"
-  - "n4m_augmentation_hetero_noise_destroy"
+  - "n4m_aug_hetero_noise_apply"
+  - "n4m_aug_hetero_noise_create"
+  - "n4m_aug_hetero_noise_destroy"
 tu:
   - "cpp/src/core/augmentation/noise/hetero_noise.c"
 headers:

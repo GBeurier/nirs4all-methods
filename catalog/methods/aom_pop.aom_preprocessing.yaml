@@ -7,9 +7,7 @@ category: "aom_pop"
 subcategory: "aom"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aom_pop_aom_preprocessing_fit"
-  - "n4m_aom_pop_aom_preprocessing_predict"
-  - "n4m_aom_pop_aom_preprocessing_destroy"
+  - "n4m_aom_preprocess_fit"
 tu:
   - "cpp/src/core/aom_preprocessing.cpp"
 headers:

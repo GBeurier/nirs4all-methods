@@ -1,19 +1,21 @@
 # Auto-generated from catalog/methods.yaml during the Phase B transition.
 # Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
 catalog_version: 1
-method_id: "models.pls._extra_aggregate_v097"
-family: "models.pls"
-category: "models"
-subcategory: "pls"
+method_id: "preprocessing.alignment.icoshift_align"
+family: "preprocessing.alignment"
+category: "preprocessing"
+subcategory: "alignment"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_models_pls__extra_aggregate_v097_fit"
-  - "n4m_models_pls__extra_aggregate_v097_predict"
-  - "n4m_models_pls__extra_aggregate_v097_destroy"
+  - "n4m_pp_icoshift_align_create"
+  - "n4m_pp_icoshift_align_destroy"
+  - "n4m_pp_icoshift_align_fit"
+  - "n4m_pp_icoshift_align_is_fitted"
+  - "n4m_pp_icoshift_align_transform"
 tu:
-  - "cpp/src/core/extra_pls.cpp"
+  - "cpp/src/c_api/c_api_advanced.cpp"
 headers:
-  - "cpp/include/n4m/models.h"
+  - "cpp/include/n4m/n4m.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -26,10 +28,10 @@ parity:
   references: []
   tolerances: []
 bench:
-  bench_id: "models.pls._extra_aggregate_v097"
+  bench_id: "preprocessing.alignment.icoshift_align"
   registry_entry: null
 feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."

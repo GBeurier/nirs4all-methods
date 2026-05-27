@@ -7,9 +7,7 @@ category: "models"
 subcategory: "specialized"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_models_specialized_gpr_pls_fit"
-  - "n4m_models_specialized_gpr_pls_predict"
-  - "n4m_models_specialized_gpr_pls_destroy"
+  - "n4m_gpr_pls_fit"
 tu:
   - "cpp/src/core/gpr_pls.cpp"
 headers:

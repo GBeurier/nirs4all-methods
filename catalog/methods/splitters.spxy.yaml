@@ -7,9 +7,9 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_splitter_spxy_create"
-  - "n4m_splitter_spxy_split"
-  - "n4m_splitter_spxy_destroy"
+  - "n4m_split_spxy_create"
+  - "n4m_split_spxy_destroy"
+  - "n4m_split_spxy_split"
 tu:
   - "cpp/src/core/splitters/spxy.c"
 headers:

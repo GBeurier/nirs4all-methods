@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "spectral"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_gauss_jitter_create"
-  - "n4m_augmentation_gauss_jitter_apply"
-  - "n4m_augmentation_gauss_jitter_destroy"
+  - "n4m_aug_gauss_jitter_apply"
+  - "n4m_aug_gauss_jitter_create"
+  - "n4m_aug_gauss_jitter_destroy"
 tu:
   - "cpp/src/core/augmentation/spectral/gauss_jitter.c"
 headers:

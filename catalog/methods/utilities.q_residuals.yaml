@@ -7,7 +7,7 @@ category: "utilities"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_utility_q_residuals"
+  - "n4m_util_q_residuals"
 tu:
   - "cpp/src/core/utilities/q_residuals.c"
 headers:

@@ -7,7 +7,7 @@ category: "diagnostics"
 subcategory: "pls"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_diag_pls_monitoring"
+  - "n4m_pls_monitoring_run"
 tu:
   - "cpp/src/core/pls_monitoring.cpp"
 headers:

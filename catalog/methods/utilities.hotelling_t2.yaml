@@ -7,7 +7,7 @@ category: "utilities"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_utility_hotelling_t2"
+  - "n4m_util_hotelling_t2"
 tu:
   - "cpp/src/core/utilities/hotelling_t2.c"
 headers:

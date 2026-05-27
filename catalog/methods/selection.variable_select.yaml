@@ -7,8 +7,7 @@ category: "selection"
 subcategory: "ranker"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_selection_variable_select_run"
-  - "n4m_selection_variable_select_destroy"
+  - "n4m_variable_select_rank"
 tu:
   - "cpp/src/core/variable_selection.cpp"
 headers:

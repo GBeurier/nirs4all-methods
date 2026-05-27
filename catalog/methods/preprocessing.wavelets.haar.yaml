@@ -7,9 +7,10 @@ category: "preprocessing"
 subcategory: "wavelets"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_haar_fit"
-  - "n4m_preprocessing_haar_transform"
-  - "n4m_preprocessing_haar_destroy"
+  - "n4m_pp_haar_create"
+  - "n4m_pp_haar_destroy"
+  - "n4m_pp_haar_output_cols"
+  - "n4m_pp_haar_transform"
 tu:
   - "cpp/src/core/preprocessing/wavelets/haar.c"
 headers:

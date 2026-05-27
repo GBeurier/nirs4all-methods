@@ -7,9 +7,9 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_splitter_kennard_stone_create"
-  - "n4m_splitter_kennard_stone_split"
-  - "n4m_splitter_kennard_stone_destroy"
+  - "n4m_split_kennard_stone_create"
+  - "n4m_split_kennard_stone_destroy"
+  - "n4m_split_kennard_stone_split"
 tu:
   - "cpp/src/core/splitters/kennard_stone.c"
 headers:

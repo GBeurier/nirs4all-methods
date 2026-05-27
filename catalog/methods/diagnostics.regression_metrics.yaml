@@ -7,7 +7,14 @@ category: "diagnostics"
 subcategory: "validation"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_diag_regression_metrics"
+  - "n4m_metric_bias"
+  - "n4m_metric_mae"
+  - "n4m_metric_nrmse"
+  - "n4m_metric_r2"
+  - "n4m_metric_rmse"
+  - "n4m_metric_rpd"
+  - "n4m_metric_rpiq"
+  - "n4m_metric_sep"
 tu:
   - "cpp/src/core/metrics.cpp"
 headers:

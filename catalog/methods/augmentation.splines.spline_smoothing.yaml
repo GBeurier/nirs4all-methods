@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "splines"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_spline_smoothing_create"
-  - "n4m_augmentation_spline_smoothing_apply"
-  - "n4m_augmentation_spline_smoothing_destroy"
+  - "n4m_aug_spline_smooth_apply"
+  - "n4m_aug_spline_smooth_create"
+  - "n4m_aug_spline_smooth_destroy"
 tu:
   - "cpp/src/core/augmentation/splines/spline_smoothing.c"
 headers:

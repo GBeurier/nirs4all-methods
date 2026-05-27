@@ -7,7 +7,7 @@ category: "utilities"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_utility_transfer_metrics"
+  - "n4m_transfer_metrics_compute"
 tu:
   - "cpp/src/core/utilities/transfer_metrics.c"
 headers:

@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "scattering"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_batch_effect_create"
-  - "n4m_augmentation_batch_effect_apply"
-  - "n4m_augmentation_batch_effect_destroy"
+  - "n4m_aug_batch_effect_apply"
+  - "n4m_aug_batch_effect_create"
+  - "n4m_aug_batch_effect_destroy"
 tu:
   - "cpp/src/core/augmentation/scattering/batch_effect.c"
 headers:

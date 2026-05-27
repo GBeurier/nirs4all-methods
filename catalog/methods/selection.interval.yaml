@@ -7,8 +7,13 @@ category: "selection"
 subcategory: "wrapper"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_selection_interval_run"
-  - "n4m_selection_interval_destroy"
+  - "n4m_interval_generator_create"
+  - "n4m_interval_generator_destroy"
+  - "n4m_interval_generator_fit"
+  - "n4m_interval_generator_is_fitted"
+  - "n4m_interval_generator_output_cols"
+  - "n4m_interval_generator_transform"
+  - "n4m_interval_select"
 tu:
   - "cpp/src/core/interval_selection.cpp"
 headers:

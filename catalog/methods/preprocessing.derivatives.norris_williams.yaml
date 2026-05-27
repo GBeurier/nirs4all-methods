@@ -7,9 +7,9 @@ category: "preprocessing"
 subcategory: "derivatives"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_norris_williams_fit"
-  - "n4m_preprocessing_norris_williams_transform"
-  - "n4m_preprocessing_norris_williams_destroy"
+  - "n4m_pp_norris_williams_create"
+  - "n4m_pp_norris_williams_destroy"
+  - "n4m_pp_norris_williams_transform"
 tu:
   - "cpp/src/core/preprocessing/derivatives/norris_williams.c"
 headers:

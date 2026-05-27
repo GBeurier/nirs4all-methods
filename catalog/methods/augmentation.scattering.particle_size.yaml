@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "scattering"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_particle_size_create"
-  - "n4m_augmentation_particle_size_apply"
-  - "n4m_augmentation_particle_size_destroy"
+  - "n4m_aug_particle_size_apply"
+  - "n4m_aug_particle_size_create"
+  - "n4m_aug_particle_size_destroy"
 tu:
   - "cpp/src/core/augmentation/scattering/particle_size.c"
 headers:

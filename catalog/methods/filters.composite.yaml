@@ -7,8 +7,10 @@ category: "filters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_filter_composite_fit"
+  - "n4m_filter_composite_add_leverage"
+  - "n4m_filter_composite_add_quality"
   - "n4m_filter_composite_apply"
+  - "n4m_filter_composite_create"
   - "n4m_filter_composite_destroy"
 tu:
   - "cpp/src/core/filters/composite.c"

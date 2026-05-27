@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "edge_artifacts"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_stray_light_create"
-  - "n4m_augmentation_stray_light_apply"
-  - "n4m_augmentation_stray_light_destroy"
+  - "n4m_aug_stray_light_apply"
+  - "n4m_aug_stray_light_create"
+  - "n4m_aug_stray_light_destroy"
 tu:
   - "cpp/src/core/augmentation/edge_artifacts/stray_light.c"
 headers:

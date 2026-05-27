@@ -7,9 +7,9 @@ category: "preprocessing"
 subcategory: "baselines"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_arpls_fit"
-  - "n4m_preprocessing_arpls_transform"
-  - "n4m_preprocessing_arpls_destroy"
+  - "n4m_pp_arpls_create"
+  - "n4m_pp_arpls_destroy"
+  - "n4m_pp_arpls_transform"
 tu:
   - "cpp/src/core/preprocessing/baselines/arpls.c"
 headers:

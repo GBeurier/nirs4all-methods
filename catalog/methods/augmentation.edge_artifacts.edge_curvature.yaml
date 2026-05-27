@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "edge_artifacts"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_edge_curvature_create"
-  - "n4m_augmentation_edge_curvature_apply"
-  - "n4m_augmentation_edge_curvature_destroy"
+  - "n4m_aug_edge_curve_apply"
+  - "n4m_aug_edge_curve_create"
+  - "n4m_aug_edge_curve_destroy"
 tu:
   - "cpp/src/core/augmentation/edge_artifacts/edge_curvature.c"
 headers:

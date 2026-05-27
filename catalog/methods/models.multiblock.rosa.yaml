@@ -1,17 +1,17 @@
 # Auto-generated from catalog/methods.yaml during the Phase B transition.
 # Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
 catalog_version: 1
-method_id: "diagnostics.component_coefficients"
-family: "diagnostics.pls"
-category: "diagnostics"
-subcategory: "pls"
+method_id: "models.multiblock.rosa"
+family: "models.multiblock"
+category: "models"
+subcategory: "multiblock"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_diag_component_coefficients"
+  - "n4m_rosa_fit"
 tu:
-  - "cpp/src/core/component_coefficients.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/diagnostics.h"
+  - "cpp/include/n4m/n4m.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -24,10 +24,10 @@ parity:
   references: []
   tolerances: []
 bench:
-  bench_id: "diagnostics.component_coefficients"
+  bench_id: "models.multiblock.rosa"
   registry_entry: null
 feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."

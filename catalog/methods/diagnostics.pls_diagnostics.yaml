@@ -7,7 +7,7 @@ category: "diagnostics"
 subcategory: "pls"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_diag_pls_diagnostics"
+  - "n4m_pls_diagnostics_compute"
 tu:
   - "cpp/src/core/pls_diagnostics.cpp"
 headers:

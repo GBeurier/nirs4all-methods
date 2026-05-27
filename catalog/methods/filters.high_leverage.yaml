@@ -7,9 +7,12 @@ category: "filters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_filter_high_leverage_fit"
-  - "n4m_filter_high_leverage_apply"
-  - "n4m_filter_high_leverage_destroy"
+  - "n4m_filter_leverage_apply"
+  - "n4m_filter_leverage_create"
+  - "n4m_filter_leverage_destroy"
+  - "n4m_filter_leverage_fit"
+  - "n4m_filter_leverage_is_fitted"
+  - "n4m_filter_leverage_threshold"
 tu:
   - "cpp/src/core/filters/high_leverage.c"
 headers:

@@ -7,8 +7,7 @@ category: "selection"
 subcategory: "wrapper"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_selection_vip_spa_run"
-  - "n4m_selection_vip_spa_destroy"
+  - "n4m_vip_spa_select"
 tu:
   - "cpp/src/core/vip_spa_selection.cpp"
 headers:

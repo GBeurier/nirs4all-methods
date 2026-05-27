@@ -7,9 +7,7 @@ category: "models"
 subcategory: "multiblock"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_models_multiblock_mb_pls_fit"
-  - "n4m_models_multiblock_mb_pls_predict"
-  - "n4m_models_multiblock_mb_pls_destroy"
+  - "n4m_mb_pls_fit"
 tu:
   - "cpp/src/core/mb_pls.cpp"
 headers:

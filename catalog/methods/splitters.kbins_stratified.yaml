@@ -7,9 +7,9 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_splitter_kbins_stratified_create"
-  - "n4m_splitter_kbins_stratified_split"
-  - "n4m_splitter_kbins_stratified_destroy"
+  - "n4m_split_kbins_stratified_create"
+  - "n4m_split_kbins_stratified_destroy"
+  - "n4m_split_kbins_stratified_split"
 tu:
   - "cpp/src/core/splitters/kbins_stratified.c"
 headers:

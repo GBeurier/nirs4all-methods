@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "noise"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_gaussian_noise_create"
-  - "n4m_augmentation_gaussian_noise_apply"
-  - "n4m_augmentation_gaussian_noise_destroy"
+  - "n4m_aug_gaussian_noise_apply"
+  - "n4m_aug_gaussian_noise_create"
+  - "n4m_aug_gaussian_noise_destroy"
 tu:
   - "cpp/src/core/augmentation/noise/gaussian_noise.c"
 headers:

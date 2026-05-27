@@ -33,6 +33,16 @@ def expected_abi_symbols() -> set[str]:
     return out
 
 
+def infra_abi_symbols() -> set[str]:
+    """Non-method support symbols (catalog/abi_infra.yaml) — the explicit bucket
+    that, together with all method abi_symbols, must cover the full ABI snapshot."""
+    path = CATALOG / "abi_infra.yaml"
+    if not path.exists():
+        return set()
+    data = load_yaml_file(path) or {}
+    return set(data.get("infra_abi_symbols") or [])
+
+
 def load_schema(name: str) -> dict[str, Any]:
     return json.loads((SCHEMA_DIR / name).read_text(encoding="utf-8"))
 
@@ -94,6 +104,7 @@ def validate_methods(
     method_schema = load_schema("method.json")
     expected_symbols = expected_abi_symbols()
     seen: set[str] = set()
+    sym_owner: dict[str, str] = {}  # ABI symbol -> owning method (duplicate guard)
     fail_count = 0
     warn_count = 0
     warning_samples: list[str] = []
@@ -140,6 +151,29 @@ def validate_methods(
                     if len(warning_samples) < 20:
                         warning_samples.append(message)
                     warn_count += 1
+            if strict_abi and symbol in sym_owner:
+                print(f"  FAIL: {method_id}: ABI symbol {symbol} also claimed by {sym_owner[symbol]}")
+                fail_count += 1
+            sym_owner[symbol] = method_id
+
+    # Coverage gate (strict only): every REAL exported symbol must be owned by a
+    # method OR listed in the explicit infra bucket. Catches API exported by
+    # libn4m but missing from the catalog (the Phase-B reconciliation invariant).
+    if strict_abi and expected_symbols:
+        infra = infra_abi_symbols()
+        # Only the exported FUNCTION symbols (n4m_*) need a method/infra home; the
+        # ELF version-script node (N4M_1) is not a function symbol.
+        real_funcs = {s for s in expected_symbols if s.startswith("n4m_")}
+        unaccounted = sorted(real_funcs - set(sym_owner) - infra)
+        for symbol in unaccounted[:20]:
+            print(f"  FAIL: real ABI symbol unaccounted (no method, not infra): {symbol}")
+        if unaccounted:
+            if len(unaccounted) > 20:
+                print(f"  FAIL: ... {len(unaccounted) - 20} more unaccounted ABI symbol(s)")
+            fail_count += len(unaccounted)
+        covered = len(set(sym_owner)) + len(infra)
+        print(f"  ABI coverage: {len(set(sym_owner))} method + {len(infra)} infra "
+              f"= {covered}/{len(real_funcs)} exported n4m_* symbols")
 
     for warning in warning_samples:
         print(f"  WARN: {warning}")

@@ -7,9 +7,9 @@ category: "preprocessing"
 subcategory: "signal_conversion"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_kubelka_munk_fit"
-  - "n4m_preprocessing_kubelka_munk_transform"
-  - "n4m_preprocessing_kubelka_munk_destroy"
+  - "n4m_pp_kubelka_munk_create"
+  - "n4m_pp_kubelka_munk_destroy"
+  - "n4m_pp_kubelka_munk_transform"
 tu:
   - "cpp/src/core/preprocessing/signal_conversion/kubelka_munk.c"
 headers:

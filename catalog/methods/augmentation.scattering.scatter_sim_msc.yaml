@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "scattering"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_scatter_sim_msc_create"
-  - "n4m_augmentation_scatter_sim_msc_apply"
-  - "n4m_augmentation_scatter_sim_msc_destroy"
+  - "n4m_aug_scatter_sim_apply"
+  - "n4m_aug_scatter_sim_create"
+  - "n4m_aug_scatter_sim_destroy"
 tu:
   - "cpp/src/core/augmentation/scattering/scatter_sim_msc.c"
 headers:

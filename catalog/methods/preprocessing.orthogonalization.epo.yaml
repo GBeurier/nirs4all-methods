@@ -7,9 +7,13 @@ category: "preprocessing"
 subcategory: "orthogonalization"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_epo_fit"
-  - "n4m_preprocessing_epo_transform"
-  - "n4m_preprocessing_epo_destroy"
+  - "n4m_pp_epo_create"
+  - "n4m_pp_epo_destroy"
+  - "n4m_pp_epo_fit"
+  - "n4m_pp_epo_inverse_transform"
+  - "n4m_pp_epo_is_fitted"
+  - "n4m_pp_epo_transform"
+  - "n4m_pp_epo_transform_with_d"
 tu:
   - "cpp/src/core/preprocessing/orthogonalization/epo.c"
 headers:

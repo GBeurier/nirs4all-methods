@@ -1,19 +1,17 @@
 # Auto-generated from catalog/methods.yaml during the Phase B transition.
 # Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
 catalog_version: 1
-method_id: "aom_pop.gating_strategy"
-family: "aom_pop.aom"
-category: "aom_pop"
-subcategory: "aom"
+method_id: "models.classification.pls_qda"
+family: "models.classification"
+category: "models"
+subcategory: "classification"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aom_pop_gating_strategy_fit"
-  - "n4m_aom_pop_gating_strategy_predict"
-  - "n4m_aom_pop_gating_strategy_destroy"
+  - "n4m_pls_qda_fit"
 tu:
-  - "cpp/src/core/gating_strategy.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/aom_pop.h"
+  - "cpp/include/n4m/n4m.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -26,10 +24,10 @@ parity:
   references: []
   tolerances: []
 bench:
-  bench_id: "aom_pop.gating_strategy"
+  bench_id: "models.classification.pls_qda"
   registry_entry: null
 feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."

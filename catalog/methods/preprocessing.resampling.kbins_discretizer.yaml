@@ -7,9 +7,11 @@ category: "preprocessing"
 subcategory: "resampling"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_kbins_discretizer_fit"
-  - "n4m_preprocessing_kbins_discretizer_transform"
-  - "n4m_preprocessing_kbins_discretizer_destroy"
+  - "n4m_pp_kbins_disc_create"
+  - "n4m_pp_kbins_disc_destroy"
+  - "n4m_pp_kbins_disc_fit"
+  - "n4m_pp_kbins_disc_is_fitted"
+  - "n4m_pp_kbins_disc_transform"
 tu:
   - "cpp/src/core/preprocessing/resampling/kbins_discretizer.c"
 headers:

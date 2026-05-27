@@ -1,19 +1,21 @@
 # Auto-generated from catalog/methods.yaml during the Phase B transition.
 # Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
 catalog_version: 1
-method_id: "aom_pop.aom_operators"
-family: "aom_pop.aom"
-category: "aom_pop"
-subcategory: "aom"
+method_id: "preprocessing.alignment.xcorr_align"
+family: "preprocessing.alignment"
+category: "preprocessing"
+subcategory: "alignment"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aom_pop_aom_operators_fit"
-  - "n4m_aom_pop_aom_operators_predict"
-  - "n4m_aom_pop_aom_operators_destroy"
+  - "n4m_pp_xcorr_align_create"
+  - "n4m_pp_xcorr_align_destroy"
+  - "n4m_pp_xcorr_align_fit"
+  - "n4m_pp_xcorr_align_is_fitted"
+  - "n4m_pp_xcorr_align_transform"
 tu:
-  - "cpp/src/core/aom_operators.cpp"
+  - "cpp/src/c_api/c_api_advanced.cpp"
 headers:
-  - "cpp/include/n4m/aom_pop.h"
+  - "cpp/include/n4m/n4m.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -26,10 +28,10 @@ parity:
   references: []
   tolerances: []
 bench:
-  bench_id: "aom_pop.aom_operators"
+  bench_id: "preprocessing.alignment.xcorr_align"
   registry_entry: null
 feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."

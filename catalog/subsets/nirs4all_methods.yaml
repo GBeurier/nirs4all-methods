@@ -26,11 +26,11 @@ includes:
     - selection
     - diagnostics
     - aom_pop
-    - pipeline
-  # 'transfer' is intentionally omitted at v1.0.0: PDS / DS live inside
-  # pls4all's extra_pls.cpp aggregate today and only become standalone
-  # method entries after the M4 split. The category will be re-added once
-  # methods.yaml has transfer.* entries.
+  # 'pipeline' was dropped in the Phase-B ABI reconciliation: its only entry
+  # (pipeline._aggregate_v097) was an internal aggregate helper with no public
+  # ABI symbol, so it was removed from the method catalog (see
+  # catalog/ABI_RECONCILE_GAP.md). Re-add the category if a public pipeline
+  # method is ever exported.
 audience: |
   Researchers and engineers running NIRS / chemometrics / process-monitoring
   pipelines that need the full preprocessing → augmentation → model → diagnostics

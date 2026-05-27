@@ -7,9 +7,10 @@ category: "preprocessing"
 subcategory: "specialized"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_fck_static_fit"
-  - "n4m_preprocessing_fck_static_transform"
-  - "n4m_preprocessing_fck_static_destroy"
+  - "n4m_pp_fck_static_create"
+  - "n4m_pp_fck_static_destroy"
+  - "n4m_pp_fck_static_output_cols"
+  - "n4m_pp_fck_static_transform"
 tu:
   - "cpp/src/core/preprocessing/specialized/fck_static.c"
 headers:

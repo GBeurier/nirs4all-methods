@@ -7,9 +7,10 @@ category: "preprocessing"
 subcategory: "resampling"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_resample_transformer_fit"
-  - "n4m_preprocessing_resample_transformer_transform"
-  - "n4m_preprocessing_resample_transformer_destroy"
+  - "n4m_pp_resample_create"
+  - "n4m_pp_resample_destroy"
+  - "n4m_pp_resample_output_cols"
+  - "n4m_pp_resample_transform"
 tu:
   - "cpp/src/core/preprocessing/resampling/resample_transformer.c"
 headers:

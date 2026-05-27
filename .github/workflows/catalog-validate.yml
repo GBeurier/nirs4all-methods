@@ -21,8 +21,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Validate catalog
-        run: python catalog/scripts/validate.py
+      - name: Validate catalog (strict ABI — every exported n4m_* symbol owned)
+        run: python catalog/scripts/validate.py --strict-abi
       - name: Check split catalog
         run: python catalog/scripts/split_legacy_methods.py --check
       - name: Catalog parser self-test

@@ -7,9 +7,7 @@ category: "models"
 subcategory: "classification"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_models_classification_pls_logistic_fit"
-  - "n4m_models_classification_pls_logistic_predict"
-  - "n4m_models_classification_pls_logistic_destroy"
+  - "n4m_pls_logistic_fit"
 tu:
   - "cpp/src/core/pls_logistic.cpp"
 headers:

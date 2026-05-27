@@ -47,7 +47,9 @@ includes:
     # Utilities required by PLS diagnostics
     - utilities.hotelling_t2
     - utilities.q_residuals
-    - utilities.nirs_metrics
+    # utilities.nirs_metrics removed in the Phase-B ABI reconciliation (no public
+    # ABI symbol; NIRS metrics are exposed via diagnostics.regression_metrics /
+    # n4m_metric_*). See catalog/ABI_RECONCILE_GAP.md.
 excludes:
   categories:
     - augmentation

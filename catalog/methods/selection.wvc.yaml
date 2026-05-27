@@ -7,8 +7,8 @@ category: "selection"
 subcategory: "wrapper"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_selection_wvc_run"
-  - "n4m_selection_wvc_destroy"
+  - "n4m_wvc_select"
+  - "n4m_wvc_threshold_select"
 tu:
   - "cpp/src/core/wvc_selection.cpp"
 headers:

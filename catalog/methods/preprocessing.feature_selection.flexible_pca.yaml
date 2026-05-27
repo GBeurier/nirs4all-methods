@@ -7,9 +7,12 @@ category: "preprocessing"
 subcategory: "feature_selection"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_flexible_pca_fit"
-  - "n4m_preprocessing_flexible_pca_transform"
-  - "n4m_preprocessing_flexible_pca_destroy"
+  - "n4m_pp_flex_pca_create"
+  - "n4m_pp_flex_pca_destroy"
+  - "n4m_pp_flex_pca_fit"
+  - "n4m_pp_flex_pca_is_fitted"
+  - "n4m_pp_flex_pca_output_cols"
+  - "n4m_pp_flex_pca_transform"
 tu:
   - "cpp/src/core/preprocessing/feature_selection/flexible_pca.c"
 headers:

@@ -1,0 +1,43 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.pop_pls"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "1.0.0"
+abi_symbols:
+  - "n4m_aom_per_component_result_destroy"
+  - "n4m_aom_per_component_result_get_best_score"
+  - "n4m_aom_per_component_result_get_component_scores"
+  - "n4m_aom_per_component_result_get_max_components"
+  - "n4m_aom_per_component_result_get_n_operators"
+  - "n4m_aom_per_component_result_get_operator_kinds"
+  - "n4m_aom_per_component_result_get_predictions"
+  - "n4m_aom_per_component_result_get_prefix_scores"
+  - "n4m_aom_per_component_result_get_selected_n_components"
+  - "n4m_aom_per_component_result_get_selected_operator_indices"
+  - "n4m_aom_per_component_select"
+tu:
+  - "cpp/src/c_api/c_api_aom_selection.cpp"
+headers:
+  - "cpp/include/n4m/n4m.h"
+carry_along_tu:
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.pop_pls"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications: []
+notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."

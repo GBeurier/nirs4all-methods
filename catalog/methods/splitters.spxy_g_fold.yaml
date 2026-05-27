@@ -7,9 +7,10 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_splitter_spxy_g_fold_create"
-  - "n4m_splitter_spxy_g_fold_split"
-  - "n4m_splitter_spxy_g_fold_destroy"
+  - "n4m_split_spxy_g_fold_create"
+  - "n4m_split_spxy_g_fold_destroy"
+  - "n4m_split_spxy_g_fold_n_splits"
+  - "n4m_split_spxy_g_fold_split_fold"
 tu:
   - "cpp/src/core/splitters/spxy_g_fold.c"
 headers:

@@ -7,9 +7,10 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_splitter_binned_strat_group_kfold_create"
-  - "n4m_splitter_binned_strat_group_kfold_split"
-  - "n4m_splitter_binned_strat_group_kfold_destroy"
+  - "n4m_split_binned_strat_group_kfold_create"
+  - "n4m_split_binned_strat_group_kfold_destroy"
+  - "n4m_split_binned_strat_group_kfold_n_splits"
+  - "n4m_split_binned_strat_group_kfold_split_fold"
 tu:
   - "cpp/src/core/splitters/binned_strat_group_kfold.c"
 headers:

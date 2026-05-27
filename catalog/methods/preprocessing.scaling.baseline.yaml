@@ -7,9 +7,12 @@ category: "preprocessing"
 subcategory: "scaling"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_baseline_fit"
-  - "n4m_preprocessing_baseline_transform"
-  - "n4m_preprocessing_baseline_destroy"
+  - "n4m_pp_baseline_create"
+  - "n4m_pp_baseline_destroy"
+  - "n4m_pp_baseline_fit"
+  - "n4m_pp_baseline_inverse_transform"
+  - "n4m_pp_baseline_is_fitted"
+  - "n4m_pp_baseline_transform"
 tu:
   - "cpp/src/core/preprocessing/scaling/baseline.c"
 headers:

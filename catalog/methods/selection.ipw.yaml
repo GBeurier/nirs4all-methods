@@ -7,8 +7,7 @@ category: "selection"
 subcategory: "wrapper"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_selection_ipw_run"
-  - "n4m_selection_ipw_destroy"
+  - "n4m_ipw_select"
 tu:
   - "cpp/src/core/ipw_selection.cpp"
 headers:

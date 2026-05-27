@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "environmental"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_moisture_create"
-  - "n4m_augmentation_moisture_apply"
-  - "n4m_augmentation_moisture_destroy"
+  - "n4m_aug_moisture_apply"
+  - "n4m_aug_moisture_create"
+  - "n4m_aug_moisture_destroy"
 tu:
   - "cpp/src/core/augmentation/environmental/moisture.c"
 headers:

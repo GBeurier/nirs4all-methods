@@ -7,9 +7,9 @@ category: "preprocessing"
 subcategory: "baselines"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_beads_fit"
-  - "n4m_preprocessing_beads_transform"
-  - "n4m_preprocessing_beads_destroy"
+  - "n4m_pp_beads_create"
+  - "n4m_pp_beads_destroy"
+  - "n4m_pp_beads_transform"
 tu:
   - "cpp/src/core/preprocessing/baselines/beads.c"
 headers:

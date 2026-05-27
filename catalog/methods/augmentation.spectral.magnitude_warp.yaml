@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "spectral"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_magnitude_warp_create"
-  - "n4m_augmentation_magnitude_warp_apply"
-  - "n4m_augmentation_magnitude_warp_destroy"
+  - "n4m_aug_magnitude_warp_apply"
+  - "n4m_aug_magnitude_warp_create"
+  - "n4m_aug_magnitude_warp_destroy"
 tu:
   - "cpp/src/core/augmentation/spectral/magnitude_warp.c"
 headers:

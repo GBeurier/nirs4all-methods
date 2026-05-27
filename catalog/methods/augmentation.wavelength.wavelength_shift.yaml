@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "wavelength"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_wavelength_shift_create"
-  - "n4m_augmentation_wavelength_shift_apply"
-  - "n4m_augmentation_wavelength_shift_destroy"
+  - "n4m_aug_wavelength_shift_apply"
+  - "n4m_aug_wavelength_shift_create"
+  - "n4m_aug_wavelength_shift_destroy"
 tu:
   - "cpp/src/core/augmentation/wavelength/wavelength_shift.c"
 headers:

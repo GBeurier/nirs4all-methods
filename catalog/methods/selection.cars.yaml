@@ -7,8 +7,7 @@ category: "selection"
 subcategory: "wrapper"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_selection_cars_run"
-  - "n4m_selection_cars_destroy"
+  - "n4m_cars_select"
 tu:
   - "cpp/src/core/cars_selection.cpp"
 headers:

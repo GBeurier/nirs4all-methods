@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "edge_artifacts"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_truncated_peak_create"
-  - "n4m_augmentation_truncated_peak_apply"
-  - "n4m_augmentation_truncated_peak_destroy"
+  - "n4m_aug_truncated_peak_apply"
+  - "n4m_aug_truncated_peak_create"
+  - "n4m_aug_truncated_peak_destroy"
 tu:
   - "cpp/src/core/augmentation/edge_artifacts/truncated_peak.c"
 headers:

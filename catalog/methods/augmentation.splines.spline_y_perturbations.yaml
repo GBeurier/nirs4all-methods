@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "splines"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_spline_y_perturbations_create"
-  - "n4m_augmentation_spline_y_perturbations_apply"
-  - "n4m_augmentation_spline_y_perturbations_destroy"
+  - "n4m_aug_spline_y_perturb_apply"
+  - "n4m_aug_spline_y_perturb_create"
+  - "n4m_aug_spline_y_perturb_destroy"
 tu:
   - "cpp/src/core/augmentation/splines/spline_y_perturbations.c"
 headers:

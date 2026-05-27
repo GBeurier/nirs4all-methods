@@ -7,9 +7,9 @@ category: "augmentation"
 subcategory: "random"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_augmentation_random_x_op_create"
-  - "n4m_augmentation_random_x_op_apply"
-  - "n4m_augmentation_random_x_op_destroy"
+  - "n4m_aug_random_x_op_apply"
+  - "n4m_aug_random_x_op_create"
+  - "n4m_aug_random_x_op_destroy"
 tu:
   - "cpp/src/core/augmentation/random/random_x_op.c"
 headers:

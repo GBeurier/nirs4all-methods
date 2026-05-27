@@ -7,9 +7,9 @@ category: "preprocessing"
 subcategory: "scaling"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_preprocessing_simple_scale_fit"
-  - "n4m_preprocessing_simple_scale_transform"
-  - "n4m_preprocessing_simple_scale_destroy"
+  - "n4m_pp_simple_scale_create"
+  - "n4m_pp_simple_scale_destroy"
+  - "n4m_pp_simple_scale_transform"
 tu:
   - "cpp/src/core/preprocessing/scaling/simple_scale.c"
 headers:

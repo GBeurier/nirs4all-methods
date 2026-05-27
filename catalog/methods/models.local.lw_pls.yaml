@@ -7,9 +7,7 @@ category: "models"
 subcategory: "local"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_models_local_lw_pls_fit"
-  - "n4m_models_local_lw_pls_predict"
-  - "n4m_models_local_lw_pls_destroy"
+  - "n4m_lw_pls_fit"
 tu:
   - "cpp/src/core/lw_pls.cpp"
 headers:
