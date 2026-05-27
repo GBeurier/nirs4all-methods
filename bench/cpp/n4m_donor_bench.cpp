@@ -879,6 +879,11 @@ int run_list() {
 
 int main(int argc, char** argv) {
     std::string method;
+    std::string dump_path;  /* --dump-output: write c.out of the first fresh
+                             * run (raw little-endian f64, n*p) for binding-vs-
+                             * C++ transcription validation. Valid only for ops
+                             * whose run writes c.out (augmenters + dim-
+                             * preserving preprocessing). */
     long n = 250, p = 50, max_runs = kDefaultMaxRuns, threads = 1;
     unsigned long long seed = 1234567890ULL;
 
@@ -894,6 +899,7 @@ int main(int argc, char** argv) {
         else if (a == "--p") p = std::strtol(next("--p needs a value"), nullptr, 10);
         else if (a == "--runs") max_runs = std::strtol(next("--runs needs a value"), nullptr, 10);
         else if (a == "--seed") seed = std::strtoull(next("--seed needs a value"), nullptr, 10);
+        else if (a == "--dump-output") dump_path = next("--dump-output needs a value");
         else if (a == "--threads") threads = std::strtol(next("--threads needs a value"), nullptr, 10);
         else die(("unknown argument: " + a).c_str());
     }
@@ -948,6 +954,18 @@ int main(int argc, char** argv) {
     double t0 = now_ms();
     bool ok = one_run();
     double warmup_ms = now_ms() - t0;
+
+    /* Dump the first fresh run's output for transcription validation — before
+     * the timing loop advances the handle RNG, so stochastic augmenters match
+     * a single fresh Python `PCG64(seed)` apply. */
+    if (ok && !dump_path.empty()) {
+        if (std::FILE* f = std::fopen(dump_path.c_str(), "wb")) {
+            std::fwrite(out.data(), sizeof(double), out.size(), f);
+            std::fclose(f);
+        } else {
+            die(("could not open --dump-output path: " + dump_path).c_str());
+        }
+    }
 
     std::vector<double> samples;
     const char* statistic = "single";
