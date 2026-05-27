@@ -125,12 +125,27 @@ if(_N4M_FITPACK_ENABLED)
 endif()
 
 # OBJECT-library transitive link deps don't propagate through TARGET_OBJECTS,
-# so the consuming shared library has to re-link OpenMP / BLAS itself.
+# so the consuming shared library has to re-link OpenMP / BLAS / CUDA itself.
+#
+# The N4M_USE_* backend macros must ALSO be (re)defined on n4m_c: the
+# n4m_backend_is_available() switch lives in cpp/src/c_api/c_api_version.cpp,
+# which compiles into n4m_c — NOT n4m_core. Without the define here that TU takes
+# the #else branch and reports the backend unavailable even though linalg.hpp
+# (in n4m_core) compiled it in. The macros only gate which #if branch compiles;
+# the clean headers mean no extra include dirs are needed on n4m_c.
 if(N4M_WITH_OPENMP AND TARGET OpenMP::OpenMP_CXX)
+    target_compile_definitions(n4m_c PRIVATE N4M_USE_OPENMP=1)
     target_link_libraries(n4m_c PRIVATE OpenMP::OpenMP_CXX)
 endif()
 if(N4M_WITH_BLAS AND DEFINED BLAS_LIBRARIES)
+    target_compile_definitions(n4m_c PRIVATE N4M_USE_BLAS=1)
     target_link_libraries(n4m_c PRIVATE ${BLAS_LIBRARIES})
+endif()
+# find_package(CUDAToolkit REQUIRED) guarantees both targets under N4M_WITH_CUDA,
+# so link unguarded — a missing cuBLAS should fail loudly, not silently skip.
+if(N4M_WITH_CUDA)
+    target_compile_definitions(n4m_c PRIVATE N4M_USE_CUDA=1)
+    target_link_libraries(n4m_c PRIVATE CUDA::cudart CUDA::cublas)
 endif()
 
 # n4m_cli (cpp/cli/) and n4m_tests (cpp/tests/) are wired by the

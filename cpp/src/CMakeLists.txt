@@ -199,11 +199,21 @@ endif()
 # Runtime safety: a build with N4M_WITH_CUDA=ON still loads cleanly
 # on a machine without a GPU. cuda_dispatch::cuda_runtime_available()
 # returns false in that case, and n4m_backend_is_available + set_backend
-# both report unavailability cleanly.
+# both report unavailability cleanly (verified: --abi-info/--selfcheck pass
+# under CUDA_VISIBLE_DEVICES="").
+#
+# Caveat: linalg dispatch is COMPILE-TIME (#if N4M_USE_CUDA in linalg.hpp),
+# not runtime backend-selected. So a cuda-on build is GPU-TARGETED: any method
+# that computes a GEMM/GEMV raises at runtime on a GPU-less machine (it does not
+# silently fall back to the CPU reference). Loading + metadata queries are safe;
+# compute is not. Build cuda-on only where a GPU is present.
 # ---------------------------------------------------------------------------
 if(N4M_WITH_CUDA)
     target_compile_definitions(n4m_core PRIVATE N4M_USE_CUDA=1)
     target_include_directories(n4m_core PRIVATE ${CUDAToolkit_INCLUDE_DIRS})
+    # NB: cuda_dispatch.cpp's CUDA runtime + cuBLAS link deps are re-linked on the
+    # consuming shared lib (n4m_c) in n4m_targets.cmake — OBJECT-library link deps
+    # do not propagate through $<TARGET_OBJECTS>.
     message(STATUS "  CUDA backend      : ON  (toolkit ${CUDAToolkit_VERSION})")
     if(N4M_WITH_BLAS)
         message(WARNING
@@ -249,11 +259,22 @@ if(N4M_BUILD_STATIC)
         OUTPUT_NAME "n4m_static"
         POSITION_INDEPENDENT_CODE ON
     )
+    # Re-link + re-define the N4M_USE_* backend macros, same rationale as n4m_c
+    # in n4m_targets.cmake: c_api_version.cpp compiles into this target too, and
+    # OBJECT-library deps/defines don't propagate through $<TARGET_OBJECTS:n4m_core>.
     if(N4M_WITH_OPENMP AND TARGET OpenMP::OpenMP_CXX)
+        target_compile_definitions(n4m_c_static PRIVATE N4M_USE_OPENMP=1)
         target_link_libraries(n4m_c_static PRIVATE OpenMP::OpenMP_CXX)
     endif()
     if(N4M_WITH_BLAS AND DEFINED BLAS_LIBRARIES)
+        target_compile_definitions(n4m_c_static PRIVATE N4M_USE_BLAS=1)
         target_link_libraries(n4m_c_static PRIVATE ${BLAS_LIBRARIES})
+    endif()
+    # CUDA-on-static is unusual (Android has no cuBLAS) but if built it must
+    # resolve cudaMalloc/cublas* like the shared lib.
+    if(N4M_WITH_CUDA)
+        target_compile_definitions(n4m_c_static PRIVATE N4M_USE_CUDA=1)
+        target_link_libraries(n4m_c_static PRIVATE CUDA::cudart CUDA::cublas)
     endif()
     n4m_add_warnings(n4m_c_static)
 endif()

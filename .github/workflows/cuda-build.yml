@@ -1,0 +1,51 @@
+# CUDA backend build-check. GitHub-hosted runners have no GPU, so this is a
+# COMPILE + LINK check of the cuda-on preset (it catches build/link regressions
+# like a wrong include path or a missing CUDA::cudart/cublas link — both of
+# which broke the build before). The GPU runtime + CUDA↔CPU bit-parity were
+# verified locally on RTX 4090 / 5090 (rmse_rel = 0 on pcr/pls/mb_pls/gpr_pls).
+#
+# n4m compiles cuda_dispatch.cpp with the host C++ compiler + the CUDA include
+# path (no enable_language(CUDA)), so this needs the CUDA headers + cudart/cublas
+# libs, not a full nvcc/GPU stack.
+name: CUDA build
+
+on:
+  push:
+    branches: [main]
+    paths: ["cpp/**", "CMakeLists.txt", "cmake/**", "CMakePresets.json", ".github/workflows/cuda-build.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["cpp/**", "CMakeLists.txt", "cmake/**", "CMakePresets.json", ".github/workflows/cuda-build.yml"]
+  workflow_dispatch: {}
+
+jobs:
+  cuda-compile:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build cmake
+
+      - name: Install CUDA toolkit (headers + cudart + cublas)
+        uses: Jimver/cuda-toolkit@v0.2.21
+        with:
+          cuda: "12.5.0"
+          method: network
+          # cuBLAS ships as `libcublas*` (not `cuda-cublas*`), so it belongs in
+          # non-cuda-sub-packages; nvcc/cudart are the `cuda-`-prefixed ones.
+          sub-packages: '["nvcc", "cudart", "cudart-dev"]'
+          non-cuda-sub-packages: '["libcublas", "libcublas-dev"]'
+
+      - name: Configure + build cuda-on (compile/link check)
+        run: |
+          cmake --preset cuda-on
+          cmake --build --preset cuda-on --parallel
+
+      - name: CLI selfcheck + abi-info (CPU path of the CUDA-linked lib)
+        run: |
+          export LD_LIBRARY_PATH=build/cuda-on/cpp/src
+          ./build/cuda-on/cpp/cli/n4m_cli --abi-info
+          ./build/cuda-on/cpp/cli/n4m_cli --selfcheck

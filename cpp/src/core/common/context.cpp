@@ -6,7 +6,7 @@
 #include <cstdio>
 
 #if defined(N4M_USE_CUDA)
-#  include "core/common/cuda_dispatch.hpp"
+#  include "core/cuda_dispatch.hpp"
 #endif
 
 namespace n4m::core {

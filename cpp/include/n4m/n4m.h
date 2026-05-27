@@ -100,9 +100,16 @@ N4M_API const char* n4m_status_to_string(n4m_status_t s);
  * 2. Backends and numerical dtypes
  * ==========================================================================
  *
- * Backends are runtime-selectable via n4m_context_set_backend. The reference
- * CPU backend is always available; everything else is built when the
- * corresponding N4M_WITH_* CMake option is enabled at compile time.
+ * Each build of libn4m has ONE active numerical path, fixed at COMPILE time:
+ * the accelerator enabled via the matching N4M_WITH_* CMake option (BLAS,
+ * OpenMP, or CUDA), or the portable reference CPU path when none is enabled.
+ * linalg dispatch is compile-time, so n4m_context_set_backend validates and
+ * records the requested backend but does NOT re-route compute at runtime.
+ * A build compiled with an accelerator routes all GEMM/GEMV through it; the
+ * reference scalar path is compiled in only when no accelerator is enabled.
+ * In particular a CUDA build is GPU-TARGETED: it loads and answers metadata
+ * queries without a GPU, but any method that computes a GEMM raises at runtime
+ * on a GPU-less machine — it does not fall back to the CPU reference.
  */
 typedef enum n4m_backend_t {
     N4M_BACKEND_AUTO            = 0,   /* library picks the best available */
@@ -115,9 +122,11 @@ typedef enum n4m_backend_t {
     N4M_BACKEND_METAL           = 7    /* reserved, not implemented */
 } n4m_backend_t;
 
-/* Returns 1 if the backend was compiled into this build of libn4m, 0
- * otherwise. AUTO is always available (it resolves to REFERENCE_CPU at
- * minimum). */
+/* Returns 1 if the backend is usable in this build of libn4m, 0 otherwise.
+ * "Usable" means compiled in (via the matching N4M_WITH_* option) AND, for
+ * CUDA, a CUDA-capable GPU present at runtime. AUTO and REFERENCE_CPU are
+ * always available. Because dispatch is compile-time (see above), this reports
+ * what the build CAN do, not a per-context runtime switch. */
 N4M_API int          n4m_backend_is_available(n4m_backend_t backend);
 N4M_API const char*  n4m_backend_to_string(n4m_backend_t backend);
 
