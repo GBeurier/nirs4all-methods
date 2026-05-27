@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gbeurier.github.io/nirs4all-methods/dashboard.schema.json",
+  "title": "n4m dashboard payload (D-min contract)",
+  "description": "Canonical contract for the benchmark/parity dashboard payload emitted by docs/_extras/build_landing.py:build_payload and consumed by the dashboard template + the per-method doc pages. The full SPA (Phase D-SPA) will consume the same contract. Forward-compatible: additional keys are allowed; the fields below are the stable surface.",
+  "type": "object",
+  "required": ["generated_at", "columns", "rows", "method_scores", "stats"],
+  "properties": {
+    "generated_at": {"type": "string"},
+    "columns": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {"type": "string"},
+          "label": {"type": "string"},
+          "group": {"type": "string"},
+          "lang": {"type": "string"},
+          "kind": {"type": "string"}
+        }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["algo", "n", "p", "threads", "cells"],
+        "properties": {
+          "algo": {"type": "string"},
+          "n": {"type": "integer"},
+          "p": {"type": "integer"},
+          "threads": {"type": "integer"},
+          "cells": {
+            "type": "object",
+            "description": "Keyed by column id. Each cell carries optional timing + parity verdicts.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "ms": {"type": ["number", "null"]},
+                "ok": {"type": "boolean"},
+                "parity": {"type": "string"},
+                "reference_parity": {"type": "string"},
+                "binding_parity": {"type": "string"},
+                "divergence": {"type": ["number", "null"]},
+                "divergence_basis": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "method_scores": {
+      "type": "object",
+      "description": "Per-method score card aggregated across the method's cells. Keyed by algorithm/dashboard id.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["reference", "binding", "divergence"],
+        "properties": {
+          "reference": {
+            "type": "object",
+            "description": "Reference-parity verdict counts (n4m vs the method's canonical external reference): exact / divergent / not_available / not_run / drift / error.",
+            "additionalProperties": {"type": "integer", "minimum": 0}
+          },
+          "binding": {
+            "type": "object",
+            "description": "Binding-parity verdict counts (each binding tier vs the C++ core).",
+            "additionalProperties": {"type": "integer", "minimum": 0}
+          },
+          "divergence": {
+            "type": "object",
+            "required": ["reference", "binding"],
+            "properties": {
+              "reference": {"$ref": "#/$defs/divergence_stat"},
+              "binding": {"$ref": "#/$defs/divergence_stat"}
+            }
+          }
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "required": ["algos", "backends", "rows", "cells", "ok"],
+      "properties": {
+        "algos": {"type": "integer"},
+        "backends": {"type": "integer"},
+        "rows": {"type": "integer"},
+        "cells": {"type": "integer"},
+        "ok": {"type": "integer"}
+      }
+    }
+  },
+  "$defs": {
+    "divergence_stat": {
+      "type": "object",
+      "required": ["max", "median", "n"],
+      "properties": {
+        "max": {"type": ["number", "null"]},
+        "median": {"type": ["number", "null"]},
+        "n": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

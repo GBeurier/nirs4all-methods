@@ -1507,12 +1507,49 @@ def build_payload(results_dir: Path) -> dict:
         and isinstance(c.get("ms"), (int, float))
     ]
 
+    # D-min: per-method score cards — reference parity, binding parity, and
+    # divergence (split by gate basis) aggregated across the method's cells.
+    # This is the canonical, automated score summary the dashboard contract
+    # (docs/dashboard.schema.json) and the per-method doc pages consume.
+    def _med(v: list) -> float | None:
+        v = sorted(v)
+        n = len(v)
+        if not n:
+            return None
+        return v[n // 2] if n % 2 else 0.5 * (v[n // 2 - 1] + v[n // 2])
+
+    method_scores: dict = {}
+    for r in rows_out:
+        sc = method_scores.setdefault(r["algo"], {
+            "reference": defaultdict(int), "binding": defaultdict(int),
+            "_rd": [], "_bd": []})
+        for cid, c in r["cells"].items():
+            if cid == REF_COL_ID:
+                continue
+            if c.get("reference_parity"):
+                sc["reference"][c["reference_parity"]] += 1
+            if c.get("binding_parity"):
+                sc["binding"][c["binding_parity"]] += 1
+            d = c.get("divergence")
+            if isinstance(d, (int, float)) and d == d:
+                (sc["_rd"] if c.get("divergence_basis") == "reference"
+                 else sc["_bd"]).append(abs(float(d)))
+    for algo, sc in method_scores.items():
+        rd, bd = sc.pop("_rd"), sc.pop("_bd")
+        sc["reference"] = dict(sc["reference"])
+        sc["binding"] = dict(sc["binding"])
+        sc["divergence"] = {
+            "reference": {"max": max(rd) if rd else None, "median": _med(rd), "n": len(rd)},
+            "binding": {"max": max(bd) if bd else None, "median": _med(bd), "n": len(bd)},
+        }
+
     payload = {
         "generated_at": generated_at,
         "host":         host_info(),
         "columns":      columns,
         "presets":      presets,
         "rows":         rows_out,
+        "method_scores": method_scores,
         "scaling":      scaling_rows,
         "versions":     versions,
         "algo_to_group":algo_to_group,

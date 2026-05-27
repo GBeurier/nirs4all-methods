@@ -1,0 +1,4407 @@
+{
+  "generated_at": "2026-05-27 09:48 UTC",
+  "host": {
+    "os": "Linux 6.6.87.2-microsoft-standard-WSL2 (x86_64)",
+    "python": "3.13.13",
+    "cpu_model": "12th Gen Intel(R) Core(TM) i9-12900K",
+    "cpu_count_logical": 24,
+    "cpu_count_physical": 12,
+    "ram_gb": "62.7",
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "cpu_mhz": "3187",
+    "cpu_cache": "30720 KB"
+  },
+  "scenario_model": "(method, n, p, seed, backend) \u2014 see parity/SCENARIOS_MIN.md",
+  "methods": {
+    "aom_pls": {
+      "reference": {
+        "exact": 42,
+        "drift": 26,
+        "not_available": 10,
+        "error": 4
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 3,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 4
+      },
+      "divergence": {
+        "reference": {
+          "max": 9.722307067288032e-16,
+          "median": 7.823200631587255e-16,
+          "n": 12
+        },
+        "binding": {
+          "max": 10.756434037282492,
+          "median": 3.552713678800501e-15,
+          "n": 45
+        }
+      }
+    },
+    "aom_preprocess": {
+      "reference": {
+        "exact": 42,
+        "error": 16,
+        "drift": 14,
+        "not_available": 10
+      },
+      "binding": {
+        "exact": 47,
+        "not_run": 3,
+        "divergent": 6,
+        "error": 16,
+        "not_available": 10
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 6.0723606211747345,
+          "median": 0.0,
+          "n": 41
+        }
+      }
+    },
+    "approximate_press": {
+      "reference": {
+        "exact": 44,
+        "divergent": 26,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "exact": 39,
+        "not_run": 5,
+        "divergent": 26,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.8700583562887027e-15,
+          "median": 1.8700583562887027e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 156.67749173683234,
+          "median": 43.24179407618388,
+          "n": 45
+        }
+      }
+    },
+    "aug_batch_effect": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_dead_band": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_detector_rolloff": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_edge_artifacts_combined": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_edge_curvature": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_emsc_distort": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_gaussian_noise": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_hetero_noise": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_instrument_broaden": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_linear_drift": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_local_mixup": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_mixup": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_moisture": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_multiplicative_noise": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_particle_size": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_path_length": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_poly_drift": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_random_x_operation": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_rotate_translate": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_scatter_sim": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_spike_noise": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_spline_smoothing": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_spline_x_perturbations": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_spline_y_perturbations": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_stray_light": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "aug_temperature": {
+      "reference": {
+        "not_available": 14
+      },
+      "binding": {
+        "exact": 12,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
+        }
+      }
+    },
+    "aug_truncated_peak": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "bagging_pls": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.646060607274038,
+          "median": 0.15899585819630202,
+          "n": 45
+        }
+      }
+    },
+    "band_mask": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "band_perturb": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "bipls_select": {
+      "reference": {
+        "exact": 57,
+        "drift": 13,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 65,
+        "not_run": 5,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "boosting_pls": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 30,
+        "not_run": 5,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.5617941882922456e-15,
+          "median": 1.5617941882922456e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 5.867618346000022,
+          "median": 1.7423887108640845,
+          "n": 45
+        }
+      }
+    },
+    "bve_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "cars_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 30,
+        "not_available": 13,
+        "error": 4
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 30,
+        "not_available": 13,
+        "error": 4
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 40
+        }
+      }
+    },
+    "channel_dropout": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "continuum_regression": {
+      "reference": {
+        "exact": 44,
+        "divergent": 31,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 10,
+        "exact": 39,
+        "divergent": 26,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.007749268880705075,
+          "median": 1.0927822472163238e-14,
+          "n": 17
+        },
+        "binding": {
+          "max": 8.96862155826718,
+          "median": 0.021563016021287573,
+          "n": 45
+        }
+      }
+    },
+    "cppls": {
+      "reference": {
+        "exact": 64,
+        "divergent": 6,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "exact": 35,
+        "not_run": 5,
+        "divergent": 30,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.025103504777769153,
+          "median": 0.025103504777769153,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.94477910710087,
+          "median": 0.014983285087366016,
+          "n": 45
+        }
+      }
+    },
+    "di_pls": {
+      "reference": {
+        "exact": 56,
+        "divergent": 14,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 51,
+        "not_run": 5,
+        "divergent": 14,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 8.160034445085868e-15,
+          "median": 8.119852845413264e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.935358165902398,
+          "median": 1.2922996006636822e-13,
+          "n": 45
+        }
+      }
+    },
+    "ds": {
+      "reference": {
+        "exact": 64,
+        "drift": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 5.517945272118952e-09,
+          "median": 5.517945272118952e-09,
+          "n": 12
+        },
+        "binding": {
+          "max": 6.133084194341849,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "ecr": {
+      "reference": {
+        "exact": 36,
+        "divergent": 6,
+        "drift": 26,
+        "not_available": 12,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 3,
+        "divergent": 6,
+        "not_available": 12,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 4.187998365163602e-07,
+          "median": 4.187998365163602e-07,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.91797186916581,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "emcuve_select": {
+      "reference": {
+        "exact": 38,
+        "divergent": 32,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 33,
+        "divergent": 32,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "fck": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_composite": {
+      "reference": {
+        "exact": 6
+      },
+      "binding": {
+        "exact": 6
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "filter_leverage": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_quality": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_x_outlier_isolation_forest": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_x_outlier_lof": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_x_outlier_mahalanobis": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_x_outlier_pca_leverage": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_x_outlier_pca_residual": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_x_outlier_robust_mahalanobis": {
+      "reference": {
+        "divergent": 10,
+        "exact": 2,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_y_outlier_constant_input": {
+      "reference": {
+        "exact": 6
+      },
+      "binding": {
+        "exact": 6
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "filter_y_outlier_iqr": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_y_outlier_mad": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_y_outlier_nan_exclusion": {
+      "reference": {
+        "exact": 6
+      },
+      "binding": {
+        "exact": 6
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "filter_y_outlier_percentile": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "filter_y_outlier_zscore": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "fused_sparse_pls": {
+      "reference": {
+        "not_available": 75,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 7.041333309078094,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "ga_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "gauss_jitter": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "gpr_pls": {
+      "reference": {
+        "exact": 64,
+        "divergent": 6,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 2.030399279083147e-10,
+          "median": 2.030388858536513e-10,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.88293623617063,
+          "median": 2.0650148258027912e-14,
+          "n": 45
+        }
+      }
+    },
+    "group_sparse_pls": {
+      "reference": {
+        "exact": 69,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 30,
+        "not_run": 10,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.2097024666475716e-15,
+          "median": 0.0,
+          "n": 17
+        },
+        "binding": {
+          "max": 8.94059993448359,
+          "median": 0.08416799526917917,
+          "n": 45
+        }
+      }
+    },
+    "hotelling_t2": {
+      "reference": {
+        "exact": 6
+      },
+      "binding": {
+        "exact": 6
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "interval_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "ipw_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "irf_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "iriv_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 30,
+        "not_run": 5,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "kernel_pls_rbf": {
+      "reference": {
+        "exact": 70,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 43,
+        "not_run": 5,
+        "divergent": 22,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 4.59803315309804e-15,
+          "median": 3.6095374141600725e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.451720295994953,
+          "median": 5.597767751552851e-07,
+          "n": 45
+        }
+      }
+    },
+    "local_clip": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "local_warp": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "lw_pls": {
+      "reference": {
+        "exact": 70,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 42,
+        "not_run": 5,
+        "divergent": 23,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 6.672563942351167e-16,
+          "median": 6.672563942351167e-16,
+          "n": 12
+        },
+        "binding": {
+          "max": 10.925906292936936,
+          "median": 0.04386669100261914,
+          "n": 45
+        }
+      }
+    },
+    "magnitude_warp": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "mb_pls": {
+      "reference": {
+        "exact": 70,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 51,
+        "not_run": 5,
+        "divergent": 14,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 6.578756407319728e-16,
+          "median": 6.578756407319728e-16,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.514858793113802,
+          "median": 7.105427357601002e-15,
+          "n": 45
+        }
+      }
+    },
+    "mir_pls": {
+      "reference": {
+        "not_available": 75,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 9.698659504175685,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "missing_aware_nipals": {
+      "reference": {
+        "exact": 70,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 7.831956019265149e-15,
+          "median": 7.831956019265149e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.784922305697249,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "n_pls": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 7.171657381188662,
+          "median": 5.259331737599654,
+          "n": 45
+        }
+      }
+    },
+    "o2pls": {
+      "reference": {
+        "exact": 44,
+        "divergent": 26,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 39,
+        "not_run": 5,
+        "divergent": 26,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 3.7880966347348643e-10,
+          "median": 3.7880966347348643e-10,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.838519881819972,
+          "median": 0.213554917666973,
+          "n": 45
+        }
+      }
+    },
+    "on_pls": {
+      "reference": {
+        "exact": 38,
+        "not_available": 22,
+        "drift": 10,
+        "error": 12
+      },
+      "binding": {
+        "exact": 33,
+        "not_run": 5,
+        "not_available": 22,
+        "drift": 10,
+        "error": 12
+      },
+      "divergence": {
+        "reference": {
+          "max": 2.3122310244537675e-11,
+          "median": 2.3122310244537675e-11,
+          "n": 12
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 13
+        }
+      }
+    },
+    "one_se_rule": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "exact": 30,
+        "not_run": 5,
+        "divergent": 35,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 3.503312987310396e-14,
+          "median": 3.503312987310396e-14,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.171365399758749,
+          "median": 0.8555332138584935,
+          "n": 45
+        }
+      }
+    },
+    "opls": {
+      "reference": {
+        "exact": 36,
+        "divergent": 6,
+        "drift": 26,
+        "not_available": 8,
+        "error": 4
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 3,
+        "divergent": 6,
+        "not_available": 8,
+        "error": 4
+      },
+      "divergence": {
+        "reference": {
+          "max": 4.974111035386395e-15,
+          "median": 4.847369789118967e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.938151541392488,
+          "median": 2.220446049250313e-14,
+          "n": 45
+        }
+      }
+    },
+    "pcr": {
+      "reference": {
+        "exact": 66,
+        "divergent": 9,
+        "not_available": 6,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 10,
+        "divergent": 6,
+        "not_available": 6,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.1878089302998944,
+          "median": 2.989750721407406e-12,
+          "n": 17
+        },
+        "binding": {
+          "max": 3.205784555494023,
+          "median": 1.6237011735142914e-15,
+          "n": 45
+        }
+      }
+    },
+    "pds": {
+      "reference": {
+        "exact": 64,
+        "drift": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 5.119717599792001e-09,
+          "median": 5.119717599792001e-09,
+          "n": 12
+        },
+        "binding": {
+          "max": 6.13308419618304,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "pls": {
+      "reference": {
+        "exact": 77,
+        "divergent": 6,
+        "error": 4,
+        "not_available": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 18,
+        "divergent": 6,
+        "error": 4,
+        "not_available": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.025111418456287934,
+          "median": 9.71967122890382e-16,
+          "n": 25
+        },
+        "binding": {
+          "max": 8.938151541392482,
+          "median": 5.329070518200751e-15,
+          "n": 45
+        }
+      }
+    },
+    "pls_cox": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 735.8381395702374,
+          "median": 1.7515387148305852,
+          "n": 45
+        }
+      }
+    },
+    "pls_diagnostic_dmodx": {
+      "reference": {
+        "exact": 70,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 2.0217840720770987e-15,
+          "median": 2.0186612684233322e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 0.5413801233330535,
+          "median": 6.661338147750939e-16,
+          "n": 45
+        }
+      }
+    },
+    "pls_diagnostic_q": {
+      "reference": {
+        "exact": 70,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.1253394382218252e-15,
+          "median": 1.1192760213630268e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 27.792381830014573,
+          "median": 3.197442310920451e-14,
+          "n": 45
+        }
+      }
+    },
+    "pls_diagnostic_t2": {
+      "reference": {
+        "exact": 70,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 5.491357335578288e-15,
+          "median": 4.006948874079063e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 12.568591461849273,
+          "median": 1.2434497875801753e-13,
+          "n": 45
+        }
+      }
+    },
+    "pls_glm": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 30,
+        "not_run": 5,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.4238041800058916e-15,
+          "median": 1.4238041800058916e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.649354979874547,
+          "median": 0.24116824825689237,
+          "n": 45
+        }
+      }
+    },
+    "pls_lda": {
+      "reference": {
+        "exact": 70,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.3000350008970503,
+          "median": 1.3000350008970503,
+          "n": 12
+        },
+        "binding": {
+          "max": 2.36523279620511,
+          "median": 2.220446049250313e-15,
+          "n": 45
+        }
+      }
+    },
+    "pls_logistic": {
+      "reference": {
+        "exact": 70,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 6.359824035495294e-16,
+          "median": 5.592723641115573e-16,
+          "n": 12
+        },
+        "binding": {
+          "max": 13.404679366737259,
+          "median": 2.913245589861969,
+          "n": 45
+        }
+      }
+    },
+    "pls_monitoring": {
+      "reference": {
+        "exact": 70,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 5.987085543950303e-15,
+          "median": 5.312660096236357e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 16.527113435728584,
+          "median": 2.2870594307278225e-14,
+          "n": 45
+        }
+      }
+    },
+    "pls_qda": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 5.312718489453692e-16,
+          "median": 4.943313811845922e-16,
+          "n": 12
+        },
+        "binding": {
+          "max": 2.1453877686231957,
+          "median": 1.903197730258126,
+          "n": 45
+        }
+      }
+    },
+    "pop_pls": {
+      "reference": {
+        "exact": 42,
+        "drift": 26,
+        "not_available": 10,
+        "error": 4
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 3,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 4
+      },
+      "divergence": {
+        "reference": {
+          "max": 5.1419047448291e-15,
+          "median": 5.1419047448291e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 2.182897553481516,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "pp_airpls": {
+      "reference": {
+        "divergent": 5,
+        "exact": 9,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.007419331056867298,
+          "median": 0.0037096655465094427,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_area": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.9319388654519669e-16,
+          "median": 1.6320056929713895e-16,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_arpls": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 3.0241136402954257e-11,
+          "median": 2.5829112528312044e-11,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_asls": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.3969085905375942e-10,
+          "median": 9.218295715238711e-11,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_baseline": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_beads": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 3.3774996727354543e-07,
+          "median": 1.7959858460927873e-07,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_crop": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_derivate": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_detrend": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.7575374004347594e-15,
+          "median": 1.3689086552537776e-15,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_emsc": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_epo": {
+      "reference": {
+        "exact": 6
+      },
+      "binding": {
+        "exact": 6
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "pp_first_derivative": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 4.8155793251700727e-17,
+          "median": 3.43664809133903e-17,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_flex_pca": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.7746718507648749,
+          "median": 1.503776643353458,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_flex_svd": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.25408037941170564,
+          "median": 0.2531846762667176,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_frac_to_pct": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_from_absorbance": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.2404446258399673e-16,
+          "median": 1.2404446258399673e-16,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_gaussian": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.6355859877828433e-16,
+          "median": 1.6313303541513765e-16,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_haar": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 2.9431398903761563,
+          "median": 2.9414676142931153,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_iasls": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.0870103497735996e-08,
+          "median": 5.6169495032616e-09,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_imodpoly": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.4170153647422748,
+          "median": 0.37037959883751076,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_kbins_disc": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_kubelka_munk": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.643646682446191e-16,
+          "median": 1.643646682446191e-16,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_log": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_lsnv": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_modpoly": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.19501660780520882,
+          "median": 0.11889842177105969,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_msc": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 20.648542856033533,
+          "median": 10.82421456488042,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_normalize": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_norris_williams": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_osc": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 9.034648762415424e-16,
+          "median": 7.804697420787318e-16,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_pct_to_frac": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_range_disc": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_resample": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 2.594739576143782e-18,
+          "median": 2.4837857293336688e-18,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_resampler": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 2.4192192554849287e-18,
+          "median": 1.9343408125909143e-18,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_rnv": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_rolling_ball": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.008355252770838966,
+          "median": 0.0058586793140580915,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_savgol": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.04833964166101889,
+          "median": 0.03492071745291699,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_second_derivative": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 8.981305181424232e-17,
+          "median": 6.813168355972673e-17,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_simple_scale": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 8.322183847367344e-17,
+          "median": 8.05669002786936e-17,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_snip": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.08929326975345761,
+          "median": 0.06597921316916239,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_snv": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.1076815268115339e-15,
+          "median": 8.365535592971488e-16,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_to_absorbance": {
+      "reference": {
+        "exact": 14,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 8.549985258012605e-17,
+          "median": 8.549985258012605e-17,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_wavelet": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 2.9431398903761563,
+          "median": 2.9414676142931153,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_wavelet_denoise": {
+      "reference": {
+        "divergent": 10,
+        "exact": 4,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.10451867583849626,
+          "median": 0.0930624934220716,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_wavelet_features": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_wavelet_pca": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pp_wavelet_svd": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 16,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "pso_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "q_residuals": {
+      "reference": {
+        "exact": 6
+      },
+      "binding": {
+        "exact": 6
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "random_frog_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 30,
+        "not_run": 5,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "random_subspace_pls": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 6.997829084976795,
+          "median": 0.9542661924802264,
+          "n": 45
+        }
+      }
+    },
+    "randomization_select": {
+      "reference": {
+        "exact": 63,
+        "not_available": 10,
+        "error": 2,
+        "divergent": 7
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 58,
+        "not_available": 10,
+        "error": 2,
+        "divergent": 7
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "recursive_pls": {
+      "reference": {
+        "exact": 55,
+        "divergent": 6,
+        "not_available": 6,
+        "error": 16
+      },
+      "binding": {
+        "exact": 46,
+        "not_run": 9,
+        "divergent": 6,
+        "not_available": 7,
+        "error": 15
+      },
+      "divergence": {
+        "reference": {
+          "max": 3.712896016544565e-15,
+          "median": 1.0710443566673482e-15,
+          "n": 15
+        },
+        "binding": {
+          "max": 9.623756811058128,
+          "median": 3.774758283725532e-15,
+          "n": 36
+        }
+      }
+    },
+    "rep_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "ridge_pls": {
+      "reference": {
+        "exact": 64,
+        "divergent": 6,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "exact": 30,
+        "not_run": 5,
+        "drift": 29,
+        "divergent": 6,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.4482601638288697e-15,
+          "median": 1.0453484217562568e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.914865227621661,
+          "median": 0.00029419262313479244,
+          "n": 45
+        }
+      }
+    },
+    "robust_pls": {
+      "reference": {
+        "exact": 60,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2,
+        "drift": 4
+      },
+      "binding": {
+        "exact": 39,
+        "not_run": 5,
+        "divergent": 26,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.0865318899916224e-14,
+          "median": 1.0865318899916224e-14,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.839028256623763,
+          "median": 0.15163839642161347,
+          "n": 45
+        }
+      }
+    },
+    "rosa": {
+      "reference": {
+        "exact": 69,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 10,
+        "exact": 59,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.6001366248947622e-15,
+          "median": 2.4705331476230017e-16,
+          "n": 17
+        },
+        "binding": {
+          "max": 8.843828251767496,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "scars_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "shaving_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "sipls_select": {
+      "reference": {
+        "not_available": 75,
+        "error": 2
+      },
+      "binding": {
+        "exact": 65,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": null,
+          "median": null,
+          "n": 0
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "so_pls": {
+      "reference": {
+        "exact": 52,
+        "divergent": 18,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 47,
+        "not_run": 5,
+        "divergent": 18,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 7.002383243898542e-10,
+          "median": 7.002383243898542e-10,
+          "n": 12
+        },
+        "binding": {
+          "max": 19.44011727521721,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "spa_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "sparse_pls_da": {
+      "reference": {
+        "exact": 75,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 34,
+        "not_run": 10,
+        "divergent": 31,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.2961481396815722,
+          "median": 0.0,
+          "n": 17
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 0.6761361986011727,
+          "n": 45
+        }
+      }
+    },
+    "sparse_simpls": {
+      "reference": {
+        "exact": 69,
+        "drift": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 39,
+        "not_run": 10,
+        "divergent": 26,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.008649821500179969,
+          "median": 0.008649821500179965,
+          "n": 17
+        },
+        "binding": {
+          "max": 8.938151541392479,
+          "median": 0.0025680326715253887,
+          "n": 45
+        }
+      }
+    },
+    "split_bsgk": {
+      "reference": {
+        "exact": 12,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 12,
+        "not_available": 2,
+        "not_run": 4
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "split_kbins_stratified": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "split_kennard_stone": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "split_kmeans": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 10,
+        "not_run": 4,
+        "not_available": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "split_split_splitter": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 10,
+        "not_run": 4,
+        "not_available": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "split_spxy": {
+      "reference": {
+        "exact": 12,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "split_spxy_fold": {
+      "reference": {
+        "divergent": 10,
+        "exact": 2,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 10,
+        "not_run": 4,
+        "not_available": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "split_spxy_g_fold": {
+      "reference": {
+        "divergent": 10,
+        "exact": 2,
+        "not_available": 4
+      },
+      "binding": {
+        "exact": 10,
+        "not_run": 4,
+        "not_available": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "split_systematic_circular": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 10,
+        "not_run": 4,
+        "not_available": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 2
+        }
+      }
+    },
+    "st_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "stability_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "t2_select": {
+      "reference": {
+        "exact": 70,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.4472135954999579,
+          "median": 0.4472135954999579,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "unsharp_mask": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "uve_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "variable_select_coef": {
+      "reference": {
+        "exact": 64,
+        "drift": 6,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "variable_select_sr": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "variable_select_vip": {
+      "reference": {
+        "exact": 64,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "vip_spa_select": {
+      "reference": {
+        "exact": 44,
+        "divergent": 26,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 39,
+        "not_run": 5,
+        "divergent": 26,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "vissa_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    },
+    "wavelength_shift": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "wavelength_stretch": {
+      "reference": {
+        "exact": 10,
+        "not_available": 6
+      },
+      "binding": {
+        "exact": 14,
+        "not_run": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 6
+        }
+      }
+    },
+    "weighted_pls": {
+      "reference": {
+        "exact": 64,
+        "divergent": 6,
+        "not_available": 8,
+        "error": 2
+      },
+      "binding": {
+        "exact": 39,
+        "not_run": 5,
+        "divergent": 26,
+        "not_available": 8,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 3.6653888601428055e-15,
+          "median": 3.6653888601428055e-15,
+          "n": 12
+        },
+        "binding": {
+          "max": 8.885569194786948,
+          "median": 0.0012991104845854196,
+          "n": 45
+        }
+      }
+    },
+    "wvc_select": {
+      "reference": {
+        "exact": 64,
+        "drift": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "exact": 59,
+        "not_run": 5,
+        "divergent": 6,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 0.0,
+          "n": 45
+        }
+      }
+    },
+    "wvc_threshold_select": {
+      "reference": {
+        "exact": 35,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "binding": {
+        "not_run": 5,
+        "exact": 30,
+        "divergent": 35,
+        "not_available": 10,
+        "error": 2
+      },
+      "divergence": {
+        "reference": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 12
+        },
+        "binding": {
+          "max": 1.0,
+          "median": 1.0,
+          "n": 45
+        }
+      }
+    }
+  },
+  "totals": {
+    "methods": 183,
+    "reference": {
+      "exact": 4540,
+      "drift": 175,
+      "not_available": 1500,
+      "error": 194,
+      "divergent": 1356
+    },
+    "binding": {
+      "exact": 4675,
+      "not_run": 607,
+      "divergent": 1533,
+      "not_available": 718,
+      "error": 193,
+      "drift": 39
+    }
+  }
+}
