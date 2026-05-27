@@ -1,0 +1,73 @@
+# Cross-binding parity — harness + Python self-consistency smoke.
+#
+# HONEST SCOPE: this CI job is NOT the full cross-binding parity proof. The
+# `cpp` baseline and `python_tier1` both route through the same
+# `MethodSpec.pls4all_fn` ctypes path (see the bench_python_tier1.py header), so
+# requiring only Python here proves the harness runs and the Python path
+# reproduces the canonical registry call deterministically — a smoke check, not
+# a cross-LANGUAGE guarantee.
+#
+# The real cross-language gate (R / Octave / JS reproduce the C++ core) is
+# delivered by the SAME script (benchmarks/cross_binding/ci_parity_gate.py) and
+# is validated locally / pre-release at rmse_rel <= 2.5e-15. It is not in CI yet
+# because those bindings have no CI-buildable packaging:
+#   - R   : bindings/r/n4m src/Makevars still references the pre-rename vendored
+#           tree, so the package does not build standalone in CI (see the note
+#           atop release-r.yml).
+#   - Octave: the +pls4all MEX dispatcher needs an equivalent CI build step.
+#   - JS  : no benchmarks/cross_binding/scripts/bench_js.* driver yet (WASM).
+# When a binding's CI build lands, install its toolchain here and add it to
+# --require to promote it from local-only to a hard CI gate.
+name: Cross-binding parity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  harness-and-python-smoke:
+    runs-on: ubuntu-22.04
+    env:
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      PYTHONHASHSEED: "0"
+      N4M_R_ENV_NOWARN: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
+
+      - name: Build libn4m (Linux gcc-12 Release)
+        run: |
+          cmake --preset ci-linux-gcc12-release
+          cmake --build --preset ci-linux-gcc12-release --parallel
+
+      - name: Install Python binding + test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e bindings/python
+          pip install pytest numpy
+
+      - name: Unit-test the gate logic
+        run: python -m pytest benchmarks/cross_binding/tests/test_ci_parity_gate.py -q
+
+      - name: Parity harness + Python self-consistency smoke (rmse_rel <= 1e-12)
+        # Python-only: a smoke check (see header). R/Octave/JS SKIP cleanly here
+        # (their toolchains aren't installed) and the full cross-language gate is
+        # run locally/pre-release until their CI builds land.
+        run: |
+          python benchmarks/cross_binding/ci_parity_gate.py \
+            --lib-dir build/ci-linux-gcc12-release/cpp/src \
+            --build-key ci --require python

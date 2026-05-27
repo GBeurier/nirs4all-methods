@@ -126,3 +126,6 @@ benchmarks/cross_binding/data/.x_target/
 benchmarks/cross_binding/results/
 
 docs/_build/
+
+# Playwright MCP scratch dir (browser-automation artifacts, not project content)
+.playwright-mcp/
