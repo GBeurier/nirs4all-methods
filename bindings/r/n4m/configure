@@ -1,0 +1,45 @@
+#!/bin/sh
+# Generate src/Makevars from src/Makevars.in for the STANDALONE build-and-test
+# path (dev / CI / the cross-binding parity gate): the R glue links against an
+# existing libn4m. Locate it from PLS4ALL_* env vars, else the in-repo build.
+#
+# The CRAN-self-contained build (vendoring + statically compiling the core) is a
+# separate, deferred path — see the note atop .github/workflows/release-r.yml.
+set -e
+
+PKG_ROOT=$(cd "$(dirname "$0")" && pwd)
+REPO=$(cd "$PKG_ROOT/../../.." && pwd)
+
+INC="${PLS4ALL_INCLUDE_DIR:-$REPO/cpp/include}"
+GEN="${PLS4ALL_GENERATED_DIR:-$REPO/build/dev-release/generated}"
+LIB="${PLS4ALL_LIB_DIR:-$REPO/build/dev-release/cpp/src}"
+
+# Fallback: if the default lib dir has no libn4m, pick any in-repo build that does.
+if [ ! -e "$LIB/libn4m.so" ] && [ ! -e "$LIB/libn4m.dylib" ]; then
+    for d in "$REPO"/build/*/cpp/src; do
+        if [ -e "$d/libn4m.so" ] || [ -e "$d/libn4m.dylib" ]; then
+            LIB="$d"
+            GEN="$(cd "$d/../.." && pwd)/generated"
+            break
+        fi
+    done
+fi
+
+if [ ! -e "$LIB/libn4m.so" ] && [ ! -e "$LIB/libn4m.dylib" ]; then
+    echo "n4m configure: ERROR — no libn4m found (looked in '$LIB' and build/*/cpp/src)." >&2
+    echo "  Build it first, e.g. cmake --preset dev-release && cmake --build --preset dev-release," >&2
+    echo "  or set PLS4ALL_LIB_DIR. (CRAN self-contained build is a separate path.)" >&2
+    exit 1
+fi
+
+CPPFLAGS="-I$INC -I$GEN"
+LIBS="-L$LIB -ln4m -Wl,-rpath,$LIB"
+
+sed -e "s|@N4M_CPPFLAGS@|$CPPFLAGS|g" \
+    -e "s|@N4M_LIBS@|$LIBS|g" \
+    "$PKG_ROOT/src/Makevars.in" > "$PKG_ROOT/src/Makevars"
+
+echo "n4m configure: linking prebuilt libn4m"
+echo "  include   = $INC"
+echo "  generated = $GEN"
+echo "  lib       = $LIB"

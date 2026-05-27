@@ -1,0 +1,18 @@
+# Generated from Makevars.in by ./configure.
+#
+# Standalone build path: compile the thin R glue (r_*.c + n4m_cxx.cpp) and LINK
+# against an existing libn4m (located by ./configure from PLS4ALL_LIB_DIR or the
+# in-repo build). R compiles every src/*.c and src/*.cpp by default, which is
+# exactly the glue set (there is no vendored libp4a/ tree on this path).
+#
+# NOTE: this is the dev/CI build-and-test path used by the cross-binding parity
+# gate. The CRAN-self-contained build (vendoring + statically compiling the core
+# so no external libn4m is needed at install time) is a separate, deferred path
+# (see the note atop .github/workflows/release-r.yml).
+
+PKG_CPPFLAGS = @N4M_CPPFLAGS@
+
+# C++17 for n4m_cxx.cpp (the link-mode sentinel). R maps -std per compiler.
+CXX_STD = CXX17
+
+PKG_LIBS = @N4M_LIBS@
