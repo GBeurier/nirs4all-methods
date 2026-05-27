@@ -1,0 +1,66 @@
+# Catalog ↔ ABI reconciliation — remaining gap (Phase B WIP)
+
+`reconcile_abi.py --check`: **421/548 method symbols attributed** to 143 catalog methods; **121 infra** symbols; **127 orphan** symbols in **46 families** = catalog methods that do not yet exist but are exported by libn4m. Union 542/669.
+
+Completing #1 means ADDING these as catalog methods (full metadata, maintainer-reviewed) or classifying as advanced/internal. Codex (thread 019e6a1c) flagged this exact wrinkle.
+
+## aom_pop.pop_pls (NEW — POP-PLS)  (2 families)
+- `n4m_aom_per_component_*` (1 symbols)
+- `n4m_aom_per_component_result_*` (10 symbols)
+
+## augmentation.* (NEW)  (1 families)
+- `n4m_aug_edge_artifacts_*` (3 symbols)
+
+## filters.* (NEW)  (2 families)
+- `n4m_filter_correlation_*` (6 symbols)
+- `n4m_filter_variance_*` (6 symbols)
+
+## models.* (NEW model variant)  (18 families)
+- `n4m_bagging_pls_*` (1 symbols)
+- `n4m_boosting_pls_*` (1 symbols)
+- `n4m_continuum_regression_*` (1 symbols)
+- `n4m_cppls_*` (1 symbols)
+- `n4m_di_pls_*` (1 symbols)
+- `n4m_ds_*` (1 symbols)
+- `n4m_fused_sparse_pls_*` (1 symbols)
+- `n4m_group_sparse_pls_*` (1 symbols)
+- `n4m_mir_pls_*` (1 symbols)
+- `n4m_o2pls_*` (1 symbols)
+- `n4m_on_pls_*` (1 symbols)
+- `n4m_pds_*` (1 symbols)
+- `n4m_random_subspace_pls_*` (1 symbols)
+- `n4m_ridge_pls_*` (1 symbols)
+- `n4m_robust_pls_*` (1 symbols)
+- `n4m_rosa_*` (1 symbols)
+- `n4m_so_pls_*` (1 symbols)
+- `n4m_weighted_pls_*` (1 symbols)
+
+## models.* / diagnostics (NEW)  (6 families)
+- `n4m_pls_cox_*` (1 symbols)
+- `n4m_pls_fit_simple_*` (1 symbols)
+- `n4m_pls_glm_*` (1 symbols)
+- `n4m_pls_qda_*` (1 symbols)
+- `n4m_sparse_pls_da_*` (1 symbols)
+- `n4m_sparse_simpls_*` (1 symbols)
+
+## preprocessing.* (NEW)  (15 families)
+- `n4m_pp_cow_align_*` (5 symbols)
+- `n4m_pp_direct_standardization_*` (5 symbols)
+- `n4m_pp_dtw_align_*` (5 symbols)
+- `n4m_pp_icoshift_align_*` (5 symbols)
+- `n4m_pp_local_centering_*` (5 symbols)
+- `n4m_pp_localized_msc_*` (5 symbols)
+- `n4m_pp_piecewise_direct_standardization_*` (5 symbols)
+- `n4m_pp_piecewise_msc_*` (5 symbols)
+- `n4m_pp_piecewise_snv_*` (5 symbols)
+- `n4m_pp_robust_direct_standardization_*` (5 symbols)
+- `n4m_pp_saps_*` (5 symbols)
+- `n4m_pp_slope_bias_*` (5 symbols)
+- `n4m_pp_vsn_*` (5 symbols)
+- `n4m_pp_weighted_snv_*` (5 symbols)
+- `n4m_pp_xcorr_align_*` (5 symbols)
+
+## review  (2 families)
+- `n4m_approximate_press_*` (1 symbols)
+- `n4m_missing_aware_nipals_*` (1 symbols)
+
