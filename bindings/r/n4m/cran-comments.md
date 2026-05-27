@@ -4,9 +4,9 @@
 
 * This is a **new submission** to CRAN.
 * `n4m` 0.98.0 — a portable Partial Least Squares (PLS) and
-  Near-Infrared Spectroscopy (NIRS) engine. The C++17 numerical core is
-  vendored under `src/libn4m/` and compiled from source at install time.
-  No external system library is required.
+  Near-Infrared Spectroscopy (NIRS) engine. The C++17/C/Fortran numerical
+  core (222 translation units) is vendored under `src/vendor/` and compiled
+  from source at install time. No external system library is required.
 * License: `CeCILL (== 2.1)` (a GPL-compatible French free-software
   license, listed in R's license database).
 * The same numerical core powers the project's Python (PyPI),
@@ -16,25 +16,26 @@
 
 ## Test environments
 
-* local Ubuntu 22.04, R 4.6.0, GCC 15.2 (conda-forge): `R CMD check
-  --as-cran --no-manual` → **0 errors, 0 warnings, 2 notes** (see
-  "Known notes" below for the remaining notes).
-* GitHub Actions CI (`.github/workflows/release-r.yml`):
+* Local development smoke (Ubuntu/WSL2, R 4.3.3): `R CMD check --as-cran
+  --no-manual` → 0 errors; the only WARNING and the extra NOTEs are
+  environment artifacts (no `checkbashisms` installed locally; conda-R's
+  `-march=nocona` Makeconf flag; offline URL/NTP checks) — none originate
+  from the package. See "Known notes" below.
+* Submission-grade checks are run on **current R (release + devel)** before
+  upload, via the GitHub Actions CI matrix (`.github/workflows/release-r.yml`):
   - Ubuntu 22.04 (R release + devel)
   - macOS 14 (R release, arm64)
-  - Windows latest (R release)
-* Pre-submission R-hub v2 / win-builder / macbuilder runs are
-  invoked manually before each CRAN submission via
-  `rhub::rhub_check()`, `devtools::check_win_devel()` and
-  `devtools::check_mac_release()`. Results attached to the matching
-  GitHub Release.
+  - Windows Server 2022 (R release)
+* win-builder (`devtools::check_win_devel()` / `check_win_release()`) and
+  R-hub v2 (`rhub::rhub_check()`) are run manually before each CRAN
+  submission; their results are attached to the matching GitHub Release.
 
 ## Known notes (all expected)
 
 * **GNU make is a SystemRequirements** — the package's Makevars uses
-  `$(wildcard ...)` and pattern substitution to enumerate the ~130
-  vendored C++ sources without hard-coding each filename. GNU make is
-  declared in `SystemRequirements`.
+  `$(shell find ...)` and pattern substitution to enumerate the 222
+  vendored C/C++/Fortran sources without hard-coding each filename. GNU make
+  is declared in `SystemRequirements`.
 * **New submission** — first upload.
 * **Compilation flags** — local conda-forge R sets `-march=nocona`;
   this comes from R's own Makeconf, not from the package's Makevars.
@@ -42,9 +43,9 @@
 
 ## Compile time
 
-The package vendors and compiles ~130 C++ files (about 1500 SLOC
-each on average). On a typical CRAN check farm the install takes
-~3–5 minutes. Per CRAN policy this is within the acceptable budget.
+The package vendors and compiles 222 C/C++/Fortran translation units. On a
+typical CRAN check farm the install takes ~3–5 minutes. Per CRAN policy this
+is within the acceptable budget.
 
 ## Anti-patterns avoided
 
@@ -74,7 +75,8 @@ The active R surface is now NIRS-first: base formula/S3, `pls`-style
   `scripts/bump_version.sh` and verified by the
   `.github/workflows/version-sync.yml` workflow on every PR.
 * The `CUDA` backend file `cuda_dispatch.cpp` is intentionally
-  excluded from the R-package build (filtered out in `src/Makevars`).
+  excluded from the R-package build (filtered out in `src/Makevars` on
+  Unix and `src/Makevars.win` on Windows).
   CUDA is an optional accelerated backend in the standalone library,
   not required for the reference scalar code path that the R package
   exposes.

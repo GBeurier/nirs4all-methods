@@ -89,7 +89,7 @@ all.equal(n4m_predict(fit_simpls, X[1:5, ]),
   `pls_monitoring_run`) implement Hotelling T-squared, Q residuals,
   DModX, and process-monitoring alarms.
 
-See the project [website](https://gbeurier.github.io/n4m/) and the
+See the project [repository](https://github.com/GBeurier/nirs4all-methods) and the
 cross-binding parity reports at
-<https://github.com/GBeurier/pls4all/tree/main/docs/parity> for the
+<https://github.com/GBeurier/nirs4all-methods/tree/main/docs/parity> for the
 full feature matrix.

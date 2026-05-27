@@ -18,8 +18,8 @@ Description: Implements a portable Partial Least Squares (PLS) and
     implementation is vendored and compiled from source at install
     time; no external system libraries are required.
 License: CeCILL (== 2.1)
-URL: https://github.com/GBeurier/pls4all
-BugReports: https://github.com/GBeurier/pls4all/issues
+URL: https://github.com/GBeurier/nirs4all-methods
+BugReports: https://github.com/GBeurier/nirs4all-methods/issues
 SystemRequirements: C++17, GNU make
 NeedsCompilation: yes
 Encoding: UTF-8

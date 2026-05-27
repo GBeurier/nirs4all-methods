@@ -63,7 +63,9 @@ bindings/r/pls4all/src/symbols.rds
 bindings/r/pls4all/inst/include/
 parity/r_generator/*.Rcheck/
 pls4all_*.tar.gz
+n4m_*.tar.gz
 pls4all.Rcheck/
+n4m.Rcheck/
 .Rhistory
 .RData
 .Ruserdata

@@ -53,12 +53,15 @@ jobs:
             r_version: "release"
     env:
       R_KEEP_PKG_SOURCE: yes
-      # CRAN self-contained build: ./configure vendors the libn4m core into
-      # src/vendor/ and compiles it statically (no external libn4m).
-      N4M_R_VENDOR: "1"
-      # Some R CMD check stages need DESCRIPTION's URL fields to be
-      # reachable; this CI builds offline-only, so disable that one
-      # incoming-feasibility sub-check.
+      # NB: N4M_R_VENDOR is intentionally NOT a job-wide env. It must be set ONLY
+      # for the pre-vendor step below (which runs in the checkout, where cpp/src
+      # exists). Setting it job-wide would make ./configure re-vendor during the
+      # tarball INSTALL too — but the unpacked tarball has no cpp/src, so it would
+      # fail. The bundled src/vendor/ is used at check time instead (the real
+      # CRAN scenario).
+      #
+      # Some R CMD check stages need DESCRIPTION's URL fields to be reachable;
+      # this CI builds offline-only, so disable that incoming-feasibility check.
       _R_CHECK_CRAN_INCOMING_REMOTE_: false
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +83,16 @@ jobs:
             any::knitr
             any::rmarkdown
             any::testthat
+
+      # Populate src/vendor/ from the in-repo cpp/src (gitignored, empty at
+      # checkout). N4M_R_VENDOR=1 is scoped to THIS step, where cpp/src is
+      # reachable; the build then bundles src/vendor/ into the tarball and the
+      # check installs from that bundled copy (no re-vendor at install time).
+      # shell: bash so it runs on the Windows runner too (Rtools provides bash;
+      # the package ships src/Makevars.win for the actual Windows compile).
+      - name: Vendor libn4m sources into the R package
+        shell: bash
+        run: cd bindings/r/n4m && N4M_R_VENDOR=1 ./configure
 
       - name: R CMD check --as-cran
         uses: r-lib/actions/check-r-package@v2

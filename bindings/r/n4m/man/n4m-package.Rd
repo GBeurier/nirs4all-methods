@@ -32,8 +32,8 @@ Version + ABI introspection is available via `n4m_version()` and
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/GBeurier/pls4all}
-  \item Report bugs at \url{https://github.com/GBeurier/pls4all/issues}
+  \item \url{https://github.com/GBeurier/nirs4all-methods}
+  \item Report bugs at \url{https://github.com/GBeurier/nirs4all-methods/issues}
 }
 
 }
