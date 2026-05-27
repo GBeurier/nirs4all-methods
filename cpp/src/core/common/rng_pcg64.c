@@ -344,12 +344,29 @@ void n4m_pcg64_engine_seed(n4m_rng_pcg64* rng, uint64_t seed) {
     n4m_pcg_step(rng);
     rng->state = n4m_pcg128_add(rng->state, initstate);
     n4m_pcg_step(rng);
+    /* Reseeding clears the uint32 half-word cache, matching NumPy. */
+    rng->has_uint32 = 0;
+    rng->buffered_uint32 = 0;
 }
 
 uint64_t n4m_pcg64_engine_next_uint64(n4m_rng_pcg64* rng) {
-    /* "advance then output" — NumPy's `pcg_setseq_128_xsl_rr_64_random_r`. */
+    /* "advance then output" — NumPy's `pcg_setseq_128_xsl_rr_64_random_r`.
+     * Does not touch the uint32 cache, matching NumPy. */
     n4m_pcg_step(rng);
     return n4m_pcg_output_xsl_rr(rng->state);
+}
+
+uint32_t n4m_pcg64_engine_next_uint32(n4m_rng_pcg64* rng) {
+    /* NumPy's `pcg64_next32`: return the cached high half if present, else
+     * draw a fresh uint64, return its low 32 bits and cache the high 32. */
+    if (rng->has_uint32) {
+        rng->has_uint32 = 0;
+        return rng->buffered_uint32;
+    }
+    const uint64_t next = n4m_pcg64_engine_next_uint64(rng);
+    rng->has_uint32 = 1;
+    rng->buffered_uint32 = (uint32_t)(next >> 32);
+    return (uint32_t)(next & 0xFFFFFFFFu);
 }
 
 double n4m_pcg64_engine_next_double(n4m_rng_pcg64* rng) {
@@ -364,4 +381,8 @@ void n4m_pcg64_engine_advance(n4m_rng_pcg64* rng,
     rng->state = n4m_pcg_advance_lcg(rng->state, delta,
                                        n4m_pcg_default_multiplier(),
                                        rng->inc);
+    /* NumPy's PCG64.advance() resets the uint32 half-word cache; mirror it so a
+     * buffered high-half from an earlier next_uint32 is not reused post-advance. */
+    rng->has_uint32 = 0;
+    rng->buffered_uint32 = 0;
 }

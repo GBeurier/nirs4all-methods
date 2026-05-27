@@ -16,57 +16,6 @@ A deferral is legitimate only when all of these hold:
 
 ---
 
-## Augmentation — spline simplification (v2)
-
-Two augmenters are reserved public surface that returns
-`N4M_ERR_NOT_IMPLEMENTED`:
-
-| Operator | C ABI (reserved) | Python binding |
-|----------|------------------|----------------|
-| `Spline_X_Simplification` | `n4m_aug_spline_x_simplify_{create,apply,destroy}` | `n4m.sklearn.SplineXSimplificationAugmenter` |
-| `Spline_Curve_Simplification` | `n4m_aug_spline_curve_simplify_{create,apply,destroy}` | `n4m.sklearn.SplineCurveSimplificationAugmenter` |
-
-**Status (current ABI 1.9):**
-
-- The six symbols are present in `cpp/abi/expected_symbols_{linux,macos,windows}.txt`
-  — the surface is **reserved**, not missing. Implementing them later is a
-  **behaviour-only** change (no ABI surface change, no snapshot regeneration).
-- `*_create` / `*_destroy` work (state lifecycle is real).
-- `*_apply` returns `N4M_ERR_NOT_IMPLEMENTED`.
-- Asserted by `cpp/tests/test_augmenters_edge_splines_random.cpp`
-  (`test_spline_x_simplification_stub`, `test_spline_curve_simplification_stub`)
-  — these tests **must keep** asserting `N4M_ERR_NOT_IMPLEMENTED` until the
-  trigger below is met.
-
-**What already exists (so this is a small future task, not a rewrite):**
-
-- The cubic B-spline primitive (`cpp/src/core/common/bspline.h`,
-  `n4m_bspline_build_not_a_knot_cubic`) — the "splrep surrogate" — is
-  implemented and already reused by `spline_x_perturbations.c`.
-
-**Why deferred:** the reference behaviour
-(`nirs4all.operators.augmentation.splines.Spline_X_Simplification` /
-`Spline_Curve_Simplification`) draws a random control subset with
-`numpy.random.Generator.choice(..., replace=False)` over a PCG64 stream.
-Bit-exact parity with NumPy's choice-**without-replacement** algorithm
-(its permutation/Floyd path) is materially harder than the uniform-draw
-parity the existing fixtures replicate (`parity/fixtures/_rng_pcg64_stream_v1.json`),
-and reimplementing it bit-for-bit is a disproportionate, brittle effort for
-two low-priority operators. (Codex review, thread 019e69b7.)
-
-**Trigger to implement (v2):** a tested, PCG64-backed
-`choice(replace=False)` primitive lands in the core with NumPy parity fixtures.
-Once that exists, fill in the two `*_apply` bodies (reusing the existing cubic
-B-spline), add per-operator parity fixtures, and flip the stub tests to parity
-assertions. No ABI bump is required.
-
-**Explicitly NOT chosen:** shipping a deterministic-but-non-NumPy subsampling
-as "expected divergence". Expected divergence is for *unavoidable* reference
-differences, not for knowingly choosing different core semantics — that would
-create permanent semantic debt and muddy the "one numerical core" guarantee.
-
----
-
 ## Dashboard — interactive SPA (D-SPA)
 
 The interactive Svelte/Vite dashboard (Phase D, D1–D15) is **deferred, not

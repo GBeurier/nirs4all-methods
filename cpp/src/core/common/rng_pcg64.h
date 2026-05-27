@@ -49,14 +49,19 @@ typedef struct n4m_pcg128_t {
 /* ---------------------------------------------------------------------------
  * PCG64 state.
  *
- * Mirrors NumPy's `pcg_state_setseq_128` (state-then-inc, both 128-bit). We
- * do NOT carry NumPy's `has_uint32` / `uinteger` half-word cache — our
- * Generator-level API never asks for 32-bit draws, so the cache would only
- * waste 8 bytes and add bookkeeping risk.
+ * Mirrors NumPy's `pcg_state_setseq_128` (state-then-inc, both 128-bit) plus
+ * the `has_uint32` / `uinteger` half-word cache. The cache is needed for
+ * bit-exact parity with NumPy's bounded-integer sampler (`Generator.integers`
+ * / `choice`), which draws 32-bit words via `next_uint32` (low half of a
+ * uint64 first, high half cached for the next call). `next_uint64` /
+ * `next_double` do NOT touch the cache, matching NumPy, so existing
+ * double/uint64-based augmenters are unaffected.
  * ------------------------------------------------------------------------- */
 typedef struct n4m_rng_pcg64 {
     n4m_pcg128_t state;
     n4m_pcg128_t inc;
+    int          has_uint32;       /* 1 if `buffered_uint32` holds a draw */
+    uint32_t     buffered_uint32;  /* cached high half of the last uint64 */
 } n4m_rng_pcg64;
 
 /* ---------------------------------------------------------------------------
@@ -72,8 +77,14 @@ typedef struct n4m_rng_pcg64 {
  * resulting stream is bit-equivalent to `np.random.default_rng(seed)`. */
 void n4m_pcg64_engine_seed(n4m_rng_pcg64* rng, uint64_t seed);
 
-/* Draw one uint64. Matches NumPy's `bit_generator.random_raw()`. */
+/* Draw one uint64. Matches NumPy's `bit_generator.random_raw()`. Does not
+ * touch the uint32 half-word cache. */
 uint64_t n4m_pcg64_engine_next_uint64(n4m_rng_pcg64* rng);
+
+/* Draw one uint32 via NumPy's PCG64 `next_uint32`: return the low 32 bits of a
+ * fresh uint64 and cache the high 32 for the next call. Reseeding clears the
+ * cache. */
+uint32_t n4m_pcg64_engine_next_uint32(n4m_rng_pcg64* rng);
 
 /* Draw a uniform double in [0, 1) — `(uint64 >> 11) * 2^-53`. Matches
  * NumPy's `next_double` callback for the PCG64 bit generator. */

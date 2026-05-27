@@ -725,7 +725,7 @@ N4M_API n4m_status_t n4m_aug_spline_y_perturb_apply(
 }
 
 // ---------------------------------------------------------------------------
-// Spline_X_Simplification (v2-deferred stub)
+// Spline_X_Simplification
 // ---------------------------------------------------------------------------
 
 N4M_API n4m_status_t n4m_aug_spline_x_simplify_create(
@@ -776,7 +776,7 @@ N4M_API n4m_status_t n4m_aug_spline_x_simplify_apply(
 }
 
 // ---------------------------------------------------------------------------
-// Spline_Curve_Simplification (v2-deferred stub)
+// Spline_Curve_Simplification
 // ---------------------------------------------------------------------------
 
 N4M_API n4m_status_t n4m_aug_spline_curve_simplify_create(

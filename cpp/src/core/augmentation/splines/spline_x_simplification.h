@@ -2,13 +2,12 @@
 /*
  * Spline_X_Simplification augmenter — internal engine.
  *
- * v2-deferred stub. The reference Python implementation builds a cubic
- * B-spline through a randomly-subsampled control set on the x-axis and
- * re-evaluates it on the dense grid. The behaviour is documented in
- * `nirs4all.operators.augmentation.splines.Spline_X_Simplification` but the
- * n4m engine returns N4M_ERR_NOT_IMPLEMENTED until v2 lands the random
- * sub-sampling primitive (rng.choice with replace=False) plus the splrep
- * surrogate. See DEFERRALS.md.
+ * Builds a cubic B-spline through a randomly-subsampled control set on the
+ * x-axis and re-evaluates it on the dense grid — the reference behaviour of
+ * `nirs4all.operators.augmentation.splines.Spline_X_Simplification`. The random
+ * control subset uses the PCG64-backed numpy.choice(replace=False) primitive
+ * (n4m_aug_rng_choice_no_replace); the cubic refit uses the splrep(s=0, k=3)
+ * not-a-knot surrogate (bspline.h). Shared logic in spline_simplify_common.h.
  *
  * Pure C. INTERNAL.
  */

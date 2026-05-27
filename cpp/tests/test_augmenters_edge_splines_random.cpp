@@ -13,9 +13,13 @@
 //      same output bit-for-bit.
 //   6. _destroy(NULL) is a no-op.
 //
-// The two v2-deferred operators (Spline_X_Simplification,
-// Spline_Curve_Simplification) skip the determinism check and instead
-// verify that _apply returns N4M_ERR_NOT_IMPLEMENTED.
+// Spline_X_Simplification and Spline_Curve_Simplification (formerly v2-deferred)
+// are now implemented: they get the determinism check plus a fixture-backed
+// parity assertion against the frozen nirs4all reference
+// (parity/fixtures/aug_spline_{x,curve}_simplify_v1.json). Parity uses the
+// standard 1e-12 / 1e-13 tolerance: the random control-point draw matches
+// numpy.choice(replace=False) bit-for-bit, and the cubic refit uses the
+// not-a-knot splrep surrogate (bspline.h) — identical to FITPACK to ~1e-15.
 
 #include <cmath>
 #include <cstdint>
@@ -24,6 +28,7 @@
 
 #include "n4m/n4m.h"
 
+#include "fixture_parser.hpp"
 #include "harness.hpp"
 
 namespace {
@@ -385,53 +390,122 @@ void test_spline_y_perturbations() {
 }
 
 // -------------------------------------------------------------------------
-// Spline_X_Simplification (v2-deferred stub)
+// Spline_X_Simplification
 // -------------------------------------------------------------------------
 
-void test_spline_x_simplification_stub() {
+void test_spline_x_simplification() {
+    // Determinism: re-seeding before two runs yields bit-identical output.
     std::vector<double> Xv, wlv;
-    synth_spectra(Xv, wlv, 2, 16);
-    std::vector<double> Ov(Xv.size());
+    synth_spectra(Xv, wlv, 4, 32);
+    std::vector<double> O1(Xv.size()), O2(Xv.size());
 
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
-
     n4m_aug_spline_x_simplify_handle_t* h = nullptr;
     N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_create(
-        &h, rng, /*points=*/4, /*uniform=*/0) == N4M_OK);
+        &h, rng, /*points=*/8, /*uniform=*/0) == N4M_OK);
 
-    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 2, 16);
-    n4m_matrix_view_t O = rowmajor_view(Ov.data(), 2, 16);
-    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(h, X, O)
-                      == N4M_ERR_NOT_IMPLEMENTED);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t Oa = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(h, X, Oa) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t Ob = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(h, X, Ob) == N4M_OK);
+    require_equal_arrays(O1, O2, 0.0, "spline_x_simplify determinism");
 
+    // Shape mismatch on output buffer.
+    std::vector<double> bad(10);
+    n4m_matrix_view_t Obad = rowmajor_view(bad.data(), 1, 10);
+    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(h, X, Obad)
+                      == N4M_ERR_SHAPE_MISMATCH);
     n4m_aug_spline_x_simplify_destroy(h);
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_spline_x_simplify_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto pts = static_cast<std::int32_t>(
+            n4m_testing::params_get_int(c.params_json, "spline_points", -1));
+        const int uniform = n4m_testing::params_get_int(
+            c.params_json, "uniform", 0) ? 1 : 0;
+        const auto seed = static_cast<std::uint64_t>(
+            n4m_testing::params_get_int(c.params_json, "random_state", 0));
+
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_spline_x_simplify_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_create(&hh, r, pts, uniform)
+                          == N4M_OK);
+        std::vector<double> in = fx.input;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(hh, Xv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "spline_x_simplify parity[" + c.name + "]");
+        n4m_aug_spline_x_simplify_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
-// Spline_Curve_Simplification (v2-deferred stub)
+// Spline_Curve_Simplification
 // -------------------------------------------------------------------------
 
-void test_spline_curve_simplification_stub() {
+void test_spline_curve_simplification() {
+    // Determinism: re-seeding before two runs yields bit-identical output.
     std::vector<double> Xv, wlv;
-    synth_spectra(Xv, wlv, 2, 16);
-    std::vector<double> Ov(Xv.size());
+    synth_spectra(Xv, wlv, 4, 32);
+    std::vector<double> O1(Xv.size()), O2(Xv.size());
 
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
-
     n4m_aug_spline_curve_simplify_handle_t* h = nullptr;
     N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_create(
-        &h, rng, /*points=*/4, /*uniform=*/1) == N4M_OK);
+        &h, rng, /*points=*/8, /*uniform=*/0) == N4M_OK);
 
-    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 2, 16);
-    n4m_matrix_view_t O = rowmajor_view(Ov.data(), 2, 16);
-    N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_apply(h, X, O)
-                      == N4M_ERR_NOT_IMPLEMENTED);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t Oa = rowmajor_view(O1.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_apply(h, X, Oa) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
+    n4m_matrix_view_t Ob = rowmajor_view(O2.data(), 4, 32);
+    N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_apply(h, X, Ob) == N4M_OK);
+    require_equal_arrays(O1, O2, 0.0, "spline_curve_simplify determinism");
 
     n4m_aug_spline_curve_simplify_destroy(h);
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_spline_curve_simplify_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto pts = static_cast<std::int32_t>(
+            n4m_testing::params_get_int(c.params_json, "spline_points", -1));
+        const int uniform = n4m_testing::params_get_int(
+            c.params_json, "uniform", 0) ? 1 : 0;
+        const auto seed = static_cast<std::uint64_t>(
+            n4m_testing::params_get_int(c.params_json, "random_state", 0));
+
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_spline_curve_simplify_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_create(&hh, r, pts, uniform)
+                          == N4M_OK);
+        std::vector<double> in = fx.input;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_apply(hh, Xv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "spline_curve_simplify parity[" + c.name + "]");
+        n4m_aug_spline_curve_simplify_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -536,8 +610,8 @@ void register_augmenters_edge_splines_random_tests(n4m_testing::Runner& r) {
     r.run("aug_spline_smoothing",         test_spline_smoothing);
     r.run("aug_spline_x_perturbations",   test_spline_x_perturbations);
     r.run("aug_spline_y_perturbations",   test_spline_y_perturbations);
-    r.run("aug_spline_x_simplify_stub",   test_spline_x_simplification_stub);
-    r.run("aug_spline_curve_simplify_stub", test_spline_curve_simplification_stub);
+    r.run("aug_spline_x_simplify",        test_spline_x_simplification);
+    r.run("aug_spline_curve_simplify",    test_spline_curve_simplification);
     r.run("aug_rotate_translate",         test_rotate_translate);
     r.run("aug_random_x_operation",       test_random_x_operation);
 }

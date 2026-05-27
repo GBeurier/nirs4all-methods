@@ -2290,10 +2290,10 @@ N4M_API void         n4m_aug_moisture_destroy(
  *
  * Twelve operators. Same universal triple as §25.
  *
- * The Spline_X_Simplification and Spline_Curve_Simplification operators are
- * v2-deferred (per the original Phase 0 plan): the `_apply` entry point
- * returns `N4M_ERR_NOT_IMPLEMENTED` until v2 lands the necessary
- * `rng.choice(replace=False)` primitive in the public surface.
+ * Spline_X_Simplification and Spline_Curve_Simplification reduce each spectrum
+ * to a random control subset (numpy.choice(replace=False), bit-for-bit) and
+ * refit a cubic interpolating B-spline. Originally v2-deferred; implemented now
+ * that the core carries the PCG64-backed choice-without-replacement primitive.
  *
  * `EdgeArtifactsAugmenter` is a combined wrapper that applies any subset
  * of DetectorRollOff, StrayLight, EdgeCurvature, TruncatedPeak in sequence;
@@ -2445,8 +2445,8 @@ N4M_API n4m_status_t n4m_aug_spline_y_perturb_apply(
 N4M_API void n4m_aug_spline_y_perturb_destroy(
     n4m_aug_spline_y_perturb_handle_t* handle);
 
-/* --- Spline_X_Simplification (v2-deferred — apply returns
- * N4M_ERR_NOT_IMPLEMENTED) ----------------------------------------------- */
+/* --- Spline_X_Simplification (cubic refit through a random control subset;
+ * spline_points <= 0 -> n_features / 4) ---------------------------------- */
 typedef struct n4m_aug_spline_x_simplify_handle_t
     n4m_aug_spline_x_simplify_handle_t;
 N4M_API n4m_status_t n4m_aug_spline_x_simplify_create(
@@ -2460,8 +2460,8 @@ N4M_API n4m_status_t n4m_aug_spline_x_simplify_apply(
 N4M_API void n4m_aug_spline_x_simplify_destroy(
     n4m_aug_spline_x_simplify_handle_t* handle);
 
-/* --- Spline_Curve_Simplification (v2-deferred — apply returns
- * N4M_ERR_NOT_IMPLEMENTED) ----------------------------------------------- */
+/* --- Spline_Curve_Simplification (as above; differs only in the uniform
+ * path's np.unique handling) --------------------------------------------- */
 typedef struct n4m_aug_spline_curve_simplify_handle_t
     n4m_aug_spline_curve_simplify_handle_t;
 N4M_API n4m_status_t n4m_aug_spline_curve_simplify_create(

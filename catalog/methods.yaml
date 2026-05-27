@@ -3627,6 +3627,7 @@ methods:
       - n4m_aug_spline_curve_simplify_destroy
     tu:
       - cpp/src/core/augmentation/splines/spline_curve_simplification.c
+      - cpp/src/core/augmentation/splines/spline_simplify_common.c
     headers:
       - cpp/include/n4m/augmentation.h
     carry_along_tu:
@@ -3635,7 +3636,8 @@ methods:
       - cpp/src/core/common/matrix_view.cpp
       - cpp/src/core/common/version.cpp
     parity:
-      fixtures: []
+      fixtures:
+        - parity/fixtures/aug_spline_curve_simplify_v1.json
       tolerance_row: tbd
       divergence_id: null
       references: []
@@ -3720,6 +3722,7 @@ methods:
       - n4m_aug_spline_x_simplify_destroy
     tu:
       - cpp/src/core/augmentation/splines/spline_x_simplification.c
+      - cpp/src/core/augmentation/splines/spline_simplify_common.c
     headers:
       - cpp/include/n4m/augmentation.h
     carry_along_tu:
@@ -3728,7 +3731,8 @@ methods:
       - cpp/src/core/common/matrix_view.cpp
       - cpp/src/core/common/version.cpp
     parity:
-      fixtures: []
+      fixtures:
+        - parity/fixtures/aug_spline_x_simplify_v1.json
       tolerance_row: tbd
       divergence_id: null
       references: []

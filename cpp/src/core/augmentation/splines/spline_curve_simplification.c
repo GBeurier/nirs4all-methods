@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 
+#include "spline_simplify_common.h"
+
 struct n4m_aug_spline_curve_simplify_state_t {
     int32_t spline_points;
     int     uniform;
@@ -28,7 +30,9 @@ n4m_status_t n4m_aug_spline_curve_simplify_state_apply(
     void* rng_void,
     const double* X, int64_t rows, int64_t cols,
     double* out) {
-    (void)state; (void)rng_void; (void)X;
-    (void)rows;  (void)cols;     (void)out;
-    return N4M_ERR_NOT_IMPLEMENTED;
+    if (state == NULL) return N4M_ERR_NULL_POINTER;
+    /* Spline_Curve_Simplification applies np.unique to the uniform linspace. */
+    return n4m_spline_simplify_apply_impl(rng_void, X, rows, cols,
+                                          state->spline_points, state->uniform,
+                                          /*unique_in_uniform=*/1, out);
 }

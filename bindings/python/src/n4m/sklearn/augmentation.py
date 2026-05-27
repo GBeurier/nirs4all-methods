@@ -1163,11 +1163,14 @@ class SplineYPerturbationAugmenter(_AugmenterBase):
 
 
 class SplineXSimplificationAugmenter(_AugmenterBase):
-    """Spline x simplification stub; current C ABI returns NOT_IMPLEMENTED."""
+    """Simplify each spectrum via a cubic B-spline through a random control
+    subset on the x-axis (nirs4all ``Spline_X_Simplification``). ``spline_points
+    <= 0`` selects the reference default of n_features // 4. Mirrors the
+    reference defaults (``uniform=False``)."""
 
     _C_PREFIX = "n4m_aug_spline_x_simplify"
 
-    def __init__(self, spline_points: int = -1, uniform: bool = True,
+    def __init__(self, spline_points: int = -1, uniform: bool = False,
                  rng: Optional[PCG64] = None, seed: int = 0):
         self.spline_points = int(spline_points)
         self.uniform = bool(uniform)
@@ -1179,7 +1182,10 @@ class SplineXSimplificationAugmenter(_AugmenterBase):
 
 
 class SplineCurveSimplificationAugmenter(SplineXSimplificationAugmenter):
-    """Spline curve simplification stub; current C ABI returns NOT_IMPLEMENTED."""
+    """Simplify each spectrum via a cubic B-spline through a random control
+    subset along the curve (nirs4all ``Spline_Curve_Simplification``). Same
+    behaviour as the x-axis variant, differing only in the uniform path's
+    np.unique handling."""
 
     _C_PREFIX = "n4m_aug_spline_curve_simplify"
 

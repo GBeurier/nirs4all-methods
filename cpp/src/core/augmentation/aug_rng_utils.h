@@ -46,19 +46,40 @@ void n4m_aug_rng_normal_fill(n4m_rng_pcg64* rng,
                              double loc, double scale,
                              double* out, size_t n);
 
-/* Returns one integer in [0, n) drawn via NumPy's masked-rejection
- * `Lemire`-style integer sampler used by `Generator.integers(0, n)`. */
+/* Returns one integer in [0, n), bit-for-bit matching NumPy's
+ * `Generator.integers(0, n)` (it delegates to n4m_aug_rng_bounded, the buffered
+ * uint32 Lemire sampler). Requires n - 1 < 2^32 (always true for spectra). */
 uint64_t n4m_aug_rng_integers(n4m_rng_pcg64* rng, uint64_t n);
+
+/* Returns one integer in [0, rng_incl] (inclusive), bit-for-bit matching
+ * NumPy's bounded sampler for ranges that fit in 32 bits — the buffered
+ * uint32 Lemire method (`(next_uint32() * (rng_incl + 1)) >> 32` with the
+ * documented rejection). This is what `Generator.integers(0, rng_incl,
+ * endpoint=True)` and `Generator.choice(..., replace=False)` actually use, so
+ * it (not n4m_aug_rng_integers) is the parity-correct primitive. Requires
+ * rng_incl < 2^32 (always true for spectral feature counts). */
+uint64_t n4m_aug_rng_bounded(n4m_rng_pcg64* rng, uint64_t rng_incl);
 
 /* Returns one Beta(a, b) draw matching NumPy's `Generator.beta(a, b)`.
  * The a <= 1 and b <= 1 path intentionally uses Joehnk rejection even for
  * a == b == 1 to match NumPy's RNG state advancement and output sequence. */
 double n4m_aug_rng_beta(n4m_rng_pcg64* rng, double a, double b);
 
-/* In-place Fisher-Yates permutation. `out[i] = i` initially, then the
- * algorithm swaps. Matches NumPy's
- * `Generator.permutation(n)` for the default `axis=0` shuffling. */
+/* In-place uniform Fisher-Yates permutation of [0, n) over the parity-correct
+ * bounded sampler (n4m_aug_rng_integers). NOTE: this is a correct uniform
+ * shuffle but is NOT bit-identical to numpy.Generator.permutation, which uses a
+ * different internal shuffle — do not rely on numpy cross-parity here. */
 void n4m_aug_rng_permutation(n4m_rng_pcg64* rng, int64_t* out, int64_t n);
+
+/* Draw `size` distinct indices in [0, pop_size) without replacement, writing
+ * them to out[0..size). Bit-for-bit reproduces NumPy's
+ * `Generator.choice(pop_size, size, replace=False, p=None)` (shuffle=True):
+ * Floyd's open-addressing algorithm for small/medium populations and the
+ * tail-shuffle path for pop_size > 10000 with size > pop_size/50, followed by
+ * the same final partial Fisher-Yates. Requires 0 <= size <= pop_size.
+ * Returns 0 on success, non-zero on bad arguments or allocation failure. */
+int n4m_aug_rng_choice_no_replace(n4m_rng_pcg64* rng, int64_t pop_size,
+                                  int64_t size, int64_t* out);
 
 /* Returns a single standard_normal draw (Ziggurat). Equivalent to
  * n4m_pcg64_engine_standard_normal_fill with n=1. */

@@ -50,3 +50,21 @@ add_test(NAME n4m_tests COMMAND n4m_tests)
 set_tests_properties(n4m_tests PROPERTIES
     LABELS "smoke;abi;parity"
     TIMEOUT 60)
+
+# Internal-primitive tests. The PCG64 bounded-integer + choice-without-
+# replacement primitives are hidden in libn4m, so they are unreachable from
+# n4m_tests (which links the shared lib). Link the static archive instead — a
+# static link resolves hidden symbols and (per n4m_targets.cmake) already
+# carries the optional OpenMP/BLAS/CUDA deps.
+if(TARGET n4m_c_static)
+    add_executable(n4m_internal_tests test_internal_rng_choice.cpp)
+    target_link_libraries(n4m_internal_tests PRIVATE n4m_c_static)
+    target_include_directories(n4m_internal_tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/cpp/src
+        ${PROJECT_BINARY_DIR}/generated)
+    n4m_add_warnings(n4m_internal_tests)
+    add_test(NAME n4m_internal_tests COMMAND n4m_internal_tests)
+    set_tests_properties(n4m_internal_tests PROPERTIES
+        LABELS "parity"
+        TIMEOUT 60)
+endif()

@@ -4,14 +4,14 @@ _Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineXSimplificationAugmen
 
 ## Description
 
-Spline x simplification stub; current C ABI returns NOT_IMPLEMENTED.
+Simplify each spectrum by refitting a cubic interpolating B-spline through a random control subset on the x-axis (`numpy.choice(replace=False)`, bit-for-bit). `spline_points <= 0` uses the reference default of n_features // 4.
 
 ### Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `spline_points` | `int` | `-1` |
-| `uniform` | `bool` | `True` |
+| `uniform` | `bool` | `False` |
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
@@ -23,7 +23,7 @@ _Standard spectroscopic operator — see the nirs4all preprocessing / augmentati
 
 ### Mathematical principle
 
-Spline x simplification stub; current C ABI returns NOT_IMPLEMENTED.
+Simplify each spectrum by refitting a cubic interpolating B-spline through a random control subset on the x-axis (`numpy.choice(replace=False)`, bit-for-bit). `spline_points <= 0` uses the reference default of n_features // 4.
 
 ### Implementation
 

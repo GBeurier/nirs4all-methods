@@ -2,10 +2,10 @@
 /*
  * Spline_Curve_Simplification augmenter — internal engine.
  *
- * v2-deferred stub. Same rationale as Spline_X_Simplification (the engine
- * requires rng.choice(replace=False) over the wavelength index set, which
- * is gated to the next ABI minor). Returns N4M_ERR_NOT_IMPLEMENTED until
- * v2; see DEFERRALS.md.
+ * Same engine as Spline_X_Simplification (PCG64 numpy.choice(replace=False)
+ * control subset + splrep(s=0, k=3) not-a-knot cubic surrogate), differing
+ * only in the uniform path's np.unique handling. Shared logic lives in
+ * spline_simplify_common.h.
  *
  * Pure C. INTERNAL.
  */

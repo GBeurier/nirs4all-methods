@@ -254,10 +254,10 @@ _Total methods_: **191** (73 PLS / selection · 118 operators). Grouped by famil
 | [`aug_rotate_translate`](aug_rotate_translate.md) | `n4m.sklearn.RotateTranslateAugmenter` | Random rotate/translate spectral augmentation. |
 | [`aug_scatter_sim`](aug_scatter_sim.md) | `n4m.sklearn.ScatterSimulationMSC` | MSC-style multiplicative/additive scatter simulation. |
 | [`aug_spike_noise`](aug_spike_noise.md) | `n4m.sklearn.SpikeNoise` | Inject random spike artifacts into spectra. |
-| [`aug_spline_curve_simplify`](aug_spline_curve_simplify.md) | `n4m.sklearn.SplineCurveSimplificationAugmenter` | Spline curve simplification stub; current C ABI returns NOT_IMPLEMENTED. |
+| [`aug_spline_curve_simplify`](aug_spline_curve_simplify.md) | `n4m.sklearn.SplineCurveSimplificationAugmenter` | Cubic B-spline refit through a random control subset along the curve. |
 | [`aug_spline_smooth`](aug_spline_smooth.md) | `n4m.sklearn.SplineSmoothingAugmenter` | Spline smoothing augmenter. |
 | [`aug_spline_x_perturb`](aug_spline_x_perturb.md) | `n4m.sklearn.SplineXPerturbationAugmenter` | Spline x-axis perturbation augmenter. |
-| [`aug_spline_x_simplify`](aug_spline_x_simplify.md) | `n4m.sklearn.SplineXSimplificationAugmenter` | Spline x simplification stub; current C ABI returns NOT_IMPLEMENTED. |
+| [`aug_spline_x_simplify`](aug_spline_x_simplify.md) | `n4m.sklearn.SplineXSimplificationAugmenter` | Cubic B-spline refit through a random control subset on the x-axis. |
 | [`aug_spline_y_perturb`](aug_spline_y_perturb.md) | `n4m.sklearn.SplineYPerturbationAugmenter` | Spline y-axis perturbation augmenter. |
 | [`aug_stray_light`](aug_stray_light.md) | `n4m.sklearn.StrayLightAugmenter` | Stray-light edge artifact. |
 | [`aug_temperature`](aug_temperature.md) | `n4m.sklearn.TemperatureAugmenter` | Temperature-induced shift, intensity and broadening perturbations. |
