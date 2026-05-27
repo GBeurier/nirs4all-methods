@@ -882,12 +882,14 @@ def build_payload(results_dir: Path) -> dict:
     }
 
     # Layer-3 overlay (donor-only, field-only): surface the LIVE n4m↔nirs4all
-    # cross-parity on the donor n4m cells. The canonical `ref_python_nirs4all`
+    # cross-parity δ on the donor C++ cells. The canonical `ref_python_nirs4all`
     # donor row carries the live verdict but suppresses its own δ (basis=self),
-    # so copy its reference_parity_* fields onto the same donor method's n4m
-    # rows (cpp + python tiers) at the same size. No timing changes, no PLS
-    # rows (gated on the donor_ops dashboard-id set; degrades gracefully if
-    # donor_ops is unavailable, e.g. a docs-only build).
+    # so copy its reference_parity_* fields onto the same donor method's cpp
+    # rows at the same size. Restricted to `cpp` (kind=n4m_core, reference-gate
+    # divergence) — the python tiers render the binding-gate δ vs cpp, so
+    # overlaying reference fields there would desync the icon from the δ. No
+    # timing changes, no PLS rows (gated on the donor_ops dashboard-id set;
+    # degrades gracefully if donor_ops is unavailable, e.g. a docs-only build).
     try:
         import sys as _sys
         _cb = Path(__file__).resolve().parents[2] / "benchmarks" / "cross_binding"
@@ -905,7 +907,7 @@ def build_payload(results_dir: Path) -> dict:
                  for r in seen.values()
                  if r.get("backend") == "ref_python_nirs4all"
                  and r.get("algorithm") in _donor_algos}
-        _n4m_be = {"cpp", "python_tier1", "python_tier2"}
+        _n4m_be = {"cpp"}
         for r in seen.values():
             if r.get("backend") not in _n4m_be or r.get("algorithm") not in _donor_algos:
                 continue

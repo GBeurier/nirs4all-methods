@@ -294,8 +294,8 @@ const DonorOp kOps[] = {
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_particle_size_handle_t* h = nullptr;
-         return n4m_aug_particle_size_create(&h, r, 50.0, 10.0, 0, 10.0, 100.0, 50.0,
-                                              1.0, 0.1, 0, 0.1, wl.data(), p) == N4M_OK ? h : nullptr; },
+         return n4m_aug_particle_size_create(&h, r, 50.0, 15.0, 0, 5.0, 500.0, 50.0,
+                                              1.5, 0.1, 1, 0.5, wl.data(), p) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_particle_size_apply, n4m_aug_particle_size_handle_t),
      DESTROY(n4m_aug_particle_size_destroy, n4m_aug_particle_size_handle_t)},
 
@@ -303,7 +303,7 @@ const DonorOp kOps[] = {
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_emsc_distort_handle_t* h = nullptr;
-         return n4m_aug_emsc_distort_create(&h, r, 0.95, 1.05, -0.02, 0.02, 2, 0.1, 0.5,
+         return n4m_aug_emsc_distort_create(&h, r, 0.9, 1.1, -0.05, 0.05, 2, 0.02, 0.3,
                                             wl.data(), p) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_emsc_distort_apply, n4m_aug_emsc_distort_handle_t),
      DESTROY(n4m_aug_emsc_distort_destroy, n4m_aug_emsc_distort_handle_t)},
@@ -312,7 +312,7 @@ const DonorOp kOps[] = {
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_batch_effect_handle_t* h = nullptr;
-         return n4m_aug_batch_effect_create(&h, r, 0.01, 0.001, 0.02, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
+         return n4m_aug_batch_effect_create(&h, r, 0.02, 0.01, 0.03, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_batch_effect_apply, n4m_aug_batch_effect_handle_t),
      DESTROY(n4m_aug_batch_effect_destroy, n4m_aug_batch_effect_handle_t)},
 
@@ -320,14 +320,14 @@ const DonorOp kOps[] = {
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_instrument_broaden_handle_t* h = nullptr;
-         return n4m_aug_instrument_broaden_create(&h, r, 5.0, 0, 3.0, 8.0, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
+         return n4m_aug_instrument_broaden_create(&h, r, 3.0, 0, 3.0, 8.0, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_instrument_broaden_apply, n4m_aug_instrument_broaden_handle_t),
      DESTROY(n4m_aug_instrument_broaden_destroy, n4m_aug_instrument_broaden_handle_t)},
 
     {"aug_dead_band",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_dead_band_handle_t* h = nullptr;
-         return n4m_aug_dead_band_create(&h, r, 2, 3, 10, 0.01, 0.5, 0) == N4M_OK ? h : nullptr; },
+         return n4m_aug_dead_band_create(&h, r, 1, 5, 10, 0.05, 1.0, 0) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_dead_band_apply, n4m_aug_dead_band_handle_t),
      DESTROY(n4m_aug_dead_band_destroy, n4m_aug_dead_band_handle_t)},
 
@@ -335,7 +335,7 @@ const DonorOp kOps[] = {
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_temperature_handle_t* h = nullptr;
-         return n4m_aug_temperature_create(&h, r, 5.0, 0, -10.0, 10.0, 1, 1, 1, 0,
+         return n4m_aug_temperature_create(&h, r, 5.0, 0, -5.0, 5.0, 1, 1, 1, 1,
                                            wl.data(), p) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_temperature_apply, n4m_aug_temperature_handle_t),
      DESTROY(n4m_aug_temperature_destroy, n4m_aug_temperature_handle_t)},
@@ -344,7 +344,7 @@ const DonorOp kOps[] = {
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_moisture_handle_t* h = nullptr;
-         return n4m_aug_moisture_create(&h, r, 0.1, 0, 0.2, 0.9, 0.5, 0.5, 0.01, 0.15, 1, 1,
+         return n4m_aug_moisture_create(&h, r, 0.1, 0, 0.0, 1.0, 0.5, 0.3, 25.0, 0.10, 1, 1,
                                         wl.data(), p) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_moisture_apply, n4m_aug_moisture_handle_t),
      DESTROY(n4m_aug_moisture_destroy, n4m_aug_moisture_handle_t)},
@@ -355,7 +355,7 @@ const DonorOp kOps[] = {
     {"aug_detector_rolloff",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_detector_rolloff_handle_t* h = nullptr;
-         return n4m_aug_detector_rolloff_create(&h, r, 0, 0.5, 1.0, 0) == N4M_OK ? h : nullptr; },
+         return n4m_aug_detector_rolloff_create(&h, r, 4, 1.0, 0.02, 1) == N4M_OK ? h : nullptr; },
      RUN_APPLY_WL(n4m_aug_detector_rolloff_apply, n4m_aug_detector_rolloff_handle_t),
      DESTROY(n4m_aug_detector_rolloff_destroy, n4m_aug_detector_rolloff_handle_t)},
 
@@ -369,21 +369,21 @@ const DonorOp kOps[] = {
     {"aug_edge_curve",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_edge_curve_handle_t* h = nullptr;
-         return n4m_aug_edge_curve_create(&h, r, 0.1, 0, 0.0, 0.5) == N4M_OK ? h : nullptr; },
+         return n4m_aug_edge_curve_create(&h, r, 0.02, 0, 0.0, 0.7) == N4M_OK ? h : nullptr; },
      RUN_APPLY_WL(n4m_aug_edge_curve_apply, n4m_aug_edge_curve_handle_t),
      DESTROY(n4m_aug_edge_curve_destroy, n4m_aug_edge_curve_handle_t)},
 
     {"aug_truncated_peak",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_truncated_peak_handle_t* h = nullptr;
-         return n4m_aug_truncated_peak_create(&h, r, 0.5, 0.1, 0.5, 2.0, 10.0, 1, 1) == N4M_OK ? h : nullptr; },
+         return n4m_aug_truncated_peak_create(&h, r, 0.5, 0.01, 0.1, 50.0, 200.0, 1, 1) == N4M_OK ? h : nullptr; },
      RUN_APPLY_WL(n4m_aug_truncated_peak_apply, n4m_aug_truncated_peak_handle_t),
      DESTROY(n4m_aug_truncated_peak_destroy, n4m_aug_truncated_peak_handle_t)},
 
     {"aug_edge_artifacts",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_edge_artifacts_handle_t* h = nullptr;
-         return n4m_aug_edge_artifacts_create(&h, r, 0xF, 1.0, 0) == N4M_OK ? h : nullptr; },
+         return n4m_aug_edge_artifacts_create(&h, r, 0xF, 1.0, 4) == N4M_OK ? h : nullptr; },
      RUN_APPLY_WL(n4m_aug_edge_artifacts_apply, n4m_aug_edge_artifacts_handle_t),
      DESTROY(n4m_aug_edge_artifacts_destroy, n4m_aug_edge_artifacts_handle_t)},
 
@@ -397,28 +397,28 @@ const DonorOp kOps[] = {
     {"aug_spline_x_perturb",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_spline_x_perturb_handle_t* h = nullptr;
-         return n4m_aug_spline_x_perturb_create(&h, r, 3, 0.1, -0.05, 0.05) == N4M_OK ? h : nullptr; },
+         return n4m_aug_spline_x_perturb_create(&h, r, 3, 0.05, -0.1, 0.1) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_spline_x_perturb_apply, n4m_aug_spline_x_perturb_handle_t),
      DESTROY(n4m_aug_spline_x_perturb_destroy, n4m_aug_spline_x_perturb_handle_t)},
 
     {"aug_spline_y_perturb",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_spline_y_perturb_handle_t* h = nullptr;
-         return n4m_aug_spline_y_perturb_create(&h, r, 0, 0.1) == N4M_OK ? h : nullptr; },
+         return n4m_aug_spline_y_perturb_create(&h, r, -1, 0.005) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_spline_y_perturb_apply, n4m_aug_spline_y_perturb_handle_t),
      DESTROY(n4m_aug_spline_y_perturb_destroy, n4m_aug_spline_y_perturb_handle_t)},
 
     {"aug_rotate_translate",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_rotate_translate_handle_t* h = nullptr;
-         return n4m_aug_rotate_translate_create(&h, r, 0.1, 0.1) == N4M_OK ? h : nullptr; },
+         return n4m_aug_rotate_translate_create(&h, r, 2.0, 3.0) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_rotate_translate_apply, n4m_aug_rotate_translate_handle_t),
      DESTROY(n4m_aug_rotate_translate_destroy, n4m_aug_rotate_translate_handle_t)},
 
     {"aug_random_x_op",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_random_x_op_handle_t* h = nullptr;
-         return n4m_aug_random_x_op_create(&h, r, 0, 0.9, 1.1) == N4M_OK ? h : nullptr; },
+         return n4m_aug_random_x_op_create(&h, r, 0, 0.97, 1.03) == N4M_OK ? h : nullptr; },
      RUN_APPLY(n4m_aug_random_x_op_apply, n4m_aug_random_x_op_handle_t),
      DESTROY(n4m_aug_random_x_op_destroy, n4m_aug_random_x_op_handle_t)},
 

@@ -186,7 +186,11 @@ def main() -> int:
     phase17_base = {(str(r["n"]), str(r["p"])): r for r in fixture_rows
                     if r.get("backend") == "cpp" and r["algorithm"] == "aug_phase17"}
     for spec in _D.all_specs():
-        if not spec.on_dashboard or spec.dashboard_id in fixture_cpp_algos:
+        # Only augmenters are bundled into aug_phase17. Restricting to the aug
+        # category (not "any op absent from the fixture") prevents a future
+        # non-aug donor op from silently inheriting the aggregate's verdict.
+        if (not spec.on_dashboard or spec.category != "aug"
+                or spec.dashboard_id in fixture_cpp_algos):
             continue
         bench_op = DASHBOARD_TO_BENCH.get(spec.dashboard_id, spec.dashboard_id)
         if bench_op not in timeable:
@@ -198,7 +202,15 @@ def main() -> int:
                 continue
             row = dict(base)
             row["algorithm"] = spec.dashboard_id
-            row["reference_parity_note"] = "inherited from aug_phase17 fixture"
+            # These ops have NO per-op numeric fixture — only the aug_phase17
+            # aggregate passed. Don't claim an exact per-op reference match:
+            # clear the numeric verdict and keep an honest provenance note.
+            # (The live nirs4all overlay supersedes this on the dashboard; the
+            # binding tier carries the real raw↔idiomatic verdict.)
+            row["reference_parity_ok"] = ""
+            row["reference_parity_rmse_abs"] = ""
+            row["reference_parity_rmse_rel"] = ""
+            row["reference_parity_note"] = "validated via aug_phase17 aggregate (no per-op fixture)"
             cells.append((row, bench_op))
 
     # Resume: keep previously-timed cells; --force re-times everything.
