@@ -1,0 +1,15 @@
+env_id: env-py-sklearn-1.4
+language: python
+framework: scikit-learn
+version: 1.4.2
+lock_file: requirements.lock
+description: >
+  Pinned scikit-learn reference environment for PLS-family parity (PLS, SIMPLS,
+  PCR, kernel/wide-kernel, canonical, PLS-DA/LDA, OPLS, MB-PLS, LW-PLS) and the
+  deterministic NumPy preprocessing ports. Matches the pins the parity gate's
+  fixture generator already uses (parity/python_generator/requirements-lock.txt).
+consumed_by:
+  # Deferred Docker reference generator (full Phase C, C6). The pins are real
+  # and used today by parity/python_generator; this recipe makes them an
+  # explicit, hashable environment.
+  - parity/generators/python  # (not yet wired — see ../README.md)

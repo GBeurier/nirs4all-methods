@@ -41,18 +41,44 @@ Scenarios are materialised as rows in the cross-binding result CSVs
   inter-binding parity). Donor raw↔idiomatic + raw≡C++ are gated bit-exact by
   `benchmarks/cross_binding/tests/test_donor_binding_specs.py`.
 
-## The gate
+## The three gates (Phase C-min)
 
-`make parity [METHOD=<id>]` runs `parity/comparator/run.py`, which reuses the
-dashboard's verdict classification and writes `parity/results/latest.json` (a
-per-method reference/binding verdict histogram + divergence δ + totals). It
-exits non-zero on any `error` verdict; `divergent` verdicts are recorded (often
-expected, allowlisted per method) and reported, not failed.
+1. **Binding/reference summary** — `make parity [METHOD=<id>]` runs
+   `parity/comparator/run.py`, which reuses the dashboard's verdict
+   classification and writes `parity/results/latest.json` (per-method
+   reference/binding verdict histogram + divergence δ + totals). Exits non-zero
+   on any `error` verdict; `divergent` verdicts are recorded (often expected,
+   allowlisted per method) and reported, not failed.
+
+2. **Self-consistency** — `make parity-paper-only [METHOD=<id>]` runs
+   `parity/comparator/self_consistency.py` for methods with **no external
+   reference** (AOM-PLS, POP-PLS). Their correctness gate is determinism (same
+   seed → bit-identical output) + structural invariants (finite, non-empty,
+   expected element count). The spec set is hand-curated and catalog-free — a
+   temporary bridge until the catalog gains real `self_consistency` blocks.
+
+3. **Golden snapshots** — `make snapshot [METHOD=<id>]` (`--write`) regenerates
+   `parity/snapshots/current/<method>/<scenario>.json`, the scenario layout that
+   full Phase C (C4) will migrate the 202 legacy fixtures into. These are
+   `source_kind: n4m_self` (a regression gate on n4m's OWN output, with seed /
+   dims / ABI / lib-sha256 provenance), NOT external validation.
+   `parity/generators/run.py --check` is the read-only golden gate.
+
+Gates 2 and 3 also run in CI (`cross-binding-parity.yml`, which builds libn4m).
+
+## Reference environments (Phase C-min)
+
+`parity/environments/` ships the **recipe schema** (`README.md`) + one **real
+pinned recipe** (`env-py-sklearn-1.4/`, the sklearn pins the fixture generator
+already uses) + a local-convenience conda env (`dev/environment.yml`). The
+per-(framework, version) matrix and the GHCR build CI are deferred.
 
 ## Deferred (full Phase C)
 
-`parity/environments/<env_id>/` Docker recipes, `parity-env-build.yml`,
-`parity/scenarios/<method>.yaml`, `parity/snapshots/current/`, the standalone
-`parity/comparator/` numeric comparator against migrated snapshots,
-`self_consistency.py` for paper-only methods, and the `workflow_dispatch`
-parity CI. Tracked in `docs/REFACTOR_PLAN.md` Phase C.
+`parity-env-build.yml` (GHCR image build/publish), the full per-framework
+environment matrix, `parity/scenarios/<method>.yaml` (catalog-coupled), the
+one-shot migration of the 202 `parity/fixtures/*.json`, the in-container
+external reference generators (`parity/generators/{python,r,octave}/`), the
+numeric comparator against migrated external snapshots, and the
+`workflow_dispatch` parity CI (`parity-snapshots.yml` / `parity-run.yml` /
+`parity-paper-only.yml`). Tracked in `docs/REFACTOR_PLAN.md` Phase C.

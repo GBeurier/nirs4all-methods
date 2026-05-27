@@ -70,32 +70,25 @@ test:
 	ctest --preset $(PRESET) --output-on-failure
 
 # ---------------------------------------------------------------------------
-# Parity (wired in Phase C — placeholders here document the interface)
+# Parity (Phase C-min pilot — see parity/SCENARIOS_MIN.md). Full Phase C
+# (Docker reference envs, catalog-coupled scenarios, 202-fixture migration,
+# the workflow_dispatch CI workflows) is deferred.
 # ---------------------------------------------------------------------------
 .PHONY: parity snapshot parity-paper-only
 
 METHOD ?= all
-REF ?=
+REF ?= n4m_self
 
+# Binding/reference parity summary over the committed results (parity/results).
 parity:
-	@if [[ ! -x parity/comparator/run.py ]]; then \
-		echo "parity infra not yet wired (Phase C). Stub: METHOD=$(METHOD)"; \
-		exit 0; \
-	fi
 	python parity/comparator/run.py --method $(METHOD)
 
+# Regenerate the golden n4m_self snapshots (run.py --check is the read-only gate).
 snapshot:
-	@if [[ ! -x parity/generators/run.py ]]; then \
-		echo "snapshot infra not yet wired (Phase C). Stub: METHOD=$(METHOD) REF=$(REF)"; \
-		exit 0; \
-	fi
-	python parity/generators/run.py --method $(METHOD) --ref $(REF)
+	python parity/generators/run.py --method $(METHOD) --ref $(REF) --write
 
+# Self-consistency gate for paper-only differentiators (AOM-PLS, POP-PLS).
 parity-paper-only:
-	@if [[ ! -x parity/comparator/self_consistency.py ]]; then \
-		echo "self-consistency infra not yet wired (Phase C). Stub: METHOD=$(METHOD)"; \
-		exit 0; \
-	fi
 	python parity/comparator/self_consistency.py --method $(METHOD)
 
 # ---------------------------------------------------------------------------

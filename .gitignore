@@ -129,3 +129,7 @@ docs/_build/
 
 # Playwright MCP scratch dir (browser-automation artifacts, not project content)
 .playwright-mcp/
+
+# Self-consistency gate run artifact (verdict JSON; the gate is the exit code,
+# nothing consumes the file — regenerated each `make parity-paper-only`).
+parity/results/self_consistency.json

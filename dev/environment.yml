@@ -1,0 +1,36 @@
+# Local-convenience conda environment for n4m development, parity, and the
+# cross-binding benchmark/gate. NOT the pinned reference environment — those
+# live under parity/environments/<env_id>/ with exact locks. This is the
+# "everything a contributor needs locally" env (C1 in REFACTOR_PLAN).
+#
+#   conda env create -f dev/environment.yml
+#   conda activate n4m-dev
+#
+# R + Octave are included so the cross-binding parity gate
+# (benchmarks/cross_binding/ci_parity_gate.py) and the parity reference
+# generators can run R/Octave bindings locally. Point N4M_R_ENV at this env if
+# you keep R/Octave here.
+name: n4m-dev
+channels:
+  - conda-forge
+dependencies:
+  # Build toolchain
+  - cmake>=3.21
+  - ninja
+  - cxx-compiler
+  # Python parity/benchmark/dev stack
+  - python=3.11
+  - numpy
+  - scipy
+  - scikit-learn
+  - joblib
+  - threadpoolctl
+  - pyyaml
+  - jsonschema
+  - jinja2
+  - pytest
+  - ruff
+  # Cross-binding references (local runs of the parity gate)
+  - r-base
+  - r-pls
+  - octave

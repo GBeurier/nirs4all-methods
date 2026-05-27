@@ -71,3 +71,17 @@ jobs:
           python benchmarks/cross_binding/ci_parity_gate.py \
             --lib-dir build/ci-linux-gcc12-release/cpp/src \
             --build-key ci --require python
+
+      - name: Self-consistency gate (paper-only differentiators)
+        # AOM-PLS / POP-PLS have no external reference; their correctness gate is
+        # determinism + structural invariants (Phase-C-min, parity/comparator).
+        run: |
+          python parity/comparator/self_consistency.py \
+            --method all --lib-dir build/ci-linux-gcc12-release/cpp/src
+
+      - name: Golden snapshot regression (n4m_self)
+        # The committed parity/snapshots/current/*.json must still regenerate
+        # bit-identically from this build (Phase-C-min golden gate).
+        run: |
+          python parity/generators/run.py \
+            --method all --check --lib-dir build/ci-linux-gcc12-release/cpp/src

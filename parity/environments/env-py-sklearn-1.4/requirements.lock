@@ -1,0 +1,9 @@
+# env-py-sklearn-1.4 — fully pinned scikit-learn reference environment.
+# Source of truth for the lock hash recorded in external snapshots.
+# Mirror of parity/python_generator/requirements-lock.txt (re-pin both together
+# with `pip-compile` when the reference version moves).
+numpy==1.26.4
+scikit-learn==1.4.2
+scipy==1.11.4
+joblib==1.4.0
+threadpoolctl==3.5.0
