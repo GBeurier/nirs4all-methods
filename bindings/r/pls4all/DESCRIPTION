@@ -1,0 +1,38 @@
+Package: pls4all
+Type: Package
+Title: Partial Least Squares and Chemometrics Engine
+Version: 0.98.0
+Date: 2026-05-20
+Authors@R: c(person("Gregory", "Beurier", role = c("aut", "cre"),
+                    email = "gregory.beurier@cirad.fr"),
+             person("pls4all", "contributors", role = "ctb"))
+Description: A portable Partial Least Squares engine for chemometrics: the
+    slim, PLS-focused distribution carved from the 'nirs4all-methods' library.
+    It ships every method built on the shared PLS core (NIPALS, SIMPLS, SVD,
+    kernel, wide-kernel, orthogonal-scores, power, randomized SVD, PCR):
+    regression variants (sparse SIMPLS, CPPLS, weighted, robust, ridge,
+    continuum, multi-block, GLM, MIR), adaptive AOM-PLS / POP-PLS operator
+    selection, variable-selection methods (SPA, CARS, GA, random frog,
+    stability selection, VIP), PLS diagnostics (Hotelling T2, Q residuals,
+    DModX), and calibration transfer (PDS, DS). The spectroscopy-specific
+    surface (spectral preprocessing, augmentation, sample filters, signal-type
+    detection) lives in the full 'nirs4all-methods' distribution. The same
+    C++17 numerical core powers both; here it is vendored and compiled from
+    source at install time, with no external system libraries required.
+License: CeCILL (== 2.1)
+URL: https://github.com/GBeurier/nirs4all-methods
+BugReports: https://github.com/GBeurier/nirs4all-methods/issues
+SystemRequirements: C++17, GNU make
+NeedsCompilation: yes
+Encoding: UTF-8
+Imports:
+    stats
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    markdown,
+    pls
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

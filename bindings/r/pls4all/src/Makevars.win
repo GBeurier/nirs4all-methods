@@ -1,0 +1,20 @@
+# Makevars.win — Windows counterpart of the configure-generated src/Makevars.
+# Windows has no ./configure (R does not run it there), so this is committed and
+# static. It compiles the SAME bundled vendor/ tree the CRAN source tarball
+# ships (populated on Unix by ./configure, shipped inside the tarball). Rtools'
+# make is GNU make and Rtools provides `find`, so the $(shell find ...) recursion
+# matches src/Makevars exactly.
+
+PKG_CPPFLAGS = -Ivendor/cpp/include -Ivendor/cpp/src -Ivendor/generated \
+               -DN4M_STATIC=1 -DN4M_HAVE_FITPACK=1
+
+CXX_STD = CXX17
+
+VEND_C   := $(shell find vendor -name '*.c')
+# cuda_dispatch.cpp is the CUDA backend (needs cuBLAS); excluded from the
+# reference build, exactly as the CMake build gates it behind N4M_USE_CUDA.
+VEND_CPP := $(shell find vendor -name '*.cpp' ! -name 'cuda_dispatch.cpp')
+VEND_F   := $(shell find vendor -name '*.f')
+R_OBJ    := r_init.o r_gateway.o r_dispatch.o r_methods.o n4m_cxx.o
+
+OBJECTS = $(R_OBJ) $(VEND_C:.c=.o) $(VEND_CPP:.cpp=.o) $(VEND_F:.f=.o)
