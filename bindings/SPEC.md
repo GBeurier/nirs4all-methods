@@ -104,9 +104,38 @@ manually-curated pilot subset is the only acceptable earlier step.
 
 ## Conformance
 
-A binding is spec-compliant when its **behavioral** gates pass (see above):
-inter-binding parity (`rmse_rel < 1e-12` vs C++ raw, Phase C / C11), the donor
-raw↔idiomatic + raw≡C++ gates, and its idiomatic smoke tests. CI hard-fails on
-those. The manifest reconciliation is a non-gating Phase-B debt report — not a
-pass/fail conformance criterion (a ctypes-style binding can address any symbol,
-so symbol-coverage proves nothing).
+A binding is spec-compliant when its **behavioral** gates pass: inter-binding
+parity (`rmse_rel < 1e-12` vs C++ raw, Phase C / C11), the donor raw↔idiomatic +
+raw≡C++ gates, and its idiomatic smoke tests. What hard-fails **in CI today**:
+the donor gates (`test_donor_binding_specs.py`) and the Python leg of the
+cross-binding gate. The full cross-language inter-binding parity is run
+locally/pre-release until the R/Octave/JS CI builds land (see
+`.github/workflows/cross-binding-parity.yml`). The manifest reconciliation is a
+non-gating Phase-B debt report — not a conformance criterion (a ctypes-style
+binding can address any symbol, so symbol-coverage proves nothing).
+
+## F-prep scope (binding-scaling infra) — reduced + deferred
+
+Phase F-prep in the refactor plan (`docs/REFACTOR_PLAN.md`, F-prep-1…7) was the
+infrastructure to scale to 10+ languages: spec → conformance → **profiles** →
+**render** → skeletons → unified CI/release matrices. The 4-language target
+(R, Python, Octave/MATLAB, JS) + the hand-written-idiomatic decision above
+**reduce** it sharply:
+
+| F-prep task | Status |
+|-------------|--------|
+| F-prep-1 SPEC.md | **Done** (this file). |
+| F-prep-2 conformance suite (≥3 methods/category) | **Partial/pilot** — the donor raw↔idiomatic + raw≡C++ gates (`benchmarks/cross_binding/tests/test_donor_binding_specs.py`) hard-fail in CI; the cross-binding parity gate (`cross-binding-parity.yml`) is **Python-only smoke** in CI today (R/Octave/JS run locally/pre-release). Full target-language inter-binding CI is deferred (their CI builds don't exist yet). |
+| F-prep-3 framework-profile **schema** | **Obsolete** — idiomatic adapters are hand-written (see "Two layers"); no profile YAML. |
+| F-prep-4 per-`(method × profile)` **template engine** | **Obsolete** — the explicitly-rejected over-engineering at 4-language scale. |
+| F-prep-5 skeleton generator (`make new-binding LANG=`) | **Deferred, low value** — with a closed 4-language target set there is no new binding to scaffold. The `make new-binding` target is a stub that prints "not yet wired (Phase F-prep)". |
+| F-prep-6 unified `bindings.yml` CI matrix | **Deferred** — would consolidate the per-language workflows into one matrix. A refactor of existing CI, not new capability. |
+| F-prep-7 `release-bindings.yml` matrix | **Deferred** — single workflow looping the publish matrix; today publication is per-binding (PyPI/CRAN automated; JS/MATLAB/Octave manual — see `docs/dev/release_process.md`). |
+
+**Net:** F-prep is no longer a prerequisite phase. What remained meaningful
+(F-prep-6/-7, a CI/release **consolidation**) is optional housekeeping; the
+generative parts (F-prep-3/-4) are cancelled. **Trigger to revisit:** a request
+for a 5th+ target language — at which point the unified CI/release matrix and a
+skeleton generator start to pay for themselves.
+
+> Indexed in [`../DEFERRALS.md`](../DEFERRALS.md).

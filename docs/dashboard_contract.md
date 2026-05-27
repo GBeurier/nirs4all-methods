@@ -18,9 +18,8 @@ the review, that is split:
   divergence). This is the load-bearing part — it makes the scientific signal
   (does n4m match its external reference? do the bindings match the C++ core?
   by how much?) visible and maintainable in the existing flow.
-- **D-SPA (deferred):** the interactive app (rich filtering, drift view,
-  host panels, lazy-loaded history). Optional polish; consumes this contract
-  unchanged.
+- **D-SPA (deferred):** the interactive Svelte app. Optional polish; consumes
+  this contract unchanged. Full scope below.
 
 ## Payload surface (stable keys)
 
@@ -68,3 +67,39 @@ python docs/_extras/build_landing.py \
 
 Then `test_dashboard_contract` validates the result against
 `docs/dashboard.schema.json`.
+
+## D-SPA (deferred): scope
+
+D-SPA is the interactive single-page app from Phase D of the refactor plan
+(`docs/REFACTOR_PLAN.md`, D1–D15). It is **deferred, not cancelled** — D-min
+deliberately delivered the load-bearing half (the schema-validated contract +
+automated score cards) so the SPA becomes pure front-end work that consumes
+`bench-data.json`/`dashboard.json` **unchanged**.
+
+**Planned views** (each reads only the contract):
+
+- **Matrix** — methods × implementation columns, filterable, with parity badges
+  (green/yellow/red + a distinct `paper_only` badge from the self-consistency
+  gate).
+- **Method drill-down** — per method: timing curves vs size (linear + log),
+  the multi-reference parity table, snapshot provenance.
+- **Drift** — parity verdicts over n versions, lazy-loaded from archived
+  `snapshots-YYYY-MM.tar.zst` assets (sparse; only manually-archived points).
+- **Catalog** — browse by category / status, fuzzy search on name/symbol.
+- **Host** — surfaces the active host card; cross-host comparison warning-gated.
+- A **stale-data badge** when `generated_at` lags the latest method-touching
+  commit.
+
+**Currently stubbed:** the `dashboard/` Svelte+Vite app does not exist; the
+`make dashboard-data` / `dashboard-serve` / `dashboard-build` targets print a
+"not yet bootstrapped (Phase D)" message and exit 0. Publication
+(`dashboard-publish.yml` → `gh-pages`) and the self-hosted timing workflow
+(`benchmarks.yml`) are likewise unbuilt.
+
+**Trigger to build:** when the static Sphinx/landing dashboard becomes the
+limiting factor for consuming the parity/timing signal (filtering, history,
+multi-host). Until then the static landing page + the `method_scores` cards
+cover the need. Because the contract is fixed and tested, building D-SPA later
+is additive and does not touch the data pipeline.
+
+> Indexed in [`DEFERRALS.md`](../DEFERRALS.md).
