@@ -8,6 +8,33 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  contracts:
+    # Guards the committed contract artifacts produced by the Phase-C-minimal /
+    # D-min / bindings work: the parity comparator summary
+    # (parity/results/latest.json), the dashboard payload + schema
+    # (docs/_static/bench-data.json vs docs/dashboard.schema.json), and the
+    # raw-binding manifest reconciliation (catalog projection vs the ABI
+    # snapshot). These tests existed but ran nowhere; here they catch silent
+    # drift on every push/PR. Python-only — no libn4m build needed.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install contract-test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest jsonschema numpy
+      - name: Validate committed contract artifacts
+        run: |
+          python -m pytest \
+            benchmarks/cross_binding/tests/test_parity_comparator.py \
+            benchmarks/cross_binding/tests/test_dashboard_contract.py \
+            benchmarks/cross_binding/tests/test_raw_manifest_reconciliation.py \
+            -q
+
   fixture-determinism:
     runs-on: ubuntu-22.04
     env:
