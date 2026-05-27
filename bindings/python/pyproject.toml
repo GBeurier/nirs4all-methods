@@ -58,3 +58,13 @@ pls4all = [
   "lib/*.dylib",
   "lib/*.dll",
 ]
+# The full `n4m` module loads libn4m from its own n4m/lib/ (n4m/_ffi.py), staged
+# by scripts/build_libn4m_in_wheel.sh — ship it so the full nirs4all-methods
+# surface works in the wheel, not only pls4all.
+n4m = [
+  "lib/libn4m*",
+  "lib/*.so",
+  "lib/*.so.*",
+  "lib/*.dylib",
+  "lib/*.dll",
+]

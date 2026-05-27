@@ -28,6 +28,11 @@ cd "${ROOT}"
 PRESET="${PLS4ALL_BUILD_PRESET:-dev-release}"
 BUILD_DIR="build/${PRESET}"
 SRC_LIB_DIR="bindings/python/src/pls4all/lib"
+# The bindings/python tree ships BOTH the slim `pls4all` module and the full
+# `n4m` module; each loads libn4m from its own `<pkg>/lib/` (see n4m/_ffi.py and
+# pls4all/_ffi.py). Stage the library into both so the full nirs4all-methods
+# surface works in the wheel, not just pls4all.
+N4M_LIB_DIR="bindings/python/src/n4m/lib"
 
 echo "::group::ensure cmake + ninja are present"
 
@@ -96,5 +101,10 @@ case "$(uname -s)" in
         ;;
 esac
 
-ls -la "${SRC_LIB_DIR}"
+# Mirror the staged library into the full-package module's lib/ too.
+rm -rf "${N4M_LIB_DIR}"
+mkdir -p "${N4M_LIB_DIR}"
+cp -a "${SRC_LIB_DIR}/"* "${N4M_LIB_DIR}/"
+
+ls -la "${SRC_LIB_DIR}" "${N4M_LIB_DIR}"
 echo "::endgroup::"
