@@ -2,8 +2,10 @@
 
 **pls4all** is a portable PLS / NIRS engine written in C++17, exposed
 through a stable C ABI, and packaged behind thin first-class bindings
-for Python, R, MATLAB / Octave, JavaScript / WebAssembly, Android,
-Go, Rust, Julia, Ruby, .NET, Lua and Nim.
+for the current target languages — Python, R, MATLAB / Octave, and
+JavaScript / WebAssembly. Additional language bindings (Go, Rust, Julia,
+Ruby, .NET, Lua, Nim, JNI, Android) exist as frozen proofs-of-concept
+under `bindings/_archive/` and are revived on request.
 
 It is built around a single claim: **the same numerical PLS result,
 in every language**, with timings that match or beat each language's
@@ -111,4 +113,4 @@ Python or R.
 | See what's measured and how | [Benchmark overview](../benchmarks/overview.md) |
 | Browse the algorithm catalogue | [Methods index](../methods/index.md) |
 | Compare bindings in a live UI | [GitHub Pages dashboard](../landing/dashboard.md) |
-| Read pls4all in your language | [Python](../bindings/python.md) · [R](../bindings/r.md) · [MATLAB](../bindings/matlab.md) · [JS](../bindings/js.md) · [Android](../bindings/android.md) |
+| Read pls4all in your language | [Python](../bindings/python.md) · [R](../bindings/r.md) · [MATLAB / Octave](../bindings/matlab.md) · [JS](../bindings/js.md) |

@@ -23,7 +23,7 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 
 - **Architecture** — [overview](architecture/overview.md) · [memory model](architecture/memory_model.md) · [error model](architecture/error_model.md) · [threading](architecture/threading.md) · [serialization](architecture/serialization.md)
 - **ABI** — [reference](abi/reference.md) · [stability policy](abi/stability_policy.md) · [changes log](abi/changes_log.md)
-- **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md) · [Android](bindings/android.md)
+- **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB / Octave](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md)
 - **Parity** — [methodology](parity/methodology.md) · {doc}`tolerances <parity/tolerances>`
 - **Benchmarks** — [index](benchmarks/index.md) · [overview](benchmarks/overview.md) · [cross-binding parity + timing](benchmarks/cross_binding.md) · [methodology](benchmarks/methodology.md)
 - **Development** — [workflow](dev/workflow.md) · [build](dev/build.md) · [testing](dev/testing.md) · [stabilisation plan](dev/stabilisation_plan.md) · [style](dev/style.md) · [release process](dev/release_process.md)
@@ -56,7 +56,6 @@ bindings/python
 bindings/r
 bindings/matlab
 bindings/js
-bindings/android
 parity/methodology
 parity/tolerances
 dev/workflow

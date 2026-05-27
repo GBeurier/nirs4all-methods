@@ -334,14 +334,10 @@ update_with_sed \
     '`n4m`[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)' \
     "s/(\`n4m\`[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
 
-# Julia (Project.toml:  version = "X.Y.Z")
-update_with_sed \
-    "bindings/julia/Pls4all.jl/Project.toml" \
-    "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
-    "s/^(version[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
-
-# Archived/frozen Rust and .NET bindings under bindings/_archive/ are
-# intentionally excluded from active version sync.
+# Archived/frozen bindings under bindings/_archive/ (go, rust, dotnet, lua, nim,
+# ruby, jni, julia, android) are intentionally excluded from active version sync
+# — they are frozen at their last version and are not current target languages
+# (R, Python, Octave/MATLAB, JS). See bindings/SPEC.md and DEFERRALS.md.
 
 # JS (package.json: top-level "version")
 update_json_field "bindings/js/package.json"      "version"
