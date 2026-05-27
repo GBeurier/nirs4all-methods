@@ -27,7 +27,10 @@ let _module: EmModule | null = null;
 /** Load and cache the Emscripten module. Call once at app startup. */
 export async function loadModule(): Promise<EmModule> {
     if (_module !== null) return _module;
-    const factory = (await import("../p4a.js")).default as
+    // p4a.js (the Emscripten loader) is staged into dist/ next to this module,
+    // so the package is self-contained (files: ["dist/"]). See package.json
+    // `stage:wasm`. Previously "../p4a.js" pointed outside dist/ → not shipped.
+    const factory = (await import("./p4a.js")).default as
         (opts?: object) => Promise<EmModule>;
     _module = await factory({});
     return _module;

@@ -17,6 +17,8 @@
   ],
   "scripts": {
     "build": "tsc -p .",
+    "stage:wasm": "node -e \"const fs=require('fs'),p='../../build/emscripten/bindings/js/';fs.mkdirSync('dist',{recursive:true});for(const f of ['p4a.js','p4a.wasm']){if(!fs.existsSync(p+f))throw new Error('missing WASM artifact '+p+f+' — run: cmake --preset emscripten && cmake --build --preset emscripten --target pls4all_wasm');fs.copyFileSync(p+f,'dist/'+f)}console.log('staged p4a.js + p4a.wasm into dist/')\"",
+    "prepack": "npm run build && npm run stage:wasm",
     "test": "node --experimental-vm-modules test/run_smoke.mjs"
   },
   "license": "CECILL-2.1",
