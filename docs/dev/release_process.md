@@ -8,12 +8,13 @@ automated (PyPI, CRAN-tarball build); the JS / MATLAB / Octave bindings are
 
 | Binding | Package | Registry | Automation | Trigger |
 |---------|---------|----------|------------|---------|
-| Python (slim) | `pls4all` | PyPI | **Automated** — `release-python.yml` (cibuildwheel + Trusted Publishing/OIDC) | push tag `v*` (TestPyPI on `-rc*`) |
-| Python (full) | `nirs4all-methods` | PyPI | Scaffolded, **inactive** — `release-wheels.yml` (needs the full package's build glue) | `workflow_dispatch` |
-| R | `n4m` | CRAN | **Semi-automated** — `release-r.yml` builds + `R CMD check`s the tarball; **submission is a manual web form** | `workflow_dispatch` (manual-only until the package builds standalone — see the note atop `release-r.yml`) |
-| JS / WASM | `@pls4all/wasm` | npm | **Manual** (this doc) | — |
-| MATLAB | `+pls4all` | File Exchange | **Manual** (this doc) | — |
-| Octave | `pls4all` (pkg) | — / Octave Forge | **Manual** (this doc) | — |
+| Python (full) | `nirs4all-methods` | PyPI | **Automated** — `release-wheels.yml` (cibuildwheel matrix + Trusted Publishing) | push tag `v*` (non-`-rc`) → PyPI; `workflow_dispatch` + `publish=true` |
+| Python (slim) | `pls4all` | PyPI | **Automated** — same `release-wheels.yml` builds both packages in one matrix; the legacy `release-python.yml` is PR-only (smoke + sdist) and no longer publishes | push tag `v*` (non-`-rc`) → PyPI; `workflow_dispatch` + `publish=true` |
+| R | `n4m` | CRAN | **Semi-automated** — `release-r.yml` vendors libn4m into `src/vendor/`, runs `R CMD check --as-cran` on the Linux/macOS/Windows + release/devel matrix, and (on tag push) attaches the tarball to the GitHub Release. **Submission is the irreducible manual web form.** | `workflow_dispatch`; tag push attaches the tarball |
+| R | `pls4all` (slim) | CRAN | **Semi-automated** — same `release-r.yml`, the matrix has a `pkg: [n4m, pls4all]` leg. | `workflow_dispatch`; tag push attaches the tarball |
+| JS / WASM | `@pls4all/wasm` | npm | **Build CI-automated** in `cross-binding-parity.yml` (emsdk pinned, `npm test` parity); **publish manual** (this doc) | — |
+| MATLAB | `+pls4all` | File Exchange | **Manual** (no licensed runner; build/test described in `bindings/matlab/COMPAT.md`) | — |
+| Octave | `pls4all` (pkg) | — / Octave Forge | **Build CI-automated** in `cross-binding-parity.yml` (apt octave + `build_mex.m` + `test_parity`); **publish manual** | — |
 
 ## Pre-release gates (release blockers)
 
@@ -38,14 +39,32 @@ ship.
 
 ## Automated paths (summary)
 
-- **PyPI (`pls4all`)** — tag `vX.Y.Z` → `release-python.yml` builds wheels with
-  cibuildwheel, repairs them (auditwheel/delocate/delvewheel), smoke-tests, and
-  publishes via PyPI Trusted Publishing (no stored token). `-rcN` tags go to
-  TestPyPI. One-time Trusted-Publisher config is documented in the workflow header.
-- **CRAN (`n4m`)** — `release-r.yml` (`workflow_dispatch`) builds the source
-  tarball and runs `R CMD check --as-cran` across the CRAN matrix, then attaches
-  the tarball to the GitHub Release. **CRAN submission itself is the irreducible
-  manual step**: download the tarball from the run and submit it at
+Each PyPI project gets its own workflow — one workflow per package, so PyPI
+Trusted Publishing stays one-to-one and the previous dual-publish collision
+on the `pls4all` name is structurally impossible:
+
+- **PyPI (`pls4all`)** — tag `vX.Y.Z` (non-`-rc`) → `release-python.yml`
+  builds the cibuildwheel matrix from `bindings/python/` directly, retags
+  wheels to `py3-none-${platform}` (pure-Python over ctypes-loaded libn4m;
+  no per-cpython ABI), runs the sklearn parity gate + installed-wheel smoke,
+  publishes via Trusted Publishing, then re-installs from PyPI to verify
+  propagation. `-rcN` tags route to TestPyPI on workflow_dispatch.
+- **PyPI (`nirs4all-methods`)** — tag `vX.Y.Z` (non-`-rc`) → `release-wheels.yml`
+  builds the cibuildwheel matrix (Linux x86_64 + aarch64, macOS x86_64 +
+  arm64, Windows x86_64 across cp310–cp313) from the generated
+  `bindings/python_nirs4all_methods/` dir (`make_python_package.py --name
+  nirs4all-methods` writes the dir; `prepare_wheel_packages.sh` builds + stages
+  libn4m into `n4m/lib/` inside each cibuildwheel env so the bundled lib
+  matches the wheel). Repairs use auditwheel / delocate / delvewheel
+  `--analyze-existing`. Publishes via Trusted Publishing.
+- **CRAN (both `n4m` and `pls4all`)** — `release-r.yml` (`workflow_dispatch`,
+  also attaches on tag push) vendors the full libn4m C/C++/Fortran core +
+  static `n4m_export.h` into `src/vendor/` via `N4M_R_VENDOR=1 ./configure`,
+  then runs `R CMD check --as-cran` across the `{pkg: n4m, pls4all} ×
+  {linux-release, linux-devel, macos-arm64-release, windows-release}` matrix
+  and produces a self-contained source tarball. **CRAN submission itself is
+  the irreducible manual step**: download the tarball from the run (or the
+  attached Release asset) and submit it at
   <https://cran.r-project.org/submit.html>.
 
 ---
@@ -120,22 +139,23 @@ The `+pls4all` package reads its version from libn4m at runtime.
 
 The Octave surface is the same `bindings/matlab/` binding (built for the
 MATLAB ∩ Octave intersection); Octave builds the MEX via `build_mex.m` /
-`mkoctfile` — there is **no** dedicated CMake Octave target. Distribution is
-manual (no Octave Forge submission is wired — Forge packaging/review is a
-heavyweight manual process): ship the built binding with the GitHub Release, or
-have users build it locally against the released libn4m. Validate with the
-`n4m_smoke_test` smoke documented in `bindings/matlab/COMPAT.md` — run manually;
-it is **not** in CI today (despite COMPAT.md describing it as the intended CI
-path).
+`mkoctfile` — there is **no** dedicated CMake Octave target. The build is
+**CI-tested on every push** (the `octave-mex` job in
+`cross-binding-parity.yml` installs apt Octave, runs `build_mex.m`, and gates
+on `test_parity` with `rmse_rel <= 1e-12`; locally observed ~4e-16). What is
+still manual is **publication** (no Octave Forge submission is wired): ship
+the built binding with the GitHub Release, or have users build it locally
+against the released libn4m.
 
 ---
 
 ## Why JS / MATLAB / Octave are manual today
 
-Automating these (an `npm publish` job, a `.mltbx` build job) is tracked as
-binding-CI work, not done here: their CI-buildable packaging is itself
-unfinished (the R package's `Makevars` still references the pre-rename vendored
-tree; the Octave/MATLAB MEX needs an equivalent CI build step; the JS WASM build
-needs the Emscripten SDK provisioned in CI). Until those land, the artifacts are
-built locally and published by hand as above. See also the cross-binding parity
-gate's scope note in `.github/workflows/cross-binding-parity.yml`.
+Their **builds** are CI-automated in `cross-binding-parity.yml` (JS via
+emsdk + `npm test`, Octave via apt octave + `build_mex.m` + `test_parity`).
+What is still manual is **publication**: an `npm publish` job, a `.mltbx`
+build job, or an Octave Forge submission. None of those are required for the
+cross-binding promise (one libn4m → identical numbers in every binding) — they
+are distribution-channel ergonomics, tracked but not blocking. MATLAB itself
+stays out of CI entirely (no licensed runner); the Octave job validates the
+MATLAB ∩ Octave intersection per `bindings/matlab/COMPAT.md`.

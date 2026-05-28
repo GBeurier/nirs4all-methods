@@ -1,6 +1,14 @@
-# M15 scaffold — cibuildwheel matrix for the two Python packages.
+# Build + publish the `nirs4all-methods` Python wheel (full n4m surface).
 #
-# Builds `nirs4all-methods` (full) and `pls4all` (slim) wheels across:
+# Scope split with release-python.yml (which owns the slim `pls4all` wheel):
+#   - `pls4all`         → release-python.yml (mature: retag, sklearn smoke,
+#                         post-publish reinstall test).
+#   - `nirs4all-methods`→ release-wheels.yml (THIS file). One workflow per
+#                         PyPI project keeps Trusted Publishing one-to-one
+#                         and prevents the dual-publish collision the two
+#                         workflows had previously on the `pls4all` name.
+#
+# Builds `nirs4all-methods` across:
 #   - Linux x86_64 (manylinux 2_28) — gcc 13
 #   - Linux aarch64 (manylinux 2_28) — gcc 13, qemu cross
 #   - macOS x86_64 (macos-13)
@@ -10,15 +18,15 @@
 # Wheel post-processing:
 #   - Linux:    auditwheel repair → tag manylinux_2_28
 #   - macOS:    delocate-wheel    → bundle libn4m.dylib
-#   - Windows:  delvewheel repair → bundle libn4m.dll
+#   - Windows:  delvewheel repair --analyze-existing → bundle libn4m.dll
+#     (libn4m is loaded via ctypes, not linked, so delvewheel needs the
+#      --analyze-existing flag to discover + vendor the DLL.)
 #
-# Status: ACTIVE. Builds run on tags / workflow_dispatch; the publish job is
-# input-gated (workflow_dispatch + publish=true).
-#
-# Publishing uses PyPI Trusted Publishing (no API tokens). One-time maintainer
-# setup on PyPI for BOTH project names (nirs4all-methods, pls4all): owner/repo,
-# workflow file `release-wheels.yml`, environment `pypi`. A single Trusted
-# Publisher can cover both projects.
+# Status: ACTIVE. Builds run on tag pushes (v*.*.*) and workflow_dispatch; the
+# publish job is gated on (a) tag push without `-rc`, or (b) workflow_dispatch
+# with publish=true. Uses PyPI Trusted Publishing (no API tokens) — one-time
+# maintainer setup on PyPI for `nirs4all-methods`: owner/repo,
+# workflow file `release-wheels.yml`, environment `pypi`.
 
 name: release-wheels
 
@@ -41,21 +49,19 @@ on:
       - 'v[0-9]*.[0-9]*.[0-9]*'
 
 # ACTIVE: the per-package build machinery is in place — prepare_wheel_packages.sh
-# builds libn4m, generates the two self-contained package dirs
-# (make_python_package.py: nirs4all-methods=full n4m, pls4all=slim), and stages
-# libn4m into each. Verified locally on Linux (both wheels build/install/import);
-# macOS/Windows/aarch64 build on this matrix. Publish is input-gated below and
-# uses PyPI Trusted Publishing (one-time maintainer setup of the publisher).
+# builds libn4m, generates the self-contained nirs4all-methods package dir
+# (make_python_package.py --name nirs4all-methods, ships the full `n4m`
+# module), and stages libn4m into it. Verified locally on Linux (wheel
+# builds/installs/imports); macOS/Windows/aarch64 build on this matrix.
+# Publish is gated on tag-push (non `-rc`) OR workflow_dispatch + publish=true,
+# and uses PyPI Trusted Publishing (one-time maintainer setup of the publisher).
 jobs:
   matrix:
-    name: ${{ matrix.package }} / ${{ matrix.os }} / ${{ matrix.arch }}
+    name: nirs4all-methods / ${{ matrix.os }} / ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        package:
-          - nirs4all-methods
-          - pls4all
         os:
           - ubuntu-22.04
           - macos-13
@@ -82,19 +88,20 @@ jobs:
         if: runner.os == 'Linux' && matrix.arch == 'aarch64'
         uses: docker/setup-qemu-action@v3
 
-      # The two package dirs are generated and gitignored, so they must exist
-      # before cibuildwheel reads `package-dir`/pyproject.toml. Materialize them
-      # here METADATA-ONLY — make_python_package.py excludes lib/ (staged at
-      # build time), so this needs no compiler/toolchain on any OS. libn4m is
-      # built + staged inside each build env by CIBW_BEFORE_ALL (in the
-      # manylinux container on Linux) so the bundled lib matches the wheel.
-      - name: Materialize package dirs (metadata only)
-        run: python bindings/python/scripts/make_python_package.py --all
+      # The nirs4all-methods package dir is generated + gitignored, so it must
+      # exist before cibuildwheel reads `package-dir`/pyproject.toml.
+      # Materialize it here METADATA-ONLY — make_python_package.py excludes
+      # lib/ (staged at build time), so this needs no compiler/toolchain on
+      # any OS. libn4m is built + staged inside each build env by
+      # CIBW_BEFORE_ALL (in the manylinux container on Linux) so the bundled
+      # lib matches the wheel.
+      - name: Materialize the nirs4all-methods package dir (metadata only)
+        run: python bindings/python/scripts/make_python_package.py --name nirs4all-methods
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21.3
         with:
-          package-dir: bindings/python_${{ matrix.package == 'pls4all' && 'pls4all' || 'nirs4all_methods' }}
+          package-dir: bindings/python_nirs4all_methods
         env:
           CIBW_ARCHS_LINUX:   ${{ matrix.arch }}
           CIBW_ARCHS_MACOS:   ${{ matrix.arch }}
@@ -125,20 +132,28 @@ jobs:
           # Linux auditwheel / macOS delocate already pick up the bundled lib.
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --analyze-existing -w {dest_dir} -v {wheel}"
           CIBW_TEST_REQUIRES: pytest numpy
-          CIBW_TEST_COMMAND: pytest {project}/bindings/python_${{ matrix.package == 'pls4all' && 'pls4all' || 'nirs4all_methods' }}/tests
+          CIBW_TEST_COMMAND: pytest {project}/bindings/python_nirs4all_methods/tests
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.package }}-${{ matrix.os }}-${{ matrix.arch }}
+          name: wheels-nirs4all-methods-${{ matrix.os }}-${{ matrix.arch }}
           path: wheelhouse/*.whl
 
   publish:
-    name: Publish to PyPI
+    name: Publish nirs4all-methods to PyPI
     needs: matrix
-    # Input-gated: only on an explicit workflow_dispatch with publish=true. Uses
-    # PyPI Trusted Publishing (id-token below) — requires the one-time publisher
-    # setup for nirs4all-methods + pls4all on PyPI.
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.publish == 'true'
+    # Gated on either:
+    #   (a) tag push v*.*.* without `-rc` (production release), or
+    #   (b) workflow_dispatch + publish=true (manual dispatch).
+    # Trusted Publishing requires the one-time publisher setup for
+    # nirs4all-methods on PyPI: owner/repo, workflow file `release-wheels.yml`,
+    # environment `pypi`.
+    if: |
+      (github.event_name == 'push'
+       && startsWith(github.ref, 'refs/tags/v')
+       && !contains(github.ref_name, '-'))
+      || (github.event_name == 'workflow_dispatch'
+          && github.event.inputs.publish == 'true')
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -148,9 +163,28 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: wheels-*
+          pattern: wheels-nirs4all-methods-*
           merge-multiple: true
           path: dist
+
+      - name: Validate tag matches the wheel version (tag push only)
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          ref_name="${GITHUB_REF_NAME}"
+          if [[ ! "${ref_name}" =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
+            echo "::error::Tag ${ref_name} is not a SemVer release (v<MAJOR>.<MINOR>.<PATCH>)" >&2
+            exit 1
+          fi
+          tag_version="${ref_name#v}"
+          wheel_version=$(ls dist/nirs4all_methods-*.whl | head -n1 \
+                          | sed -E 's|.*/nirs4all_methods-([0-9]+\.[0-9]+\.[0-9]+)-.*|\1|')
+          if [[ "${tag_version}" != "${wheel_version}" ]]; then
+            echo "::error::Tag version (${tag_version}) != wheel version (${wheel_version})" >&2
+            exit 1
+          fi
+          echo "tag ${ref_name} matches wheel version ${wheel_version}."
+
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist

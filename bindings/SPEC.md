@@ -55,25 +55,33 @@ The old metric "0 hand-written idiomatic wrappers" is replaced by:
 
 `render_api.py` projects `catalog/methods/*.yaml` into
 `build/catalog/rendered_api/raw_manifest.json`. **It is a catalog projection,
-not binding truth.** The catalog `abi_symbols` are largely auto-discovered
-guesses, so the manifest also reconciles them against the authoritative ABI
-snapshot `cpp/abi/expected_symbols_linux.txt` and reports the gap:
+not binding truth.** Every per-method `abi_symbols` array now comes from the
+reviewed `catalog/abi_method_map.yaml` + `catalog/abi_missing_methods.yaml`
+(the source of truth, applied by `reconcile_abi.py --write`), so the
+reconciliation is complete:
 
 ```jsonc
 { "abi": "1.9.0", "source": "catalog projection (advisory)",
   "reconciliation": {
-    "real_abi_symbol_count": 669, "catalog_symbol_count": 427,
-    "catalog_real": 8, "catalog_guessed": 419, "catalog_coverage_pct": 1.9,
-    "unmapped_real_abi_symbols": [...], "unmapped_real_count": 662 },
+    "real_abi_symbol_count": 669, "catalog_symbol_count": 548,
+    "catalog_real": 548, "catalog_guessed": 0, "catalog_coverage_pct": 100.0,
+    "unmapped_real_abi_symbols": [...], "unmapped_real_count": 121 },
   "methods": [ { "method_id": "...", "abi_symbols": [...],
                  "real_abi_symbols": [...], "guessed_abi_symbols": [...] }, ... ] }
 ```
 
-`test_raw_manifest_reconciliation` runs this **non-strict** (exit 0) — it
-quantifies the **Phase-B catalog-cleanup debt**, it does not gate. Strict
-manifest-driven raw-class generation is **gated on this reconciliation reaching
-~100 %**; until then, generating object classes from the catalog would bake bad
-symbol names / signatures into a public-looking API.
+The 121 `unmapped_real_abi_symbols` are the **infra/support surface** —
+context, config, array marshalling, status, version, RNG, matrix view, plus
+the shared model / split-result handles — explicitly tracked in
+`catalog/abi_infra.yaml`. They belong to no operator and so do not appear in
+any method's `abi_symbols`. The actual gate is `union(catalog method symbols,
+infra symbols) == snapshot` (`reconcile_abi.py --check`,
+`validate.py --strict-abi`), both green: **548 + 121 = 669/669**.
+
+The two gates are enforced in `catalog-validate.yml` (`--strict-abi`). Strict
+manifest-driven raw-class generation is no longer gated on reconciliation
+coverage — that debt is paid; the remaining gate is the **behavioral**
+conformance gate below.
 
 ## The real (behavioral) conformance gate
 
@@ -86,9 +94,10 @@ symbol-level "does the binding expose X" is meaningless. Conformance is
 - donor **n4m ↔ nirs4all** reference parity / allowlisted expected divergence
 - (Phase C / C11) **inter-binding parity** `rmse_rel < 1e-12` vs C++ raw
 
-`n4m.raw` (the object-class raw layer for all ~160 methods) is **deferred until
-the catalog↔ABI reconciliation is done** — see the manifest. A small,
-manually-curated pilot subset is the only acceptable earlier step.
+`n4m.raw` (the object-class raw layer for all ~160 methods) is **unblocked**:
+the catalog↔ABI reconciliation is complete (548 method + 121 infra = 669/669
+exported `n4m_*` symbols, gated in `catalog-validate.yml`). Bringing the raw
+layer up is the next pilot.
 
 ## Idiomatic layer
 
@@ -108,11 +117,13 @@ A binding is spec-compliant when its **behavioral** gates pass: inter-binding
 parity (`rmse_rel < 1e-12` vs C++ raw, Phase C / C11), the donor raw↔idiomatic +
 raw≡C++ gates, and its idiomatic smoke tests. What hard-fails **in CI today**:
 the donor gates (`test_donor_binding_specs.py`) and the Python leg of the
-cross-binding gate. The full cross-language inter-binding parity is run
-locally/pre-release until the R/Octave/JS CI builds land (see
-`.github/workflows/cross-binding-parity.yml`). The manifest reconciliation is a
-non-gating Phase-B debt report — not a conformance criterion (a ctypes-style
-binding can address any symbol, so symbol-coverage proves nothing).
+cross-binding gate. The R / Octave / JS legs of `cross-binding-parity.yml`
+now also run on every push (`r-binding`, `octave-mex`, `js-wasm` jobs;
+locally-verified `rmse_rel ≈ 9.4e-18` / `4e-16` / `1e-16` against the shared
+Python-generated fixture). The manifest reconciliation is **not** a
+conformance criterion (a ctypes-style binding can address any symbol, so
+symbol-coverage proves nothing) — it is now a healthy state report rather
+than a Phase-B debt report.
 
 ## F-prep scope (binding-scaling infra) — reduced + deferred
 
@@ -125,7 +136,7 @@ infrastructure to scale to 10+ languages: spec → conformance → **profiles** 
 | F-prep task | Status |
 |-------------|--------|
 | F-prep-1 SPEC.md | **Done** (this file). |
-| F-prep-2 conformance suite (≥3 methods/category) | **Partial/pilot** — the donor raw↔idiomatic + raw≡C++ gates (`benchmarks/cross_binding/tests/test_donor_binding_specs.py`) hard-fail in CI; the cross-binding parity gate (`cross-binding-parity.yml`) is **Python-only smoke** in CI today (R/Octave/JS run locally/pre-release). Full target-language inter-binding CI is deferred (their CI builds don't exist yet). |
+| F-prep-2 conformance suite (≥3 methods/category) | **Live** — the donor raw↔idiomatic + raw≡C++ gates (`benchmarks/cross_binding/tests/test_donor_binding_specs.py`) hard-fail in CI; `cross-binding-parity.yml` runs all four bindings on every push (`harness-and-python-smoke`, `js-wasm`, `octave-mex`, `r-binding`; MATLAB stays manual — no licensed runner). |
 | F-prep-3 framework-profile **schema** | **Obsolete** — idiomatic adapters are hand-written (see "Two layers"); no profile YAML. |
 | F-prep-4 per-`(method × profile)` **template engine** | **Obsolete** — the explicitly-rejected over-engineering at 4-language scale. |
 | F-prep-5 skeleton generator (`make new-binding LANG=`) | **Deferred, low value** — with a closed 4-language target set there is no new binding to scaffold. The `make new-binding` target is a stub that prints "not yet wired (Phase F-prep)". |
