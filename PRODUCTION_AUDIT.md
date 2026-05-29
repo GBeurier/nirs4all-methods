@@ -511,11 +511,11 @@ catalog and surface it); (5) delete the dead `cpp_header.py` path.
 
 **P1 — make the contract enforceable & complete:**
 4. Tighten the relaxed reference tolerances to achieved (§6.4), especially the 5 `nirs4all_sanctioned`.
-5. Decide `t2_select`'s donor + selector contract (§5); apply the discrete-selector metric to all selectors.
-6. Move donor + tolerance into the catalog; `validate.py` fails on undocumented references (§7).
-7. ✅ DONE: edge/spline/random augmenter replays wired + 10 identity-placeholder fixtures regenerated (§10.2). Remaining: phase-17 fixture replay (§10.4) + a Fortran-enabled lane for `spline_smooth`/FITPACK (§10.3).
-8. Expand the live CI parity gate beyond 2 cells / wire the nightly sweep (§11 A1); regenerate macOS/Windows ABI snapshots + add the diff (A2).
-9. ✅ DONE (contributor docs): `method-add.md` + `CONTRIBUTING.md` now match the real flow (§13.1). Remaining: fix `release-python.yml` doc block (A3).
+5. ✅ DONE: `t2_select` donor resolved = R `plsVarSel::T2_pls` (Mehmood 2016); root-caused — n4m's T²/UCL/selection are bit-identical to the donor, the residual mask divergence is an upstream PLS loading-weight convention (`weights_w` vs `loading.weights`); kept the Jaccard allowlist with the corrected WHY (registry note + orchestrator allowlist), no C++ change (§5).
+6. ✅ DONE (the enforceable part, per maintainer — NOT catalog-as-record): `validate.py --check-references` now fails when a production method lacks a documented donor, reading the registry lockfile + `parity/REFERENCES.md` (donor data stays in the registry, not the catalog); wired into `catalog-validate.yml`; the stale committed lockfile (pre-§6.4 tolerances) was regenerated. 188/188 covered (§7).
+7. ✅ DONE: edge/spline/random replays + 10 placeholder fixtures regenerated (§10.2); **phase-17 replay wired** (5 stochastic cases locked at seed 0, §10.4); `build_info()` now reports `fitpack=0/1` for runtime detectability (§10.3). Remaining: the gfortran CI lane + FITPACK `spline_smooth` oracle (deferred — needs a Fortran compiler).
+8. ✅ DONE (live gate widened): `cross-binding-parity.yml` gains a PR-blocking Gate-2 step (n4m vs scikit-learn oracle, 7 PLS-family methods, ~42s) + new `nightly-parity.yml` cron full-sweep artifact (§11 A1). macOS/Windows ABI snapshots intentionally dropped (maintainer scope).
+9. ✅ DONE: `method-add.md` + `CONTRIBUTING.md` match the real flow (§13.1); `release-python.yml` doc block corrected (A3).
 
 **P2 — forward tracks:**
 10. `nirs4all-lite`: rebuild WASM + lite export subset + generic MethodResult runner (§12).

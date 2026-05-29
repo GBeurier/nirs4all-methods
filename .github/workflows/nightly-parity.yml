@@ -1,0 +1,103 @@
+# .github/workflows/nightly-parity.yml — full registry parity sweep (non-blocking).
+#
+# PRODUCTION_AUDIT §11 A1: the per-PR gate (cross-binding-parity.yml) proves the
+# C++/binding self surface plus the 7 scikit-learn-canonical methods live. This
+# scheduled job runs the COMPLETE registry sweep (every MethodSpec at its own
+# cell) and uploads full_matrix.csv as an artifact. It is informational only —
+# it never blocks a merge. Only the Python reference layer is provisioned
+# (scikit-learn + the small pure-Python donors); R / Octave / nirs4all donors
+# are out of scope here (heavy toolchains) and surface as honest failed rows in
+# the matrix rather than being silently hidden.
+name: Nightly parity sweep
+
+on:
+  schedule:
+    # 03:30 UTC daily. Cron is UTC; pick an off-peak hour for the shared runner.
+    - cron: "30 3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  full-registry-sweep:
+    runs-on: ubuntu-22.04
+    # Generous ceiling: the full registry sweep with cold sklearn/ensemble cells
+    # at 1 thread runs well under an hour locally; cap so a hung cell cannot
+    # pin the runner indefinitely.
+    timeout-minutes: 120
+    env:
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      PYTHONHASHSEED: "0"
+      N4M_R_ENV_NOWARN: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
+
+      - name: Build libn4m (Linux gcc-12 Release)
+        run: |
+          cmake --preset ci-linux-gcc12-release
+          cmake --build --preset ci-linux-gcc12-release --parallel
+
+      - name: Install Python binding + reference deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e bindings/python
+          # Python reference layer only (no R/Octave/nirs4all). This mirrors
+          # the Python branch of scripts/setup_parity_references.sh.
+          pip install "scikit-learn" numpy scipy "auswahl" "pyswarms" \
+                      "tensorly" "ikpls" "diPLSlib==2.5.0"
+
+      - name: Full registry parity sweep (every method, registry cells)
+        # The orchestrator's 'dev-release' build slot is pointed at the CI build
+        # (both plain Release => identical numbers). --algorithms all expands to
+        # the whole MethodSpec catalog; --registry-cells uses each method's own
+        # (n_samples, n_features). main() always exits 0, so this never fails the
+        # job; the matrix CSV carries the verdicts.
+        run: |
+          mkdir -p build
+          ln -sfn ci-linux-gcc12-release build/dev-release
+          python benchmarks/cross_binding/orchestrator.py \
+            --algorithms all --registry-cells --threads 1 \
+            --libn4m-build dev-release \
+            --canonical-pls4all-only \
+            --reference-backends registry \
+            --n-runs 1 --workers 1 --timeout 600 \
+            --flush-each-cell \
+            --out-csv benchmarks/cross_binding/results/nightly_matrix.csv
+
+      - name: Summarise the nightly matrix
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from benchmarks.cross_binding.orchestrator import load_existing_records
+          rows = load_existing_records(Path("benchmarks/cross_binding/results/nightly_matrix.csv"))
+          binding = [r for r in rows if r.get("kind") in ("n4m_core", "pls4all_binding")]
+          passed = [r for r in binding if r.get("reference_parity_ok") is True]
+          failed = [r for r in binding if r.get("reference_parity_ok") is False]
+          info   = [r for r in binding if r.get("reference_parity_ok") is None]
+          print(f"n4m methods: {len(binding)}  pass={len(passed)}  fail={len(failed)}  informational={len(info)}")
+          for r in failed:
+              print(f"  DIVERGED {r['algorithm']:24s} rmse_rel={r.get('reference_parity_rmse_rel')}"
+                    f" tol={r.get('reference_parity_tolerance')} {r.get('reference_parity_note','')}")
+          PY
+
+      - name: Upload nightly parity matrix
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-parity-matrix
+          path: |
+            benchmarks/cross_binding/results/nightly_matrix.csv
+          retention-days: 30
+          if-no-files-found: warn

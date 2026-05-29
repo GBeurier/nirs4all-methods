@@ -594,9 +594,15 @@ def run_backend(name: str, script: str, language: str, tier: str,
 # overlap with this allowlist instead of exact set-equality. Keep each entry
 # justified; an empty allowlist means every selector must match its donor exactly.
 SELECTION_DIVERGENCE_ALLOWLIST = {
-    "t2_select": ("R plsVarSel::T2_pls picks the min-error feature set across "
-                  "alpha levels via CV; n4m thresholds the training-score "
-                  "Hotelling T2 directly — both are valid T2 selectors."),
+    "t2_select": ("R plsVarSel::T2_pls and n4m compute the SAME Hotelling-T2 "
+                  "statistic, the SAME beta-quantile UCL, and both pick the "
+                  "min-CV-error feature set across alpha levels (verified "
+                  "bit-identical). The mask differs only because the upstream "
+                  "PLS loading weights differ: plsVarSel runs T2 on R "
+                  "pls::plsr loading.weights (== sklearn x_weights_), n4m on "
+                  "its model weights_w; borderline features near the UCL flip "
+                  "(Jaccard ~0.7-1.0, true signal always captured). Both are "
+                  "valid T2-PLS selectors."),
 }
 
 

@@ -8,7 +8,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -17,7 +17,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "transformed"
     },
     {
@@ -89,7 +89,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.1,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -107,7 +107,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.5,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -116,7 +116,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.001,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -161,7 +161,7 @@
       "has_python_reference": true,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.05,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -206,7 +206,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 2.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -215,7 +215,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -224,7 +224,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 2.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -242,7 +242,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -287,7 +287,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.001,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -305,7 +305,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.5,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -317,7 +317,7 @@
         "ikpls",
         "mixOmics"
       ],
-      "rmse_rel_tol": 0.1,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -335,7 +335,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "dmodx"
     },
     {
@@ -344,7 +344,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "q"
     },
     {
@@ -353,7 +353,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "t2"
     },
     {
@@ -371,7 +371,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "decision_scores"
     },
     {
@@ -380,7 +380,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "decision_scores"
     },
     {
@@ -389,7 +389,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 10.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "t2"
     },
     {
@@ -407,7 +407,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 5.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -452,7 +452,7 @@
       "has_python_reference": true,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.1,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -470,7 +470,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.1,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -479,7 +479,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.1,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -542,7 +542,7 @@
       "has_python_reference": true,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 2.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -551,7 +551,7 @@
       "has_python_reference": true,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.0,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {
@@ -578,7 +578,7 @@
       "has_python_reference": false,
       "has_r_reference": true,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 1.2,
+      "rmse_rel_tol": 2.0,
       "prediction_key": "mask"
     },
     {
@@ -641,7 +641,7 @@
       "has_python_reference": true,
       "has_r_reference": false,
       "extra_reference_roles": [],
-      "rmse_rel_tol": 0.1,
+      "rmse_rel_tol": 1e-08,
       "prediction_key": "predictions"
     },
     {

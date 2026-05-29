@@ -30,7 +30,20 @@ const char* version_string() noexcept {
 }
 
 const char* build_info() noexcept {
-    return N4M_BUILD_INFO;
+    // Reports optional-feature flags so a caller can detect, at runtime,
+    // capabilities that are compiled out. FITPACK is the load-bearing one:
+    // when it is absent (no Fortran compiler at build time) the spline-smooth
+    // augmenter is an intentional no-op (see cpp/src/core/augmentation/
+    // splines/spline_smoothing.c + PRODUCTION_AUDIT.md §10.3), so a downstream
+    // pipeline can check for "fitpack=1" before relying on it. N4M_HAVE_FITPACK
+    // is a PRIVATE n4m_core define (n4m_targets.cmake); version.cpp compiles
+    // into n4m_core, so it is visible here.
+    return N4M_BUILD_INFO
+#if defined(N4M_HAVE_FITPACK) && N4M_HAVE_FITPACK
+        "fitpack=1";
+#else
+        "fitpack=0";
+#endif
 }
 
 const char* git_revision() noexcept {

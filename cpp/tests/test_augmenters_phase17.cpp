@@ -613,6 +613,119 @@ void test_parity_dead_band_zero_prob() {
     n4m_rng_pcg64_destroy(rng);
 }
 
+/* The remaining 5 cases are stochastic (they consume PCG64 draws). Their oracle
+ * is libn4m's own output at seed 0 — frozen by parity/scripts/regen_aug_fixtures.py
+ * (_regen_phase17, PHASE17_SEED=0) — so the replay re-seeds at 0u to match.
+ * particle_size / emsc_distort / moisture take the wavelength axis as the last
+ * create args; mixup / local_mixup do not. */
+
+void test_parity_particle_size() {
+    DetCase dc = load_det_case("particle_size");
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
+    n4m_aug_particle_size_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_particle_size_create(&h, rng,
+        /*mean=*/50.0, /*var=*/15.0,
+        /*use_range=*/0, /*lo=*/0.0, /*hi=*/0.0,
+        /*ref=*/50.0, /*wl_exp=*/1.5,
+        /*strength=*/0.1,
+        /*include_pl=*/1, /*pl_sens=*/0.5,
+        dc.wavelengths.data(),
+        static_cast<int64_t>(dc.wavelengths.size())) == N4M_OK);
+    std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
+    auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
+    auto Yv = make_view(Y.data(), dc.rows, dc.cols);
+    N4M_TEST_REQUIRE(n4m_aug_particle_size_apply(h, Xv, Yv) == N4M_OK);
+    for (size_t i = 0; i < Y.size(); ++i) {
+        N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
+    }
+    n4m_aug_particle_size_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
+}
+
+void test_parity_emsc_distort() {
+    DetCase dc = load_det_case("emsc_distort");
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
+    n4m_aug_emsc_distort_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_emsc_distort_create(&h, rng,
+        /*mult_low=*/0.9, /*mult_high=*/1.1,
+        /*add_low=*/-0.05, /*add_high=*/0.05,
+        /*poly_order=*/2, /*poly_strength=*/0.02,
+        /*correlation=*/0.3,
+        dc.wavelengths.data(),
+        static_cast<int64_t>(dc.wavelengths.size())) == N4M_OK);
+    std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
+    auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
+    auto Yv = make_view(Y.data(), dc.rows, dc.cols);
+    N4M_TEST_REQUIRE(n4m_aug_emsc_distort_apply(h, Xv, Yv) == N4M_OK);
+    for (size_t i = 0; i < Y.size(); ++i) {
+        N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
+    }
+    n4m_aug_emsc_distort_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
+}
+
+void test_parity_moisture() {
+    DetCase dc = load_det_case("moisture");
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
+    n4m_aug_moisture_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_moisture_create(&h, rng,
+        /*aw_delta=*/0.1,
+        /*use_aw_range=*/0, /*aw_lo=*/0.0, /*aw_hi=*/0.0,
+        /*ref_aw=*/0.5,
+        /*free_frac=*/0.3, /*bound_shift=*/25.0,
+        /*moisture_content=*/0.10,
+        /*enable_shift=*/1, /*enable_intensity=*/1,
+        dc.wavelengths.data(),
+        static_cast<int64_t>(dc.wavelengths.size())) == N4M_OK);
+    std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
+    auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
+    auto Yv = make_view(Y.data(), dc.rows, dc.cols);
+    N4M_TEST_REQUIRE(n4m_aug_moisture_apply(h, Xv, Yv) == N4M_OK);
+    for (size_t i = 0; i < Y.size(); ++i) {
+        N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
+    }
+    n4m_aug_moisture_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
+}
+
+void test_parity_mixup() {
+    DetCase dc = load_det_case("mixup_alpha02");
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
+    n4m_aug_mixup_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_mixup_create(&h, rng, /*alpha=*/0.2) == N4M_OK);
+    std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
+    auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
+    auto Yv = make_view(Y.data(), dc.rows, dc.cols);
+    N4M_TEST_REQUIRE(n4m_aug_mixup_apply(h, Xv, Yv) == N4M_OK);
+    for (size_t i = 0; i < Y.size(); ++i) {
+        N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
+    }
+    n4m_aug_mixup_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
+}
+
+void test_parity_local_mixup() {
+    DetCase dc = load_det_case("local_mixup");
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
+    n4m_aug_local_mixup_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_aug_local_mixup_create(&h, rng,
+        /*alpha=*/0.2, /*k_neighbors=*/5) == N4M_OK);
+    std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
+    auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
+    auto Yv = make_view(Y.data(), dc.rows, dc.cols);
+    N4M_TEST_REQUIRE(n4m_aug_local_mixup_apply(h, Xv, Yv) == N4M_OK);
+    for (size_t i = 0; i < Y.size(); ++i) {
+        N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
+    }
+    n4m_aug_local_mixup_destroy(h);
+    n4m_rng_pcg64_destroy(rng);
+}
+
 }  // namespace
 
 void register_augmenters_phase17_tests(n4m_testing::Runner& r) {
@@ -642,4 +755,10 @@ void register_augmenters_phase17_tests(n4m_testing::Runner& r) {
     r.run("aug_phase17/parity_instrument_broaden_fixed", test_parity_instrument_broaden_fixed);
     r.run("aug_phase17/parity_temperature_zero_delta",  test_parity_temperature_zero_delta);
     r.run("aug_phase17/parity_dead_band_zero_prob",     test_parity_dead_band_zero_prob);
+    /* Fixture-driven parity for the stochastic cases (oracle = libn4m at seed 0). */
+    r.run("aug_phase17/parity_particle_size",           test_parity_particle_size);
+    r.run("aug_phase17/parity_emsc_distort",            test_parity_emsc_distort);
+    r.run("aug_phase17/parity_moisture",                test_parity_moisture);
+    r.run("aug_phase17/parity_mixup",                   test_parity_mixup);
+    r.run("aug_phase17/parity_local_mixup",             test_parity_local_mixup);
 }

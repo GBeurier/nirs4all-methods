@@ -1,7 +1,19 @@
-# Build pls4all Python wheels (cibuildwheel + auditwheel/delocate/delvewheel),
-# retag to py3-none-${platform}, smoke-test the installed wheel, and publish
-# to TestPyPI (for -rc tags) or PyPI (for v* tags) via Trusted Publishing
-# (OIDC).
+# Build the slim `pls4all` Python wheel (the PLS-only subset of
+# nirs4all-methods over the libn4m C ABI): cibuildwheel +
+# auditwheel/delocate/delvewheel, retag to py3-none-${platform}, smoke-test the
+# installed wheel, and publish to TestPyPI (for -rc tags) or PyPI (for v* tags)
+# via Trusted Publishing (OIDC).
+#
+# Package ownership (one workflow per PyPI project keeps Trusted Publishing
+# one-to-one and avoids the dual-publish collision the two workflows had on the
+# `pls4all` name):
+#   - `pls4all`          → THIS workflow. Builds the in-tree `pls4all` module
+#                          from bindings/python directly (no
+#                          make_python_package.py step). Mature: retag, sklearn
+#                          smoke, post-publish reinstall test.
+#   - `nirs4all-methods` → release-wheels.yml. Builds the full `n4m` module via
+#                          make_python_package.py --name nirs4all-methods
+#                          (gitignored bindings/python_nirs4all_methods/).
 #
 # Triggers
 # --------
@@ -17,10 +29,14 @@
 #
 # Trusted Publishing config (one-time, maintainer action)
 # -------------------------------------------------------
+# The GitHub repo was renamed pls4all → nirs4all-methods; the Trusted-Publisher
+# Repository name MUST be the current repo `nirs4all-methods` (pointing it at
+# the old `pls4all` repo name is what caused the v0.98.0 invalid-publisher
+# failure). The PyPI Project Name stays `pls4all` — only this workflow owns it.
 # PyPI side:    https://pypi.org/manage/account/publishing/
 #   PyPI Project Name = pls4all
 #   Owner             = GBeurier
-#   Repository name   = pls4all
+#   Repository name   = nirs4all-methods
 #   Workflow filename = release-python.yml
 #   Environment       = pypi
 # Same on TestPyPI:  https://test.pypi.org/manage/account/publishing/

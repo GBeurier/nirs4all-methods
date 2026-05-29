@@ -67,6 +67,59 @@ jobs:
             --lib-dir build/ci-linux-gcc12-release/cpp/src \
             --build-key ci --require python
 
+      - name: External-reference parity gate (Gate 2 — n4m vs scikit-learn oracle)
+        # The committed cells above (ci_parity_gate.py) only prove binding
+        # consistency (every binding == the C++ core). This step proves the
+        # *correctness* leg of PRODUCTION_AUDIT §11 A1: the n4m engine matches
+        # an external reference on every PR, not just in the C++ fixture ctest.
+        # We pick the 7 methods whose canonical reference is plain scikit-learn
+        # with no x_target/labels/group/weight sidecars, so the gate needs only
+        # numpy+scipy+scikit-learn (no R / Octave / nirs4all). Runtime locally:
+        # ~42 s for all 14 cells (7 n4m + 7 sklearn) at 1 thread.
+        run: |
+          python -m pip install "scikit-learn" scipy
+          # The orchestrator forces PLS4ALL_LIB_PATH inside LIBP4A_BUILDS[build];
+          # 'dev-release' maps to build/dev-release/cpp/src. Point that slot at
+          # the CI build (both are plain Release => bit-identical numbers).
+          mkdir -p build
+          ln -sfn ci-linux-gcc12-release build/dev-release
+          python benchmarks/cross_binding/orchestrator.py \
+            --algorithms pls pcr recursive_pls ridge_pls gpr_pls bagging_pls random_subspace_pls \
+            --registry-cells --threads 1 \
+            --libn4m-build dev-release \
+            --canonical-pls4all-only \
+            --reference-backends registry \
+            --only registry_pls4all ref_python_scikit_learn \
+            --n-runs 1 --workers 1 --timeout 180 \
+            --out-csv /tmp/ci_reference_gate.csv --force
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          from benchmarks.cross_binding.orchestrator import load_existing_records
+          rows = load_existing_records(Path("/tmp/ci_reference_gate.csv"))
+          binding = [r for r in rows
+                     if r.get("kind") in ("n4m_core", "pls4all_binding")]
+          if not binding:
+              print("GATE FAIL: no n4m binding rows produced", file=sys.stderr)
+              sys.exit(1)
+          failures = [r for r in binding if r.get("reference_parity_ok") is not True]
+          print("External-reference parity gate (n4m vs scikit-learn oracle)")
+          print("=" * 60)
+          for r in binding:
+              ok = r.get("reference_parity_ok")
+              icon = "PASS" if ok is True else ("FAIL" if ok is False else "????")
+              print(f"{icon}  {r['algorithm']:22s} {r['n']}x{r['p']:<5}"
+                    f" rmse_rel={r.get('reference_parity_rmse_rel')}"
+                    f" tol={r.get('reference_parity_tolerance')}"
+                    f" {r.get('reference_parity_note','')}")
+          print("=" * 60)
+          if failures:
+              print(f"GATE FAIL: {len(failures)}/{len(binding)} n4m methods diverged",
+                    file=sys.stderr)
+              sys.exit(1)
+          print(f"GATE PASS: {len(binding)} n4m methods match the sklearn oracle")
+          PY
+
       - name: Self-consistency gate (paper-only differentiators)
         # AOM-PLS / POP-PLS have no external reference; their correctness gate is
         # determinism + structural invariants (Phase-C-min, parity/comparator).

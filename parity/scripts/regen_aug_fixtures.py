@@ -139,6 +139,102 @@ def _compute(fx: dict, prefix: str, needs_wl: bool, build, params: dict) -> np.n
     return np.asarray(out, dtype=np.float64)
 
 
+# ---------------------------------------------------------------------------
+# Phase-17 self-fixtures (parity/fixtures/aug_phase17_v1.json): 10 heterogeneous
+# augmenters, one case each. Five take the wavelength axis as the LAST `*_create`
+# args (wl_ptr, cols) — NOT as an apply arg — so the regen loop appends those to
+# the create-arg list with apply_wavelengths left False. The other five do not.
+# Five cases ship a frozen output_hex + a test_parity_* lock already; only the
+# five EMPTY cases are (re)generated here, against the committed wavelength axis,
+# at PHASE17_SEED (the n4m_rng_pcg64_create(0u, ...) the C++ replays use).
+# ---------------------------------------------------------------------------
+PHASE17_FIXTURE = "aug_phase17_v1.json"
+PHASE17_SEED = 0
+
+
+def _p17_particle_size(p):
+    return [_f64(p.get("mean_size_um", 50.0)), _f64(p.get("size_variation_um", 15.0)),
+            ctypes.c_int(0), _f64(0.0), _f64(0.0),
+            _f64(p.get("reference_size_um", 50.0)), _f64(p.get("wavelength_exponent", 1.5)),
+            _f64(p.get("size_effect_strength", 0.1)),
+            ctypes.c_int(int(p.get("include_path_length", 1))),
+            _f64(p.get("path_length_sensitivity", 0.5))]
+
+
+def _p17_emsc_distort(p):
+    return [_f64(p.get("mult_low", 0.9)), _f64(p.get("mult_high", 1.1)),
+            _f64(p.get("add_low", -0.05)), _f64(p.get("add_high", 0.05)),
+            _i32(p.get("polynomial_order", 2)), _f64(p.get("polynomial_strength", 0.02)),
+            _f64(p.get("correlation", 0.3))]
+
+
+def _p17_moisture(p):
+    return [_f64(p.get("water_activity_delta", 0.1)), ctypes.c_int(0), _f64(0.0), _f64(0.0),
+            _f64(p.get("reference_water_activity", 0.5)), _f64(p.get("free_water_fraction", 0.3)),
+            _f64(p.get("bound_water_shift", 25.0)), _f64(p.get("moisture_content", 0.1)),
+            ctypes.c_int(int(p.get("enable_shift", 1))), ctypes.c_int(int(p.get("enable_intensity", 1)))]
+
+
+def _p17_mixup(p):
+    return [_f64(p.get("alpha", 0.2))]
+
+
+def _p17_local_mixup(p):
+    return [_f64(p.get("alpha", 0.2)), _i32(p.get("k_neighbors", 5))]
+
+
+# case-name -> (libn4m prefix, needs_wl, builder). Only the empty cases are listed;
+# the 5 deterministic cases are already locked by their test_parity_* tests.
+PHASE17 = {
+    "particle_size": ("n4m_aug_particle_size", True,  _p17_particle_size),
+    "emsc_distort":  ("n4m_aug_emsc_distort",  True,  _p17_emsc_distort),
+    "moisture":      ("n4m_aug_moisture",      True,  _p17_moisture),
+    "mixup_alpha02": ("n4m_aug_mixup",         False, _p17_mixup),
+    "local_mixup":   ("n4m_aug_local_mixup",   False, _p17_local_mixup),
+}
+
+
+def _regen_phase17(check: bool) -> bool:
+    """Fill the EMPTY per-case output_hex in aug_phase17_v1.json from libn4m.
+
+    Cases that already carry a frozen output_hex (the 5 deterministic locks) are
+    left untouched. The committed wavelengths_hex axis is reused as-is; the C++
+    replay reads the same axis via load_det_case. Returns True if stale.
+    """
+    path = FIXTURE_DIR / PHASE17_FIXTURE
+    fx = json.loads(path.read_text())
+    rows, cols = int(fx["rows"]), int(fx["cols"])
+    X = _decode(fx["input_hex"]).reshape(rows, cols)
+    wl = _decode(fx["wavelengths_hex"]).reshape(-1)
+    wl_ptr = wl.ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+
+    changed = False
+    for case in fx["cases"]:
+        if case.get("output_hex"):  # already locked — never recompute
+            continue
+        prefix, needs_wl, build = PHASE17[case["name"]]
+        args = list(build(case.get("params", {})))
+        if needs_wl:
+            args += [wl_ptr, ctypes.c_int64(cols)]
+        out = np.asarray(_aug_apply(prefix, X, *args, seed=PHASE17_SEED),
+                         dtype=np.float64)
+        new_hex = _encode(out)
+        if case.get("output_hex", []) != new_hex:
+            changed = True
+            case["output_hex"] = new_hex
+            case["output_rows"] = int(out.shape[0])
+            case["output_cols"] = int(out.shape[1])
+
+    if changed and not check:
+        path.write_text(json.dumps(fx) + "\n")
+        print(f"  rewrote {PHASE17_FIXTURE}")
+    elif changed:
+        print(f"  STALE   {PHASE17_FIXTURE}")
+    else:
+        print(f"  ok      {PHASE17_FIXTURE}")
+    return changed
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
@@ -169,10 +265,14 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"  ok      {fname}")
 
+    if _regen_phase17(args.check):
+        stale += 1
+
     if args.check and stale:
         print(f"\n{stale} fixture(s) do not match libn4m — run without --check to regenerate.")
         return 1
-    print(f"\n{'checked' if args.check else 'regenerated'} {len(SPECS)} augmenter fixtures.")
+    n_total = len(SPECS) + 1
+    print(f"\n{'checked' if args.check else 'regenerated'} {n_total} augmenter fixtures.")
     return 0
 
 

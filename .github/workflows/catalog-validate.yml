@@ -5,12 +5,16 @@ on:
     paths:
       - "catalog/**"
       - "cpp/abi/**"
+      - "benchmarks/parity_timing/truth_sources.lock.json"
+      - "parity/REFERENCES.md"
       - ".github/workflows/catalog-validate.yml"
   push:
     branches: [main]
     paths:
       - "catalog/**"
       - "cpp/abi/**"
+      - "benchmarks/parity_timing/truth_sources.lock.json"
+      - "parity/REFERENCES.md"
       - ".github/workflows/catalog-validate.yml"
 
 jobs:
@@ -21,8 +25,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Validate catalog (strict ABI — every exported n4m_* symbol owned)
-        run: python catalog/scripts/validate.py --strict-abi
+      - name: Validate catalog (strict ABI + reference coverage)
+        run: python catalog/scripts/validate.py --strict-abi --check-references
       - name: Check split catalog
         run: python catalog/scripts/split_legacy_methods.py --check
       - name: Catalog parser self-test
