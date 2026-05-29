@@ -480,10 +480,16 @@ def run_backend(name: str, script: str, language: str, tier: str,
     if script.endswith(".R") or script.endswith(".m"):
         try:
             from benchmarks.cross_binding.scripts.bench_registry_common import (
-                adapted_params, load_method)
+                adapted_params, load_method, method_conventions)
             method = load_method(algo)
             params = adapted_params(method, n, p, n_components)
             argv_nc = int(params.get("n_components", n_components))
+            # Inject the per-method parity convention (solver / scale_x /
+            # scale_y) the binding dispatcher would otherwise hardcode wrong.
+            # The R/MATLAB dispatchers read these keys from params and fall
+            # back to their current defaults when absent (item #21).
+            for _ck, _cv in method_conventions(algo).items():
+                params.setdefault(_ck, int(_cv))
             env["BENCH_R_PARAMS_JSON"] = _params_to_json(params)
             env["BENCH_MATLAB_PARAMS_JSON"] = env["BENCH_R_PARAMS_JSON"]
             if method.needs_labels:

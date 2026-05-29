@@ -582,6 +582,19 @@ SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         cleanup_err(NULL, NULL, "n4m_context_create failed");
     }
     cfg = build_cfg(n_components, center_x, scale_x, center_y, scale_y);
+    /* Item #21: honour per-method parity conventions injected by the
+     * orchestrator via the params list (BENCH_R_PARAMS_JSON). When absent
+     * these keys default to build_cfg's hardcoded values, so non-bench
+     * callers are unaffected. solver enum: NIPALS=0, SIMPLS=1, SVD=5. */
+    {
+        int solver_v = get_int(params, "solver", -1);
+        if (solver_v >= 0)
+            n4m_config_set_solver(cfg, (n4m_solver_t)solver_v);
+        int sx = get_int(params, "scale_x", -1);
+        if (sx >= 0) n4m_config_set_scale_x(cfg, sx);
+        int sy = get_int(params, "scale_y", -1);
+        if (sy >= 0) n4m_config_set_scale_y(cfg, sy);
+    }
 
     n4m_matrix_view_t Xv, Yv;
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n, p, N4M_DTYPE_F64);

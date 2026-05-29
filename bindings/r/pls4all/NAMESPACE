@@ -30,6 +30,7 @@ export(pls_monitoring)
 
 # Unified low-level dispatcher (33 fits + 24 selectors + 4 diagnostics)
 export(n4m_method)
+export(pls4all_method)
 
 # Tier 1 — extra MethodResult fits (via dispatcher)
 export(ecr_fit)

@@ -107,6 +107,14 @@ _FUNCTION_BINDINGS = {
     "aom_preprocess": "aom_preprocess",
     "aom_pls": "aom_pls",
     "pop_pls": "pop_pls",
+    # Item #21: route these through the canonical registry fn (not their
+    # idiomatic classes) so the method-specific parity convention is applied
+    # — ridge_pls needs solver=NIPALS, sparse_simpls needs scale_x=True, and
+    # neither idiomatic class sets it (they diverge from the oracle otherwise).
+    # cppls is intentionally NOT here: CPPLSRegression already defaults NIPALS
+    # and matches the oracle, so routing it would be no-op churn.
+    "ridge_pls": "ridge_pls_fit",
+    "sparse_simpls": "sparse_simpls_fit",
     "approximate_press": "approximate_press",
     "one_se_rule": "one_se_rule",
     "on_pls": "on_pls",
@@ -226,6 +234,32 @@ def _run_function_binding(algo: str, n4m_sklearn, X, y, Y, params: dict,
             except Exception:
                 pass
             result = method.pls4all_fn(ctx, cfg, X, Y, **params)
+            try:
+                return np.asarray(result.matrix(prediction_key), dtype=np.float64)
+            finally:
+                result.close()
+    if algo in {"ridge_pls", "sparse_simpls"}:
+        # Item #21: route through the canonical registry fn so the
+        # method-specific convention is applied (ridge_pls -> NIPALS,
+        # sparse_simpls -> scale_x=True). pls4all.Config() defaults scale_x
+        # to True, so we reset to the cross-binding base (center on, scale
+        # off) exactly like bench_registry_pls4all; method.pls4all_fn then
+        # applies its own override. These methods take only Y, so pass the
+        # registry params minus the size hints.
+        import pls4all
+        method = load_method(algo)
+        clean = {k: v for k, v in params.items()
+                 if k not in ("n_samples", "n_features")}
+        with pls4all.Context() as ctx, pls4all.Config() as cfg:
+            try:
+                ctx.num_threads = int(os.environ.get("BENCH_THREADS", "1"))
+            except Exception:
+                pass
+            cfg.center_x = True
+            cfg.scale_x = False
+            cfg.center_y = True
+            cfg.scale_y = False
+            result = method.pls4all_fn(ctx, cfg, X, Y, **clean)
             try:
                 return np.asarray(result.matrix(prediction_key), dtype=np.float64)
             finally:

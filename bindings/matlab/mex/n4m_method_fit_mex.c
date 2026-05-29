@@ -524,6 +524,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         mexErrMsgIdAndTxt("pls4all:ctx", "n4m_context_create failed");
     }
     n4m_config_t *cfg = basic_cfg(n_components);
+    /* Item #21: honour per-method parity conventions injected by the
+     * orchestrator via params (BENCH_MATLAB_PARAMS_JSON). Absent keys keep
+     * basic_cfg's defaults (solver=SIMPLS, scale_x=0, scale_y=0). solver
+     * enum: NIPALS=0, SIMPLS=1, SVD=5. The per-method mb_pls NIPALS override
+     * below still wins (it runs after this block). */
+    {
+        int solver_v = get_int_field(params, "solver", -1);
+        if (solver_v >= 0)
+            n4m_config_set_solver(cfg, (n4m_solver_t)solver_v);
+        int sx = get_int_field(params, "scale_x", -1);
+        if (sx >= 0) n4m_config_set_scale_x(cfg, sx);
+        int sy = get_int_field(params, "scale_y", -1);
+        if (sy >= 0) n4m_config_set_scale_y(cfg, sy);
+    }
 
     n4m_matrix_view_t Xv, Yv;
     n4m_matrix_view_init_rowmajor(&Xv, X, n, p, N4M_DTYPE_F64);

@@ -190,3 +190,36 @@ def find_reference(method, ref_id: str, params: dict):
 
 def load_method(name: str):
     return get_method(name)
+
+
+# Solver enum values mirror cpp/include/n4m/pls.h: NIPALS=0, SIMPLS=1, SVD=5.
+_SOLVER_NIPALS = 0
+_SOLVER_SIMPLS = 1
+_SOLVER_SVD = 5
+
+
+def method_conventions(name: str) -> dict:
+    """Return the non-default cfg convention flags a binding dispatcher must
+    apply for `name` so it matches the canonical registry `_<method>_pls4all`
+    path (and hence the oracle). Empty dict => the dispatcher defaults
+    (solver=SIMPLS, scale_x=0, scale_y=0, center_*=1) are already correct.
+
+    ONLY methods whose C kernel actually honours the flag AND whose canonical
+    path deviates from the dispatcher default are listed. Verified live
+    against the 200x50 oracle (item #21):
+      cppls         NIPALS  4.41e-3 -> 7.96e-16
+      ridge_pls     NIPALS  4.61e-5 -> 6.42e-16
+      sparse_simpls scale_x 8.65e-3 -> 7.36e-16
+    Methods excluded on purpose (kernel ignores the flag, Python-composite
+    canonical path that bypasses the C kernel, or discrete output) are NOT
+    here: o2pls/so_pls (kernel ignores solver), weighted_pls/continuum/
+    kernel_pls_rbf/robust_pls (SIMPLS already within Gate B of the oracle),
+    pls_qda/pls_logistic/pls_glm/pls_cox/bagging/boosting/random_subspace/
+    group_sparse/n_pls (Python composite), sparse_pls_da (scale_x no-op +
+    discrete labels).
+    """
+    return {
+        "cppls":         {"solver": _SOLVER_NIPALS},
+        "ridge_pls":     {"solver": _SOLVER_NIPALS},
+        "sparse_simpls": {"solver": _SOLVER_SIMPLS, "scale_x": 1},
+    }.get(name, {})
