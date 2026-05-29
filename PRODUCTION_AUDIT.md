@@ -458,7 +458,7 @@ GitHub Pages source. Version/ABI/SONAME are clean and gated (0.98.0 in sync, `li
 
 ## 12. WASM / `nirs4all-lite` readiness
 
-The JS/WASM binding is a **working but narrow PLS-only PoC** with a **stale, pre-rename artifact**:
+_Original finding (now resolved — see **Status** below)._ The JS/WASM binding was a **working but narrow PLS-only PoC** with a **stale, pre-rename artifact**:
 - End-to-end it does SIMPLS PLS regression `fit`+`predict` only, proven at ~1e-16 vs the Python binding. The TS scaffolding
   (memory mgmt, sklearn-style class, `FinalizationRegistry`) is sound.
 - **The shipped `dist/p4a.{js,wasm}` exports `_p4a_*` symbols (0 `_n4m_*`)** — it was not rebuilt after the `p4a→n4m` rename,
@@ -466,13 +466,27 @@ The JS/WASM binding is a **working but narrow PLS-only PoC** with a **stale, pre
   (source 0.98.0/1.9.0, artifact 0.97.3/1.16.0, fixture 0.95.0/1.13.0).
 - **No predict-only / lite ABI subset:** WASM links the whole engine (~1 MB wasm) via `n4m_c_static`, yet surfaces one method.
 
-**`nirs4all-lite` roadmap:** (1) **rebuild** against the post-rename ABI + re-sync `run_smoke.mjs` + regenerate the parity
-fixture from the current build; (2) **decide scope** — predict-only (model trained server-side; ship `predict` + SNV/MSC/SG
-preprocessing) vs fit-capable (PLS/PLS-DA + SIMPLS/NIPALS + preprocessing + KS/SPXY + metrics, i.e. the `pls4all` slim
-subset); (3) **add a lite export allow-list** (drive `EXPORTED_FUNCTIONS` from a subset YAML + an `N4M_BUILD_LITE` core so
-dead-code elimination shrinks the wasm to the chosen methods); (4) **wire the generic `MethodResult` runner** so
-preprocessing/selection/diagnostics become reachable from JS without per-method glue; (5) rename the npm scope off `@pls4all`.
-The cross-binding promise (one C ABI → bit-identical numbers in the browser) is proven; the work is packaging + scope.
+**Status (updated 2026-05-29):** the binding was rebuilt + repackaged as a clean, consumable function library for the
+`nirs4all-lite` distribution (maintainer scope: full engine, no lite subset; function-lib only; raw `Float64Array` input).
+DONE:
+- **Rebuilt** against the post-rename ABI → `n4m.js` + `n4m.wasm` (full engine, 669 `_n4m_*` symbols); `run_smoke.mjs` +
+  the parity fixture verified green (coeffs 1.37e-16, preds 2.12e-16).
+- **Renamed** the npm scope `@pls4all/wasm` → `@nirs4all/methods-wasm`; artifact `p4a.{js,wasm}` → `n4m.{js,wasm}`
+  (CMake OUTPUT_NAME + install + package.json + ffi.ts loader + run_smoke.mjs + p4a.d.ts→n4m.d.ts); updated the live docs
+  (getting_started, release_process) and the binding README.
+- **Dropped** the idiomatic `sklearn.ts` layer (maintainer: idiomatic not required); `tsc` compiles clean.
+- Added `bindings/js/INPUT_CONTRACT.md` (the raw-array contract a downstream repo copies) + a runnable
+  `bindings/js/examples/consume.mjs` (recovers the synthetic PLS coefficients exactly).
+- The `nirs4all-io` (Python) layer is out of scope for n4m's WASM (maintainer call); n4m's WASM consumes raw arrays.
+
+REMAINING (the generic-method gap, tracked follow-up): `fitPls`/`predictPls` are callable end-to-end, but the **generic
+"call any of the 188 methods by id" path is NOT enabled** — Emscripten miscompiles JS-built `n4m_matrix_view_t*`
+*parameters* to the deep numeric entrypoints, so view-taking methods need a C raw-pointer shim. Two routes: (a) fix the
+Emscripten codegen (newer emsdk / `-O0` / drop `WASM_BIGINT`) → the JS `MethodResult` path then reaches every
+`method_result` producer with no per-method glue; (b) per-family raw-pointer shims. The spec's `n4m_wasm_run_xy` runner was
+NOT applied — it calls `n4m_method_result_create_empty`/`_set_double_matrix`, which are **not** public ABI symbols (only
+getters are). A `makeMatrixView` int64-via-`ccall("number")` bug is documented in the README; it is moot until (a).
+The lite *export allow-list / N4M_BUILD_LITE subset* is explicitly out of scope (maintainer wants the full engine).
 
 ---
 

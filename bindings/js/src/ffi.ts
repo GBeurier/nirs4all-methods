@@ -27,10 +27,11 @@ let _module: EmModule | null = null;
 /** Load and cache the Emscripten module. Call once at app startup. */
 export async function loadModule(): Promise<EmModule> {
     if (_module !== null) return _module;
-    // p4a.js (the Emscripten loader) is staged into dist/ next to this module,
+    // n4m.js (the Emscripten loader) is staged into dist/ next to this module,
     // so the package is self-contained (files: ["dist/"]). See package.json
-    // `stage:wasm`. Previously "../p4a.js" pointed outside dist/ → not shipped.
-    const factory = (await import("./p4a.js")).default as
+    // `stage:wasm`. The import path must stay relative to dist/ so the shipped
+    // package resolves the loader it bundles.
+    const factory = (await import("./n4m.js")).default as
         (opts?: object) => Promise<EmModule>;
     _module = await factory({});
     return _module;
@@ -39,7 +40,7 @@ export async function loadModule(): Promise<EmModule> {
 export function getModule(): EmModule {
     if (_module === null) {
         throw new Error(
-            "pls4all WASM module not loaded — call await loadModule() first."
+            "@nirs4all/methods-wasm not loaded — call await loadModule() first."
         );
     }
     return _module;

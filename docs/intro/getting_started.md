@@ -107,13 +107,13 @@ The WebAssembly binding ships the same surface; see
 module:
 
 ```javascript
-import init, { Context, Config, fitPls } from '@pls4all/wasm';
+import * as n4m from '@nirs4all/methods-wasm';
 
-await init();   // loads libn4m.wasm
-const ctx = new Context();
-const cfg = new Config({ algorithm: 'pls_regression', nComponents: 5 });
-const model = fitPls(ctx, cfg, X, y);
-const yhat = model.predict(Xtest);
+await n4m.loadModule();   // loads n4m.wasm
+// Raw row-major Float64Array matrices in, typed arrays out (see
+// bindings/js/INPUT_CONTRACT.md).
+const model = n4m.fitPls({ data: X, rows, cols }, { data: y, rows, cols: 1 }, 5);
+const yhat = n4m.predictPls(model, { data: Xtest, rows: rowsTest, cols });
 ```
 
 ## Save / load across languages

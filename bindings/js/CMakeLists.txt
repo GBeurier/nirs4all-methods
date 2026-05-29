@@ -38,7 +38,7 @@ add_executable(pls4all_wasm
     "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_entry.c")
 target_link_libraries(pls4all_wasm PRIVATE n4m_c_static)
 set_target_properties(pls4all_wasm PROPERTIES
-    OUTPUT_NAME "p4a"
+    OUTPUT_NAME "n4m"
     SUFFIX ".js")
 
 target_link_options(pls4all_wasm PRIVATE
@@ -57,7 +57,7 @@ target_link_options(pls4all_wasm PRIVATE
 )
 
 install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/p4a.js"
-    "${CMAKE_CURRENT_BINARY_DIR}/p4a.wasm"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pls4all-wasm"
+    "${CMAKE_CURRENT_BINARY_DIR}/n4m.js"
+    "${CMAKE_CURRENT_BINARY_DIR}/n4m.wasm"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/nirs4all-methods-wasm"
     OPTIONAL)

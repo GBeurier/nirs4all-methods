@@ -12,7 +12,7 @@ automated (PyPI, CRAN-tarball build); the JS / MATLAB / Octave bindings are
 | Python (slim) | `pls4all` | PyPI | **Automated** — same `release-wheels.yml` builds both packages in one matrix; the legacy `release-python.yml` is PR-only (smoke + sdist) and no longer publishes | push tag `v*` (non-`-rc`) → PyPI; `workflow_dispatch` + `publish=true` |
 | R | `n4m` | CRAN | **Semi-automated** — `release-r.yml` vendors libn4m into `src/vendor/`, runs `R CMD check --as-cran` on the Linux/macOS/Windows + release/devel matrix, and (on tag push) attaches the tarball to the GitHub Release. **Submission is the irreducible manual web form.** | `workflow_dispatch`; tag push attaches the tarball |
 | R | `pls4all` (slim) | CRAN | **Semi-automated** — same `release-r.yml`, the matrix has a `pkg: [n4m, pls4all]` leg. | `workflow_dispatch`; tag push attaches the tarball |
-| JS / WASM | `@pls4all/wasm` | npm | **Build CI-automated** in `cross-binding-parity.yml` (emsdk pinned, `npm test` parity); **publish manual** (this doc) | — |
+| JS / WASM | `@nirs4all/methods-wasm` | npm | **Build CI-automated** in `cross-binding-parity.yml` (emsdk pinned, `npm test` parity); **publish manual** (this doc) | — |
 | MATLAB | `+pls4all` | File Exchange | **Manual** (no licensed runner; build/test described in `bindings/matlab/COMPAT.md`) | — |
 | Octave | `pls4all` (pkg) | — / Octave Forge | **Build CI-automated** in `cross-binding-parity.yml` (apt octave + `build_mex.m` + `test_parity`); **publish manual** | — |
 
@@ -76,7 +76,7 @@ glue (WASM module, MEX dispatcher) is built locally and published by hand. Each
 binding's artifact is built from the **same `libn4m` source** at the released
 version; always run the pre-release gates first.
 
-### JS → npm (`@pls4all/wasm`)
+### JS → npm (`@nirs4all/methods-wasm`)
 
 The npm package ships the Emscripten WASM module + the TypeScript wrappers; the
 `npm run build` step only runs `tsc`, so the WASM artifacts must be built first.
@@ -88,18 +88,17 @@ The npm package ships the Emscripten WASM module + the TypeScript wrappers; the
 source /path/to/emsdk/emsdk_env.sh
 cmake --preset emscripten
 cmake --build --preset emscripten --target pls4all_wasm
-#    → build/emscripten/bindings/js/{p4a.js,p4a.wasm}
+#    → build/emscripten/bindings/js/{n4m.js,n4m.wasm}
 
 cd bindings/js
 npm run build           # tsc -p .  → dist/index.js + dist/index.d.ts (TS only)
 
 # 2. STAGE the WASM artifacts into dist/ — `npm run build` runs only tsc, and
-#    package.json ships `files: ["dist/"]`, so the WASM must be copied in by
-#    hand (there is no copy/prepublish script yet — this staging is unwired):
-cp ../../build/emscripten/bindings/js/p4a.wasm dist/
-cp ../../build/emscripten/bindings/js/p4a.js   dist/
+#    package.json ships `files: ["dist/"]`. The `stage:wasm` script copies the
+#    Emscripten artifacts in (and `prepack` runs build + stage:wasm for you):
+npm run stage:wasm      # → dist/n4m.js + dist/n4m.wasm
 
-# 3. Verify the tarball actually contains index.js + p4a.wasm + p4a.js BEFORE
+# 3. Verify the tarball actually contains index.js + n4m.wasm + n4m.js BEFORE
 #    publishing, and run the smoke test:
 npm pack --dry-run      # inspect the file list
 npm test                # node test/run_smoke.mjs — must pass

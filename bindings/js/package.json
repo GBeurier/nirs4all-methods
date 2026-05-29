@@ -1,7 +1,7 @@
 {
-  "name": "@pls4all/wasm",
+  "name": "@nirs4all/methods-wasm",
   "version": "0.98.0",
-  "description": "WebAssembly bindings for pls4all — portable PLS / NIRS engine.",
+  "description": "WebAssembly build of libn4m (nirs4all-methods) — portable PLS/NIRS engine, full 188-method surface.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,21 +10,21 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./p4a.wasm": "./dist/p4a.wasm"
+    "./n4m.wasm": "./dist/n4m.wasm"
   },
   "files": [
     "dist/"
   ],
   "scripts": {
     "build": "tsc -p .",
-    "stage:wasm": "node -e \"const fs=require('fs'),p='../../build/emscripten/bindings/js/';fs.mkdirSync('dist',{recursive:true});for(const f of ['p4a.js','p4a.wasm']){if(!fs.existsSync(p+f))throw new Error('missing WASM artifact '+p+f+' — run: cmake --preset emscripten && cmake --build --preset emscripten --target pls4all_wasm');fs.copyFileSync(p+f,'dist/'+f)}console.log('staged p4a.js + p4a.wasm into dist/')\"",
+    "stage:wasm": "node -e \"const fs=require('fs'),p='../../build/emscripten/bindings/js/';fs.mkdirSync('dist',{recursive:true});for(const f of ['n4m.js','n4m.wasm']){if(!fs.existsSync(p+f))throw new Error('missing WASM artifact '+p+f+' — run: cmake --preset emscripten && cmake --build --preset emscripten --target pls4all_wasm');fs.copyFileSync(p+f,'dist/'+f)}console.log('staged n4m.js + n4m.wasm into dist/')\"",
     "prepack": "npm run build && npm run stage:wasm",
     "test": "node --experimental-vm-modules test/run_smoke.mjs"
   },
   "license": "CECILL-2.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/GBeurier/pls4all.git",
+    "url": "https://github.com/GBeurier/nirs4all-methods.git",
     "directory": "bindings/js"
   },
   "devDependencies": {
