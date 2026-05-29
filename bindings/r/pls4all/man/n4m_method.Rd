@@ -2,6 +2,7 @@
 % Please edit documentation in R/dispatch.R
 \name{n4m_method}
 \alias{n4m_method}
+\alias{pls4all_method}
 \title{Low-level n4m method dispatcher.}
 \usage{
 n4m_method(

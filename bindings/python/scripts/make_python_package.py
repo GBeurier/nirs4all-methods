@@ -62,6 +62,28 @@ include = ["{module}", "{module}.*"]
 {module} = ["lib/libn4m*", "lib/*.so", "lib/*.so.*", "lib/*.dylib", "lib/*.dll"]
 '''
 
+_README = '''# {name}
+
+{description}
+
+The wheel bundles the `libn4m` shared library, so `pip install {name}` is
+self-contained — no separate native build is required.
+
+```python
+import {module}
+
+print({module}.version())      # project version + ABI, e.g. "{version}+abi.1.9.0"
+print({module}.abi_version())  # ABI triple, e.g. (1, 9, 0)
+```
+
+`{module}` loads `libn4m` via `ctypes.CDLL` and exposes a Pythonic `Context` /
+`Config`, the method fit/predict surface, and a scikit-learn-compatible estimator
+layer (`{module}.sklearn`). `scikit-learn` is an optional dependency; the core
+`import {module}` works with NumPy alone.
+
+See <https://github.com/GBeurier/nirs4all-methods> for documentation.
+'''
+
 
 def _version() -> str:
     m = re.search(r'^version\s*=\s*"([^"]+)"', (SRC_PKG / "pyproject.toml").read_text(), re.M)
@@ -77,8 +99,13 @@ def generate(name: str) -> Path:
     (out / "src").mkdir(parents=True)
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", "lib")  # lib/ staged at build
     shutil.copytree(SRC_PKG / "src" / module, out / "src" / module, ignore=ignore)
-    for asset in ("setup.py", "README.md", "LICENSE"):
+    for asset in ("setup.py", "LICENSE"):
         shutil.copy2(SRC_PKG / asset, out / asset)
+    # Generate a per-package README — do NOT copy bindings/python/README.md,
+    # which documents the slim `pls4all` surface and would mislabel the full
+    # `nirs4all-methods` (module `n4m`) package on PyPI.
+    (out / "README.md").write_text(_README.format(
+        name=name, module=module, description=spec["description"], version=_version()))
     (out / "pyproject.toml").write_text(_PYPROJECT.format(
         name=name, version=_version(), module=module, description=spec["description"]))
     # Per-module smoke test (cibuildwheel CIBW_TEST_COMMAND target).

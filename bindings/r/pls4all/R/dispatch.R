@@ -61,11 +61,9 @@ n4m_method <- function(algo, X, Y, n_components, params = list(),
           PACKAGE = "pls4all")
 }
 
-#' Back-compat alias for the unified dispatcher.
-#'
-#' The dispatcher was renamed `pls4all_method` -> `n4m_method` during the
-#' p4a -> n4m token rename. The cross-binding benches and any downstream
-#' caller that still uses the old name resolve through this alias.
-#'
+#' @rdname n4m_method
+#' @details `pls4all_method` is the pls4all-package-branded name for the same
+#'   dispatcher (used throughout the method docs and the cross-binding benches);
+#'   it and `n4m_method` are the same function.
 #' @export
 pls4all_method <- n4m_method

@@ -16,7 +16,8 @@
     "dist/"
   ],
   "scripts": {
-    "build": "tsc -p .",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p .",
     "stage:wasm": "node -e \"const fs=require('fs'),p='../../build/emscripten/bindings/js/';fs.mkdirSync('dist',{recursive:true});for(const f of ['n4m.js','n4m.wasm']){if(!fs.existsSync(p+f))throw new Error('missing WASM artifact '+p+f+' — run: cmake --preset emscripten && cmake --build --preset emscripten --target pls4all_wasm');fs.copyFileSync(p+f,'dist/'+f)}console.log('staged n4m.js + n4m.wasm into dist/')\"",
     "prepack": "npm run build && npm run stage:wasm",
     "test": "node --experimental-vm-modules test/run_smoke.mjs"
