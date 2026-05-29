@@ -1002,6 +1002,93 @@
     }
     .empty-state .hint:hover { text-shadow: 0 0 6px var(--phosphor-glow); }
 
+    /* ---------- LIST VIEW ---------- */
+    /* Per-method blocks listing ONLY the filled cells. Reuses the same
+       parity / language / score colour vocabulary as the matrix so the
+       two views read identically; the difference is layout (vertical
+       cards) and that empty cells are simply omitted. */
+    .list-body {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 14px;
+    }
+    .list-card {
+      background: var(--ink-1);
+      border: 1px solid var(--line-2);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px var(--phosphor-faint);
+    }
+    .list-card.row-pls4all .list-card-head { border-left: 3px solid var(--phosphor); }
+    .list-card.row-n4m     .list-card-head { border-left: 3px solid var(--fg-3); }
+    .list-card-head {
+      display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+      padding: 9px 12px;
+      background: linear-gradient(180deg, var(--ink-2) 0%, var(--ink-1) 100%);
+      border-bottom: 1px solid var(--line-2);
+    }
+    .list-card-head .lc-algo {
+      font-family: var(--display); font-weight: 600; font-size: 14px;
+      color: var(--fg-0); letter-spacing: -0.01em;
+    }
+    .list-card-head .lc-algo a { color: inherit; text-decoration: none; }
+    .list-card-head .lc-algo a:hover { color: var(--phosphor); text-decoration: underline; text-shadow: none; }
+    .list-card-head .lc-group {
+      font-family: var(--sans); font-size: 9.5px; text-transform: uppercase;
+      letter-spacing: 0.14em; color: var(--fg-2); font-weight: 600;
+    }
+    .list-card-head .lc-meta {
+      font-family: var(--mono); font-size: 10px; color: var(--fg-3);
+      margin-left: auto;
+    }
+    .list-card-head .lc-doc {
+      display: inline-block; padding: 0 5px; border-radius: 2px;
+      background: var(--phosphor-soft); color: var(--phosphor);
+      font-family: var(--mono); font-size: 9px; font-weight: 600;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .list-rows { padding: 4px 0; }
+    .list-row {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto auto auto;
+      align-items: baseline; gap: 10px;
+      padding: 3px 12px;
+      font-family: var(--mono); font-size: 11.5px;
+      border-bottom: 1px solid var(--line);
+    }
+    .list-row:last-child { border-bottom: none; }
+    .list-row:hover { background: var(--phosphor-faint); }
+    .list-row.lr-pls4all { background: var(--pls4all-wash); }
+    .list-row.lr-pls4all:hover { background: var(--pls4all-wash-hover); }
+    .list-row .lr-backend {
+      display: flex; align-items: baseline; gap: 6px; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .list-row .lr-dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+      display: inline-block; align-self: center;
+    }
+    .list-row .lr-label { color: var(--fg-0); font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+    .list-row .lr-tier  { color: var(--fg-3); font-family: var(--sans); font-size: 9px; }
+    .list-row .lr-verdict { font-weight: 600; font-family: var(--mono); text-align: center; min-width: 14px; }
+    .list-row .lr-div   { font-family: var(--mono); font-size: 10.5px; text-align: right; min-width: 48px; }
+    .list-row .lr-time  { font-family: var(--mono); color: var(--fg-1); text-align: right; min-width: 64px; }
+    .list-row .lr-time.lr-notimed { color: var(--fg-3); font-style: italic; font-size: 10px; }
+    /* language dot colours mirror the matrix accent vars */
+    .list-row .lr-dot.l-cpp  { background: var(--lang-cpp); }
+    .list-row .lr-dot.l-py   { background: var(--lang-py); }
+    .list-row .lr-dot.l-r    { background: var(--lang-r); }
+    .list-row .lr-dot.l-m    { background: var(--lang-m); }
+    .list-row .lr-dot.l-jl   { background: var(--lang-jl); }
+    .list-row .lr-dot.l-rs   { background: var(--lang-rs); }
+    .list-row .lr-dot.l-go   { background: var(--lang-go); }
+    .list-row .lr-dot.l-js   { background: var(--lang-js); }
+    .list-row .lr-dot.l-java { background: var(--lang-java); }
+    .list-row .lr-dot.l-other{ background: var(--lang-other); }
+    body.density-compact .list-row { font-size: 11px; padding: 2px 10px; }
+    body.density-ultra   .list-row { font-size: 10px; padding: 1.5px 8px; }
+    body.density-ultra   .list-row .lr-tier { display: none; }
+
     /* ---------- INFO CARDS ---------- */
     .info-grid {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
@@ -1410,6 +1497,7 @@
       <span class="control-label">view</span>
       <select id="view-mode">
         <option value="parity">parity matrix</option>
+        <option value="list">list (filled only)</option>
         <option value="scaling">size scaling</option>
       </select>
     </div>
@@ -1462,6 +1550,20 @@
   <div class="table-meta">
     <span id="table-meta-left">—</span>
     <span id="table-meta-right">—</span>
+  </div>
+</div>
+
+<!-- LIST VIEW (hidden until view=list) -->
+<div class="table-shell reveal reveal-3" id="list-shell" hidden>
+  <div class="legend">
+    <span class="legend-item">One block per method &mdash; only the implementations that actually ran are listed. Each line is <b>backend</b> &middot; <b>verdict</b> &middot; <b>divergence &delta;</b> &middot; <b>timing</b>, grouped by language (C++ &rarr; Python &rarr; R &rarr; MATLAB &rarr; external).</span>
+    <span class="legend-item"><span class="ico p-exact">&#10003;</span> exact &middot; <span class="ico p-drift">&asymp;</span> drift &middot; <span class="ico p-divergent">&#10007;</span> divergent &middot; <span class="ico p-error">!</span> error &middot; <span class="ico p-cross_check">&#8644;</span> cross-check</span>
+    <span class="legend-item" style="margin-left:auto;color:var(--fg-2);font-size:10px">filters + parity chips + column visibility apply &middot; click a method name for its doc page</span>
+  </div>
+  <div id="list-body" class="list-body"></div>
+  <div class="table-meta">
+    <span id="list-meta-left">&mdash;</span>
+    <span id="list-meta-right">&mdash;</span>
   </div>
 </div>
 
@@ -1587,6 +1689,11 @@ function parseParity(raw) {
 
 const VIZ_VALUES = ['duration', 'speedup', 'avg-speedup',
                      'duration-pct', 'avg-duration-pct', 'divergence'];
+function parseView(raw) {
+  if (raw === 'list') return 'list';
+  if (raw === 'scaling' && (DATA.scaling || []).length) return 'scaling';
+  return 'parity';
+}
 function loadState() {
   const p = new URLSearchParams(location.hash.slice(1));
   const density = p.get('density') || '';
@@ -1607,7 +1714,7 @@ function loadState() {
     sort:    parseSort(p.get('sort')),
     density: DENSITY_VALUES.includes(density) ? density : 'comfortable',
     viz,
-    view: (p.get('view') === 'scaling' && (DATA.scaling || []).length) ? 'scaling' : 'parity',
+    view: parseView(p.get('view')),
   };
 }
 function parseSort(s) {
@@ -2826,11 +2933,133 @@ function renderScaling() {
     `${algos.length} methods · ${sizes.length} sizes · cpp blas+omp wall-clock (threads=1)`;
 }
 
+// ---------- list view ----------
+// One card per method (algo), listing ONLY the filled cells in the current
+// slice. Reuses every matrix helper so the two views agree: applyRowFilters /
+// visibleColIds / cellPasses / effectiveParity / usesReferenceGate /
+// colLangSlug / LANG_ORDER / densifyFmt. Collapses the per-(algo,size,threads)
+// rows to the first row of each algo in the current filtered+sorted order.
+function listVerdictHtml(cell, meta) {
+  const v = effectiveParity(cell, meta);
+  if (cell.is_canonical_reference) {
+    return `<span class="lr-verdict reference-mark" title="canonical reference">${REFERENCE_ICON}</span>`;
+  }
+  if (v === 'not_available') return `<span class="lr-verdict"></span>`;
+  const gate = usesReferenceGate(meta) ? 'reference parity vs canonical external reference' : 'binding parity vs cpp';
+  return `<span class="lr-verdict p-${v}" title="${escAttr(gate)}: ${v}">${PARITY_ICON[v] || '-'}</span>`;
+}
+
+function renderListView() {
+  ensureFixedColumns();
+  const cols = visibleColIds();
+  const allColsById = Object.fromEntries(DATA.columns.map(c => [c.id, c]));
+  const dataCols = cols.filter(id => id !== '__reference');
+  const langRank = id => {
+    const m = allColsById[id];
+    const slug = m ? colLangSlug(m) : 'other';
+    const r = LANG_ORDER.indexOf(slug);
+    return r === -1 ? LANG_ORDER.length : r;
+  };
+  const orderedCols = [...dataCols].sort((a, b) => langRank(a) - langRank(b));
+
+  let rowsFiltered = applyRowFilters();
+  const sorted = sortRows(rowsFiltered, cols);
+  const byAlgo = new Map();
+  for (const r of sorted) {
+    if (!byAlgo.has(r.algo)) byAlgo.set(r.algo, r);
+  }
+  const groupMap = DATA.algo_to_group || {};
+  const groupLabel = {};
+  for (const g of (DATA.algo_groups || [])) groupLabel[g.key] = g.label;
+
+  const cards = [];
+  let totalFilled = 0;
+  for (const row of byAlgo.values()) {
+    const lines = [];
+    for (const id of orderedCols) {
+      const meta = allColsById[id];
+      const c = row.cells[id];
+      if (!c || !cellPasses(c, meta)) continue;
+      if (effectiveParity(c, meta) === 'not_available' && !c.is_canonical_reference) continue;
+      totalFilled += 1;
+      const slug = meta ? colLangSlug(meta) : 'other';
+      const label = (meta && (meta.short || meta.label)) || id;
+      const tier  = (meta && (meta.tier || meta.kind)) || '';
+      const isPls4all = meta && (meta.kind || '').toLowerCase() === 'pls4all';
+      let timeHtml;
+      if (Number.isFinite(c.ms)) {
+        const t = c.timing_statistic
+          ? `${c.timing_statistic}, ${c.n_runs || '?'} run${c.n_runs === 1 ? '' : 's'}` : '';
+        timeHtml = `<span class="lr-time"${t ? ` title="${escAttr(t)}"` : ''}>${densifyFmt(c.fmt) || '—'}</span>`;
+      } else if (c.build_insensitive) {
+        timeHtml = `<span class="lr-time lr-notimed" title="≡ native — no BLAS/OpenMP code path">≡ native</span>`;
+      } else {
+        timeHtml = `<span class="lr-time lr-notimed" title="parity-validated (C++ fixture) · not timed">not timed</span>`;
+      }
+      const dq = c.divergence_quality || 'unknown';
+      const dFmt = c.divergence_fmt || '—';
+      const divTitle = c.divergence_basis === 'self'
+        ? 'this row is the canonical reference'
+        : `divergence δ (${c.divergence_basis || 'unknown'}, ${dq})`;
+      const divHtml = `<span class="lr-div cell-value div-${dq}" title="${escAttr(divTitle)}">${dFmt}</span>`;
+      lines.push(
+        `<div class="list-row${isPls4all ? ' lr-pls4all' : ''}">` +
+          `<span class="lr-backend" title="${escAttr((meta && meta.label) || id)}">` +
+            `<span class="lr-dot l-${slug}"></span>` +
+            `<span class="lr-label">${label}</span>` +
+            (tier ? `<span class="lr-tier">${tier}</span>` : '') +
+          `</span>` +
+          listVerdictHtml(c, meta) +
+          divHtml +
+          timeHtml +
+        `</div>`
+      );
+    }
+    if (!lines.length) continue;
+    const algoLabel = algoDisplay(row.algo);
+    const docPage = (DATA.algo_has_doc || {})[row.algo];
+    const algoHtml = docPage
+      ? `<a href="methods/${docPage}.html" title="open ${algoLabel} method documentation">${algoLabel}</a>`
+      : algoLabel;
+    const grp = groupMap[row.algo] || '';
+    const grpHtml = grp ? `<span class="lc-group">${groupLabel[grp] || grp}</span>` : '';
+    const docBadge = docPage ? `<span class="lc-doc" title="has documentation page">doc</span>` : '';
+    const origin = (DATA.algo_origin || {})[row.algo] || 'pls4all';
+    const originCls = origin === 'pls4all' ? 'row-pls4all' : 'row-n4m';
+    const meta = `${row.n}×${row.p} · ${row.threads}t · ${lines.length} impl`;
+    cards.push(
+      `<div class="list-card ${originCls}">` +
+        `<div class="list-card-head">` +
+          `<span class="lc-algo">${algoHtml}</span>${grpHtml}${docBadge}` +
+          `<span class="lc-meta">${meta}</span>` +
+        `</div>` +
+        `<div class="list-rows">${lines.join('')}</div>` +
+      `</div>`
+    );
+  }
+
+  const body = $('list-body');
+  if (!cards.length) {
+    body.innerHTML = `<div class="empty-state">
+      <h3>nothing in this slice.</h3>
+      <p>your filters narrowed every method out.</p>
+      <p class="hint" onclick="document.getElementById('reset-btn').click()">⟲ reset all filters</p>
+    </div>`;
+  } else {
+    body.innerHTML = cards.join('');
+  }
+  $('list-meta-left').textContent = `${cards.length} method${cards.length === 1 ? '' : 's'} · ${totalFilled} filled cell${totalFilled === 1 ? '' : 's'}`;
+  $('list-meta-right').textContent = `filled implementations only · empty / unavailable cells hidden`;
+}
+
 function _applyView() {
   const scaling = state.view === 'scaling' && (DATA.scaling || []).length;
-  $('parity-shell').hidden = scaling;
+  const list = state.view === 'list';
+  $('parity-shell').hidden = scaling || list;
   $('scaling-shell').hidden = !scaling;
+  $('list-shell').hidden = !list;
   if (scaling) renderScaling();
+  if (list) renderListView();
 }
 
 function render() {
@@ -2898,7 +3127,7 @@ function wire() {
     rerender();
   });
   $('view-mode').addEventListener('change', e => {
-    state.view = e.target.value === 'scaling' ? 'scaling' : 'parity';
+    state.view = parseView(e.target.value);
     rerender();
   });
   $('reset-btn').addEventListener('click', () => {
