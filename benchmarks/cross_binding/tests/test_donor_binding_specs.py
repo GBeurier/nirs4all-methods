@@ -173,13 +173,14 @@ def _cross_parity_ok(spec, ref) -> tuple[bool, float]:
     inp = D.build_inputs(spec, N, P, SEED)
     ref_vec = D.run_reference(spec, ref, inp, SEED)
     n4m_vec = D.run_idiom(spec, inp, SEED)
-    if ref_vec.shape != n4m_vec.shape:
-        return False, float("inf")
     if spec.parity in ("mask", "indices"):
-        return bool(np.array_equal(n4m_vec, ref_vec)), 0.0
-    denom = float(np.sqrt(np.mean(ref_vec ** 2))) or 1.0
-    rel = float(np.sqrt(np.mean((n4m_vec - ref_vec) ** 2)) / denom)
-    return rel <= ref.tol_rel, rel
+        ok = (n4m_vec.shape == ref_vec.shape
+              and bool(np.array_equal(n4m_vec, ref_vec)))
+        return ok, 0.0 if ok else 1.0
+    # Convention-aware (D.cross_parity): PCA sign / DWT layout where n4m is the
+    # legitimately-correct side read as a match, not a >1 artefact.
+    ok, _abs, rel = D.cross_parity(spec, n4m_vec, ref_vec, N, ref.tol_rel)
+    return ok, rel
 
 
 @pytest.mark.parametrize("bench_id", sorted(

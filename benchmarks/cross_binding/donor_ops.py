@@ -106,6 +106,12 @@ class DonorOpSpec:
     category: str  # "aug" | "pp" | "filter" | "split"
     inputs: tuple[str, ...]  # subset of ("X", "y", "wl", "groups")
     parity: str  # "values" | "mask" | "indices"
+    # Convention under which n4m (legitimately correct) is comparable to the
+    # nirs4all donor. None = direct compare. "pca_sign" = per-component
+    # sign-invariant (PCA component-sign ambiguity). "dwt_detail_resample" =
+    # take n4m's detail (cD) half of its [cA|cD] DWT and FFT-resample to N cols,
+    # matching nirs4all's wavelet transform (which returns only cD, resampled).
+    parity_convention: Optional[str] = None
 
     raw_fn: Optional[str] = None
     raw_kwargs: dict[str, Any] = field(default_factory=dict)
@@ -163,13 +169,14 @@ def _dash(bench_id: str) -> str:
 # Builders — keep the registry declarations compact and uniform.
 # ---------------------------------------------------------------------------
 def _pp(bench_id, raw_fn, idiom_module, idiom_cls, *, raw=None, idiom=None,
-        inputs=("X",), dump=True, parity="values") -> DonorOpSpec:
+        inputs=("X",), dump=True, parity="values", convention=None) -> DonorOpSpec:
     """Preprocessing op: raw `n4m.python.<fn>(X, **raw)`, idiom
     `n4m.sklearn.<module>.<Cls>(**idiom).fit_transform(X)`. Defaults to
     dump-validatable (dim-preserving deterministic transforms)."""
     return DonorOpSpec(
         bench_id=bench_id, dashboard_id=_dash(bench_id), category="pp", inputs=inputs,
-        parity=parity, raw_fn=raw_fn, raw_kwargs=dict(raw or {}),
+        parity=parity, parity_convention=convention,
+        raw_fn=raw_fn, raw_kwargs=dict(raw or {}),
         idiom_module=idiom_module, idiom_cls=idiom_cls,
         idiom_kwargs=dict(idiom if idiom is not None else (raw or {})),
         dump_validatable=dump,
@@ -266,13 +273,15 @@ PP_SPECS: list[DonorOpSpec] = [
         raw=dict(start=1, end=-1), idiom=dict(start=1, end=-1), dump=False),
     _pp("pp_derivate", "derivate", "preprocessing", "Derivate",
         raw=dict(order=1, delta=1.0), dump=False),
-    _pp("pp_haar", "haar", "augmentation", "Haar", dump=False),
+    _pp("pp_haar", "haar", "augmentation", "Haar", dump=False,
+        convention="dwt_detail_resample"),
     _pp("pp_resample", "resample", "resampling", "ResampleTransformer",
         raw=dict(num_samples=128), idiom=dict(num_samples=128), dump=False),
     _pp("pp_resampler", "resampler", "resampling", "Resampler",
         raw={}, idiom={}, inputs=("X", "wl"), dump=False),
     _pp("pp_wavelet", "wavelet", "augmentation", "Wavelet",
-        raw=dict(family="haar", mode="periodization"), dump=False),
+        raw=dict(family="haar", mode="periodization"), dump=False,
+        convention="dwt_detail_resample"),
     _pp("pp_wavelet_features", "wavelet_features", "augmentation", "WaveletFeatures",
         raw=dict(family="haar", mode="periodization", max_level=3), dump=False),
     _pp("pp_wavelet_pca", "wavelet_pca", "augmentation", "WaveletPCA",
@@ -280,7 +289,7 @@ PP_SPECS: list[DonorOpSpec] = [
     _pp("pp_wavelet_svd", "wavelet_svd", "augmentation", "WaveletSVD",
         raw=dict(family="haar", mode="periodization", max_level=3, n_components=5.0), dump=False),
     _pp("pp_flex_pca", "flexible_pca", "feature_extraction", "FlexiblePCA",
-        raw=dict(n_components=5.0), dump=False),
+        raw=dict(n_components=5.0), dump=False, convention="pca_sign"),
     _pp("pp_flex_svd", "flexible_svd", "feature_extraction", "FlexibleSVD",
         raw=dict(n_components=5.0), dump=False),
     # FCK static: raw + idiom both take the kernel orders/scales as
@@ -543,6 +552,54 @@ def _reduce(spec: DonorOpSpec, out: Any) -> np.ndarray:
     return np.asarray(out, dtype=np.float64).ravel()
 
 
+def _n_components(spec: DonorOpSpec) -> int:
+    nc = spec.idiom_kwargs.get("n_components")
+    return int(nc) if nc is not None else 5
+
+
+def cross_parity(spec: DonorOpSpec, n4m_vec: np.ndarray, ref_vec: np.ndarray,
+                 rows: int, tol_rel: float) -> tuple[bool, float, float]:
+    """Compare n4m vs nirs4all UNDER spec.parity_convention.
+
+    Returns (ok, rmse_abs, rmse_rel). n4m is the legitimately-correct side; the
+    convention maps it onto nirs4all's representation so a true numerical match
+    reads as a match instead of a >1 sign/layout artefact. With no convention
+    this is a plain RMSE compare.
+    """
+    conv = spec.parity_convention
+    if conv == "pca_sign":
+        k = _n_components(spec)
+        a = n4m_vec.reshape(rows, -1)
+        b = ref_vec.reshape(rows, -1)
+        if a.shape != b.shape:
+            return False, float("inf"), float("inf")
+        a2 = a.copy()
+        for c in range(a.shape[1]):
+            # Align each component's sign to the reference (dot-product sign).
+            if float(np.dot(a[:, c], b[:, c])) < 0.0:
+                a2[:, c] = -a[:, c]
+        diff = a2 - b
+    elif conv == "dwt_detail_resample":
+        from scipy import signal
+        a = n4m_vec.reshape(rows, -1)
+        b = ref_vec.reshape(rows, -1)
+        m = a.shape[1] // 2          # n4m layout is [cA(m) | cD(m)]
+        cd = a[:, m:2 * m]           # n4m's detail half
+        n = b.shape[1]
+        a2 = cd if cd.shape[1] == n else np.asarray(signal.resample(cd, n, axis=1))
+        if a2.shape != b.shape:
+            return False, float("inf"), float("inf")
+        diff = a2 - b
+    else:
+        if n4m_vec.shape != ref_vec.shape:
+            return False, float("inf"), float("inf")
+        diff = n4m_vec - ref_vec
+    abs_rmse = float(np.sqrt(np.mean(diff ** 2))) if diff.size else 0.0
+    denom = float(np.sqrt(np.mean(ref_vec ** 2))) or 1.0
+    rel = abs_rmse / denom
+    return rel <= tol_rel, abs_rmse, rel
+
+
 def run_raw(spec: DonorOpSpec, inp: dict[str, Any], seed: int) -> np.ndarray:
     """Invoke the raw `n4m.python` tier and reduce its output."""
     if spec.raw_fn is None:
@@ -729,15 +786,22 @@ _N4_EXPECTED_DIVERGENCE: dict[str, str] = {
     "pp_snip": "SNIP clipping iteration differs from n4m",
     "pp_rolling_ball": "rolling-ball window handling differs from n4m",
     "pp_wavelet_denoise": "wavelet denoise thresholding differs from n4m",
-    "pp_msc": "MSC reference/scale formulation differs from n4m",
+    # pp_msc removed: nirs4all's MSC was a transposed bug (fixed upstream); n4m
+    # is the standard MSC and now matches. pp_haar/pp_wavelet/pp_flex_pca removed:
+    # n4m is bit-exactly correct, compared convention-aware (donor_ops.cross_parity).
+    # split_spxy_fold removed: real n4m binding bug (use_y) — now bit-exact.
     "pp_emsc": "EMSC polynomial basis formulation differs from n4m",
-    "pp_haar": "Haar coefficient layout/normalisation differs from n4m",
-    "pp_wavelet": "wavelet coefficient layout/normalisation differs from n4m",
-    "pp_flex_pca": "PCA sign/component convention differs from n4m",
-    "pp_flex_svd": "SVD sign/component convention differs from n4m",
+    # split_spxy_g_fold: the per-sample SPXY fold now matches, but the GROUP
+    # variant (nirs4all's grouped_wrapper aggregates samples to group level then
+    # runs SPXY, assigning whole groups) still diverges from n4m's group-SPXY —
+    # a deeper group-aggregation difference, not the binding use_y bug. Kept as
+    # an informational cross-check pending a group-level alignment pass.
+    "split_spxy_g_fold": "group-level SPXY fold assignment differs from nirs4all grouped_wrapper",
+    # SVD subspace differs from nirs4all (basis/sign, not a single sign-flip):
+    # not recoverable by the pca_sign convention, so kept as an informational
+    # cross-check rather than forced to match.
+    "pp_flex_svd": "SVD subspace basis differs from nirs4all (informational cross-check)",
     "filter_x_outlier_robust_mahalanobis": "robust covariance estimator differs from n4m",
-    "split_spxy_fold": "fold-0 assignment differs from n4m",
-    "split_spxy_g_fold": "group fold-0 assignment differs from n4m",
 }
 
 # Donor methods deliberately NOT timed at any layer (parity-only). They are not

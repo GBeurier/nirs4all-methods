@@ -95,17 +95,27 @@ def run_cell(spec: D.DonorOpSpec, n: int, p: int, seed_base: int, max_runs: int,
         abs_rmse = 0.0 if ok else 1.0
         rel = abs_rmse
     else:
-        abs_rmse, rel = _rmse(n4m_vec, ref_vec)
-        ok = rel <= ref.tol_rel
+        # Compare under spec.parity_convention so legitimately-correct n4m
+        # output (PCA sign, DWT layout) reads as a match instead of a >1 artefact.
+        ok, abs_rmse, rel = D.cross_parity(spec, n4m_vec, ref_vec, n, ref.tol_rel)
     expected = D._N4_EXPECTED_DIVERGENCE.get(spec.bench_id)
     if ok:
-        note = "n4m matches nirs4all"
+        # A direct match, or a documented-convention match (n4m correct).
+        note = ("n4m matches nirs4all" if spec.parity_convention is None
+                else f"n4m matches nirs4all under convention "
+                     f"'{spec.parity_convention}'")
+        row.update(reference_parity_rmse_abs=abs_rmse, reference_parity_rmse_rel=rel,
+                   reference_parity_ok="True", reference_parity_note=note)
     elif expected:
-        note = f"expected divergence: {expected}"
+        # Genuine algorithm difference vs the donor not recoverable by a
+        # convention (e.g. EMSC basis, SVD subspace). Informational cross-check:
+        # build_landing shows the spread but does not flag n4m as a failure.
+        row.update(reference_parity_rmse_abs=abs_rmse, reference_parity_rmse_rel=rel,
+                   reference_parity_ok="", reference_parity_note=f"cross_check: {expected}")
     else:
-        note = "UNEXPECTED divergence vs nirs4all"
-    row.update(reference_parity_rmse_abs=abs_rmse, reference_parity_rmse_rel=rel,
-               reference_parity_ok=str(ok), reference_parity_note=note)
+        row.update(reference_parity_rmse_abs=abs_rmse, reference_parity_rmse_rel=rel,
+                   reference_parity_ok="False",
+                   reference_parity_note="UNEXPECTED divergence vs nirs4all")
     return row
 
 
