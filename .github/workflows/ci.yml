@@ -106,3 +106,53 @@ jobs:
             build/${{ matrix.cfg.preset }}/cpp/src/**/libn4m*
             build/${{ matrix.cfg.preset }}/cpp/cli/n4m_cli*
           if-no-files-found: warn
+
+  fitpack:
+    name: fitpack / linux-gcc-release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain (incl. gfortran)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc g++ gfortran ninja-build cmake python3-venv
+
+      - name: Configure (Release, FITPACK on via system gfortran)
+        run: |
+          cmake -S . -B build/fitpack -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build
+        run: cmake --build build/fitpack --parallel
+
+      - name: CLI selfcheck reports fitpack=1
+        run: |
+          info=$(./build/fitpack/cpp/cli/n4m_cli --abi-info)
+          echo "$info"
+          echo "$info" | grep -qE 'build_info *: *fitpack=1' \
+            || { echo 'ERROR: FITPACK not enabled'; exit 1; }
+          ./build/fitpack/cpp/cli/n4m_cli --selfcheck
+
+      # Hard parity gate: the gated spline_smooth replay (assert_close, 1e-12)
+      # runs here under fitpack=1. Tolerant comparison, robust across gfortran
+      # versions (FITPACK is pure double arithmetic, no BLAS).
+      - name: Test (gated spline_smooth replay runs under fitpack=1)
+        run: ctest --test-dir build/fitpack --output-on-failure
+
+      # Informational drift detector: regen --check is an EXACT float-bit
+      # comparison against the committed oracle. The committed oracle is
+      # toolchain-specific (whatever gfortran first generated it), so a 1-ULP
+      # difference from this runner's gfortran would flag here without meaning
+      # the engine is wrong — the tolerant ctest above is the real gate. Run it
+      # non-blocking so cross-compiler bit-drift is visible but not flaky-red.
+      - name: Detect spline_smooth oracle bit-drift (informational)
+        continue-on-error: true
+        run: |
+          python3 -m venv /tmp/fitpack-venv
+          /tmp/fitpack-venv/bin/pip install --quiet numpy
+          N4M_LIB_PATH="$PWD/$(ls build/fitpack/cpp/src/libn4m.so.*.*.* | head -1)" \
+          PYTHONPATH=bindings/python/src \
+            /tmp/fitpack-venv/bin/python parity/scripts/regen_aug_fixtures.py --check
