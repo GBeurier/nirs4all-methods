@@ -23,7 +23,14 @@ from ._compat import BaseEstimator
 
 # Strategy enums (mirror n4m_split_kbins_strategy_t).
 _KBINS_STRATEGIES = {"uniform": 0, "quantile": 1, 0: 0, 1: 1}
-_SPXY_Y_METRICS = {"euclidean": 0, "mahalanobis": 1, 0: 0, 1: 1}
+# C ABI use_y enum (cpp/src/core/splitters/spxy_fold.h): 0 = pure Kennard-Stone
+# (X only), 1 = SPXY (X + euclidean Y), 2 = hamming Y. SPXY MUST add the Y
+# distance, so "euclidean" maps to 1 — the old map sent it to 0, which silently
+# ran X-only Kennard-Stone and dropped y entirely (a real bug: the split then
+# ignored the target). The C engine's only joint metric is euclidean; nirs4all's
+# SPXY y_metric is a scipy cdist metric with no Mahalanobis kernel here, so both
+# string aliases route to the euclidean-Y code. Use "x_only" for pure KS.
+_SPXY_Y_METRICS = {"x_only": 0, "euclidean": 1, "mahalanobis": 1, 0: 0, 1: 1, 2: 2}
 _SPXY_GROUP_AGGREGATIONS = {"mean": 0, "median": 1, 0: 0, 1: 1}
 
 
@@ -170,7 +177,10 @@ class SPXYFoldSplitter(_SplitHandle):
 
     def split_fold(self, X, y, fold_idx: int) -> Tuple[np.ndarray, np.ndarray]:
         X = as_f64_2d(X)
-        y = as_f64_2d(y)
+        # SPXY now uses the Y distance (y_metric -> use_y=1), so y must be a
+        # column (n, 1): as_f64_2d promotes a 1-D y to (1, n), which mismatches
+        # X's n rows. A 2-D y (multi-target) is passed through unchanged.
+        y = as_f64_2d(np.reshape(y, (-1, 1)) if np.ndim(y) == 1 else y)
         result = SplitResult()
         check(
             lib.n4m_split_spxy_fold_split_fold(
@@ -231,7 +241,9 @@ class SPXYGroupFoldSplitter(_SplitHandle):
 
     def split_fold(self, X, y, groups, fold_idx: int) -> Tuple[np.ndarray, np.ndarray]:
         X = as_f64_2d(X)
-        y = as_f64_2d(y)
+        # SPXY uses the Y distance (use_y=1): y must be a column (n, 1); a 1-D y
+        # promoted to (1, n) by as_f64_2d would mismatch X's n rows.
+        y = as_f64_2d(np.reshape(y, (-1, 1)) if np.ndim(y) == 1 else y)
         groups_arr = _as_i64_1d(groups, "groups")
         result = SplitResult()
         check(
