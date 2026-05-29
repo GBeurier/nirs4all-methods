@@ -2,6 +2,13 @@ function [stats, last_preds] = pls4all_bench_run(fit_predict_seeded, runs, seed_
 % Adaptive benchmark helper. One timed warm-up is used to classify very
 % slow cells; otherwise a timed probe chooses the final sample count.
 max_runs = max(1, floor(runs));
+% Number of warm-up executions discarded before the first timed probe.
+% A single warm-up does not amortise Octave classdef + MEX JIT and BLAS
+% thread-pool spin-up, which decay over the first few calls.
+warmup_runs = str2double(getenv("BENCH_WARMUP_RUNS"));
+if isnan(warmup_runs) || warmup_runs < 1
+    warmup_runs = 3;
+end
 
     function [target, statistic, decision] = adaptive_target(probe_ms)
         if probe_ms > 60000.0
@@ -61,9 +68,14 @@ max_runs = max(1, floor(runs));
         s.total_runs = total_runs_;
     end
 
-t0 = tic();
-warmup_preds = fit_predict_seeded(seed_base);
-warmup_ms = toc(t0) * 1000.0;
+% Discard `warmup_runs` executions on seed_base so the timed probe is warm.
+warmup_preds = [];
+warmup_ms = 0.0;
+for w = 1:warmup_runs
+    t0 = tic();
+    warmup_preds = fit_predict_seeded(seed_base);
+    warmup_ms = toc(t0) * 1000.0;
+end
 if warmup_ms > 300000.0
     samples = warmup_ms;
     stats = make_stats(samples, 'single', warmup_ms, 'warmup_gt_5min', 1, true);
@@ -89,5 +101,5 @@ for i = 2:target_samples
     last_preds = fit_predict_seeded(seed_base + (i - 1));
     samples(end + 1, 1) = toc(t0) * 1000.0;
 end
-stats = make_stats(samples, statistic, warmup_ms, decision, 1 + length(samples), false);
+stats = make_stats(samples, statistic, warmup_ms, decision, warmup_runs + length(samples), false);
 end

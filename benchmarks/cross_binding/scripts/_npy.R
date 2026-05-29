@@ -132,10 +132,23 @@ pls4all_bench_stats <- function(samples, statistic, warmup_ms, decision,
 
 pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
     max_runs <- max(1L, as.integer(runs))
+    # Number of warm-up executions discarded before the first timed probe.
+    # One warm-up is not enough to amortise R/.Call dispatch + BLAS spin-up
+    # on the first few calls.
+    warmup_runs <- suppressWarnings(
+        as.integer(Sys.getenv("BENCH_WARMUP_RUNS", unset = "3")))
+    if (is.na(warmup_runs) || warmup_runs < 1L) {
+        warmup_runs <- 3L
+    }
 
-    t0 <- pls4all_bench_now_ms()
-    warmup_preds <- fit_predict_seeded(seed_base)
-    warmup_ms <- pls4all_bench_now_ms() - t0
+    # Discard `warmup_runs` executions on seed_base so the timed probe is warm.
+    warmup_preds <- NULL
+    warmup_ms <- 0.0
+    for (w in seq_len(warmup_runs)) {
+        t0 <- pls4all_bench_now_ms()
+        warmup_preds <- fit_predict_seeded(seed_base)
+        warmup_ms <- pls4all_bench_now_ms() - t0
+    }
     if (warmup_ms > 300000.0) {
         return(list(
             stats = pls4all_bench_stats(
@@ -172,7 +185,7 @@ pls4all_bench_time_runs <- function(fit_predict_seeded, runs, seed_base) {
     # last timed run, so it is comparable across backends.
     list(stats = pls4all_bench_stats(samples, target$statistic, warmup_ms,
                                      target$decision, max_runs,
-                                     1L + length(samples),
+                                     warmup_runs + length(samples),
                                      prediction_seed = seed_base),
          last_preds = warmup_preds)
 }

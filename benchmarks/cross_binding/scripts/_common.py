@@ -74,6 +74,11 @@ def load_dataset(csv_dir: Path, n: int, p: int, seed: int):
 WARMUP_ABORT_MS = 5 * 60 * 1000.0
 PROBE_ABORT_MS = 60 * 1000.0
 DEFAULT_MAX_RUNS = 40
+# Number of warm-up executions discarded before the first timed probe.
+# One warm-up is not enough to amortise multi-call first-use costs in the
+# idiomatic (sklearn-wrapper) tier and in the Octave/MATLAB classdef+MEX
+# JIT path; those decay over the first few calls. Override with BENCH_WARMUP_RUNS.
+WARMUP_RUNS = max(1, int(os.environ.get("BENCH_WARMUP_RUNS", "3")))
 
 
 def adaptive_target(probe_ms: float, max_runs: int) -> tuple[int, str, str]:
@@ -161,9 +166,17 @@ def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
     """
     max_runs = max(1, int(n_runs))
 
-    t0 = time.perf_counter()
-    parity_preds = fit_predict_seeded(seed_base)
-    warmup_ms = (time.perf_counter() - t0) * 1000.0
+    # Discard WARMUP_RUNS executions on seed_base so the timed probe is fully
+    # warm regardless of max_runs. The thin-ctypes cpp/tier1 path is warm after
+    # one call; the idiomatic and Octave/MATLAB paths need several. warmup_ms
+    # records the LAST warm-up (the one immediately before the probe) and
+    # parity_preds is its prediction (still the seed_base run).
+    parity_preds = None
+    warmup_ms = 0.0
+    for _ in range(WARMUP_RUNS):
+        t0 = time.perf_counter()
+        parity_preds = fit_predict_seeded(seed_base)
+        warmup_ms = (time.perf_counter() - t0) * 1000.0
     if warmup_ms > WARMUP_ABORT_MS:
         return _stats([warmup_ms], statistic="single", warmup_ms=warmup_ms,
                       decision="warmup_gt_5min", max_runs=max_runs,
@@ -193,7 +206,7 @@ def time_runs_seeded(fit_predict_seeded, n_runs: int, seed_base: int):
 
     return _stats(samples, statistic=statistic, warmup_ms=warmup_ms,
                   decision=decision, max_runs=max_runs,
-                  total_runs=1 + len(samples),
+                  total_runs=WARMUP_RUNS + len(samples),
                   prediction_seed=seed_base), parity_preds
 
 
