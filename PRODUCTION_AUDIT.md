@@ -384,13 +384,18 @@ correct oracle is the engine itself, frozen as a regression-lock — exactly wha
 
 ### 10.3 Behavioural facts surfaced (correct, not bugs — but worth knowing for the nirs4all-replacement)
 
-* **`spline_smooth` is inert without FITPACK.** It is the only FITPACK-gated augmenter
+* **`spline_smooth` FITPACK oracle — DONE (2026-05-29, commit 9a72b86).** It is the only FITPACK-gated augmenter
   (`spline_smoothing.c`, `#if !N4M_HAVE_FITPACK` → `memcpy` + return). FITPACK ships as 11 vendored Fortran `.f` files
-  enabled *iff a Fortran compiler is found* (`cpp/src/n4m_targets.cmake`); the standard CI/dev builds here have
-  `N4M_HAVE_FITPACK=0`, so `spline_smooth` does nothing. A single committed self-fixture can't lock a build-dependent
-  output, so it is **excluded from the bit-exact replay** (determinism smoke retained) and flagged here. **Action (P2):** a
-  Fortran-enabled CI lane to generate + lock the FITPACK oracle, or document `spline_smooth` as a no-op in non-Fortran
-  builds so downstream (nirs4all pipeline) does not silently route a smoothing step into a pass-through.
+  enabled *iff a Fortran compiler is found* (`cpp/src/n4m_targets.cmake`). The committed fixture was an identity
+  placeholder (input==output), so it could not be an oracle. Now: `regen_aug_fixtures.py` regenerates
+  `aug_spline_smooth_v1.json` **only from a fitpack=1 build** (guarded on `n4m_get_build_info()`); under fitpack=0 it
+  skips entirely (never freezes the placeholder, `--check` stays green). The C++ test gained a `build_info`-gated
+  bit-exact replay (`assert_close` 1e-12) that runs under fitpack=1 and keeps the determinism/plausibility smoke under
+  fitpack=0. A new `fitpack` CI job (ubuntu-24.04 + apt gfortran) builds Release with FITPACK on, asserts `fitpack=1`,
+  runs the gated replay, and runs `regen --check` as a non-blocking bit-drift detector. The committed oracle is real
+  smoothing now (conda gfortran 15.2); the tolerant ctest replay is the hard cross-toolchain gate, the exact-hex
+  `--check` is informational. Verified: fitpack=1 → 271 tests pass incl. the gated replay; fitpack=0 → regen skips
+  (oracle byte-identical), `--check` green.
 * **`detector_rolloff` is pass-through on the fixture input** — its wavelengths (1000–1700 nm) sit inside detector model
   4's optimal band, so sensitivity is flat 1.0 and both the noise factor `(1/s−1)` and baseline term vanish. The replay
   locks "in-band signal is not corrupted." Correct; the rolloff path is only exercised by out-of-band wavelengths.
@@ -479,14 +484,23 @@ DONE:
   `bindings/js/examples/consume.mjs` (recovers the synthetic PLS coefficients exactly).
 - The `nirs4all-io` (Python) layer is out of scope for n4m's WASM (maintainer call); n4m's WASM consumes raw arrays.
 
-REMAINING (the generic-method gap, tracked follow-up): `fitPls`/`predictPls` are callable end-to-end, but the **generic
-"call any of the 188 methods by id" path is NOT enabled** — Emscripten miscompiles JS-built `n4m_matrix_view_t*`
-*parameters* to the deep numeric entrypoints, so view-taking methods need a C raw-pointer shim. Two routes: (a) fix the
-Emscripten codegen (newer emsdk / `-O0` / drop `WASM_BIGINT`) → the JS `MethodResult` path then reaches every
-`method_result` producer with no per-method glue; (b) per-family raw-pointer shims. The spec's `n4m_wasm_run_xy` runner was
-NOT applied — it calls `n4m_method_result_create_empty`/`_set_double_matrix`, which are **not** public ABI symbols (only
-getters are). A `makeMatrixView` int64-via-`ccall("number")` bug is documented in the README; it is moot until (a).
-The lite *export allow-list / N4M_BUILD_LITE subset* is explicitly out of scope (maintainer wants the full engine).
+**Generic-method path (RESOLVED 2026-05-29, commit 5107fae):** the "call any method by id" path is now enabled — and
+there was **no Emscripten codegen bug**. JS-built `n4m_matrix_view_t*` params returned garbage (~1e32) only because the
+TS `ccall` layer passed a JS `number` for the `int64_t rows/cols` args of `n4m_matrix_view_init_rowmajor` while the
+module is built with `-s WASM_BIGINT=1` (i64 slots must be marshalled as `'i64'` with `BigInt`; emsdk ≥5.0.7 throws
+`Cannot convert N to a BigInt`, older emsdk silently corrupted the struct). The deep entrypoints were always byte-correct.
+DONE (TypeScript-only, **no WASM rebuild**): `ffi.ts/makeMatrixView` now marshals dims as `BigInt` (and its default dtype
+was wrong — `2`=F32, fixed to `1`=F64); `types.ts` `Dtype` enum was inverted vs the C ABI (F32/F64 swapped + a
+nonexistent `U8`), corrected; `methodResult.ts` gained a generic `MethodResult.run(symbol, ctx, cfg, views, extras)`
+runner covering the `(ctx,cfg,X[,Y,…views],…scalars)→n4m_method_result_t**` family (the bulk of the ~150 producers);
+`readArrayView` for the `n4m_model_fit→get_array` path. The spec's `n4m_wasm_run_xy`/`create_empty` route was correctly
+**not** taken — only the 4 getters + destroy are public ABI (no creator/setter), and none take a view, so the handle is
+simply returned to JS as a pointer and read via the getters. Proven by `bindings/js/test/run_generic_method.mjs`: the
+generic `method_result` path (`n4m_sparse_simpls_fit`) and the generic model path (`n4m_model_fit→get_array→array_view`)
+match the raw `n4m_pls_fit_simple` oracle byte-for-byte from JS (`ITEM#19 PASS`). The lite *export allow-list /
+N4M_BUILD_LITE subset* remains out of scope (maintainer wants the full engine). Follow-up (small): methods taking raw
+caller buffers (e.g. `weighted_pls` sample_weights) still need a thin per-method malloc wrapper; `context.ts setSeed`
+has the same `number`-as-`u64` bug for future seeded methods.
 
 ---
 
@@ -527,14 +541,24 @@ catalog and surface it); (5) delete the dead `cpp_header.py` path.
 4. Tighten the relaxed reference tolerances to achieved (§6.4), especially the 5 `nirs4all_sanctioned`.
 5. ✅ DONE: `t2_select` donor resolved = R `plsVarSel::T2_pls` (Mehmood 2016); root-caused — n4m's T²/UCL/selection are bit-identical to the donor, the residual mask divergence is an upstream PLS loading-weight convention (`weights_w` vs `loading.weights`); kept the Jaccard allowlist with the corrected WHY (registry note + orchestrator allowlist), no C++ change (§5).
 6. ✅ DONE (the enforceable part, per maintainer — NOT catalog-as-record): `validate.py --check-references` now fails when a production method lacks a documented donor, reading the registry lockfile + `parity/REFERENCES.md` (donor data stays in the registry, not the catalog); wired into `catalog-validate.yml`; the stale committed lockfile (pre-§6.4 tolerances) was regenerated. 188/188 covered (§7).
-7. ✅ DONE: edge/spline/random replays + 10 placeholder fixtures regenerated (§10.2); **phase-17 replay wired** (5 stochastic cases locked at seed 0, §10.4); `build_info()` now reports `fitpack=0/1` for runtime detectability (§10.3). Remaining: the gfortran CI lane + FITPACK `spline_smooth` oracle (deferred — needs a Fortran compiler).
+7. ✅ DONE: edge/spline/random replays + 10 placeholder fixtures regenerated (§10.2); **phase-17 replay wired** (5 stochastic cases locked at seed 0, §10.4); `build_info()` now reports `fitpack=0/1` for runtime detectability (§10.3). **gfortran CI lane + FITPACK `spline_smooth` oracle now DONE** (commit 9a72b86, §10.3): conda gfortran is available, oracle regenerated from a fitpack=1 build, `build_info`-gated C++ replay + a `fitpack` ubuntu-24.04 CI job.
 8. ✅ DONE (live gate widened): `cross-binding-parity.yml` gains a PR-blocking Gate-2 step (n4m vs scikit-learn oracle, 7 PLS-family methods, ~42s) + new `nightly-parity.yml` cron full-sweep artifact (§11 A1). macOS/Windows ABI snapshots intentionally dropped (maintainer scope).
 9. ✅ DONE: `method-add.md` + `CONTRIBUTING.md` match the real flow (§13.1); `release-python.yml` doc block corrected (A3).
 
 **P2 — forward tracks:**
-10. `nirs4all-lite`: rebuild WASM + lite export subset + generic MethodResult runner (§12).
-11. Catalog-driven codegen for binding/registry/header glue (§13.3); real `make parity METHOD=` (§13.4).
-12. (External, maintainer) PyPI Trusted Publisher re-point, wheel matrix tag, CRAN submission.
+10. ✅ DONE (WASM generic path): `nirs4all-lite` WASM rebuilt (§12) + **generic `MethodResult.run` runner enabled**
+    (commit 5107fae) — the i64-BigInt marshalling fix unlocks every `method_result` producer from JS; the lite export
+    subset stays out of scope per the maintainer (full engine).
+11. ✅ DONE (binding-parity conventions, commit b7a3b9a, §6): the R/MATLAB/python_tier2 binding dispatchers now honour the
+    per-method parity conventions the canonical registry applies (`method_conventions()` single source → orchestrator
+    injects solver/scale_x/scale_y; R `r_dispatch.c` + MATLAB `n4m_method_fit_mex.c` read them). Fixes cppls/ridge_pls/
+    sparse_simpls across R+MATLAB (4.4e-3/4.6e-5/8.6e-3 → ~1e-15) verified end-to-end after R CMD INSTALL (0.97.3→0.98.0)
+    + Octave mkoctfile. Restored the `pls4all_method→n4m_method` R export alias the benches need.
+12. ✅ DONE (slim-wheel bloat, commit 2119149, §11): the `pls4all` PyPI wheel no longer bundles the full `n4m` module +
+    a duplicate libn4m (`packages.find include` filter + orphan `n4m` package-data block removed). Other channels verified
+    green (full nirs4all-methods wheel, both CRAN packages `--as-cran` clean, Octave MEX 4.3e-16, WASM npm 1.4e-16).
+13. Catalog-driven codegen for binding/registry/header glue (§13.3); real `make parity METHOD=` (§13.4).
+14. (External, maintainer) PyPI Trusted Publisher re-point, wheel matrix tag, CRAN web-form submission, `npm publish`.
 
 ---
 
