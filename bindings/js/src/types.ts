@@ -30,14 +30,13 @@ export enum Status {
     ERR_CANCELED = 17,
 }
 
-/** Mirror of n4m_dtype_t. */
+/** Mirror of n4m_dtype_t (cpp/include/n4m/n4m.h §2). */
 export enum Dtype {
     UNKNOWN = 0,
-    F32 = 1,
-    F64 = 2,
+    F64 = 1,
+    F32 = 2,
     I32 = 3,
     I64 = 4,
-    U8 = 5,
 }
 
 /** Mirror of n4m_algorithm_t. Values must match cpp/include/pls4all/p4a.h. */

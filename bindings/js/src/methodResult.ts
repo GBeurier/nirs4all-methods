@@ -3,7 +3,7 @@
 // Owning wrapper around n4m_method_result_t — the universal output
 // container used by every method shipped in Batches 1-12 of the C ABI.
 
-import { checkStatus, getModule } from "./ffi.js";
+import { checkStatus, getModule, makeMatrixView } from "./ffi.js";
 import { Matrix } from "./types.js";
 
 export class MethodResult {
@@ -11,6 +11,49 @@ export class MethodResult {
 
     constructor(ptr: number) {
         this._ptr = ptr;
+    }
+
+    /** Generic runner for the `(ctx, cfg, X[, Y, ...views], ...scalar-extras)
+     *  -> n4m_method_result_t**` family — the bulk of the ~150 method_result
+     *  producers. Matrix views are built BigInt-safe via makeMatrixView, so
+     *  the deep entrypoints get correct dimensions under WASM_BIGINT=1.
+     *  Returns an owning MethodResult; read outputs with matrix()/vector().
+     *
+     *  `extra` are the positional scalar args after the views, matching the C
+     *  signature: "int" -> int32_t, "double" -> double, "int64" -> int64_t.
+     *  (Methods taking raw caller buffers — e.g. weighted_pls sample_weights —
+     *  need a thin per-method wrapper that mallocs the buffer; not handled
+     *  here.) */
+    static run(
+        symbol: string,
+        ctxHandle: number,
+        cfgHandle: number,
+        views: Matrix[],
+        extra: ReadonlyArray<{ kind: "int" | "double" | "int64"; value: number }>
+            = [],
+    ): MethodResult {
+        const m = getModule();
+        const built = views.map((v) => makeMatrixView(v.data, v.rows, v.cols));
+        const resPP = m._malloc(4);
+        m.setValue(resPP, 0, "i32");
+        try {
+            const argTypes: string[] = ["number", "number"];
+            const args: unknown[] = [ctxHandle, cfgHandle];
+            for (const b of built) { argTypes.push("number"); args.push(b.viewPtr); }
+            for (const e of extra) {
+                if (e.kind === "double") { argTypes.push("number"); args.push(e.value); }
+                else if (e.kind === "int64") { argTypes.push("i64"); args.push(BigInt(e.value)); }
+                else { argTypes.push("number"); args.push(e.value | 0); }
+            }
+            argTypes.push("number"); args.push(resPP); // n4m_method_result_t** out
+            const status = m.ccall(symbol, "number", argTypes, args) as number;
+            checkStatus(status, ctxHandle);
+            const ptr = m.getValue(resPP, "i32");
+            return new MethodResult(ptr);
+        } finally {
+            for (const b of built) b.free();
+            m._free(resPP);
+        }
     }
 
     get handle(): number {

@@ -3,13 +3,18 @@
  * Emscripten entry point + production helpers.
  *
  * Pulls in the full public ABI header so all n4m_* symbols stay
- * reachable. Adds a small set of higher-level `n4m_wasm_*` helpers
- * that take raw double pointers + ints, work around an Emscripten
- * 5.0.7 code-gen issue where passing `n4m_matrix_view_t*` parameters
- * directly to `n4m_model_fit` from a JS-invoked WASM function returns
- * incorrect numerics. The same `n4m_model_fit` invoked through the
- * raw-pointer helpers below is byte-correct (matches the native
- * Linux build and the Python binding).
+ * reachable. Adds a small set of higher-level `n4m_wasm_*` raw-double-
+ * pointer convenience helpers used by the PLS fast-path in model.ts.
+ *
+ * Historical note: JS-built `n4m_matrix_view_t*` parameters reaching the
+ * deep entrypoints USED to return garbage. That was NOT an Emscripten
+ * codegen bug — it was the TS ccall layer passing JS `number` for the
+ * int64_t rows/cols args of n4m_matrix_view_init_rowmajor while the module
+ * is built with `-s WASM_BIGINT=1` (i64 slots must be marshalled as 'i64'
+ * with BigInt values). Once ffi.ts/makeMatrixView passes BigInt dims, the
+ * full view-pointer path (n4m_model_fit, the method_result producers, etc.)
+ * is byte-correct from JS. These raw helpers remain only as a thin PLS
+ * convenience surface; they are not required for the generic method path.
  */
 
 #include "n4m/n4m.h"

@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: CECILL-2.1
 #
-# WASM build of libn4m via Emscripten. Produces:
-#   build/<preset>/bindings/js/p4a.js     — Emscripten glue (MODULARIZE)
-#   build/<preset>/bindings/js/p4a.wasm   — WebAssembly module
+# WASM build of libn4m via Emscripten. Produces (OUTPUT_NAME = n4m):
+#   build/<preset>/bindings/js/n4m.js     — Emscripten glue (MODULARIZE, ES6)
+#   build/<preset>/bindings/js/n4m.wasm   — WebAssembly module
 # Plus the canonical TypeScript source under bindings/js/src/.
+# WASM_BIGINT=1 stays ON: i64 args are marshalled as BigInt by the TS layer
+# (see bindings/js/src/ffi.ts makeMatrixView).
 
 if(NOT EMSCRIPTEN)
     message(WARNING "PLS4ALL_BUILD_BINDINGS_JS=ON but the active toolchain is "
