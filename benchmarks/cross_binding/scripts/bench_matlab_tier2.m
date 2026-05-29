@@ -171,6 +171,19 @@ function preds = fit_predict(algo, csv_dir, n, p, nc, seed, params, ...
         Y_call = Y(1:split, :);
     end
 
+    % Item #21: cppls/ridge_pls/sparse_simpls need the per-method parity
+    % convention (solver / scale_x) the orchestrator injected into params.
+    % The concrete tier-2 wrapper classes (CpplsRegression / RidgePlsRegression
+    % / SparsePlsRegression) rebuild params from lambda/gamma only and drop it,
+    % so call the MEX directly with the full params struct — the dispatcher
+    % reads solver/scale_x/scale_y from it. Mirrors the python_tier2 route.
+    if any(strcmp(algo, {"cppls", "ridge_pls", "sparse_simpls"}))
+        res = pls4all.n4m_method_fit_mex(char(dispatch_algo), X_call, Y_call, ...
+                                         int32(nc), params);
+        preds = res.(char(pkey));
+        return;
+    end
+
     nv = pls4all_bench_name_values(algo, nc, params);
     nv_run = [nv, {"Params", params, "PredictionKey", char(pkey)}];
     mdl = pls4all.fit(char(dispatch_algo), X_call, Y_call, nv_run{:});
