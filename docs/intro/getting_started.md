@@ -69,7 +69,7 @@ summary(fit)
 
 ```r
 res  <- pls4all_method("pls", X, y, n_components = 5)
-yhat <- pls4all_predict(res, X_test)
+yhat <- n4m_predict(res, X_test)
 ```
 
 The dispatcher covers all 71 methods; switch by changing the first
@@ -126,7 +126,7 @@ mdl.export("model.n4a")
 ```r
 # R loads the same file
 loaded <- pls4all_load("model.n4a")
-yhat   <- pls4all_predict(loaded, X_test)
+yhat   <- n4m_predict(loaded, X_test)
 ```
 
 ```matlab

@@ -175,7 +175,7 @@ if (a$algo == "on_pls") {
 }
 
 .fit_simpls_model <- function(X, Y, n_components) {
-    pls4all::pls4all_fit(X, Y,
+    pls4all::n4m_fit(X, Y,
                          algo = "pls_simpls",
                          n_components = as.integer(n_components),
                          store_scores = TRUE,
@@ -350,12 +350,12 @@ fit_predict <- function(seed) {
         # The C dispatcher `pls4all_method` doesn't expose pcr_svd /
         # opls_nipals as named methods, so we go through the lower-level
         # `pls4all_fit` model wrapper instead.
-        res <- pls4all::pls4all_fit(xy$X, Y,
+        res <- pls4all::n4m_fit(xy$X, Y,
                                       algo = model_api_algo,
                                       n_components = as.integer(call_nc),
                                       scale_x = FALSE,
                                       scale_y = FALSE)
-        preds_vec <- as.numeric(pls4all::pls4all_predict(res, xy$X))
+        preds_vec <- as.numeric(pls4all::n4m_predict(res, xy$X))
         return(preds_vec)
     }
 

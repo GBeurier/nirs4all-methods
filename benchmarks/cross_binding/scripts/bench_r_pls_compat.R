@@ -137,7 +137,7 @@ if (a$algo == "on_pls") {
 }
 
 .fit_simpls_model <- function(X, Y, n_components) {
-    pls4all::pls4all_fit(X, Y,
+    pls4all::n4m_fit(X, Y,
                          algo = "pls_simpls",
                          n_components = as.integer(n_components),
                          store_scores = TRUE,
@@ -280,12 +280,12 @@ fit_predict <- function(seed) {
     }
 
     if (use_model_api) {
-        res <- pls4all::pls4all_fit(X, Y,
+        res <- pls4all::n4m_fit(X, Y,
                                     algo = model_api_algo,
                                     n_components = as.integer(call_nc),
                                     scale_x = FALSE,
                                     scale_y = FALSE)
-        return(as.numeric(pls4all::pls4all_predict(res, X)))
+        return(as.numeric(pls4all::n4m_predict(res, X)))
     }
     if (a$algo %in% c("pls_diagnostic_t2", "pls_diagnostic_q",
                        "pls_diagnostic_dmodx")) {
