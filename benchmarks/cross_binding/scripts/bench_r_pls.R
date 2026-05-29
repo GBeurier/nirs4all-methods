@@ -31,7 +31,8 @@ fit_predict <- function(seed) {
         "pls"   = pls::plsr(y ~ ., data = df, ncomp = a$nc,
                               method = "simpls",
                               validation = "none", scale = FALSE),
-        "cppls" = pls::cppls(y ~ ., data = df, ncomp = a$nc),
+        "cppls" = pls::cppls(y ~ ., data = df, ncomp = a$nc,
+                               validation = "none", scale = FALSE),
         "pcr"   = pls::pcr(y ~ ., data = df, ncomp = a$nc,
                              validation = "none", scale = FALSE)
     )

@@ -471,12 +471,19 @@ def run_backend(name: str, script: str, language: str, tier: str,
     # `adapted_params` computes in Python. Serialise to JSON env var so
     # the R/MATLAB script gets the exact same param shape we use on the
     # Python side.
+    # n_components actually passed in argv8. R/MATLAB benches that read the
+    # positional nc (e.g. bench_r_pls.R cppls) must get the registry-ADAPTED
+    # value, not the orchestrator's global --n-components — otherwise the R
+    # reference fits a different component count than n4m (whose Python bench
+    # re-derives it via adapted_params), e.g. cppls R nc=5 vs n4m nc=4 -> 2.5e-2.
+    argv_nc = n_components
     if script.endswith(".R") or script.endswith(".m"):
         try:
             from benchmarks.cross_binding.scripts.bench_registry_common import (
                 adapted_params, load_method)
             method = load_method(algo)
             params = adapted_params(method, n, p, n_components)
+            argv_nc = int(params.get("n_components", n_components))
             env["BENCH_R_PARAMS_JSON"] = _params_to_json(params)
             env["BENCH_MATLAB_PARAMS_JSON"] = env["BENCH_R_PARAMS_JSON"]
             if method.needs_labels:
@@ -505,11 +512,19 @@ def run_backend(name: str, script: str, language: str, tier: str,
     pred_path = predictions_path(algo, name, n, p, threads, libp4a_build)
     # Common 8-arg contract used by all scripts (Python + R via positional
     # args; Octave reads BENCH_* env vars instead).
-    argv8 = [algo, str(DATA_DIR), str(n), str(p), str(n_components),
+    argv8 = [algo, str(DATA_DIR), str(n), str(p), str(argv_nc),
               str(n_runs), str(seed_base), str(pred_path)]
 
     if script.endswith(".py"):
-        cmd = [sys.executable, str(script_path), *argv8]
+        # The nirs4all donor reference needs a Python ≥3.11 interpreter with
+        # nirs4all + its deps installed (the parity venv may be older / lack
+        # them). Point N4M_NIRS4ALL_PYTHON at such an interpreter; otherwise the
+        # current interpreter is used (and the cell honestly reports the import
+        # error rather than silently vanishing).
+        py = sys.executable
+        if "nirs4all" in name:
+            py = os.environ.get("N4M_NIRS4ALL_PYTHON", sys.executable)
+        cmd = [py, str(script_path), *argv8]
     elif script.endswith(".R"):
         # Resolve against the subprocess PATH (which prepends
         # PLS4ALL_R_ENV/bin) so the configured R env wins over whatever
@@ -573,6 +588,31 @@ def run_backend(name: str, script: str, language: str, tier: str,
     return rec
 
 
+# Selection methods whose selected-feature SET legitimately differs from the
+# DONOR's because the donor implements a different (valid) selection rule. These
+# are documented convention divergences, NOT n4m bugs — they are gated on Jaccard
+# overlap with this allowlist instead of exact set-equality. Keep each entry
+# justified; an empty allowlist means every selector must match its donor exactly.
+SELECTION_DIVERGENCE_ALLOWLIST = {
+    "t2_select": ("R plsVarSel::T2_pls picks the min-error feature set across "
+                  "alpha levels via CV; n4m thresholds the training-score "
+                  "Hotelling T2 directly — both are valid T2 selectors."),
+}
+
+
+def _selection_jaccard(pred, ref) -> float:
+    """Jaccard overlap of two 0/1 feature masks (selected-index sets).
+
+    The right contract for selection methods: a 0/1 mask compared by relative
+    RMSE is meaningless (it saturates at ~1.41 for disjoint masks). 1.0 = the
+    same features selected; 0.0 = disjoint.
+    """
+    a = set(np.flatnonzero(np.asarray(pred).ravel() != 0).tolist())
+    b = set(np.flatnonzero(np.asarray(ref).ravel() != 0).tolist())
+    union = a | b
+    return 1.0 if not union else len(a & b) / len(union)
+
+
 def compute_parity(records: list[dict]) -> None:
     """In-place augment each record with TWO parity gates.
 
@@ -630,7 +670,16 @@ def compute_parity(records: list[dict]) -> None:
             if binding_ref:
                 break
         if binding_ref is None:
-            binding_ref = group[0]
+            # Prefer any actual n4m core/binding row over an external reference,
+            # so the binding-integrity gate never compares pls4all output to the
+            # donor oracle (Codex: group[0] can be a ref_* row in
+            # --canonical-pls4all-only runs).
+            for r in group:
+                if r.get("kind") in {"n4m_core", "pls4all_binding"}:
+                    binding_ref = r
+                    break
+        if binding_ref is None:
+            binding_ref = group[0]  # no binding baseline in group; gate 1 is moot
 
         binding_ref_pred = None
         bref_path = binding_ref.get("predictions_path")
@@ -694,9 +743,18 @@ def compute_parity(records: list[dict]) -> None:
                 r["binding_parity_note"] = (
                     r.get("binding_parity_note") or "predictions missing")
             else:
+                # Binding-integrity gate: same algorithm, deterministic code
+                # path, so the contract is 1e-12 for native bindings; a
+                # documented 1e-9 isolated band for WASM (Emscripten fp) and
+                # CUDA (fp64 GPU drift). Achieved today is <=7.6e-14.
+                lang = (r.get("language") or "").lower()
+                build = (r.get("libp4a_build") or "").lower()
+                wasm_or_gpu = (lang in {"js", "javascript", "wasm", "webassembly"}
+                               or "cuda" in build)
+                default_btol = 1e-9 if wasm_or_gpu else 1e-12
                 bres = binding_parity(r_pred, binding_ref_pred,
                                        tolerance=r.get("parity_tolerance",
-                                                        1e-6))
+                                                        default_btol))
                 r["binding_parity_max_diff"] = bres.max_abs_diff
                 r["binding_parity_ok"] = bres.ok
                 r["binding_parity_note"] = bres.note
@@ -746,8 +804,46 @@ def compute_parity(records: list[dict]) -> None:
                                           tolerance=rel_tol)
                 r["reference_parity_rmse_abs"] = rres.rmse_abs
                 r["reference_parity_rmse_rel"] = rres.rmse_rel
-                r["reference_parity_ok"] = rres.ok
-                r["reference_parity_note"] = rres.note
+                pred_key = ((getattr(method, "prediction_key", "") or "")
+                            if canonical is not None else "")
+                if is_pls4all and pred_key == "mask":
+                    # Selection methods emit a 0/1 feature mask: gate on exact
+                    # index overlap (Jaccard), not relative RMSE. Documented
+                    # selection-convention divergences vs the donor are allowed.
+                    jac = _selection_jaccard(r_pred, reference_ref_pred)
+                    exact = jac >= 1.0 - 1e-12
+                    allowed = algo in SELECTION_DIVERGENCE_ALLOWLIST
+                    if exact:
+                        # Bit-identical selection vs the donor -> a real pass.
+                        r["reference_parity_ok"] = True
+                        r["reference_parity_note"] = "selection_exact"
+                    elif allowed:
+                        # Documented selection-convention divergence: INFORMATIONAL
+                        # (ok=None), never a hard pass — records the actual overlap
+                        # so a regression to disjoint masks (jaccard→0) is visible,
+                        # not silently waved through.
+                        r["reference_parity_ok"] = None
+                        r["reference_parity_note"] = (
+                            f"selection_divergence_allowed jaccard={jac:.4f}: "
+                            + SELECTION_DIVERGENCE_ALLOWLIST[algo])
+                    else:
+                        r["reference_parity_ok"] = False
+                        r["reference_parity_note"] = (
+                            f"selection_mismatch jaccard={jac:.4f}")
+                elif is_pls4all:
+                    # Correctness gate: the n4m engine/binding vs the donor
+                    # oracle. This is the only pass/fail on Gate 2.
+                    r["reference_parity_ok"] = rres.ok
+                    r["reference_parity_note"] = rres.note
+                else:
+                    # A *secondary* external library scored against the donor
+                    # oracle is an INFORMATIONAL cross-check, never a failure:
+                    # two external libs may legitimately disagree on
+                    # conventions (e.g. R pls::pcr vs sklearn PCR, R JICO vs the
+                    # Stone&Brooks continuum recipe). Record the divergence so
+                    # the matrix shows inter-library spread, but do not gate it.
+                    r["reference_parity_ok"] = None
+                    r["reference_parity_note"] = "cross_check"
 
 
 def parse_sizes(args_sizes) -> list[tuple[int, int]]:

@@ -1240,6 +1240,18 @@ def verdict(row: dict, cid: str = "") -> str:
         kind = (row.get("reference_kind") or "").lower()
         if kind == "paper_only":
             return "not_available"
+        # Secondary external lib vs the donor oracle, or an allowed selection
+        # divergence -> informational cross-check (not n4m pass/fail); a real
+        # selection mismatch is divergent. (Mirrors build_landing.)
+        note = (row.get("reference_parity_note") or "").lower()
+        if note.startswith("cross_check") or note.startswith("selection_divergence_allowed"):
+            return "cross_check"
+        if note.startswith("selection_mismatch"):
+            return "divergent"
+        # A missing reference oracle is "no truth to compare", not a drift —
+        # mirror build_landing so the same CSV renders identically on both pages.
+        if "oracle missing" in note or "run canonical reference backend" in note:
+            return "not_available"
         ref_ok = row.get("reference_parity_ok")
         if ref_ok in (None, "", "None"):
             return "not_available"
@@ -1298,6 +1310,7 @@ def fmt_ms(s: str) -> str:
 VERDICT_ICON = {
     "exact": "✓", "drift": "≈", "divergent": "✗",
     "not_available": "⊘", "not_run": "—", "error": "⚠",
+    "cross_check": "⇄",
 }
 
 

@@ -21,13 +21,13 @@ const factory = (await import(resolve(wasmDir, "p4a.js"))).default;
 const M = await factory({locateFile: (p) => resolve(wasmDir, p)});
 
 // ----- Version + ABI -----
-const versionPtr = M._p4a_get_version_string();
+const versionPtr = M._n4m_get_version_string();
 const version = M.UTF8ToString(versionPtr);
 console.log("pls4all version:", version);
 const abi = [
-    M._p4a_get_abi_version_major(),
-    M._p4a_get_abi_version_minor(),
-    M._p4a_get_abi_version_patch(),
+    M._n4m_get_abi_version_major(),
+    M._n4m_get_abi_version_minor(),
+    M._n4m_get_abi_version_patch(),
 ];
 console.log("ABI:", abi.join("."));
 
@@ -52,7 +52,7 @@ const predsPtr = M._malloc(n * q * 8);
 M.HEAPF64.set(X, xPtr >>> 3);
 M.HEAPF64.set(Y, yPtr >>> 3);
 
-const status = M._p4a_pls_fit_simple(
+const status = M._n4m_pls_fit_simple(
     xPtr, yPtr, n, p, q, 3,
     coefsPtr, xmPtr, ymPtr, predsPtr);
 if (status !== 0) throw new Error(`n4m_pls_fit_simple failed: ${status}`);
@@ -117,7 +117,9 @@ console.log(`  x_mean       rmse_rel: ${xMeanRel.toExponential(3)}`);
 console.log(`  y_mean       rmse_rel: ${yMeanRel.toExponential(3)}`);
 console.log(`  predictions  rmse_rel: ${predsRel.toExponential(3)}`);
 
-const tol = 1e-6;
+// WASM binding vs the C++ engine: same algorithm, but Emscripten fp gets a
+// documented 1e-9 isolated band (achieved ~2.1e-16). Native bindings gate at 1e-12.
+const tol = 1e-9;
 if (coefsRel > tol || xMeanRel > tol || yMeanRel > tol || predsRel > tol) {
     throw new Error(`Parity failure: tolerance ${tol} exceeded`);
 }

@@ -1,23 +1,23 @@
 {
   "algorithm": "vissa_select",
   "backend": "ref_python_auswahl",
-  "max_runs": 40,
+  "max_runs": 2,
   "n": 80,
-  "n_runs": 19,
+  "n_runs": 1,
   "p": 25,
   "prediction_seed": 1234567890,
   "seed_base": 1234567890,
   "source_predictions_path": "/home/delete/nirs4all/nirs4all-methods/benchmarks/cross_binding/data/.predictions/vissa_select_ref_python_auswahl_80x25_t10_blas-omp.npy",
-  "timing_statistic": "median",
-  "total_runs": 20,
+  "timing_statistic": "single",
+  "total_runs": 2,
   "versions": {
-    "blas": "libscipy_openblas 0.3.30 blas=10; libscipy_openblas 0.3.30 blas=10; libgomp ? openmp=10",
-    "language": "Python 3.13.13",
-    "numpy": "2.3.5",
+    "blas": "libscipy_openblas 0.3.29 blas=10; libscipy_openblas 0.3.28 blas=10; libgomp ? openmp=10",
+    "language": "Python 3.10.12",
+    "numpy": "2.2.6",
     "reference_id": "python_auswahl",
     "reference_library": "auswahl",
     "reference_version": "0.9.0",
     "timing_schema": "adaptive-v1"
   },
-  "warmup_ms": 1842.6705660531297
+  "warmup_ms": 2325.6232489366084
 }

@@ -43,10 +43,12 @@ checklist that the reviewer (human + Codex) verifies.
    `libn4m` binary, etc.) will be rejected without further discussion.
    Open an issue first if you think a spec itself needs to change.
 2. **The parity gate is non-negotiable.** Any PR that changes a
-   numerical path MUST update the relevant snapshots and keep the
-   tolerances declared in `catalog/methods/<id>.yaml` green. For
-   `status: paper_only` methods, the `self_consistency` block stands
-   in for the parity gate.
+   numerical path MUST update the relevant fixtures/snapshots and keep
+   the per-method tolerance (declared alongside its `MethodSpec` in
+   `benchmarks/parity_timing/registry.py`) green — verify with
+   `parity/scripts/per_method_parity.py <id>`. Paper-only methods use
+   the self-consistency gate (`make parity-paper-only METHOD=<id>`)
+   instead of an external reference.
 3. **The ABI surface is monitored.** Any PR that adds, removes or
    renames an exported `n4m_*` symbol must regenerate
    `cpp/abi/expected_symbols_*.txt` for all three platforms and
@@ -119,32 +121,60 @@ In short:
   `docs:`, `test:`, `build:`, `ci:`, `refactor:`). Scope when relevant
   (e.g. `feat(abi):`, `fix(parity):`).
 
-## Adding a new PLS variant
+## Adding a new method
 
-The full procedure is encoded in
+A method's facts live in **~6 hand-edited surfaces**, and they are not generated
+from one source — you edit each and keep them consistent. The catalog is a
+*manifest* (ABI symbols, translation units, publications); the **registry**
+(`benchmarks/parity_timing/registry.py`) is what actually drives parity and
+timing; binding wrappers are hand-written. The PR checklist is
 [`.github/PULL_REQUEST_TEMPLATE/method-add.md`](.github/PULL_REQUEST_TEMPLATE/method-add.md).
-At a glance:
 
-1. **Catalog**: create `catalog/methods/<id>.yaml` (one file per method;
-   schema in [`catalog/README.md`](catalog/README.md)).
-2. **C++ impl** under `cpp/src/core/<category>/<id>.{cpp,hpp}` + the
-   `extern "C"` wrapper under `cpp/src/c_api/c_api_<category>.cpp`.
-3. **ABI snapshot** regen (automatic on CI; verify locally with `nm`).
-4. **Reference & parity**: pin the external reference's environment
-   under `parity/environments/<env_id>/`, write
-   `parity/scenarios/<id>.yaml`, regenerate snapshots with
-   `make snapshot METHOD=<id>`, calibrate tolerances in
-   `catalog/methods/<id>.yaml`, get `make parity METHOD=<id>` green.
-   For `paper_only` methods, populate the `self_consistency:` block
-   instead.
-5. **Bindings**: declare `bindings.<lang>.raw` and
-   `bindings.<lang>.idiomatic[]` in the catalog YAML; run
-   `python catalog/scripts/render_api.py` to regenerate wrappers
-   across every active language. **No hand-written per-method
-   per-binding code.**
-6. **Docs**: write `examples/canonical/<id>.yaml` (per-binding examples
-   are auto-generated); the Sphinx method page picks up the parity
-   badge and timing mini-table from `dashboard.json`.
+1. **C++ core + C ABI.** Implement under
+   `cpp/src/core/<category>/<id>.{c,cpp,h}` (C++17 internal; nothing from STL /
+   Eigen / no exceptions cross the boundary). Add the `extern "C"` wrapper in
+   `cpp/src/c_api/c_api_<category>.cpp` — or, for a `MethodResult`-style op, a
+   case in the dispatcher `cpp/src/c_api/c_api_method_result.cpp`. Declare the
+   public `N4M_API` symbols in `cpp/include/n4m/<category>.h`. The build picks up
+   new sources via `CONFIGURE_DEPENDS` globs; only touch
+   `cpp/src/n4m_targets.cmake` for a new vendored/optional dependency.
+2. **ABI snapshot (release blocker).** Regenerate
+   `cpp/abi/expected_symbols_{linux,macos,windows}.txt` for **all three**
+   platforms and update `docs/abi/changes_log.md`. CI fails closed on any
+   undocumented `n4m_*` symbol. Verify locally:
+   `nm -D --defined-only build/dev-release/cpp/src/libn4m.so.<ver> | awk '{print $3}' | sort -u | diff -u cpp/abi/expected_symbols_linux.txt -`.
+3. **Tests.** doctest cases in `cpp/tests/test_<category>.cpp` covering
+   create/apply + null/shape errors **and that a non-trivial input is actually
+   transformed** (determinism alone passes a silent no-op). For
+   deterministic-given-seed methods, freeze a self-fixture under
+   `parity/fixtures/<id>_v1.json` (IEEE-754 big-endian hex) and replay it with
+   `assert_close`. Run `ctest --preset dev-release`; one method:
+   `./build/dev-release/cpp/tests/n4m_tests --test-case="*<id>*"`.
+4. **Reference & parity.** Add a `MethodSpec` to
+   `benchmarks/parity_timing/registry.py` — this is where the external
+   reference, `adapted_params`, and `rmse_rel_tol` actually live. The reference
+   must be an installable, documented donor (`parity/REFERENCES.md`; confirm with
+   `parity/scripts/check_references.py`). Verify per-method:
+   `python parity/scripts/per_method_parity.py <id> --reference <ref> --tol 1e-8`
+   (Gate A = each binding vs the C++ core at 1e-12; Gate B = C++ core vs the
+   reference at 1e-8). Paper-only methods use
+   `make parity-paper-only METHOD=<id>` (self-consistency) instead.
+5. **Catalog manifest.** Add the row to `catalog/methods.yaml`, regenerate the
+   split file (`python catalog/scripts/split_legacy_methods.py` →
+   `catalog/methods/<id>.yaml`), and keep `abi_symbols` / `tu` / `headers` /
+   `parity` / `publications` matching the code. `python catalog/scripts/validate.py`
+   must pass. (Schema keys are `catalog_version`, `method_id`, `family`,
+   `category`, `abi_symbols`, `tu`, `headers`, `parity`, `bench`, `bindings`,
+   `publications`, `notes` — there is no `status` / `math` / `parameters` /
+   `self_consistency` / `scenarios` field.)
+6. **Bindings & docs.** Hand-write the Python wrapper in
+   `bindings/python/src/n4m/python.py` (+ argtypes in `_ffi_decls.py`; a
+   sklearn-style estimator in `bindings/python/src/n4m/sklearn/` if an idiomatic
+   profile is wanted), and other language bindings only if in scope.
+   `render_api.py` renders metadata, **not** package APIs, so wrappers are not
+   auto-generated. Add a `CHANGELOG.md` entry; for dashboard methods, register
+   the op in `benchmarks/cross_binding/donor_ops.py` and refresh
+   `docs/_static/bench-data.json`.
 
 ## Adding a new language binding
 

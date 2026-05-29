@@ -20,7 +20,9 @@ namespace {
 
 constexpr double kEps = 1e-12;
 constexpr std::int32_t kPowerMaxIter = 500;
-constexpr double kPowerTol = 1e-9;
+// Match libPLS powermethod.m: stop on the relative eigenvector change <= 1e-10
+// (was 1e-9 on the eigenvalue, which left a ~1e-6 gap vs the libPLS donor).
+constexpr double kPowerTol = 1e-10;
 
 [[nodiscard]] n4m_status_t copy_matrix(Context& ctx,
                                         const n4m_matrix_view_t& V,
@@ -115,7 +117,6 @@ void power_method(const std::vector<double>& H, std::size_t p,
     }
 
     std::vector<double> w_new(p, 0.0);
-    double prev_eig = 0.0;
     for (std::int32_t it = 0; it < kPowerMaxIter; ++it) {
         // w_new = H * w
         for (std::size_t i = 0; i < p; ++i) {
@@ -140,13 +141,21 @@ void power_method(const std::vector<double>& H, std::size_t p,
         if (dot < 0.0) {
             for (double& v : w_new) v = -v;
         }
-        const double eig = norm;  // Rayleigh-ish proxy after normalisation.
-        if (it > 0 && std::fabs(eig - prev_eig) < kPowerTol * std::fabs(prev_eig + kEps)) {
-            w = w_new;
+        // Convergence on the RELATIVE EIGENVECTOR change, matching libPLS
+        // powermethod.m (error = ||x1 - x0|| / ||x0|| <= 1e-10).
+        double delta_sq = 0.0;
+        double prev_norm_sq = 0.0;
+        for (std::size_t i = 0; i < p; ++i) {
+            const double d = w_new[i] - w[i];
+            delta_sq += d * d;
+            prev_norm_sq += w[i] * w[i];
+        }
+        const bool converged =
+            std::sqrt(delta_sq) <= kPowerTol * std::sqrt(prev_norm_sq + kEps);
+        w = w_new;
+        if (it > 0 && converged) {
             return;
         }
-        prev_eig = eig;
-        w = w_new;
     }
 }
 

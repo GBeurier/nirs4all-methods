@@ -530,17 +530,33 @@ def divergence_fields(row: dict) -> dict:
             "divergence_basis": "binding",
             "divergence_quality": "binding",
         }
+    note = (row.get("reference_parity_note") or "").strip().lower()
+    if note.startswith("cross_check"):
+        # A secondary external library vs the donor oracle: show the divergence
+        # so inter-library spread is visible, but mark it informational so it is
+        # never rendered as a strict-green "n4m matches" value.
+        diff = _float_or_none(row.get("reference_parity_rmse_rel"))
+        return {
+            "divergence": diff,
+            "divergence_fmt": _format_divergence(diff) if diff is not None else "—",
+            "divergence_basis": "cross_check",
+            "divergence_quality": "cross_check",
+        }
     if kind in ("n4m_core", "external"):
         # rmse_rel only — the tooltip says "rmse_rel" so falling back to
         # rmse_abs (different units, very different magnitude scale)
         # would be a silent lie about what the number means.
         diff = _float_or_none(row.get("reference_parity_rmse_rel"))
         tol = reference_tolerance(row)
+        # Selection methods are gated on Jaccard, not RMSE — a documented,
+        # allowed selection-convention divergence must not read as strict-green.
+        quality = ("cross_check" if note.startswith("selection_divergence_allowed")
+                   else _quality_from_tol(tol))
         return {
             "divergence": diff,
             "divergence_fmt": _format_divergence(diff) if diff is not None else "—",
             "divergence_basis": "reference",
-            "divergence_quality": _quality_from_tol(tol),
+            "divergence_quality": quality,
         }
     return {}
 
@@ -638,6 +654,20 @@ def reference_parity_code(row: dict) -> str:
     kind = (row.get("reference_kind") or "").lower()
     if kind == "paper_only":
         return "not_available"
+    # A *secondary* external library scored against the donor oracle is an
+    # informational cross-check (ok=None, note "cross_check"), never an n4m
+    # pass/fail — render it distinctly so its divergence shows but is not a red
+    # error nor a fake strict-green.
+    note = (row.get("reference_parity_note") or "").lower()
+    if note.startswith("cross_check"):
+        return "cross_check"
+    # Selection methods are gated on Jaccard set-overlap (not RMSE):
+    #   selection_exact -> ok=True -> "exact"; an allowed selection-convention
+    #   divergence is informational; a real mismatch is divergent.
+    if note.startswith("selection_divergence_allowed"):
+        return "cross_check"
+    if note.startswith("selection_mismatch"):
+        return "divergent"
     ref_ok = row.get("reference_parity_ok")
     if ref_ok in (None, "", "None"):
         return "not_available"

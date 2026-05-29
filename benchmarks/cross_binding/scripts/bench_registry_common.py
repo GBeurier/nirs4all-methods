@@ -43,10 +43,12 @@ def adapted_params(method, n: int, p: int, n_components: int) -> dict:
         requested = params["n_components"] if use_registry_components else n_components
         params["n_components"] = _cap_components(requested, n, p)
     if method.name in {"pls_lda", "pls_logistic", "pls_qda", "sparse_pls_da"}:
-        if method.name in {"pls_lda", "pls_logistic"}:
-            # The LDA/logistic C kernels are binary classifiers. Keep the
-            # benchmark cell in that supported regime even if the registry
-            # parity cell uses multiclass sklearn references.
+        if method.name in {"pls_lda", "pls_logistic"} and not use_registry_components:
+            # GLOBAL SIZE-SWEEP ONLY: keep LDA/logistic in the binary regime the
+            # historical sweep used. The --registry-cells parity run uses the
+            # registry cell's own multiclass n_classes, where the C kernels
+            # match sklearn at ~1e-15 (binary n_components=1 has a single-column
+            # decision-score convention that differs from sklearn ~1.3).
             params["n_classes"] = 2
         n_classes = int(params.get("n_classes", 2))
         params["n_components"] = max(1, min(int(params["n_components"]),

@@ -30,8 +30,8 @@ foreach(sym IN LISTS _exported_symbols)
 endforeach()
 list(APPEND _js_export_list
     "_malloc" "_free"
-    "_p4a_wasm_pls_fit_legacy"
-    "_p4a_wasm_pls_predict_from_coeffs")
+    "_n4m_wasm_pls_fit_legacy"
+    "_n4m_wasm_pls_predict_from_coeffs")
 string(REPLACE ";" "," _js_export_flag "${_js_export_list}")
 
 add_executable(pls4all_wasm

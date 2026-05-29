@@ -900,6 +900,7 @@
     .p-deferred { color: var(--indigo); }
     .p-not_run { color: var(--indigo); }
     .p-not_available { color: var(--fg-3); }
+    .p-cross_check { color: var(--indigo); }
     /* build-tier sentinel: "≡ native" for ops with no BLAS/OpenMP path */
     .cell-sentinel { color: var(--fg-3); font-size: 0.95em; opacity: 0.7; }
     .p-ok      { color: var(--phosphor); }
@@ -1045,6 +1046,7 @@
     .info-card li + li { margin-top: 6px; }
     .info-card .p-exact, .info-card .p-drift, .info-card .p-divergent,
     .info-card .p-error, .info-card .p-deferred, .info-card .p-not_run, .info-card .p-not_available,
+    .info-card .p-cross_check,
     .info-card .p-ok, .info-card .p-warn, .info-card .p-fail, .info-card .p-timeout {
       font-family: var(--mono); font-weight: 700; padding: 0 4px;
     }
@@ -1386,6 +1388,7 @@
       <span class="chip active crimson" data-parity="error"><span class="ico p-error">!</span>error</span>
       <span class="chip active gray" data-parity="deferred"><span class="ico p-deferred">…</span>deferred</span>
       <span class="chip active gray" data-parity="not_available"><span class="ico p-not_available">-</span>not available</span>
+      <span class="chip active" data-parity="cross_check"><span class="ico p-cross_check">⇄</span>cross-check</span>
     </div>
     <div class="filter-chips" id="origin-chips" title="filter rows by method origin">
       <span class="chip active" data-origin="pls4all" title="cross_binding registry methods (PLS-style)">pls4all</span>
@@ -1444,6 +1447,7 @@
     <span class="legend-item"><span class="ico p-error">!</span> error</span>
     <span class="legend-item"><span class="ico p-deferred">…</span> deferred for catch-up run</span>
     <span class="legend-item"><span class="ico p-not_available">-</span> not available in lib</span>
+    <span class="legend-item"><span class="ico p-cross_check">⇄</span> cross-check (secondary external lib vs donor oracle; informational)</span>
     <span class="legend-item"><span class="cell-fastest cell-fastest-bg score-row-best" style="font-family:var(--mono);padding:1px 6px;border-radius:2px">42.5</span> fastest row</span>
     <span class="legend-item"><span class="score-row-best">row best</span> · <span class="score-lang-best">language best</span> · <span class="score-close">≤15%</span> · <span class="score-mid">≤50%</span> · <span class="score-slow">≤100%</span> · <span class="score-bad">rest</span></span>
     <span class="legend-item" style="font-size:10px;color:var(--fg-2)">cell <code>X.X ✓✓</code>: gate 1 (binding ≡ cpp) · gate 2 (cpp ≈ external ref)</span>
@@ -1558,7 +1562,7 @@ function parseOrigin(raw) {
   return keys.length ? new Set(keys) : new Set(ORIGIN_VALUES);
 }
 const DENSITY_VALUES = ['comfortable', 'compact', 'ultra'];
-const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'deferred', 'not_run', 'not_available'];
+const PARITY_VALUES = ['exact', 'drift', 'divergent', 'error', 'deferred', 'not_run', 'not_available', 'cross_check'];
 const PARITY_ALIASES = {
   ok: 'exact',
   warn: 'drift',
@@ -1686,6 +1690,7 @@ const PARITY_ICON = {
   deferred: '…',
   not_run: '·',
   not_available: '-',
+  cross_check: '⇄',
   ok: '✓',
   warn: '≈',
   fail: '✗',

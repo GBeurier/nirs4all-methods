@@ -1,24 +1,24 @@
 {
   "algorithm": "rep_select",
   "backend": "ref_r_plsvarsel",
-  "max_runs": 40,
+  "max_runs": 2,
   "n": 200,
-  "n_runs": 19,
+  "n_runs": 1,
   "p": 40,
   "prediction_seed": 1234567890,
   "seed_base": 1234567890,
   "source_predictions_path": "/home/delete/nirs4all/nirs4all-methods/benchmarks/cross_binding/data/.predictions/rep_select_ref_r_plsvarsel_200x40_t10_blas-omp.npy",
-  "timing_statistic": "median",
-  "total_runs": 20,
+  "timing_statistic": "single",
+  "total_runs": 2,
   "versions": {
-    "blas": "libscipy_openblas 0.3.30 blas=10",
+    "blas": "libscipy_openblas 0.3.29 blas=10",
     "language": "R (host Linux x86_64)",
-    "numpy": "2.3.5",
+    "numpy": "2.2.6",
     "reference_id": "r_plsvarsel",
     "reference_library": "plsVarSel",
     "reference_version": "0.10.0",
     "timing_driver": "rscript-batch",
     "timing_schema": "adaptive-v1"
   },
-  "warmup_ms": 479.25
+  "warmup_ms": 612.823486328125
 }

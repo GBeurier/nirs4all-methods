@@ -399,6 +399,9 @@ struct Fixture {
     std::int64_t        fit_rows = 0;
     std::int64_t        fit_cols = 0;
     std::vector<double> fit_input;
+    // Optional wavelength axis (edge-artifact augmenters that need a W view).
+    bool                has_wavelengths = false;
+    std::vector<double> wavelengths;
     std::vector<Case>   cases;
 };
 
@@ -418,6 +421,12 @@ inline Fixture load_fixture(const std::string& path,
     }
     std::size_t input_pos = find_value_for_key(body, "input_hex", 0, body.size());
     parse_hex_double_array(body, input_pos, fx.input);
+
+    if (body.find("\"wavelengths_hex\"") != std::string::npos) {
+        std::size_t wl_pos = find_value_for_key(body, "wavelengths_hex", 0, body.size());
+        parse_hex_double_array(body, wl_pos, fx.wavelengths);
+        fx.has_wavelengths = !fx.wavelengths.empty();
+    }
 
     auto [cases_lo, cases_hi] = find_cases_array(body);
     auto spans = list_case_object_spans(body, cases_lo, cases_hi);

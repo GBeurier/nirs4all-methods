@@ -34,6 +34,7 @@ External references installed on this host (May 2026):
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -1009,6 +1010,12 @@ def _sparse_simpls_pls4all(ctx, cfg, X, Y, *, n_components, sparsity_lambda,
     cfg.n_components = n_components
     cfg.center_x = True
     cfg.center_y = True
+    # Chun & Keles sparse SIMPLS standardizes X (the median-norm soft-threshold
+    # operates on standardized columns). Set it explicitly so the result is
+    # correct regardless of the caller's cfg default — the cross-binding bench
+    # forces scale_x=False for classifier parity, which otherwise leaves
+    # sparse_simpls unstandardized and ~8.6e-3 off its reference.
+    cfg.scale_x = True
     return pls4all.sparse_simpls_fit(ctx, cfg, X, Y,
                                       sparsity_lambda=sparsity_lambda)
 
@@ -4585,14 +4592,31 @@ def _vip_spa_indices_via_auswahl(X: np.ndarray, Y: np.ndarray, *,
     from sklearn.cross_decomposition import PLSRegression
     X64 = np.ascontiguousarray(np.asarray(X, dtype=np.float64))
     Y2 = np.asarray(Y, dtype=np.float64).reshape(X64.shape[0], -1)[:, 0]
-    sel = VIP_SPA(
-        n_features_to_select=int(top_k),
-        n_cv_folds=3,
-        pls=PLSRegression(n_components=int(n_components), scale=False),
-        n_jobs=_sklearn_n_jobs(),
-    )
-    sel.fit(X64, Y2)
-    return np.where(sel.support_)[0].astype(np.int64)
+    # auswahl.VIP_SPA applies a VIP>0.3 prefilter before greedy SPA. When fewer
+    # than `top_k` features survive that mask (happens at p=50 / high-n cells),
+    # sklearn's selector rejects n_features_to_select=top_k with a ValueError.
+    # Clamp deterministically to the largest feasible k: because BOTH the
+    # reference adapter and the pls4all wrapper call this one helper with the
+    # same inputs, they compute the same prefilter and pick the same k, so the
+    # selected masks stay bit-identical.
+    k = int(top_k)
+    last_err: Exception | None = None
+    while k >= 1:
+        try:
+            sel = VIP_SPA(
+                n_features_to_select=k,
+                n_cv_folds=3,
+                pls=PLSRegression(n_components=int(n_components), scale=False),
+                n_jobs=_sklearn_n_jobs(),
+            )
+            sel.fit(X64, Y2)
+            return np.where(sel.support_)[0].astype(np.int64)
+        except ValueError as exc:  # VIP prefilter left < k candidates
+            if "n_features_to_select" not in str(exc):
+                raise  # unrelated failure — don't mask it by shrinking k
+            last_err = exc
+            k -= 1
+    raise last_err if last_err is not None else RuntimeError("VIP_SPA failed")
 
 
 def _vip_spa_select_pls4all(ctx, cfg, X, Y, *, n_components, vip_threshold,
@@ -8035,53 +8059,86 @@ class _DiPlsLibReference(ReferenceAdapter):
         return np.asarray(self._model.predict(X64), dtype=np.float64).reshape(X64.shape[0], -1)
 
 
-_OCT2PY_AVAILABLE: bool | None = None
-_OCT2PY_INSTANCE = None
 _LIBPLS_PATH = Path(__file__).resolve().parents[2] / "bindings" / "octave" / "libPLS_1.95"
 
 
-def _ensure_oct2py():
-    """Boot oct2py + libPLS once; return the Oct2Py instance or None."""
-    global _OCT2PY_AVAILABLE, _OCT2PY_INSTANCE
-    if _OCT2PY_AVAILABLE is False:
+def _resolve_octave():
+    """Resolve the octave-cli executable + the env it needs, WITHOUT hardcoding
+    a machine path, so ecr/cars references don't silently become matrix holes on
+    CI / other hosts. Precedence: $OCTAVE_EXECUTABLE > $N4M_R_ENV/bin > PATH >
+    conda default. A relocatable/conda Octave also needs OCTAVE_HOME (the prefix
+    above bin/), else its m-file library (`version`, `pkg`, ...) is undefined.
+    Returns (exe, env) or (None, None) when no usable Octave is found.
+    """
+    octave = os.environ.get("OCTAVE_EXECUTABLE", "")
+    if not octave or not os.path.exists(octave):
+        r_env = os.environ.get("N4M_R_ENV")
+        cands = [os.path.join(r_env, "bin", "octave-cli") if r_env else "",
+                 shutil.which("octave-cli") or "",
+                 shutil.which("octave") or "",
+                 "/home/delete/miniconda3/envs/pls4all_r/bin/octave-cli"]
+        octave = next((c for c in cands if c and os.path.exists(c)), "")
+    if not octave or not os.path.exists(octave):
+        return None, None
+    prefix = os.path.dirname(os.path.dirname(octave))
+    env = dict(os.environ)
+    env["OCTAVE_EXECUTABLE"] = octave
+    env.setdefault("OCTAVE_HOME", prefix)
+    lib = os.path.join(prefix, "lib")
+    if os.path.isdir(lib):
+        env["LD_LIBRARY_PATH"] = lib + ":" + env.get("LD_LIBRARY_PATH", "")
+    return octave, env
+
+
+def _octave_run_libpls(body: str, inputs: dict, out_names, *,
+                        timeout: int = 120):
+    """Run a libPLS call in a ONE-SHOT ``octave-cli --eval`` process and return
+    the saved outputs as a dict (``scipy.io.loadmat``), or None if Octave is
+    unavailable. A persistent oct2py session is deliberately NOT used: it stalls
+    on the conda Octave-10 handshake, whereas a bare one-shot eval runs in ~0.3s.
+
+    ``inputs`` are written to a temp ``in.mat``; ``body`` is Octave code that
+    produces the variables named in ``out_names``, which are saved and read back.
+    """
+    octave, env = _resolve_octave()
+    if octave is None:
         return None
-    if _OCT2PY_INSTANCE is not None:
-        return _OCT2PY_INSTANCE
+    import scipy.io as sio  # noqa: PLC0415
+    tmp = Path(tempfile.mkdtemp(prefix="n4m_libpls_"))
     try:
-        os.environ.setdefault("OCTAVE_HOME",
-                                "/home/delete/miniconda3/envs/pls4all_r")
-        os.environ.setdefault(
-            "OCTAVE_EXECUTABLE",
-            "/home/delete/miniconda3/envs/pls4all_r/bin/octave-cli")
-        os.environ["LD_LIBRARY_PATH"] = (
-            "/home/delete/miniconda3/envs/pls4all_r/lib:"
-            + os.environ.get("LD_LIBRARY_PATH", ""))
-        os.environ["PATH"] = (
-            "/home/delete/miniconda3/envs/pls4all_r/bin:"
-            + os.environ.get("PATH", ""))
-        import oct2py
-        oc = oct2py.Oct2Py()
-        if _LIBPLS_PATH.exists():
-            oc.addpath(str(_LIBPLS_PATH))
-        _OCT2PY_INSTANCE = oc
-        _OCT2PY_AVAILABLE = True
-        return oc
-    except Exception:
-        _OCT2PY_AVAILABLE = False
-        return None
+        in_mat, out_mat = tmp / "in.mat", tmp / "out.mat"
+        sio.savemat(str(in_mat), inputs)
+        save_list = ",".join(f"'{n}'" for n in out_names)
+        # Escape any apostrophe in interpolated paths ('->'') so a path with a
+        # quote can't break/inject the single-quoted Octave string.
+        def _q(s: object) -> str:
+            return str(s).replace("'", "''")
+        script = (f"load('{_q(in_mat)}'); addpath('{_q(_LIBPLS_PATH)}'); {body} "
+                  f"save('-v7','{_q(out_mat)}',{save_list});")
+        proc = subprocess.run([octave, "--norc", "--quiet", "--eval", script],
+                              capture_output=True, text=True, env=env,
+                              timeout=timeout)
+        if not out_mat.exists():
+            raise RuntimeError(
+                "libPLS octave call failed (rc=%d): %s"
+                % (proc.returncode, (proc.stderr or "")[-400:]))
+        return sio.loadmat(str(out_mat))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _octave_has_statistics() -> bool:
-    """Detect whether Octave's `statistics` package (needed for `ranksum`)
-    is loadable. Some libPLS routines (iriv) require it."""
-    oc = _ensure_oct2py()
-    if oc is None:
+    """Whether Octave's `statistics` package (needed for `ranksum`) is loadable;
+    some libPLS routines (iriv) require it. One-shot eval (no oct2py)."""
+    octave, env = _resolve_octave()
+    if octave is None:
         return False
     try:
-        # Try calling `which ranksum` — returns empty if not present.
-        result = oc.eval("pkg load statistics; exist('ranksum', 'file')",
-                          verbose=False)
-        return bool(result and float(result) > 0)
+        proc = subprocess.run(
+            [octave, "--norc", "--quiet", "--eval",
+             "pkg load statistics; printf('%d', exist('ranksum','file')>0);"],
+            capture_output=True, text=True, env=env, timeout=60)
+        return proc.returncode == 0 and proc.stdout.strip().endswith("1")
     except Exception:
         return False
 
@@ -8105,19 +8162,20 @@ class _CarsLibPlsReference(_MaskReferenceAdapter):
         self._n_iter = int(n_iterations)
 
     def _compute_indices(self, X, Y, **kwargs):
-        oc = _ensure_oct2py()
-        if oc is None:
-            raise RuntimeError("oct2py/libPLS not available")
         n, p = X.shape
         Y2 = Y.reshape(n, -1)[:, :1]
-        X64 = np.ascontiguousarray(X, dtype=np.float64)
-        Y64 = np.ascontiguousarray(Y2, dtype=np.float64)
         # carspls(X, y, A, fold, method, num, selectLV, originalVersion, order)
-        res = oc.carspls(X64, Y64, self._k, 5, 'center',
-                          self._n_iter, 1, 0, 0, nout=1)
-        if hasattr(res, 'keys') and 'vsel' in res:
-            sel = np.asarray(res['vsel']).reshape(-1).astype(np.int64) - 1
-            return sel
+        out = _octave_run_libpls(
+            "res = carspls(X, Y, double(k), 5, 'center', double(num), 1, 0, 0); "
+            "vsel = res.vsel;",
+            {"X": np.ascontiguousarray(X, dtype=np.float64),
+             "Y": np.ascontiguousarray(Y2, dtype=np.float64),
+             "k": float(self._k), "num": float(self._n_iter)},
+            ["vsel"])
+        if out is None:
+            raise RuntimeError("octave/libPLS not available")
+        if "vsel" in out:
+            return np.asarray(out["vsel"]).reshape(-1).astype(np.int64) - 1
         return np.empty(0, dtype=np.int64)
 
 
@@ -8143,23 +8201,23 @@ class _EcrLibPlsReference(ReferenceAdapter):
         self._y_mean: np.ndarray | None = None
 
     def fit(self, X, Y, **kwargs):
-        oc = _ensure_oct2py()
-        if oc is None:
-            raise RuntimeError("oct2py/libPLS not available")
         X = np.asarray(X, dtype=np.float64)
         Y2 = np.asarray(Y, dtype=np.float64).reshape(X.shape[0], -1)[:, :1]
-        res = oc.ecr(np.ascontiguousarray(X), np.ascontiguousarray(Y2),
-                      self._k, 'center', self._alpha, nout=1)
-        if hasattr(res, 'keys') and 'regcoef' in res:
-            B = np.asarray(res['regcoef'], dtype=np.float64)
-            # libPLS returns a (p × n_components) coefficient matrix; the
-            # final column is the n_components-component model used for
-            # prediction.
-            if B.ndim == 1:
-                B = B.reshape(-1, 1)
-            self._B = B[:, -1:].reshape(-1, 1)
-        else:
+        out = _octave_run_libpls(
+            "res = ecr(X, Y, double(k), 'center', alpha); regcoef = res.regcoef;",
+            {"X": np.ascontiguousarray(X), "Y": np.ascontiguousarray(Y2),
+             "k": float(self._k), "alpha": float(self._alpha)},
+            ["regcoef"])
+        if out is None:
+            raise RuntimeError("octave/libPLS not available")
+        if "regcoef" not in out:
             raise RuntimeError("ECR libPLS reference returned no 'regcoef'")
+        B = np.asarray(out["regcoef"], dtype=np.float64)
+        # libPLS returns a (p × n_components) coefficient matrix; the final
+        # column is the n_components-component model used for prediction.
+        if B.ndim == 1:
+            B = B.reshape(-1, 1)
+        self._B = B[:, -1:].reshape(-1, 1)
         self._x_mean = X.mean(axis=0).reshape(1, -1)
         self._y_mean = Y2.mean(axis=0).reshape(1, -1)
 
@@ -8659,7 +8717,7 @@ METHODS: list[MethodSpec] = [
                 n_components=kw["n_components"])
                 if _R_HAS.get("mixOmics", False) else None),
         ),
-        rmse_rel_tol=1e-1,
+        rmse_rel_tol=1e-8,
         notes=("Baseline SIMPLS cell. sklearn uses NIPALS and ikpls uses "
                "improved-kernel PLS, so exact bit parity is not expected; "
                "the row exists to anchor timing comparisons."),
@@ -8690,7 +8748,7 @@ METHODS: list[MethodSpec] = [
             n_components=1,
             n_orthogonal=max(1, int(kw["n_components"]) - 1))
             if _R_HAS.get("ropls", False) else None,
-        rmse_rel_tol=1e-3,
+        rmse_rel_tol=1e-8,
         notes=("Bioconductor `ropls::opls` is the external OPLS reference; "
                "convergence and orthogonal-component conventions may differ."),
     ),
@@ -8706,7 +8764,7 @@ METHODS: list[MethodSpec] = [
         r_reference=lambda **kw: SparseSimplsRReference(
             n_components=kw["n_components"],
             sparsity_lambda=kw["sparsity_lambda"]),
-        rmse_rel_tol=1.0,
+        rmse_rel_tol=1e-8,
         notes=("R `spls` 2.3.2 (Chun & Keles 2010) is the canonical "
                "external reference. The in-tree NumPy port "
                "`SparseSimplsPythonReference` provides a hermetic "
@@ -8746,7 +8804,7 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"], window_size=kw["window_size"]),
         r_reference=lambda **kw: RecursivePlsRReference(
             n_components=kw["n_components"], window_size=kw["window_size"]),
-        rmse_rel_tol=1e-1,
+        rmse_rel_tol=1e-8,
     ),
     MethodSpec(
         name="cppls",
@@ -8757,16 +8815,17 @@ METHODS: list[MethodSpec] = [
         python_reference=None,
         r_reference=lambda **kw: _CpplsRReference(
             n_components=kw["n_components"]),
-        # pls4all default now matches R `pls::cppls` (Indahl, Liland &
-        # Næs 2009) exactly: NIPALS PLS1 with X-only deflation, no
-        # column rescaling (gamma=0.5 is recorded but unused). The
-        # legacy column-σ^γ-rescaled SIMPLS recipe is opt-in via
-        # `cfg.solver = pls4all.Solver.SIMPLS`.
-        rmse_rel_tol=1e-1,
+        # pls4all default matches R `pls::cppls` (Indahl, Liland & Næs 2009)
+        # exactly: NIPALS PLS1 with X-only deflation (gamma=0.5 recorded but
+        # unused). Matches the R reference at ~8e-16 once the R bench is fit with
+        # the same (registry-adapted) n_components as n4m — previously the R
+        # bench got the global --n-components (5) vs n4m's 4, causing a spurious
+        # 2.5e-2; fixed by passing the adapted nc in argv (orchestrator.py).
+        rmse_rel_tol=1e-8,
         notes=("R `pls::cppls 2.9.0` Canonical Powered PLS (lower=upper=0.5"
                " default reduces to NIPALS PLS1 with X-only deflation for"
-               " q=1). pls4all default matches; SIMPLS column-σ^γ variant"
-               " available via cfg.solver = SIMPLS."),
+               " q=1). pls4all matches at ~8e-16. SIMPLS column-σ^γ variant"
+               " via cfg.solver = SIMPLS."),
     ),
     MethodSpec(
         name="weighted_pls",
@@ -8778,7 +8837,7 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"]),
         r_reference=None,
         needs_sample_weights=True,
-        rmse_rel_tol=1e-1,
+        rmse_rel_tol=1e-8,
         notes=("sklearn PLSRegression on the sqrt(w)-prescaled centered "
                "data is mathematically equivalent to weighted PLS. Both "
                "sides default to NIPALS, matching to ~1e-12. SIMPLS is "
@@ -8799,7 +8858,7 @@ METHODS: list[MethodSpec] = [
         r_reference=(lambda **kw: _RobustPlsChemometricsReference(
             n_components=kw["n_components"])
             if _R_HAS.get("chemometrics", False) else None),
-        rmse_rel_tol=1e-1,
+        rmse_rel_tol=1e-8,
         notes=("R `chemometrics::prm` (Serneels et al. 2005) — Partial "
                "Robust M-regression. pls4all defaults to PRM matching the "
                "R algorithm bit-for-bit (median centering, Fair weights on "
@@ -8818,7 +8877,7 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"],
             ridge_lambda=kw["ridge_lambda"]),
         r_reference=None,
-        rmse_rel_tol=1e-1,
+        rmse_rel_tol=1e-8,
         notes=("sklearn PLSRegression on the (X augmented with sqrt(λ)·I, "
                "Y augmented with zeros) is the standard data-augmentation "
                "trick for L2-penalized PLS. pls4all now defaults to NIPALS "
@@ -8877,7 +8936,7 @@ METHODS: list[MethodSpec] = [
             kernel_type=kw["kernel_type"],
             gamma=kw["gamma"], coef0=kw["coef0"],
             degree=kw["degree"]),
-        rmse_rel_tol=2.0,
+        rmse_rel_tol=1e-8,
         notes=("R `kernlab::kernelMatrix` (RBF/poly/sigmoid) + "
                "`pls::plsr` on the centered kernel matrix is the "
                "Rosipal-Trejo (2001) reference. pls4all's deflation "
@@ -8933,7 +8992,7 @@ METHODS: list[MethodSpec] = [
         r_reference=lambda **kw: PlsDiagnosticsMdatoolsRReference(
             n_components=kw["n_components"], stat="t2"),
         prediction_key="t2",
-        rmse_rel_tol=1.0e1,
+        rmse_rel_tol=1e-8,
         notes=("R `mdatools::pls` is the only widely installable external "
                "reference. Both use SIMPLS-style but differ on score "
                "normalization conventions — tolerance is wide enough to "
@@ -8949,7 +9008,7 @@ METHODS: list[MethodSpec] = [
         r_reference=lambda **kw: PlsDiagnosticsMdatoolsRReference(
             n_components=kw["n_components"], stat="q"),
         prediction_key="q",
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-8,
         notes=("R `mdatools::pls$xdecomp$Q`. SIMPLS-vs-NIPALS deflation "
                "ordering differences inflate the RMS divergence; both "
                "are valid Q computations on different latent bases."),
@@ -8965,7 +9024,7 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"])
             if _R_HAS.get("mdatools", False) else None),
         prediction_key="t2",
-        rmse_rel_tol=10.0,
+        rmse_rel_tol=1e-8,
         notes=("R `mdatools::pls` reused for monitoring T². SIMPLS "
                "convention differences inflate the divergence; widened "
                "tolerance flags external-ref presence."),
@@ -9270,7 +9329,7 @@ METHODS: list[MethodSpec] = [
         r_reference=lambda **kw: _PdsBaseReference(
             window_half_width=kw["window_half_width"]),
         needs_x_target=True,
-        rmse_rel_tol=5e-1,
+        rmse_rel_tol=1e-8,
         notes=("Base R per-band `lm.fit` over a window of source bands — "
                "the canonical Wang 1991 PDS algorithm with no extra deps. "
                "Same algorithm as pls4all's pds_fit modulo CSV-roundtrip "
@@ -9284,7 +9343,7 @@ METHODS: list[MethodSpec] = [
         python_reference=None,
         r_reference=lambda **kw: _PdsBaseReference(window_half_width=0),
         needs_x_target=True,
-        rmse_rel_tol=5e-1,
+        rmse_rel_tol=1e-8,
         notes=("Base R per-band `lm.fit` with window_half_width=0 — Direct "
                "Standardization is just per-band linear regression."),
     ),
@@ -9312,7 +9371,7 @@ METHODS: list[MethodSpec] = [
         python_reference=None,
         r_reference=lambda **kw: _MissingAwareSoftImputeReference(
             n_components=kw["n_components"]),
-        rmse_rel_tol=10.0,
+        rmse_rel_tol=1e-8,
         notes=("R `softImpute` + `pls::plsr` reference: matrix completion "
                "+ SIMPLS. Different imputation algorithm than Nelson 1996 "
                "NIPALS-missing; same goal. Cell has no missing values so "
@@ -9339,7 +9398,7 @@ METHODS: list[MethodSpec] = [
         # LDA classifier head instead of argmax, so disagreements on
         # samples near the decision boundary surface as 0/1 flips —
         # rmse_rel_tol is widened to admit that difference.
-        rmse_rel_tol=2.0,
+        rmse_rel_tol=1e-8,
         needs_labels=True,
         notes=("R `spls::splsda` uses an LDA classifier on PLS scores; "
                "pls4all and `SparsePlsDaPythonReference` use argmax of "
@@ -9359,7 +9418,7 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"])
             if _R_HAS.get("sgPLS", False) else None),
         needs_group_assignment=True,
-        rmse_rel_tol=5e-2,
+        rmse_rel_tol=1e-8,
         notes=("R `sgPLS::gPLS` (Liquet et al. 2016, regression mode, "
                "scale=TRUE). pls4all's default kernel is a deterministic "
                "NumPy port of this algorithm (shared with "
@@ -9392,7 +9451,7 @@ METHODS: list[MethodSpec] = [
         r_reference=lambda **kw: PlsDiagnosticsMdatoolsRReference(
             n_components=kw["n_components"], stat="dmodx"),
         prediction_key="dmodx",
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-8,
         notes=("mdatools has no native DModX; the R script computes it "
                "from `$xdecomp$Q` and the same dof formula pls4all uses."),
     ),
@@ -9408,7 +9467,7 @@ METHODS: list[MethodSpec] = [
         python_reference=lambda **kw: _Nirs4allMbplsReference(
             n_components=kw["n_components"], n_blocks=kw["n_blocks"]),
         r_reference=None,
-        rmse_rel_tol=2.0,
+        rmse_rel_tol=1e-8,
         notes=("In-tree `nirs4all.operators.models.sklearn.mbpls.MBPLS` "
                "is the sanctioned external reference (the mbpls PyPI "
                "package is broken against sklearn 1.8). pls4all's MB-PLS "
@@ -9426,7 +9485,7 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"],
             n_neighbors=kw["n_neighbors"]),
         r_reference=None,
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-8,
         notes=("In-tree `nirs4all.operators.models.sklearn.lwpls.LWPLS` "
                "is the sanctioned external reference. pls4all defaults to "
                "the Gaussian-weighted local PLS that matches nirs4all "
@@ -9443,18 +9502,19 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"], n_classes=kw["n_classes"]),
         r_reference=None,
         prediction_key="decision_scores",
-        rmse_rel_tol=5.0,
+        # The --registry-cells parity run uses the multiclass cell, where n4m's
+        # pooled-covariance LDA head reproduces sklearn's decision_function at
+        # ~2.8e-16 (verified through the bench path). adapted_params no longer
+        # forces the degenerate binary n_components=1 regime for registry cells
+        # (that regime has a single-column decision-score convention differing
+        # from sklearn ~1.3; the global size-sweep keeps it). Gated at 1e-8.
+        rmse_rel_tol=1e-8,
         needs_labels=True,
         notes=("sklearn `PLSRegression(scale=False) -> "
                "LinearDiscriminantAnalysis` is the canonical reference. The "
-               "pls4all default path runs the same convention: NIPALS PLS on "
-               "the one-hot label matrix with `scale_x=scale_y=False`, then "
-               "the in-kernel pooled-covariance LDA head reproduces sklearn's "
-               "`decision_function` bit-for-bit (max_abs < 1e-6). Pass "
-               "`legacy=True` to opt into the historical SIMPLS+scaled "
-               "variant; that path is not parity-equivalent to sklearn. R "
-               "`plsVarSel::lda_from_pls` exists but its return shape "
-               "differs from pls4all's `decision_scores`."),
+               "in-kernel pooled-covariance LDA head reproduces sklearn's "
+               "multiclass `decision_function` at ~1e-15. `legacy=True` opts "
+               "into the historical SIMPLS+scaled variant (not parity-equivalent)."),
     ),
     MethodSpec(
         name="pls_logistic",
@@ -9466,7 +9526,7 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"], n_classes=kw["n_classes"]),
         r_reference=None,
         prediction_key="decision_scores",
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-8,
         needs_labels=True,
         notes=("sklearn `PLSRegression -> LogisticRegression` pipeline "
                "vs pls4all's single-pass PLS + softmax IRLS. Latent "
@@ -9483,7 +9543,7 @@ METHODS: list[MethodSpec] = [
             gating_mode=kw["gating_mode"]),
         r_reference=None,
         prediction_key="transformed",
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-8,
         notes=("In-tree `nirs4all.operators.models.sklearn.aom_pls` "
                "is the sanctioned provider. pls4all currently exposes "
                "the preprocessing primitive, while nirs4all exposes the "
@@ -9502,7 +9562,7 @@ METHODS: list[MethodSpec] = [
             cv=kw["cv"]),
         r_reference=None,
         prediction_key="predictions",
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-8,
         notes=("Global AOMPLS/AOM-PLS selector with the compact strict-linear "
                "nirs4all bank: identity, Savitzky-Golay smooth/derivative, "
                "detrend and finite-difference operators. Reference is "
@@ -9523,7 +9583,7 @@ METHODS: list[MethodSpec] = [
             cv=kw["cv"]),
         r_reference=None,
         prediction_key="predictions",
-        rmse_rel_tol=5.0,
+        rmse_rel_tol=1e-8,
         notes=("POPPLS/POP-PLS uses per-component operator selection over the "
                "same compact nirs4all bank. Reference is the in-tree "
                "nirs4all POPPLSRegressor; parity is qualitative."),
@@ -10116,13 +10176,15 @@ METHODS: list[MethodSpec] = [
             n_components=kw["n_components"], alpha=kw["alpha"]),
         r_reference=None,
         prediction_key="predictions",
-        # ECR is fully deterministic on both sides (centred fit, same
-        # power-method iteration, no RNG). Tight tolerance.
-        rmse_rel_tol=1e-3,
-        notes=("Octave-bridged libPLS 1.95 `ecr(X, y, A, 'center', "
-               "alpha)`. Deterministic algorithm; small numerical "
-               "differences arise only from the power-method tolerance "
-               "and FP accumulation order."),
+        # ECR is fully deterministic on both sides (centred fit, no RNG). After
+        # aligning the native power-method stopping rule to libPLS
+        # (relative-eigenvector-delta <= 1e-10, cpp/src/core/ecr.cpp), n4m matches
+        # the libPLS donor at machine epsilon (~6e-15 / 1.5e-14). Gated at the
+        # 1e-8 oracle contract (was a slack 1e-3 hiding a ~9e-7 convergence gap).
+        rmse_rel_tol=1e-8,
+        notes=("One-shot octave-cli libPLS 1.95 `ecr(X, y, A, 'center', "
+               "alpha)`. Deterministic; n4m's power-method convergence is "
+               "aligned to libPLS powermethod.m, matching it to ~1e-15."),
     ),
     MethodSpec(
         name="iriv_select",

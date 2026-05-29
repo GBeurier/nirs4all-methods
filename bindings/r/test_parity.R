@@ -65,7 +65,9 @@ cat(sprintf("R predictions vs native fixture: rmse_rel = %.3e\n",
 cat("First 3 R preds:    ", sprintf("%.6f ", preds[1:3, 1]), "\n")
 cat("First 3 fixture:    ", sprintf("%.6f ", ref_preds[1:3, 1]), "\n")
 
-if (rmse_rel > 1e-6) {
-  stop(sprintf("R parity failure: rmse_rel = %.3e > 1e-6", rmse_rel))
+# Binding-integrity gate: native R binding vs the C++ engine is the same
+# deterministic algorithm, so the contract is 1e-12 (achieved ~9.4e-18).
+if (rmse_rel > 1e-12) {
+  stop(sprintf("R parity failure: rmse_rel = %.3e > 1e-12", rmse_rel))
 }
 cat("R smoke + parity OK\n")

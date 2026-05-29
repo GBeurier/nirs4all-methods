@@ -1,0 +1,180 @@
+# SPDX-License-Identifier: CECILL-2.1
+"""Regenerate (or check) the libn4m self-fixtures for the stochastic edge /
+spline / random augmenters.
+
+Ten ``parity/fixtures/aug_*_v1.json`` files shipped with ``output_hex`` byte-
+identical to ``input_hex`` — identity placeholders that lock nothing. These
+augmenters are *self-fixtures*: the oracle is libn4m's own deterministic output
+at the canonical seed (donor bit-parity vs nirs4all is explicitly out of scope
+for stochastic augmenters — nirs4all's numpy RNG ≠ n4m's PCG64, see
+``benchmarks/cross_binding/donor_ops.py``). This tool freezes that output so the
+C++ replay in ``cpp/tests/test_augmenters_edge_splines_random.cpp`` becomes a
+real regression-lock.
+
+``spline_smooth`` is deliberately excluded: it is the only FITPACK-gated
+augmenter (a no-op when N4M_HAVE_FITPACK=0, real smoothing when =1), so its
+output is build-dependent and a single committed self-fixture cannot lock it.
+``detector_rolloff`` stays in: its fixture wavelengths (1000–1700 nm) sit inside
+detector model 4's optimal band, so it is deterministically pass-through here —
+the replay locks that in-band signal is not corrupted.
+
+The libn4m call path (PCG64 seed → ``*_create`` → ``*_apply``) is identical to
+the C++ test, so regenerated values match the test bit-for-bit by construction.
+
+Usage (libn4m must be built; point N4M_LIB_PATH at it)::
+
+    N4M_LIB_PATH=build/blas-omp/cpp/src/libn4m.so.1.9.0 \
+    PYTHONPATH=bindings/python/src \
+        python parity/scripts/regen_aug_fixtures.py            # rewrite in place
+    ... regen_aug_fixtures.py --check                          # verify only (CI)
+"""
+from __future__ import annotations
+
+import argparse
+import ctypes
+import json
+import struct
+import sys
+from pathlib import Path
+
+import numpy as np
+
+from n4m.python import _aug_apply  # noqa: E402  (after sys.path / env are set)
+
+# Canonical augmenter parity seed — mirrors `kSeed` in
+# cpp/tests/test_augmenters_edge_splines_random.cpp.
+K_SEED = 3298921130
+
+FIXTURE_DIR = Path(__file__).resolve().parents[1] / "fixtures"
+
+
+def _i32(v) -> ctypes.c_int32:
+    return ctypes.c_int32(int(v))
+
+
+def _f64(v) -> ctypes.c_double:
+    return ctypes.c_double(float(v))
+
+
+# Per-augmenter: libn4m symbol prefix, whether apply takes the wavelength axis,
+# and how the case `params` map onto the C `*_create` argument list (order +
+# type must match the C++ smoke/parity calls exactly).
+def _detector_rolloff(p):
+    return [_i32(p.get("detector_model", 4)), _f64(p.get("effect_strength", 1.0)),
+            _f64(p.get("noise_amplification", 0.02)),
+            _i32(p.get("include_baseline_distortion", 1))]
+
+
+def _stray_light(p):
+    return [_f64(p.get("stray_light_fraction", 0.001)), _f64(p.get("edge_enhancement", 2.0)),
+            _f64(p.get("edge_width", 0.1)), _i32(p.get("include_peak_truncation", 1))]
+
+
+def _edge_curve(p):
+    return [_f64(p.get("curvature_strength", 0.02)), _i32(p.get("curvature_type", 1)),
+            _f64(p.get("asymmetry", 0.0)), _f64(p.get("edge_focus", 0.7))]
+
+
+def _truncated_peak(p):
+    return [_f64(p.get("peak_probability", 0.5)), _f64(p.get("amplitude_min", 0.01)),
+            _f64(p.get("amplitude_max", 0.1)), _f64(p.get("width_min", 50.0)),
+            _f64(p.get("width_max", 200.0)), _i32(p.get("left_edge", 1)),
+            _i32(p.get("right_edge", 1))]
+
+
+def _edge_artifacts(p):
+    return [_i32(p.get("enabled_flags", 15)), _f64(p.get("overall_strength", 1.0)),
+            _i32(p.get("detector_model", 4))]
+
+
+def _spline_x_perturb(p):
+    return [_i32(p.get("spline_degree", 3)), _f64(p.get("perturbation_density", 0.05)),
+            _f64(p.get("perturbation_range_min", -0.1)),
+            _f64(p.get("perturbation_range_max", 0.1))]
+
+
+def _spline_y_perturb(p):
+    return [_i32(p.get("spline_points", -1)), _f64(p.get("perturbation_intensity", 0.005))]
+
+
+def _rotate_translate(p):
+    return [_f64(p.get("p_range", 2.0)), _f64(p.get("y_factor", 3.0))]
+
+
+def _random_x_op(p):
+    return [_i32(p.get("op_kind", 0)), _f64(p.get("operator_range_min", 0.97)),
+            _f64(p.get("operator_range_max", 1.03))]
+
+
+SPECS = [
+    ("aug_detector_rolloff_v1.json", "n4m_aug_detector_rolloff", True,  _detector_rolloff),
+    ("aug_stray_light_v1.json",      "n4m_aug_stray_light",      True,  _stray_light),
+    ("aug_edge_curve_v1.json",       "n4m_aug_edge_curve",       True,  _edge_curve),
+    ("aug_truncated_peak_v1.json",   "n4m_aug_truncated_peak",   True,  _truncated_peak),
+    ("aug_edge_artifacts_v1.json",   "n4m_aug_edge_artifacts",   True,  _edge_artifacts),
+    ("aug_spline_x_perturb_v1.json", "n4m_aug_spline_x_perturb", False, _spline_x_perturb),
+    ("aug_spline_y_perturb_v1.json", "n4m_aug_spline_y_perturb", False, _spline_y_perturb),
+    ("aug_rotate_translate_v1.json", "n4m_aug_rotate_translate", False, _rotate_translate),
+    ("aug_random_x_op_v1.json",      "n4m_aug_random_x_op",      False, _random_x_op),
+]
+
+
+def _decode(hexes: list[str]) -> np.ndarray:
+    """ieee754_binary64_be_hex (one big-endian hex string per double)."""
+    return np.array([struct.unpack(">d", bytes.fromhex(h))[0] for h in hexes],
+                    dtype=np.float64)
+
+
+def _encode(arr: np.ndarray) -> list[str]:
+    return [struct.pack(">d", float(v)).hex() for v in np.asarray(arr).reshape(-1)]
+
+
+def _compute(fx: dict, prefix: str, needs_wl: bool, build, params: dict) -> np.ndarray:
+    rows, cols = int(fx["rows"]), int(fx["cols"])
+    X = _decode(fx["input_hex"]).reshape(rows, cols)
+    wl = _decode(fx["wavelengths_hex"]).reshape(-1) if "wavelengths_hex" in fx else None
+    seed = int(params.get("random_state", K_SEED))
+    out = _aug_apply(prefix, X, *build(params), seed=seed,
+                     wavelengths=wl, apply_wavelengths=needs_wl)
+    return np.asarray(out, dtype=np.float64)
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--check", action="store_true",
+                    help="verify stored output_hex matches libn4m; do not write")
+    args = ap.parse_args(argv)
+
+    stale = 0
+    for fname, prefix, needs_wl, build in SPECS:
+        path = FIXTURE_DIR / fname
+        fx = json.loads(path.read_text())
+        changed = False
+        for case in fx["cases"]:
+            out = _compute(fx, prefix, needs_wl, build, case.get("params", {}))
+            new_hex = _encode(out)
+            old_hex = case.get("output_hex", [])
+            if new_hex != old_hex:
+                changed = True
+                case["output_hex"] = new_hex
+                case["output_rows"] = int(out.shape[0])
+                case["output_cols"] = int(out.shape[1])
+        if changed:
+            stale += 1
+            if args.check:
+                print(f"  STALE   {fname}")
+            else:
+                path.write_text(json.dumps(fx, indent=2) + "\n")
+                print(f"  rewrote {fname}")
+        else:
+            print(f"  ok      {fname}")
+
+    if args.check and stale:
+        print(f"\n{stale} fixture(s) do not match libn4m — run without --check to regenerate.")
+        return 1
+    print(f"\n{'checked' if args.check else 'regenerated'} {len(SPECS)} augmenter fixtures.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

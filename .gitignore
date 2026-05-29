@@ -140,3 +140,5 @@ parity/results/self_consistency.json
 # Generated dual-package dirs (bindings/python/scripts/make_python_package.py)
 bindings/python_nirs4all_methods/
 bindings/python_pls4all/
+parity/.nirs4all_ref_venv/
+octave-workspace

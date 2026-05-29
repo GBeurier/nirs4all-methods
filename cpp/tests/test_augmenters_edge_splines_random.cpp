@@ -142,6 +142,38 @@ void test_detector_rolloff() {
     n4m_aug_detector_rolloff_destroy(h);
     n4m_aug_detector_rolloff_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference (seed echoed as kSeed = 3298921130).
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_detector_rolloff_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto seed = static_cast<std::uint64_t>(n4m_testing::params_get_int(
+            c.params_json, "random_state", static_cast<std::int64_t>(kSeed)));
+        const int model = static_cast<int>(n4m_testing::params_get_int(
+            c.params_json, "detector_model", 4));
+        const double strength = n4m_testing::params_get_double(
+            c.params_json, "effect_strength", 1.0);
+        const double noise = n4m_testing::params_get_double(
+            c.params_json, "noise_amplification", 0.02);
+        const int baseline = n4m_testing::params_get_int(
+            c.params_json, "include_baseline_distortion", 1) ? 1 : 0;
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_detector_rolloff_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
+            &hh, r, model, strength, noise, baseline) == N4M_OK);
+        std::vector<double> in = fx.input, wl = fx.wavelengths;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "detector_rolloff parity[" + c.name + "]");
+        n4m_aug_detector_rolloff_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -172,6 +204,38 @@ void test_stray_light() {
 
     n4m_aug_stray_light_destroy(h);
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_stray_light_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto seed = static_cast<std::uint64_t>(n4m_testing::params_get_int(
+            c.params_json, "random_state", static_cast<std::int64_t>(kSeed)));
+        const double fraction = n4m_testing::params_get_double(
+            c.params_json, "stray_light_fraction", 0.001);
+        const double edge_enh = n4m_testing::params_get_double(
+            c.params_json, "edge_enhancement", 2.0);
+        const double edge_width = n4m_testing::params_get_double(
+            c.params_json, "edge_width", 0.1);
+        const int peak_trunc = n4m_testing::params_get_int(
+            c.params_json, "include_peak_truncation", 1) ? 1 : 0;
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_stray_light_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_stray_light_create(
+            &hh, r, fraction, edge_enh, edge_width, peak_trunc) == N4M_OK);
+        std::vector<double> in = fx.input, wl = fx.wavelengths;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_stray_light_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "stray_light parity[" + c.name + "]");
+        n4m_aug_stray_light_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -202,6 +266,38 @@ void test_edge_curvature() {
 
     n4m_aug_edge_curve_destroy(h);
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_edge_curve_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto seed = static_cast<std::uint64_t>(n4m_testing::params_get_int(
+            c.params_json, "random_state", static_cast<std::int64_t>(kSeed)));
+        const double curvature = n4m_testing::params_get_double(
+            c.params_json, "curvature_strength", 0.02);
+        const int type = static_cast<int>(n4m_testing::params_get_int(
+            c.params_json, "curvature_type", 1));
+        const double asymmetry = n4m_testing::params_get_double(
+            c.params_json, "asymmetry", 0.0);
+        const double edge_focus = n4m_testing::params_get_double(
+            c.params_json, "edge_focus", 0.7);
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_edge_curve_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_edge_curve_create(
+            &hh, r, curvature, type, asymmetry, edge_focus) == N4M_OK);
+        std::vector<double> in = fx.input, wl = fx.wavelengths;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_edge_curve_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "edge_curve parity[" + c.name + "]");
+        n4m_aug_edge_curve_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -233,6 +329,44 @@ void test_truncated_peak() {
 
     n4m_aug_truncated_peak_destroy(h);
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_truncated_peak_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto seed = static_cast<std::uint64_t>(n4m_testing::params_get_int(
+            c.params_json, "random_state", static_cast<std::int64_t>(kSeed)));
+        const double prob = n4m_testing::params_get_double(
+            c.params_json, "peak_probability", 0.5);
+        const double amp_min = n4m_testing::params_get_double(
+            c.params_json, "amplitude_min", 0.01);
+        const double amp_max = n4m_testing::params_get_double(
+            c.params_json, "amplitude_max", 0.1);
+        const double w_min = n4m_testing::params_get_double(
+            c.params_json, "width_min", 50.0);
+        const double w_max = n4m_testing::params_get_double(
+            c.params_json, "width_max", 200.0);
+        const int left = n4m_testing::params_get_int(
+            c.params_json, "left_edge", 1) ? 1 : 0;
+        const int right = n4m_testing::params_get_int(
+            c.params_json, "right_edge", 1) ? 1 : 0;
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_truncated_peak_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_truncated_peak_create(
+            &hh, r, prob, amp_min, amp_max, w_min, w_max, left, right) == N4M_OK);
+        std::vector<double> in = fx.input, wl = fx.wavelengths;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_truncated_peak_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "truncated_peak parity[" + c.name + "]");
+        n4m_aug_truncated_peak_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -284,6 +418,36 @@ void test_edge_artifacts_combined() {
     n4m_aug_edge_artifacts_destroy(h);
 
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_edge_artifacts_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto seed = static_cast<std::uint64_t>(n4m_testing::params_get_int(
+            c.params_json, "random_state", static_cast<std::int64_t>(kSeed)));
+        const int flags = static_cast<int>(n4m_testing::params_get_int(
+            c.params_json, "enabled_flags", 15));
+        const double strength = n4m_testing::params_get_double(
+            c.params_json, "overall_strength", 1.0);
+        const int model = static_cast<int>(n4m_testing::params_get_int(
+            c.params_json, "detector_model", 4));
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_edge_artifacts_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_create(
+            &hh, r, flags, strength, model) == N4M_OK);
+        std::vector<double> in = fx.input, wl = fx.wavelengths;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "edge_artifacts parity[" + c.name + "]");
+        n4m_aug_edge_artifacts_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -328,6 +492,14 @@ void test_spline_smoothing() {
 
     n4m_aug_spline_smooth_destroy(h);
     n4m_rng_pcg64_destroy(rng);
+
+    // NOTE: no bit-exact fixture replay here. spline_smooth is the only
+    // FITPACK-gated augmenter (cpp/src/core/augmentation/splines/
+    // spline_smoothing.c): with N4M_HAVE_FITPACK=0 (no Fortran compiler) it is
+    // an intentional no-op, with FITPACK=1 it performs real spline smoothing.
+    // A single committed self-fixture can only match one build config, so a
+    // bit-exact oracle is deferred to a Fortran-enabled CI lane. See
+    // PRODUCTION_AUDIT.md §10.
 }
 
 // -------------------------------------------------------------------------
@@ -358,6 +530,37 @@ void test_spline_x_perturbations() {
 
     n4m_aug_spline_x_perturb_destroy(h);
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_spline_x_perturb_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto seed = static_cast<std::uint64_t>(n4m_testing::params_get_int(
+            c.params_json, "random_state", static_cast<std::int64_t>(kSeed)));
+        const int degree = static_cast<int>(n4m_testing::params_get_int(
+            c.params_json, "spline_degree", 3));
+        const double density = n4m_testing::params_get_double(
+            c.params_json, "perturbation_density", 0.05);
+        const double range_min = n4m_testing::params_get_double(
+            c.params_json, "perturbation_range_min", -0.1);
+        const double range_max = n4m_testing::params_get_double(
+            c.params_json, "perturbation_range_max", 0.1);
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_spline_x_perturb_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_create(
+            &hh, r, degree, density, range_min, range_max) == N4M_OK);
+        std::vector<double> in = fx.input;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_apply(hh, Xv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "spline_x_perturb parity[" + c.name + "]");
+        n4m_aug_spline_x_perturb_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -387,6 +590,33 @@ void test_spline_y_perturbations() {
 
     n4m_aug_spline_y_perturb_destroy(h);
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_spline_y_perturb_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto seed = static_cast<std::uint64_t>(n4m_testing::params_get_int(
+            c.params_json, "random_state", static_cast<std::int64_t>(kSeed)));
+        const int points = static_cast<int>(n4m_testing::params_get_int(
+            c.params_json, "spline_points", -1));
+        const double intensity = n4m_testing::params_get_double(
+            c.params_json, "perturbation_intensity", 0.005);
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_spline_y_perturb_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_create(
+            &hh, r, points, intensity) == N4M_OK);
+        std::vector<double> in = fx.input;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_apply(hh, Xv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "spline_y_perturb parity[" + c.name + "]");
+        n4m_aug_spline_y_perturb_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -535,6 +765,33 @@ void test_rotate_translate() {
 
     n4m_aug_rotate_translate_destroy(h);
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_rotate_translate_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto seed = static_cast<std::uint64_t>(n4m_testing::params_get_int(
+            c.params_json, "random_state", static_cast<std::int64_t>(kSeed)));
+        const double p_range = n4m_testing::params_get_double(
+            c.params_json, "p_range", 2.0);
+        const double y_factor = n4m_testing::params_get_double(
+            c.params_json, "y_factor", 3.0);
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_rotate_translate_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_rotate_translate_create(
+            &hh, r, p_range, y_factor) == N4M_OK);
+        std::vector<double> in = fx.input;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_rotate_translate_apply(hh, Xv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "rotate_translate parity[" + c.name + "]");
+        n4m_aug_rotate_translate_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -596,6 +853,35 @@ void test_random_x_operation() {
         &h, rng, /*op=*/99, 0.97, 1.03) == N4M_ERR_INVALID_ARGUMENT);
 
     n4m_rng_pcg64_destroy(rng);
+
+    // Parity vs frozen nirs4all reference.
+    const auto fx = n4m_testing::load_fixture(
+        std::string(N4M_PARITY_FIXTURE_DIR) + "/aug_random_x_op_v1.json",
+        /*require_per_case_output_shape=*/true);
+    for (const auto& c : fx.cases) {
+        const auto seed = static_cast<std::uint64_t>(n4m_testing::params_get_int(
+            c.params_json, "random_state", static_cast<std::int64_t>(kSeed)));
+        const int op = static_cast<int>(n4m_testing::params_get_int(
+            c.params_json, "op_kind", 0));
+        const double range_min = n4m_testing::params_get_double(
+            c.params_json, "operator_range_min", 0.97);
+        const double range_max = n4m_testing::params_get_double(
+            c.params_json, "operator_range_max", 1.03);
+        n4m_rng_pcg64_state_t* r = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
+        n4m_aug_random_x_op_handle_t* hh = nullptr;
+        N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+            &hh, r, op, range_min, range_max) == N4M_OK);
+        std::vector<double> in = fx.input;
+        std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
+        n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
+        N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(hh, Xv2, Ov2) == N4M_OK);
+        n4m_testing::assert_close(out, c.expected_output,
+                                  "random_x_op parity[" + c.name + "]");
+        n4m_aug_random_x_op_destroy(hh);
+        n4m_rng_pcg64_destroy(r);
+    }
 }
 
 }  // namespace

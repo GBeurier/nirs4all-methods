@@ -1,23 +1,23 @@
 {
   "algorithm": "pls",
   "backend": "ref_python_scikit_learn",
-  "max_runs": 40,
+  "max_runs": 2,
   "n": 200,
-  "n_runs": 39,
+  "n_runs": 1,
   "p": 50,
   "prediction_seed": 1234567890,
   "seed_base": 1234567890,
   "source_predictions_path": "/home/delete/nirs4all/nirs4all-methods/benchmarks/cross_binding/data/.predictions/pls_ref_python_scikit_learn_200x50_t10_blas-omp.npy",
-  "timing_statistic": "median",
-  "total_runs": 40,
+  "timing_statistic": "single",
+  "total_runs": 2,
   "versions": {
-    "blas": "libscipy_openblas 0.3.30 blas=10; libscipy_openblas 0.3.30 blas=10; libgomp ? openmp=10",
-    "language": "Python 3.13.13",
-    "numpy": "2.3.5",
+    "blas": "libscipy_openblas 0.3.29 blas=10; libscipy_openblas 0.3.28 blas=10; libgomp ? openmp=10",
+    "language": "Python 3.10.12",
+    "numpy": "2.2.6",
     "reference_id": "python_scikit_learn",
     "reference_library": "scikit-learn",
-    "reference_version": "1.8.0",
+    "reference_version": "1.7.2",
     "timing_schema": "adaptive-v1"
   },
-  "warmup_ms": 596.3123629335314
+  "warmup_ms": 535.2121870964766
 }
