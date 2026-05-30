@@ -9,6 +9,9 @@
 // point below is declared there and links via the same executable.
 void register_rng_pcg64_tests(n4m_testing::Runner& r);
 
+// R-compatible Mersenne-Twister RNG parity tests live in test_rng_mt_r.cpp.
+void register_rng_mt_r_tests(n4m_testing::Runner& r);
+
 // Phase 2 — stateless preprocessing parity tests live in
 // test_preprocessing_stateless.cpp.
 void register_preprocessing_stateless_tests(n4m_testing::Runner& r);
@@ -154,6 +157,7 @@ int main() {
     r.run("dtype_sizes",                        test_dtype_sizes);
     r.run("backend_reference_cpu_available",    test_backend_reference_cpu_available);
     register_rng_pcg64_tests(r);
+    register_rng_mt_r_tests(r);
     register_preprocessing_stateless_tests(r);
     register_preprocessing_stateful_tests(r);
     register_preprocessing_smoothing_tests(r);

@@ -24,6 +24,10 @@ add_executable(n4m_tests
     test_preprocessing_stateless.cpp
     test_preprocessing_wavelets.cpp
     test_rng_pcg64.cpp
+    test_rng_mt_r.cpp
+    # rng_mt_r is an internal core module (hidden visibility in libn4m), so the
+    # parity test compiles it directly rather than linking it through n4m_c.
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/common/rng_mt_r.c
     test_signal_type.cpp
     test_splitters.cpp
     test_transfer_metrics.cpp)
