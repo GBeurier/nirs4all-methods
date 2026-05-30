@@ -75,7 +75,8 @@ def uve_r_exact(X: np.ndarray, y: np.ndarray, *, seed: int = 11, n_iter: int = 3
             for i in range(n):
                 mask = np.ones(n, bool); mask[i] = False
                 m = PLSRegression(n_components=k, scale=False).fit(Zc[mask], yc[mask])
-                e2 += (yc[i] - m.predict(Zc[i:i + 1])[0, 0]) ** 2
+                pred = np.asarray(m.predict(Zc[i:i + 1])).ravel()[0]
+                e2 += (yc[i] - pred) ** 2
             press[k] = e2
         return press
 

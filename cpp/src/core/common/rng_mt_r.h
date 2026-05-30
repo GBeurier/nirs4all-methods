@@ -52,6 +52,16 @@ double n4m_rng_mt_r_norm(n4m_rng_mt_r* rng);
 /* Inverse standard-normal CDF (Wichura AS 241), exposed for testing. */
 double n4m_qnorm5_std(double p);
 
+/* R 3.6+ R_unif_index (sample.kind="Rejection"): a uniform integer in [0, dn)
+ * via rejection sampling of ceil(log2(dn)) bits drawn from 16-bit unif chunks.
+ * Bit-identical to R's R_unif_index — the basis of R's sample(). */
+double n4m_rng_mt_r_unif_index(n4m_rng_mt_r* rng, double dn);
+
+/* R's sample(n): a 0-based permutation of [0, n) via Fisher-Yates using
+ * n4m_rng_mt_r_unif_index (R's equal-probability no-replacement do_sample).
+ * Writes n entries into out[0..n). Bit-identical to `set.seed(s); sample(n) - 1`. */
+void n4m_rng_mt_r_sample(n4m_rng_mt_r* rng, int n, int* out);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif

@@ -7,6 +7,7 @@
 #include "rng_mt_r.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 /* ---- MT19937 constants (Matsumoto & Nishimura 1998, R's RNG.c values) ---- */
 #define MT_N 624
@@ -145,4 +146,44 @@ double n4m_rng_mt_r_norm(n4m_rng_mt_r* rng) {
     double u1 = n4m_rng_mt_r_unif(rng);
     u1 = (double)(int)(N4M_BIG * u1) + n4m_rng_mt_r_unif(rng);
     return n4m_qnorm5_std(u1 / N4M_BIG);
+}
+
+/* R's rbits(bits): assemble `bits` random bits from 16-bit unif chunks
+ * (R src/main/RNG.c). */
+static double n4m_mt_rbits(n4m_rng_mt_r* rng, int bits) {
+    int64_t v = 0;
+    for (int n = 0; n <= bits; n += 16) {
+        int v1 = (int)floor(n4m_rng_mt_r_unif(rng) * 65536.0);
+        v = 65536 * v + v1;
+    }
+    return (double)(v & (((int64_t)1 << bits) - 1));
+}
+
+double n4m_rng_mt_r_unif_index(n4m_rng_mt_r* rng, double dn) {
+    /* R 3.6+ R_unif_index, sample.kind="Rejection". */
+    if (dn <= 0.0) return 0.0;
+    int bits = (int)ceil(log2(dn));
+    double dv;
+    do { dv = n4m_mt_rbits(rng, bits); } while (dn <= dv);
+    return dv;
+}
+
+void n4m_rng_mt_r_sample(n4m_rng_mt_r* rng, int n, int* out) {
+    /* R do_sample, equal-probability no-replacement Fisher-Yates
+     * (R src/main/random.c): pool x[i]=i; for i: j=R_unif_index(n_);
+     * out[i]=x[j]; x[j]=x[--n_]. Emits R's `sample(n) - 1` (0-based). */
+    if (n <= 0) return;
+    int* pool = (int*)malloc((size_t)n * sizeof(int));
+    if (pool == NULL) {                  /* OOM: degrade to identity */
+        for (int i = 0; i < n; i++) out[i] = i;
+        return;
+    }
+    for (int i = 0; i < n; i++) pool[i] = i;
+    int nn = n;
+    for (int i = 0; i < n; i++) {
+        int j = (int)n4m_rng_mt_r_unif_index(rng, (double)nn);
+        out[i] = pool[j];
+        pool[j] = pool[--nn];
+    }
+    free(pool);
 }

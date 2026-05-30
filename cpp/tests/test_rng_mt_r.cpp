@@ -26,6 +26,7 @@ void   n4m_rng_mt_r_set_seed(void* rng, std::uint32_t seed);
 double n4m_rng_mt_r_unif(void* rng);
 double n4m_rng_mt_r_norm(void* rng);
 double n4m_qnorm5_std(double p);
+void   n4m_rng_mt_r_sample(void* rng, int n, int* out);
 }
 
 namespace {
@@ -84,6 +85,21 @@ void test_qnorm5_median_and_symmetry() {
     N4M_TEST_REQUIRE(std::fabs(hi - 1.959963984540054) < 1e-12);
 }
 
+void test_sample_bit_exact_vs_R() {
+    // R 4.3.3: set.seed(11); sample(10) - 1  ==  {9,1,7,0,6,4,3,8,2,5}
+    //          set.seed(11); sample(5)  - 1  ==  {1,4,0,3,2}
+    RMtBuf buf;
+    int out[10];
+    constexpr int want10[10] = {9, 1, 7, 0, 6, 4, 3, 8, 2, 5};
+    n4m_rng_mt_r_set_seed(&buf, 11u);
+    n4m_rng_mt_r_sample(&buf, 10, out);
+    for (int i = 0; i < 10; ++i) N4M_TEST_REQUIRE(out[i] == want10[i]);
+    constexpr int want5[5] = {1, 4, 0, 3, 2};
+    n4m_rng_mt_r_set_seed(&buf, 11u);
+    n4m_rng_mt_r_sample(&buf, 5, out);
+    for (int i = 0; i < 5; ++i) N4M_TEST_REQUIRE(out[i] == want5[i]);
+}
+
 }  // namespace
 
 void register_rng_mt_r_tests(n4m_testing::Runner& r);
@@ -92,4 +108,5 @@ void register_rng_mt_r_tests(n4m_testing::Runner& r) {
     r.run("rng_mt_r_rnorm_bit_exact_vs_R",   test_rnorm_bit_exact_vs_R);
     r.run("rng_mt_r_set_seed_resets_stream", test_set_seed_resets_stream);
     r.run("rng_mt_r_qnorm5_median_symmetry", test_qnorm5_median_and_symmetry);
+    r.run("rng_mt_r_sample_bit_exact_vs_R",  test_sample_bit_exact_vs_R);
 }
