@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <new>
 #include <numeric>
 #include <vector>
@@ -14,6 +15,8 @@
 #include "core/common/matrix_view.hpp"
 #include "core/stability_selection.hpp"
 #include "core/common/status.hpp"
+#include "core/model.hpp"
+#include "core/common/rng_mt_r.h"
 
 namespace {
 
@@ -236,6 +239,227 @@ void standardize_noise_columns(std::vector<double>& augmented,
     return order;
 }
 
+// ---------------------------------------------------------------------------
+// R-exact MCUVE path (opt-in via cfg.rng_kind == N4M_RNG_MT_R).
+//
+// Reproduces R `plsVarSel::mcuve_pls` for-the-selected-set:
+//   W   <- matrix(runif(Nx*Mx,0,1), Mx, Nx)   (R-MT, column-major, NOT scaled)
+//   Z   <- cbind(X, W);  K <- floor(Mx*ratio)  (== first MC fold's train size)
+//   for it in 1..N: calk <- sample(Mx)[1:K]
+//                   opt  <- which.min(LOO-PRESS over 1..ncomp comps)
+//                   C[it,] <- coef(plsr(scale=FALSE), opt)
+//   RI  <- colMeans(C)/colSd(C);  thr <- max|RI[noise]|
+//   sel <- which(|RI[real]| > thr); too-few fallback -> top-ncomp |RI[real]|.
+// Every primitive is bit-exact / parity-validated; proven Jaccard 1.0 vs R in
+// parity/scripts/uve_r_exact_reference.py and the doctest. The default
+// rng_kind (SPLITMIX64) keeps the historical path untouched — this is additive.
+// ---------------------------------------------------------------------------
+
+[[nodiscard]] ::n4m::core::Config r_exact_pls_cfg(const ::n4m::core::Config& base,
+                                                  std::int32_t k) noexcept {
+    ::n4m::core::Config cfg = base;
+    cfg.algorithm = N4M_ALGO_PLS_REGRESSION;
+    cfg.solver = N4M_SOLVER_NIPALS;
+    cfg.deflation = N4M_DEFLATION_REGRESSION;
+    cfg.n_components = k;
+    cfg.center_x = 1;
+    cfg.center_y = 1;
+    cfg.scale_x = 0;   // R plsr(scale = FALSE)
+    cfg.scale_y = 0;
+    return cfg;
+}
+
+[[nodiscard]] n4m_status_t r_exact_fit_coef(::n4m::core::Context& ctx,
+                                            const ::n4m::core::Config& base,
+                                            const std::vector<double>& Zrows,
+                                            std::size_t n_rows,
+                                            std::size_t n_cols,
+                                            const std::vector<double>& yrows,
+                                            std::int32_t k,
+                                            std::vector<double>& out_coef) {
+    ::n4m::core::Config cfg = r_exact_pls_cfg(base, k);
+    auto Zv = const_cast<std::vector<double>&>(Zrows);
+    auto Yv = const_cast<std::vector<double>&>(yrows);
+    n4m_matrix_view_t Xview = rowmajor_f64_view(Zv, static_cast<std::int64_t>(n_rows),
+                                                static_cast<std::int64_t>(n_cols));
+    n4m_matrix_view_t Yview = rowmajor_f64_view(Yv, static_cast<std::int64_t>(n_rows), 1);
+    std::unique_ptr<::n4m::core::Model> model;
+    const n4m_status_t st = ::n4m::core::fit_model(ctx, cfg, Xview, Yview, model);
+    if (st != N4M_OK) return st;
+    if (!model || model->coefficients.size() != n_cols) return N4M_ERR_INTERNAL;
+    out_coef = model->coefficients;   // n_cols x 1
+    return N4M_OK;
+}
+
+[[nodiscard]] double r_exact_loo_predict(::n4m::core::Context& ctx,
+                                         const ::n4m::core::Config& base,
+                                         const std::vector<double>& Ztrain,
+                                         std::size_t train_rows,
+                                         std::size_t n_cols,
+                                         const std::vector<double>& ytrain,
+                                         std::int32_t k,
+                                         const double* xrow,
+                                         bool& ok) {
+    ::n4m::core::Config cfg = r_exact_pls_cfg(base, k);
+    auto Zv = const_cast<std::vector<double>&>(Ztrain);
+    auto Yv = const_cast<std::vector<double>&>(ytrain);
+    n4m_matrix_view_t Xview = rowmajor_f64_view(Zv, static_cast<std::int64_t>(train_rows),
+                                                static_cast<std::int64_t>(n_cols));
+    n4m_matrix_view_t Yview = rowmajor_f64_view(Yv, static_cast<std::int64_t>(train_rows), 1);
+    std::unique_ptr<::n4m::core::Model> model;
+    if (::n4m::core::fit_model(ctx, cfg, Xview, Yview, model) != N4M_OK || !model) {
+        ok = false;
+        return 0.0;
+    }
+    std::vector<double> xbuf(xrow, xrow + n_cols);
+    std::vector<double> pred(1, 0.0);
+    n4m_matrix_view_t xv = rowmajor_f64_view(xbuf, 1, static_cast<std::int64_t>(n_cols));
+    n4m_matrix_view_t pv = rowmajor_f64_view(pred, 1, 1);
+    if (::n4m::core::predict_into(ctx, *model, xv, pv) != N4M_OK) {
+        ok = false;
+        return 0.0;
+    }
+    ok = true;
+    return pred[0];
+}
+
+[[nodiscard]] n4m_status_t select_by_uve_r_exact(::n4m::core::Context& ctx,
+                                                 const ::n4m::core::Config& cfg,
+                                                 const n4m_matrix_view_t& X,
+                                                 const n4m_matrix_view_t& Y,
+                                                 const ::n4m::core::ValidationPlan& plan,
+                                                 std::uint64_t seed,
+                                                 ::n4m::core::UveSelectionResult& out) {
+    const auto Mx = static_cast<std::size_t>(X.rows);
+    const auto Nx = static_cast<std::size_t>(X.cols);
+    const std::size_t total = 2U * Nx;                       // [X | W]
+    const std::size_t N = plan.folds.size();                // MC iterations (R's N)
+    const std::size_t K = std::min(plan.folds[0].train_indices.size(), Mx);  // floor(Mx*ratio)
+
+    std::int32_t ncomp = cfg.n_components;                   // R clamps to min(Mx, Nx, ncomp)
+    {
+        const std::int32_t cap = static_cast<std::int32_t>(std::min(Mx, Nx));
+        if (ncomp > cap) ncomp = cap;
+        if (ncomp < 1) ncomp = 1;
+    }
+
+    std::vector<double> y(Mx, 0.0);
+    for (std::size_t i = 0; i < Mx; ++i) y[i] = read_value(Y, i, 0);
+
+    // Z = [X | W]; W = Nx unscaled runif columns, R-MT, column-major fill.
+    std::vector<double> Z(Mx * total, 0.0);
+    for (std::size_t i = 0; i < Mx; ++i)
+        for (std::size_t j = 0; j < Nx; ++j)
+            Z[idx(i, total, j)] = read_value(X, i, j);
+    n4m_rng_mt_r rng;
+    n4m_rng_mt_r_set_seed(&rng, static_cast<std::uint32_t>(seed));
+    for (std::size_t j = 0; j < Nx; ++j)                     // column-major (R matrix())
+        for (std::size_t i = 0; i < Mx; ++i)
+            Z[idx(i, total, Nx + j)] = n4m_rng_mt_r_unif(&rng);
+
+    std::vector<double> C(N * total, 0.0);
+    std::vector<int> perm(Mx, 0);
+    for (std::size_t it = 0; it < N; ++it) {
+        n4m_rng_mt_r_sample(&rng, static_cast<int>(Mx), perm.data());
+        const std::size_t k_rows = K;
+        std::vector<double> Zcal(k_rows * total, 0.0);
+        std::vector<double> ycal(k_rows, 0.0);
+        for (std::size_t r = 0; r < k_rows; ++r) {
+            const auto src = static_cast<std::size_t>(perm[r]);
+            for (std::size_t c = 0; c < total; ++c) Zcal[idx(r, total, c)] = Z[idx(src, total, c)];
+            ycal[r] = y[src];
+        }
+        std::int32_t maxk = ncomp;
+        if (maxk > static_cast<std::int32_t>(total) - 1) maxk = static_cast<std::int32_t>(total) - 1;
+        if (maxk > static_cast<std::int32_t>(k_rows) - 1) maxk = static_cast<std::int32_t>(k_rows) - 1;
+        if (maxk < 1) maxk = 1;
+
+        std::int32_t opt = 1;
+        double best_press = std::numeric_limits<double>::infinity();
+        for (std::int32_t k = 1; k <= maxk; ++k) {
+            double press = 0.0;
+            bool ok = true;
+            for (std::size_t hold = 0; hold < k_rows && ok; ++hold) {
+                std::vector<double> Ztr((k_rows - 1) * total, 0.0);
+                std::vector<double> ytr(k_rows - 1, 0.0);
+                std::size_t w = 0;
+                for (std::size_t r = 0; r < k_rows; ++r) {
+                    if (r == hold) continue;
+                    for (std::size_t c = 0; c < total; ++c)
+                        Ztr[idx(w, total, c)] = Zcal[idx(r, total, c)];
+                    ytr[w] = ycal[r];
+                    ++w;
+                }
+                const double pred = r_exact_loo_predict(ctx, cfg, Ztr, k_rows - 1, total,
+                                                        ytr, k, &Zcal[idx(hold, total, 0)], ok);
+                const double e = ycal[hold] - pred;
+                press += e * e;
+            }
+            if (ok && press < best_press) {
+                best_press = press;
+                opt = k;
+            }
+        }
+
+        std::vector<double> coef;
+        const n4m_status_t st = r_exact_fit_coef(ctx, cfg, Zcal, k_rows, total, ycal, opt, coef);
+        if (st != N4M_OK) {
+            out = ::n4m::core::UveSelectionResult{};
+            return st;
+        }
+        for (std::size_t c = 0; c < total; ++c) C[it * total + c] = coef[c];
+    }
+
+    // RI = colMeans(C) / colSd(C, ddof = 1).
+    std::vector<double> RI(total, 0.0);
+    for (std::size_t c = 0; c < total; ++c) {
+        double mean = 0.0;
+        for (std::size_t it = 0; it < N; ++it) mean += C[it * total + c];
+        mean /= static_cast<double>(N);
+        double ss = 0.0;
+        for (std::size_t it = 0; it < N; ++it) {
+            const double d = C[it * total + c] - mean;
+            ss += d * d;
+        }
+        const double sd = (N > 1U) ? std::sqrt(ss / static_cast<double>(N - 1U)) : 0.0;
+        RI[c] = (sd > 0.0) ? mean / sd : 0.0;
+    }
+
+    double thr = 0.0;
+    for (std::size_t j = Nx; j < total; ++j) thr = std::max(thr, std::fabs(RI[j]));
+
+    out = ::n4m::core::UveSelectionResult{};
+    out.real_stability_scores.assign(Nx, 0.0);
+    out.noise_stability_scores.assign(Nx, 0.0);
+    for (std::size_t j = 0; j < Nx; ++j) out.real_stability_scores[j] = std::fabs(RI[j]);
+    for (std::size_t j = 0; j < Nx; ++j) out.noise_stability_scores[j] = std::fabs(RI[Nx + j]);
+    out.noise_threshold = thr;
+
+    std::vector<std::int64_t> sel;
+    for (std::size_t j = 0; j < Nx; ++j)
+        if (std::fabs(RI[j]) > thr) sel.push_back(static_cast<std::int64_t>(j));
+    // R too-few fallback: take the top-ncomp |RI[real]| when the threshold rule
+    // keeps no more than ncomp+1 features.
+    if (sel.size() <= static_cast<std::size_t>(ncomp + 1)) {
+        std::vector<std::int64_t> order = rank_descending(out.real_stability_scores);
+        order.resize(static_cast<std::size_t>(ncomp));
+        std::sort(order.begin(), order.end());
+        sel = order;
+    } else {
+        std::sort(sel.begin(), sel.end());
+    }
+
+    out.selected_indices = sel;
+    out.n_features = static_cast<std::int32_t>(Nx);
+    out.n_targets = static_cast<std::int32_t>(Y.cols);
+    out.n_repeats = static_cast<std::int32_t>(N);
+    out.n_noise_features = static_cast<std::int32_t>(Nx);
+    out.selected_count = static_cast<std::int32_t>(sel.size());
+    out.noise_seed = seed;
+    ctx.clear_error();
+    return N4M_OK;
+}
+
 }  // namespace
 
 namespace n4m::core {
@@ -253,6 +477,13 @@ n4m_status_t select_by_uve(Context& ctx,
         n4m_status_t status = validate_request(ctx, X, Y, plan, noise_features);
         if (status != N4M_OK) {
             return status;
+        }
+
+        // Opt-in R-exact MCUVE path (additive): reproduces R
+        // plsVarSel::mcuve_pls bit-for-set. The default rng_kind
+        // (SPLITMIX64) falls through to the historical path below, unchanged.
+        if (cfg.rng_kind == static_cast<std::int32_t>(N4M_RNG_MT_R)) {
+            return select_by_uve_r_exact(ctx, cfg, X, Y, plan, noise_seed, out);
         }
 
         std::vector<double> augmented;
