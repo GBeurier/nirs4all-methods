@@ -27,28 +27,40 @@ R's exact algorithm (decoded from `deparse(mcuve_pls)`):
 4. `RI = mean/sd` over iters; threshold `max(|RI[noise]|)`; selection
    `which(|RI[real]| > threshold)` + a too-few-selected fallback.
 
-On a fixed 40×12 dataset (signal in features 3 & 8):
-- R `mcuve_pls` selects **{3, 8}** (1-based). The RI of the real features is
-  `[0.18, -0.10, 11.36, 0.13, 0.08, 0.18, 0.08, -7.43, -0.71, 0.47, 0.01, 0.16]`
-  — features 3 and 8 dominate by ~10× over everything else (all |RI| < 0.7).
-- n4m's C kernel (different noise model + splitmix RNG) selects **{2, 7}**
-  (0-based) = **the same features. Jaccard 1.0.**
+On a fixed 40×12 dataset (signal in features 3 & 8), MEASURED (not assumed):
+- R `mcuve_pls` (set.seed(11), N=3, ratio=0.75, ncomp=5) selects **{3,4,5,8,9}**
+  (1-based) = **{2,3,4,7,8}** 0-based. R's RI for the real features is
+  `[-1.02, 0.34, 34.2, 1.74, -2.48, 1.03, 0.58, -36.6, -1.03, -0.61, -0.79, -0.28]`
+  with noise threshold `max|RI_noise| = 4.99`: features 3 & 8 dominate, and
+  4, 5, 9 are the borderline ones near the threshold.
+- n4m's C kernel (different noise model + splitmix RNG) selects **{0,2,4,7,8,11}**
+  (0-based) = {1,3,5,8,9,12} 1-based.
+- Overlap {2,4,7,8} / union {0,2,3,4,7,8,11} → **Jaccard 4/7 ≈ 0.57.**
 
-## Conclusion (the load-bearing finding)
+So the honest result is NOT "already matches": the strong features (3, 8) agree,
+but the BORDERLINE features near the noise threshold (R's 4,5,9 vs n4m's 1,12)
+diverge — exactly because n4m's noise model (standardized signed-uniform,
+splitmix) and LOO-PRESS path differ from R's (unstandardized U(0,1), R-MT).
+This is the dashboard's Jaccard-0.75-class gap, reproduced.
 
-**n4m's UVE is not wrong, and on signal-dominated data it ALREADY matches R
-bit-for-set (Jaccard 1.0) despite a different noise model and RNG** — because
-strong features dominate the noise threshold by an order of magnitude. The
-dashboard's Jaccard 0.75 (e.g. uve at 200×40) is a **borderline-feature**
-effect: one feature sits near the noise threshold and n4m vs R classify it
-differently because their noise realizations differ. It is *intrinsic to a
-stochastic noise-threshold selector*, not a bug.
+## What it takes to close it — and the building blocks all exist
 
-To force Jaccard 1.0 **even on borderline features**, n4m's C kernel must be
-rewritten to replicate R exactly: Nx unstandardized `runif` noise cols (RNG:
-have) + `sample()` subsampling (have) + `pls::plsr` SIMPLS coefficients (have,
-~1e-13) + **per-subsample LOO-PRESS `which.min(opt.comp)`** (the fragile part:
-a discrete argmin that can flip on 1e-12 PRESS ties) + RI/threshold/fallback.
+To reach Jaccard 1.0, n4m's UVE C kernel must replicate R exactly. Every piece
+is now available in n4m:
+- Nx unstandardized `runif(0,1)` noise cols — **RNG have** (`rng_mt_r_unif`, bit-exact).
+- `sample()` subsampling — **have** (`rng_mt_r_sample`, golden-tested bit-exact).
+- `pls::plsr` SIMPLS coefficients — **have** (n4m PLS ~1e-13 vs pls::plsr).
+- per-subsample **LOO-PRESS `which.min(opt.comp)`** — **have**
+  (`n4m_approximate_press_compute`, legacy=0, documented to match
+  `pls::plsr(validation='LOO', method='simpls', scale=FALSE)` bit-for-bit,
+  cpp/src/core/extra_pls.cpp:3097). The fragile bit is the discrete argmin
+  (can flip on ~1e-12 PRESS ties), but the PRESS values themselves are available.
+- RI mean/sd + threshold + too-few fallback — trivial.
+
+So a `uve_legacy=0` R-exact path is **feasible additively** (new code path behind
+a config flag; the current splitmix kernel stays as the default), and the only
+real risk is the LOO-PRESS argmin tie-sensitivity. Estimated ~1 day for the uve
+path itself + a fixture parity test vs R.
 
 ## Stop decision (per maintainer: "selon les difficultés rencontrées, on arrête")
 
