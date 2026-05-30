@@ -107,6 +107,50 @@ numpy-referenced stochastic surface is mostly composites the C kernel does not
 run. Tier B (RNG abstraction) is the enabler for the 12–15 R cases + 3 auswahl
 cases.
 
+## 3c. Codex review corrections (verified vs source — authoritative over §3b)
+
+A read-only Codex review (high reasoning) checked the analysis against the code
+and corrected three factual points + added two risks:
+
+1. **R-referenced set ≥ 12 and `iriv_select` is NOT R-backed.** R-default
+   selectors include stability, uve, spa, cars, ga, shaving, bve, emcuve,
+   randomization, rep, ipw, st, wvc_threshold (registry.py:3588/3845/3957/4867/
+   5001/5119/5244/5381). `iriv_select` routes through a **NumPy port using
+   `default_rng`** (registry.py:4485, 7659), not R.
+2. **auswahl is NOT numpy-PCG64.** It passes `random_state=int(seed)`
+   (registry.py:1562/4014/7543); auswahl 0.9.0 uses sklearn
+   `check_random_state` → legacy **`numpy.random.RandomState` (MT19937)**, not
+   `default_rng`/PCG64. The auswahl cases need a THIRD engine (numpy
+   RandomState-MT); the "cheap PCG64 Tier A" is smaller/different than hoped.
+3. **`n4m.h:344` overclaims PCG64 adoption** — UVE/EMCUVE public APIs take only
+   a seed (pls.h:1404/1605) and UVE uses file-local splitmix64
+   (uve_selection.cpp:144/215). The header comment needs correcting.
+4. **RISK (Tier B): symbol-additive ≠ behaviour-preserving.** splitmix is
+   duplicated file-local across ~10 selectors with method-specific seed
+   perturbations (EMCUVE `noise_seed + ensemble*golden`
+   emcuve_selection.cpp:87; randomization per-permutation seed :281;
+   randomized-SVD context-seed offset model.cpp:766). **Freeze current splitmix
+   streams with golden tests BEFORE the vtable refactor**; default `rng_kind`
+   must = exact-current-splitmix.
+5. **RISK (Tier C): R-MT is bounded to `set.seed`+`unif_rand`(+`rnorm`).** Methods
+   that use R's `sample()`, CV-segment generation or package internals also need
+   `sample.kind` semantics + package draw order — NOT "a few hundred LOC". The
+   R-MT engine just landed covers the bounded case only.
+
+Also: some references are "closest installable analog", not the method proper
+(CARS vs `enpls.fs`, registry.py:6061) → keep those as documented
+`cross_check`/Jaccard, never a forced bit-match.
+
+**Revised verdict (Codex-aligned), supersedes §5:**
+- **Tier 0 first** — fix the method inventory; per method decide canonical /
+  compat-mode / documented-cross_check (§3b was unreliable).
+- **Tier B only after golden stream tests** freeze current splitmix; `rng_kind`
+  additive, default = current splitmix.
+- **Implement only the RNGs actually needed:** PCG64 exists; add numpy
+  `RandomState`-MT for auswahl; R-MT (DONE) for true R-compat methods.
+- **Tier C only for high-value methods** where the reference IS the target
+  algorithm (UVE/MCUVE); cross_check/Jaccard for the analog-only ones.
+
 ## 4. Proposed tiered plan
 
 ### Tier B (infrastructure — do this regardless; it is the right abstraction)
