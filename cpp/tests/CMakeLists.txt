@@ -25,9 +25,15 @@ add_executable(n4m_tests
     test_preprocessing_wavelets.cpp
     test_rng_pcg64.cpp
     test_rng_mt_r.cpp
-    # rng_mt_r is an internal core module (hidden visibility in libn4m), so the
-    # parity test compiles it directly rather than linking it through n4m_c.
+    test_rng_engine.cpp
+    # The RNG engines are internal core modules (hidden visibility in libn4m),
+    # so the parity/golden tests compile them directly rather than linking
+    # through n4m_c. rng_engine pulls pcg64 + ziggurat (its PCG64 dispatch arm).
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/common/rng_mt_r.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/common/rng_numpy_mt.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/common/rng_engine.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/common/rng_pcg64.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/common/ziggurat.c
     test_signal_type.cpp
     test_splitters.cpp
     test_transfer_metrics.cpp)
