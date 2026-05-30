@@ -90,7 +90,7 @@ if max_runs < 2
 end
 
 t0 = tic();
-last_preds = fit_predict_seeded(seed_base);
+parity_preds = fit_predict_seeded(seed_base);
 probe_ms = toc(t0) * 1000.0;
 samples = probe_ms;
 
@@ -98,8 +98,13 @@ samples = probe_ms;
 target_samples = max(1, target - 1);
 for i = 2:target_samples
     t0 = tic();
-    last_preds = fit_predict_seeded(seed_base + (i - 1));
+    % Timing-only run at a DIFFERENT seed; its predictions must NOT become the
+    % parity output (they are computed on a different dataset -> wrong oracle).
+    fit_predict_seeded(seed_base + (i - 1));
     samples(end + 1, 1) = toc(t0) * 1000.0;
 end
+% Return the seed_base prediction for parity (mirrors the R/Python helpers),
+% never a timing-seed one.
+last_preds = parity_preds;
 stats = make_stats(samples, statistic, warmup_ms, decision, warmup_runs + length(samples), false);
 end
