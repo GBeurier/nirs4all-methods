@@ -59,6 +59,13 @@ try:
 except ImportError:  # pragma: no cover - depends on import path
     _CURATED_BIB = {}
 
+from selection_parity_policy import (
+    binding_cross_check_reason,
+    dependency_unavailable_reason,
+    jaccard_from_note,
+    selection_bydesign_reason,
+)
+
 try:
     from method_param_docs import lookup as _param_doc_lookup
 except ImportError:  # pragma: no cover - depends on import path
@@ -1210,7 +1217,13 @@ def is_true(v: Any) -> bool:
 
 def _failure_verdict(row: dict) -> str:
     if not is_true(row.get("ok")):
-        reason = (row.get("reason") or "").lower()
+        algo = row.get("algorithm") or row.get("algo") or ""
+        backend = row.get("backend") or ""
+        raw_reason = row.get("reason") or ""
+        if (dependency_unavailable_reason(algo, raw_reason)
+                or binding_cross_check_reason(algo, backend)):
+            return "not_available"
+        reason = raw_reason.lower()
         if "timeout" in reason:
             return "not_run"
         if ("not implemented by" in reason or "unsupported algo" in reason
@@ -1247,6 +1260,9 @@ def verdict(row: dict, cid: str = "") -> str:
         if note.startswith("cross_check") or note.startswith("selection_divergence_allowed"):
             return "cross_check"
         if note.startswith("selection_mismatch"):
+            algo = row.get("algorithm") or row.get("algo") or ""
+            if selection_bydesign_reason(algo, note):
+                return "cross_check"
             return "divergent"
         # A missing reference oracle is "no truth to compare", not a drift —
         # mirror build_landing so the same CSV renders identically on both pages.
@@ -1269,6 +1285,12 @@ def verdict(row: dict, cid: str = "") -> str:
     parity_ok = row.get("binding_parity_ok", row.get("parity_ok"))
     if is_true(parity_ok):
         return "exact"
+    algo = row.get("algorithm") or row.get("algo") or ""
+    ref_note = row.get("reference_parity_note") or ""
+    if selection_bydesign_reason(algo, ref_note):
+        return "cross_check"
+    if binding_cross_check_reason(algo, row.get("backend")):
+        return "cross_check"
     try:
         d = float(row.get("binding_parity_max_diff",
                           row.get("parity_max_diff", "nan")))
@@ -1280,6 +1302,15 @@ def verdict(row: dict, cid: str = "") -> str:
 
 
 def parity_metric(row: dict, cid: str) -> tuple[str, str]:
+    note = (
+        row.get("reference_parity_note")
+        or row.get("binding_parity_note")
+        or row.get("parity_note")
+        or ""
+    )
+    jac = jaccard_from_note(note)
+    if jac is not None:
+        return "jaccard", str(jac)
     if _uses_reference_parity(row, cid):
         return (
             "reference",
@@ -2019,13 +2050,16 @@ def _row_worst_diff(cells_in_row, cid):
         if not basis:
             basis = b
         try:
-            v = abs(float(d)) if d else 0.0
+            raw = float(d) if d else 0.0
         except (TypeError, ValueError):
             continue
-        if v != v:  # NaN
+        if raw != raw:  # NaN
             continue
-        if v > worst_abs:
-            worst_abs = v
+        # RMSE δ: worst is the largest absolute delta. Jaccard: worst is the
+        # smallest overlap, so score it by negative value for the same max scan.
+        score = (1.0 - raw) if b == "jaccard" else abs(raw)
+        if score > worst_abs:
+            worst_abs = score
             worst_str = d
     return basis, worst_str
 
@@ -2039,6 +2073,7 @@ def _row_worst_diff(cells_in_row, cid):
 _REAL_VERDICT_RANK = {
     "exact":      0,
     "drift":      1,
+    "cross_check": 2,
     "error":      4,
     "divergent":  5,
 }
@@ -2088,6 +2123,16 @@ def _parity_badge_html(verdict_, basis, diff, quality, is_self):
     a canonical reference row whose self-run errored or diverged still
     shows the failure, not a confident grey "source".
     """
+    if basis == "jaccard":
+        try:
+            jac = float(diff) if diff else 1.0
+        except (TypeError, ValueError):
+            jac = 1.0
+        label = f"J {jac:.2f}"
+        if verdict_ == "exact":
+            return "parity parity-exact", f"✓ {label}"
+        icon = VERDICT_ICON[verdict_]
+        return f"parity parity-{verdict_}", f"{icon} {label}"
     if verdict_ != "exact":
         icon = VERDICT_ICON[verdict_]
         fmt, _ = _format_diff(diff)
@@ -2280,7 +2325,10 @@ def parity_table(method: str, rows: list[dict],
         "**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a "
         "reference-gate pass at strict / relaxed / qualitative "
         "tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees "
-        "with the C++ baseline &nbsp;·&nbsp; ✗ divergent "
+        "with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented "
+        "by-design selector/RNG/model, noncanonical API/facade convention, "
+        "or secondary oracle "
+        "&nbsp;·&nbsp; ✗ divergent "
         "&nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The "
         "fastest backend per column is marked 🏆.",
     ]
@@ -2340,7 +2388,7 @@ def parity_table(method: str, rows: list[dict],
                 if r is None:
                     continue
                 v = _row_verdict(r, cid)
-                if v not in ("exact", "drift"):
+                if v not in ("exact", "drift", "cross_check"):
                     continue
                 ms = _row_ms(r)
                 if ms != ms:  # NaN
@@ -2366,11 +2414,12 @@ def parity_table(method: str, rows: list[dict],
         # Pre-scan rows so we can drop backends that don't implement
         # this method (or that simply didn't run any size). A row is
         # "present" only when at least one of its visible cells has a
-        # REAL outcome — exact/drift/divergent/error. Cells whose
+        # REAL outcome — exact/drift/cross_check/divergent/error. Cells whose
         # verdict is `not_available` (library doesn't ship the method)
         # or `not_run` (size deferred / timeout / not scheduled) are
         # absence-of-data, not evidence of presence.
-        _PRESENCE_VERDICTS = {"exact", "drift", "divergent", "error"}
+        _PRESENCE_VERDICTS = {"exact", "drift", "cross_check",
+                              "divergent", "error"}
         def _row_is_present(cid: str) -> bool:
             for (n, p_) in sizes:
                 r = cells.get((cid, n, p_, t))

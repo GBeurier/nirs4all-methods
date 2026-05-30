@@ -28,6 +28,23 @@ match the external oracle selected for each method.
 | **Thread counts** | 1, 3, 10 |
 | **libn4m build** | `blas-omp` by default (OpenBLAS + OpenMP); `dev-release` available for the single-thread reference column |
 
+The current canonical registry sweep is production-build first: `full_matrix.csv`
+contains the `cpp` rows for `blas-omp`. Separate native/BLAS-only/OpenMP-only
+build tiers are only present when a targeted refresh measured them. Therefore a
+blank-looking C++ sibling tier is run coverage, not a parity contradiction; the
+dashboard renders it as `NR` and does not invent a divergence δ/J for a cell that
+was not executed.
+
+`pls4all.registry` is the benchmark registry's canonical pls4all call
+(`MethodSpec.pls4all_fn`). It is not a public binding/API column, so the
+dashboard excludes it from the user-facing matrix and score cards. The public
+Python columns are `pls4all.python`, `pls4all.sklearn`, and Python externals.
+
+Public binding backends that are part of the matrix but absent from the current
+CSV snapshot are kept visible as `NR` (`not_run`) rather than being dropped.
+This makes missing MATLAB/Octave coverage explicit when `matlab_tier1` /
+`matlab_tier2` have not been executed.
+
 A "skip" record is emitted when an external backend does not implement a
 given algorithm. In `--reference-backends registry` mode those rows
 should be rare because unsupported pairs are not scheduled. In legacy
@@ -121,8 +138,10 @@ Per-algorithm overrides exist for inherently noisier algorithms:
 | `GA`, `PSO`, `VISSA` selectors | non-applicable | Stochastic feature selection; per-implementation RNG streams |
 
 Wide selector tolerances are qualitative evidence, not a release-quality
-oracle. A blocking release gate should either make the selector
-deterministic across bindings or explicitly mark the row as relaxed.
+oracle. The dashboard therefore distinguishes selector set-overlap
+(`divergence_metric="jaccard"`) from numeric relative-RMSE δ, and documented
+RNG/noise/model selector mismatches render as `cross_check`/`BD J` rather than
+as red numeric failures.
 
 ## Thread control
 
@@ -157,9 +176,11 @@ default to `scale_x=True / scale_y=True` (unit-variance scaling), while
 `matlab_tier1`, `matlab_pls` default to `scale_x=False / scale_y=False`
 (centring only — the spectroscopy convention).
 
-This is **not a bug**: both conventions are valid. The benchmark
-surfaces it as a parity ✗ because the predictions DO differ. Users
-should pick the convention matching their reference paper.
+This is **not a bug**: both conventions are valid. Current dashboard payloads
+use `cross_check` for documented noncanonical API/facade convention cells when
+the canonical registry/C++ path is already exact, so those timings remain
+visible without classifying the method as a parity failure. Users should pick
+the convention matching their reference paper.
 
 ## Timeout
 

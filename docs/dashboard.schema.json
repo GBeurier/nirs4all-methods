@@ -43,7 +43,11 @@
                 "reference_parity": {"type": "string"},
                 "binding_parity": {"type": "string"},
                 "divergence": {"type": ["number", "null"]},
-                "divergence_basis": {"type": "string"}
+                "divergence_fmt": {"type": "string"},
+                "divergence_basis": {"type": "string"},
+                "divergence_quality": {"type": "string"},
+                "divergence_metric": {"type": "string"},
+                "divergence_note": {"type": "string"}
               }
             }
           }
@@ -55,7 +59,7 @@
       "description": "Per-method score card aggregated across the method's cells. Keyed by algorithm/dashboard id.",
       "additionalProperties": {
         "type": "object",
-        "required": ["reference", "binding", "divergence"],
+        "required": ["reference", "binding", "divergence", "timing"],
         "properties": {
           "reference": {
             "type": "object",
@@ -74,6 +78,9 @@
               "reference": {"$ref": "#/$defs/divergence_stat"},
               "binding": {"$ref": "#/$defs/divergence_stat"}
             }
+          },
+          "timing": {
+            "$ref": "#/$defs/timing_stat"
           }
         }
       }
@@ -97,6 +104,16 @@
       "properties": {
         "max": {"type": ["number", "null"]},
         "median": {"type": ["number", "null"]},
+        "n": {"type": "integer", "minimum": 0}
+      }
+    },
+    "timing_stat": {
+      "type": "object",
+      "required": ["min_ms", "median_ms", "max_ms", "n"],
+      "properties": {
+        "min_ms": {"type": ["number", "null"]},
+        "median_ms": {"type": ["number", "null"]},
+        "max_ms": {"type": ["number", "null"]},
         "n": {"type": "integer", "minimum": 0}
       }
     }

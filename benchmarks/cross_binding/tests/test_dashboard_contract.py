@@ -18,13 +18,14 @@ REPO = Path(__file__).resolve().parents[3]
 PAYLOAD = REPO / "docs" / "_static" / "bench-data.json"
 SCHEMA = REPO / "docs" / "dashboard.schema.json"
 
-# The canonical-reference mirror column is excluded from score aggregation
-# (it duplicates another column's verdict); keep this in sync with build_landing.
+# The canonical-reference mirror column and dashboard-internal harness columns
+# are excluded from score aggregation; keep this in sync with build_landing.
 try:
     sys.path.insert(0, str(REPO / "docs" / "_extras"))
-    from build_landing import REF_COL_ID  # type: ignore
+    from build_landing import DASHBOARD_INTERNAL_COL_IDS, REF_COL_ID  # type: ignore
 except Exception:  # pragma: no cover - fallback if build_landing import fails
     REF_COL_ID = "__reference"
+    DASHBOARD_INTERNAL_COL_IDS = {"pls4all.registry"}
 
 
 @pytest.fixture(scope="module")
@@ -55,9 +56,9 @@ def test_method_scores_are_self_consistent(payload):
     expect: dict = {}
     for r in payload["rows"]:
         e = expect.setdefault(r["algo"], {"reference": Counter(), "binding": Counter(),
-                                          "rd": 0, "bd": 0})
+                                          "rd": 0, "bd": 0, "tm": 0})
         for cid, c in r["cells"].items():
-            if cid == REF_COL_ID:
+            if cid == REF_COL_ID or cid in DASHBOARD_INTERNAL_COL_IDS:
                 continue
             if c.get("reference_parity"):
                 e["reference"][c["reference_parity"]] += 1
@@ -69,11 +70,15 @@ def test_method_scores_are_self_consistent(payload):
                     e["rd"] += 1
                 else:
                     e["bd"] += 1
+            ms = c.get("ms")
+            if c.get("ok") and isinstance(ms, (int, float)):
+                e["tm"] += 1
     for algo, sc in payload["method_scores"].items():
         assert sc["reference"] == dict(expect[algo]["reference"]), f"{algo} reference"
         assert sc["binding"] == dict(expect[algo]["binding"]), f"{algo} binding"
         assert sc["divergence"]["reference"]["n"] == expect[algo]["rd"], f"{algo} ref div n"
         assert sc["divergence"]["binding"]["n"] == expect[algo]["bd"], f"{algo} bind div n"
+        assert sc["timing"]["n"] == expect[algo]["tm"], f"{algo} timing n"
 
 
 def test_divergence_stats_shape(payload):
@@ -86,3 +91,18 @@ def test_divergence_stats_shape(payload):
                 assert st["max"] is None and st["median"] is None
             else:
                 assert st["max"] is not None and st["median"] is not None
+
+
+def test_timing_stats_shape(payload):
+    for algo, sc in payload["method_scores"].items():
+        st = sc["timing"]
+        assert set(st) >= {"min_ms", "median_ms", "max_ms", "n"}
+        assert isinstance(st["n"], int) and st["n"] >= 0
+        if st["n"] == 0:
+            assert st["min_ms"] is None
+            assert st["median_ms"] is None
+            assert st["max_ms"] is None
+        else:
+            assert st["min_ms"] is not None
+            assert st["median_ms"] is not None
+            assert st["max_ms"] is not None

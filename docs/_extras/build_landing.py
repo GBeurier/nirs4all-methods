@@ -23,6 +23,14 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from selection_parity_policy import (
+    binding_cross_check_reason,
+    dependency_unavailable_reason,
+    jaccard_from_note as _jaccard_from_note,
+    selection_bydesign_reason,
+    selection_note_with_reason,
+)
+
 
 # Same canonical orderings & display labels as render_docs.py — kept in
 # sync deliberately so dashboard column ids match the markdown tables.
@@ -43,6 +51,21 @@ BACKEND_DISPLAY: dict[str, str] = {
     "r_ropls":      "ropls",
     "r_mixomics":   "mixOmics",
     "matlab_pls":   "plsregress",
+}
+
+REF_COL_ID = "__reference"
+DASHBOARD_INTERNAL_COL_IDS = {
+    # Internal MethodSpec harness invocation. It is useful as source data for
+    # benchmark plumbing, but it is not a public implementation column.
+    "pls4all.registry",
+}
+PLANNED_VISIBLE_BACKENDS = {
+    # The MATLAB/Octave bindings are part of the public surface, but the current
+    # committed CSV snapshot has no matlab_tier1/matlab_tier2 rows. Keep the
+    # columns visible and score them as not_run instead of silently dropping
+    # them from the matrix.
+    "matlab_tier1",
+    "matlab_tier2",
 }
 
 CPP_BUILD_SUFFIX = {
@@ -68,8 +91,8 @@ CPP_TIER_DESC = {
 
 BACKEND_LONG: dict[str, tuple[str, str, str]] = {
     "python_tier1": ("Python",        "pls4all raw",        "`pls4all._methods.<algo>_fit(ctx, cfg, X, y, …)` — direct FFI binding"),
-    "registry_pls4all": ("Python",    "pls4all bench reference",
-                                       "`benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — the canonical pls4all invocation defined by the benchmark suite for each algorithm (algorithm + solver + deflation + …). This is the column used as the parity reference against sklearn / pls / ropls / plsregress."),
+    "registry_pls4all": ("Benchmark", "registry call",
+                                       "`benchmarks.parity_timing.registry.MethodSpec.pls4all_fn` — the canonical pls4all invocation defined by the benchmark suite for each algorithm (algorithm + solver + deflation + …). It is a benchmark harness call, not a public Python binding."),
     "python_tier2": ("Python",        "pls4all idiomatic",  "`pls4all.sklearn.<Class>` — sklearn-style BaseEstimator with `.fit()/.predict()`"),
     "sklearn":      ("Python",        "external",           "`sklearn.cross_decomposition.PLSRegression`, `sklearn.decomposition.PCA` + LinearRegression / Ridge / GaussianProcessRegressor (proxies)"),
     "ikpls":        ("Python",        "external",           "`ikpls.numpy_ikpls.PLS` — Improved Kernel PLS (plain PLS only)"),
@@ -99,6 +122,7 @@ BACKEND_ORDER = [
 
 GROUP_LABELS = {
     "cpp":     "pls4all · C++ (libn4m)",
+    "registry":"pls4all · benchmark registry",
     "python":  "pls4all · Python",
     "r":       "pls4all · R",
     "matlab":  "pls4all · MATLAB/Octave",
@@ -109,7 +133,7 @@ GROUP_LABELS = {
 
 BACKEND_GROUP = {
     "python_tier1": "python", "python_tier2": "python",
-    "registry_pls4all": "python",
+    "registry_pls4all": "registry",
     "r_tier1": "r", "r_tier2": "r",
     "r_pls_compat": "r", "r_mdatools_compat": "r",
     "matlab_tier1": "matlab", "matlab_tier2": "matlab",
@@ -499,6 +523,41 @@ def _format_divergence(value: float | None) -> str:
     return f"{value:.2f}"
 
 
+# Selector methods (uve_select, cars_select, ...) are scored on Jaccard
+# set-overlap of the selected-feature index sets, NOT on relative RMSE.
+# The orchestrator records it inside the parity note as e.g.
+# "selection_mismatch jaccard=0.7500" / "selection_divergence_allowed
+# jaccard=0.8000: …"; a bare "selection_exact" means an identical
+# selection, i.e. Jaccard == 1.0.
+
+
+def _format_jaccard(value: float) -> str:
+    """Render a Jaccard overlap (0..1, higher = better) as e.g. "0.75"."""
+    if value >= 0.9995:
+        return "1.00"
+    return f"{value:.2f}"
+
+
+def _jaccard_fields(value: float, basis: str, note: str,
+                    quality: str = "jaccard") -> dict:
+    """Divergence fields for a variable-selector (Jaccard) cell.
+
+    `divergence_metric="jaccard"` flags the cell as set-overlap rather than
+    relative RMSE so the dashboard renders a distinct "J …" badge and never
+    treats a low-but-valid overlap as a red numeric divergence. A quality of
+    `selection_bydesign` marks known legacy-C++ vs external-reference selector
+    differences as informational.
+    """
+    return {
+        "divergence": value,
+        "divergence_fmt": _format_jaccard(value),
+        "divergence_basis": basis,
+        "divergence_quality": quality,
+        "divergence_metric": "jaccard",
+        "divergence_note": note.strip()[:500],
+    }
+
+
 def divergence_fields(row: dict) -> dict:
     """Build per-cell divergence fields for the dashboard.
 
@@ -509,8 +568,14 @@ def divergence_fields(row: dict) -> dict:
 
     Returns a dict ready for cell merge:
         {"divergence": float|None, "divergence_fmt": str|None,
-         "divergence_basis": "binding"|"reference"|"self",
-         "divergence_quality": "strict"|"relaxed"|"qualitative"|"binding"|"unknown"}
+         "divergence_basis": "binding"|"reference"|"cross_check"|"self",
+         "divergence_quality": "strict"|"relaxed"|"qualitative"|"binding"
+                               |"cross_check"|"jaccard"|"selection_bydesign"
+                               |"self"|"unknown",
+         "divergence_metric": "rmse"|"jaccard"}
+    `divergence_metric` distinguishes the numeric relative-RMSE δ (lower is
+    better) from variable-selector Jaccard set-overlap (0..1, higher is
+    better) so the dashboard can render the two scales unambiguously.
     Empty dict if the row can't supply a value.
     """
     kind = (row.get("kind") or "").strip().lower()
@@ -520,17 +585,34 @@ def divergence_fields(row: dict) -> dict:
             "divergence_fmt": "source",
             "divergence_basis": "self",
             "divergence_quality": "self",
+            "divergence_metric": "rmse",
         }
+    # Selector methods are scored on Jaccard set-overlap, recorded in the
+    # parity note. Detect them first (regardless of kind / gate) so a Jaccard
+    # of e.g. 0.75 is never emitted as a bare RMSE-style "divergence" number.
+    algo = row.get("algorithm") or row.get("algo") or ""
+    binding_note = (row.get("binding_parity_note") or row.get("parity_note") or "")
+    ref_note = (row.get("reference_parity_note") or "")
     if kind == "pls4all_binding":
+        jac_note = binding_note if _jaccard_from_note(binding_note) is not None else ref_note
+        jac = _jaccard_from_note(jac_note)
+        if jac is not None:
+            quality = ("selection_bydesign"
+                       if selection_bydesign_reason(algo, jac_note) else "jaccard")
+            return _jaccard_fields(
+                jac, "binding", selection_note_with_reason(algo, jac_note), quality)
         diff = _float_or_none(row.get("binding_parity_max_diff")
                               or row.get("parity_max_diff"))
+        cross_note = binding_cross_check_reason(algo, row.get("backend"))
         return {
             "divergence": diff,
             "divergence_fmt": _format_divergence(diff) if diff is not None else "—",
             "divergence_basis": "binding",
-            "divergence_quality": "binding",
+            "divergence_quality": "cross_check" if cross_note else "binding",
+            "divergence_metric": "rmse",
+            **({"divergence_note": cross_note} if cross_note else {}),
         }
-    note = (row.get("reference_parity_note") or "").strip().lower()
+    note = ref_note.strip().lower()
     if note.startswith("cross_check"):
         # A secondary external library vs the donor oracle: show the divergence
         # so inter-library spread is visible, but mark it informational so it is
@@ -541,22 +623,26 @@ def divergence_fields(row: dict) -> dict:
             "divergence_fmt": _format_divergence(diff) if diff is not None else "—",
             "divergence_basis": "cross_check",
             "divergence_quality": "cross_check",
+            "divergence_metric": "rmse",
         }
     if kind in ("n4m_core", "external"):
+        jac = _jaccard_from_note(ref_note)
+        if jac is not None:
+            quality = ("selection_bydesign"
+                       if selection_bydesign_reason(algo, ref_note) else "jaccard")
+            return _jaccard_fields(
+                jac, "reference", selection_note_with_reason(algo, ref_note), quality)
         # rmse_rel only — the tooltip says "rmse_rel" so falling back to
         # rmse_abs (different units, very different magnitude scale)
         # would be a silent lie about what the number means.
         diff = _float_or_none(row.get("reference_parity_rmse_rel"))
         tol = reference_tolerance(row)
-        # Selection methods are gated on Jaccard, not RMSE — a documented,
-        # allowed selection-convention divergence must not read as strict-green.
-        quality = ("cross_check" if note.startswith("selection_divergence_allowed")
-                   else _quality_from_tol(tol))
         return {
             "divergence": diff,
             "divergence_fmt": _format_divergence(diff) if diff is not None else "—",
             "divergence_basis": "reference",
-            "divergence_quality": quality,
+            "divergence_quality": _quality_from_tol(tol),
+            "divergence_metric": "rmse",
         }
     return {}
 
@@ -576,6 +662,9 @@ def parity_code(row: dict) -> str:
             return "deferred"
         algo = row.get("algorithm") or row.get("algo") or ""
         backend = row.get("backend") or ""
+        if (dependency_unavailable_reason(algo, row.get("reason"))
+                or binding_cross_check_reason(algo, backend)):
+            return "not_available"
         supported = FIXED_EXTERNAL_SUPPORT.get(backend)
         if supported is not None and algo not in supported:
             return "not_available"
@@ -621,6 +710,17 @@ def parity_code(row: dict) -> str:
         return "not_run"
     if is_true(parity_ok):
         return "exact"
+    # Several selector binding rows compare a language wrapper that follows the
+    # canonical external selector against the legacy C++ kernel. When the
+    # reference note identifies a documented selector-model/RNG mismatch, the
+    # binding gate should read as the same informational cross-check rather
+    # than a red binding bug.
+    algo = row.get("algorithm") or row.get("algo") or ""
+    ref_note = row.get("reference_parity_note") or ""
+    if selection_bydesign_reason(algo, ref_note):
+        return "cross_check"
+    if binding_cross_check_reason(algo, row.get("backend")):
+        return "cross_check"
     try:
         d = float(diff_val)
     except (TypeError, ValueError):
@@ -667,7 +767,13 @@ def reference_parity_code(row: dict) -> str:
     if note.startswith("selection_divergence_allowed"):
         return "cross_check"
     if note.startswith("selection_mismatch"):
+        algo = row.get("algorithm") or row.get("algo") or ""
+        if selection_bydesign_reason(algo, note):
+            return "cross_check"
         return "divergent"
+    algo = row.get("algorithm") or row.get("algo") or ""
+    if binding_cross_check_reason(algo, row.get("backend")):
+        return "cross_check"
     ref_ok = row.get("reference_parity_ok")
     if ref_ok in (None, "", "None"):
         return "not_available"
@@ -821,7 +927,7 @@ def _row_is_dense(row: dict) -> bool:
     registry-vs-cpp timing-sweep cell.
     """
     for cid, cell in row["cells"].items():
-        if cid == "__reference" or cid == "pls4all.registry" \
+        if cid == REF_COL_ID or cid in DASHBOARD_INTERNAL_COL_IDS \
                 or cid.startswith("pls4all.cpp."):
             continue
         if (cell.get("ms") is not None or cell.get("parity")
@@ -1012,25 +1118,24 @@ def build_payload(results_dir: Path) -> dict:
     # default "strip pls4all. prefix" heuristic produces internal-jargon
     # names. Keys are the canonical backend slug from BACKEND_DISPLAY.
     SHORT_OVERRIDES = {
-        # "registry" came from the python file name (registry.py) and
-        # collided semantically with "canonical PLS" in the PLS lit
-        # (CPPLS / Indahl 2009). "bench-ref" is unambiguous: this column
-        # is the parity reference invocation of pls4all used by the
-        # benchmark suite for each algorithm.
-        "registry_pls4all": "bench-ref",
+        "registry_pls4all": "registry",
     }
     for be in BACKEND_ORDER:
         cid = BACKEND_DISPLAY.get(be, be)
-        if cid in present:
+        if ((cid in present or be in PLANNED_VISIBLE_BACKENDS)
+                and cid not in DASHBOARD_INTERNAL_COL_IDS):
             lang, tier, what = BACKEND_LONG[be]
             is_pls4all = cid.startswith("pls4all.")
             short = SHORT_OVERRIDES.get(be) or (cid[len("pls4all."):] if is_pls4all else cid)
-            raw_cols.append({
+            col = {
                 "id": cid, "label": cid, "short": short,
                 "group": BACKEND_GROUP[be], "tier": tier, "lang": lang,
                 "what": what, "build": "",
                 "kind": "pls4all" if is_pls4all else "external",
-            })
+            }
+            if be in PLANNED_VISIBLE_BACKENDS and cid not in present:
+                col["planned"] = True
+            raw_cols.append(col)
     # Standalone `ref_*` columns: registry-declared external libraries
     # that don't have a fixed legacy bench script. Find them by looking
     # for cids whose only contributing backend is a `ref_*` row AND that
@@ -1066,8 +1171,9 @@ def build_payload(results_dir: Path) -> dict:
         })
 
     # Canonical language order for contiguous band rendering: C++,
-    # Python, R, MATLAB/Octave, then other languages alphabetically.
-    LANG_ORDER = ["C++", "Python", "R", "MATLAB/Octave",
+    # benchmark harness, Python, R, MATLAB/Octave, then other languages
+    # alphabetically.
+    LANG_ORDER = ["C++", "Benchmark", "Python", "R", "MATLAB/Octave",
                   "Julia", "Rust", "Go", "JavaScript", "Java", "external"]
     def _lang_rank(c: dict) -> int:
         try:
@@ -1112,7 +1218,7 @@ def build_payload(results_dir: Path) -> dict:
                 "binding_parity": verdict, "ok": ok,
                 "_source_is_ref": r["backend"].startswith("ref_"),
                 "_rank": _row_rank(r)}
-        # Divergence fields — feed the dashboard's "divergence δ" viz.
+        # Divergence fields — feed the dashboard's parity δ/J viz.
         # Source rule depends on `kind`: binding-gate for pls4all_binding,
         # reference-gate for n4m_core/external, basis="self" for the
         # canonical reference row. See divergence_fields() docstring.
@@ -1144,8 +1250,14 @@ def build_payload(results_dir: Path) -> dict:
         # Capture the failure reason so the dashboard tooltip can show
         # "ModuleNotFoundError: foo" instead of a silent dash.
         reason = (r.get("reason") or "").strip()
+        policy_reason = (
+            dependency_unavailable_reason(r.get("algorithm"), reason)
+            or binding_cross_check_reason(r.get("algorithm"), r.get("backend"))
+        )
+        if policy_reason and verdict in ("not_available", "cross_check"):
+            cell["reason"] = policy_reason[:200]
         if reason and verdict in ("error", "deferred", "not_run", "not_available",
-                                  "divergent", "drift"):
+                                  "divergent", "drift") and "reason" not in cell:
             cell["reason"] = reason[:200]
         # Keep every explicit verdict emitted by the orchestrator so the
         # dashboard can distinguish "not run" from "not available in lib".
@@ -1219,7 +1331,8 @@ def build_payload(results_dir: Path) -> dict:
                     # the merged cell as "source" (basis=self).
                     if incoming_ok:
                         for k in ("divergence", "divergence_fmt",
-                                  "divergence_basis", "divergence_quality"):
+                                  "divergence_basis", "divergence_quality",
+                                  "divergence_metric", "divergence_note"):
                             if k in cell:
                                 existing[k] = cell[k]
                 if cell.get("reference_kind") and not existing.get("reference_kind"):
@@ -1244,7 +1357,6 @@ def build_payload(results_dir: Path) -> dict:
     # this column to the front of the table and colours it by the
     # canonical lib's language. If no canonical reference is wired
     # (paper_only methods), the cell stays empty.
-    REF_COL_ID = "__reference"
     columns_by_id = {c["id"]: c for c in raw_cols}
     for (algo, n, p_, t), cells in pivot.items():
         canonical_cid = None
@@ -1270,9 +1382,10 @@ def build_payload(results_dir: Path) -> dict:
         if "reference_kind" in src:
             mirror["reference_kind"] = src["reference_kind"]
         # Carry divergence info onto the synthetic reference column so the
-        # divergence-δ viz can render "source" instead of "—".
+        # parity δ/J viz can render "source" instead of "—".
         for k in ("divergence", "divergence_fmt",
-                  "divergence_basis", "divergence_quality"):
+                  "divergence_basis", "divergence_quality",
+                  "divergence_metric", "divergence_note"):
             if k in src:
                 mirror[k] = src[k]
         cells[REF_COL_ID] = mirror
@@ -1311,6 +1424,14 @@ def build_payload(results_dir: Path) -> dict:
             parity_rows.append(r)
     rows_out = parity_rows
 
+    # Strip dashboard-internal harness cells from the emitted payload. They can
+    # participate in upstream routing decisions (for example separating timing
+    # sweeps from parity rows), but the JSON consumed by the UI should expose
+    # only user-facing implementation columns.
+    for r in [*rows_out, *scaling_rows]:
+        for cid in DASHBOARD_INTERNAL_COL_IDS:
+            r["cells"].pop(cid, None)
+
     # Register the synthetic Reference column at the very front so the
     # renderer pins it before any backend column. `kind="reference"`
     # tells the JS layer to apply the special per-row language-tint +
@@ -1339,6 +1460,8 @@ def build_payload(results_dir: Path) -> dict:
     version_rows: dict[str, dict] = {}
     for r in seen.values():
         cid = column_id(r["backend"], r.get("libp4a_build", ""))
+        if cid in DASHBOARD_INTERNAL_COL_IDS:
+            continue
         old = version_rows.get(cid)
         if old is not None and _row_rank(old) > _row_rank(r):
             continue
@@ -1374,9 +1497,6 @@ def build_payload(results_dir: Path) -> dict:
     headline_candidates = [
         cpp_blas_omp, "pls4all.python", "pls4all.sklearn",
         "pls4all.R", "pls4all.matlab",
-        # add the canonical registry column too — it's the new "pls4all"
-        # entry point in the registry-driven runs
-        "pls4all.registry",
         # nirs4all: the universal donor reference (Layer 3) — default-visible
         # so the donor cross-impl timing + parity is surfaced out of the box.
         "nirs4all",
@@ -1387,8 +1507,8 @@ def build_payload(results_dir: Path) -> dict:
     pls4all_only = [c for c in selectable_cols if c.startswith("pls4all.")]
     externals = [c for c in selectable_cols if not c.startswith("pls4all.")]
     thread_sweep = [c for c in [cpp_blas_omp, "pls4all.python",
-                                  "pls4all.sklearn", "pls4all.registry",
-                                  "sklearn"] if c and c in all_cols]
+                                  "pls4all.sklearn", "sklearn"]
+                    if c and c in all_cols]
     # API-parity view — same algorithm, same idiomatic API in each
     # language. Compares pls4all's "mimicking" bindings (sklearn-style,
     # R-formula + S3, MATLAB classdef) against the canonical external
@@ -1428,11 +1548,6 @@ def build_payload(results_dir: Path) -> dict:
         "pls4all.R.pls_compat", "pls4all.R.mdatools_compat",
         "pls4all.matlab.classdef"
     ) if c in all_cols]
-    # registry/bench-ref is the single canonical pls4all invocation
-    # used by the benchmark suite as parity baseline; expose it as its
-    # own preset so users can see only what's parity-anchored.
-    bench_ref = [c for c in ("pls4all.registry",) if c in all_cols]
-
     # Per-language sets (pls4all bindings + externals for that host language)
     py_all = by_lang("Python")
     r_all  = by_lang("R")
@@ -1443,7 +1558,7 @@ def build_payload(results_dir: Path) -> dict:
     # point. This is the "how much speed do the C++ optimisations buy?"
     # view, which is what the benchmark is really *for*.
     native_baseline = [c for c in (
-        cpp_native, cpp_blas_omp, "pls4all.registry",
+        cpp_native, cpp_blas_omp,
     ) if c and c in all_cols]
 
     raw_presets = {
@@ -1454,7 +1569,6 @@ def build_payload(results_dir: Path) -> dict:
         "api-parity":   {"label": "API parity",     "cols": api_parity},
         "tier-2":       {"label": "Tier-2 idiomatic","cols": [cpp_blas_omp, *tier_2] if cpp_blas_omp else tier_2},
         "tier-1":       {"label": "Tier-1 raw",      "cols": [cpp_blas_omp, *tier_1] if cpp_blas_omp else tier_1},
-        "bench-ref":    {"label": "Bench reference","cols": bench_ref},
         "native":       {"label": "C++ native",     "cols": native_baseline},
         "cpp-tiers":    {"label": "C++ all tiers",  "cols": cpp_tiers},
         # Language-scoped views — keep the C++ baseline included on each
@@ -1518,6 +1632,28 @@ def build_payload(results_dir: Path) -> dict:
 
     columns_by_id = {c["id"]: c for c in columns}
 
+    planned_cols = {
+        c["id"]: c for c in columns
+        if c.get("planned") and c["id"] not in DASHBOARD_INTERNAL_COL_IDS
+    }
+    for r in rows_out:
+        for cid, col in planned_cols.items():
+            if cid in r["cells"]:
+                continue
+            reason = f"{col.get('label', cid)} was not run in this benchmark snapshot"
+            r["cells"][cid] = {
+                "parity": "not_run",
+                "reference_parity": "not_run",
+                "binding_parity": "not_run",
+                "ok": False,
+                "reason": reason,
+                "divergence": None,
+                "divergence_fmt": "—",
+                "divergence_basis": "binding",
+                "divergence_quality": "unknown",
+                "divergence_metric": "rmse",
+            }
+
     def _cell_effective_parity(cid: str, cell: dict) -> str | None:
         if cid == REF_COL_ID:
             return None
@@ -1533,12 +1669,14 @@ def build_payload(results_dir: Path) -> dict:
         for r in rows_out
         for cid, c in r["cells"].items()
         if cid != REF_COL_ID
+        and cid not in DASHBOARD_INTERNAL_COL_IDS
         and c.get("ok")
         and isinstance(c.get("ms"), (int, float))
     ]
 
-    # D-min: per-method score cards — reference parity, binding parity, and
-    # divergence (split by gate basis) aggregated across the method's cells.
+    # D-min: per-method score cards — reference parity, binding parity,
+    # divergence (split by gate basis), and timing aggregated across the
+    # method's cells.
     # This is the canonical, automated score summary the dashboard contract
     # (docs/dashboard.schema.json) and the per-method doc pages consume.
     def _med(v: list) -> float | None:
@@ -1552,9 +1690,9 @@ def build_payload(results_dir: Path) -> dict:
     for r in rows_out:
         sc = method_scores.setdefault(r["algo"], {
             "reference": defaultdict(int), "binding": defaultdict(int),
-            "_rd": [], "_bd": []})
+            "_rd": [], "_bd": [], "_tm": []})
         for cid, c in r["cells"].items():
-            if cid == REF_COL_ID:
+            if cid == REF_COL_ID or cid in DASHBOARD_INTERNAL_COL_IDS:
                 continue
             if c.get("reference_parity"):
                 sc["reference"][c["reference_parity"]] += 1
@@ -1564,13 +1702,22 @@ def build_payload(results_dir: Path) -> dict:
             if isinstance(d, (int, float)) and d == d:
                 (sc["_rd"] if c.get("divergence_basis") == "reference"
                  else sc["_bd"]).append(abs(float(d)))
+            ms = c.get("ms")
+            if c.get("ok") and isinstance(ms, (int, float)) and ms == ms:
+                sc["_tm"].append(float(ms))
     for algo, sc in method_scores.items():
-        rd, bd = sc.pop("_rd"), sc.pop("_bd")
+        rd, bd, tm = sc.pop("_rd"), sc.pop("_bd"), sc.pop("_tm")
         sc["reference"] = dict(sc["reference"])
         sc["binding"] = dict(sc["binding"])
         sc["divergence"] = {
             "reference": {"max": max(rd) if rd else None, "median": _med(rd), "n": len(rd)},
             "binding": {"max": max(bd) if bd else None, "median": _med(bd), "n": len(bd)},
+        }
+        sc["timing"] = {
+            "min_ms": min(tm) if tm else None,
+            "median_ms": _med(tm),
+            "max_ms": max(tm) if tm else None,
+            "n": len(tm),
         }
 
     payload = {

@@ -15,7 +15,7 @@ the review, that is split:
 
 - **D-min (this):** a stable, schema-validated `dashboard.json` contract with
   **automated per-method score cards** (reference parity, binding parity,
-  divergence). This is the load-bearing part — it makes the scientific signal
+  divergence, timing). This is the load-bearing part — it makes the scientific signal
   (does n4m match its external reference? do the bindings match the C++ core?
   by how much?) visible and maintainable in the existing flow.
 - **D-SPA (deferred):** the interactive Svelte app. Optional polish; consumes
@@ -26,9 +26,19 @@ the review, that is split:
 | Key | Meaning |
 |-----|---------|
 | `columns` | The implementation columns (C++ tiers, bindings, external references), with `id`/`label`/`group`/`lang`/`kind`. |
-| `rows` | One per `(algo, n, p, threads)`. Each has `cells` keyed by column id; a cell carries `ms` (timing), `ok`, and the parity verdicts (`parity`, `reference_parity`, `binding_parity`) + `divergence` (numeric δ) + `divergence_basis`. |
+| `rows` | One per `(algo, n, p, threads)`. Each has `cells` keyed by column id; a cell carries `ms` (timing), `ok`, and the parity verdicts (`parity`, `reference_parity`, `binding_parity`) + `divergence` + `divergence_basis` + `divergence_metric` (`rmse` δ or selector `jaccard`). |
 | `method_scores` | **The D-min score card.** Per method, aggregated across its cells. |
 | `stats` | Global counts (algos, backends, rows, cells, exact). |
+
+`pls4all.registry` is deliberately excluded from `columns` and
+`method_scores`. It is the benchmark harness's canonical per-method pls4all
+call, not a public implementation column for the user-facing matrix.
+
+Public binding columns may be present even when the current CSV snapshot has no
+run rows for that backend. Those cells are emitted and scored as `not_run`
+(`NR`) so missing run coverage is visible instead of silently disappearing; this
+currently covers the MATLAB/Octave pls4all columns when no MATLAB sweep has
+been committed.
 
 ## `method_scores[<method>]`
 
@@ -39,14 +49,33 @@ the review, that is split:
   "divergence": {
     "reference": { "max": 20.65, "median": 0.0, "n": 16 },                  // |δ| of reference-gate cells
     "binding":   { "max": 0.0,   "median": 0.0, "n": 40 }                   // |δ| of binding-gate cells
-  }
+  },
+  "timing": { "min_ms": 0.31, "median_ms": 1.8, "max_ms": 42.0, "n": 40 }    // wall-clock cells with timing
 }
 ```
 
 - **reference / binding** are verdict histograms (counts by
-  `exact / divergent / not_available / not_run / drift / error`).
+  `exact / cross_check / divergent / not_available / not_run / drift / error`).
 - **divergence** is split by gate **basis**: `reference` (n4m vs external
   library, e.g. live nirs4all) vs `binding` (binding tier vs the C++ core).
+  Selector rows use `divergence_metric="jaccard"` and display set overlap
+  (`1.00` = identical feature mask); numeric rows use relative-RMSE δ.
+- **timing** is the per-method wall-clock summary over cells that actually
+  carry `ms`. Parity-only fixture cells and build-insensitive sentinels remain
+  visible in the matrix but do not inflate timing aggregates.
+- The matrix distinguishes absent **C++ build-tier runs** from unsupported
+  methods. If a row has a C++ result for one build (usually `blas-omp`) but the
+  native/BLAS/OpenMP sibling build was not run in that snapshot, the dashboard
+  renders that missing build as `NR` ("not run") rather than `not_available`.
+  No δ/J value is invented for those cells.
+
+## Cross-checks
+
+`cross_check` is informational, not a red parity failure. It is used for
+secondary external libraries, documented selector RNG/noise/model differences
+where exact feature-mask parity is not expected, and noncanonical API/facade
+cells that keep useful timings while the canonical registry/C++ path is already
+exact.
 
 ## Source of the verdicts
 

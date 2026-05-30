@@ -9,6 +9,17 @@ RNG + seed.
 This document analyses impact, feasibility, and effort, and proposes a tiered
 plan. It is the basis for a Codex review.
 
+## Status update (2026-05-30)
+
+This analysis is retained for rationale, but it is no longer the current task
+list. The additive RNG infrastructure has shipped (`n4m_rng_kind_t` with
+splitmix64, PCG64, R-MT, and numpy RandomState-MT), the UVE R-exact pilot is
+available behind `rng_kind=MT_R`, and the dashboard now renders documented
+selector RNG/noise/model mismatches as `cross_check`/`BD J` instead of red
+numeric divergences. See
+[`RNG_TIER0_INVENTORY.md`](RNG_TIER0_INVENTORY.md) for the authoritative
+post-investigation verdict table.
+
 ## 1. What we have today (verified in source)
 
 - **Two RNGs already exist in the core:**
