@@ -31,6 +31,9 @@ inline bool in_range_algorithm(n4m_algorithm_t a) noexcept {
 inline bool in_range_solver(n4m_solver_t s) noexcept {
     return s >= N4M_SOLVER_NIPALS && s <= N4M_SOLVER_RANDOMIZED_SVD;
 }
+inline bool in_range_rng_kind(n4m_rng_kind_t k) noexcept {
+    return k >= N4M_RNG_SPLITMIX64 && k <= N4M_RNG_NUMPY_MT;
+}
 inline bool in_range_deflation(n4m_deflation_t d) noexcept {
     return d >= N4M_DEFLATION_REGRESSION && d <= N4M_DEFLATION_ORTHOGONAL;
 }
@@ -109,6 +112,23 @@ N4M_API n4m_status_t n4m_config_set_solver(n4m_config_t* cfg, n4m_solver_t v) {
     N4M_CFG_TRY_BEGIN
         if (!in_range_solver(v)) return N4M_ERR_INVALID_ARGUMENT;
         as_core(cfg)->solver = v;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_set_rng_kind(n4m_config_t* cfg, n4m_rng_kind_t v) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (!in_range_rng_kind(v)) return N4M_ERR_INVALID_ARGUMENT;
+        as_core(cfg)->rng_kind = static_cast<std::int32_t>(v);
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_rng_kind(const n4m_config_t* cfg, n4m_rng_kind_t* out) {
+    if (cfg == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out = static_cast<n4m_rng_kind_t>(as_core(cfg)->rng_kind);
         return N4M_OK;
     N4M_CFG_TRY_END
 }

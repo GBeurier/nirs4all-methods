@@ -118,6 +118,8 @@ n4m_aug_wavelength_stretch_destroy@@N4M_1
 n4m_backend_is_available@@N4M_1
 n4m_backend_to_string@@N4M_1
 n4m_check_abi_compatibility@@N4M_1
+n4m_config_get_rng_kind
+n4m_config_set_rng_kind
 n4m_context_clear_error@@N4M_1
 n4m_context_create@@N4M_1
 n4m_context_destroy@@N4M_1

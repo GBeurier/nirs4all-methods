@@ -26,6 +26,12 @@ class Config {
     n4m_solver_t    solver{N4M_SOLVER_NIPALS};
     n4m_deflation_t deflation{N4M_DEFLATION_REGRESSION};
 
+    // RNG engine for stochastic methods (variable selectors, ensemble PLS,
+    // randomized SVD). 0 = N4M_RNG_SPLITMIX64 (default; reproduces n4m's
+    // historical streams bit-for-bit). Other values select an external
+    // library's exact RNG for reference parity — see n4m_rng_kind_t.
+    std::int32_t rng_kind{0};
+
     // Geometry / numerics
     std::int32_t n_components{2};
     std::int32_t center_x{1};

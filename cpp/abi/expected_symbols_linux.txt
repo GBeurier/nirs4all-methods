@@ -166,6 +166,7 @@ n4m_config_get_max_iter
 n4m_config_get_n_components
 n4m_config_get_operator_bank
 n4m_config_get_pipeline
+n4m_config_get_rng_kind
 n4m_config_get_robust_pls_legacy
 n4m_config_get_scale_x
 n4m_config_get_scale_y
@@ -185,6 +186,7 @@ n4m_config_set_max_iter
 n4m_config_set_n_components
 n4m_config_set_operator_bank
 n4m_config_set_pipeline
+n4m_config_set_rng_kind
 n4m_config_set_robust_pls_legacy
 n4m_config_set_scale_x
 n4m_config_set_scale_y

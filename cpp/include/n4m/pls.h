@@ -152,6 +152,21 @@ typedef enum n4m_deflation_t {
     N4M_DEFLATION_ORTHOGONAL  = 4
 } n4m_deflation_t;
 
+/* Random-number generator used by stochastic methods (variable selectors,
+ * ensemble PLS, randomized SVD). The default SPLITMIX64 reproduces n4m's
+ * historical streams bit-for-bit, so leaving it unset changes nothing. The
+ * other kinds make a method draw from an external library's exact RNG so its
+ * stochastic output can match that reference:
+ *   PCG64    ≡ numpy.random.default_rng
+ *   MT_R     ≡ base R set.seed / runif / rnorm (Inversion)
+ *   NUMPY_MT ≡ numpy.random.RandomState (legacy MT19937; sklearn / auswahl) */
+typedef enum n4m_rng_kind_t {
+    N4M_RNG_SPLITMIX64 = 0,
+    N4M_RNG_PCG64      = 1,
+    N4M_RNG_MT_R       = 2,
+    N4M_RNG_NUMPY_MT   = 3
+} n4m_rng_kind_t;
+
 /* ============================================================================
  * 8. Config lifecycle and setters
  * ==========================================================================
