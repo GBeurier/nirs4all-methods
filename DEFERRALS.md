@@ -86,3 +86,31 @@ and only the first exists today:
 - **Explicitly NOT chosen:** widening the single-fit cuBLAS path further (more
   ops on GPU) as a perf feature — the measurements show that does not move the
   needle at NIRS sizes.
+
+### Known limitations of the shipped single-fit cuBLAS path (documented, not bugs)
+
+- **Single-thread-only in a cuda-on build.** All GEMM/GEMV/GER share one
+  process-wide cuBLAS handle (`cpp/src/core/cuda_dispatch.cpp`), which cuBLAS
+  does not allow to be used concurrently from multiple host threads. So the
+  `n4m.h` "across contexts thread-safe" guarantee holds for the **CPU** build but
+  **not** for a cuda-on build — treat cuda-on as single-threaded until the
+  per-stream handle pool (the batched path below) lands. This is now stated in
+  the `n4m.h` Threading section.
+- **Contiguous-buffer precondition.** `cuda_dispatch` assumes row-major
+  contiguous matrices (`lda == cols`); the H2D copy uses `rows*cols`, so a
+  strided/transposed view would be silently mis-copied. The model/PLS call sites
+  only ever pass contiguous buffers, so this is safe today, but it is a
+  precondition, not full Rule-4 stride-awareness, for the GPU path.
+
+### Reserving the batched fit/CV ABI surface (when scheduled)
+
+The batched path (axis 2) is the genuine GPU win but is a **new capability**, not
+a refinement — so per this file's legitimacy criteria it needs a *reserved*
+public surface. When it is scheduled, reserve one additive symbol (e.g.
+`n4m_pls_cross_validate(ctx, cfg, X, Y, fold_assignment, n_folds,
+component_grid, n_components_grid, out_result)`) returning
+`N4M_ERR_NOT_IMPLEMENTED` until the device-resident batched executor exists, with
+a test asserting that status. The exact signature is intentionally **not yet
+committed** (it is a design decision that benefits from the consuming
+cross-validation API in nirs4all); reserving it is a one-line additive ABI minor
+bump + a 3-platform snapshot regen when the work starts.
