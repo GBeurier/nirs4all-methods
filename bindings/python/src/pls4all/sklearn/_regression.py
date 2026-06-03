@@ -8,6 +8,8 @@ import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_is_fitted
 
+from .. import _methods
+from .._config import Config
 from .._context import Context
 from .._model import Model, ModelArrayKind
 from .._types import Algorithm, Deflation
@@ -18,6 +20,7 @@ from ._base import (
     _check_X_y_p4a,
     _config_from_params,
     _resolve_solver,
+    _validate_X_y_no_mutate,
 )
 
 
@@ -332,3 +335,101 @@ class PLSSVD(_PlsRegressorBase):
         self.tol = tol
         self.max_iter = max_iter
         self.store_scores = store_scores
+
+
+class Ridge(BaseEstimator, RegressorMixin):
+    """Direct (closed-form) L2-penalized linear regression.
+
+    Drop-in replacement for ``sklearn.linear_model.Ridge`` backed by the
+    ``n4m_ridge_fit`` C entry-point, which solves the genuine closed form
+
+        beta = (Xc'Xc + alpha I)^-1 Xc'Yc
+
+    on column-centered ``X`` / ``Y`` (the L2 penalty is *not* applied to the
+    intercept, for sklearn parity). This is distinct from
+    :class:`pls4all.sklearn.RidgePLSRegression`, which runs a ridge-augmented
+    SIMPLS in latent space. The C kernel picks a primal (augmented-QR) or
+    dual (Gram-on-samples) solver automatically by shape; both give identical
+    coefficients. Supports single- and multi-output ``y``.
+
+    Parameters
+    ----------
+    alpha : float, default=1.0
+        L2 regularization strength (the sklearn ``alpha`` == C-ABI
+        ``ridge_lambda``). Must be finite and ``>= 0`` (``alpha=0`` is OLS
+        and may be ill-posed for ``p >= n``).
+    fit_intercept : bool, default=True
+        Whether to fit an intercept term. When ``False`` no centering is
+        applied and the model passes through the origin.
+    scale_x : bool, default=False
+        Standardize X columns to unit variance before solving (a
+        zero-variance column gets scale 1.0 -> 0 coefficient, sklearn
+        convention). Coefficients are reported on the original X scale.
+    """
+
+    def __init__(self,
+                  alpha: float = 1.0,
+                  *,
+                  fit_intercept: bool = True,
+                  scale_x: bool = False) -> None:
+        self.alpha = alpha
+        self.fit_intercept = fit_intercept
+        self.scale_x = scale_x
+
+    def _make_config(self) -> Config:
+        cfg = Config()
+        cfg.algorithm = Algorithm.PLS_REGRESSION
+        # Intercept fitting is gated on cfg.center_x / cfg.center_y; the C
+        # ABI exposes no ridge_fit_intercept setter, so fit_intercept=False
+        # is realized by disabling centering (x_mean = y_mean = 0 ->
+        # intercept = 0), which is exactly the no-intercept solve.
+        fit_intercept = bool(self.fit_intercept)
+        cfg.center_x = fit_intercept
+        cfg.center_y = fit_intercept
+        cfg.scale_x = bool(self.scale_x)
+        cfg.scale_y = False  # ignored by the kernel; set explicitly for clarity
+        return cfg
+
+    def fit(self, X: Any, y: Any) -> "Ridge":
+        X_arr, y_arr, y_ndim = _validate_X_y_no_mutate(X, y)
+        ctx = Context()
+        cfg = self._make_config()
+        try:
+            result = _methods.ridge_fit(
+                ctx, cfg, X_arr, y_arr, ridge_lambda=float(self.alpha))
+        finally:
+            cfg.close()
+        # Read everything before committing fitted state so a partial
+        # failure leaves the prior (or unfitted) state intact.
+        coef = np.asarray(result.matrix("coefficients"), dtype=np.float64)
+        # C result stores coefficients (p, q); sklearn uses (q, p) or (p,)
+        # when q == 1.
+        coef_T = coef.T.copy()
+        if coef_T.shape[0] == 1:
+            coef_T = coef_T.reshape(coef_T.shape[1])
+        intercept_arr = np.asarray(
+            result.matrix("intercept"), dtype=np.float64).ravel()
+        # Commit.
+        self.coef_ = coef_T
+        self.intercept_ = (
+            float(intercept_arr[0]) if intercept_arr.size == 1
+            else intercept_arr
+        )
+        self.n_features_in_ = int(X_arr.shape[1])
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        self._y_ndim_ = y_ndim
+        return self
+
+    def predict(self, X: Any) -> np.ndarray:
+        check_is_fitted(self)
+        X_arr = _check_X_p4a(self, X)
+        if self.coef_.ndim == 1:
+            preds = X_arr @ self.coef_ + self.intercept_
+        else:
+            preds = X_arr @ self.coef_.T + self.intercept_
+        # sklearn convention: 1-D y in -> 1-D predictions out.
+        if (getattr(self, "_y_ndim_", 2) == 1 and preds.ndim == 2
+                and preds.shape[1] == 1):
+            preds = preds.ravel()
+        return preds

@@ -118,6 +118,14 @@ lib.n4m_ridge_pls_fit.argtypes = [
     ctypes.c_double, ctypes.POINTER(ctypes.c_void_p),
 ]
 
+lib.n4m_ridge_fit.restype = ctypes.c_int
+lib.n4m_ridge_fit.argtypes = [
+    ctypes.c_void_p, ctypes.c_void_p,
+    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_double), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+
 lib.n4m_continuum_regression_fit.restype = ctypes.c_int
 lib.n4m_continuum_regression_fit.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p,
@@ -830,6 +838,40 @@ def ridge_pls_fit(ctx: Context, cfg: Config,
     )
     _check(status, ctx)
     return _resolve_handle(out, ctx, "n4m_ridge_pls_fit")
+
+
+def ridge_fit(ctx: Context, cfg: Config,
+              X: Any, Y: Any,
+              ridge_lambda: float) -> MethodResult:
+    """Direct (closed-form) multi-output Ridge regression.
+
+    Solves ``beta = (Xc'Xc + lambda I)^-1 Xc'Yc`` on column-centered X/Y
+    (distinct from the ridge-augmented SIMPLS of :func:`ridge_pls_fit`).
+    ``ridge_lambda`` is the sklearn ``alpha`` (the L2 penalty); it is
+    passed as the single-element override accepted by the v1 C ABI, so it
+    takes precedence over ``cfg.ridge_lambda``. Intercept fitting follows
+    ``cfg.ridge_fit_intercept`` (default on) gated by
+    ``cfg.center_x``/``cfg.center_y``; ``cfg.scale_x`` standardizes X
+    columns; ``cfg.scale_y`` is ignored (Y is never scaled, for
+    sklearn.linear_model.Ridge parity). The result carries
+    ``"coefficients"`` (p x q), ``"intercept"`` (1 x q), ``"x_mean"``,
+    ``"x_scale"`` (1 x p), ``"y_mean"`` (1 x q), ``"predictions"`` (n x q),
+    scalar ``"rmse"`` and scalar ``"lambda"``.
+    """
+    X_arr = _as_float64_contiguous(X)
+    Y_arr = _as_float64_contiguous(Y)
+    x_view = _matrix_view(X_arr)
+    y_view = _matrix_view(Y_arr)
+    lam = ctypes.c_double(float(ridge_lambda))
+    out = ctypes.c_void_p(0)
+    status = lib.n4m_ridge_fit(
+        ctx.handle, cfg.handle,
+        ctypes.byref(x_view), ctypes.byref(y_view),
+        ctypes.byref(lam), ctypes.c_int64(1),
+        ctypes.byref(out),
+    )
+    _check(status, ctx)
+    return _resolve_handle(out, ctx, "n4m_ridge_fit")
 
 
 def continuum_regression_fit(ctx: Context, cfg: Config,
@@ -2172,6 +2214,7 @@ __all__ = [
     "weighted_pls_fit",
     "robust_pls_fit",
     "ridge_pls_fit",
+    "ridge_fit",
     "continuum_regression_fit",
     "n_pls_fit",
     "kernel_pls_fit",
