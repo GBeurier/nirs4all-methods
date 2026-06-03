@@ -398,11 +398,15 @@ get_params/set_params`, multi-output, pickle bit-exact via the `.n4a` C-ABI wire
 n4m references (greenfield) and resolves models by class-path string/instance, so the swap is config/instance-level,
 not a rewrite. **This is a downstream feature for the user's G3 goal — it does NOT gate the engine's own 1.0 release.**
 
-- **[High · M] `map-model-classes`** — produce the authoritative `nirs4all-class → n4m-estimator` table with a per-
-  class verdict {drop-in / adapter-needed / blocked / keep-native}. 1:1 confirmed: OPLS, OPLSDA, PCR, SparsePLS,
-  MBPLS, DiPLS, PLSDA. Mappable-by-param: SIMPLS→`PLSRegression(solver='simpls')`, Kernel/NLPLS/KPLS→`KernelPLSRegression`.
-  **No n4m equivalent:** FCKPLS, OKLMPLS, IntervalPLS(regressor), AOM/POP/AOM-Ridge/FastAOM families, TabPFN.
-  **In-sample-only (broken predict):** LWPLS, RobustPLS, RecursivePLS.
+- **[High · M] `map-model-classes`** — **DONE** → `docs/nirs4all_integration_map.md` (per-class table, file:line-cited).
+  Verdicts over nirs4all's 42 exported estimators: **drop-in 1** (PCR), **adapter-needed 8** (PLSDA, IKPLS, OPLS,
+  OPLSDA, MBPLS, SparsePLS, SIMPLS, RobustPLS), **blocked 5** (LWPLS, RecursivePLS, KernelPLS, NLPLS, KPLS — real C-ABI
+  gaps), **keep-native 28**. Two corrections from the mapping pass: **`DiPLS` is a NAME COLLISION** (nirs4all `DiPLS`
+  = *Dynamic* PLS with time-lags; pls4all `DIPLSRegression` = *Domain-Invariant* PLS needing `X_target`) → keep-native,
+  **not** 1:1 — do not auto-map it. **RobustPLS is adapter-needed, not blocked** (`n4m_robust_pls_fit` exports
+  coefficients). All model fits live only in the slim **`pls4all`** dist; the full `n4m` package has no method-result
+  FFI yet, so even drop-ins target `pls4all.sklearn` until that subsystem is built. **No n4m equivalent:** FCKPLS,
+  OKLMPLS, IntervalPLS(regressor), KOPLS, DiPLS(Dynamic), AOM/POP/AOM-Ridge/FastAOM families, TabPFN.
 - **[High · L] `adapter-shim-or-repoint`** — build the integration shim: either re-point each mappable nirs4all class
   to delegate to the n4m estimator (preserving import path, `get_params` arg names, `_estimator_type`, `_webapp_meta`
   that 19 model files carry) or reference `pls4all.sklearn` in pipeline configs. API signatures differ (`scale/center/
