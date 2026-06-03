@@ -16,6 +16,7 @@ add_executable(n4m_tests
     test_metrics.cpp
     test_models_pls.cpp
     test_models_extra.cpp
+    test_ridge.cpp
     test_c_abi_memory.cpp
     test_threading.cpp
     test_preprocessing_baselines.cpp

@@ -52,6 +52,7 @@
 #include "core/randomization_selection.hpp"
 #include "core/recursive_pls.hpp"
 #include "core/rep_selection.hpp"
+#include "core/ridge.hpp"
 #include "core/scars_selection.hpp"
 #include "core/shaving_selection.hpp"
 #include "core/sipls_selection.hpp"
@@ -692,6 +693,66 @@ N4M_API n4m_status_t n4m_continuum_regression_fit(
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in n4m_continuum_regression_fit");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_ridge_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const double* lambdas,
+    int64_t n_lambdas,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_ridge_fit");
+        return N4M_ERR_NULL_POINTER;
+    }
+    // v1 contract: NULL+0 (use cfg.ridge_lambda) or a single-element array.
+    // n_lambdas > 1 is reserved for the not-yet-implemented GCV/lambda-path and
+    // is rejected rather than silently using only lambdas[0].
+    if (n_lambdas < 0 || n_lambdas > 1 || (n_lambdas > 0 && lambdas == nullptr)) {
+        set_error(ctx, "n4m_ridge_fit: invalid (lambdas, n_lambdas) — v1 accepts "
+                       "NULL+0 (use cfg.ridge_lambda) or a single lambda; the "
+                       "multi-lambda path is reserved/not yet implemented");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    try {
+        const ::n4m::core::Config& c = *as_core(cfg);
+        // v1: single lambda. NULL+0 => cfg.ridge_lambda; else lambdas[0].
+        const double lambda = (n_lambdas > 0) ? lambdas[0] : c.ridge_lambda;
+        const bool fit_intercept = c.ridge_fit_intercept != 0;
+
+        ::n4m::core::RidgeResult res;
+        const n4m_status_t status = ::n4m::core::fit_ridge(
+            *as_core(ctx), c, *X, *Y, lambda,
+            ::n4m::core::RidgeSolver::kAuto, fit_intercept, res);
+        if (status != N4M_OK) return status;
+
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto q = static_cast<std::int64_t>(res.n_targets);
+        const auto nn = res.n_samples;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        handle->set_double_matrix("coefficients", res.coefficients, p, q);
+        handle->set_double_matrix("intercept", res.intercept, 1, q);
+        handle->set_double_matrix("x_mean", res.x_mean, 1, p);
+        handle->set_double_matrix("x_scale", res.x_scale, 1, p);
+        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+        handle->set_double_matrix("predictions", res.predictions, nn, q);
+        handle->set_scalar("rmse", res.rmse);
+        handle->set_scalar("lambda", res.lambda);
+
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_ridge_fit");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_ridge_fit");
         return N4M_ERR_INTERNAL;
     }
 }

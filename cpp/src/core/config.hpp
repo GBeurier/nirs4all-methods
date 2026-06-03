@@ -55,6 +55,15 @@ class Config {
     //     0)`, renormalized.
     double sparsity_lambda{0.0};
 
+    // Direct (closed-form) Ridge regression knobs (n4m_ridge_fit). Penalty
+    // `ridge_lambda` is the sklearn `alpha`; used when no per-call lambda is
+    // supplied. `ridge_fit_intercept` (default true) toggles intercept fitting
+    // (and centering): the penalty is never applied to the intercept.
+    // Data-only — no public setter, to keep the new ABI surface to the single
+    // n4m_ridge_fit symbol; the lambda is threaded through the fit call.
+    double       ridge_lambda{1.0};
+    std::int32_t ridge_fit_intercept{1};
+
     // Switch `fit_pls_sparse_simpls` to the pre-0.97.4 behaviour
     // (per-component absolute soft-threshold of the SIMPLS direction).
     // 0 (default) uses the Chun & Keles 2010 spls algorithm that matches

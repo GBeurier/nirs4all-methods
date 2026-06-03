@@ -106,6 +106,10 @@ void register_c_abi_memory_tests(n4m_testing::Runner& r);
 // Multi-context threading tests live in test_threading.cpp.
 void register_threading_tests(n4m_testing::Runner& r);
 
+// Direct closed-form Ridge regression parity tests (public n4m_ridge_fit)
+// live in test_ridge.cpp.
+void register_ridge_tests(n4m_testing::Runner& r);
+
 namespace {
 
 void test_version_string_nonempty() {
@@ -198,5 +202,6 @@ int main() {
     register_models_extra_tests(r);
     register_c_abi_memory_tests(r);
     register_threading_tests(r);
+    register_ridge_tests(r);
     return r.finalize();
 }

@@ -1,0 +1,55 @@
+catalog_version: 1
+method_id: "models.regularized.ridge"
+family: "models.regularized"
+category: "models"
+subcategory: "regularized"
+since_abi: "1.11.0"
+abi_symbols:
+  - "n4m_ridge_fit"
+tu:
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+carry_along_tu:
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "sklearn/Ridge-direct-closed-form"
+  divergence_id: null
+  references:
+    - library: "scikit-learn"
+      version: "*"
+      function: "sklearn.linear_model.Ridge"
+      doi_or_url: "https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.Ridge.html"
+      publication_ref: null
+  tolerances:
+    - row_key: "sklearn/Ridge-direct-closed-form"
+      reference: "sklearn.linear_model.Ridge"
+      abs_tol: 1.0e-10
+      rel_tol: 1.0e-10
+      comparison_set: "coef_+intercept_"
+      notes: >-
+        Primal augmented-QR (p<=n) / dual Gram (p>n) vs sklearn solver='cholesky'.
+        glmnet/MASS::lm.ridge need the lambda reparameterisation (lambda_sklearn =
+        n * lambda_glmnet, modulo standardization) and gate at 1e-6 after de-standardize.
+bench:
+  bench_id: "models.regularized.ridge"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications: []
+notes: >-
+  Direct (closed-form) multi-output Ridge: beta = (Xc'Xc + lambda I)^-1 Xc'Yc on
+  column-centered X/Y, intercept = y_mean - x_mean.beta (penalty NOT applied to the
+  intercept, for sklearn.linear_model.Ridge parity). Distinct from
+  models.regularized.ridge_pls (n4m_ridge_pls_fit), which is ridge-AUGMENTED SIMPLS.
+  AUTO solver: PRIMAL augmented-QR (p<=n) / DUAL Gram-on-samples (p>n); identical
+  coefficients up to round-off. Added in G6 (release-readiness). Result keys:
+  coefficients (p x q), intercept (1 x q), x_mean, x_scale (1 x p), y_mean (1 x q),
+  predictions (n x q), scalar rmse, scalar lambda.

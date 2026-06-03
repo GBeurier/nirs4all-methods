@@ -811,6 +811,38 @@ N4M_API n4m_status_t n4m_continuum_regression_fit(
     double tau,
     n4m_method_result_t** out_result);
 
+/* Direct (closed-form) multi-output Ridge regression — genuine
+ *   beta = (Xc'Xc + lambda I)^-1 Xc'Yc
+ * on column-centered X, Y, with intercept = y_mean - x_mean.beta (the penalty
+ * is NOT applied to the intercept, for sklearn.linear_model.Ridge parity).
+ * This is distinct from n4m_ridge_pls_fit (ridge-augmented SIMPLS).
+ *
+ * Solver is chosen automatically by shape: PRIMAL (augmented-QR) when
+ * p <= n, DUAL (Gram-on-samples) when p > n; both give identical coefficients.
+ * Centering follows cfg.center_x/center_y (gated by cfg.ridge_fit_intercept);
+ * cfg.scale_x scales X columns (a zero-variance column gets scale 1.0, sklearn
+ * convention -> 0 coefficient). cfg.scale_y is IGNORED: Y is never scaled, to
+ * match sklearn.linear_model.Ridge. Coefficients/intercept are on the original
+ * (de-scaled) X scale.
+ *
+ * `lambdas`/`n_lambdas` reserve a lambda-path/selection extension. v1 uses a
+ * single lambda: pass NULL+0 to take cfg.ridge_lambda, or a 1-element array to
+ * override it (lambdas[0]); n_lambdas > 1 is rejected (N4M_ERR_INVALID_ARGUMENT)
+ * until the path ships. lambda must be finite and >= 0 (lambda=0 is OLS and
+ * may be ill-posed for p >= n). The result contains:
+ *   "coefficients" (p x q), "intercept" (1 x q), "x_mean" (1 x p),
+ *   "x_scale" (1 x p), "y_mean" (1 x q), "predictions" (n x q)
+ *   scalar "rmse", scalar "lambda"
+ */
+N4M_API n4m_status_t n4m_ridge_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const double* lambdas,
+    int64_t n_lambdas,
+    n4m_method_result_t** out_result);
+
 /* N-PLS (§22). 3-way tensor regression via Bro's algorithm. X must be a
  * row-major (n_samples x (mode_j * mode_k)) flat view of the (n x J x K)
  * tensor. The result contains:
