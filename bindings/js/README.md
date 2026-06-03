@@ -72,33 +72,33 @@ The CMake `emscripten` preset sets:
   `n4m_*` symbol that ships in `libn4m` is exported here as `_n4m_*` (the full
   engine surface), plus `_malloc`/`_free` and the raw-pointer PLS shims.
 
-## Generic method path (status)
+## Generic method path (enabled)
 
-`fitPls` / `predictPls` (and the other raw-pointer shims in
-`src/wasm_entry.c`, e.g. `n4m_wasm_pls_fit_legacy`) are callable end-to-end from
-JS today and are at the numerical floor.
+Two ways to reach the engine, both bit-exact vs native:
 
-The **generic "call any of the 188 methods by id"** path is **not yet enabled**.
-Emscripten miscompiles JS-built `n4m_matrix_view_t*` *parameters* to the deep
-numeric entrypoints (`n4m_model_fit`, the selectors, ...) — they return garbage
-even with a byte-correct struct, while the raw-double-pointer shims are
-bit-exact. So methods that take a matrix-view argument must be reached through a
-C raw-pointer shim built inside the WASM boundary (the `n4m_wasm_pls_fit_legacy`
-pattern). Closing the gap to the full 188-method surface is a tracked follow-up
-with two viable routes:
+- **Raw-pointer shims** — `fitPls` / `predictPls` and the other shims in
+  `src/wasm_entry.c` (e.g. `n4m_wasm_pls_fit_legacy`): typed arrays in, typed
+  arrays out, no handle bookkeeping.
+- **Generic `MethodResult.run`** — call **any** of the ~188 `method_result`
+  producers by symbol, passing `n4m_matrix_view_t*` arguments built from JS.
 
-1. **Fix the Emscripten codegen** (try a newer emsdk, `-O0` vs `-O2`, dropping
-   `WASM_BIGINT`). If the view-pointer path becomes correct, the JS
-   `MethodResult` path reaches every `method_result`-producing method with no
-   per-method C glue.
-2. **Per-family raw-pointer shims** in `wasm_entry.c` (one shim per output
-   shape), routing JS callers through the proven raw-pointer boundary.
+The generic path **works** and is regression-tested (`test/run_generic_method.mjs`
+fits `n4m_sparse_simpls_fit` and the generic `n4m_model_fit` and matches the raw
+`n4m_pls_fit_simple` oracle byte-for-byte). The previous "Emscripten miscompiles
+matrix-view parameters" diagnosis was **wrong**: the bug was the TS `ccall` layer
+passing a JS `number` for the `int64_t` `rows`/`cols` fields. Marshalling those
+dims as `BigInt` under `WASM_BIGINT` (`ffi.ts` / `makeMatrixView`) made the deep
+view-pointer path byte-correct — see the note at the top of `src/wasm_entry.c`.
 
-Note: the JS `makeMatrixView` helper in `ffi.ts` also passes the `int64`
-`rows`/`cols` to `n4m_matrix_view_init_rowmajor` via `ccall("number")`, which is
-itself wrong under `WASM_BIGINT` — but it is moot until the deeper view-pointer
-parameter codegen issue above is resolved, since that helper feeds exactly that
-broken path.
+```js
+import { loadModule, Context, Config, MethodResult } from "@nirs4all/methods-wasm";
+await loadModule();
+const ctx = new Context(), cfg = new Config();
+const X = makeMatrixView(rows, cols, dataF64);   // row-major Float64Array
+const res = MethodResult.run("n4m_sparse_simpls_fit", ctx, cfg, [X /* , Y */]);
+const coef = res.matrix("coefficients");          // typed array + shape
+res.destroy(); cfg.destroy(); ctx.destroy();
+```
 
 ## Layout
 

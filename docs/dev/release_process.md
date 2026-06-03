@@ -8,8 +8,8 @@ automated (PyPI, CRAN-tarball build); the JS / MATLAB / Octave bindings are
 
 | Binding | Package | Registry | Automation | Trigger |
 |---------|---------|----------|------------|---------|
-| Python (full) | `nirs4all-methods` | PyPI | **Automated** — `release-wheels.yml` (cibuildwheel matrix + Trusted Publishing) | push tag `v*` (non-`-rc`) → PyPI; `workflow_dispatch` + `publish=true` |
-| Python (slim) | `pls4all` | PyPI | **Automated** — same `release-wheels.yml` builds both packages in one matrix; the legacy `release-python.yml` is PR-only (smoke + sdist) and no longer publishes | push tag `v*` (non-`-rc`) → PyPI; `workflow_dispatch` + `publish=true` |
+| Python (full) | `nirs4all-methods` | PyPI | **Automated** — `release-wheels.yml` (cibuildwheel matrix + Trusted Publishing) publishes the `nirs4all-methods` project | push tag `v*` (non-`-rc`) → PyPI; `workflow_dispatch` + `publish=true` |
+| Python (slim) | `pls4all` | PyPI | **Automated** — `release-python.yml` (its own Trusted Publisher) publishes the `pls4all` project: sdist + cibuildwheel + retag-to-py3 + TestPyPI/PyPI + post-publish smoke. The two Python workflows are split one-per-PyPI-project (no collision), each with its own one-to-one Trusted Publisher. | push tag `v*` (non-`-rc`) → PyPI; `workflow_dispatch` + `publish=true` |
 | R | `n4m` | CRAN | **Semi-automated** — `release-r.yml` vendors libn4m into `src/vendor/`, runs `R CMD check --as-cran` on the Linux/macOS/Windows + release/devel matrix, and (on tag push) attaches the tarball to the GitHub Release. **Submission is the irreducible manual web form.** | `workflow_dispatch`; tag push attaches the tarball |
 | R | `pls4all` (slim) | CRAN | **Semi-automated** — same `release-r.yml`, the matrix has a `pkg: [n4m, pls4all]` leg. | `workflow_dispatch`; tag push attaches the tarball |
 | JS / WASM | `@nirs4all/methods-wasm` | npm | **Build CI-automated** in `cross-binding-parity.yml` (emsdk pinned, `npm test` parity); **publish manual** (this doc) | — |
