@@ -1,3 +1,13 @@
+> **⚠️ SUPERSEDED SNAPSHOT (2026-05-25).** This is a historical snapshot taken
+> on the now-merged branch `codex/phase-b-catalog`. It cites a stale build
+> (`libn4m.so.1.9.0`) and points at a branch that no longer reflects HEAD.
+> The current branch is **`main`**, the current ABI version is **1.10.0**, and
+> the current project version is **0.98.0** (source of truth:
+> [`cpp/include/n4m/n4m_version.h`](cpp/include/n4m/n4m_version.h)). For the
+> authoritative current state, read [`RELEASE_READINESS.md`](RELEASE_READINESS.md)
+> and [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md). The body below is kept
+> verbatim as a historical record — do not treat its versions/branch as current.
+
 # Status — refactor state on `codex/phase-b-catalog`
 
 > Snapshot: 2026-05-25 · after Phase B catalog foundation + threading audit.

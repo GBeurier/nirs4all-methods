@@ -1,13 +1,15 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * pls4all — public C ABI v1.1.0.
+ * nirs4all-methods — PLS-domain public C ABI (version: see N4M_ABI_VERSION_* in n4m_version.h).
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see n4m_version.h). After v1.0.0 the ABI
  * follows strict semver: breaking changes bump MAJOR, additive changes bump
  * MINOR, bugfixes bump PATCH.
  *
- * This is the ONLY header consumers of libn4m are expected to include.
+ * This is the PLS-domain header. n4m.h is the umbrella header carrying the
+ * common-core surface (status / backend / dtype / matrix-view / context /
+ * version); this header includes it and adds the PLS-domain declarations.
  *
  * Universal rules of the surface:
  *   - Every exported function is `noexcept` — no C++ exception ever crosses
@@ -27,7 +29,7 @@
  *     `n4m_array_t*` and the opaque handles below; both have explicit
  *     `n4m_*_destroy` / `n4m_array_free` functions.
  *
- * Current implementation status (rev 1.1.0 of this header — May 2026):
+ * Current implementation status (see N4M_ABI_VERSION_* in n4m_version.h — May 2026):
  *   - Lifecycle / config / version / matrix-view are fully implemented.
  *   - Pipeline / operator-bank / gating-strategy / validation-plan
  *     lifecycle is implemented; AOM global and POP per-component
@@ -206,15 +208,15 @@ N4M_API n4m_status_t n4m_config_set_store_diagnostics(n4m_config_t*, int32_t ena
 /* Switch `n4m_sparse_simpls_fit` between the default Chun & Keles 2010
  * spls algorithm (enabled=0; matches R `spls::spls`) and the legacy
  * per-component absolute soft-threshold of the SIMPLS direction
- * (enabled=1; behaviour of pls4all <= 0.97.3). */
+ * (enabled=1; behaviour of nirs4all-methods <= 0.97.3). */
 N4M_API n4m_status_t n4m_config_set_sparse_simpls_legacy(n4m_config_t*,
                                                           int32_t enabled);
 N4M_API n4m_status_t n4m_config_get_sparse_simpls_legacy(const n4m_config_t*,
                                                           int32_t* out_enabled);
 /* Switch `n4m_robust_pls_fit` between Partial Robust M-regression
  * (enabled=0; default; matches R `chemometrics::prm` bit-for-bit) and the
- * legacy Huber-IRLS over weighted SIMPLS (enabled=1; behaviour of pls4all
- * <= 0.97.3). */
+ * legacy Huber-IRLS over weighted SIMPLS (enabled=1; behaviour of
+ * nirs4all-methods <= 0.97.3). */
 N4M_API n4m_status_t n4m_config_set_robust_pls_legacy(n4m_config_t*,
                                                        int32_t enabled);
 N4M_API n4m_status_t n4m_config_get_robust_pls_legacy(const n4m_config_t*,
@@ -222,8 +224,8 @@ N4M_API n4m_status_t n4m_config_get_robust_pls_legacy(const n4m_config_t*,
 /* Switch `n4m_approximate_press_compute` between true leave-one-out PRESS
  * (enabled=0; default; matches R `pls::plsr(validation='LOO', method='simpls',
  * scale=FALSE)` bit-for-bit) and the legacy Eastment-Krzanowski leverage-
- * inflated training-residual approximation (enabled=1; behaviour of pls4all
- * <= 0.97.3). */
+ * inflated training-residual approximation (enabled=1; behaviour of
+ * nirs4all-methods <= 0.97.3). */
 N4M_API n4m_status_t n4m_config_set_approximate_press_legacy(n4m_config_t*,
                                                               int32_t enabled);
 N4M_API n4m_status_t n4m_config_get_approximate_press_legacy(const n4m_config_t*,

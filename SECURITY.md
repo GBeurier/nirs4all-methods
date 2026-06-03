@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-`pls4all` is in active pre-release development. The `main` branch and the most recent tagged release are the only versions receiving security updates.
+`nirs4all-methods` is in active pre-release development. The `main` branch and the most recent tagged release are the only versions receiving security updates.
 
 | Version | Supported |
 |---------|-----------|
@@ -12,7 +12,7 @@
 
 ## Reporting a Vulnerability
 
-If you believe you have found a security vulnerability in `pls4all`, please **do not** open a public GitHub issue. Instead, use one of:
+If you believe you have found a security vulnerability in `nirs4all-methods`, please **do not** open a public GitHub issue. Instead, use one of:
 
 1. The GitHub private vulnerability reporting form for this repository (Security tab → "Report a vulnerability").
 2. Email the maintainer directly at the address listed on the GitHub profile attached to the most recent release tag.
@@ -21,18 +21,25 @@ Please include:
 
 - A clear description of the vulnerability and its impact.
 - A minimal reproducer (input data, configuration, expected vs observed behaviour).
-- The pls4all version, operating system, compiler, and binding language(s) involved.
+- The nirs4all-methods version, operating system, compiler, and binding language(s) involved.
 - Any suggested mitigations or patches.
 
 You will receive an acknowledgement within 5 business days. We aim to publish a coordinated fix within 30 days for confirmed vulnerabilities; the timeline may be longer for issues that require ABI changes.
 
 ## Threat model snapshot
 
-`pls4all` is a numerical library. The most plausible vulnerability classes are:
+`nirs4all-methods` is a numerical library. The most plausible vulnerability classes are:
 
-- Out-of-bounds reads/writes when handling user-supplied `p4a_matrix_view_t` with malformed strides.
-- Heap corruption on `p4a_model_import_from_buffer` with crafted serialized models (Phase 1+).
+- Out-of-bounds reads/writes when handling user-supplied `n4m_matrix_view_t` with malformed strides.
+- Heap corruption on `n4m_model_import_from_buffer` with crafted serialized models (Phase 1+).
 - Integer overflow in dimension arithmetic on very large matrices.
 - Denial of service via unbounded iteration counts on adversarial input.
 
-The library does not parse JSON / YAML in the core, does not open network connections, and does not load arbitrary shared libraries at runtime. Optional accelerator backends (BLAS, CUDA) are only invoked when explicitly selected via `p4a_context_set_backend`.
+The library does not parse JSON / YAML in the core, does not open network connections, and does not load arbitrary shared libraries at runtime. Optional accelerator backends (BLAS, CUDA) are only invoked when explicitly selected via `n4m_context_set_backend`.
+
+## WebAssembly / untrusted input
+
+The `@nirs4all/methods-wasm` build runs inside the browser's WebAssembly sandbox: it can only touch the linear memory of the tab that loaded it, and cannot reach the filesystem, the network, or other tabs. Two boundaries are worth calling out for embedders that feed untrusted input to the WASM build:
+
+- **Memory growth is a tab-level DoS surface.** The module is built with `ALLOW_MEMORY_GROWTH=1` and `MAXIMUM_MEMORY=2GB`, so an oversized input can grow the WASM heap until the tab runs out of memory. This is contained to the embedding page (it cannot escape the sandbox), but the embedder is responsible for bounding input sizes so a hostile or malformed payload cannot exhaust the tab.
+- **The caller owns the buffer length.** An `n4m_matrix_view_t` carries explicit dimensions and strides but **no total length** — the core trusts that the backing buffer is large enough for the declared `rows × cols` and stride layout. The binding or embedder that constructs the view must guarantee that invariant; passing dimensions or strides that exceed the real allocation is an out-of-bounds read/write, not something the core can detect.

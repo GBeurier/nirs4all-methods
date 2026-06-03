@@ -121,6 +121,8 @@ readelf -d build/dev-release/cpp/src/libn4m.so.<ver> \
   | grep -E 'SONAME|NEEDED|RPATH|RUNPATH'
 ```
 
+To regenerate the per-platform ABI snapshots after an intentional surface change, use `scripts/regen_abi_snapshots.sh`.
+
 ABI versioning (`N4M_ABI_VERSION_*` in `cpp/include/n4m/n4m_version.h`) is **independent of project version** and bumps only on surface change. `n4m_check_abi_compatibility(header_major, header_minor)` is how bindings detect header/runtime skew.
 
 ## Architecture — load-bearing rules
@@ -216,7 +218,7 @@ docs/                             # Sphinx site source
 | `n4m_tests`       | EXE    | doctest binary, links core + c_api.                        |
 | `n4m_cli`         | EXE    | `--version`, `--abi-info`, `--selfcheck`.                  |
 
-Symbol visibility is hidden by default; only `N4M_API`-decorated declarations are exported. On MSVC a `.def` file additionally drives exports. The Linux version script `cpp/src/c_api/n4m_linux.map` carries the `N4M_1` ABI version tag.
+Symbol visibility is hidden by default; only `N4M_API`-decorated declarations are exported. On Windows the `N4M_API` macro expands to `__declspec(dllexport)` (`__attribute__((dllexport))` under MinGW/GCC) — see `cpp/include/n4m/n4m_export.h.in`; there is no `.def` file. The Linux version script `cpp/src/c_api/n4m_linux.map` carries the `N4M_1` ABI version tag.
 
 ## Development workflow (Codex review loop)
 
