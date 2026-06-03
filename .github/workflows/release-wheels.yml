@@ -118,6 +118,13 @@ jobs:
           # This propagates to CIBW_BEFORE_ALL on the host-built platforms;
           # the Linux container uses build_libn4m_in_wheel.sh's dev-release default.
           PLS4ALL_BUILD_PRESET: ${{ runner.os == 'Windows' && 'ci-windows-msvc-release' || 'dev-release' }}
+          # Pin the macOS minimum so all three agree: clang/CMake build libn4m.dylib
+          # with -mmacosx-version-min=11.0 (dev-release sets no CMAKE_OSX_DEPLOYMENT_TARGET,
+          # so it inherits this env), cibuildwheel tags the wheel macosx_11_0_*, and
+          # delocate accepts the dylib — otherwise the dylib's LC_BUILD_VERSION (the
+          # runner SDK default) can exceed the advertised wheel tag and import-fail on
+          # older macOS than advertised. Ignored on Linux/Windows.
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
           # Rebuild + re-stage libn4m inside each build environment so the bundled
           # lib matches the wheel (in-container glibc on Linux).
           CIBW_BEFORE_ALL_LINUX:   bash bindings/python/scripts/prepare_wheel_packages.sh
