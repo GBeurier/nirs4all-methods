@@ -600,6 +600,7 @@ n4m_random_subspace_pls_fit
 n4m_randomization_select
 n4m_recursive_pls_run
 n4m_rep_select
+n4m_ridge_fit
 n4m_ridge_pls_fit
 n4m_rng_pcg64_advance
 n4m_rng_pcg64_create

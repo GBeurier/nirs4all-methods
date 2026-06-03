@@ -1,5 +1,35 @@
 # ABI — Changes Log
 
+## 2026-06-03 — ABI 1.11.0: direct (closed-form) Ridge regression
+
+One additive public symbol (ABI MINOR bump 1.10.0 → 1.11.0), backward-compatible
+(no signature/layout change, nothing removed):
+
+- `n4m_ridge_fit(n4m_context_t*, const n4m_config_t*, const n4m_matrix_view_t* X,
+  const n4m_matrix_view_t* Y, const double* lambdas, int64_t n_lambdas,
+  n4m_method_result_t** out_result)`
+
+This is a **genuine closed-form** multi-output Ridge — `beta = (Xc'Xc + lambda I)^-1
+Xc'Yc` on column-centered X/Y with `intercept = y_mean - x_mean.beta` (the penalty is
+not applied to the intercept, for `sklearn.linear_model.Ridge` parity). It is distinct
+from the pre-existing `n4m_ridge_pls_fit` (ridge-augmented SIMPLS, rank-truncated by
+`n_components`). The solver is chosen automatically by shape (PRIMAL augmented-QR for
+p ≤ n, DUAL Gram-on-samples for p > n; identical coefficients up to round-off).
+
+Declared with `N4M_API` in `cpp/include/n4m/pls.h` (after `n4m_continuum_regression_fit`),
+implemented in `cpp/src/c_api/c_api_method_result.cpp` over the new core kernel
+`cpp/src/core/ridge.cpp`. Result keys: `coefficients` (p×q), `intercept` (1×q),
+`x_mean`, `x_scale` (1×p), `y_mean` (1×q), `predictions` (n×q), scalar `rmse`,
+scalar `lambda`.
+
+Snapshots regenerated for all three platforms via
+`scripts/regen_abi_snapshots.sh --derive` (linux from the lib; macos/windows derived
+= linux minus the `N4M_1` version node). `n4m_ridge_fit` is present in
+`cpp/abi/expected_symbols_{linux,macos,windows}.txt`. Header
+`N4M_ABI_VERSION_MINOR` and `bindings/python/src/n4m/_ffi.py:ABI_VERSION_MINOR`
+both bumped 10 → 11; `bump_version.sh --check` is green (project version unchanged
+at 0.98.0).
+
 ## 2026-06-03 — macOS/Windows snapshot correction + cross-platform gate enforced
 
 No ABI surface change (still ABI 1.10.0). This is an **audit-trail and CI

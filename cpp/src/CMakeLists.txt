@@ -56,6 +56,7 @@ add_library(n4m_core OBJECT
     core/pls_diagnostics.cpp
     core/pls_monitoring.cpp
     core/recursive_pls.cpp
+    core/ridge.cpp
     core/tensor_pls.cpp
     core/interval_selection.cpp
     core/lw_pls.cpp
