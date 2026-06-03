@@ -14,6 +14,10 @@ add_executable(n4m_tests
     test_filters_meta.cpp
     test_filters_y.cpp
     test_metrics.cpp
+    test_models_pls.cpp
+    test_models_extra.cpp
+    test_c_abi_memory.cpp
+    test_threading.cpp
     test_preprocessing_baselines.cpp
     test_preprocessing_feature_selection.cpp
     test_preprocessing_orthogonalization.cpp
@@ -67,9 +71,13 @@ set_tests_properties(n4m_tests PROPERTIES
 # static link resolves hidden symbols and (per n4m_targets.cmake) already
 # carries the optional OpenMP/BLAS/CUDA deps.
 if(TARGET n4m_c_static)
-    add_executable(n4m_internal_tests test_internal_rng_choice.cpp)
+    add_executable(n4m_internal_tests
+        test_internal_rng_choice.cpp
+        test_uve_r_exact.cpp
+        test_internal_cv.cpp)
     target_link_libraries(n4m_internal_tests PRIVATE n4m_c_static)
     target_include_directories(n4m_internal_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/cpp/src
         ${PROJECT_BINARY_DIR}/generated)
     n4m_add_warnings(n4m_internal_tests)

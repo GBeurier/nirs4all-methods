@@ -145,12 +145,23 @@ void test_choice_tail_shuffle() {
 
 }  // namespace
 
+// R-exact MCUVE parity tests live in test_uve_r_exact.cpp (same binary —
+// internal core symbols are hidden in libn4m and only reachable through the
+// static archive this executable links). Returns its own failure count.
+int run_uve_r_exact_tests();
+
+// Internal-core CV / component-CV / component-coefficients parity tests live in
+// test_internal_cv.cpp (same binary, static archive). Returns its failures.
+int run_internal_cv_tests();
+
 int main() {
     test_bounded();
     test_integers();
     test_advance_resets_cache();
     test_choice_floyd();
     test_choice_tail_shuffle();
+    g_failures += run_uve_r_exact_tests();
+    g_failures += run_internal_cv_tests();
     if (g_failures == 0) {
         std::printf("=== n4m_internal_tests: all RNG choice/bounded parity OK ===\n");
         return 0;

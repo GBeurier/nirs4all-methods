@@ -91,6 +91,21 @@ void register_augmenters_phase17_tests(n4m_testing::Runner& r);
 // test_augmenters_edge_splines_random.cpp.
 void register_augmenters_edge_splines_random_tests(n4m_testing::Runner& r);
 
+// Model-fixture parity tests for the core regression-solver PLS families
+// (public n4m_model_fit / predict / get_array path) live in test_models_pls.cpp.
+void register_models_pls_tests(n4m_testing::Runner& r);
+
+// Method-result model families (MB-PLS, LW-PLS, PLS-LDA, PLS-Logistic) reachable
+// through the dedicated public n4m_*_fit ABI live in test_models_extra.cpp.
+void register_models_extra_tests(n4m_testing::Runner& r);
+
+// Adversarial C-ABI boundary / memory-ownership tests live in
+// test_c_abi_memory.cpp.
+void register_c_abi_memory_tests(n4m_testing::Runner& r);
+
+// Multi-context threading tests live in test_threading.cpp.
+void register_threading_tests(n4m_testing::Runner& r);
+
 namespace {
 
 void test_version_string_nonempty() {
@@ -179,5 +194,9 @@ int main() {
     register_augmenters_wavelength_spectral_tests(r);
     register_augmenters_phase17_tests(r);
     register_augmenters_edge_splines_random_tests(r);
+    register_models_pls_tests(r);
+    register_models_extra_tests(r);
+    register_c_abi_memory_tests(r);
+    register_threading_tests(r);
     return r.finalize();
 }
