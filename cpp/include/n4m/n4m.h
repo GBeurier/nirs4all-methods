@@ -225,8 +225,13 @@ N4M_API n4m_status_t n4m_matrix_view_validate(const n4m_matrix_view_t* v);
  *   - an optional user-pointer for binding-side bookkeeping.
  *
  * Threading: a single n4m_context_t* must not be used concurrently from two
- * threads — use one context per thread. Across contexts the library is
- * thread-safe.
+ * threads — use one context per thread. Across contexts the (default CPU)
+ * library is thread-safe.
+ * EXCEPTION: a cuda-on build routes all GEMM/GEMV/GER through a single
+ * process-wide cuBLAS handle, which is NOT safe for concurrent use from
+ * multiple host threads. Until the deferred per-stream handle pool lands
+ * (see DEFERRALS.md "GPU — batched execution path"), treat a cuda-on build
+ * as single-threaded: do not fit/predict concurrently across contexts.
  *
  * Signal safety: no n4m_* function is async-signal-safe. Do not call any
  * n4m_* function from a POSIX signal handler.
