@@ -14,6 +14,7 @@
 #include "core/common/matrix_view.hpp"
 #include "core/common/parallel.hpp"
 #include "core/common/status.hpp"
+#include "core/common/svd.h"
 
 namespace {
 
@@ -3477,135 +3478,66 @@ n4m_status_t fit_pcr_svd(
         return N4M_ERR_INVALID_ARGUMENT;
     }
 
-    // Gram = Xc^T Xc  (symmetric, p x p, row-major contiguous).
-    std::vector<double> gram;
-    resize_fill(gram, p * p, 0.0);
-    n4m::linalg::gemm(
-        n4m::linalg::Trans_Yes, n4m::linalg::Trans_No,
-        p, p, n,
-        1.0,
-        xs.data(), p,
-        xs.data(), p,
-        0.0,
-        gram.data(), p);
-
-    // Full symmetric cyclic Jacobi diagonalization. After convergence:
-    //   mat[i,i]      = eigenvalues (unsorted)
-    //   eigvecs[:, i] = corresponding orthonormal eigenvector
+    // PCR directions are the leading principal axes of Xc, i.e. the right
+    // singular vectors V[:, i] of Xc (= eigenvectors of Xc^T Xc), with the
+    // associated X-score sum-of-squares ||Xc v_i||^2 = sigma_i^2 = the i-th
+    // (Xc^T Xc) eigenvalue.
     //
-    // Sweeps walk every off-diagonal (row, col > row) in fixed order
-    // instead of paying O(p^2) to relocate the max-magnitude entry every
-    // single rotation. Cyclic Jacobi converges quadratically and needs
-    // only O(log p) sweeps for double-precision eigendecompositions of
-    // well-conditioned symmetric matrices; the sweep cap is set to 64
-    // which is far above the textbook 10-12 needed in practice.
-    std::vector<double> mat = gram;
-    std::vector<double> eigvecs;
-    resize_fill(eigvecs, p * p, 0.0);
-    for (std::size_t i = 0; i < p; ++i) {
-        eigvecs[idx(i, p, i)] = 1.0;
+    // We compute these from a TRUE SVD of Xc (one-sided Jacobi on the
+    // smaller dimension via n4m_svd_compact) rather than from the explicit
+    // p x p Gram Xc^T Xc. Forming and diagonalising the Gram squares the
+    // condition number (kappa(Xc^T Xc) = kappa(Xc)^2) and costs O(p^3) /
+    // O(p^2) memory at the NIRS feature width p >> n. The one-sided Jacobi
+    // SVD works on Xc directly, so it never squares kappa, and for the wide
+    // NIRS regime (n < p) n4m_svd_compact factors Xc^T (no p x p allocation).
+    const std::size_t kfull = (n < p) ? n : p;  // min(n, p) singular triplets
+    if (a > kfull) {
+        ctx.set_errorf("PCR n_components (%llu) exceeds rank bound min(n,p)=%llu",
+                       ull(a), ull(kfull));
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-    const double stop_tol = std::min(std::max(cfg.tol, 1e-14), 1e-12);
-    constexpr std::size_t kMaxSweeps = 64U;
-    bool converged = (p <= 1U);
-    if (p >= 2U) {
-        for (std::size_t sweep = 0; sweep < kMaxSweeps && !converged; ++sweep) {
-            double max_off = 0.0;
-            double diag_scale = 1.0;
-            for (std::size_t row = 0; row < p; ++row) {
-                diag_scale = std::max(diag_scale, std::fabs(mat[idx(row, p, row)]));
-                for (std::size_t col = row + 1U; col < p; ++col) {
-                    max_off = std::max(max_off, std::fabs(mat[idx(row, p, col)]));
-                }
-            }
-            const double threshold = stop_tol * diag_scale;
-            if (max_off <= threshold) {
-                converged = true;
-                break;
-            }
-            for (std::size_t pivot_p = 0; pivot_p < p; ++pivot_p) {
-                for (std::size_t pivot_q = pivot_p + 1U; pivot_q < p; ++pivot_q) {
-                    const double apq = mat[idx(pivot_p, p, pivot_q)];
-                    if (std::fabs(apq) <= threshold) {
-                        continue;
-                    }
-                    const double app = mat[idx(pivot_p, p, pivot_p)];
-                    const double aqq = mat[idx(pivot_q, p, pivot_q)];
-                    const double tau = (aqq - app) / (2.0 * apq);
-                    const double tau_sign = tau >= 0.0 ? 1.0 : -1.0;
-                    const double t = tau_sign /
-                                     (std::fabs(tau) + std::sqrt(1.0 + tau * tau));
-                    const double c = 1.0 / std::sqrt(1.0 + t * t);
-                    const double s = t * c;
-
-                    mat[idx(pivot_p, p, pivot_p)] = app - t * apq;
-                    mat[idx(pivot_q, p, pivot_q)] = aqq + t * apq;
-                    mat[idx(pivot_p, p, pivot_q)] = 0.0;
-                    mat[idx(pivot_q, p, pivot_p)] = 0.0;
-
-                    for (std::size_t k = 0; k < p; ++k) {
-                        if (k == pivot_p || k == pivot_q) {
-                            continue;
-                        }
-                        const double akp = mat[idx(k, p, pivot_p)];
-                        const double akq = mat[idx(k, p, pivot_q)];
-                        const double next_p = c * akp - s * akq;
-                        const double next_q = s * akp + c * akq;
-                        mat[idx(k, p, pivot_p)] = next_p;
-                        mat[idx(pivot_p, p, k)] = next_p;
-                        mat[idx(k, p, pivot_q)] = next_q;
-                        mat[idx(pivot_q, p, k)] = next_q;
-                    }
-
-                    for (std::size_t row = 0; row < p; ++row) {
-                        const double vip = eigvecs[idx(row, p, pivot_p)];
-                        const double viq = eigvecs[idx(row, p, pivot_q)];
-                        eigvecs[idx(row, p, pivot_p)] = c * vip - s * viq;
-                        eigvecs[idx(row, p, pivot_q)] = s * vip + c * viq;
-                    }
-                }
-            }
+    std::vector<double> svd_input = xs;  // consumed (modified) in place by the SVD
+    std::vector<double> svd_u;
+    std::vector<double> svd_s;
+    std::vector<double> svd_vt;
+    resize_fill(svd_u, n * kfull, 0.0);
+    resize_fill(svd_s, kfull, 0.0);
+    resize_fill(svd_vt, kfull * p, 0.0);
+    const n4m_status_t svd_status = n4m_svd_compact(
+        svd_input.data(), static_cast<std::int64_t>(n),
+        static_cast<std::int64_t>(p), svd_u.data(), svd_s.data(), svd_vt.data());
+    if (svd_status != N4M_OK) {
+        if (svd_status == N4M_ERR_CONVERGENCE_FAILED) {
+            ctx.set_error("PCR X SVD (one-sided Jacobi) failed to converge");
+        } else {
+            ctx.set_error("PCR X SVD failed");
         }
-    }
-    if (!converged) {
-        ctx.set_error("PCR X covariance Jacobi diagonalization failed to converge");
-        return N4M_ERR_CONVERGENCE_FAILED;
+        return svd_status;
     }
 
-    // Collect column indices in descending-eigenvalue order.
-    std::vector<std::size_t> order(p);
-    for (std::size_t i = 0; i < p; ++i) {
-        order[i] = i;
-    }
-    std::sort(order.begin(), order.end(),
-              [&](std::size_t lhs, std::size_t rhs) {
-                  return mat[idx(lhs, p, lhs)] > mat[idx(rhs, p, rhs)];
-              });
-
-    // For each retained component, collect the eigenvector directions.
-    // Then batch the PCR projections through GEMM:
+    // For each retained component, collect the right singular vector
+    // direction = V[:, comp] (= row comp of Vt). Then batch the PCR
+    // projections through GEMM:
     //   scores_t     = Xc * directions
-    //   y_loadings_q = Yc^T * scores_t / eigenvalue
-    // This preserves the same math as per-component GEMV while avoiding
-    // repeated dispatch overhead and enabling BLAS/CUDA to see a wider op.
+    //   y_loadings_q = Yc^T * scores_t / sigma^2
     // weights_w == loadings_p == V[:, i] in closed form because each
-    // eigenvector is orthonormal and the per-component deflation reduces
-    // to the identity in the (Xc^T Xc) eigenbasis.
+    // singular vector is orthonormal and the per-component deflation reduces
+    // to the identity in the right-singular-vector basis.
     std::vector<double> direction(p, 0.0);
     std::vector<double> directions;
     std::vector<double> eigenvalues;
     resize_fill(directions, p * a, 0.0);
     resize_fill(eigenvalues, a, 0.0);
     for (std::size_t comp = 0; comp < a; ++comp) {
-        const std::size_t col = order[comp];
-        const double eigenvalue = mat[idx(col, p, col)];
+        const double sigma = svd_s[comp];
+        const double eigenvalue = sigma * sigma;  // ||Xc v||^2 = sigma^2
         if (!(eigenvalue > std::numeric_limits<double>::epsilon())) {
             ctx.set_errorf("PCR X covariance vanished at component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
         for (std::size_t feature = 0; feature < p; ++feature) {
-            direction[feature] = eigvecs[idx(feature, p, col)];
+            direction[feature] = svd_vt[idx(comp, p, feature)];
         }
         canonicalize_direction_sign(direction);
         eigenvalues[comp] = eigenvalue;
@@ -3805,13 +3737,22 @@ n4m_status_t fit_pls_regression_simpls(
 
         std::vector<double> v = x_loadings;
         if (comp > 0U) {
-            for (std::size_t prev = 0; prev < comp; ++prev) {
-                double projection = 0.0;
-                for (std::size_t feature = 0; feature < p; ++feature) {
-                    projection += basis_v[idx(feature, a, prev)] * v[feature];
-                }
-                for (std::size_t feature = 0; feature < p; ++feature) {
-                    v[feature] -= basis_v[idx(feature, a, prev)] * projection;
+            // Classical Gram-Schmidt against the prior deflation basis, run
+            // twice (CGS2). A single classical pass loses orthogonality as the
+            // component count grows (rounding in the projections accumulates);
+            // a second pass restores it to ~machine precision (Giraud-Langou-
+            // Rozloznik). For well-separated components the second pass removes
+            // only an O(eps) residual, so existing low-component fixtures are
+            // unchanged.
+            for (int pass = 0; pass < 2; ++pass) {
+                for (std::size_t prev = 0; prev < comp; ++prev) {
+                    double projection = 0.0;
+                    for (std::size_t feature = 0; feature < p; ++feature) {
+                        projection += basis_v[idx(feature, a, prev)] * v[feature];
+                    }
+                    for (std::size_t feature = 0; feature < p; ++feature) {
+                        v[feature] -= basis_v[idx(feature, a, prev)] * projection;
+                    }
                 }
             }
         }

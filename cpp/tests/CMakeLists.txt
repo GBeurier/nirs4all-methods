@@ -75,7 +75,8 @@ if(TARGET n4m_c_static)
     add_executable(n4m_internal_tests
         test_internal_rng_choice.cpp
         test_uve_r_exact.cpp
-        test_internal_cv.cpp)
+        test_internal_cv.cpp
+        test_internal_linalg.cpp)
     target_link_libraries(n4m_internal_tests PRIVATE n4m_c_static)
     target_include_directories(n4m_internal_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}

@@ -154,6 +154,10 @@ int run_uve_r_exact_tests();
 // test_internal_cv.cpp (same binary, static archive). Returns its failures.
 int run_internal_cv_tests();
 
+// Shared dense linear-algebra (Householder QR + back-solve) unit tests live in
+// test_internal_linalg.cpp (same binary, static archive). Returns its failures.
+int run_internal_linalg_tests();
+
 int main() {
     test_bounded();
     test_integers();
@@ -162,6 +166,7 @@ int main() {
     test_choice_tail_shuffle();
     g_failures += run_uve_r_exact_tests();
     g_failures += run_internal_cv_tests();
+    g_failures += run_internal_linalg_tests();
     if (g_failures == 0) {
         std::printf("=== n4m_internal_tests: all RNG choice/bounded parity OK ===\n");
         return 0;

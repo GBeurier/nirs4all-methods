@@ -37,7 +37,17 @@ n4m_status_t n4m_householder_qr(double* A, int64_t rows, int64_t cols,
             continue;
         }
         const double vk0 = Akk - alpha;
-        const double v_norm_sq = vk0 * vk0 + (sigma * sigma - Akk * Akk);
+        /* ||v||^2 = vk0^2 + (sigma^2 - Akk^2). The parenthesised term loses
+         * precision via catastrophic cancellation when the column is near
+         * axis-aligned (Akk ~= +/-sigma). Use the algebraically-equal,
+         * cancellation-free form:
+         *   ||v||^2 = (Akk - alpha)^2 + sigma^2 - Akk^2
+         *           = alpha^2 + sigma^2 - 2*Akk*alpha   (alpha^2 = sigma^2)
+         *           = 2*sigma^2 - 2*Akk*alpha
+         *           = -2*alpha*(Akk - alpha) = -2*alpha*vk0.
+         * Because alpha = -sign(Akk)*sigma, vk0 = Akk - alpha is a sum of
+         * same-sign terms (no cancellation), and -2*alpha*vk0 stays exact. */
+        const double v_norm_sq = -2.0 * alpha * vk0;
         const double t = 2.0 / v_norm_sq * vk0 * vk0;
         const double inv_vk0 = 1.0 / vk0;
         A[(size_t)k * (size_t)cols + (size_t)k] = alpha;
@@ -94,13 +104,30 @@ n4m_status_t n4m_back_solve_R(const double* A, int64_t rows, int64_t cols,
     if (rows < 1 || cols < 1 || rows < cols) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
+    /* Reject a rank-deficient R relative to its largest diagonal: a diagonal
+     * with |R_ii| <= rtol * max_j|R_jj| means R is (numerically) singular, so
+     * the back-substitution would amplify it into a garbage huge solution.
+     * Flag it as a numerical failure instead. rtol is a few ulps scaled by the
+     * problem dimension — tight enough that well-conditioned solves are
+     * unaffected, loose enough to catch exact / near-exact rank deficiency
+     * (e.g. two identical design columns -> a zero pivot up to rounding). */
+    double max_abs_diag = 0.0;
+    for (int64_t i = 0; i < cols; ++i) {
+        const double d = A[(size_t)i * (size_t)cols + (size_t)i];
+        const double ad = (d < 0.0) ? -d : d;
+        if (ad > max_abs_diag) {
+            max_abs_diag = ad;
+        }
+    }
+    const double rtol = 2.220446049250313e-16 * (double)cols * max_abs_diag;
     for (int64_t i = cols - 1; i >= 0; --i) {
         double s = y[i];
         for (int64_t j = i + 1; j < cols; ++j) {
             s -= A[(size_t)i * (size_t)cols + (size_t)j] * x[j];
         }
         const double diag = A[(size_t)i * (size_t)cols + (size_t)i];
-        if (diag == 0.0) {
+        const double abs_diag = (diag < 0.0) ? -diag : diag;
+        if (abs_diag <= rtol) {
             return N4M_ERR_NUMERICAL_FAILURE;
         }
         x[i] = s / diag;

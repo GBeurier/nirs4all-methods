@@ -38,6 +38,7 @@
 #include "fixtures/opls_fixtures.hpp"
 #include "fixtures/orthogonal_scores_fixtures.hpp"
 #include "fixtures/pcr_fixtures.hpp"
+#include "fixtures/pcr_illcond_fixtures.hpp"
 #include "fixtures/pls_da_fixtures.hpp"
 #include "fixtures/pls_svd_fixtures.hpp"
 #include "fixtures/power_fixtures.hpp"
@@ -254,6 +255,75 @@ void test_opls_da() {
                  {N4M_ALGO_OPLS_DA, N4M_SOLVER_NIPALS, N4M_DEFLATION_ORTHOGONAL, true, false});
 }
 
+// Ill-conditioned PCR conditioning gate (true-SVD-of-X path). On a 60 x 400
+// design with kappa(Xc) ~ 1e8, forming the p x p Gram Xc^T Xc squares the
+// condition number to ~1e16 and corrupts the smaller retained principal
+// components. The production PCR now routes through a true SVD of Xc (one-sided
+// Jacobi via n4m_svd_compact), which never squares kappa, so its training
+// predictions must match a numpy SVD-based PCR reference to ~1e-8 relative.
+// center_x=1, scale_x=0, center_y=1, scale_y=0 mirrors the reference exactly
+// (the fixture columns are already mean-zero).
+void test_pcr_illconditioned() {
+    using ::n4m::test::fixtures::kPcrIllN;
+    using ::n4m::test::fixtures::kPcrIllP;
+    using ::n4m::test::fixtures::kPcrIllA;
+    using ::n4m::test::fixtures::kPcrIllX;
+    using ::n4m::test::fixtures::kPcrIllY;
+    using ::n4m::test::fixtures::kPcrIllPredRef;
+
+    n4m_context_t* ctx = nullptr;
+    n4m_config_t* cfg = nullptr;
+    n4m_model_t* model = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, kPcrIllA) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, N4M_ALGO_PCR) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, N4M_SOLVER_SVD) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_deflation(cfg, N4M_DEFLATION_REGRESSION) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_center_x(cfg, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_center_y(cfg, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+
+    n4m_matrix_view_t Xv{}, Yv{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(
+        &Xv, const_cast<double*>(kPcrIllX), kPcrIllN, kPcrIllP, N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(
+        &Yv, const_cast<double*>(kPcrIllY), kPcrIllN, 1, N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_fit(ctx, cfg, &Xv, &Yv, &model) == N4M_OK);
+
+    n4m_array_t* pred = nullptr;
+    N4M_TEST_REQUIRE(n4m_model_predict_alloc(ctx, model, &Xv, &pred) == N4M_OK);
+    std::int64_t pr = 0, pc = 0;
+    N4M_TEST_REQUIRE(n4m_array_shape(pred, &pr, &pc) == N4M_OK);
+    N4M_TEST_REQUIRE(pr == kPcrIllN);
+    N4M_TEST_REQUIRE(pc == 1);
+    std::vector<double> got = array_values(pred);
+    n4m_array_free(pred);
+
+    double max_rel = 0.0;
+    for (std::size_t i = 0; i < got.size(); ++i) {
+        const double ref = kPcrIllPredRef[i];
+        const double diff = std::fabs(got[i] - ref);
+        const double scale = std::max(std::fabs(ref), 1.0);
+        max_rel = std::max(max_rel, diff / scale);
+    }
+    n4m_model_destroy(model);
+    n4m_config_destroy(cfg);
+    n4m_context_destroy(ctx);
+    // The task gate is "~1e-8 relative" vs the numpy SVD-PCR reference. The
+    // true-SVD-of-X path actually lands at ~2e-13 here, well inside 1e-8. We
+    // assert 1e-11 because that ALSO discriminates the fix: the previous
+    // p x p Gram + Jacobi PCR (whose cyclic-Jacobi tolerance is clamped to
+    // [1e-14, 1e-12] and which squares kappa to ~1e16) lands at ~1.2e-10 on
+    // this design — it would FAIL a 1e-11 gate while comfortably passing 1e-8.
+    if (max_rel > 1e-11) {
+        throw std::runtime_error(
+            "PCR ill-conditioned predictions diverge from numpy SVD-PCR "
+            "reference (kappa-squaring?): max_rel=" + std::to_string(max_rel));
+    }
+}
+
 }  // namespace
 
 void register_models_pls_tests(n4m_testing::Runner& r) {
@@ -262,6 +332,7 @@ void register_models_pls_tests(n4m_testing::Runner& r) {
     r.run("models_pls/power",              test_power);
     r.run("models_pls/randomized_svd",     test_randomized_svd);
     r.run("models_pls/pcr",                test_pcr);
+    r.run("models_pls/pcr_illconditioned", test_pcr_illconditioned);
     r.run("models_pls/kernel",             test_kernel);
     r.run("models_pls/wide_kernel",        test_wide_kernel);
     r.run("models_pls/orthogonal_scores",  test_orthogonal_scores);
