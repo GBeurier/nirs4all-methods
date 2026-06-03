@@ -43,12 +43,12 @@ Unsupervised/transform methods (SNV, MSC, SG, ...) take no `y`.
 WASM memory is manual. Every handle (`Context`, `Config`, `MethodResult`) has a
 `destroy()`; call it. `fitPls`/`predictPls` return plain JS data (nothing to free).
 
-## Generic method access — current status
-`fitPls`/`predictPls` (and the other raw-pointer shims in
-`bindings/js/src/wasm_entry.c`) are callable end-to-end today. The **generic
-"call any of the 188 methods by id"** path is **not yet enabled**: Emscripten
-miscompiles JS-built `n4m_matrix_view_t*` parameters to the deep numeric
-entrypoints (documented in `wasm_entry.c`), so methods that take a matrix-view
-argument must be reached through a C raw-pointer shim. Closing that gap (an
-Emscripten-codegen fix, or per-family raw-pointer shims) is a tracked follow-up;
-see the README "Generic method path" section.
+## Generic method access — enabled
+`fitPls`/`predictPls` (the raw-pointer shims in `bindings/js/src/wasm_entry.c`)
+**and** the generic `MethodResult.run("n4m_<method>_fit", ...)` path — which
+reaches any of the ~188 `method_result` producers via JS-built
+`n4m_matrix_view_t*` arguments — are both callable end-to-end and bit-exact vs
+native. The earlier "Emscripten miscompiles matrix-view parameters" note was a
+misdiagnosis; the real bug was passing a JS `number` for the `int64_t` view dims,
+fixed by marshalling them as `BigInt` under `WASM_BIGINT`. Regression guard:
+`bindings/js/test/run_generic_method.mjs`. See the README "Generic method path".
