@@ -54,6 +54,7 @@ from ._regression import (
     PLSCanonical,
     PLSRegression,
     PLSSVD,
+    Ridge,
     SparsePLSRegression,
 )
 from ._classification import OPLSDAClassifier, PLSDAClassifier
@@ -152,6 +153,8 @@ __all__ = [
     # Model-based regressors / classifiers
     "PLSRegression", "OPLSRegression", "PCR", "SparsePLSRegression",
     "PLSCanonical", "PLSSVD", "PLSDAClassifier", "OPLSDAClassifier",
+    # Direct closed-form ridge (MethodResult-based)
+    "Ridge",
     # MethodResult-based regressors (Python-side predict via coef)
     "SparseSimplsRegression", "CPPLSRegression", "ECRegression",
     "DIPLSRegression", "MIRPLSRegression", "MBPLSRegression",
