@@ -413,6 +413,32 @@ update_with_sed \
     "s/(version[[:space:]]*=[[:space:]]*\\{)[0-9]+\.[0-9]+\.[0-9]+(\\})/\1${VERSION}\2/"
 
 # ---------------------------------------------------------------------------
+# 6b. ABI-constant drift guard (independent of the project version)
+# ---------------------------------------------------------------------------
+# The Python loader hardcodes the ABI triple it was generated against; it is
+# used for the candidate SONAME and the n4m_check_abi_compatibility() floor.
+# It must track N4M_ABI_VERSION_* in n4m_version.h. This is a hard CHECK in both
+# modes (never auto-edited — ABI bumps are deliberate, manual commits).
+verify_abi_constants() {
+    local rel="bindings/python/src/n4m/_ffi.py"
+    local abs="${ROOT}/${rel}"
+    if [[ ! -f "${abs}" ]]; then
+        echo "  DRIFT: ${rel} missing (expected ABI loader)" >&2
+        DRIFTED+=("${rel}"); EXIT_CODE=1; return 0
+    fi
+    local gm gn gp
+    gm=$(sed -nE 's/^ABI_VERSION_MAJOR[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "${abs}" | head -n1)
+    gn=$(sed -nE 's/^ABI_VERSION_MINOR[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "${abs}" | head -n1)
+    gp=$(sed -nE 's/^ABI_VERSION_PATCH[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "${abs}" | head -n1)
+    if [[ "${gm}.${gn}.${gp}" != "${ABI_VERSION}" ]]; then
+        echo "  DRIFT: ${rel} ABI constants ${gm}.${gn}.${gp} != header ABI ${ABI_VERSION}" >&2
+        echo "         (update ABI_VERSION_{MAJOR,MINOR,PATCH} in ${rel} to match n4m_version.h)" >&2
+        DRIFTED+=("${rel}"); EXIT_CODE=1
+    fi
+}
+verify_abi_constants
+
+# ---------------------------------------------------------------------------
 # 7. Summary
 # ---------------------------------------------------------------------------
 if [[ "${MODE}" == "check" ]]; then
