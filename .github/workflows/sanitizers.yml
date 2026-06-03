@@ -10,6 +10,14 @@ on:
 jobs:
   asan-ubsan-tsan:
     runs-on: ubuntu-22.04
+    # Make leak detection + fatal-on-first-error explicit rather than relying on
+    # the implicit clang/Linux default. detect_leaks is honored only by the
+    # asan/asan_ubsan builds (no-op for ubsan/tsan); the other *_OPTIONS are
+    # no-ops where they don't apply. halt_on_error=1 fails on the first finding.
+    env:
+      ASAN_OPTIONS: "detect_leaks=1:halt_on_error=1:abort_on_error=1"
+      UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+      TSAN_OPTIONS: "halt_on_error=1"
     strategy:
       fail-fast: false
       matrix:
