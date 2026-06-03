@@ -1,5 +1,29 @@
 # ABI — Changes Log
 
+## 2026-06-03 — macOS/Windows snapshot correction + cross-platform gate enforced
+
+No ABI surface change (still ABI 1.10.0). This is an **audit-trail and CI
+correction**: the 2026-05-30 entry below claimed "Snapshots regenerated for all
+three platforms", but `expected_symbols_{macos,windows}.txt` were in fact a stale,
+truncated copy of an old Linux `nm -D` dump — 500 lines, carrying the Linux-only
+`@@N4M_1` version tag (which macOS `nm -gU` / Windows `dumpbin` never emit), and
+missing ~171 symbols (the whole selection / method-result / aom / config family).
+They were also **not diffed by CI** on macOS/Windows (only Linux was fail-closed).
+
+Corrected here:
+
+- `expected_symbols_{macos,windows}.txt` regenerated to the real 671-symbol set
+  — identical to the Linux `n4m_*` names minus the Linux-only `N4M_1` version
+  node (the only legitimate cross-platform difference).
+- `.github/workflows/abi-check.yml` now diffs the committed snapshot **fail-closed
+  on all three platforms** (macOS `diff`, Windows `Compare-Object` set comparison),
+  with `LC_ALL=C`-pinned sorts so ordering is reproducible.
+- Added a SONAME / RPATH-RUNPATH linkage gate to the Linux job (asserts
+  `SONAME == libn4m.so.1` and no baked-in absolute search path).
+- Added `scripts/regen_abi_snapshots.sh` — the single canonical regenerator
+  (`--check` for CI/pre-commit, `--derive` to produce the macOS/Windows files
+  from the Linux snapshot when only a Linux box is available).
+
 ## 2026-05-18 — Linux export baseline for ABI 1.16.0
 
 `build/dev-release/cpp/src/libn4m.so.1.16.0` exports 27 additional
