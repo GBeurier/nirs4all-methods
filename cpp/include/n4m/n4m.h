@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * nirs4all-methods — public C ABI v1.8.0.
+ * nirs4all-methods — public C ABI (version: see N4M_ABI_VERSION_* in n4m_version.h).
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see n4m_version.h). After v1.0.0 the ABI
@@ -27,7 +27,8 @@
  *     opaque operator handles; each has an explicit `n4m_*_destroy` function.
  *
  * Phase 3 trim (May 2026): prior revisions of this header inherited a large
- * set of PLS-domain declarations from pls4all (config, pipeline, model,
+ * set of PLS-domain declarations from the legacy pre-rename surface
+ * (config, pipeline, model,
  * operator bank, gating strategy, AOM, validation plan, method result,
  * n4m_array_t). None of those had implementations in the nirs4all-methods
  * core; they were placeholders for an algorithm surface that has been

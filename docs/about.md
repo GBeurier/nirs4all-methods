@@ -1,4 +1,4 @@
-# pls4all documentation
+# nirs4all-methods documentation
 
 A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 
@@ -6,7 +6,7 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 
 ## Latest highlights (May 2026)
 
-- **R binding COMPLETE** — `pls4all_method()` dispatcher covers all 33
+- **R binding COMPLETE** — `n4m_method()` dispatcher covers all 33
   MethodResult fits + 24 selectors + 4 diagnostics ; 16 formula+S3
   tier-2 wrappers ; parsnip + mlr3 meta-models that dispatch to all
   16 algorithms via the `algorithm` arg.
