@@ -142,3 +142,14 @@ bindings/python_nirs4all_methods/
 bindings/python_pls4all/
 parity/.nirs4all_ref_venv/
 octave-workspace
+
+# Developer scratch / handoff notes left at repo root — kept on disk but never
+# committed (they would otherwise be swept into a `git add .` and the source
+# archive). Delete freely; they are working notes, not project content.
+/HANDOFF_RNG_DASHBOARD.md
+/finish-lib-progress-irf-probe.txt
+/irf_auswahl_excerpt.txt
+/irf_reg_excerpt.txt
+/r_T2pls_body.txt
+/r_t2_helpers.txt
+/report.log
