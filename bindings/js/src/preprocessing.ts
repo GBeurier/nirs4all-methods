@@ -1,0 +1,116 @@
+// SPDX-License-Identifier: CECILL-2.1
+//
+// Generic preprocessing surface over libn4m. One opaque handle wraps any
+// supported preprocessing operator; the numerics live entirely in libn4m
+// (n4m_pp_*). This TS layer is marshalling only — it never computes a spectrum.
+//
+// Operators are addressed by their catalog `type` token + a numeric params
+// vector (in the documented order per operator). All supported operators are
+// shape-preserving (out is n×p). Stateful operators (MSC) expose their fitted
+// state as plain doubles via getState/setState so it round-trips into a saved
+// model bundle for predict-later, without re-fitting on the training data.
+//
+// Param vectors (order matters):
+//   StandardNormalVariate : []                       (SNV; with_mean/std on)
+//   MSC                   : []                        (stateful — call fit first)
+//   SavitzkyGolay         : [window, polyorder, deriv]
+//   Derivative            : [order]                   (1 → 1st, ≥2 → 2nd derivative)
+//   Detrend               : [polyorder]
+//   Normalize             : []                        (vector L2 norm)
+//   GaussianFilter        : [sigma]
+
+import { getModule, checkStatus } from "./ffi.js";
+
+export interface PpOperator {
+    /** opaque WASM handle; 0 once destroyed */
+    _ptr: number;
+}
+
+function pushF64(m: ReturnType<typeof getModule>, data: Float64Array): number {
+    const ptr = m._malloc(Math.max(1, data.length) * 8);
+    if (data.length > 0) m.HEAPF64.set(data, ptr / 8);
+    return ptr;
+}
+
+/** Create a preprocessing operator by catalog type token + numeric params. */
+export function ppCreate(op: string, params: number[] = []): PpOperator {
+    const m = getModule();
+    let pPtr = 0;
+    if (params.length > 0) {
+        pPtr = m._malloc(params.length * 8);
+        m.HEAPF64.set(Float64Array.from(params), pPtr / 8);
+    }
+    const ptr = m.ccall(
+        "n4m_wasm_pp_create", "number",
+        ["string", "number", "number"],
+        [op, pPtr, params.length],
+    ) as number;
+    if (pPtr !== 0) m._free(pPtr);
+    if (ptr === 0) {
+        throw new Error(`@nirs4all/methods-wasm: unknown/unconstructable preprocessing operator "${op}"`);
+    }
+    return { _ptr: ptr };
+}
+
+/** Fit a stateful operator on training data (no-op for stateless operators). */
+export function ppFit(op: PpOperator, X: Float64Array, n: number, p: number): void {
+    const m = getModule();
+    const xp = pushF64(m, X);
+    try {
+        checkStatus(m.ccall("n4m_wasm_pp_fit", "number",
+            ["number", "number", "number", "number"], [op._ptr, xp, n, p]) as number);
+    } finally {
+        m._free(xp);
+    }
+}
+
+/** Transform X (n×p, row-major) → a fresh Float64Array (n×p). */
+export function ppTransform(op: PpOperator, X: Float64Array, n: number, p: number): Float64Array {
+    const m = getModule();
+    const xp = pushF64(m, X);
+    const out = m._malloc(Math.max(1, n * p) * 8);
+    try {
+        checkStatus(m.ccall("n4m_wasm_pp_transform", "number",
+            ["number", "number", "number", "number", "number"],
+            [op._ptr, xp, n, p, out]) as number);
+        return Float64Array.from(m.HEAPF64.subarray(out / 8, out / 8 + n * p));
+    } finally {
+        m._free(xp);
+        m._free(out);
+    }
+}
+
+/** Serialize the fitted state (empty for stateless operators). */
+export function ppGetState(op: PpOperator): Float64Array {
+    const m = getModule();
+    const len = m.ccall("n4m_wasm_pp_state_len", "number", ["number"], [op._ptr]) as number;
+    if (len <= 0) return new Float64Array(0);
+    const out = m._malloc(len * 8);
+    try {
+        checkStatus(m.ccall("n4m_wasm_pp_get_state", "number",
+            ["number", "number"], [op._ptr, out]) as number);
+        return Float64Array.from(m.HEAPF64.subarray(out / 8, out / 8 + len));
+    } finally {
+        m._free(out);
+    }
+}
+
+/** Restore a fitted state from getState() output (no-op for stateless ops). */
+export function ppSetState(op: PpOperator, state: Float64Array): void {
+    if (state.length === 0) return;
+    const m = getModule();
+    const sp = pushF64(m, state);
+    try {
+        checkStatus(m.ccall("n4m_wasm_pp_set_state", "number",
+            ["number", "number", "number"], [op._ptr, sp, state.length]) as number);
+    } finally {
+        m._free(sp);
+    }
+}
+
+/** Free the operator handle. */
+export function ppDestroy(op: PpOperator): void {
+    if (op._ptr === 0) return;
+    getModule().ccall("n4m_wasm_pp_destroy", null, ["number"], [op._ptr]);
+    op._ptr = 0;
+}
