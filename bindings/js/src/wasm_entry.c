@@ -163,7 +163,7 @@ int n4m_wasm_pls_predict_from_coeffs(const double *x_new,
  * ==========================================================================*/
 enum n4m_wasm_pp_kind {
     PPK_SNV = 1, PPK_MSC, PPK_SAVGOL, PPK_DERIV1, PPK_DERIV2,
-    PPK_DETREND, PPK_NORMALIZE, PPK_GAUSSIAN
+    PPK_DETREND, PPK_GAUSSIAN
 };
 
 struct n4m_wasm_pp_s {
@@ -178,8 +178,10 @@ static int pp_kind_for(const char* op, const double* params, int n_params) {
     if (strcmp(op, "Derivative") == 0)
         return (n_params >= 1 && params[0] >= 2.0) ? PPK_DERIV2 : PPK_DERIV1;
     if (strcmp(op, "Detrend") == 0) return PPK_DETREND;
-    if (strcmp(op, "Normalize") == 0) return PPK_NORMALIZE;
     if (strcmp(op, "GaussianFilter") == 0) return PPK_GAUSSIAN;
+    /* Note: n4m_pp_normalize is COLUMN-wise L2 (batch-dependent), not the
+     * per-spectrum normalization a catalog node would want — intentionally
+     * not exposed here until a row-wise L2 operator lands in libn4m. */
     return 0;
 }
 
@@ -188,6 +190,7 @@ static int pp_kind_for(const char* op, const double* params, int n_params) {
 __attribute__((used))
 void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
     if (op == NULL) return NULL;
+    if (n_params < 0 || (n_params > 0 && params == NULL)) return NULL;
     int kind = pp_kind_for(op, params, n_params);
     if (kind == 0) return NULL;
 
@@ -239,12 +242,6 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             w->h = h;
             break;
         }
-        case PPK_NORMALIZE: {
-            n4m_pp_normalize_handle_t* h = NULL;
-            s = n4m_pp_normalize_create(&h, -1.0, 1.0); /* linalg L2 mode */
-            w->h = h;
-            break;
-        }
         case PPK_GAUSSIAN: {
             double sigma = n_params >= 1 ? params[0] : 2.0;
             n4m_pp_gaussian_handle_t* h = NULL;
@@ -277,13 +274,16 @@ int n4m_wasm_pp_transform(void* handle, const double* X, int n, int p,
     if (handle == NULL || X == NULL || out == NULL) {
         return N4M_ERR_NULL_POINTER;
     }
+    if (n < 0 || p < 0) return N4M_ERR_INVALID_ARGUMENT;
     struct n4m_wasm_pp_s* w = (struct n4m_wasm_pp_s*)handle;
     if (w->kind == PPK_MSC) {
         return n4m_pp_msc_state_apply((n4m_pp_msc_state_t*)w->h, X, n, p, out);
     }
     n4m_matrix_view_t xv, ov;
-    n4m_matrix_view_init_rowmajor(&xv, (void*)X, n, p, N4M_DTYPE_F64);
-    n4m_matrix_view_init_rowmajor(&ov, out, n, p, N4M_DTYPE_F64);
+    n4m_status_t vi = n4m_matrix_view_init_rowmajor(&xv, (void*)X, n, p, N4M_DTYPE_F64);
+    if (vi != N4M_OK) return vi;
+    vi = n4m_matrix_view_init_rowmajor(&ov, out, n, p, N4M_DTYPE_F64);
+    if (vi != N4M_OK) return vi;
     switch (w->kind) {
         case PPK_SNV:
             return n4m_pp_snv_transform((const n4m_pp_snv_handle_t*)w->h, xv, ov);
@@ -295,8 +295,6 @@ int n4m_wasm_pp_transform(void* handle, const double* X, int n, int p,
             return n4m_pp_second_derivative_transform((const n4m_pp_second_derivative_handle_t*)w->h, xv, ov);
         case PPK_DETREND:
             return n4m_pp_detrend_transform((const n4m_pp_detrend_handle_t*)w->h, xv, ov);
-        case PPK_NORMALIZE:
-            return n4m_pp_normalize_transform((const n4m_pp_normalize_handle_t*)w->h, xv, ov);
         case PPK_GAUSSIAN:
             return n4m_pp_gaussian_transform((const n4m_pp_gaussian_handle_t*)w->h, xv, ov);
         default: return N4M_ERR_INVALID_ARGUMENT;
@@ -351,7 +349,6 @@ void n4m_wasm_pp_destroy(void* handle) {
         case PPK_DERIV1:   n4m_pp_first_derivative_destroy((n4m_pp_first_derivative_handle_t*)w->h); break;
         case PPK_DERIV2:   n4m_pp_second_derivative_destroy((n4m_pp_second_derivative_handle_t*)w->h); break;
         case PPK_DETREND:  n4m_pp_detrend_destroy((n4m_pp_detrend_handle_t*)w->h); break;
-        case PPK_NORMALIZE:n4m_pp_normalize_destroy((n4m_pp_normalize_handle_t*)w->h); break;
         case PPK_GAUSSIAN: n4m_pp_gaussian_destroy((n4m_pp_gaussian_handle_t*)w->h); break;
         default: break;
     }
