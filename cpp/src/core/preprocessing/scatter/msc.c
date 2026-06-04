@@ -199,3 +199,70 @@ n4m_status_t n4m_pp_msc_state_inverse_apply(const n4m_pp_msc_state_t* state,
     }
     return N4M_OK;
 }
+
+int64_t n4m_pp_msc_state_n_features(const n4m_pp_msc_state_t* state) {
+    return (state != NULL && state->fitted) ? state->cols : 0;
+}
+
+n4m_status_t n4m_pp_msc_state_get_reference(const n4m_pp_msc_state_t* state,
+                                             double* out, int64_t cols) {
+    if (state == NULL || out == NULL) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    if (!state->fitted || state->reference == NULL) {
+        return N4M_ERR_NOT_FITTED;
+    }
+    if (cols != state->cols) {
+        return N4M_ERR_SHAPE_MISMATCH;
+    }
+    for (int64_t j = 0; j < cols; ++j) {
+        out[j] = state->reference[j];
+    }
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_msc_state_set_reference(n4m_pp_msc_state_t* state,
+                                             const double* reference,
+                                             int64_t cols) {
+    if (state == NULL || reference == NULL) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    if (cols < 2) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    double* ref_copy = (double*)calloc((size_t)cols, sizeof(double));
+    if (ref_copy == NULL) {
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+    for (int64_t j = 0; j < cols; ++j) {
+        ref_copy[j] = reference[j];
+    }
+
+    /* Recompute the cached mean/denominator exactly as _fit does, so apply()
+     * produces identical results to a state fitted on the source data. */
+    double ref_mean = 0.0;
+    for (int64_t j = 0; j < cols; ++j) {
+        ref_mean += ref_copy[j];
+    }
+    ref_mean /= (double)cols;
+
+    double ref_den = 0.0;
+    for (int64_t j = 0; j < cols; ++j) {
+        const double centered = ref_copy[j] - ref_mean;
+        ref_den += centered * centered;
+    }
+    if (ref_den <= 0.0) {
+        free(ref_copy);
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+
+    free(state->reference);
+    clear_last_transform(state);
+    state->reference = ref_copy;
+    state->reference_mean = ref_mean;
+    state->reference_den = ref_den;
+    state->cols = cols;
+    state->fitted = 1;
+    return N4M_OK;
+}

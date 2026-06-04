@@ -18,6 +18,10 @@
  */
 
 #include "n4m/n4m.h"
+/* Internal MSC engine — lets the generic preprocessing dispatcher round-trip the
+ * fitted reference spectrum (get/set_reference) for predict-later, which the
+ * public MSC ABI does not expose. Internal header, not part of the public ABI. */
+#include "../../../cpp/src/core/preprocessing/scatter/msc.h"
 
 #include <math.h>
 #include <stddef.h>
@@ -145,4 +149,211 @@ int n4m_wasm_pls_predict_from_coeffs(const double *x_new,
         }
     }
     return N4M_OK;
+}
+
+/* ============================================================================
+ * Generic preprocessing dispatcher (raw-double-pointer surface for JS)
+ * ----------------------------------------------------------------------------
+ * One handle wraps any libn4m preprocessing operator. The numerics stay 100%
+ * in libn4m; this is only marshalling so the JS shell can fit/transform any
+ * operator by id without a hand-written wrapper per operator. All operators in
+ * this set are shape-preserving (out is n*p), which keeps the JS side trivial.
+ * Stateful operators (MSC) expose their fitted state as plain doubles via
+ * get/set_state so it round-trips into a saved model (.n4a) for predict-later.
+ * ==========================================================================*/
+enum n4m_wasm_pp_kind {
+    PPK_SNV = 1, PPK_MSC, PPK_SAVGOL, PPK_DERIV1, PPK_DERIV2,
+    PPK_DETREND, PPK_NORMALIZE, PPK_GAUSSIAN
+};
+
+struct n4m_wasm_pp_s {
+    int kind;
+    void* h;        /* public op handle, or n4m_pp_msc_state_t* for MSC */
+};
+
+static int pp_kind_for(const char* op, const double* params, int n_params) {
+    if (strcmp(op, "StandardNormalVariate") == 0) return PPK_SNV;
+    if (strcmp(op, "MSC") == 0) return PPK_MSC;
+    if (strcmp(op, "SavitzkyGolay") == 0) return PPK_SAVGOL;
+    if (strcmp(op, "Derivative") == 0)
+        return (n_params >= 1 && params[0] >= 2.0) ? PPK_DERIV2 : PPK_DERIV1;
+    if (strcmp(op, "Detrend") == 0) return PPK_DETREND;
+    if (strcmp(op, "Normalize") == 0) return PPK_NORMALIZE;
+    if (strcmp(op, "GaussianFilter") == 0) return PPK_GAUSSIAN;
+    return 0;
+}
+
+/* Create an operator from its catalog `type` token + numeric params.
+ * Returns an opaque handle (JS keeps it as an int) or NULL on failure. */
+__attribute__((used))
+void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
+    if (op == NULL) return NULL;
+    int kind = pp_kind_for(op, params, n_params);
+    if (kind == 0) return NULL;
+
+    struct n4m_wasm_pp_s* w =
+        (struct n4m_wasm_pp_s*)malloc(sizeof(struct n4m_wasm_pp_s));
+    if (w == NULL) return NULL;
+    w->kind = kind;
+    w->h = NULL;
+
+    n4m_status_t s = N4M_OK;
+    switch (kind) {
+        case PPK_SNV: {
+            n4m_pp_snv_handle_t* h = NULL;
+            s = n4m_pp_snv_create(&h, 1, 1, 0);
+            w->h = h;
+            break;
+        }
+        case PPK_MSC: {
+            w->h = n4m_pp_msc_state_new();
+            if (w->h == NULL) s = N4M_ERR_OUT_OF_MEMORY;
+            break;
+        }
+        case PPK_SAVGOL: {
+            int window = n_params >= 1 ? (int)params[0] : 11;
+            int poly = n_params >= 2 ? (int)params[1] : 2;
+            int deriv = n_params >= 3 ? (int)params[2] : 0;
+            n4m_pp_savgol_handle_t* h = NULL;
+            s = n4m_pp_savgol_create(&h, window, poly, deriv, 1.0,
+                                     N4M_PP_SAVGOL_MIRROR, 0.0);
+            w->h = h;
+            break;
+        }
+        case PPK_DERIV1: {
+            n4m_pp_first_derivative_handle_t* h = NULL;
+            s = n4m_pp_first_derivative_create(&h, 1.0, 2);
+            w->h = h;
+            break;
+        }
+        case PPK_DERIV2: {
+            n4m_pp_second_derivative_handle_t* h = NULL;
+            s = n4m_pp_second_derivative_create(&h, 1.0, 2);
+            w->h = h;
+            break;
+        }
+        case PPK_DETREND: {
+            int poly = n_params >= 1 ? (int)params[0] : 1;
+            n4m_pp_detrend_handle_t* h = NULL;
+            s = n4m_pp_detrend_create(&h, poly);
+            w->h = h;
+            break;
+        }
+        case PPK_NORMALIZE: {
+            n4m_pp_normalize_handle_t* h = NULL;
+            s = n4m_pp_normalize_create(&h, -1.0, 1.0); /* linalg L2 mode */
+            w->h = h;
+            break;
+        }
+        case PPK_GAUSSIAN: {
+            double sigma = n_params >= 1 ? params[0] : 2.0;
+            n4m_pp_gaussian_handle_t* h = NULL;
+            s = n4m_pp_gaussian_create(&h, sigma, 0,
+                                       N4M_PP_GAUSSIAN_REFLECT, 0.0, 4.0);
+            w->h = h;
+            break;
+        }
+        default: s = N4M_ERR_INVALID_ARGUMENT; break;
+    }
+    if (s != N4M_OK || w->h == NULL) { free(w); return NULL; }
+    return w;
+}
+
+/* Fit a stateful operator on training data (no-op for stateless operators). */
+__attribute__((used))
+int n4m_wasm_pp_fit(void* handle, const double* X, int n, int p) {
+    if (handle == NULL || X == NULL) return N4M_ERR_NULL_POINTER;
+    struct n4m_wasm_pp_s* w = (struct n4m_wasm_pp_s*)handle;
+    if (w->kind == PPK_MSC) {
+        return n4m_pp_msc_state_fit((n4m_pp_msc_state_t*)w->h, X, n, p);
+    }
+    return N4M_OK; /* stateless */
+}
+
+/* Transform X (n*p, row-major) into out (n*p). Shape-preserving. */
+__attribute__((used))
+int n4m_wasm_pp_transform(void* handle, const double* X, int n, int p,
+                          double* out) {
+    if (handle == NULL || X == NULL || out == NULL) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    struct n4m_wasm_pp_s* w = (struct n4m_wasm_pp_s*)handle;
+    if (w->kind == PPK_MSC) {
+        return n4m_pp_msc_state_apply((n4m_pp_msc_state_t*)w->h, X, n, p, out);
+    }
+    n4m_matrix_view_t xv, ov;
+    n4m_matrix_view_init_rowmajor(&xv, (void*)X, n, p, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&ov, out, n, p, N4M_DTYPE_F64);
+    switch (w->kind) {
+        case PPK_SNV:
+            return n4m_pp_snv_transform((const n4m_pp_snv_handle_t*)w->h, xv, ov);
+        case PPK_SAVGOL:
+            return n4m_pp_savgol_transform((const n4m_pp_savgol_handle_t*)w->h, xv, ov);
+        case PPK_DERIV1:
+            return n4m_pp_first_derivative_transform((const n4m_pp_first_derivative_handle_t*)w->h, xv, ov);
+        case PPK_DERIV2:
+            return n4m_pp_second_derivative_transform((const n4m_pp_second_derivative_handle_t*)w->h, xv, ov);
+        case PPK_DETREND:
+            return n4m_pp_detrend_transform((const n4m_pp_detrend_handle_t*)w->h, xv, ov);
+        case PPK_NORMALIZE:
+            return n4m_pp_normalize_transform((const n4m_pp_normalize_handle_t*)w->h, xv, ov);
+        case PPK_GAUSSIAN:
+            return n4m_pp_gaussian_transform((const n4m_pp_gaussian_handle_t*)w->h, xv, ov);
+        default: return N4M_ERR_INVALID_ARGUMENT;
+    }
+}
+
+/* Length (in doubles) of the serializable fitted state (0 for stateless ops). */
+__attribute__((used))
+int n4m_wasm_pp_state_len(void* handle) {
+    if (handle == NULL) return 0;
+    struct n4m_wasm_pp_s* w = (struct n4m_wasm_pp_s*)handle;
+    if (w->kind == PPK_MSC) {
+        return (int)n4m_pp_msc_state_n_features((const n4m_pp_msc_state_t*)w->h);
+    }
+    return 0;
+}
+
+/* Copy the fitted state into out (length == n4m_wasm_pp_state_len). */
+__attribute__((used))
+int n4m_wasm_pp_get_state(void* handle, double* out) {
+    if (handle == NULL || out == NULL) return N4M_ERR_NULL_POINTER;
+    struct n4m_wasm_pp_s* w = (struct n4m_wasm_pp_s*)handle;
+    if (w->kind == PPK_MSC) {
+        const n4m_pp_msc_state_t* st = (const n4m_pp_msc_state_t*)w->h;
+        return n4m_pp_msc_state_get_reference(st, out,
+                                              n4m_pp_msc_state_n_features(st));
+    }
+    return N4M_OK; /* stateless: nothing to copy */
+}
+
+/* Restore a fitted state from serialized doubles (predict-later). */
+__attribute__((used))
+int n4m_wasm_pp_set_state(void* handle, const double* state, int len) {
+    if (handle == NULL) return N4M_ERR_NULL_POINTER;
+    struct n4m_wasm_pp_s* w = (struct n4m_wasm_pp_s*)handle;
+    if (w->kind == PPK_MSC) {
+        return n4m_pp_msc_state_set_reference((n4m_pp_msc_state_t*)w->h,
+                                              state, len);
+    }
+    return N4M_OK; /* stateless: nothing to restore */
+}
+
+/* Destroy an operator handle created by n4m_wasm_pp_create. */
+__attribute__((used))
+void n4m_wasm_pp_destroy(void* handle) {
+    if (handle == NULL) return;
+    struct n4m_wasm_pp_s* w = (struct n4m_wasm_pp_s*)handle;
+    switch (w->kind) {
+        case PPK_SNV:      n4m_pp_snv_destroy((n4m_pp_snv_handle_t*)w->h); break;
+        case PPK_MSC:      n4m_pp_msc_state_free((n4m_pp_msc_state_t*)w->h); break;
+        case PPK_SAVGOL:   n4m_pp_savgol_destroy((n4m_pp_savgol_handle_t*)w->h); break;
+        case PPK_DERIV1:   n4m_pp_first_derivative_destroy((n4m_pp_first_derivative_handle_t*)w->h); break;
+        case PPK_DERIV2:   n4m_pp_second_derivative_destroy((n4m_pp_second_derivative_handle_t*)w->h); break;
+        case PPK_DETREND:  n4m_pp_detrend_destroy((n4m_pp_detrend_handle_t*)w->h); break;
+        case PPK_NORMALIZE:n4m_pp_normalize_destroy((n4m_pp_normalize_handle_t*)w->h); break;
+        case PPK_GAUSSIAN: n4m_pp_gaussian_destroy((n4m_pp_gaussian_handle_t*)w->h); break;
+        default: break;
+    }
+    free(w);
 }
