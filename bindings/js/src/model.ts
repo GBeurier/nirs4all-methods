@@ -218,21 +218,25 @@ export function predictModel(model: FittedModel, X_new: Matrix): Matrix {
     const xmBuf = _malloc_f64(M, p);
     const ymBuf = _malloc_f64(M, q);
     const predsBuf = _malloc_f64(M, n_new * q);
+    // AOM-PLS (and any future affine model) carries input-space coefficients +
+    // a genuine intercept and zero means — it predicts on RAW X via the
+    // explicit-intercept form  pred = intercept + x.B. Every centred model
+    // (PLS family + the Tier-B fits, including Ridge) carries intercept = null
+    // and predicts via  pred = y_mean + (x - x_mean).B. The C helper picks the
+    // form from whether the intercept pointer is non-NULL.
+    const useIntercept = model.intercept !== null;
+    const interBuf = useIntercept ? _malloc_f64(M, q) : { ptr: 0, len: 0 };
     try {
         _copy_in(M, X_new.data, xBuf.ptr);
         _copy_in(M, model.coefficients, coefsBuf.ptr);
         _copy_in(M, model.xMean, xmBuf.ptr);
         _copy_in(M, model.yMean, ymBuf.ptr);
-        // Centred form (intercept = NULL): pred = y_mean + (x - x_mean).B.
-        // Every libn4m coeff model — PLS family and the Tier-B fits, including
-        // Ridge — exposes a valid (coefficients, x_mean, y_mean) triple whose
-        // in-sample predictions use exactly this convention, so one path covers
-        // all of them and the stored `intercept` stays informational only.
+        if (useIntercept) _copy_in(M, model.intercept as Float64Array, interBuf.ptr);
         const status = M.ccall(
             "n4m_wasm_model_predict_from_coeffs", "number",
             ["number", "number", "number", "number",
              "number", "number", "number", "number", "number"],
-            [coefsBuf.ptr, xmBuf.ptr, ymBuf.ptr, 0,
+            [coefsBuf.ptr, xmBuf.ptr, ymBuf.ptr, interBuf.ptr,
              xBuf.ptr, n_new, p, q, predsBuf.ptr]) as number;
         checkStatus(status);
         return {
@@ -246,6 +250,87 @@ export function predictModel(model: FittedModel, X_new: Matrix): Matrix {
         M._free(xmBuf.ptr);
         M._free(ymBuf.ptr);
         M._free(predsBuf.ptr);
+        if (interBuf.ptr !== 0) M._free(interBuf.ptr);
+    }
+}
+
+/** A fitted AOM-PLS model — a {@link FittedModel} (so {@link predictModel}
+ *  works unchanged) plus the screen result. Its `intercept` is a genuine
+ *  input-space intercept and its `xMean` / `yMean` are zero, so prediction is
+ *  the affine form  y = intercept + X.B  on RAW X. */
+export interface AomModel extends FittedModel {
+    /** Bank index of the operator the internal CV selected. */
+    selectedOperator: number;
+    /** Best internal-CV score of the selected operator. */
+    score: number;
+}
+
+/** Fit AOM-PLS (operator-adaptive PLS) on (X, Y).
+ *
+ * Screens a bank of strict-linear preprocessing operators by internal k-fold CV
+ * and fits SIMPLS on the winner, returning INPUT-SPACE coefficients so the model
+ * predicts on RAW X — it is therefore used WITHOUT preceding preprocessing steps
+ * (the screen does the preprocessing internally). Numerics are 100% libn4m
+ * (`n4m_aom_global_select`); this only builds the bank + validation plan.
+ *
+ * @param X row-major (n × p) input matrix.
+ * @param Y row-major (n × q) target matrix.
+ * @param maxComponents max latent components for the internal SIMPLS fits.
+ * @param nFolds internal-CV fold count for the operator screen.
+ * @param seed reserved (the contiguous-fold partition is deterministic).
+ * @param operatorKinds optional `n4m_operator_kind_t` bank override; when
+ *   omitted a default strict bank (identity / detrend / SG smooth / SG
+ *   derivative / finite-difference) is screened.
+ */
+export function fitAom(X: Matrix, Y: Matrix, maxComponents: number,
+                        nFolds = 5, seed = 0,
+                        operatorKinds: number[] = []): AomModel {
+    if (X.rows !== Y.rows) {
+        throw new Error(`X.rows (${X.rows}) must equal Y.rows (${Y.rows})`);
+    }
+    const M = getModule();
+    const n = X.rows, p = X.cols, q = Y.cols;
+    const xBuf = _malloc_f64(M, n * p);
+    const yBuf = _malloc_f64(M, n * q);
+    const coefsBuf = _malloc_f64(M, p * q);
+    const interBuf = _malloc_f64(M, q);
+    const selBuf = M._malloc(4); // int32 selected operator index
+    const scoreBuf = _malloc_f64(M, 1);
+    const opsPtr = operatorKinds.length > 0
+        ? M._malloc(operatorKinds.length * 4)
+        : 0;
+    try {
+        _copy_in(M, X.data, xBuf.ptr);
+        _copy_in(M, Y.data, yBuf.ptr);
+        if (opsPtr !== 0) M.HEAP32.set(Int32Array.from(operatorKinds), opsPtr >> 2);
+        const status = M.ccall(
+            "n4m_wasm_aom_fit", "number",
+            ["number", "number", "number", "number", "number",
+             "number", "number", "number", "number", "number",
+             "number", "number", "number", "number"],
+            [xBuf.ptr, yBuf.ptr, n, p, q,
+             maxComponents, nFolds, seed, opsPtr, operatorKinds.length,
+             coefsBuf.ptr, interBuf.ptr, selBuf, scoreBuf.ptr]) as number;
+        checkStatus(status);
+        return {
+            coefficients: _read_out(M, coefsBuf.ptr, p * q),
+            // zero means — AOM predicts on RAW X via the affine intercept form.
+            xMean: new Float64Array(p),
+            yMean: new Float64Array(q),
+            intercept: _read_out(M, interBuf.ptr, q),
+            n_features: p,
+            n_targets: q,
+            selectedOperator: M.HEAP32[selBuf >> 2] ?? -1,
+            score: _read_out(M, scoreBuf.ptr, 1)[0] ?? NaN,
+        };
+    } finally {
+        M._free(xBuf.ptr);
+        M._free(yBuf.ptr);
+        M._free(coefsBuf.ptr);
+        M._free(interBuf.ptr);
+        M._free(selBuf);
+        M._free(scoreBuf.ptr);
+        if (opsPtr !== 0) M._free(opsPtr);
     }
 }
 

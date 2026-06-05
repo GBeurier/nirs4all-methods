@@ -569,6 +569,202 @@ int n4m_wasm_model_predict_from_coeffs(const double* coefficients,
 }
 
 /* ============================================================================
+ * AOM-PLS — operator-adaptive PLS (raw-double-pointer surface for JS)
+ * ----------------------------------------------------------------------------
+ * Screens a bank of strict-linear preprocessing operators by internal k-fold
+ * CV and fits SIMPLS on the winner, then exports INPUT-SPACE coefficients so
+ * the model predicts on RAW X via the affine form  y = intercept + X.B  (no
+ * replay of the selected operator). The numerics stay 100% in libn4m
+ * (n4m_aom_global_select); this is only bank/plan construction + marshalling.
+ *
+ * Default bank (when operator_kinds == NULL): a small set of STRICT-linear
+ * operators that all accept default (empty) params —
+ *   IDENTITY, DETREND_POLY, SAVGOL_SMOOTH, SAVGOL_DERIVATIVE, FINITE_DIFFERENCE.
+ * Non-strict operators (e.g. SNV/MSC) are rejected by the selector, so they are
+ * intentionally NOT in the default set. A caller-supplied operator_kinds array
+ * (n4m_operator_kind_t values) overrides the default bank; every kind is added
+ * with default params.
+ *
+ * The validation plan is k contiguous balanced folds over the n rows (the same
+ * deterministic partition the C++ AOM tests use); `seed` is accepted for API
+ * symmetry with the other stochastic fits but the contiguous fold partition is
+ * deterministic so it does not consume the seed.
+ *
+ * Writes (all row-major, F64):
+ *   coefficients_out (p * q)  input-space coefficients B
+ *   intercept_out    (q)      input-space intercept
+ *   selected_op_out  (int32)  bank index of the winning operator
+ *   best_score_out   (double) best internal-CV score of the winner
+ * Returns 0 on success, a N4M_ERR_* otherwise. On any failure every handle is
+ * destroyed (no leak) and the out buffers are left untouched.
+ * ==========================================================================*/
+__attribute__((used))
+int n4m_wasm_aom_fit(const double* x, const double* y,
+                     int n, int p, int q,
+                     int max_components, int n_folds, int seed,
+                     const int* operator_kinds, int n_ops,
+                     double* coefficients_out,
+                     double* intercept_out,
+                     int* selected_op_out,
+                     double* best_score_out) {
+    (void)seed; /* contiguous-fold partition is deterministic */
+    if (x == NULL || y == NULL || coefficients_out == NULL ||
+        intercept_out == NULL) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    if (n < 4 || p < 1 || q < 1 || max_components < 1) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (n_ops < 0 || (n_ops > 0 && operator_kinds == NULL)) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    /* The selector requires max_components < n_rows and <= n_features. */
+    if (max_components > p) max_components = p;
+    if (max_components >= n) max_components = n - 1;
+    if (max_components < 1) return N4M_ERR_INVALID_ARGUMENT;
+    /* k-fold: at least 2 folds, at most n. */
+    int k = n_folds;
+    if (k < 2) k = 2;
+    if (k > n) k = n;
+
+    n4m_matrix_view_t xv, yv;
+    n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q, N4M_DTYPE_F64);
+
+    n4m_context_t* ctx = NULL;
+    n4m_status_t s = n4m_context_create(&ctx);
+    if (s != N4M_OK) return s;
+
+    n4m_config_t* cfg = NULL;
+    s = n4m_config_create(&cfg);
+    if (s != N4M_OK) { n4m_context_destroy(ctx); return s; }
+    /* Phase 6 AOM kernel: strict-linear operators + SIMPLS regression. */
+    n4m_config_set_algorithm(cfg, N4M_ALGO_PLS_REGRESSION);
+    n4m_config_set_solver(cfg, N4M_SOLVER_SIMPLS);
+    n4m_config_set_deflation(cfg, N4M_DEFLATION_REGRESSION);
+    n4m_config_set_scale_x(cfg, 0);
+
+    /* ---- Operator bank ---- */
+    n4m_operator_bank_t* bank = NULL;
+    s = n4m_operator_bank_create(&bank);
+    if (s != N4M_OK) {
+        n4m_config_destroy(cfg);
+        n4m_context_destroy(ctx);
+        return s;
+    }
+    if (n_ops > 0) {
+        for (int i = 0; i < n_ops && s == N4M_OK; ++i) {
+            s = n4m_operator_bank_add(
+                bank, (n4m_operator_kind_t)operator_kinds[i], NULL, 0);
+        }
+    } else {
+        static const n4m_operator_kind_t kDefault[] = {
+            N4M_OP_IDENTITY,
+            N4M_OP_DETREND_POLY,
+            N4M_OP_SAVGOL_SMOOTH,
+            N4M_OP_SAVGOL_DERIVATIVE,
+            N4M_OP_FINITE_DIFFERENCE,
+        };
+        const int n_default = (int)(sizeof(kDefault) / sizeof(kDefault[0]));
+        for (int i = 0; i < n_default && s == N4M_OK; ++i) {
+            s = n4m_operator_bank_add(bank, kDefault[i], NULL, 0);
+        }
+    }
+    if (s != N4M_OK) {
+        n4m_operator_bank_destroy(bank);
+        n4m_config_destroy(cfg);
+        n4m_context_destroy(ctx);
+        return s;
+    }
+
+    /* ---- Validation plan: k contiguous balanced folds over n rows ---- */
+    n4m_validation_plan_t* plan = NULL;
+    s = n4m_validation_plan_create(&plan);
+    if (s == N4M_OK) s = n4m_validation_plan_set_n_samples(plan, n);
+    int64_t* train = NULL;
+    int64_t* test = NULL;
+    if (s == N4M_OK) {
+        train = (int64_t*)malloc((size_t)n * sizeof(int64_t));
+        test = (int64_t*)malloc((size_t)n * sizeof(int64_t));
+        if (train == NULL || test == NULL) s = N4M_ERR_OUT_OF_MEMORY;
+    }
+    for (int fold = 0; fold < k && s == N4M_OK; ++fold) {
+        int n_train = 0, n_test = 0;
+        for (int row = 0; row < n; ++row) {
+            /* contiguous balanced partition: row -> fold (row * k) / n */
+            if ((row * k) / n == fold) {
+                test[n_test++] = row;
+            } else {
+                train[n_train++] = row;
+            }
+        }
+        if (n_train < 1 || n_test < 1) { s = N4M_ERR_INVALID_ARGUMENT; break; }
+        s = n4m_validation_plan_add_fold(plan, train, n_train, test, n_test);
+    }
+    free(train);
+    free(test);
+    if (s != N4M_OK) {
+        if (plan != NULL) n4m_validation_plan_destroy(plan);
+        n4m_operator_bank_destroy(bank);
+        n4m_config_destroy(cfg);
+        n4m_context_destroy(ctx);
+        return s;
+    }
+
+    /* ---- Run the global AOM selector ---- */
+    n4m_aom_global_result_t* res = NULL;
+    s = n4m_aom_global_select(ctx, cfg, bank, &xv, &yv, plan,
+                              max_components, &res);
+    if (s != N4M_OK || res == NULL) {
+        if (res != NULL) n4m_aom_global_result_destroy(res);
+        n4m_validation_plan_destroy(plan);
+        n4m_operator_bank_destroy(bank);
+        n4m_config_destroy(cfg);
+        n4m_context_destroy(ctx);
+        return s != N4M_OK ? s : N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    /* ---- Copy out input-space coefficients + intercept + selection ---- */
+    s = N4M_OK;
+    const double* coeff = NULL;
+    int64_t crows = 0, ccols = 0;
+    if (n4m_aom_global_result_get_input_coefficients(
+            res, &coeff, &crows, &ccols) == N4M_OK &&
+        coeff != NULL && crows == p && ccols == q) {
+        memcpy(coefficients_out, coeff, (size_t)p * (size_t)q * sizeof(double));
+    } else {
+        s = N4M_ERR_INVALID_ARGUMENT;
+    }
+    const double* inter = NULL;
+    int64_t irows = 0, icols = 0;
+    if (s == N4M_OK &&
+        n4m_aom_global_result_get_intercept(res, &inter, &irows, &icols) ==
+            N4M_OK &&
+        inter != NULL && irows == 1 && icols == q) {
+        memcpy(intercept_out, inter, (size_t)q * sizeof(double));
+    } else if (s == N4M_OK) {
+        s = N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (s == N4M_OK && selected_op_out != NULL) {
+        int32_t sel = -1;
+        n4m_aom_global_result_get_selected_operator_index(res, &sel);
+        *selected_op_out = (int)sel;
+    }
+    if (s == N4M_OK && best_score_out != NULL) {
+        double sc = 0.0;
+        n4m_aom_global_result_get_best_score(res, &sc);
+        *best_score_out = sc;
+    }
+
+    n4m_aom_global_result_destroy(res);
+    n4m_validation_plan_destroy(plan);
+    n4m_operator_bank_destroy(bank);
+    n4m_config_destroy(cfg);
+    n4m_context_destroy(ctx);
+    return s;
+}
+
+/* ============================================================================
  * Generic preprocessing dispatcher (raw-double-pointer surface for JS)
  * ----------------------------------------------------------------------------
  * One handle wraps any libn4m preprocessing operator. The numerics stay 100%
