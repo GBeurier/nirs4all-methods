@@ -201,12 +201,20 @@ static int model_kind_for(const char* model) {
 }
 
 /* Tier A — build a Config for the algorithm-enum family, fit via the model API,
- * and copy out the coefficient triple (+ intercept). */
+ * and copy out the centred coefficient triple.
+ *
+ * The PLS/PCR family does NOT have a genuine affine intercept: its prediction
+ * is the centred form y_mean + (x - x_mean).B. (libn4m's N4M_MODEL_INTERCEPT
+ * for these models just aliases y_mean, which is NOT a constant term usable as
+ * intercept + x.B — exposing it as an intercept would double-count the
+ * centring.) So `has_intercept_out` is set to 0 and intercept_out is zero-filled
+ * for shape only; callers must predict via the centred form. */
 static int n4m_wasm_model_fit_tier_a(
         int kind, const double* x, const double* y,
         int n, int p, int q, int n_components,
         double* coefficients_out, double* x_mean_out, double* y_mean_out,
-        double* intercept_out, double* predictions_out) {
+        double* intercept_out, int* has_intercept_out,
+        double* predictions_out) {
     n4m_matrix_view_t xv, yv;
     n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q, N4M_DTYPE_F64);
@@ -277,15 +285,11 @@ static int n4m_wasm_model_fit_tier_a(
         memcpy(y_mean_out, v.data, (size_t)q * sizeof(double));
         n4m_array_free(arr);
     }
+    /* PLS/PCR family: centred form only — no genuine affine intercept. */
     if (intercept_out != NULL) {
         for (int t = 0; t < q; ++t) intercept_out[t] = 0.0;
-        if (n4m_model_get_array(ctx, m, N4M_MODEL_INTERCEPT, &arr) == N4M_OK) {
-            n4m_matrix_view_t v;
-            n4m_array_view(arr, &v);
-            memcpy(intercept_out, v.data, (size_t)q * sizeof(double));
-            n4m_array_free(arr);
-        }
     }
+    if (has_intercept_out != NULL) *has_intercept_out = 0;
     if (predictions_out != NULL) {
         n4m_matrix_view_t pv;
         n4m_matrix_view_init_rowmajor(&pv, predictions_out, n, q, N4M_DTYPE_F64);
@@ -297,26 +301,37 @@ static int n4m_wasm_model_fit_tier_a(
 }
 
 /* Copy a named double matrix from a method-result into a caller buffer of
- * exactly `expect` doubles (silently leaves the buffer untouched if absent). */
-static void copy_result_matrix(const n4m_method_result_t* r, const char* name,
-                               double* out, size_t expect) {
-    if (out == NULL) return;
+ * exactly `expect` doubles. Returns 1 when the matrix was present and copied,
+ * 0 otherwise (leaving the buffer untouched). */
+static int copy_result_matrix(const n4m_method_result_t* r, const char* name,
+                              double* out, size_t expect) {
+    if (out == NULL) return 0;
     const double* data = NULL;
     int64_t rows = 0, cols = 0;
     if (n4m_method_result_get_double_matrix(r, name, &data, &rows, &cols) == N4M_OK
         && data != NULL && (size_t)(rows * cols) == expect) {
         memcpy(out, data, expect * sizeof(double));
+        return 1;
     }
+    return 0;
 }
 
 /* Tier B — call the standalone fit for `kind`, then read the coeff triple
- * (+ intercept for Ridge) out of the returned method-result. */
+ * (+ intercept for Ridge) out of the returned method-result.
+ *
+ * Every PLS-based Tier-B fit (RidgePLS, ContinuumRegression, RobustPLS, CPPLS,
+ * SparseSIMPLS, GroupSparsePLS, FusedSparsePLS, BaggingPLS, BoostingPLS,
+ * RandomSubspacePLS) reads the latent-component count from `cfg.n_components`
+ * (a fresh config defaults to 2), so the selected `n_components` is applied to
+ * the config before the fit. Pure Ridge (MK_RIDGE) is a closed-form L2 solve
+ * with no latent components — it legitimately ignores `n_components`. */
 static int n4m_wasm_model_fit_tier_b(
         int kind, const double* params, int n_params,
         const double* x, const double* y,
-        int n, int p, int q,
+        int n, int p, int q, int n_components,
         double* coefficients_out, double* x_mean_out, double* y_mean_out,
-        double* intercept_out, double* predictions_out) {
+        double* intercept_out, int* has_intercept_out,
+        double* predictions_out) {
     n4m_matrix_view_t xv, yv;
     n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q, N4M_DTYPE_F64);
@@ -327,6 +342,18 @@ static int n4m_wasm_model_fit_tier_b(
     n4m_config_t* cfg = NULL;
     s = n4m_config_create(&cfg);
     if (s != N4M_OK) { n4m_context_destroy(ctx); return s; }
+
+    /* Apply the requested latent-component count to every PLS-based Tier-B
+     * fit. MK_RIDGE is a pure (component-free) closed-form solve and keeps the
+     * config default. */
+    if (kind != MK_RIDGE) {
+        s = n4m_config_set_n_components(cfg, n_components);
+        if (s != N4M_OK) {
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
+            return s;
+        }
+    }
 
     n4m_method_result_t* res = NULL;
     switch (kind) {
@@ -416,10 +443,23 @@ static int n4m_wasm_model_fit_tier_b(
                        (size_t)p * (size_t)q);
     copy_result_matrix(res, "x_mean", x_mean_out, (size_t)p);
     copy_result_matrix(res, "y_mean", y_mean_out, (size_t)q);
+    /* Only the standalone fits that emit a genuine affine "intercept" matrix
+     * (currently just Ridge: intercept = y_mean - x_mean.B_descaled) set the
+     * has_intercept flag. The PLS-based Tier-B fits expose only the centred
+     * triple, so intercept_out is zero-filled for shape and the flag stays 0. */
+    int has_intercept = 0;
     if (intercept_out != NULL) {
         for (int t = 0; t < q; ++t) intercept_out[t] = 0.0;
-        copy_result_matrix(res, "intercept", intercept_out, (size_t)q);
+        has_intercept = copy_result_matrix(res, "intercept", intercept_out,
+                                           (size_t)q);
+    } else {
+        const double* idata = NULL;
+        int64_t irows = 0, icols = 0;
+        has_intercept = (n4m_method_result_get_double_matrix(
+                             res, "intercept", &idata, &irows, &icols) == N4M_OK
+                         && idata != NULL && (size_t)(irows * icols) == (size_t)q);
     }
+    if (has_intercept_out != NULL) *has_intercept_out = has_intercept;
     if (predictions_out != NULL) {
         copy_result_matrix(res, "predictions", predictions_out,
                            (size_t)n * (size_t)q);
@@ -430,8 +470,17 @@ static int n4m_wasm_model_fit_tier_b(
 }
 
 /* Fit any coeff-based model by token. Writes coefficients_out (p*q row-major),
- * x_mean_out (p), y_mean_out (q), and — when non-NULL — intercept_out (q) and
- * predictions_out (n*q). Returns N4M_ERR_NOT_IMPLEMENTED for unknown tokens. */
+ * x_mean_out (p), y_mean_out (q), and — when non-NULL — intercept_out (q),
+ * has_intercept_out (1 when the model produced a genuine affine intercept,
+ * 0 for the centred PLS/PCR family), and predictions_out (n*q).
+ *
+ * Intercept contract: only models with a real constant term (currently Ridge)
+ * set has_intercept_out=1 and a meaningful intercept_out. The PLS/PCR family
+ * (Tier A) and the PLS-based Tier-B fits predict via the centred form
+ * y_mean + (x - x_mean).B and have NO affine intercept — their intercept_out is
+ * zero-filled and has_intercept_out=0, so a caller must not add it to x.B.
+ *
+ * Returns N4M_ERR_NOT_IMPLEMENTED for unknown tokens. */
 __attribute__((used))
 int n4m_wasm_model_fit(const char* model,
                        const double* params, int n_params,
@@ -441,6 +490,7 @@ int n4m_wasm_model_fit(const char* model,
                        double* x_mean_out,
                        double* y_mean_out,
                        double* intercept_out,
+                       int* has_intercept_out,
                        double* predictions_out) {
     if (model == NULL || x == NULL || y == NULL || coefficients_out == NULL ||
         x_mean_out == NULL || y_mean_out == NULL) {
@@ -452,31 +502,38 @@ int n4m_wasm_model_fit(const char* model,
     if (n < 2 || p < 1 || q < 1 || n_components < 1) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
+    if (has_intercept_out != NULL) *has_intercept_out = 0;
     int kind = model_kind_for(model);
     if (kind == MK_NONE) return N4M_ERR_NOT_IMPLEMENTED;
     if (kind <= MK_PLS_DA) {
         return n4m_wasm_model_fit_tier_a(kind, x, y, n, p, q, n_components,
                                          coefficients_out, x_mean_out,
                                          y_mean_out, intercept_out,
-                                         predictions_out);
+                                         has_intercept_out, predictions_out);
     }
     return n4m_wasm_model_fit_tier_b(kind, params, n_params, x, y, n, p, q,
-                                     coefficients_out, x_mean_out, y_mean_out,
-                                     intercept_out, predictions_out);
+                                     n_components, coefficients_out, x_mean_out,
+                                     y_mean_out, intercept_out,
+                                     has_intercept_out, predictions_out);
 }
 
 /* Predict from a fitted coefficient triple.
  *
- * Two equivalent affine conventions are supported via the `intercept` arg:
+ * Two prediction conventions are supported via the `intercept` arg:
  *   intercept == NULL : centred form, pred = y_mean + (x - x_mean).B
- *                       (every libn4m coeff model exposes this triple, and its
- *                        own in-sample `predictions` use exactly this form).
+ *                       This is the ONLY correct form for the PLS/PCR family and
+ *                       the PLS-based Tier-B fits: they have no affine intercept
+ *                       and their own in-sample `predictions` use exactly this.
  *   intercept != NULL : explicit-intercept form, pred = intercept + x.B
- *                       (x_mean / y_mean ignored; for models that fold the
- *                        constant into `intercept`, e.g. sklearn-style Ridge).
+ *                       (x_mean / y_mean ignored). Use this ONLY for models that
+ *                       reported has_intercept=1 (currently Ridge), where
+ *                       intercept already folds the centring (and any feature
+ *                       scaling) into a genuine constant term.
  *
- * Because libn4m's Ridge folds y_mean - x_mean.B into `intercept`, the two
- * forms agree numerically; callers pick whichever triple they round-tripped. */
+ * For Ridge the two forms agree numerically because its intercept is
+ * y_mean - x_mean.B (on the de-scaled coefficient scale); for the centred-only
+ * models passing a non-NULL intercept would double-count the constant, so the
+ * generic JS path always uses the centred form (intercept = NULL). */
 __attribute__((used))
 int n4m_wasm_model_predict_from_coeffs(const double* coefficients,
                                        const double* x_mean,
