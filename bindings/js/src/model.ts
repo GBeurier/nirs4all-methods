@@ -334,6 +334,101 @@ export function fitAom(X: Matrix, Y: Matrix, maxComponents: number,
     }
 }
 
+/** A fitted POP-PLS model — a {@link FittedModel} (so {@link predictModel}
+ *  works unchanged) plus the per-component screen result. Its `intercept` is a
+ *  genuine input-space intercept and its `xMean` / `yMean` are zero, so
+ *  prediction is the affine form  y = intercept + X.B  on RAW X. */
+export interface PopModel extends FittedModel {
+    /** Bank index of the operator picked at each selected latent component
+     *  (length = `selectedComponents`). */
+    selectedOperators: number[];
+    /** Number of latent components the per-component screen selected. */
+    selectedComponents: number;
+    /** Best internal-CV prefix score of the selected model. */
+    score: number;
+}
+
+/** Fit POP-PLS (per-component operator-adaptive PLS) on (X, Y).
+ *
+ * Like AOM-PLS but picks one strict-linear operator PER latent component
+ * (`n4m_aom_per_component_select`) rather than one for the whole model, then
+ * returns INPUT-SPACE coefficients so it predicts on RAW X via the same affine
+ * intercept path — so it is used WITHOUT preceding preprocessing steps (the
+ * screen does the preprocessing internally). Numerics are 100% libn4m; this
+ * only builds the bank + validation plan.
+ *
+ * @param X row-major (n × p) input matrix.
+ * @param Y row-major (n × q) target matrix.
+ * @param maxComponents max latent components for the internal SIMPLS fits.
+ * @param nFolds internal-CV fold count for the operator screen.
+ * @param seed reserved (the contiguous-fold partition is deterministic).
+ * @param operatorKinds optional `n4m_operator_kind_t` bank override; when
+ *   omitted a default strict bank (identity / detrend / SG smooth / SG
+ *   derivative / finite-difference) is screened.
+ */
+export function fitPop(X: Matrix, Y: Matrix, maxComponents: number,
+                        nFolds = 5, seed = 0,
+                        operatorKinds: number[] = []): PopModel {
+    if (X.rows !== Y.rows) {
+        throw new Error(`X.rows (${X.rows}) must equal Y.rows (${Y.rows})`);
+    }
+    const M = getModule();
+    const n = X.rows, p = X.cols, q = Y.cols;
+    // The selector clamps max_components to min(maxComponents, p, n-1); allocate
+    // the per-component op buffer to the un-clamped request (always >= clamp).
+    const maxComp = Math.max(1, maxComponents);
+    const xBuf = _malloc_f64(M, n * p);
+    const yBuf = _malloc_f64(M, n * q);
+    const coefsBuf = _malloc_f64(M, p * q);
+    const interBuf = _malloc_f64(M, q);
+    const opsOutBuf = M._malloc(maxComp * 4); // int32 per-component op indices
+    const nSelBuf = M._malloc(4);             // int32 selected component count
+    const scoreBuf = _malloc_f64(M, 1);
+    const opsPtr = operatorKinds.length > 0
+        ? M._malloc(operatorKinds.length * 4)
+        : 0;
+    try {
+        _copy_in(M, X.data, xBuf.ptr);
+        _copy_in(M, Y.data, yBuf.ptr);
+        if (opsPtr !== 0) M.HEAP32.set(Int32Array.from(operatorKinds), opsPtr >> 2);
+        const status = M.ccall(
+            "n4m_wasm_pop_fit", "number",
+            ["number", "number", "number", "number", "number",
+             "number", "number", "number", "number", "number",
+             "number", "number", "number", "number", "number"],
+            [xBuf.ptr, yBuf.ptr, n, p, q,
+             maxComp, nFolds, seed, opsPtr, operatorKinds.length,
+             coefsBuf.ptr, interBuf.ptr, opsOutBuf, nSelBuf, scoreBuf.ptr]) as number;
+        checkStatus(status);
+        const nSel = Math.max(0, M.HEAP32[nSelBuf >> 2] ?? 0);
+        const selectedOperators: number[] = [];
+        for (let k = 0; k < nSel; ++k) {
+            selectedOperators.push(M.HEAP32[(opsOutBuf >> 2) + k] ?? -1);
+        }
+        return {
+            coefficients: _read_out(M, coefsBuf.ptr, p * q),
+            // zero means — POP predicts on RAW X via the affine intercept form.
+            xMean: new Float64Array(p),
+            yMean: new Float64Array(q),
+            intercept: _read_out(M, interBuf.ptr, q),
+            n_features: p,
+            n_targets: q,
+            selectedOperators,
+            selectedComponents: nSel,
+            score: _read_out(M, scoreBuf.ptr, 1)[0] ?? NaN,
+        };
+    } finally {
+        M._free(xBuf.ptr);
+        M._free(yBuf.ptr);
+        M._free(coefsBuf.ptr);
+        M._free(interBuf.ptr);
+        M._free(opsOutBuf);
+        M._free(nSelBuf);
+        M._free(scoreBuf.ptr);
+        if (opsPtr !== 0) M._free(opsPtr);
+    }
+}
+
 /* Legacy class wrapper preserved for backwards compat with the
  * scaffold; not yet exposed via index.ts. */
 export class Model {

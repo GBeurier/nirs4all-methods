@@ -569,13 +569,15 @@ int n4m_wasm_model_predict_from_coeffs(const double* coefficients,
 }
 
 /* ============================================================================
- * AOM-PLS — operator-adaptive PLS (raw-double-pointer surface for JS)
+ * AOM-PLS / POP-PLS — operator-adaptive PLS (raw-double-pointer surface for JS)
  * ----------------------------------------------------------------------------
- * Screens a bank of strict-linear preprocessing operators by internal k-fold
- * CV and fits SIMPLS on the winner, then exports INPUT-SPACE coefficients so
- * the model predicts on RAW X via the affine form  y = intercept + X.B  (no
- * replay of the selected operator). The numerics stay 100% in libn4m
- * (n4m_aom_global_select); this is only bank/plan construction + marshalling.
+ * Both screen a bank of strict-linear preprocessing operators by internal
+ * k-fold CV and fit SIMPLS, then export INPUT-SPACE coefficients so the model
+ * predicts on RAW X via the affine form  y = intercept + X.B  (no replay of the
+ * selected operator). AOM-PLS (global) picks ONE operator for the whole model;
+ * POP-PLS (per-component) picks one operator PER latent component. The numerics
+ * stay 100% in libn4m (n4m_aom_global_select / n4m_aom_per_component_select);
+ * this is only bank/plan construction + marshalling.
  *
  * Default bank (when operator_kinds == NULL): a small set of STRICT-linear
  * operators that all accept default (empty) params —
@@ -589,47 +591,40 @@ int n4m_wasm_model_predict_from_coeffs(const double* coefficients,
  * deterministic partition the C++ AOM tests use); `seed` is accepted for API
  * symmetry with the other stochastic fits but the contiguous fold partition is
  * deterministic so it does not consume the seed.
- *
- * Writes (all row-major, F64):
- *   coefficients_out (p * q)  input-space coefficients B
- *   intercept_out    (q)      input-space intercept
- *   selected_op_out  (int32)  bank index of the winning operator
- *   best_score_out   (double) best internal-CV score of the winner
- * Returns 0 on success, a N4M_ERR_* otherwise. On any failure every handle is
- * destroyed (no leak) and the out buffers are left untouched.
  * ==========================================================================*/
-__attribute__((used))
-int n4m_wasm_aom_fit(const double* x, const double* y,
-                     int n, int p, int q,
-                     int max_components, int n_folds, int seed,
-                     const int* operator_kinds, int n_ops,
-                     double* coefficients_out,
-                     double* intercept_out,
-                     int* selected_op_out,
-                     double* best_score_out) {
-    (void)seed; /* contiguous-fold partition is deterministic */
-    if (x == NULL || y == NULL || coefficients_out == NULL ||
-        intercept_out == NULL) {
-        return N4M_ERR_NULL_POINTER;
-    }
-    if (n < 4 || p < 1 || q < 1 || max_components < 1) {
+
+/* Shared setup for the AOM/POP selectors: validate + clamp max_components/k,
+ * build the SIMPLS-regression config, build the operator bank (custom or
+ * default strict set), and build a k contiguous-fold validation plan. On
+ * success all four handles are owned by the caller, which MUST destroy them
+ * (ctx, cfg, bank, plan) regardless of the later selector outcome. On failure
+ * every handle is destroyed here and all out-params are set to NULL. */
+static int n4m_wasm_aom_setup(int n, int p, int q,
+                              int* max_components, int n_folds,
+                              const int* operator_kinds, int n_ops,
+                              n4m_matrix_view_t* xv, n4m_matrix_view_t* yv,
+                              const double* x, const double* y,
+                              n4m_context_t** out_ctx, n4m_config_t** out_cfg,
+                              n4m_operator_bank_t** out_bank,
+                              n4m_validation_plan_t** out_plan) {
+    *out_ctx = NULL; *out_cfg = NULL; *out_bank = NULL; *out_plan = NULL;
+    if (n < 4 || p < 1 || q < 1 || *max_components < 1) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
     if (n_ops < 0 || (n_ops > 0 && operator_kinds == NULL)) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
     /* The selector requires max_components < n_rows and <= n_features. */
-    if (max_components > p) max_components = p;
-    if (max_components >= n) max_components = n - 1;
-    if (max_components < 1) return N4M_ERR_INVALID_ARGUMENT;
+    if (*max_components > p) *max_components = p;
+    if (*max_components >= n) *max_components = n - 1;
+    if (*max_components < 1) return N4M_ERR_INVALID_ARGUMENT;
     /* k-fold: at least 2 folds, at most n. */
     int k = n_folds;
     if (k < 2) k = 2;
     if (k > n) k = n;
 
-    n4m_matrix_view_t xv, yv;
-    n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
-    n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(xv, (void*)x, n, p, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(yv, (void*)y, n, q, N4M_DTYPE_F64);
 
     n4m_context_t* ctx = NULL;
     n4m_status_t s = n4m_context_create(&ctx);
@@ -711,10 +706,50 @@ int n4m_wasm_aom_fit(const double* x, const double* y,
         return s;
     }
 
+    *out_ctx = ctx;
+    *out_cfg = cfg;
+    *out_bank = bank;
+    *out_plan = plan;
+    return N4M_OK;
+}
+
+/* AOM-PLS (global): one operator for the whole model.
+ *
+ * Writes (all row-major, F64):
+ *   coefficients_out (p * q)  input-space coefficients B
+ *   intercept_out    (q)      input-space intercept
+ *   selected_op_out  (int32)  bank index of the winning operator
+ *   best_score_out   (double) best internal-CV score of the winner
+ * Returns 0 on success, a N4M_ERR_* otherwise. On any failure every handle is
+ * destroyed (no leak) and the out buffers are left untouched. */
+__attribute__((used))
+int n4m_wasm_aom_fit(const double* x, const double* y,
+                     int n, int p, int q,
+                     int max_components, int n_folds, int seed,
+                     const int* operator_kinds, int n_ops,
+                     double* coefficients_out,
+                     double* intercept_out,
+                     int* selected_op_out,
+                     double* best_score_out) {
+    (void)seed; /* contiguous-fold partition is deterministic */
+    if (x == NULL || y == NULL || coefficients_out == NULL ||
+        intercept_out == NULL) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    n4m_matrix_view_t xv, yv;
+    n4m_context_t* ctx = NULL;
+    n4m_config_t* cfg = NULL;
+    n4m_operator_bank_t* bank = NULL;
+    n4m_validation_plan_t* plan = NULL;
+    int mc = max_components;
+    n4m_status_t s = n4m_wasm_aom_setup(n, p, q, &mc, n_folds, operator_kinds,
+                                        n_ops, &xv, &yv, x, y, &ctx, &cfg,
+                                        &bank, &plan);
+    if (s != N4M_OK) return s;
+
     /* ---- Run the global AOM selector ---- */
     n4m_aom_global_result_t* res = NULL;
-    s = n4m_aom_global_select(ctx, cfg, bank, &xv, &yv, plan,
-                              max_components, &res);
+    s = n4m_aom_global_select(ctx, cfg, bank, &xv, &yv, plan, mc, &res);
     if (s != N4M_OK || res == NULL) {
         if (res != NULL) n4m_aom_global_result_destroy(res);
         n4m_validation_plan_destroy(plan);
@@ -757,6 +792,119 @@ int n4m_wasm_aom_fit(const double* x, const double* y,
     }
 
     n4m_aom_global_result_destroy(res);
+    n4m_validation_plan_destroy(plan);
+    n4m_operator_bank_destroy(bank);
+    n4m_config_destroy(cfg);
+    n4m_context_destroy(ctx);
+    return s;
+}
+
+/* POP-PLS (per-component): one operator picked PER latent component.
+ *
+ * Same bank/plan construction as AOM; runs n4m_aom_per_component_select, then
+ * exports INPUT-SPACE coefficients + intercept (predict on RAW X via the same
+ * affine path) plus the per-component selected-operator list (bank index of the
+ * operator picked at each of the selected n_components components).
+ *
+ * Writes (all row-major, F64):
+ *   coefficients_out (p * q)  input-space coefficients B
+ *   intercept_out    (q)      input-space intercept
+ *   selected_ops_out (int32 * max_components) per-component bank indices; only
+ *                    the first *n_selected_out entries are meaningful (the
+ *                    selected prefix length). Pass NULL to skip.
+ *   n_selected_out   (int32)  number of selected components (= meaningful
+ *                    entries in selected_ops_out). Pass NULL to skip.
+ *   best_score_out   (double) best internal-CV prefix score. Pass NULL to skip.
+ * Returns 0 on success, a N4M_ERR_* otherwise. On any failure every handle is
+ * destroyed (no leak) and the out buffers are left untouched. */
+__attribute__((used))
+int n4m_wasm_pop_fit(const double* x, const double* y,
+                     int n, int p, int q,
+                     int max_components, int n_folds, int seed,
+                     const int* operator_kinds, int n_ops,
+                     double* coefficients_out,
+                     double* intercept_out,
+                     int* selected_ops_out,
+                     int* n_selected_out,
+                     double* best_score_out) {
+    (void)seed; /* contiguous-fold partition is deterministic */
+    if (x == NULL || y == NULL || coefficients_out == NULL ||
+        intercept_out == NULL) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    n4m_matrix_view_t xv, yv;
+    n4m_context_t* ctx = NULL;
+    n4m_config_t* cfg = NULL;
+    n4m_operator_bank_t* bank = NULL;
+    n4m_validation_plan_t* plan = NULL;
+    int mc = max_components;
+    n4m_status_t s = n4m_wasm_aom_setup(n, p, q, &mc, n_folds, operator_kinds,
+                                        n_ops, &xv, &yv, x, y, &ctx, &cfg,
+                                        &bank, &plan);
+    if (s != N4M_OK) return s;
+
+    /* ---- Run the per-component (POP) AOM selector ---- */
+    n4m_aom_per_component_result_t* res = NULL;
+    s = n4m_aom_per_component_select(ctx, cfg, bank, &xv, &yv, plan, mc, &res);
+    if (s != N4M_OK || res == NULL) {
+        if (res != NULL) n4m_aom_per_component_result_destroy(res);
+        n4m_validation_plan_destroy(plan);
+        n4m_operator_bank_destroy(bank);
+        n4m_config_destroy(cfg);
+        n4m_context_destroy(ctx);
+        return s != N4M_OK ? s : N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    /* ---- Copy out input-space coefficients + intercept ---- */
+    s = N4M_OK;
+    const double* coeff = NULL;
+    int64_t crows = 0, ccols = 0;
+    if (n4m_aom_per_component_result_get_input_coefficients(
+            res, &coeff, &crows, &ccols) == N4M_OK &&
+        coeff != NULL && crows == p && ccols == q) {
+        memcpy(coefficients_out, coeff, (size_t)p * (size_t)q * sizeof(double));
+    } else {
+        s = N4M_ERR_INVALID_ARGUMENT;
+    }
+    const double* inter = NULL;
+    int64_t irows = 0, icols = 0;
+    if (s == N4M_OK &&
+        n4m_aom_per_component_result_get_intercept(res, &inter, &irows,
+                                                   &icols) == N4M_OK &&
+        inter != NULL && irows == 1 && icols == q) {
+        memcpy(intercept_out, inter, (size_t)q * sizeof(double));
+    } else if (s == N4M_OK) {
+        s = N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    /* ---- Per-component selected operators (one bank index per selected
+     * component) + selected component count + best prefix score ---- */
+    int32_t n_selected = 0;
+    if (s == N4M_OK) {
+        n4m_aom_per_component_result_get_selected_n_components(res, &n_selected);
+        if (n_selected < 0) n_selected = 0;
+        if (n_selected > mc) n_selected = mc;
+    }
+    if (s == N4M_OK && selected_ops_out != NULL) {
+        for (int k = 0; k < mc; ++k) selected_ops_out[k] = -1;
+        const int32_t* sel = NULL;
+        int32_t sel_len = 0;
+        if (n4m_aom_per_component_result_get_selected_operator_indices(
+                res, &sel, &sel_len) == N4M_OK && sel != NULL) {
+            int copy = (int)(sel_len < n_selected ? sel_len : n_selected);
+            for (int k = 0; k < copy; ++k) selected_ops_out[k] = (int)sel[k];
+        }
+    }
+    if (s == N4M_OK && n_selected_out != NULL) {
+        *n_selected_out = (int)n_selected;
+    }
+    if (s == N4M_OK && best_score_out != NULL) {
+        double sc = 0.0;
+        n4m_aom_per_component_result_get_best_score(res, &sc);
+        *best_score_out = sc;
+    }
+
+    n4m_aom_per_component_result_destroy(res);
     n4m_validation_plan_destroy(plan);
     n4m_operator_bank_destroy(bank);
     n4m_config_destroy(cfg);

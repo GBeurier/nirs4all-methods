@@ -39,6 +39,8 @@ list(APPEND _js_export_list
     "_n4m_wasm_model_predict_from_coeffs"
     # AOM-PLS — operator-adaptive PLS (strict bank screen + SIMPLS on the winner)
     "_n4m_wasm_aom_fit"
+    # POP-PLS — per-component AOM (one operator per latent component)
+    "_n4m_wasm_pop_fit"
     # Generic preprocessing dispatcher (raw-pointer surface; numerics in libn4m)
     "_n4m_wasm_pp_create"
     "_n4m_wasm_pp_fit"
