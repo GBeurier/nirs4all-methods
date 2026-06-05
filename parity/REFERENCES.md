@@ -12,10 +12,11 @@ See [`../PRODUCTION_AUDIT.md`](../PRODUCTION_AUDIT.md) §1 for the full parity m
 ## The rule
 
 > Every method has **one documented donor** chosen as the most credible
-> implementation for the community. Methods that originate in the Python
-> **nirs4all** library (augmentations, scatter/baseline preprocessing, splitters)
-> use **nirs4all** as the donor. The only exception is a genuine *paper-only*
-> method, which must be explicitly marked as such.
+> implementation for the community. Methods that originate in **nirs4all**
+> (augmentations, scatter/baseline preprocessing, splitters, native AOM/moment
+> orchestration, and direct native heads such as Ridge) use **nirs4all** as the
+> donor. The only exception is a genuine *paper-only* method, which must be
+> explicitly marked as such.
 
 A "missing value" in the matrix must always mean *paper-only / not-applicable*,
 **never** "the reference library was not installed". The doctor below enforces that.
@@ -73,4 +74,4 @@ if any **required** reference dependency is missing. `--json` for machine output
 | external lib | 65 | sklearn (`pls`, `pcr`, `pls_lda`), R `pls` (`cppls`, solver variants), R `plsVarSel` (selectors), R `multiblock` (`so_pls`), matlab/libPLS (`ecr`, `cars`), `diPLSlib` (`di_pls`), `ikpls` (cross-check) |
 | `nirs4all_sanctioned` | 5 | `aom_pls`, `aom_preprocess`, `lw_pls`, `mb_pls`, `pop_pls` |
 | `paper_only` (no reference) | 3 | `fused_sparse_pls`, `mir_pls`, `sipls_select` |
-| nirs4all (donor methods) | ≈104 | augmentation, preprocessing, filters, splitters |
+| nirs4all (donor methods) | ≈135 | augmentation, preprocessing, filters, splitters, native `aom_pop` orchestration, direct Ridge |

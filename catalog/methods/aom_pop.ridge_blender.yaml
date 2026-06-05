@@ -1,0 +1,42 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.ridge_blender"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "1.17.0"
+abi_symbols:
+  - "n4m_aom_ridge_blender_fit"
+tu:
+  - "cpp/src/core/aom_ridge_blender.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+carry_along_tu:
+  - "cpp/src/core/aom_operators.cpp"
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/AOM-ridge-blender-native-contract"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.ridge_blender"
+  registry_entry: "benchmarks/cross_binding/bench_aom_ridge_blender_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "aom_ridge_blender"
+    legacy_aliases: []
+publications: []
+notes: "Native strict-linear AOM Ridge OOF simplex blender over compact/wide chain banks and positive Ridge-lambda grids. Compact has 12 chains; wide has 31 strict-linear chains, including Gaussian, FCK and Whittaker variants. It returns candidate predictions, OOF candidate predictions, non-negative blend weights, and final input_coefficients plus intercept for replay through NativeAOMRidgeBlenderRegressor; native v1 builds in CUDA-enabled configurations but is not yet a fused batched GPU blender."

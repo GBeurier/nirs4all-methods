@@ -9,6 +9,9 @@ since_abi: "1.0.0"
 abi_symbols:
   - "n4m_aom_global_result_destroy"
   - "n4m_aom_global_result_get_best_score"
+  - "n4m_aom_global_result_get_coefficients"
+  - "n4m_aom_global_result_get_input_coefficients"
+  - "n4m_aom_global_result_get_intercept"
   - "n4m_aom_global_result_get_max_components"
   - "n4m_aom_global_result_get_n_operators"
   - "n4m_aom_global_result_get_operator_kinds"
@@ -38,6 +41,11 @@ bench:
   registry_entry: null
 feature_flags: []
 vendored_licenses: []
-bindings: {}
+bindings:
+  python:
+    module: "n4m.python"
+    class: "aom_global_select"
+    legacy_aliases:
+      - "aom_pls"
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Auto-discovered from source tree in M2. Python binding refined during AOM/moment product integration; aom_pls remains the public legacy alias."

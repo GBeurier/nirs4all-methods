@@ -1,0 +1,42 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.robust_hpo"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "1.12.0"
+abi_symbols:
+  - "n4m_aom_robust_hpo_fit"
+tu:
+  - "cpp/src/core/aom_robust_hpo.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+carry_along_tu:
+  - "cpp/src/core/aom_operators.cpp"
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/AOM-robust-HPO-native-smoke"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.robust_hpo"
+  registry_entry: "benchmarks/cross_binding/bench_aom_robust_hpo_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "aom_robust_hpo"
+    legacy_aliases: []
+publications: []
+notes: "Native strict-linear AOM robust-HPO screen over compact/wide preprocessing banks and Ridge/PLS heads. Compact has 12 chains; wide has 31 strict-linear chains, including Gaussian, FCK and Whittaker variants. Exposes input_coefficients plus intercept for replay in original feature space and backs NativeAOMRobustHPORegressor. Builds in CPU and CUDA-enabled libn4m configurations; native v1 is not the fused batched GPU grinder."

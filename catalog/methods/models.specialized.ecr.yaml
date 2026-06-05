@@ -28,6 +28,10 @@ bench:
   registry_entry: null
 feature_flags: []
 vendored_licenses: []
-bindings: {}
+bindings:
+  python:
+    module: "n4m.python"
+    class: "ecr"
+    legacy_aliases: []
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Auto-discovered from source tree in M2. Python binding refined during AOM/moment product integration."

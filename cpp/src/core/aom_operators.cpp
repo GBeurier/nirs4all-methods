@@ -192,6 +192,11 @@ struct SavGolParams {
     std::int32_t derivative_order{0};
 };
 
+struct GaussianParams {
+    double sigma{1.0};
+    double truncate{4.0};
+};
+
 [[nodiscard]] double factorial(std::int32_t n) noexcept {
     double out = 1.0;
     for (std::int32_t i = 2; i <= n; ++i) {
@@ -344,6 +349,66 @@ struct SavGolParams {
     return N4M_OK;
 }
 
+[[nodiscard]] n4m_status_t parse_gaussian(::n4m::core::Context& ctx,
+                                          const ::n4m::core::OperatorEntry& entry,
+                                          GaussianParams& params) {
+    params = GaussianParams{};
+    if (entry.params.empty()) {
+        return N4M_OK;
+    }
+    if (entry.params.size() != 1U && entry.params.size() != 2U) {
+        ctx.set_error("AOM Gaussian expects zero params, sigma, or sigma/truncate");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    params.sigma = entry.params[0];
+    if (entry.params.size() == 2U) {
+        params.truncate = entry.params[1];
+    }
+    if (!std::isfinite(params.sigma) || params.sigma <= 0.0) {
+        ctx.set_error("AOM Gaussian sigma must be finite and positive");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (!std::isfinite(params.truncate) || params.truncate < 0.0) {
+        ctx.set_error("AOM Gaussian truncate must be finite and non-negative");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const auto radius = static_cast<std::int32_t>(params.truncate * params.sigma + 0.5);
+    if (radius < 0 || radius > 250) {
+        ctx.set_error("AOM Gaussian kernel length must not exceed 501");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    return N4M_OK;
+}
+
+[[nodiscard]] n4m_status_t build_gaussian_kernel(::n4m::core::Context& ctx,
+                                                 const ::n4m::core::OperatorEntry& entry,
+                                                 std::vector<double>& kernel) {
+    GaussianParams params;
+    n4m_status_t status = parse_gaussian(ctx, entry, params);
+    if (status != N4M_OK) {
+        return status;
+    }
+    const auto radius = static_cast<std::int32_t>(params.truncate * params.sigma + 0.5);
+    const std::int32_t length = 2 * radius + 1;
+    const double sigma2 = params.sigma * params.sigma;
+    kernel.assign(static_cast<std::size_t>(length), 0.0);
+    double total = 0.0;
+    for (std::int32_t i = 0; i < length; ++i) {
+        const double x = static_cast<double>(i - radius);
+        const double value = std::exp(-0.5 * x * x / sigma2);
+        kernel[static_cast<std::size_t>(i)] = value;
+        total += value;
+    }
+    if (!(total > 0.0) || !std::isfinite(total)) {
+        ctx.set_error("failed to build AOM Gaussian kernel");
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    for (double& value : kernel) {
+        value /= total;
+    }
+    return N4M_OK;
+}
+
 [[nodiscard]] n4m_status_t apply_xcorr_zero_pad(const std::vector<double>& values,
                                                 std::size_t rows,
                                                 std::size_t cols,
@@ -384,6 +449,81 @@ struct SavGolParams {
     }
     return apply_xcorr_zero_pad(values, rows, cols, coeffs, out);
 }
+
+[[nodiscard]] n4m_status_t build_xcorr_banded_operator(
+    ::n4m::core::Context& ctx,
+    std::int64_t n_features,
+    const std::vector<double>& kernel,
+    ::n4m::core::BandedLinearOperator& out) {
+    out = ::n4m::core::BandedLinearOperator{};
+    if (n_features <= 0) {
+        ctx.set_error("AOM banded operator requires a positive feature count");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (kernel.empty()) {
+        ctx.set_error("AOM banded operator kernel must not be empty");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const auto p = static_cast<std::size_t>(n_features);
+    if (p > static_cast<std::size_t>(
+                std::numeric_limits<std::int32_t>::max() - 1)) {
+        ctx.set_error("AOM banded operator feature count exceeds int32 storage");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    for (double value : kernel) {
+        if (!std::isfinite(value)) {
+            ctx.set_error("AOM banded operator kernel contains NaN or Inf");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+    }
+
+    out.n_features = n_features;
+    out.offsets.assign(p + 1U, 0);
+    out.src_indices.reserve(p * kernel.size());
+    out.coeffs.reserve(p * kernel.size());
+    const std::int64_t half =
+        static_cast<std::int64_t>((kernel.size() - 1U) / 2U);
+    const auto max_entries =
+        static_cast<std::size_t>(std::numeric_limits<std::int32_t>::max());
+    for (std::size_t col = 0; col < p; ++col) {
+        out.offsets[col] =
+            static_cast<std::int32_t>(out.src_indices.size());
+        for (std::size_t k = 0; k < kernel.size(); ++k) {
+            const double coeff = kernel[k];
+            if (coeff == 0.0) {
+                continue;
+            }
+            const std::int64_t source =
+                static_cast<std::int64_t>(col) +
+                static_cast<std::int64_t>(k) - half;
+            if (source >= 0 && source < n_features) {
+                if (out.src_indices.size() >= max_entries) {
+                    ctx.set_error("AOM banded operator has too many non-zero entries");
+                    out = ::n4m::core::BandedLinearOperator{};
+                    return N4M_ERR_INVALID_ARGUMENT;
+                }
+                out.src_indices.push_back(static_cast<std::int32_t>(source));
+                out.coeffs.push_back(coeff);
+            }
+        }
+    }
+    out.offsets[p] = static_cast<std::int32_t>(out.src_indices.size());
+    return N4M_OK;
+}
+
+[[nodiscard]] n4m_status_t build_finite_difference_kernel(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::OperatorEntry& entry,
+    std::vector<double>& kernel);
+
+[[nodiscard]] n4m_status_t build_norris_williams_kernel(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::OperatorEntry& entry,
+    std::vector<double>& kernel);
+
+[[nodiscard]] n4m_status_t build_fck_kernel(::n4m::core::Context& ctx,
+                                            const ::n4m::core::OperatorEntry& entry,
+                                            std::vector<double>& kernel);
 
 [[nodiscard]] n4m_status_t apply_detrend_poly(::n4m::core::Context& ctx,
                                               const std::vector<double>& values,
@@ -459,6 +599,18 @@ struct SavGolParams {
                                                    std::size_t rows,
                                                    std::size_t cols,
                                                    std::vector<double>& out) {
+    std::vector<double> kernel;
+    n4m_status_t status = build_finite_difference_kernel(ctx, entry, kernel);
+    if (status != N4M_OK) {
+        return status;
+    }
+    return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
+}
+
+[[nodiscard]] n4m_status_t build_finite_difference_kernel(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::OperatorEntry& entry,
+    std::vector<double>& kernel) {
     std::int32_t order = 1;
     if (!entry.params.empty()) {
         if (entry.params.size() != 1U) {
@@ -475,13 +627,12 @@ struct SavGolParams {
             return status;
         }
     }
-    std::vector<double> kernel;
     if (order == 1) {
         kernel = {-0.5, 0.0, 0.5};
     } else {
         kernel = {1.0, -2.0, 1.0};
     }
-    return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
+    return N4M_OK;
 }
 
 struct NorrisWilliamsParams {
@@ -552,6 +703,18 @@ struct NorrisWilliamsParams {
                                                  std::size_t rows,
                                                  std::size_t cols,
                                                  std::vector<double>& out) {
+    std::vector<double> kernel;
+    n4m_status_t status = build_norris_williams_kernel(ctx, entry, kernel);
+    if (status != N4M_OK) {
+        return status;
+    }
+    return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
+}
+
+[[nodiscard]] n4m_status_t build_norris_williams_kernel(
+    ::n4m::core::Context& ctx,
+    const ::n4m::core::OperatorEntry& entry,
+    std::vector<double>& kernel) {
     NorrisWilliamsParams params;
     n4m_status_t status = parse_norris_williams(ctx, entry, params);
     if (status != N4M_OK) {
@@ -562,11 +725,11 @@ struct NorrisWilliamsParams {
     std::vector<double> gap_kernel(static_cast<std::size_t>(2 * params.gap + 1), 0.0);
     gap_kernel.front() = -1.0 / (2.0 * static_cast<double>(params.gap));
     gap_kernel.back() = 1.0 / (2.0 * static_cast<double>(params.gap));
-    std::vector<double> kernel = convolve(smooth, gap_kernel);
+    kernel = convolve(smooth, gap_kernel);
     if (params.derivative_order == 2) {
         kernel = convolve(kernel, gap_kernel);
     }
-    return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
+    return N4M_OK;
 }
 
 [[nodiscard]] n4m_status_t apply_whittaker(::n4m::core::Context& ctx,
@@ -684,6 +847,31 @@ struct FckParams {
                                      std::size_t rows,
                                      std::size_t cols,
                                      std::vector<double>& out) {
+    std::vector<double> kernel;
+    n4m_status_t status = build_fck_kernel(ctx, entry, kernel);
+    if (status != N4M_OK) {
+        return status;
+    }
+    return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
+}
+
+[[nodiscard]] n4m_status_t apply_gaussian(::n4m::core::Context& ctx,
+                                          const ::n4m::core::OperatorEntry& entry,
+                                          const std::vector<double>& values,
+                                          std::size_t rows,
+                                          std::size_t cols,
+                                          std::vector<double>& out) {
+    std::vector<double> kernel;
+    n4m_status_t status = build_gaussian_kernel(ctx, entry, kernel);
+    if (status != N4M_OK) {
+        return status;
+    }
+    return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
+}
+
+[[nodiscard]] n4m_status_t build_fck_kernel(::n4m::core::Context& ctx,
+                                            const ::n4m::core::OperatorEntry& entry,
+                                            std::vector<double>& kernel) {
     FckParams params;
     n4m_status_t status = parse_fck(ctx, entry, params);
     if (status != N4M_OK) {
@@ -691,7 +879,7 @@ struct FckParams {
     }
 
     const std::int32_t half = params.kernel_size / 2;
-    std::vector<double> kernel(static_cast<std::size_t>(params.kernel_size), 0.0);
+    kernel.assign(static_cast<std::size_t>(params.kernel_size), 0.0);
     for (std::int32_t i = 0; i < params.kernel_size; ++i) {
         const double x = static_cast<double>(i - half) * params.scale;
         const double gauss = std::exp(-0.5 * (x / params.sigma) * (x / params.sigma));
@@ -721,7 +909,7 @@ struct FckParams {
     for (double& value : kernel) {
         value /= norm;
     }
-    return apply_xcorr_zero_pad(values, rows, cols, kernel, out);
+    return N4M_OK;
 }
 
 }  // namespace
@@ -784,6 +972,9 @@ n4m_status_t transform_aom_strict_operator(Context& ctx,
         case N4M_OP_FINITE_DIFFERENCE:
             status = apply_finite_difference(ctx, entry, values, rows, cols, out);
             break;
+        case N4M_OP_GAUSSIAN:
+            status = apply_gaussian(ctx, entry, values, rows, cols, out);
+            break;
         case N4M_OP_WHITTAKER:
             status = apply_whittaker(ctx, entry, values, rows, cols, out);
             break;
@@ -799,6 +990,93 @@ n4m_status_t transform_aom_strict_operator(Context& ctx,
 
     if (status != N4M_OK) {
         out.clear();
+        return status;
+    }
+    ctx.clear_error();
+    return N4M_OK;
+}
+
+n4m_status_t build_aom_banded_operator(Context& ctx,
+                                       const OperatorEntry& entry,
+                                       std::int64_t n_features,
+                                       BandedLinearOperator& out) {
+    out = BandedLinearOperator{};
+    if (n_features <= 0) {
+        ctx.set_error("AOM banded operator requires a positive feature count");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    n4m_status_t status = N4M_OK;
+    std::vector<double> kernel;
+    switch (entry.kind) {
+        case N4M_OP_IDENTITY:
+            status = require_no_params(ctx, entry, "AOM identity");
+            if (status != N4M_OK) {
+                return status;
+            }
+            kernel = {1.0};
+            break;
+        case N4M_OP_SAVGOL_SMOOTH: {
+            SavGolParams params;
+            status = parse_savgol_smooth(ctx, entry, params);
+            if (status != N4M_OK) {
+                return status;
+            }
+            status = compute_savgol_coeffs(ctx, params, kernel);
+            if (status != N4M_OK) {
+                return status;
+            }
+            break;
+        }
+        case N4M_OP_SAVGOL_DERIVATIVE: {
+            SavGolParams params;
+            status = parse_savgol_derivative(ctx, entry, params);
+            if (status != N4M_OK) {
+                return status;
+            }
+            status = compute_savgol_coeffs(ctx, params, kernel);
+            if (status != N4M_OK) {
+                return status;
+            }
+            break;
+        }
+        case N4M_OP_NORRIS_WILLIAMS:
+            status = build_norris_williams_kernel(ctx, entry, kernel);
+            if (status != N4M_OK) {
+                return status;
+            }
+            break;
+        case N4M_OP_FINITE_DIFFERENCE:
+            status = build_finite_difference_kernel(ctx, entry, kernel);
+            if (status != N4M_OK) {
+                return status;
+            }
+            break;
+        case N4M_OP_GAUSSIAN:
+            status = build_gaussian_kernel(ctx, entry, kernel);
+            if (status != N4M_OK) {
+                return status;
+            }
+            break;
+        case N4M_OP_FCK:
+            status = build_fck_kernel(ctx, entry, kernel);
+            if (status != N4M_OK) {
+                return status;
+            }
+            break;
+        case N4M_OP_DETREND_POLY:
+        case N4M_OP_WHITTAKER:
+            ctx.set_error("AOM operator is not banded under the current moment route");
+            return N4M_ERR_UNSUPPORTED;
+        default:
+            ctx.set_errorf("operator %d is not a supported banded AOM operator",
+                           static_cast<int>(entry.kind));
+            return N4M_ERR_UNSUPPORTED;
+    }
+
+    status = build_xcorr_banded_operator(ctx, n_features, kernel, out);
+    if (status != N4M_OK) {
+        out = BandedLinearOperator{};
         return status;
     }
     ctx.clear_error();

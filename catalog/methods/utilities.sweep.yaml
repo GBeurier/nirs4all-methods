@@ -1,0 +1,42 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "utilities.sweep"
+family: "utilities.sweep"
+category: "utilities"
+subcategory: "sweep"
+since_abi: "1.16.0"
+abi_symbols:
+  - "n4m_sweep_run"
+tu:
+  - "cpp/src/core/sweep.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+carry_along_tu:
+  - "cpp/src/core/moments.cpp"
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "utilities.sweep"
+  registry_entry: "benchmarks/cross_binding/bench_moment_sweep_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "sweep_run"
+    legacy_aliases: []
+publications: []
+notes: "Native Ridge/PLS candidate screen. Ridge is exact over row-additive moments when efficient and uses native dual kernels in wide regimes; compatible single-target NIPALS/regression PLS1 grids score from train/held-out moments, with a scalar host loop for medium-width CUDA builds and a device-resident cuBLAS component loop plus reused exact-CV fold workspace for very wide p>=1024 CUDA moment screens; materialized prefix scoring remains for other PLS regimes. PLS fit-cost counters are exposed as n_pls_moment_cv_fits, n_pls_moment_host_cv_fits, n_pls_moment_cuda_device_cv_fits, n_pls_materialized_cv_fits, n_pls_moment_final_fits, n_pls_moment_host_final_fits, n_pls_moment_cuda_device_final_fits and n_pls_materialized_final_fits so timing screens can distinguish moment-prefix fits, host/device PLS1 moment execution, and materialized fallback fits. Python exposes score_only=True for ranking passes that keep scores and selected ids while skipping selected-model buffers; score-only materialized fallback cells compute held-out SSE directly from linear fits when possible, and wide dual cross-kernel Ridge cells score directly from K_cross, to avoid held-out prediction-buffer allocation. This is not stream-parallel or fused batched IKPLS yet."

@@ -1,0 +1,4 @@
+backend,profile,n_samples,n_features,cv,n_chains,n_candidates,n_nonzero_weights,regularizer,selected_chain_id,selected_param,selected_cv_rmse,best_single_cv_rmse,blend_oof_rmse,elapsed_ms_median,library_path,abi
+native_aom_ridge_blender,compact,32,64,5,12,48,5,0.01,1,0.0001,0.6070727707566309,0.6070727707566309,0.5955871043602542,15.632077003829181,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so,1.17.0
+native_aom_ridge_blender,compact,64,128,5,12,48,10,0.01,2,0.0001,0.6346255577250742,0.6346255577250742,0.6085814072320265,81.00063551682979,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so,1.17.0
+native_aom_ridge_blender,compact,96,256,5,12,48,4,0.01,2,0.0001,0.6172587591948484,0.6172587591948484,0.6138319554915768,299.5628289791057,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so,1.17.0

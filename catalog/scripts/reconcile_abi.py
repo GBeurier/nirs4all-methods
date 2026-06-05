@@ -272,19 +272,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.write:
         import yaml
         INFRA_YAML.write_text(_dump({"infra_abi_symbols": infra}))
-        # Rewrite EVERY method's abi_symbols from the assignment: real methods get
-        # their symbols, helper/concept stubs (null-mapped) get [] — clearing the
-        # old M2 guesses so no unreal symbol remains. Then regenerate split files.
+        # Rewrite EVERY method's abi_symbols from the assignment: real native
+        # methods get their symbols, Python-backed orchestration entries may
+        # remain symbol-less when their native building blocks are catalogued
+        # separately, and helper/concept stubs are dropped.
         data = yaml.safe_load(METHODS_YAML.read_text())
         kept, dropped = [], []
         for entry in data["methods"]:
             syms = sorted(by_method.get(entry["method_id"], []))
             if not syms:
-                # Helper/concept stub with no public ABI symbol — REMOVE it
-                # (the schema requires abi_symbols minItems=1; Codex: remove
-                # helper stubs rather than keep symbol-less entries).
-                dropped.append(entry["method_id"])
-                continue
+                bindings = entry.get("bindings") or {}
+                has_python_binding = bool((bindings.get("python") or {}).get("class"))
+                if not has_python_binding:
+                    dropped.append(entry["method_id"])
+                    continue
             entry["abi_symbols"] = syms
             kept.append(entry)
         data["methods"] = kept

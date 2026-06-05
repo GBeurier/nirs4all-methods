@@ -43,6 +43,45 @@ from .sklearn import (
     signal_type_detector,
 )
 from .sklearn import (
+    AOMCandidateSpec,
+    AOMControlSelector,
+    AOMDatasetMetadata,
+    AOMEndpointMarginStabilityGate,
+    AOMFallbackBlendGate,
+    AOMMidPEndpointStack,
+    AOMOperatorPLSStack,
+    AOMOperatorPLSSpec,
+    AOMPreprocessingChain,
+    AOMRidgeBlender,
+    AOMRobustHPOCompact,
+    AOMRobustHPORegressor,
+    AOMRobustHPOWide,
+    AOMStructuralPolicy,
+    AOMStructuralPolicyWithP700BlockLocalAdmission,
+    AOMStructuralPolicyWithP700ProtocolUnified,
+    AOMStructuralPolicyWithPgt1200Admissions,
+    AOMTrueBankEndpointPortfolio,
+    EndpointStabilityDecision,
+    NativeAOMChainSweepRegressor,
+    NativeAOMFixedCandidateRegressor,
+    NativeAOMMomentScreenRefitRegressor,
+    NativeAOMMomentPLSScreenRefitRegressor,
+    NativeAOMMomentRidgeScreenRefitRegressor,
+    NativeAOMOperatorPLSStackRegressor,
+    NativeAOMPLSRegressor,
+    NativeAOMRidgeBlenderRegressor,
+    NativeAOMRobustHPORegressor,
+    NativeAOMScreenRefitRegressor,
+    NativeAOMSweepRegressor,
+    NativeContinuumRegressionRegressor,
+    NativeCPPLSRegressor,
+    NativeECRRegressor,
+    NativeMomentStackRegressor,
+    NativeMomentSweepRegressor,
+    NativePCRRegressor,
+    NativePOPPLSRegressor,
+    NativeRidgeRegressor,
+    build_aom_control_chain_bank,
     EMSC,
     LSNV,
     MSC,
@@ -102,6 +141,8 @@ from .sklearn import (
 )
 from .sklearn import *  # noqa: F403 - re-export full sklearn-style surface
 from .sklearn import __all__ as _sklearn_all
+from . import aom
+from . import moment
 
 
 def version() -> str:
@@ -121,11 +162,93 @@ def abi_version() -> tuple[int, int, int]:
     )
 
 
+aom_robust_hpo = python.aom_robust_hpo
+aom_global_select = python.aom_global_select
+aom_per_component_select = python.aom_per_component_select
+aom_pls = python.aom_pls
+pop_pls = python.pop_pls
+aom_preprocess = python.aom_preprocess
+aom_sweep_run = python.aom_sweep_run
+aom_chain_sweep_run = python.aom_chain_sweep_run
+aom_chain_fixed_fit_run = python.aom_chain_fixed_fit_run
+aom_candidate_table = python.aom_candidate_table
+aom_candidate_operator_summary = python.aom_candidate_operator_summary
+aom_candidate_preprocessing_impact = python.aom_candidate_preprocessing_impact
+aom_candidate_route_summary = python.aom_candidate_route_summary
+aom_candidate_rank_diagnostics = python.aom_candidate_rank_diagnostics
+aom_candidate_report_records = python.aom_candidate_report_records
+aom_chain_score_campaign = python.aom_chain_score_campaign
+aom_chain_screen_refit_campaign = python.aom_chain_screen_refit_campaign
+aom_moment_screen_refit_campaign = python.aom_moment_screen_refit_campaign
+aom_screen_refit_candidate_pool = python.aom_screen_refit_candidate_pool
+aom_refit_execution_plan = python.aom_refit_execution_plan
+aom_refit_candidates = python.aom_refit_candidates
+aom_evaluate_candidates = python.aom_evaluate_candidates
+aom_load_candidate_report = python.aom_load_candidate_report
+aom_save_candidate_report = python.aom_save_candidate_report
+build_aom_strict_chain_grid = python.build_aom_strict_chain_grid
+iter_aom_strict_chain_grid = python.iter_aom_strict_chain_grid
+decode_aom_chains = python.decode_aom_chains
+aom_ridge_blender = python.aom_ridge_blender
+aom_operator_pls_stack = python.aom_operator_pls_stack
+moments = python.moments
+moments_train_from_heldout = python.moments_train_from_heldout
+moment_screen_backend_recommendation = python.moment_screen_backend_recommendation
+sweep_run = python.sweep_run
+ridge = python.ridge
+pcr = python.pcr
+cppls = python.cppls
+continuum_regression = python.continuum_regression
+ecr = python.ecr
+moment_stack = python.moment_stack
+
+
 __all__ = [
     "ABI_VERSION_MAJOR",
     "ABI_VERSION_MINOR",
     "ABI_VERSION_PATCH",
     "ABI_VERSION_STRING",
+    "aom",
+    "moment",
+    "AOMCandidateSpec",
+    "AOMControlSelector",
+    "AOMDatasetMetadata",
+    "AOMEndpointMarginStabilityGate",
+    "AOMFallbackBlendGate",
+    "AOMMidPEndpointStack",
+    "AOMOperatorPLSStack",
+    "AOMOperatorPLSSpec",
+    "AOMPreprocessingChain",
+    "AOMRidgeBlender",
+    "AOMRobustHPOCompact",
+    "AOMRobustHPORegressor",
+    "AOMRobustHPOWide",
+    "AOMStructuralPolicy",
+    "AOMStructuralPolicyWithP700BlockLocalAdmission",
+    "AOMStructuralPolicyWithP700ProtocolUnified",
+    "AOMStructuralPolicyWithPgt1200Admissions",
+    "AOMTrueBankEndpointPortfolio",
+    "build_aom_control_chain_bank",
+    "EndpointStabilityDecision",
+    "NativeAOMChainSweepRegressor",
+    "NativeAOMFixedCandidateRegressor",
+    "NativeAOMMomentScreenRefitRegressor",
+    "NativeAOMMomentPLSScreenRefitRegressor",
+    "NativeAOMMomentRidgeScreenRefitRegressor",
+    "NativeAOMOperatorPLSStackRegressor",
+    "NativeAOMPLSRegressor",
+    "NativeAOMRidgeBlenderRegressor",
+    "NativeAOMRobustHPORegressor",
+    "NativeAOMScreenRefitRegressor",
+    "NativeAOMSweepRegressor",
+    "NativeContinuumRegressionRegressor",
+    "NativeCPPLSRegressor",
+    "NativeECRRegressor",
+    "NativeMomentStackRegressor",
+    "NativeMomentSweepRegressor",
+    "NativePCRRegressor",
+    "NativePOPPLSRegressor",
+    "NativeRidgeRegressor",
     "AirPLS",
     "ArPLS",
     "AreaNormalization",
@@ -188,20 +311,59 @@ __all__ = [
     "YOutlierFilter",
     "__version__",
     "abi_version",
+    "aom_chain_screen_refit_campaign",
+    "aom_chain_fixed_fit_run",
+    "aom_chain_sweep_run",
+    "aom_chain_score_campaign",
+    "aom_moment_screen_refit_campaign",
+    "aom_screen_refit_candidate_pool",
+    "aom_candidate_operator_summary",
+    "aom_candidate_preprocessing_impact",
+    "aom_candidate_route_summary",
+    "aom_candidate_rank_diagnostics",
+    "aom_candidate_table",
+    "aom_candidate_report_records",
+    "aom_evaluate_candidates",
+    "aom_global_select",
+    "aom_load_candidate_report",
+    "aom_operator_pls_stack",
+    "aom_per_component_select",
+    "aom_preprocess",
+    "aom_pls",
+    "aom_refit_execution_plan",
+    "aom_ridge_blender",
+    "aom_robust_hpo",
+    "aom_refit_candidates",
+    "aom_save_candidate_report",
+    "aom_sweep_run",
     "aug_wavelength_spectral",
     "bias",
+    "build_aom_strict_chain_grid",
+    "continuum_regression",
+    "cppls",
+    "decode_aom_chains",
+    "ecr",
     "hotelling_t2",
+    "iter_aom_strict_chain_grid",
     "library_path",
     "mae",
+    "moments",
+    "moments_train_from_heldout",
+    "moment_stack",
+    "moment_screen_backend_recommendation",
     "nirs_metrics",
     "nrmse",
     "q_residuals",
     "r2",
+    "pop_pls",
+    "pcr",
+    "ridge",
     "rmse",
     "rpd",
     "rpiq",
     "sep",
     "signal_type_detector",
+    "sweep_run",
     "transfer_metrics",
     "version",
 ]

@@ -1,0 +1,41 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "models.ensembles.moment_stack"
+family: "models.ensembles"
+category: "models"
+subcategory: "ensembles"
+since_abi: "1.21.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/sweep.cpp"
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+carry_along_tu:
+  - "cpp/src/core/moments.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/moment-stack-native-smoke"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "models.ensembles.moment_stack"
+  registry_entry: "benchmarks/cross_binding/bench_moment_stack_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "moment_stack"
+    legacy_aliases: []
+publications: []
+notes: "Python-backed train-only OOF linear stack over native moment-compatible Ridge, PLS sweep, PCR, continuum, ECR and CPPLS heads. Base predictions are fit on training folds only; the final reusable estimator fits the same base heads on all rows and applies a small Ridge meta-model over base predictions. This is a moment-model composition, not a nonlinear feature lift and not a fused CUDA grinder."

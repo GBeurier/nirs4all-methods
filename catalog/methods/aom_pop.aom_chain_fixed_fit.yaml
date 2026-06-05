@@ -1,0 +1,44 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.aom_chain_fixed_fit"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "1.18.0"
+abi_symbols:
+  - "n4m_aom_chain_fixed_fit_run"
+tu:
+  - "cpp/src/core/aom_sweep.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+carry_along_tu:
+  - "cpp/src/core/aom_operators.cpp"
+  - "cpp/src/core/sweep.cpp"
+  - "cpp/src/core/moments.cpp"
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/AOM-chain-fixed-fit-contract"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.aom_chain_fixed_fit"
+  registry_entry: "benchmarks/cross_binding/bench_aom_sweep_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "aom_chain_fixed_fit_run"
+    legacy_aliases: []
+publications: []
+notes: "Native final-only reusable fit for one already-selected caller-provided strict-linear AOM chain/head/parameter. This is the individual winner reuse surface behind `NativeAOMFixedCandidateRegressor(fit_mode=\"final_only\")` and the final model-building step of `NativeAOMScreenRefitRegressor`: it fits the selected Ridge lambda or PLS component count on all training rows, folds transformed coefficients back into original input space, and returns final predictions, input_coefficients and intercept without running CV. It is not a ranking endpoint: OOF/fold outputs are empty and CV score fields are NaN unless a higher-level wrapper injects an exact-CV score that was already verified by `aom_refit_candidates`."

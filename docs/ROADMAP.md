@@ -86,6 +86,10 @@ Current git notes:
 - **Phase 7a** — Benchmark foundation: `benchmarks/` directory, Python
   ctypes driver, AOM-PLS global benchmark vs `nirs4all/bench/AOM_v0/aompls`
   oracle, gated accuracy CSV + informational timing CSV.
+- **Phase 7f (partial shipped)** — Native AOM robust-HPO compact/wide
+  preprocessing screen through `n4m_aom_robust_hpo_fit`; broader source-free
+  portfolio/gating objects remain Python/reference layer until separately
+  hardened.
 
 ### Phase 7 - Benchmark Foundation - shipped through 7e
 
@@ -110,6 +114,10 @@ Current git notes:
   Smoke set is committed; full matrix (9 algos × 5 n × 3 p = 135
   cells) is parameterized — re-run under varying CPU pinning when the
   host is free.
+- Phase 7f (partial shipped): AOM robust-HPO integration. The native compact/wide
+  strict-linear screen is catalogued and wrapped in Python. The broader
+  portfolio/gating layer remains reference-only until it gets native ABI,
+  timing and catalog contracts.
 
 ### Phase 8 - 15 - PLS extensions (§7, §11, §12, §13, §17, §18, §19)
 
@@ -458,6 +466,8 @@ Benchmarks ship under `benchmarks/` and follow a strict split:
 - **7e** — Orchestrator that runs the full matrix end-to-end, splits
   outputs per language and per core count, regenerates the summary
   markdown.
+- **7f (partial shipped)** — Native AOM robust-HPO compact/wide screen shipped;
+  broader portfolio/gating layer remains reference-only.
 
 ### Later
 

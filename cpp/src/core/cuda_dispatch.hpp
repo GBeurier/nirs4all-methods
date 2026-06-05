@@ -14,6 +14,7 @@
 #define PLS4ALL_CORE_CUDA_DISPATCH_HPP
 
 #include <cstddef>
+#include <string>
 
 namespace n4m {
 namespace cuda_dispatch {
@@ -58,6 +59,51 @@ void ger(std::size_t M, std::size_t N,
          const double* x,   // length M
          const double* y,   // length N
          double* A, std::size_t lda);
+
+// Device-resident PLS1 moment component loop. Inputs C (p x p row-major) and
+// s (p) are copied to device once; the per-component C*w, dot products,
+// covariance deflation and score-vector deflation stay on device. W and P are
+// returned row-major as p x max_components, matching the CPU sweep code.
+//
+// Return codes:
+//   0: success
+//   1: numerical failure (same conditions as the scalar PLS1 moment loop)
+//   2: CUDA/runtime/allocation failure
+int pls1_moment_components(std::size_t p,
+                           std::size_t max_components,
+                           const double* C,
+                           const double* s,
+                           double yy,
+                           double eps,
+                           double* W,
+                           double* P,
+                           double* Q,
+                           double* yy_out,
+                           std::string* error);
+
+// Same numerical loop as pls1_moment_components, but processes several
+// independent moment designs with one reusable device workspace by default.
+// Passing parallel_folds=true, or setting N4M_CUDA_PLS_PARALLEL_FOLDS=1,
+// uses the older bounded stream-parallel probe path. Passing many_batched=true,
+// or setting N4M_CUDA_PLS_MANY_BATCHED=1, enables an experimental one-GPU tiled
+// path that batches the p^2 component work with cuBLAS strided-batched calls
+// while preserving fold-level exact CV scores. This is still not fused IKPLS
+// across preprocessing chains.
+int pls1_moment_components_many(std::size_t n_jobs,
+                                std::size_t p,
+                                std::size_t max_components,
+                                const double* const* C,
+                                const double* const* s,
+                                const double* yy,
+                                double eps,
+                                double* const* W,
+                                double* const* P,
+                                double* const* Q,
+                                double* yy_out,
+                                bool parallel_folds,
+                                bool many_batched,
+                                bool* used_parallel_folds,
+                                std::string* error);
 
 }  // namespace cuda_dispatch
 }  // namespace n4m

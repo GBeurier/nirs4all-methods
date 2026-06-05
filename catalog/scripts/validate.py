@@ -37,10 +37,12 @@ REFERENCES_DOC = REPO / "parity" / "REFERENCES.md"
 
 # Categories whose every method uses nirs4all as the donor (parity/REFERENCES.md
 # "per-method donor summary": augmentation / preprocessing / filters / splitters,
-# plus the utility metric/diagnostic helpers). Coverage for these is the
-# REFERENCES.md blanket rule + the IEEE-754 fixtures under parity/fixtures/.
+# native AOM/moment orchestration, plus the utility metric/diagnostic helpers).
+# Coverage for these is the REFERENCES.md blanket rule + the IEEE-754 fixtures
+# under parity/fixtures/ or native contract tests.
 NIRS4ALL_DONOR_CATEGORIES = {
     "augmentation",
+    "aom_pop",
     "preprocessing",
     "filters",
     "splitters",
@@ -48,9 +50,12 @@ NIRS4ALL_DONOR_CATEGORIES = {
 }
 
 # nirs4all-donor methods that live inside an otherwise registry-covered category
-# (diagnostics mixes registry-backed PLS diagnostics with nirs4all metric helpers).
+# (diagnostics mixes registry-backed PLS diagnostics with nirs4all metric helpers;
+# models mixes reference-backed PLS variants with direct native heads).
 NIRS4ALL_DONOR_METHODS = {
     "diagnostics.regression_metrics",
+    "models.ensembles.moment_stack",
+    "models.regularized.ridge",
 }
 
 # The three declared paper-only methods (no installable external reference exists).

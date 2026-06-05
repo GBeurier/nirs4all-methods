@@ -138,7 +138,7 @@ jobs:
           # Windows repair needs --analyze-existing to discover + vendor the DLL.
           # Linux auditwheel / macOS delocate already pick up the bundled lib.
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --analyze-existing -w {dest_dir} -v {wheel}"
-          CIBW_TEST_REQUIRES: pytest numpy
+          CIBW_TEST_REQUIRES: pytest numpy scikit-learn
           CIBW_TEST_COMMAND: pytest {project}/bindings/python_nirs4all_methods/tests
 
       - uses: actions/upload-artifact@v4

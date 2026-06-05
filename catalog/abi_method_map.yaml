@@ -13,6 +13,12 @@ method_prefix:
   # ---- aom_pop ----
   aom_pop.aom_pls: n4m_aom_global
   aom_pop.aom_preprocessing: n4m_aom_preprocess
+  aom_pop.aom_sweep: n4m_aom_sweep_run
+  aom_pop.aom_chain_sweep: n4m_aom_chain_sweep_run
+  aom_pop.aom_chain_fixed_fit: n4m_aom_chain_fixed_fit_run
+  aom_pop.robust_hpo: n4m_aom_robust_hpo
+  aom_pop.ridge_blender: n4m_aom_ridge_blender
+  aom_pop.operator_pls_stack: n4m_aom_operator_pls_stack
   aom_pop.aom_operators: null
   aom_pop.gating_strategy: null
   aom_pop.operator_bank: null
@@ -87,6 +93,8 @@ method_prefix:
   models.pls._aggregate_v097: null
   models.pls._extra_aggregate_v097: null
   models.pls.kernel: n4m_kernel_pls
+  models.pls.pcr: n4m_pcr_fit
+  models.regularized.ridge: n4m_ridge_fit
   models.specialized.ecr: n4m_ecr
   models.specialized.gpr_pls: n4m_gpr_pls
   models.specialized.recursive: n4m_recursive_pls
@@ -185,7 +193,9 @@ method_prefix:
 
   # ---- utilities ----
   utilities.hotelling_t2: n4m_util_hotelling_t2
+  utilities.moments: n4m_moments
   utilities.nirs_metrics: null
   utilities.q_residuals: n4m_util_q_residuals
   utilities.signal_type_detector: n4m_signal_detect
+  utilities.sweep: n4m_sweep_run
   utilities.transfer_metrics: n4m_transfer_metrics

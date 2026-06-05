@@ -1,0 +1,13 @@
+backend,n_samples,n_features,cv,n_candidates,n_ridge_moment_candidates,n_ridge_dual_materialized_candidates,n_ridge_moment_cv_fits,n_ridge_dual_materialized_cv_fits,n_ridge_dual_cross_cv_fits,n_ridge_moment_final_fits,n_ridge_dual_materialized_final_fits,n_pls_moment_candidates,n_pls_moment_cv_fits,n_pls_moment_host_cv_fits,n_pls_moment_cuda_device_cv_fits,n_pls_materialized_cv_fits,n_pls_moment_final_fits,n_pls_moment_host_final_fits,n_pls_moment_cuda_device_final_fits,n_pls_materialized_final_fits,selected_param,selected_cv_rmse,elapsed_ms_median,library_path,abi
+native_sweep_ridge,64,64,5,5,0,5,0,25,0,1,0,0,0,0,0,0,0,0,0,0,0.001,0.5869484891386962,6.712625996442512,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_ridge_score_only,64,64,5,5,0,5,0,25,0,0,0,0,0,0,0,0,0,0,0,0,0.001,0.5869484891386962,4.569499986246228,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_pls,64,64,5,3,0,0,0,0,0,0,0,3,5,5,0,0,1,1,0,0,4.0,0.7186866952063297,1.8500850128475577,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_pls_score_only,64,64,5,3,0,0,0,0,0,0,0,3,5,5,0,0,0,0,0,0,4.0,0.7186866952063297,2.1223619987722486,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_ridge,128,128,5,5,0,5,0,25,0,1,0,0,0,0,0,0,0,0,0,0,0.1,0.5928431990891183,13.444618001813069,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_ridge_score_only,128,128,5,5,0,5,0,25,0,0,0,0,0,0,0,0,0,0,0,0,0.1,0.5928431990891183,14.109001989709213,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_pls,128,128,5,3,0,0,0,0,0,0,0,3,5,5,0,0,1,1,0,0,4.0,0.7495334441704189,2.9672250093426555,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_pls_score_only,128,128,5,3,0,0,0,0,0,0,0,3,5,5,0,0,0,0,0,0,4.0,0.7495334441704189,2.8764120070263743,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_ridge,192,256,5,5,0,5,0,25,0,0,1,0,0,0,0,0,0,0,0,0,1.0,0.7487228693396205,34.31720199296251,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_ridge_score_only,192,256,5,5,0,5,0,25,0,0,0,0,0,0,0,0,0,0,0,0,1.0,0.7487228693396205,31.77973799756728,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_pls,192,256,5,3,0,0,0,0,0,0,0,3,5,5,0,0,1,1,0,0,4.0,0.7758976066023683,8.89945199014619,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
+native_sweep_pls_score_only,192,256,5,3,0,0,0,0,0,0,0,3,5,5,0,0,0,0,0,0,4.0,0.7758976066023683,7.4777069967240095,build/cuda-on/cpp/src/libn4m.so.1.18.0,1.18.0
