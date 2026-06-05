@@ -50,7 +50,16 @@ Because $\mathbf{B}$ lives in the *original* feature space, **the fitted model i
 
 ### Implementation
 
-`n4m_aom_global_select` via the Python/R/MATLAB dispatchers. The compact strict-linear bank shipped by pls4all (`compact_bank`: identity, Savitzky–Golay smooth/derivative, polynomial detrending, finite differences) mirrors the `default_bank` used in the paper experiments. Reference: git-pinned oracle `nirs4all.operators.models.sklearn.aom_pls.AOMPLSRegressor` (sanctioned exception).
+`n4m_aom_global_select` via the native C ABI. Python exposes this as
+`n4m.aom_global_select` and the catalog alias `n4m.aom_pls`; the wrapper builds
+the compact strict-linear bank by default and also accepts caller-provided
+strict operators. Result buffers include `input_coefficients` and `intercept`,
+so callers can reuse the selected model on new spectra as
+`X_new @ input_coefficients + intercept` without replaying the selected
+operator. The sklearn-style `n4m.sklearn.NativeAOMPLSRegressor` wraps the same
+native result. Reference: git-pinned oracle
+`nirs4all.operators.models.sklearn.aom_pls.AOMPLSRegressor` (sanctioned
+exception).
 
 MATLAB header (`bindings/matlab/+pls4all/aom_pls.m`):
 
@@ -99,19 +108,24 @@ n4m_context_destroy(ctx);
 :class-label: lang-python
 
 ```python
-import pls4all
+import n4m
 
-with pls4all.Context() as ctx, pls4all.Config() as cfg:
-    bank = pls4all.OperatorBank()
-    plan = pls4all.ValidationPlan()
-    # Add compact nirs4all-style operators and CV folds.
-    res = pls4all.aom_global_select(
-        ctx, cfg, bank, X.ravel(), y.ravel(), plan,
-        max_components=2,
-        x_rows=X.shape[0], x_cols=X.shape[1],
-        y_rows=y.shape[0], y_cols=1,
-    )
-    values, rows, cols = res.predictions
+res = n4m.aom_pls(
+    X,
+    y,
+    max_components=2,
+    cv=4,
+    operators=[
+        "identity",
+        ("savgol_smooth", [5, 2]),
+        ("finite_difference", [1]),
+    ],
+)
+yhat = res["predictions"]
+rmse_curves = res["rmse_curves"]
+coef = res["input_coefficients"]
+intercept = res["intercept"]
+yhat_new = X_new @ coef + intercept
 ```
 
 :::
@@ -120,7 +134,12 @@ with pls4all.Context() as ctx, pls4all.Config() as cfg:
 :sync: python-sklearn
 :class-label: lang-python
 
-_No tier-2 sklearn-style class yet — exposed via the `pls4all.aom_global_select` / `pls4all.aom_per_component_select` low-level ABI._
+```python
+from n4m.sklearn import NativeAOMPLSRegressor
+
+model = NativeAOMPLSRegressor(max_components=2, cv=4).fit(X, y)
+yhat_new = model.predict(X_new)
+```
 
 :::
 

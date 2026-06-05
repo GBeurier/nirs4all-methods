@@ -23,7 +23,11 @@ configure_file(
 # ---------------------------------------------------------------------------
 add_library(n4m_core OBJECT
     core/aom_operators.cpp
-    core/aom_preprocessing.cpp
+  core/aom_preprocessing.cpp
+  core/aom_operator_pls_stack.cpp
+  core/aom_ridge_blender.cpp
+  core/aom_robust_hpo.cpp
+    core/aom_sweep.cpp
     core/aom_selection.cpp
     core/bipls_selection.cpp
     core/bve_selection.cpp
@@ -48,6 +52,7 @@ add_library(n4m_core OBJECT
     core/metrics.cpp
     core/model.cpp
     core/model_selection.cpp
+    core/moments.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp
     core/extra_pls.cpp
@@ -72,6 +77,7 @@ add_library(n4m_core OBJECT
     core/spa_selection.cpp
     core/stability_selection.cpp
     core/st_selection.cpp
+    core/sweep.cpp
     core/uve_selection.cpp
     core/validation.cpp
     core/vip_spa_selection.cpp
@@ -155,7 +161,7 @@ endif()
 
 # ---------------------------------------------------------------------------
 # Optional OpenMP backend (Phase 44). Default OFF — when ON we annotate
-# the hot inner loops in model.cpp with #pragma omp parallel for via the
+# the hot inner loops in model.cpp/sweep.cpp with #pragma omp parallel for via the
 # N4M_PARALLEL_FOR_STATIC macro in cpp/src/core/parallel.hpp. The OFF
 # build is bit-identical to pre-Phase-44.
 #
@@ -279,6 +285,3 @@ if(N4M_BUILD_STATIC)
     endif()
     n4m_add_warnings(n4m_c_static)
 endif()
-
-
-

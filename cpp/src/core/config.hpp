@@ -114,6 +114,37 @@ class Config {
     // method='simpls', scale=FALSE)$validation$PRESS` bit-for-bit.
     std::int32_t approximate_press_legacy{0};
 
+    // AOM sweep route policy. 0 = auto exact operator-moment routes when
+    // guarded; 1 = force legacy materialized-chain scoring; 2 = reject
+    // candidate screens that would require materialized fallbacks.
+    std::int32_t aom_moment_policy{N4M_AOM_MOMENT_AUTO};
+
+    // AOM PLS candidate scoring policy. 0 = exact CV RMSE; 1 = score-only
+    // moment PLS1 GCV proxy, intended as a fast first-pass screen.
+    std::int32_t aom_pls_score_mode{N4M_AOM_PLS_SCORE_CV};
+
+    // AOM sweep output policy. 0 = return selected OOF/final predictions and
+    // coefficients; 1 = return score/rank outputs only.
+    std::int32_t aom_score_only{0};
+
+    // CUDA PLS1 moment CV scheduling policy. 0 = process independent fold jobs
+    // through one reusable stream/workspace; 1 = allow bounded stream-parallel
+    // fold batches on the selected single CUDA device.
+    std::int32_t cuda_pls_parallel_folds{0};
+
+    // CUDA PLS1 moment device-route threshold in feature count. The default
+    // keeps the historical conservative guard; lower values are for explicit
+    // crossover campaigns without recompiling.
+    std::int32_t cuda_pls_min_device_features{1024};
+
+    // CUDA PLS1 moment many-design batching policy. 0 (default) processes
+    // independent fold/moment jobs through the reusable sequential workspace;
+    // 1 selects the experimental tiled/strided-batched path that fuses the
+    // per-component p^2 work with cuBLAS strided-batched calls while keeping
+    // fold-level exact CV scores. Off by default; the N4M_CUDA_PLS_MANY_BATCHED
+    // env var remains an equivalent opt-in fallback.
+    std::int32_t cuda_pls_many_batched{0};
+
     // Composability hooks (non-owning).
     const n4m_pipeline_t*        pipeline{nullptr};
     const n4m_operator_bank_t*   operator_bank{nullptr};

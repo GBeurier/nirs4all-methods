@@ -405,7 +405,10 @@ namespace {
                                                     const n4m_matrix_view_t& X,
                                                     const n4m_matrix_view_t& Y,
                                                     std::int32_t n_components,
-                                                    std::vector<double>& predictions) {
+                                                    std::vector<double>& predictions,
+                                                    std::vector<double>& coefficients,
+                                                    std::vector<double>& input_coefficients,
+                                                    std::vector<double>& intercept) {
     std::vector<double> xt;
     n4m_status_t status = transform_with_operator(ctx, entry, X, xt);
     if (status != N4M_OK) {
@@ -421,6 +424,52 @@ namespace {
     if (status != N4M_OK || !model) {
         return status == N4M_OK ? N4M_ERR_INTERNAL : status;
     }
+    const auto p = static_cast<std::size_t>(X.cols);
+    const auto q = static_cast<std::size_t>(Y.cols);
+    if (model->coefficients.size() != p * q ||
+        model->x_mean.size() != p ||
+        model->y_mean.size() != q) {
+        ctx.set_error("AOM selected model returned inconsistent coefficient shapes");
+        return N4M_ERR_INTERNAL;
+    }
+    coefficients = model->coefficients;
+
+    std::vector<double> basis(p * p, 0.0);
+    for (std::size_t i = 0; i < p; ++i) {
+        basis[idx(i, p, i)] = 1.0;
+    }
+    std::vector<double> operator_matrix;
+    n4m_matrix_view_t basis_view = rowmajor_f64_view(basis, X.cols, X.cols);
+    status = transform_with_operator(ctx, entry, basis_view, operator_matrix);
+    if (status != N4M_OK) {
+        return status;
+    }
+    if (operator_matrix.size() != p * p) {
+        ctx.set_error("AOM selected operator matrix has inconsistent shape");
+        return N4M_ERR_INTERNAL;
+    }
+    input_coefficients.assign(p * q, 0.0);
+    for (std::size_t src = 0; src < p; ++src) {
+        for (std::size_t mid = 0; mid < p; ++mid) {
+            const double value = operator_matrix[idx(src, p, mid)];
+            if (value == 0.0) {
+                continue;
+            }
+            for (std::size_t target = 0; target < q; ++target) {
+                input_coefficients[idx(src, q, target)] +=
+                    value * coefficients[idx(mid, q, target)];
+            }
+        }
+    }
+    intercept.assign(q, 0.0);
+    for (std::size_t target = 0; target < q; ++target) {
+        double value = model->y_mean[target];
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            value -= model->x_mean[feature] * coefficients[idx(feature, q, target)];
+        }
+        intercept[target] = value;
+    }
+
     std::size_t pred_values = 0;
     if (!checked_matrix_size(X.rows, Y.cols, pred_values)) {
         ctx.set_error("AOM prediction matrix shape is too large");
@@ -946,7 +995,10 @@ void dominant_left_direction(const std::vector<double>& covariance,
                                                const std::vector<std::int32_t>& op_indices,
                                                const n4m_matrix_view_t& X,
                                                const n4m_matrix_view_t& Y,
-                                               std::vector<double>& predictions) {
+                                               std::vector<double>& predictions,
+                                               std::vector<double>& coefficients,
+                                               std::vector<double>& input_coefficients,
+                                               std::vector<double>& intercept) {
     const auto rows = static_cast<std::size_t>(X.rows);
     const auto p = static_cast<std::size_t>(X.cols);
     const auto q = static_cast<std::size_t>(Y.cols);
@@ -975,10 +1027,18 @@ void dominant_left_direction(const std::vector<double>& covariance,
     if (status != N4M_OK) {
         return status;
     }
-    std::vector<double> coefficients;
     status = coefficients_for_prefix(ctx, fit, p, q, op_indices.size(), coefficients);
     if (status != N4M_OK) {
         return status;
+    }
+    input_coefficients = coefficients;
+    intercept.assign(q, 0.0);
+    for (std::size_t target = 0; target < q; ++target) {
+        double value = y_mean[target];
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            value -= x_mean[feature] * coefficients[idx(feature, q, target)];
+        }
+        intercept[target] = value;
     }
 
     predictions.assign(rows * q, 0.0);
@@ -1067,7 +1127,10 @@ n4m_status_t select_aom_global(Context& ctx,
                                           X,
                                           Y,
                                           best_k,
-                                          out.predictions);
+                                          out.predictions,
+                                          out.coefficients,
+                                          out.input_coefficients,
+                                          out.intercept);
         if (status != N4M_OK) {
             out = AomGlobalSelectionResult{};
             return status;
@@ -1180,7 +1243,10 @@ n4m_status_t select_aom_per_component(Context& ctx,
                                      final_selected,
                                      X,
                                      Y,
-                                     out.predictions);
+                                     out.predictions,
+                                     out.coefficients,
+                                     out.input_coefficients,
+                                     out.intercept);
         if (status != N4M_OK) {
             out = AomPerComponentSelectionResult{};
             return status;

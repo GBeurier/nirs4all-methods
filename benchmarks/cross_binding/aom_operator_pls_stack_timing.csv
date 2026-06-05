@@ -1,0 +1,4 @@
+backend,profile,n_samples,n_features,cv,n_operators,n_specs,n_operator_features,selected_components,selected_alpha,selected_oof_rmse,best_single_criterion,elapsed_ms_median,library_path,abi
+native_aom_operator_pls_stack,compact,32,64,4,12,4,24,2,1.0,0.47753464915192323,0.47753464915192323,9.56455199047923,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so,1.18.0
+native_aom_operator_pls_stack,compact,48,96,4,12,4,12,1,0.01,0.5242772739972641,0.5242772739972641,14.619444002164528,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so,1.18.0
+native_aom_operator_pls_stack,compact,64,128,4,12,4,12,1,0.01,0.5495412809412247,0.5495412809412247,24.28627698100172,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so,1.18.0

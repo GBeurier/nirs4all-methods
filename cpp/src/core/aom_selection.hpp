@@ -27,6 +27,9 @@ struct AomGlobalSelectionResult {
     std::vector<double> operator_scores;  // n_operators
     std::vector<double> rmse_curves;      // row-major n_operators x max_components
     std::vector<double> predictions;      // row-major n_samples x n_targets
+    std::vector<double> coefficients;     // selected transformed operator space, n_features x n_targets
+    std::vector<double> input_coefficients;  // folded original input space, n_features x n_targets
+    std::vector<double> intercept;        // 1 x n_targets, pairs with input_coefficients
 };
 
 struct AomPerComponentSelectionResult {
@@ -40,6 +43,9 @@ struct AomPerComponentSelectionResult {
     std::vector<double> component_scores;                 // row-major max_components x n_operators
     std::vector<double> prefix_scores;                    // max_components
     std::vector<double> predictions;                      // row-major n_samples x n_targets
+    std::vector<double> coefficients;                     // original input space, n_features x n_targets
+    std::vector<double> input_coefficients;                // same as coefficients, for AOM result parity
+    std::vector<double> intercept;                        // 1 x n_targets
 };
 
 [[nodiscard]] n4m_status_t select_aom_global(
@@ -69,6 +75,8 @@ struct PublicAomGlobalResult {
     AomGlobalSelectionResult inner;
     std::int64_t predictions_rows{0};
     std::int64_t predictions_cols{0};
+    std::int64_t n_features{0};
+    std::int64_t n_targets{0};
     std::vector<n4m_operator_kind_t> operator_kinds_typed;
 };
 
@@ -76,6 +84,8 @@ struct PublicAomPerComponentResult {
     AomPerComponentSelectionResult inner;
     std::int64_t predictions_rows{0};
     std::int64_t predictions_cols{0};
+    std::int64_t n_features{0};
+    std::int64_t n_targets{0};
     std::vector<n4m_operator_kind_t> operator_kinds_typed;
     std::vector<std::int32_t> selected_operator_indices_i32;
 };

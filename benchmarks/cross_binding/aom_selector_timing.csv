@@ -1,0 +1,13 @@
+method,surface,n_samples,n_features,cv,n_operators,max_components,selected_n_components,best_score,replay_max_abs,elapsed_ms_median,library_path,abi,selected_operator_index
+aom_pls,function,24,32,4,9,2,2,0.5235594784247113,4.440892098500626e-16,0.47991800238378346,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,0
+pop_pls,function,24,32,4,9,2,1,0.9861428893486908,8.881784197001252e-16,0.6035460100974888,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,6
+aom_pls,sklearn,24,32,4,9,2,2,0.5235594784247113,4.440892098500626e-16,0.5956600070931017,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,0
+pop_pls,sklearn,24,32,4,9,2,1,0.9861428893486908,8.881784197001252e-16,0.5584199971053749,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,6
+aom_pls,function,36,64,4,9,2,1,0.6680075239296548,6.661338147750939e-16,0.935889984248206,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,2
+pop_pls,function,36,64,4,9,2,1,0.7560480113220435,4.440892098500626e-16,1.2688259885180742,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,5
+aom_pls,sklearn,36,64,4,9,2,1,0.6680075239296548,6.661338147750939e-16,0.9861679864116013,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,2
+pop_pls,sklearn,36,64,4,9,2,1,0.7560480113220435,4.440892098500626e-16,1.704163005342707,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,5
+aom_pls,function,48,96,4,9,2,2,0.822677231447078,1.7763568394002505e-15,1.7732599808368832,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,5
+pop_pls,function,48,96,4,9,2,1,1.0104152952583654,1.3322676295501878e-15,3.3877500100061297,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,2
+aom_pls,sklearn,48,96,4,9,2,2,0.822677231447078,1.7763568394002505e-15,1.9044200016651303,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,5
+pop_pls,sklearn,48,96,4,9,2,1,1.0104152952583654,1.3322676295501878e-15,2.7345459966454655,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.18.0,2

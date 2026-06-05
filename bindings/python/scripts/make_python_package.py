@@ -113,11 +113,158 @@ def generate(name: str) -> Path:
     # abi_version() forces the embedded libn4m to load and respond, and is
     # exposed by both modules (the slim pls4all subset has no `python`
     # submodule, so importing it directly would fail there).
-    (out / "tests" / "test_import.py").write_text(
-        f'def test_import_and_load():\n'
-        f'    import {module}\n'
-        f'    assert {module}.__version__\n'
-        f'    assert {module}.abi_version()  # loads + queries the embedded libn4m\n')
+    if module == "n4m":
+        test_text = '''def test_import_and_load():
+    import numpy as np
+
+    import n4m
+    import n4m.aom as aom
+    import n4m.moment as moment
+    from n4m.sklearn import NativeAOMMomentScreenRefitRegressor
+    from n4m.sklearn import NativeRidgeRegressor
+
+    assert n4m.__version__
+    assert n4m.abi_version()  # loads + queries the embedded libn4m
+    assert n4m.aom is aom
+    assert n4m.moment is moment
+    assert callable(n4m.moments)
+    assert hasattr(n4m, "aom_screen_refit_candidate_pool")
+    assert aom.aom_screen_refit_candidate_pool is n4m.aom_screen_refit_candidate_pool
+    assert moment.moments is n4m.moments
+    assert moment.ridge is n4m.ridge
+    aom_inventory = {row["name"]: row for row in aom.available_methods()}
+    moment_inventory = {row["name"]: row for row in moment.available_methods()}
+    # Every advertised inventory entry must resolve as a facade attribute, so the
+    # generated wheel can never ship a facade that names a wrapper it does not
+    # actually export (regression guard for the n4m.aom pop_pls wrapper gap).
+    for facade in (aom, moment):
+        for row in facade.available_methods():
+            assert hasattr(facade, row["entry"]), (facade.__name__, row["name"], row["entry"])
+    assert {"preprocess", "moment_mixed_screen_refit", "fixed_candidate"}.issubset(
+        aom_inventory
+    )
+    assert {"moments", "moment_sweep", "ridge", "ridge_regressor"}.issubset(
+        moment_inventory
+    )
+    assert "cuda_pls_min_device_features" in aom_inventory[
+        "moment_mixed_screen_refit"
+    ]["config_options"]
+    assert "cuda_pls_min_device_features" in moment_inventory["sweep_run"][
+        "config_options"
+    ]
+    assert hasattr(n4m, "NativeAOMMomentScreenRefitRegressor")
+    assert aom.NativeAOMMomentScreenRefitRegressor is NativeAOMMomentScreenRefitRegressor
+    assert hasattr(n4m, "NativeRidgeRegressor")
+    assert moment.NativeRidgeRegressor is NativeRidgeRegressor
+
+    rng = np.random.default_rng(731)
+    X = rng.standard_normal((48, 6))
+    y = X[:, 0] - 0.25 * X[:, 2] + 0.03 * rng.standard_normal(48)
+    folds = np.arange(48, dtype=np.int32) % 4
+    chains = [[("identity", ())], [("savgol_smooth", (5, 2))]]
+
+    stats = moment.moments(X, y)
+    assert stats["xtx"].shape == (X.shape[1], X.shape[1])
+    pre = aom.aom_preprocess(X, y, operators=["identity"], gating_mode="soft")
+    np.testing.assert_allclose(pre["transformed"], X)
+    assert pre["operator_kinds"].tolist() == [0]
+    ridge = moment.ridge(X, y, alpha=0.1, scale_x=False)
+    assert ridge["predictions"].shape[0] == X.shape[0]
+    ridge_model = NativeRidgeRegressor(alpha=0.1, scale_x=False).fit(X, y)
+    np.testing.assert_allclose(
+        ridge_model.predict(X), ridge["predictions"].ravel(), rtol=1e-10, atol=1e-10
+    )
+
+    model = NativeAOMMomentScreenRefitRegressor(
+        chains=chains,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=(0.01,),
+        pls_components=(1,),
+        top_k=1,
+        refit_top_k=1,
+        refit_per_head_top_k=1,
+        chain_chunk_size=2,
+        scale_x=False,
+    ).fit(X, y)
+    diag = model.get_diagnostics()
+    assert diag["preset"] == "moment_mixed_gcv_proxy_screen_refit"
+    assert diag["split_head_scoring"] == "auto"
+    assert diag["n_split_head_chunks"] >= 1
+    assert diag["n_refit_candidates"] >= 2
+    assert {row["head"] for row in model.refit_report_["rows"]} == {"ridge", "pls"}
+    pool = n4m.aom_screen_refit_candidate_pool(
+        model.screen_report_,
+        refit_top_k=1,
+        refit_per_head_top_k=1,
+    )
+    assert pool["n_candidates"] == diag["n_refit_candidates"]
+
+
+def test_core_import_without_sklearn():
+    # The wheel declares only numpy as a runtime dependency and advertises
+    # scikit-learn (and scipy) as optional. Prove the SHIPPED package honors that:
+    # importing n4m + the aom/moment facades + the direct function surface must
+    # work in a child interpreter where sklearn and scipy are blocked, falling
+    # back to n4m.sklearn._compat for the estimator base classes. The cibuildwheel
+    # test stage installs scikit-learn for the sklearn-wrapper smoke above, so
+    # only this explicit block exercises the optional-dependency contract.
+    import os
+    import subprocess
+    import sys
+
+    child = """
+import sys
+_BLOCK = {"sklearn", "scipy"}
+class _Block:
+    def find_spec(self, name, path=None, target=None):
+        if name.split(".")[0] in _BLOCK:
+            raise ModuleNotFoundError("blocked for test: " + name)
+        return None
+sys.meta_path.insert(0, _Block())
+
+import numpy as np
+import n4m
+import n4m.aom as aom
+import n4m.moment as moment
+
+assert "sklearn" not in sys.modules
+assert "scipy" not in sys.modules
+from n4m.sklearn._compat import BaseEstimator
+assert BaseEstimator.__module__ == "n4m.sklearn._compat"
+assert n4m.abi_version()
+
+rng = np.random.default_rng(0)
+X = rng.standard_normal((32, 5))
+y = X[:, 0] - 0.2 * X[:, 1] + 0.01 * rng.standard_normal(32)
+assert moment.moments(X, y)["xtx"].shape == (5, 5)
+pre = aom.aom_preprocess(X, y, operators=["identity"])
+np.testing.assert_allclose(pre["transformed"], X)
+r = moment.ridge(X, y, alpha=0.1, scale_x=False)
+assert r["predictions"].shape[0] == 32
+assert aom.available_methods() and moment.available_methods()
+
+from n4m.sklearn import NativeRidgeRegressor
+m = NativeRidgeRegressor(alpha=0.1, scale_x=False).fit(X, y)
+np.testing.assert_allclose(m.predict(X), r["predictions"].ravel(), rtol=1e-10, atol=1e-10)
+print("SKLEARN_OPTIONAL_OK")
+"""
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(p for p in sys.path if p)
+    proc = subprocess.run(
+        [sys.executable, "-c", child], capture_output=True, text=True, env=env
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "SKLEARN_OPTIONAL_OK" in proc.stdout
+'''
+    else:
+        test_text = (
+            f'def test_import_and_load():\n'
+            f'    import {module}\n'
+            f'    assert {module}.__version__\n'
+            f'    assert {module}.abi_version()  # loads + queries the embedded libn4m\n'
+        )
+    (out / "tests" / "test_import.py").write_text(test_text)
     print(f"generated {out.relative_to(REPO)}  (name={name}, module={module})")
     return out
 

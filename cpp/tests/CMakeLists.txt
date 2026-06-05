@@ -9,6 +9,11 @@ add_executable(n4m_tests
     test_augmenters_phase17.cpp
     test_augmenters_edge_splines_random.cpp
     test_augmenters_wavelength_spectral.cpp
+    test_aom_operator_pls_stack.cpp
+    test_aom_ridge_blender.cpp
+    test_aom_robust_hpo.cpp
+    test_aom_selection.cpp
+    test_aom_sweep.cpp
     test_fck.cpp
     test_filter_x_outlier.cpp
     test_filters_meta.cpp
@@ -16,7 +21,9 @@ add_executable(n4m_tests
     test_metrics.cpp
     test_models_pls.cpp
     test_models_extra.cpp
+    test_moments.cpp
     test_ridge.cpp
+    test_sweep.cpp
     test_c_abi_memory.cpp
     test_threading.cpp
     test_preprocessing_baselines.cpp
@@ -45,6 +52,7 @@ add_executable(n4m_tests
 target_link_libraries(n4m_tests PRIVATE n4m_c)
 target_include_directories(n4m_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/cpp/src
     ${PROJECT_BINARY_DIR}/generated)
 # Pass the parity fixture directory so test_rng_pcg64.cpp can load the JSON
 # without relying on a working directory. Quote-wrapping survives the CMake
@@ -76,6 +84,7 @@ if(TARGET n4m_c_static)
         test_internal_rng_choice.cpp
         test_uve_r_exact.cpp
         test_internal_cv.cpp
+        test_internal_sweep.cpp
         test_internal_linalg.cpp)
     target_link_libraries(n4m_internal_tests PRIVATE n4m_c_static)
     target_include_directories(n4m_internal_tests PRIVATE

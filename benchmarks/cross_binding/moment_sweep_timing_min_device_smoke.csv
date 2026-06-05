@@ -1,0 +1,13 @@
+backend,cuda_pls_parallel_folds,cuda_pls_min_device_features,n_samples,n_features,cv,n_candidates,n_ridge_moment_candidates,n_ridge_dual_materialized_candidates,n_ridge_moment_cv_fits,n_ridge_dual_materialized_cv_fits,n_ridge_dual_cross_cv_fits,n_ridge_moment_final_fits,n_ridge_dual_materialized_final_fits,n_pls_moment_candidates,n_pls_moment_cv_fits,n_pls_moment_host_cv_fits,n_pls_moment_cuda_device_cv_fits,n_pls_moment_cuda_parallel_fold_batches,n_pls_moment_cuda_parallel_fold_jobs,n_pls_materialized_cv_fits,n_pls_moment_final_fits,n_pls_moment_host_final_fits,n_pls_moment_cuda_device_final_fits,n_pls_materialized_final_fits,selected_param,selected_cv_rmse,elapsed_ms_median,library_path,abi
+native_sweep_ridge,True,256,64,64,5,5,0,5,0,25,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0.001,0.5869484891386966,1.8708970164880157,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_ridge_score_only,True,256,64,64,5,5,0,5,0,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.001,0.5869484891386966,1.5526020142715424,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_pls,True,256,64,64,5,3,0,0,0,0,0,0,0,3,5,5,0,0,0,0,1,1,0,0,4.0,0.7186866952063308,0.5332940199878067,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_pls_score_only,True,256,64,64,5,3,0,0,0,0,0,0,0,3,5,5,0,0,0,0,0,0,0,0,4.0,0.7186866952063308,0.35376299638301134,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_ridge,True,256,128,128,5,5,0,5,0,25,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0.1,0.5928431990891182,11.622589983744547,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_ridge_score_only,True,256,128,128,5,5,0,5,0,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.1,0.5928431990891182,10.113145981449634,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_pls,True,256,128,128,5,3,0,0,0,0,0,0,0,3,5,5,0,0,0,0,1,1,0,0,4.0,0.7495334441704207,2.3232879757415503,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_pls_score_only,True,256,128,128,5,3,0,0,0,0,0,0,0,3,5,5,0,0,0,0,0,0,0,0,4.0,0.7495334441704207,1.9560929795261472,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_ridge,True,256,192,256,5,5,0,5,0,25,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1.0,0.7487228693396201,42.33638200093992,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_ridge_score_only,True,256,192,256,5,5,0,5,0,25,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1.0,0.7487228693396201,37.72032100823708,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_pls,True,256,192,256,5,3,0,0,0,0,0,0,0,3,5,5,0,0,0,0,1,1,0,0,4.0,0.7758976066023688,10.300934984115884,build/dev-release/cpp/src/libn4m.so,1.20.0
+native_sweep_pls_score_only,True,256,192,256,5,3,0,0,0,0,0,0,0,3,5,5,0,0,0,0,0,0,0,0,4.0,0.7758976066023688,10.409857000922784,build/dev-release/cpp/src/libn4m.so,1.20.0

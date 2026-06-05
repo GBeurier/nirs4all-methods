@@ -34,6 +34,14 @@ inline bool in_range_solver(n4m_solver_t s) noexcept {
 inline bool in_range_rng_kind(n4m_rng_kind_t k) noexcept {
     return k >= N4M_RNG_SPLITMIX64 && k <= N4M_RNG_NUMPY_MT;
 }
+inline bool in_range_aom_moment_policy(n4m_aom_moment_policy_t policy) noexcept {
+    return policy >= N4M_AOM_MOMENT_AUTO &&
+           policy <= N4M_AOM_MOMENT_FORCE_MOMENTS;
+}
+inline bool in_range_aom_pls_score_mode(n4m_aom_pls_score_mode_t mode) noexcept {
+    return mode >= N4M_AOM_PLS_SCORE_CV &&
+           mode <= N4M_AOM_PLS_SCORE_GCV_PROXY;
+}
 inline bool in_range_deflation(n4m_deflation_t d) noexcept {
     return d >= N4M_DEFLATION_REGRESSION && d <= N4M_DEFLATION_ORTHOGONAL;
 }
@@ -282,6 +290,126 @@ N4M_API n4m_status_t n4m_config_get_approximate_press_legacy(
     if (cfg == nullptr || out_enabled == nullptr) return N4M_ERR_NULL_POINTER;
     N4M_CFG_TRY_BEGIN
         *out_enabled = as_core(cfg)->approximate_press_legacy;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_set_aom_moment_policy(
+    n4m_config_t* cfg, n4m_aom_moment_policy_t policy) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (!in_range_aom_moment_policy(policy)) {
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        as_core(cfg)->aom_moment_policy = static_cast<std::int32_t>(policy);
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_aom_moment_policy(
+    const n4m_config_t* cfg, n4m_aom_moment_policy_t* out_policy) {
+    if (cfg == nullptr || out_policy == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out_policy =
+            static_cast<n4m_aom_moment_policy_t>(as_core(cfg)->aom_moment_policy);
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_set_aom_pls_score_mode(
+    n4m_config_t* cfg, n4m_aom_pls_score_mode_t mode) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (!in_range_aom_pls_score_mode(mode)) {
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        as_core(cfg)->aom_pls_score_mode = static_cast<std::int32_t>(mode);
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_aom_pls_score_mode(
+    const n4m_config_t* cfg, n4m_aom_pls_score_mode_t* out_mode) {
+    if (cfg == nullptr || out_mode == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out_mode =
+            static_cast<n4m_aom_pls_score_mode_t>(as_core(cfg)->aom_pls_score_mode);
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_set_aom_score_only(
+    n4m_config_t* cfg, int32_t enabled) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (enabled != 0 && enabled != 1) return N4M_ERR_INVALID_ARGUMENT;
+        as_core(cfg)->aom_score_only = enabled;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_aom_score_only(
+    const n4m_config_t* cfg, int32_t* out_enabled) {
+    if (cfg == nullptr || out_enabled == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out_enabled = as_core(cfg)->aom_score_only;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_set_cuda_pls_parallel_folds(
+    n4m_config_t* cfg, int32_t enabled) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (enabled != 0 && enabled != 1) return N4M_ERR_INVALID_ARGUMENT;
+        as_core(cfg)->cuda_pls_parallel_folds = enabled;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_cuda_pls_parallel_folds(
+    const n4m_config_t* cfg, int32_t* out_enabled) {
+    if (cfg == nullptr || out_enabled == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out_enabled = as_core(cfg)->cuda_pls_parallel_folds;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_set_cuda_pls_min_device_features(
+    n4m_config_t* cfg, int32_t n_features) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (n_features < 1) return N4M_ERR_INVALID_ARGUMENT;
+        as_core(cfg)->cuda_pls_min_device_features = n_features;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_cuda_pls_min_device_features(
+    const n4m_config_t* cfg, int32_t* out_n_features) {
+    if (cfg == nullptr || out_n_features == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out_n_features = as_core(cfg)->cuda_pls_min_device_features;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_set_cuda_pls_many_batched(
+    n4m_config_t* cfg, int32_t enabled) {
+    if (cfg == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        if (enabled != 0 && enabled != 1) return N4M_ERR_INVALID_ARGUMENT;
+        as_core(cfg)->cuda_pls_many_batched = enabled;
+        return N4M_OK;
+    N4M_CFG_TRY_END
+}
+
+N4M_API n4m_status_t n4m_config_get_cuda_pls_many_batched(
+    const n4m_config_t* cfg, int32_t* out_enabled) {
+    if (cfg == nullptr || out_enabled == nullptr) return N4M_ERR_NULL_POINTER;
+    N4M_CFG_TRY_BEGIN
+        *out_enabled = as_core(cfg)->cuda_pls_many_batched;
         return N4M_OK;
     N4M_CFG_TRY_END
 }

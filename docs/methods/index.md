@@ -2,7 +2,8 @@
 
 Every method in the library — the PLS / selection algorithms from `benchmarks.parity_timing.registry.METHODS` and the C++ preprocessing / augmentation / filter / splitter operators from the n4m binding — documented with parameters, bibliographic source, mathematical principle, binding signatures, and benchmark rows.
 
-_Total methods_: **191** (73 PLS / selection · 118 operators). Grouped by family below.
+_Total catalogued native methods_: **200**. Additional Python reference
+surfaces are documented where relevant.
 
 ```{toctree}
 :hidden:
@@ -37,6 +38,7 @@ _Total methods_: **191** (73 PLS / selection · 118 operators). Grouped by famil
 |--------|-------------|-----------|------|
 | [`bagging_pls`](bagging_pls.md) | Bagging PLS (§20) | `1e-06` | Py |
 | [`boosting_pls`](boosting_pls.md) | Boosting PLS (§20) | `1e-06` | R |
+| [`moment_stack`](moment_stack.md) | Train-only OOF stack over native moment heads | `n/a` | n4m |
 | [`random_subspace_pls`](random_subspace_pls.md) | Random-subspace PLS (§20) | `1e-06` | Py |
 
 ## Robust / weighted
@@ -96,13 +98,21 @@ _Total methods_: **191** (73 PLS / selection · 118 operators). Grouped by famil
 
 | Method | Description | Tolerance | Refs |
 |--------|-------------|-----------|------|
+| [`ridge`](ridge.md) | Direct closed-form Ridge regression | `1e-10` | Py |
 | [`ridge_pls`](ridge_pls.md) | Ridge-augmented PLS | `0.1` | Py |
 
 ## Diagnostic
 
 | Method | Description | Tolerance | Refs |
 |--------|-------------|-----------|------|
-| [`aom_preprocess`](aom_preprocess.md) | AOM preprocessing pipeline (§17 Phase 4) | `5.0` | Py |
+| [`aom_chain_fixed_fit`](aom_chain_sweep_run.md) | Final-only reusable fit for one selected strict-linear AOM chain/head/parameter | `1e-09` | n4m |
+| [`aom_chain_screen_refit`](aom_chain_sweep_run.md) | Two-pass strict-linear AOM preprocessing screen with exact-CV refit and reusable final model | `1e-09` | n4m |
+| [`aom_chain_sweep_run`](aom_chain_sweep_run.md) | User-defined native AOM strict-linear chain sweep | `1e-09` | n4m |
+| [`aom_operator_pls_stack`](aom_operator_pls_stack.md) | Native AOM strict-operator PLS score stack with Ridge head | `1e-09` | n4m |
+| [`aom_ridge_blender`](aom_ridge_blender.md) | Native fold-safe AOM-Ridge OOF simplex blender | `1e-09` | n4m |
+| [`aom_robust_hpo`](aom_robust_hpo.md) | Native strict-linear AOM robust-HPO preprocessing screen | `1e-10` | n4m |
+| [`aom_sweep_run`](aom_sweep_run.md) | Configurable native AOM strict-linear preprocessing sweep | `1e-09` | n4m |
+| [`aom_preprocess`](aom_preprocess.md) | Native AOM operator-bank preprocessing primitive | `5.0` | n4m |
 | [`approximate_press`](approximate_press.md) | Approximate-PRESS component selection (§29) | `1e-10` | R |
 | [`one_se_rule`](one_se_rule.md) | One-SE component selection rule (§10) | `1e-06` | R |
 | [`pls_diagnostic_dmodx`](pls_diagnostic_dmodx.md) | PLS Distance-to-Model X (§9) | `5.0` | R |
@@ -295,6 +305,13 @@ _Total methods_: **191** (73 PLS / selection · 118 operators). Grouped by famil
 | [`split_spxy_fold`](split_spxy_fold.md) | `n4m.sklearn.SPXYFoldSplitter` | SPXY k-fold splitter over paired ``X`` and ``y`` matrices. |
 | [`split_spxy_g_fold`](split_spxy_g_fold.md) | `n4m.sklearn.SPXYGroupFoldSplitter` | Group-aware SPXY k-fold splitter. |
 | [`split_systematic_circular`](split_systematic_circular.md) | `n4m.sklearn.SystematicCircularSplitter` | Systematic circular split over sorted or ordered targets. |
+
+## Utilities
+
+| Method | Binding | Description |
+|--------|---------|-------------|
+| [`moments`](moments.md) | `n4m.moments` | Raw and centered row-additive moment sufficient statistics for exact linear screens. |
+| [`sweep_run`](sweep_run.md) | `n4m.sweep_run` | Native moment Ridge-CV sweep over candidate lambdas. |
 
 ---
 

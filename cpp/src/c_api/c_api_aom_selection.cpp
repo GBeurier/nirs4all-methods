@@ -120,6 +120,8 @@ N4M_API n4m_status_t n4m_aom_global_select(
         }
         handle->predictions_rows = X->rows;
         handle->predictions_cols = Y->cols;
+        handle->n_features = X->cols;
+        handle->n_targets = Y->cols;
         populate_typed_operator_kinds(
             handle->inner.operator_kinds, handle->operator_kinds_typed);
         *out_result = handle.release();
@@ -228,6 +230,48 @@ N4M_API n4m_status_t n4m_aom_global_result_get_predictions(
     return N4M_OK;
 }
 
+N4M_API n4m_status_t n4m_aom_global_result_get_coefficients(
+    const n4m_aom_global_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols) {
+    if (result == nullptr || out_data == nullptr ||
+        out_rows == nullptr || out_cols == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    *out_data = result->inner.coefficients.empty()
+        ? nullptr : result->inner.coefficients.data();
+    *out_rows = result->n_features;
+    *out_cols = result->n_targets;
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_aom_global_result_get_input_coefficients(
+    const n4m_aom_global_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols) {
+    if (result == nullptr || out_data == nullptr ||
+        out_rows == nullptr || out_cols == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    *out_data = result->inner.input_coefficients.empty()
+        ? nullptr : result->inner.input_coefficients.data();
+    *out_rows = result->n_features;
+    *out_cols = result->n_targets;
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_aom_global_result_get_intercept(
+    const n4m_aom_global_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols) {
+    if (result == nullptr || out_data == nullptr ||
+        out_rows == nullptr || out_cols == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    *out_data = result->inner.intercept.empty()
+        ? nullptr : result->inner.intercept.data();
+    *out_rows = 1;
+    *out_cols = result->n_targets;
+    return N4M_OK;
+}
+
 /* ------------------------------------------------------------------ */
 /*  AOM per-component (POP) selection                                 */
 /* ------------------------------------------------------------------ */
@@ -258,6 +302,8 @@ N4M_API n4m_status_t n4m_aom_per_component_select(
         }
         handle->predictions_rows = X->rows;
         handle->predictions_cols = Y->cols;
+        handle->n_features = X->cols;
+        handle->n_targets = Y->cols;
         populate_typed_operator_kinds(
             handle->inner.operator_kinds, handle->operator_kinds_typed);
         populate_selected_indices_i32(
@@ -371,6 +417,48 @@ N4M_API n4m_status_t n4m_aom_per_component_result_get_predictions(
         ? nullptr : result->inner.predictions.data();
     *out_rows = result->predictions_rows;
     *out_cols = result->predictions_cols;
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_aom_per_component_result_get_coefficients(
+    const n4m_aom_per_component_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols) {
+    if (result == nullptr || out_data == nullptr ||
+        out_rows == nullptr || out_cols == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    *out_data = result->inner.coefficients.empty()
+        ? nullptr : result->inner.coefficients.data();
+    *out_rows = result->n_features;
+    *out_cols = result->n_targets;
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_aom_per_component_result_get_input_coefficients(
+    const n4m_aom_per_component_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols) {
+    if (result == nullptr || out_data == nullptr ||
+        out_rows == nullptr || out_cols == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    *out_data = result->inner.input_coefficients.empty()
+        ? nullptr : result->inner.input_coefficients.data();
+    *out_rows = result->n_features;
+    *out_cols = result->n_targets;
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_aom_per_component_result_get_intercept(
+    const n4m_aom_per_component_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols) {
+    if (result == nullptr || out_data == nullptr ||
+        out_rows == nullptr || out_cols == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    *out_data = result->inner.intercept.empty()
+        ? nullptr : result->inner.intercept.data();
+    *out_rows = 1;
+    *out_cols = result->n_targets;
     return N4M_OK;
 }
 

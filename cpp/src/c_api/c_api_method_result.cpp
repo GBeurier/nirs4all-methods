@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <exception>
 #include <limits>
 #include <memory>
 #include <new>
@@ -20,6 +21,10 @@
 #include "n4m/n4m.h"
 
 #include "core/aom_preprocessing.hpp"
+#include "core/aom_operator_pls_stack.hpp"
+#include "core/aom_ridge_blender.hpp"
+#include "core/aom_robust_hpo.hpp"
+#include "core/aom_sweep.hpp"
 #include "core/bipls_selection.hpp"
 #include "core/bve_selection.hpp"
 #include "core/cars_selection.hpp"
@@ -41,6 +46,7 @@
 #include "core/method_result.hpp"
 #include "core/model.hpp"
 #include "core/model_selection.hpp"
+#include "core/moments.hpp"
 #include "core/multiblock_extensions.hpp"
 #include "core/operator_bank.hpp"
 #include "core/pls_diagnostics.hpp"
@@ -59,6 +65,7 @@
 #include "core/spa_selection.hpp"
 #include "core/st_selection.hpp"
 #include "core/stability_selection.hpp"
+#include "core/sweep.hpp"
 #include "core/t2_selection.hpp"
 #include "core/tensor_pls.hpp"
 #include "core/uve_selection.hpp"
@@ -190,6 +197,395 @@ void predict_from_coefficients(const n4m_matrix_view_t& X,
     out_cols = static_cast<std::int64_t>(q);
 }
 
+void pack_moment_stats(n4m_method_result_s& handle,
+                       const ::n4m::core::MomentStats& stats) {
+    const auto p = stats.n_features;
+    const auto q = stats.n_targets;
+    handle.set_double_matrix("x_sum", stats.x_sum, 1, p);
+    handle.set_double_matrix("y_sum", stats.y_sum, 1, q);
+    handle.set_double_matrix("xtx", stats.xtx, p, p);
+    handle.set_double_matrix("xty", stats.xty, p, q);
+    handle.set_double_matrix("yty", stats.yty, q, q);
+    handle.set_double_matrix("x_mean", stats.x_mean, 1, p);
+    handle.set_double_matrix("y_mean", stats.y_mean, 1, q);
+    handle.set_double_matrix("cxx", stats.cxx, p, p);
+    handle.set_double_matrix("cxy", stats.cxy, p, q);
+    handle.set_double_matrix("cyy", stats.cyy, q, q);
+    handle.set_scalar("n_samples", static_cast<double>(stats.n_samples));
+    handle.set_scalar("n_features", static_cast<double>(stats.n_features));
+    handle.set_scalar("n_targets", static_cast<double>(stats.n_targets));
+}
+
+void pack_sweep_result(n4m_method_result_s& handle,
+                       const ::n4m::core::SweepResult& res) {
+    const auto n = res.n_samples;
+    const auto p = res.n_features;
+    const auto q = res.n_targets;
+    const auto nc = res.n_candidates;
+    auto set_optional = [&](const char* name,
+                            const std::vector<double>& values,
+                            std::int64_t rows,
+                            std::int64_t cols) {
+        if (values.empty()) {
+            handle.set_double_matrix(name, {}, 0, 0);
+        } else {
+            handle.set_double_matrix(name, values, rows, cols);
+        }
+    };
+    handle.set_double_matrix("candidate_scores", res.candidate_scores, nc, 4);
+    set_optional("oof_predictions", res.oof_predictions, n, q);
+    set_optional("predictions", res.predictions, n, q);
+    set_optional("coefficients", res.coefficients, p, q);
+    set_optional("intercept", res.intercept, 1, q);
+    set_optional("x_mean", res.x_mean, 1, p);
+    set_optional("x_scale", res.x_scale, 1, p);
+    set_optional("y_mean", res.y_mean, 1, q);
+    handle.set_int_vector("fold_ids", res.fold_ids);
+    handle.set_scalar("selected_candidate_id",
+                      static_cast<double>(res.selected_candidate_id));
+    handle.set_scalar("selected_head_id",
+                      static_cast<double>(res.selected_head_id));
+    handle.set_scalar("selected_param", res.selected_param);
+    handle.set_scalar("selected_cv_rmse", res.selected_cv_rmse);
+    handle.set_scalar("n_candidates", static_cast<double>(res.n_candidates));
+    handle.set_scalar("score_only", static_cast<double>(res.score_only));
+    handle.set_scalar("n_ridge_moment_candidates",
+                      static_cast<double>(res.n_ridge_moment_candidates));
+    handle.set_scalar("n_ridge_dual_materialized_candidates",
+                      static_cast<double>(res.n_ridge_dual_materialized_candidates));
+    handle.set_scalar("n_ridge_moment_cv_fits",
+                      static_cast<double>(res.n_ridge_moment_cv_fits));
+    handle.set_scalar("n_ridge_dual_materialized_cv_fits",
+                      static_cast<double>(res.n_ridge_dual_materialized_cv_fits));
+    handle.set_scalar("n_ridge_dual_cross_cv_fits",
+                      static_cast<double>(res.n_ridge_dual_cross_cv_fits));
+    handle.set_scalar("n_ridge_moment_score_batch_calls",
+                      static_cast<double>(res.n_ridge_moment_score_batch_calls));
+    handle.set_scalar("n_ridge_moment_score_batch_jobs",
+                      static_cast<double>(res.n_ridge_moment_score_batch_jobs));
+    handle.set_scalar("n_ridge_moment_final_fits",
+                      static_cast<double>(res.n_ridge_moment_final_fits));
+    handle.set_scalar("n_ridge_dual_materialized_final_fits",
+                      static_cast<double>(res.n_ridge_dual_materialized_final_fits));
+    handle.set_scalar("n_pls_moment_candidates",
+                      static_cast<double>(res.n_pls_moment_candidates));
+    handle.set_scalar("n_pls_gcv_proxy_candidates",
+                      static_cast<double>(res.n_pls_gcv_proxy_candidates));
+    handle.set_scalar("n_pls_moment_cv_fits",
+                      static_cast<double>(res.n_pls_moment_cv_fits));
+    handle.set_scalar("n_pls_moment_host_cv_fits",
+                      static_cast<double>(res.n_pls_moment_host_cv_fits));
+    handle.set_scalar("n_pls_moment_cuda_device_cv_fits",
+                      static_cast<double>(res.n_pls_moment_cuda_device_cv_fits));
+    handle.set_scalar("n_pls_moment_cuda_parallel_fold_batches",
+                      static_cast<double>(res.n_pls_moment_cuda_parallel_fold_batches));
+    handle.set_scalar("n_pls_moment_cuda_parallel_fold_jobs",
+                      static_cast<double>(res.n_pls_moment_cuda_parallel_fold_jobs));
+    handle.set_scalar("n_pls_moment_score_batch_calls",
+                      static_cast<double>(res.n_pls_moment_score_batch_calls));
+    handle.set_scalar("n_pls_moment_score_batch_jobs",
+                      static_cast<double>(res.n_pls_moment_score_batch_jobs));
+    handle.set_scalar("n_pls_materialized_cv_fits",
+                      static_cast<double>(res.n_pls_materialized_cv_fits));
+    handle.set_scalar("n_pls_gcv_proxy_fits",
+                      static_cast<double>(res.n_pls_gcv_proxy_fits));
+    handle.set_scalar("n_pls_gcv_proxy_batch_calls",
+                      static_cast<double>(res.n_pls_gcv_proxy_batch_calls));
+    handle.set_scalar("n_pls_gcv_proxy_batch_jobs",
+                      static_cast<double>(res.n_pls_gcv_proxy_batch_jobs));
+    handle.set_scalar("n_pls_moment_final_fits",
+                      static_cast<double>(res.n_pls_moment_final_fits));
+    handle.set_scalar("n_pls_moment_host_final_fits",
+                      static_cast<double>(res.n_pls_moment_host_final_fits));
+    handle.set_scalar("n_pls_moment_cuda_device_final_fits",
+                      static_cast<double>(res.n_pls_moment_cuda_device_final_fits));
+    handle.set_scalar("n_pls_materialized_final_fits",
+                      static_cast<double>(res.n_pls_materialized_final_fits));
+    handle.set_scalar("cv", static_cast<double>(res.cv));
+    handle.set_scalar("n_samples", static_cast<double>(res.n_samples));
+    handle.set_scalar("n_features", static_cast<double>(res.n_features));
+    handle.set_scalar("n_targets", static_cast<double>(res.n_targets));
+}
+
+void pack_aom_sweep_result(n4m_method_result_s& handle,
+                           const ::n4m::core::AomSweepResult& res) {
+    const auto n = res.n_samples;
+    const auto p = res.n_features;
+    const auto q = res.n_targets;
+    const auto nc = res.n_candidates;
+    auto set_optional = [&](const char* name,
+                            const std::vector<double>& values,
+                            std::int64_t rows,
+                            std::int64_t cols) {
+        if (values.empty()) {
+            handle.set_double_matrix(name, {}, 0, 0);
+        } else {
+            handle.set_double_matrix(name, values, rows, cols);
+        }
+    };
+    handle.set_double_matrix("candidate_scores", res.candidate_scores, nc, 5);
+    handle.set_double_matrix("chain_params", res.chain_params, 1,
+                             static_cast<std::int64_t>(res.chain_params.size()));
+    set_optional("oof_predictions", res.oof_predictions, n, q);
+    set_optional("predictions", res.predictions, n, q);
+    set_optional("coefficients", res.coefficients, p, q);
+    set_optional("input_coefficients", res.input_coefficients, p, q);
+    set_optional("intercept", res.intercept, 1, q);
+    set_optional("x_mean", res.x_mean, 1, p);
+    set_optional("x_scale", res.x_scale, 1, p);
+    set_optional("y_mean", res.y_mean, 1, q);
+    handle.set_int_vector("fold_ids", res.fold_ids);
+    handle.set_int_vector("candidate_routes", res.candidate_routes);
+    handle.set_int_vector("chain_offsets", res.chain_offsets);
+    handle.set_int_vector("op_kinds", res.op_kinds);
+    handle.set_int_vector("param_offsets", res.param_offsets);
+    handle.set_scalar("selected_candidate_id",
+                      static_cast<double>(res.selected_candidate_id));
+    handle.set_scalar("selected_chain_id",
+                      static_cast<double>(res.selected_chain_id));
+    handle.set_scalar("selected_sweep_candidate_id",
+                      static_cast<double>(res.selected_sweep_candidate_id));
+    handle.set_scalar("selected_head_id",
+                      static_cast<double>(res.selected_head_id));
+    handle.set_scalar("selected_param", res.selected_param);
+    handle.set_scalar("selected_cv_rmse", res.selected_cv_rmse);
+    handle.set_scalar("n_candidates", static_cast<double>(res.n_candidates));
+    handle.set_scalar("n_operator_moment_candidates",
+                      static_cast<double>(res.n_operator_moment_candidates));
+    handle.set_scalar("n_ridge_operator_moment_candidates",
+                      static_cast<double>(res.n_ridge_operator_moment_candidates));
+    handle.set_scalar("n_pls_operator_moment_candidates",
+                      static_cast<double>(res.n_pls_operator_moment_candidates));
+    handle.set_scalar("n_banded_operator_moment_candidates",
+                      static_cast<double>(res.n_banded_operator_moment_candidates));
+    handle.set_scalar("n_structured_operator_moment_candidates",
+                      static_cast<double>(res.n_structured_operator_moment_candidates));
+    handle.set_scalar("n_dense_operator_moment_candidates",
+                      static_cast<double>(res.n_dense_operator_moment_candidates));
+    handle.set_scalar("n_materialized_candidates",
+                      static_cast<double>(res.n_materialized_candidates));
+    handle.set_scalar("n_ridge_materialized_candidates",
+                      static_cast<double>(res.n_ridge_materialized_candidates));
+    handle.set_scalar("n_pls_materialized_candidates",
+                      static_cast<double>(res.n_pls_materialized_candidates));
+    handle.set_scalar("n_moment_prefix_cache_hits",
+                      static_cast<double>(res.n_moment_prefix_cache_hits));
+    handle.set_scalar("n_moment_prefix_cache_misses",
+                      static_cast<double>(res.n_moment_prefix_cache_misses));
+    handle.set_scalar("n_ridge_moment_cv_fits",
+                      static_cast<double>(res.n_ridge_moment_cv_fits));
+    handle.set_scalar("n_ridge_dual_materialized_cv_fits",
+                      static_cast<double>(res.n_ridge_dual_materialized_cv_fits));
+    handle.set_scalar("n_ridge_dual_cross_cv_fits",
+                      static_cast<double>(res.n_ridge_dual_cross_cv_fits));
+    handle.set_scalar("n_ridge_moment_score_batch_calls",
+                      static_cast<double>(res.n_ridge_moment_score_batch_calls));
+    handle.set_scalar("n_ridge_moment_score_batch_jobs",
+                      static_cast<double>(res.n_ridge_moment_score_batch_jobs));
+    handle.set_scalar("n_ridge_moment_final_fits",
+                      static_cast<double>(res.n_ridge_moment_final_fits));
+    handle.set_scalar("n_ridge_dual_materialized_final_fits",
+                      static_cast<double>(res.n_ridge_dual_materialized_final_fits));
+    handle.set_scalar("n_pls_moment_cv_fits",
+                      static_cast<double>(res.n_pls_moment_cv_fits));
+    handle.set_scalar("n_pls_moment_host_cv_fits",
+                      static_cast<double>(res.n_pls_moment_host_cv_fits));
+    handle.set_scalar("n_pls_moment_cuda_device_cv_fits",
+                      static_cast<double>(res.n_pls_moment_cuda_device_cv_fits));
+    handle.set_scalar("n_pls_moment_cuda_parallel_fold_batches",
+                      static_cast<double>(res.n_pls_moment_cuda_parallel_fold_batches));
+    handle.set_scalar("n_pls_moment_cuda_parallel_fold_jobs",
+                      static_cast<double>(res.n_pls_moment_cuda_parallel_fold_jobs));
+    handle.set_scalar("n_pls_moment_score_batch_calls",
+                      static_cast<double>(res.n_pls_moment_score_batch_calls));
+    handle.set_scalar("n_pls_moment_score_batch_jobs",
+                      static_cast<double>(res.n_pls_moment_score_batch_jobs));
+    handle.set_scalar("n_pls_materialized_cv_fits",
+                      static_cast<double>(res.n_pls_materialized_cv_fits));
+    handle.set_scalar("n_pls_gcv_proxy_candidates",
+                      static_cast<double>(res.n_pls_gcv_proxy_candidates));
+    handle.set_scalar("n_pls_gcv_proxy_fits",
+                      static_cast<double>(res.n_pls_gcv_proxy_fits));
+    handle.set_scalar("n_pls_gcv_proxy_batch_calls",
+                      static_cast<double>(res.n_pls_gcv_proxy_batch_calls));
+    handle.set_scalar("n_pls_gcv_proxy_batch_jobs",
+                      static_cast<double>(res.n_pls_gcv_proxy_batch_jobs));
+    handle.set_scalar("n_pls_moment_final_fits",
+                      static_cast<double>(res.n_pls_moment_final_fits));
+    handle.set_scalar("n_pls_moment_host_final_fits",
+                      static_cast<double>(res.n_pls_moment_host_final_fits));
+    handle.set_scalar("n_pls_moment_cuda_device_final_fits",
+                      static_cast<double>(res.n_pls_moment_cuda_device_final_fits));
+    handle.set_scalar("n_pls_materialized_final_fits",
+                      static_cast<double>(res.n_pls_materialized_final_fits));
+    handle.set_scalar("aom_pls_score_mode",
+                      static_cast<double>(res.aom_pls_score_mode));
+    handle.set_scalar("score_only", static_cast<double>(res.score_only));
+    handle.set_scalar("n_chains", static_cast<double>(res.n_chains));
+    handle.set_scalar("profile", static_cast<double>(res.profile));
+    handle.set_scalar("cv", static_cast<double>(res.cv));
+    handle.set_scalar("n_samples", static_cast<double>(res.n_samples));
+    handle.set_scalar("n_features", static_cast<double>(res.n_features));
+    handle.set_scalar("n_targets", static_cast<double>(res.n_targets));
+}
+
+void pack_aom_ridge_blender_result(
+    n4m_method_result_s& handle,
+    const ::n4m::core::AomRidgeBlenderResult& res) {
+    const auto n = res.n_samples;
+    const auto q = res.n_targets;
+    const auto n_flat = n * q;
+    const auto nc = res.n_candidates;
+    handle.set_double_matrix("candidate_scores", res.candidate_scores, nc, 5);
+    handle.set_double_matrix("weights", res.weights, 1, nc);
+    handle.set_double_matrix("oof_predictions", res.oof_predictions, n, q);
+    handle.set_double_matrix("predictions", res.predictions, n, q);
+    handle.set_double_matrix("input_coefficients",
+                             res.input_coefficients, res.n_features, q);
+    handle.set_double_matrix("intercept", res.intercept, 1, q);
+    handle.set_double_matrix("oof_candidate_predictions",
+                             res.oof_candidate_predictions, n_flat, nc);
+    handle.set_double_matrix("candidate_predictions",
+                             res.candidate_predictions, n_flat, nc);
+    handle.set_int_vector("fold_ids", res.fold_ids);
+    handle.set_scalar("selected_candidate_id",
+                      static_cast<double>(res.selected_candidate_id));
+    handle.set_scalar("selected_chain_id",
+                      static_cast<double>(res.selected_chain_id));
+    handle.set_scalar("selected_param", res.selected_param);
+    handle.set_scalar("selected_cv_rmse", res.selected_cv_rmse);
+    handle.set_scalar("blend_oof_rmse", res.blend_oof_rmse);
+    handle.set_scalar("regularizer", res.regularizer);
+    handle.set_scalar("n_candidates", static_cast<double>(res.n_candidates));
+    handle.set_scalar("n_chains", static_cast<double>(res.n_chains));
+    handle.set_scalar("profile", static_cast<double>(res.profile));
+    handle.set_scalar("cv", static_cast<double>(res.cv));
+    handle.set_scalar("n_samples", static_cast<double>(res.n_samples));
+    handle.set_scalar("n_features", static_cast<double>(res.n_features));
+    handle.set_scalar("n_targets", static_cast<double>(res.n_targets));
+}
+
+void pack_aom_operator_pls_stack_result(
+    n4m_method_result_s& handle,
+    const ::n4m::core::AomOperatorPlsStackResult& res) {
+    const auto n = res.n_samples;
+    const auto ns = res.n_specs;
+    const auto nf = res.n_operator_features;
+    handle.set_double_matrix("candidate_scores", res.candidate_scores, ns, 7);
+    handle.set_double_matrix("fold_scores", res.fold_scores, ns, res.cv);
+    handle.set_double_matrix("oof_predictions", res.oof_predictions, n, 1);
+    handle.set_double_matrix("predictions", res.predictions, n, 1);
+    handle.set_double_matrix("stack_features", res.stack_features, n, nf);
+    handle.set_double_matrix("coefficients", res.coefficients, nf, 1);
+    handle.set_double_matrix("intercept", res.intercept, 1, 1);
+    handle.set_double_matrix("input_coefficients",
+                             res.input_coefficients, res.n_features, 1);
+    handle.set_double_matrix("input_intercept", res.input_intercept, 1, 1);
+    handle.set_int_vector("fold_ids", res.fold_ids);
+    handle.set_int_vector("operator_feature_offsets",
+                          res.operator_feature_offsets);
+    handle.set_scalar("selected_spec_id",
+                      static_cast<double>(res.selected_spec_id));
+    handle.set_scalar("selected_components",
+                      static_cast<double>(res.selected_components));
+    handle.set_scalar("selected_alpha", res.selected_alpha);
+    handle.set_scalar("selected_oof_rmse", res.selected_oof_rmse);
+    handle.set_scalar("selected_train_rmse", res.selected_train_rmse);
+    handle.set_scalar("selected_criterion", res.selected_criterion);
+    handle.set_scalar("std_penalty", res.std_penalty);
+    handle.set_scalar("gap_penalty", res.gap_penalty);
+    handle.set_scalar("n_operator_features",
+                      static_cast<double>(res.n_operator_features));
+    handle.set_scalar("n_specs", static_cast<double>(res.n_specs));
+    handle.set_scalar("n_operators", static_cast<double>(res.n_operators));
+    handle.set_scalar("profile", static_cast<double>(res.profile));
+    handle.set_scalar("cv", static_cast<double>(res.cv));
+    handle.set_scalar("n_samples", static_cast<double>(res.n_samples));
+    handle.set_scalar("n_features", static_cast<double>(res.n_features));
+    handle.set_scalar("n_targets", static_cast<double>(res.n_targets));
+}
+
+n4m_status_t read_int64_scalar(n4m_context_t* ctx,
+                               const n4m_method_result_t* result,
+                               const char* name,
+                               std::int64_t& out) {
+    const auto scalar_iter = result->scalars.find(name);
+    if (scalar_iter == result->scalars.end()) {
+        set_error(ctx, "moment result missing required scalar");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const double value = scalar_iter->second;
+    if (!std::isfinite(value) || value < 0.0 ||
+        value > static_cast<double>(std::numeric_limits<std::int64_t>::max())) {
+        set_error(ctx, "moment result scalar has invalid integer value");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const double rounded = std::round(value);
+    if (std::fabs(value - rounded) > 0.0) {
+        set_error(ctx, "moment result scalar is not an integer");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    out = static_cast<std::int64_t>(rounded);
+    return N4M_OK;
+}
+
+n4m_status_t read_moment_matrix(n4m_context_t* ctx,
+                                const n4m_method_result_t* result,
+                                const char* name,
+                                std::int64_t rows,
+                                std::int64_t cols,
+                                std::vector<double>& out) {
+    const auto array_iter = result->double_arrays.find(name);
+    const auto shape_iter = result->double_shapes.find(name);
+    if (array_iter == result->double_arrays.end() ||
+        shape_iter == result->double_shapes.end()) {
+        set_error(ctx, "moment result missing required matrix");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (shape_iter->second.first != rows || shape_iter->second.second != cols) {
+        set_error(ctx, "moment result matrix has incompatible shape");
+        return N4M_ERR_SHAPE_MISMATCH;
+    }
+    const std::size_t expected =
+        static_cast<std::size_t>(rows) * static_cast<std::size_t>(cols);
+    if (array_iter->second.size() != expected) {
+        set_error(ctx, "moment result matrix has inconsistent storage size");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    out = array_iter->second;
+    return N4M_OK;
+}
+
+n4m_status_t unpack_moment_stats(n4m_context_t* ctx,
+                                 const n4m_method_result_t* result,
+                                 ::n4m::core::MomentStats& out) {
+    if (result == nullptr) {
+        set_error(ctx, "null moment result");
+        return N4M_ERR_NULL_POINTER;
+    }
+    n4m_status_t st = read_int64_scalar(ctx, result, "n_samples", out.n_samples);
+    if (st != N4M_OK) return st;
+    st = read_int64_scalar(ctx, result, "n_features", out.n_features);
+    if (st != N4M_OK) return st;
+    st = read_int64_scalar(ctx, result, "n_targets", out.n_targets);
+    if (st != N4M_OK) return st;
+    if (out.n_samples <= 0 || out.n_features <= 0 || out.n_targets <= 0) {
+        set_error(ctx, "moment result has non-positive dimensions");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const auto p = out.n_features;
+    const auto q = out.n_targets;
+    st = read_moment_matrix(ctx, result, "x_sum", 1, p, out.x_sum);
+    if (st != N4M_OK) return st;
+    st = read_moment_matrix(ctx, result, "y_sum", 1, q, out.y_sum);
+    if (st != N4M_OK) return st;
+    st = read_moment_matrix(ctx, result, "xtx", p, p, out.xtx);
+    if (st != N4M_OK) return st;
+    st = read_moment_matrix(ctx, result, "xty", p, q, out.xty);
+    if (st != N4M_OK) return st;
+    return read_moment_matrix(ctx, result, "yty", q, q, out.yty);
+}
+
 }  // namespace
 
 extern "C" {
@@ -295,6 +691,395 @@ N4M_API n4m_status_t n4m_method_result_get_scalar(
     }
 }
 
+/* ---- moment substrate ---- */
+
+N4M_API n4m_status_t n4m_moments_compute(
+    n4m_context_t* ctx,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_moments_compute");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::MomentStats stats;
+        const n4m_status_t status =
+            ::n4m::core::compute_moments(*as_core(ctx), *X, *Y, stats);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        pack_moment_stats(*handle, stats);
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_moments_compute");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const std::exception& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INTERNAL;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_moments_compute");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_moments_subset_compute(
+    n4m_context_t* ctx,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const int64_t* row_indices,
+    int64_t n_indices,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_moments_subset_compute");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::MomentStats stats;
+        const n4m_status_t status = ::n4m::core::compute_moments_subset(
+            *as_core(ctx), *X, *Y, row_indices, n_indices, stats);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        pack_moment_stats(*handle, stats);
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_moments_subset_compute");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const std::exception& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INTERNAL;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_moments_subset_compute");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_moments_subtract(
+    n4m_context_t* ctx,
+    const n4m_method_result_t* lhs,
+    const n4m_method_result_t* rhs,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || lhs == nullptr || rhs == nullptr) {
+        set_error(ctx, "null pointer in n4m_moments_subtract");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::MomentStats left;
+        ::n4m::core::MomentStats right;
+        n4m_status_t status = unpack_moment_stats(ctx, lhs, left);
+        if (status != N4M_OK) return status;
+        status = unpack_moment_stats(ctx, rhs, right);
+        if (status != N4M_OK) return status;
+
+        ::n4m::core::MomentStats diff;
+        status = ::n4m::core::subtract_moments(
+            *as_core(ctx), left, right, diff);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        pack_moment_stats(*handle, diff);
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_moments_subtract");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const std::exception& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INTERNAL;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_moments_subtract");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_sweep_run(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const double* ridge_lambdas,
+    int64_t n_ridge_lambdas,
+    const int32_t* pls_components,
+    int64_t n_pls_components,
+    int32_t heads_mask,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_sweep_run");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::SweepResult res;
+        const n4m_status_t status = ::n4m::core::run_moment_sweep(
+            *as_core(ctx), *as_core(cfg), *X, *Y, cv, fold_ids, n_fold_ids,
+            ridge_lambdas, n_ridge_lambdas, pls_components, n_pls_components,
+            heads_mask, res);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        pack_sweep_result(*handle, res);
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_sweep_run");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const std::exception& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INTERNAL;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_sweep_run");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_aom_sweep_run(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t profile,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const double* ridge_lambdas,
+    int64_t n_ridge_lambdas,
+    const int32_t* pls_components,
+    int64_t n_pls_components,
+    int32_t heads_mask,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_aom_sweep_run");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::AomSweepResult res;
+        const n4m_status_t status = ::n4m::core::run_aom_sweep(
+            *as_core(ctx), *as_core(cfg), *X, *Y, profile, cv,
+            fold_ids, n_fold_ids, ridge_lambdas, n_ridge_lambdas,
+            pls_components, n_pls_components, heads_mask, res);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        pack_aom_sweep_result(*handle, res);
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_aom_sweep_run");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const std::exception& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INTERNAL;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_aom_sweep_run");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_aom_chain_sweep_run(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const int32_t* chain_offsets,
+    int64_t n_chain_offsets,
+    const int32_t* op_kinds,
+    int64_t n_op_kinds,
+    const int32_t* param_offsets,
+    int64_t n_param_offsets,
+    const double* params,
+    int64_t n_params,
+    const double* ridge_lambdas,
+    int64_t n_ridge_lambdas,
+    const int32_t* pls_components,
+    int64_t n_pls_components,
+    int32_t heads_mask,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_aom_chain_sweep_run");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::AomSweepResult res;
+        const n4m_status_t status = ::n4m::core::run_aom_chain_sweep(
+            *as_core(ctx), *as_core(cfg), *X, *Y, cv, fold_ids, n_fold_ids,
+            chain_offsets, n_chain_offsets, op_kinds, n_op_kinds,
+            param_offsets, n_param_offsets, params, n_params,
+            ridge_lambdas, n_ridge_lambdas,
+            pls_components, n_pls_components, heads_mask, res);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        pack_aom_sweep_result(*handle, res);
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_aom_chain_sweep_run");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const std::exception& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INTERNAL;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_aom_chain_sweep_run");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_aom_chain_fixed_fit_run(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const int32_t* chain_offsets,
+    int64_t n_chain_offsets,
+    const int32_t* op_kinds,
+    int64_t n_op_kinds,
+    const int32_t* param_offsets,
+    int64_t n_param_offsets,
+    const double* params,
+    int64_t n_params,
+    int32_t head_id,
+    double param,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_aom_chain_fixed_fit_run");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::AomSweepResult res;
+        const n4m_status_t status = ::n4m::core::run_aom_chain_fixed_fit(
+            *as_core(ctx), *as_core(cfg), *X, *Y,
+            chain_offsets, n_chain_offsets, op_kinds, n_op_kinds,
+            param_offsets, n_param_offsets, params, n_params,
+            head_id, param, res);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        pack_aom_sweep_result(*handle, res);
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_aom_chain_fixed_fit_run");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const std::exception& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INTERNAL;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_aom_chain_fixed_fit_run");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_aom_ridge_blender_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t profile,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const double* ridge_lambdas,
+    int64_t n_ridge_lambdas,
+    double regularizer,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_aom_ridge_blender_fit");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::AomRidgeBlenderResult res;
+        const n4m_status_t status = ::n4m::core::fit_aom_ridge_blender(
+            *as_core(ctx), *as_core(cfg), *X, *Y, profile, cv,
+            fold_ids, n_fold_ids, ridge_lambdas, n_ridge_lambdas,
+            regularizer, res);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        pack_aom_ridge_blender_result(*handle, res);
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_aom_ridge_blender_fit");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const std::exception& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INTERNAL;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_aom_ridge_blender_fit");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_aom_operator_pls_stack_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t profile,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const int32_t* components,
+    int64_t n_components,
+    const double* alphas,
+    int64_t n_alphas,
+    double std_penalty,
+    double gap_penalty,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_aom_operator_pls_stack_fit");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::AomOperatorPlsStackResult res;
+        const n4m_status_t status = ::n4m::core::fit_aom_operator_pls_stack(
+            *as_core(ctx), *as_core(cfg), *X, *Y, profile, cv,
+            fold_ids, n_fold_ids, components, n_components, alphas, n_alphas,
+            std_penalty, gap_penalty, res);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        pack_aom_operator_pls_stack_result(*handle, res);
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_aom_operator_pls_stack_fit");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const std::exception& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INTERNAL;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_aom_operator_pls_stack_fit");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
 /* ---- fit entry points ---- */
 
 N4M_API n4m_status_t n4m_sparse_simpls_fit(
@@ -351,6 +1136,71 @@ N4M_API n4m_status_t n4m_sparse_simpls_fit(
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in n4m_sparse_simpls_fit");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_pcr_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_pcr_fit");
+        return N4M_ERR_NULL_POINTER;
+    }
+
+    try {
+        ::n4m::core::Config local = *as_core(cfg);
+        local.algorithm = N4M_ALGO_PCR;
+        local.solver = N4M_SOLVER_SVD;
+        local.deflation = N4M_DEFLATION_REGRESSION;
+        std::unique_ptr<::n4m::core::Model> model;
+        const n4m_status_t status = ::n4m::core::fit_pcr_svd(
+            *as_core(ctx), local, *X, *Y, model);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        const auto p = static_cast<std::int64_t>(model->n_features);
+        const auto q = static_cast<std::int64_t>(model->n_targets);
+        const auto k = static_cast<std::int64_t>(model->n_components);
+
+        handle->set_double_matrix("coefficients", model->coefficients, p, q);
+        handle->set_double_matrix("x_mean", model->x_mean, 1, p);
+        handle->set_double_matrix("x_scale", model->x_scale, 1, p);
+        handle->set_double_matrix("y_mean", model->y_mean, 1, q);
+        handle->set_double_matrix("y_scale", model->y_scale, 1, q);
+        if (!model->weights_w.empty()) {
+            handle->set_double_matrix("weights_w", model->weights_w, p, k);
+        }
+        if (!model->loadings_p.empty()) {
+            handle->set_double_matrix("loadings_p", model->loadings_p, p, k);
+        }
+        if (!model->rotations_r.empty()) {
+            handle->set_double_matrix("rotations_r", model->rotations_r, p, k);
+        }
+
+        std::vector<double> predictions;
+        std::int64_t pred_rows = 0;
+        std::int64_t pred_cols = 0;
+        copy_predictions(*model, *X, *as_core(ctx), predictions, pred_rows,
+                         pred_cols);
+        const double rmse = in_sample_rmse(predictions, *Y);
+        handle->set_double_matrix("predictions", std::move(predictions),
+                                  pred_rows, pred_cols);
+        handle->set_scalar("rmse", rmse);
+        handle->set_scalar("n_components", static_cast<double>(k));
+
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_pcr_fit");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_pcr_fit");
         return N4M_ERR_INTERNAL;
     }
 }
@@ -753,6 +1603,69 @@ N4M_API n4m_status_t n4m_ridge_fit(
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in n4m_ridge_fit");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_aom_robust_hpo_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t profile,
+    int32_t cv,
+    int32_t heads_mask,
+    n4m_method_result_t** out_result) {
+    if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_result = nullptr;
+    if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
+        set_error(ctx, "null pointer in n4m_aom_robust_hpo_fit");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        ::n4m::core::AomRobustHpoResult res;
+        const n4m_status_t status = ::n4m::core::fit_aom_robust_hpo(
+            *as_core(ctx), *as_core(cfg), *X, *Y, profile, cv, heads_mask, res);
+        if (status != N4M_OK) return status;
+
+        auto handle = std::make_unique<n4m_method_result_s>();
+        const auto n = static_cast<std::int64_t>(res.n_samples);
+        const auto p = static_cast<std::int64_t>(res.n_features_transformed);
+        const auto nc = static_cast<std::int64_t>(res.n_candidates);
+        handle->set_double_matrix("predictions", res.predictions, n, 1);
+        handle->set_double_matrix("coefficients_transformed",
+                                  res.coefficients_transformed, p, 1);
+        handle->set_double_matrix("input_coefficients",
+                                  res.input_coefficients,
+                                  static_cast<std::int64_t>(res.n_features),
+                                  1);
+        handle->set_double_matrix("intercept", res.intercept, 1, 1);
+        handle->set_double_matrix("candidate_scores",
+                                  res.candidate_scores, nc, 4);
+        handle->set_scalar("selected_chain_id",
+                           static_cast<double>(res.selected_chain_id));
+        handle->set_scalar("selected_head_id",
+                           static_cast<double>(res.selected_head_id));
+        handle->set_scalar("selected_param", res.selected_param);
+        handle->set_scalar("selected_cv_rmse", res.selected_cv_rmse);
+        handle->set_scalar("n_chains", static_cast<double>(res.n_chains));
+        handle->set_scalar("n_candidates",
+                           static_cast<double>(res.n_candidates));
+        handle->set_scalar("profile", static_cast<double>(res.profile));
+        handle->set_scalar("cv", static_cast<double>(res.cv));
+        handle->set_scalar("n_samples", static_cast<double>(res.n_samples));
+        handle->set_scalar("n_features", static_cast<double>(res.n_features));
+        handle->set_scalar("n_features_transformed",
+                           static_cast<double>(res.n_features_transformed));
+        handle->set_scalar("n_targets", 1.0);
+
+        *out_result = handle.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_aom_robust_hpo_fit");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_aom_robust_hpo_fit");
         return N4M_ERR_INTERNAL;
     }
 }

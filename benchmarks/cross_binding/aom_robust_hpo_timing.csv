@@ -1,0 +1,7 @@
+backend,profile,n_samples,n_features,cv,n_candidates,selected_chain_id,selected_head_id,selected_param,selected_cv_rmse,elapsed_ms_median,library_path,abi
+native_abi,compact,32,64,3,84,5,0,1.0,1.0737800444092243,3.1419879815075547,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.16.0
+python_sklearn,compact,32,64,3,84,detrend1__pls_8,pls_8,,1.0791993647446774,29.027734010014683,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.16.0
+native_abi,compact,64,128,3,84,3,1,2.0,1.03369439208021,16.327088000252843,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.16.0
+python_sklearn,compact,64,128,3,84,savgol_w5_p2_d0__pls_2,pls_2,,1.0332554879536102,49.74253600812517,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.16.0
+native_abi,compact,96,256,3,84,1,1,8.0,1.107871675990779,60.466535011073574,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.16.0
+python_sklearn,compact,96,256,3,84,detrend1__pls_8,pls_8,,1.107871675990779,263.5896489955485,/home/delete/nirs4all/nirs4all-methods/bindings/python/src/n4m/lib/libn4m.so,1.16.0

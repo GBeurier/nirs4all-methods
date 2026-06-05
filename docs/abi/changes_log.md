@@ -1,5 +1,298 @@
 # ABI — Changes Log
 
+## 2026-06-05 — ABI 1.21.0: CUDA PLS many-design batching config
+
+Two additive public config helpers:
+
+- `n4m_config_set_cuda_pls_many_batched`
+- `n4m_config_get_cuda_pls_many_batched`
+
+The default remains off. When enabled on a CUDA build, eligible PLS1 moment
+many-design jobs may use the experimental tiled/strided-batched route that
+also remains reachable through the `N4M_CUDA_PLS_MANY_BATCHED` environment
+fallback. This changes only GPU scheduling and timings; candidate scores remain
+fold-level exact for the selected scoring path.
+
+## 2026-06-05 — ABI 1.20.0: CUDA PLS device threshold config
+
+Two additive public config helpers:
+
+- `n4m_config_set_cuda_pls_min_device_features`
+- `n4m_config_get_cuda_pls_min_device_features`
+
+The default threshold remains 1024 features, matching the conservative
+historical CUDA PLS1 moment guard. Lower positive values let CPU/CUDA
+crossover campaigns explicitly test medium-width PLS moment screens on the
+selected single GPU without recompiling. This changes only route eligibility
+and timing; candidate scores are unchanged for a given exact scoring path.
+
+## 2026-06-05 — ABI 1.19.0: CUDA PLS fold scheduling config
+
+Two additive public config helpers:
+
+- `n4m_config_set_cuda_pls_parallel_folds`
+- `n4m_config_get_cuda_pls_parallel_folds`
+
+When enabled on a CUDA build, eligible exact PLS1 moment CV jobs may run in
+bounded stream-parallel batches on the single selected GPU. This changes only
+scheduling and timings; candidate scores are unchanged. Sweep and AOM
+MethodResults also expose additive scalar counters
+`n_pls_moment_cuda_parallel_fold_batches` and
+`n_pls_moment_cuda_parallel_fold_jobs` for fit-cost auditing.
+
+## 2026-06-05 — ABI 1.18.x: strict AOM Gaussian operator kind
+
+No public symbol or result layout change. The public operator enum gains one
+additive value:
+
+- `N4M_OP_GAUSSIAN = 18`
+
+This value is accepted by the strict AOM chain sweep and represents a fixed,
+shape-preserving zero-padding Gaussian convolution with a banded
+operator-moment descriptor. It is distinct from the full `pp_gaussian`
+preprocessing transformer surface.
+
+## 2026-06-05 — ABI 1.18.x: AOM chain fixed final fit
+
+One additive public symbol:
+
+- `n4m_aom_chain_fixed_fit_run(n4m_context_t*, const n4m_config_t*,
+  const n4m_matrix_view_t* X, const n4m_matrix_view_t* Y,
+  const int32_t* chain_offsets, int64_t n_chain_offsets,
+  const int32_t* op_kinds, int64_t n_op_kinds,
+  const int32_t* param_offsets, int64_t n_param_offsets,
+  const double* params, int64_t n_params, int32_t head_id, double param,
+  n4m_method_result_t** out_result)`
+
+This fits one already-selected caller-provided strict-linear AOM
+chain/head/parameter on all rows without running CV. It is a model-building
+endpoint, not a ranking endpoint: CV score fields are NaN unless a higher-level
+wrapper injects an externally verified exact-CV score. Python uses this in
+`NativeAOMScreenRefitRegressor` after exact-CV refit so reusable model
+construction no longer repays one-candidate CV.
+
+## 2026-06-05 — ABI 1.18.x: AOM score-only screen output mode
+
+Two additive public config helpers:
+
+- `n4m_config_set_aom_score_only`
+- `n4m_config_get_aom_score_only`
+
+When enabled for `n4m_aom_sweep_run` or `n4m_aom_chain_sweep_run`, the result
+keeps the candidate-score table, selected identifiers, route counters and fold
+ids, but omits selected-model matrices by returning them as `0 x 0`. This is
+an additive output/cost-control knob for large preprocessing ranking passes.
+
+## 2026-06-04 — ABI 1.18.0: native AOM operator PLS score stack
+
+One additive public symbol (ABI MINOR bump 1.17.0 -> 1.18.0),
+backward-compatible (no signature/layout change, nothing removed):
+
+- `n4m_aom_operator_pls_stack_fit(n4m_context_t*, const n4m_config_t*,
+  const n4m_matrix_view_t* X, const n4m_matrix_view_t* Y, int32_t profile,
+  int32_t cv, const int32_t* fold_ids, int64_t n_fold_ids,
+  const int32_t* components, int64_t n_components, const double* alphas,
+  int64_t n_alphas, double std_penalty, double gap_penalty,
+  n4m_method_result_t** out_result)`
+
+This exposes a native strict-linear AOM operator PLS1 score stack. The method
+builds compact or wide AOM operator banks, fits fold-local PLS1 score
+projectors per operator, concatenates the scores, selects `(n_components,
+alpha)` by train-only CV criterion, and refits the selected stack on all rows
+with a Ridge head.
+
+The returned `n4m_method_result_t` carries `candidate_scores`, `fold_scores`,
+`oof_predictions`, `predictions`, `stack_features`, `coefficients`,
+`intercept`, `fold_ids` and `operator_feature_offsets`. `candidate_scores`
+columns are `spec_id`, `n_components`, `alpha`, `mean_oof_rmse`,
+`std_oof_rmse`, `mean_train_rmse`, `criterion`.
+
+Native v1 is single-target (`Y.cols == 1`) and not yet a fused batched GPU
+stack. Custom Python operator matrices, shuffled/both CV and baseline admission
+gating remain in the Python `AOMOperatorPLSStack` estimator.
+
+The implementation lives in `cpp/src/core/aom_operator_pls_stack.cpp` and is
+dispatched from `cpp/src/c_api/c_api_method_result.cpp`. The symbol is declared
+in `cpp/include/n4m/pls.h`, exported in all ABI snapshots, catalogued as
+`aom_pop.operator_pls_stack`, wrapped in Python as
+`n4m.aom_operator_pls_stack`, and documented in
+`docs/methods/aom_operator_pls_stack.md`.
+
+## 2026-06-04 — ABI 1.17.0: native AOM Ridge OOF simplex blender
+
+One additive public symbol (ABI MINOR bump 1.16.0 -> 1.17.0),
+backward-compatible (no signature/layout change, nothing removed):
+
+- `n4m_aom_ridge_blender_fit(n4m_context_t*, const n4m_config_t*,
+  const n4m_matrix_view_t* X, const n4m_matrix_view_t* Y, int32_t profile,
+  int32_t cv, const int32_t* fold_ids, int64_t n_fold_ids,
+  const double* ridge_lambdas, int64_t n_ridge_lambdas, double regularizer,
+  n4m_method_result_t** out_result)`
+
+This exposes a native strict-linear AOM Ridge candidate blender. The method
+builds compact or wide AOM chain banks, scores each chain/lambda candidate by
+fold-local OOF Ridge predictions, solves a regularized non-negative simplex
+blend, and refits all candidates on the full training data for final blended
+predictions.
+
+The returned `n4m_method_result_t` carries `candidate_scores`, `weights`,
+`oof_predictions`, `predictions`, `oof_candidate_predictions`,
+`candidate_predictions` and `fold_ids`. `candidate_scores` columns are
+`candidate_id`, `chain_id`, `lambda`, `cv_rmse`, `weight`.
+
+Native v1 requires strictly positive Ridge lambdas and is not yet a fused
+batched GPU blender. It builds in CUDA-enabled configurations, but the
+candidate loop still uses the existing native Ridge path per fold/candidate.
+
+The implementation lives in `cpp/src/core/aom_ridge_blender.cpp` and is
+dispatched from `cpp/src/c_api/c_api_method_result.cpp`. The symbol is declared
+in `cpp/include/n4m/pls.h`, exported in all ABI snapshots, catalogued as
+`aom_pop.ridge_blender`, wrapped in Python as `n4m.aom_ridge_blender`, and
+documented in `docs/methods/aom_ridge_blender.md`.
+
+## 2026-06-04 — ABI 1.16.0: user-defined AOM chain sweep
+
+One additive public symbol (ABI MINOR bump 1.15.0 -> 1.16.0),
+backward-compatible (no signature/layout change, nothing removed):
+
+- `n4m_aom_chain_sweep_run(n4m_context_t*, const n4m_config_t*,
+  const n4m_matrix_view_t* X, const n4m_matrix_view_t* Y, int32_t cv,
+  const int32_t* fold_ids, int64_t n_fold_ids,
+  const int32_t* chain_offsets, int64_t n_chain_offsets,
+  const int32_t* op_kinds, int64_t n_op_kinds,
+  const int32_t* param_offsets, int64_t n_param_offsets,
+  const double* params, int64_t n_params,
+  const double* ridge_lambdas, int64_t n_ridge_lambdas,
+  const int32_t* pls_components, int64_t n_pls_components,
+  int32_t heads_mask, n4m_method_result_t** out_result)`
+
+This exposes a flat descriptor for caller-provided strict-linear preprocessing
+chains. `chain_offsets` partitions `op_kinds`; `param_offsets` partitions the
+flat `params` payload. Empty chains are rejected; callers use an explicit
+identity operator for raw spectra. Supported operators are identity, polynomial
+detrend, Savitzky-Golay smooth/derivative, Norris-Williams, finite difference,
+Whittaker, FCK and Gaussian.
+
+The result shape matches `n4m_aom_sweep_run`; `candidate_scores` columns are
+`candidate_id`, `chain_id`, `head_id`, `param`, `cv_rmse`, and scalar
+`profile` is `-1` for caller-provided chains.
+
+This is the first ABI-stable arbitrary strict-linear preprocessing-chain
+surface. It still materializes transformed matrices per chain and uses
+materialized PLS CV; fused operator-moment updates, batched IKPLS and CUDA
+kernels remain later acceleration work.
+
+The implementation lives in `cpp/src/core/aom_sweep.cpp` and is dispatched from
+`cpp/src/c_api/c_api_method_result.cpp`. The symbol is declared in
+`cpp/include/n4m/pls.h`, catalogued as `aom_pop.aom_chain_sweep`, wrapped in
+Python as `n4m.aom_chain_sweep_run`, and documented in
+`docs/methods/aom_chain_sweep_run.md`.
+
+## 2026-06-04 — ABI 1.15.0: configurable native AOM preprocessing sweep
+
+One additive public symbol (ABI MINOR bump 1.14.0 -> 1.15.0),
+backward-compatible (no signature/layout change, nothing removed):
+
+- `n4m_aom_sweep_run(n4m_context_t*, const n4m_config_t*,
+  const n4m_matrix_view_t* X, const n4m_matrix_view_t* Y, int32_t profile,
+  int32_t cv, const int32_t* fold_ids, int64_t n_fold_ids,
+  const double* ridge_lambdas, int64_t n_ridge_lambdas,
+  const int32_t* pls_components, int64_t n_pls_components,
+  int32_t heads_mask, n4m_method_result_t** out_result)`
+
+The symbol applies the native strict-linear AOM compact/wide preprocessing
+chain bank, then delegates candidate scoring to `n4m_sweep_run` over Ridge
+lambdas and/or PLS component counts. It returns `candidate_scores`,
+`oof_predictions`, final `predictions`, coefficients/intercept and fold ids.
+`candidate_scores` has columns `candidate_id`, `chain_id`, `head_id`, `param`,
+`cv_rmse`; `head_id` is `0` for Ridge and `1` for PLS.
+
+This is a configurable product sweep over the fixed AOM strict-linear banks. It
+is not yet the arbitrary operator-descriptor layer or fused batched IKPLS/CUDA
+grinder.
+
+The implementation lives in `cpp/src/core/aom_sweep.cpp` and is dispatched from
+`cpp/src/c_api/c_api_method_result.cpp`. The symbol is declared in
+`cpp/include/n4m/pls.h`, exported in all ABI snapshots, catalogued as
+`aom_pop.aom_sweep`, wrapped in Python as `n4m.aom_sweep_run`, and documented
+in `docs/methods/aom_sweep_run.md`.
+
+## 2026-06-04 — ABI 1.14.0: native Ridge/PLS sweep
+
+One additive public symbol (ABI MINOR bump 1.13.0 -> 1.14.0),
+backward-compatible (no signature/layout change, nothing removed):
+
+- `n4m_sweep_run(n4m_context_t*, const n4m_config_t*,
+  const n4m_matrix_view_t* X, const n4m_matrix_view_t* Y, int32_t cv,
+  const int32_t* fold_ids, int64_t n_fold_ids, const double* ridge_lambdas,
+  int64_t n_ridge_lambdas, const int32_t* pls_components,
+  int64_t n_pls_components, int32_t heads_mask,
+  n4m_method_result_t** out_result)`
+
+ABI v1 supports exact Ridge CV over row-additive moments where efficient, with
+a precomputed dual Ridge path when `p > n_train`. It also supports fold-local
+materialized PLS component screening through the existing native PLS model path.
+The returned `n4m_method_result_t` carries `candidate_scores`,
+`oof_predictions`, final `predictions`, coefficients/intercept and fold ids.
+`candidate_scores[:,1]` is `0` for Ridge and `1` for PLS; `param` is lambda for
+Ridge and `n_components` for PLS.
+
+The fused batched IKPLS/operator-descriptor grinder is not part of ABI v1.
+
+The implementation lives in `cpp/src/core/sweep.cpp` and is dispatched from
+`cpp/src/c_api/c_api_method_result.cpp`. The symbol is declared in
+`cpp/include/n4m/pls.h`, exported in all ABI snapshots, catalogued as
+`utilities.sweep`, wrapped in Python as `n4m.sweep_run`, and documented in
+`docs/methods/sweep_run.md`.
+
+## 2026-06-04 — ABI 1.13.0: native row-additive moment substrate
+
+Three additive public symbols (ABI MINOR bump 1.12.0 -> 1.13.0),
+backward-compatible (no signature/layout change, nothing removed):
+
+- `n4m_moments_compute(n4m_context_t*, const n4m_matrix_view_t* X,
+  const n4m_matrix_view_t* Y, n4m_method_result_t** out_result)`
+- `n4m_moments_subset_compute(n4m_context_t*, const n4m_matrix_view_t* X,
+  const n4m_matrix_view_t* Y, const int64_t* row_indices, int64_t n_indices,
+  n4m_method_result_t** out_result)`
+- `n4m_moments_subtract(n4m_context_t*, const n4m_method_result_t* lhs,
+  const n4m_method_result_t* rhs, n4m_method_result_t** out_result)`
+
+The result is a `n4m_method_result_t` carrying raw additive moments
+(`x_sum`, `y_sum`, `xtx`, `xty`, `yty`) and centered moments recomputed from
+the raw sums (`x_mean`, `y_mean`, `cxx`, `cxy`, `cyy`). This gives an exact
+fold-subtraction primitive for PLS/Ridge screens: compute all rows, compute the
+held-out rows, subtract raw moments, then recenter on the remaining train rows.
+
+The implementation lives in `cpp/src/core/moments.cpp` and is dispatched from
+`cpp/src/c_api/c_api_method_result.cpp`. The symbols are declared in
+`cpp/include/n4m/pls.h`, exported in all ABI snapshots, catalogued as
+`utilities.moments`, wrapped in Python as `n4m.moments` /
+`n4m.moments_train_from_heldout`, and documented in `docs/methods/moments.md`.
+
+## 2026-06-04 — ABI 1.12.0: native AOM robust-HPO screen
+
+One additive public symbol (ABI MINOR bump 1.11.0 -> 1.12.0),
+backward-compatible (no signature/layout change, nothing removed):
+
+- `n4m_aom_robust_hpo_fit(n4m_context_t*, const n4m_config_t*,
+  const n4m_matrix_view_t* X, const n4m_matrix_view_t* Y, int32_t profile,
+  int32_t cv, int32_t heads_mask, n4m_method_result_t** out_result)`
+
+This exposes the product AOM robust-HPO preprocessing screen through the public
+C ABI. Native v1 screens compact/wide banks of strict-linear, shape-preserving
+AOM preprocessing chains and Ridge/PLS heads by contiguous K-fold CV RMSE. It
+returns a `n4m_method_result_t` carrying in-sample predictions after refitting
+the selected candidate, transformed-space coefficients, intercept, scalar
+selection diagnostics and the full `candidate_scores` matrix
+(`chain_id`, `head_id`, `param`, `mean_cv_rmse`).
+
+The implementation lives in `cpp/src/core/aom_robust_hpo.cpp` and is dispatched
+from `cpp/src/c_api/c_api_method_result.cpp`. The symbol is declared in
+`cpp/include/n4m/pls.h`, exported in all ABI snapshots, catalogued as
+`aom_pop.robust_hpo`, wrapped in Python as `n4m.aom_robust_hpo`, and documented
+in `docs/methods/aom_robust_hpo.md`.
+
 ## 2026-06-03 — ABI 1.11.0: direct (closed-form) Ridge regression
 
 One additive public symbol (ABI MINOR bump 1.10.0 → 1.11.0), backward-compatible

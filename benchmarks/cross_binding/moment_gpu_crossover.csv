@@ -1,0 +1,17 @@
+abi,backend,cuda_available,cv,elapsed_ms_median,error,head,library_path,n_candidates,n_features,n_pls_materialized_cv_fits,n_pls_moment_cuda_device_cv_fits,n_pls_moment_cv_fits,n_pls_moment_host_cv_fits,n_ridge_dual_cross_cv_fits,n_ridge_dual_materialized_candidates,n_ridge_dual_materialized_cv_fits,n_ridge_moment_candidates,n_ridge_moment_cv_fits,n_samples,repeats,selected_cv_rmse,speedup_vs_cpu,recommended_backend
+1.18.0,cpu,0,5,2.1061570150777698,,ridge,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so.1.18.0,4,48,0,0,0,0,0,0,0,4,20,260,3,0.05663614403986856,1.0,cpu
+1.18.0,cpu,0,5,1.7701530014164746,,pls,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so.1.18.0,3,48,0,0,5,5,0,0,0,0,0,260,3,0.06773870442683837,1.0,cpu
+1.18.0,cpu,0,5,297.70029700011946,,ridge,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so.1.18.0,4,256,0,0,0,0,0,4,20,0,0,260,3,0.37244405561511285,1.0,cpu
+1.18.0,cpu,0,5,33.60260100453161,,pls,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so.1.18.0,3,256,0,0,5,5,0,0,0,0,0,260,3,0.4265804605849943,1.0,cpu
+1.18.0,cpu,0,5,711.9469530007336,,ridge,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so.1.18.0,4,512,0,0,0,0,0,4,20,0,0,512,3,0.32835427141454104,1.0,cpu
+1.18.0,cpu,0,5,84.34402299462818,,pls,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so.1.18.0,3,512,0,0,5,5,0,0,0,0,0,512,3,0.4084460685952113,1.0,cpu
+1.18.0,cpu,0,5,180.83610199391842,,ridge,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so.1.18.0,4,1024,0,0,0,0,0,4,20,0,0,256,3,0.5938926660074296,1.0,cpu
+1.18.0,cpu,0,5,232.9197860090062,,pls,/home/delete/nirs4all/nirs4all-methods/build/dev-release/cpp/src/libn4m.so.1.18.0,3,1024,0,0,5,5,0,0,0,0,0,256,3,0.593835416464065,1.0,cpu
+1.18.0,cuda,1,5,6.161471013911068,,ridge,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so.1.18.0,4,48,0,0,0,0,0,0,0,4,20,260,3,0.05663614403987,0.34182697773349763,cpu
+1.18.0,cuda,1,5,2.8844030166510493,,pls,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so.1.18.0,3,48,0,0,5,5,0,0,0,0,0,260,3,0.06773870442683695,0.6136982215029437,cpu
+1.18.0,cuda,1,5,62.40211398107931,,ridge,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so.1.18.0,4,256,0,0,0,0,0,4,20,0,0,260,3,0.3724440556151129,4.770676472441045,cuda
+1.18.0,cuda,1,5,8.25918497866951,,pls,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so.1.18.0,3,256,0,0,5,5,0,0,0,0,0,260,3,0.42658046058499544,4.068512945443768,cuda
+1.18.0,cuda,1,5,519.8759070190135,,ridge,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so.1.18.0,4,512,0,0,0,0,0,4,20,0,0,512,3,0.32835427141454093,1.3694555631228655,cuda
+1.18.0,cuda,1,5,29.82934602187015,,pls,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so.1.18.0,3,512,0,0,5,5,0,0,0,0,0,512,3,0.4084460685952122,2.827551865628874,cuda
+1.18.0,cuda,1,5,70.1546180061996,,ridge,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so.1.18.0,4,1024,0,0,0,0,0,4,20,0,0,256,3,0.5938926660074295,2.5776792338593855,cuda
+1.18.0,cuda,1,5,109.01602997910231,,pls,/home/delete/nirs4all/nirs4all-methods/build/cuda-on/cpp/src/libn4m.so.1.18.0,3,1024,0,5,5,0,0,0,0,0,0,256,3,0.5938354164640647,2.1365645589337223,cuda

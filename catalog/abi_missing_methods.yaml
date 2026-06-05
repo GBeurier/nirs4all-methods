@@ -8,6 +8,8 @@
 new_methods:
   # ---- aom_pop ----
   - {prefix: n4m_aom_per_component, category: aom_pop, subcategory: aom, name: pop_pls}
+  - {prefix: n4m_aom_sweep_run, category: aom_pop, subcategory: aom, name: aom_sweep}
+  - {prefix: n4m_aom_chain_sweep_run, category: aom_pop, subcategory: aom, name: aom_chain_sweep}
 
   # ---- augmentation ----
   - {prefix: n4m_aug_edge_artifacts, category: augmentation, subcategory: edge_artifacts, name: edge_artifacts}
@@ -34,6 +36,7 @@ new_methods:
   - {prefix: n4m_mir_pls, category: models, subcategory: multiblock, name: mir_pls}
   - {prefix: n4m_rosa, category: models, subcategory: multiblock, name: rosa}
   # ---- models: regularized ----
+  - {prefix: n4m_ridge_fit, category: models, subcategory: regularized, name: ridge}
   - {prefix: n4m_ridge_pls, category: models, subcategory: regularized, name: ridge_pls}
   - {prefix: n4m_robust_pls, category: models, subcategory: regularized, name: robust_pls}
   - {prefix: n4m_weighted_pls, category: models, subcategory: regularized, name: weighted_pls}
@@ -73,3 +76,7 @@ new_methods:
   - {prefix: n4m_pp_vsn, category: preprocessing, subcategory: scatter, name: vsn}
   # ---- preprocessing: baselines ----
   - {prefix: n4m_pp_saps, category: preprocessing, subcategory: baselines, name: saps}
+
+  # ---- utilities ----
+  - {prefix: n4m_moments, category: utilities, subcategory: moments, name: moments}
+  - {prefix: n4m_sweep_run, category: utilities, subcategory: sweep, name: sweep}
