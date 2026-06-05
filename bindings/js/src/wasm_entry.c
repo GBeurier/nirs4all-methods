@@ -1421,3 +1421,89 @@ void n4m_wasm_pp_destroy(void* handle) {
     }
     free(w);
 }
+
+/* ============================================================================
+ * Splitters (raw-double-pointer surface for JS)
+ * ----------------------------------------------------------------------------
+ * Compute a single train/test split over the n rows and fill out_test_mask[n]
+ * with 1 (test) / 0 (train). The numerics stay 100% in libn4m (the n4m_split_*
+ * splitters); this is only marshalling + mask conversion.
+ *
+ *   kind 0 = KennardStone   (X only)        — n4m_split_kennard_stone_*
+ *   kind 1 = SPXY           (X and Y)       — n4m_split_spxy_*
+ *   kind 2 = KMeans         (X; seed,p0=max_iter) — n4m_split_kmeans_*
+ *   kind 3 = KBinsStratified(Y; seed,p0=n_bins,p1=strategy) — n4m_split_kbins_*
+ *
+ * test_size is a fraction in (0, 1). `seed` is used by the stochastic splitters
+ * (KMeans, KBins); KS/SPXY are deterministic and ignore it. p0/p1 are generic
+ * extra integer params (see per-kind notes). y may be NULL for kinds that do not
+ * use it (KS, KMeans); SPXY and KBins require it. Returns 0 on success, a
+ * N4M_ERR_* otherwise; on failure out_test_mask is left untouched.
+ * ==========================================================================*/
+__attribute__((used))
+int n4m_wasm_split(int kind, double test_size, unsigned int seed,
+                   int p0, int p1,
+                   const double* x, const double* y,
+                   int n, int p, int q,
+                   int* out_test_mask) {
+    if (out_test_mask == NULL) return N4M_ERR_NULL_POINTER;
+    if (x == NULL && kind != 3) return N4M_ERR_NULL_POINTER; /* KBins needs only Y */
+    if ((kind == 1 || kind == 3) && y == NULL) return N4M_ERR_NULL_POINTER;
+    if (n < 2 || (x != NULL && p < 1)) return N4M_ERR_INVALID_ARGUMENT;
+    if (!(test_size > 0.0 && test_size < 1.0)) return N4M_ERR_INVALID_ARGUMENT;
+
+    n4m_matrix_view_t xv, yv;
+    if (x != NULL) n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
+    if (y != NULL) n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q < 1 ? 1 : q, N4M_DTYPE_F64);
+
+    n4m_split_result_t res = {0};
+    n4m_status_t s = N4M_ERR_NOT_IMPLEMENTED;
+    switch (kind) {
+        case 0: { /* KennardStone */
+            n4m_split_kennard_stone_handle_t* h = NULL;
+            s = n4m_split_kennard_stone_create(&h, test_size);
+            if (s == N4M_OK) s = n4m_split_kennard_stone_split(h, xv, &res);
+            n4m_split_kennard_stone_destroy(h);
+            break;
+        }
+        case 1: { /* SPXY (joint X-Y) */
+            n4m_split_spxy_handle_t* h = NULL;
+            s = n4m_split_spxy_create(&h, test_size);
+            if (s == N4M_OK) s = n4m_split_spxy_split(h, xv, yv, &res);
+            n4m_split_spxy_destroy(h);
+            break;
+        }
+        case 2: { /* KMeans (k-means++) — p0 = max_iter */
+            int max_iter = p0 > 0 ? p0 : 100;
+            n4m_split_kmeans_handle_t* h = NULL;
+            s = n4m_split_kmeans_create(&h, test_size, (uint64_t)seed, max_iter);
+            if (s == N4M_OK) s = n4m_split_kmeans_split(h, xv, &res);
+            n4m_split_kmeans_destroy(h);
+            break;
+        }
+        case 3: { /* KBinsStratified (Y) — p0 = n_bins, p1 = strategy */
+            int n_bins = p0 > 1 ? p0 : 5;
+            int strategy = p1; /* 0 uniform, 1 quantile */
+            n4m_split_kbins_stratified_handle_t* h = NULL;
+            s = n4m_split_kbins_stratified_create(&h, test_size, (uint64_t)seed,
+                                                  n_bins, strategy);
+            if (s == N4M_OK) s = n4m_split_kbins_stratified_split(h, yv, &res);
+            n4m_split_kbins_stratified_destroy(h);
+            break;
+        }
+        default:
+            return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (s != N4M_OK) { n4m_split_result_destroy(&res); return s; }
+
+    /* Fill the mask: default train (0), mark test rows (1). */
+    for (int i = 0; i < n; ++i) out_test_mask[i] = 0;
+    if (res.test_idx != NULL) {
+        for (int64_t t = 0; t < res.n_test; ++t) {
+            int64_t row = res.test_idx[t];
+            if (row >= 0 && row < (int64_t)n) out_test_mask[(int)row] = 1;
+        }
+    }
+    n4m_split_result_destroy(&res);
+    return N4M_OK;
+}
