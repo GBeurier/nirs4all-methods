@@ -15,7 +15,7 @@ import { getModule } from "./ffi.js";
 export { loadModule, getModule, makeMatrixView, readArrayView } from "./ffi.js";
 export { Context } from "./context.js";
 export { Config } from "./config.js";
-export { Model, fitPls, predictPls, type PlsModel } from "./model.js";
+export { Model, fitPls, predictPls, fitModel, predictModel, type PlsModel, type FittedModel } from "./model.js";
 export {
     ppCreate,
     ppFit,

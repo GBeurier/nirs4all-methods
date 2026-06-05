@@ -34,6 +34,9 @@ list(APPEND _js_export_list
     "_malloc" "_free"
     "_n4m_wasm_pls_fit_legacy"
     "_n4m_wasm_pls_predict_from_coeffs"
+    # Generic model dispatcher (Tier A algorithm-enum + Tier B coeff fits)
+    "_n4m_wasm_model_fit"
+    "_n4m_wasm_model_predict_from_coeffs"
     # Generic preprocessing dispatcher (raw-pointer surface; numerics in libn4m)
     "_n4m_wasm_pp_create"
     "_n4m_wasm_pp_fit"
