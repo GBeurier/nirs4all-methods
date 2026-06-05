@@ -175,7 +175,9 @@ enum n4m_wasm_model_kind {
     /* Tier B — standalone coeff fits */
     MK_RIDGE, MK_RIDGE_PLS, MK_CONTINUUM, MK_ROBUST_PLS, MK_CPPLS,
     MK_SPARSE_SIMPLS, MK_GROUP_SPARSE_PLS, MK_FUSED_SPARSE_PLS,
-    MK_BAGGING_PLS, MK_BOOSTING_PLS, MK_RANDOM_SUBSPACE_PLS
+    MK_BAGGING_PLS, MK_BOOSTING_PLS, MK_RANDOM_SUBSPACE_PLS,
+    /* Tier B extension — additional coeff-triple fits */
+    MK_MIR_PLS, MK_MB_PLS, MK_MISSING_NIPALS
 };
 
 static int model_kind_for(const char* model) {
@@ -197,6 +199,9 @@ static int model_kind_for(const char* model) {
     if (strcmp(model, "BaggingPLS") == 0) return MK_BAGGING_PLS;
     if (strcmp(model, "BoostingPLS") == 0) return MK_BOOSTING_PLS;
     if (strcmp(model, "RandomSubspacePLS") == 0) return MK_RANDOM_SUBSPACE_PLS;
+    if (strcmp(model, "MIRPLS") == 0) return MK_MIR_PLS;
+    if (strcmp(model, "MBPLS") == 0) return MK_MB_PLS;
+    if (strcmp(model, "MissingAwareNIPALS") == 0) return MK_MISSING_NIPALS;
     return MK_NONE;
 }
 
@@ -426,6 +431,29 @@ static int n4m_wasm_model_fit_tier_b(
             uint64_t seed = n_params >= 3 ? (uint64_t)params[2] : 0;
             s = n4m_random_subspace_pls_fit(ctx, cfg, &xv, &yv, n_estimators,
                                             feats, seed, &res);
+            break;
+        }
+        case MK_MIR_PLS: {
+            /* Multiple-Inverse-Regression PLS: SIMPLS on (Y, X) then
+             * pseudo-inverse → X→Y coefficients. No extra params; centred
+             * coefficient triple (coefficients/x_mean/y_mean). */
+            s = n4m_mir_pls_fit(ctx, cfg, &xv, &yv, &res);
+            break;
+        }
+        case MK_MB_PLS: {
+            /* Block-weighted multi-block PLS over a SINGLE block (all p
+             * features). It returns input-space coefficients PLUS a genuine
+             * affine intercept (and x_scale), so it predicts on RAW X via
+             * intercept + x.B — the same explicit-intercept path as Ridge. */
+            int64_t block_sizes[1];
+            block_sizes[0] = (int64_t)p;
+            s = n4m_mb_pls_fit(ctx, cfg, &xv, &yv, block_sizes, 1, &res);
+            break;
+        }
+        case MK_MISSING_NIPALS: {
+            /* Missing-aware NIPALS PLS: same centred coefficient triple as a
+             * regular SIMPLS PLS but tolerant of NaN entries in X. */
+            s = n4m_missing_aware_nipals_fit(ctx, cfg, &xv, &yv, &res);
             break;
         }
         default:
