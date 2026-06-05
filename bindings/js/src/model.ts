@@ -429,6 +429,77 @@ export function fitPop(X: Matrix, Y: Matrix, maxComponents: number,
     }
 }
 
+/** A train/test splitter kind for {@link computeSplit}. */
+export type SplitKind = "KennardStone" | "SPXY" | "KMeans" | "KBinsStratified";
+
+/** Options for {@link computeSplit}. `testSize` is a fraction in (0, 1). */
+export interface SplitOptions {
+    /** test fraction in (0, 1); default 0.25. */
+    testSize?: number;
+    /** seed for the stochastic splitters (KMeans, KBinsStratified). */
+    seed?: number;
+    /** KMeans: max iterations (default 100). */
+    maxIter?: number;
+    /** KBinsStratified: number of Y bins (default 5). */
+    nBins?: number;
+    /** KBinsStratified: 0 = uniform-width bins, 1 = quantile bins. */
+    strategy?: number;
+}
+
+const SPLIT_KIND_CODE: Record<SplitKind, number> = {
+    KennardStone: 0,
+    SPXY: 1,
+    KMeans: 2,
+    KBinsStratified: 3,
+};
+
+/** Compute a single train/test split over the rows of X (and Y) via libn4m's
+ * splitters, returning a `Uint8Array` mask of length n where 1 = test, 0 = train.
+ *
+ * Numerics are 100% libn4m (`n4m_wasm_split` → n4m_split_*). KennardStone and
+ * SPXY are deterministic; KMeans and KBinsStratified use `opts.seed`. SPXY and
+ * KBinsStratified need Y; KennardStone and KMeans use X only.
+ *
+ * @param kind splitter strategy.
+ * @param X row-major (n × p) input matrix.
+ * @param Y row-major (n × q) target matrix (required for SPXY / KBinsStratified).
+ * @param opts split options (testSize / seed / maxIter / nBins / strategy).
+ */
+export function computeSplit(kind: SplitKind, X: Matrix, Y: Matrix | null,
+                             opts: SplitOptions = {}): Uint8Array {
+    const M = getModule();
+    const n = X.rows, p = X.cols;
+    const q = Y ? Y.cols : 1;
+    const testSize = opts.testSize ?? 0.25;
+    const seed = (opts.seed ?? 0) >>> 0;
+    // p0/p1 generic int params: KMeans → maxIter; KBins → nBins, strategy.
+    let p0 = 0, p1 = 0;
+    if (kind === "KMeans") p0 = opts.maxIter ?? 100;
+    if (kind === "KBinsStratified") { p0 = opts.nBins ?? 5; p1 = opts.strategy ?? 0; }
+
+    const xBuf = _malloc_f64(M, n * p);
+    const yBuf = Y ? _malloc_f64(M, n * q) : { ptr: 0, len: 0 };
+    const maskBuf = M._malloc(n * 4); // int32[n]
+    try {
+        _copy_in(M, X.data, xBuf.ptr);
+        if (Y) _copy_in(M, Y.data, yBuf.ptr);
+        const status = M.ccall(
+            "n4m_wasm_split", "number",
+            ["number", "number", "number", "number", "number",
+             "number", "number", "number", "number", "number", "number"],
+            [SPLIT_KIND_CODE[kind], testSize, seed, p0, p1,
+             xBuf.ptr, yBuf.ptr, n, p, q, maskBuf]) as number;
+        checkStatus(status);
+        const mask = new Uint8Array(n);
+        for (let i = 0; i < n; i++) mask[i] = M.HEAP32[(maskBuf >> 2) + i] === 1 ? 1 : 0;
+        return mask;
+    } finally {
+        M._free(xBuf.ptr);
+        if (yBuf.ptr !== 0) M._free(yBuf.ptr);
+        M._free(maskBuf);
+    }
+}
+
 /* Legacy class wrapper preserved for backwards compat with the
  * scaffold; not yet exposed via index.ts. */
 export class Model {
