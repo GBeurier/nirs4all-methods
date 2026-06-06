@@ -3049,3 +3049,52 @@ PLS many-batched W/P tile storage (2026-06-06):
   branchy sign flips) plus the broader missing fused cartesian/IKPLS CUDA
   executor. Solving that cleanly likely requires custom CUDA kernels / CMake
   CUDA-language work, not just host-C++ cuBLAS reshaping.
+
+Final stop handoff update (2026-06-06):
+
+- User requested: "Met à jour ou créé le handoff, et stop." Work stops here;
+  no additional code, benchmark or test expansion was started after this
+  instruction.
+- Repository state at this stop:
+  - branch: `release-readiness-fixes`;
+  - head: `ccefb1a6c5c7b0a88640a75a1ceee716d55d1cea`
+    (`perf(cuda): store PLS W/P as batched tiles`);
+  - local branch and `origin/release-readiness-fixes` were identical before
+    this handoff-only edit.
+- Latest validated implementation state:
+  - public AOM/moment method integration is broadly present in
+    `nirs4all-methods`: CPU/CUDA facades, reusable sklearn wrappers,
+    strict-linear AOM/moment presets, exact and proxy PLS screen/refit variants,
+    Ridge/PLS staged campaigns, fixed-candidate reuse, inventories, docs and
+    benchmark smoke artifacts;
+  - current CUDA PLS many-batched route has been optimized with batched scalar
+    reductions/scaling, batched sign-value gather, batched score deflation and
+    component-major W/P tile storage;
+  - validations after the latest CUDA engine commit passed:
+    `cmake --build build/cuda-on --target n4m_c -j2`, the one-GPU pytest guard
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`,
+    `cmake --build build/cuda-on --target n4m_internal_tests -j2`, and
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`;
+  - manual 32-chain synthetic exact-CV PLS smoke matched many-batched and
+    legacy scores, with expected route counters.
+- Important unfinished item from the interrupted next step:
+  - after changing internal W/P storage, the existing CUDA guard mostly covers
+    score-only route equivalence. A useful next small test is to extend
+    `bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`
+    with a non-`score_only` many-batched-vs-legacy comparison of final
+    predictions/coefs/candidate scores. This was planned but not implemented.
+- Real remaining gap:
+  - the current route is still host C++ plus cuBLAS orchestration, not a true
+    fused cartesian/IKPLS CUDA executor. The remaining per-job sign path
+    (`Idamax` / branchy sign flips) and any true 200k-chain grinder will likely
+    require custom CUDA kernels and CMake CUDA-language work.
+- Recommended next continuation:
+  1. If resuming release-readiness only, add the non-score-only CUDA output
+     guard above, run the targeted one-GPU pytest, `py_compile` and
+     `git diff --check`, then commit.
+  2. If resuming performance work, start in
+     `cpp/src/core/cuda_dispatch.cpp` around
+     `pls1_moment_components_many_batched_tiled`; attack the remaining sign
+     path only if willing to add custom CUDA kernels.
+  3. If deciding to stop engineering, run one deliberate benchmark campaign
+     from the current branch rather than adding more smoke artifacts.
