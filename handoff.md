@@ -2888,3 +2888,35 @@ Coverage-matrix release audit refresh (2026-06-06):
 - Validation:
   - facade/catalog inventory tests: `40 passed`.
   - `git diff --check`: PASS.
+
+Stop snapshot for next continuation (2026-06-06):
+
+- User requested: "Met à jour ou créé le handoff, et stop." No new engine work
+  was started after that instruction.
+- Current branch at stop: `release-readiness-fixes`, pushed to origin before
+  this handoff-only update. Latest pushed commit before this note:
+  `b213786 docs(aom): refresh many-batched coverage audit`.
+- Current objective status:
+  - Public AOM/moment method integration is broadly in place: direct moment
+    heads, reusable sklearn wrappers, winning/preconfigured strict-linear AOM
+    presets, ultra-configurable score/screen/refit/staged campaigns, fixed
+    candidate winner reuse, candidate audit/report helpers, docs/catalog
+    discoverability and CPU/CUDA smoke artifacts.
+  - Current release evidence includes direct moment sweep, AOM sweep,
+    screen/refit and real held-out runner CUDA many-batched route smokes, plus
+    facade/catalog guards and benchmark artefact guards.
+  - The real remaining gap is still engine/performance work: a true fused
+    cartesian/IKPLS CUDA many-chain/many-fold executor, broader arbitrary-chain
+    moment coverage for unsupported regimes, and broad benchmark campaigns if
+    the user wants to quantify final oracle gaps again.
+- Recommended next continuation:
+  1. Do not spend more time on public API wiring unless an audit finds a
+     specific missing export/catalog/doc/test.
+  2. If continuing implementation, start from `cpp/src/core/cuda_dispatch.cpp`
+     and `cpp/src/core/sweep.cpp` around `pls1_moment_components_many*` /
+     `fit_pls1_moment_prefixes_for_folds`. The current many-batched route uses
+     strided-batched cuBLAS for the large products but still has per-job scalar
+     reductions/host synchronisation, so that is the likely concrete engine
+     target.
+  3. If not attacking engine work, run a deliberate benchmark campaign rather
+     than adding more release-evidence smokes.
