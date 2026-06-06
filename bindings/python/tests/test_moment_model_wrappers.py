@@ -1155,6 +1155,98 @@ print(json.dumps({
     )
 
 
+def test_native_aom_pls_moment_batch_omp_scores_match_scalar_build():
+    root = Path(__file__).resolve().parents[3]
+    dev_lib = root / "build/dev-release/cpp/src/libn4m.so"
+    omp_lib = root / "build/omp-on/cpp/src/libn4m.so"
+    if not dev_lib.exists() or not omp_lib.exists():
+        pytest.skip("requires dev-release and omp-on libn4m builds")
+
+    code = r"""
+import json
+import numpy as np
+import n4m
+
+rng = np.random.default_rng(20260607)
+X = rng.standard_normal((96, 16))
+y = (
+    0.65 * X[:, 0]
+    - 0.3 * X[:, 4]
+    + 0.18 * X[:, 9]
+    + 0.04 * rng.standard_normal(X.shape[0])
+)
+folds = np.arange(X.shape[0], dtype=np.int32) % 4
+chains = [
+    [("identity", ())],
+    [("savgol_smooth", (5, 2))],
+    [("savgol_derivative", (7, 2, 1))],
+    [("finite_difference", (1,))],
+]
+
+res = n4m.aom_chain_sweep_run(
+    X,
+    y,
+    chains,
+    cv=4,
+    fold_ids=folds,
+    ridge_lambdas=[],
+    pls_components=[1, 2, 3],
+    heads=("pls",),
+    scale_x=False,
+    moment_policy="force_moments",
+    pls_score_mode="cv",
+    score_only=True,
+)
+print(json.dumps({
+    "candidate_scores": np.asarray(res["candidate_scores"], dtype=float).tolist(),
+    "selected_candidate_id": int(res["selected_candidate_id"]),
+    "selected_chain_id": int(res["selected_chain_id"]),
+    "selected_cv_rmse": float(res["selected_cv_rmse"]),
+    "selected_head_id": float(res["selected_head_id"]),
+    "selected_param": float(res["selected_param"]),
+    "n_pls_moment_score_batch_calls": int(res["n_pls_moment_score_batch_calls"]),
+    "n_pls_moment_score_batch_jobs": int(res["n_pls_moment_score_batch_jobs"]),
+}))
+"""
+
+    def run_with_lib(lib_path: Path) -> dict:
+        env = os.environ.copy()
+        env["N4M_LIB_PATH"] = str(lib_path)
+        env["PYTHONPATH"] = str(root / "bindings/python/src")
+        env["OMP_NUM_THREADS"] = "2"
+        env["OPENBLAS_NUM_THREADS"] = "1"
+        out = subprocess.check_output(
+            [sys.executable, "-c", code],
+            cwd=root,
+            env=env,
+            text=True,
+        )
+        return json.loads(out)
+
+    scalar = run_with_lib(dev_lib)
+    omp = run_with_lib(omp_lib)
+
+    scalar_scores = np.asarray(scalar["candidate_scores"], dtype=float)
+    omp_scores = np.asarray(omp["candidate_scores"], dtype=float)
+    assert omp_scores.shape == scalar_scores.shape
+    np.testing.assert_allclose(omp_scores, scalar_scores, rtol=1e-10, atol=1e-10)
+    assert scalar["n_pls_moment_score_batch_calls"] == 1
+    assert omp["n_pls_moment_score_batch_calls"] == 1
+    assert scalar["n_pls_moment_score_batch_jobs"] == 4 * 4
+    assert omp["n_pls_moment_score_batch_jobs"] == 4 * 4
+    assert omp["selected_candidate_id"] == scalar["selected_candidate_id"]
+    assert omp["selected_chain_id"] == scalar["selected_chain_id"]
+    assert omp["selected_head_id"] == pytest.approx(
+        scalar["selected_head_id"], rel=0.0, abs=1e-12
+    )
+    assert omp["selected_param"] == pytest.approx(
+        scalar["selected_param"], rel=0.0, abs=1e-12
+    )
+    assert omp["selected_cv_rmse"] == pytest.approx(
+        scalar["selected_cv_rmse"], rel=1e-10, abs=1e-10
+    )
+
+
 def test_native_sweep_run_accepts_explicit_folds_multi_output_y():
     X, y = _dataset()
     Y = np.column_stack([y, 0.5 * y + 0.1])
