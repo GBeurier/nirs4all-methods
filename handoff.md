@@ -8,6 +8,25 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- PLS exact-CV reusable screen/refit preset:
+  - Commit `570ef01 feat(aom): add exact PLS screen-refit preset` adds
+    `NativeAOMMomentPLSExactScreenRefitRegressor`, a PLS-only
+    `NativeAOMScreenRefitRegressor` preset with `heads=("pls",)`,
+    `ridge_lambdas=()`, `moment_policy="force_moments"`,
+    `chain_ordering="prefix"` and first-pass `pls_score_mode="cv"`.
+  - The existing `NativeAOMMomentPLSScreenRefitRegressor` remains the
+    GCV-proxy -> exact-refit preset; the new exact preset is additive and is
+    intended for screen-recall audits and reusable exact train-CV PLS screens.
+  - Public exports now cover `n4m`, `n4m.sklearn`, `n4m.aom` and
+    `n4m.moment`; inventories expose `moment_pls_exact_screen_refit`.
+    Method docs, coverage matrix and catalog notes distinguish PLS GCV,
+    PLS exact-CV and Ridge exact presets.
+  - Validation after this Python-surface/docs slice: full dev-release
+    `test_moment_model_wrappers.py` passed (`80 passed`); py_compile on
+    touched Python modules/tests passed; catalog validation and split-method
+    checks passed; `git diff --check` passed. Branch was pushed to
+    `origin/release-readiness-fixes`.
+
 - Real-cohort benchmark PLS batch telemetry export:
   - `benchmarks/cross_binding/run_aom_staged_real_cohort.py` now persists the
     staged PLS score-batch counters in result CSV rows and diagnostics JSON:
