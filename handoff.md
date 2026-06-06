@@ -2546,3 +2546,25 @@ Staged real-cohort CSV resume guard slice (2026-06-06):
   - Python `py_compile` on touched benchmark/test files: PASS.
 - Remaining true gap is unchanged: this closes a benchmark-resume correctness
   issue, but not the fused/batched Ridge/PLS many-chain executor.
+
+Strict AOM portfolio CPU timing artifact slice (2026-06-06):
+
+- Generated committed CPU/dev-release timing pairs for strict AOM methods that
+  previously had committed CUDA smokes only:
+  `aom_preprocess_timing.csv`, `aom_ridge_superblock_timing.csv`,
+  `aom_ridge_active_superblock_timing.csv`,
+  `aom_ridge_mkl_superblock_timing.csv`, `aom_pls_superblock_timing.csv`,
+  `aom_ridge_pls_superblock_timing.csv`, `aom_chain_ridge_pls_timing.csv`,
+  `aom_ridge_global_timing.csv` and `aom_staged_chain_campaign_timing.csv`.
+- Added release guards in
+  `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py`:
+  - `aom_preprocess_timing.csv` covers direct strict-linear operators in hard
+    and soft gating modes on `build/dev-release`.
+  - strict diversity CPU artifacts cover native + sklearn replay where
+    applicable.
+  - CPU PLS rows have host PLS counters nonzero and CUDA counters zero.
+  - staged CPU timing keeps `selection_uses_test_set=False`.
+- Validation:
+  - full `test_aom_moment_cuda_smoke_artifacts.py`: `34 passed`.
+- Remaining true gap is unchanged: this improves CPU/GPU timing evidence, but
+  not the fused/batched Ridge/PLS many-chain executor.

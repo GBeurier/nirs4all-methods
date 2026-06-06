@@ -1,5 +1,37 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Strict AOM portfolio CPU timing artifacts
+
+Purpose:
+
+- Close the release-readiness evidence gap where several catalogued strict AOM
+  portfolio methods had committed CUDA smoke timing artifacts but no committed
+  CPU/dev-release timing pair.
+
+Changes:
+
+- Generated CPU timing CSVs on `build/dev-release` for:
+  `aom_preprocess_timing.csv`, `aom_ridge_superblock_timing.csv`,
+  `aom_ridge_active_superblock_timing.csv`,
+  `aom_ridge_mkl_superblock_timing.csv`, `aom_pls_superblock_timing.csv`,
+  `aom_ridge_pls_superblock_timing.csv`, `aom_chain_ridge_pls_timing.csv`,
+  `aom_ridge_global_timing.csv` and `aom_staged_chain_campaign_timing.csv`.
+- Added release guards proving the new CPU artifacts use the dev-release
+  library, cover native+sklearn replay where applicable, keep PLS host counters
+  nonzero and CUDA counters at zero, and preserve the staged campaign invariant
+  `selection_uses_test_set=False`.
+
+Validation:
+
+- Full `test_aom_moment_cuda_smoke_artifacts.py` passed (`34 passed`).
+
+Follow-up:
+
+- Some older CPU timing artifacts (`aom_sweep_timing.csv`,
+  `aom_selector_timing.csv`, `aom_robust_hpo_timing.csv`) still pre-date the
+  latest ABI in their recorded metadata, but they already had committed CPU
+  rows. This slice targets the missing CPU-pair gap.
+
 ## 2026-06-06 - Staged real-cohort resume rejects stale CSV schemas
 
 Purpose:
