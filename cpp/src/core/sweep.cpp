@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <new>
@@ -3223,6 +3224,13 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
         }
     }
     const auto max_comp = *std::max_element(components.begin(), components.end());
+    std::vector<std::int32_t> fallback_components_desc = components;
+    std::sort(fallback_components_desc.begin(), fallback_components_desc.end(),
+              std::greater<std::int32_t>{});
+    fallback_components_desc.erase(
+        std::unique(fallback_components_desc.begin(),
+                    fallback_components_desc.end()),
+        fallback_components_desc.end());
 
     std::vector<MomentStats> train_stats(n_chains * n_folds);
     for (std::size_t chain = 0; chain < n_chains; ++chain) {
@@ -3249,9 +3257,9 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
         have_batched_prefix_fits = true;
     } else {
         // A rank-deficient late component should not fail a broad screen when
-        // smaller component prefixes are still scoreable. Fall back to slower
-        // per-chain/fold/component moment fits and mark only failed candidates
-        // as infinite below.
+        // smaller component prefixes are still scoreable. Fall back below to
+        // the largest recoverable prefix per job, then reuse all lower
+        // prefixes from that fit.
         ctx.clear_error();
     }
 
@@ -3294,25 +3302,59 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
                 Context fit_ctx;
                 for (std::size_t fold = 0; fold < n_folds; ++fold) {
                     const auto job = chain * n_folds + fold;
-                    for (std::size_t comp_ix = 0; comp_ix < components.size();
-                         ++comp_ix) {
-                        if (ok[comp_ix] == 0) continue;
-                        const auto comp = components[comp_ix];
-                        std::vector<RidgeMomentFit> prefix_fits;
+                    std::vector<std::int32_t> fold_attempt_components_desc;
+                    fold_attempt_components_desc.reserve(
+                        fallback_components_desc.size());
+                    for (const auto attempt_comp :
+                         fallback_components_desc) {
+                        bool needed = false;
+                        for (std::size_t comp_ix = 0;
+                             comp_ix < components.size(); ++comp_ix) {
+                            if (ok[comp_ix] != 0 &&
+                                components[comp_ix] == attempt_comp) {
+                                needed = true;
+                                break;
+                            }
+                        }
+                        if (needed) {
+                            fold_attempt_components_desc.push_back(
+                                attempt_comp);
+                        }
+                    }
+                    if (fold_attempt_components_desc.empty()) {
+                        break;
+                    }
+
+                    std::vector<RidgeMomentFit> prefix_fits;
+                    std::int32_t recovered_comp = 0;
+                    for (const auto attempt_comp :
+                         fold_attempt_components_desc) {
                         bool used_cuda_device = false;
                         ++moment_cv_fits;
                         const n4m_status_t st = fit_pls1_moment_prefixes(
-                            fit_ctx, cfg, train_stats[job], comp,
+                            fit_ctx, cfg, train_stats[job], attempt_comp,
                             prefix_fits, &used_cuda_device);
                         if (used_cuda_device) {
                             ++moment_cuda_device_cv_fits;
                         } else {
                             ++moment_host_cv_fits;
                         }
-                        if (st != N4M_OK ||
+                        if (st == N4M_OK &&
+                            prefix_fits.size() >=
+                                static_cast<std::size_t>(attempt_comp)) {
+                            recovered_comp = attempt_comp;
+                            break;
+                        }
+                        fit_ctx.clear_error();
+                        prefix_fits.clear();
+                    }
+                    for (std::size_t comp_ix = 0; comp_ix < components.size();
+                         ++comp_ix) {
+                        if (ok[comp_ix] == 0) continue;
+                        const auto comp = components[comp_ix];
+                        if (comp > recovered_comp ||
                             prefix_fits.size() < static_cast<std::size_t>(comp)) {
                             ok[comp_ix] = 0;
-                            fit_ctx.clear_error();
                             continue;
                         }
                         sse[comp_ix] += ridge_heldout_sse_from_moments(

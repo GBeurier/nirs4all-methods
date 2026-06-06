@@ -45,6 +45,21 @@ const double kY[static_cast<std::size_t>(kN)] = {
     1.2, 0.4, -0.7, 2.1, 0.1, -1.4, 1.8, -0.2,
 };
 
+const double kDegenerateX[static_cast<std::size_t>(kN * kP)] = {
+    0.0,  1.0,  3.0,
+    1.0,  2.0,  5.0,
+    2.0,  3.0,  7.0,
+    3.0,  4.0,  9.0,
+    4.0,  5.0, 11.0,
+    5.0,  6.0, 13.0,
+    6.0,  7.0, 15.0,
+    7.0,  8.0, 17.0,
+};
+
+const double kDegenerateY[static_cast<std::size_t>(kN)] = {
+    -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5,
+};
+
 const std::int32_t kFolds[static_cast<std::size_t>(kN)] = {
     0, 0, 1, 1, 2, 2, 3, 3,
 };
@@ -175,6 +190,62 @@ void test_pls1_moment_batch_scores_match_single_chain() {
     }
 }
 
+void test_pls1_moment_batch_fallback_reuses_recovered_prefixes() {
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+    cfg.aom_score_only = 1;
+
+    n4m_matrix_view_t X = make_view(kX, kN, kP);
+    n4m_matrix_view_t Y = make_view(kY, kN, 1);
+    n4m_matrix_view_t X_degenerate = make_view(kDegenerateX, kN, kP);
+    n4m_matrix_view_t Y_degenerate = make_view(kDegenerateY, kN, 1);
+    const std::int32_t comps[2] = {1, 2};
+
+    ::n4m::core::MomentStats all_stats;
+    SWEEP_CHECK(::n4m::core::compute_moments(ctx, X, Y, all_stats) == N4M_OK);
+    std::vector<::n4m::core::MomentStats> heldout;
+    build_heldout_stats(ctx, X, Y, heldout);
+
+    ::n4m::core::MomentStats degenerate_all_stats;
+    SWEEP_CHECK(::n4m::core::compute_moments(
+                    ctx, X_degenerate, Y_degenerate,
+                    degenerate_all_stats) == N4M_OK);
+    std::vector<::n4m::core::MomentStats> degenerate_heldout;
+    build_heldout_stats(ctx, X_degenerate, Y_degenerate,
+                        degenerate_heldout);
+
+    std::vector<::n4m::core::MomentStats> all_many = {
+        all_stats,
+        degenerate_all_stats,
+    };
+    std::vector<std::vector<::n4m::core::MomentStats>> heldout_many = {
+        heldout,
+        degenerate_heldout,
+    };
+
+    std::vector<::n4m::core::SweepResult> batched;
+    SWEEP_CHECK(::n4m::core::score_pls1_moment_sweeps_score_only(
+                    ctx, cfg, all_many, heldout_many, comps, 2,
+                    batched) == N4M_OK);
+
+    SWEEP_CHECK(batched.size() == 2U);
+    const auto& healthy = batched[0];
+    SWEEP_CHECK(healthy.n_pls_moment_score_batch_calls == 0);
+    SWEEP_CHECK(healthy.n_pls_moment_cv_fits == kCv);
+    SWEEP_CHECK(healthy.n_pls_moment_host_cv_fits == kCv);
+    SWEEP_CHECK(healthy.n_candidates == 2);
+    SWEEP_CHECK(std::isfinite(healthy.candidate_scores[3]));
+    SWEEP_CHECK(std::isfinite(healthy.candidate_scores[7]));
+
+    const auto& degenerate = batched[1];
+    SWEEP_CHECK(degenerate.n_pls_moment_score_batch_calls == 0);
+    SWEEP_CHECK(degenerate.n_pls_moment_cv_fits == kCv + 1);
+    SWEEP_CHECK(degenerate.n_pls_moment_host_cv_fits == kCv + 1);
+    SWEEP_CHECK(degenerate.n_candidates == 2);
+    SWEEP_CHECK(std::isfinite(degenerate.candidate_scores[3]));
+    SWEEP_CHECK(std::isinf(degenerate.candidate_scores[7]));
+}
+
 void test_ridge_moment_batch_scores_match_single_chain() {
     ::n4m::core::Context ctx;
     ::n4m::core::Config cfg;
@@ -286,6 +357,7 @@ int run_internal_sweep_tests() {
     test_pls1_moment_scores_match_materialized_cv(false);
     test_pls1_moment_scores_match_materialized_cv(true);
     test_pls1_moment_batch_scores_match_single_chain();
+    test_pls1_moment_batch_fallback_reuses_recovered_prefixes();
     test_ridge_moment_batch_scores_match_single_chain();
     test_pls1_gcv_moment_batch_scores_match_single_chain();
     if (g_sweep_failures == 0) {
