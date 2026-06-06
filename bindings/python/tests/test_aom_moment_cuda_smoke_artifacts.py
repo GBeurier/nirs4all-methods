@@ -1157,27 +1157,183 @@ def test_aom_staged_chain_campaign_cpu_artifact_covers_host_route():
     assert math.isfinite(_float(row, "best_refit_cv_rmse"))
 
 
-@pytest.mark.parametrize(
-    ("csv_name", "head", "min_refit_candidates"),
-    (
-        ("aom_screen_refit_scaling_cuda_smoke.csv", "pls", 1),
-        ("aom_mixed_screen_refit_scaling_cuda_smoke.csv", "mixed", 1),
-        ("aom_ridge_refit_scaling_cuda_smoke.csv", "ridge", 1),
-    ),
-)
-def test_screen_refit_cuda_smoke_artifacts_cover_global_campaign_profiles(
+def _assert_screen_refit_scaling_rows(
+    rows: list[dict[str, str]],
+    *,
     csv_name: str,
     head: str,
-    min_refit_candidates: int,
+    expect_cuda_build: bool,
+    expected_row_count: int,
+    expected_refit_per_head_top_k: int,
+    expected_split_head_scoring: str,
+    expected_parallel_folds: bool,
+    expected_min_device_features: int | None,
+) -> None:
+    assert len(rows) == expected_row_count, csv_name
+    assert {row["backend"] for row in rows} == {"native_aom_screen_refit_scaling"}
+    assert {row["head"] for row in rows} == {head}
+    assert {row["chain_ordering"] for row in rows} == {"input"}
+    assert {row["split_head_scoring"] for row in rows} == {
+        expected_split_head_scoring
+    }
+    assert {_int(row, "refit_per_head_top_k") for row in rows} == {
+        expected_refit_per_head_top_k
+    }
+
+    for row in rows:
+        if expect_cuda_build:
+            _assert_cuda_build_path(row["library_path"])
+        else:
+            _assert_dev_release_build_path(row["library_path"])
+        _assert_current_aom_artifact_abi(row)
+        assert _bool(row, "cuda_pls_parallel_folds") is expected_parallel_folds
+        assert _bool(row, "cuda_pls_many_batched") is False
+        if expected_min_device_features is None:
+            assert row["cuda_pls_min_device_features"] == ""
+        else:
+            assert _int(row, "cuda_pls_min_device_features") == (
+                expected_min_device_features
+            )
+        assert _int(row, "n_screen_candidates") > 0
+        assert _int(row, "n_screen_top_candidates") > 0
+        assert _int(row, "n_refit_candidates") >= 1
+        assert _int(row, "best_refit_cv_rank") >= 1
+        assert math.isfinite(_float(row, "best_refit_cv_rmse"))
+
+    pls_cv = sum(_int(row, "n_refit_pls_moment_cv_fits") for row in rows)
+    pls_host = sum(_int(row, "n_refit_pls_moment_host_cv_fits") for row in rows)
+    pls_device = sum(
+        _int(row, "n_refit_pls_moment_cuda_device_cv_fits") for row in rows
+    )
+    pls_parallel_jobs = sum(
+        _int(row, "n_refit_pls_moment_cuda_parallel_fold_jobs") for row in rows
+    )
+    ridge_refit_cv = sum(_int(row, "n_refit_ridge_moment_cv_fits") for row in rows)
+    ridge_score_jobs = sum(
+        _int(row, "n_refit_ridge_moment_score_batch_jobs") for row in rows
+    )
+
+    if head in {"pls", "mixed"}:
+        assert pls_cv > 0
+        if expect_cuda_build:
+            assert pls_host == 0
+            assert pls_device == pls_cv
+            assert pls_parallel_jobs == pls_cv
+        else:
+            assert pls_host == pls_cv
+            assert pls_device == 0
+            assert pls_parallel_jobs == 0
+    else:
+        assert pls_cv == 0
+        assert pls_host == 0
+        assert pls_device == 0
+        assert pls_parallel_jobs == 0
+
+    if head in {"ridge", "mixed"}:
+        assert ridge_refit_cv > 0
+        assert ridge_score_jobs > 0
+    else:
+        assert ridge_refit_cv == 0
+        assert ridge_score_jobs == 0
+
+    split_chunks = sum(_int(row, "n_split_head_chunks") for row in rows)
+    chunk_score_calls = sum(_int(row, "n_chunk_score_calls") for row in rows)
+    if head == "mixed" and expected_split_head_scoring == "auto":
+        assert split_chunks > 0
+        assert chunk_score_calls >= split_chunks * 2
+    else:
+        assert split_chunks == 0
+        assert chunk_score_calls >= len(rows)
+
+
+@pytest.mark.parametrize(
+    (
+        "csv_name",
+        "head",
+        "expect_cuda_build",
+        "expected_refit_per_head_top_k",
+        "expected_parallel_folds",
+        "expected_min_device_features",
+    ),
+    (
+        ("aom_screen_refit_scaling.csv", "pls", False, 0, False, None),
+        ("aom_screen_refit_scaling_cuda_smoke.csv", "pls", True, 0, True, 1),
+        ("aom_mixed_screen_refit_scaling.csv", "mixed", False, 4, False, None),
+        ("aom_mixed_screen_refit_scaling_cuda_smoke.csv", "mixed", True, 4, True, 1),
+        ("aom_ridge_refit_scaling.csv", "ridge", False, 0, False, None),
+        ("aom_ridge_refit_scaling_cuda_smoke.csv", "ridge", True, 0, True, 1),
+    ),
+)
+def test_screen_refit_scaling_artifacts_cover_global_campaign_profiles(
+    csv_name: str,
+    head: str,
+    expect_cuda_build: bool,
+    expected_refit_per_head_top_k: int,
+    expected_parallel_folds: bool,
+    expected_min_device_features: int | None,
 ):
     rows = _rows(csv_name)
 
-    assert {row["backend"] for row in rows} == {"native_aom_screen_refit_scaling"}
-    assert {row["head"] for row in rows} == {head}
-    for row in rows:
-        _assert_cuda_build_path(row["library_path"])
-        assert _int(row, "n_screen_candidates") > 0
-        assert _int(row, "n_screen_top_candidates") > 0
-        assert _int(row, "n_refit_candidates") >= min_refit_candidates
-        assert _int(row, "best_refit_cv_rank") >= 1
-        assert math.isfinite(_float(row, "best_refit_cv_rmse"))
+    _assert_screen_refit_scaling_rows(
+        rows,
+        csv_name=csv_name,
+        head=head,
+        expect_cuda_build=expect_cuda_build,
+        expected_row_count=25,
+        expected_refit_per_head_top_k=expected_refit_per_head_top_k,
+        expected_split_head_scoring="auto",
+        expected_parallel_folds=expected_parallel_folds,
+        expected_min_device_features=expected_min_device_features,
+    )
+    assert {_int(row, "refit_top_k") for row in rows} == {1, 2, 4, 8, 16}
+    assert {row["execution_mode_requested"] for row in rows} == {
+        "individual",
+        "grouped_score",
+        "batched_score",
+        "union_batched_score",
+        "auto",
+    }
+    assert {row["execution_mode"] for row in rows}.issubset({
+        "individual",
+        "grouped_score",
+        "batched_score",
+        "union_batched_score",
+    })
+
+
+@pytest.mark.parametrize(
+    (
+        "csv_name",
+        "head",
+        "expected_refit_per_head_top_k",
+        "expected_split_head_scoring",
+        "expected_parallel_folds",
+        "expected_min_device_features",
+    ),
+    (
+        ("aom_mixed_screen_refit_split_smoke.csv", "mixed", 1, "auto", False, None),
+        ("aom_screen_refit_parallel_flag_smoke.csv", "pls", 0, "off", True, None),
+        ("aom_screen_refit_min_device_smoke.csv", "pls", 0, "off", True, 1),
+    ),
+)
+def test_screen_refit_flag_smoke_artifacts_cover_small_host_profiles(
+    csv_name: str,
+    head: str,
+    expected_refit_per_head_top_k: int,
+    expected_split_head_scoring: str,
+    expected_parallel_folds: bool,
+    expected_min_device_features: int | None,
+):
+    rows = _rows(csv_name)
+
+    _assert_screen_refit_scaling_rows(
+        rows,
+        csv_name=csv_name,
+        head=head,
+        expect_cuda_build=False,
+        expected_row_count=1,
+        expected_refit_per_head_top_k=expected_refit_per_head_top_k,
+        expected_split_head_scoring=expected_split_head_scoring,
+        expected_parallel_folds=expected_parallel_folds,
+        expected_min_device_features=expected_min_device_features,
+    )
