@@ -201,6 +201,9 @@ _SWEEP_SCALARS = (
     "n_ridge_moment_candidates",
     "n_ridge_dual_materialized_candidates",
     "n_ridge_moment_cv_fits",
+    "n_ridge_moment_eigen_path_preparations",
+    "n_ridge_moment_eigen_path_cv_fits",
+    "n_ridge_moment_direct_cv_fits",
     "n_ridge_dual_materialized_cv_fits",
     "n_ridge_dual_cross_cv_fits",
     "n_ridge_moment_score_batch_calls",
@@ -214,6 +217,8 @@ _SWEEP_SCALARS = (
     "n_pls_moment_cuda_device_cv_fits",
     "n_pls_moment_cuda_parallel_fold_batches",
     "n_pls_moment_cuda_parallel_fold_jobs",
+    "n_pls_moment_cuda_many_batched_batches",
+    "n_pls_moment_cuda_many_batched_jobs",
     "n_pls_moment_score_batch_calls",
     "n_pls_moment_score_batch_jobs",
     "n_pls_materialized_cv_fits",
@@ -250,6 +255,9 @@ _AOM_SWEEP_SCALARS = (
     "n_moment_prefix_cache_hits",
     "n_moment_prefix_cache_misses",
     "n_ridge_moment_cv_fits",
+    "n_ridge_moment_eigen_path_preparations",
+    "n_ridge_moment_eigen_path_cv_fits",
+    "n_ridge_moment_direct_cv_fits",
     "n_ridge_dual_materialized_cv_fits",
     "n_ridge_dual_cross_cv_fits",
     "n_ridge_moment_score_batch_calls",
@@ -261,6 +269,8 @@ _AOM_SWEEP_SCALARS = (
     "n_pls_moment_cuda_device_cv_fits",
     "n_pls_moment_cuda_parallel_fold_batches",
     "n_pls_moment_cuda_parallel_fold_jobs",
+    "n_pls_moment_cuda_many_batched_batches",
+    "n_pls_moment_cuda_many_batched_jobs",
     "n_pls_moment_score_batch_calls",
     "n_pls_moment_score_batch_jobs",
     "n_pls_materialized_cv_fits",
@@ -879,6 +889,9 @@ _AOM_ROUTE_COUNTER_KEYS = (
     "n_moment_prefix_cache_hits",
     "n_moment_prefix_cache_misses",
     "n_ridge_moment_cv_fits",
+    "n_ridge_moment_eigen_path_preparations",
+    "n_ridge_moment_eigen_path_cv_fits",
+    "n_ridge_moment_direct_cv_fits",
     "n_ridge_dual_materialized_cv_fits",
     "n_ridge_dual_cross_cv_fits",
     "n_ridge_moment_score_batch_calls",
@@ -890,6 +903,8 @@ _AOM_ROUTE_COUNTER_KEYS = (
     "n_pls_moment_cuda_device_cv_fits",
     "n_pls_moment_cuda_parallel_fold_batches",
     "n_pls_moment_cuda_parallel_fold_jobs",
+    "n_pls_moment_cuda_many_batched_batches",
+    "n_pls_moment_cuda_many_batched_jobs",
     "n_pls_moment_score_batch_calls",
     "n_pls_moment_score_batch_jobs",
     "n_pls_materialized_cv_fits",
@@ -926,6 +941,9 @@ _AOM_CANDIDATE_INT_FIELDS = {
     "n_moment_prefix_cache_hits",
     "n_moment_prefix_cache_misses",
     "n_ridge_moment_cv_fits",
+    "n_ridge_moment_eigen_path_preparations",
+    "n_ridge_moment_eigen_path_cv_fits",
+    "n_ridge_moment_direct_cv_fits",
     "n_ridge_dual_materialized_cv_fits",
     "n_ridge_dual_cross_cv_fits",
     "n_ridge_moment_score_batch_calls",
@@ -937,6 +955,8 @@ _AOM_CANDIDATE_INT_FIELDS = {
     "n_pls_moment_cuda_device_cv_fits",
     "n_pls_moment_cuda_parallel_fold_batches",
     "n_pls_moment_cuda_parallel_fold_jobs",
+    "n_pls_moment_cuda_many_batched_batches",
+    "n_pls_moment_cuda_many_batched_jobs",
     "n_pls_materialized_cv_fits",
     "n_pls_gcv_proxy_candidates",
     "n_pls_gcv_proxy_fits",
@@ -945,6 +965,9 @@ _AOM_CANDIDATE_INT_FIELDS = {
     "n_pls_moment_cuda_device_final_fits",
     "n_pls_materialized_final_fits",
     "refit_group_n_ridge_moment_cv_fits",
+    "refit_group_n_ridge_moment_eigen_path_preparations",
+    "refit_group_n_ridge_moment_eigen_path_cv_fits",
+    "refit_group_n_ridge_moment_direct_cv_fits",
     "refit_group_n_ridge_dual_materialized_cv_fits",
     "refit_group_n_ridge_dual_cross_cv_fits",
     "refit_group_n_ridge_moment_score_batch_calls",
@@ -953,6 +976,8 @@ _AOM_CANDIDATE_INT_FIELDS = {
     "refit_group_n_pls_moment_cuda_device_cv_fits",
     "refit_group_n_pls_moment_cuda_parallel_fold_batches",
     "refit_group_n_pls_moment_cuda_parallel_fold_jobs",
+    "refit_group_n_pls_moment_cuda_many_batched_batches",
+    "refit_group_n_pls_moment_cuda_many_batched_jobs",
 }
 _AOM_CANDIDATE_FLOAT_FIELDS = {
     "param",
@@ -2641,6 +2666,15 @@ def _finalize_aom_refit_report(
         "n_ridge_moment_cv_fits": int(
             aggregate.get("n_ridge_moment_cv_fits", 0)
         ),
+        "n_ridge_moment_eigen_path_preparations": int(
+            aggregate.get("n_ridge_moment_eigen_path_preparations", 0)
+        ),
+        "n_ridge_moment_eigen_path_cv_fits": int(
+            aggregate.get("n_ridge_moment_eigen_path_cv_fits", 0)
+        ),
+        "n_ridge_moment_direct_cv_fits": int(
+            aggregate.get("n_ridge_moment_direct_cv_fits", 0)
+        ),
         "n_ridge_dual_materialized_cv_fits": int(
             aggregate.get("n_ridge_dual_materialized_cv_fits", 0)
         ),
@@ -2671,6 +2705,12 @@ def _finalize_aom_refit_report(
         ),
         "n_pls_moment_cuda_parallel_fold_jobs": int(
             aggregate.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+        ),
+        "n_pls_moment_cuda_many_batched_batches": int(
+            aggregate.get("n_pls_moment_cuda_many_batched_batches", 0)
+        ),
+        "n_pls_moment_cuda_many_batched_jobs": int(
+            aggregate.get("n_pls_moment_cuda_many_batched_jobs", 0)
         ),
         "n_pls_materialized_cv_fits": int(
             aggregate.get("n_pls_materialized_cv_fits", 0)
@@ -3215,6 +3255,15 @@ def aom_refit_candidates(
                 "refit_group_n_ridge_moment_cv_fits": int(
                     result.get("n_ridge_moment_cv_fits", 0)
                 ),
+                "refit_group_n_ridge_moment_eigen_path_preparations": int(
+                    result.get("n_ridge_moment_eigen_path_preparations", 0)
+                ),
+                "refit_group_n_ridge_moment_eigen_path_cv_fits": int(
+                    result.get("n_ridge_moment_eigen_path_cv_fits", 0)
+                ),
+                "refit_group_n_ridge_moment_direct_cv_fits": int(
+                    result.get("n_ridge_moment_direct_cv_fits", 0)
+                ),
                 "refit_group_n_ridge_dual_materialized_cv_fits": int(
                     result.get("n_ridge_dual_materialized_cv_fits", 0)
                 ),
@@ -3241,6 +3290,12 @@ def aom_refit_candidates(
                 ),
                 "refit_group_n_pls_moment_cuda_parallel_fold_jobs": int(
                     result.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+                ),
+                "refit_group_n_pls_moment_cuda_many_batched_batches": int(
+                    result.get("n_pls_moment_cuda_many_batched_batches", 0)
+                ),
+                "refit_group_n_pls_moment_cuda_many_batched_jobs": int(
+                    result.get("n_pls_moment_cuda_many_batched_jobs", 0)
                 ),
                 "refit_group_n_pls_materialized_cv_fits": int(
                     result.get("n_pls_materialized_cv_fits", 0)
@@ -3281,6 +3336,9 @@ def aom_refit_candidates(
                         "n_operator_moment_candidates": 0,
                         "n_materialized_candidates": 0,
                         "n_ridge_moment_cv_fits": 0,
+                        "n_ridge_moment_eigen_path_preparations": 0,
+                        "n_ridge_moment_eigen_path_cv_fits": 0,
+                        "n_ridge_moment_direct_cv_fits": 0,
                         "n_ridge_dual_materialized_cv_fits": 0,
                         "n_ridge_dual_cross_cv_fits": 0,
                         "n_ridge_moment_score_batch_calls": 0,
@@ -3375,6 +3433,15 @@ def aom_refit_candidates(
             "n_operator_moment_candidates": int(result["n_operator_moment_candidates"]),
             "n_materialized_candidates": int(result["n_materialized_candidates"]),
             "n_ridge_moment_cv_fits": int(result.get("n_ridge_moment_cv_fits", 0)),
+            "n_ridge_moment_eigen_path_preparations": int(
+                result.get("n_ridge_moment_eigen_path_preparations", 0)
+            ),
+            "n_ridge_moment_eigen_path_cv_fits": int(
+                result.get("n_ridge_moment_eigen_path_cv_fits", 0)
+            ),
+            "n_ridge_moment_direct_cv_fits": int(
+                result.get("n_ridge_moment_direct_cv_fits", 0)
+            ),
             "n_ridge_dual_materialized_cv_fits": int(
                 result.get("n_ridge_dual_materialized_cv_fits", 0)
             ),
@@ -3399,6 +3466,12 @@ def aom_refit_candidates(
             ),
             "n_pls_moment_cuda_parallel_fold_jobs": int(
                 result.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+            ),
+            "n_pls_moment_cuda_many_batched_batches": int(
+                result.get("n_pls_moment_cuda_many_batched_batches", 0)
+            ),
+            "n_pls_moment_cuda_many_batched_jobs": int(
+                result.get("n_pls_moment_cuda_many_batched_jobs", 0)
             ),
             "n_pls_materialized_cv_fits": int(result.get("n_pls_materialized_cv_fits", 0)),
             "n_pls_gcv_proxy_fits": int(result.get("n_pls_gcv_proxy_fits", 0)),
@@ -3721,6 +3794,924 @@ def aom_moment_screen_refit_campaign(
     )
     report = dict(report)
     report["campaign_preset"] = "moment_fast_screen_refit"
+    return report
+
+
+_AOM_STAGED_PLANS = {
+    "compact": ("compact",),
+    "wide": ("wide",),
+    "lab": ("lab",),
+    "compact_wide": ("compact", "wide"),
+    "compact_lab": ("compact", "lab"),
+    "wide_lab": ("wide", "lab"),
+    "compact_wide_lab": ("compact", "wide", "lab"),
+    "savgol_focus": (
+        {"name": "compact", "profile": "compact"},
+        {
+            "name": "savgol_smooth",
+            "profile": "lab",
+            "templates": (("savgol_smooth",),),
+        },
+        {
+            "name": "savgol_derivative",
+            "profile": "lab",
+            "templates": (("savgol_derivative",),),
+        },
+        {
+            "name": "savgol_combinations",
+            "profile": "lab",
+            "templates": (
+                ("detrend_poly", "savgol_smooth"),
+                ("detrend_poly", "savgol_derivative"),
+                ("savgol_smooth", "finite_difference"),
+                ("savgol_smooth", "savgol_derivative"),
+            ),
+        },
+    ),
+    "strict_family_focus": (
+        {"name": "compact", "profile": "compact"},
+        {
+            "name": "savgol_smooth",
+            "profile": "lab",
+            "templates": (("savgol_smooth",),),
+        },
+        {
+            "name": "savgol_derivative",
+            "profile": "lab",
+            "templates": (("savgol_derivative",),),
+        },
+        {
+            "name": "norris_williams",
+            "profile": "lab",
+            "templates": (("norris_williams",),),
+        },
+        {
+            "name": "finite_difference",
+            "profile": "lab",
+            "templates": (("finite_difference",),),
+        },
+        {
+            "name": "gaussian",
+            "profile": "lab",
+            "templates": (("gaussian",),),
+        },
+        {
+            "name": "fck",
+            "profile": "lab",
+            "templates": (("fck",),),
+        },
+        {
+            "name": "whittaker",
+            "profile": "lab",
+            "templates": (("whittaker",),),
+        },
+        {
+            "name": "strict_combinations",
+            "profile": "lab",
+            "templates": (
+                ("detrend_poly", "savgol_smooth"),
+                ("detrend_poly", "savgol_derivative"),
+                ("detrend_poly", "norris_williams"),
+                ("detrend_poly", "finite_difference"),
+                ("savgol_smooth", "finite_difference"),
+                ("gaussian", "finite_difference"),
+                ("fck", "finite_difference"),
+                ("whittaker", "finite_difference"),
+                ("whittaker", "savgol_derivative"),
+            ),
+        },
+    ),
+}
+
+_AOM_STAGE_OVERRIDE_KEYS = frozenset({
+    "name",
+    "profile",
+    "families",
+    "templates",
+    "heads",
+    "ridge_lambdas",
+    "pls_components",
+    "top_k",
+    "max_chains",
+    "pls_score_mode",
+    "moment_policy",
+    "chain_ordering",
+    "split_head_scoring",
+})
+
+
+def _staged_normalized_heads(heads):
+    return tuple(sorted({_normalize_sweep_head_name(head) for head in heads}))
+
+
+def _aom_staged_checkpoint_path(checkpoint_dir, stage) -> Path | None:
+    if checkpoint_dir is None:
+        return None
+
+    def safe_token(value) -> str:
+        text = str(value)
+        chars = [
+            char
+            if char.isalnum() or char in {"-", "_", "."}
+            else "_"
+            for char in text
+        ]
+        safe = "".join(chars).strip("._")
+        return safe or "stage"
+
+    return Path(checkpoint_dir) / (
+        f"{int(stage['stage_index']):03d}_"
+        f"{safe_token(stage['name'])}_"
+        f"{safe_token(stage['profile'])}.json"
+    )
+
+
+def _normalize_staged_chain_stages(stages, *, plan, defaults):
+    """Resolve a staged campaign plan into explicit per-stage screen specs.
+
+    Each stage is a profile-stage label plus the screen overrides that differ
+    from the campaign defaults. ``name`` is a stage label only: it never selects
+    by dataset, source or identity and plays no role in model selection.
+    """
+    if stages is None:
+        plan_key = str(plan)
+        if plan_key not in _AOM_STAGED_PLANS:
+            raise ValueError(
+                "plan must be one of "
+                + ", ".join(sorted(_AOM_STAGED_PLANS))
+                + " when stages is None"
+            )
+        stage_specs = [
+            dict(stage) if isinstance(stage, dict)
+            else {"name": stage, "profile": stage}
+            for stage in _AOM_STAGED_PLANS[plan_key]
+        ]
+    else:
+        stage_specs = []
+        for raw in stages:
+            if isinstance(raw, str):
+                stage_specs.append({"name": raw, "profile": raw})
+            elif isinstance(raw, dict):
+                unknown = set(raw) - _AOM_STAGE_OVERRIDE_KEYS
+                if unknown:
+                    raise ValueError(
+                        "unknown staged campaign stage keys: "
+                        + ", ".join(sorted(str(key) for key in unknown))
+                    )
+                stage_specs.append(dict(raw))
+            else:
+                raise ValueError(
+                    "each stage must be a profile name or an override dict"
+                )
+        if not stage_specs:
+            raise ValueError("stages must contain at least one stage")
+
+    normalized = []
+    for index, spec in enumerate(stage_specs):
+        profile = str(spec.get("profile", "compact"))
+        name = str(spec.get("name", profile))
+        normalized.append({
+            "name": name,
+            "stage_index": int(index),
+            "profile": profile,
+            "families": spec.get("families", defaults["families"]),
+            "templates": spec.get("templates", defaults["templates"]),
+            "max_chains": spec.get("max_chains", defaults["max_chains"]),
+            "heads": tuple(spec.get("heads", defaults["heads"])),
+            "ridge_lambdas": spec.get("ridge_lambdas", defaults["ridge_lambdas"]),
+            "pls_components": spec.get("pls_components", defaults["pls_components"]),
+            "top_k": int(spec.get("top_k", defaults["top_k"])),
+            "pls_score_mode": spec.get("pls_score_mode", defaults["pls_score_mode"]),
+            "moment_policy": spec.get("moment_policy", defaults["moment_policy"]),
+            "chain_ordering": spec.get("chain_ordering", defaults["chain_ordering"]),
+            "split_head_scoring": spec.get(
+                "split_head_scoring", defaults["split_head_scoring"]
+            ),
+        })
+    return normalized
+
+
+def _aom_merge_staged_candidates(stage_rows):
+    """Merge per-stage screen candidate rows, keeping the best screen score.
+
+    ``stage_rows`` is a sequence of ``(stage_name, rows)`` pairs. Rows that
+    decode to the same chain/head/parameter are deduplicated; the retained copy
+    carries the best (lowest) ``cv_rmse`` and records every stage it surfaced in
+    under ``campaign_stages`` plus the best-scoring stage under ``campaign_stage``.
+    """
+    best: dict[object, dict[str, object]] = {}
+    stages_by_key: dict[object, list[str]] = {}
+    order: list[object] = []
+    for stage_name, rows in stage_rows:
+        for row in rows:
+            key = _aom_refit_candidate_key(row)
+            if key not in stages_by_key:
+                stages_by_key[key] = []
+                order.append(key)
+            if stage_name not in stages_by_key[key]:
+                stages_by_key[key].append(stage_name)
+            score = float(row.get("cv_rmse", np.inf))
+            current = best.get(key)
+            if current is None or score < float(current["score"]):
+                best[key] = {"row": dict(row), "score": score, "stage": stage_name}
+    merged = []
+    for key in order:
+        entry = best[key]
+        row = dict(entry["row"])
+        row["campaign_stage"] = entry["stage"]
+        row["campaign_stages"] = list(stages_by_key[key])
+        merged.append(row)
+    merged.sort(
+        key=lambda item: (
+            float(item.get("cv_rmse", np.inf)),
+            int(item.get("chain_id", 0)),
+            str(item.get("head", "")),
+            float(item.get("param", 0.0)),
+        )
+    )
+    return merged
+
+
+def _optional_bool_label(value: bool | None) -> str:
+    if value is None:
+        return "default"
+    return "true" if bool(value) else "false"
+
+
+def _normalize_optional_bool_grid(values, name: str) -> list[bool | None]:
+    normalized: list[bool | None] = []
+    seen: set[bool | None] = set()
+    for raw in values:
+        if raw is None:
+            value = None
+        elif isinstance(raw, str):
+            token = raw.strip().lower()
+            if token in {"none", "null", "default"}:
+                value = None
+            elif token in {"true", "1", "yes", "on"}:
+                value = True
+            elif token in {"false", "0", "no", "off"}:
+                value = False
+            else:
+                raise ValueError(f"{name} contains invalid boolean value {raw!r}")
+        else:
+            value = bool(raw)
+        if value not in seen:
+            seen.add(value)
+            normalized.append(value)
+    if not normalized:
+        raise ValueError(f"{name} must contain at least one value")
+    return normalized
+
+
+def _aom_staged_model_config_checkpoint_dir(
+    checkpoint_dir: str | Path | None,
+    field: str,
+    value: bool | None,
+) -> str | Path | None:
+    if checkpoint_dir is None:
+        return None
+    return Path(checkpoint_dir) / f"{field}_{_optional_bool_label(value)}"
+
+
+def aom_staged_chain_campaign(
+    X,
+    y,
+    stages=None,
+    *,
+    plan: str = "compact_wide_lab",
+    cv: int = 5,
+    fold_ids=None,
+    ridge_lambdas=(0.01, 0.1, 1.0, 10.0),
+    pls_components=(1, 2, 4),
+    heads=("ridge", "pls"),
+    top_k: int = 50,
+    refit_top_k: int | None = None,
+    refit_per_head_top_k: int | None = 10,
+    families: dict | None = None,
+    templates: Sequence[Sequence[str]] | None = None,
+    max_chains: int | None = None,
+    chain_chunk_size: int = 4096,
+    checkpoint_dir: str | Path | None = None,
+    resume: bool = True,
+    max_chunks_per_run: int | None = None,
+    center_x: bool | None = None,
+    scale_x: bool | None = None,
+    scale_x_values: Sequence[bool | None] | None = None,
+    center_y: bool | None = None,
+    scale_y: bool | None = None,
+    moment_policy: str | int = "auto",
+    refit_moment_policy: str | int | None = None,
+    pls_score_mode: str | int = "cv",
+    chain_ordering: str = "input",
+    split_head_scoring: str = "off",
+    backend_cuda_available: bool | None = None,
+    backend_min_cuda_product: int | None = None,
+    cuda_pls_parallel_folds: bool | None = None,
+    cuda_pls_min_device_features: int | None = None,
+    cuda_pls_many_batched: bool | None = None,
+    refit_sort_by: str | None = "refit_cv_rmse",
+    refit_execution: str = "auto",
+    refit_auto_max_extra_fraction: float = 1.0,
+    return_predictions: bool = False,
+    impact: bool = True,
+    rank_diagnostics: bool = True,
+    impact_top_k: int | None = None,
+    X_audit=None,
+    y_audit=None,
+    audit_top_k: int | None = None,
+    return_stage_screens: bool = False,
+) -> dict[str, object]:
+    """Run a staged strict-chain screen/refit campaign over Ridge/PLS heads.
+
+    This is the first-class staged-cartesian workflow: it chains several
+    score-only strict-linear preprocessing screens (the ``compact`` / ``wide`` /
+    ``lab`` profiles, or an explicit ``stages`` list mixing profiles and head
+    plans), merges their retained candidates, keeps the top global and per-head
+    rows, exact-CV refits that union once, and attaches preprocessing-impact and
+    screen-vs-refit rank diagnostics. It is pure orchestration over the existing
+    helpers (``aom_chain_score_campaign``, ``_aom_screen_refit_candidate_union``,
+    ``aom_refit_candidates``, ``aom_candidate_preprocessing_impact`` and
+    ``aom_candidate_rank_diagnostics``) so every numerical fit still flows through
+    the single ``libn4m`` runtime.
+
+    Each stage screens in chunks of ``chain_chunk_size`` chains and only retains
+    its own ``top_k`` rows, so large ``lab`` cartesians stream rather than
+    materialize every scored candidate. When ``checkpoint_dir`` is supplied, each
+    stage writes an independent ``aom_chain_score_campaign`` checkpoint and can
+    resume later with the same data/configuration; ``max_chunks_per_run`` limits
+    the number of new chunks processed by each stage in the current call. Even
+    partial screens are exact-refit-able over the currently retained rows and are
+    marked ``screen_complete=False``. Selection is exact-CV on the training folds
+    only (``selection_metric="refit_cv_rmse"``): the production winner never
+    depends on a held-out set. When ``X_audit`` / ``y_audit`` are supplied the
+    helper additionally scores the retained union on that split, but the result
+    is recorded under ``report["audit"]`` with ``audit_only=True`` and is never
+    used to choose a model. No dataset, source, id or name is consulted at any
+    point — ``stages`` only carry profile-stage labels.
+
+    Args:
+        X, y: training spectra and targets. ``y`` may be 1-D or ``(n, 1)``.
+        stages: optional explicit stage list. Each entry is a profile name or an
+            override dict (keys: ``name``, ``profile``, ``heads``,
+            ``ridge_lambdas``, ``pls_components``, ``top_k``, ``max_chains``,
+            ``families``, ``templates``, ``pls_score_mode``, ``moment_policy``,
+            ``chain_ordering``, ``split_head_scoring``). Missing keys fall back to
+            the campaign defaults. When ``None``, ``plan`` selects the stages.
+        plan: named stage plan used when ``stages`` is ``None``. One of
+            ``compact``, ``wide``, ``lab``, ``compact_wide``, ``compact_lab``,
+            ``wide_lab``, ``compact_wide_lab`` (default), ``savgol_focus`` or
+            ``strict_family_focus``.
+        refit_top_k: global retained rows refit with exact CV. Defaults to
+            ``top_k`` when ``None``.
+        refit_per_head_top_k: extra per-head retained rows (``None`` disables).
+        checkpoint_dir, resume, max_chunks_per_run: optional per-stage checkpoint
+            directory, resume flag and per-call chunk limit forwarded to each
+            score-only stage screen.
+        impact, rank_diagnostics: toggle the post-hoc audit reports.
+        X_audit, y_audit, audit_top_k: optional audit-only held-out scoring.
+        return_stage_screens: include the raw per-stage screen reports.
+
+    Returns:
+        A JSON-friendly report keyed by ``report_schema`` =
+        ``n4m.aom_staged_chain_campaign.v1`` with ``rows`` (the exact-CV refit
+        rows, usable by ``NativeAOMFixedCandidateRegressor.from_refit_report``),
+        ``best`` / ``best_by_head``, ``merged_top_candidates``, per-stage
+        summaries, ``retention`` stats, and the ``impact`` / ``rank_diagnostics``
+        / ``audit`` sub-reports.
+    """
+    if refit_top_k is not None and int(refit_top_k) < 1:
+        raise ValueError("refit_top_k must be positive when provided")
+    if refit_per_head_top_k is not None and int(refit_per_head_top_k) < 1:
+        raise ValueError("refit_per_head_top_k must be positive when provided")
+    if max_chunks_per_run is not None and int(max_chunks_per_run) < 1:
+        raise ValueError("max_chunks_per_run must be positive when provided")
+    split_head_scoring_name = _normalize_aom_split_head_scoring(split_head_scoring)
+    if scale_x_values is not None:
+        if scale_x is not None:
+            raise ValueError("scale_x and scale_x_values are mutually exclusive")
+        scale_grid = _normalize_optional_bool_grid(scale_x_values, "scale_x_values")
+        config_reports: list[dict[str, object]] = []
+        config_summaries: list[dict[str, object]] = []
+        for config_id, scale_value in enumerate(scale_grid):
+            config_checkpoint_dir = _aom_staged_model_config_checkpoint_dir(
+                checkpoint_dir,
+                "scale_x",
+                scale_value,
+            )
+            subreport = aom_staged_chain_campaign(
+                X,
+                y,
+                stages=stages,
+                plan=plan,
+                cv=cv,
+                fold_ids=fold_ids,
+                ridge_lambdas=ridge_lambdas,
+                pls_components=pls_components,
+                heads=heads,
+                top_k=top_k,
+                refit_top_k=refit_top_k,
+                refit_per_head_top_k=refit_per_head_top_k,
+                families=families,
+                templates=templates,
+                max_chains=max_chains,
+                chain_chunk_size=chain_chunk_size,
+                checkpoint_dir=config_checkpoint_dir,
+                resume=resume,
+                max_chunks_per_run=max_chunks_per_run,
+                center_x=center_x,
+                scale_x=scale_value,
+                center_y=center_y,
+                scale_y=scale_y,
+                moment_policy=moment_policy,
+                refit_moment_policy=refit_moment_policy,
+                pls_score_mode=pls_score_mode,
+                chain_ordering=chain_ordering,
+                split_head_scoring=split_head_scoring_name,
+                backend_cuda_available=backend_cuda_available,
+                backend_min_cuda_product=backend_min_cuda_product,
+                cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+                cuda_pls_min_device_features=cuda_pls_min_device_features,
+                cuda_pls_many_batched=cuda_pls_many_batched,
+                refit_sort_by=refit_sort_by,
+                refit_execution=refit_execution,
+                refit_auto_max_extra_fraction=refit_auto_max_extra_fraction,
+                return_predictions=return_predictions,
+                impact=impact,
+                rank_diagnostics=rank_diagnostics,
+                impact_top_k=impact_top_k,
+                X_audit=X_audit,
+                y_audit=y_audit,
+                audit_top_k=audit_top_k,
+                return_stage_screens=return_stage_screens,
+            )
+            model_config = {
+                "model_config_id": int(config_id),
+                "scale_x": scale_value,
+            }
+            subreport["model_config"] = dict(model_config)
+            subreport["model_config_id"] = int(config_id)
+            for row in subreport.get("rows", ()):
+                row["model_config_id"] = int(config_id)
+                row["scale_x"] = scale_value
+            for stage_summary in subreport.get("stages", ()):
+                stage_summary["model_config_id"] = int(config_id)
+                stage_summary["scale_x"] = scale_value
+            config_reports.append(subreport)
+            config_summaries.append({
+                **model_config,
+                "best_refit_cv_rmse": float(subreport["best"]["refit_cv_rmse"]),
+                "best_head": str(subreport["best"]["head"]),
+                "best_param": float(subreport["best"]["param"]),
+                "screen_complete": bool(subreport.get("screen_complete", True)),
+                "n_stages": int(subreport.get("n_stages", 0)),
+                "n_screen_candidates_total": int(
+                    subreport.get("n_screen_candidates_total", 0)
+                ),
+                "n_refit_candidates": int(subreport.get("n_refit_candidates", 0)),
+                "n_remaining_stage_chunks_total": int(
+                    subreport.get("n_remaining_stage_chunks_total", 0)
+                ),
+            })
+
+        selected_index = min(
+            range(len(config_reports)),
+            key=lambda index: float(config_reports[index]["best"]["refit_cv_rmse"]),
+        )
+        selected = config_reports[selected_index]
+        selected_config = dict(config_summaries[selected_index])
+        selected["model_config_grid_enabled"] = True
+        selected["model_config_selection_metric"] = "best_refit_cv_rmse"
+        selected["model_config_grid"] = [
+            {"model_config_id": int(i), "scale_x": value}
+            for i, value in enumerate(scale_grid)
+        ]
+        selected["model_config_summaries"] = config_summaries
+        selected["selected_model_config_id"] = int(selected_index)
+        selected["selected_model_config"] = selected_config
+        selected["scale_x_values"] = list(scale_grid)
+        selected["scale_x"] = selected_config["scale_x"]
+        selected["complete"] = all(
+            bool(report.get("complete", True)) for report in config_reports
+        )
+        selected["screen_complete"] = all(
+            bool(report.get("screen_complete", True)) for report in config_reports
+        )
+        selected["n_remaining_stage_chunks_total"] = int(sum(
+            int(report.get("n_remaining_stage_chunks_total", 0))
+            for report in config_reports
+        ))
+        for key in (
+            "n_screen_candidates_total",
+            "n_screen_split_head_chunks",
+            "n_screen_chunk_score_calls",
+            "n_ridge_moment_cv_fits",
+            "n_ridge_moment_eigen_path_preparations",
+            "n_ridge_moment_eigen_path_cv_fits",
+            "n_ridge_moment_direct_cv_fits",
+            "n_ridge_moment_score_batch_calls",
+            "n_ridge_moment_score_batch_jobs",
+            "n_screen_pls_moment_cv_fits",
+            "n_screen_pls_moment_host_cv_fits",
+            "n_screen_pls_moment_cuda_device_cv_fits",
+            "n_screen_pls_moment_cuda_parallel_fold_batches",
+            "n_screen_pls_moment_cuda_parallel_fold_jobs",
+            "n_screen_pls_moment_cuda_many_batched_batches",
+            "n_screen_pls_moment_cuda_many_batched_jobs",
+            "n_refit_pls_moment_cv_fits",
+            "n_refit_pls_moment_host_cv_fits",
+            "n_refit_pls_moment_cuda_device_cv_fits",
+            "n_refit_pls_moment_cuda_parallel_fold_batches",
+            "n_refit_pls_moment_cuda_parallel_fold_jobs",
+            "n_refit_pls_moment_cuda_many_batched_batches",
+            "n_refit_pls_moment_cuda_many_batched_jobs",
+        ):
+            selected[key] = int(sum(int(report.get(key, 0)) for report in config_reports))
+        return selected
+
+    stage_defaults = {
+        "families": families,
+        "templates": templates,
+        "max_chains": max_chains,
+        "heads": heads,
+        "ridge_lambdas": ridge_lambdas,
+        "pls_components": pls_components,
+        "top_k": top_k,
+        "pls_score_mode": pls_score_mode,
+        "moment_policy": moment_policy,
+        "chain_ordering": chain_ordering,
+        "split_head_scoring": split_head_scoring_name,
+    }
+    normalized_stages = _normalize_staged_chain_stages(
+        stages, plan=plan, defaults=stage_defaults
+    )
+
+    stage_pairs: list[tuple[dict[str, object], dict[str, object]]] = []
+    stage_summaries: list[dict[str, object]] = []
+    stage_screens: list[dict[str, object]] = []
+    for stage in normalized_stages:
+        stage_checkpoint_path = _aom_staged_checkpoint_path(checkpoint_dir, stage)
+        screen = aom_chain_score_campaign(
+            X,
+            y,
+            chains=None,
+            profile=stage["profile"],
+            families=stage["families"],
+            templates=stage["templates"],
+            max_chains=stage["max_chains"],
+            chain_chunk_size=chain_chunk_size,
+            top_k=stage["top_k"],
+            cv=cv,
+            fold_ids=fold_ids,
+            ridge_lambdas=stage["ridge_lambdas"],
+            pls_components=stage["pls_components"],
+            heads=stage["heads"],
+            center_x=center_x,
+            scale_x=scale_x,
+            center_y=center_y,
+            scale_y=scale_y,
+            moment_policy=stage["moment_policy"],
+            pls_score_mode=stage["pls_score_mode"],
+            chain_ordering=stage["chain_ordering"],
+            split_head_scoring=stage["split_head_scoring"],
+            cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+            cuda_pls_min_device_features=cuda_pls_min_device_features,
+            cuda_pls_many_batched=cuda_pls_many_batched,
+            backend_cuda_available=backend_cuda_available,
+            backend_min_cuda_product=backend_min_cuda_product,
+            checkpoint_path=stage_checkpoint_path,
+            resume=resume,
+            max_chunks_per_run=max_chunks_per_run,
+        )
+        stage_pairs.append((stage, screen))
+        if return_stage_screens:
+            stage_screens.append(screen)
+        stage_summaries.append({
+            "name": stage["name"],
+            "stage_index": stage["stage_index"],
+            "profile": stage["profile"],
+            "heads": _staged_normalized_heads(stage["heads"]),
+            "pls_score_mode": str(screen.get("pls_score_mode", "")),
+            "moment_policy": stage["moment_policy"],
+            "chain_ordering": str(
+                screen.get("chain_ordering", stage["chain_ordering"])
+            ),
+            "split_head_scoring": str(
+                screen.get("split_head_scoring", stage["split_head_scoring"])
+            ),
+            "n_chains": int(screen.get("n_chains", 0)),
+            "n_screen_candidates": int(screen.get("n_candidates", 0)),
+            "n_top_candidates": int(len(screen.get("top_candidates", ()))),
+            "screen_complete": bool(screen.get("complete", True)),
+            "checkpoint_path": screen.get("checkpoint_path"),
+            "resumed_from_checkpoint": bool(
+                screen.get("resumed_from_checkpoint", False)
+            ),
+            "n_chunks": int(screen.get("n_chunks", 0)),
+            "n_total_chunks": int(screen.get("n_total_chunks", 0)),
+            "n_remaining_chunks": int(screen.get("n_remaining_chunks", 0)),
+            "n_split_head_chunks": int(screen.get("n_split_head_chunks", 0)),
+            "n_chunk_score_calls": int(screen.get("n_chunk_score_calls", 0)),
+            "n_ridge_moment_cv_fits": int(
+                screen.get("n_ridge_moment_cv_fits", 0)
+            ),
+            "n_ridge_moment_eigen_path_preparations": int(
+                screen.get("n_ridge_moment_eigen_path_preparations", 0)
+            ),
+            "n_ridge_moment_eigen_path_cv_fits": int(
+                screen.get("n_ridge_moment_eigen_path_cv_fits", 0)
+            ),
+            "n_ridge_moment_direct_cv_fits": int(
+                screen.get("n_ridge_moment_direct_cv_fits", 0)
+            ),
+            "n_ridge_moment_score_batch_calls": int(
+                screen.get("n_ridge_moment_score_batch_calls", 0)
+            ),
+            "n_ridge_moment_score_batch_jobs": int(
+                screen.get("n_ridge_moment_score_batch_jobs", 0)
+            ),
+            "n_pls_moment_cv_fits": int(screen.get("n_pls_moment_cv_fits", 0)),
+            "n_pls_moment_host_cv_fits": int(
+                screen.get("n_pls_moment_host_cv_fits", 0)
+            ),
+            "n_pls_moment_cuda_device_cv_fits": int(
+                screen.get("n_pls_moment_cuda_device_cv_fits", 0)
+            ),
+            "n_pls_moment_cuda_parallel_fold_batches": int(
+                screen.get("n_pls_moment_cuda_parallel_fold_batches", 0)
+            ),
+            "n_pls_moment_cuda_parallel_fold_jobs": int(
+                screen.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+            ),
+            "n_pls_moment_cuda_many_batched_batches": int(
+                screen.get("n_pls_moment_cuda_many_batched_batches", 0)
+            ),
+            "n_pls_moment_cuda_many_batched_jobs": int(
+                screen.get("n_pls_moment_cuda_many_batched_jobs", 0)
+            ),
+            "processed_chunks_this_run": int(
+                screen.get("processed_chunks_this_run", 0)
+            ),
+            "screen_best": screen.get("best"),
+        })
+
+    merged_global = _aom_merge_staged_candidates([
+        (stage["name"], screen.get("top_candidates", ()))
+        for stage, screen in stage_pairs
+    ])
+    if not merged_global:
+        raise ValueError("staged campaign produced no screen candidates to refit")
+    heads_seen = sorted({
+        head
+        for _, screen in stage_pairs
+        for head in screen.get("top_candidates_by_head", {})
+    })
+    merged_by_head = {
+        head: _aom_merge_staged_candidates([
+            (stage["name"], screen.get("top_candidates_by_head", {}).get(head, ()))
+            for stage, screen in stage_pairs
+        ])
+        for head in heads_seen
+    }
+
+    refit_keep = int(top_k) if refit_top_k is None else int(refit_top_k)
+    merged_screen = {
+        "top_candidates": merged_global,
+        "top_candidates_by_head": merged_by_head,
+        "top_k": refit_keep,
+    }
+    union_rows, union_stats = _aom_screen_refit_candidate_union(
+        merged_screen,
+        refit_top_k=refit_keep,
+        refit_per_head_top_k=refit_per_head_top_k,
+    )
+    if not union_rows:
+        raise ValueError("staged campaign retained no candidates to refit")
+
+    provenance: dict[object, tuple[object, list[str]]] = {}
+    for row in union_rows:
+        key = _aom_refit_candidate_key(row)
+        provenance[key] = (
+            row.get("campaign_stage"),
+            list(row.get("campaign_stages", ())),
+        )
+
+    exact_policy = moment_policy if refit_moment_policy is None else refit_moment_policy
+    refit = aom_refit_candidates(
+        X,
+        y,
+        union_rows,
+        top_k=None,
+        sort_by=refit_sort_by,
+        cv=cv,
+        fold_ids=fold_ids,
+        center_x=center_x,
+        scale_x=scale_x,
+        center_y=center_y,
+        scale_y=scale_y,
+        moment_policy=exact_policy,
+        execution_mode=refit_execution,
+        auto_max_extra_fraction=refit_auto_max_extra_fraction,
+        return_predictions=return_predictions,
+        cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+        cuda_pls_min_device_features=cuda_pls_min_device_features,
+        cuda_pls_many_batched=cuda_pls_many_batched,
+    )
+    for row in refit["rows"]:
+        key = _aom_refit_candidate_key(row)
+        if key in provenance:
+            stage_name, stage_list = provenance[key]
+            row["campaign_stage"] = stage_name
+            row["campaign_stages"] = list(stage_list)
+
+    best_by_head: dict[str, dict[str, object]] = {}
+    for row in refit["rows"]:
+        head = str(row["head"])
+        current = best_by_head.get(head)
+        if current is None or float(row["refit_cv_rmse"]) < float(
+            current["refit_cv_rmse"]
+        ):
+            best_by_head[head] = row
+
+    impact_report = None
+    if impact:
+        impact_report = aom_candidate_preprocessing_impact(
+            refit["rows"],
+            score_key="refit_cv_rmse",
+            top_k=impact_top_k,
+            higher_is_better=False,
+        )
+
+    rank_report = None
+    if rank_diagnostics and len(refit["rows"]) >= 2:
+        try:
+            rank_report = aom_candidate_rank_diagnostics(
+                refit["rows"],
+                screen_score_key="screen_cv_rmse",
+                eval_score_key="refit_cv_rmse",
+            )
+        except ValueError:
+            rank_report = None
+
+    audit_report = None
+    if X_audit is not None or y_audit is not None:
+        if X_audit is None or y_audit is None:
+            raise ValueError(
+                "X_audit and y_audit must both be provided for the offline audit"
+            )
+        eval_report = aom_evaluate_candidates(
+            X,
+            y,
+            X_audit,
+            y_audit,
+            union_rows,
+            top_k=audit_top_k,
+            sort_by="eval_rmse",
+            cv=cv,
+            fold_ids=fold_ids,
+            center_x=center_x,
+            scale_x=scale_x,
+            center_y=center_y,
+            scale_y=scale_y,
+            moment_policy=exact_policy,
+            return_predictions=return_predictions,
+        )
+        audit_rank = None
+        if len(eval_report["rows"]) >= 2:
+            try:
+                audit_rank = aom_candidate_rank_diagnostics(eval_report)
+            except ValueError:
+                audit_rank = None
+        audit_report = {
+            "audit_only": True,
+            "note": (
+                "Offline holdout audit. The held-out scores are never used to "
+                "choose the production model; selection stays exact-CV on train."
+            ),
+            "n_candidates": int(eval_report["n_candidates"]),
+            "best_eval": eval_report.get("best_eval"),
+            "eval": eval_report,
+            "rank_diagnostics": audit_rank,
+        }
+
+    screen_complete = all(
+        bool(screen.get("complete", True)) for _, screen in stage_pairs
+    )
+
+    def screen_counter(key: str) -> int:
+        return int(sum(int(screen.get(key, 0)) for _, screen in stage_pairs))
+
+    report = {
+        "report_schema": "n4m.aom_staged_chain_campaign.v1",
+        "plan": str(plan) if stages is None else "custom",
+        "n_stages": int(len(normalized_stages)),
+        "stages": stage_summaries,
+        "complete": bool(screen_complete),
+        "screen_complete": bool(screen_complete),
+        "refit_complete": True,
+        "checkpoint_dir": None if checkpoint_dir is None else str(Path(checkpoint_dir)),
+        "resume": bool(resume),
+        "max_chunks_per_run": (
+            None if max_chunks_per_run is None else int(max_chunks_per_run)
+        ),
+        "n_remaining_stage_chunks_total": int(
+            sum(int(screen.get("n_remaining_chunks", 0)) for _, screen in stage_pairs)
+        ),
+        "selection_metric": "refit_cv_rmse",
+        "selection_policy": "exact_cv_refit_train_only",
+        "selection_uses_test_set": False,
+        "split_head_scoring": split_head_scoring_name,
+        "rows": refit["rows"],
+        "refit": refit,
+        "merged_top_candidates": merged_global,
+        "best": refit["best_cv"],
+        "best_cv": refit["best_cv"],
+        "best_refit": refit["best_cv"],
+        "best_by_head": best_by_head,
+        "retention": {
+            "refit_top_k": int(refit_keep),
+            "refit_per_head_top_k": (
+                None if refit_per_head_top_k is None else int(refit_per_head_top_k)
+            ),
+            **union_stats,
+        },
+        "n_screen_candidates_total": int(
+            sum(int(screen.get("n_candidates", 0)) for _, screen in stage_pairs)
+        ),
+        "n_screen_split_head_chunks": screen_counter("n_split_head_chunks"),
+        "n_screen_chunk_score_calls": screen_counter("n_chunk_score_calls"),
+        "n_merged_global_candidates": int(len(merged_global)),
+        "n_refit_candidates": int(refit["n_candidates"]),
+        "n_ridge_moment_cv_fits": screen_counter("n_ridge_moment_cv_fits"),
+        "n_ridge_moment_eigen_path_preparations": screen_counter(
+            "n_ridge_moment_eigen_path_preparations"
+        ),
+        "n_ridge_moment_eigen_path_cv_fits": screen_counter(
+            "n_ridge_moment_eigen_path_cv_fits"
+        ),
+        "n_ridge_moment_direct_cv_fits": screen_counter(
+            "n_ridge_moment_direct_cv_fits"
+        ),
+        "n_ridge_moment_score_batch_calls": screen_counter(
+            "n_ridge_moment_score_batch_calls"
+        ),
+        "n_ridge_moment_score_batch_jobs": screen_counter(
+            "n_ridge_moment_score_batch_jobs"
+        ),
+        "n_screen_pls_moment_cv_fits": screen_counter("n_pls_moment_cv_fits"),
+        "n_screen_pls_moment_host_cv_fits": screen_counter(
+            "n_pls_moment_host_cv_fits"
+        ),
+        "n_screen_pls_moment_cuda_device_cv_fits": screen_counter(
+            "n_pls_moment_cuda_device_cv_fits"
+        ),
+        "n_screen_pls_moment_cuda_parallel_fold_batches": screen_counter(
+            "n_pls_moment_cuda_parallel_fold_batches"
+        ),
+        "n_screen_pls_moment_cuda_parallel_fold_jobs": screen_counter(
+            "n_pls_moment_cuda_parallel_fold_jobs"
+        ),
+        "n_screen_pls_moment_cuda_many_batched_batches": screen_counter(
+            "n_pls_moment_cuda_many_batched_batches"
+        ),
+        "n_screen_pls_moment_cuda_many_batched_jobs": screen_counter(
+            "n_pls_moment_cuda_many_batched_jobs"
+        ),
+        "n_refit_pls_moment_cv_fits": int(refit.get("n_pls_moment_cv_fits", 0)),
+        "n_refit_pls_moment_host_cv_fits": int(
+            refit.get("n_pls_moment_host_cv_fits", 0)
+        ),
+        "n_refit_pls_moment_cuda_device_cv_fits": int(
+            refit.get("n_pls_moment_cuda_device_cv_fits", 0)
+        ),
+        "n_refit_pls_moment_cuda_parallel_fold_batches": int(
+            refit.get("n_pls_moment_cuda_parallel_fold_batches", 0)
+        ),
+        "n_refit_pls_moment_cuda_parallel_fold_jobs": int(
+            refit.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+        ),
+        "n_refit_pls_moment_cuda_many_batched_batches": int(
+            refit.get("n_pls_moment_cuda_many_batched_batches", 0)
+        ),
+        "n_refit_pls_moment_cuda_many_batched_jobs": int(
+            refit.get("n_pls_moment_cuda_many_batched_jobs", 0)
+        ),
+        "impact": impact_report,
+        "rank_diagnostics": rank_report,
+        "audit": audit_report,
+        "cv": int(cv),
+        "moment_policy": moment_policy,
+        "refit_moment_policy": exact_policy,
+        "refit_execution": str(refit["execution_mode"]),
+        "library_path": library_path(),
+        "abi": ".".join(str(int(fn())) for fn in (
+            lib.n4m_get_abi_version_major,
+            lib.n4m_get_abi_version_minor,
+            lib.n4m_get_abi_version_patch,
+        )),
+    }
+    if return_stage_screens:
+        report["stage_screens"] = stage_screens
     return report
 
 
@@ -5523,6 +6514,55 @@ def aom_chain_fixed_fit_run(
             lib.n4m_context_destroy(ctx)
 
 
+def aom_ridge_global(
+    X,
+    y,
+    *,
+    operators=None,
+    cv: int = 5,
+    fold_ids=None,
+    ridge_lambdas=(1e-4, 1e-2, 1.0, 100.0),
+    center_x: bool | None = None,
+    scale_x: bool | None = None,
+    center_y: bool | None = None,
+    scale_y: bool | None = None,
+    moment_policy: str | int = "auto",
+) -> dict[str, object]:
+    """Select one strict-linear AOM operator plus Ridge alpha by native CV."""
+    op_spec = tuple(_AOM_SELECTOR_DEFAULT_OPERATORS if operators is None else operators)
+    if not op_spec:
+        raise ValueError("operators must contain at least one strict AOM operator")
+    chains = [_canonicalize_aom_chain(op) for op in op_spec]
+    result = aom_chain_sweep_run(
+        X,
+        y,
+        chains,
+        cv=cv,
+        fold_ids=fold_ids,
+        ridge_lambdas=ridge_lambdas,
+        pls_components=(),
+        heads=("ridge",),
+        center_x=center_x,
+        scale_x=scale_x,
+        center_y=center_y,
+        scale_y=scale_y,
+        moment_policy=moment_policy,
+        pls_score_mode="cv",
+    )
+    selected_chain_id = int(result["selected_chain_id"])
+    if selected_chain_id < 0 or selected_chain_id >= len(chains):
+        raise ValueError("native AOM Ridge global selection returned invalid chain id")
+    selected_operator = chains[selected_chain_id][0]
+    result["operators"] = tuple(chains)
+    result["selected_operator"] = selected_operator
+    result["selected_operator_index"] = float(selected_chain_id)
+    result["selected_operator_kind"] = float(result["op_kinds"][selected_chain_id])
+    result["n_operators"] = float(len(chains))
+    result["selection_mode"] = "global"
+    result["ridge_backend"] = "native_aom_chain_sweep"
+    return result
+
+
 def aom_ridge_blender(
     X,
     y,
@@ -5597,12 +6637,20 @@ def aom_ridge_blender(
             ),
             "n4m_aom_ridge_blender_fit",
         )
-        return _method_result_dict(
+        out = _method_result_dict(
             result,
             matrices=_AOM_RIDGE_BLENDER_MATRICES,
             int_vectors=("fold_ids",),
             scalars=_AOM_RIDGE_BLENDER_SCALARS,
         )
+        nc = int(out["n_candidates"])
+        cv_i = int(out["cv"])
+        n_cv_fits = nc * cv_i
+        n_final_fits = nc
+        out["n_ridge_blender_cv_fits"] = float(n_cv_fits)
+        out["n_ridge_blender_final_fits"] = float(n_final_fits)
+        out["n_ridge_blender_fit_calls"] = float(n_cv_fits + n_final_fits)
+        return out
     finally:
         if result.value:
             lib.n4m_method_result_destroy(result)
@@ -5610,6 +6658,1463 @@ def aom_ridge_blender(
             lib.n4m_config_destroy(cfg)
         if ctx.value:
             lib.n4m_context_destroy(ctx)
+
+
+def _aom_operator_outputs(X_arr: np.ndarray, operators) -> tuple[np.ndarray, np.ndarray]:
+    result = aom_preprocess(X_arr, operators=operators, gating_mode="soft")
+    n_ops = int(result["n_operators"])
+    if n_ops <= 0:
+        raise ValueError("operators must contain at least one strict AOM operator")
+    outputs = np.asarray(result["operator_outputs"], dtype=np.float64).reshape(
+        n_ops,
+        X_arr.shape[0],
+        X_arr.shape[1],
+    )
+    kinds = np.asarray(result["operator_kinds"], dtype=np.int64).reshape(-1)
+    return outputs, kinds
+
+
+def _aom_superblock_from_outputs(outputs: np.ndarray) -> np.ndarray:
+    n_ops, n_samples, n_features = outputs.shape
+    return np.ascontiguousarray(outputs.transpose(1, 0, 2).reshape(n_samples, n_ops * n_features))
+
+
+def _aom_ridge_superblock_design(
+    X_arr: np.ndarray,
+    operators,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    outputs, kinds = _aom_operator_outputs(X_arr, operators)
+    return _aom_superblock_from_outputs(outputs), outputs, kinds
+
+
+def _aom_superblock_center_scale(
+    Z: np.ndarray,
+    n_ops: int,
+    n_features: int,
+    *,
+    center_x: bool,
+    block_scaling: str,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    z_mean = np.mean(Z, axis=0, keepdims=True) if center_x else np.zeros((1, Z.shape[1]))
+    Z_work = Z - z_mean
+    scales = np.ones(n_ops, dtype=np.float64)
+    if block_scaling == "rms":
+        for op_idx in range(n_ops):
+            start = op_idx * n_features
+            stop = start + n_features
+            rms = float(np.sqrt(np.mean(Z_work[:, start:stop] * Z_work[:, start:stop])))
+            if rms > 1e-12:
+                scales[op_idx] = 1.0 / rms
+    elif block_scaling != "none":
+        raise ValueError("block_scaling must be 'rms' or 'none'")
+    Z_scaled = Z_work.copy()
+    for op_idx, scale in enumerate(scales):
+        start = op_idx * n_features
+        stop = start + n_features
+        Z_scaled[:, start:stop] *= scale
+    return np.ascontiguousarray(Z_scaled), z_mean.reshape(-1), scales
+
+
+def _ridge_solve_design(Z: np.ndarray, Y: np.ndarray, alpha: float) -> np.ndarray:
+    alpha_value = float(alpha)
+    if not np.isfinite(alpha_value) or alpha_value <= 0.0:
+        raise ValueError("alpha must be finite and strictly positive")
+    result = ridge(
+        Z,
+        Y,
+        alpha=alpha_value,
+        center_x=False,
+        scale_x=False,
+        center_y=False,
+    )
+    return np.asarray(result["coefficients"], dtype=np.float64)
+
+
+def _pls_solve_design(
+    Z: np.ndarray,
+    Y: np.ndarray,
+    n_components: int,
+    *,
+    center_y: bool,
+    cuda_pls_parallel_folds: bool | None = None,
+    cuda_pls_min_device_features: int | None = None,
+    cuda_pls_many_batched: bool | None = None,
+) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
+    component_count = int(n_components)
+    if component_count < 1:
+        raise ValueError("n_components must be >= 1")
+    result = pls(
+        Z,
+        Y,
+        n_components=component_count,
+        center_x=False,
+        scale_x=False,
+        center_y=bool(center_y),
+        scale_y=False,
+        cv=min(2, Z.shape[0]),
+        cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+        cuda_pls_min_device_features=cuda_pls_min_device_features,
+        cuda_pls_many_batched=cuda_pls_many_batched,
+    )
+    beta = np.asarray(result["coefficients"], dtype=np.float64)
+    intercept = np.asarray(result["intercept"], dtype=np.float64).reshape(-1)
+    return beta, intercept, result
+
+
+def _ridge_pls_solve_design(
+    Z: np.ndarray,
+    Y: np.ndarray,
+    ridge_lambda: float,
+    n_components: int,
+    *,
+    center_x: bool = True,
+    center_y: bool = True,
+) -> tuple[np.ndarray, np.ndarray, dict[str, object]]:
+    component_count = int(n_components)
+    if component_count < 1:
+        raise ValueError("n_components must be >= 1")
+    lambda_value = float(ridge_lambda)
+    if not np.isfinite(lambda_value) or lambda_value < 0.0:
+        raise ValueError("ridge_lambda must be finite and non-negative")
+    result = ridge_pls(
+        Z,
+        Y,
+        ridge_lambda=lambda_value,
+        n_components=component_count,
+        center_x=bool(center_x),
+        scale_x=False,
+        center_y=bool(center_y),
+        scale_y=False,
+    )
+    beta = np.asarray(result["coefficients"], dtype=np.float64)
+    x_mean = np.asarray(result["x_mean"], dtype=np.float64).reshape(-1)
+    y_mean = np.asarray(result["y_mean"], dtype=np.float64).reshape(-1)
+    intercept = y_mean - x_mean @ beta
+    return beta, intercept.reshape(-1), result
+
+
+def _aom_fold_superblock_coefficients(
+    beta: np.ndarray,
+    z_mean: np.ndarray,
+    block_scales: np.ndarray,
+    operators,
+    n_features: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    eye = np.ascontiguousarray(np.eye(n_features, dtype=np.float64))
+    op_mats, _ = _aom_operator_outputs(eye, operators)
+    n_ops = op_mats.shape[0]
+    input_coef = np.zeros((n_features, beta.shape[1]), dtype=np.float64)
+    scaled_beta = beta.copy()
+    for op_idx, scale in enumerate(block_scales):
+        start = op_idx * n_features
+        stop = start + n_features
+        scaled_beta[start:stop, :] *= float(scale)
+        input_coef += op_mats[op_idx] @ scaled_beta[start:stop, :]
+    offset = z_mean.reshape(1, -1) @ scaled_beta
+    return input_coef, offset.reshape(-1)
+
+
+def _aom_active_operator_family(name: str) -> str:
+    if name == "identity":
+        return "identity"
+    if name.startswith("savgol_smooth"):
+        return "sg_smooth"
+    if name.startswith("savgol_derivative"):
+        return "sg_derivative"
+    if name.startswith("norris_williams"):
+        return "norris_williams"
+    if name.startswith("finite_difference"):
+        return "finite_difference"
+    if name.startswith("detrend_poly"):
+        return "detrend"
+    if name.startswith("whittaker"):
+        return "whittaker"
+    if name.startswith("gaussian"):
+        return "gaussian"
+    if name.startswith("fck"):
+        return "fck"
+    return "other"
+
+
+def _aom_active_screen_from_outputs(
+    outputs: np.ndarray,
+    y_arr: np.ndarray,
+    operators,
+    *,
+    top_m: int,
+    diversity_threshold: float,
+    block_scaling: str,
+    center_x: bool,
+    center_y: bool,
+    score_method: str,
+    max_per_family: int | None,
+    keep_identity: bool,
+) -> tuple[np.ndarray, np.ndarray, int]:
+    """Screen strict operator outputs by train-only response signatures.
+
+    The donor active-superblock score is expressed through operator covariance
+    helpers that are not part of this binding. This n4m surface defines its
+    active score on the exact strict-linear outputs it later fits:
+    ``||scale_b * Z_b.T @ y_c||_F^2`` for the default ``norm`` method.
+    """
+    if top_m < 1:
+        raise ValueError("active_top_m must be >= 1")
+    method = str(score_method).lower()
+    if method not in {"norm", "kta", "blend"}:
+        raise ValueError("active_score_method must be 'norm', 'kta', or 'blend'")
+    threshold = float(diversity_threshold)
+    if not (0.0 <= threshold <= 1.0):
+        raise ValueError("active_diversity_threshold must be in [0, 1]")
+    if max_per_family is not None and int(max_per_family) < 1:
+        raise ValueError("active_max_per_family must be >= 1 when provided")
+
+    n_ops, n_samples, _ = outputs.shape
+    if n_ops == 0:
+        raise ValueError("operators must contain at least one strict AOM operator")
+    active_cap = min(int(top_m), n_ops)
+    y_centered = (
+        y_arr - np.mean(y_arr, axis=0, keepdims=True)
+        if center_y
+        else np.asarray(y_arr, dtype=np.float64)
+    )
+    yy = y_centered @ y_centered.T
+    yy_norm = float(np.linalg.norm(yy, "fro"))
+    norm_scores = np.zeros(n_ops, dtype=np.float64)
+    kta_scores = np.zeros(n_ops, dtype=np.float64)
+    signatures: list[np.ndarray] = []
+    canonical_ops = tuple(_canonical_aom_op_spec(op) for op in operators)
+
+    for op_idx in range(n_ops):
+        block = np.asarray(outputs[op_idx], dtype=np.float64)
+        if center_x:
+            block = block - np.mean(block, axis=0, keepdims=True)
+        if block_scaling == "rms":
+            rms = float(np.sqrt(np.mean(block * block)))
+            scale = 1.0 / rms if rms > 1e-12 else 1.0
+        elif block_scaling == "none":
+            scale = 1.0
+        else:
+            raise ValueError("block_scaling must be 'rms' or 'none'")
+        sig = float(scale) * (block.T @ y_centered)
+        signatures.append(sig.reshape(-1))
+        norm_scores[op_idx] = float(np.linalg.norm(sig, "fro")) ** 2
+        if method in {"kta", "blend"}:
+            k = (float(scale) ** 2) * (block @ block.T)
+            k_norm = float(np.linalg.norm(k, "fro"))
+            if k_norm > 1e-30 and yy_norm > 1e-30:
+                kta_scores[op_idx] = float(np.sum(k * yy) / (k_norm * yy_norm))
+
+    if method == "norm":
+        scores = norm_scores
+    elif method == "kta":
+        scores = kta_scores
+    else:
+        def _to_01(arr: np.ndarray) -> np.ndarray:
+            lo = float(np.min(arr))
+            hi = float(np.max(arr))
+            if hi <= lo:
+                return np.zeros_like(arr)
+            return (arr - lo) / (hi - lo)
+
+        scores = _to_01(norm_scores) + _to_01(kta_scores)
+
+    selected: list[int] = []
+    selected_unit_signatures: list[np.ndarray] = []
+    family_counts: dict[str, int] = {}
+    pruned = 0
+
+    def _add(idx: int) -> bool:
+        nonlocal pruned
+        if idx in selected:
+            return True
+        sig = signatures[idx]
+        sig_norm_value = float(np.linalg.norm(sig))
+        sig_unit = sig / sig_norm_value if sig_norm_value > 1e-30 else sig
+        for prev in selected_unit_signatures:
+            if sig_norm_value > 1e-30 and abs(float(sig_unit @ prev)) >= threshold:
+                pruned += 1
+                return False
+        if max_per_family is not None:
+            family = _aom_active_operator_family(canonical_ops[idx][0])
+            if family_counts.get(family, 0) >= int(max_per_family):
+                pruned += 1
+                return False
+            family_counts[family] = family_counts.get(family, 0) + 1
+        selected.append(int(idx))
+        selected_unit_signatures.append(sig_unit)
+        return True
+
+    if keep_identity:
+        for idx, (name, _params) in enumerate(canonical_ops):
+            if name == "identity":
+                _add(idx)
+                break
+    for idx in np.argsort(-scores):
+        if len(selected) >= active_cap:
+            break
+        _add(int(idx))
+    if not selected:
+        selected.append(int(np.argmax(scores)))
+    return np.asarray(selected[:active_cap], dtype=np.int32), scores, int(pruned)
+
+
+def _aom_mkl_weights_from_outputs(
+    outputs: np.ndarray,
+    y_arr: np.ndarray,
+    *,
+    top_k: int,
+    center_x: bool,
+    center_y: bool,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Learn non-negative simplex block weights by kernel-target alignment."""
+    n_ops = int(outputs.shape[0])
+    keep = min(int(top_k), n_ops)
+    if keep < 1:
+        raise ValueError("mkl_top_k must be >= 1")
+    Y = np.asarray(y_arr, dtype=np.float64)
+    if center_y:
+        Y = Y - np.mean(Y, axis=0, keepdims=True)
+    YYt = Y @ Y.T
+    yy_norm = float(np.linalg.norm(YYt, "fro"))
+    scores = np.zeros(n_ops, dtype=np.float64)
+    for op_idx in range(n_ops):
+        Zb = np.asarray(outputs[op_idx], dtype=np.float64)
+        if center_x:
+            Zb = Zb - np.mean(Zb, axis=0, keepdims=True)
+        Kb = Zb @ Zb.T
+        Kb = 0.5 * (Kb + Kb.T)
+        k_norm = float(np.linalg.norm(Kb, "fro"))
+        if k_norm > 1e-30 and yy_norm > 1e-30:
+            scores[op_idx] = float(np.sum(Kb * YYt) / (k_norm * yy_norm))
+
+    top_idx = np.argsort(-scores)[:keep]
+    positive = np.maximum(scores, 0.0)
+    mask = np.zeros(n_ops, dtype=bool)
+    mask[top_idx] = True
+    positive = np.where(mask, positive, 0.0)
+    total = float(np.sum(positive))
+    weights = np.zeros(n_ops, dtype=np.float64)
+    if total > 0.0:
+        weights = positive / total
+    else:
+        weights[top_idx] = 1.0 / float(keep)
+    return weights, scores
+
+
+def _aom_apply_block_weights(
+    Z: np.ndarray,
+    weights: np.ndarray,
+    n_features: int,
+) -> np.ndarray:
+    weighted = np.asarray(Z, dtype=np.float64).copy()
+    for op_idx, weight in enumerate(np.asarray(weights, dtype=np.float64).reshape(-1)):
+        start = int(op_idx) * int(n_features)
+        stop = start + int(n_features)
+        weighted[:, start:stop] *= float(np.sqrt(max(float(weight), 0.0)))
+    return np.ascontiguousarray(weighted)
+
+
+def aom_ridge_superblock(
+    X,
+    y,
+    *,
+    operators=None,
+    alpha: float | None = None,
+    alphas: Sequence[float] = (1e-4, 1e-2, 1.0, 100.0),
+    cv: int = 5,
+    fold_ids=None,
+    block_scaling: str = "rms",
+    center_x: bool = True,
+    center_y: bool = True,
+) -> dict[str, object]:
+    """Fit Ridge on a concatenated strict-linear AOM operator superblock.
+
+    This is a donor AOM-Ridge ``superblock`` style CPU reference constrained to
+    the moment-compatible single-operator bank. It returns coefficients folded
+    back to the original input space, so predictions replay as
+    ``X @ input_coefficients + intercept``.
+    """
+    X_arr = as_f64_2d(X)
+    y_arr = _as_y_matrix(y, X_arr.shape[0])
+    op_spec = tuple(_AOM_SELECTOR_DEFAULT_OPERATORS if operators is None else operators)
+    if not op_spec:
+        raise ValueError("operators must contain at least one strict AOM operator")
+    scaling = str(block_scaling).lower()
+    if scaling not in {"rms", "none"}:
+        raise ValueError("block_scaling must be 'rms' or 'none'")
+
+    alpha_values = (
+        np.asarray([float(alpha)], dtype=np.float64)
+        if alpha is not None
+        else np.asarray(tuple(float(v) for v in alphas), dtype=np.float64)
+    ).reshape(-1)
+    if alpha_values.size == 0:
+        raise ValueError("alphas must contain at least one value")
+    if np.any(~np.isfinite(alpha_values)) or np.any(alpha_values <= 0.0):
+        raise ValueError("alphas must be finite and strictly positive")
+
+    fold_arr = _selector_fold_ids(X_arr.shape[0], int(cv), fold_ids)
+    n_folds = int(fold_arr.max()) + 1
+    candidate_scores = np.empty((alpha_values.size, 3), dtype=np.float64)
+    oof_by_alpha = np.empty((alpha_values.size, X_arr.shape[0], y_arr.shape[1]), dtype=np.float64)
+
+    for alpha_idx, alpha_value in enumerate(alpha_values):
+        oof = np.empty_like(y_arr)
+        for fold in range(n_folds):
+            train_mask = fold_arr != fold
+            valid_mask = ~train_mask
+            if not np.any(valid_mask) or not np.any(train_mask):
+                raise ValueError("every fold must contain train and validation rows")
+            Z_train, train_outputs, _ = _aom_ridge_superblock_design(X_arr[train_mask], op_spec)
+            Z_valid, _, _ = _aom_ridge_superblock_design(X_arr[valid_mask], op_spec)
+            n_ops = train_outputs.shape[0]
+            Z_train_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+                Z_train,
+                n_ops,
+                X_arr.shape[1],
+                center_x=bool(center_x),
+                block_scaling=scaling,
+            )
+            Z_valid_scaled = Z_valid - z_mean.reshape(1, -1)
+            for op_idx, scale in enumerate(block_scales):
+                start = op_idx * X_arr.shape[1]
+                stop = start + X_arr.shape[1]
+                Z_valid_scaled[:, start:stop] *= float(scale)
+            y_mean = (
+                np.mean(y_arr[train_mask], axis=0, keepdims=True)
+                if center_y
+                else np.zeros((1, y_arr.shape[1]), dtype=np.float64)
+            )
+            beta = _ridge_solve_design(Z_train_scaled, y_arr[train_mask] - y_mean, float(alpha_value))
+            oof[valid_mask] = Z_valid_scaled @ beta + y_mean
+        residual = y_arr - oof
+        rmse = float(np.sqrt(np.mean(residual * residual)))
+        candidate_scores[alpha_idx] = (float(alpha_idx), float(alpha_value), rmse)
+        oof_by_alpha[alpha_idx] = oof
+
+    selected_idx = int(np.argmin(candidate_scores[:, 2]))
+    selected_alpha = float(alpha_values[selected_idx])
+    selected_oof = oof_by_alpha[selected_idx].copy()
+
+    Z_full, outputs_full, operator_kinds = _aom_ridge_superblock_design(X_arr, op_spec)
+    n_ops = outputs_full.shape[0]
+    Z_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+        Z_full,
+        n_ops,
+        X_arr.shape[1],
+        center_x=bool(center_x),
+        block_scaling=scaling,
+    )
+    y_mean = (
+        np.mean(y_arr, axis=0, keepdims=True)
+        if center_y
+        else np.zeros((1, y_arr.shape[1]), dtype=np.float64)
+    )
+    beta = _ridge_solve_design(Z_scaled, y_arr - y_mean, selected_alpha)
+    input_coef, offset = _aom_fold_superblock_coefficients(
+        beta,
+        z_mean,
+        block_scales,
+        op_spec,
+        X_arr.shape[1],
+    )
+    intercept = y_mean.reshape(-1) - offset
+    predictions = X_arr @ input_coef + intercept.reshape(1, -1)
+
+    return {
+        "predictions": np.ascontiguousarray(predictions),
+        "oof_predictions": np.ascontiguousarray(selected_oof),
+        "coefficients": np.ascontiguousarray(beta),
+        "superblock_coefficients": np.ascontiguousarray(beta),
+        "input_coefficients": np.ascontiguousarray(input_coef),
+        "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
+        "candidate_scores": candidate_scores,
+        "operator_outputs": np.ascontiguousarray(outputs_full.reshape(n_ops, X_arr.size)),
+        "operator_kinds": operator_kinds,
+        "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
+        "block_scales": np.ascontiguousarray(block_scales.reshape(n_ops, 1)),
+        "superblock_mean": np.ascontiguousarray(z_mean.reshape(1, -1)),
+        "selected_candidate_id": float(selected_idx),
+        "selected_alpha": selected_alpha,
+        "selected_cv_rmse": float(candidate_scores[selected_idx, 2]),
+        "n_candidates": float(alpha_values.size),
+        "n_operators": float(n_ops),
+        "n_samples": float(X_arr.shape[0]),
+        "n_features": float(X_arr.shape[1]),
+        "n_features_superblock": float(Z_full.shape[1]),
+        "n_targets": float(y_arr.shape[1]),
+        "cv": float(n_folds),
+        "center_x": float(bool(center_x)),
+        "center_y": float(bool(center_y)),
+        "block_scaling": scaling,
+        "ridge_backend": "native",
+    }
+
+
+def aom_ridge_mkl_superblock(
+    X,
+    y,
+    *,
+    operators=None,
+    alpha: float | None = None,
+    alphas: Sequence[float] = (1e-4, 1e-2, 1.0, 100.0),
+    cv: int = 5,
+    fold_ids=None,
+    mkl_top_k: int = 6,
+    block_scaling: str = "none",
+    center_x: bool = True,
+    center_y: bool = True,
+) -> dict[str, object]:
+    """Fit Ridge on a KTA-weighted strict-linear AOM operator superblock.
+
+    This is the moment-compatible subset of donor MKL-light: block weights are
+    learned from train-only linear-kernel target alignment, then the weighted
+    superblock is fit by native Ridge and folded back to raw input space.
+    """
+    X_arr = as_f64_2d(X)
+    y_arr = _as_y_matrix(y, X_arr.shape[0])
+    op_spec = tuple(_AOM_SELECTOR_DEFAULT_OPERATORS if operators is None else operators)
+    if not op_spec:
+        raise ValueError("operators must contain at least one strict AOM operator")
+    scaling = str(block_scaling).lower()
+    if scaling not in {"rms", "none"}:
+        raise ValueError("block_scaling must be 'rms' or 'none'")
+    top_k = int(mkl_top_k)
+    if top_k < 1:
+        raise ValueError("mkl_top_k must be >= 1")
+
+    alpha_values = (
+        np.asarray([float(alpha)], dtype=np.float64)
+        if alpha is not None
+        else np.asarray(tuple(float(v) for v in alphas), dtype=np.float64)
+    ).reshape(-1)
+    if alpha_values.size == 0:
+        raise ValueError("alphas must contain at least one value")
+    if np.any(~np.isfinite(alpha_values)) or np.any(alpha_values <= 0.0):
+        raise ValueError("alphas must be finite and strictly positive")
+
+    fold_arr = _selector_fold_ids(X_arr.shape[0], int(cv), fold_ids)
+    n_folds = int(fold_arr.max()) + 1
+    n_ops_total = len(op_spec)
+    candidate_scores = np.empty((alpha_values.size, 3), dtype=np.float64)
+    oof_by_alpha = np.empty(
+        (alpha_values.size, X_arr.shape[0], y_arr.shape[1]),
+        dtype=np.float64,
+    )
+    fold_mkl_weights = np.zeros(
+        (alpha_values.size, n_folds, n_ops_total),
+        dtype=np.float64,
+    )
+
+    for alpha_idx, alpha_value in enumerate(alpha_values):
+        oof = np.empty_like(y_arr)
+        for fold in range(n_folds):
+            train_mask = fold_arr != fold
+            valid_mask = ~train_mask
+            if not np.any(valid_mask) or not np.any(train_mask):
+                raise ValueError("every fold must contain train and validation rows")
+            train_outputs, _ = _aom_operator_outputs(X_arr[train_mask], op_spec)
+            weights, _scores = _aom_mkl_weights_from_outputs(
+                train_outputs,
+                y_arr[train_mask],
+                top_k=top_k,
+                center_x=bool(center_x),
+                center_y=bool(center_y),
+            )
+            Z_train = _aom_superblock_from_outputs(train_outputs)
+            valid_outputs, _ = _aom_operator_outputs(X_arr[valid_mask], op_spec)
+            Z_valid = _aom_superblock_from_outputs(valid_outputs)
+            Z_train_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+                Z_train,
+                n_ops_total,
+                X_arr.shape[1],
+                center_x=bool(center_x),
+                block_scaling=scaling,
+            )
+            Z_valid_scaled = Z_valid - z_mean.reshape(1, -1)
+            for op_idx, scale in enumerate(block_scales):
+                start = op_idx * X_arr.shape[1]
+                stop = start + X_arr.shape[1]
+                Z_valid_scaled[:, start:stop] *= float(scale)
+            Z_train_weighted = _aom_apply_block_weights(
+                Z_train_scaled,
+                weights,
+                X_arr.shape[1],
+            )
+            Z_valid_weighted = _aom_apply_block_weights(
+                Z_valid_scaled,
+                weights,
+                X_arr.shape[1],
+            )
+            y_mean = (
+                np.mean(y_arr[train_mask], axis=0, keepdims=True)
+                if center_y
+                else np.zeros((1, y_arr.shape[1]), dtype=np.float64)
+            )
+            beta = _ridge_solve_design(
+                Z_train_weighted,
+                y_arr[train_mask] - y_mean,
+                float(alpha_value),
+            )
+            oof[valid_mask] = Z_valid_weighted @ beta + y_mean
+            fold_mkl_weights[alpha_idx, fold, :] = weights
+        residual = y_arr - oof
+        rmse = float(np.sqrt(np.mean(residual * residual)))
+        candidate_scores[alpha_idx] = (float(alpha_idx), float(alpha_value), rmse)
+        oof_by_alpha[alpha_idx] = oof
+
+    selected_idx = int(np.argmin(candidate_scores[:, 2]))
+    selected_alpha = float(alpha_values[selected_idx])
+    selected_oof = oof_by_alpha[selected_idx].copy()
+
+    outputs_full, operator_kinds = _aom_operator_outputs(X_arr, op_spec)
+    weights_full, alignment_scores = _aom_mkl_weights_from_outputs(
+        outputs_full,
+        y_arr,
+        top_k=top_k,
+        center_x=bool(center_x),
+        center_y=bool(center_y),
+    )
+    Z_full = _aom_superblock_from_outputs(outputs_full)
+    n_ops = outputs_full.shape[0]
+    Z_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+        Z_full,
+        n_ops,
+        X_arr.shape[1],
+        center_x=bool(center_x),
+        block_scaling=scaling,
+    )
+    Z_weighted = _aom_apply_block_weights(Z_scaled, weights_full, X_arr.shape[1])
+    y_mean = (
+        np.mean(y_arr, axis=0, keepdims=True)
+        if center_y
+        else np.zeros((1, y_arr.shape[1]), dtype=np.float64)
+    )
+    beta = _ridge_solve_design(Z_weighted, y_arr - y_mean, selected_alpha)
+    effective_scales = block_scales * np.sqrt(np.maximum(weights_full, 0.0))
+    input_coef, offset = _aom_fold_superblock_coefficients(
+        beta,
+        z_mean,
+        effective_scales,
+        op_spec,
+        X_arr.shape[1],
+    )
+    intercept = y_mean.reshape(-1) - offset
+    predictions = X_arr @ input_coef + intercept.reshape(1, -1)
+    selected_operator_indices = np.asarray(
+        [idx for idx, value in enumerate(weights_full) if float(value) > 0.0],
+        dtype=np.int32,
+    )
+
+    return {
+        "predictions": np.ascontiguousarray(predictions),
+        "oof_predictions": np.ascontiguousarray(selected_oof),
+        "coefficients": np.ascontiguousarray(beta),
+        "superblock_coefficients": np.ascontiguousarray(beta),
+        "input_coefficients": np.ascontiguousarray(input_coef),
+        "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
+        "candidate_scores": candidate_scores,
+        "operator_outputs": np.ascontiguousarray(outputs_full.reshape(n_ops, X_arr.size)),
+        "operator_kinds": operator_kinds,
+        "selected_operator_indices": selected_operator_indices,
+        "selected_operator_kinds": np.ascontiguousarray(
+            operator_kinds[selected_operator_indices],
+            dtype=np.int64,
+        ),
+        "mkl_weights": np.ascontiguousarray(weights_full.reshape(n_ops, 1)),
+        "mkl_alignment_scores": np.ascontiguousarray(alignment_scores.reshape(n_ops, 1)),
+        "fold_mkl_weights": np.ascontiguousarray(fold_mkl_weights),
+        "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
+        "block_scales": np.ascontiguousarray(block_scales.reshape(n_ops, 1)),
+        "effective_block_scales": np.ascontiguousarray(effective_scales.reshape(n_ops, 1)),
+        "superblock_mean": np.ascontiguousarray(z_mean.reshape(1, -1)),
+        "selected_candidate_id": float(selected_idx),
+        "selected_alpha": selected_alpha,
+        "selected_cv_rmse": float(candidate_scores[selected_idx, 2]),
+        "n_candidates": float(alpha_values.size),
+        "n_operators": float(n_ops),
+        "n_mkl_active_operators": float(selected_operator_indices.size),
+        "mkl_top_k": float(top_k),
+        "n_samples": float(X_arr.shape[0]),
+        "n_features": float(X_arr.shape[1]),
+        "n_features_superblock": float(Z_full.shape[1]),
+        "n_targets": float(y_arr.shape[1]),
+        "cv": float(n_folds),
+        "center_x": float(bool(center_x)),
+        "center_y": float(bool(center_y)),
+        "block_scaling": scaling,
+        "selection_mode": "mkl_superblock",
+        "mkl_mode": "alignment",
+        "ridge_backend": "native",
+    }
+
+
+def aom_ridge_active_superblock(
+    X,
+    y,
+    *,
+    operators=None,
+    alpha: float | None = None,
+    alphas: Sequence[float] = (1e-4, 1e-2, 1.0, 100.0),
+    cv: int = 5,
+    fold_ids=None,
+    active_top_m: int = 20,
+    active_diversity_threshold: float = 0.98,
+    active_score_method: str = "norm",
+    active_max_per_family: int | None = None,
+    keep_identity: bool = True,
+    block_scaling: str = "rms",
+    center_x: bool = True,
+    center_y: bool = True,
+) -> dict[str, object]:
+    """Fit active-superblock AOM Ridge with fold-local operator screening.
+
+    This donor-style strict-linear surface screens operators on each training
+    fold using response signatures from the actual ``aom_preprocess`` outputs,
+    then fits Ridge on the selected superblock. The production final model
+    screens once on the full calibration set and exposes folded original-input
+    coefficients for direct replay.
+    """
+    X_arr = as_f64_2d(X)
+    y_arr = _as_y_matrix(y, X_arr.shape[0])
+    op_spec = tuple(_AOM_SELECTOR_DEFAULT_OPERATORS if operators is None else operators)
+    if not op_spec:
+        raise ValueError("operators must contain at least one strict AOM operator")
+    scaling = str(block_scaling).lower()
+    if scaling not in {"rms", "none"}:
+        raise ValueError("block_scaling must be 'rms' or 'none'")
+    score_method = str(active_score_method).lower()
+    active_top = int(active_top_m)
+    if active_top < 1:
+        raise ValueError("active_top_m must be >= 1")
+    active_limit = min(active_top, len(op_spec))
+
+    alpha_values = (
+        np.asarray([float(alpha)], dtype=np.float64)
+        if alpha is not None
+        else np.asarray(tuple(float(v) for v in alphas), dtype=np.float64)
+    ).reshape(-1)
+    if alpha_values.size == 0:
+        raise ValueError("alphas must contain at least one value")
+    if np.any(~np.isfinite(alpha_values)) or np.any(alpha_values <= 0.0):
+        raise ValueError("alphas must be finite and strictly positive")
+
+    fold_arr = _selector_fold_ids(X_arr.shape[0], int(cv), fold_ids)
+    n_folds = int(fold_arr.max()) + 1
+    candidate_scores = np.empty((alpha_values.size, 3), dtype=np.float64)
+    oof_by_alpha = np.empty((alpha_values.size, X_arr.shape[0], y_arr.shape[1]), dtype=np.float64)
+    fold_active_indices = np.full(
+        (alpha_values.size, n_folds, active_limit),
+        -1,
+        dtype=np.int32,
+    )
+    fold_active_counts = np.zeros((alpha_values.size, n_folds), dtype=np.int32)
+    fold_active_pruned = np.zeros((alpha_values.size, n_folds), dtype=np.int32)
+
+    for alpha_idx, alpha_value in enumerate(alpha_values):
+        oof = np.empty_like(y_arr)
+        for fold in range(n_folds):
+            train_mask = fold_arr != fold
+            valid_mask = ~train_mask
+            if not np.any(valid_mask) or not np.any(train_mask):
+                raise ValueError("every fold must contain train and validation rows")
+            train_outputs, _ = _aom_operator_outputs(X_arr[train_mask], op_spec)
+            active_idx, _active_scores, pruned = _aom_active_screen_from_outputs(
+                train_outputs,
+                y_arr[train_mask],
+                op_spec,
+                top_m=active_top,
+                diversity_threshold=active_diversity_threshold,
+                block_scaling=scaling,
+                center_x=bool(center_x),
+                center_y=bool(center_y),
+                score_method=score_method,
+                max_per_family=active_max_per_family,
+                keep_identity=bool(keep_identity),
+            )
+            active_ops = tuple(op_spec[int(i)] for i in active_idx)
+            Z_train = _aom_superblock_from_outputs(train_outputs[active_idx])
+            valid_outputs, _ = _aom_operator_outputs(X_arr[valid_mask], active_ops)
+            Z_valid = _aom_superblock_from_outputs(valid_outputs)
+            Z_train_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+                Z_train,
+                active_idx.size,
+                X_arr.shape[1],
+                center_x=bool(center_x),
+                block_scaling=scaling,
+            )
+            Z_valid_scaled = Z_valid - z_mean.reshape(1, -1)
+            for op_pos, scale in enumerate(block_scales):
+                start = op_pos * X_arr.shape[1]
+                stop = start + X_arr.shape[1]
+                Z_valid_scaled[:, start:stop] *= float(scale)
+            y_mean = (
+                np.mean(y_arr[train_mask], axis=0, keepdims=True)
+                if center_y
+                else np.zeros((1, y_arr.shape[1]), dtype=np.float64)
+            )
+            beta = _ridge_solve_design(Z_train_scaled, y_arr[train_mask] - y_mean, float(alpha_value))
+            oof[valid_mask] = Z_valid_scaled @ beta + y_mean
+            count = min(active_idx.size, active_limit)
+            fold_active_indices[alpha_idx, fold, :count] = active_idx[:count]
+            fold_active_counts[alpha_idx, fold] = int(active_idx.size)
+            fold_active_pruned[alpha_idx, fold] = int(pruned)
+        residual = y_arr - oof
+        rmse = float(np.sqrt(np.mean(residual * residual)))
+        candidate_scores[alpha_idx] = (float(alpha_idx), float(alpha_value), rmse)
+        oof_by_alpha[alpha_idx] = oof
+
+    selected_idx = int(np.argmin(candidate_scores[:, 2]))
+    selected_alpha = float(alpha_values[selected_idx])
+    selected_oof = oof_by_alpha[selected_idx].copy()
+
+    outputs_full, operator_kinds = _aom_operator_outputs(X_arr, op_spec)
+    final_active_idx, active_scores, final_pruned = _aom_active_screen_from_outputs(
+        outputs_full,
+        y_arr,
+        op_spec,
+        top_m=active_top,
+        diversity_threshold=active_diversity_threshold,
+        block_scaling=scaling,
+        center_x=bool(center_x),
+        center_y=bool(center_y),
+        score_method=score_method,
+        max_per_family=active_max_per_family,
+        keep_identity=bool(keep_identity),
+    )
+    active_ops_final = tuple(op_spec[int(i)] for i in final_active_idx)
+    selected_outputs_full = outputs_full[final_active_idx]
+    Z_full = _aom_superblock_from_outputs(selected_outputs_full)
+    Z_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+        Z_full,
+        final_active_idx.size,
+        X_arr.shape[1],
+        center_x=bool(center_x),
+        block_scaling=scaling,
+    )
+    y_mean = (
+        np.mean(y_arr, axis=0, keepdims=True)
+        if center_y
+        else np.zeros((1, y_arr.shape[1]), dtype=np.float64)
+    )
+    beta = _ridge_solve_design(Z_scaled, y_arr - y_mean, selected_alpha)
+    input_coef, offset = _aom_fold_superblock_coefficients(
+        beta,
+        z_mean,
+        block_scales,
+        active_ops_final,
+        X_arr.shape[1],
+    )
+    intercept = y_mean.reshape(-1) - offset
+    predictions = X_arr @ input_coef + intercept.reshape(1, -1)
+
+    return {
+        "predictions": np.ascontiguousarray(predictions),
+        "oof_predictions": np.ascontiguousarray(selected_oof),
+        "coefficients": np.ascontiguousarray(beta),
+        "superblock_coefficients": np.ascontiguousarray(beta),
+        "input_coefficients": np.ascontiguousarray(input_coef),
+        "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
+        "candidate_scores": candidate_scores,
+        "operator_outputs": np.ascontiguousarray(selected_outputs_full.reshape(final_active_idx.size, X_arr.size)),
+        "operator_kinds": operator_kinds,
+        "selected_operator_indices": np.ascontiguousarray(final_active_idx, dtype=np.int32),
+        "selected_operator_kinds": np.ascontiguousarray(operator_kinds[final_active_idx], dtype=np.int64),
+        "active_scores": np.ascontiguousarray(active_scores.reshape(-1, 1)),
+        "selected_active_scores": np.ascontiguousarray(active_scores[final_active_idx].reshape(-1, 1)),
+        "fold_active_operator_indices": np.ascontiguousarray(fold_active_indices),
+        "fold_active_operator_counts": np.ascontiguousarray(fold_active_counts),
+        "fold_active_pruned": np.ascontiguousarray(fold_active_pruned),
+        "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
+        "block_scales": np.ascontiguousarray(block_scales.reshape(final_active_idx.size, 1)),
+        "superblock_mean": np.ascontiguousarray(z_mean.reshape(1, -1)),
+        "selected_candidate_id": float(selected_idx),
+        "selected_alpha": selected_alpha,
+        "selected_cv_rmse": float(candidate_scores[selected_idx, 2]),
+        "n_candidates": float(alpha_values.size),
+        "n_operators": float(len(op_spec)),
+        "n_active_operators": float(final_active_idx.size),
+        "n_active_pruned": float(final_pruned),
+        "active_top_m": float(active_top),
+        "active_diversity_threshold": float(active_diversity_threshold),
+        "active_max_per_family": float(active_max_per_family if active_max_per_family is not None else -1),
+        "n_samples": float(X_arr.shape[0]),
+        "n_features": float(X_arr.shape[1]),
+        "n_features_superblock": float(Z_full.shape[1]),
+        "n_targets": float(y_arr.shape[1]),
+        "cv": float(n_folds),
+        "center_x": float(bool(center_x)),
+        "center_y": float(bool(center_y)),
+        "keep_identity": float(bool(keep_identity)),
+        "block_scaling": scaling,
+        "active_score_method": score_method,
+        "selection_mode": "active_superblock",
+        "ridge_backend": "native",
+    }
+
+
+def aom_pls_superblock(
+    X,
+    y,
+    *,
+    operators=None,
+    n_components: int = 2,
+    pls_components: Sequence[int] | None = None,
+    cv: int = 5,
+    fold_ids=None,
+    block_scaling: str = "rms",
+    center_x: bool = True,
+    center_y: bool = True,
+    cuda_pls_parallel_folds: bool | None = None,
+    cuda_pls_min_device_features: int | None = None,
+    cuda_pls_many_batched: bool | None = None,
+) -> dict[str, object]:
+    """Fit PLS on a concatenated strict-linear AOM operator superblock."""
+    X_arr = as_f64_2d(X)
+    y_arr = _as_y_matrix(y, X_arr.shape[0])
+    op_spec = tuple(_AOM_SELECTOR_DEFAULT_OPERATORS if operators is None else operators)
+    if not op_spec:
+        raise ValueError("operators must contain at least one strict AOM operator")
+    scaling = str(block_scaling).lower()
+    if scaling not in {"rms", "none"}:
+        raise ValueError("block_scaling must be 'rms' or 'none'")
+    component_values = (
+        np.asarray([int(n_components)], dtype=np.int32)
+        if pls_components is None
+        else np.asarray(tuple(int(v) for v in pls_components), dtype=np.int32)
+    ).reshape(-1)
+    if component_values.size == 0:
+        raise ValueError("pls_components must contain at least one value")
+    if np.any(component_values < 1):
+        raise ValueError("PLS components must be positive integers")
+
+    fold_arr = _selector_fold_ids(X_arr.shape[0], int(cv), fold_ids)
+    n_folds = int(fold_arr.max()) + 1
+    min_train = min(int(np.count_nonzero(fold_arr != fold)) for fold in range(n_folds))
+    if min_train < 2:
+        raise ValueError("every PLS superblock train fold must contain at least 2 rows")
+    max_components = min(min_train - 1, len(op_spec) * X_arr.shape[1])
+    if np.any(component_values > max_components):
+        raise ValueError(
+            "PLS components must be <= min(train_rows - 1, superblock_features)"
+        )
+
+    candidate_scores = np.empty((component_values.size, 3), dtype=np.float64)
+    oof_by_component = np.empty(
+        (component_values.size, X_arr.shape[0], y_arr.shape[1]),
+        dtype=np.float64,
+    )
+    route_counter_keys = (
+        "n_pls_moment_cv_fits",
+        "n_pls_moment_host_cv_fits",
+        "n_pls_moment_cuda_device_cv_fits",
+        "n_pls_moment_cuda_parallel_fold_batches",
+        "n_pls_moment_cuda_parallel_fold_jobs",
+        "n_pls_moment_cuda_many_batched_batches",
+        "n_pls_moment_cuda_many_batched_jobs",
+        "n_pls_materialized_cv_fits",
+        "n_pls_moment_final_fits",
+        "n_pls_moment_host_final_fits",
+        "n_pls_moment_cuda_device_final_fits",
+        "n_pls_materialized_final_fits",
+    )
+    route_counters = {key: 0.0 for key in route_counter_keys}
+
+    def add_route_counters(result: dict[str, object]) -> None:
+        for key in route_counter_keys:
+            route_counters[key] += float(result.get(key, 0.0))
+
+    for component_idx, component_count in enumerate(component_values):
+        oof = np.empty_like(y_arr)
+        for fold in range(n_folds):
+            train_mask = fold_arr != fold
+            valid_mask = ~train_mask
+            if not np.any(valid_mask) or not np.any(train_mask):
+                raise ValueError("every fold must contain train and validation rows")
+            Z_train, train_outputs, _ = _aom_ridge_superblock_design(X_arr[train_mask], op_spec)
+            Z_valid, _, _ = _aom_ridge_superblock_design(X_arr[valid_mask], op_spec)
+            n_ops = train_outputs.shape[0]
+            Z_train_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+                Z_train,
+                n_ops,
+                X_arr.shape[1],
+                center_x=bool(center_x),
+                block_scaling=scaling,
+            )
+            Z_valid_scaled = Z_valid - z_mean.reshape(1, -1)
+            for op_idx, scale in enumerate(block_scales):
+                start = op_idx * X_arr.shape[1]
+                stop = start + X_arr.shape[1]
+                Z_valid_scaled[:, start:stop] *= float(scale)
+            beta, intercept_design, _fit_result = _pls_solve_design(
+                Z_train_scaled,
+                y_arr[train_mask],
+                int(component_count),
+                center_y=bool(center_y),
+                cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+                cuda_pls_min_device_features=cuda_pls_min_device_features,
+                cuda_pls_many_batched=cuda_pls_many_batched,
+            )
+            add_route_counters(_fit_result)
+            oof[valid_mask] = Z_valid_scaled @ beta + intercept_design.reshape(1, -1)
+        residual = y_arr - oof
+        rmse = float(np.sqrt(np.mean(residual * residual)))
+        candidate_scores[component_idx] = (
+            float(component_idx),
+            float(component_count),
+            rmse,
+        )
+        oof_by_component[component_idx] = oof
+
+    selected_idx = int(np.argmin(candidate_scores[:, 2]))
+    selected_components = int(component_values[selected_idx])
+    selected_oof = oof_by_component[selected_idx].copy()
+
+    Z_full, outputs_full, operator_kinds = _aom_ridge_superblock_design(X_arr, op_spec)
+    n_ops = outputs_full.shape[0]
+    Z_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+        Z_full,
+        n_ops,
+        X_arr.shape[1],
+        center_x=bool(center_x),
+        block_scaling=scaling,
+    )
+    beta, intercept_design, final_result = _pls_solve_design(
+        Z_scaled,
+        y_arr,
+        selected_components,
+        center_y=bool(center_y),
+        cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+        cuda_pls_min_device_features=cuda_pls_min_device_features,
+        cuda_pls_many_batched=cuda_pls_many_batched,
+    )
+    add_route_counters(final_result)
+    input_coef, offset = _aom_fold_superblock_coefficients(
+        beta,
+        z_mean,
+        block_scales,
+        op_spec,
+        X_arr.shape[1],
+    )
+    intercept = intercept_design.reshape(-1) - offset
+    predictions = X_arr @ input_coef + intercept.reshape(1, -1)
+
+    out: dict[str, object] = {
+        "predictions": np.ascontiguousarray(predictions),
+        "oof_predictions": np.ascontiguousarray(selected_oof),
+        "coefficients": np.ascontiguousarray(beta),
+        "superblock_coefficients": np.ascontiguousarray(beta),
+        "input_coefficients": np.ascontiguousarray(input_coef),
+        "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
+        "candidate_scores": candidate_scores,
+        "operator_outputs": np.ascontiguousarray(outputs_full.reshape(n_ops, X_arr.size)),
+        "operator_kinds": operator_kinds,
+        "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
+        "block_scales": np.ascontiguousarray(block_scales.reshape(n_ops, 1)),
+        "superblock_mean": np.ascontiguousarray(z_mean.reshape(1, -1)),
+        "selected_candidate_id": float(selected_idx),
+        "selected_n_components": float(selected_components),
+        "n_components": float(selected_components),
+        "selected_cv_rmse": float(candidate_scores[selected_idx, 2]),
+        "n_candidates": float(component_values.size),
+        "n_operators": float(n_ops),
+        "n_samples": float(X_arr.shape[0]),
+        "n_features": float(X_arr.shape[1]),
+        "n_features_superblock": float(Z_full.shape[1]),
+        "n_targets": float(y_arr.shape[1]),
+        "cv": float(n_folds),
+        "center_x": float(bool(center_x)),
+        "center_y": float(bool(center_y)),
+        "block_scaling": scaling,
+        "selection_mode": "superblock",
+        "pls_backend": "native",
+    }
+    for key, value in route_counters.items():
+        out[key] = value
+    return out
+
+
+def aom_ridge_pls_superblock(
+    X,
+    y,
+    *,
+    operators=None,
+    n_components: int = 2,
+    pls_components: Sequence[int] | None = None,
+    ridge_lambda: float | None = None,
+    ridge_lambdas: Sequence[float] = (0.0, 0.1, 1.0, 10.0),
+    cv: int = 5,
+    fold_ids=None,
+    block_scaling: str = "rms",
+    center_x: bool = True,
+) -> dict[str, object]:
+    """Fit Ridge-PLS on a concatenated strict-linear AOM operator superblock."""
+    X_arr = as_f64_2d(X)
+    y_arr = _as_y_matrix(y, X_arr.shape[0])
+    op_spec = tuple(_AOM_SELECTOR_DEFAULT_OPERATORS if operators is None else operators)
+    if not op_spec:
+        raise ValueError("operators must contain at least one strict AOM operator")
+    scaling = str(block_scaling).lower()
+    if scaling not in {"rms", "none"}:
+        raise ValueError("block_scaling must be 'rms' or 'none'")
+    component_values = (
+        np.asarray([int(n_components)], dtype=np.int32)
+        if pls_components is None
+        else np.asarray(tuple(int(v) for v in pls_components), dtype=np.int32)
+    ).reshape(-1)
+    if component_values.size == 0:
+        raise ValueError("pls_components must contain at least one value")
+    if np.any(component_values < 1):
+        raise ValueError("PLS components must be positive integers")
+    lambda_values = (
+        np.asarray([float(ridge_lambda)], dtype=np.float64)
+        if ridge_lambda is not None
+        else np.asarray(tuple(float(v) for v in ridge_lambdas), dtype=np.float64)
+    ).reshape(-1)
+    if lambda_values.size == 0:
+        raise ValueError("ridge_lambdas must contain at least one value")
+    if np.any(~np.isfinite(lambda_values)) or np.any(lambda_values < 0.0):
+        raise ValueError("ridge_lambdas must be finite and non-negative")
+
+    fold_arr = _selector_fold_ids(X_arr.shape[0], int(cv), fold_ids)
+    n_folds = int(fold_arr.max()) + 1
+    min_train = min(int(np.count_nonzero(fold_arr != fold)) for fold in range(n_folds))
+    if min_train < 2:
+        raise ValueError("every AOM Ridge-PLS train fold must contain at least 2 rows")
+    max_components = min(min_train - 1, len(op_spec) * X_arr.shape[1])
+    if np.any(component_values > max_components):
+        raise ValueError(
+            "PLS components must be <= min(train_rows - 1, superblock_features)"
+        )
+
+    n_candidates = int(component_values.size * lambda_values.size)
+    candidate_scores = np.empty((n_candidates, 4), dtype=np.float64)
+    oof_by_candidate = np.empty(
+        (n_candidates, X_arr.shape[0], y_arr.shape[1]),
+        dtype=np.float64,
+    )
+
+    candidate_idx = 0
+    n_ridge_pls_fit_calls = 0
+    for component_count in component_values:
+        for lambda_value in lambda_values:
+            oof = np.empty_like(y_arr)
+            for fold in range(n_folds):
+                train_mask = fold_arr != fold
+                valid_mask = ~train_mask
+                if not np.any(valid_mask) or not np.any(train_mask):
+                    raise ValueError("every fold must contain train and validation rows")
+                Z_train, train_outputs, _ = _aom_ridge_superblock_design(
+                    X_arr[train_mask],
+                    op_spec,
+                )
+                Z_valid, _, _ = _aom_ridge_superblock_design(X_arr[valid_mask], op_spec)
+                n_ops = train_outputs.shape[0]
+                Z_train_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+                    Z_train,
+                    n_ops,
+                    X_arr.shape[1],
+                    center_x=bool(center_x),
+                    block_scaling=scaling,
+                )
+                Z_valid_scaled = Z_valid - z_mean.reshape(1, -1)
+                for op_idx, scale in enumerate(block_scales):
+                    start = op_idx * X_arr.shape[1]
+                    stop = start + X_arr.shape[1]
+                    Z_valid_scaled[:, start:stop] *= float(scale)
+                beta, intercept_design, _fit_result = _ridge_pls_solve_design(
+                    Z_train_scaled,
+                    y_arr[train_mask],
+                    float(lambda_value),
+                    int(component_count),
+                )
+                n_ridge_pls_fit_calls += 1
+                oof[valid_mask] = (
+                    Z_valid_scaled @ beta + intercept_design.reshape(1, -1)
+                )
+            residual = y_arr - oof
+            rmse = float(np.sqrt(np.mean(residual * residual)))
+            candidate_scores[candidate_idx] = (
+                float(candidate_idx),
+                float(component_count),
+                float(lambda_value),
+                rmse,
+            )
+            oof_by_candidate[candidate_idx] = oof
+            candidate_idx += 1
+
+    selected_idx = int(np.argmin(candidate_scores[:, 3]))
+    selected_components = int(candidate_scores[selected_idx, 1])
+    selected_lambda = float(candidate_scores[selected_idx, 2])
+    selected_oof = oof_by_candidate[selected_idx].copy()
+
+    Z_full, outputs_full, operator_kinds = _aom_ridge_superblock_design(X_arr, op_spec)
+    n_ops = outputs_full.shape[0]
+    Z_scaled, z_mean, block_scales = _aom_superblock_center_scale(
+        Z_full,
+        n_ops,
+        X_arr.shape[1],
+        center_x=bool(center_x),
+        block_scaling=scaling,
+    )
+    beta, intercept_design, final_result = _ridge_pls_solve_design(
+        Z_scaled,
+        y_arr,
+        selected_lambda,
+        selected_components,
+    )
+    n_ridge_pls_fit_calls += 1
+    input_coef, offset = _aom_fold_superblock_coefficients(
+        beta,
+        z_mean,
+        block_scales,
+        op_spec,
+        X_arr.shape[1],
+    )
+    intercept = intercept_design.reshape(-1) - offset
+    predictions = X_arr @ input_coef + intercept.reshape(1, -1)
+
+    return {
+        "predictions": np.ascontiguousarray(predictions),
+        "oof_predictions": np.ascontiguousarray(selected_oof),
+        "coefficients": np.ascontiguousarray(beta),
+        "superblock_coefficients": np.ascontiguousarray(beta),
+        "input_coefficients": np.ascontiguousarray(input_coef),
+        "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
+        "candidate_scores": candidate_scores,
+        "operator_outputs": np.ascontiguousarray(outputs_full.reshape(n_ops, X_arr.size)),
+        "operator_kinds": operator_kinds,
+        "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
+        "block_scales": np.ascontiguousarray(block_scales.reshape(n_ops, 1)),
+        "superblock_mean": np.ascontiguousarray(z_mean.reshape(1, -1)),
+        "selected_candidate_id": float(selected_idx),
+        "selected_n_components": float(selected_components),
+        "n_components": float(selected_components),
+        "selected_ridge_lambda": selected_lambda,
+        "ridge_lambda": selected_lambda,
+        "selected_cv_rmse": float(candidate_scores[selected_idx, 3]),
+        "n_candidates": float(n_candidates),
+        "n_operators": float(n_ops),
+        "n_samples": float(X_arr.shape[0]),
+        "n_features": float(X_arr.shape[1]),
+        "n_features_superblock": float(Z_full.shape[1]),
+        "n_targets": float(y_arr.shape[1]),
+        "cv": float(n_folds),
+        "center_x": float(bool(center_x)),
+        "block_scaling": scaling,
+        "selection_mode": "ridge_pls_superblock",
+        "ridge_pls_backend": "native",
+        "n_ridge_pls_fit_calls": float(n_ridge_pls_fit_calls),
+        "native_rmse": float(final_result.get("rmse", np.nan)),
+    }
+
+
+def _aom_apply_strict_chain_to_matrix(
+    X_arr: np.ndarray,
+    chain,
+) -> tuple[np.ndarray, list[tuple[str, tuple[float, ...]]]]:
+    """Apply one strict-linear AOM chain sequentially to a matrix."""
+    canonical_chain = _canonicalize_aom_chain(chain)
+    if not canonical_chain:
+        raise ValueError("AOM chain must contain at least one strict operator")
+    current = np.ascontiguousarray(X_arr, dtype=np.float64)
+    for operator in canonical_chain:
+        outputs, _kinds = _aom_operator_outputs(current, (operator,))
+        if outputs.shape[0] != 1:
+            raise ValueError("strict AOM chain operator did not return one output")
+        current = np.ascontiguousarray(outputs[0], dtype=np.float64)
+    return current, canonical_chain
+
+
+def aom_chain_ridge_pls(
+    X,
+    y,
+    chains=None,
+    *,
+    profile: str = "compact",
+    families: dict | None = None,
+    templates: Sequence[Sequence[str]] | None = None,
+    max_chains: int | None = None,
+    n_components: int = 2,
+    pls_components: Sequence[int] | None = None,
+    ridge_lambda: float | None = None,
+    ridge_lambdas: Sequence[float] = (0.0, 0.1, 1.0, 10.0),
+    cv: int = 5,
+    fold_ids=None,
+    center_x: bool = True,
+    center_y: bool = True,
+) -> dict[str, object]:
+    """Select one strict-linear AOM chain and fit a native Ridge-PLS head.
+
+    This is the strict/raw-base subset of donor FastAOM SingleChainPLSRidge:
+    every candidate is one sequential chain of native strict-linear AOM
+    operators, selected by train-only CV over ``chain x components x lambda``.
+    The final coefficient vector is folded back to the raw input space by
+    applying the selected chain to an identity matrix.
+    """
+    X_arr = as_f64_2d(X)
+    y_arr = _as_y_matrix(y, X_arr.shape[0])
+    if chains is None:
+        chain_list = build_aom_strict_chain_grid(
+            profile,
+            families=families,
+            templates=templates,
+            max_chains=max_chains,
+        )
+    else:
+        chain_list = [_canonicalize_aom_chain(chain) for chain in chains]
+        if max_chains is not None:
+            chain_list = chain_list[: int(max_chains)]
+    if not chain_list:
+        raise ValueError("chains must contain at least one strict AOM chain")
+
+    component_values = (
+        np.asarray([int(n_components)], dtype=np.int32)
+        if pls_components is None
+        else np.asarray(tuple(int(v) for v in pls_components), dtype=np.int32)
+    ).reshape(-1)
+    if component_values.size == 0:
+        raise ValueError("pls_components must contain at least one value")
+    if np.any(component_values < 1):
+        raise ValueError("PLS components must be positive integers")
+
+    lambda_values = (
+        np.asarray([float(ridge_lambda)], dtype=np.float64)
+        if ridge_lambda is not None
+        else np.asarray(tuple(float(v) for v in ridge_lambdas), dtype=np.float64)
+    ).reshape(-1)
+    if lambda_values.size == 0:
+        raise ValueError("ridge_lambdas must contain at least one value")
+    if np.any(~np.isfinite(lambda_values)) or np.any(lambda_values < 0.0):
+        raise ValueError("ridge_lambdas must be finite and non-negative")
+
+    fold_arr = _selector_fold_ids(X_arr.shape[0], int(cv), fold_ids)
+    n_folds = int(fold_arr.max()) + 1
+    min_train = min(int(np.count_nonzero(fold_arr != fold)) for fold in range(n_folds))
+    if min_train < 2:
+        raise ValueError("every AOM chain Ridge-PLS train fold must contain at least 2 rows")
+    max_components = min(min_train - 1, X_arr.shape[1])
+    if np.any(component_values > max_components):
+        raise ValueError("PLS components must be <= min(train_rows - 1, n_features)")
+
+    n_candidates = int(len(chain_list) * component_values.size * lambda_values.size)
+    candidate_scores = np.empty((n_candidates, 5), dtype=np.float64)
+    chain_lengths = np.asarray(
+        [len(_canonicalize_aom_chain(chain)) for chain in chain_list],
+        dtype=np.int32,
+    )
+
+    candidate_idx = 0
+    best_idx = -1
+    best_rmse = np.inf
+    best_oof = None
+    n_ridge_pls_fit_calls = 0
+    for chain_idx, chain in enumerate(chain_list):
+        for component_count in component_values:
+            for lambda_value in lambda_values:
+                oof = np.empty_like(y_arr)
+                for fold in range(n_folds):
+                    train_mask = fold_arr != fold
+                    valid_mask = ~train_mask
+                    if not np.any(valid_mask) or not np.any(train_mask):
+                        raise ValueError("every fold must contain train and validation rows")
+                    Z_train, canonical_chain = _aom_apply_strict_chain_to_matrix(
+                        X_arr[train_mask],
+                        chain,
+                    )
+                    Z_valid, _ = _aom_apply_strict_chain_to_matrix(
+                        X_arr[valid_mask],
+                        canonical_chain,
+                    )
+                    beta, intercept_design, _fit_result = _ridge_pls_solve_design(
+                        Z_train,
+                        y_arr[train_mask],
+                        float(lambda_value),
+                        int(component_count),
+                        center_x=bool(center_x),
+                        center_y=bool(center_y),
+                    )
+                    n_ridge_pls_fit_calls += 1
+                    oof[valid_mask] = (
+                        Z_valid @ beta + intercept_design.reshape(1, -1)
+                    )
+                residual = y_arr - oof
+                rmse = float(np.sqrt(np.mean(residual * residual)))
+                candidate_scores[candidate_idx] = (
+                    float(candidate_idx),
+                    float(chain_idx),
+                    float(component_count),
+                    float(lambda_value),
+                    rmse,
+                )
+                if rmse < best_rmse:
+                    best_idx = candidate_idx
+                    best_rmse = rmse
+                    best_oof = oof.copy()
+                candidate_idx += 1
+
+    if best_oof is None:
+        raise RuntimeError("AOM chain Ridge-PLS scoring produced no candidates")
+    selected_idx = int(best_idx)
+    selected_chain_idx = int(candidate_scores[selected_idx, 1])
+    selected_components = int(candidate_scores[selected_idx, 2])
+    selected_lambda = float(candidate_scores[selected_idx, 3])
+    selected_chain = chain_list[selected_chain_idx]
+    selected_oof = best_oof.copy()
+
+    Z_full, selected_chain = _aom_apply_strict_chain_to_matrix(X_arr, selected_chain)
+    beta, intercept_design, final_result = _ridge_pls_solve_design(
+        Z_full,
+        y_arr,
+        selected_lambda,
+        selected_components,
+        center_x=bool(center_x),
+        center_y=bool(center_y),
+    )
+    n_ridge_pls_fit_calls += 1
+    identity = np.ascontiguousarray(np.eye(X_arr.shape[1], dtype=np.float64))
+    transform_matrix, _ = _aom_apply_strict_chain_to_matrix(identity, selected_chain)
+    input_coef = np.ascontiguousarray(transform_matrix @ beta)
+    intercept = np.ascontiguousarray(intercept_design.reshape(1, -1))
+    predictions = np.ascontiguousarray(
+        X_arr @ input_coef + intercept.reshape(1, -1)
+    )
+
+    return {
+        "predictions": predictions,
+        "oof_predictions": np.ascontiguousarray(selected_oof),
+        "coefficients": np.ascontiguousarray(beta),
+        "transformed_coefficients": np.ascontiguousarray(beta),
+        "input_coefficients": input_coef,
+        "intercept": intercept,
+        "candidate_scores": candidate_scores,
+        "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
+        "chain_transform_matrix": np.ascontiguousarray(transform_matrix),
+        "chain_lengths": np.ascontiguousarray(chain_lengths, dtype=np.int32),
+        "selected_candidate_id": float(selected_idx),
+        "selected_chain_id": float(selected_chain_idx),
+        "selected_chain_length": float(len(selected_chain)),
+        "selected_chain": selected_chain,
+        "selected_n_components": float(selected_components),
+        "n_components": float(selected_components),
+        "selected_ridge_lambda": selected_lambda,
+        "ridge_lambda": selected_lambda,
+        "selected_cv_rmse": float(candidate_scores[selected_idx, 4]),
+        "n_candidates": float(n_candidates),
+        "n_chains": float(len(chain_list)),
+        "n_operators": float(len(selected_chain)),
+        "n_samples": float(X_arr.shape[0]),
+        "n_features": float(X_arr.shape[1]),
+        "n_features_transformed": float(Z_full.shape[1]),
+        "n_targets": float(y_arr.shape[1]),
+        "cv": float(n_folds),
+        "center_x": float(bool(center_x)),
+        "center_y": float(bool(center_y)),
+        "selection_mode": "chain_ridge_pls",
+        "ridge_pls_backend": "native",
+        "n_ridge_pls_fit_calls": float(n_ridge_pls_fit_calls),
+        "native_rmse": float(final_result.get("rmse", np.nan)),
+    }
 
 
 def aom_operator_pls_stack(
@@ -5701,12 +8206,29 @@ def aom_operator_pls_stack(
             ),
             "n4m_aom_operator_pls_stack_fit",
         )
-        return _method_result_dict(
+        out = _method_result_dict(
             result,
             matrices=_AOM_OPERATOR_PLS_STACK_MATRICES,
             int_vectors=("fold_ids", "operator_feature_offsets"),
             scalars=_AOM_OPERATOR_PLS_STACK_SCALARS,
         )
+        ns = int(out["n_specs"])
+        cv_i = int(out["cv"])
+        n_ops = int(out["n_operators"])
+        n_stack_cv_fits = (ns + 1) * cv_i
+        n_stack_fit_calls = n_stack_cv_fits + 1
+        n_pls_cv_fits = n_stack_cv_fits * n_ops
+        n_pls_final_fits = n_ops
+        out["n_operator_pls_stack_fit_calls"] = float(n_stack_fit_calls)
+        out["n_operator_pls_stack_pls_fit_calls"] = float(
+            n_pls_cv_fits + n_pls_final_fits
+        )
+        out["n_operator_pls_stack_ridge_fit_calls"] = float(n_stack_fit_calls)
+        out["n_pls_stack_cv_fits"] = float(n_pls_cv_fits)
+        out["n_pls_stack_final_fits"] = float(n_pls_final_fits)
+        out["n_ridge_stack_cv_fits"] = float(n_stack_cv_fits)
+        out["n_ridge_stack_final_fits"] = 1.0
+        return out
     finally:
         if result.value:
             lib.n4m_method_result_destroy(result)
@@ -5739,6 +8261,59 @@ def ridge(
         scale_x=scale_x,
         center_y=center_y,
     )
+
+
+def pls(
+    X,
+    y,
+    *,
+    n_components: int = 2,
+    pls_components=None,
+    cv: int = 5,
+    fold_ids=None,
+    center_x: bool | None = None,
+    scale_x: bool | None = None,
+    center_y: bool | None = None,
+    scale_y: bool | None = None,
+    cuda_pls_parallel_folds: bool | None = None,
+    cuda_pls_min_device_features: int | None = None,
+    cuda_pls_many_batched: bool | None = None,
+) -> dict[str, np.ndarray | float]:
+    """Fit native moment PLS through the reusable sweep path.
+
+    ``n_components`` gives the fixed component count used by default.
+    ``pls_components`` can be supplied as an explicit component grid; selection
+    is then by train CV inside ``n4m_sweep_run``. The final result still exposes
+    replayable input-space coefficients and an intercept.
+    """
+    if pls_components is None:
+        components = (int(n_components),)
+    else:
+        components = tuple(int(value) for value in pls_components)
+    if not components or any(value < 1 for value in components):
+        raise ValueError("PLS components must be positive integers")
+    result = sweep_run(
+        X,
+        y,
+        cv=cv,
+        fold_ids=fold_ids,
+        ridge_lambdas=(),
+        pls_components=components,
+        heads=("pls",),
+        center_x=center_x,
+        scale_x=scale_x,
+        center_y=center_y,
+        scale_y=scale_y,
+        cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+        cuda_pls_min_device_features=cuda_pls_min_device_features,
+        cuda_pls_many_batched=cuda_pls_many_batched,
+    )
+    pred = np.asarray(result["predictions"], dtype=np.float64)
+    y_arr = _as_y_matrix(y, pred.shape[0])
+    residual = pred - y_arr
+    result["rmse"] = float(np.sqrt(np.mean(residual * residual)))
+    result["n_components"] = int(result.get("selected_param", components[-1]))
+    return result
 
 
 def pcr(
@@ -5792,6 +8367,103 @@ def cppls(
         matrices=("coefficients", "predictions", "x_mean", "y_mean"),
         scalars=("rmse", "gamma"),
         n_components=n_components,
+    )
+
+
+def weighted_pls(
+    X,
+    y,
+    *,
+    sample_weights=None,
+    n_components: int = 2,
+    center_x: bool | None = None,
+    scale_x: bool | None = None,
+    center_y: bool | None = None,
+    scale_y: bool | None = None,
+) -> dict[str, np.ndarray | float]:
+    """Fit native weighted SIMPLS and return its MethodResult."""
+    X_arr = as_f64_2d(X)
+    if sample_weights is None:
+        weights = np.ones(X_arr.shape[0], dtype=np.float64)
+    else:
+        weights = np.ascontiguousarray(sample_weights, dtype=np.float64).reshape(-1)
+    if weights.size != X_arr.shape[0]:
+        raise ValueError("sample_weights length must match X.shape[0]")
+    if np.any(~np.isfinite(weights)) or np.any(weights <= 0.0):
+        raise ValueError("sample_weights must be strictly positive and finite")
+    return _fit_method_result(
+        "n4m_weighted_pls_fit",
+        X_arr,
+        y,
+        _f64_ptr(weights),
+        ctypes.c_int64(weights.size),
+        matrices=("coefficients", "predictions", "x_mean", "y_mean"),
+        scalars=("rmse",),
+        n_components=n_components,
+        center_x=center_x,
+        scale_x=scale_x,
+        center_y=center_y,
+        scale_y=scale_y,
+    )
+
+
+def robust_pls(
+    X,
+    y,
+    *,
+    huber_k: float = 1.345,
+    max_irls_iter: int = 5,
+    n_components: int = 2,
+    center_x: bool | None = None,
+    scale_x: bool | None = None,
+    center_y: bool | None = None,
+    scale_y: bool | None = None,
+) -> dict[str, np.ndarray | float]:
+    """Fit native robust SIMPLS with Huber weights and return its MethodResult."""
+    if not np.isfinite(float(huber_k)) or float(huber_k) <= 0.0:
+        raise ValueError("huber_k must be strictly positive and finite")
+    return _fit_method_result(
+        "n4m_robust_pls_fit",
+        X,
+        y,
+        ctypes.c_double(float(huber_k)),
+        ctypes.c_int32(int(max_irls_iter)),
+        matrices=("coefficients", "predictions", "x_mean", "y_mean"),
+        scalars=("rmse", "huber_k"),
+        n_components=n_components,
+        center_x=center_x,
+        scale_x=scale_x,
+        center_y=center_y,
+        scale_y=scale_y,
+    )
+
+
+def ridge_pls(
+    X,
+    y,
+    *,
+    ridge_lambda: float = 0.1,
+    n_components: int = 2,
+    center_x: bool | None = None,
+    scale_x: bool | None = None,
+    center_y: bool | None = None,
+    scale_y: bool | None = None,
+) -> dict[str, np.ndarray | float]:
+    """Fit native ridge-augmented SIMPLS and return its MethodResult."""
+    if not np.isfinite(float(ridge_lambda)) or float(ridge_lambda) < 0.0:
+        raise ValueError("ridge_lambda must be non-negative and finite")
+    return _fit_method_result(
+        "n4m_ridge_pls_fit",
+        X,
+        y,
+        ctypes.c_double(float(ridge_lambda)),
+        matrices=("coefficients", "predictions", "x_mean", "y_mean"),
+        scalars=("rmse", "ridge_lambda"),
+        n_components=n_components,
+        center_x=center_x,
+        scale_x=scale_x,
+        center_y=center_y,
+        scale_y=scale_y,
     )
 
 

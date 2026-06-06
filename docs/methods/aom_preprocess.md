@@ -27,7 +27,7 @@ Beurier, G., Reiter, R., Noûs, C., Rouan, L. & Cornet, D. (2026). *Reframing pr
 
 ### Mathematical principle
 
-`aom_preprocess` is the **operator-bank primitive** that AOM-PLS and POP-PLS build on. Given the centered spectral matrix $\mathbf{X} \in \mathbb{R}^{n\times p}$ and a finite bank of strict-linear operators $\{\mathbf{A}_b\}_{b=1}^{M} \subset \mathbb{R}^{p\times p}$ — matrices fully determined by the wavelength grid (identity, Savitzky–Golay smooth/derivative, finite difference, polynomial detrending, Norris–Williams, Whittaker; SNV / MSC / EMSC / ASLS / OSC are excluded because they depend on $\mathbf{y}$ or on a reference spectrum) — `aom_preprocess` materializes the $M$ preprocessed views $\mathbf{X}_b = \mathbf{X}\mathbf{A}_b^{\top}$ and gates them.
+`aom_preprocess` is the **operator-bank primitive** that AOM-PLS and POP-PLS build on. Given the centered spectral matrix $\mathbf{X} \in \mathbb{R}^{n\times p}$ and a finite bank of strict-linear operators $\{\mathbf{A}_b\}_{b=1}^{M} \subset \mathbb{R}^{p\times p}$ — matrices fully determined by the wavelength grid — `aom_preprocess` materializes the $M$ preprocessed views $\mathbf{X}_b = \mathbf{X}\mathbf{A}_b^{\top}$ and gates them. The direct `n4m_aom_preprocess_fit` surface currently supports the reusable strict-linear operator subset covered by the smoke tests: identity, first-degree polynomial detrending, Savitzky-Golay smoothing, Savitzky-Golay first derivative, Norris-Williams, finite difference, Gaussian smoothing, Whittaker smoothing and FCK. Strict chains and model-scoring diversity are handled by the AOM sweep/campaign operator-moment paths. SNV / MSC / EMSC / ASLS / OSC remain excluded from the moment contract because they depend on per-sample normalization, $\mathbf{y}$, or a reference spectrum.
 
 Two gating modes are supported:
 
@@ -84,7 +84,13 @@ res = n4m.aom_preprocess(
     operators=[
         "identity",
         ("savgol_smooth", [5, 2]),
+        ("detrend_poly", [1]),
+        ("savgol_derivative", [5, 2, 1]),
+        ("norris_williams", [5, 5, 1]),
         ("finite_difference", [1]),
+        ("gaussian", [1.0]),
+        ("whittaker", [100.0]),
+        ("fck", [1.0]),
     ],
     gating_mode="soft",
 )

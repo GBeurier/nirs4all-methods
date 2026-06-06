@@ -35,6 +35,9 @@ struct AomSweepResult {
     std::int64_t n_moment_prefix_cache_hits{0};
     std::int64_t n_moment_prefix_cache_misses{0};
     std::int64_t n_ridge_moment_cv_fits{0};
+    std::int64_t n_ridge_moment_eigen_path_preparations{0};
+    std::int64_t n_ridge_moment_eigen_path_cv_fits{0};
+    std::int64_t n_ridge_moment_direct_cv_fits{0};
     std::int64_t n_ridge_dual_materialized_cv_fits{0};
     std::int64_t n_ridge_dual_cross_cv_fits{0};
     std::int64_t n_ridge_moment_score_batch_calls{0};
@@ -46,6 +49,8 @@ struct AomSweepResult {
     std::int64_t n_pls_moment_cuda_device_cv_fits{0};
     std::int64_t n_pls_moment_cuda_parallel_fold_batches{0};
     std::int64_t n_pls_moment_cuda_parallel_fold_jobs{0};
+    std::int64_t n_pls_moment_cuda_many_batched_batches{0};
+    std::int64_t n_pls_moment_cuda_many_batched_jobs{0};
     std::int64_t n_pls_moment_score_batch_calls{0};
     std::int64_t n_pls_moment_score_batch_jobs{0};
     std::int64_t n_pls_materialized_cv_fits{0};

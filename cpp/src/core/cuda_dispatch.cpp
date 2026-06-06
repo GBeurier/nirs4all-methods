@@ -1041,6 +1041,7 @@ int pls1_moment_components_many(std::size_t n_jobs,
                                 bool parallel_folds,
                                 bool many_batched,
                                 bool* used_parallel_folds,
+                                bool* used_many_batched,
                                 std::string* error) {
     try {
         if (error != nullptr) {
@@ -1048,6 +1049,9 @@ int pls1_moment_components_many(std::size_t n_jobs,
         }
         if (used_parallel_folds != nullptr) {
             *used_parallel_folds = false;
+        }
+        if (used_many_batched != nullptr) {
+            *used_many_batched = false;
         }
         if (n_jobs == 0) {
             return 0;
@@ -1140,6 +1144,9 @@ int pls1_moment_components_many(std::size_t n_jobs,
                         n_jobs, p, max_components, C, s, yy, eps,
                         W, P, Q, yy_out, &batched_error);
                 if (batched_status == 0 || batched_status == 1) {
+                    if (batched_status == 0 && used_many_batched != nullptr) {
+                        *used_many_batched = true;
+                    }
                     if (batched_status != 0 && error != nullptr) {
                         *error = batched_error;
                     }

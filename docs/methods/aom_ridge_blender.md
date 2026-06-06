@@ -148,7 +148,8 @@ CUDA_VISIBLE_DEVICES=0 \
 PYTHONPATH=bindings/python/src \
 N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
 python3 benchmarks/cross_binding/bench_aom_ridge_blender_timing.py \
-  --output benchmarks/cross_binding/aom_ridge_blender_timing_cuda_smoke.csv
+  --output benchmarks/cross_binding/aom_ridge_blender_timing_cuda_smoke.csv \
+  --mode both
 ```
 
 Current smoke CSVs:
@@ -156,10 +157,18 @@ Current smoke CSVs:
 - `benchmarks/cross_binding/aom_ridge_blender_timing.csv`
 - `benchmarks/cross_binding/aom_ridge_blender_timing_cuda_smoke.csv`
 
-Current ABI 1.17.0 compact 48-candidate medians:
+The CUDA smoke CSV includes both the ABI-close function row
+`native_aom_ridge_blender` and the sklearn replay wrapper row
+`native_aom_ridge_blender_sklearn`. The wrapper row records
+`prediction_replay_max_abs_error` to prove `predict(X)` replays the native
+folded coefficients/intercept state on the CUDA build path.
 
-- CPU: 16.32 ms for 32 x 64, 69.39 ms for 64 x 128, 272.69 ms for 96 x 256.
-- CUDA-build smoke: 15.63 ms, 81.00 ms, 299.56 ms on the same cells.
+The timing rows also expose deterministic Ridge fit accounting:
+`n_ridge_blender_cv_fits = n_candidates * cv`,
+`n_ridge_blender_final_fits = n_candidates`, and
+`n_ridge_blender_fit_calls = n_candidates * (cv + 1)`. For the compact smoke
+grid (`cv=5`, 12 chains, 4 lambdas), those counters are `240`, `48`, and
+`288`.
 
 On the same synthetic cells, `blend_oof_rmse` is lower than the best single
 candidate OOF RMSE, which confirms that the stored simplex weights and

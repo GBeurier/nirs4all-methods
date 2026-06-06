@@ -19,6 +19,7 @@
 #include "core/common/linalg.hpp"
 #include "core/common/matrix_view.hpp"
 #include "core/common/parallel.hpp"
+#include "core/common/svd.h"
 #if defined(N4M_USE_CUDA)
 #  include "core/cuda_dispatch.hpp"
 #endif
@@ -67,6 +68,17 @@ struct RidgeDualDesign {
     std::vector<double> x_mean;
     std::vector<double> y_mean;
     std::vector<double> x_scale;
+};
+
+struct RidgeMomentEigenPath {
+    std::int64_t n_features{0};
+    std::int64_t n_targets{0};
+    std::vector<double> eigenvalues;    // p
+    std::vector<double> eigenvectors;   // p x p, eigenvectors as columns
+    std::vector<double> projected_xy;   // p x q = V.T @ xy_scaled
+    std::vector<double> x_offset;       // p
+    std::vector<double> y_offset;       // q
+    std::vector<double> scale;          // p
 };
 
 [[nodiscard]] bool score_only_requested(const Config& cfg) noexcept {
@@ -882,6 +894,199 @@ void design_cross_moments(const Config& cfg,
     return N4M_OK;
 }
 
+[[nodiscard]] n4m_status_t prepare_ridge_moment_eigen_path(
+    Context& ctx,
+    const Config& cfg,
+    const MomentStats& stats,
+    RidgeMomentEigenPath& out) {
+    const auto p = static_cast<std::size_t>(stats.n_features);
+    const auto q = static_cast<std::size_t>(stats.n_targets);
+    if (p == 0 || q == 0) {
+        ctx.set_error("ridge moment eigen path requires p>0 and q>0");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (product_overflows(p, p) || product_overflows(p, q)) {
+        ctx.set_error("ridge moment eigen path dimensions are too large");
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+
+    std::vector<double> xx;
+    std::vector<double> xy;
+    std::vector<double> x_offset;
+    std::vector<double> y_offset;
+    design_cross_moments(cfg, stats, xx, xy, x_offset, y_offset);
+    if (xx.size() != p * p || xy.size() != p * q ||
+        x_offset.size() != p || y_offset.size() != q) {
+        ctx.set_error("ridge moment eigen path received inconsistent moments");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    std::vector<double> scale(p, 1.0);
+    if (cfg.scale_x != 0) {
+        const double inv_n = 1.0 / static_cast<double>(stats.n_samples);
+        for (std::size_t i = 0; i < p; ++i) {
+            const double var = std::max(0.0, xx[i * p + i] * inv_n);
+            const double s = std::sqrt(var);
+            scale[i] = (s > 0.0) ? s : 1.0;
+        }
+        for (std::size_t i = 0; i < p; ++i) {
+            for (std::size_t j = 0; j < p; ++j) {
+                xx[i * p + j] /= (scale[i] * scale[j]);
+            }
+            for (std::size_t j = 0; j < q; ++j) {
+                xy[i * q + j] /= scale[i];
+            }
+        }
+    }
+
+    for (std::size_t i = 0; i < p; ++i) {
+        for (std::size_t j = i + 1; j < p; ++j) {
+            const double sym = 0.5 * (xx[i * p + j] + xx[j * p + i]);
+            xx[i * p + j] = sym;
+            xx[j * p + i] = sym;
+        }
+    }
+
+    RidgeMomentEigenPath path{};
+    path.n_features = stats.n_features;
+    path.n_targets = stats.n_targets;
+    path.eigenvalues.assign(p, 0.0);
+    path.eigenvectors.assign(p * p, 0.0);
+    n4m_status_t st = n4m_symmetric_eigh(
+        xx.data(), static_cast<std::int64_t>(p), path.eigenvalues.data(),
+        path.eigenvectors.data());
+    if (st != N4M_OK) {
+        ctx.set_error("ridge moment eigen path decomposition failed");
+        return st;
+    }
+
+    path.projected_xy.assign(p * q, 0.0);
+    for (std::size_t eig = 0; eig < p; ++eig) {
+        for (std::size_t target = 0; target < q; ++target) {
+            double acc = 0.0;
+            for (std::size_t row = 0; row < p; ++row) {
+                acc += path.eigenvectors[row * p + eig] *
+                       xy[row * q + target];
+            }
+            path.projected_xy[eig * q + target] = acc;
+        }
+    }
+    path.x_offset = std::move(x_offset);
+    path.y_offset = std::move(y_offset);
+    path.scale = std::move(scale);
+    out = std::move(path);
+    return N4M_OK;
+}
+
+[[nodiscard]] n4m_status_t fit_ridge_from_eigen_path(
+    Context& ctx,
+    const RidgeMomentEigenPath& path,
+    double lambda,
+    RidgeMomentFit& out) {
+    if (!std::isfinite(lambda) || lambda < 0.0) {
+        ctx.set_error("sweep ridge lambda must be finite and >= 0");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const auto p = static_cast<std::size_t>(path.n_features);
+    const auto q = static_cast<std::size_t>(path.n_targets);
+    if (p == 0 || q == 0 ||
+        path.eigenvalues.size() != p ||
+        path.eigenvectors.size() != p * p ||
+        path.projected_xy.size() != p * q ||
+        path.x_offset.size() != p ||
+        path.y_offset.size() != q ||
+        path.scale.size() != p) {
+        ctx.set_error("ridge moment eigen path is inconsistent");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    double max_abs_eig = 0.0;
+    for (const double eig : path.eigenvalues) {
+        if (!std::isfinite(eig)) {
+            ctx.set_error("ridge moment eigen path has non-finite eigenvalues");
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        max_abs_eig = std::max(max_abs_eig, std::abs(eig));
+    }
+    const double tol = 64.0 * std::numeric_limits<double>::epsilon() *
+                       std::max(1.0, max_abs_eig + std::abs(lambda));
+
+    std::vector<double> beta_scaled(p * q, 0.0);
+    for (std::size_t eig_ix = 0; eig_ix < p; ++eig_ix) {
+        double eig = path.eigenvalues[eig_ix];
+        if (eig < 0.0) {
+            if (std::abs(eig) <= tol) {
+                eig = 0.0;
+            } else {
+                ctx.set_error("ridge moment eigen path is not positive semidefinite");
+                return N4M_ERR_NUMERICAL_FAILURE;
+            }
+        }
+        const double denom = eig + lambda;
+        if (!std::isfinite(denom) || std::abs(denom) <= tol) {
+            ctx.set_error("ridge moment eigen path solve is singular");
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            const double factor =
+                path.projected_xy[eig_ix * q + target] / denom;
+            for (std::size_t row = 0; row < p; ++row) {
+                beta_scaled[row * q + target] +=
+                    path.eigenvectors[row * p + eig_ix] * factor;
+            }
+        }
+    }
+
+    out = RidgeMomentFit{};
+    out.n_features = path.n_features;
+    out.n_targets = path.n_targets;
+    out.x_mean = path.x_offset;
+    out.y_mean = path.y_offset;
+    out.x_scale = path.scale;
+    out.coefficients.assign(p * q, 0.0);
+    for (std::size_t i = 0; i < p; ++i) {
+        for (std::size_t j = 0; j < q; ++j) {
+            out.coefficients[i * q + j] = beta_scaled[i * q + j] /
+                                          out.x_scale[i];
+        }
+    }
+
+    out.intercept.assign(q, 0.0);
+    for (std::size_t j = 0; j < q; ++j) {
+        double v = out.y_mean[j];
+        for (std::size_t i = 0; i < p; ++i) {
+            v -= out.x_mean[i] * out.coefficients[i * q + j];
+        }
+        out.intercept[j] = v;
+    }
+    return N4M_OK;
+}
+
+[[nodiscard]] n4m_status_t fit_ridge_from_moment_path_or_direct(
+    Context& ctx,
+    const Config& cfg,
+    const MomentStats& stats,
+    const RidgeMomentEigenPath* path,
+    double lambda,
+    RidgeMomentFit& out,
+    bool* used_eigen_path = nullptr) {
+    if (used_eigen_path != nullptr) {
+        *used_eigen_path = false;
+    }
+    if (path != nullptr) {
+        Context path_ctx;
+        const n4m_status_t path_st =
+            fit_ridge_from_eigen_path(path_ctx, *path, lambda, out);
+        if (path_st == N4M_OK) {
+            if (used_eigen_path != nullptr) {
+                *used_eigen_path = true;
+            }
+            return N4M_OK;
+        }
+    }
+    return fit_ridge_from_moments(ctx, cfg, stats, lambda, out);
+}
+
 void predict_rows(const std::vector<double>& X,
                   std::size_t p,
                   const std::vector<std::int64_t>& rows,
@@ -1336,12 +1541,16 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
     std::int32_t max_components,
     std::vector<std::vector<RidgeMomentFit>>& prefix_fits_by_fold,
     bool* used_cuda_device_components = nullptr,
-    bool* used_cuda_parallel_folds = nullptr) {
+    bool* used_cuda_parallel_folds = nullptr,
+    bool* used_cuda_many_batched = nullptr) {
     if (used_cuda_device_components != nullptr) {
         *used_cuda_device_components = false;
     }
     if (used_cuda_parallel_folds != nullptr) {
         *used_cuda_parallel_folds = false;
+    }
+    if (used_cuda_many_batched != nullptr) {
+        *used_cuda_many_batched = false;
     }
     if (stats_by_fold.empty()) {
         ctx.set_error("PLS1 moment fold fit requires at least one fold");
@@ -1395,6 +1604,7 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
 
         std::string cuda_error;
         bool used_parallel_folds = false;
+        bool used_many_batched = false;
         const int cuda_status =
             ::n4m::cuda_dispatch::pls1_moment_components_many(
                 stats_by_fold.size(), p, a, C_ptrs.data(), s_ptrs.data(),
@@ -1402,7 +1612,7 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
                 W_ptrs.data(), P_ptrs.data(), Q_ptrs.data(), yy_out.data(),
                 cfg.cuda_pls_parallel_folds != 0,
                 cfg.cuda_pls_many_batched != 0, &used_parallel_folds,
-                &cuda_error);
+                &used_many_batched, &cuda_error);
         if (cuda_status != 0) {
             if (!cuda_error.empty()) {
                 ctx.set_error(cuda_error.c_str());
@@ -1431,6 +1641,9 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
         }
         if (used_cuda_parallel_folds != nullptr) {
             *used_cuda_parallel_folds = used_parallel_folds;
+        }
+        if (used_cuda_many_batched != nullptr) {
+            *used_cuda_many_batched = used_many_batched;
         }
         return N4M_OK;
     }
@@ -1745,6 +1958,26 @@ n4m_status_t run_moment_sweep(Context& ctx,
         }
     };
 
+    std::vector<RidgeMomentEigenPath> ridge_moment_eigen_paths;
+    std::vector<unsigned char> ridge_moment_eigen_path_ready;
+    if (do_ridge && lambdas.size() > 1U) {
+        ridge_moment_eigen_paths.resize(static_cast<std::size_t>(actual_cv));
+        ridge_moment_eigen_path_ready.assign(
+            static_cast<std::size_t>(actual_cv), 0);
+        for (std::int32_t fold = 0; fold < actual_cv; ++fold) {
+            const auto fold_ix = static_cast<std::size_t>(fold);
+            if (use_materialized_fold[fold_ix] != 0) continue;
+            Context path_ctx;
+            const n4m_status_t path_st = prepare_ridge_moment_eigen_path(
+                path_ctx, cfg, train_stats[fold_ix],
+                ridge_moment_eigen_paths[fold_ix]);
+            if (path_st == N4M_OK) {
+                ridge_moment_eigen_path_ready[fold_ix] = 1;
+                ++out.n_ridge_moment_eigen_path_preparations;
+            }
+        }
+    }
+
     for (std::size_t candidate = 0; candidate < lambdas.size(); ++candidate) {
         const double lambda = lambdas[candidate];
         bool candidate_ok = true;
@@ -1789,9 +2022,21 @@ n4m_status_t run_moment_sweep(Context& ctx,
                 }
             } else {
                 ++out.n_ridge_moment_cv_fits;
-                st = fit_ridge_from_moments(ctx, cfg, train_stats[fold_ix],
-                                            lambda, fit);
+                const RidgeMomentEigenPath* path =
+                    (!ridge_moment_eigen_path_ready.empty() &&
+                     ridge_moment_eigen_path_ready[fold_ix] != 0)
+                        ? &ridge_moment_eigen_paths[fold_ix]
+                        : nullptr;
+                bool used_eigen_path = false;
+                st = fit_ridge_from_moment_path_or_direct(
+                    ctx, cfg, train_stats[fold_ix], path, lambda, fit,
+                    &used_eigen_path);
                 if (st == N4M_OK) {
+                    if (used_eigen_path) {
+                        ++out.n_ridge_moment_eigen_path_cv_fits;
+                    } else {
+                        ++out.n_ridge_moment_direct_cv_fits;
+                    }
                     if (score_only) {
                         sse += ridge_heldout_sse_from_moments(
                             heldout_stats[fold_ix], fit);
@@ -1835,6 +2080,8 @@ n4m_status_t run_moment_sweep(Context& ctx,
     std::int64_t pls_moment_cuda_device_cv_fits = 0;
     std::int64_t pls_moment_cuda_parallel_fold_batches = 0;
     std::int64_t pls_moment_cuda_parallel_fold_jobs = 0;
+    std::int64_t pls_moment_cuda_many_batched_batches = 0;
+    std::int64_t pls_moment_cuda_many_batched_jobs = 0;
     std::int64_t pls_materialized_cv_fits = 0;
     std::int64_t pls_moment_final_fits = 0;
     std::int64_t pls_moment_host_final_fits = 0;
@@ -1852,9 +2099,11 @@ n4m_status_t run_moment_sweep(Context& ctx,
             std::vector<std::vector<RidgeMomentFit>> prefix_fits_by_fold;
             bool used_cuda_device = false;
             bool used_cuda_parallel_folds = false;
+            bool used_cuda_many_batched = false;
             st = fit_pls1_moment_prefixes_for_folds(
                 ctx, cfg, train_stats, max_comp, prefix_fits_by_fold,
-                &used_cuda_device, &used_cuda_parallel_folds);
+                &used_cuda_device, &used_cuda_parallel_folds,
+                &used_cuda_many_batched);
             if (st != N4M_OK) {
                 moment_attempt_ok = false;
                 ctx.clear_error();
@@ -1866,6 +2115,10 @@ n4m_status_t run_moment_sweep(Context& ctx,
                     if (used_cuda_parallel_folds) {
                         ++pls_moment_cuda_parallel_fold_batches;
                         pls_moment_cuda_parallel_fold_jobs += actual_cv;
+                    }
+                    if (used_cuda_many_batched) {
+                        ++pls_moment_cuda_many_batched_batches;
+                        pls_moment_cuda_many_batched_jobs += actual_cv;
                     }
                 } else {
                     pls_moment_host_cv_fits += actual_cv;
@@ -1989,6 +2242,10 @@ n4m_status_t run_moment_sweep(Context& ctx,
         pls_moment_cuda_parallel_fold_batches;
     out.n_pls_moment_cuda_parallel_fold_jobs =
         pls_moment_cuda_parallel_fold_jobs;
+    out.n_pls_moment_cuda_many_batched_batches =
+        pls_moment_cuda_many_batched_batches;
+    out.n_pls_moment_cuda_many_batched_jobs =
+        pls_moment_cuda_many_batched_jobs;
     out.n_pls_materialized_cv_fits = pls_materialized_cv_fits;
 
     if (score_only) {
@@ -2233,6 +2490,22 @@ n4m_status_t score_ridge_moment_sweep(Context& ctx,
                              train_stats[fold]);
         if (st != N4M_OK) return st;
     }
+    std::vector<RidgeMomentEigenPath> eigen_paths;
+    std::vector<unsigned char> eigen_path_ready;
+    std::int64_t eigen_path_preparations = 0;
+    if (lambdas.size() > 1U) {
+        eigen_paths.resize(heldout_stats.size());
+        eigen_path_ready.assign(heldout_stats.size(), 0);
+        for (std::size_t fold = 0; fold < train_stats.size(); ++fold) {
+            Context path_ctx;
+            const n4m_status_t st = prepare_ridge_moment_eigen_path(
+                path_ctx, cfg, train_stats[fold], eigen_paths[fold]);
+            if (st == N4M_OK) {
+                eigen_path_ready[fold] = 1;
+                ++eigen_path_preparations;
+            }
+        }
+    }
 
     out = SweepResult{};
     out.n_samples = all_stats.n_samples;
@@ -2241,6 +2514,7 @@ n4m_status_t score_ridge_moment_sweep(Context& ctx,
     out.cv = static_cast<std::int32_t>(heldout_stats.size());
     out.n_candidates = static_cast<std::int64_t>(lambdas.size());
     out.n_ridge_moment_candidates = out.n_candidates;
+    out.n_ridge_moment_eigen_path_preparations = eigen_path_preparations;
     out.candidate_scores.assign(lambdas.size() * 4U, 0.0);
     const bool score_only = score_only_requested(cfg);
     out.score_only = score_only ? 1 : 0;
@@ -2255,13 +2529,23 @@ n4m_status_t score_ridge_moment_sweep(Context& ctx,
         for (std::size_t fold = 0; fold < heldout_stats.size(); ++fold) {
             RidgeMomentFit fit;
             ++out.n_ridge_moment_cv_fits;
-            n4m_status_t st =
-                fit_ridge_from_moments(ctx, cfg, train_stats[fold],
-                                       lambda, fit);
+            const RidgeMomentEigenPath* path =
+                (!eigen_path_ready.empty() && eigen_path_ready[fold] != 0)
+                    ? &eigen_paths[fold]
+                    : nullptr;
+            bool used_eigen_path = false;
+            n4m_status_t st = fit_ridge_from_moment_path_or_direct(
+                ctx, cfg, train_stats[fold], path, lambda, fit,
+                &used_eigen_path);
             if (st != N4M_OK) {
                 candidate_ok = false;
                 ctx.clear_error();
                 break;
+            }
+            if (used_eigen_path) {
+                ++out.n_ridge_moment_eigen_path_cv_fits;
+            } else {
+                ++out.n_ridge_moment_direct_cv_fits;
             }
             sse += ridge_heldout_sse_from_moments(heldout_stats[fold], fit);
             count += heldout_stats[fold].n_samples *
@@ -2417,48 +2701,90 @@ n4m_status_t score_ridge_moment_sweeps_score_only(
     const auto n_lambdas = lambdas.size();
     const auto jobs_per_chain = n_lambdas * n_folds;
     const auto n_jobs = n_chains * jobs_per_chain;
-    const auto n_jobs_i = static_cast<std::int64_t>(n_jobs);
+    const auto n_train_jobs = n_chains * n_folds;
+    const auto n_train_jobs_i = static_cast<std::int64_t>(n_train_jobs);
     std::vector<double> sse_by_job(n_jobs, 0.0);
     std::vector<std::int64_t> count_by_job(n_jobs, 0);
     std::vector<n4m_status_t> status_by_job(n_jobs, N4M_OK);
     std::vector<std::string> error_by_job(n_jobs);
+    std::vector<std::uint8_t> eigen_path_prepared_by_train_job(
+        n_train_jobs, 0);
+    std::vector<std::uint8_t> eigen_path_used_by_job(n_jobs, 0);
+    std::vector<std::uint8_t> direct_fit_used_by_job(n_jobs, 0);
+    const bool try_eigen_path = n_lambdas > 1U;
 
     N4M_PARALLEL_FOR_STATIC
-    for (std::int64_t job_i = 0; job_i < n_jobs_i; ++job_i) {
-        const auto job = static_cast<std::size_t>(job_i);
-        const auto chain = job / jobs_per_chain;
-        const auto local = job % jobs_per_chain;
-        const auto lambda_ix = local / n_folds;
-        const auto fold = local % n_folds;
-        const auto train_job = chain * n_folds + fold;
+    for (std::int64_t train_job_i = 0; train_job_i < n_train_jobs_i;
+         ++train_job_i) {
+        const auto train_job = static_cast<std::size_t>(train_job_i);
+        const auto chain = train_job / n_folds;
+        const auto fold = train_job % n_folds;
 
-        Context job_ctx;
-        RidgeMomentFit fit;
         try {
-            const n4m_status_t st = fit_ridge_from_moments(
-                job_ctx, cfg, train_stats[train_job],
-                lambdas[lambda_ix], fit);
-            status_by_job[job] = st;
-            if (st == N4M_OK) {
-                sse_by_job[job] = ridge_heldout_sse_from_moments(
-                    heldout_stats_by_chain[chain][fold], fit);
-                count_by_job[job] =
-                    heldout_stats_by_chain[chain][fold].n_samples *
-                    static_cast<std::int64_t>(q);
-            } else if (job_ctx.last_error()[0] != '\0') {
-                error_by_job[job] = job_ctx.last_error();
+            RidgeMomentEigenPath eigen_path;
+            const RidgeMomentEigenPath* path = nullptr;
+            if (try_eigen_path) {
+                Context path_ctx;
+                const n4m_status_t path_st = prepare_ridge_moment_eigen_path(
+                    path_ctx, cfg, train_stats[train_job], eigen_path);
+                if (path_st == N4M_OK) {
+                    path = &eigen_path;
+                    eigen_path_prepared_by_train_job[train_job] = 1;
+                }
+            }
+
+            for (std::size_t lambda_ix = 0; lambda_ix < n_lambdas;
+                 ++lambda_ix) {
+                const auto job = chain * jobs_per_chain +
+                                 lambda_ix * n_folds + fold;
+                Context job_ctx;
+                RidgeMomentFit fit;
+                bool used_eigen_path = false;
+                const n4m_status_t st = fit_ridge_from_moment_path_or_direct(
+                    job_ctx, cfg, train_stats[train_job], path,
+                    lambdas[lambda_ix], fit, &used_eigen_path);
+                status_by_job[job] = st;
+                if (st == N4M_OK) {
+                    if (used_eigen_path) {
+                        eigen_path_used_by_job[job] = 1;
+                    } else {
+                        direct_fit_used_by_job[job] = 1;
+                    }
+                    sse_by_job[job] = ridge_heldout_sse_from_moments(
+                        heldout_stats_by_chain[chain][fold], fit);
+                    count_by_job[job] =
+                        heldout_stats_by_chain[chain][fold].n_samples *
+                        static_cast<std::int64_t>(q);
+                } else if (job_ctx.last_error()[0] != '\0') {
+                    error_by_job[job] = job_ctx.last_error();
+                }
             }
         } catch (const std::bad_alloc&) {
-            status_by_job[job] = N4M_ERR_OUT_OF_MEMORY;
-            error_by_job[job] =
-                "out of memory while fitting ridge moment batch job";
+            for (std::size_t lambda_ix = 0; lambda_ix < n_lambdas;
+                 ++lambda_ix) {
+                const auto job = chain * jobs_per_chain +
+                                 lambda_ix * n_folds + fold;
+                status_by_job[job] = N4M_ERR_OUT_OF_MEMORY;
+                error_by_job[job] =
+                    "out of memory while fitting ridge moment batch job";
+            }
         } catch (const std::exception& exc) {
-            status_by_job[job] = N4M_ERR_INTERNAL;
-            error_by_job[job] = exc.what();
+            for (std::size_t lambda_ix = 0; lambda_ix < n_lambdas;
+                 ++lambda_ix) {
+                const auto job = chain * jobs_per_chain +
+                                 lambda_ix * n_folds + fold;
+                status_by_job[job] = N4M_ERR_INTERNAL;
+                error_by_job[job] = exc.what();
+            }
         } catch (...) {
-            status_by_job[job] = N4M_ERR_INTERNAL;
-            error_by_job[job] =
-                "unexpected exception while fitting ridge moment batch job";
+            for (std::size_t lambda_ix = 0; lambda_ix < n_lambdas;
+                 ++lambda_ix) {
+                const auto job = chain * jobs_per_chain +
+                                 lambda_ix * n_folds + fold;
+                status_by_job[job] = N4M_ERR_INTERNAL;
+                error_by_job[job] =
+                    "unexpected exception while fitting ridge moment batch job";
+            }
         }
     }
 
@@ -2485,6 +2811,22 @@ n4m_status_t score_ridge_moment_sweeps_score_only(
         result.n_ridge_moment_candidates = result.n_candidates;
         result.n_ridge_moment_cv_fits =
             static_cast<std::int64_t>(n_lambdas * n_folds);
+        for (std::size_t fold = 0; fold < n_folds; ++fold) {
+            const auto train_job = chain * n_folds + fold;
+            result.n_ridge_moment_eigen_path_preparations +=
+                static_cast<std::int64_t>(
+                    eigen_path_prepared_by_train_job[train_job]);
+        }
+        for (std::size_t lambda_ix = 0; lambda_ix < n_lambdas; ++lambda_ix) {
+            for (std::size_t fold = 0; fold < n_folds; ++fold) {
+                const auto job = chain * jobs_per_chain +
+                                 lambda_ix * n_folds + fold;
+                result.n_ridge_moment_eigen_path_cv_fits +=
+                    static_cast<std::int64_t>(eigen_path_used_by_job[job]);
+                result.n_ridge_moment_direct_cv_fits +=
+                    static_cast<std::int64_t>(direct_fit_used_by_job[job]);
+            }
+        }
         if (chain == 0) {
             result.n_ridge_moment_score_batch_calls = 1;
             result.n_ridge_moment_score_batch_jobs =
@@ -2627,14 +2969,18 @@ n4m_status_t score_pls1_moment_sweep(Context& ctx,
     std::int64_t pls_moment_cuda_device_cv_fits = 0;
     std::int64_t pls_moment_cuda_parallel_fold_batches = 0;
     std::int64_t pls_moment_cuda_parallel_fold_jobs = 0;
+    std::int64_t pls_moment_cuda_many_batched_batches = 0;
+    std::int64_t pls_moment_cuda_many_batched_jobs = 0;
     std::vector<std::vector<RidgeMomentFit>> prefix_fits_by_fold;
     bool used_cuda_device_cv = false;
     bool used_cuda_parallel_folds = false;
+    bool used_cuda_many_batched = false;
     n4m_status_t fold_fit_status =
         fit_pls1_moment_prefixes_for_folds(ctx, cfg, train_stats,
                                            max_comp, prefix_fits_by_fold,
                                            &used_cuda_device_cv,
-                                           &used_cuda_parallel_folds);
+                                           &used_cuda_parallel_folds,
+                                           &used_cuda_many_batched);
     if (fold_fit_status != N4M_OK) {
         for (auto& v : ok) v = 0;
         ctx.clear_error();
@@ -2645,6 +2991,10 @@ n4m_status_t score_pls1_moment_sweep(Context& ctx,
             if (used_cuda_parallel_folds) {
                 pls_moment_cuda_parallel_fold_batches = 1;
                 pls_moment_cuda_parallel_fold_jobs = pls_moment_cv_fits;
+            }
+            if (used_cuda_many_batched) {
+                pls_moment_cuda_many_batched_batches = 1;
+                pls_moment_cuda_many_batched_jobs = pls_moment_cv_fits;
             }
         } else {
             pls_moment_host_cv_fits = pls_moment_cv_fits;
@@ -2676,6 +3026,10 @@ n4m_status_t score_pls1_moment_sweep(Context& ctx,
         pls_moment_cuda_parallel_fold_batches;
     out.n_pls_moment_cuda_parallel_fold_jobs =
         pls_moment_cuda_parallel_fold_jobs;
+    out.n_pls_moment_cuda_many_batched_batches =
+        pls_moment_cuda_many_batched_batches;
+    out.n_pls_moment_cuda_many_batched_jobs =
+        pls_moment_cuda_many_batched_jobs;
     out.candidate_scores.assign(components.size() * 4U, 0.0);
     const bool score_only = score_only_requested(cfg);
     out.score_only = score_only ? 1 : 0;
@@ -2851,9 +3205,11 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
     std::vector<std::vector<RidgeMomentFit>> prefix_fits_by_job;
     bool used_cuda_device_cv = false;
     bool used_cuda_parallel_folds = false;
+    bool used_cuda_many_batched = false;
     n4m_status_t fit_status = fit_pls1_moment_prefixes_for_folds(
         ctx, cfg, train_stats, max_comp, prefix_fits_by_job,
-        &used_cuda_device_cv, &used_cuda_parallel_folds);
+        &used_cuda_device_cv, &used_cuda_parallel_folds,
+        &used_cuda_many_batched);
     if (fit_status != N4M_OK) {
         return fit_status;
     }
@@ -2895,6 +3251,11 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
         if (chain == 0 && used_cuda_device_cv && used_cuda_parallel_folds) {
             result.n_pls_moment_cuda_parallel_fold_batches = 1;
             result.n_pls_moment_cuda_parallel_fold_jobs =
+                static_cast<std::int64_t>(train_stats.size());
+        }
+        if (chain == 0 && used_cuda_device_cv && used_cuda_many_batched) {
+            result.n_pls_moment_cuda_many_batched_batches = 1;
+            result.n_pls_moment_cuda_many_batched_jobs =
                 static_cast<std::int64_t>(train_stats.size());
         }
         result.score_only = 1;

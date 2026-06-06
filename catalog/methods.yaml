@@ -1,5 +1,5 @@
 schema_version: 1
-method_count: 198
+method_count: 203
 methods:
   - method_id: aom_pop.aom_preprocessing
     family: aom_pop.aom
@@ -24,7 +24,7 @@ methods:
       references: []
     bench:
       bench_id: aom_pop.aom_preprocessing
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_aom_preprocess_timing.py
     feature_flags: []
     vendored_licenses: []
     bindings:
@@ -70,7 +70,7 @@ methods:
       references: []
     bench:
       bench_id: aom_pop.aom_pls
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_aom_selector_timing.py
     feature_flags: []
     vendored_licenses: []
     bindings:
@@ -158,6 +158,283 @@ methods:
         legacy_aliases: []
     publications: []
     notes: Native strict-linear AOM Ridge OOF simplex blender over compact/wide chain banks and positive Ridge-lambda grids. Compact has 12 chains; wide has 31 strict-linear chains, including Gaussian, FCK and Whittaker variants. It returns candidate predictions, OOF candidate predictions, non-negative blend weights, and final input_coefficients plus intercept for replay through NativeAOMRidgeBlenderRegressor; native v1 builds in CUDA-enabled configurations but is not yet a fused batched GPU blender.
+  - method_id: aom_pop.ridge_global
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 1.21.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/aom_sweep.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+    carry_along_tu:
+      - cpp/src/core/aom_operators.cpp
+      - cpp/src/core/sweep.cpp
+      - cpp/src/core/moments.cpp
+      - cpp/src/core/ridge.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/AOM-ridge-global-python-contract
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: aom_pop.ridge_global
+      registry_entry: benchmarks/cross_binding/bench_aom_ridge_global_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: aom_ridge_global
+        legacy_aliases: []
+    publications: []
+    notes: Python-backed donor-style AOM Ridge global selector constrained to strict-linear single-operator AOM views. It delegates scoring and final fit to the native aom_chain_sweep_run Ridge-only path, selects one operator plus one positive Ridge alpha by train CV, and returns folded input_coefficients plus intercept for replay through NativeAOMRidgeGlobalRegressor. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU grinder.
+  - method_id: aom_pop.ridge_superblock
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 1.21.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/aom_preprocessing.cpp
+      - cpp/src/core/ridge.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+      - cpp/include/n4m/aom_pop.h
+    carry_along_tu:
+      - cpp/src/core/aom_operators.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/AOM-ridge-superblock-python-contract
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: aom_pop.ridge_superblock
+      registry_entry: benchmarks/cross_binding/bench_aom_ridge_superblock_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: aom_ridge_superblock
+        legacy_aliases: []
+    publications: []
+    notes: Python-backed donor-style AOM Ridge superblock constrained to strict-linear single-operator AOM views. It builds operator outputs through native aom_preprocess, selects/fits Ridge alphas fold-locally through the native Ridge binding, applies train-fold centering and optional block RMS scaling to validation folds, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU superblock grinder.
+  - method_id: aom_pop.ridge_active_superblock
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 1.21.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/aom_preprocessing.cpp
+      - cpp/src/core/ridge.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+      - cpp/include/n4m/aom_pop.h
+    carry_along_tu:
+      - cpp/src/core/aom_operators.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/AOM-ridge-active-superblock-python-contract
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: aom_pop.ridge_active_superblock
+      registry_entry: benchmarks/cross_binding/bench_aom_ridge_active_superblock_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: aom_ridge_active_superblock
+        legacy_aliases: []
+    publications: []
+    notes: Python-backed donor-style AOM Ridge active-superblock constrained to strict-linear single-operator AOM views. It screens operators fold-locally during alpha CV using response signatures computed from native aom_preprocess outputs, refits the active subset on the full calibration set, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU active-superblock grinder.
+  - method_id: aom_pop.ridge_mkl_superblock
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 1.21.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/aom_preprocessing.cpp
+      - cpp/src/core/ridge.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+      - cpp/include/n4m/aom_pop.h
+    carry_along_tu:
+      - cpp/src/core/aom_operators.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/AOM-ridge-mkl-superblock-python-contract
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: aom_pop.ridge_mkl_superblock
+      registry_entry: benchmarks/cross_binding/bench_aom_ridge_mkl_superblock_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: aom_ridge_mkl_superblock
+        legacy_aliases: []
+    publications: []
+    notes: Python-backed donor-style AOM Ridge MKL-light superblock constrained to strict-linear single-operator AOM views. It learns non-negative train-only KTA weights over operator blocks inside every alpha-CV fold, refits weights on the full calibration set, fits native Ridge on the equivalent weighted superblock, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, row-reference-dependent preprocessing, nonlinear kernels and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU weighted-superblock grinder.
+  - method_id: aom_pop.aom_pls_superblock
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 1.21.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/aom_preprocessing.cpp
+      - cpp/src/core/sweep.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+      - cpp/include/n4m/aom_pop.h
+    carry_along_tu:
+      - cpp/src/core/aom_operators.cpp
+      - cpp/src/core/moments.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/AOM-PLS-superblock-python-contract
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: aom_pop.aom_pls_superblock
+      registry_entry: benchmarks/cross_binding/bench_aom_pls_superblock_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: aom_pls_superblock
+        legacy_aliases: []
+    publications: []
+    notes: Python-backed donor-style AOM-PLS superblock constrained to strict-linear single-operator AOM views. It builds concatenated native aom_preprocess operator outputs, selects the PLS component count by train CV over the superblock, fits through the native PLS binding, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes row-reference-dependent preprocessing, nonlinear lifts and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU PLS superblock grinder.
+  - method_id: aom_pop.aom_ridge_pls_superblock
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 1.21.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/aom_preprocessing.cpp
+      - cpp/src/core/extra_pls.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+      - cpp/include/n4m/aom_pop.h
+    carry_along_tu:
+      - cpp/src/core/aom_operators.cpp
+      - cpp/src/core/moments.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/AOM-Ridge-PLS-superblock-python-contract
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: aom_pop.aom_ridge_pls_superblock
+      registry_entry: benchmarks/cross_binding/bench_aom_ridge_pls_superblock_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: aom_ridge_pls_superblock
+        legacy_aliases: []
+    publications: []
+    notes: Python-backed donor-style AOM Ridge-PLS superblock constrained to strict-linear single-operator AOM views. It builds concatenated native aom_preprocess operator outputs, selects the PLS component count and Ridge-PLS lambda by train CV over the superblock, fits through the native ridge_pls binding, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes row-reference-dependent preprocessing, nonlinear lifts, MKL/kernel modes and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU Ridge-PLS superblock grinder.
+  - method_id: aom_pop.aom_chain_ridge_pls
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 1.21.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/aom_preprocessing.cpp
+      - cpp/src/core/extra_pls.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+      - cpp/include/n4m/aom_pop.h
+    carry_along_tu:
+      - cpp/src/core/aom_operators.cpp
+      - cpp/src/core/moments.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/AOM-chain-Ridge-PLS-python-contract
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: aom_pop.aom_chain_ridge_pls
+      registry_entry: benchmarks/cross_binding/bench_aom_chain_ridge_pls_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: aom_chain_ridge_pls
+        legacy_aliases: []
+    publications: []
+    notes: Python-backed strict/raw-base subset of donor FastAOM SingleChainPLSRidge. It applies strict-linear AOM chains sequentially, selects one chain plus PLS component count and Ridge-PLS lambda by train CV, fits through the native ridge_pls binding, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not a fused many-chain GPU Ridge-PLS grinder.
   - method_id: aom_pop.operator_pls_stack
     family: aom_pop.aom
     category: aom_pop
@@ -307,7 +584,7 @@ methods:
       references: []
     bench:
       bench_id: models.specialized.ecr
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_direct_moment_heads_timing.py
     feature_flags: []
     vendored_licenses: []
     bindings:
@@ -4599,7 +4876,7 @@ methods:
       tolerances: []
     bench:
       bench_id: aom_pop.pop_pls
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_aom_selector_timing.py
     feature_flags: []
     vendored_licenses: []
     bindings:
@@ -4639,13 +4916,9 @@ methods:
       registry_entry: null
     feature_flags: []
     vendored_licenses: []
-    bindings:
-      python:
-        module: n4m.python
-        class: cppls
-        legacy_aliases: []
+    bindings: {}
     publications: []
-    notes: Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration.
+    notes: Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md).
   - method_id: diagnostics.approximate_press
     family: diagnostics.validation
     category: diagnostics
@@ -4673,13 +4946,9 @@ methods:
       registry_entry: null
     feature_flags: []
     vendored_licenses: []
-    bindings:
-      python:
-        module: n4m.python
-        class: continuum_regression
-        legacy_aliases: []
+    bindings: {}
     publications: []
-    notes: Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration.
+    notes: Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md).
   - method_id: filters.correlation
     family: filters.feature
     category: filters
@@ -4774,7 +5043,7 @@ methods:
       tolerances: []
     bench:
       bench_id: models.pls.cppls
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_direct_moment_heads_timing.py
     feature_flags: []
     vendored_licenses: []
     bindings:
@@ -4784,6 +5053,42 @@ methods:
         legacy_aliases: []
     publications: []
     notes: Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration.
+  - method_id: models.pls.pcr
+    family: models.pls
+    category: models
+    subcategory: pls
+    since_abi: 1.21.0
+    abi_symbols:
+      - n4m_pcr_fit
+    tu:
+      - cpp/src/core/model.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+    carry_along_tu:
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: tbd
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: models.pls.pcr
+      registry_entry: benchmarks/cross_binding/bench_direct_moment_heads_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: pcr
+        legacy_aliases: []
+    publications:
+      - "Massy, W. F. (1965). Principal Components Regression in Exploratory Statistical Research."
+    notes: Direct native Principal Components Regression MethodResult ABI. Added during AOM/moment product integration so PCR follows the same n4m.python and sklearn wrapper pattern as Ridge/CPPLS/continuum/ECR.
   - method_id: models.pls.pls_fit_simple
     family: models.pls
     category: models
@@ -4808,12 +5113,16 @@ methods:
       tolerances: []
     bench:
       bench_id: models.pls.pls_fit_simple
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_direct_moment_heads_timing.py
     feature_flags: []
     vendored_licenses: []
-    bindings: {}
+    bindings:
+      python:
+        module: n4m.python
+        class: pls
+        legacy_aliases: []
     publications: []
-    notes: Added in Phase-B ABI reconciliation — exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md).
+    notes: Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration as the direct moment PLS surface backed by n4m_sweep_run.
   - method_id: models.classification.pls_qda
     family: models.classification
     category: models
@@ -5078,12 +5387,16 @@ methods:
       tolerances: []
     bench:
       bench_id: models.regularized.ridge_pls
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_direct_moment_heads_timing.py
     feature_flags: []
     vendored_licenses: []
-    bindings: {}
+    bindings:
+      python:
+        module: n4m.python
+        class: ridge_pls
+        legacy_aliases: []
     publications: []
-    notes: Added in Phase-B ABI reconciliation — exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md).
+    notes: Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration as a function-only linear PLS variant.
   - method_id: models.regularized.robust_pls
     family: models.regularized
     category: models
@@ -5108,12 +5421,16 @@ methods:
       tolerances: []
     bench:
       bench_id: models.regularized.robust_pls
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_direct_moment_heads_timing.py
     feature_flags: []
     vendored_licenses: []
-    bindings: {}
+    bindings:
+      python:
+        module: n4m.python
+        class: robust_pls
+        legacy_aliases: []
     publications: []
-    notes: Added in Phase-B ABI reconciliation — exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md).
+    notes: Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration as a function-only linear PLS variant.
   - method_id: models.regularized.weighted_pls
     family: models.regularized
     category: models
@@ -5138,12 +5455,16 @@ methods:
       tolerances: []
     bench:
       bench_id: models.regularized.weighted_pls
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_direct_moment_heads_timing.py
     feature_flags: []
     vendored_licenses: []
-    bindings: {}
+    bindings:
+      python:
+        module: n4m.python
+        class: weighted_pls
+        legacy_aliases: []
     publications: []
-    notes: Added in Phase-B ABI reconciliation — exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md).
+    notes: Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration as a function-only linear PLS variant.
   - method_id: models.regularized.continuum_regression
     family: models.regularized
     category: models
@@ -5168,7 +5489,7 @@ methods:
       tolerances: []
     bench:
       bench_id: models.regularized.continuum_regression
-      registry_entry: null
+      registry_entry: benchmarks/cross_binding/bench_direct_moment_heads_timing.py
     feature_flags: []
     vendored_licenses: []
     bindings:
@@ -5268,6 +5589,44 @@ methods:
     bindings: {}
     publications: []
     notes: Added in Phase-B ABI reconciliation — exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md).
+  - method_id: models.ensembles.moment_stack
+    family: models.ensembles
+    category: models
+    subcategory: ensembles
+    since_abi: 1.21.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/sweep.cpp
+      - cpp/src/core/ridge.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+    carry_along_tu:
+      - cpp/src/core/moments.cpp
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/moment-stack-native-smoke
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: models.ensembles.moment_stack
+      registry_entry: benchmarks/cross_binding/bench_moment_stack_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: moment_stack
+        legacy_aliases: []
+    publications: []
+    notes: Python-backed train-only OOF linear stack over native moment-compatible Ridge, PLS sweep, PCR, continuum, ECR and CPPLS heads. Base predictions are fit on training folds only; the final reusable estimator fits the same base heads on all rows and applies a small Ridge meta-model over base predictions. This is a moment-model composition, not a nonlinear feature lift and not a fused CUDA grinder.
   - method_id: models.sparse.fused_sparse_pls
     family: models.sparse
     category: models
@@ -6181,6 +6540,46 @@ methods:
         legacy_aliases: []
     publications: []
     notes: Python-backed two-pass AOM preprocessing campaign over the native n4m_aom_chain_sweep_run ABI, with final model reuse delegated to the catalogued final-only `aom_pop.aom_chain_fixed_fit` surface. The first pass runs a chunked score-only strict-linear chain screen, including optional pls_score_mode=gcv_proxy for explicit moment-only PLS proxy ranking, checkpoint/resume and global/per-head/per-route top-k aggregation from full chunk score tables. The second pass refits retained candidates by exact native CV with pls_score_mode=cv, preserving screen and refit reports for audit; `refit_per_head_top_k` can add each head's best rows to the exact-refit pool before deduplication, while score-only refit can group by chain/head, batch retained chains sharing a head/parameter signature, or explicitly union-batch retained parameters per head while keeping the same returned exact-CV scores. Union batching exposes scored and extra-scored candidate counters so its surplus cost is auditable, and aom_refit_execution_plan previews those counters for each mode without touching X/y. NativeAOMScreenRefitRegressor exposes the same workflow as a sklearn-style reusable regressor: fit runs the two-pass campaign, then fits the selected verified row through NativeAOMFixedCandidateRegressor in final_only mode so predict uses folded input-space coefficients on new X without replaying CV after exact refit. NativeAOMMomentScreenRefitRegressor, NativeAOMMomentPLSScreenRefitRegressor and NativeAOMMomentRidgeScreenRefitRegressor are end-user presets over the same workflow for mixed Ridge/PLS GCV-proxy->exact-refit, PLS GCV-proxy->exact-refit and Ridge exact-screen->exact-refit paths. This is intended for ultra-configurable preprocessing selection experiments and reusable selected models without dataset-name routing; it is not the fused CUDA/IKPLS grinder.
+  - method_id: aom_pop.aom_staged_chain_campaign
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 1.21.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/aom_sweep.cpp
+      - cpp/src/c_api/c_api_method_result.cpp
+    headers:
+      - cpp/include/n4m/pls.h
+    carry_along_tu:
+      - cpp/src/core/aom_operators.cpp
+      - cpp/src/core/sweep.cpp
+      - cpp/src/core/moments.cpp
+      - cpp/src/core/ridge.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+      - cpp/src/core/common/version.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/AOM-staged-chain-campaign-contract
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: aom_pop.aom_staged_chain_campaign
+      registry_entry: benchmarks/cross_binding/bench_aom_staged_chain_campaign_timing.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.python
+        class: aom_staged_chain_campaign
+        legacy_aliases: []
+    publications: []
+    notes: Python-backed staged strict-chain AOM preprocessing campaign over the same native chain-screen/refit helpers as `aom_pop.aom_chain_screen_refit`. It runs compact, wide, lab, focused strict-family plans such as `savgol_focus` / `strict_family_focus`, or caller-provided strict-linear score-only stages over Ridge, PLS or mixed heads, merges cross-stage global and per-head retained candidates, exact-CV refits the retained union once, and attaches preprocessing-impact plus screen-vs-refit rank diagnostics. Optional `X_audit`/`y_audit` scoring is audit-only; production selection remains train exact-CV (`selection_uses_test_set=False`) and the sklearn wrapper omits audit inputs before fitting the selected row through final-only `aom_pop.aom_chain_fixed_fit`. `NativeAOMSavgolFocusRegressor` is the fast SavGol-focused preset wrapper over this method, using the locally validated `savgol_focus` / `scale_x_values=[False, True]` recipe while preserving selected-candidate reuse. `NativeAOMStrictFamilyLiteRegressor` is the cost-safe strict-family audit preset over the same method, sampling SavGol, Norris-Williams, finite-difference, Gaussian, FCK and Whittaker stages with small screen/refit defaults and no scale grid by default. The workflow supports checkpoint/resume and `max_chunks_per_run` for incremental campaigns, one-GPU CUDA PLS route knobs through the underlying screen/refit helpers, no dataset-name routing, and no hors-moment nonlinear lifts. This is the catalogued global staged preprocessing-selection method for benchmark campaigns, not the future fused CUDA/IKPLS grinder.
   - method_id: models.regularized.ridge
     family: models.regularized
     category: models
@@ -6208,7 +6607,7 @@ methods:
       tolerances: []
     bench:
       bench_id: models.regularized.ridge
-      registry_entry: benchmarks/cross_binding/bench_moment_sweep_timing.py
+      registry_entry: benchmarks/cross_binding/bench_direct_moment_heads_timing.py
     feature_flags: []
     vendored_licenses: []
     bindings:

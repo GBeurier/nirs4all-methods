@@ -28,7 +28,7 @@ parity:
   tolerances: []
 bench:
   bench_id: "models.regularized.ridge"
-  registry_entry: "benchmarks/cross_binding/bench_moment_sweep_timing.py"
+  registry_entry: "benchmarks/cross_binding/bench_direct_moment_heads_timing.py"
 feature_flags: []
 vendored_licenses: []
 bindings:

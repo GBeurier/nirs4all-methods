@@ -1,6 +1,6 @@
 # Handoff - AOM / moment portage
 
-Date: 2026-06-05
+Date: 2026-06-06
 
 ## Current state
 
@@ -8,6 +8,354 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- Compact-wide audit10 benchmark follow-up:
+  - Ran `plan=compact_wide` on the first 10 runnable diverse11 cohort rows in
+    two chunks (`audit5` + `audit10_tail5`) on one GPU, then combined them into
+    `benchmarks/cross_binding/aom_staged_real_cohort_compact_wide_audit10_20260606.csv`.
+  - Output: 10 rows total, 8 OK and 2 property-skipped rows
+    (`BERRY`, `FUSARIUM`, both `n_features>1200`), all with
+    `selection_uses_test_set=False`.
+  - OK rows all selected `ridge` and `selected_campaign_stage=compact`; the
+    extra wide stage did not win under this retained/refit budget.
+  - PLS routing stayed on CUDA: screen PLS moment CV fits `1920/0/1920`
+    total/host/device; refit PLS moment CV fits `220/0/220`.
+    Split-head counters were `64` split chunks and `128` score calls; Ridge
+    screen counters were `2160/24/2160`.
+  - Timing: total OK fit time `1562.03s`, median OK fit time `155.04s`.
+  - Baseline comparison versus
+    `aom_staged_real_cohort_compact10_split_head_auto_20260606.csv`: 8 paired,
+    `0` wins, `0` losses, `8` ties, median ratio `1`. This shows
+    `compact_wide` currently adds cost but no selected improvement on this
+    cohort/budget.
+  - Oracle comparison:
+    `aom_staged_compact_wide_audit10_20260606_oracle_summary.md` reports
+    AOM-PLS oracle median ratio `1.03079` (1/7 target wins), AOM-Ridge oracle
+    median ratio `1.08068` (0/8 wins), TabPFN oracle median ratio `0.978527`
+    (4/8 target wins), matching the compact split-head-auto score profile.
+  - New rank-audit summary:
+    `aom_staged_compact_wide_audit10_20260606_rank_audit.md` has 8 audit rows.
+    Median test-rank delta is `2.5`, max `5`; median oracle-gap ratio is
+    `0.02354`, max `0.57732` on ECOSIS; median CV/test Spearman is `0.64286`,
+    min `-0.73810` on ECOSIS. This is the first concrete evidence from the new
+    audit payload that recall failure is dataset-specific even when overall
+    compact-vs-wide scores tie.
+    `summarize_aom_rank_audit.py` now exposes selected/oracle head, parameter
+    and preprocessing chain plus audit top-1/top-3/top-5 recall columns. The
+    ECOSIS row shows the missed test-best candidate directly:
+    selected `ridge:0.1 savgol_smooth(7,2)` vs oracle
+    `pls:1 detrend_poly(2)`, oracle CV-rank `7`, selected test-rank `5`,
+    top-1/top-3 recall `0/0`.
+  - Impact summary:
+    `aom_staged_compact_wide_audit10_20260606_impact_summary.md` ranks
+    `detrend_poly` as the top operator by dataset wins (`5/7`), identity next
+    (`2/5`), and SavGol smooth one win (`1/8`); derivatives did not win under
+    this profile.
+  - ECOSIS retention stress test:
+    `aom_staged_real_cohort_ecosis_compact_wide_refit40_audit_20260606.csv`
+    reran only ECOSIS with `top_k=60`, `refit_top_k=40` and
+    `refit_per_head_top_k=10`, producing `44` retained/refit candidates.
+    Production selection still chose the same `ridge:0.1 savgol_smooth(7,2)`
+    candidate and tied the audit10 score (`RMSEP=41.3984`), but the offline
+    audit oracle moved to `ridge:10 finite_difference(1)` with
+    `eval_rmse=10.5817`, `cv_rank=11`, selected test-rank `41/44`,
+    top-1/top-3/top-5 recall `0/0/0`, and CV/test Spearman `0.0667`.
+    This proves that, at least for ECOSIS, the observed failure is not just
+    insufficient retained-candidate budget; the train-CV ranking itself is not
+    aligned with held-out behavior.
+
+- Audit/test-rank diagnostics persistence and summarizer:
+  - `run_aom_staged_real_cohort.py` now persists a compact `audit` section in
+    each per-dataset diagnostics JSON when `report["audit"]` is present.
+    The payload keeps `audit_only`, `n_candidates`, the train-CV selected
+    candidate scored on test as `selected_cv`, the best-by-test-rank candidate
+    as `oracle`, and `audit_rank_diagnostics`; prediction arrays are stripped.
+  - This is offline audit only. Production selection remains train-CV-only and
+    diagnostics keep `selection_uses_test_set=False`.
+  - Added `benchmarks/cross_binding/summarize_aom_rank_audit.py`, which reads a
+    diagnostics directory or glob and writes CSV plus optional Markdown with
+    selected CV RMSE/rank, selected test RMSE/rank, test-rank delta, oracle test
+    RMSE, oracle CV rank, candidate count and CV-vs-test Spearman.
+  - Existing compact10 diagnostics in
+    `benchmarks/cross_binding/aom_staged_compact10_split_head_auto_20260606/`
+    pre-date this payload, so the summarizer reports `8` files without audit
+    and writes a header-only CSV until the campaign is rerun with
+    `--diagnostics-dir`.
+  - Validation: py_compile on touched scripts/tests; local
+    `test_aom_benchmark_tools.py` `19 passed`; targeted
+    benchmark/catalog/facade/staged suite `63 passed`; synthetic summarizer
+    smoke wrote `1` audit row and correctly reported `1` pre-feature file;
+    existing compact10 smoke wrote `0` audit rows and reported `8` pre-feature
+    files.
+
+- Real-cohort split-head scoring audit path:
+  - `run_aom_staged_real_cohort.py` now exposes
+    `--split-head-scoring {auto,off,force}` and defaults to `auto`.
+  - This is score-preserving for mixed `ridge,pls` chunks: the screen runs
+    separate Ridge-only and PLS-only native score calls, then merges the same
+    `(chain, head, param)` candidate rows. `off` keeps the legacy single-call
+    launch shape for timing comparisons.
+  - Output CSVs now include `split_head_scoring`,
+    `n_screen_split_head_chunks` and `n_screen_chunk_score_calls`.
+  - `n4m.aom_staged_chain_campaign` aggregates those counters across stages,
+    stage summaries expose the per-stage values, and
+    `NativeAOMStagedChainCampaignRegressor.get_diagnostics()` exposes the
+    top-level counters.
+  - The staged report now also surfaces the Ridge screen counters expected by
+    the real-cohort diagnostics payload:
+    `n_ridge_moment_cv_fits`, `n_ridge_moment_score_batch_calls` and
+    `n_ridge_moment_score_batch_jobs`.
+  - For `scale_x_values` model-config grids, the staged report now aggregates
+    split-head and Ridge screen counters across every evaluated config instead
+    of inheriting those counters only from the selected config.
+  - `NativeAOMStagedChainCampaignRegressor`,
+    `NativeAOMSavgolFocusRegressor` and
+    `NativeAOMStrictFamilyLiteRegressor` now default
+    `split_head_scoring="auto"` for mixed-head reusable sklearn use, while the
+    lower-level `aom_staged_chain_campaign` helper keeps the historical
+    explicit `off` default.
+  - `benchmarks/cross_binding/aom_moment_cuda_facade_smoke.py` and its JSON
+    artifact now include `staged_mixed_default_estimator`, a mixed Ridge+PLS
+    sklearn smoke proving the reusable default actually splits mixed chunks on
+    CUDA (`n_screen_split_head_chunks=1`, `n_screen_chunk_score_calls=2`),
+    routes the PLS screen through CUDA (`8/0` device/host CV fits), records
+    Ridge screen counters (`8/1/8`) and keeps `selection_uses_test_set=False`.
+  - `compare_aom_staged_variants.py` includes `split_head_scoring` in the
+    config key so `auto` and `off` runs are not grouped together.
+  - Validation: py_compile on touched Python modules/tests; benchmark-tool +
+    staged pytest files `33 passed`; synthetic score-preserving smoke confirmed
+    identical top candidates for `off` vs `auto`; staged smoke reported
+    `n_screen_split_head_chunks=2`, `n_screen_chunk_score_calls=4`,
+    `selection_uses_test_set=False`; CUDA facade artifact test passed after
+    regenerating the smoke JSON; full targeted pytest suite `154 passed`;
+    catalog split/reference/strict-ABI validations passed.
+  - Real one-row CUDA CLI smoke also passed to `/tmp`: BEEFMARBLING reported
+    `split_head_scoring=auto`, `n_screen_split_head_chunks=2`,
+    `n_screen_chunk_score_calls=4`, PLS screen CUDA/host `12/0`, and
+    `selection_uses_test_set=False`.
+  - Real compact10 split-head follow-up:
+    `benchmarks/cross_binding/aom_staged_real_cohort_compact10_split_head_auto_20260606.csv`,
+    diagnostics dir
+    `benchmarks/cross_binding/aom_staged_compact10_split_head_auto_20260606/`,
+    baseline comparison
+    `benchmarks/cross_binding/aom_staged_compact10_split_head_auto_vs_compact_20260606.md`,
+    oracle summary
+    `benchmarks/cross_binding/aom_staged_compact10_split_head_auto_20260606_oracle_summary.md`,
+    and impact summary
+    `benchmarks/cross_binding/aom_staged_compact10_split_head_auto_20260606_impact_summary.md`.
+    It produced 8 OK rows and 2 property-skipped rows, all with
+    `selection_uses_test_set=False`; versus the compact mixed diagnostic
+    baseline it was score-identical on the 8 paired datasets (0 wins, 0 losses,
+    8 ties, median ratio `1`). PLS stayed on CUDA for screen/refit (`960/0`
+    and `220/0`), and the screen counters reported 32 split chunks and 64
+    score calls across the 8 OK rows after summing both `scale_x` configs.
+    The CSV now includes Ridge screen-counter columns as well:
+    total Ridge moment/batch counters across OK rows were `1080/12/1080`.
+    The diagnostics were regenerated after the Ridge/config-grid counter fix;
+    e.g. BEEFMARBLING now records Ridge moment/batch counters `360/4/360`.
+
+- Focused preprocessing diagnostic campaign:
+  - Ran a one-GPU compact10 follow-up using custom stages derived from the
+    previous diagnostics: identity/detrend/Norris plus a SavGol-variety branch
+    with six smooth windows and three derivatives.
+  - Outputs:
+    `benchmarks/cross_binding/aom_staged_real_cohort_compact10_diag_focused_20260606.csv`,
+    diagnostics dir
+    `benchmarks/cross_binding/aom_staged_compact10_diag_focused_20260606/`,
+    oracle comparison
+    `benchmarks/cross_binding/aom_staged_real_cohort_compact10_diag_focused_20260606_oracle_compare.csv`,
+    variant comparison
+    `benchmarks/cross_binding/aom_staged_compact10_diag_focused_vs_compact_20260606.md`,
+    and impact summary
+    `benchmarks/cross_binding/aom_staged_compact10_diag_focused_20260606_impact_summary.md`.
+  - Results: 8 OK rows, 2 property-skipped rows (`n_features>1200`), all OK
+    rows with `selection_uses_test_set=False`.
+  - The selected production head was Ridge on all 8 OK rows; selected stages
+    were `identity_detrend_norris` on 5/8 and `savgol_variety` on 3/8.
+  - PLS GPU routing stayed clean: screen CUDA/host `1280/0`, refit CUDA/host
+    `215/0`.
+  - Versus the compact mixed diagnostic baseline: 2 wins, 4 losses, 2 ties,
+    median ratio `1.00125`; median fit time `8.55s`.
+  - Oracle ratios: AOM-PLS oracle median `1.05178` (1/7 target wins),
+    AOM-Ridge oracle median `1.09528` (1/8 target wins), TabPFN oracle median
+    `0.992611` (4/8 target wins).
+  - Interpretation: focused SavGol/detrend diversity is selectable and audited,
+    but this small follow-up did not beat the compact baseline in aggregate.
+
+- Real-cohort staged diagnostics output:
+  - `run_aom_staged_real_cohort.py` now accepts `--diagnostics-dir DIR`.
+  - Default behavior is unchanged when the flag is omitted.
+  - For each `ok` dataset row it writes
+    `<safe_dataset_key>.diagnostics.json` with `best`, `impact`,
+    `rank_diagnostics`, selected model config and route/counter fields.
+  - It also appends `impact_groups.csv` rows for `by_operator`,
+    `by_stage_family`, `by_stage_option` and `by_head_stage_option`.
+  - Added `summarize_aom_impact_groups.py` to convert `impact_groups.csv` into
+    aggregate CSV/Markdown ranked by dataset wins, rank-1 occurrences and
+    train-CV rank.
+  - This is offline audit output only; production selection still uses the
+    train-CV refit winner and `selection_uses_test_set` is persisted.
+  - Follow-up real compact10 mixed diagnostics run:
+    `benchmarks/cross_binding/aom_staged_real_cohort_compact10_mixed_diag_20260606.csv`
+    plus diagnostics dir
+    `benchmarks/cross_binding/aom_staged_compact10_mixed_diag_20260606/`.
+  - Summary:
+    `benchmarks/cross_binding/aom_staged_compact10_mixed_diag_20260606_summary.md`.
+    Automated impact summary:
+    `benchmarks/cross_binding/aom_staged_compact10_mixed_diag_20260606_impact_summary.md`
+    plus the matching `.csv`.
+    Best train-CV impact groups were `detrend_poly` on 5/8 OK datasets,
+    `identity` on 2/8 and `savgol_smooth` on 1/8; selected production head was
+    Ridge on all 8 OK rows.
+  - Validation: py_compile pass; runner tests
+    `5 passed, 11 deselected`.
+
+- Compact10 staged CUDA benchmark against local oracles:
+  - Ran `run_aom_staged_real_cohort.py` on one GPU with `--limit 10`,
+    `--max-features 1200`, `--plan compact`, `--max-chains 12`,
+    `--top-k 12`, `--refit-top-k 6`, `--refit-per-head-top-k 2`,
+    `--scale-x-grid false,true`, `--cuda-pls-parallel-folds` and
+    `--cuda-pls-min-device-features 1`.
+  - Ran three variants: mixed Ridge+PLS, Ridge-only and PLS-only.
+  - Each variant produced 8 OK rows and 2 property-skipped rows; all OK rows
+    have `selection_uses_test_set=False`.
+  - Mixed selected `ridge` on every OK row and exactly matched Ridge-only
+    RMSEP; the compact mixed profile currently adds no PLS diversity on this
+    cohort.
+  - Mixed/Ridge ratios: AOM-PLS oracle median `1.03079` (1/7 target wins),
+    AOM-Ridge oracle median `1.08068` (0/8 wins), TabPFN median `0.978527`
+    (4/8 wins).
+  - PLS-only ratios: AOM-PLS oracle median `1.22592` (0/7 wins), AOM-Ridge
+    oracle median `1.21773` (0/8 wins), TabPFN median `1.27884` (1/8 wins).
+  - PLS CUDA routing was clean: mixed screen/refit PLS CUDA/host `960/0` and
+    `220/0`; PLS-only `960/0` and `450/0`.
+  - Summary artifact:
+    `benchmarks/cross_binding/aom_staged_compact10_cuda_20260606_summary.md`.
+
+- Robust-HPO native sklearn CUDA smoke artifact:
+  - Regenerated `benchmarks/cross_binding/aom_robust_hpo_timing_cuda_smoke.csv`
+    without `--native-only`, adding the `native_sklearn` backend rows.
+  - New artifact: 6 rows (3 shapes x 2 backends:
+    `native_abi` + `native_sklearn`),
+    `profile=compact`, `library_path=build/cuda-on/cpp/src/libn4m.so`.
+  - `prediction_replay_max_abs_error` for `native_sklearn` rows: <= 4.5e-15,
+    proving `NativeAOMRobustHPORegressor.predict(X)` replays native fitted
+    state (`X @ input_coefficients + intercept`) on the CUDA build path.
+  - `test_aom_moment_cuda_smoke_artifacts.py -k robust_hpo`: `1 passed`.
+  - Full targeted pytest set: `152 passed`.
+  - Catalog split/reference/strict-ABI: all green.
+  - Docs updated: README.md (new "AOM Robust-HPO Timing Smoke" section),
+    `aom_moment_coverage_matrix.md` (robust-HPO row, artifact note),
+    `aom_moment_worklog.md` and `handoff.md` (this entry).
+
+- SavGol-focus reusable sklearn preset:
+  - `NativeAOMSavgolFocusRegressor`
+  - exported from `n4m`, `n4m.sklearn`, `n4m.aom` and `n4m.moment`
+  - preset wrapper over `NativeAOMStagedChainCampaignRegressor` with
+    `plan="savgol_focus"`, `max_chains=6`, `top_k=10`, `refit_top_k=8`,
+    `refit_per_head_top_k=2`, `scale_x_values=(False, True)` and the one-GPU
+    CUDA PLS route knobs used in the benchmark
+  - no held-out/test inputs, no dataset/source routing, and final prediction
+    still reuses the selected final-only fixed candidate
+  - facade inventories expose it as `savgol_focus_regressor` with
+    `catalog_role="preset_sklearn_wrapper"` over
+    `aom_pop.aom_staged_chain_campaign`
+  - `test_aom_staged_campaign.py` now fits the preset on a tiny synthetic
+    dataset and verifies `plan="savgol_focus"`, selected scale config,
+    train-CV-only selection and replay through `selected_model_`
+  - `aom_moment_cuda_facade_smoke.py` and
+    `aom_moment_cuda_facade_smoke.json` now cover this preset on the CUDA
+    build; the JSON section `savgol_focus_estimator` reports screen PLS CUDA CV
+    fits `64` / host `0`, refit PLS CUDA CV fits `8` / host `0`, and
+    `selection_uses_test_set=False`
+- Strict-family lite reusable sklearn audit preset:
+  - `NativeAOMStrictFamilyLiteRegressor`
+  - exported from `n4m`, `n4m.sklearn`, `n4m.aom` and `n4m.moment`
+  - preset wrapper over `NativeAOMStagedChainCampaignRegressor` with
+    `plan="strict_family_focus"`, but deliberately low defaults:
+    `max_chains=2`, `chain_chunk_size=2`, `top_k=6`, `refit_top_k=4`,
+    `refit_per_head_top_k=1`, `scale_x=False` and no `scale_x_values` grid
+  - intended as a cost-safe family audit over SavGol, Norris-Williams,
+    finite-difference, Gaussian, FCK and Whittaker stages; it is not the heavy
+    benchmark profile and still performs train-CV-only production selection
+  - facade inventories expose it as `strict_family_lite_regressor` with
+    `catalog_role="preset_sklearn_wrapper"` over
+    `aom_pop.aom_staged_chain_campaign`
+  - `test_aom_staged_campaign.py` now fits the preset on a tiny synthetic
+    dataset and verifies family stage coverage, no dataset/source/id stage
+    metadata, `selection_uses_test_set=False`, selected `scale_x=False`, and
+    replay through `selected_model_`
+  - `aom_moment_cuda_facade_smoke.py` and
+    `aom_moment_cuda_facade_smoke.json` now cover this preset on the CUDA
+    build; the JSON section `strict_family_lite_estimator` reports screen PLS
+    CUDA CV fits `36` / host `0`, refit PLS CUDA CV fits `4` / host `0`, and
+    `selection_uses_test_set=False`
+- Focused strict-family staged campaign plans:
+  - `n4m.aom_staged_chain_campaign(..., plan="savgol_focus")`
+  - `n4m.aom_staged_chain_campaign(..., plan="strict_family_focus")`
+  - both are source-free, strict-linear recipes over the existing lab families;
+    existing plans and explicit `stages=[...]` behavior are unchanged
+  - `savgol_focus` runs compact, SavGol smooth, SavGol derivative and
+    SavGol-combination stages so SavGol variety is reached with small
+    `max_chains`
+  - `strict_family_focus` adds separate Norris-Williams, finite-difference,
+    Gaussian, FCK and Whittaker stages so `max_chains` is applied per family
+    instead of cutting off late `lab` families
+  - production selection remains train exact-CV only and no dataset/source/name
+    metadata is read
+  - one-GPU CLI smoke on one real cohort row passed with
+    `plan=strict_family_focus`; it wrote 9 focused stage checkpoints, selected
+    `strict_combinations`, kept `selection_uses_test_set=False`, and routed PLS
+    screen/refit CV through CUDA with host counters at `0`
+  - follow-up `savgol_focus --max-chains 6 --scale-x-grid false,true` on the
+    local diverse-10 cohort with `--max-features 1200` produced 8 OK rows and 2
+    property-skipped rows; against compact scale-grid on the 8 paired rows it
+    had 5 wins, 2 losses and 1 tie, median paired ratio `0.995259`, mean ratio
+    `0.996638`, median fit time `16.06s`, screen PLS CUDA CV fits `1920` / host
+    `0`, refit PLS CUDA CV fits `245` / host `0`
+  - a broader `strict_family_focus --max-chains 4` partial run showed family
+    wins but stalled during a MANURE refit/finalization after all focused stage
+    checkpoints were written; keep it as a heavier audit profile, not the fast
+    default campaign
+- Staged campaign model-config scaling grid:
+  - `n4m.aom_staged_chain_campaign(..., scale_x_values=[False, True])`
+  - `NativeAOMStagedChainCampaignRegressor(scale_x_values=[False, True])`
+  - runs one normal staged sub-campaign per `scale_x` value, scopes checkpoints
+    by config, selects the config by train exact-CV `best.refit_cv_rmse`, and
+    fits the final reusable candidate with the selected `scale_x`
+  - reports `model_config_grid`, `model_config_summaries`,
+    `selected_model_config_id`, `selected_model_config`, selected `scale_x`, and
+    cost counters aggregated across evaluated configs
+  - `run_aom_staged_real_cohort.py` now accepts `--scale-x-grid false,true` and
+    writes `scale_x`, `scale_x_values`, `selected_model_config_id`
+  - compact 10-dataset one-GPU run selected `scale_x=True` on 8/10 rows and
+    kept all PLS screen/refit CV fits on CUDA (`screen=1200`, `refit=280`, host
+    `0`)
+  - oracle summary for that run: AOM-PLS paired median ratio `1.03079` with 1
+    target win, AOM-Ridge paired median ratio `1.05918` with 0 target wins,
+    TabPFN paired median ratio `1.05956` with 4 target wins
+  - follow-up `compact_wide` scale-grid run with `--max-features 1200` produced
+    8 OK rows and 2 property-skipped rows; against the compact scale-grid
+    baseline on the 8 paired rows it had 2 wins, 1 loss and 5 ties with median
+    paired ratio `1.0` and mean ratio `0.994179`; it paid more work
+    (`screen CUDA PLS CV fits=2880`, host `0`) for marginal score movement
+- Strict single-chain AOM Ridge-PLS selector:
+  - `n4m.aom_chain_ridge_pls(...)`
+  - `NativeAOMChainRidgePLSRegressor`
+  - catalog method `aom_pop.aom_chain_ridge_pls`
+  - exposed through `n4m`, `n4m.sklearn`, `n4m.aom` and `n4m.moment`
+  - applies strict-linear AOM chains sequentially, scores
+    `(chain, n_components, ridge_lambda)` by train-only CV, final-fits through
+    native `ridge_pls`, and folds selected-chain coefficients back to raw
+    `input_coefficients` plus `intercept`
+  - keeps the full candidate score table but tracks only the current best OOF
+    prediction buffer, avoiding an `n_candidates x n_samples x n_targets`
+    allocation
+  - has docs and `bench_aom_chain_ridge_pls_timing.py`
+  - has one-GPU CUDA-build smoke artifact
+    `benchmarks/cross_binding/aom_chain_ridge_pls_timing_cuda_smoke.csv`
+  - intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent
+    preprocessing, nonlinear lifts, kernels, trees, TabPFN residuals and
+    dataset/source routing
 - Direct PCR head:
   - C ABI `n4m_pcr_fit`
   - Python `n4m.pcr`
@@ -20,12 +368,24 @@ Completed and validated in the latest pass:
   - `NativeMomentStackRegressor`
   - catalog method `models.ensembles.moment_stack`
   - uses train-only OOF predictions from Ridge / PLS sweep / PCR / continuum / ECR / CPPLS
+  - fitted diagnostics expose OOF/final base route counters, including PLS CUDA device vs host CV fits
   - no nonlinear lift, no transformed-spectrum stacking, no dataset-name routing
 - Candidate preprocessing impact audit:
   - `n4m.aom_candidate_preprocessing_impact`
   - exposed through `n4m`, `n4m.aom`, and `n4m.moment`
   - groups scored candidate reports by stage, operator, option, chain position and head/stage option
   - reports best/mean/median score, rank stats and improvement vs identity baseline when present
+- Staged strict-chain cartesian campaign:
+  - `n4m.aom_staged_chain_campaign(...)`
+  - `n4m.NativeAOMStagedChainCampaignRegressor`
+  - catalog method `aom_pop.aom_staged_chain_campaign`
+  - exposed through `n4m`, `n4m.aom`, and `n4m.moment`
+  - runs compact/wide/lab or custom strict-linear score-only stages
+  - merges global + per-head retained candidates, exact-CV refits the union once
+  - attaches preprocessing-impact, screen-vs-refit rank diagnostics and optional audit-only holdout scoring
+  - supports per-stage checkpoint/resume via `checkpoint_dir`, `resume`, `max_chunks_per_run`
+  - the sklearn estimator intentionally has no `X_audit` / `y_audit` inputs and fits the selected train-CV refit row final-only
+  - no nonlinear lifts, no dataset-name routing, production selection remains train-CV only
 - Existing broader surfaces in this branch:
   - `n4m.aom` and `n4m.moment` facades
   - strict-chain grid builder and streaming iterator
@@ -42,11 +402,261 @@ From `/home/delete/nirs4all/nirs4all-methods`:
 ```bash
 PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python -m py_compile \
   bindings/python/src/n4m/python.py \
+  bindings/python/src/n4m/sklearn/native_sweeps.py \
+  bindings/python/src/n4m/__init__.py \
+  bindings/python/src/n4m/sklearn/__init__.py \
+  bindings/python/src/n4m/aom/__init__.py \
+  bindings/python/src/n4m/moment/__init__.py \
+  bindings/python/tests/test_moment_model_wrappers.py \
+  bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py \
+  benchmarks/cross_binding/bench_aom_chain_ridge_pls_timing.py
+```
+
+```bash
+PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python -m pytest \
+  bindings/python/tests/test_aom_benchmark_tools.py \
+  bindings/python/tests/test_catalog_python_bindings.py \
+  bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py \
+  bindings/python/tests/test_aom_moment_facade.py \
+  bindings/python/tests/test_moment_model_wrappers.py \
+  bindings/python/tests/test_aom_staged_campaign.py -q
+```
+
+Result after `aom_chain_ridge_pls`: `141 passed`.
+
+After adding staged `scale_x_values`, the same targeted suite is `143 passed`.
+
+After adding `NativeAOMSavgolFocusRegressor`, the focused staged campaign test
+file is `14 passed`.
+
+After adding `NativeAOMStrictFamilyLiteRegressor`:
+
+- `bindings/python/tests/test_aom_staged_campaign.py`: `15 passed`
+- `bindings/python/tests/test_aom_moment_facade.py`: `13 passed`
+- `bindings/python/tests/test_aom_moment_facade.py` now also has a generic
+  guard for every `catalog_role="preset_sklearn_wrapper"` row: presets must
+  advertise a `preset_plan`, wrap a catalog binding, resolve to the sklearn
+  class object, and hide `plan`, `stages`, `families` and `templates` from
+  their config surface.
+- `bindings/python/tests/test_aom_moment_facade.py` also guards that every
+  AOM/moment facade entry is the exact top-level `n4m` object, and that every
+  relevant catalogued `n4m.python` binding under `aom_pop`, `utilities`,
+  direct PLS/regularized/specialized heads and `moment_stack` is exposed by at
+  least one of `n4m.aom` / `n4m.moment`.
+- one-GPU CUDA facade smoke regenerated
+  `benchmarks/cross_binding/aom_moment_cuda_facade_smoke.json` with
+  `strict_family_lite_estimator`: screen CUDA `36`, host `0`; refit CUDA `4`,
+  host `0`
+- `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py -q -k facade`:
+  `1 passed, 20 deselected`
+- targeted benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest
+  set: `152 passed`
+- `catalog/scripts/split_legacy_methods.py --check`: PASS, `208` per-method
+  files up to date
+- `catalog/scripts/validate.py --check-references`: PASS, `208/208`
+  production methods covered
+- `catalog/scripts/validate.py --strict-abi`: PASS, ABI coverage `701/701`
+
+After adding CUDA facade coverage for the preset:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/aom_moment_cuda_facade_smoke.py \
+  --cuda-lib build/cuda-on/cpp/src/libn4m.so \
+  --output benchmarks/cross_binding/aom_moment_cuda_facade_smoke.json \
+  --cuda-visible-devices 0 --n-samples 80 --n-features 1024 --cv 4
+```
+
+Result: JSON regenerated with `savgol_focus_estimator` device route counters:
+screen CUDA `64`, host `0`; refit CUDA `8`, host `0`.
+
+```bash
+PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python -m pytest \
+  bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py -q -k facade
+```
+
+Result: `1 passed, 20 deselected`.
+
+After adding the focused strict-family plans:
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python -m py_compile \
+  bindings/python/src/n4m/python.py \
+  bindings/python/tests/test_aom_staged_campaign.py \
+  benchmarks/cross_binding/run_aom_staged_real_cohort.py
+```
+
+```bash
+PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python -m pytest \
+  bindings/python/tests/test_aom_staged_campaign.py -q
+```
+
+Result: `13 passed`.
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output /tmp/aom_staged_strict_family_focus_cli_smoke.csv \
+  --limit 1 --plan strict_family_focus --cv 3 --max-chains 2 \
+  --chain-chunk-size 2 --top-k 4 --refit-top-k 3 \
+  --refit-per-head-top-k 1 --heads ridge,pls --components 1 \
+  --ridge-lambdas 0.1 \
+  --checkpoint-dir /tmp/aom_staged_strict_family_focus_cli_smoke_ckpt \
+  --no-resume --cuda-pls-parallel-folds \
+  --cuda-pls-min-device-features 1 --backend-min-cuda-product 1
+```
+
+Result: one OK row,
+`BEEFMARBLING/Beef_Marbling_RandomSplit`, `plan=strict_family_focus`,
+`selected_campaign_stage=strict_combinations`, `screen_complete=True`,
+`selection_uses_test_set=False`, screen PLS CUDA CV fits `54` / host `0`,
+refit PLS CUDA CV fits `3` / host `0`.
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output /tmp/aom_staged_real_cohort_savgol_focus10_scalex_grid_p1200_cuda.csv \
+  --limit 10 --plan savgol_focus --cv 5 --max-chains 6 \
+  --chain-chunk-size 6 --top-k 10 --refit-top-k 8 \
+  --refit-per-head-top-k 2 --heads ridge,pls --components 1,2 \
+  --ridge-lambdas 0.1,1.0,10.0 \
+  --checkpoint-dir /tmp/aom_staged_real_cohort_savgol_focus10_scalex_grid_p1200_ckpt \
+  --scale-x-grid false,true --cuda-pls-parallel-folds \
+  --cuda-pls-min-device-features 1 --backend-min-cuda-product 1 \
+  --max-features 1200
+```
+
+Result: 8 OK rows, 2 property-skipped rows. Variant comparison versus compact
+scale-grid on the 8 paired rows: 5 wins, 2 losses, 1 tie, median paired ratio
+`0.995259`, mean ratio `0.996638`. Oracle summary: AOM-PLS median ratio
+`1.03051` with 1 target win; AOM-Ridge median ratio `1.07519` with 1 target
+win; TabPFN median ratio `0.971371` with 4 target wins. Output artifacts:
+`/tmp/aom_staged_savgol_focus_p1200_oracle_summary.md` and
+`/tmp/aom_staged_variant_savgol_focus_p1200.md`.
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python catalog/scripts/split_legacy_methods.py
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python catalog/scripts/validate.py --check-references
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python catalog/scripts/validate.py --strict-abi
+```
+
+Result: split wrote `208` per-method files; reference validation PASS
+`208/208`; strict ABI validation PASS `701/701`.
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python catalog/scripts/validate.py --check-references
+```
+
+Result after `aom_chain_ridge_pls`: PASS, `208/208` production methods covered.
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python catalog/scripts/validate.py --strict-abi
+```
+
+Result after `aom_chain_ridge_pls`: PASS, ABI coverage `701/701`.
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python catalog/scripts/split_legacy_methods.py --check
+```
+
+Result: PASS, `208` per-method files up to date.
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_aom_chain_ridge_pls_timing.py \
+  --output benchmarks/cross_binding/aom_chain_ridge_pls_timing_cuda_smoke.csv \
+  --repeats 1 --mode both
+```
+
+Result: 6 rows. `library_path=build/cuda-on/cpp/src/libn4m.so`,
+`selection_mode=chain_ridge_pls`, `ridge_pls_backend=native`,
+`prediction_replay_max_abs_error=0.0`.
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output /tmp/aom_staged_real_cohort_compact10_scalex_grid_cuda.csv \
+  --limit 10 --plan compact --max-chains 12 --top-k 12 --refit-top-k 6 \
+  --refit-per-head-top-k 2 \
+  --checkpoint-dir /tmp/aom_staged_real_cohort_compact10_scalex_grid_ckpt \
+  --scale-x-grid false,true \
+  --cuda-pls-parallel-folds --cuda-pls-min-device-features 1 \
+  --backend-min-cuda-product 1
+```
+
+Result: 10/10 rows OK, selected `scale_x=True` on 8/10 rows, screen CUDA PLS CV
+fits `1200` and host fits `0`, refit CUDA PLS CV fits `280` and host fits `0`.
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python \
+  benchmarks/cross_binding/compare_aom_staged_to_oracles.py \
+  --target /tmp/aom_staged_real_cohort_compact10_scalex_grid_cuda.csv \
+  --target-label n4m_staged_compact_scalex_grid_cuda \
+  --output /tmp/aom_staged_compact10_scalex_grid_cuda_oracle_comparison.csv \
+  --summary-output /tmp/aom_staged_compact10_scalex_grid_cuda_oracle_summary.md
+```
+
+Summary: AOM-PLS paired median ratio `1.03079` with 1 target win, AOM-Ridge
+paired median ratio `1.05918` with 0 target wins, TabPFN paired median ratio
+`1.05956` with 4 target wins.
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output /tmp/aom_staged_real_cohort_compact_wide10_scalex_grid_p1200_cuda.csv \
+  --limit 10 --plan compact_wide --max-chains 24 --chain-chunk-size 8 \
+  --top-k 16 --refit-top-k 8 --refit-per-head-top-k 3 \
+  --checkpoint-dir /tmp/aom_staged_real_cohort_compact_wide10_scalex_grid_p1200_ckpt \
+  --scale-x-grid false,true \
+  --cuda-pls-parallel-folds --cuda-pls-min-device-features 1 \
+  --backend-min-cuda-product 1 --max-features 1200
+```
+
+Result: 8 OK, 2 skipped by feature-count property. Against the compact
+scale-grid baseline on common rows: 2 wins, 1 loss, 5 ties, median ratio `1.0`,
+mean ratio `0.994179`. Oracle summary:
+AOM-PLS median ratio `1.03051`, AOM-Ridge `1.08068`, TabPFN `0.968453`.
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python \
+  benchmarks/cross_binding/compare_aom_staged_variants.py \
+  --input compact=/tmp/aom_staged_real_cohort_compact10_scalex_grid_cuda.csv \
+  --input compact_wide_p1200=/tmp/aom_staged_real_cohort_compact_wide10_scalex_grid_p1200_cuda.csv \
+  --baseline-label compact \
+  --output /tmp/aom_staged_variant_compact_vs_compact_wide_p1200.csv \
+  --summary-output /tmp/aom_staged_variant_compact_vs_compact_wide_p1200.md
+```
+
+```bash
+git diff --check
+```
+
+Result: exit 0; only the known CRLF warnings on existing CSV artifacts.
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python -m py_compile \
+  bindings/python/src/n4m/python.py \
   bindings/python/src/n4m/__init__.py \
   bindings/python/src/n4m/aom/__init__.py \
   bindings/python/src/n4m/moment/__init__.py \
   bindings/python/src/n4m/sklearn/native_sweeps.py \
   bindings/python/src/n4m/sklearn/__init__.py \
+  bindings/python/tests/test_aom_staged_campaign.py \
   bindings/python/tests/test_moment_model_wrappers.py \
   bindings/python/tests/test_aom_moment_facade.py \
   benchmarks/cross_binding/bench_moment_stack_timing.py \
@@ -57,16 +667,61 @@ PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python -m py_compile \
 PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
   /home/delete/.venv/bin/python -m pytest \
   bindings/python/tests/test_aom_moment_facade.py \
-  bindings/python/tests/test_moment_model_wrappers.py -q
+  bindings/python/tests/test_moment_model_wrappers.py \
+  bindings/python/tests/test_aom_staged_campaign.py -q
 ```
 
-Result: `61 passed`.
+Result after staged campaign: `70 passed`.
 
 ```bash
 PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python catalog/scripts/validate.py --strict-abi
 ```
 
-Result: `PASS`, 200 methods, ABI coverage `701/701`.
+Result after adding `aom_pop.aom_staged_chain_campaign`: `PASS`, 201 methods,
+ABI coverage `701/701`.
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python catalog/scripts/validate.py --check-references
+```
+
+Result: `PASS`, reference coverage `137 nirs4all-donor + 61 registry + 3
+paper_only = 201/201 production methods`.
+
+The AOM/moment facade guard now also verifies that advertised
+`config_options` do not expose dataset/source/database/metadata routing knobs.
+The catalog Python-binding guard verifies that every per-method
+`bindings.python` declaration resolves to a real export. The targeted
+catalog/facade/wrapper/staged pytest set is now `73 passed`.
+
+`catalog/scripts/validate.py` now also checks non-null
+`bench.registry_entry` paths, so catalogued AOM/moment Python-backed methods
+cannot advertise missing timing scripts.
+
+`bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py` now checks the
+committed one-GPU CUDA readiness artifacts for the facade smoke, staged
+campaign, moment stack PLS base, Ridge blender wrapper and operator PLS stack
+wrapper. The targeted catalog/CUDA-artifact/facade/wrapper/staged pytest set is
+now `78 passed`.
+
+The same CUDA-artifact guard now also covers the global AOM profile sweep,
+native AOM-PLS / POP-PLS reusable coefficient replay, robust-HPO native CUDA
+build smokes, and the PLS/mixed/Ridge screen-refit CUDA build artifacts.
+The regenerated facade JSON reports `aom_profile_sweep` with
+`n_pls_moment_cuda_device_cv_fits=48` and host PLS CV fits at `0`; AOM-PLS and
+POP-PLS sklearn replay errors are both below `1e-10`.
+
+`docs/methods/index.md` now links the AOM/POP and staged campaign method docs
+advertised by `n4m.aom` / `n4m.moment`; the facade test guards that link
+coverage. After this doc-index guard, the targeted
+catalog/CUDA-artifact/facade/wrapper/staged pytest set is `80 passed`.
+
+`bindings/python/tests/test_aom_benchmark_tools.py` now guards the two offline
+benchmark helpers: the oracle comparator must filter true AOM-PLS/AOM-Ridge and
+TabPFN Raw/Opt rows separately, and the real-cohort runner must report the
+train-CV-selected audit row (`eval.best_cv`) rather than the test-best retained
+candidate (`best_eval`). With this guard included, the targeted
+benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set is
+`87 passed`.
 
 ```bash
 git diff --check
@@ -74,7 +729,55 @@ git diff --check
 
 Result: pass.
 
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python - <<'PY'
+import csv
+row = next(csv.DictReader(open(
+    "benchmarks/cross_binding/aom_staged_chain_campaign_timing_cuda_smoke.csv"
+)))
+assert row["selection_uses_test_set"] == "False"
+assert row["screen_complete"] == "True"
+assert int(row["n_pls_moment_cuda_device_cv_fits"]) > 0
+assert int(row["n_pls_moment_host_cv_fits"]) == 0
+PY
+```
+
+Result: staged CUDA smoke CSV counters pass.
+
 Earlier in the same pass, `catalog/scripts/validate.py --check-references` also passed after adding `models.ensembles.moment_stack` as a nirs4all-donor method.
+
+Moment stack CUDA smoke:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_moment_stack_timing.py \
+  --output benchmarks/cross_binding/moment_stack_timing_cuda_smoke.csv \
+  --repeats 1 --shapes 80x1024 --base-models pls --cv 4 --inner-cv 4 \
+  --n-components 1 --cuda-pls-min-device-features 1 \
+  --cuda-pls-parallel-folds
+```
+
+Observed readiness counters: `n_base_oof_pls_moment_cuda_device_cv_fits=16`,
+`n_base_oof_pls_moment_host_cv_fits=0`,
+`n_base_final_pls_moment_cuda_device_cv_fits=4`,
+`n_base_final_pls_moment_host_cv_fits=0`.
+
+CSV assertion:
+
+```bash
+PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python - <<'PY'
+import csv
+row = next(csv.DictReader(open(
+    "benchmarks/cross_binding/moment_stack_timing_cuda_smoke.csv"
+)))
+assert int(row["n_base_oof_pls_moment_cuda_device_cv_fits"]) == 16
+assert int(row["n_base_oof_pls_moment_host_cv_fits"]) == 0
+assert int(row["n_base_final_pls_moment_cuda_device_cv_fits"]) == 4
+assert int(row["n_base_final_pls_moment_host_cv_fits"]) == 0
+PY
+```
 
 ## Important files
 
@@ -83,14 +786,25 @@ Earlier in the same pass, `catalog/scripts/validate.py --check-references` also 
 - `bindings/python/src/n4m/moment/__init__.py`
 - `bindings/python/src/n4m/sklearn/native_sweeps.py`
 - `bindings/python/tests/test_aom_moment_facade.py`
+- `bindings/python/tests/test_aom_benchmark_tools.py`
 - `bindings/python/tests/test_moment_model_wrappers.py`
+- `bindings/python/tests/test_aom_staged_campaign.py`
+- `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py`
+- `benchmarks/cross_binding/bench_aom_chain_ridge_pls_timing.py`
+- `benchmarks/cross_binding/aom_chain_ridge_pls_timing_cuda_smoke.csv`
+- `benchmarks/cross_binding/bench_aom_staged_chain_campaign_timing.py`
+- `benchmarks/cross_binding/run_aom_staged_real_cohort.py`
+- `benchmarks/cross_binding/compare_aom_staged_to_oracles.py`
 - `cpp/src/c_api/c_api_method_result.cpp`
 - `cpp/include/n4m/pls.h`
 - `catalog/methods/models.pls.pcr.yaml`
 - `catalog/methods/models.ensembles.moment_stack.yaml`
+- `catalog/methods/aom_pop.aom_chain_ridge_pls.yaml`
 - `docs/architecture/aom_moment_coverage_matrix.md`
 - `docs/architecture/aom_moment_worklog.md`
+- `docs/methods/aom_chain_ridge_pls.md`
 - `docs/methods/aom_chain_sweep_run.md`
+- `docs/methods/aom_staged_chain_campaign.md`
 - `docs/methods/pcr.md`
 - `docs/methods/moment_stack.md`
 
@@ -114,10 +828,6 @@ The remaining gaps are engine/performance work, not simple method wiring:
    - Need a controlled campaign against robust AOM oracle / AOM Ridge oracle / AOM PLS oracle / TabPFN baselines.
    - The new `aom_candidate_preprocessing_impact` helper should be used to analyze which preprocessing families/options justify more budget.
 
-5. Staged cartesian orchestration.
-   - The current chain grid can stream and score strict-linear chains.
-   - A full staged cartesian runner like the proto `cartesian.py` / `impact.py` is not yet a first-class benchmark workflow in this repo.
-
 ## Constraints to keep
 
 - Do not add hors-moment nonlinear lifts in this pass.
@@ -136,3 +846,1151 @@ Stop expanding features and run one focused benchmark campaign:
 5. Use `aom_candidate_preprocessing_impact` and `aom_candidate_rank_diagnostics` to decide whether more cartesian budget is justified.
 6. Compare against the real robust AOM oracle and TabPFN baselines from `n4a-lab` / `n4a-paper` / `n4a-aom`.
 
+The staged runner, synthetic timing smoke, real-cohort runner, and offline
+oracle comparator are now wired. The comparator defaults to the real local
+artifacts:
+
+- AOM-PLS oracle:
+  `/home/delete/nirs4all/nirs4all-aom/benchmarks/runs/scenarios/paper_aom_aompls_seeds012/results.csv`
+- AOM-Ridge oracle:
+  `/home/delete/nirs4all/nirs4all-aom/benchmarks/runs/ridge/all54_headline/results.csv`
+- TabPFN oracle:
+  `/home/delete/nirs4all/nirs4all-aom/benchmarks/pls/cohort_regression.csv`
+  plus fallback `/home/delete/nirs4all/nirs4all-lab/benchmark/results/1_master_results.csv`
+
+The comparator filters plain PLS/Ridge baselines out of the AOM-PLS and
+AOM-Ridge oracles, and uses the best available TabPFN Raw/Opt reference per
+dataset.
+
+To produce target rows, run for example:
+
+```bash
+PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output benchmarks/cross_binding/aom_staged_real_cohort_results.csv \
+  --limit 10 --plan compact --max-chains 12 --top-k 12 --refit-top-k 6
+```
+
+Without `--resume`, the runner replaces the output CSV. With `--resume`, it
+keeps existing rows and skips dataset rows already marked `ok`.
+
+Then compare:
+
+```bash
+/home/delete/.venv/bin/python benchmarks/cross_binding/compare_aom_staged_to_oracles.py \
+  --target benchmarks/cross_binding/aom_staged_real_cohort_results.csv \
+  --target-score-column rmsep
+```
+
+The runner's `rmsep` is the held-out score of the candidate selected by train
+CV. The test-best retained candidate is recorded separately as
+`audit_oracle_rmse` and must stay audit-only.
+
+Staged CUDA smoke:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_aom_staged_chain_campaign_timing.py \
+  --output benchmarks/cross_binding/aom_staged_chain_campaign_timing_cuda_smoke.csv \
+  --repeats 1 --plans compact --n-samples 96 --n-features 128 --cv 3 \
+  --heads pls --components 1 --ridge-lambdas 0.1 --max-chains 4 \
+  --chain-chunk-size 2 --top-k 4 --refit-top-k 3 \
+  --refit-per-head-top-k 1 --moment-policy auto \
+  --cuda-pls-min-device-features 1 --cuda-pls-parallel-folds
+```
+
+Observed readiness counters: `selection_uses_test_set=False`,
+`screen_complete=True`, `n_pls_moment_cuda_device_cv_fits=9`,
+`n_pls_moment_host_cv_fits=0`,
+`n_pls_moment_cuda_parallel_fold_jobs=9`.
+
+The broader CUDA facade smoke also covers the staged sklearn estimator:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/aom_moment_cuda_facade_smoke.py \
+  --cuda-lib build/cuda-on/cpp/src/libn4m.so \
+  --output benchmarks/cross_binding/aom_moment_cuda_facade_smoke.json \
+  --cuda-visible-devices 0 --n-samples 80 --n-features 1024 --cv 4
+```
+
+Observed staged estimator counters in the JSON:
+`n_pls_moment_cuda_device_cv_fits=8`,
+`n_pls_moment_host_cv_fits=0`,
+`n_pls_moment_cuda_parallel_fold_jobs=8`,
+`selection_uses_test_set=False`.
+
+Native AOM diversity wrapper CUDA smokes:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_aom_ridge_blender_timing.py \
+  --output benchmarks/cross_binding/aom_ridge_blender_timing_cuda_smoke.csv \
+  --repeats 1 --profile compact --cv 5 --mode both
+
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_aom_operator_pls_stack_timing.py \
+  --output benchmarks/cross_binding/aom_operator_pls_stack_timing_cuda_smoke.csv \
+  --repeats 1 --profile compact --cv 4 --mode both
+```
+
+Both CSVs now include native function and sklearn replay-wrapper rows:
+`native_aom_ridge_blender_sklearn` and
+`native_aom_operator_pls_stack_sklearn`. The wrapper rows report
+`prediction_replay_max_abs_error <= 1e-10`, proving `predict(X)` replays the
+native folded model state through the CUDA build path.
+
+Direct moment-head CUDA smoke:
+
+- A stale `build/cuda-on/cpp/src/libn4m.so` initially missed the
+  `n4m_pcr_fit` symbol even though the CPU dev-release build exposed the direct
+  head ABI. Rebuilt the CUDA preset with
+  `/home/delete/.venv/bin/cmake --build --preset cuda-on --parallel`.
+- Verified the rebuilt CUDA shared library exports `n4m_ridge_fit`,
+  `n4m_pcr_fit`, `n4m_cppls_fit`, `n4m_continuum_regression_fit` and
+  `n4m_ecr_fit`; direct `n4m.pls` is Python-backed over `n4m_sweep_run`.
+- Generated
+  `benchmarks/cross_binding/direct_moment_heads_timing_cuda_smoke.csv` with one
+  GPU. It contains Ridge, PLS, PCR, CPPLS, continuum regression and ECR across
+  three shapes, with both `native_function` and `sklearn_fit_predict` rows on
+  `build/cuda-on/cpp/src/libn4m.so`.
+- Added a release-readiness guard asserting the exact method set, three shapes
+  per method, both backends per method/shape, finite RMSE, CUDA build path and
+  `replay_max_abs_error <= 1e-10`.
+- After this direct-head guard, the targeted
+  benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set reports
+  `88 passed`.
+
+Sweep/selector CUDA artifact refresh:
+
+- Regenerated `moment_sweep_timing_cuda_smoke.csv`,
+  `aom_sweep_timing_cuda_smoke.csv` and `aom_selector_timing_cuda_smoke.csv`
+  against `build/cuda-on/cpp/src/libn4m.so` after the older committed artifacts
+  were still on ABI `1.18.0`.
+- The refreshed artifacts report ABI `1.21.0` and a `build/cuda-on` library
+  path.
+- Added release-readiness guards proving:
+  - moment sweep exact PLS CV rows have `cuda_pls_parallel_folds=True`,
+    `cuda_pls_min_device_features=1`, host CV fits at zero, and device CV fits
+    equal to total PLS moment CV fits;
+  - AOM sweep exact PLS CV rows across compact/global, custom chain,
+    Whittaker, FCK, Gaussian, PLS exact/proxy and Ridge rows have host CV fits at
+    zero and device CV fits equal to total PLS moment CV fits;
+  - AOM-PLS and POP-PLS selector function/sklearn rows replay with
+    `replay_max_abs <= 1e-10`.
+- After these sweep/selector guards, the targeted
+  benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set reports
+  `91 passed`.
+
+Real 10-dataset staged CUDA calibration:
+
+- Added staged campaign route counters to `aom_staged_chain_campaign` reports
+  and to `run_aom_staged_real_cohort.py` output rows:
+  `n_screen_pls_moment_*`, `n_refit_pls_moment_*`, plus the CUDA knob columns.
+- Ran a one-GPU compact real-cohort calibration:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output /tmp/n4m_aom_staged_real_cohort_10_cuda.csv \
+  --limit 10 --plan compact --cv 4 --max-chains 12 \
+  --chain-chunk-size 6 --top-k 12 --refit-top-k 6 \
+  --refit-per-head-top-k 2 --heads ridge,pls --components 1,2 \
+  --ridge-lambdas 0.1,1.0,10.0 --moment-policy auto \
+  --cuda-pls-min-device-features 1 --cuda-pls-parallel-folds \
+  --backend-min-cuda-product 1
+```
+
+- Result: `10/10` rows OK, `screen_complete=True`,
+  `selection_uses_test_set=False`, ABI `1.21.0`,
+  `library_path=build/cuda-on/cpp/src/libn4m.so`.
+- GPU route evidence: screen PLS moment CV fits `480`, screen host fits `0`,
+  screen CUDA device fits `480`; refit PLS moment CV fits `140`, refit host fits
+  `0`, refit CUDA device fits `140`.
+- Fit time: total `81.69 s`, median `3.43 s`; one BERRY dataset dominated at
+  about `51.17 s`.
+- Oracle comparison:
+
+```bash
+/home/delete/.venv/bin/python benchmarks/cross_binding/compare_aom_staged_to_oracles.py \
+  --target /tmp/n4m_aom_staged_real_cohort_10_cuda.csv \
+  --target-score-column rmsep \
+  --output /tmp/n4m_aom_staged_oracle_comparison_10_cuda.csv \
+  --summary-output /tmp/n4m_aom_staged_oracle_comparison_10_cuda.md
+```
+
+- Paired results: vs AOM-PLS oracle `0/9` target wins, median ratio `1.21015`;
+  vs AOM-Ridge oracle `0/10` target wins, median ratio `1.24282`; vs TabPFN
+  oracle `1/10` target wins, median ratio `1.33059`.
+- Interpretation: this proves the compact staged workflow runs train-only
+  selection on real data with PLS CV on GPU, but the tiny `max_chains=12` budget
+  is still far behind the robust AOM oracles. It is calibration evidence, not a
+  ceiling estimate for larger cartesian/preprocessing budgets.
+- After the route-counter runner guard, the targeted
+  benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set reports
+  `92 passed`.
+
+Property-filtered compact+wide calibration:
+
+- Added optional real-cohort runner filters by measured dataset properties:
+  `--max-train-samples`, `--max-features`,
+  `--max-train-feature-product`. Rows outside the budget are written as
+  `status=skipped` with `error_message=property_filter:...`; no model selection
+  ever uses dataset/source/name identity.
+- Ran a one-GPU incremental campaign:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output /tmp/n4m_aom_staged_real_cohort_10_cuda_compact_wide_p1200.csv \
+  --limit 10 --plan compact_wide --cv 4 --max-chains 24 \
+  --chain-chunk-size 8 --top-k 16 --refit-top-k 8 \
+  --refit-per-head-top-k 3 --heads ridge,pls --components 1,2 \
+  --ridge-lambdas 0.1,1.0,10.0 --moment-policy auto \
+  --cuda-pls-min-device-features 1 --cuda-pls-parallel-folds \
+  --backend-min-cuda-product 1 --max-features 1200
+```
+
+- Result: `8` OK rows and `2` skipped rows, both skipped only because
+  `n_features>1200`. OK rows used ABI `1.21.0` and
+  `build/cuda-on/cpp/src/libn4m.so`.
+- GPU route evidence on OK rows: screen PLS moment CV fits `1152`, screen host
+  fits `0`, screen CUDA device fits `1152`; refit PLS moment CV fits `160`,
+  refit host fits `0`, refit CUDA device fits `160`.
+- Timing: total fit time on OK rows `45.06 s`, median `5.31 s`.
+- Compared with the previous compact run on the 8 common OK datasets:
+  compact+wide improved `3/8`, was identical on `4/8`, and degraded slightly on
+  `1/8`; median ratio versus compact was `1.0`.
+- Oracle comparison:
+  - AOM-PLS oracle: paired `7`, target wins `0`, median ratio `1.17183`;
+  - AOM-Ridge oracle: paired `8`, target wins `0`, median ratio `1.26483`;
+  - TabPFN oracle: paired `8`, target wins `1`, median ratio `1.33059`.
+- Interpretation: adding a wide stage at this small budget improves a few rows
+  but still does not close the robust AOM oracle gap. The property filters give
+  a clean way to iterate budget without dataset-name selection.
+- After the property-filter guard, the targeted
+  benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set reports
+  `93 passed`.
+
+Custom staged JSON calibration:
+
+- Added `--stages-json` and `--stages-json-file` to
+  `run_aom_staged_real_cohort.py`. The value must be a non-empty JSON list of
+  profile strings or stage objects accepted by `n4m.aom_staged_chain_campaign`.
+  The runner passes it through as `stages=...` and records a compact
+  `stages_json` field in each output row.
+- Mini one-GPU proof run:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output /tmp/n4m_aom_staged_real_cohort_3_cuda_custom_stages.csv \
+  --limit 3 --plan compact \
+  --stages-json '[{"name":"compact","profile":"compact","max_chains":8,"top_k":8},{"name":"sg_lab","profile":"lab","families":{"identity":[["identity",[]]],"savgol_smooth":[["savgol_smooth",[5,2]],["savgol_smooth",[9,2]],["savgol_smooth",[15,3]]],"savgol_derivative":[["savgol_derivative",[7,2,1]],["savgol_derivative",[15,3,1]]],"finite_difference":[["finite_difference",[1]]]},"templates":[["identity"],["savgol_smooth"],["savgol_derivative"],["savgol_smooth","finite_difference"]],"max_chains":8,"top_k":8}]' \
+  --cv 4 --max-chains 8 --chain-chunk-size 4 --top-k 8 \
+  --refit-top-k 6 --refit-per-head-top-k 2 \
+  --heads ridge,pls --components 1,2 --ridge-lambdas 0.1,1.0,10.0 \
+  --moment-policy auto --cuda-pls-min-device-features 1 \
+  --cuda-pls-parallel-folds --backend-min-cuda-product 1 \
+  --max-features 1200
+```
+
+- Result: `2` OK rows, `1` skipped row (`n_features>1200`), `plan=custom`,
+  `stages_json` non-empty, ABI `1.21.0`.
+- GPU route evidence on OK rows: screen PLS moment CV fits `128`, screen host
+  fits `0`, screen CUDA device fits `128`; refit PLS moment CV fits `32`,
+  refit host fits `0`, refit CUDA device fits `32`.
+- Oracle comparison for those two rows: target wins `0` vs AOM-PLS, AOM-Ridge
+  and TabPFN. This is a functionality proof for custom preprocessing-family
+  campaign wiring, not a scoring improvement.
+- After the custom-stages JSON guard, the targeted
+  benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set reports
+  `94 passed`.
+
+Staged variant comparison helper:
+
+- Added `benchmarks/cross_binding/compare_aom_staged_variants.py` to compare
+  several staged campaign result CSVs before comparing to AOM/TabPFN oracles.
+  It is offline only: no fitting, no production selection, and no dataset-name
+  routing. Dataset keys are used only to pair evaluation scores against a
+  baseline.
+- Example:
+
+```bash
+python benchmarks/cross_binding/compare_aom_staged_variants.py \
+  --input compact=/tmp/n4m_aom_staged_real_cohort_10_cuda.csv \
+  --input wide=/tmp/n4m_aom_staged_real_cohort_10_cuda_compact_wide_p1200.csv \
+  --baseline-label compact \
+  --output /tmp/n4m_aom_staged_variant_summary.csv \
+  --summary-output /tmp/n4m_aom_staged_variant_summary.md
+```
+
+- The summary groups by campaign config (`plan`, `stages_json`, heads, budget,
+  property filters and CUDA knobs) and reports OK/skipped/error counts, median
+  score/timing, route-counter totals, and paired win/loss/tie ratios.
+- With this helper included, the targeted
+  benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set reports
+  `97 passed`.
+
+Direct reusable PLS head:
+
+- Added `n4m.pls` / `n4m.python.pls`, backed by `n4m_sweep_run` in PLS-only
+  mode. It supports fixed `n_components` or an explicit train-CV
+  `pls_components` grid and passes through the existing CUDA PLS controls.
+- Added `NativePLSRegressor` to `n4m.sklearn`, top-level `n4m`, and
+  `n4m.moment`. It predicts from replayable input-space coefficients plus
+  intercept and exposes the sweep PLS route counters.
+- Wired `catalog/methods/models.pls.pls_fit_simple.yaml` and
+  `catalog/methods.yaml` to the new `n4m.python.pls` binding, and updated
+  `docs/methods/pls.md`.
+- Regenerated
+  `benchmarks/cross_binding/direct_moment_heads_timing_cuda_smoke.csv`; it now
+  covers Ridge, PLS, PCR, CPPLS, continuum regression and ECR on the CUDA build,
+  with function and sklearn replay rows.
+- With this direct PLS head included, the targeted
+  benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set reports
+  `98 passed`; strict ABI, reference validation and split-method checks pass.
+
+Linear PLS variants (weighted, robust, ridge-augmented):
+
+- `n4m.weighted_pls`: FFI wired to `n4m_weighted_pls_fit`; exports
+  replayable `coefficients`, `predictions`, `x_mean`, `y_mean`;
+  `NativeWeightedPLSRegressor` reconstructs the intercept from the native means;
+  present in `direct_moment_heads_timing_cuda_smoke.csv` across all 3 shapes
+  with native and sklearn rows.
+- `n4m.robust_pls`: FFI wired to `n4m_robust_pls_fit`; Huber IRLS over weighted
+  PLS fits; Python helper default `max_irls_iter=5`; exports `coefficients`,
+  `predictions`, `x_mean`, `y_mean`; `NativeRobustPLSRegressor` replays native
+  training predictions; present in the smoke CSV with native and sklearn rows.
+- `n4m.ridge_pls`: FFI wired to `n4m_ridge_pls_fit`; ridge-regularised augmented
+  SIMPLS; `NativeRidgePLSRegressor` replays native training predictions; present
+  in the smoke CSV with native and sklearn rows.
+- All three have catalog YAML entries and are part of the `n4m.moment` facade
+  inventory.
+- `models.pls.kernel` / `kernel_pls` is **not wired** and is explicitly excluded:
+  non-linear kernel PLS requires a separate kernel-moment substrate outside the
+  strict-linear AOM/operator-moment architecture.
+- Tested: coefficient replay was verified at numerical noise level on CPU before
+  adding wrappers; all nine direct heads are present in the regenerated 54-row
+  CUDA smoke CSV and every row reports
+  `surface_status=function_and_sklearn_replay`.
+- Validation after this wrapper pass:
+  - Combined benchmark/catalog/CUDA-artifact/facade/wrapper/staged pytest set:
+    `107 passed`.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 201 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 201/201 production
+    methods covered.
+  - `git diff --check`: exit 0, only the known CRLF warnings on existing CSV
+    artifacts.
+
+Direct-head timing catalog alignment:
+
+- The nine reusable direct moment heads now all advertise
+  `benchmarks/cross_binding/bench_direct_moment_heads_timing.py` as their
+  `bench.registry_entry`: Ridge, PLS, PCR, CPPLS, weighted PLS, robust PLS,
+  ridge-augmented PLS, continuum regression and ECR.
+- Added a catalog guard for that exact registry entry across the direct-head
+  per-method YAML files.
+- With this guard included, the targeted
+  benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set reports
+  `99 passed`; strict ABI, reference validation and split-method checks pass.
+
+Direct PLS CUDA route proof:
+
+- `bench_direct_moment_heads_timing.py` now accepts
+  `--cuda-pls-min-device-features`, `--cuda-pls-parallel-folds` and
+  `--cuda-pls-many-batched`, and records PLS route counters in its CSV.
+- Regenerated
+  `benchmarks/cross_binding/direct_moment_heads_timing_cuda_smoke.csv` with one
+  GPU and `--cuda-pls-min-device-features 1 --cuda-pls-parallel-folds`.
+  PLS rows now show `n_pls_moment_cv_fits=4`, host CV fits `0`, CUDA device CV
+  fits `4` and CUDA fold jobs `4` for all three shapes and both function/wrapper
+  backends.
+- The CUDA artifact guard now requires that direct PLS rows prove device-CV
+  routing, not only CUDA library loading and replay.
+- Validation remains `99 passed` for the targeted
+  benchmark-tool/catalog/CUDA-artifact/facade/wrapper/staged pytest set; strict
+  ABI, reference validation and split-method checks pass.
+
+Moment-stack PLS base reuse:
+
+- `NativeMomentStackRegressor` now uses `NativePLSRegressor` for its `"pls"`
+  base instead of the generic `NativeMomentSweepRegressor`. This keeps the same
+  underlying `n4m_sweep_run` route but reuses the direct individual PLS method
+  exposed to users.
+- Wrapper tests now require stack diagnostics to report
+  `estimator="NativePLSRegressor"` and `method="pls"` for OOF/final PLS base
+  rows.
+- Regenerated `benchmarks/cross_binding/moment_stack_timing_cuda_smoke.csv`;
+  PLS route counters remain OOF `16/0/16` total/host/device CV fits and final
+  `4/0/4`.
+- Validation: `test_moment_model_wrappers.py` reports `53 passed`,
+  `test_aom_moment_cuda_smoke_artifacts.py` reports `13 passed`, and the
+  targeted combined suite remains `99 passed`.
+
+AOM preprocessing timing gap:
+
+- Added `benchmarks/cross_binding/bench_aom_preprocess_timing.py` for the
+  currently supported reusable `n4m.aom_preprocess` primitive contract:
+  direct single-operator `identity`, degree-1 detrend,
+  `savgol_smooth(window=5, poly=2)` and
+  `savgol_derivative(window=5, poly=2, deriv=1)`, Norris-Williams,
+  finite-difference, Gaussian, Whittaker and FCK in both `soft` and `hard`
+  gating modes.
+- Wired `aom_pop.aom_preprocessing` to that script as its
+  `bench.registry_entry` in both `catalog/methods.yaml` and the split YAML.
+- The benchmark asserts exact single-operator replay against
+  `operator_outputs`, expected operator kinds `0/7/8/9/10/15/16/17/18`,
+  `weight_shape=1x1`, and `weight_sum=1`. This is a timing/API smoke for the
+  direct strict-linear single-operator bank; richer strict-chain/model-scoring
+  diversity remains in AOM sweep/campaign helpers, and SNV-style banks remain
+  outside the moment contract.
+- Generated
+  `benchmarks/cross_binding/aom_preprocess_timing_cuda_smoke.csv` with
+  `CUDA_VISIBLE_DEVICES=0`, `N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so` and
+  ABI `1.21.0`; it contains 3 shapes x 2 gating modes x 9 direct operators
+  with replay error at numerical-noise level.
+- Validation after this pass:
+  - Rebuilt both `dev-release` and `cuda-on` CMake presets after switching
+    `aom_preprocess` to the shared AOM strict-linear operator engine.
+  - Added C ABI coverage in `build/dev-release/cpp/tests/n4m_tests` for the
+    9-operator direct strict-linear bank, hard/soft weights and replay of
+    identity plus finite-difference operator outputs.
+  - `test_aom_moment_cuda_smoke_artifacts.py`: `14 passed`.
+  - Combined benchmark/catalog/CUDA-artifact/facade/wrapper/staged pytest set:
+    `108 passed`.
+  - `build/dev-release/cpp/tests/n4m_tests`: `351 passed, 0 failed`.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 201 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 201/201 production
+    methods covered.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS.
+  - `git diff --check`: exit 0, only the known CRLF warnings on existing CSV
+    artifacts.
+
+AOM Ridge superblock strict-moment reference:
+
+- Added `n4m.aom_ridge_superblock`, a Python-backed donor-style AOM Ridge
+  superblock constrained to strict-linear single-operator AOM views.
+- Added `NativeAOMRidgeSuperblockRegressor` and exported it through top-level
+  `n4m`, `n4m.sklearn`, `n4m.aom` and `n4m.moment`.
+- The method concatenates strict operator outputs from `n4m.aom_preprocess`,
+  uses the native `n4m.ridge` binding for fold-local Ridge alpha scoring/fitting,
+  applies train-fold centering and optional block RMS scaling to validation
+  folds, and folds final superblock coefficients back to original-input
+  `input_coefficients` plus `intercept`.
+- Promoted the method to catalog entry `aom_pop.ridge_superblock`, added
+  `docs/methods/aom_ridge_superblock.md`, wired
+  `benchmarks/cross_binding/bench_aom_ridge_superblock_timing.py`, and
+  generated `aom_ridge_superblock_timing_cuda_smoke.csv` on `build/cuda-on`
+  with function + sklearn rows and `ridge_backend=native`.
+- The method is CUDA-build compatible and timed, but still not a fused GPU
+  superblock grinder. It
+  intentionally excludes donor `branch_global`, MKL/kernel,
+  row-reference-dependent preprocessing and nonlinear AOM Ridge modes.
+- Validation after this slice:
+  - py_compile on touched Python modules/tests: PASS.
+  - Focused Ridge-superblock tests plus `test_aom_moment_facade.py`: `15 passed`.
+  - Targeted benchmark/catalog/CUDA-artifact/facade/wrapper/staged pytest:
+    `113 passed`.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 202 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 202/202 production
+    methods covered.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS, 202 per-method
+    files up to date.
+  - `git diff --check`: exit 0, only known CRLF warnings on existing CSV
+    artifacts.
+
+AOM Ridge global strict-moment selector:
+
+- Added `n4m.aom_ridge_global`, a donor-style strict AOM Ridge global selector
+  constrained to single strict-linear operators.
+- Added `NativeAOMRidgeGlobalRegressor` and exported it through top-level
+  `n4m`, `n4m.sklearn`, `n4m.aom` and `n4m.moment`.
+- The method wraps native `aom_chain_sweep_run` in Ridge-only mode, selects one
+  operator plus one Ridge alpha by train CV, and returns folded
+  `input_coefficients` plus `intercept` for reuse.
+- Promoted the method to catalog entry `aom_pop.ridge_global`, added
+  `docs/methods/aom_ridge_global.md`, wired
+  `benchmarks/cross_binding/bench_aom_ridge_global_timing.py`, and generated
+  `aom_ridge_global_timing_cuda_smoke.csv` on `build/cuda-on` with function +
+  sklearn rows and `ridge_backend=native_aom_chain_sweep`.
+- It intentionally excludes donor `branch_global`, MKL/kernel,
+  row-reference-dependent preprocessing and nonlinear AOM Ridge modes.
+- Validation after this slice:
+  - py_compile on touched Python modules/tests: PASS.
+  - Focused Ridge-global tests plus `test_aom_moment_facade.py`: `21 passed`.
+  - Targeted benchmark/catalog/CUDA-artifact/facade/wrapper/staged pytest:
+    `118 passed`.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 203 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 203/203 production
+    methods covered.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS, 203 per-method
+    files up to date.
+
+AOM Ridge active-superblock strict-moment reference:
+
+- Added `n4m.aom_ridge_active_superblock`, a Python-backed donor-style AOM
+  Ridge active-superblock constrained to strict-linear single-operator AOM
+  views.
+- Added `NativeAOMRidgeActiveSuperblockRegressor` and exported it through
+  top-level `n4m`, `n4m.sklearn`, `n4m.aom` and `n4m.moment`.
+- The active score is defined on native `n4m.aom_preprocess` outputs as
+  `||scale_b * Z_b.T @ y_c||_F^2` by default; optional `kta` and `blend`
+  modes use the same train-only outputs. This is donor-style, not a hidden
+  claim of exact donor-private `op.apply_cov` reproduction.
+- Alpha CV screens active operators inside each training fold only; the final
+  model screens once on full calibration rows and fits Ridge through native
+  `n4m.ridge`. The final active superblock folds back to
+  `input_coefficients` plus `intercept`.
+- Promoted the method to catalog entry `aom_pop.ridge_active_superblock`, added
+  `docs/methods/aom_ridge_active_superblock.md`, wired
+  `benchmarks/cross_binding/bench_aom_ridge_active_superblock_timing.py`, and
+  generated `aom_ridge_active_superblock_timing_cuda_smoke.csv` on
+  `build/cuda-on` with function + sklearn rows and `ridge_backend=native`.
+- Kept donor `branch_global`, MKL/kernel, row-reference-dependent preprocessing
+  and nonlinear AOM Ridge modes out of scope for the moment contract.
+- Validation during implementation:
+  - py_compile on touched Python modules: PASS.
+  - Focused Ridge active/global/superblock wrapper tests: `6 passed`.
+  - Targeted benchmark/catalog/CUDA-artifact guards for active/global/superblock:
+    `11 passed`.
+  - Combined benchmark/catalog/CUDA-artifact/facade/wrapper/staged pytest set:
+    `123 passed`.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 204 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 204/204 production
+    methods covered.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS, 204 per-method
+    files up to date.
+
+AOM-PLS superblock strict-moment reference:
+
+- Added `n4m.aom_pls_superblock`, a Python-backed donor-style AOM-PLS
+  superblock constrained to strict-linear single-operator AOM views.
+- Added `NativeAOMPLSSuperblockRegressor` and exported it through top-level
+  `n4m`, `n4m.sklearn`, `n4m.aom` and `n4m.moment`.
+- The method concatenates strict operator outputs from `n4m.aom_preprocess`,
+  selects the PLS component count by train CV, fits through native `n4m.pls`,
+  and folds final superblock coefficients back to original-input
+  `input_coefficients` plus `intercept`.
+- Promoted the method to catalog entry `aom_pop.aom_pls_superblock`, added
+  `docs/methods/aom_pls_superblock.md`, wired
+  `benchmarks/cross_binding/bench_aom_pls_superblock_timing.py`, and generated
+  `aom_pls_superblock_timing_cuda_smoke.csv` on `build/cuda-on` with function
+  + sklearn rows, `pls_backend=native` and CUDA device PLS route counters when
+  `--cuda-pls-min-device-features 1` is used.
+- Kept donor `soft`, active PLS pruning, MKL/kernel, row-reference-dependent
+  preprocessing, nonlinear lifts and dataset/source routing out of scope for
+  this slice.
+
+AOM Ridge MKL-light superblock strict-moment reference:
+
+- Added `n4m.aom_ridge_mkl_superblock`, a Python-backed donor-style AOM Ridge
+  MKL-light weighted-superblock constrained to strict-linear single-operator
+  AOM views.
+- Added `NativeAOMRidgeMKLSuperblockRegressor` and exported it through
+  top-level `n4m`, `n4m.sklearn`, `n4m.aom` and `n4m.moment`.
+- The method learns non-negative KTA block weights on training rows only inside
+  every alpha-CV fold, refits weights on the full calibration rows, fits native
+  Ridge on the equivalent weighted superblock, and folds final coefficients
+  back to original-input `input_coefficients` plus `intercept`.
+- Promoted the method to catalog entry `aom_pop.ridge_mkl_superblock`, added
+  `docs/methods/aom_ridge_mkl_superblock.md`, wired
+  `benchmarks/cross_binding/bench_aom_ridge_mkl_superblock_timing.py`, and
+  generated `aom_ridge_mkl_superblock_timing_cuda_smoke.csv` on `build/cuda-on`
+  with function + sklearn rows, `mkl_mode=alignment`, `ridge_backend=native`
+  and replay error at numerical-noise level.
+- Kept donor branch/global reference-dependent preprocessing, local/SNV/MSC
+  branches, row-reference-dependent preprocessing, nonlinear kernels,
+  nonlinear lifts and dataset/source routing out of scope for this slice.
+- Validation after this slice:
+  - py_compile on touched Python modules/tests/benchmark: PASS.
+  - Focused AOM Ridge MKL-light superblock wrapper/function tests: `2 passed`.
+  - Targeted benchmark/catalog/CUDA-artifact guards for AOM Ridge MKL-light
+    superblock: `12 passed`.
+  - Combined benchmark/catalog/CUDA-artifact/facade/wrapper/staged pytest set:
+    `138 passed`.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 207 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 207/207
+    production methods covered.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS, 207 per-method
+    files up to date.
+- Validation after this slice:
+  - py_compile on touched Python modules/tests/benchmark: PASS.
+  - Focused AOM Ridge-PLS superblock wrapper/function tests: `2 passed`.
+  - Targeted benchmark/catalog/CUDA-artifact guards for AOM Ridge-PLS
+    superblock: `11 passed`.
+  - Combined benchmark/catalog/CUDA-artifact/facade/wrapper/staged pytest set:
+    `133 passed`.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 206 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 206/206
+    production methods covered.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS, 206 per-method
+    files up to date.
+- Validation during implementation:
+  - py_compile on touched Python modules: PASS.
+  - Focused AOM-PLS superblock wrapper/function tests: `2 passed`.
+  - Targeted benchmark/catalog/CUDA-artifact guards for AOM-PLS superblock:
+    `8 passed`.
+  - Combined benchmark/catalog/CUDA-artifact/facade/wrapper/staged pytest set:
+    `128 passed`.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 205 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 205/205 production
+    methods covered.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS, 205 per-method
+    files up to date.
+
+AOM Ridge-PLS superblock strict-moment reference:
+
+- Added `n4m.aom_ridge_pls_superblock`, a Python-backed donor-style AOM
+  Ridge-PLS superblock constrained to strict-linear single-operator AOM views.
+- Added `NativeAOMRidgePLSSuperblockRegressor` and exported it through
+  top-level `n4m`, `n4m.sklearn`, `n4m.aom` and `n4m.moment`.
+- The method concatenates strict operator outputs from `n4m.aom_preprocess`,
+  selects the PLS component count and Ridge-PLS lambda by train CV, fits
+  through native `n4m.ridge_pls`, and folds final superblock coefficients back
+  to original-input `input_coefficients` plus `intercept`.
+- Promoted the method to catalog entry `aom_pop.aom_ridge_pls_superblock`,
+  added `docs/methods/aom_ridge_pls_superblock.md`, wired
+  `benchmarks/cross_binding/bench_aom_ridge_pls_superblock_timing.py`, and
+  generated `aom_ridge_pls_superblock_timing_cuda_smoke.csv` on `build/cuda-on`
+  with function + sklearn rows and `ridge_pls_backend=native`.
+- Kept donor `soft`, active PLS pruning, MKL/kernel, row-reference-dependent
+  preprocessing, nonlinear lifts and dataset/source routing out of scope for
+  this slice.
+
+Rank-audit mismatch summary follow-up (2026-06-06):
+
+- Added a post-hoc mismatch-pattern section to
+  `benchmarks/cross_binding/summarize_aom_rank_audit.py`.
+- The Markdown summary now aggregates rows where the train-CV winner was not
+  the offline test oracle (`test_rank_delta > 0` or `oracle_gap_ratio > 0`),
+  grouped by `selected_head -> oracle_head` and
+  `selected_chain -> oracle_chain`.
+- Aggregates include count, mean/median oracle-gap ratio, median selected test
+  rank and median rank delta. CSV schema is unchanged.
+- The section explicitly preserves the invariant: production selection remains
+  train-CV only, and the audit must not be used to route or select by dataset
+  name, source or id.
+- Regenerated:
+  - `benchmarks/cross_binding/aom_staged_compact_wide_audit5_20260606_rank_audit.csv/.md`
+  - `benchmarks/cross_binding/aom_staged_compact_wide_audit10_20260606_rank_audit.csv/.md`
+  - `benchmarks/cross_binding/aom_staged_ecosis_compact_wide_refit40_audit_20260606_rank_audit.csv/.md`
+- Notable audit10 patterns:
+  - ECOSIS selected `ridge:0.1 savgol_smooth(7,2)` while offline oracle was
+    `pls:1 detrend_poly(2)`, gap ratio `0.5773`.
+  - ECOSIS refit40 still selected `ridge:0.1 savgol_smooth(7,2)`, while the
+    offline oracle was `ridge:10 finite_difference(1)`, gap ratio `2.9123` and
+    selected test rank `41`.
+- Validation:
+  - `/home/delete/.venv/bin/python -m py_compile benchmarks/cross_binding/summarize_aom_rank_audit.py bindings/python/tests/test_aom_benchmark_tools.py`: PASS.
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_aom_benchmark_tools.py -q`: `19 passed`.
+  - `git diff --check`: PASS apart from pre-existing CRLF warnings on old CSV
+    artifacts.
+
+Read-only engine audit follow-up (2026-06-06):
+
+- Delegated a read-only Claude Code audit of the remaining engine/performance
+  gap. It found no remaining Python/facade/catalog method wiring gap; the
+  open work is C++/CUDA engine work.
+- Smallest plausible PR-sized engine slice:
+  - accelerate Ridge moment scoring by scanning the lambda path from one
+    symmetric eigendecomposition per fold instead of solving the Ridge system
+    independently for every lambda;
+  - then raise the Ridge moment feature route cap only after timing/parity
+    proves the crossover is favorable.
+- Important review correction: current `sweep.cpp` uses the generic
+  `solve_square_qr()` path, not Cholesky, and the existing performant
+  `symmetric_eigh()` helper is local/static in `cpp/src/core/model.cpp`.
+  A clean implementation should first extract or share that eigensolver rather
+  than duplicate a large numerical routine in `sweep.cpp`.
+- Likely touch list for that future slice:
+  - `cpp/src/core/common/*` or equivalent shared eigensolver helper,
+  - `cpp/src/core/model.cpp` to consume the shared helper,
+  - `cpp/src/core/sweep.cpp` for a Ridge lambda-path scorer,
+  - focused C++/Python parity tests plus one timing smoke for p around
+    500-1000.
+- Not implemented in this pass because doing it safely requires numerical
+  helper extraction and parity/timing evidence; the rank-audit tooling change
+  above is complete and validated.
+
+Ridge moment eigen-path implementation follow-up (2026-06-06):
+
+- Implemented the bounded Ridge moment engine slice from the audit:
+  `cpp/src/core/common/svd.c` now exposes an internal read-only
+  `n4m_symmetric_eigh()` wrapper over the existing symmetric eigensolver, with
+  overflow-guarded workspace allocation; `cpp/src/core/common/svd.h` documents
+  it as internal/non-ABI.
+- `cpp/src/core/sweep.cpp` now prepares a `RidgeMomentEigenPath` for
+  multi-lambda Ridge moment scoring: it builds the same centered/scaled
+  cross-moments as `fit_ridge_from_moments()`, eigendecomposes `X'X` once per
+  fold, preprojects `X'Y`, then scans lambdas by diagonal division.
+- The path is only attempted when `n_lambdas > 1`; mono-lambda calls keep the
+  previous direct QR solve. If eigen preparation or an eigen solve is not
+  usable, the code falls back to the existing direct moment solve for that
+  fold/lambda, preserving behavior.
+- Batch score-only Ridge AOM now computes one local eigen-path per
+  `(chain, fold)` worker and scores all lambdas from it without storing
+  eigenvectors for every chain/fold globally. Public counters remain unchanged:
+  `n_ridge_moment_cv_fits` and `n_ridge_moment_score_batch_jobs` still report
+  the logical lambda-by-fold candidate work.
+- Added `test_native_sweep_run_ridge_moment_scores_match_numpy_path`, which
+  compares Ridge moment CV candidate RMSEs against explicit NumPy solves across
+  five lambdas and four folds with centering/scaling disabled, and checks that
+  the same lambda scores identically in the mono-lambda direct path and the
+  multi-lambda eigen path.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/dev-release --target n4m_c -j2`: PASS.
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_moment_model_wrappers.py -q`: `73 passed`.
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_aom_benchmark_tools.py -q`: `19 passed`.
+  - `/home/delete/.venv/bin/ctest --test-dir build/dev-release -R sweep --output-on-failure`: no C++ tests found in this build.
+  - `git diff --check`: PASS apart from known CRLF warnings on old CSV artifacts.
+- Microbench smoke on synthetic `n=140, p=80, cv=5`, Ridge score-only:
+  `1/4/16/64` lambdas took approximately `0.0026 / 0.0064 / 0.0221 / 0.1417`
+  seconds respectively on the dev build.
+- Read-only Claude review found no blocking correctness, memory, counter or
+  parallelism issue. Its only actionable test gap was the mono-lambda direct
+  versus multi-lambda eigen-path equality check, which is now covered.
+
+Moment sweep timing smoke Ridge-moment coverage follow-up (2026-06-06):
+
+- Fixed a coverage blind spot in `benchmarks/cross_binding/bench_moment_sweep_timing.py`:
+  the previous default CUDA smoke shapes all routed Ridge through the
+  wide dual/materialized path, despite the script documenting a native moment
+  Ridge sweep timing smoke.
+- Added a tall `96x48` cell to the smoke shapes so Ridge reports
+  `n_ridge_moment_candidates=5` and `n_ridge_moment_cv_fits=25`, covering the
+  new multi-lambda Ridge moment scorer separately from the wide Ridge route.
+- Updated `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py` to
+  require that the committed `moment_sweep_timing_cuda_smoke.csv` includes at
+  least one Ridge moment row and that those rows have zero dual/materialized
+  Ridge CV counters.
+- Regenerated `benchmarks/cross_binding/moment_sweep_timing_cuda_smoke.csv`
+  with one visible GPU and `N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so`.
+  The tall `96x48` Ridge rows now show the expected moment counters, and the
+  PLS rows still route exact PLS CV through CUDA device counters.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`: PASS.
+  - `/home/delete/.venv/bin/python -m py_compile benchmarks/cross_binding/bench_moment_sweep_timing.py bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py`: PASS.
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py -q`: `21 passed`.
+
+Catalog/method-surface conformance follow-up (2026-06-06):
+
+- Revalidated the broadened AOM/moment method surface after the Ridge
+  eigen-path and timing-smoke updates.
+- Evidence:
+  - `/home/delete/.venv/bin/python catalog/scripts/validate.py --strict-abi`:
+    PASS, 208 methods and 701/701 exported `n4m_*` symbols covered.
+  - `/home/delete/.venv/bin/python catalog/scripts/validate.py --check-references`:
+    PASS, 208/208 production methods covered by donor/registry/paper-only
+    references.
+  - `/home/delete/.venv/bin/python catalog/scripts/split_legacy_methods.py --check`:
+    PASS, 208 per-method files up to date.
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_catalog_python_bindings.py -q`:
+    `10 passed`.
+- This confirms the current method count and Python/catalog exposure are
+  internally consistent; it does not close the remaining engine gaps
+  (batched IKPLS, fused CUDA kernels, broader oracle campaign).
+
+Oracle comparison table follow-up (2026-06-06):
+
+- Improved `benchmarks/cross_binding/compare_aom_staged_to_oracles.py` so the
+  Markdown summary now includes a per-target-dataset table with target RMSEP,
+  AOM-PLS oracle RMSEP/ratio, AOM-Ridge oracle RMSEP/ratio, TabPFN
+  oracle RMSEP/ratio and overall winner.
+- This keeps AOM-PLS oracle, AOM-Ridge oracle and TabPFN oracle separated in
+  the report instead of only exposing aggregate median ratios.
+- Regenerated:
+  - `benchmarks/cross_binding/aom_staged_compact_wide_audit10_20260606_oracle_summary.md`
+  - `benchmarks/cross_binding/aom_staged_real_cohort_compact_wide_audit10_20260606_oracle_compare.csv`
+  - `benchmarks/cross_binding/aom_staged_oracle_comparison.md`
+  - `benchmarks/cross_binding/aom_staged_oracle_comparison.csv`
+- Current compact-wide audit10 summary remains train-CV-selected target only,
+  never test-set selected. It reports 8 target datasets, AOM-PLS paired=7
+  median ratio `1.03079`, AOM-Ridge paired=8 median ratio `1.08068`, and
+  TabPFN paired=8 median ratio `0.978527`.
+- Validation:
+  - `/home/delete/.venv/bin/python -m py_compile benchmarks/cross_binding/compare_aom_staged_to_oracles.py bindings/python/tests/test_aom_benchmark_tools.py`: PASS.
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_aom_benchmark_tools.py -q`: `19 passed`.
+
+Methods index count follow-up (2026-06-06):
+
+- Fixed `docs/methods/index.md`: the displayed total catalogued native method
+  count was stale at `201`; it now matches the current catalog count `208`.
+- Added `test_methods_index_total_matches_catalog_file_count` in
+  `bindings/python/tests/test_catalog_python_bindings.py` so future catalog
+  additions cannot leave the end-user methods index count stale silently.
+- Validation:
+  - `/home/delete/.venv/bin/python -m py_compile bindings/python/tests/test_catalog_python_bindings.py`: PASS.
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_catalog_python_bindings.py -q`: `11 passed`.
+
+Facade inventory conformance follow-up (2026-06-06):
+
+- Added an explicit facade guard that every `n4m.aom.available_methods()` and
+  `n4m.moment.available_methods()` row declares typed `cpu` and `cuda`
+  capability flags and at least one execution capability.
+- Existing facade checks already cover object identity, top-level re-export,
+  catalog/doc resolution, public docs-index links, binding-role coherence,
+  complete relevant native AOM/moment catalog exposure, preset boundedness and
+  the ban on dataset/source-name routing options.
+- Validation:
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_aom_moment_facade.py -q`: `20 passed`.
+
+Ridge moment eigen-path general sweep follow-up (2026-06-06):
+
+- Extended the already-validated Ridge moment eigen-path to the general
+  `run_moment_sweep()` Ridge moment route, not only the score-only
+  `score_ridge_moment_sweep()` / batch AOM scorer.
+- For `p <= n_train` moment folds and `len(ridge_lambdas) > 1`, the sweep now
+  prepares one eigen-path per fold and scans lambdas from it. Mono-lambda and
+  fallback behavior still use the previous direct QR solve, and public logical
+  counters remain unchanged.
+- Added `test_native_sweep_run_ridge_moment_score_only_matches_full_scores` so
+  the tall Ridge moment multi-lambda route must match full sweep scores,
+  preserve moment-vs-dual counters, and skip final outputs when `score_only`.
+- Synthetic `n=140, p=80, cv=5` score-only smoke comparing one multi-lambda
+  call to repeated mono-lambda calls:
+  - 4 lambdas: `0.058237s` vs `0.143395s`, `2.46x`, max score diff `8.3e-15`.
+  - 16 lambdas: `0.026655s` vs `0.306316s`, `11.49x`, max score diff `8.3e-15`.
+  - 64 lambdas: `0.093162s` vs `1.277440s`, `13.71x`, max score diff `1.1e-14`.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/dev-release --target n4m_c -j2`: PASS.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`: PASS.
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_moment_model_wrappers.py -q`: `74 passed`.
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_moment_model_wrappers.py -q -k 'ridge_moment_score_only_matches_full_scores or ridge_moment_scores_match_numpy_path'`: `2 passed, 72 deselected`.
+
+Moment sweep CUDA smoke artifact follow-up after general eigen-path
+(2026-06-06):
+
+- Regenerated
+  `benchmarks/cross_binding/moment_sweep_timing_cuda_smoke.csv` against
+  `build/cuda-on/cpp/src/libn4m.so` with one visible GPU and the same smoke
+  command documented in `benchmarks/cross_binding/README.md`.
+- Strengthened the artifact guard so the tall Ridge moment cell (`96x48`) must
+  include both `native_sweep_ridge` and `native_sweep_ridge_score_only`,
+  both with five Ridge moment candidates; the full row must perform one final
+  Ridge moment fit, the score-only row must perform none, and both rows must
+  agree on selected lambda and CV RMSE.
+- Regenerated tall Ridge values:
+  - full: selected lambda `0.001`, RMSE `0.08037705391174381`,
+    elapsed `13.025 ms`, `n_ridge_moment_cv_fits=25`, final fits `1`.
+  - score-only: selected lambda `0.001`, RMSE `0.08037705391174604`,
+    elapsed `20.925 ms`, `n_ridge_moment_cv_fits=25`, final fits `0`.
+- Validation:
+  - py_compile on the timing script and touched tests: PASS.
+  - `test_aom_moment_cuda_smoke_artifacts.py`: `21 passed`.
+  - `test_aom_moment_facade.py` + `test_moment_model_wrappers.py`: `94 passed`.
+
+Post-tranche catalog/surface validation (2026-06-06):
+
+- Re-ran the catalog and split checks after the general sweep eigen-path and
+  CUDA smoke artifact updates.
+- Results:
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 208 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 208/208
+    production methods covered by references.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS, 208 per-method
+    files up to date.
+  - `test_catalog_python_bindings.py`: `11 passed`.
+  - `/home/delete/.venv/bin/ctest --test-dir build/dev-release -R sweep --output-on-failure`:
+    no C++ tests found in this build.
+
+Ridge moment eigen-path telemetry follow-up (2026-06-06):
+
+- Added route counters to `SweepResult` and `AomSweepResult`:
+  `n_ridge_moment_eigen_path_preparations`,
+  `n_ridge_moment_eigen_path_cv_fits` and
+  `n_ridge_moment_direct_cv_fits`.
+- The counters distinguish logical Ridge moment CV fits from the physical
+  execution route. Existing `n_ridge_moment_cv_fits` remains the logical
+  lambda-by-fold candidate count; the new counters show whether those fits
+  used the fold-local eigen-path or the direct QR fallback.
+- Propagated the counters through the C API, `n4m.python`, sklearn
+  diagnostics, AOM sweep aggregation, refit reports, staged campaign reports,
+  and the moment sweep timing smoke CSV.
+- Regenerated `moment_sweep_timing_cuda_smoke.csv`; the tall `96x48` Ridge
+  full and score-only rows now both report `5` eigen-path preparations, `25`
+  eigen-path CV fits and `0` direct CV fits.
+- Validation:
+  - dev `n4m_c` build: PASS.
+  - CUDA `n4m_c` build: PASS.
+  - focused Ridge moment route tests: `3 passed, 71 deselected`.
+  - `test_moment_model_wrappers.py`: `74 passed`.
+  - `test_aom_moment_cuda_smoke_artifacts.py` + facade + wrappers:
+    `115 passed`.
+  - `test_catalog_python_bindings.py`: `11 passed`.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 208 methods and 701/701
+    exported `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 208/208
+    production methods covered.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS.
+  - `git diff --check`: PASS apart from known CRLF warnings on old CSV
+    artifacts.
+
+Ridge telemetry benchmark-runner propagation follow-up (2026-06-06):
+
+- Propagated the Ridge moment eigen-path/direct counters into the benchmark
+  surfaces used for preprocessing-selection campaigns:
+  - `run_aom_staged_real_cohort.py` result rows and diagnostics JSON counters.
+  - `bench_aom_screen_refit_scaling.py` screen/refit/final-fit timing rows.
+  - `bench_aom_staged_chain_campaign_timing.py` orchestration timing rows.
+  - `bench_aom_sweep_timing.py` and `bench_aom_ridge_global_timing.py` smoke
+    rows.
+- Regenerated CUDA smoke artifacts whose scripts gained columns:
+  - `aom_sweep_timing_cuda_smoke.csv`
+  - `aom_ridge_global_timing_cuda_smoke.csv`
+  - `aom_staged_chain_campaign_timing_cuda_smoke.csv`
+- Strengthened benchmark/staged tests so runner rows, diagnostics payloads and
+  stage/model-config aggregates preserve the new counters; the invariant
+  `eigen_path_cv_fits + direct_cv_fits == n_ridge_moment_cv_fits` is covered
+  on staged reports.
+- Validation:
+  - py_compile on touched benchmark scripts/tests: PASS.
+  - `test_aom_benchmark_tools.py`: `19 passed`.
+  - `test_aom_staged_campaign.py`: `16 passed`.
+  - `test_aom_moment_cuda_smoke_artifacts.py`: `21 passed`.
+  - combined benchmark/staged/artifact suite: `56 passed`.
+  - facade/wrapper/catalog Python suite: `105 passed`.
+  - catalog strict ABI/reference/split checks: PASS.
+
+Real-cohort Ridge telemetry guard follow-up (2026-06-06):
+
+- Added a staged real-cohort runner guard:
+  `validate_ridge_moment_route_telemetry(report)`.
+- The guard runs immediately after `n4m.aom_staged_chain_campaign(...)`
+  returns and before CSV/diagnostics persistence. When
+  `n_ridge_moment_cv_fits`,
+  `n_ridge_moment_eigen_path_cv_fits` and
+  `n_ridge_moment_direct_cv_fits` are present, all route counters must be
+  non-negative integer-like values and
+  `eigen_path_cv_fits + direct_cv_fits == n_ridge_moment_cv_fits`.
+- This keeps real preprocessing-selection campaign artifacts from silently
+  recording impossible Ridge moment route telemetry. It does not affect
+  production selection policy; held-out/test ranking remains audit-only and
+  `selection_uses_test_set=False`.
+- Validation:
+  - py_compile on `run_aom_staged_real_cohort.py` and
+    `test_aom_benchmark_tools.py`: PASS.
+  - `test_aom_benchmark_tools.py`: `20 passed`.
+  - One-row one-GPU real-cohort smoke to `/tmp`:
+    `BEEFMARBLING/Beef_Marbling_RandomSplit` completed `ok`,
+    `selection_uses_test_set=False`, Ridge counters `12/6/6`
+    total/eigen/direct, and diagnostics JSON carried the same counters.
+
+Moment facade wrapper-target follow-up (2026-06-06):
+
+- Added the missing `n4m.moment.aom_chain_screen_refit_campaign` export. Three
+  moment screen/refit sklearn wrappers already declared
+  `wrapper_of="aom_chain_screen_refit_campaign"`, and the function existed on
+  `n4m` / `n4m.python`, but not on the `n4m.moment` facade itself.
+- Added a generic facade guard so every advertised `wrapper_of` target must be
+  exported on the same facade, top-level `n4m`, and `n4m.python`, and must be
+  the exact same native object. This protects the reusable AOM/moment wrappers,
+  including the superblock and staged presets, from dangling inventory targets.
+- Validation:
+  - py_compile on `bindings/python/src/n4m/moment/__init__.py` and
+    `test_aom_moment_facade.py`: PASS.
+  - `test_aom_moment_facade.py`: `22 passed`.
+  - facade/wrapper/catalog suite:
+    `test_aom_moment_facade.py`, `test_moment_model_wrappers.py`,
+    `test_catalog_python_bindings.py`: `107 passed`.
+  - catalog split/reference/strict-ABI checks: PASS.
+
+Facade timing-benchmark coverage guard follow-up (2026-06-06):
+
+- Added a generic facade guard requiring every catalogued method advertised by
+  `n4m.aom.available_methods()` or `n4m.moment.available_methods()` to declare
+  an existing `bench.registry_entry` under `benchmarks/cross_binding/`.
+- The current public AOM/moment surface exposes 30 distinct catalog IDs and all
+  30 have timing benchmark scripts. This complements `catalog/scripts/validate.py`,
+  which already checks that declared benchmark paths exist, by tying the check
+  directly to the user-facing AOM/moment inventories.
+- Validation:
+  - py_compile on `test_aom_moment_facade.py`: PASS.
+  - `test_aom_moment_facade.py`: `24 passed`.
+  - facade/wrapper/catalog suite:
+    `test_aom_moment_facade.py`, `test_moment_model_wrappers.py`,
+    `test_catalog_python_bindings.py`: `109 passed`.
+  - catalog split/reference/strict-ABI checks: PASS.
+
+AOM PLS superblock route-telemetry accounting follow-up (2026-06-06):
+
+- Fixed `n4m.aom_pls_superblock` telemetry aggregation. Before this patch the
+  result only propagated the final selected PLS solve counters, so timing
+  artifacts under-reported the PLS work used during the external
+  component-selection CV.
+- The method now sums PLS route counters for every fold/component solve plus
+  the final fit. For the committed CUDA smoke profile (`2` component values,
+  `4` folds), the reported PLS work is now `18` CV fits and `9` final fits
+  instead of `2` CV fits and `1` final fit.
+- Extended `bench_aom_pls_superblock_timing.py` to write the CUDA parallel-fold
+  jobs and final-fit host/device counters, and regenerated
+  `aom_pls_superblock_timing_cuda_smoke.csv` on one GPU. The first smoke rows
+  now report `n_pls_moment_cv_fits=18`,
+  `n_pls_moment_host_cv_fits=0`,
+  `n_pls_moment_cuda_device_cv_fits=18`,
+  `n_pls_moment_cuda_parallel_fold_jobs=18`,
+  `n_pls_moment_final_fits=9`,
+  `n_pls_moment_host_final_fits=0` and
+  `n_pls_moment_cuda_device_final_fits=9`.
+- Strengthened wrapper and artifact tests so this accounting cannot regress
+  silently.
+- Validation:
+  - py_compile on touched Python modules, benchmark and tests: PASS.
+  - focused PLS-superblock wrapper tests: `2 passed, 72 deselected`.
+  - focused diversity CUDA smoke artifact tests: `9 passed, 12 deselected`.
+  - wrapper + CUDA-artifact suite:
+    `test_moment_model_wrappers.py`,
+    `test_aom_moment_cuda_smoke_artifacts.py`: `95 passed`.
+  - catalog split/reference/strict-ABI checks: PASS.
+
+AOM Ridge-PLS solve-count telemetry follow-up (2026-06-06):
+
+- Added `n_ridge_pls_fit_calls` to `n4m.aom_ridge_pls_superblock` and
+  `n4m.aom_chain_ridge_pls`.
+- The counter records deterministic external Ridge-PLS work:
+  `n_candidates * cv + 1` native Ridge-PLS solves, i.e. all train-CV candidate
+  folds plus the selected final fit. It is CPU solve accounting, not a CUDA
+  route counter.
+- Exposed the counter through
+  `NativeAOMRidgePLSSuperblockRegressor.get_diagnostics()` and
+  `NativeAOMChainRidgePLSRegressor.get_diagnostics()`.
+- Extended and regenerated the CUDA-build timing smoke CSVs:
+  - `aom_ridge_pls_superblock_timing_cuda_smoke.csv` now reports
+    `n_ridge_pls_fit_calls=17` for the smoke grid (`4` candidates x `4` folds
+    + final fit).
+  - `aom_chain_ridge_pls_timing_cuda_smoke.csv` now reports
+    `n_ridge_pls_fit_calls=33` (`8` candidates x `4` folds + final fit).
+- Validation:
+  - py_compile on touched modules/benchmarks/tests: PASS.
+  - focused Ridge-PLS wrapper tests: `4 passed, 70 deselected`.
+  - focused diversity CUDA artifact tests: `9 passed, 12 deselected`.
+  - wrapper + CUDA-artifact suite:
+    `test_moment_model_wrappers.py`,
+    `test_aom_moment_cuda_smoke_artifacts.py`: `95 passed`.
+  - catalog split/reference/strict-ABI checks: PASS.
+
+AOM operator-PLS-stack and ridge-blender cost-route telemetry (2026-06-06):
+
+- Audited `aom_ridge_blender` and `aom_operator_pls_stack`. Neither had cost counters
+  in their C++ result structs. No C++ change needed: both methods' costs are fully
+  deterministic from existing native scalars.
+- Added Python-derived counters:
+  - `aom_ridge_blender`: `n_ridge_blender_cv_fits = n_candidates * cv`,
+    `n_ridge_blender_final_fits = n_candidates`,
+    `n_ridge_blender_fit_calls = n_candidates * (cv + 1)`.
+  - `aom_operator_pls_stack`: `n_operator_pls_stack_fit_calls = (n_specs + 1) * cv + 1`,
+    `n_operator_pls_stack_pls_fit_calls = n_operator_pls_stack_fit_calls * n_operators`,
+    `n_operator_pls_stack_ridge_fit_calls = n_operator_pls_stack_fit_calls`,
+    plus the `n_pls_stack_*` / `n_ridge_stack_*` CV/final breakdown counters.
+- Propagated to `get_diagnostics()` in both sklearn wrappers, bench CSV rows, smoke CSV
+  files, and targeted tests with exact-value assertions.
+- Updated `benchmarks/cross_binding/README.md` and the two method pages so the
+  documented smoke contract covers replay plus the new fit-count telemetry
+  instead of stale fixed ABI/timing values.
+- Codex review follow-up regenerated the four timing CSVs from the local scripts:
+  dev rows with `N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so`, CUDA smoke
+  rows with `CUDA_VISIBLE_DEVICES=0` and `N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so`.
+  The smoke rows now report `n_ridge_blender_fit_calls=288` and
+  `n_operator_pls_stack_fit_calls=21` / `n_operator_pls_stack_pls_fit_calls=252` /
+  `n_operator_pls_stack_ridge_fit_calls=21`.
+- Validation:
+  - py_compile on all touched Python modules/tests/benchmarks: PASS.
+  - focused contract tests: `2 passed, 72 deselected`.
+  - diversity CUDA smoke artifact tests: `9 passed, 12 deselected`.
+  - wrapper + CUDA-artifact suite: `95 passed`.
+  - catalog split/reference/strict-ABI checks: PASS.
+  - `git diff --check`: PASS apart from known CRLF warnings on CSV artifacts.
+
+Facade duplicate catalog-role guard follow-up (2026-06-06):
+
+- Added a facade inventory guard requiring duplicate `catalog_id` entries to be
+  explicit wrappers, aliases, presets or campaign helpers. At most one entry on
+  a facade may claim the primary `catalog_binding` / `direct_native_binding`
+  role for a catalog method, and every secondary duplicate must declare
+  `wrapper_of`.
+- This keeps the AOM/moment reusable product surfaces clear: duplicate catalog
+  rows now mean "same native method exposed through a wrapper/preset/helper",
+  not two ambiguous primary methods.
+- Validation:
+  - py_compile on `test_aom_moment_facade.py`: PASS.
+  - `test_aom_moment_facade.py`: `26 passed`.
+  - facade/wrapper/catalog suite:
+    `test_aom_moment_facade.py`, `test_moment_model_wrappers.py`,
+    `test_catalog_python_bindings.py`: `111 passed`.
+  - catalog split/reference/strict-ABI checks: PASS.
+
+CUDA facade smoke diversity-alias guard follow-up (2026-06-06):
+
+- Strengthened `benchmarks/cross_binding/aom_moment_cuda_facade_smoke.py` so the
+  CUDA child process also proves the recent diversity methods are exported
+  consistently through the top-level facade:
+  `aom_ridge_blender`, `aom_operator_pls_stack`,
+  `NativeAOMRidgeBlenderRegressor`, and
+  `NativeAOMOperatorPLSStackRegressor`.
+- Regenerated `benchmarks/cross_binding/aom_moment_cuda_facade_smoke.json` with
+  one visible GPU (`CUDA_VISIBLE_DEVICES=0`,
+  `N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so`). The artifact now records
+  `aom_diversity_aliases_top_level=true` and
+  `aom_diversity_estimators_alias_top_level=true`.
+- Added a duplicate-key-safe JSON loader in
+  `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py` and asserted
+  the two new facade proof fields. This catches accidental duplicated report
+  keys as well as missing diversity aliases.
+- Validation:
+  - py_compile on the CUDA facade smoke script and artifact tests: PASS.
+  - focused CUDA facade artifact guard: `1 passed, 20 deselected`.
+  - full CUDA smoke artifact test file: `21 passed`.
+
+Claude Code release-readiness audit follow-up (2026-06-06):
+
+- Delegated a focused Claude Code audit over the handoff and dirty diff, with
+  write permissions available but no long benchmark campaign. Claude did not
+  produce a patch before hitting the turn cap.
+- The only concrete signal it raised was whether Ridge moment
+  `eigen_path/direct_cv` telemetry still needed artifact guards. Codex verified
+  this is already covered in `test_aom_moment_cuda_smoke_artifacts.py` and
+  `test_aom_benchmark_tools.py`, including the CUDA smoke artifact exact
+  assertions for `n_ridge_moment_eigen_path_preparations`,
+  `n_ridge_moment_eigen_path_cv_fits`, and
+  `n_ridge_moment_direct_cv_fits`.
+- Codex also checked that the staged preset estimators
+  `NativeAOMSavgolFocusRegressor` and
+  `NativeAOMStrictFamilyLiteRegressor` are present in top-level `n4m.__all__`.
+  No speculative facade/doc edit was made.
+- Validation after the audit:
+  - py_compile on the recently touched facade-smoke/test files: PASS.
+  - targeted AOM/moment release-readiness suite:
+    `test_aom_moment_facade.py`, `test_moment_model_wrappers.py`,
+    `test_aom_moment_cuda_smoke_artifacts.py`,
+    `test_catalog_python_bindings.py`, `test_aom_staged_campaign.py`,
+    `test_aom_benchmark_tools.py`: `168 passed`.
+  - `catalog/scripts/validate.py`: PASS, 208 methods.
+  - `catalog/scripts/validate.py --strict-abi`: PASS, 701/701 exported
+    `n4m_*` symbols covered.
+  - `catalog/scripts/validate.py --check-references`: PASS, 208/208
+    production methods covered.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS, 208 per-method
+    files up to date.

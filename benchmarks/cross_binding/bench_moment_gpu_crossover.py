@@ -184,6 +184,12 @@ for shape in payload["shapes"]:
                 "n_pls_moment_cuda_parallel_fold_jobs": int(
                     result.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
                 ),
+                "n_pls_moment_cuda_many_batched_batches": int(
+                    result.get("n_pls_moment_cuda_many_batched_batches", 0)
+                ),
+                "n_pls_moment_cuda_many_batched_jobs": int(
+                    result.get("n_pls_moment_cuda_many_batched_jobs", 0)
+                ),
                 "n_pls_materialized_cv_fits": int(
                     result.get("n_pls_materialized_cv_fits", 0)
                 ),
@@ -205,6 +211,8 @@ for shape in payload["shapes"]:
                 "n_pls_moment_score_batch_jobs": 0,
                 "n_pls_moment_cuda_parallel_fold_batches": 0,
                 "n_pls_moment_cuda_parallel_fold_jobs": 0,
+                "n_pls_moment_cuda_many_batched_batches": 0,
+                "n_pls_moment_cuda_many_batched_jobs": 0,
                 "n_pls_materialized_cv_fits": 0,
                 "error": f"{type(exc).__name__}: {exc}",
             })

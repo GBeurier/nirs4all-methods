@@ -9,9 +9,9 @@
 #include <new>
 #include <vector>
 
+#include "core/aom_operators.hpp"
 #include "core/common/matrix_view.hpp"
 #include "core/operator_entry.hpp"
-#include "core/pipeline.hpp"
 #include "core/common/status.hpp"
 
 namespace {
@@ -34,19 +34,6 @@ namespace {
     }
     out = urows * ucols;
     return true;
-}
-
-[[nodiscard]] n4m_matrix_view_t rowmajor_f64_view(std::vector<double>& values,
-                                                  std::int64_t rows,
-                                                  std::int64_t cols) noexcept {
-    n4m_matrix_view_t view{};
-    view.data = values.data();
-    view.rows = rows;
-    view.cols = cols;
-    view.row_stride = cols > 0 ? cols : 1;
-    view.col_stride = 1;
-    view.dtype = N4M_DTYPE_F64;
-    return view;
 }
 
 [[nodiscard]] n4m_status_t validate_request(::n4m::core::Context& ctx,
@@ -157,23 +144,16 @@ n4m_status_t apply_aom_preprocessing(Context& ctx,
 
         for (std::size_t op_index = 0; op_index < n_operators; ++op_index) {
             const OperatorEntry& entry = bank.entries()[op_index];
-            Pipeline pipeline;
-            const double* params = entry.params.empty() ? nullptr : entry.params.data();
-            pipeline.add_operator(entry.kind,
-                                  params,
-                                  static_cast<std::int32_t>(entry.params.size()));
-            status = pipeline.fit(ctx, X, Y);
+            std::vector<double> operator_values;
+            status = transform_aom_strict_operator(ctx, entry, X, operator_values);
             if (status != N4M_OK) {
                 out = AomPreprocessingResult{};
                 return status;
             }
-
-            std::vector<double> operator_values(block_values, 0.0);
-            n4m_matrix_view_t operator_view = rowmajor_f64_view(operator_values, X.rows, X.cols);
-            status = pipeline.transform(ctx, X, operator_view);
-            if (status != N4M_OK) {
+            if (operator_values.size() != block_values) {
+                ctx.set_error("AOM strict-linear operator returned an unexpected shape");
                 out = AomPreprocessingResult{};
-                return status;
+                return N4M_ERR_INTERNAL;
             }
 
             out.operator_kinds.push_back(static_cast<std::int64_t>(entry.kind));

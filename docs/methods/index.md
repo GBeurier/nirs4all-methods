@@ -2,7 +2,7 @@
 
 Every method in the library — the PLS / selection algorithms from `benchmarks.parity_timing.registry.METHODS` and the C++ preprocessing / augmentation / filter / splitter operators from the n4m binding — documented with parameters, bibliographic source, mathematical principle, binding signatures, and benchmark rows.
 
-_Total catalogued native methods_: **200**. Additional Python reference
+_Total catalogued native methods_: **208**. Additional Python reference
 surfaces are documented where relevant.
 
 ```{toctree}
@@ -106,10 +106,19 @@ surfaces are documented where relevant.
 | Method | Description | Tolerance | Refs |
 |--------|-------------|-----------|------|
 | [`aom_chain_fixed_fit`](aom_chain_sweep_run.md) | Final-only reusable fit for one selected strict-linear AOM chain/head/parameter | `1e-09` | n4m |
+| [`aom_chain_ridge_pls`](aom_chain_ridge_pls.md) | Strict-linear AOM single-chain Ridge-PLS selector | `1e-08` | n4m |
 | [`aom_chain_screen_refit`](aom_chain_sweep_run.md) | Two-pass strict-linear AOM preprocessing screen with exact-CV refit and reusable final model | `1e-09` | n4m |
 | [`aom_chain_sweep_run`](aom_chain_sweep_run.md) | User-defined native AOM strict-linear chain sweep | `1e-09` | n4m |
+| [`aom_pls`](aom_pls.md) | Native AOM global strict-linear operator selector for PLS | `1e-09` | n4m |
+| [`aom_pls_superblock`](aom_pls_superblock.md) | Strict-linear AOM-PLS operator superblock | `1e-09` | n4m |
 | [`aom_operator_pls_stack`](aom_operator_pls_stack.md) | Native AOM strict-operator PLS score stack with Ridge head | `1e-09` | n4m |
+| [`aom_staged_chain_campaign`](aom_staged_chain_campaign.md) | Staged strict-chain AOM/moment preprocessing screen/refit campaign | `n/a` | n4m |
 | [`aom_ridge_blender`](aom_ridge_blender.md) | Native fold-safe AOM-Ridge OOF simplex blender | `1e-09` | n4m |
+| [`aom_ridge_active_superblock`](aom_ridge_active_superblock.md) | Strict-linear AOM Ridge active-superblock selector | `1e-09` | n4m |
+| [`aom_ridge_global`](aom_ridge_global.md) | Strict-linear AOM Ridge global operator selector | `1e-09` | n4m |
+| [`aom_ridge_mkl_superblock`](aom_ridge_mkl_superblock.md) | Strict-linear AOM Ridge MKL-light weighted superblock | `1e-09` | n4m |
+| [`aom_ridge_pls_superblock`](aom_ridge_pls_superblock.md) | Strict-linear AOM Ridge-PLS operator superblock | `1e-09` | n4m |
+| [`aom_ridge_superblock`](aom_ridge_superblock.md) | Strict-linear AOM Ridge superblock over native Ridge fits | `1e-09` | n4m |
 | [`aom_robust_hpo`](aom_robust_hpo.md) | Native strict-linear AOM robust-HPO preprocessing screen | `1e-10` | n4m |
 | [`aom_sweep_run`](aom_sweep_run.md) | Configurable native AOM strict-linear preprocessing sweep | `1e-09` | n4m |
 | [`aom_preprocess`](aom_preprocess.md) | Native AOM operator-bank preprocessing primitive | `5.0` | n4m |
@@ -119,6 +128,7 @@ surfaces are documented where relevant.
 | [`pls_diagnostic_q`](pls_diagnostic_q.md) | PLS Q residuals / SPE (§9) | `5.0` | R |
 | [`pls_diagnostic_t2`](pls_diagnostic_t2.md) | PLS Hotelling T² (§9) | `10.0` | R |
 | [`pls_monitoring`](pls_monitoring.md) | PLS process monitoring (T²/Q thresholds + alarms) (§19) | `10.0` | R |
+| [`pop_pls`](pop_pls.md) | Native POP-PLS per-component strict-linear operator selector | `1e-09` | n4m |
 
 ## Variable selector
 

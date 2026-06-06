@@ -1,0 +1,42 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.ridge_active_superblock"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "1.21.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/aom_preprocessing.cpp"
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/aom_pop.h"
+carry_along_tu:
+  - "cpp/src/core/aom_operators.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/AOM-ridge-active-superblock-python-contract"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.ridge_active_superblock"
+  registry_entry: "benchmarks/cross_binding/bench_aom_ridge_active_superblock_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "aom_ridge_active_superblock"
+    legacy_aliases: []
+publications: []
+notes: "Python-backed donor-style AOM Ridge active-superblock constrained to strict-linear single-operator AOM views. It screens operators fold-locally during alpha CV using response signatures computed from native aom_preprocess outputs, refits the active subset on the full calibration set, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU active-superblock grinder."

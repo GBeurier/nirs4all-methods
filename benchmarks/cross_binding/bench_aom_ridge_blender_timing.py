@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 
 import n4m
+from n4m.sklearn import NativeAOMRidgeBlenderRegressor
 
 
 def make_dataset(n_samples: int, n_features: int, seed: int):
@@ -53,11 +54,26 @@ def run_blender(X, y, folds, cv, profile, lambdas, regularizer):
     )
 
 
-def row(profile, n_samples, n_features, cv, elapsed_ms, result):
+def run_blender_wrapper(X, y, folds, cv, profile, lambdas, regularizer):
+    return NativeAOMRidgeBlenderRegressor(
+        profile=profile,
+        cv=cv,
+        fold_ids=folds,
+        ridge_lambdas=lambdas,
+        regularizer=regularizer,
+        scale_x=False,
+    ).fit(X, y)
+
+
+def result_from_model(model):
+    return model.result_
+
+
+def row(backend, profile, n_samples, n_features, cv, elapsed_ms, result, replay_error):
     weights = np.asarray(result["weights"], dtype=np.float64).reshape(-1)
     scores = np.asarray(result["candidate_scores"], dtype=np.float64)
     return {
-        "backend": "native_aom_ridge_blender",
+        "backend": backend,
         "profile": profile,
         "n_samples": n_samples,
         "n_features": n_features,
@@ -71,6 +87,10 @@ def row(profile, n_samples, n_features, cv, elapsed_ms, result):
         "selected_cv_rmse": result["selected_cv_rmse"],
         "best_single_cv_rmse": float(np.min(scores[:, 3])),
         "blend_oof_rmse": result["blend_oof_rmse"],
+        "n_ridge_blender_cv_fits": int(result.get("n_ridge_blender_cv_fits", 0)),
+        "n_ridge_blender_final_fits": int(result.get("n_ridge_blender_final_fits", 0)),
+        "n_ridge_blender_fit_calls": int(result.get("n_ridge_blender_fit_calls", 0)),
+        "prediction_replay_max_abs_error": replay_error,
         "elapsed_ms_median": elapsed_ms,
         "library_path": n4m.library_path(),
         "abi": ".".join(str(v) for v in n4m.abi_version()),
@@ -88,6 +108,12 @@ def main() -> int:
     parser.add_argument("--cv", type=int, default=5)
     parser.add_argument("--profile", default="compact", choices=("compact", "wide"))
     parser.add_argument("--regularizer", type=float, default=0.01)
+    parser.add_argument(
+        "--mode",
+        default="native",
+        choices=("native", "wrapper", "both"),
+        help="Benchmark ABI-close function, sklearn wrapper, or both",
+    )
     args = parser.parse_args()
 
     shapes = [(32, 64), (64, 128), (96, 256)]
@@ -96,19 +122,54 @@ def main() -> int:
     for i, (n_samples, n_features) in enumerate(shapes):
         X, y = make_dataset(n_samples, n_features, seed=7200 + i)
         folds = balanced_folds(n_samples, args.cv)
-        elapsed, result = median_ms(
-            lambda: run_blender(
-                X,
-                y,
-                folds,
-                args.cv,
+        if args.mode in {"native", "both"}:
+            elapsed, result = median_ms(
+                lambda: run_blender(
+                    X,
+                    y,
+                    folds,
+                    args.cv,
+                    args.profile,
+                    lambdas,
+                    args.regularizer,
+                ),
+                args.repeats,
+            )
+            rows.append(row(
+                "native_aom_ridge_blender",
                 args.profile,
-                lambdas,
-                args.regularizer,
-            ),
-            args.repeats,
-        )
-        rows.append(row(args.profile, n_samples, n_features, args.cv, elapsed, result))
+                n_samples,
+                n_features,
+                args.cv,
+                elapsed,
+                result,
+                0.0,
+            ))
+        if args.mode in {"wrapper", "both"}:
+            elapsed, model = median_ms(
+                lambda: run_blender_wrapper(
+                    X,
+                    y,
+                    folds,
+                    args.cv,
+                    args.profile,
+                    lambdas,
+                    args.regularizer,
+                ),
+                args.repeats,
+            )
+            pred = np.asarray(model.predict(X), dtype=np.float64).reshape(-1, 1)
+            replay_error = float(np.max(np.abs(pred - model.predictions_)))
+            rows.append(row(
+                "native_aom_ridge_blender_sklearn",
+                args.profile,
+                n_samples,
+                n_features,
+                args.cv,
+                elapsed,
+                result_from_model(model),
+                replay_error,
+            ))
 
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)

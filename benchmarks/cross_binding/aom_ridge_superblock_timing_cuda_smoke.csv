@@ -1,0 +1,7 @@
+backend,n_samples,n_features,cv,block_scaling,n_operators,operator_kinds,n_features_superblock,n_candidates,selected_alpha,selected_cv_rmse,best_cv_rmse,ridge_backend,prediction_replay_max_abs_error,elapsed_ms_median,library_path,abi
+native_aom_ridge_superblock,32,32,4,rms,3,0 15 8,96,3,0.001,0.43498008139844024,0.43498008139844024,native,0.0,4.300947010051459,build/cuda-on/cpp/src/libn4m.so,1.21.0
+native_aom_ridge_superblock_sklearn,32,32,4,rms,3,0 15 8,96,3,0.001,0.43498008139844024,0.43498008139844024,native,0.0,9.616568975616246,build/cuda-on/cpp/src/libn4m.so,1.21.0
+native_aom_ridge_superblock,64,64,4,rms,3,0 15 8,192,3,0.1,0.5186087167303942,0.5186087167303942,native,0.0,10.408814006950706,build/cuda-on/cpp/src/libn4m.so,1.21.0
+native_aom_ridge_superblock_sklearn,64,64,4,rms,3,0 15 8,192,3,0.1,0.5186087167303942,0.5186087167303942,native,0.0,6.508402002509683,build/cuda-on/cpp/src/libn4m.so,1.21.0
+native_aom_ridge_superblock,96,128,4,rms,3,0 15 8,384,3,10.0,0.4893181236420655,0.4893181236420655,native,0.0,17.572067969013005,build/cuda-on/cpp/src/libn4m.so,1.21.0
+native_aom_ridge_superblock_sklearn,96,128,4,rms,3,0 15 8,384,3,10.0,0.4893181236420655,0.4893181236420655,native,0.0,18.41870095813647,build/cuda-on/cpp/src/libn4m.so,1.21.0

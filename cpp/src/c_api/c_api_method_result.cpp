@@ -255,6 +255,12 @@ void pack_sweep_result(n4m_method_result_s& handle,
                       static_cast<double>(res.n_ridge_dual_materialized_candidates));
     handle.set_scalar("n_ridge_moment_cv_fits",
                       static_cast<double>(res.n_ridge_moment_cv_fits));
+    handle.set_scalar("n_ridge_moment_eigen_path_preparations",
+                      static_cast<double>(res.n_ridge_moment_eigen_path_preparations));
+    handle.set_scalar("n_ridge_moment_eigen_path_cv_fits",
+                      static_cast<double>(res.n_ridge_moment_eigen_path_cv_fits));
+    handle.set_scalar("n_ridge_moment_direct_cv_fits",
+                      static_cast<double>(res.n_ridge_moment_direct_cv_fits));
     handle.set_scalar("n_ridge_dual_materialized_cv_fits",
                       static_cast<double>(res.n_ridge_dual_materialized_cv_fits));
     handle.set_scalar("n_ridge_dual_cross_cv_fits",
@@ -281,6 +287,10 @@ void pack_sweep_result(n4m_method_result_s& handle,
                       static_cast<double>(res.n_pls_moment_cuda_parallel_fold_batches));
     handle.set_scalar("n_pls_moment_cuda_parallel_fold_jobs",
                       static_cast<double>(res.n_pls_moment_cuda_parallel_fold_jobs));
+    handle.set_scalar("n_pls_moment_cuda_many_batched_batches",
+                      static_cast<double>(res.n_pls_moment_cuda_many_batched_batches));
+    handle.set_scalar("n_pls_moment_cuda_many_batched_jobs",
+                      static_cast<double>(res.n_pls_moment_cuda_many_batched_jobs));
     handle.set_scalar("n_pls_moment_score_batch_calls",
                       static_cast<double>(res.n_pls_moment_score_batch_calls));
     handle.set_scalar("n_pls_moment_score_batch_jobs",
@@ -374,6 +384,12 @@ void pack_aom_sweep_result(n4m_method_result_s& handle,
                       static_cast<double>(res.n_moment_prefix_cache_misses));
     handle.set_scalar("n_ridge_moment_cv_fits",
                       static_cast<double>(res.n_ridge_moment_cv_fits));
+    handle.set_scalar("n_ridge_moment_eigen_path_preparations",
+                      static_cast<double>(res.n_ridge_moment_eigen_path_preparations));
+    handle.set_scalar("n_ridge_moment_eigen_path_cv_fits",
+                      static_cast<double>(res.n_ridge_moment_eigen_path_cv_fits));
+    handle.set_scalar("n_ridge_moment_direct_cv_fits",
+                      static_cast<double>(res.n_ridge_moment_direct_cv_fits));
     handle.set_scalar("n_ridge_dual_materialized_cv_fits",
                       static_cast<double>(res.n_ridge_dual_materialized_cv_fits));
     handle.set_scalar("n_ridge_dual_cross_cv_fits",
@@ -396,6 +412,10 @@ void pack_aom_sweep_result(n4m_method_result_s& handle,
                       static_cast<double>(res.n_pls_moment_cuda_parallel_fold_batches));
     handle.set_scalar("n_pls_moment_cuda_parallel_fold_jobs",
                       static_cast<double>(res.n_pls_moment_cuda_parallel_fold_jobs));
+    handle.set_scalar("n_pls_moment_cuda_many_batched_batches",
+                      static_cast<double>(res.n_pls_moment_cuda_many_batched_batches));
+    handle.set_scalar("n_pls_moment_cuda_many_batched_jobs",
+                      static_cast<double>(res.n_pls_moment_cuda_many_batched_jobs));
     handle.set_scalar("n_pls_moment_score_batch_calls",
                       static_cast<double>(res.n_pls_moment_score_batch_calls));
     handle.set_scalar("n_pls_moment_score_batch_jobs",

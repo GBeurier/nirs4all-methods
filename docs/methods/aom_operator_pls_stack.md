@@ -227,14 +227,9 @@ N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
 python3 benchmarks/cross_binding/bench_aom_operator_pls_stack_timing.py
 ```
 
-CPU timing smoke, ABI 1.18.0, compact profile, `cv=4`, components `[1, 2]`,
-alphas `[0.01, 1.0]`, median of 3 repeats:
-
-| shape | operators | specs | stack features | median |
-|---:|---:|---:|---:|---:|
-| 32x64 | 12 | 4 | 24 | 9.56 ms |
-| 48x96 | 12 | 4 | 12 | 14.62 ms |
-| 64x128 | 12 | 4 | 12 | 24.29 ms |
+The CPU timing smoke uses the compact profile with `cv=4`, components
+`[1, 2]`, and alphas `[0.01, 1.0]`. The generated CSV records the current ABI,
+library path, elapsed medians, replay error, and fit-count telemetry.
 
 CUDA-build smoke:
 
@@ -243,13 +238,20 @@ CUDA_VISIBLE_DEVICES=0 \
 PYTHONPATH=bindings/python/src \
 N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
 python3 benchmarks/cross_binding/bench_aom_operator_pls_stack_timing.py \
-  --output benchmarks/cross_binding/aom_operator_pls_stack_timing_cuda_smoke.csv
+  --output benchmarks/cross_binding/aom_operator_pls_stack_timing_cuda_smoke.csv \
+  --mode both
 ```
 
-CUDA-build timing smoke, same grid, median of 2 repeats:
+The CUDA smoke CSV includes both the ABI-close function row
+`native_aom_operator_pls_stack` and the sklearn replay wrapper row
+`native_aom_operator_pls_stack_sklearn`. The wrapper row records
+`prediction_replay_max_abs_error` to prove `predict(X)` replays the native
+folded input-space stack on the CUDA build path.
 
-| shape | operators | specs | stack features | median |
-|---:|---:|---:|---:|---:|
-| 32x64 | 12 | 4 | 24 | 4.13 ms |
-| 48x96 | 12 | 4 | 12 | 8.75 ms |
-| 64x128 | 12 | 4 | 12 | 11.95 ms |
+The timing rows also expose deterministic cost accounting for the internal
+`fit_stack` calls. For the compact smoke grid (`cv=4`, `n_specs=4`,
+`n_operators=12`), `n_operator_pls_stack_fit_calls=21`,
+`n_operator_pls_stack_pls_fit_calls=252`, and
+`n_operator_pls_stack_ridge_fit_calls=21`. The CV/final breakdown is also
+recorded as `n_pls_stack_cv_fits=240`, `n_pls_stack_final_fits=12`,
+`n_ridge_stack_cv_fits=20`, and `n_ridge_stack_final_fits=1`.

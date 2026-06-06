@@ -226,7 +226,7 @@ def load_schema(name: str) -> dict[str, Any]:
 
 
 def check_existing_path(path_value: str, *, suffix: str = "") -> bool:
-    path = path_value.split(":", 1)[0] if suffix == "tu" else path_value
+    path = path_value.split(":", 1)[0] if suffix in {"tu", "registry"} else path_value
     return (REPO / path).exists()
 
 
@@ -319,6 +319,10 @@ def validate_methods(
             if not check_existing_path(str(fixture)):
                 print(f"  FAIL: {method_id}: fixture path missing: {fixture}")
                 fail_count += 1
+        registry_entry = (method.get("bench") or {}).get("registry_entry")
+        if registry_entry and not check_existing_path(str(registry_entry), suffix="registry"):
+            print(f"  FAIL: {method_id}: bench registry_entry path missing: {registry_entry}")
+            fail_count += 1
         for symbol in method.get("abi_symbols") or []:
             if symbol not in expected_symbols:
                 message = f"{method_id}: ABI symbol not in expected snapshot: {symbol}"

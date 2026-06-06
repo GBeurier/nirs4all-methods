@@ -153,3 +153,6 @@ octave-workspace
 /r_T2pls_body.txt
 /r_t2_helpers.txt
 /report.log
+
+# local code-intelligence index
+.codegraph/

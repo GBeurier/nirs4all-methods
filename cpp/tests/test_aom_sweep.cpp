@@ -61,6 +61,16 @@ std::vector<std::int32_t> get_int_vector(const n4m_method_result_t* result,
         data, data + static_cast<std::size_t>(size));
 }
 
+std::vector<std::int64_t> get_int64_vector(const n4m_method_result_t* result,
+                                           const char* key) {
+    const std::int64_t* data = nullptr;
+    std::int64_t size = 0;
+    N4M_TEST_REQUIRE(n4m_method_result_get_int64_vector(
+                         result, key, &data, &size) == N4M_OK);
+    return std::vector<std::int64_t>(
+        data, data + static_cast<std::size_t>(size));
+}
+
 void assert_route_partitions(const n4m_method_result_t* result) {
     N4M_TEST_REQUIRE(
         std::fabs(get_scalar(result, "n_ridge_operator_moment_candidates") +
@@ -1810,9 +1820,140 @@ void test_aom_chain_sweep_rejects_non_strict_operator() {
     n4m_context_destroy(ctx);
 }
 
+void test_aom_preprocess_direct_strict_linear_bank() {
+    constexpr std::int64_t n = 8;
+    constexpr std::int64_t p = 12;
+    constexpr std::int64_t n_ops = 9;
+    std::vector<double> X;
+    std::vector<double> y;
+    make_dataset(X, y, n, p);
+
+    n4m_context_t* ctx = nullptr;
+    n4m_operator_bank_t* bank = nullptr;
+    n4m_gating_strategy_t* soft_gate = nullptr;
+    n4m_gating_strategy_t* hard_gate = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_operator_bank_create(&bank) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_gating_strategy_create(&soft_gate, N4M_GATING_SOFT) ==
+                     N4M_OK);
+    N4M_TEST_REQUIRE(n4m_gating_strategy_create(&hard_gate, N4M_GATING_HARD) ==
+                     N4M_OK);
+
+    const double detrend_params[1] = {1.0};
+    const double savgol_smooth_params[2] = {5.0, 2.0};
+    const double savgol_deriv_params[3] = {5.0, 2.0, 1.0};
+    const double norris_params[3] = {5.0, 5.0, 1.0};
+    const double finite_params[1] = {1.0};
+    const double gaussian_params[1] = {1.0};
+    const double whittaker_params[1] = {100.0};
+    const double fck_params[1] = {1.0};
+
+    N4M_TEST_REQUIRE(n4m_operator_bank_add(
+                         bank, N4M_OP_IDENTITY, nullptr, 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_operator_bank_add(
+                         bank, N4M_OP_DETREND_POLY, detrend_params, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_operator_bank_add(
+                         bank, N4M_OP_SAVGOL_SMOOTH, savgol_smooth_params, 2) ==
+                     N4M_OK);
+    N4M_TEST_REQUIRE(n4m_operator_bank_add(
+                         bank, N4M_OP_SAVGOL_DERIVATIVE, savgol_deriv_params, 3) ==
+                     N4M_OK);
+    N4M_TEST_REQUIRE(n4m_operator_bank_add(
+                         bank, N4M_OP_NORRIS_WILLIAMS, norris_params, 3) ==
+                     N4M_OK);
+    N4M_TEST_REQUIRE(n4m_operator_bank_add(
+                         bank, N4M_OP_FINITE_DIFFERENCE, finite_params, 1) ==
+                     N4M_OK);
+    N4M_TEST_REQUIRE(n4m_operator_bank_add(
+                         bank, N4M_OP_GAUSSIAN, gaussian_params, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_operator_bank_add(
+                         bank, N4M_OP_WHITTAKER, whittaker_params, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_operator_bank_add(
+                         bank, N4M_OP_FCK, fck_params, 1) == N4M_OK);
+
+    n4m_matrix_view_t Xv = make_view(X.data(), n, p);
+    n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
+    n4m_method_result_t* soft = nullptr;
+    N4M_TEST_REQUIRE(n4m_aom_preprocess_fit(
+                         ctx, bank, soft_gate, &Xv, &Yv, &soft) == N4M_OK);
+    N4M_TEST_REQUIRE(soft != nullptr);
+
+    const auto kinds = get_int64_vector(soft, "operator_kinds");
+    const std::vector<std::int64_t> expected_kinds = {
+        N4M_OP_IDENTITY,
+        N4M_OP_DETREND_POLY,
+        N4M_OP_SAVGOL_SMOOTH,
+        N4M_OP_SAVGOL_DERIVATIVE,
+        N4M_OP_NORRIS_WILLIAMS,
+        N4M_OP_FINITE_DIFFERENCE,
+        N4M_OP_GAUSSIAN,
+        N4M_OP_WHITTAKER,
+        N4M_OP_FCK,
+    };
+    N4M_TEST_REQUIRE(kinds == expected_kinds);
+    N4M_TEST_REQUIRE(std::fabs(get_scalar(soft, "n_operators") -
+                               static_cast<double>(n_ops)) <= kTol);
+    N4M_TEST_REQUIRE(std::fabs(get_scalar(soft, "mode") -
+                               static_cast<double>(N4M_GATING_SOFT)) <= kTol);
+
+    const auto soft_transformed = get_matrix(soft, "transformed", n, p);
+    const auto soft_outputs = get_matrix(soft, "operator_outputs", n_ops, n * p);
+    const auto soft_weights = get_matrix(soft, "weights", 1, n_ops);
+    for (double weight : soft_weights) {
+        N4M_TEST_REQUIRE(std::fabs(weight - 1.0 / static_cast<double>(n_ops)) <=
+                         kTol);
+    }
+    for (std::int64_t value = 0; value < n * p; ++value) {
+        double expected = 0.0;
+        for (std::int64_t op = 0; op < n_ops; ++op) {
+            expected += soft_outputs[static_cast<std::size_t>(op * n * p + value)] /
+                        static_cast<double>(n_ops);
+        }
+        N4M_TEST_REQUIRE(std::fabs(soft_transformed[static_cast<std::size_t>(value)] -
+                                   expected) <= 1e-10);
+    }
+    for (std::int64_t value = 0; value < n * p; ++value) {
+        N4M_TEST_REQUIRE(std::fabs(soft_outputs[static_cast<std::size_t>(value)] -
+                                   X[static_cast<std::size_t>(value)]) <= kTol);
+    }
+    const auto expected_finite = finite_difference_order1(X, n, p);
+    const std::int64_t finite_offset = 5 * n * p;
+    for (std::int64_t value = 0; value < n * p; ++value) {
+        N4M_TEST_REQUIRE(
+            std::fabs(soft_outputs[static_cast<std::size_t>(finite_offset + value)] -
+                      expected_finite[static_cast<std::size_t>(value)]) <=
+            1e-12);
+    }
+
+    n4m_method_result_t* hard = nullptr;
+    N4M_TEST_REQUIRE(n4m_aom_preprocess_fit(
+                         ctx, bank, hard_gate, &Xv, nullptr, &hard) == N4M_OK);
+    N4M_TEST_REQUIRE(hard != nullptr);
+    const auto hard_transformed = get_matrix(hard, "transformed", n, p);
+    const auto hard_weights = get_matrix(hard, "weights", 1, n_ops);
+    N4M_TEST_REQUIRE(std::fabs(hard_weights[0] - 1.0) <= kTol);
+    for (std::int64_t op = 1; op < n_ops; ++op) {
+        N4M_TEST_REQUIRE(std::fabs(hard_weights[static_cast<std::size_t>(op)]) <=
+                         kTol);
+    }
+    for (std::int64_t value = 0; value < n * p; ++value) {
+        N4M_TEST_REQUIRE(std::fabs(hard_transformed[static_cast<std::size_t>(value)] -
+                                   X[static_cast<std::size_t>(value)]) <= kTol);
+    }
+
+    n4m_method_result_destroy(hard);
+    n4m_method_result_destroy(soft);
+    n4m_gating_strategy_destroy(hard_gate);
+    n4m_gating_strategy_destroy(soft_gate);
+    n4m_operator_bank_destroy(bank);
+    n4m_context_destroy(ctx);
+}
+
 }  // namespace
 
 void register_aom_sweep_tests(n4m_testing::Runner& r) {
+    r.run("aom_preprocess/direct_strict_linear_bank",
+          test_aom_preprocess_direct_strict_linear_bank);
     r.run("aom_sweep/compact_contract_and_oof_score",
           test_aom_sweep_compact_contract_and_oof_score);
     r.run("aom_chain_sweep/custom_descriptor_contract",

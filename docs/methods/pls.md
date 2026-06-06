@@ -141,6 +141,28 @@ with pls4all.Context() as ctx, pls4all.Config() as cfg:
 
 :::
 
+:::{tab-item} Python · n4m direct
+:sync: python-n4m
+:class-label: lang-python
+
+```python
+import n4m
+from n4m.sklearn import NativePLSRegressor
+
+# Fixed component count through the moment sweep path.
+res = n4m.pls(X, y, n_components=4, cv=5)
+coef = res["coefficients"]
+
+# Reusable estimator; predict() replays X @ coefficients + intercept.
+model = NativePLSRegressor(n_components=4, cv=5).fit(X, y)
+y_hat = model.predict(X_test)
+
+# Optional train-CV component grid, still train-only and moment-based.
+model_grid = NativePLSRegressor(pls_components=(1, 2, 3, 4), cv=5).fit(X, y)
+```
+
+:::
+
 :::{tab-item} Python · pls4all.sklearn
 :sync: python-sklearn
 :class-label: lang-python

@@ -34,7 +34,7 @@ This is a building block for robust PLS (IRLS over a weighted fit) and for incor
 
 ### Implementation
 
-`n4m_weighted_pls_fit` (in-sample only — no global coefficient export, since the weighted fit's $\bar{\mathbf{x}}, \bar{\mathbf{y}}$ depend on the weights). Python reference: sklearn `PLSRegression` on the prescaled matrices.
+`n4m_weighted_pls_fit` exports `coefficients`, `predictions`, `x_mean` and `y_mean`; the centering vectors are weight-dependent, so replaying predictions on new samples requires reconstructing the fit intercept as `y_mean - x_mean @ coefficients`. Python reference: sklearn `PLSRegression` on the prescaled matrices.
 
 MATLAB header (`bindings/matlab/+pls4all/WeightedPlsRegression.m`):
 
@@ -43,6 +43,23 @@ pls4all.WeightedPlsRegression — sqrt(w)-prescaled SIMPLS.
 ```
 
 ### Usage
+
+Direct `n4m` Python helper:
+
+```python
+import numpy as np
+import n4m
+
+sample_w = np.ones(X.shape[0])
+res = n4m.weighted_pls(X, y, sample_weights=sample_w, n_components=4)
+y_hat = res["predictions"]
+coef = res["coefficients"]
+```
+
+The `n4m.sklearn.NativeWeightedPLSRegressor` wrapper replays predictions from
+the returned coefficients plus reconstructed intercept. Use `sample_weights`
+as an estimator parameter when training-row weights are part of the fit
+contract.
 
 Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
 

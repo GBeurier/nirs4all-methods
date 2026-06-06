@@ -18,7 +18,7 @@ From the `pls4all.sklearn.RobustPLSRegression` docstring:
 |------|------|---------|-------|
 | `n_components` | `int` | `2` | Number of latent components extracted (k). |
 | `huber_k` | `float` | `1.345` | Huber threshold (in residual-stdev units) controlling IRLS reweighting; smaller = more robust. |
-| `max_irls_iter` | `int` | `20` | Maximum IRLS reweighting iterations. |
+| `max_irls_iter` | `int` | `5` | Maximum IRLS reweighting iterations. |
 
 ## Explanations
 
@@ -47,6 +47,25 @@ pls4all.RobustPlsRegression  Robust PLS via Huber IRLS.
 ```
 
 ### Usage
+
+Direct `n4m` Python helper:
+
+```python
+import n4m
+
+res = n4m.robust_pls(
+    X,
+    y,
+    n_components=4,
+    huber_k=1.345,
+    max_irls_iter=5,
+)
+y_hat = res["predictions"]
+coef = res["coefficients"]
+```
+
+The `n4m.sklearn.NativeRobustPLSRegressor` wrapper replays predictions from the
+returned coefficients plus reconstructed intercept.
 
 Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
 

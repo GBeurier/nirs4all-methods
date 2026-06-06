@@ -25,9 +25,13 @@ parity:
   tolerances: []
 bench:
   bench_id: "models.regularized.weighted_pls"
-  registry_entry: null
+  registry_entry: "benchmarks/cross_binding/bench_direct_moment_heads_timing.py"
 feature_flags: []
 vendored_licenses: []
-bindings: {}
+bindings:
+  python:
+    module: "n4m.python"
+    class: "weighted_pls"
+    legacy_aliases: []
 publications: []
-notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+notes: "Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration as a function-only linear PLS variant."

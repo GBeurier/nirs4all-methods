@@ -367,6 +367,15 @@ def main() -> int:
             n_refit_ridge_moment_cv_fits = int(
                 refit.get("n_ridge_moment_cv_fits", 0)
             )
+            n_refit_ridge_moment_eigen_path_preparations = int(
+                refit.get("n_ridge_moment_eigen_path_preparations", 0)
+            )
+            n_refit_ridge_moment_eigen_path_cv_fits = int(
+                refit.get("n_ridge_moment_eigen_path_cv_fits", 0)
+            )
+            n_refit_ridge_moment_direct_cv_fits = int(
+                refit.get("n_ridge_moment_direct_cv_fits", 0)
+            )
             n_refit_ridge_dual_materialized_cv_fits = int(
                 refit.get("n_ridge_dual_materialized_cv_fits", 0)
             )
@@ -399,6 +408,12 @@ def main() -> int:
             n_refit_pls_moment_cuda_parallel_fold_jobs = int(
                 refit.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
             )
+            n_refit_pls_moment_cuda_many_batched_batches = int(
+                refit.get("n_pls_moment_cuda_many_batched_batches", 0)
+            )
+            n_refit_pls_moment_cuda_many_batched_jobs = int(
+                refit.get("n_pls_moment_cuda_many_batched_jobs", 0)
+            )
             n_refit_pls_moment_score_batch_calls = int(
                 refit.get("n_pls_moment_score_batch_calls", 0)
             )
@@ -418,9 +433,14 @@ def main() -> int:
                     "n_pls_moment_cuda_device_cv_fits": 0,
                     "n_pls_moment_cuda_parallel_fold_batches": 0,
                     "n_pls_moment_cuda_parallel_fold_jobs": 0,
+                    "n_pls_moment_cuda_many_batched_batches": 0,
+                    "n_pls_moment_cuda_many_batched_jobs": 0,
                     "n_pls_moment_score_batch_calls": 0,
                     "n_pls_moment_score_batch_jobs": 0,
                     "n_ridge_moment_cv_fits": 0,
+                    "n_ridge_moment_eigen_path_preparations": 0,
+                    "n_ridge_moment_eigen_path_cv_fits": 0,
+                    "n_ridge_moment_direct_cv_fits": 0,
                     "n_ridge_dual_materialized_cv_fits": 0,
                     "n_ridge_dual_cross_cv_fits": 0,
                     "n_ridge_moment_score_batch_calls": 0,
@@ -481,6 +501,12 @@ def main() -> int:
                 ),
                 "screen_pls_moment_cuda_parallel_fold_jobs": int(
                     screen.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+                ),
+                "screen_pls_moment_cuda_many_batched_batches": int(
+                    screen.get("n_pls_moment_cuda_many_batched_batches", 0)
+                ),
+                "screen_pls_moment_cuda_many_batched_jobs": int(
+                    screen.get("n_pls_moment_cuda_many_batched_jobs", 0)
                 ),
                 "n_samples": int(args.n_samples),
                 "n_features": int(args.n_features),
@@ -564,6 +590,15 @@ def main() -> int:
                 "n_ridge_moment_cv_fits": int(
                     screen.get("n_ridge_moment_cv_fits", 0)
                 ),
+                "n_ridge_moment_eigen_path_preparations": int(
+                    screen.get("n_ridge_moment_eigen_path_preparations", 0)
+                ),
+                "n_ridge_moment_eigen_path_cv_fits": int(
+                    screen.get("n_ridge_moment_eigen_path_cv_fits", 0)
+                ),
+                "n_ridge_moment_direct_cv_fits": int(
+                    screen.get("n_ridge_moment_direct_cv_fits", 0)
+                ),
                 "n_ridge_dual_materialized_cv_fits": int(
                     screen.get("n_ridge_dual_materialized_cv_fits", 0)
                 ),
@@ -588,6 +623,15 @@ def main() -> int:
                 ),
                 "n_refit_ridge_moment_cv_fits": int(
                     n_refit_ridge_moment_cv_fits
+                ),
+                "n_refit_ridge_moment_eigen_path_preparations": int(
+                    n_refit_ridge_moment_eigen_path_preparations
+                ),
+                "n_refit_ridge_moment_eigen_path_cv_fits": int(
+                    n_refit_ridge_moment_eigen_path_cv_fits
+                ),
+                "n_refit_ridge_moment_direct_cv_fits": int(
+                    n_refit_ridge_moment_direct_cv_fits
                 ),
                 "n_refit_ridge_dual_materialized_cv_fits": int(
                     n_refit_ridge_dual_materialized_cv_fits
@@ -614,6 +658,12 @@ def main() -> int:
                 "n_refit_pls_moment_cuda_parallel_fold_jobs": int(
                     n_refit_pls_moment_cuda_parallel_fold_jobs
                 ),
+                "n_refit_pls_moment_cuda_many_batched_batches": int(
+                    n_refit_pls_moment_cuda_many_batched_batches
+                ),
+                "n_refit_pls_moment_cuda_many_batched_jobs": int(
+                    n_refit_pls_moment_cuda_many_batched_jobs
+                ),
                 "n_refit_pls_moment_score_batch_calls": int(
                     n_refit_pls_moment_score_batch_calls
                 ),
@@ -626,6 +676,15 @@ def main() -> int:
                 "final_fit_n_candidates": int(final_diag["n_candidates"]),
                 "final_fit_n_ridge_moment_cv_fits": int(
                     final_diag.get("n_ridge_moment_cv_fits", 0)
+                ),
+                "final_fit_n_ridge_moment_eigen_path_preparations": int(
+                    final_diag.get("n_ridge_moment_eigen_path_preparations", 0)
+                ),
+                "final_fit_n_ridge_moment_eigen_path_cv_fits": int(
+                    final_diag.get("n_ridge_moment_eigen_path_cv_fits", 0)
+                ),
+                "final_fit_n_ridge_moment_direct_cv_fits": int(
+                    final_diag.get("n_ridge_moment_direct_cv_fits", 0)
                 ),
                 "final_fit_n_ridge_dual_materialized_cv_fits": int(
                     final_diag.get("n_ridge_dual_materialized_cv_fits", 0)
@@ -659,6 +718,12 @@ def main() -> int:
                 ),
                 "final_fit_n_pls_moment_cuda_parallel_fold_jobs": int(
                     final_diag.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+                ),
+                "final_fit_n_pls_moment_cuda_many_batched_batches": int(
+                    final_diag.get("n_pls_moment_cuda_many_batched_batches", 0)
+                ),
+                "final_fit_n_pls_moment_cuda_many_batched_jobs": int(
+                    final_diag.get("n_pls_moment_cuda_many_batched_jobs", 0)
                 ),
                 "final_fit_n_pls_moment_score_batch_calls": int(
                     final_diag.get("n_pls_moment_score_batch_calls", 0)

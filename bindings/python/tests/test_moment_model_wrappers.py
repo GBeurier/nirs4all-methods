@@ -8,6 +8,7 @@ import pytest
 
 import n4m
 from n4m.sklearn import (
+    NativeAOMChainRidgePLSRegressor,
     NativeAOMChainSweepRegressor,
     NativeAOMFixedCandidateRegressor,
     NativeAOMMomentScreenRefitRegressor,
@@ -15,7 +16,13 @@ from n4m.sklearn import (
     NativeAOMMomentRidgeScreenRefitRegressor,
     NativeAOMOperatorPLSStackRegressor,
     NativeAOMPLSRegressor,
+    NativeAOMPLSSuperblockRegressor,
+    NativeAOMRidgePLSSuperblockRegressor,
     NativeAOMRidgeBlenderRegressor,
+    NativeAOMRidgeActiveSuperblockRegressor,
+    NativeAOMRidgeGlobalRegressor,
+    NativeAOMRidgeMKLSuperblockRegressor,
+    NativeAOMRidgeSuperblockRegressor,
     NativeAOMRobustHPORegressor,
     NativeAOMScreenRefitRegressor,
     NativeAOMSweepRegressor,
@@ -25,8 +32,12 @@ from n4m.sklearn import (
     NativeMomentStackRegressor,
     NativeMomentSweepRegressor,
     NativePCRRegressor,
+    NativePLSRegressor,
     NativePOPPLSRegressor,
     NativeRidgeRegressor,
+    NativeRidgePLSRegressor,
+    NativeRobustPLSRegressor,
+    NativeWeightedPLSRegressor,
 )
 
 
@@ -184,8 +195,12 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
     assert moment.aom_save_candidate_report is n4m.aom_save_candidate_report
     assert moment.aom_load_candidate_report is n4m.aom_load_candidate_report
     assert moment.ridge is n4m.ridge
+    assert moment.pls is n4m.pls
     assert moment.pcr is n4m.pcr
     assert moment.cppls is n4m.cppls
+    assert moment.weighted_pls is n4m.weighted_pls
+    assert moment.robust_pls is n4m.robust_pls
+    assert moment.ridge_pls is n4m.ridge_pls
     assert moment.continuum_regression is n4m.continuum_regression
     assert moment.ecr is n4m.ecr
     assert (
@@ -207,8 +222,12 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         is NativeAOMMomentRidgeScreenRefitRegressor
     )
     assert moment.NativeRidgeRegressor is NativeRidgeRegressor
+    assert moment.NativePLSRegressor is NativePLSRegressor
     assert moment.NativePCRRegressor is NativePCRRegressor
     assert moment.NativeCPPLSRegressor is NativeCPPLSRegressor
+    assert moment.NativeWeightedPLSRegressor is NativeWeightedPLSRegressor
+    assert moment.NativeRobustPLSRegressor is NativeRobustPLSRegressor
+    assert moment.NativeRidgePLSRegressor is NativeRidgePLSRegressor
     assert (
         moment.NativeContinuumRegressionRegressor
         is NativeContinuumRegressionRegressor
@@ -217,6 +236,9 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
     assert moment.NativeMomentStackRegressor is NativeMomentStackRegressor
     assert n4m.NativeRidgeRegressor is NativeRidgeRegressor
     assert n4m.NativePCRRegressor is NativePCRRegressor
+    assert n4m.NativeWeightedPLSRegressor is NativeWeightedPLSRegressor
+    assert n4m.NativeRobustPLSRegressor is NativeRobustPLSRegressor
+    assert n4m.NativeRidgePLSRegressor is NativeRidgePLSRegressor
     assert n4m.NativeMomentStackRegressor is NativeMomentStackRegressor
     assert moment.moment_stack is n4m.moment_stack
     inventory = moment.available_methods()
@@ -227,10 +249,18 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "sweep_run",
         "ridge",
         "ridge_regressor",
+        "pls",
+        "pls_regressor",
         "pcr",
         "pcr_regressor",
         "cppls",
         "cppls_regressor",
+        "weighted_pls",
+        "weighted_pls_regressor",
+        "robust_pls",
+        "robust_pls_regressor",
+        "ridge_pls",
+        "ridge_pls_regressor",
         "continuum_regression",
         "continuum_regression_regressor",
         "ecr",
@@ -284,6 +314,17 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "center_y",
     )
     assert inventory_by_name["ridge_regressor"]["entry"] == "NativeRidgeRegressor"
+    assert {
+        "n_components",
+        "pls_components",
+        "cv",
+        "fold_ids",
+        "cuda_pls_parallel_folds",
+        "cuda_pls_min_device_features",
+        "cuda_pls_many_batched",
+    }.issubset(inventory_by_name["pls_regressor"]["config_options"])
+    assert inventory_by_name["pls"]["entry"] == "pls"
+    assert inventory_by_name["pls_regressor"]["entry"] == "NativePLSRegressor"
     assert inventory_by_name["pcr"]["config_options"] == (
         "n_components",
         "center_x",
@@ -292,6 +333,44 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "scale_y",
     )
     assert inventory_by_name["pcr_regressor"]["entry"] == "NativePCRRegressor"
+    assert inventory_by_name["weighted_pls"]["config_options"] == (
+        "sample_weights",
+        "n_components",
+        "center_x",
+        "scale_x",
+        "center_y",
+        "scale_y",
+    )
+    assert inventory_by_name["weighted_pls_regressor"]["entry"] == (
+        "NativeWeightedPLSRegressor"
+    )
+    assert inventory_by_name["weighted_pls_regressor"]["wrapper_of"] == "weighted_pls"
+    assert inventory_by_name["robust_pls"]["config_options"] == (
+        "huber_k",
+        "max_irls_iter",
+        "n_components",
+        "center_x",
+        "scale_x",
+        "center_y",
+        "scale_y",
+    )
+    assert inventory_by_name["robust_pls_regressor"]["entry"] == (
+        "NativeRobustPLSRegressor"
+    )
+    assert inventory_by_name["robust_pls_regressor"]["wrapper_of"] == "robust_pls"
+    assert inventory_by_name["ridge_pls"]["config_options"] == (
+        "ridge_lambda",
+        "n_components",
+        "center_x",
+        "scale_x",
+        "center_y",
+        "scale_y",
+    )
+    assert inventory_by_name["ridge_pls_regressor"]["entry"] == (
+        "NativeRidgePLSRegressor"
+    )
+    assert inventory_by_name["ridge_pls_regressor"]["wrapper_of"] == "ridge_pls"
+    assert "kernel_pls" not in inventory_by_name
     assert inventory_by_name["moment_stack_regressor"]["entry"] == (
         "NativeMomentStackRegressor"
     )
@@ -432,13 +511,60 @@ def test_native_moment_model_wrappers_smoke():
     X, y = _dataset()
 
     _assert_method_result(n4m.ridge(X, y, alpha=0.1), X.shape[0])
+    pls = n4m.pls(X, y, n_components=3, cv=4, scale_x=False)
+    _assert_method_result(pls, X.shape[0])
+    assert int(pls["selected_head_id"]) == 1
+    assert pls["selected_param"] == pytest.approx(3.0)
+    assert int(pls["n_pls_moment_cv_fits"]) > 0
     _assert_method_result(n4m.pcr(X, y, n_components=3), X.shape[0])
     _assert_method_result(n4m.cppls(X, y, gamma=0.4, n_components=3), X.shape[0])
+    weights = np.linspace(0.5, 1.5, X.shape[0], dtype=np.float64)
+    weighted = n4m.weighted_pls(
+        X,
+        y,
+        sample_weights=weights,
+        n_components=3,
+        scale_x=False,
+    )
+    _assert_method_result(weighted, X.shape[0])
+    assert "final_weights" not in weighted
+    robust = n4m.robust_pls(
+        X,
+        y,
+        huber_k=1.345,
+        max_irls_iter=3,
+        n_components=3,
+        scale_x=False,
+    )
+    _assert_method_result(robust, X.shape[0])
+    assert robust["huber_k"] == pytest.approx(1.345)
+    assert "final_weights" not in robust
+    ridge_pls = n4m.ridge_pls(
+        X,
+        y,
+        ridge_lambda=0.1,
+        n_components=3,
+        scale_x=False,
+    )
+    _assert_method_result(ridge_pls, X.shape[0])
+    assert ridge_pls["ridge_lambda"] == pytest.approx(0.1)
     _assert_method_result(
         n4m.continuum_regression(X, y, tau=0.25, n_components=3),
         X.shape[0],
     )
     _assert_method_result(n4m.ecr(X, y, alpha=0.6, n_components=3), X.shape[0])
+
+
+def test_direct_weighted_robust_and_ridge_pls_validate_inputs():
+    X, y = _dataset()
+    with pytest.raises(ValueError, match="sample_weights length"):
+        n4m.weighted_pls(X, y, sample_weights=np.ones(X.shape[0] - 1))
+    with pytest.raises(ValueError, match="strictly positive"):
+        n4m.weighted_pls(X, y, sample_weights=np.zeros(X.shape[0]))
+    with pytest.raises(ValueError, match="huber_k"):
+        n4m.robust_pls(X, y, huber_k=0.0)
+    with pytest.raises(ValueError, match="ridge_lambda"):
+        n4m.ridge_pls(X, y, ridge_lambda=-1.0)
 
 
 @pytest.mark.parametrize(
@@ -451,6 +577,12 @@ def test_native_moment_model_wrappers_smoke():
             "ridge",
         ),
         (
+            NativePLSRegressor,
+            n4m.pls,
+            {"n_components": 3, "cv": 4, "scale_x": False},
+            "pls",
+        ),
+        (
             NativePCRRegressor,
             n4m.pcr,
             {"n_components": 3, "scale_x": False},
@@ -461,6 +593,33 @@ def test_native_moment_model_wrappers_smoke():
             n4m.cppls,
             {"gamma": 0.4, "n_components": 3},
             "cppls",
+        ),
+        (
+            NativeWeightedPLSRegressor,
+            n4m.weighted_pls,
+            {
+                "sample_weights": np.linspace(0.5, 1.5, 28),
+                "n_components": 3,
+                "scale_x": False,
+            },
+            "weighted_pls",
+        ),
+        (
+            NativeRobustPLSRegressor,
+            n4m.robust_pls,
+            {
+                "huber_k": 1.345,
+                "max_irls_iter": 5,
+                "n_components": 3,
+                "scale_x": False,
+            },
+            "robust_pls",
+        ),
+        (
+            NativeRidgePLSRegressor,
+            n4m.ridge_pls,
+            {"ridge_lambda": 0.1, "n_components": 3, "scale_x": False},
+            "ridge_pls",
         ),
         (
             NativeContinuumRegressionRegressor,
@@ -519,8 +678,18 @@ def test_native_direct_moment_sklearn_wrappers_support_multi_output():
 
     for Estimator, kwargs in (
         (NativeRidgeRegressor, {"alpha": 0.1, "scale_x": False}),
+        (NativePLSRegressor, {"n_components": 2, "cv": 4, "scale_x": False}),
         (NativePCRRegressor, {"n_components": 2, "scale_x": False}),
         (NativeCPPLSRegressor, {"gamma": 0.4, "n_components": 2}),
+        (
+            NativeWeightedPLSRegressor,
+            {
+                "sample_weights": np.linspace(0.5, 1.5, X.shape[0]),
+                "n_components": 2,
+                "scale_x": False,
+            },
+        ),
+        (NativeRidgePLSRegressor, {"ridge_lambda": 0.1, "n_components": 2}),
         (NativeContinuumRegressionRegressor, {"tau": 0.25, "n_components": 2}),
         (NativeECRRegressor, {"alpha": 0.6, "n_components": 2}),
     ):
@@ -563,6 +732,24 @@ def test_native_moment_stack_regressor_smoke():
     assert diagnostics["cv"] == 4
     assert diagnostics["inner_cv"] == 3
     assert set(diagnostics["base_oof_rmse"]) == {"ridge", "pcr", "pls"}
+    assert len(diagnostics["base_oof_diagnostics"]) == 4 * 3
+    assert len(diagnostics["base_final_diagnostics"]) == 3
+    assert any(
+        row["phase"] == "oof"
+        and row["base_model"] == "pls"
+        and row["estimator"] == "NativePLSRegressor"
+        and row["method"] == "pls"
+        for row in diagnostics["base_oof_diagnostics"]
+    )
+    assert any(
+        row["phase"] == "final"
+        and row["base_model"] == "pls"
+        and row["estimator"] == "NativePLSRegressor"
+        and row["method"] == "pls"
+        for row in diagnostics["base_final_diagnostics"]
+    )
+    assert diagnostics["n_base_oof_pls_moment_cv_fits"] >= 0
+    assert diagnostics["n_base_final_pls_moment_cv_fits"] >= 0
 
     factory_model = n4m.moment_stack(
         X,
@@ -678,6 +865,46 @@ def test_native_aom_preprocess_identity_smoke():
     assert hard["mode"] == 0.0
 
 
+def test_native_aom_preprocess_direct_strict_linear_bank():
+    X, y = _aom_dataset()
+    operators = [
+        "identity",
+        ("detrend_poly", [1]),
+        ("savgol_smooth", [5, 2]),
+        ("savgol_derivative", [5, 2, 1]),
+        ("norris_williams", [5, 5, 1]),
+        ("finite_difference", [1]),
+        ("gaussian", [1.0]),
+        ("whittaker", [100.0]),
+        ("fck", [1.0]),
+    ]
+    expected_kinds = [0, 7, 8, 9, 10, 15, 18, 16, 17]
+
+    soft = n4m.aom_preprocess(X, y, operators=operators, gating_mode="soft")
+    outputs = np.asarray(soft["operator_outputs"]).reshape(len(operators), *X.shape)
+
+    assert soft["transformed"].shape == X.shape
+    assert soft["operator_outputs"].shape == (len(operators), X.size)
+    assert soft["weights"].shape == (1, len(operators))
+    assert soft["operator_kinds"].tolist() == expected_kinds
+    assert soft["n_operators"] == float(len(operators))
+    np.testing.assert_allclose(
+        soft["weights"], np.full((1, len(operators)), 1 / len(operators))
+    )
+    np.testing.assert_allclose(
+        soft["transformed"], np.mean(outputs, axis=0), rtol=1e-12, atol=1e-12
+    )
+
+    hard = n4m.aom_preprocess(X, y, operators=operators, gating_mode="hard")
+    hard_outputs = np.asarray(hard["operator_outputs"]).reshape(len(operators), *X.shape)
+    np.testing.assert_allclose(
+        hard["weights"], [[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
+    )
+    np.testing.assert_allclose(
+        hard["transformed"], hard_outputs[0], rtol=1e-12, atol=1e-12
+    )
+
+
 def test_native_moment_model_wrappers_support_multi_output_y():
     X, y = _dataset()
     Y = np.column_stack([y, 0.5 * y + 0.1])
@@ -782,6 +1009,73 @@ def test_native_sweep_run_ridge_smoke_and_oof_score():
     assert selected_id == int(np.argmin(res["candidate_scores"][:, 3]))
     oof_rmse = np.sqrt(np.mean((res["oof_predictions"][:, 0] - y) ** 2))
     np.testing.assert_allclose(oof_rmse, res["selected_cv_rmse"], rtol=1e-12, atol=1e-12)
+
+
+def test_native_sweep_run_ridge_moment_scores_match_numpy_path():
+    X, y = _dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    lambdas = np.array([0.001, 0.01, 0.1, 1.0, 10.0], dtype=np.float64)
+    expected = []
+    Y = y.reshape(-1, 1)
+    for lam in lambdas:
+        sse = 0.0
+        count = 0
+        for fold in sorted(set(folds.tolist())):
+            train = folds != fold
+            test = folds == fold
+            lhs = X[train].T @ X[train] + lam * np.eye(X.shape[1])
+            rhs = X[train].T @ Y[train]
+            beta = np.linalg.solve(lhs, rhs)
+            pred = X[test] @ beta
+            sse += float(np.sum((Y[test] - pred) ** 2))
+            count += int(Y[test].size)
+        expected.append(np.sqrt(sse / count))
+
+    res = n4m.sweep_run(
+        X,
+        y,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=lambdas.tolist(),
+        pls_components=[],
+        heads=("ridge",),
+        center_x=False,
+        center_y=False,
+        scale_x=False,
+    )
+
+    np.testing.assert_allclose(
+        res["candidate_scores"][:, 3],
+        np.asarray(expected),
+        rtol=1e-8,
+        atol=1e-10,
+    )
+    single = n4m.sweep_run(
+        X,
+        y,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=[0.1],
+        pls_components=[],
+        heads=("ridge",),
+        center_x=False,
+        center_y=False,
+        scale_x=False,
+        score_only=True,
+    )
+    assert res["n_ridge_moment_eigen_path_preparations"] == 4.0
+    assert res["n_ridge_moment_eigen_path_cv_fits"] == len(lambdas) * 4
+    assert res["n_ridge_moment_direct_cv_fits"] == 0.0
+    assert single["n_ridge_moment_eigen_path_preparations"] == 0.0
+    assert single["n_ridge_moment_eigen_path_cv_fits"] == 0.0
+    assert single["n_ridge_moment_direct_cv_fits"] == 4.0
+    np.testing.assert_allclose(
+        single["candidate_scores"][0, 3],
+        res["candidate_scores"][2, 3],
+        rtol=1e-10,
+        atol=1e-10,
+    )
+    assert res["n_ridge_moment_cv_fits"] == len(lambdas) * 4
 
 
 def test_native_sweep_run_accepts_explicit_folds_multi_output_y():
@@ -906,6 +1200,60 @@ def test_native_sweep_run_wide_ridge_score_only_matches_full_scores():
     )
     assert full["n_ridge_dual_materialized_final_fits"] == 1.0
     assert score_only["n_ridge_dual_materialized_final_fits"] == 0.0
+    assert score_only["score_only"] == 1.0
+    assert score_only["predictions"].shape == (0, 0)
+    assert score_only["oof_predictions"].shape == (0, 0)
+    assert score_only["coefficients"].shape == (0, 0)
+
+
+def test_native_sweep_run_ridge_moment_score_only_matches_full_scores():
+    rng = np.random.default_rng(55)
+    X = rng.standard_normal((18, 6))
+    y = 0.6 * X[:, 0] - 0.2 * X[:, 3] + 0.03 * rng.standard_normal(X.shape[0])
+    folds = np.arange(X.shape[0], dtype=np.int32) % 3
+    lambdas = [0.01, 0.4, 2.0]
+
+    full = n4m.sweep_run(
+        X,
+        y,
+        cv=3,
+        fold_ids=folds,
+        ridge_lambdas=lambdas,
+        heads=("ridge",),
+        scale_x=True,
+    )
+    score_only = n4m.sweep_run(
+        X,
+        y,
+        cv=3,
+        fold_ids=folds,
+        ridge_lambdas=lambdas,
+        heads=("ridge",),
+        scale_x=True,
+        score_only=True,
+    )
+
+    np.testing.assert_allclose(
+        score_only["candidate_scores"],
+        full["candidate_scores"],
+        rtol=1e-10,
+        atol=1e-10,
+    )
+    assert full["n_ridge_moment_candidates"] == float(len(lambdas))
+    assert full["n_ridge_dual_materialized_candidates"] == 0.0
+    assert full["n_ridge_moment_cv_fits"] == float(len(lambdas) * 3)
+    assert full["n_ridge_moment_eigen_path_preparations"] == 3.0
+    assert full["n_ridge_moment_eigen_path_cv_fits"] == float(len(lambdas) * 3)
+    assert full["n_ridge_moment_direct_cv_fits"] == 0.0
+    assert full["n_ridge_dual_materialized_cv_fits"] == 0.0
+    assert full["n_ridge_dual_cross_cv_fits"] == 0.0
+    assert full["n_ridge_moment_final_fits"] == 1.0
+    assert score_only["n_ridge_moment_eigen_path_preparations"] == 3.0
+    assert score_only["n_ridge_moment_eigen_path_cv_fits"] == float(
+        len(lambdas) * 3
+    )
+    assert score_only["n_ridge_moment_direct_cv_fits"] == 0.0
+    assert score_only["n_ridge_moment_final_fits"] == 0.0
     assert score_only["score_only"] == 1.0
     assert score_only["predictions"].shape == (0, 0)
     assert score_only["oof_predictions"].shape == (0, 0)
@@ -2649,6 +2997,12 @@ def test_native_aom_ridge_score_only_uses_batch_moment_path():
     assert res["n_materialized_candidates"] == 0.0
     assert res["n_ridge_operator_moment_candidates"] == res["n_candidates"]
     assert res["n_ridge_moment_cv_fits"] == len(chains) * len(lambdas) * 4
+    assert res["n_ridge_moment_eigen_path_preparations"] == len(chains) * 4
+    assert (
+        res["n_ridge_moment_eigen_path_cv_fits"]
+        == len(chains) * len(lambdas) * 4
+    )
+    assert res["n_ridge_moment_direct_cv_fits"] == 0.0
     assert res["n_ridge_moment_score_batch_calls"] == 1.0
     assert res["n_ridge_moment_score_batch_jobs"] == len(chains) * len(lambdas) * 4
     assert res["n_ridge_moment_final_fits"] == 0.0
@@ -2672,6 +3026,12 @@ def test_native_aom_ridge_score_only_uses_batch_moment_path():
         top_k=3,
     )
     assert campaign["n_ridge_moment_cv_fits"] == len(chains) * len(lambdas) * 4
+    assert campaign["n_ridge_moment_eigen_path_preparations"] == len(chains) * 4
+    assert (
+        campaign["n_ridge_moment_eigen_path_cv_fits"]
+        == len(chains) * len(lambdas) * 4
+    )
+    assert campaign["n_ridge_moment_direct_cv_fits"] == 0
     assert campaign["n_ridge_moment_score_batch_calls"] == 1
     assert campaign["n_ridge_moment_score_batch_jobs"] == len(chains) * len(lambdas) * 4
     assert campaign["ridge_cv_fits_per_chain"] == len(lambdas) * 4
@@ -3723,6 +4083,7 @@ def test_native_aom_ridge_blender_compact_contract():
         rtol=1e-8,
         atol=1e-8,
     )
+
     assert int(res["selected_candidate_id"]) == int(np.argmax(weights))
     assert hasattr(n4m, "NativeAOMRidgeBlenderRegressor")
     model = NativeAOMRidgeBlenderRegressor(
@@ -3744,6 +4105,13 @@ def test_native_aom_ridge_blender_compact_contract():
     assert diagnostics["n_candidates"] == 24
     assert diagnostics["profile_name"] == "compact"
     assert diagnostics["expected_bank_size"] == 12
+    # n_candidates=24, cv=4: 24*4 CV fits plus 24 final fits.
+    assert diagnostics["n_ridge_blender_cv_fits"] == 96
+    assert diagnostics["n_ridge_blender_final_fits"] == 24
+    assert diagnostics["n_ridge_blender_fit_calls"] == 120
+    assert int(res["n_ridge_blender_cv_fits"]) == 96
+    assert int(res["n_ridge_blender_final_fits"]) == 24
+    assert int(res["n_ridge_blender_fit_calls"]) == 120
 
 
 def test_native_aom_ridge_blender_rejects_non_positive_lambda():
@@ -3754,6 +4122,527 @@ def test_native_aom_ridge_blender_rejects_non_positive_lambda():
         assert "strictly positive" in str(exc)
     else:
         raise AssertionError("expected ValueError for non-positive Ridge lambda")
+
+
+def test_native_aom_ridge_global_selects_operator_and_replays_coefficients():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
+
+    res = n4m.aom_ridge_global(
+        X,
+        y,
+        operators=operators,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=[0.01, 0.1],
+        scale_x=False,
+    )
+
+    assert res["candidate_scores"].shape == (len(operators) * 2, 5)
+    assert res["n_operators"] == float(len(operators))
+    assert res["n_chains"] == float(len(operators))
+    assert res["selected_head_id"] == 0.0
+    assert res["selected_param"] in {0.01, 0.1}
+    assert res["selected_operator_kind"] in {0.0, 15.0, 8.0}
+    assert res["ridge_backend"] == "native_aom_chain_sweep"
+    np.testing.assert_array_equal(res["fold_ids"], folds)
+    np.testing.assert_allclose(
+        X @ res["input_coefficients"] + res["intercept"],
+        res["predictions"],
+        rtol=1e-9,
+        atol=1e-9,
+    )
+
+
+def test_native_aom_ridge_global_wrapper_replays_and_reports_selection():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1])]
+
+    model = NativeAOMRidgeGlobalRegressor(
+        operators=operators,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=[0.01, 0.1],
+        scale_x=False,
+    ).fit(X, y)
+
+    assert hasattr(n4m, "aom_ridge_global")
+    assert hasattr(n4m, "NativeAOMRidgeGlobalRegressor")
+    np.testing.assert_allclose(
+        model.predict(X),
+        model.result_["predictions"].ravel(),
+        rtol=1e-9,
+        atol=1e-9,
+    )
+    diagnostics = model.get_diagnostics()
+    assert diagnostics["n_operators"] == len(operators)
+    assert diagnostics["selected_operator_kind"] in {0, 15}
+    assert diagnostics["ridge_backend"] == "native_aom_chain_sweep"
+
+
+def test_native_aom_ridge_superblock_function_replays_input_coefficients():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
+
+    res = n4m.aom_ridge_superblock(
+        X,
+        y,
+        operators=operators,
+        alpha=0.1,
+        cv=4,
+        fold_ids=folds,
+        block_scaling="none",
+    )
+
+    assert res["predictions"].shape == (X.shape[0], 1)
+    assert res["oof_predictions"].shape == (X.shape[0], 1)
+    assert res["candidate_scores"].shape == (1, 3)
+    assert res["input_coefficients"].shape == (X.shape[1], 1)
+    assert res["intercept"].shape == (1, 1)
+    assert res["operator_kinds"].tolist() == [0, 15, 8]
+    assert res["n_operators"] == float(len(operators))
+    assert res["n_features_superblock"] == float(len(operators) * X.shape[1])
+    assert res["selected_alpha"] == 0.1
+    assert res["ridge_backend"] == "native"
+    np.testing.assert_array_equal(res["fold_ids"], folds)
+    np.testing.assert_allclose(
+        X @ res["input_coefficients"] + res["intercept"],
+        res["predictions"],
+        rtol=1e-9,
+        atol=1e-9,
+    )
+
+
+def test_native_aom_ridge_superblock_cv_and_wrapper_replay():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1])]
+
+    res = n4m.aom_ridge_superblock(
+        X,
+        y,
+        operators=operators,
+        alphas=[0.01, 0.1, 1.0],
+        cv=4,
+        fold_ids=folds,
+    )
+    assert res["candidate_scores"].shape == (3, 3)
+    assert res["selected_alpha"] in {0.01, 0.1, 1.0}
+    assert res["selected_cv_rmse"] == pytest.approx(
+        np.min(res["candidate_scores"][:, 2])
+    )
+
+    assert hasattr(n4m, "NativeAOMRidgeSuperblockRegressor")
+    model = NativeAOMRidgeSuperblockRegressor(
+        operators=operators,
+        alphas=[0.01, 0.1, 1.0],
+        cv=4,
+        fold_ids=folds,
+    ).fit(X, y)
+    np.testing.assert_allclose(
+        model.predict(X),
+        model.result_["predictions"].ravel(),
+        rtol=1e-9,
+        atol=1e-9,
+    )
+    assert model.selected_alpha_ in {0.01, 0.1, 1.0}
+    diagnostics = model.get_diagnostics()
+    assert diagnostics["n_operators"] == len(operators)
+    assert diagnostics["n_features_superblock"] == len(operators) * X.shape[1]
+    assert diagnostics["ridge_backend"] == "native"
+
+
+def test_native_aom_ridge_mkl_superblock_learns_weights_and_replays():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = [
+        "identity",
+        ("finite_difference", [1]),
+        ("savgol_smooth", [5, 2]),
+        ("savgol_derivative", [5, 2, 1]),
+    ]
+
+    res = n4m.aom_ridge_mkl_superblock(
+        X,
+        y,
+        operators=operators,
+        alphas=[0.01, 0.1],
+        cv=4,
+        fold_ids=folds,
+        mkl_top_k=2,
+        block_scaling="none",
+    )
+
+    weights = res["mkl_weights"].reshape(-1)
+    assert res["predictions"].shape == (X.shape[0], 1)
+    assert res["candidate_scores"].shape == (2, 3)
+    assert res["n_operators"] == float(len(operators))
+    assert res["n_mkl_active_operators"] <= 2.0
+    assert np.count_nonzero(weights > 0.0) == int(res["n_mkl_active_operators"])
+    assert np.sum(weights) == pytest.approx(1.0)
+    assert res["mkl_alignment_scores"].shape == (len(operators), 1)
+    assert res["fold_mkl_weights"].shape == (2, 4, len(operators))
+    assert res["selection_mode"] == "mkl_superblock"
+    assert res["mkl_mode"] == "alignment"
+    assert res["ridge_backend"] == "native"
+    np.testing.assert_array_equal(res["fold_ids"], folds)
+    np.testing.assert_allclose(
+        X @ res["input_coefficients"] + res["intercept"],
+        res["predictions"],
+        rtol=1e-9,
+        atol=1e-9,
+    )
+
+
+def test_native_aom_ridge_mkl_superblock_wrapper_reports_weights():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
+
+    model = NativeAOMRidgeMKLSuperblockRegressor(
+        operators=operators,
+        alphas=[0.01, 0.1],
+        cv=4,
+        fold_ids=folds,
+        mkl_top_k=2,
+        block_scaling="none",
+    ).fit(X, y)
+
+    assert hasattr(n4m, "aom_ridge_mkl_superblock")
+    assert hasattr(n4m, "NativeAOMRidgeMKLSuperblockRegressor")
+    np.testing.assert_allclose(
+        model.predict(X),
+        model.result_["predictions"].ravel(),
+        rtol=1e-9,
+        atol=1e-9,
+    )
+    diagnostics = model.get_diagnostics()
+    assert diagnostics["n_operators"] == len(operators)
+    assert diagnostics["n_mkl_active_operators"] <= 2
+    assert diagnostics["selected_operator_indices"] == model.selected_operator_indices_.tolist()
+    assert sum(diagnostics["mkl_weights"]) == pytest.approx(1.0)
+    assert diagnostics["mkl_mode"] == "alignment"
+    assert diagnostics["ridge_backend"] == "native"
+
+
+def test_native_aom_ridge_active_superblock_screens_fold_local_and_replays():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
+
+    res = n4m.aom_ridge_active_superblock(
+        X,
+        y,
+        operators=operators,
+        alphas=[0.01, 0.1],
+        cv=4,
+        fold_ids=folds,
+        active_top_m=2,
+        block_scaling="none",
+    )
+
+    assert res["predictions"].shape == (X.shape[0], 1)
+    assert res["candidate_scores"].shape == (2, 3)
+    assert res["n_operators"] == float(len(operators))
+    assert res["n_active_operators"] == 2.0
+    assert res["n_features_superblock"] == 2.0 * X.shape[1]
+    assert res["selected_alpha"] in {0.01, 0.1}
+    assert res["selected_cv_rmse"] == pytest.approx(
+        np.min(res["candidate_scores"][:, 2])
+    )
+    assert res["fold_active_operator_indices"].shape == (2, 4, 2)
+    assert np.all(res["fold_active_operator_counts"] == 2)
+    assert res["selected_operator_indices"].shape == (2,)
+    assert res["selected_operator_indices"][0] == 0
+    assert res["selected_operator_kinds"][0] == 0
+    assert res["active_score_method"] == "norm"
+    assert res["selection_mode"] == "active_superblock"
+    assert res["ridge_backend"] == "native"
+    np.testing.assert_array_equal(res["fold_ids"], folds)
+    np.testing.assert_allclose(
+        X @ res["input_coefficients"] + res["intercept"],
+        res["predictions"],
+        rtol=1e-9,
+        atol=1e-9,
+    )
+
+
+def test_native_aom_ridge_active_superblock_wrapper_replays_and_reports_active_subset():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
+
+    model = NativeAOMRidgeActiveSuperblockRegressor(
+        operators=operators,
+        alphas=[0.01, 0.1],
+        cv=4,
+        fold_ids=folds,
+        active_top_m=2,
+        block_scaling="none",
+    ).fit(X, y)
+
+    assert hasattr(n4m, "aom_ridge_active_superblock")
+    assert hasattr(n4m, "NativeAOMRidgeActiveSuperblockRegressor")
+    np.testing.assert_allclose(
+        model.predict(X),
+        model.result_["predictions"].ravel(),
+        rtol=1e-9,
+        atol=1e-9,
+    )
+    diagnostics = model.get_diagnostics()
+    assert diagnostics["n_operators"] == len(operators)
+    assert diagnostics["n_active_operators"] == 2
+    assert diagnostics["selected_operator_indices"][0] == 0
+    assert diagnostics["selected_operator_kinds"][0] == 0
+    assert diagnostics["active_score_method"] == "norm"
+    assert diagnostics["ridge_backend"] == "native"
+
+
+def test_native_aom_pls_superblock_function_replays_input_coefficients():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
+
+    res = n4m.aom_pls_superblock(
+        X,
+        y,
+        operators=operators,
+        pls_components=[1, 2],
+        cv=4,
+        fold_ids=folds,
+        block_scaling="none",
+    )
+
+    assert res["predictions"].shape == (X.shape[0], 1)
+    assert res["oof_predictions"].shape == (X.shape[0], 1)
+    assert res["candidate_scores"].shape == (2, 3)
+    assert res["input_coefficients"].shape == (X.shape[1], 1)
+    assert res["intercept"].shape == (1, 1)
+    assert res["operator_kinds"].tolist() == [0, 15, 8]
+    assert res["n_operators"] == float(len(operators))
+    assert res["n_features_superblock"] == float(len(operators) * X.shape[1])
+    assert res["n_components"] in {1.0, 2.0}
+    assert res["selected_cv_rmse"] == pytest.approx(
+        np.min(res["candidate_scores"][:, 2])
+    )
+    assert res["selection_mode"] == "superblock"
+    assert res["pls_backend"] == "native"
+    expected_pls_solves = len([1, 2]) * 4 + 1
+    assert res["n_pls_moment_cv_fits"] == float(2 * expected_pls_solves)
+    assert res["n_pls_moment_final_fits"] == float(expected_pls_solves)
+    np.testing.assert_array_equal(res["fold_ids"], folds)
+    np.testing.assert_allclose(
+        X @ res["input_coefficients"] + res["intercept"],
+        res["predictions"],
+        rtol=1e-9,
+        atol=1e-9,
+    )
+
+
+def test_native_aom_pls_superblock_wrapper_replays_and_reports_components():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1])]
+
+    model = NativeAOMPLSSuperblockRegressor(
+        operators=operators,
+        pls_components=[1, 2],
+        cv=4,
+        fold_ids=folds,
+        block_scaling="none",
+    ).fit(X, y)
+
+    assert hasattr(n4m, "aom_pls_superblock")
+    assert hasattr(n4m, "NativeAOMPLSSuperblockRegressor")
+    np.testing.assert_allclose(
+        model.predict(X),
+        model.result_["predictions"].ravel(),
+        rtol=1e-9,
+        atol=1e-9,
+    )
+    diagnostics = model.get_diagnostics()
+    assert diagnostics["n_operators"] == len(operators)
+    assert diagnostics["n_components"] in {1, 2}
+    assert diagnostics["n_features_superblock"] == len(operators) * X.shape[1]
+    assert diagnostics["pls_backend"] == "native"
+    expected_pls_solves = len([1, 2]) * 4 + 1
+    assert diagnostics["n_pls_moment_cv_fits"] == 2 * expected_pls_solves
+    assert diagnostics["n_pls_moment_final_fits"] == expected_pls_solves
+
+
+def test_native_aom_ridge_pls_superblock_function_replays_input_coefficients():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
+
+    res = n4m.aom_ridge_pls_superblock(
+        X,
+        y,
+        operators=operators,
+        pls_components=[1, 2],
+        ridge_lambdas=[0.0, 0.1],
+        cv=4,
+        fold_ids=folds,
+        block_scaling="none",
+    )
+
+    assert res["predictions"].shape == (X.shape[0], 1)
+    assert res["oof_predictions"].shape == (X.shape[0], 1)
+    assert res["candidate_scores"].shape == (4, 4)
+    assert res["input_coefficients"].shape == (X.shape[1], 1)
+    assert res["intercept"].shape == (1, 1)
+    assert res["operator_kinds"].tolist() == [0, 15, 8]
+    assert res["n_operators"] == float(len(operators))
+    assert res["n_features_superblock"] == float(len(operators) * X.shape[1])
+    assert res["n_components"] in {1.0, 2.0}
+    assert res["ridge_lambda"] in {0.0, 0.1}
+    assert res["selected_cv_rmse"] == pytest.approx(
+        np.min(res["candidate_scores"][:, 3])
+    )
+    assert res["selection_mode"] == "ridge_pls_superblock"
+    assert res["ridge_pls_backend"] == "native"
+    assert res["n_ridge_pls_fit_calls"] == float(4 * 4 + 1)
+    np.testing.assert_array_equal(res["fold_ids"], folds)
+    np.testing.assert_allclose(
+        X @ res["input_coefficients"] + res["intercept"],
+        res["predictions"],
+        rtol=1e-9,
+        atol=1e-9,
+    )
+
+
+def test_native_aom_ridge_pls_superblock_wrapper_replays_and_reports_grid():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    operators = ["identity", ("finite_difference", [1])]
+
+    model = NativeAOMRidgePLSSuperblockRegressor(
+        operators=operators,
+        pls_components=[1, 2],
+        ridge_lambdas=[0.0, 0.1],
+        cv=4,
+        fold_ids=folds,
+        block_scaling="none",
+    ).fit(X, y)
+
+    assert hasattr(n4m, "aom_ridge_pls_superblock")
+    assert hasattr(n4m, "NativeAOMRidgePLSSuperblockRegressor")
+    np.testing.assert_allclose(
+        model.predict(X),
+        model.result_["predictions"].ravel(),
+        rtol=1e-9,
+        atol=1e-9,
+    )
+    diagnostics = model.get_diagnostics()
+    assert diagnostics["n_operators"] == len(operators)
+    assert diagnostics["n_components"] in {1, 2}
+    assert diagnostics["ridge_lambda"] in {0.0, 0.1}
+    assert diagnostics["n_candidates"] == 4
+    assert diagnostics["n_features_superblock"] == len(operators) * X.shape[1]
+    assert diagnostics["ridge_pls_backend"] == "native"
+    assert diagnostics["n_ridge_pls_fit_calls"] == 4 * 4 + 1
+
+
+def test_native_aom_chain_ridge_pls_function_replays_input_coefficients():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    chains = [
+        [("identity", ())],
+        [("savgol_smooth", (5, 2)), ("finite_difference", (1,))],
+    ]
+
+    res = n4m.aom_chain_ridge_pls(
+        X,
+        y,
+        chains=chains,
+        pls_components=[1, 2],
+        ridge_lambdas=[0.0, 0.1],
+        cv=4,
+        fold_ids=folds,
+    )
+
+    assert res["predictions"].shape == (X.shape[0], 1)
+    assert res["oof_predictions"].shape == (X.shape[0], 1)
+    assert res["candidate_scores"].shape == (8, 5)
+    assert res["input_coefficients"].shape == (X.shape[1], 1)
+    assert res["intercept"].shape == (1, 1)
+    assert res["chain_transform_matrix"].shape == (X.shape[1], X.shape[1])
+    assert res["n_chains"] == 2.0
+    assert res["n_operators"] in {1.0, 2.0}
+    assert res["n_features_transformed"] == float(X.shape[1])
+    assert res["n_components"] in {1.0, 2.0}
+    assert res["ridge_lambda"] in {0.0, 0.1}
+    assert res["selected_cv_rmse"] == pytest.approx(
+        np.min(res["candidate_scores"][:, 4])
+    )
+    assert res["selection_mode"] == "chain_ridge_pls"
+    assert res["ridge_pls_backend"] == "native"
+    assert res["n_ridge_pls_fit_calls"] == float(8 * 4 + 1)
+    np.testing.assert_array_equal(res["fold_ids"], folds)
+    np.testing.assert_allclose(
+        X @ res["input_coefficients"] + res["intercept"],
+        res["predictions"],
+        rtol=1e-8,
+        atol=1e-8,
+    )
+
+    transformed_only = n4m.aom_chain_ridge_pls(
+        X,
+        y,
+        chains=[chains[1]],
+        pls_components=[1],
+        ridge_lambdas=[0.0],
+        cv=4,
+        fold_ids=folds,
+    )
+    assert transformed_only["n_operators"] == 2.0
+    assert not np.allclose(
+        transformed_only["chain_transform_matrix"],
+        np.eye(X.shape[1]),
+    )
+    np.testing.assert_allclose(
+        X @ transformed_only["input_coefficients"] + transformed_only["intercept"],
+        transformed_only["predictions"],
+        rtol=1e-8,
+        atol=1e-8,
+    )
+
+
+def test_native_aom_chain_ridge_pls_wrapper_replays_and_reports_grid():
+    X, y = _aom_dataset()
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    chains = [
+        [("identity", ())],
+        [("savgol_smooth", (5, 2)), ("finite_difference", (1,))],
+    ]
+
+    model = NativeAOMChainRidgePLSRegressor(
+        chains=chains,
+        pls_components=[1, 2],
+        ridge_lambdas=[0.0, 0.1],
+        cv=4,
+        fold_ids=folds,
+    ).fit(X, y)
+
+    assert hasattr(n4m, "aom_chain_ridge_pls")
+    assert hasattr(n4m, "NativeAOMChainRidgePLSRegressor")
+    np.testing.assert_allclose(
+        model.predict(X),
+        model.result_["predictions"].ravel(),
+        rtol=1e-8,
+        atol=1e-8,
+    )
+    diagnostics = model.get_diagnostics()
+    assert diagnostics["n_chains"] == 2
+    assert diagnostics["n_components"] in {1, 2}
+    assert diagnostics["ridge_lambda"] in {0.0, 0.1}
+    assert diagnostics["n_candidates"] == 8
+    assert diagnostics["n_features_transformed"] == X.shape[1]
+    assert diagnostics["ridge_pls_backend"] == "native"
+    assert diagnostics["n_ridge_pls_fit_calls"] == 8 * 4 + 1
 
 
 def test_native_aom_operator_pls_stack_compact_contract():
@@ -3823,6 +4712,21 @@ def test_native_aom_operator_pls_stack_compact_contract():
     assert diagnostics["n_specs"] == 4
     assert diagnostics["profile_name"] == "compact"
     assert diagnostics["expected_bank_size"] == 12
+    # n_specs=4, cv=4, n_operators=12: 21 stack fits, 252 PLS fits.
+    assert diagnostics["n_pls_stack_cv_fits"] == 240
+    assert diagnostics["n_pls_stack_final_fits"] == 12
+    assert diagnostics["n_ridge_stack_cv_fits"] == 20
+    assert diagnostics["n_ridge_stack_final_fits"] == 1
+    assert diagnostics["n_operator_pls_stack_fit_calls"] == 21
+    assert diagnostics["n_operator_pls_stack_pls_fit_calls"] == 252
+    assert diagnostics["n_operator_pls_stack_ridge_fit_calls"] == 21
+    assert int(res["n_pls_stack_cv_fits"]) == 240
+    assert int(res["n_pls_stack_final_fits"]) == 12
+    assert int(res["n_ridge_stack_cv_fits"]) == 20
+    assert int(res["n_ridge_stack_final_fits"]) == 1
+    assert int(res["n_operator_pls_stack_fit_calls"]) == 21
+    assert int(res["n_operator_pls_stack_pls_fit_calls"]) == 252
+    assert int(res["n_operator_pls_stack_ridge_fit_calls"]) == 21
 
 
 def test_native_aom_operator_pls_stack_rejects_multi_output_y():
