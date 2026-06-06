@@ -334,6 +334,7 @@ def test_catalogued_native_aom_moment_bindings_are_exposed_on_a_facade():
 def test_aom_inventory_covers_reuse_presets_and_global_campaign_surfaces():
     rows = _rows_by_name(aom)
     required = {
+        "chain_score_campaign": "ultra_configurable_score_screen",
         "screen_refit_campaign": "ultra_configurable_campaign",
         "moment_fast_screen_refit_campaign": "preconfigured_global_screen_refit",
         "staged_chain_campaign": "staged_screen_refit_orchestration",
@@ -395,6 +396,21 @@ def test_moment_inventory_covers_direct_heads_stack_and_aom_reuse_surfaces():
         assert row["cpu"] is True
         assert row["cuda"] is True
         assert row.get("reuse"), (name, row)
+
+    strict_moment_heads = ("ridge", "pls", "pcr", "continuum", "ecr", "cppls")
+    forbidden_non_moment_heads = {
+        "catboost",
+        "kernel",
+        "random_forest",
+        "rbf",
+        "rff",
+        "tabpfn",
+        "tree",
+    }
+    for name in ("moment_stack", "moment_stack_regressor"):
+        heads = tuple(rows[name]["heads"])
+        assert heads == strict_moment_heads
+        assert forbidden_non_moment_heads.isdisjoint(heads), (name, heads)
 
 
 @pytest.mark.parametrize("label", sorted(_FACADES))
