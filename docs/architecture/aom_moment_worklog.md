@@ -1,5 +1,46 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Force-moments bypasses CPU wide Ridge materialization heuristic
+
+Purpose:
+
+- Keep `moment_policy="force_moments"` strict for Ridge `score_only` screens
+  when Ridge moments are mathematically admissible but the CPU wide-Ridge
+  performance heuristic would normally choose materialization.
+
+Changes:
+
+- In `run_aom_ridge_operator_moment_sweep`, the score-only Ridge batch path now
+  honors the already selected forced moment route before applying
+  `should_materialize_cpu_wide_ridge()`.
+- This is limited to the Ridge moment score batch. Non-forced routing keeps the
+  existing CPU wide materialization heuristic, and full/refit runs still use
+  the existing selected-chain final-fit path.
+- Added
+  `test_aom_ridge_force_moments_bypasses_cpu_wide_materialization_heuristic`,
+  covering `n=40, p=64`, positive Ridge lambdas and zero materialized
+  candidates. The test also checks exact RMSE agreement against the explicit
+  materialized screen.
+
+Validation:
+
+- Rebuilt `build/dev-release` `n4m_c`.
+- Rebuilt `build/cuda-on` `n4m_c`.
+- Targeted force-moments pytest:
+  `2 passed, 80 deselected`.
+- Full dev-release wrapper test file:
+  `test_moment_model_wrappers.py` passed (`82 passed`).
+- Manual repro for the prior `n=40, p=48`, `cv=4`, Ridge-only
+  `force_moments`, `score_only=True` failure now returns two Ridge moment
+  candidates, zero materialized candidates and one score batch with eight jobs.
+- Manual one-GPU CUDA smoke with `CUDA_VISIBLE_DEVICES=0` reports the same
+  Ridge moment route counters on `build/cuda-on`.
+
+Follow-up:
+
+- This fixes a forced-screen route inconsistency. It is still not the deferred
+  fused/batched Ridge/PLS many-chain executor.
+
 ## 2026-06-06 - Force-moments bypasses CPU wide PLS materialization heuristic
 
 Purpose:

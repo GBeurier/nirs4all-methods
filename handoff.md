@@ -2440,3 +2440,32 @@ Force-moments CPU wide PLS route slice (2026-06-06):
     zero materialized candidates and four CUDA PLS parallel-fold jobs.
 - Remaining true gap is unchanged: this broadens the forced moment screen
   surface, but it is not the fused/batched IKPLS many-chain executor.
+
+Force-moments CPU wide Ridge route slice (2026-06-06):
+
+- Fixed the inner Ridge `score_only` batch path so a route already accepted
+  under `moment_policy="force_moments"` is not rejected again by the CPU
+  wide-Ridge materialization heuristic.
+- Scope is intentionally narrow: non-forced Ridge still keeps the existing CPU
+  wide materialization heuristic, and full/refit runs still use the existing
+  selected-chain final-fit path.
+- The motivating case was Ridge-only AOM moment scoring at `n=40, p=48`,
+  `cv=4`, positive lambdas and `score_only=True`; it previously returned
+  `UNSUPPORTED` and now returns two Ridge moment candidates, zero materialized
+  candidates and one score batch with eight jobs.
+- Added
+  `test_aom_ridge_force_moments_bypasses_cpu_wide_materialization_heuristic`
+  using `n=40, p=64` to cover the banded underdetermined route, and checking
+  exact RMSE agreement with an explicit materialized screen.
+- Validation:
+  - rebuilt `build/dev-release` `n4m_c`.
+  - rebuilt `build/cuda-on` `n4m_c`.
+  - targeted PLS/Ridge force-moments pytest:
+    `2 passed, 80 deselected`.
+  - full dev-release `test_moment_model_wrappers.py`:
+    `82 passed`.
+  - manual one-GPU CUDA smoke with `CUDA_VISIBLE_DEVICES=0`:
+    two candidates, zero materialized candidates and one Ridge moment score
+    batch with eight jobs.
+- Remaining true gap is unchanged: this fixes forced Ridge screen semantics,
+  but it is not the fused/batched Ridge/PLS many-chain executor.

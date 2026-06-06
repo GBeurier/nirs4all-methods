@@ -1730,7 +1730,10 @@ void account_pls_fit_counters(AomSweepResult& out,
         MomentPrefixCache batch_cache;
         batch_cache.enabled = true;
         const auto p = static_cast<std::size_t>(X.cols);
-        bool all_supported = !should_materialize_cpu_wide_ridge(X, fold_rows);
+        const bool force_operator_moments = force_operator_moments_policy(cfg);
+        bool all_supported =
+            force_operator_moments ||
+            !should_materialize_cpu_wide_ridge(X, fold_rows);
         if (all_supported) {
             for (const auto& chain : chains) {
                 MomentStats all_transformed;
@@ -1818,7 +1821,7 @@ void account_pls_fit_counters(AomSweepResult& out,
             return N4M_OK;
         }
 
-        if (force_operator_moments_policy(cfg)) {
+        if (force_operator_moments) {
             return reject_forced_moment_fallback(
                 ctx, "Ridge chain is not eligible for operator-moment scoring");
         }

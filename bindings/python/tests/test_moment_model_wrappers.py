@@ -227,6 +227,59 @@ def test_aom_pls_force_moments_bypasses_cpu_wide_materialization_heuristic():
     assert np.isfinite(got["selected_cv_rmse"])
 
 
+def test_aom_ridge_force_moments_bypasses_cpu_wide_materialization_heuristic():
+    rng = np.random.default_rng(20260609)
+    X = rng.standard_normal((40, 64))
+    y = 0.9 * X[:, 0] - 0.4 * X[:, 5] + 0.2 * X[:, 13]
+    y += 0.04 * rng.standard_normal(X.shape[0])
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    lambdas = [0.1, 1.0]
+
+    forced = n4m.aom_chain_sweep_run(
+        X,
+        y,
+        [[("identity", ())]],
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=lambdas,
+        pls_components=[],
+        heads=("ridge",),
+        scale_x=False,
+        moment_policy="force_moments",
+        score_only=True,
+    )
+    materialized = n4m.aom_chain_sweep_run(
+        X,
+        y,
+        [[("identity", ())]],
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=lambdas,
+        pls_components=[],
+        heads=("ridge",),
+        scale_x=False,
+        moment_policy="materialized",
+        score_only=True,
+    )
+
+    assert forced["n_materialized_candidates"] == 0.0
+    assert forced["n_ridge_operator_moment_candidates"] == forced["n_candidates"]
+    assert forced["n_ridge_moment_score_batch_calls"] == 1.0
+    assert forced["n_ridge_moment_score_batch_jobs"] == len(lambdas) * 4
+    assert forced["n_ridge_moment_cv_fits"] == len(lambdas) * 4
+    assert forced["n_ridge_moment_final_fits"] == 0.0
+    assert np.all(np.isfinite(forced["candidate_scores"][:, 4]))
+    assert "materialized" not in {
+        row["score_route"] for row in n4m.aom_candidate_table(forced)
+    }
+    np.testing.assert_allclose(
+        forced["candidate_scores"][:, 4],
+        materialized["candidate_scores"][:, 4],
+        rtol=1e-10,
+        atol=1e-10,
+    )
+
+
 def _assert_aom_route_partitions(res):
     assert (
         res["n_ridge_operator_moment_candidates"]
