@@ -1188,6 +1188,7 @@ def _assert_screen_refit_scaling_rows(
     expected_split_head_scoring: str,
     expected_parallel_folds: bool,
     expected_min_device_features: int | None,
+    expected_many_batched: bool = False,
 ) -> None:
     assert len(rows) == expected_row_count, csv_name
     assert {row["backend"] for row in rows} == {"native_aom_screen_refit_scaling"}
@@ -1207,7 +1208,7 @@ def _assert_screen_refit_scaling_rows(
             _assert_dev_release_build_path(row["library_path"])
         _assert_current_aom_artifact_abi(row)
         assert _bool(row, "cuda_pls_parallel_folds") is expected_parallel_folds
-        assert _bool(row, "cuda_pls_many_batched") is False
+        assert _bool(row, "cuda_pls_many_batched") is expected_many_batched
         if expected_min_device_features is None:
             assert row["cuda_pls_min_device_features"] == ""
         else:
@@ -1228,6 +1229,21 @@ def _assert_screen_refit_scaling_rows(
     pls_parallel_jobs = sum(
         _int(row, "n_refit_pls_moment_cuda_parallel_fold_jobs") for row in rows
     )
+    pls_many_batches = sum(
+        _int(row, "n_refit_pls_moment_cuda_many_batched_batches") for row in rows
+    )
+    pls_many_jobs = sum(
+        _int(row, "n_refit_pls_moment_cuda_many_batched_jobs") for row in rows
+    )
+    screen_parallel_jobs = sum(
+        _int(row, "screen_pls_moment_cuda_parallel_fold_jobs") for row in rows
+    )
+    screen_many_batches = sum(
+        _int(row, "screen_pls_moment_cuda_many_batched_batches") for row in rows
+    )
+    screen_many_jobs = sum(
+        _int(row, "screen_pls_moment_cuda_many_batched_jobs") for row in rows
+    )
     ridge_refit_cv = sum(_int(row, "n_refit_ridge_moment_cv_fits") for row in rows)
     ridge_score_jobs = sum(
         _int(row, "n_refit_ridge_moment_score_batch_jobs") for row in rows
@@ -1238,16 +1254,31 @@ def _assert_screen_refit_scaling_rows(
         if expect_cuda_build:
             assert pls_host == 0
             assert pls_device == pls_cv
-            assert pls_parallel_jobs == pls_cv
+            if expected_many_batched:
+                assert pls_parallel_jobs == 0
+                assert pls_many_batches > 0
+                assert pls_many_jobs == pls_cv
+            else:
+                assert pls_parallel_jobs == pls_cv
+                assert pls_many_batches == 0
+                assert pls_many_jobs == 0
         else:
             assert pls_host == pls_cv
             assert pls_device == 0
             assert pls_parallel_jobs == 0
+            assert pls_many_batches == 0
+            assert pls_many_jobs == 0
     else:
         assert pls_cv == 0
         assert pls_host == 0
         assert pls_device == 0
         assert pls_parallel_jobs == 0
+        assert pls_many_batches == 0
+        assert pls_many_jobs == 0
+
+    assert screen_parallel_jobs == 0
+    assert screen_many_batches == 0
+    assert screen_many_jobs == 0
 
     if head in {"ridge", "mixed"}:
         assert ridge_refit_cv > 0
@@ -1274,14 +1305,32 @@ def _assert_screen_refit_scaling_rows(
         "expected_refit_per_head_top_k",
         "expected_parallel_folds",
         "expected_min_device_features",
+        "expected_many_batched",
     ),
     (
-        ("aom_screen_refit_scaling.csv", "pls", False, 0, False, None),
-        ("aom_screen_refit_scaling_cuda_smoke.csv", "pls", True, 0, True, 1),
-        ("aom_mixed_screen_refit_scaling.csv", "mixed", False, 4, False, None),
-        ("aom_mixed_screen_refit_scaling_cuda_smoke.csv", "mixed", True, 4, True, 1),
-        ("aom_ridge_refit_scaling.csv", "ridge", False, 0, False, None),
-        ("aom_ridge_refit_scaling_cuda_smoke.csv", "ridge", True, 0, True, 1),
+        ("aom_screen_refit_scaling.csv", "pls", False, 0, False, None, False),
+        ("aom_screen_refit_scaling_cuda_smoke.csv", "pls", True, 0, True, 1, False),
+        (
+            "aom_screen_refit_scaling_cuda_many_batched_smoke.csv",
+            "pls",
+            True,
+            0,
+            False,
+            1,
+            True,
+        ),
+        ("aom_mixed_screen_refit_scaling.csv", "mixed", False, 4, False, None, False),
+        (
+            "aom_mixed_screen_refit_scaling_cuda_smoke.csv",
+            "mixed",
+            True,
+            4,
+            True,
+            1,
+            False,
+        ),
+        ("aom_ridge_refit_scaling.csv", "ridge", False, 0, False, None, False),
+        ("aom_ridge_refit_scaling_cuda_smoke.csv", "ridge", True, 0, True, 1, False),
     ),
 )
 def test_screen_refit_scaling_artifacts_cover_global_campaign_profiles(
@@ -1291,6 +1340,7 @@ def test_screen_refit_scaling_artifacts_cover_global_campaign_profiles(
     expected_refit_per_head_top_k: int,
     expected_parallel_folds: bool,
     expected_min_device_features: int | None,
+    expected_many_batched: bool,
 ):
     rows = _rows(csv_name)
 
@@ -1304,6 +1354,7 @@ def test_screen_refit_scaling_artifacts_cover_global_campaign_profiles(
         expected_split_head_scoring="auto",
         expected_parallel_folds=expected_parallel_folds,
         expected_min_device_features=expected_min_device_features,
+        expected_many_batched=expected_many_batched,
     )
     assert {_int(row, "refit_top_k") for row in rows} == {1, 2, 4, 8, 16}
     assert {row["execution_mode_requested"] for row in rows} == {
