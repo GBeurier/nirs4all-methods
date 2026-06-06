@@ -327,9 +327,38 @@ def load_completed(path: Path) -> set[str]:
     return completed
 
 
+def validate_existing_result_header(path: Path) -> None:
+    """Refuse appending current rows to an older or incompatible CSV schema."""
+    if not path.is_file() or path.stat().st_size == 0:
+        return
+    with path.open(newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        header = next(reader, None)
+    if header == list(RESULT_FIELDS):
+        return
+    header = header or []
+    missing = [field for field in RESULT_FIELDS if field not in header]
+    extra = [field for field in header if field not in RESULT_FIELDS]
+    order_changed = not missing and not extra
+    details = []
+    if missing:
+        details.append(f"missing={missing}")
+    if extra:
+        details.append(f"extra={extra}")
+    if order_changed:
+        details.append("field order differs")
+    raise ValueError(
+        f"{path} has an incompatible staged-cohort CSV schema; "
+        "resume would corrupt columns. Use a fresh --output or migrate the "
+        f"artifact explicitly ({'; '.join(details)})."
+    )
+
+
 def append_row(path: Path, row: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     exists = path.is_file()
+    if exists:
+        validate_existing_result_header(path)
     with path.open("a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=RESULT_FIELDS)
         if not exists:
