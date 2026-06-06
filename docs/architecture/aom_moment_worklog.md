@@ -1,5 +1,46 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Moment facade exposes full reusable AOM surface
+
+Purpose:
+
+- Make `n4m.moment` a self-contained facade for the reusable AOM/moment
+  methods, not only the low-level moment helpers and a subset of presets.
+
+Changes:
+
+- Re-exported native AOM preprocess/profile/chain sweep functions from
+  `n4m.moment`: `aom_preprocess`, `aom_global_select`,
+  `aom_per_component_select`, `aom_sweep_run`, `aom_chain_sweep_run`,
+  `aom_robust_hpo`, `aom_ridge_blender` and `aom_operator_pls_stack`.
+- Re-exported the missing reusable AOM sklearn wrappers in `n4m.moment`:
+  `NativeAOMChainSweepRegressor`, `NativeAOMScreenRefitRegressor`,
+  `NativeAOMOperatorPLSStackRegressor`, `NativeAOMRidgeBlenderRegressor`,
+  `NativeAOMRobustHPORegressor`, `NativeAOMPLSRegressor`,
+  `NativeAOMSweepRegressor` and `NativePOPPLSRegressor`.
+- Added corresponding `available_methods()` rows for the fit/predict surfaces
+  so the moment facade advertises native AOM sweeps, generic screen-refit,
+  Ridge blender, operator PLS stack, robust HPO, AOM-PLS and POP-PLS alongside
+  the existing moment-specific presets.
+- Corrected the `pls_cross_validate` inventory role to be a secondary helper
+  over `sweep_run` rather than a second primary `utilities.sweep` catalog
+  binding.
+
+Validation:
+
+- `test_aom_moment_facade.py` passed (`26 passed`).
+- Targeted facade/inventory wrapper selection passed
+  (`27 passed, 82 deselected`).
+- Full dev-release `test_moment_model_wrappers.py` passed (`83 passed`).
+- Full dev-release `test_aom_staged_campaign.py` passed (`16 passed`).
+- Python `py_compile` on the touched facade/test files passed.
+- CUDA facade smoke passed on `CUDA_VISIBLE_DEVICES=0`.
+
+Follow-up:
+
+- This improves method discoverability/reuse only. It does not implement the
+  fused/batched Ridge/PLS many-chain executor.
+
 ## 2026-06-06 - Force-moments Ridge banded cap extends to p=512
 
 Purpose:
