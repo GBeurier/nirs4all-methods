@@ -2568,3 +2568,20 @@ Strict AOM portfolio CPU timing artifact slice (2026-06-06):
   - full `test_aom_moment_cuda_smoke_artifacts.py`: `34 passed`.
 - Remaining true gap is unchanged: this improves CPU/GPU timing evidence, but
   not the fused/batched Ridge/PLS many-chain executor.
+
+Strict AOM portfolio timing refresh slice (2026-06-06):
+
+- Regenerated the strict AOM portfolio timing artifacts against ABI 1.22.0 on
+  both `build/dev-release` and one-GPU `build/cuda-on` where applicable:
+  preprocess, AOM selector, Ridge blender, operator PLS stack, robust HPO,
+  all strict AOM superblock/chain timing pairs, Ridge global and staged chain
+  campaign.
+- Strengthened
+  `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py` so those
+  AOM artifacts must report ABI 1.22.0, expected CPU/CUDA library paths,
+  native+sklearn replay rows where applicable, CPU host PLS counters on
+  dev-release, and CUDA device PLS counters on cuda-on.
+- Validation:
+  - full `test_aom_moment_cuda_smoke_artifacts.py`: `36 passed`.
+- Remaining true gap is unchanged: this refreshes release evidence, but not
+  the fused/batched Ridge/PLS many-chain executor.

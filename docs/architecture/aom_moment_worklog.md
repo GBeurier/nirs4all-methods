@@ -1,5 +1,36 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Strict AOM portfolio timing artifacts refreshed to ABI 1.22
+
+Purpose:
+
+- Remove stale ABI metadata from committed strict AOM timing evidence after the
+  latest native AOM/moment route changes.
+
+Changes:
+
+- Regenerated the strict AOM portfolio CPU and CUDA timing artifacts against
+  ABI 1.22.0:
+  `aom_preprocess_timing(.csv|_cuda_smoke.csv)`,
+  `aom_selector_timing(.csv|_cuda_smoke.csv)`,
+  `aom_ridge_blender_timing(.csv|_cuda_smoke.csv)`,
+  `aom_operator_pls_stack_timing(.csv|_cuda_smoke.csv)`,
+  `aom_robust_hpo_timing(.csv|_cuda_smoke.csv)`,
+  all strict AOM superblock/chain timing pairs, and
+  `aom_staged_chain_campaign_timing(.csv|_cuda_smoke.csv)`.
+- Strengthened artifact guards so these AOM artifacts must report ABI 1.22.0,
+  the expected CPU/CUDA library path, native+sklearn replay rows where
+  applicable, and CPU-vs-CUDA PLS route counters.
+
+Validation:
+
+- Full `test_aom_moment_cuda_smoke_artifacts.py` passed (`36 passed`).
+
+Follow-up:
+
+- Moment sweep/stack/crossover artifacts still contain older historical ABI
+  metadata and remain a separate refresh slice.
+
 ## 2026-06-06 - Strict AOM portfolio CPU timing artifacts
 
 Purpose:
@@ -24,13 +55,6 @@ Changes:
 Validation:
 
 - Full `test_aom_moment_cuda_smoke_artifacts.py` passed (`34 passed`).
-
-Follow-up:
-
-- Some older CPU timing artifacts (`aom_sweep_timing.csv`,
-  `aom_selector_timing.csv`, `aom_robust_hpo_timing.csv`) still pre-date the
-  latest ABI in their recorded metadata, but they already had committed CPU
-  rows. This slice targets the missing CPU-pair gap.
 
 ## 2026-06-06 - Staged real-cohort resume rejects stale CSV schemas
 

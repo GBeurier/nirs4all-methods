@@ -1,7 +1,7 @@
 backend,n_samples,n_features,cv,elapsed_ms,n_chains,n_candidates,selected_chain_id,selected_n_components,selected_ridge_lambda,selected_cv_rmse,min_candidate_rmse,replay_max_abs_error,prediction_replay_max_abs_error,selection_mode,ridge_pls_backend,n_ridge_pls_fit_calls,library_path,abi
-native_aom_chain_ridge_pls,32,32,4,2245.294783031568,2,8,0,2,0.0,0.46075550831452244,0.46075550831452244,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_chain_ridge_pls_sklearn,32,32,4,160.59389698784798,2,8,0,2,0.0,0.46075550831452244,0.46075550831452244,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_chain_ridge_pls,64,64,4,199.46942100068554,2,8,0,2,0.0,0.5814587070531846,0.5814587070531846,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_chain_ridge_pls_sklearn,64,64,4,409.3942829640582,2,8,0,2,0.0,0.5814587070531846,0.5814587070531846,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_chain_ridge_pls,96,128,4,342.10867201909423,2,8,0,2,0.0,0.5420032097929658,0.5420032097929658,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_chain_ridge_pls_sklearn,96,128,4,241.34858004981652,2,8,0,2,0.0,0.5420032097929658,0.5420032097929658,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.21.0
+native_aom_chain_ridge_pls,32,32,4,1314.4948279950768,2,8,0,2,0.0,0.46075550831452244,0.46075550831452244,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls_sklearn,32,32,4,93.14446698408574,2,8,0,2,0.0,0.46075550831452244,0.46075550831452244,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls,64,64,4,50.67636095918715,2,8,0,2,0.0,0.5814587070531846,0.5814587070531846,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls_sklearn,64,64,4,51.205275987740606,2,8,0,2,0.0,0.5814587070531846,0.5814587070531846,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls,96,128,4,57.868219970259815,2,8,0,2,0.0,0.5420032097929658,0.5420032097929658,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls_sklearn,96,128,4,60.24984997930005,2,8,0,2,0.0,0.5420032097929658,0.5420032097929658,0.0,0.0,chain_ridge_pls,native,33,build/cuda-on/cpp/src/libn4m.so,1.22.0
