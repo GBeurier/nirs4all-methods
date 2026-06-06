@@ -67,6 +67,16 @@ Benchmark note: campaign timing scripts now expose
 CPU/CUDA launch recommendation used in reports can be reproduced or overridden
 from scripted runs without changing candidate scores.
 
+Timing artifact note: the strict AOM portfolio now has committed CPU
+`build/dev-release` timing pairs for the previously CUDA-only smoke artifacts:
+`aom_preprocess_timing.csv`, `aom_ridge_superblock_timing.csv`,
+`aom_ridge_active_superblock_timing.csv`,
+`aom_ridge_mkl_superblock_timing.csv`, `aom_pls_superblock_timing.csv`,
+`aom_ridge_pls_superblock_timing.csv`, `aom_chain_ridge_pls_timing.csv`,
+`aom_ridge_global_timing.csv` and `aom_staged_chain_campaign_timing.csv`.
+Release guards assert those CPU rows use the host/dev-release route while the
+existing CUDA smokes keep the one-GPU `build/cuda-on` route.
+
 | Surface | Required shape before completion | Reason it is still open |
 |---|---|---|
 | Fused/batched IKPLS mode for `n4m_sweep_run` | native batch/sweep ABI for device/host-fused free component CV over many PLS variants | ABI 1.22.0 exposes `n4m_pls_cross_validate` as an exact PLS-only reference surface and tests equivalence to the PLS branch of `n4m_sweep_run`; `bench_pls_cross_validate_timing.py` now pins CPU/CUDA smoke artifacts and route counters for that reference hook; current ABI v1 already scores compatible single-target PLS1 grids from moment cross-products, i.e. an IKPLS-style sufficient-statistics route, and falls back to one max-component materialized fit per fold for other PLS regimes, but it is still not fused across many chains/folds/candidates |

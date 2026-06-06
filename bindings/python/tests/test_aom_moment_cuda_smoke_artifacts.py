@@ -45,6 +45,10 @@ def _assert_cuda_build_path(path: str) -> None:
     assert "build/cuda-on" in path, path
 
 
+def _assert_dev_release_build_path(path: str) -> None:
+    assert "build/dev-release" in path, path
+
+
 def _assert_direct_moment_heads_rows(
     rows: list[dict[str, str]],
     *,
@@ -576,8 +580,24 @@ def test_aom_selector_cuda_smoke_artifact_covers_function_and_sklearn_replay():
 
 
 def test_aom_preprocess_cuda_smoke_artifact_covers_direct_linear_operators():
-    rows = _rows("aom_preprocess_timing_cuda_smoke.csv")
+    _assert_aom_preprocess_rows(
+        _rows("aom_preprocess_timing_cuda_smoke.csv"),
+        expect_cuda_build=True,
+    )
 
+
+def test_aom_preprocess_cpu_artifact_covers_direct_linear_operators():
+    _assert_aom_preprocess_rows(
+        _rows("aom_preprocess_timing.csv"),
+        expect_cuda_build=False,
+    )
+
+
+def _assert_aom_preprocess_rows(
+    rows: list[dict[str, str]],
+    *,
+    expect_cuda_build: bool,
+) -> None:
     expected_shapes = {(48, 24), (96, 64), (160, 128)}
     expected_operator_kinds = {
         "identity": 0,
@@ -600,7 +620,10 @@ def test_aom_preprocess_cuda_smoke_artifact_covers_direct_linear_operators():
     )
 
     for row in rows:
-        _assert_cuda_build_path(row["library_path"])
+        if expect_cuda_build:
+            _assert_cuda_build_path(row["library_path"])
+        else:
+            _assert_dev_release_build_path(row["library_path"])
         operator = row["operator"]
         assert _int(row, "n_operators") == 1
         assert _int(row, "operator_kind") == expected_operator_kinds[operator]
@@ -610,6 +633,89 @@ def test_aom_preprocess_cuda_smoke_artifact_covers_direct_linear_operators():
         if operator == "identity":
             assert _float(row, "input_replay_max_abs_error") <= 1e-12
         assert math.isfinite(_float(row, "elapsed_ms_median"))
+
+
+@pytest.mark.parametrize(
+    ("csv_name", "native_backend", "wrapper_backend"),
+    (
+        (
+            "aom_ridge_superblock_timing.csv",
+            "native_aom_ridge_superblock",
+            "native_aom_ridge_superblock_sklearn",
+        ),
+        (
+            "aom_ridge_active_superblock_timing.csv",
+            "native_aom_ridge_active_superblock",
+            "native_aom_ridge_active_superblock_sklearn",
+        ),
+        (
+            "aom_ridge_mkl_superblock_timing.csv",
+            "native_aom_ridge_mkl_superblock",
+            "native_aom_ridge_mkl_superblock_sklearn",
+        ),
+        (
+            "aom_pls_superblock_timing.csv",
+            "native_aom_pls_superblock",
+            "native_aom_pls_superblock_sklearn",
+        ),
+        (
+            "aom_ridge_pls_superblock_timing.csv",
+            "native_aom_ridge_pls_superblock",
+            "native_aom_ridge_pls_superblock_sklearn",
+        ),
+        (
+            "aom_chain_ridge_pls_timing.csv",
+            "native_aom_chain_ridge_pls",
+            "native_aom_chain_ridge_pls_sklearn",
+        ),
+        (
+            "aom_ridge_global_timing.csv",
+            "native_aom_ridge_global",
+            "native_aom_ridge_global_sklearn",
+        ),
+    ),
+)
+def test_diversity_cpu_artifacts_cover_native_and_sklearn_replay(
+    csv_name: str,
+    native_backend: str,
+    wrapper_backend: str,
+):
+    rows = _rows(csv_name)
+    backends = {row["backend"] for row in rows}
+    assert native_backend in backends
+    assert wrapper_backend in backends
+
+    for row in rows:
+        _assert_dev_release_build_path(row["library_path"])
+        elapsed_key = (
+            "elapsed_ms_median" if "elapsed_ms_median" in row else "elapsed_ms"
+        )
+        assert math.isfinite(_float(row, elapsed_key))
+        if "ridge_backend" in row:
+            assert row["ridge_backend"] in {"native", "native_aom_chain_sweep"}
+        if "pls_backend" in row:
+            assert row["pls_backend"] == "native"
+            n_cv = _int(row, "n_pls_moment_cv_fits")
+            assert n_cv > _int(row, "n_candidates")
+            assert _int(row, "n_pls_moment_host_cv_fits") == n_cv
+            assert _int(row, "n_pls_moment_cuda_device_cv_fits") == 0
+            assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
+            assert _int(row, "n_pls_moment_cuda_many_batched_batches") == 0
+            assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
+            assert _int(row, "n_pls_moment_final_fits") > 1
+            assert _int(row, "n_pls_moment_host_final_fits") == _int(
+                row,
+                "n_pls_moment_final_fits",
+            )
+            assert _int(row, "n_pls_moment_cuda_device_final_fits") == 0
+        if "ridge_pls_backend" in row:
+            assert row["ridge_pls_backend"] == "native"
+            assert _int(row, "n_ridge_pls_fit_calls") == (
+                _int(row, "n_candidates") * _int(row, "cv") + 1
+            )
+    for row in rows:
+        if row["backend"] == wrapper_backend:
+            assert _float(row, "prediction_replay_max_abs_error") <= 1e-10
 
 
 @pytest.mark.parametrize(
@@ -741,6 +847,28 @@ def test_robust_hpo_cuda_smoke_artifact_covers_native_winner_path():
         if row["backend"] == "native_sklearn":
             assert _float(row, "prediction_replay_max_abs_error") <= 1e-10
     assert all(backends == {"native_abi", "native_sklearn"} for backends in seen_by_shape.values())
+
+
+def test_aom_staged_chain_campaign_cpu_artifact_covers_host_route():
+    row = _only_row("aom_staged_chain_campaign_timing.csv")
+
+    _assert_dev_release_build_path(row["library_path"])
+    assert row["backend"] == "native_aom_staged_chain_campaign"
+    assert row["plan"] == "compact"
+    assert row["heads"] == "pls"
+    assert _bool(row, "selection_uses_test_set") is False
+    assert _bool(row, "screen_complete") is True
+    assert _int(row, "n_refit_candidates") >= 1
+    assert _int(row, "n_pls_moment_cv_fits") > 0
+    assert _int(row, "n_pls_moment_host_cv_fits") == _int(
+        row,
+        "n_pls_moment_cv_fits",
+    )
+    assert _int(row, "n_pls_moment_cuda_device_cv_fits") == 0
+    assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
+    assert _int(row, "n_pls_moment_cuda_many_batched_batches") == 0
+    assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
+    assert math.isfinite(_float(row, "best_refit_cv_rmse"))
 
 
 @pytest.mark.parametrize(

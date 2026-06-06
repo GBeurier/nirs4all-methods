@@ -1,0 +1,7 @@
+backend,n_samples,n_features,cv,elapsed_ms,n_chains,n_candidates,selected_chain_id,selected_n_components,selected_ridge_lambda,selected_cv_rmse,min_candidate_rmse,replay_max_abs_error,prediction_replay_max_abs_error,selection_mode,ridge_pls_backend,n_ridge_pls_fit_calls,library_path,abi
+native_aom_chain_ridge_pls,32,32,4,10.067989001981914,2,8,0,2,0.0,0.46075550831452244,0.46075550831452244,0.0,0.0,chain_ridge_pls,native,33,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls_sklearn,32,32,4,17.530942044686526,2,8,0,2,0.0,0.46075550831452244,0.46075550831452244,0.0,0.0,chain_ridge_pls,native,33,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls,64,64,4,25.53674200316891,2,8,0,2,0.0,0.5814587070531846,0.5814587070531846,0.0,0.0,chain_ridge_pls,native,33,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls_sklearn,64,64,4,9.275892982259393,2,8,0,2,0.0,0.5814587070531846,0.5814587070531846,0.0,0.0,chain_ridge_pls,native,33,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls,96,128,4,16.557993018068373,2,8,0,2,0.0,0.5420032097929658,0.5420032097929658,0.0,0.0,chain_ridge_pls,native,33,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_chain_ridge_pls_sklearn,96,128,4,14.298870984930545,2,8,0,2,0.0,0.5420032097929658,0.5420032097929658,0.0,0.0,chain_ridge_pls,native,33,build/dev-release/cpp/src/libn4m.so,1.22.0

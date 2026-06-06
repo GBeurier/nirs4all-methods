@@ -212,6 +212,11 @@ ABI-close function, the native sklearn replay wrapper, or both with
 visible GPU and `--mode both`, so they prove both the native function row and
 the sklearn wrapper replay row on the CUDA-enabled shared library:
 
+For release artifacts, the base `*_timing.csv` files are the CPU/dev-release
+pairs and the `*_timing_cuda_smoke.csv` files are the one-GPU CUDA pairs. Use
+the same command shape with `N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so`
+and without `CUDA_VISIBLE_DEVICES` / CUDA-only flags to refresh a CPU pair.
+
 ```bash
 CUDA_VISIBLE_DEVICES=0 \
 PYTHONPATH=bindings/python/src \
