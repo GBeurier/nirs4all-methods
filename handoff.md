@@ -2850,3 +2850,28 @@ AOM screen-refit CUDA many-batched timing artifact (2026-06-06):
 - Remaining true gap is unchanged: this closes another release-evidence hole
   for the current public screen/refit route, but it is still not the fused
   batched IKPLS/cartesian CUDA grinder.
+
+Real-cohort PLS many-batched CUDA smoke artifact (2026-06-06):
+
+- Added the committed one-row held-out real-cohort smoke
+  `benchmarks/cross_binding/aom_staged_real_cohort_diesel_pls_many_batched_cuda_smoke.csv`,
+  generated with `run_aom_staged_real_cohort.py` on
+  `DIESEL/DIESEL_bp50_246_b-a`, PLS-only, `force_moments`, exact-CV PLS,
+  `--cuda-pls-min-device-features 1`, `--cuda-pls-many-batched`, and
+  `--backend-min-cuda-product 1`.
+- The row is ABI `1.22.0`, uses the one-GPU CUDA build, and records
+  `selection_uses_test_set=False`. It proves the real train/test benchmark
+  runner can now persist the current many-batched route counters:
+  screen PLS exact-CV `12/0/12` total/host/device with `2` many-batched
+  batches and `12` many-batched jobs; refit PLS exact-CV `6/0/6` with
+  `1` many-batched batch and `6` many-batched jobs; zero parallel-fold jobs.
+- Added the matching offline oracle join artifacts
+  `aom_staged_real_cohort_diesel_pls_many_batched_cuda_smoke_oracle_compare.csv`
+  and `.md`. This is a route/benchmark-pipeline smoke only: with four PLS
+  chains it is intentionally not competitive with the real AOM/TabPFN oracles.
+- Validation:
+  - focused real-cohort smoke artifact test: `1 passed`.
+  - full artifact guard file: `52 passed`.
+- Remaining true gap is unchanged: this proves the current benchmark runner and
+  many-batched telemetry on a held-out real split, but it is not the fused
+  cartesian/IKPLS CUDA engine.

@@ -7924,3 +7924,29 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
 - This closes release evidence for the existing public screen/refit
   many-batched CUDA route, without claiming the deferred fused IKPLS/cartesian
   CUDA executor.
+
+## 2026-06-06 — Real-Cohort PLS Many-Batched CUDA Smoke Artifact
+
+- Added `aom_staged_real_cohort_diesel_pls_many_batched_cuda_smoke.csv`, a
+  one-row held-out real-cohort smoke generated with
+  `run_aom_staged_real_cohort.py` on `DIESEL/DIESEL_bp50_246_b-a`, PLS-only,
+  `force_moments`, exact-CV PLS scoring, and the one-GPU CUDA many-batched
+  route (`--cuda-pls-min-device-features 1 --cuda-pls-many-batched
+  --backend-min-cuda-product 1`).
+- The artifact is ABI `1.22.0`, records `selection_uses_test_set=False`, and
+  proves the real benchmark runner now persists current PLS many-batched route
+  telemetry: screen exact-CV PLS has `12` total CV fits, zero host fits,
+  `12` CUDA device fits, `2` many-batched batches and `12` many-batched jobs;
+  refit exact-CV PLS has `6` total/device fits, zero host fits, one
+  many-batched batch and `6` many-batched jobs. Both stages report zero
+  parallel-fold jobs.
+- Added matching offline oracle join outputs
+  `aom_staged_real_cohort_diesel_pls_many_batched_cuda_smoke_oracle_compare.csv`
+  and `.md`. The smoke uses only four PLS chains, so the joined oracle summary
+  is benchmark-pipeline evidence, not a performance claim.
+- Validation:
+  - focused real-cohort smoke artifact test: `1 passed`.
+  - full artifact guard file: `52 passed`.
+- This closes a stale-evidence gap for real held-out benchmark artifacts after
+  ABI `1.22.0`, without claiming the deferred fused cartesian/IKPLS CUDA
+  engine.
