@@ -4,9 +4,8 @@
 # which broke the build before). The GPU runtime + CUDA↔CPU bit-parity were
 # verified locally on RTX 4090 / 5090 (rmse_rel = 0 on pcr/pls/mb_pls/gpr_pls).
 #
-# n4m compiles cuda_dispatch.cpp with the host C++ compiler + the CUDA include
-# path (no enable_language(CUDA)), so this needs the CUDA headers + cudart/cublas
-# libs, not a full nvcc/GPU stack.
+# n4m compiles cuda_dispatch.cpp with the host C++ compiler and a small
+# cuda_kernels.cu helper with nvcc, so this needs nvcc plus cudart/cublas libs.
 name: CUDA build
 
 on:

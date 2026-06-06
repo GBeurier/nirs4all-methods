@@ -51,17 +51,20 @@ function(n4m_add_warnings target)
     endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         target_compile_options(${target} PRIVATE
-            ${_n4m_gnu_clang_warnings}
-            ${_n4m_gnu_clang_disables})
+            $<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:${_n4m_gnu_clang_warnings}>
+            $<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:${_n4m_gnu_clang_disables}>)
     elseif(MSVC)
-        target_compile_options(${target} PRIVATE ${_n4m_msvc_warnings})
+        target_compile_options(${target} PRIVATE
+            $<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:${_n4m_msvc_warnings}>)
     endif()
 
     if(N4M_WARNINGS_AS_ERRORS)
         if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-            target_compile_options(${target} PRIVATE -Werror)
+            target_compile_options(${target} PRIVATE
+                $<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:-Werror>)
         elseif(MSVC)
-            target_compile_options(${target} PRIVATE /WX)
+            target_compile_options(${target} PRIVATE
+                $<$<NOT:$<COMPILE_LANGUAGE:CUDA>>:/WX>)
         endif()
     endif()
 endfunction()
