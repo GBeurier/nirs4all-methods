@@ -4386,6 +4386,49 @@ recovered = n4m.aom_chain_sweep_run(
     cuda_pls_min_device_features=1,
     cuda_pls_many_batched=True,
 )
+single_sweep_recovered = n4m.sweep_run(
+    X_bad,
+    y_bad,
+    cv=2,
+    fold_ids=folds_bad,
+    ridge_lambdas=[],
+    pls_components=[1, 2],
+    heads=("pls",),
+    scale_x=False,
+    score_only=True,
+    cuda_pls_parallel_folds=True,
+    cuda_pls_min_device_features=1,
+)
+single_cv_recovered = n4m.pls_cross_validate(
+    X_bad,
+    y_bad,
+    cv=2,
+    fold_ids=folds_bad,
+    component_grid=[1, 2],
+    score_only=True,
+    cuda_pls_parallel_folds=True,
+    cuda_pls_min_device_features=1,
+)
+
+def summarize_single(res):
+    return {
+        "candidate_scores": np.asarray(res["candidate_scores"], dtype=float).tolist(),
+        "n_pls_moment_cv_fits": int(res["n_pls_moment_cv_fits"]),
+        "n_pls_moment_host_cv_fits": int(
+            res["n_pls_moment_host_cv_fits"]
+        ),
+        "n_pls_moment_cuda_device_cv_fits": int(
+            res["n_pls_moment_cuda_device_cv_fits"]
+        ),
+        "n_pls_moment_cuda_parallel_fold_batches": int(
+            res["n_pls_moment_cuda_parallel_fold_batches"]
+        ),
+        "n_pls_moment_cuda_parallel_fold_jobs": int(
+            res["n_pls_moment_cuda_parallel_fold_jobs"]
+        ),
+        "n_pls_materialized_cv_fits": int(res["n_pls_materialized_cv_fits"]),
+    }
+
 print(json.dumps({
     "many_first": many_first,
     "legacy_override": legacy_override,
@@ -4413,6 +4456,8 @@ print(json.dumps({
             recovered["n_pls_moment_cuda_many_batched_jobs"]
         ),
     },
+    "single_sweep_recovered": summarize_single(single_sweep_recovered),
+    "single_cv_recovered": summarize_single(single_cv_recovered),
 }))
 """
 
@@ -4467,6 +4512,25 @@ print(json.dumps({
     assert recovered["n_pls_moment_cuda_device_cv_fits"] == 4
     assert recovered["n_pls_moment_host_cv_fits"] == 2
     assert recovered["n_pls_moment_cv_fits"] == 6
+
+    single_sweep = payload["single_sweep_recovered"]
+    single_cv = payload["single_cv_recovered"]
+    for row in (single_sweep, single_cv):
+        scores = np.asarray(row["candidate_scores"], dtype=float)
+        assert np.isfinite(scores[0, 3])
+        assert np.isinf(scores[1, 3])
+        assert row["n_pls_moment_cv_fits"] == 3
+        assert row["n_pls_moment_host_cv_fits"] == 1
+        assert row["n_pls_moment_cuda_device_cv_fits"] == 2
+        assert row["n_pls_moment_cuda_parallel_fold_batches"] == 1
+        assert row["n_pls_moment_cuda_parallel_fold_jobs"] == 2
+        assert row["n_pls_materialized_cv_fits"] == 0
+    np.testing.assert_allclose(
+        single_cv["candidate_scores"],
+        single_sweep["candidate_scores"],
+        rtol=1e-8,
+        atol=1e-6,
+    )
 
 
 def test_native_aom_chain_sweep_moment_prefix_cache_counters():

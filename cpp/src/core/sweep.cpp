@@ -1748,45 +1748,6 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
     return false;
 }
 
-[[nodiscard]] n4m_status_t recover_pls1_moment_prefix_for_job(
-    const Config& cfg,
-    const MomentStats& stats,
-    const std::vector<std::int32_t>& components,
-    const std::vector<std::int32_t>& components_desc,
-    const std::vector<unsigned char>& ok,
-    std::vector<RidgeMomentFit>& prefix_fits,
-    std::int32_t& recovered_component,
-    std::int64_t& n_attempts,
-    std::int64_t& n_host_attempts,
-    std::int64_t& n_cuda_device_attempts) {
-    prefix_fits.clear();
-    recovered_component = 0;
-    Context fit_ctx;
-    for (const auto attempt_comp : components_desc) {
-        if (!component_prefix_still_needed(components, ok, attempt_comp)) {
-            continue;
-        }
-        bool used_cuda_device = false;
-        ++n_attempts;
-        const n4m_status_t st = fit_pls1_moment_prefixes(
-            fit_ctx, cfg, stats, attempt_comp, prefix_fits,
-            &used_cuda_device);
-        if (used_cuda_device) {
-            ++n_cuda_device_attempts;
-        } else {
-            ++n_host_attempts;
-        }
-        if (st == N4M_OK &&
-            prefix_fits.size() >= static_cast<std::size_t>(attempt_comp)) {
-            recovered_component = attempt_comp;
-            return N4M_OK;
-        }
-        fit_ctx.clear_error();
-        prefix_fits.clear();
-    }
-    return N4M_OK;
-}
-
 [[nodiscard]] n4m_status_t recover_pls1_moment_prefixes_for_folds(
     Context& ctx,
     const Config& cfg,
@@ -1836,6 +1797,35 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
         prefix_fits_by_fold.clear();
     }
     return N4M_OK;
+}
+
+void add_pls1_moment_prefix_batch_counters(
+    std::size_t n_jobs,
+    bool used_cuda_device,
+    bool used_cuda_parallel_folds,
+    bool used_cuda_many_batched,
+    std::int64_t& n_cv_fits,
+    std::int64_t& n_host_cv_fits,
+    std::int64_t& n_cuda_device_cv_fits,
+    std::int64_t& n_cuda_parallel_fold_batches,
+    std::int64_t& n_cuda_parallel_fold_jobs,
+    std::int64_t& n_cuda_many_batched_batches,
+    std::int64_t& n_cuda_many_batched_jobs) noexcept {
+    const auto jobs = static_cast<std::int64_t>(n_jobs);
+    n_cv_fits += jobs;
+    if (used_cuda_device) {
+        n_cuda_device_cv_fits += jobs;
+        if (used_cuda_parallel_folds) {
+            ++n_cuda_parallel_fold_batches;
+            n_cuda_parallel_fold_jobs += jobs;
+        }
+        if (used_cuda_many_batched) {
+            ++n_cuda_many_batched_batches;
+            n_cuda_many_batched_jobs += jobs;
+        }
+    } else {
+        n_host_cv_fits += jobs;
+    }
 }
 
 }  // namespace
@@ -2243,33 +2233,46 @@ n4m_status_t run_moment_sweep(Context& ctx,
             bool used_cuda_device = false;
             bool used_cuda_parallel_folds = false;
             bool used_cuda_many_batched = false;
+            bool have_batched_prefix_fits = false;
+            std::int32_t batched_recovered_comp = 0;
             st = fit_pls1_moment_prefixes_for_folds(
                 ctx, cfg, train_stats, max_comp, prefix_fits_by_fold,
                 &used_cuda_device, &used_cuda_parallel_folds,
                 &used_cuda_many_batched);
-            if (st != N4M_OK) {
-                ctx.clear_error();
+            if (st == N4M_OK) {
+                have_batched_prefix_fits = true;
+                batched_recovered_comp = max_comp;
             } else {
-                moment_attempt_ok = true;
-                pls_moment_cv_fits += actual_cv;
-                if (used_cuda_device) {
-                    pls_moment_cuda_device_cv_fits += actual_cv;
-                    if (used_cuda_parallel_folds) {
-                        ++pls_moment_cuda_parallel_fold_batches;
-                        pls_moment_cuda_parallel_fold_jobs += actual_cv;
-                    }
-                    if (used_cuda_many_batched) {
-                        ++pls_moment_cuda_many_batched_batches;
-                        pls_moment_cuda_many_batched_jobs += actual_cv;
-                    }
-                } else {
-                    pls_moment_host_cv_fits += actual_cv;
-                }
+                // Keep the shared batch/GPU route for lower requested PLS
+                // prefixes when a late max-component prefix is degenerate.
+                ctx.clear_error();
+                st = recover_pls1_moment_prefixes_for_folds(
+                    ctx, cfg, train_stats, fallback_components_desc, max_comp,
+                    prefix_fits_by_fold, batched_recovered_comp,
+                    used_cuda_device, used_cuda_parallel_folds,
+                    used_cuda_many_batched);
+                if (st != N4M_OK) return st;
+                have_batched_prefix_fits = (batched_recovered_comp > 0);
             }
-            for (std::int32_t fold = 0; moment_attempt_ok && fold < actual_cv; ++fold) {
+            if (have_batched_prefix_fits) {
+                add_pls1_moment_prefix_batch_counters(
+                    static_cast<std::size_t>(actual_cv), used_cuda_device,
+                    used_cuda_parallel_folds, used_cuda_many_batched,
+                    pls_moment_cv_fits, pls_moment_host_cv_fits,
+                    pls_moment_cuda_device_cv_fits,
+                    pls_moment_cuda_parallel_fold_batches,
+                    pls_moment_cuda_parallel_fold_jobs,
+                    pls_moment_cuda_many_batched_batches,
+                    pls_moment_cuda_many_batched_jobs);
+            }
+            for (std::int32_t fold = 0;
+                 have_batched_prefix_fits && fold < actual_cv; ++fold) {
                 const auto fold_ix = static_cast<std::size_t>(fold);
                 const auto& rows = fold_rows[fold_ix];
                 for (std::size_t comp_ix = 0; comp_ix < components.size(); ++comp_ix) {
+                    if (components[comp_ix] > batched_recovered_comp) {
+                        continue;
+                    }
                     const auto comp = static_cast<std::size_t>(components[comp_ix]);
                     const auto& fit = prefix_fits_by_fold[fold_ix][comp - 1U];
                     pls_sse[comp_ix] +=
@@ -2289,22 +2292,57 @@ n4m_status_t run_moment_sweep(Context& ctx,
                         static_cast<std::int64_t>(rows.size() * q);
                 }
             }
-            if (!moment_attempt_ok) {
+            if (!have_batched_prefix_fits || batched_recovered_comp < max_comp) {
                 for (std::int32_t fold = 0; fold < actual_cv; ++fold) {
                     const auto fold_ix = static_cast<std::size_t>(fold);
+                    std::vector<std::int32_t> fold_attempt_components_desc;
+                    fold_attempt_components_desc.reserve(
+                        fallback_components_desc.size());
+                    for (const auto attempt_comp : fallback_components_desc) {
+                        if (have_batched_prefix_fits &&
+                            attempt_comp <= batched_recovered_comp) {
+                            continue;
+                        }
+                        if (component_prefix_still_needed(
+                                components, pls_ok, attempt_comp)) {
+                            fold_attempt_components_desc.push_back(
+                                attempt_comp);
+                        }
+                    }
+                    if (fold_attempt_components_desc.empty()) break;
+
                     std::vector<RidgeMomentFit> prefix_fits;
                     std::int32_t recovered_comp = 0;
-                    st = recover_pls1_moment_prefix_for_job(
-                        cfg, train_stats[fold_ix], components,
-                        fallback_components_desc, pls_ok, prefix_fits,
-                        recovered_comp, pls_moment_cv_fits,
-                        pls_moment_host_cv_fits,
-                        pls_moment_cuda_device_cv_fits);
-                    if (st != N4M_OK) return st;
+                    Context fit_ctx;
+                    for (const auto attempt_comp :
+                         fold_attempt_components_desc) {
+                        bool used_cuda_device_fold = false;
+                        ++pls_moment_cv_fits;
+                        st = fit_pls1_moment_prefixes(
+                            fit_ctx, cfg, train_stats[fold_ix], attempt_comp,
+                            prefix_fits, &used_cuda_device_fold);
+                        if (used_cuda_device_fold) {
+                            ++pls_moment_cuda_device_cv_fits;
+                        } else {
+                            ++pls_moment_host_cv_fits;
+                        }
+                        if (st == N4M_OK &&
+                            prefix_fits.size() >=
+                                static_cast<std::size_t>(attempt_comp)) {
+                            recovered_comp = attempt_comp;
+                            break;
+                        }
+                        fit_ctx.clear_error();
+                        prefix_fits.clear();
+                    }
                     const auto& rows = fold_rows[fold_ix];
                     for (std::size_t comp_ix = 0;
                          comp_ix < components.size(); ++comp_ix) {
                         if (pls_ok[comp_ix] == 0) continue;
+                        if (have_batched_prefix_fits &&
+                            components[comp_ix] <= batched_recovered_comp) {
+                            continue;
+                        }
                         const auto comp =
                             static_cast<std::size_t>(components[comp_ix]);
                         if (components[comp_ix] > recovered_comp ||
@@ -2335,10 +2373,18 @@ n4m_status_t run_moment_sweep(Context& ctx,
                     bool any_needed = false;
                     for (std::size_t comp_ix = 0;
                          comp_ix < components.size(); ++comp_ix) {
-                        any_needed = any_needed || (pls_ok[comp_ix] != 0);
+                        any_needed = any_needed ||
+                                     (pls_ok[comp_ix] != 0 &&
+                                      (!have_batched_prefix_fits ||
+                                       components[comp_ix] >
+                                           batched_recovered_comp));
                     }
                     if (!any_needed) break;
                 }
+            }
+            if (have_batched_prefix_fits) {
+                moment_attempt_ok = true;
+            } else {
                 for (std::size_t comp_ix = 0; comp_ix < components.size();
                      ++comp_ix) {
                     if (pls_ok[comp_ix] != 0 && pls_count[comp_ix] > 0) {
@@ -3178,53 +3224,93 @@ n4m_status_t score_pls1_moment_sweep(Context& ctx,
     bool used_cuda_device_cv = false;
     bool used_cuda_parallel_folds = false;
     bool used_cuda_many_batched = false;
-    n4m_status_t fold_fit_status =
-        fit_pls1_moment_prefixes_for_folds(ctx, cfg, train_stats,
-                                           max_comp, prefix_fits_by_fold,
-                                           &used_cuda_device_cv,
-                                           &used_cuda_parallel_folds,
-                                           &used_cuda_many_batched);
-    if (fold_fit_status != N4M_OK) {
-        ctx.clear_error();
+    bool have_batched_prefix_fits = false;
+    std::int32_t batched_recovered_comp = 0;
+    n4m_status_t fold_fit_status = fit_pls1_moment_prefixes_for_folds(
+        ctx, cfg, train_stats, max_comp, prefix_fits_by_fold,
+        &used_cuda_device_cv, &used_cuda_parallel_folds,
+        &used_cuda_many_batched);
+    if (fold_fit_status == N4M_OK) {
+        have_batched_prefix_fits = true;
+        batched_recovered_comp = max_comp;
     } else {
-        pls_moment_cv_fits = static_cast<std::int64_t>(heldout_stats.size());
-        if (used_cuda_device_cv) {
-            pls_moment_cuda_device_cv_fits = pls_moment_cv_fits;
-            if (used_cuda_parallel_folds) {
-                pls_moment_cuda_parallel_fold_batches = 1;
-                pls_moment_cuda_parallel_fold_jobs = pls_moment_cv_fits;
-            }
-            if (used_cuda_many_batched) {
-                pls_moment_cuda_many_batched_batches = 1;
-                pls_moment_cuda_many_batched_jobs = pls_moment_cv_fits;
-            }
-        } else {
-            pls_moment_host_cv_fits = pls_moment_cv_fits;
-        }
+        // Preserve the shared host/CUDA batch route for lower requested
+        // prefixes when only a later PLS component is rank-deficient.
+        ctx.clear_error();
+        fold_fit_status = recover_pls1_moment_prefixes_for_folds(
+            ctx, cfg, train_stats, fallback_components_desc, max_comp,
+            prefix_fits_by_fold, batched_recovered_comp, used_cuda_device_cv,
+            used_cuda_parallel_folds, used_cuda_many_batched);
+        if (fold_fit_status != N4M_OK) return fold_fit_status;
+        have_batched_prefix_fits = (batched_recovered_comp > 0);
+    }
+    if (have_batched_prefix_fits) {
+        add_pls1_moment_prefix_batch_counters(
+            heldout_stats.size(), used_cuda_device_cv,
+            used_cuda_parallel_folds, used_cuda_many_batched,
+            pls_moment_cv_fits, pls_moment_host_cv_fits,
+            pls_moment_cuda_device_cv_fits,
+            pls_moment_cuda_parallel_fold_batches,
+            pls_moment_cuda_parallel_fold_jobs,
+            pls_moment_cuda_many_batched_batches,
+            pls_moment_cuda_many_batched_jobs);
     }
     for (std::size_t fold = 0;
-         fold_fit_status == N4M_OK && fold < heldout_stats.size();
-         ++fold) {
+         have_batched_prefix_fits && fold < heldout_stats.size(); ++fold) {
         for (std::size_t comp_ix = 0; comp_ix < components.size(); ++comp_ix) {
             if (ok[comp_ix] == 0) continue;
+            if (components[comp_ix] > batched_recovered_comp) continue;
             const auto comp = static_cast<std::size_t>(components[comp_ix]);
             sse[comp_ix] += ridge_heldout_sse_from_moments(
                 heldout_stats[fold], prefix_fits_by_fold[fold][comp - 1]);
             count[comp_ix] += heldout_stats[fold].n_samples;
         }
     }
-    if (fold_fit_status != N4M_OK) {
+    if (!have_batched_prefix_fits || batched_recovered_comp < max_comp) {
         for (std::size_t fold = 0; fold < heldout_stats.size(); ++fold) {
+            std::vector<std::int32_t> fold_attempt_components_desc;
+            fold_attempt_components_desc.reserve(fallback_components_desc.size());
+            for (const auto attempt_comp : fallback_components_desc) {
+                if (have_batched_prefix_fits &&
+                    attempt_comp <= batched_recovered_comp) {
+                    continue;
+                }
+                if (component_prefix_still_needed(components, ok, attempt_comp)) {
+                    fold_attempt_components_desc.push_back(attempt_comp);
+                }
+            }
+            if (fold_attempt_components_desc.empty()) break;
+
             std::vector<RidgeMomentFit> prefix_fits;
             std::int32_t recovered_comp = 0;
-            n4m_status_t st = recover_pls1_moment_prefix_for_job(
-                cfg, train_stats[fold], components, fallback_components_desc,
-                ok, prefix_fits, recovered_comp, pls_moment_cv_fits,
-                pls_moment_host_cv_fits, pls_moment_cuda_device_cv_fits);
-            if (st != N4M_OK) return st;
+            Context fit_ctx;
+            for (const auto attempt_comp : fold_attempt_components_desc) {
+                bool used_cuda_device = false;
+                ++pls_moment_cv_fits;
+                const n4m_status_t st = fit_pls1_moment_prefixes(
+                    fit_ctx, cfg, train_stats[fold], attempt_comp,
+                    prefix_fits, &used_cuda_device);
+                if (used_cuda_device) {
+                    ++pls_moment_cuda_device_cv_fits;
+                } else {
+                    ++pls_moment_host_cv_fits;
+                }
+                if (st == N4M_OK &&
+                    prefix_fits.size() >=
+                        static_cast<std::size_t>(attempt_comp)) {
+                    recovered_comp = attempt_comp;
+                    break;
+                }
+                fit_ctx.clear_error();
+                prefix_fits.clear();
+            }
             for (std::size_t comp_ix = 0; comp_ix < components.size();
                  ++comp_ix) {
                 if (ok[comp_ix] == 0) continue;
+                if (have_batched_prefix_fits &&
+                    components[comp_ix] <= batched_recovered_comp) {
+                    continue;
+                }
                 const auto comp = static_cast<std::size_t>(components[comp_ix]);
                 if (components[comp_ix] > recovered_comp ||
                     prefix_fits.size() < comp) {
@@ -3238,7 +3324,10 @@ n4m_status_t score_pls1_moment_sweep(Context& ctx,
             bool any_needed = false;
             for (std::size_t comp_ix = 0; comp_ix < components.size();
                  ++comp_ix) {
-                any_needed = any_needed || (ok[comp_ix] != 0);
+                any_needed = any_needed ||
+                             (ok[comp_ix] != 0 &&
+                              (!have_batched_prefix_fits ||
+                               components[comp_ix] > batched_recovered_comp));
             }
             if (!any_needed) break;
         }
