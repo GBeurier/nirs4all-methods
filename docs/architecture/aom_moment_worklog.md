@@ -7835,3 +7835,27 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     `23 passed`.
   - py_compile on touched benchmark/test files: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — AOM Score Campaign Facade Inventory Slice
+
+- Added the missing `chain_score_campaign` row to
+  `n4m.aom.available_methods()`. The underlying
+  `aom_chain_score_campaign` function was already re-exported, but the facade
+  inventory did not advertise the score-only global screen surface.
+- The new row is declared as an ultra-configurable score-only strict-linear
+  AOM/moment screen over Ridge/PLS heads, CPU/CUDA capable, linked to
+  `aom_pop.aom_chain_sweep` and `docs/methods/aom_chain_sweep_run.md`, and
+  marked as reusing candidate tables/audit reports.
+- Added `_SCORE_CAMPAIGN_OPTIONS` from the real Python signature so the public
+  inventory exposes chain-grid, CV, scaling, moment-policy, PLS score-mode,
+  split-head, checkpoint/resume and CPU/CUDA route knobs without dataset-name
+  routing.
+- Strengthened facade tests so the score-only campaign is required in the AOM
+  reuse/global surface inventory and so `moment_stack` / its sklearn wrapper
+  remain bounded to strict moment/linear heads:
+  `ridge`, `pls`, `pcr`, `continuum`, `ecr`, `cppls`.
+- Validation:
+  - `test_aom_moment_facade.py`: `28 passed`.
+  - `test_catalog_python_bindings.py`: `12 passed`.
+  - py_compile on touched Python facade/test files: PASS.
+  - `git diff --check`: PASS.

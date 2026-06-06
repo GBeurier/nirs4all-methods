@@ -2753,3 +2753,29 @@ PLS moment lower-prefix batch recovery for public sweeps (2026-06-06):
   public exact PLS moment CV, but it is still not the fused/batched IKPLS
   many-chain/many-fold executor, broader arbitrary-chain moment coverage, or
   full fused CUDA cartesian kernel suite.
+
+AOM score-only campaign facade closure (2026-06-06):
+
+- Exposed `n4m.aom.aom_chain_score_campaign` as the discoverable
+  `chain_score_campaign` entry in `n4m.aom.available_methods()`. It is now
+  marked as an ultra-configurable score-only strict-linear AOM/moment screen,
+  CPU/CUDA capable, tied to `aom_pop.aom_chain_sweep`, and reusing candidate
+  tables/checkpointed audit reports rather than final model refits.
+- Added exact public config-option coverage for the score campaign from the
+  real Python signature, including chain-grid, CV, Ridge/PLS head, scaling,
+  moment-policy, PLS route, checkpoint/resume and CPU/CUDA route knobs.
+- Strengthened facade tests so this score-only surface is required alongside
+  the screen-refit and staged global campaign surfaces, and so `moment_stack`
+  remains bounded to strict moment/linear heads:
+  `ridge`, `pls`, `pcr`, `continuum`, `ecr`, `cppls`.
+- Validation:
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_aom_moment_facade.py -q`:
+    `28 passed`.
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_catalog_python_bindings.py -q`:
+    `12 passed`.
+  - py_compile on touched Python facade/test files: PASS.
+  - `git diff --check`: PASS.
+- Remaining true gap is unchanged: method/facade/catalog discoverability is now
+  tighter, but the nontrivial remaining work is still the fused/batched IKPLS
+  many-chain/many-fold CUDA executor and broader fused cartesian performance
+  engine, not public API wiring.
