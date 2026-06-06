@@ -1077,6 +1077,7 @@ def test_real_cohort_runner_writes_route_counters_and_diagnostics(
         max_chunks_per_run=None,
         scale_x=False,
         moment_policy="auto",
+        pls_score_mode="gcv_proxy",
         split_head_scoring="auto",
         cuda_pls_parallel_folds=True,
         cuda_pls_min_device_features=1,
@@ -1125,6 +1126,7 @@ def test_real_cohort_runner_writes_route_counters_and_diagnostics(
     assert row["cuda_pls_min_device_features"] == 1
     assert row["backend_min_cuda_product"] == 1
     assert row["plan"] == "compact"
+    assert row["pls_score_mode"] == "gcv_proxy"
     assert row["split_head_scoring"] == "auto"
     assert row["scale_x"] is True
     assert row["stages_json"] == (
@@ -1132,6 +1134,7 @@ def test_real_cohort_runner_writes_route_counters_and_diagnostics(
         '"name":"sg_only","profile":"compact"}]'
     )
     assert captured_campaign_kwargs["stages"] == args.stages
+    assert captured_campaign_kwargs["pls_score_mode"] == "gcv_proxy"
     assert captured_campaign_kwargs["split_head_scoring"] == "auto"
 
     diagnostics_path = (
@@ -1146,6 +1149,7 @@ def test_real_cohort_runner_writes_route_counters_and_diagnostics(
     assert diagnostics["impact"]["by_operator"][0]["group"] == "savgol_smooth"
     assert diagnostics["rank_diagnostics"]["spearman_rank_correlation"] == 0.5
     assert diagnostics["selected_model_config"]["scale_x"] is True
+    assert diagnostics["runner"]["pls_score_mode"] == "gcv_proxy"
     assert diagnostics["runner"]["split_head_scoring"] == "auto"
     assert diagnostics["counters"]["n_screen_split_head_chunks"] == 2
     assert diagnostics["counters"]["n_screen_chunk_score_calls"] == 4
@@ -1257,6 +1261,7 @@ def test_real_cohort_runner_can_skip_by_dataset_properties(monkeypatch):
         max_chunks_per_run=None,
         scale_x=False,
         moment_policy="auto",
+        pls_score_mode="cv",
         split_head_scoring="force",
         cuda_pls_parallel_folds=True,
         cuda_pls_min_device_features=1,
@@ -1279,6 +1284,7 @@ def test_real_cohort_runner_can_skip_by_dataset_properties(monkeypatch):
     assert row["n_features"] == 7
     assert row["selection_uses_test_set"] is False
     assert row["plan"] == "compact_wide"
+    assert row["pls_score_mode"] == "cv"
     assert row["split_head_scoring"] == "force"
     assert row["cuda_pls_parallel_folds"] is True
     assert row["cuda_pls_min_device_features"] == 1

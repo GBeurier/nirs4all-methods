@@ -110,6 +110,7 @@ RESULT_FIELDS = (
     "refit_top_k",
     "refit_per_head_top_k",
     "moment_policy",
+    "pls_score_mode",
     "split_head_scoring",
     "scale_x",
     "scale_x_values",
@@ -455,6 +456,7 @@ def diagnostics_payload(
                 if args.refit_per_head_top_k is None
                 else int(args.refit_per_head_top_k)
             ),
+            "pls_score_mode": str(getattr(args, "pls_score_mode", "cv")),
             "split_head_scoring": str(args.split_head_scoring),
             "cuda_pls_parallel_folds": bool(args.cuda_pls_parallel_folds),
             "cuda_pls_min_device_features": (
@@ -654,6 +656,7 @@ def run_one(args, item: dict[str, str]) -> dict[str, Any]:
                     else int(args.refit_per_head_top_k)
                 ),
                 "moment_policy": str(args.moment_policy),
+                "pls_score_mode": str(args.pls_score_mode),
                 "split_head_scoring": str(args.split_head_scoring),
                 "scale_x": bool(args.scale_x),
                 "scale_x_values": scale_x_grid,
@@ -707,6 +710,7 @@ def run_one(args, item: dict[str, str]) -> dict[str, Any]:
                 else parse_optional_bool_list(scale_x_grid)
             ),
             moment_policy=args.moment_policy,
+            pls_score_mode=args.pls_score_mode,
             split_head_scoring=args.split_head_scoring,
             cuda_pls_parallel_folds=args.cuda_pls_parallel_folds,
             cuda_pls_min_device_features=args.cuda_pls_min_device_features,
@@ -863,6 +867,7 @@ def run_one(args, item: dict[str, str]) -> dict[str, Any]:
                 else int(args.refit_per_head_top_k)
             ),
             "moment_policy": str(args.moment_policy),
+            "pls_score_mode": str(report.get("pls_score_mode", args.pls_score_mode)),
             "split_head_scoring": str(args.split_head_scoring),
             "scale_x": selected_scale_x,
             "scale_x_values": scale_x_grid,
@@ -916,6 +921,7 @@ def run_one(args, item: dict[str, str]) -> dict[str, Any]:
             "seed": int(args.seed),
             "status": "failed",
             "error_message": f"{type(exc).__name__}: {exc}",
+            "pls_score_mode": str(getattr(args, "pls_score_mode", "")),
             "started_at": started,
             "ended_at": datetime.now(timezone.utc).isoformat(),
         }
@@ -974,6 +980,16 @@ def main() -> int:
         ),
     )
     parser.add_argument("--moment-policy", default="auto")
+    parser.add_argument(
+        "--pls-score-mode",
+        choices=("cv", "gcv_proxy"),
+        default="cv",
+        help=(
+            "PLS first-pass screen score passed to the staged campaign. "
+            "Use gcv_proxy only for explicit proxy-vs-exact recall campaigns; "
+            "refit remains exact-CV."
+        ),
+    )
     parser.add_argument(
         "--split-head-scoring",
         choices=("auto", "off", "force"),

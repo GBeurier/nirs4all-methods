@@ -1,5 +1,32 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Staged benchmark PLS score-mode switch
+
+Purpose:
+
+- Make staged benchmark campaigns directly compare exact-CV PLS screens against
+  explicit GCV-proxy first-pass screens without code edits, so screen-recall
+  studies can be run incrementally from the standard runners.
+
+Changes:
+
+- Added `--pls-score-mode {cv,gcv_proxy}` to
+  `run_aom_staged_real_cohort.py` and
+  `bench_aom_staged_chain_campaign_timing.py`.
+- Forwarded the mode to `n4m.aom_staged_chain_campaign` and persisted it in
+  real-cohort CSV rows, diagnostics JSON runner metadata and staged timing CSV
+  rows.
+- Updated benchmark README guidance: `cv` remains default exact-CV screen;
+  `gcv_proxy` is explicit for proxy-vs-exact recall/timing campaigns, while
+  retained-candidate refit remains exact-CV.
+
+Validation:
+
+- `test_aom_benchmark_tools.py`: `21 passed`.
+- Synthetic staged timing smoke with `--pls-score-mode gcv_proxy` wrote a CSV
+  row containing `pls_score_mode=gcv_proxy`.
+- py_compile and `git diff --check` passed.
+
 ## 2026-06-06 - CUDA facade smoke covers PLS exact preset
 
 Purpose:
