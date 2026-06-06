@@ -377,6 +377,65 @@ def test_staged_campaign_cuda_smoke_artifact_proves_train_only_cuda_screen():
     assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") > 0
 
 
+def test_real_cohort_pls_many_batched_cuda_smoke_artifact_routes_train_only():
+    row = _only_row(
+        "aom_staged_real_cohort_diesel_pls_many_batched_cuda_smoke.csv"
+    )
+
+    _assert_cuda_build_path(row["library_path"])
+    _assert_current_aom_artifact_abi(row)
+    assert row["dataset_key"] == "DIESEL/DIESEL_bp50_246_b-a"
+    assert row["status"] == "ok"
+    assert row["model_class"] == "aom_staged_chain_campaign"
+    assert row["selection"] == "exact_cv_refit_train_only"
+    assert _bool(row, "selection_uses_test_set") is False
+    assert row["heads"] == "pls"
+    assert row["moment_policy"] == "force_moments"
+    assert row["pls_score_mode"] == "cv"
+    assert _bool(row, "screen_complete") is True
+    assert _bool(row, "cuda_pls_many_batched") is True
+    assert _bool(row, "cuda_pls_parallel_folds") is False
+    assert _int(row, "cuda_pls_min_device_features") == 1
+    assert _int(row, "backend_min_cuda_product") == 1
+
+    screen_cv = _int(row, "n_screen_pls_moment_cv_fits")
+    refit_cv = _int(row, "n_refit_pls_moment_cv_fits")
+    assert screen_cv > 0
+    assert refit_cv > 0
+    assert _int(row, "n_screen_pls_moment_host_cv_fits") == 0
+    assert _int(row, "n_refit_pls_moment_host_cv_fits") == 0
+    assert _int(row, "n_screen_pls_moment_cuda_device_cv_fits") == screen_cv
+    assert _int(row, "n_refit_pls_moment_cuda_device_cv_fits") == refit_cv
+    assert _int(row, "n_screen_pls_moment_cuda_parallel_fold_jobs") == 0
+    assert _int(row, "n_refit_pls_moment_cuda_parallel_fold_jobs") == 0
+    assert _int(row, "n_screen_pls_moment_cuda_many_batched_batches") > 0
+    assert _int(row, "n_refit_pls_moment_cuda_many_batched_batches") > 0
+    assert _int(row, "n_screen_pls_moment_cuda_many_batched_jobs") == screen_cv
+    assert _int(row, "n_refit_pls_moment_cuda_many_batched_jobs") == refit_cv
+    assert math.isfinite(_float(row, "rmsep"))
+    assert math.isfinite(_float(row, "audit_oracle_rmse"))
+
+    compare_rows = _rows(
+        "aom_staged_real_cohort_diesel_pls_many_batched_cuda_smoke_oracle_compare.csv"
+    )
+    paired = [
+        item for item in compare_rows
+        if item["dataset_key"] == "DIESEL/DIESEL_bp50_246_b-a"
+    ]
+    assert len(paired) == 1
+    compare = paired[0]
+    assert math.isfinite(_float(compare, "target_score"))
+    assert math.isfinite(_float(compare, "aom_pls_oracle_score"))
+    assert math.isfinite(_float(compare, "aom_ridge_oracle_score"))
+    assert math.isfinite(_float(compare, "tabpfn_oracle_score"))
+    assert compare["winner"] in {
+        "target",
+        "aom_pls_oracle",
+        "aom_ridge_oracle",
+        "tabpfn_oracle",
+    }
+
+
 def _assert_moment_stack_rows(
     rows: list[dict[str, str]],
     *,

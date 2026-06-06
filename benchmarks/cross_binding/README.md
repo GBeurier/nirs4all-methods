@@ -658,6 +658,31 @@ N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
   --backend-min-cuda-product 1
 ```
 
+For a very small held-out real-split CUDA route smoke, use one PLS-only DIESEL
+row with exact-CV scoring and the opt-in many-batched PLS route:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output /tmp/n4m_aom_staged_real_cohort_diesel_pls_many_batched_cuda_smoke.csv \
+  --datasets DIESEL/DIESEL_bp50_246_b-a --limit 1 --cv 3 \
+  --heads pls --components 1,2 --max-chains 4 --chain-chunk-size 2 \
+  --top-k 4 --refit-top-k 2 --refit-per-head-top-k 1 \
+  --moment-policy force_moments --pls-score-mode cv \
+  --cuda-pls-min-device-features 1 --cuda-pls-many-batched \
+  --backend-min-cuda-product 1 --scale-x
+```
+
+The committed artifact
+`aom_staged_real_cohort_diesel_pls_many_batched_cuda_smoke.csv` is ABI
+`1.22.0` and records `selection_uses_test_set=False`. It is intended as route
+and benchmark-pipeline evidence: screen/refit exact-CV PLS rows run on CUDA
+many-batched with host and parallel-fold counters at zero. The matching
+`*_oracle_compare.csv`/`.md` files are offline joins against the real AOM and
+TabPFN oracle artifacts; the four-chain smoke is not a competitive score claim.
+
 On the local diverse-10 cohort, this compact scale-grid run selected
 `scale_x=True` for 8/10 rows and kept PLS exact-CV routing on one GPU
 (`screen_cuda=1200`, host `0`; `refit_cuda=280`, host `0`). The oracle summary
