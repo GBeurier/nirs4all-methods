@@ -156,6 +156,42 @@ def test_pls_moment_fallback_builds_fold_designs_on_demand():
     assert ref["n_pls_materialized_cv_fits"] > 0
 
 
+def test_aom_pls_moment_batch_degenerate_components_do_not_abort_screen():
+    n = 24
+    t = np.arange(n, dtype=np.float64)
+    X = np.ascontiguousarray(
+        np.column_stack([t, t + 1.0, 2.0 * t + 3.0]),
+        dtype=np.float64,
+    )
+    y = 0.5 * X[:, 0] - X[:, 1]
+    folds = np.arange(n, dtype=np.int32) % 2
+    chains = [["identity"], ["identity"]]
+
+    got = n4m.aom_chain_sweep_run(
+        X,
+        y,
+        chains,
+        cv=2,
+        fold_ids=folds,
+        ridge_lambdas=[],
+        pls_components=[1, 2],
+        heads=("pls",),
+        scale_x=False,
+        moment_policy="force_moments",
+        score_only=True,
+    )
+
+    scores = np.asarray(got["candidate_scores"], dtype=float)
+    assert scores.shape == (4, 5)
+    assert np.all(np.isfinite(scores[scores[:, 3] == 1.0, 4]))
+    assert np.all(np.isinf(scores[scores[:, 3] == 2.0, 4]))
+    assert np.isfinite(got["selected_cv_rmse"])
+    assert got["n_materialized_candidates"] == 0.0
+    assert got["n_pls_materialized_cv_fits"] == 0.0
+    assert got["n_pls_moment_score_batch_calls"] == 0.0
+    assert got["n_pls_moment_cv_fits"] > 0.0
+
+
 def _assert_aom_route_partitions(res):
     assert (
         res["n_ridge_operator_moment_candidates"]
