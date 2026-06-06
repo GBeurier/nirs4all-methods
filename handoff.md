@@ -2069,3 +2069,24 @@ Moment SSE BLAS engine slice (2026-06-06):
   - The dev-vs-BLAS candidate-score comparison is now pinned by
     `test_native_sweep_run_blas_sse_scores_match_scalar_build`.
   - `git diff --check`: PASS.
+
+Moment GPU crossover artifact refresh (2026-06-06):
+
+- Added optional Markdown rendering to
+  `benchmarks/cross_binding/bench_moment_gpu_crossover.py` via
+  `--summary-output`; the summary groups CPU, CUDA default and PLS-only
+  CUDA many-batched rows by `(head, n_samples, n_features)` and keeps the
+  recommendation source-free (shape/head only, no dataset identity).
+- Regenerated `benchmarks/cross_binding/moment_gpu_crossover.csv` and added
+  `benchmarks/cross_binding/moment_gpu_crossover.md` from one visible GPU
+  (`CUDA_VISIBLE_DEVICES=0`, `--repeats 3`,
+  `--cuda-pls-min-device-features 1`,
+  `--compare-cuda-pls-many-batched`). The CSV is now ABI `1.21.0`, has 24
+  rows and zero errors.
+- Current summary: PLS keeps CPU at `260x256`, CUDA default wins at `512x512`
+  and `256x1024`; many-batched does not beat CUDA default on the large PLS
+  rows in this smoke.
+- Validation:
+  - `py_compile` on the touched benchmark/test files: PASS.
+  - targeted benchmark-tool pytest:
+    `1 passed, 20 deselected`; full file: `21 passed`.

@@ -33,6 +33,75 @@ def _write_csv(path: Path, rows: list[dict[str, object]]) -> Path:
     return path
 
 
+def test_moment_gpu_crossover_writes_markdown_summary(tmp_path):
+    bench = _load_script(
+        "bench_moment_gpu_crossover",
+        "benchmarks/cross_binding/bench_moment_gpu_crossover.py",
+    )
+    rows = bench.add_speedups(
+        [
+            {
+                "backend": "cpu",
+                "cuda_pls_profile": "cpu_baseline",
+                "head": "pls",
+                "n_samples": 512,
+                "n_features": 512,
+                "elapsed_ms_median": 20.0,
+                "error": "",
+            },
+            {
+                "backend": "cuda",
+                "cuda_pls_profile": "default",
+                "head": "pls",
+                "n_samples": 512,
+                "n_features": 512,
+                "elapsed_ms_median": 10.0,
+                "error": "",
+            },
+            {
+                "backend": "cuda",
+                "cuda_pls_profile": "many_batched",
+                "head": "pls",
+                "n_samples": 512,
+                "n_features": 512,
+                "elapsed_ms_median": 12.5,
+                "error": "",
+            },
+            {
+                "backend": "cpu",
+                "cuda_pls_profile": "cpu_baseline",
+                "head": "ridge",
+                "n_samples": 260,
+                "n_features": 256,
+                "elapsed_ms_median": 4.0,
+                "error": "",
+            },
+            {
+                "backend": "cuda",
+                "cuda_pls_profile": "default",
+                "head": "ridge",
+                "n_samples": 260,
+                "n_features": 256,
+                "elapsed_ms_median": 4.2,
+                "error": "",
+            },
+        ]
+    )
+    output = tmp_path / "moment_gpu_crossover.md"
+
+    bench.write_markdown(output, rows)
+    markdown = output.read_text(encoding="utf-8")
+
+    assert "# Moment GPU Crossover" in markdown
+    assert "512x512" in markdown
+    assert "cuda:default" in markdown
+    assert "2.00x" in markdown
+    assert "0.80x" in markdown
+    assert "| ridge | 260x256 |" in markdown
+    assert "| pls | 512x512 |" in markdown
+    assert "dataset identity" in markdown
+
+
 def test_aom_preprocess_timing_script_writes_direct_operator_rows(tmp_path, monkeypatch):
     bench = _load_script(
         "bench_aom_preprocess_timing",
