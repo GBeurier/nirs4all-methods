@@ -48,13 +48,13 @@ The 10+-language binding-scaling infra is **reduced and deferred** by the
 - **Trigger:** a request for a 5th+ target language.
 - **Full scope:** [`bindings/SPEC.md`](bindings/SPEC.md) → "F-prep scope".
 
-## GPU — batched execution path (single-fit cuBLAS shipped; batch deferred)
+## GPU — fused cartesian sweep path (cuBLAS + bounded PLS CV routes shipped; full grinder deferred)
 
 The cuBLAS backend (`cuda-on` preset, `cpp/src/core/cuda_dispatch.cpp`) **ships
 and is verified** (builds + bit-identical to the CPU reference on GPU). What is
-**deferred** is the *batched* GPU execution path, which is where PLS on a GPU
-actually pays off for NIRS-scale data. There are two distinct acceleration axes,
-and only the first exists today:
+**deferred** is the *fully fused cartesian sweep* execution path, which is where
+PLS on a GPU should pay off for very large preprocessing screens. There are
+three distinct acceleration axes:
 
 1. **Single-fit GEMM offload (shipped).** `linalg::gemv/gemm/ger` route to cuBLAS
    when `N4M_USE_CUDA` is compiled. This is a *latency* play whose benefit is
@@ -67,18 +67,29 @@ and only the first exists today:
    only large-`n×p` Gram/kernel/multi-block variants (IKPLS, GPR-PLS, MB-PLS,
    PCR/SVD, AOM-selection) are candidates, and only well above NIRS-typical sizes.
 
-2. **Batched-throughput execution (deferred).** The reliable PLS-on-GPU win is
-   batching *many* fits into one GPU job — cross-validation folds × component
-   counts × hyperparameter grid, ensembles, or the AOM/POP operator bank. This is
-   the pattern of `ikpls` (`jax_ikpls_alg_1/2`, `cross_validate`, JAX `jit`/`vmap`),
-   which nirs4all already wires as `IKPLS(backend='jax')` in
-   `nirs4all/operators/models/sklearn/ikpls.py` — though nirs4all currently calls
-   only the single `fit`, not `cross_validate`, so even it does not yet exploit
-   ikpls's main GPU strength.
+2. **Bounded exact PLS CV scheduling (shipped for the moment path).**
+   Compatible single-target PLS1 moment sweeps now expose
+   `cuda_pls_parallel_folds=True` for bounded stream/cuBLAS fold scheduling and
+   `cuda_pls_many_batched=True` for the optional tiled/strided-batched
+   many-design route. The CUDA smoke artifacts pin both paths with explicit
+   route counters, but these paths still launch over already-formed moment
+   jobs; they are not a full many-chain/many-fold/many-candidate fused IKPLS
+   engine.
+
+3. **Fused cartesian-throughput execution (deferred).** The reliable large-screen
+   win is batching *many* fits into one fused GPU job — preprocessing chains ×
+   cross-validation folds × component counts × hyperparameter grid, ensembles,
+   or the AOM/POP operator bank. This is the broader pattern of `ikpls`
+   (`jax_ikpls_alg_1/2`, `cross_validate`, JAX `jit`/`vmap`). The nirs4all
+   Python-side `IKPLS(backend='jax')` wrapper is outside this C++/moment port,
+   and nirs4all historically called only the single `fit`, not
+   `cross_validate`, so it still does not provide the target 200k-chain AOM
+   grinder inside `libn4m`.
 
 - **Why deferred:** axis 1 is a niche win (correct but ≈parity at NIRS sizes);
-  axis 2 is genuinely valuable but is a **new capability** (a batched fit/CV
-  execution path + its C ABI surface), not a refinement of the existing backend.
+  axis 2 is useful observability/control for exact PLS CV on one GPU, but the
+  target 200k-chain grinder is axis 3: a **new capability** with grouped
+  operator kernels, fused batched fit/CV execution and likely new C ABI surface.
   It does not block CPU wheel/CRAN packaging (CUDA is an opt-in build).
 - **Trigger:** demand for high-throughput CV / component-sweep / ensemble fitting
   at scale, where batching K folds × C components into one GPU job dominates the

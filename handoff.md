@@ -2020,3 +2020,27 @@ CUDA PLS many-batched route telemetry follow-up (2026-06-06):
   - full moment wrapper test file: `74 passed`.
   - catalog strict ABI/reference/split checks: PASS.
   - `git diff --check`: PASS.
+
+AOM/moment completion audit follow-up (2026-06-06):
+
+- Re-audited the current porting state against the coverage matrix and the
+  active objective. Method/facade/catalog/docs/artifact wiring is internally
+  consistent:
+  - Claude Code audit reran the targeted AOM/moment suite:
+    `test_aom_benchmark_tools.py`, `test_catalog_python_bindings.py`,
+    `test_aom_moment_cuda_smoke_artifacts.py`,
+    `test_aom_moment_facade.py`, `test_moment_model_wrappers.py`,
+    `test_aom_staged_campaign.py`: `169 passed`.
+  - Catalog reference, strict-ABI and split-method checks remained green
+    (`208` methods, `701/701` exported `n4m_*` symbols covered).
+  - Referenced docs, benchmark scripts, CUDA smoke CSV artifacts and coverage
+    matrix catalog ids all resolved on disk in the audit.
+- Updated `DEFERRALS.md` to reflect the current CUDA state accurately:
+  single-fit cuBLAS and bounded exact PLS CV routes (`cuda_pls_parallel_folds`,
+  `cuda_pls_many_batched`) ship with smoke coverage, while the full fused
+  cartesian/IKPLS-style 200k-chain grinder remains deferred.
+- No additional small Python/facade/catalog method gap was found. The remaining
+  objective gap is still category-B engine/performance work: fused batched IKPLS
+  over many chains/folds/candidates, broader arbitrary-chain moment coverage
+  without materialization, grouped CUDA sweep kernels and a larger oracle
+  campaign.
