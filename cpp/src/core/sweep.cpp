@@ -1161,6 +1161,17 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
                                       const RidgeMomentFit& fit) {
     const auto p = static_cast<std::size_t>(heldout.n_features);
     const auto q = static_cast<std::size_t>(heldout.n_targets);
+#if defined(N4M_USE_BLAS) && !defined(N4M_USE_CUDA)
+    constexpr std::size_t kMomentSseBlasMinFeatures = 64;
+    std::vector<double> xtx_beta;
+    const bool use_blas_quadratic =
+        q == 1U && p >= kMomentSseBlasMinFeatures &&
+        heldout.xtx.size() == p * p &&
+        fit.coefficients.size() == p;
+    if (use_blas_quadratic) {
+        xtx_beta.assign(p, 0.0);
+    }
+#endif
     double sse = 0.0;
     for (std::size_t target = 0; target < q; ++target) {
         const double intercept = fit.intercept[target];
@@ -1172,13 +1183,28 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
         double xb_sum = 0.0;
         double yxb = 0.0;
         double xbx = 0.0;
-        for (std::size_t i = 0; i < p; ++i) {
-            const double bi = fit.coefficients[i * q + target];
-            xb_sum += heldout.x_sum[i] * bi;
-            yxb += heldout.xty[i * q + target] * bi;
-            for (std::size_t j = 0; j < p; ++j) {
-                const double bj = fit.coefficients[j * q + target];
-                xbx += bi * heldout.xtx[i * p + j] * bj;
+#if defined(N4M_USE_BLAS) && !defined(N4M_USE_CUDA)
+        if (use_blas_quadratic && target == 0U) {
+            const double* beta = fit.coefficients.data();
+            linalg::gemv(linalg::Trans_No, p, p, 1.0,
+                         heldout.xtx.data(), beta, 0.0, xtx_beta.data());
+            for (std::size_t i = 0; i < p; ++i) {
+                const double bi = beta[i];
+                xb_sum += heldout.x_sum[i] * bi;
+                yxb += heldout.xty[i] * bi;
+                xbx += bi * xtx_beta[i];
+            }
+        } else
+#endif
+        {
+            for (std::size_t i = 0; i < p; ++i) {
+                const double bi = fit.coefficients[i * q + target];
+                xb_sum += heldout.x_sum[i] * bi;
+                yxb += heldout.xty[i * q + target] * bi;
+                for (std::size_t j = 0; j < p; ++j) {
+                    const double bj = fit.coefficients[j * q + target];
+                    xbx += bi * heldout.xtx[i * p + j] * bj;
+                }
             }
         }
         target_sse -= 2.0 * yxb;

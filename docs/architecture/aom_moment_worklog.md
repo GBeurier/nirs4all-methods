@@ -6913,3 +6913,25 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
   CUDA exists: bounded exact PLS CV routes now ship, while the full fused
   cartesian/IKPLS-style 200k-chain grinder remains the explicit deferred
   engine/performance item.
+
+## 2026-06-06 — Moment SSE BLAS Engine Slice
+
+- Added a small score-preserving throughput improvement to the hot
+  `ridge_heldout_sse_from_moments()` path used by Ridge and PLS moment CV
+  scoring. In CPU BLAS builds, single-target (`q=1`) held-out moment scoring
+  with `p >= 64` now computes the quadratic term through `linalg::gemv`
+  (`X'X beta`) before the final dot product.
+- The CUDA build keeps the existing scalar host SSE path to avoid accidental
+  per-candidate GPU transfers; CUDA acceleration remains concentrated in the
+  PLS moment component routes and their explicit counters.
+- This is not the fused cartesian IKPLS grinder, but it removes a CPU BLAS
+  bottleneck from exact moment screen scoring without changing scores or
+  selection.
+- Validation:
+  - dev, BLAS and CUDA `n4m_c` builds: PASS.
+  - targeted moment wrapper tests on dev and BLAS libs:
+    `6 passed, 68 deselected` each.
+  - `test_aom_benchmark_tools.py` on dev and BLAS libs: `20 passed` each.
+  - dev-vs-BLAS candidate-score comparison on `n=200, p=80`: same selected
+    lambda and max absolute score delta `6.63e-15`.
+  - `git diff --check`: PASS.
