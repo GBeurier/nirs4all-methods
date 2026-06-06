@@ -280,6 +280,98 @@ def test_aom_ridge_force_moments_bypasses_cpu_wide_materialization_heuristic():
     )
 
 
+def test_aom_ridge_force_moments_extends_wide_banded_cap():
+    rng = np.random.default_rng(20260610)
+    X = rng.standard_normal((40, 320))
+    y = 0.8 * X[:, 2] - 0.35 * X[:, 17] + 0.25 * X[:, 101]
+    y += 0.04 * rng.standard_normal(X.shape[0])
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+    chain = [[("finite_difference", (1,))]]
+    lambdas = [0.1, 1.0]
+
+    forced = n4m.aom_chain_sweep_run(
+        X,
+        y,
+        chain,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=lambdas,
+        pls_components=[],
+        heads=("ridge",),
+        scale_x=False,
+        moment_policy="force_moments",
+        score_only=True,
+    )
+    materialized = n4m.aom_chain_sweep_run(
+        X,
+        y,
+        chain,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=lambdas,
+        pls_components=[],
+        heads=("ridge",),
+        scale_x=False,
+        moment_policy="materialized",
+        score_only=True,
+    )
+    auto = n4m.aom_chain_sweep_run(
+        X,
+        y,
+        chain,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=lambdas,
+        pls_components=[],
+        heads=("ridge",),
+        scale_x=False,
+        moment_policy="auto",
+        score_only=True,
+    )
+    full = n4m.aom_chain_sweep_run(
+        X,
+        y,
+        chain,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=lambdas,
+        pls_components=[],
+        heads=("ridge",),
+        scale_x=False,
+        moment_policy="force_moments",
+    )
+
+    assert forced["n_candidates"] == float(len(lambdas))
+    assert forced["n_materialized_candidates"] == 0.0
+    assert forced["n_banded_operator_moment_candidates"] == forced["n_candidates"]
+    assert forced["n_ridge_moment_score_batch_calls"] == 1.0
+    assert forced["n_ridge_moment_score_batch_jobs"] == len(lambdas) * 4
+    assert forced["n_ridge_moment_final_fits"] == 0.0
+    np.testing.assert_allclose(
+        forced["candidate_scores"][:, 4],
+        materialized["candidate_scores"][:, 4],
+        rtol=1e-10,
+        atol=1e-10,
+    )
+    assert full["n_materialized_candidates"] == 0.0
+    assert full["n_banded_operator_moment_candidates"] == full["n_candidates"]
+    assert full["predictions"].shape == (X.shape[0], 1)
+    assert full["input_coefficients"].shape == (X.shape[1], 1)
+    np.testing.assert_allclose(
+        full["candidate_scores"][:, 4],
+        forced["candidate_scores"][:, 4],
+        rtol=1e-10,
+        atol=1e-10,
+    )
+    assert auto["n_materialized_candidates"] == auto["n_candidates"]
+    np.testing.assert_allclose(
+        auto["candidate_scores"][:, 4],
+        materialized["candidate_scores"][:, 4],
+        rtol=1e-10,
+        atol=1e-10,
+    )
+
+
 def _assert_aom_route_partitions(res):
     assert (
         res["n_ridge_operator_moment_candidates"]

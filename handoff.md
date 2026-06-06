@@ -2469,3 +2469,33 @@ Force-moments CPU wide Ridge route slice (2026-06-06):
     batch with eight jobs.
 - Remaining true gap is unchanged: this fixes forced Ridge screen semantics,
   but it is not the fused/batched Ridge/PLS many-chain executor.
+
+Force-moments Ridge banded cap slice (2026-06-06):
+
+- Added a force-only Ridge banded moment feature cap:
+  normal routing stays at `p <= 256`, while strict Ridge screens
+  under `moment_policy="force_moments"` can now use local banded
+  operator-moment scoring up to `p <= 512`.
+- CPU `auto` behavior is deliberately unchanged for underdetermined wide Ridge:
+  it still selects the exact materialized dual-Ridge scorer when that route is
+  cheaper.
+- Added
+  `test_aom_ridge_force_moments_extends_wide_banded_cap`, covering
+  a `finite_difference` chain at `n=40, p=320`, positive Ridge lambdas, zero
+  materialized candidates, exact RMSE agreement with materialized scoring and
+  unchanged `auto` materialization, plus full/refit output after a moment-only
+  candidate screen.
+- Validation:
+  - rebuilt `build/dev-release` `n4m_c`.
+  - rebuilt `build/cuda-on` `n4m_c`.
+  - targeted Ridge force-moments pytest:
+    `2 passed, 81 deselected`.
+  - full dev-release `test_moment_model_wrappers.py`:
+    `83 passed`.
+  - dev-release `n4m_internal_tests`: PASS.
+  - manual one-GPU CUDA smoke with `CUDA_VISIBLE_DEVICES=0` on the same
+    `n=40, p=320` finite-difference Ridge screen:
+    two candidates, zero materialized candidates and one Ridge moment score
+    batch with eight jobs.
+- Remaining true gap is unchanged: this broadens strict wide Ridge screening,
+  but it is not the fused/batched Ridge/PLS many-chain executor.

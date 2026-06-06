@@ -28,6 +28,7 @@ namespace {
 constexpr std::size_t kMaxWideOperatorMomentFeatures = 48;
 constexpr std::size_t kMaxBandedOperatorMomentFeatures = 1024;
 constexpr std::size_t kMaxBandedRidgeMomentFeatures = 256;
+constexpr std::size_t kMaxForcedBandedRidgeMomentFeatures = 512;
 constexpr std::size_t kMaxMomentPrefixCacheFeatures = 256;
 constexpr std::size_t kMaxMomentPrefixCacheEntries = 64;
 
@@ -438,6 +439,18 @@ std::vector<std::vector<std::int64_t>> aom_fold_rows_from_ids(
     return true;
 }
 
+[[nodiscard]] bool config_forces_operator_moments(const Config& cfg) noexcept {
+    return cfg.aom_moment_policy ==
+           static_cast<std::int32_t>(N4M_AOM_MOMENT_FORCE_MOMENTS);
+}
+
+[[nodiscard]] std::size_t banded_ridge_moment_feature_cap(
+    const Config& cfg) noexcept {
+    return config_forces_operator_moments(cfg)
+        ? kMaxForcedBandedRidgeMomentFeatures
+        : kMaxBandedRidgeMomentFeatures;
+}
+
 [[nodiscard]] bool can_use_operator_moment_ridge_features(
     const Config& cfg,
     const n4m_matrix_view_t& X,
@@ -460,7 +473,7 @@ std::vector<std::vector<std::int64_t>> aom_fold_rows_from_ids(
     const auto p = static_cast<std::size_t>(X.cols);
     const auto n = static_cast<std::size_t>(X.rows);
     if (p <= min_train_rows(n, fold_rows)) return true;
-    if (p > kMaxBandedRidgeMomentFeatures) return false;
+    if (p > banded_ridge_moment_feature_cap(cfg)) return false;
     return ridge_grid_is_strictly_positive(cfg, ridge_lambdas, n_ridge_lambdas);
 }
 
@@ -520,8 +533,7 @@ std::vector<std::vector<std::int64_t>> aom_fold_rows_from_ids(
 }
 
 [[nodiscard]] bool force_operator_moments_policy(const Config& cfg) noexcept {
-    return cfg.aom_moment_policy ==
-           static_cast<std::int32_t>(N4M_AOM_MOMENT_FORCE_MOMENTS);
+    return config_forces_operator_moments(cfg);
 }
 
 [[nodiscard]] bool aom_score_only_policy(const Config& cfg) noexcept {
@@ -1730,6 +1742,8 @@ void account_pls_fit_counters(AomSweepResult& out,
         MomentPrefixCache batch_cache;
         batch_cache.enabled = true;
         const auto p = static_cast<std::size_t>(X.cols);
+        const bool allow_banded_ridge_moment =
+            p <= banded_ridge_moment_feature_cap(cfg);
         const bool force_operator_moments = force_operator_moments_policy(cfg);
         bool all_supported =
             force_operator_moments ||
@@ -1742,7 +1756,7 @@ void account_pls_fit_counters(AomSweepResult& out,
                 st = transform_moment_set_by_chain_cached(
                     ctx, all_base, heldout_base, chain,
                     true,
-                    p <= kMaxBandedRidgeMomentFeatures,
+                    allow_banded_ridge_moment,
                     batch_cache, all_transformed, heldout_transformed, route);
                 if (st != N4M_OK) {
                     if (st != N4M_ERR_UNSUPPORTED) return st;
@@ -1841,13 +1855,16 @@ void account_pls_fit_counters(AomSweepResult& out,
         std::vector<MomentStats> heldout_transformed;
         OperatorMomentRoute route = OperatorMomentRoute::kNone;
         const auto p = static_cast<std::size_t>(X.cols);
-        if (should_materialize_cpu_wide_ridge(X, fold_rows)) {
+        const bool allow_banded_ridge_moment =
+            p <= banded_ridge_moment_feature_cap(cfg);
+        if (!force_operator_moments_policy(cfg) &&
+            should_materialize_cpu_wide_ridge(X, fold_rows)) {
             st = N4M_ERR_UNSUPPORTED;
         } else {
             st = transform_moment_set_by_chain_cached(
                 ctx, all_base, heldout_base, chain,
                 true,
-                p <= kMaxBandedRidgeMomentFeatures,
+                allow_banded_ridge_moment,
                 moment_cache, all_transformed, heldout_transformed, route);
         }
         if (st != N4M_OK) {

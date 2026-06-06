@@ -1,5 +1,47 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Force-moments Ridge banded cap extends to p=512
+
+Purpose:
+
+- Broaden strict Ridge moment screens for underdetermined local-operator chains
+  without changing the pragmatic CPU `auto` route.
+
+Changes:
+
+- Added a force-only Ridge banded moment feature cap:
+  `kMaxForcedBandedRidgeMomentFeatures = 512`.
+- `can_use_banded_operator_moment_ridge_features()` and the Ridge moment
+  transformer now use that larger cap only when
+  `moment_policy="force_moments"`.
+- The normal Ridge banded cap remains `p <= 256`; CPU `auto` still chooses the
+  exact materialized dual-Ridge scorer for wide underdetermined rows.
+- Added
+  `test_aom_ridge_force_moments_extends_wide_banded_cap`, covering
+  a `finite_difference` chain at `n=40, p=320`, positive lambdas, zero
+  materialized candidates, exact RMSE agreement against materialized scoring,
+  unchanged CPU `auto` materialization, and full/refit output after a
+  moment-only candidate screen.
+
+Validation:
+
+- Rebuilt `build/dev-release` `n4m_c`.
+- Rebuilt `build/cuda-on` `n4m_c`.
+- Targeted Ridge force-moments pytest:
+  `2 passed, 81 deselected`.
+- Full dev-release wrapper test file:
+  `test_moment_model_wrappers.py` passed (`83 passed`).
+- Dev-release `n4m_internal_tests` passed.
+- Manual one-GPU CUDA smoke with `CUDA_VISIBLE_DEVICES=0` on the same
+  `n=40, p=320` finite-difference Ridge screen reports two candidates, zero
+  materialized candidates and one Ridge moment score batch with eight jobs.
+
+Follow-up:
+
+- This closes part of the "very wide Ridge" force-screen gap. It is not
+  the fused/batched Ridge/PLS many-chain executor, and Ridge moment screens
+  beyond `p=512` remain intentionally unsupported for now.
+
 ## 2026-06-06 - Force-moments bypasses CPU wide Ridge materialization heuristic
 
 Purpose:

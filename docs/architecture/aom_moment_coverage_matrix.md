@@ -273,11 +273,13 @@ from scripted runs without changing candidate scores.
   operators into moment space and score held-out SSE from moments, including
   inside mixed Ridge+PLS sweeps. Dense medium-wide Ridge grids use this exact
   path when all lambdas are strictly positive and `p <= 48`; local linear
-  banded operators extend the route to `p <= 256` for Ridge and `p <= 1024`
-  for compatible single-target NIPALS PLS1. `detrend_poly` chains use an exact
-  structured low-rank projection transform and Whittaker chains use the exact
-  structured pentadiagonal solve for `(I + lambda D2'D2)^-1`; both can compose
-  with the local banded operators. CPU `auto` routes Ridge `p > n_train` rows
+  banded operators extend the route to `p <= 256` for Ridge in normal routing,
+  to `p <= 512` for strict Ridge screens under
+  `moment_policy="force_moments"`, and to `p <= 1024` for compatible
+  single-target NIPALS PLS1. `detrend_poly` chains use an exact structured
+  low-rank projection transform and Whittaker chains use the exact structured
+  pentadiagonal solve for `(I + lambda D2'D2)^-1`; both can compose with the
+  local banded operators. CPU `auto` routes Ridge `p > n_train` rows
   through the exact materialized dual-Ridge scorer and PLS rows with
   `min_train < 4p` through the exact materialized PLS prefix scorer; CUDA
   `auto` keeps the operator-moment route in those cells. Feature caps and
