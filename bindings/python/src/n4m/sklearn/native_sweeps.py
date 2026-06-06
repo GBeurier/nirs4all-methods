@@ -2413,6 +2413,24 @@ class NativeAOMStagedChainCampaignRegressor(BaseEstimator):
             "n_screen_pls_moment_cuda_device_cv_fits": int(
                 report.get("n_screen_pls_moment_cuda_device_cv_fits", 0)
             ),
+            "n_screen_pls_moment_cuda_parallel_fold_batches": int(
+                report.get("n_screen_pls_moment_cuda_parallel_fold_batches", 0)
+            ),
+            "n_screen_pls_moment_cuda_parallel_fold_jobs": int(
+                report.get("n_screen_pls_moment_cuda_parallel_fold_jobs", 0)
+            ),
+            "n_screen_pls_moment_cuda_many_batched_batches": int(
+                report.get("n_screen_pls_moment_cuda_many_batched_batches", 0)
+            ),
+            "n_screen_pls_moment_cuda_many_batched_jobs": int(
+                report.get("n_screen_pls_moment_cuda_many_batched_jobs", 0)
+            ),
+            "n_screen_pls_moment_score_batch_calls": int(
+                report.get("n_screen_pls_moment_score_batch_calls", 0)
+            ),
+            "n_screen_pls_moment_score_batch_jobs": int(
+                report.get("n_screen_pls_moment_score_batch_jobs", 0)
+            ),
             "n_refit_pls_moment_cv_fits": int(
                 report.get("n_refit_pls_moment_cv_fits", 0)
             ),
@@ -2421,6 +2439,24 @@ class NativeAOMStagedChainCampaignRegressor(BaseEstimator):
             ),
             "n_refit_pls_moment_cuda_device_cv_fits": int(
                 report.get("n_refit_pls_moment_cuda_device_cv_fits", 0)
+            ),
+            "n_refit_pls_moment_cuda_parallel_fold_batches": int(
+                report.get("n_refit_pls_moment_cuda_parallel_fold_batches", 0)
+            ),
+            "n_refit_pls_moment_cuda_parallel_fold_jobs": int(
+                report.get("n_refit_pls_moment_cuda_parallel_fold_jobs", 0)
+            ),
+            "n_refit_pls_moment_cuda_many_batched_batches": int(
+                report.get("n_refit_pls_moment_cuda_many_batched_batches", 0)
+            ),
+            "n_refit_pls_moment_cuda_many_batched_jobs": int(
+                report.get("n_refit_pls_moment_cuda_many_batched_jobs", 0)
+            ),
+            "n_refit_pls_moment_score_batch_calls": int(
+                report.get("n_refit_pls_moment_score_batch_calls", 0)
+            ),
+            "n_refit_pls_moment_score_batch_jobs": int(
+                report.get("n_refit_pls_moment_score_batch_jobs", 0)
             ),
             "refit_top_k": retention.get("refit_top_k"),
             "refit_per_head_top_k": retention.get("refit_per_head_top_k"),

@@ -8,6 +8,23 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- Staged PLS batch telemetry propagation:
+  - `aom_staged_chain_campaign` now carries PLS moment score-batch
+    calls/jobs through every level where the other PLS CV/CUDA counters were
+    already visible: per-stage summaries, top-level screen aggregation,
+    refit aggregation, `scale_x_values` model-config aggregation and the
+    `NativeAOMStagedChainCampaignRegressor.get_diagnostics()` payload.
+  - The staged reports now distinguish “PLS CV fits happened” from “the screen
+    actually stayed on the grouped score-batch path”, which is necessary for
+    evaluating whether large cartesian campaigns are using the intended grinder
+    route.
+  - The sklearn diagnostics also expose the staged PLS parallel-fold and
+    many-batched CUDA counters alongside the existing host/device counts.
+  - Validation: staged campaign tests passed (`16 passed`); targeted
+    wrapper/inventory tests passed (`5 passed`); full dev-release
+    `test_moment_model_wrappers.py` passed (`80 passed`); `py_compile` on
+    touched Python modules/tests and `git diff --check` passed.
+
 - PLS exact batch lower-prefix downgrade:
   - `score_pls1_moment_sweeps_score_only` now keeps a shared batch/GPU route
     after a maximum-component prefix failure when a lower requested PLS prefix
