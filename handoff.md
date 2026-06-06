@@ -3017,3 +3017,35 @@ PLS many-batched score-deflation batching (2026-06-06):
     `0.32402508454613355`) with expected route counters. Observed smoke timing
     was `0.249s` many-batched vs `0.313s` legacy, but this is still a tiny
     route smoke rather than the final benchmark.
+
+PLS many-batched W/P tile storage (2026-06-06):
+
+- Continued the same many-batched PLS CUDA engine cleanup in
+  `cpp/src/core/cuda_dispatch.cpp`.
+- Removed the per-job strided cuBLAS copies that stored `dw` / `dp_load` into
+  row-major `W` / `P` device buffers at every component.
+- Since `W` and `P` are only needed after the device component loop completes,
+  the many-batched workspace now stores them temporarily as component-major
+  contiguous tiles. Each component uses one chunked contiguous cuBLAS copy for
+  the whole `W` tile and one for the whole `P` tile.
+- The existing host output contract is preserved by repacking the copied
+  component-major tile into row-major `p x n_components` buffers before the
+  prefix-fit code sees it.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - live one-GPU CUDA wrapper route guard:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` plus
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - Manual 32-chain synthetic PLS exact-CV smoke: many-batched and legacy had
+    matching best CV score (`0.32402508454613366` vs
+    `0.32402508454613355`) with expected route counters. Observed smoke timing
+    was `0.252s` many-batched vs `0.307s` legacy.
+- Remaining engine gap is now mostly the unfused sign path (`Idamax` and
+  branchy sign flips) plus the broader missing fused cartesian/IKPLS CUDA
+  executor. Solving that cleanly likely requires custom CUDA kernels / CMake
+  CUDA-language work, not just host-C++ cuBLAS reshaping.

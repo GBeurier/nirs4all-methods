@@ -8052,3 +8052,28 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     `0.32402508454613355`) with expected route counters. The observed smoke
     timings were `0.249s` many-batched vs `0.313s` legacy; this remains a small
     smoke, not a final benchmark claim.
+
+## 2026-06-06 — PLS Many-Batched W/P Tile Storage
+
+- Removed the per-job strided device copies used only to store intermediate
+  PLS `W` and `P` outputs in the many-batched route.
+- `W`/`P` are not consumed again on device during the component loop, so the
+  CUDA workspace now stores them temporarily as component-major contiguous
+  tiles. Each component copies the whole `dw` and `dp_load` tile with one
+  chunked contiguous cuBLAS copy for `W` and one for `P`.
+- The final device-to-host copy is unchanged in size; the host repack step now
+  converts component-major tile storage back to the row-major `p x n_components`
+  layout expected by the existing CPU prefix-fit code and public outputs.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - live one-GPU CUDA wrapper route guard:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_internal_tests -j2`
+    and `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - manual 32-chain / 128 exact-CV PLS smoke: many-batched and legacy selected
+    the same best CV score to floating precision (`0.32402508454613366` vs
+    `0.32402508454613355`) with expected route counters; observed smoke timing
+    was `0.252s` many-batched vs `0.307s` legacy.

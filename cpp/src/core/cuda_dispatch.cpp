@@ -449,6 +449,27 @@ long long as_cublas_stride(std::size_t value) {
     return static_cast<long long>(value);
 }
 
+void cublas_copy_contiguous(const double* src,
+                            double* dst,
+                            std::size_t n,
+                            const char* what) {
+    std::size_t offset = 0;
+    std::size_t remaining = n;
+    while (remaining > 0) {
+        const std::size_t chunk =
+            std::min<std::size_t>(
+                remaining,
+                static_cast<std::size_t>(std::numeric_limits<int>::max()));
+        const int chunk_i = static_cast<int>(chunk);
+        check_cublas(
+            cublasDcopy_v2(
+                state().handle, chunk_i, src + offset, 1, dst + offset, 1),
+            what);
+        offset += chunk;
+        remaining -= chunk;
+    }
+}
+
 class CudaStream {
 public:
     CudaStream() {
@@ -748,7 +769,6 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                                               double* yy_out,
                                               std::string* error) {
     const int pi = static_cast<int>(p);
-    const int ai = static_cast<int>(max_components);
     const std::size_t pp = p * p;
     const std::size_t pa = p * max_components;
     const long long stride_C = as_cublas_stride(pp);
@@ -786,6 +806,7 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
         const int batch_i = static_cast<int>(batch);
         const Pls1MomentBatchWorkspaceView workspace =
             reusable_workspace.ensure(batch, p, max_components);
+        const std::size_t batch_vec_elems = batch * p;
 
         hC.assign(batch * pp, 0.0);
         hs.assign(batch * p, 0.0);
@@ -1071,22 +1092,17 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                 score_update_remaining -= chunk;
             }
 
+            const std::size_t component_tile_offset = comp * batch_vec_elems;
+            cublas_copy_contiguous(
+                workspace.dw, workspace.dW + component_tile_offset,
+                batch_vec_elems, "cublasDcopy_v2(W tile)");
+            cublas_copy_contiguous(
+                workspace.dp_load, workspace.dP + component_tile_offset,
+                batch_vec_elems, "cublasDcopy_v2(P tile)");
+
             for (std::size_t local = 0; local < batch; ++local) {
-                double* const dw_j = workspace.dw + local * p;
-                double* const dp_j = workspace.dp_load + local * p;
-                double* const dW_j = workspace.dW + local * pa;
-                double* const dP_j = workspace.dP + local * pa;
                 const double tt = h_tt[local];
                 const double q_load = h_q_load[local];
-
-                check_cublas(
-                    cublasDcopy_v2(state().handle, pi, dw_j, 1,
-                                   dW_j + comp, ai),
-                    "cublasDcopy_v2");
-                check_cublas(
-                    cublasDcopy_v2(state().handle, pi, dp_j, 1,
-                                   dP_j + comp, ai),
-                    "cublasDcopy_v2");
 
                 current_yy[local] -= tt * q_load * q_load;
                 if (current_yy[local] < 0.0 &&
@@ -1124,12 +1140,16 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
         copy_d2h(hP.data(), workspace.dP, hP.size() * sizeof(double));
         for (std::size_t local = 0; local < batch; ++local) {
             const std::size_t job = begin + local;
-            std::copy(hW.data() + local * pa,
-                      hW.data() + (local + 1) * pa,
-                      W[job]);
-            std::copy(hP.data() + local * pa,
-                      hP.data() + (local + 1) * pa,
-                      P[job]);
+            for (std::size_t comp = 0; comp < max_components; ++comp) {
+                const double* const w_comp =
+                    hW.data() + comp * batch_vec_elems + local * p;
+                const double* const p_comp =
+                    hP.data() + comp * batch_vec_elems + local * p;
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    W[job][feature * max_components + comp] = w_comp[feature];
+                    P[job][feature * max_components + comp] = p_comp[feature];
+                }
+            }
             if (yy_out != nullptr) {
                 yy_out[job] = current_yy[local];
             }
