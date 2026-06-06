@@ -4360,9 +4360,61 @@ def run_once():
         ),
     }
 
+def run_full_once():
+    res = n4m.sweep_run(
+        X,
+        y,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=(),
+        pls_components=(1, 2),
+        heads=("pls",),
+        scale_x=False,
+        score_only=False,
+        cuda_pls_parallel_folds=True,
+        cuda_pls_min_device_features=1,
+        cuda_pls_many_batched=True,
+    )
+    return {
+        "candidate_scores": np.asarray(res["candidate_scores"], dtype=float).tolist(),
+        "oof_predictions": np.asarray(res["oof_predictions"], dtype=float).tolist(),
+        "predictions": np.asarray(res["predictions"], dtype=float).tolist(),
+        "coefficients": np.asarray(res["coefficients"], dtype=float).tolist(),
+        "intercept": np.asarray(res["intercept"], dtype=float).tolist(),
+        "selected_cv_rmse": float(res["selected_cv_rmse"]),
+        "n_pls_moment_cv_fits": int(res["n_pls_moment_cv_fits"]),
+        "n_pls_moment_cuda_device_cv_fits": int(
+            res["n_pls_moment_cuda_device_cv_fits"]
+        ),
+        "n_pls_moment_cuda_parallel_fold_batches": int(
+            res["n_pls_moment_cuda_parallel_fold_batches"]
+        ),
+        "n_pls_moment_cuda_parallel_fold_jobs": int(
+            res["n_pls_moment_cuda_parallel_fold_jobs"]
+        ),
+        "n_pls_moment_cuda_many_batched_batches": int(
+            res["n_pls_moment_cuda_many_batched_batches"]
+        ),
+        "n_pls_moment_cuda_many_batched_jobs": int(
+            res["n_pls_moment_cuda_many_batched_jobs"]
+        ),
+        "n_pls_moment_final_fits": int(res["n_pls_moment_final_fits"]),
+        "n_pls_moment_cuda_device_final_fits": int(
+            res["n_pls_moment_cuda_device_final_fits"]
+        ),
+        "n_pls_moment_host_final_fits": int(
+            res["n_pls_moment_host_final_fits"]
+        ),
+    }
+
 many_first = run_once()
 os.environ["N4M_CUDA_PLS_MANY_LEGACY"] = "1"
 legacy_override = run_once()
+os.environ.pop("N4M_CUDA_PLS_MANY_LEGACY", None)
+
+full_many = run_full_once()
+os.environ["N4M_CUDA_PLS_MANY_LEGACY"] = "1"
+full_legacy = run_full_once()
 os.environ.pop("N4M_CUDA_PLS_MANY_LEGACY", None)
 
 campaign_chains = [
@@ -4505,6 +4557,8 @@ def summarize_single(res):
 print(json.dumps({
     "many_first": many_first,
     "legacy_override": legacy_override,
+    "full_many": full_many,
+    "full_legacy": full_legacy,
     "campaign_many": campaign_many,
     "campaign_legacy": campaign_legacy,
     "recovered": {
@@ -4574,6 +4628,51 @@ print(json.dumps({
     )
     assert legacy_override["selected_cv_rmse"] == pytest.approx(
         many_first["selected_cv_rmse"], rel=1e-10, abs=1e-10
+    )
+
+    full_many = payload["full_many"]
+    full_legacy = payload["full_legacy"]
+    n_cv = full_many["n_pls_moment_cv_fits"]
+    assert n_cv == 4
+    assert full_many["n_pls_moment_cuda_device_cv_fits"] == n_cv
+    assert full_many["n_pls_moment_cuda_parallel_fold_batches"] == 0
+    assert full_many["n_pls_moment_cuda_parallel_fold_jobs"] == 0
+    assert full_many["n_pls_moment_cuda_many_batched_batches"] == 1
+    assert full_many["n_pls_moment_cuda_many_batched_jobs"] == n_cv
+    assert full_many["n_pls_moment_final_fits"] == 1
+    assert full_many["n_pls_moment_cuda_device_final_fits"] == 1
+    assert full_many["n_pls_moment_host_final_fits"] == 0
+
+    assert full_legacy["n_pls_moment_cv_fits"] == n_cv
+    assert full_legacy["n_pls_moment_cuda_device_cv_fits"] == n_cv
+    assert full_legacy["n_pls_moment_cuda_parallel_fold_batches"] == 1
+    assert full_legacy["n_pls_moment_cuda_parallel_fold_jobs"] == n_cv
+    assert full_legacy["n_pls_moment_cuda_many_batched_batches"] == 0
+    assert full_legacy["n_pls_moment_cuda_many_batched_jobs"] == 0
+    assert full_legacy["n_pls_moment_final_fits"] == full_many[
+        "n_pls_moment_final_fits"
+    ]
+    assert full_legacy["n_pls_moment_cuda_device_final_fits"] == full_many[
+        "n_pls_moment_cuda_device_final_fits"
+    ]
+    assert full_legacy["n_pls_moment_host_final_fits"] == full_many[
+        "n_pls_moment_host_final_fits"
+    ]
+    for key in (
+        "candidate_scores",
+        "oof_predictions",
+        "predictions",
+        "coefficients",
+        "intercept",
+    ):
+        np.testing.assert_allclose(
+            full_legacy[key],
+            full_many[key],
+            rtol=1e-10,
+            atol=1e-10,
+        )
+    assert full_legacy["selected_cv_rmse"] == pytest.approx(
+        full_many["selected_cv_rmse"], rel=1e-10, abs=1e-10
     )
 
     campaign_many = payload["campaign_many"]

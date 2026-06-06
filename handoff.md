@@ -3098,3 +3098,36 @@ Final stop handoff update (2026-06-06):
      path only if willing to add custom CUDA kernels.
   3. If deciding to stop engineering, run one deliberate benchmark campaign
      from the current branch rather than adding more smoke artifacts.
+
+Continuation update - PLS many-batched full-output guard (2026-06-06):
+
+- Resumed from the handoff and closed the small release-readiness test gap left
+  after the W/P tile-storage commit.
+- Updated
+  `bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`
+  so the same one-GPU subprocess now also runs
+  `n4m.sweep_run(... score_only=False)` on:
+  - the default CUDA PLS many-batched CV route;
+  - the legacy override route forced by `N4M_CUDA_PLS_MANY_LEGACY=1`.
+- The new assertions check:
+  - default run uses one many-batched CV batch / four jobs and no parallel-fold
+    CV batches;
+  - legacy override uses one parallel-fold CV batch / four jobs and no
+    many-batched CV batches;
+  - both routes keep the final full-data PLS fit on CUDA;
+  - candidate scores, OOF predictions, final predictions, coefficients,
+    intercept and selected CV RMSE match to tight tolerances.
+- Validation completed:
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src
+    N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python
+    -m pytest
+    bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides
+    -q`: `1 passed`;
+  - `PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python -m
+    py_compile bindings/python/tests/test_moment_model_wrappers.py`: PASS;
+  - `git diff --check`: PASS.
+- Next useful continuation after this commit:
+  1. For release-readiness, run a broader wrapper/artifact subset if desired;
+     the specific W/P output-contract guard is now covered.
+  2. For performance, the remaining real engine work is still the unfused sign
+     path and ultimately a true custom CUDA fused cartesian/IKPLS executor.
