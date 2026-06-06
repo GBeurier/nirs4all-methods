@@ -2585,3 +2585,29 @@ Strict AOM portfolio timing refresh slice (2026-06-06):
   - full `test_aom_moment_cuda_smoke_artifacts.py`: `36 passed`.
 - Remaining true gap is unchanged: this refreshes release evidence, but not
   the fused/batched Ridge/PLS many-chain executor.
+
+Sweep/stack/crossover timing refresh slice (2026-06-06):
+
+- Regenerated the remaining stale sweep/stack/crossover timing artifacts
+  against ABI 1.22.0:
+  `moment_sweep_timing.csv`,
+  `moment_sweep_timing_cuda_smoke.csv`,
+  `moment_sweep_timing_cuda_many_batched_smoke.csv`,
+  `moment_sweep_timing_parallel_flag_smoke.csv`,
+  `moment_sweep_timing_min_device_smoke.csv`,
+  `moment_stack_timing.csv`,
+  `moment_stack_timing_cuda_smoke.csv`,
+  `aom_sweep_timing.csv`,
+  `aom_sweep_timing_cuda_smoke.csv`,
+  `aom_sweep_timing_batch_counter_smoke.csv`,
+  `moment_gpu_crossover.csv` and `moment_gpu_crossover.md`.
+- Strengthened
+  `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py` so these
+  artifacts must report ABI 1.22.0, expected CPU/CUDA build paths, CPU host vs
+  CUDA device PLS counters, AOM exact/proxy batch counters, and the source-free
+  CPU/CUDA crossover profile matrix.
+- Validation:
+  - Python `py_compile` on the artifact test file: PASS.
+  - full `test_aom_moment_cuda_smoke_artifacts.py`: `43 passed`.
+- Remaining true gap is unchanged: release evidence is now current, but the
+  fused/batched Ridge/PLS many-chain executor is still not implemented.

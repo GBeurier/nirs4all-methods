@@ -4,11 +4,11 @@ Synthetic score-only `n4m.sweep_run` timing for CPU vs one-GPU CUDA moment scree
 
 | head | shape | CPU ms | CUDA default ms | CUDA many-batched ms | best CUDA profile | best CUDA vs CPU | many-batched vs default | recommended |
 |---|---:|---:|---:|---:|---|---:|---:|---|
-| pls | 256x1024 | 227.389 | 115.589 | 124.100 | default | 1.97x | 0.93x | cuda:default |
-| pls | 260x48 | 0.463 | 8.671 | 8.815 | default | 0.05x | 0.98x | cpu |
-| pls | 260x256 | 11.604 | 13.204 | 15.304 | default | 0.88x | 0.86x | cpu |
-| pls | 512x512 | 84.181 | 39.134 | 41.258 | default | 2.15x | 0.95x | cuda:default |
-| ridge | 256x1024 | 168.339 | 67.007 |  | default | 2.51x |  | cuda:default |
-| ridge | 260x48 | 1.396 | 5.415 |  | default | 0.26x |  | cpu |
-| ridge | 260x256 | 75.546 | 58.862 |  | default | 1.28x |  | cuda:default |
-| ridge | 512x512 | 684.388 | 518.294 |  | default | 1.32x |  | cuda:default |
+| pls | 256x1024 | 542.701 | 312.121 | 740.471 | default | 1.74x | 0.42x | cuda:default |
+| pls | 260x48 | 1.128 | 57.397 | 32.487 | many_batched | 0.03x | 1.77x | cpu |
+| pls | 260x256 | 34.607 | 67.060 | 55.000 | many_batched | 0.63x | 1.22x | cpu |
+| pls | 512x512 | 112.756 | 224.345 | 183.722 | many_batched | 0.61x | 1.22x | cpu |
+| ridge | 256x1024 | 263.826 | 375.202 |  | default | 0.70x |  | cpu |
+| ridge | 260x48 | 4.912 | 117.491 |  | default | 0.04x |  | cpu |
+| ridge | 260x256 | 378.230 | 334.641 |  | default | 1.13x |  | cuda:default |
+| ridge | 512x512 | 1168.275 | 1558.649 |  | default | 0.75x |  | cpu |
