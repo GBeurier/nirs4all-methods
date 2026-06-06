@@ -1,5 +1,45 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Sweep and crossover timing artifacts refreshed to ABI 1.22
+
+Purpose:
+
+- Remove the last stale ABI metadata from committed moment/AOM sweep timing
+  evidence after the native AOM/moment route changes.
+
+Changes:
+
+- Regenerated the moment sweep and stack timing artifacts against ABI 1.22.0:
+  `moment_sweep_timing.csv`,
+  `moment_sweep_timing_cuda_smoke.csv`,
+  `moment_sweep_timing_cuda_many_batched_smoke.csv`,
+  `moment_sweep_timing_parallel_flag_smoke.csv`,
+  `moment_sweep_timing_min_device_smoke.csv`,
+  `moment_stack_timing.csv`, and
+  `moment_stack_timing_cuda_smoke.csv`.
+- Regenerated the AOM sweep timing artifacts against ABI 1.22.0:
+  `aom_sweep_timing.csv`,
+  `aom_sweep_timing_cuda_smoke.csv`, and
+  `aom_sweep_timing_batch_counter_smoke.csv`.
+- Regenerated the live CPU/CUDA crossover artifacts
+  `moment_gpu_crossover.csv` and `moment_gpu_crossover.md` with one visible
+  GPU, comparing CPU, CUDA default, and CUDA many-batched PLS profiles.
+- Strengthened artifact guards so the refreshed sweep/stack/crossover CSVs
+  must report ABI 1.22.0, expected CPU/CUDA library paths, host-vs-device PLS
+  route counters, AOM exact/proxy batch counters, and the source-free crossover
+  shape/profile matrix.
+
+Validation:
+
+- `py_compile` passed for
+  `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py`.
+- Full `test_aom_moment_cuda_smoke_artifacts.py` passed (`43 passed`).
+
+Follow-up:
+
+- This closes stale timing evidence for the current release slice. The fused
+  many-chain IKPLS/Ridge grinder remains the true performance gap.
+
 ## 2026-06-06 - Strict AOM portfolio timing artifacts refreshed to ABI 1.22
 
 Purpose:

@@ -12,7 +12,8 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _BENCH = _REPO_ROOT / "benchmarks" / "cross_binding"
-_AOM_ARTIFACT_ABI = "1.22.0"
+_CURRENT_ARTIFACT_ABI = "1.22.0"
+_AOM_ARTIFACT_ABI = _CURRENT_ARTIFACT_ABI
 
 
 def _rows(name: str) -> list[dict[str, str]]:
@@ -50,8 +51,12 @@ def _assert_dev_release_build_path(path: str) -> None:
     assert "build/dev-release" in path, path
 
 
+def _assert_current_artifact_abi(row: dict[str, str]) -> None:
+    assert row.get("abi") == _CURRENT_ARTIFACT_ABI
+
+
 def _assert_current_aom_artifact_abi(row: dict[str, str]) -> None:
-    assert row.get("abi") == _AOM_ARTIFACT_ABI
+    _assert_current_artifact_abi(row)
 
 
 def _assert_direct_moment_heads_rows(
@@ -100,6 +105,7 @@ def _assert_direct_moment_heads_rows(
         backend = row["backend"]
         shape = (_int(row, "n_samples"), _int(row, "n_features"))
 
+        _assert_current_artifact_abi(row)
         assert backend in expected_backends
         assert row["surface_status"] == "function_and_sklearn_replay"
         assert math.isfinite(_float(row, "rmse"))
@@ -180,6 +186,7 @@ def _assert_pls_cross_validate_rows(
         backend = row["backend"]
         shape = (_int(row, "n_samples"), _int(row, "n_features"))
         score_only = backend.endswith("_score_only")
+        _assert_current_artifact_abi(row)
         assert _bool(row, "score_only") is score_only
         assert row["component_grid"] == "1|2|3"
         assert _int(row, "n_component_grid") == 3
@@ -370,17 +377,65 @@ def test_staged_campaign_cuda_smoke_artifact_proves_train_only_cuda_screen():
     assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") > 0
 
 
-def test_moment_stack_cuda_smoke_artifact_proves_pls_base_routes_on_device():
-    row = _only_row("moment_stack_timing_cuda_smoke.csv")
+def _assert_moment_stack_rows(
+    rows: list[dict[str, str]],
+    *,
+    expect_cuda_pls: bool,
+) -> None:
+    assert rows
+    for row in rows:
+        _assert_current_artifact_abi(row)
+        assert math.isfinite(_float(row, "oof_rmse"))
+        assert math.isfinite(_float(row, "train_rmse"))
+        assert math.isfinite(_float(row, "elapsed_ms_median"))
+        assert _int(row, "n_base_models") >= 1
+        assert "pls" in row["base_models"].split("|")
 
-    assert row["base_models"] == "pls"
-    _assert_cuda_build_path(row["library_path"])
-    assert _int(row, "n_base_oof_pls_moment_cuda_device_cv_fits") > 0
-    assert _int(row, "n_base_oof_pls_moment_host_cv_fits") == 0
-    assert _int(row, "n_base_oof_pls_moment_cuda_parallel_fold_jobs") > 0
-    assert _int(row, "n_base_final_pls_moment_cuda_device_cv_fits") > 0
-    assert _int(row, "n_base_final_pls_moment_host_cv_fits") == 0
-    assert _int(row, "n_base_final_pls_moment_cuda_parallel_fold_jobs") > 0
+        oof_cv = _int(row, "n_base_oof_pls_moment_cv_fits")
+        final_cv = _int(row, "n_base_final_pls_moment_cv_fits")
+        assert oof_cv > 0
+        assert final_cv > 0
+        if expect_cuda_pls:
+            _assert_cuda_build_path(row["library_path"])
+            assert _int(row, "n_base_oof_pls_moment_host_cv_fits") == 0
+            assert _int(row, "n_base_oof_pls_moment_cuda_device_cv_fits") == oof_cv
+            assert (
+                _int(row, "n_base_oof_pls_moment_cuda_parallel_fold_jobs")
+                == oof_cv
+            )
+            assert _int(row, "n_base_final_pls_moment_host_cv_fits") == 0
+            assert (
+                _int(row, "n_base_final_pls_moment_cuda_device_cv_fits")
+                == final_cv
+            )
+            assert (
+                _int(row, "n_base_final_pls_moment_cuda_parallel_fold_jobs")
+                == final_cv
+            )
+        else:
+            _assert_dev_release_build_path(row["library_path"])
+            assert _int(row, "n_base_oof_pls_moment_host_cv_fits") == oof_cv
+            assert _int(row, "n_base_oof_pls_moment_cuda_device_cv_fits") == 0
+            assert _int(row, "n_base_oof_pls_moment_cuda_parallel_fold_jobs") == 0
+            assert _int(row, "n_base_final_pls_moment_host_cv_fits") == final_cv
+            assert _int(row, "n_base_final_pls_moment_cuda_device_cv_fits") == 0
+            assert _int(row, "n_base_final_pls_moment_cuda_parallel_fold_jobs") == 0
+
+
+def test_moment_stack_cuda_smoke_artifact_proves_pls_base_routes_on_device():
+    rows = _rows("moment_stack_timing_cuda_smoke.csv")
+
+    assert len(rows) == 1
+    assert rows[0]["base_models"] == "pls"
+    _assert_moment_stack_rows(rows, expect_cuda_pls=True)
+
+
+def test_moment_stack_cpu_artifact_covers_host_pls_base_route():
+    rows = _rows("moment_stack_timing.csv")
+
+    assert len(rows) == 4
+    assert {row["label"] for row in rows} == {"ridge_pcr_pls", "full_moment_stack"}
+    _assert_moment_stack_rows(rows, expect_cuda_pls=False)
 
 
 def test_direct_moment_heads_cuda_smoke_artifact_covers_native_and_sklearn_replay():
@@ -403,9 +458,16 @@ def test_pls_cross_validate_cpu_artifact_covers_reference_abi_schema():
     _assert_pls_cross_validate_rows(rows, expect_cuda_pls=False)
 
 
-def test_moment_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
-    rows = _rows("moment_sweep_timing_cuda_smoke.csv")
-
+def _assert_moment_sweep_rows(
+    rows: list[dict[str, str]],
+    *,
+    expect_cuda_build: bool,
+    expect_cuda_pls: bool,
+    expect_parallel_folds: bool,
+    expected_min_device_features: int | None,
+    expect_many_batched: bool,
+) -> None:
+    assert len(rows) == 16
     assert {row["backend"] for row in rows} == {
         "native_sweep_ridge",
         "native_sweep_ridge_score_only",
@@ -426,22 +488,51 @@ def test_moment_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
     ]
     assert ridge_moment_rows
     for row in rows:
-        _assert_cuda_build_path(row["library_path"])
-        assert _bool(row, "cuda_pls_parallel_folds") is True
-        assert _int(row, "cuda_pls_min_device_features") == 1
+        if expect_cuda_build:
+            _assert_cuda_build_path(row["library_path"])
+        else:
+            _assert_dev_release_build_path(row["library_path"])
+        _assert_current_artifact_abi(row)
+        assert _bool(row, "cuda_pls_parallel_folds") is expect_parallel_folds
+        assert _bool(row, "cuda_pls_many_batched") is expect_many_batched
+        if expected_min_device_features is None:
+            assert row["cuda_pls_min_device_features"] == ""
+        else:
+            assert _int(row, "cuda_pls_min_device_features") == (
+                expected_min_device_features
+            )
         assert math.isfinite(_float(row, "selected_cv_rmse"))
 
     for row in pls_cv_rows:
         n_cv = _int(row, "n_pls_moment_cv_fits")
-        assert _int(row, "n_pls_moment_host_cv_fits") == 0
-        assert _int(row, "n_pls_moment_cuda_device_cv_fits") == n_cv
-        assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == n_cv
+        if expect_cuda_pls:
+            assert _int(row, "n_pls_moment_host_cv_fits") == 0
+            assert _int(row, "n_pls_moment_cuda_device_cv_fits") == n_cv
+            if expect_many_batched:
+                assert _int(row, "n_pls_moment_cuda_parallel_fold_batches") == 0
+                assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
+                assert _int(row, "n_pls_moment_cuda_many_batched_batches") == 1
+                assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == n_cv
+            else:
+                assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == n_cv
+                assert _int(row, "n_pls_moment_cuda_many_batched_batches") == 0
+                assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
+        else:
+            assert _int(row, "n_pls_moment_host_cv_fits") == n_cv
+            assert _int(row, "n_pls_moment_cuda_device_cv_fits") == 0
+            assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
+            assert _int(row, "n_pls_moment_cuda_many_batched_batches") == 0
+            assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
 
     for row in rows:
         n_final = _int(row, "n_pls_moment_final_fits")
         if n_final > 0:
-            assert _int(row, "n_pls_moment_host_final_fits") == 0
-            assert _int(row, "n_pls_moment_cuda_device_final_fits") == n_final
+            if expect_cuda_pls:
+                assert _int(row, "n_pls_moment_host_final_fits") == 0
+                assert _int(row, "n_pls_moment_cuda_device_final_fits") == n_final
+            else:
+                assert _int(row, "n_pls_moment_host_final_fits") == n_final
+                assert _int(row, "n_pls_moment_cuda_device_final_fits") == 0
 
     for row in ridge_moment_rows:
         assert _int(row, "n_ridge_dual_materialized_cv_fits") == 0
@@ -473,62 +564,99 @@ def test_moment_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
     )
 
 
+def test_moment_sweep_cpu_artifact_routes_exact_pls_cv_on_host():
+    _assert_moment_sweep_rows(
+        _rows("moment_sweep_timing.csv"),
+        expect_cuda_build=False,
+        expect_cuda_pls=False,
+        expect_parallel_folds=False,
+        expected_min_device_features=None,
+        expect_many_batched=False,
+    )
+
+
+def test_moment_sweep_cpu_parallel_flag_artifact_remains_host_without_cuda_build():
+    _assert_moment_sweep_rows(
+        _rows("moment_sweep_timing_parallel_flag_smoke.csv"),
+        expect_cuda_build=False,
+        expect_cuda_pls=False,
+        expect_parallel_folds=True,
+        expected_min_device_features=None,
+        expect_many_batched=False,
+    )
+
+
+def test_moment_sweep_cpu_min_device_artifact_remains_host_without_cuda_build():
+    _assert_moment_sweep_rows(
+        _rows("moment_sweep_timing_min_device_smoke.csv"),
+        expect_cuda_build=False,
+        expect_cuda_pls=False,
+        expect_parallel_folds=False,
+        expected_min_device_features=1,
+        expect_many_batched=False,
+    )
+
+
+def test_moment_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
+    _assert_moment_sweep_rows(
+        _rows("moment_sweep_timing_cuda_smoke.csv"),
+        expect_cuda_build=True,
+        expect_cuda_pls=True,
+        expect_parallel_folds=True,
+        expected_min_device_features=1,
+        expect_many_batched=False,
+    )
+
+
 def test_moment_sweep_cuda_many_batched_smoke_artifact_routes_exact_pls_cv():
-    rows = _rows("moment_sweep_timing_cuda_many_batched_smoke.csv")
+    _assert_moment_sweep_rows(
+        _rows("moment_sweep_timing_cuda_many_batched_smoke.csv"),
+        expect_cuda_build=True,
+        expect_cuda_pls=True,
+        expect_parallel_folds=False,
+        expected_min_device_features=1,
+        expect_many_batched=True,
+    )
 
-    assert {row["backend"] for row in rows} == {
-        "native_sweep_ridge",
-        "native_sweep_ridge_score_only",
-        "native_sweep_pls",
-        "native_sweep_pls_score_only",
+
+_AOM_SWEEP_BACKENDS = {
+    "native_aom_sweep",
+    "native_aom_chain_sweep",
+    "native_aom_chain_sweep_whittaker",
+    "native_aom_chain_sweep_fck",
+    "native_aom_chain_sweep_gaussian",
+    "native_aom_sweep_pls",
+    "native_aom_chain_sweep_pls",
+    "native_aom_chain_sweep_pls_gcv_proxy",
+    "native_aom_chain_sweep_pls_exact_score_only",
+    "native_aom_chain_screen_refit_pls_gcv_proxy",
+    "native_aom_chain_fixed_fit_pls",
+    "native_aom_chain_fixed_fit_ridge",
+    "native_aom_sweep_ridge",
+    "native_aom_chain_sweep_ridge",
+    "native_aom_chain_sweep_ridge_exact_score_only",
+}
+
+
+def _assert_aom_sweep_rows(
+    rows: list[dict[str, str]],
+    *,
+    expect_cuda_build: bool,
+    expect_cuda_pls: bool,
+) -> None:
+    required_batch_fields = {
+        "n_ridge_moment_score_batch_calls",
+        "n_ridge_moment_score_batch_jobs",
+        "n_pls_moment_score_batch_calls",
+        "n_pls_moment_score_batch_jobs",
+        "n_pls_gcv_proxy_batch_calls",
+        "n_pls_gcv_proxy_batch_jobs",
+        "n_refit_pls_moment_cuda_parallel_fold_jobs",
+        "n_refit_pls_moment_cuda_many_batched_jobs",
     }
-    pls_cv_rows = [row for row in rows if _int(row, "n_pls_moment_cv_fits") > 0]
-    assert pls_cv_rows
-
-    for row in rows:
-        _assert_cuda_build_path(row["library_path"])
-        assert _bool(row, "cuda_pls_parallel_folds") is False
-        assert _bool(row, "cuda_pls_many_batched") is True
-        assert _int(row, "cuda_pls_min_device_features") == 1
-        assert math.isfinite(_float(row, "selected_cv_rmse"))
-
-    for row in pls_cv_rows:
-        n_cv = _int(row, "n_pls_moment_cv_fits")
-        assert _int(row, "n_pls_moment_host_cv_fits") == 0
-        assert _int(row, "n_pls_moment_cuda_device_cv_fits") == n_cv
-        assert _int(row, "n_pls_moment_cuda_parallel_fold_batches") == 0
-        assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
-        assert _int(row, "n_pls_moment_cuda_many_batched_batches") == 1
-        assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == n_cv
-
-    for row in rows:
-        n_final = _int(row, "n_pls_moment_final_fits")
-        if n_final > 0:
-            assert _int(row, "n_pls_moment_host_final_fits") == 0
-            assert _int(row, "n_pls_moment_cuda_device_final_fits") == n_final
-
-
-def test_aom_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
-    rows = _rows("aom_sweep_timing_cuda_smoke.csv")
-
-    expected_backends = {
-        "native_aom_sweep",
-        "native_aom_chain_sweep",
-        "native_aom_chain_sweep_whittaker",
-        "native_aom_chain_sweep_fck",
-        "native_aom_chain_sweep_gaussian",
-        "native_aom_sweep_pls",
-        "native_aom_chain_sweep_pls",
-        "native_aom_chain_sweep_pls_gcv_proxy",
-        "native_aom_chain_sweep_pls_exact_score_only",
-        "native_aom_chain_screen_refit_pls_gcv_proxy",
-        "native_aom_chain_fixed_fit_pls",
-        "native_aom_chain_fixed_fit_ridge",
-        "native_aom_sweep_ridge",
-        "native_aom_chain_sweep_ridge",
-        "native_aom_chain_sweep_ridge_exact_score_only",
-    }
-    assert {row["backend"] for row in rows} == expected_backends
+    assert len(rows) == 49
+    assert {row["backend"] for row in rows} == _AOM_SWEEP_BACKENDS
+    assert required_batch_fields.issubset(rows[0])
 
     pls_cv_rows = [row for row in rows if _int(row, "n_pls_moment_cv_fits") > 0]
     assert pls_cv_rows
@@ -537,9 +665,16 @@ def test_aom_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
     assert any(row["profile"] == "custom2_whittaker" for row in rows)
 
     for row in rows:
-        _assert_cuda_build_path(row["library_path"])
-        assert _bool(row, "cuda_pls_parallel_folds") is True
-        assert _int(row, "cuda_pls_min_device_features") == 1
+        if expect_cuda_build:
+            _assert_cuda_build_path(row["library_path"])
+            assert _bool(row, "cuda_pls_parallel_folds") is True
+            assert _int(row, "cuda_pls_min_device_features") == 1
+        else:
+            _assert_dev_release_build_path(row["library_path"])
+            assert _bool(row, "cuda_pls_parallel_folds") is False
+            assert row["cuda_pls_min_device_features"] == ""
+        _assert_current_artifact_abi(row)
+        assert _bool(row, "cuda_pls_many_batched") is False
         assert _int(row, "n_chains") > 0
         assert _int(row, "n_candidates") > 0
         if not row["backend"].startswith("native_aom_chain_fixed_fit"):
@@ -547,9 +682,110 @@ def test_aom_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
 
     for row in pls_cv_rows:
         n_cv = _int(row, "n_pls_moment_cv_fits")
-        assert _int(row, "n_pls_moment_host_cv_fits") == 0
-        assert _int(row, "n_pls_moment_cuda_device_cv_fits") == n_cv
-        assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == n_cv
+        if expect_cuda_pls:
+            assert _int(row, "n_pls_moment_host_cv_fits") == 0
+            assert _int(row, "n_pls_moment_cuda_device_cv_fits") == n_cv
+            assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == n_cv
+        else:
+            assert _int(row, "n_pls_moment_host_cv_fits") == n_cv
+            assert _int(row, "n_pls_moment_cuda_device_cv_fits") == 0
+            assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
+        assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
+
+    assert any(
+        row["backend"] == "native_aom_chain_sweep_ridge_exact_score_only"
+        and _int(row, "n_ridge_moment_score_batch_calls") > 0
+        and _int(row, "n_ridge_moment_score_batch_jobs") > 0
+        for row in rows
+    )
+    assert any(
+        row["backend"] == "native_aom_chain_sweep_pls_exact_score_only"
+        and _int(row, "n_pls_moment_score_batch_calls") > 0
+        and _int(row, "n_pls_moment_score_batch_jobs") > 0
+        for row in rows
+    )
+    assert any(
+        row["backend"] == "native_aom_chain_sweep_pls_gcv_proxy"
+        and _int(row, "n_pls_gcv_proxy_batch_calls") > 0
+        and _int(row, "n_pls_gcv_proxy_batch_jobs") > 0
+        for row in rows
+    )
+
+
+@pytest.mark.parametrize(
+    "csv_name",
+    ("aom_sweep_timing.csv", "aom_sweep_timing_batch_counter_smoke.csv"),
+)
+def test_aom_sweep_cpu_artifact_covers_current_abi_and_batch_counters(
+    csv_name: str,
+):
+    _assert_aom_sweep_rows(
+        _rows(csv_name),
+        expect_cuda_build=False,
+        expect_cuda_pls=False,
+    )
+
+
+def test_aom_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
+    _assert_aom_sweep_rows(
+        _rows("aom_sweep_timing_cuda_smoke.csv"),
+        expect_cuda_build=True,
+        expect_cuda_pls=True,
+    )
+
+
+def test_moment_gpu_crossover_artifact_covers_current_cpu_cuda_profiles():
+    rows = _rows("moment_gpu_crossover.csv")
+
+    assert len(rows) == 24
+    assert {row["backend"] for row in rows} == {"cpu", "cuda"}
+    assert {row["head"] for row in rows} == {"ridge", "pls"}
+    assert {(_int(row, "n_samples"), _int(row, "n_features")) for row in rows} == {
+        (260, 48),
+        (260, 256),
+        (512, 512),
+        (256, 1024),
+    }
+    assert {
+        (row["backend"], row["cuda_pls_profile"]) for row in rows
+    } == {
+        ("cpu", "cpu_baseline"),
+        ("cuda", "default"),
+        ("cuda", "many_batched"),
+    }
+
+    for row in rows:
+        _assert_current_artifact_abi(row)
+        assert row["error"] == ""
+        assert _int(row, "cv") == 5
+        assert _int(row, "repeats") == 1
+        assert math.isfinite(_float(row, "elapsed_ms_median"))
+        assert math.isfinite(_float(row, "selected_cv_rmse"))
+        assert math.isfinite(_float(row, "speedup_vs_cpu"))
+        assert row["recommended_backend"] in {"cpu", "cuda"}
+
+        if row["backend"] == "cpu":
+            _assert_dev_release_build_path(row["library_path"])
+            assert row["cuda_pls_profile"] == "cpu_baseline"
+            assert _int(row, "cuda_available") == 0
+        else:
+            _assert_cuda_build_path(row["library_path"])
+            assert _int(row, "cuda_available") == 1
+            assert _int(row, "cuda_pls_min_device_features") == 1
+
+        if row["head"] == "pls":
+            n_cv = _int(row, "n_pls_moment_cv_fits")
+            assert n_cv == 5
+            if row["backend"] == "cuda":
+                assert _int(row, "n_pls_moment_host_cv_fits") == 0
+                assert _int(row, "n_pls_moment_cuda_device_cv_fits") == n_cv
+                if row["cuda_pls_profile"] == "many_batched":
+                    assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == n_cv
+                else:
+                    assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
+            else:
+                assert _int(row, "n_pls_moment_host_cv_fits") == n_cv
+                assert _int(row, "n_pls_moment_cuda_device_cv_fits") == 0
 
 
 def test_aom_selector_cuda_smoke_artifact_covers_function_and_sklearn_replay():
