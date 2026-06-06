@@ -920,15 +920,40 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
             }
             copy_d2h(h_sign.data(), workspace.dsign,
                      h_sign.size() * sizeof(double));
+
+            bool any_negative_sign = false;
             for (std::size_t local = 0; local < batch; ++local) {
-                double* const dw_j = workspace.dw + local * p;
                 if (h_sign[local] < 0.0) {
-                    double neg_one = -1.0;
-                    check_cublas(
-                        cublasDscal_v2(state().handle, pi, &neg_one, dw_j, 1),
-                        "cublasDscal_v2");
+                    any_negative_sign = true;
+                    h_scale[local] = -1.0;
+                } else {
+                    h_scale[local] = 1.0;
                 }
             }
+            double* signed_w = workspace.dw;
+            if (any_negative_sign) {
+                copy_h2d(workspace.dscale, h_scale.data(),
+                         h_scale.size() * sizeof(double));
+                check_cublas(
+                    cublasDdgmm(
+                        state().handle,
+                        CUBLAS_SIDE_RIGHT,
+                        pi,
+                        batch_i,
+                        workspace.dw,
+                        pi,
+                        workspace.dscale,
+                        1,
+                        workspace.douter,
+                        pi),
+                    "cublasDdgmm(signed weights)");
+                signed_w = workspace.douter;
+            }
+
+            const std::size_t component_tile_offset = comp * batch_vec_elems;
+            cublas_copy_contiguous(
+                signed_w, workspace.dW + component_tile_offset,
+                batch_vec_elems, "cublasDcopy_v2(W tile)");
 
             check_cublas(
                 cublasDgemmStridedBatched(
@@ -942,7 +967,7 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     workspace.dC,
                     pi,
                     stride_C,
-                    workspace.dw,
+                    signed_w,
                     pi,
                     stride_vec,
                     &zero,
@@ -961,7 +986,7 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     1,
                     pi,
                     &one,
-                    workspace.dw,
+                    signed_w,
                     pi,
                     stride_vec,
                     workspace.dcw,
@@ -982,7 +1007,7 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     1,
                     pi,
                     &one,
-                    workspace.dw,
+                    signed_w,
                     pi,
                     stride_vec,
                     workspace.ds,
@@ -1092,10 +1117,6 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                 score_update_remaining -= chunk;
             }
 
-            const std::size_t component_tile_offset = comp * batch_vec_elems;
-            cublas_copy_contiguous(
-                workspace.dw, workspace.dW + component_tile_offset,
-                batch_vec_elems, "cublasDcopy_v2(W tile)");
             cublas_copy_contiguous(
                 workspace.dp_load, workspace.dP + component_tile_offset,
                 batch_vec_elems, "cublasDcopy_v2(P tile)");

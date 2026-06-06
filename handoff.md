@@ -3131,3 +3131,34 @@ Continuation update - PLS many-batched full-output guard (2026-06-06):
      the specific W/P output-contract guard is now covered.
   2. For performance, the remaining real engine work is still the unfused sign
      path and ultimately a true custom CUDA fused cartesian/IKPLS executor.
+
+Continuation update - PLS many-batched batched sign scaling (2026-06-06):
+
+- Continued the CUDA PLS many-batched engine cleanup in
+  `cpp/src/core/cuda_dispatch.cpp`.
+- Replaced the remaining per-negative-job `cublasDscal_v2` sign flips with one
+  tile-level `cublasDdgmm` when any job in the tile needs a sign flip:
+  - `cublasIdamax_v2` remains per job to preserve the deterministic dominant
+    loading convention without adding custom CUDA kernels;
+  - gathered sign values are converted to a host `+1/-1` vector;
+  - the vector is copied once to `dscale`;
+  - `cublasDdgmm(CUBLAS_SIDE_RIGHT, ...)` writes the signed weight tile to the
+    reusable `douter` buffer;
+  - the signed W tile is copied to `dW` before `douter` is reused for the later
+    C-deflation vector.
+- Validation completed:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS;
+  - one-GPU CUDA wrapper guard
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`;
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` and
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS;
+  - manual 32-chain / 128 exact-CV PLS smoke matched many-batched and legacy
+    best CV scores with expected route counters (`1` many-batched batch /
+    `128` jobs vs `1` parallel-fold batch / `128` jobs).
+- Scope note: this removes another component x negative-job cuBLAS loop from
+  the current host-C++ + cuBLAS path, but it still is not the true fused
+  cartesian/IKPLS CUDA executor.
