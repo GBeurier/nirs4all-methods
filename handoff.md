@@ -8,20 +8,30 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
-- Reserved fused/batched PLS CV ABI surface:
+- PLS CV ABI reference surface:
   - Added ABI 1.22.0 symbol
     `n4m_pls_cross_validate(ctx, cfg, X, Y, fold_ids, n_fold_ids, n_folds,
     component_grid, n_component_grid, out_result)`.
-  - This is intentionally a reserved surface only: the C implementation sets
-    `out_result` to NULL, writes a context error and returns
-    `N4M_ERR_NOT_IMPLEMENTED`. It is catalogued as ABI infrastructure, not as a
-    production method.
+  - The symbol now provides an exact PLS-only reference path by delegating to
+    `n4m_sweep_run` with `heads_mask=PLS`; candidate scores and route counters
+    match the existing sweep PLS branch. It is catalogued as ABI infrastructure,
+    not as a production method.
+  - Exposed the reference path as `n4m.pls_cross_validate` and
+    `n4m.moment.pls_cross_validate`; the moment facade inventory now advertises
+    the PLS CV reference entry and its CUDA PLS knobs.
   - Updated Python ctypes declarations, ABI floor, Linux/macOS/Windows expected
-    symbol snapshots, ABI changelog, DEFERRALS, release-readiness notes and the
-    moment coverage matrix.
-  - Validation so far: rebuilt dev-release `n4m_c` to `libn4m.so.1.22.0`;
-    targeted ctypes test passed; catalog strict ABI/reference/split checks and
-    `reconcile_abi.py --check` passed.
+    symbol snapshots, ABI changelog, DEFERRALS, release-readiness notes,
+    worklog and the moment coverage matrix.
+  - Validation after this slice: rebuilt dev-release and CUDA `n4m_c` to
+    `libn4m.so.1.22.0`; targeted dev/CUDA equivalence tests passed; full
+    `test_moment_model_wrappers.py` passed (`78 passed`); `py_compile` on
+    touched Python modules/tests passed; catalog strict ABI/reference/split
+    checks, `reconcile_abi.py --check`, `git diff --check` and
+    `scripts/bump_version.sh --check` passed.
+  - During validation, a tiny rank-deficient PLS fixture crashed the existing
+    `n4m.sweep_run(..., heads=("pls",))` path before the new wrapper was called.
+    The equivalence test now uses a deterministic non-degenerate fixture; the
+    separate PLS degeneracy bug is not fixed in this slice.
   - Remaining true gap: actual grouped/fused host/device executor,
     score-equivalence tests and timings for the 200k-chain PLS grinder.
 

@@ -1,31 +1,43 @@
 # AOM / Moment Integration Worklog
 
-## 2026-06-06 - Reserved fused/batched PLS CV ABI
+## 2026-06-06 - PLS CV ABI reference surface
 
 Purpose:
 
-- Reserve the public C/Python entry point needed by the future fused/batched
-  IKPLS-style PLS grinder without shipping a fake fallback executor.
+- Provide the public C/Python entry point needed by the future fused/batched
+  IKPLS-style PLS grinder with an exact single-matrix reference implementation.
 
 Changes:
 
 - Added ABI 1.22.0 symbol `n4m_pls_cross_validate(ctx, cfg, X, Y, fold_ids,
   n_fold_ids, n_folds, component_grid, n_component_grid, out_result)`.
-- Implemented it as an explicit C API stub: validates obvious pointer/length
-  errors, sets `out_result` to NULL, writes a context error and returns
-  `N4M_ERR_NOT_IMPLEMENTED`.
-- Exposed the symbol through Python ctypes, classified it as catalog ABI infra
-  rather than a production method, updated ABI snapshots and documented the
-  remaining executor gap.
+- Implemented it by validating obvious pointer/length errors, then delegating to
+  `n4m_sweep_run` with `heads_mask=PLS`; candidate scores and CPU/CUDA route
+  counters therefore match the existing exact PLS sweep path.
+- Exposed the symbol through Python ctypes as `n4m.pls_cross_validate` and
+  `n4m.moment.pls_cross_validate`, added it to the moment facade inventory,
+  classified it as catalog ABI infra rather than a production method, updated
+  ABI snapshots and documented that the grouped/fused executor remains open.
 
 Validation:
 
-- Rebuilt `build/dev-release` `n4m_c`; CMake rechecked the c_api source glob and
-  produced `libn4m.so.1.22.0`.
-- Targeted Python ctypes test:
-  `test_pls_cross_validate_reserved_abi_returns_not_implemented`.
+- Rebuilt `build/dev-release` and `build/cuda-on` `n4m_c`; both produced
+  `libn4m.so.1.22.0`.
+- Targeted dev/CUDA Python equivalence tests:
+  `test_pls_cross_validate_reference_matches_pls_sweep` and the moment facade
+  alias/inventory guard.
+- Full dev-release `test_moment_model_wrappers.py`: `78 passed`.
+- Python `py_compile` on touched modules/tests passed.
 - Catalog checks: `validate.py --strict-abi`, `validate.py --check-references`,
-  `split_legacy_methods.py --check`, and `reconcile_abi.py --check`.
+  `split_legacy_methods.py --check`, `reconcile_abi.py --check`,
+  `git diff --check` and `scripts/bump_version.sh --check`.
+
+Residual risk:
+
+- A tiny rank-deficient PLS fixture reproduced a segfault in the pre-existing
+  `n4m.sweep_run(..., heads=("pls",))` path before the new wrapper was called.
+  The reference wrapper equivalence test uses a deterministic non-degenerate
+  fixture; the separate PLS degeneracy bug remains open.
 
 ## 2026-06-06 - Compact-wide audit10 benchmark follow-up
 

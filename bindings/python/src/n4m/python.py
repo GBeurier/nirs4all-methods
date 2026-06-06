@@ -6154,6 +6154,99 @@ def sweep_run(
             lib.n4m_context_destroy(ctx)
 
 
+def pls_cross_validate(
+    X,
+    y,
+    *,
+    cv: int = 5,
+    fold_ids=None,
+    component_grid=(1, 2, 3),
+    center_x: bool | None = None,
+    scale_x: bool | None = None,
+    center_y: bool | None = None,
+    scale_y: bool | None = None,
+    score_only: bool = False,
+    cuda_pls_parallel_folds: bool | None = None,
+    cuda_pls_min_device_features: int | None = None,
+    cuda_pls_many_batched: bool | None = None,
+) -> dict[str, np.ndarray | float]:
+    """Run the ABI 1.22 exact PLS-only cross-validation reference path.
+
+    The current native implementation delegates to the PLS branch of
+    :func:`sweep_run`; the signature is the stable hook that the future
+    grouped/fused PLS grinder can accelerate without changing callers.
+    """
+    X_arr = as_f64_2d(X)
+    y_arr = _as_y_matrix(y, X_arr.shape[0])
+    components = np.ascontiguousarray(component_grid, dtype=np.int32).reshape(-1)
+    if components.size == 0:
+        raise ValueError("component_grid must not be empty")
+
+    fold_arr = None
+    if fold_ids is not None:
+        fold_arr = np.ascontiguousarray(fold_ids, dtype=np.int32).reshape(-1)
+        if fold_arr.size != X_arr.shape[0]:
+            raise ValueError("fold_ids length must match X.shape[0]")
+
+    ctx = ctypes.c_void_p()
+    cfg = ctypes.c_void_p()
+    result = ctypes.c_void_p()
+    try:
+        check(lib.n4m_context_create(ctypes.byref(ctx)), "n4m_context_create")
+        check(lib.n4m_config_create(ctypes.byref(cfg)), "n4m_config_create")
+        _set_model_config(
+            cfg,
+            center_x=center_x,
+            scale_x=scale_x,
+            center_y=center_y,
+            scale_y=scale_y,
+        )
+        _set_config_bool(cfg, "aom_score_only", score_only)
+        _set_config_bool(
+            cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds
+        )
+        _set_config_bool(cfg, "cuda_pls_many_batched", cuda_pls_many_batched)
+        _set_config_positive_int(
+            cfg, "cuda_pls_min_device_features", cuda_pls_min_device_features
+        )
+        Xv = numpy_to_view(X_arr)
+        Yv = numpy_to_view(y_arr)
+        fold_ptr = (
+            fold_arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+            if fold_arr is not None
+            else ctypes.POINTER(ctypes.c_int32)()
+        )
+        component_ptr = components.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+        check(
+            lib.n4m_pls_cross_validate(
+                ctx,
+                cfg,
+                ctypes.byref(Xv),
+                ctypes.byref(Yv),
+                fold_ptr,
+                ctypes.c_int64(0 if fold_arr is None else fold_arr.size),
+                ctypes.c_int32(int(cv)),
+                component_ptr,
+                ctypes.c_int64(components.size),
+                ctypes.byref(result),
+            ),
+            "n4m_pls_cross_validate",
+        )
+        return _method_result_dict(
+            result,
+            matrices=_SWEEP_MATRICES,
+            int_vectors=("fold_ids",),
+            scalars=_SWEEP_SCALARS,
+        )
+    finally:
+        if result.value:
+            lib.n4m_method_result_destroy(result)
+        if cfg.value:
+            lib.n4m_config_destroy(cfg)
+        if ctx.value:
+            lib.n4m_context_destroy(ctx)
+
+
 def aom_sweep_run(
     X,
     y,

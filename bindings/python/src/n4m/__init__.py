@@ -217,6 +217,7 @@ moments = python.moments
 moments_train_from_heldout = python.moments_train_from_heldout
 moment_screen_backend_recommendation = python.moment_screen_backend_recommendation
 sweep_run = python.sweep_run
+pls_cross_validate = python.pls_cross_validate
 ridge = python.ridge
 pls = python.pls
 pcr = python.pcr
@@ -403,6 +404,7 @@ __all__ = [
     "r2",
     "pop_pls",
     "pcr",
+    "pls_cross_validate",
     "pls",
     "ridge",
     "ridge_pls",

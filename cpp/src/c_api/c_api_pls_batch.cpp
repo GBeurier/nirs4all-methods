@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// Reserved C ABI surface for the future fused/batched PLS CV executor.
-// The executor itself is deliberately deferred; callers get an explicit,
-// testable NOT_IMPLEMENTED status instead of accidentally hitting a slow or
-// semantically different fallback.
+// C ABI surface for PLS-only cross-validation.
+//
+// This currently delegates to the exact PLS branch of n4m_sweep_run. That gives
+// downstream code a stable, score-equivalent reference implementation while the
+// future fused/grouped PLS grinder can replace the internals without changing
+// the ABI.
 
 #include <stdint.h>
 
@@ -63,19 +65,9 @@ N4M_API n4m_status_t n4m_pls_cross_validate(
         return N4M_ERR_INVALID_ARGUMENT;
     }
 
-    (void)cfg;
-    (void)X;
-    (void)Y;
-    (void)fold_ids;
-    (void)n_fold_ids;
-    (void)n_folds;
-    (void)component_grid;
-    (void)n_component_grid;
-
-    set_error(ctx,
-              "n4m_pls_cross_validate is reserved for fused batched PLS "
-              "cross-validation and is not implemented yet");
-    return N4M_ERR_NOT_IMPLEMENTED;
+    return n4m_sweep_run(ctx, cfg, X, Y, n_folds, fold_ids, n_fold_ids,
+                         nullptr, 0, component_grid, n_component_grid,
+                         2, out_result);
 }
 
 }  // extern "C"
