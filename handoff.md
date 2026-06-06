@@ -2654,3 +2654,70 @@ AOM/moment inventory objective guard slice (2026-06-06):
   - `test_aom_moment_facade.py`: `28 passed`.
 - Remaining true gap is unchanged: this is public API/readiness evidence, not
   the fused/batched Ridge/PLS many-chain executor.
+
+Screen/refit release-evidence refresh and completion audit slice (2026-06-06):
+
+- Regenerated the remaining stale global screen/refit timing artifacts against
+  ABI 1.22.0:
+  `aom_screen_refit_scaling.csv`,
+  `aom_screen_refit_scaling_cuda_smoke.csv`,
+  `aom_mixed_screen_refit_scaling.csv`,
+  `aom_mixed_screen_refit_scaling_cuda_smoke.csv`,
+  `aom_ridge_refit_scaling.csv`,
+  `aom_ridge_refit_scaling_cuda_smoke.csv`,
+  `aom_mixed_screen_refit_split_smoke.csv`,
+  `aom_screen_refit_parallel_flag_smoke.csv` and
+  `aom_screen_refit_min_device_smoke.csv`.
+- The six scaling artifacts keep 25 rows each over the same refit-top-k and
+  execution-mode grid. PLS/Ridge stay global-only retention, while mixed keeps
+  `refit_per_head_top_k=4`; the one-row mixed split smoke uses
+  `refit_per_head_top_k=1`.
+- Strengthened
+  `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py` so these
+  artifacts now prove ABI 1.22.0, expected dev-release/cuda-on library paths,
+  CPU host PLS vs CUDA device PLS counters, Ridge moment refit counters,
+  split-head scoring for mixed screens, CUDA PLS flags and min-device-feature
+  smoke behavior.
+- Validation:
+  - `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so CUDA_VISIBLE_DEVICES=0 /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py -q`:
+    `49 passed`.
+  - Combined Python readiness slice:
+    `test_catalog_python_bindings.py`,
+    `test_aom_moment_facade.py`,
+    `test_aom_moment_cuda_smoke_artifacts.py`: `89 passed`.
+  - `catalog/scripts/validate.py`: PASS.
+  - `catalog/scripts/validate_catalog.py`: PASS.
+  - `catalog/scripts/validate.py --strict-abi`: PASS,
+    `566` method symbols + `136` infra symbols = `702/702`.
+  - `catalog/scripts/validate.py --check-references`: PASS,
+    `208/208` production methods covered.
+  - `catalog/scripts/reconcile_abi.py --check`: PASS.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS.
+  - `git diff --check`: PASS.
+- Completion audit against the active AOM/moment porting objective:
+  - Public method/facade/catalog/docs wiring for AOM and moment surfaces is
+    covered by the strengthened facade inventory tests and catalog gates.
+  - Winning reusable presets are present and guarded:
+    `NativeAOMSavgolFocusRegressor`, `NativeAOMStrictFamilyLiteRegressor`,
+    `NativeAOMMomentScreenRefitRegressor`,
+    `NativeAOMMomentPLSScreenRefitRegressor`,
+    `NativeAOMMomentPLSExactScreenRefitRegressor`,
+    `NativeAOMMomentRidgeScreenRefitRegressor`,
+    `NativeAOMFixedCandidateRegressor` and the direct moment-head wrappers.
+  - Global ultra-configurable test surfaces are present and guarded:
+    `aom_chain_screen_refit_campaign`, `aom_moment_screen_refit_campaign`,
+    `aom_staged_chain_campaign`, `NativeAOMScreenRefitRegressor`,
+    `NativeAOMStagedChainCampaignRegressor`, candidate-pool/refit helpers,
+    route summaries, rank diagnostics and preprocessing-impact helpers.
+  - CPU and one-GPU CUDA smoke evidence is current for the public timing
+    artifacts; PLS exact moment CV device routes are proven by counters on
+    cuda-on builds, and dev-release host routes are proven separately.
+  - The tests explicitly guard against dataset-name/source/id routing in public
+    config options, and production selection remains train-CV/refit based;
+    test-rank helpers are offline audit surfaces.
+- Remaining true gap is unchanged after this audit: not method wiring, catalog,
+  docs, benchmark scripts or committed CPU/GPU release evidence. The open work
+  is still category-B engine/performance work: a true fused/batched IKPLS-style
+  many-chain/many-fold executor, broader arbitrary-chain moment coverage
+  without materialization, and full fused CUDA sweep kernels for the complete
+  cartesian.
