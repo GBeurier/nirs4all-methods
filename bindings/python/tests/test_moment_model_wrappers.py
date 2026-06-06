@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ctypes
 import csv
 import json
 import os
@@ -68,76 +67,48 @@ def _assert_method_result(res, n_samples: int, n_targets: int = 1):
     assert np.isfinite(res["rmse"])
 
 
-def test_pls_cross_validate_reserved_abi_returns_not_implemented():
-    from n4m._ffi import lib
-    from n4m._types import Dtype, MatrixView, Status
+def test_pls_cross_validate_reference_matches_pls_sweep():
+    rng = np.random.default_rng(1729)
+    X = np.ascontiguousarray(rng.normal(size=(12, 5)), dtype=np.float64)
+    y = np.ascontiguousarray(
+        0.6 * X[:, 0] - 0.25 * X[:, 1] + 0.1 * rng.normal(size=X.shape[0]),
+        dtype=np.float64,
+    )
+    folds = np.arange(X.shape[0], dtype=np.int32) % 3
+    components = np.asarray([1, 2, 3], dtype=np.int32)
 
-    ctx = ctypes.c_void_p()
-    cfg = ctypes.c_void_p()
-    assert lib.n4m_context_create(ctypes.byref(ctx)) == Status.OK
-    assert lib.n4m_config_create(ctypes.byref(cfg)) == Status.OK
-
-    try:
-        X = np.ascontiguousarray(
-            [
-                [0.0, 1.0, 2.0],
-                [1.0, 0.0, 3.0],
-                [2.0, 1.0, 0.0],
-                [3.0, 2.0, 1.0],
-                [4.0, 3.0, 2.0],
-                [5.0, 4.0, 3.0],
-            ],
-            dtype=np.float64,
-        )
-        y = np.ascontiguousarray((0.5 * X[:, 0] - X[:, 1])[:, None])
-        x_view = MatrixView()
-        y_view = MatrixView()
-        assert (
-            lib.n4m_matrix_view_init_rowmajor(
-                ctypes.byref(x_view),
-                ctypes.c_void_p(X.ctypes.data),
-                X.shape[0],
-                X.shape[1],
-                Dtype.F64,
-            )
-            == Status.OK
-        )
-        assert (
-            lib.n4m_matrix_view_init_rowmajor(
-                ctypes.byref(y_view),
-                ctypes.c_void_p(y.ctypes.data),
-                y.shape[0],
-                y.shape[1],
-                Dtype.F64,
-            )
-            == Status.OK
-        )
-
-        folds = np.asarray([0, 1, 0, 1, 0, 1], dtype=np.int32)
-        components = np.asarray([1, 2], dtype=np.int32)
-        out = ctypes.c_void_p()
-        status = lib.n4m_pls_cross_validate(
-            ctx,
-            cfg,
-            ctypes.byref(x_view),
-            ctypes.byref(y_view),
-            folds.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-            folds.size,
-            2,
-            components.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
-            components.size,
-            ctypes.byref(out),
-        )
-
-        assert status == Status.ERR_NOT_IMPLEMENTED
-        assert not out.value
-        err_ptr = lib.n4m_context_last_error(ctx)
-        err = ctypes.cast(err_ptr, ctypes.c_char_p).value.decode("utf-8")
-        assert "n4m_pls_cross_validate" in err
-        assert "not implemented" in err.lower()
-    finally:
-        lib.n4m_config_destroy(cfg)
-        lib.n4m_context_destroy(ctx)
+    got = n4m.pls_cross_validate(
+        X,
+        y,
+        cv=3,
+        fold_ids=folds,
+        component_grid=components,
+    )
+    expected = n4m.sweep_run(
+        X,
+        y,
+        cv=3,
+        fold_ids=folds,
+        ridge_lambdas=[],
+        pls_components=components,
+        heads=("pls",),
+    )
+    np.testing.assert_allclose(
+        got["candidate_scores"],
+        expected["candidate_scores"],
+        rtol=1e-12,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        got["oof_predictions"],
+        expected["oof_predictions"],
+        rtol=1e-12,
+        atol=1e-12,
+    )
+    assert got["candidate_scores"].shape == (3, 4)
+    assert np.all(got["candidate_scores"][:, 1] == 1.0)
+    assert got["n_pls_moment_cv_fits"] == expected["n_pls_moment_cv_fits"]
+    assert got["n_pls_materialized_cv_fits"] == expected["n_pls_materialized_cv_fits"]
 
 
 def _assert_aom_route_partitions(res):
@@ -248,6 +219,7 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
     assert callable(n4m.moments)
     assert moment.moments is n4m.moments
     assert moment.sweep_run is n4m.sweep_run
+    assert moment.pls_cross_validate is n4m.pls_cross_validate
     assert (
         moment.aom_moment_screen_refit_campaign
         is n4m.aom_moment_screen_refit_campaign
@@ -324,6 +296,7 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "moments",
         "moment_sweep",
         "sweep_run",
+        "pls_cross_validate",
         "ridge",
         "ridge_regressor",
         "pls",
@@ -377,6 +350,14 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "cuda_pls_many_batched",
         "score_only",
     }.issubset(inventory_by_name["sweep_run"]["config_options"])
+    assert {
+        "component_grid",
+        "fold_ids",
+        "cuda_pls_parallel_folds",
+        "cuda_pls_many_batched",
+        "score_only",
+    }.issubset(inventory_by_name["pls_cross_validate"]["config_options"])
+    assert inventory_by_name["pls_cross_validate"]["wrapper_of"] == "sweep_run"
     assert "score_only" not in inventory_by_name["moment_sweep"]["config_options"]
     assert {
         "start",

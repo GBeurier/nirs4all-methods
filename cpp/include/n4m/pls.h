@@ -874,13 +874,13 @@ N4M_API n4m_status_t n4m_sweep_run(
     int32_t heads_mask,
     n4m_method_result_t** out_result);
 
-/* Reserved high-throughput PLS cross-validation surface.
+/* PLS-only cross-validation surface.
  *
- * This ABI entry point is intentionally present before the fused/batched
- * IKPLS-style executor lands so downstream bindings can target a stable C
- * signature. It currently returns N4M_ERR_NOT_IMPLEMENTED and stores a context
- * error. It is not a production method and must not be used for selection until
- * the device/host batched executor is implemented and benchmarked.
+ * ABI 1.22 provides a stable reference endpoint for exact PLS CV. The current
+ * implementation delegates to n4m_sweep_run with heads_mask=PLS, so scores and
+ * route counters match the PLS branch of the sweep path. It is not yet the
+ * grouped/fused multi-chain IKPLS grinder; that executor can replace the
+ * internals later without changing this signature.
  *
  * `fold_ids` follows n4m_sweep_run semantics: when provided,
  * `n_fold_ids == n_samples`; `n_folds <= 0` means infer max(fold_ids)+1.

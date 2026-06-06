@@ -1,16 +1,17 @@
 # ABI — Changes Log
 
-## 2026-06-06 — ABI 1.22.0: reserved fused batched PLS CV surface
+## 2026-06-06 — ABI 1.22.0: PLS CV reference surface
 
 One additive public symbol:
 
 - `n4m_pls_cross_validate`
 
-This is a reserved C/Python ABI entry point for the future fused/batched
-IKPLS-style PLS cross-validation/grinder path. It currently returns
-`N4M_ERR_NOT_IMPLEMENTED`, clears the output result pointer to NULL and writes a
-context error. It is intentionally catalogued as ABI infrastructure, not as a
-production method.
+This is a C/Python ABI entry point for exact PLS-only cross-validation over one
+input matrix. The current implementation delegates to the PLS branch of
+`n4m_sweep_run`, so candidate scores and CPU/CUDA route counters match the
+existing sweep path. It is intentionally catalogued as ABI infrastructure, not
+as a production method. The future fused/batched IKPLS-style multi-chain
+executor can replace the internals without changing this signature.
 
 ## 2026-06-05 — ABI 1.21.0: CUDA PLS many-design batching config
 

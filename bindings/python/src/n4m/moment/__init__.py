@@ -40,6 +40,7 @@ moments = _native.moments
 moments_train_from_heldout = _native.moments_train_from_heldout
 moment_screen_backend_recommendation = _native.moment_screen_backend_recommendation
 sweep_run = _native.sweep_run
+pls_cross_validate = _native.pls_cross_validate
 aom_chain_screen_refit_campaign = _native.aom_chain_screen_refit_campaign
 aom_moment_screen_refit_campaign = _native.aom_moment_screen_refit_campaign
 aom_staged_chain_campaign = _native.aom_staged_chain_campaign
@@ -100,6 +101,14 @@ _MOMENT_SWEEP_OPTIONS = (
     "ridge_lambdas",
     "pls_components",
     "heads",
+    *_MODEL_SCALE_OPTIONS,
+    "score_only",
+    *_CUDA_PLS_OPTIONS,
+)
+_PLS_CV_OPTIONS = (
+    "cv",
+    "fold_ids",
+    "component_grid",
     *_MODEL_SCALE_OPTIONS,
     "score_only",
     *_CUDA_PLS_OPTIONS,
@@ -496,6 +505,22 @@ _METHOD_INVENTORY = (
         "doc_path": "docs/methods/sweep_run.md",
         "config_options": _MOMENT_SWEEP_OPTIONS,
         "notes": "ABI-close Ridge/PLS moment screen over candidate lambdas/components.",
+    },
+    {
+        "name": "pls_cross_validate",
+        "entry": "pls_cross_validate",
+        "kind": "function",
+        "role": "pls_cv_reference",
+        "heads": ("pls",),
+        "reuse": "candidate_scores",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "utilities.sweep",
+        "catalog_role": "catalog_binding",
+        "wrapper_of": "sweep_run",
+        "doc_path": "docs/methods/sweep_run.md",
+        "config_options": _PLS_CV_OPTIONS,
+        "notes": "ABI 1.22 exact PLS-only CV reference surface; currently score-equivalent to the PLS branch of sweep_run.",
     },
     {
         "name": "aom_moment_screen_refit_campaign",
@@ -1366,6 +1391,7 @@ __all__ = [
     "moment_stack",
     "NativePCRRegressor",
     "pcr",
+    "pls_cross_validate",
     "pls",
     "ridge",
     "ridge_pls",
