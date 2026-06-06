@@ -2528,3 +2528,21 @@ Moment facade reusable AOM surface slice (2026-06-06):
   - CUDA facade smoke on `CUDA_VISIBLE_DEVICES=0`: PASS.
 - Remaining true gap is unchanged: this improves reusable method discovery,
   but it is not the fused/batched Ridge/PLS many-chain executor.
+
+Staged real-cohort CSV resume guard slice (2026-06-06):
+
+- Added a header compatibility check in
+  `benchmarks/cross_binding/run_aom_staged_real_cohort.py` so `--resume` cannot
+  append current telemetry rows into older staged-cohort CSV artifacts whose
+  headers lack the latest Ridge/PLS route counters.
+- Compatible current-schema CSVs still append normally; stale historical
+  outputs now fail fast with an explicit message to use a fresh `--output` or
+  migrate the artifact deliberately.
+- Validation:
+  - targeted staged real-cohort resume tests:
+    `2 passed, 22 deselected`.
+  - full `test_aom_benchmark_tools.py`:
+    `24 passed`.
+  - Python `py_compile` on touched benchmark/test files: PASS.
+- Remaining true gap is unchanged: this closes a benchmark-resume correctness
+  issue, but not the fused/batched Ridge/PLS many-chain executor.

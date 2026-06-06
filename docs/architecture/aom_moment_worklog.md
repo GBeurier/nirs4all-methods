@@ -1,5 +1,30 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Staged real-cohort resume rejects stale CSV schemas
+
+Purpose:
+
+- Prevent resumed staged AOM benchmark campaigns from appending current
+  telemetry rows into older CSV artifacts whose headers pre-date the latest
+  Ridge/PLS route counters.
+
+Changes:
+
+- Added a header compatibility check in
+  `benchmarks/cross_binding/run_aom_staged_real_cohort.py` before appending to
+  an existing output CSV.
+- Existing compatible outputs still append normally; incompatible historical
+  outputs now fail fast with a message telling the caller to use a fresh
+  `--output` or explicitly migrate the artifact.
+- Added focused tests for rejecting a stale header and accepting the current
+  header.
+
+Validation:
+
+- Targeted staged real-cohort resume tests passed (`2 passed, 22 deselected`).
+- Full `test_aom_benchmark_tools.py` passed (`24 passed`).
+- Python `py_compile` on the touched benchmark/test files passed.
+
 ## 2026-06-06 - Moment facade exposes full reusable AOM surface
 
 Purpose:

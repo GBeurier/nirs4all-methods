@@ -33,6 +33,46 @@ def _write_csv(path: Path, rows: list[dict[str, object]]) -> Path:
     return path
 
 
+def test_aom_staged_real_cohort_resume_rejects_incompatible_header(tmp_path):
+    runner = _load_script(
+        "run_aom_staged_real_cohort",
+        "benchmarks/cross_binding/run_aom_staged_real_cohort.py",
+    )
+    output = tmp_path / "staged.csv"
+    stale_fields = [
+        field
+        for field in runner.RESULT_FIELDS
+        if field != "n_ridge_moment_eigen_path_cv_fits"
+    ]
+    with output.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=stale_fields)
+        writer.writeheader()
+        writer.writerow({field: "" for field in stale_fields})
+
+    with pytest.raises(ValueError, match="resume would corrupt columns"):
+        runner.append_row(output, {"dataset_key": "A/B", "status": "ok"})
+
+    rows = list(csv.reader(output.open(newline="", encoding="utf-8")))
+    assert rows[0] == stale_fields
+    assert len(rows) == 2
+
+
+def test_aom_staged_real_cohort_append_allows_current_header(tmp_path):
+    runner = _load_script(
+        "run_aom_staged_real_cohort",
+        "benchmarks/cross_binding/run_aom_staged_real_cohort.py",
+    )
+    output = tmp_path / "staged.csv"
+
+    runner.append_row(output, {"dataset_key": "A/B", "status": "ok"})
+    runner.append_row(output, {"dataset_key": "C/D", "status": "skipped"})
+
+    rows = list(csv.DictReader(output.open(newline="", encoding="utf-8")))
+    assert [row["dataset_key"] for row in rows] == ["A/B", "C/D"]
+    assert [row["status"] for row in rows] == ["ok", "skipped"]
+    assert rows[0]["n_ridge_moment_eigen_path_cv_fits"] == ""
+
+
 def test_moment_gpu_crossover_writes_markdown_summary(tmp_path):
     bench = _load_script(
         "bench_moment_gpu_crossover",
