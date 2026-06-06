@@ -230,9 +230,10 @@ void test_pls1_moment_batch_fallback_reuses_recovered_prefixes() {
 
     SWEEP_CHECK(batched.size() == 2U);
     const auto& healthy = batched[0];
-    SWEEP_CHECK(healthy.n_pls_moment_score_batch_calls == 0);
-    SWEEP_CHECK(healthy.n_pls_moment_cv_fits == kCv);
-    SWEEP_CHECK(healthy.n_pls_moment_host_cv_fits == kCv);
+    SWEEP_CHECK(healthy.n_pls_moment_score_batch_calls == 1);
+    SWEEP_CHECK(healthy.n_pls_moment_score_batch_jobs == 2 * kCv);
+    SWEEP_CHECK(healthy.n_pls_moment_cv_fits == 2 * kCv);
+    SWEEP_CHECK(healthy.n_pls_moment_host_cv_fits == 2 * kCv);
     SWEEP_CHECK(healthy.n_candidates == 2);
     SWEEP_CHECK(std::isfinite(healthy.candidate_scores[3]));
     SWEEP_CHECK(std::isfinite(healthy.candidate_scores[7]));

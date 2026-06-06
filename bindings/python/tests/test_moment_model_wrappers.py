@@ -191,8 +191,9 @@ def test_aom_pls_moment_batch_degenerate_components_do_not_abort_screen():
     assert np.isfinite(got["selected_cv_rmse"])
     assert got["n_materialized_candidates"] == 0.0
     assert got["n_pls_materialized_cv_fits"] == 0.0
-    assert got["n_pls_moment_score_batch_calls"] == 0.0
-    assert got["n_pls_moment_cv_fits"] > 0.0
+    assert got["n_pls_moment_score_batch_calls"] == 1.0
+    assert got["n_pls_moment_score_batch_jobs"] == len(chains) * 2
+    assert got["n_pls_moment_cv_fits"] == len(chains) * 3
 
 
 def _assert_aom_route_partitions(res):
@@ -4087,9 +4088,56 @@ def run_once():
 many_first = run_once()
 os.environ["N4M_CUDA_PLS_MANY_LEGACY"] = "1"
 legacy_override = run_once()
+os.environ.pop("N4M_CUDA_PLS_MANY_LEGACY", None)
+
+t = np.arange(24, dtype=np.float64)
+X_bad = np.ascontiguousarray(
+    np.column_stack([t, t + 1.0, 2.0 * t + 3.0]), dtype=np.float64
+)
+y_bad = 0.5 * X_bad[:, 0] - X_bad[:, 1]
+folds_bad = np.arange(X_bad.shape[0], dtype=np.int32) % 2
+recovered = n4m.aom_chain_sweep_run(
+    X_bad,
+    y_bad,
+    [["identity"], ["identity"]],
+    cv=2,
+    fold_ids=folds_bad,
+    ridge_lambdas=[],
+    pls_components=[1, 2],
+    heads=("pls",),
+    scale_x=False,
+    moment_policy="force_moments",
+    score_only=True,
+    cuda_pls_min_device_features=1,
+    cuda_pls_many_batched=True,
+)
 print(json.dumps({
     "many_first": many_first,
     "legacy_override": legacy_override,
+    "recovered": {
+        "candidate_scores": np.asarray(
+            recovered["candidate_scores"], dtype=float
+        ).tolist(),
+        "n_pls_moment_cv_fits": int(recovered["n_pls_moment_cv_fits"]),
+        "n_pls_moment_host_cv_fits": int(
+            recovered["n_pls_moment_host_cv_fits"]
+        ),
+        "n_pls_moment_cuda_device_cv_fits": int(
+            recovered["n_pls_moment_cuda_device_cv_fits"]
+        ),
+        "n_pls_moment_score_batch_calls": int(
+            recovered["n_pls_moment_score_batch_calls"]
+        ),
+        "n_pls_moment_score_batch_jobs": int(
+            recovered["n_pls_moment_score_batch_jobs"]
+        ),
+        "n_pls_moment_cuda_many_batched_batches": int(
+            recovered["n_pls_moment_cuda_many_batched_batches"]
+        ),
+        "n_pls_moment_cuda_many_batched_jobs": int(
+            recovered["n_pls_moment_cuda_many_batched_jobs"]
+        ),
+    },
 }))
 """
 
@@ -4132,6 +4180,18 @@ print(json.dumps({
     assert legacy_override["selected_cv_rmse"] == pytest.approx(
         many_first["selected_cv_rmse"], rel=1e-10, abs=1e-10
     )
+
+    recovered = payload["recovered"]
+    recovered_scores = np.asarray(recovered["candidate_scores"], dtype=float)
+    assert np.all(np.isfinite(recovered_scores[recovered_scores[:, 3] == 1.0, 4]))
+    assert np.all(np.isinf(recovered_scores[recovered_scores[:, 3] == 2.0, 4]))
+    assert recovered["n_pls_moment_score_batch_calls"] == 1
+    assert recovered["n_pls_moment_score_batch_jobs"] == 4
+    assert recovered["n_pls_moment_cuda_many_batched_batches"] == 1
+    assert recovered["n_pls_moment_cuda_many_batched_jobs"] == 4
+    assert recovered["n_pls_moment_cuda_device_cv_fits"] == 4
+    assert recovered["n_pls_moment_host_cv_fits"] == 2
+    assert recovered["n_pls_moment_cv_fits"] == 6
 
 
 def test_native_aom_chain_sweep_moment_prefix_cache_counters():
