@@ -232,8 +232,10 @@ tiled scheduler for the default many-job exact PLS1 moment path; it preserves
 scores but remains opt-in because smoke timings did not beat the legacy
 sequential-many workspace path. Passing `cuda_pls_many_batched=True` to
 `sweep_run` or `NativeMomentSweepRegressor` enables the same route without an
-environment variable. `N4M_CUDA_PLS_MANY_LEGACY=1` forces the legacy path and
-`N4M_CUDA_PLS_BATCH_MAX_BYTES=<bytes>` caps experimental tile memory.
+environment variable and takes precedence over `cuda_pls_parallel_folds=True`
+when both knobs are set. `N4M_CUDA_PLS_MANY_LEGACY=1` forces the legacy
+non-batched route even if the explicit Python flag or environment opt-in is set,
+and `N4M_CUDA_PLS_BATCH_MAX_BYTES=<bytes>` caps experimental tile memory.
 Passing `cuda_pls_min_device_features=<positive int>` lowers or raises the CUDA
 device-route feature threshold from the default 1024 without recompiling;
 scores are unchanged, but timings and host/device counters may change. This is

@@ -2115,3 +2115,28 @@ PLS exact batch OpenMP aggregation slice (2026-06-06):
     ABI/API/counter change, deterministic per-chain accumulation preserved.
     Residual non-blocking note: CI does not appear to build `omp-on`, so the
     new parity guard is mostly a local guard until an OpenMP CI job exists.
+
+CUDA PLS scheduler precedence slice (2026-06-06):
+
+- Fixed `pls1_moment_components_many()` route precedence so the explicit
+  `cuda_pls_many_batched=True` / `N4M_CUDA_PLS_MANY_BATCHED=1` tiled scheduler
+  is tried before `cuda_pls_parallel_folds=True` when both are set.
+- Made `N4M_CUDA_PLS_MANY_LEGACY=1` a real override: it disables the tiled
+  many-batched route even when the explicit Python flag or env opt-in is set,
+  then falls through to the requested parallel-folds or sequential legacy path.
+- Added a live CUDA subprocess guard,
+  `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`, that
+  checks many-batched counters win with both flags true, legacy env flips the
+  route to parallel-fold counters, and candidate scores stay unchanged.
+- Updated method docs for `sweep_run` and `aom_chain_sweep_run` with the route
+  precedence and legacy override semantics.
+- Validation:
+  - CUDA `n4m_c` build: PASS.
+  - targeted wrapper tests on `cuda-on` and `dev-release`:
+    `2 passed, 75 deselected` each.
+  - full dev `test_moment_model_wrappers.py`: `77 passed`.
+  - CUDA artifact guard file: `22 passed`.
+  - live CUDA precedence guard:
+    `1 passed, 76 deselected`.
+  - py_compile on `test_moment_model_wrappers.py`: PASS.
+  - `git diff --check`: PASS.

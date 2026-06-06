@@ -457,9 +457,11 @@ An experimental cuBLAS-only many-job scheduler is also available for profiling
 with `cuda_pls_many_batched=True` or the `N4M_CUDA_PLS_MANY_BATCHED=1`
 environment fallback. It tiles independent exact PLS1 moment jobs on one GPU
 and batches the dominant `p^2` operations with `cublasDgemmStridedBatched`,
-while preserving the same scores. It is not the default because current smoke
-timings did not beat the legacy sequential-many workspace path. Use
-`N4M_CUDA_PLS_MANY_LEGACY=1` to force the legacy path and
+while preserving the same scores. If both CUDA PLS schedulers are requested,
+`cuda_pls_many_batched=True` is tried before `cuda_pls_parallel_folds=True`.
+It is not the default because current smoke timings did not beat the legacy
+sequential-many workspace path. Use `N4M_CUDA_PLS_MANY_LEGACY=1` to force the
+legacy non-batched path even when an explicit flag or env opt-in is set, and
 `N4M_CUDA_PLS_BATCH_MAX_BYTES=<bytes>` to cap the experimental tile memory.
 
 Pass `cuda_pls_min_device_features=<positive int>` to the same calls to change
