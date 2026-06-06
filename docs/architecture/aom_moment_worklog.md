@@ -7902,3 +7902,25 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
   - `git diff --check`: PASS.
 - This strengthens release evidence for the existing AOM many-batched CUDA
   path, without claiming the deferred fused/batched IKPLS cartesian executor.
+
+## 2026-06-06 — AOM Screen-Refit CUDA Many-Batched Timing Artifact
+
+- Added `aom_screen_refit_scaling_cuda_many_batched_smoke.csv`, generated with
+  `bench_aom_screen_refit_scaling.py` on the one-GPU `build/cuda-on` library
+  using `--cuda-pls-min-device-features 1`, `--cuda-pls-many-batched`, and
+  `--backend-min-cuda-product 1`.
+- The artifact keeps the full 25-row PLS screen/refit scaling surface
+  (`refit_top_k=1,2,4,8,16` crossed with the five refit execution modes).
+  Across the rows, exact-CV PLS refit reports `730` PLS moment CV fits,
+  `730` CUDA device CV fits, `101` CUDA many-batched batches,
+  `730` CUDA many-batched jobs, and zero CUDA parallel-fold jobs.
+- The screen half of this benchmark uses the PLS `gcv_proxy` mode by design, so
+  its exact-CV CUDA counters remain zero while proxy batch counters account for
+  the screen. The artifact test now explicitly distinguishes CUDA parallel-fold
+  refit, CUDA many-batched refit, and this proxy-screen behavior.
+- Validation:
+  - focused screen-refit artifact slice: `7 passed`.
+  - full artifact guard file: `51 passed`.
+- This closes release evidence for the existing public screen/refit
+  many-batched CUDA route, without claiming the deferred fused IKPLS/cartesian
+  CUDA executor.

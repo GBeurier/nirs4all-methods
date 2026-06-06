@@ -2827,3 +2827,26 @@ AOM sweep CUDA many-batched timing artifact (2026-06-06):
 - Remaining true gap is unchanged: this adds release evidence for the existing
   AOM many-batched CUDA route; it is not the future fused/batched IKPLS
   cartesian executor.
+
+AOM screen-refit CUDA many-batched timing artifact (2026-06-06):
+
+- Added the committed smoke timing artifact
+  `benchmarks/cross_binding/aom_screen_refit_scaling_cuda_many_batched_smoke.csv`,
+  generated from `bench_aom_screen_refit_scaling.py` on the one-GPU
+  `build/cuda-on` lib with `--cuda-pls-min-device-features 1`,
+  `--cuda-pls-many-batched`, and `--backend-min-cuda-product 1`.
+- The artifact keeps the full 25-row PLS screen/refit scaling surface
+  (`5` refit depths x `5` execution modes). It proves the exact-CV refit stage
+  runs on the CUDA many-batched route: `730` PLS moment CV fits,
+  `730` CUDA device CV fits, `101` many-batched batches,
+  `730` many-batched jobs, and zero CUDA parallel-fold jobs.
+- The screen stage in this benchmark is intentionally PLS `gcv_proxy`, so its
+  exact-CV CUDA PLS counters stay at zero while proxy batch counters carry the
+  screen work. The artifact test now distinguishes this from the exact-CV
+  refit route and from the older parallel-fold CUDA smoke.
+- Validation:
+  - focused screen-refit artifact slice: `7 passed`.
+  - full artifact guard file: `51 passed`.
+- Remaining true gap is unchanged: this closes another release-evidence hole
+  for the current public screen/refit route, but it is still not the fused
+  batched IKPLS/cartesian CUDA grinder.
