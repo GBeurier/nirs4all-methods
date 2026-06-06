@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 import csv
 import json
 import os
@@ -65,6 +66,78 @@ def _assert_method_result(res, n_samples: int, n_targets: int = 1):
     assert res["coefficients"].shape[1] == n_targets
     assert np.all(np.isfinite(res["predictions"]))
     assert np.isfinite(res["rmse"])
+
+
+def test_pls_cross_validate_reserved_abi_returns_not_implemented():
+    from n4m._ffi import lib
+    from n4m._types import Dtype, MatrixView, Status
+
+    ctx = ctypes.c_void_p()
+    cfg = ctypes.c_void_p()
+    assert lib.n4m_context_create(ctypes.byref(ctx)) == Status.OK
+    assert lib.n4m_config_create(ctypes.byref(cfg)) == Status.OK
+
+    try:
+        X = np.ascontiguousarray(
+            [
+                [0.0, 1.0, 2.0],
+                [1.0, 0.0, 3.0],
+                [2.0, 1.0, 0.0],
+                [3.0, 2.0, 1.0],
+                [4.0, 3.0, 2.0],
+                [5.0, 4.0, 3.0],
+            ],
+            dtype=np.float64,
+        )
+        y = np.ascontiguousarray((0.5 * X[:, 0] - X[:, 1])[:, None])
+        x_view = MatrixView()
+        y_view = MatrixView()
+        assert (
+            lib.n4m_matrix_view_init_rowmajor(
+                ctypes.byref(x_view),
+                ctypes.c_void_p(X.ctypes.data),
+                X.shape[0],
+                X.shape[1],
+                Dtype.F64,
+            )
+            == Status.OK
+        )
+        assert (
+            lib.n4m_matrix_view_init_rowmajor(
+                ctypes.byref(y_view),
+                ctypes.c_void_p(y.ctypes.data),
+                y.shape[0],
+                y.shape[1],
+                Dtype.F64,
+            )
+            == Status.OK
+        )
+
+        folds = np.asarray([0, 1, 0, 1, 0, 1], dtype=np.int32)
+        components = np.asarray([1, 2], dtype=np.int32)
+        out = ctypes.c_void_p()
+        status = lib.n4m_pls_cross_validate(
+            ctx,
+            cfg,
+            ctypes.byref(x_view),
+            ctypes.byref(y_view),
+            folds.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+            folds.size,
+            2,
+            components.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+            components.size,
+            ctypes.byref(out),
+        )
+
+        assert status == Status.ERR_NOT_IMPLEMENTED
+        assert not out.value
+        err_ptr = lib.n4m_context_last_error(ctx)
+        err = ctypes.cast(err_ptr, ctypes.c_char_p).value.decode("utf-8")
+        assert "n4m_pls_cross_validate" in err
+        assert "not implemented" in err.lower()
+    finally:
+        lib.n4m_config_destroy(cfg)
+        lib.n4m_context_destroy(ctx)
 
 
 def _assert_aom_route_partitions(res):

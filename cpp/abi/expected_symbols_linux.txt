@@ -355,6 +355,7 @@ n4m_pipeline_size
 n4m_pipeline_transform
 n4m_pipeline_transform_alloc
 n4m_pls_cox_fit
+n4m_pls_cross_validate
 n4m_pls_diagnostics_compute
 n4m_pls_fit_simple
 n4m_pls_glm_fit

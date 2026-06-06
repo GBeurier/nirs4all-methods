@@ -8,6 +8,23 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- Reserved fused/batched PLS CV ABI surface:
+  - Added ABI 1.22.0 symbol
+    `n4m_pls_cross_validate(ctx, cfg, X, Y, fold_ids, n_fold_ids, n_folds,
+    component_grid, n_component_grid, out_result)`.
+  - This is intentionally a reserved surface only: the C implementation sets
+    `out_result` to NULL, writes a context error and returns
+    `N4M_ERR_NOT_IMPLEMENTED`. It is catalogued as ABI infrastructure, not as a
+    production method.
+  - Updated Python ctypes declarations, ABI floor, Linux/macOS/Windows expected
+    symbol snapshots, ABI changelog, DEFERRALS, release-readiness notes and the
+    moment coverage matrix.
+  - Validation so far: rebuilt dev-release `n4m_c` to `libn4m.so.1.22.0`;
+    targeted ctypes test passed; catalog strict ABI/reference/split checks and
+    `reconcile_abi.py --check` passed.
+  - Remaining true gap: actual grouped/fused host/device executor,
+    score-equivalence tests and timings for the 200k-chain PLS grinder.
+
 - Compact-wide audit10 benchmark follow-up:
   - Ran `plan=compact_wide` on the first 10 runnable diverse11 cohort rows in
     two chunks (`audit5` + `audit10_tail5`) on one GPU, then combined them into

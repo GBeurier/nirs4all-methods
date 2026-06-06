@@ -1,5 +1,32 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Reserved fused/batched PLS CV ABI
+
+Purpose:
+
+- Reserve the public C/Python entry point needed by the future fused/batched
+  IKPLS-style PLS grinder without shipping a fake fallback executor.
+
+Changes:
+
+- Added ABI 1.22.0 symbol `n4m_pls_cross_validate(ctx, cfg, X, Y, fold_ids,
+  n_fold_ids, n_folds, component_grid, n_component_grid, out_result)`.
+- Implemented it as an explicit C API stub: validates obvious pointer/length
+  errors, sets `out_result` to NULL, writes a context error and returns
+  `N4M_ERR_NOT_IMPLEMENTED`.
+- Exposed the symbol through Python ctypes, classified it as catalog ABI infra
+  rather than a production method, updated ABI snapshots and documented the
+  remaining executor gap.
+
+Validation:
+
+- Rebuilt `build/dev-release` `n4m_c`; CMake rechecked the c_api source glob and
+  produced `libn4m.so.1.22.0`.
+- Targeted Python ctypes test:
+  `test_pls_cross_validate_reserved_abi_returns_not_implemented`.
+- Catalog checks: `validate.py --strict-abi`, `validate.py --check-references`,
+  `split_legacy_methods.py --check`, and `reconcile_abi.py --check`.
+
 ## 2026-06-06 - Compact-wide audit10 benchmark follow-up
 
 Purpose:

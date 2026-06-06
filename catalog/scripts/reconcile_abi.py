@@ -54,6 +54,11 @@ INFRA_PREFIXES = (
     "n4m_split_result_",  # the shared splitter result handle
 )
 
+# Exact reserved/support symbols whose prefix is otherwise method-owned.
+INFRA_SYMBOLS = {
+    "n4m_pls_cross_validate",  # reserved fused/batched PLS CV ABI, not a production method
+}
+
 
 def _dump(data) -> str:
     """Dump YAML the vendored catalog parser can read: block style with INDENTED
@@ -76,7 +81,7 @@ def real_symbols() -> list[str]:
 
 
 def is_infra(sym: str) -> bool:
-    return sym.startswith(INFRA_PREFIXES)
+    return sym in INFRA_SYMBOLS or sym.startswith(INFRA_PREFIXES)
 
 
 def _norm(s: str) -> str:
