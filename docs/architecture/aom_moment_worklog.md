@@ -7950,3 +7950,19 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
 - This closes a stale-evidence gap for real held-out benchmark artifacts after
   ABI `1.22.0`, without claiming the deferred fused cartesian/IKPLS CUDA
   engine.
+
+## 2026-06-06 — Coverage Matrix Many-Batched Release Audit
+
+- Refreshed `docs/architecture/aom_moment_coverage_matrix.md` after the latest
+  ABI `1.22.0` route-evidence commits. The integrated campaign helper now
+  names CUDA many-batched batch/job counters, and the staged campaign row
+  cites the real held-out DIESEL PLS many-batched CUDA smoke with train-only
+  selection and screen/refit route counters.
+- Added a dedicated many-batched artifact note covering the direct moment
+  sweep, AOM sweep, screen/refit and real held-out benchmark-runner smokes.
+  The note keeps the distinction explicit: these artifacts prove current route
+  telemetry and exact-CV compatibility, not the deferred fused
+  cartesian/IKPLS CUDA engine.
+- Validation:
+  - facade/catalog inventory tests: `40 passed`.
+  - `git diff --check`: PASS.
