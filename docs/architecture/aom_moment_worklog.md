@@ -6891,3 +6891,25 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
   - full moment wrapper test file: `74 passed`.
   - catalog strict ABI/reference/split checks: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — AOM/Moment Completion Audit
+
+- Re-audited the port against the requested end state and the coverage matrix.
+  The reusable AOM/moment method surface, direct heads, staged/global
+  configurable campaigns, CPU paths, CUDA build smokes, catalog files and docs
+  are internally consistent.
+- Claude Code reran the targeted AOM/moment suite:
+  `test_aom_benchmark_tools.py`, `test_catalog_python_bindings.py`,
+  `test_aom_moment_cuda_smoke_artifacts.py`, `test_aom_moment_facade.py`,
+  `test_moment_model_wrappers.py`, and `test_aom_staged_campaign.py`:
+  `169 passed`.
+- Catalog validation remained green: reference coverage for `208/208`
+  production methods, strict ABI coverage for `701/701` exported `n4m_*`
+  symbols, and per-method split files up to date.
+- Verified referenced docs, benchmark scripts, CUDA smoke artifacts and
+  coverage-matrix catalog ids exist on disk. No new small
+  Python/facade/catalog gap was found.
+- Updated `DEFERRALS.md` so the GPU section no longer claims only single-fit
+  CUDA exists: bounded exact PLS CV routes now ship, while the full fused
+  cartesian/IKPLS-style 200k-chain grinder remains the explicit deferred
+  engine/performance item.
