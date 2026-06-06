@@ -2044,3 +2044,26 @@ AOM/moment completion audit follow-up (2026-06-06):
   over many chains/folds/candidates, broader arbitrary-chain moment coverage
   without materialization, grouped CUDA sweep kernels and a larger oracle
   campaign.
+
+Moment SSE BLAS engine slice (2026-06-06):
+
+- Added a bounded CPU-BLAS optimization inside
+  `ridge_heldout_sse_from_moments()`: for single-target (`q=1`) held-out moment
+  scoring with `p >= 64`, non-CUDA BLAS builds compute `X'X beta` through the
+  existing `linalg::gemv` dispatch and finish `beta'X'X beta` by dot product.
+- CUDA builds intentionally keep the scalar host path here to avoid introducing
+  per-candidate host/device transfers in the SSE loop; the dedicated CUDA PLS
+  component routes remain the GPU path.
+- This advances the screen-throughput engine work without changing scores,
+  candidate ranking or selection policy.
+- Validation:
+  - dev `n4m_c` build: PASS.
+  - BLAS `n4m_c` build: PASS.
+  - CUDA `n4m_c` build: PASS.
+  - targeted moment wrapper tests on dev and BLAS libs:
+    `6 passed, 68 deselected` each.
+  - `test_aom_benchmark_tools.py` on dev and BLAS libs: `20 passed` each.
+  - dev-vs-BLAS two-process candidate-score comparison on `n=200, p=80`:
+    same selected Ridge lambda (`1.0`), max absolute candidate-score delta
+    `6.63e-15`.
+  - `git diff --check`: PASS.
