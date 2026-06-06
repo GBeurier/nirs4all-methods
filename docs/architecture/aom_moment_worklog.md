@@ -7384,3 +7384,27 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     `22 passed`.
   - py_compile on touched Python files: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — Direct Moment Heads CPU/CUDA Artifact Schema Slice
+
+- Regenerated `direct_moment_heads_timing.csv` and
+  `direct_moment_heads_timing_cuda_smoke.csv` with the current direct-head
+  timing schema. Both artifacts now cover all 9 reusable direct moment/linear
+  heads across three shapes with native-function and sklearn replay rows.
+- The CPU artifact now matches the CUDA artifact schema, including the PLS route
+  controls/counters and the `n_pls_moment_cuda_many_batched_*` fields. CPU PLS
+  rows prove host exact-CV routing; CUDA PLS rows prove one-GPU device exact-CV
+  routing with many-batched explicitly off.
+- Strengthened artifact tests so both CPU and CUDA direct-head CSVs must expose
+  the current route fields, current method set, replay status and route
+  counters.
+- Validation:
+  - regenerated CPU direct-head timing artifact on `build/dev-release`.
+  - regenerated CUDA direct-head timing artifact on one visible GPU
+    (`CUDA_VISIBLE_DEVICES=0`, `build/cuda-on`).
+  - focused direct-head artifact tests:
+    `2 passed, 21 deselected`.
+  - full CUDA/artifact guard file:
+    `23 passed`.
+  - py_compile on touched benchmark/test files: PASS.
+  - `git diff --check`: PASS.

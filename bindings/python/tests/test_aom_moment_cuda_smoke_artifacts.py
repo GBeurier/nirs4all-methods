@@ -45,6 +45,96 @@ def _assert_cuda_build_path(path: str) -> None:
     assert "build/cuda-on" in path, path
 
 
+def _assert_direct_moment_heads_rows(
+    rows: list[dict[str, str]],
+    *,
+    expect_cuda_pls: bool,
+) -> None:
+    expected_methods = {
+        "ridge",
+        "pls",
+        "pcr",
+        "cppls",
+        "weighted_pls",
+        "robust_pls",
+        "ridge_pls",
+        "continuum_regression",
+        "ecr",
+    }
+    expected_backends = {"native_function", "sklearn_fit_predict"}
+    required_route_fields = {
+        "cuda_pls_parallel_folds",
+        "cuda_pls_min_device_features",
+        "cuda_pls_many_batched",
+        "n_pls_moment_cv_fits",
+        "n_pls_moment_host_cv_fits",
+        "n_pls_moment_cuda_device_cv_fits",
+        "n_pls_moment_cuda_parallel_fold_batches",
+        "n_pls_moment_cuda_parallel_fold_jobs",
+        "n_pls_moment_cuda_many_batched_batches",
+        "n_pls_moment_cuda_many_batched_jobs",
+        "n_pls_materialized_cv_fits",
+        "n_pls_moment_final_fits",
+        "n_pls_moment_host_final_fits",
+        "n_pls_moment_cuda_device_final_fits",
+        "n_pls_materialized_final_fits",
+    }
+    shapes_by_method: dict[str, set[tuple[int, int]]] = {}
+    backends_by_cell: dict[tuple[str, tuple[int, int]], set[str]] = {}
+
+    assert len(rows) == len(expected_methods) * 3 * len(expected_backends)
+    assert {row["method"] for row in rows} == expected_methods
+    assert required_route_fields.issubset(rows[0])
+
+    for row in rows:
+        method = row["method"]
+        backend = row["backend"]
+        shape = (_int(row, "n_samples"), _int(row, "n_features"))
+
+        assert backend in expected_backends
+        assert row["surface_status"] == "function_and_sklearn_replay"
+        assert math.isfinite(_float(row, "rmse"))
+        assert _float(row, "replay_max_abs_error") <= 1e-10
+        if expect_cuda_pls:
+            _assert_cuda_build_path(row["library_path"])
+        else:
+            assert "build/dev-release" in row["library_path"], row["library_path"]
+
+        if method == "pls":
+            assert _int(row, "n_pls_moment_cv_fits") > 0
+            if expect_cuda_pls:
+                assert _bool(row, "cuda_pls_parallel_folds") is True
+                assert _int(row, "cuda_pls_min_device_features") == 1
+                assert _bool(row, "cuda_pls_many_batched") is False
+                assert _int(row, "n_pls_moment_host_cv_fits") == 0
+                assert _int(row, "n_pls_moment_cuda_device_cv_fits") == _int(
+                    row,
+                    "n_pls_moment_cv_fits",
+                )
+                assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") > 0
+            else:
+                assert _bool(row, "cuda_pls_parallel_folds") is False
+                assert row["cuda_pls_min_device_features"] == ""
+                assert _bool(row, "cuda_pls_many_batched") is False
+                assert _int(row, "n_pls_moment_host_cv_fits") == _int(
+                    row,
+                    "n_pls_moment_cv_fits",
+                )
+                assert _int(row, "n_pls_moment_cuda_device_cv_fits") == 0
+                assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
+            assert _int(row, "n_pls_moment_cuda_many_batched_batches") == 0
+            assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
+
+        shapes_by_method.setdefault(method, set()).add(shape)
+        backends_by_cell.setdefault((method, shape), set()).add(backend)
+
+    for method in expected_methods:
+        assert len(shapes_by_method[method]) == 3
+    assert len(backends_by_cell) == len(expected_methods) * 3
+    for backends in backends_by_cell.values():
+        assert backends == expected_backends
+
+
 def _loads_json_without_duplicate_keys(text: str):
     def no_duplicate_object(pairs):
         seen = {}
@@ -198,54 +288,12 @@ def test_moment_stack_cuda_smoke_artifact_proves_pls_base_routes_on_device():
 
 def test_direct_moment_heads_cuda_smoke_artifact_covers_native_and_sklearn_replay():
     rows = _rows("direct_moment_heads_timing_cuda_smoke.csv")
+    _assert_direct_moment_heads_rows(rows, expect_cuda_pls=True)
 
-    expected_methods = {
-        "ridge",
-        "pls",
-        "pcr",
-        "cppls",
-        "weighted_pls",
-        "robust_pls",
-        "ridge_pls",
-        "continuum_regression",
-        "ecr",
-    }
-    expected_backends = {"native_function", "sklearn_fit_predict"}
-    shapes_by_method: dict[str, set[tuple[int, int]]] = {}
-    backends_by_cell: dict[tuple[str, tuple[int, int]], set[str]] = {}
 
-    assert len(rows) == len(expected_methods) * 3 * len(expected_backends)
-    assert {row["method"] for row in rows} == expected_methods
-
-    for row in rows:
-        method = row["method"]
-        backend = row["backend"]
-        shape = (_int(row, "n_samples"), _int(row, "n_features"))
-
-        assert backend in expected_backends
-        assert row["surface_status"] == "function_and_sklearn_replay"
-        _assert_cuda_build_path(row["library_path"])
-        assert math.isfinite(_float(row, "rmse"))
-        assert _float(row, "replay_max_abs_error") <= 1e-10
-        if method == "pls":
-            assert _bool(row, "cuda_pls_parallel_folds") is True
-            assert _int(row, "cuda_pls_min_device_features") == 1
-            assert _int(row, "n_pls_moment_cv_fits") > 0
-            assert _int(row, "n_pls_moment_host_cv_fits") == 0
-            assert _int(row, "n_pls_moment_cuda_device_cv_fits") == _int(
-                row,
-                "n_pls_moment_cv_fits",
-            )
-            assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") > 0
-
-        shapes_by_method.setdefault(method, set()).add(shape)
-        backends_by_cell.setdefault((method, shape), set()).add(backend)
-
-    for method in expected_methods:
-        assert len(shapes_by_method[method]) == 3
-    assert len(backends_by_cell) == len(expected_methods) * 3
-    for (method, _shape), backends in backends_by_cell.items():
-        assert backends == expected_backends
+def test_direct_moment_heads_cpu_artifact_covers_current_schema_and_replay():
+    rows = _rows("direct_moment_heads_timing.csv")
+    _assert_direct_moment_heads_rows(rows, expect_cuda_pls=False)
 
 
 def test_moment_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
