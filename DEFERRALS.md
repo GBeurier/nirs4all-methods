@@ -89,7 +89,8 @@ three distinct acceleration axes:
 - **Why deferred:** axis 1 is a niche win (correct but ≈parity at NIRS sizes);
   axis 2 is useful observability/control for exact PLS CV on one GPU, but the
   target 200k-chain grinder is axis 3: a **new capability** with grouped
-  operator kernels, fused batched fit/CV execution and likely new C ABI surface.
+  operator kernels, fused batched fit/CV execution and the reserved
+  `n4m_pls_cross_validate` C ABI surface.
   It does not block CPU wheel/CRAN packaging (CUDA is an opt-in build).
 - **Trigger:** demand for high-throughput CV / component-sweep / ensemble fitting
   at scale, where batching K folds × C components into one GPU job dominates the
@@ -113,15 +114,14 @@ three distinct acceleration axes:
   only ever pass contiguous buffers, so this is safe today, but it is a
   precondition, not full Rule-4 stride-awareness, for the GPU path.
 
-### Reserving the batched fit/CV ABI surface (when scheduled)
+### Batched fit/CV ABI surface reserved; executor still deferred
 
 The batched path (axis 2) is the genuine GPU win but is a **new capability**, not
-a refinement — so per this file's legitimacy criteria it needs a *reserved*
-public surface. When it is scheduled, reserve one additive symbol (e.g.
-`n4m_pls_cross_validate(ctx, cfg, X, Y, fold_assignment, n_folds,
-component_grid, n_components_grid, out_result)`) returning
-`N4M_ERR_NOT_IMPLEMENTED` until the device-resident batched executor exists, with
-a test asserting that status. The exact signature is intentionally **not yet
-committed** (it is a design decision that benefits from the consuming
-cross-validation API in nirs4all); reserving it is a one-line additive ABI minor
-bump + a 3-platform snapshot regen when the work starts.
+a refinement — so per this file's legitimacy criteria it now has a *reserved*
+public surface. ABI 1.22.0 adds
+`n4m_pls_cross_validate(ctx, cfg, X, Y, fold_ids, n_fold_ids, n_folds,
+component_grid, n_component_grid, out_result)`. It returns
+`N4M_ERR_NOT_IMPLEMENTED`, leaves `out_result == NULL`, and has a test asserting
+that status until the device-resident batched executor exists. The remaining
+work is the actual grouped host/device executor, score-equivalence tests and
+timing benchmarks; the reserved symbol is not a production method.

@@ -108,6 +108,7 @@ SYMBOLS = (
     ("n4m_moments_subset_compute", (c_void_p, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_int64), c_int64, POINTER(c_void_p)), c_int),
     ("n4m_moments_subtract", (c_void_p, c_void_p, c_void_p, POINTER(c_void_p)), c_int),
     ("n4m_sweep_run", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), c_int32, POINTER(c_int32), c_int64, POINTER(c_double), c_int64, POINTER(c_int32), c_int64, c_int32, POINTER(c_void_p)), c_int),
+    ("n4m_pls_cross_validate", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_int32), c_int64, c_int32, POINTER(c_int32), c_int64, POINTER(c_void_p)), c_int),
     ("n4m_aom_sweep_run", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), c_int32, c_int32, POINTER(c_int32), c_int64, POINTER(c_double), c_int64, POINTER(c_int32), c_int64, c_int32, POINTER(c_void_p)), c_int),
     ("n4m_aom_chain_sweep_run", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), c_int32, POINTER(c_int32), c_int64, POINTER(c_int32), c_int64, POINTER(c_int32), c_int64, POINTER(c_int32), c_int64, POINTER(c_double), c_int64, POINTER(c_double), c_int64, POINTER(c_int32), c_int64, c_int32, POINTER(c_void_p)), c_int),
     ("n4m_aom_chain_fixed_fit_run", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_int32), c_int64, POINTER(c_int32), c_int64, POINTER(c_int32), c_int64, POINTER(c_double), c_int64, c_int32, c_double, POINTER(c_void_p)), c_int),

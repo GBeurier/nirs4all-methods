@@ -118,6 +118,7 @@ infra_abi_symbols:
   - n4m_pipeline_size
   - n4m_pipeline_transform
   - n4m_pipeline_transform_alloc
+  - n4m_pls_cross_validate
   - n4m_rng_pcg64_advance
   - n4m_rng_pcg64_create
   - n4m_rng_pcg64_destroy

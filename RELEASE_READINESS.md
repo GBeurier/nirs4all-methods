@@ -509,9 +509,9 @@ and the genuinely valuable **batched** path + **browser WebGPU** are greenfield.
   is from-source `cuda-on`. For G5-via-G2: ship a documented `n4m-cu12` wheel (CUDA toolkit in a manylinux image) or a
   conda-forge cuda variant. CRAN stays CPU-only by design.
 - **[Medium · XL] `gpu-batched-cv-abi`** — the real PLS-on-GPU win (per DEFERRALS.md) is batching **K folds × C
-  components × hyperparameter grid** into one GPU job. **No batched ABI exists.** Reserve + document a batched fit/CV
-  C ABI (e.g. `n4m_pls_cross_validate`) even if it first returns `N4M_ERR_NOT_IMPLEMENTED` (satisfies the DEFERRALS
-  legitimacy criteria, which currently lack a reserved symbol).
+  components × hyperparameter grid** into one GPU job. ABI 1.22.0 now reserves and documents
+  `n4m_pls_cross_validate`; it deliberately returns `N4M_ERR_NOT_IMPLEMENTED` until the executor lands, satisfying the
+  DEFERRALS legitimacy criterion without advertising a production method.
 - **[Low · XL] `gpu-batched-execution-impl`** — implement it: device-resident data, streams, `cublasDgemmBatched`/
   strided-batched, per-stream/handle pool. *Acceptance:* >2× wall-clock vs CPU `blas-omp` on a representative large
   NIRS CV sweep.

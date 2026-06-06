@@ -874,6 +874,30 @@ N4M_API n4m_status_t n4m_sweep_run(
     int32_t heads_mask,
     n4m_method_result_t** out_result);
 
+/* Reserved high-throughput PLS cross-validation surface.
+ *
+ * This ABI entry point is intentionally present before the fused/batched
+ * IKPLS-style executor lands so downstream bindings can target a stable C
+ * signature. It currently returns N4M_ERR_NOT_IMPLEMENTED and stores a context
+ * error. It is not a production method and must not be used for selection until
+ * the device/host batched executor is implemented and benchmarked.
+ *
+ * `fold_ids` follows n4m_sweep_run semantics: when provided,
+ * `n_fold_ids == n_samples`; `n_folds <= 0` means infer max(fold_ids)+1.
+ * `component_grid` is a non-empty array of positive component counts.
+ */
+N4M_API n4m_status_t n4m_pls_cross_validate(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    int32_t n_folds,
+    const int32_t* component_grid,
+    int64_t n_component_grid,
+    n4m_method_result_t** out_result);
+
 /* Native AOM preprocessing sweep. Applies the strict-linear AOM chain bank
  * selected by `profile` (0=compact, 1=wide), then runs the same Ridge/PLS
  * candidate screen as n4m_sweep_run on every transformed matrix.
