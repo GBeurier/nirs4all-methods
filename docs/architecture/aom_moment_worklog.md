@@ -7241,3 +7241,28 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     `80 passed`.
   - py_compile on `test_moment_model_wrappers.py`: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — Staged PLS Batch Telemetry Propagation Slice
+
+- Propagated PLS moment score-batch counters through
+  `aom_staged_chain_campaign` reports. Per-stage summaries now expose
+  `n_pls_moment_score_batch_calls/jobs`, top-level staged reports expose
+  `n_screen_pls_moment_score_batch_calls/jobs` and
+  `n_refit_pls_moment_score_batch_calls/jobs`, and the `scale_x_values`
+  aggregation sums those counters across every evaluated model config.
+- `NativeAOMStagedChainCampaignRegressor.get_diagnostics()` now exposes those
+  staged screen/refit batch counters plus the staged PLS parallel-fold and
+  many-batched CUDA counters. This closes an observability gap where a staged
+  campaign could report PLS moment CV/device fits without proving whether the
+  grouped batch route was actually used.
+- Added staged campaign tests covering per-stage/top-level sums, split-head PLS
+  exact-CV batch calls, model-config aggregation and sklearn diagnostics.
+- Validation:
+  - staged campaign test file:
+    `16 passed`.
+  - targeted moment wrapper/inventory checks:
+    `5 passed, 75 deselected`.
+  - full dev wrapper:
+    `80 passed`.
+  - py_compile on touched Python modules/tests: PASS.
+  - `git diff --check`: PASS.

@@ -4318,6 +4318,8 @@ def aom_staged_chain_campaign(
             "n_screen_pls_moment_cuda_parallel_fold_jobs",
             "n_screen_pls_moment_cuda_many_batched_batches",
             "n_screen_pls_moment_cuda_many_batched_jobs",
+            "n_screen_pls_moment_score_batch_calls",
+            "n_screen_pls_moment_score_batch_jobs",
             "n_refit_pls_moment_cv_fits",
             "n_refit_pls_moment_host_cv_fits",
             "n_refit_pls_moment_cuda_device_cv_fits",
@@ -4325,6 +4327,8 @@ def aom_staged_chain_campaign(
             "n_refit_pls_moment_cuda_parallel_fold_jobs",
             "n_refit_pls_moment_cuda_many_batched_batches",
             "n_refit_pls_moment_cuda_many_batched_jobs",
+            "n_refit_pls_moment_score_batch_calls",
+            "n_refit_pls_moment_score_batch_jobs",
         ):
             selected[key] = int(sum(int(report.get(key, 0)) for report in config_reports))
         return selected
@@ -4448,6 +4452,12 @@ def aom_staged_chain_campaign(
             ),
             "n_pls_moment_cuda_many_batched_jobs": int(
                 screen.get("n_pls_moment_cuda_many_batched_jobs", 0)
+            ),
+            "n_pls_moment_score_batch_calls": int(
+                screen.get("n_pls_moment_score_batch_calls", 0)
+            ),
+            "n_pls_moment_score_batch_jobs": int(
+                screen.get("n_pls_moment_score_batch_jobs", 0)
             ),
             "processed_chunks_this_run": int(
                 screen.get("processed_chunks_this_run", 0)
@@ -4677,6 +4687,12 @@ def aom_staged_chain_campaign(
         "n_screen_pls_moment_cuda_many_batched_jobs": screen_counter(
             "n_pls_moment_cuda_many_batched_jobs"
         ),
+        "n_screen_pls_moment_score_batch_calls": screen_counter(
+            "n_pls_moment_score_batch_calls"
+        ),
+        "n_screen_pls_moment_score_batch_jobs": screen_counter(
+            "n_pls_moment_score_batch_jobs"
+        ),
         "n_refit_pls_moment_cv_fits": int(refit.get("n_pls_moment_cv_fits", 0)),
         "n_refit_pls_moment_host_cv_fits": int(
             refit.get("n_pls_moment_host_cv_fits", 0)
@@ -4695,6 +4711,12 @@ def aom_staged_chain_campaign(
         ),
         "n_refit_pls_moment_cuda_many_batched_jobs": int(
             refit.get("n_pls_moment_cuda_many_batched_jobs", 0)
+        ),
+        "n_refit_pls_moment_score_batch_calls": int(
+            refit.get("n_pls_moment_score_batch_calls", 0)
+        ),
+        "n_refit_pls_moment_score_batch_jobs": int(
+            refit.get("n_pls_moment_score_batch_jobs", 0)
         ),
         "impact": impact_report,
         "rank_diagnostics": rank_report,

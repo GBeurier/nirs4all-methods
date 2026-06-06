@@ -91,6 +91,8 @@ def test_staged_campaign_runs_and_reports_stage_structure():
         assert stage["n_pls_moment_host_cv_fits"] >= 0
         assert stage["n_pls_moment_cuda_device_cv_fits"] >= 0
         assert stage["n_pls_moment_cuda_parallel_fold_jobs"] >= 0
+        assert stage["n_pls_moment_score_batch_calls"] >= 0
+        assert stage["n_pls_moment_score_batch_jobs"] >= 0
 
     # Stage screens are streamed candidate reports, not whole-grid materializations.
     assert len(report["stage_screens"]) == 2
@@ -111,6 +113,12 @@ def test_staged_campaign_runs_and_reports_stage_structure():
     assert report["n_screen_pls_moment_cuda_parallel_fold_jobs"] == sum(
         stage["n_pls_moment_cuda_parallel_fold_jobs"] for stage in report["stages"]
     )
+    assert report["n_screen_pls_moment_score_batch_calls"] == sum(
+        stage["n_pls_moment_score_batch_calls"] for stage in report["stages"]
+    )
+    assert report["n_screen_pls_moment_score_batch_jobs"] == sum(
+        stage["n_pls_moment_score_batch_jobs"] for stage in report["stages"]
+    )
     assert report["n_refit_pls_moment_cv_fits"] == report["refit"][
         "n_pls_moment_cv_fits"
     ]
@@ -123,10 +131,16 @@ def test_staged_campaign_runs_and_reports_stage_structure():
     assert report["n_refit_pls_moment_cuda_parallel_fold_jobs"] == report["refit"][
         "n_pls_moment_cuda_parallel_fold_jobs"
     ]
+    assert report["n_refit_pls_moment_score_batch_calls"] == report[
+        "refit"
+    ].get("n_pls_moment_score_batch_calls", 0)
+    assert report["n_refit_pls_moment_score_batch_jobs"] == report[
+        "refit"
+    ].get("n_pls_moment_score_batch_jobs", 0)
 
 
 def test_staged_campaign_reports_split_head_screen_counters():
-    X, y = _dataset(n=24, p=14)
+    X, y = _dataset(n=64, p=10)
     report = _run(
         X,
         y,
@@ -169,8 +183,20 @@ def test_staged_campaign_reports_split_head_screen_counters():
     assert report["n_ridge_moment_score_batch_jobs"] == sum(
         stage["n_ridge_moment_score_batch_jobs"] for stage in report["stages"]
     )
+    assert report["n_screen_pls_moment_score_batch_calls"] == sum(
+        stage["n_pls_moment_score_batch_calls"] for stage in report["stages"]
+    )
+    assert report["n_screen_pls_moment_score_batch_jobs"] == sum(
+        stage["n_pls_moment_score_batch_jobs"] for stage in report["stages"]
+    )
     assert report["n_screen_split_head_chunks"] > 0
     assert report["n_screen_chunk_score_calls"] > report["n_screen_split_head_chunks"]
+    assert report["n_screen_pls_moment_score_batch_calls"] == report[
+        "n_screen_split_head_chunks"
+    ]
+    assert report["n_screen_pls_moment_score_batch_jobs"] == (
+        report["n_screen_split_head_chunks"] * 2 * 4
+    )
     assert {stage["split_head_scoring"] for stage in report["stages"]} == {"auto"}
 
 
@@ -354,6 +380,18 @@ def test_staged_campaign_sklearn_estimator_selects_train_cv_only():
     assert diagnostics["n_screen_chunk_score_calls"] > diagnostics[
         "n_screen_split_head_chunks"
     ]
+    assert diagnostics["n_screen_pls_moment_score_batch_calls"] == model.campaign_report_[
+        "n_screen_pls_moment_score_batch_calls"
+    ]
+    assert diagnostics["n_screen_pls_moment_score_batch_jobs"] == model.campaign_report_[
+        "n_screen_pls_moment_score_batch_jobs"
+    ]
+    assert diagnostics["n_refit_pls_moment_score_batch_calls"] == model.campaign_report_[
+        "n_refit_pls_moment_score_batch_calls"
+    ]
+    assert diagnostics["n_refit_pls_moment_score_batch_jobs"] == model.campaign_report_[
+        "n_refit_pls_moment_score_batch_jobs"
+    ]
     assert diagnostics["selection_uses_test_set"] is False
     assert diagnostics["n_remaining_stage_chunks_total"] == 0
     assert diagnostics["n_screen_candidates_total"] >= diagnostics["n_refit_candidates"]
@@ -424,6 +462,22 @@ def test_staged_campaign_selects_scale_x_grid_by_train_cv_only():
     assert grid["n_screen_pls_moment_cv_fits"] == (
         plain["n_screen_pls_moment_cv_fits"]
         + scaled["n_screen_pls_moment_cv_fits"]
+    )
+    assert grid["n_screen_pls_moment_score_batch_calls"] == (
+        plain["n_screen_pls_moment_score_batch_calls"]
+        + scaled["n_screen_pls_moment_score_batch_calls"]
+    )
+    assert grid["n_screen_pls_moment_score_batch_jobs"] == (
+        plain["n_screen_pls_moment_score_batch_jobs"]
+        + scaled["n_screen_pls_moment_score_batch_jobs"]
+    )
+    assert grid["n_refit_pls_moment_score_batch_calls"] == (
+        plain["n_refit_pls_moment_score_batch_calls"]
+        + scaled["n_refit_pls_moment_score_batch_calls"]
+    )
+    assert grid["n_refit_pls_moment_score_batch_jobs"] == (
+        plain["n_refit_pls_moment_score_batch_jobs"]
+        + scaled["n_refit_pls_moment_score_batch_jobs"]
     )
     assert grid["n_screen_split_head_chunks"] > 0
     assert len(grid["model_config_summaries"]) == 2
