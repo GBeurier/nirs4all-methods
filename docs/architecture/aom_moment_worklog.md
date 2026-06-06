@@ -1,5 +1,33 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Fixed-candidate CUDA option surface alignment
+
+Purpose:
+
+- Keep winner-reuse APIs aligned with the AOM/moment facade inventories so a
+  selected PLS candidate can be reused with the same public CPU/CUDA option
+  names exposed by screen/refit methods.
+
+Changes:
+
+- Added `cuda_pls_parallel_folds` and `cuda_pls_many_batched` to
+  `n4m.aom_chain_fixed_fit_run`.
+- Added `cuda_pls_parallel_folds` and `cuda_pls_many_batched` to
+  `NativeAOMFixedCandidateRegressor`, storing them and forwarding them both to
+  final-only fixed fits and to `fit_mode="cv"` replay.
+- The already-present `cuda_pls_min_device_features` remains forwarded.
+- No C ABI change. Final-only fits currently consume the threshold knob on the
+  native PLS component path; fold/many-batch knobs are API-symmetric and matter
+  when the wrapper replays the exact-CV path.
+
+Validation:
+
+- Targeted pytest:
+  `test_native_aom_chain_fixed_fit_run_matches_single_candidate_final_fit` and
+  the AOM/moment facade inventory tests.
+- Full dev-release `test_moment_model_wrappers.py`: `80 passed`.
+- Python `py_compile` on touched modules/tests and `git diff --check` passed.
+
 ## 2026-06-06 - AOM exact PLS batch partial-failure guard
 
 Purpose:

@@ -570,6 +570,9 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "fit_mode",
         "precomputed_cv_rmse",
         "moment_policy",
+        "cuda_pls_parallel_folds",
+        "cuda_pls_min_device_features",
+        "cuda_pls_many_batched",
     }.issubset(inventory_by_name["fixed_candidate"]["config_options"])
     assert (
         inventory_by_name["continuum_regression_regressor"]["config_options"]
@@ -1748,6 +1751,15 @@ def test_native_aom_chain_fixed_fit_run_matches_single_candidate_final_fit():
             heads=(head,),
             scale_x=False,
         )
+        cuda_kwargs = (
+            {
+                "cuda_pls_parallel_folds": True,
+                "cuda_pls_min_device_features": 1,
+                "cuda_pls_many_batched": True,
+            }
+            if head == "pls"
+            else {}
+        )
         fixed = n4m.aom_chain_fixed_fit_run(
             X,
             y,
@@ -1755,6 +1767,7 @@ def test_native_aom_chain_fixed_fit_run_matches_single_candidate_final_fit():
             head=head,
             param=param,
             scale_x=False,
+            **cuda_kwargs,
         )
 
         assert fixed["candidate_scores"].shape == (1, 5)
@@ -3449,6 +3462,11 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
         "head",
         "param",
     )
+    assert {
+        "cuda_pls_parallel_folds",
+        "cuda_pls_min_device_features",
+        "cuda_pls_many_batched",
+    }.issubset(inventory_by_name["fixed_candidate"]["config_options"])
     assert inventory_by_name["aom_chain_fixed_fit"][
         "entry"
     ] == "aom_chain_fixed_fit_run"

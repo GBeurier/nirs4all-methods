@@ -1471,7 +1471,9 @@ class NativeAOMFixedCandidateRegressor(_NativeLinearResultRegressor):
         center_y: bool | None = None,
         scale_y: bool | None = None,
         moment_policy: str | int = "auto",
+        cuda_pls_parallel_folds: bool | None = None,
         cuda_pls_min_device_features: int | None = None,
+        cuda_pls_many_batched: bool | None = None,
         fit_mode: str = "cv",
         precomputed_cv_rmse: float | None = None,
     ) -> None:
@@ -1485,7 +1487,9 @@ class NativeAOMFixedCandidateRegressor(_NativeLinearResultRegressor):
         self.center_y = center_y
         self.scale_y = scale_y
         self.moment_policy = moment_policy
+        self.cuda_pls_parallel_folds = cuda_pls_parallel_folds
         self.cuda_pls_min_device_features = cuda_pls_min_device_features
+        self.cuda_pls_many_batched = cuda_pls_many_batched
         self.fit_mode = str(fit_mode)
         self.precomputed_cv_rmse = (
             None if precomputed_cv_rmse is None else float(precomputed_cv_rmse)
@@ -1582,7 +1586,9 @@ class NativeAOMFixedCandidateRegressor(_NativeLinearResultRegressor):
                 center_y=self.center_y,
                 scale_y=self.scale_y,
                 moment_policy=self.moment_policy,
+                cuda_pls_parallel_folds=self.cuda_pls_parallel_folds,
                 cuda_pls_min_device_features=self.cuda_pls_min_device_features,
+                cuda_pls_many_batched=self.cuda_pls_many_batched,
             )
             if self.precomputed_cv_rmse is not None:
                 result = dict(result)
@@ -1617,7 +1623,9 @@ class NativeAOMFixedCandidateRegressor(_NativeLinearResultRegressor):
             center_y=self.center_y,
             scale_y=self.scale_y,
             moment_policy=self.moment_policy,
+            cuda_pls_parallel_folds=self.cuda_pls_parallel_folds,
             cuda_pls_min_device_features=self.cuda_pls_min_device_features,
+            cuda_pls_many_batched=self.cuda_pls_many_batched,
         )
 
     def get_diagnostics(self) -> dict[str, object]:

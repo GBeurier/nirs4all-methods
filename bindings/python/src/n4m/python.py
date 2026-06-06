@@ -6522,7 +6522,9 @@ def aom_chain_fixed_fit_run(
     center_y: bool | None = None,
     scale_y: bool | None = None,
     moment_policy: str | int = "auto",
+    cuda_pls_parallel_folds: bool | None = None,
     cuda_pls_min_device_features: int | None = None,
+    cuda_pls_many_batched: bool | None = None,
 ) -> dict[str, np.ndarray | float]:
     """Fit one already-selected AOM chain/head/param without running CV.
 
@@ -6556,6 +6558,10 @@ def aom_chain_fixed_fit_run(
             scale_y=scale_y,
         )
         _set_aom_moment_policy(cfg, moment_policy)
+        _set_config_bool(
+            cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds
+        )
+        _set_config_bool(cfg, "cuda_pls_many_batched", cuda_pls_many_batched)
         _set_config_positive_int(
             cfg, "cuda_pls_min_device_features", cuda_pls_min_device_features
         )

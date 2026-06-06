@@ -8,6 +8,19 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- Fixed-candidate CUDA option surface alignment:
+  - `n4m.aom_chain_fixed_fit_run` and `NativeAOMFixedCandidateRegressor` now
+    accept the same public PLS CUDA option names advertised by the AOM/moment
+    facade inventories: `cuda_pls_parallel_folds`,
+    `cuda_pls_min_device_features` and `cuda_pls_many_batched`.
+  - Final-only fixed fits currently consume the threshold knob on the native
+    PLS component path; fold/many-batch knobs are forwarded for API symmetry and
+    for `fit_mode="cv"`, where the underlying `aom_chain_sweep_run` can use
+    them.
+  - Validation after this Python-surface fix: targeted fixed-candidate/facade
+    pytest passed; full dev-release `test_moment_model_wrappers.py` passed
+    (`80 passed`); `py_compile` and `git diff --check` passed.
+
 - AOM PLS exact batch partial-failure guard:
   - `score_pls1_moment_sweeps_score_only` now keeps broad force-moment screens
     alive when a rank-deficient late component makes the global batched prefix
