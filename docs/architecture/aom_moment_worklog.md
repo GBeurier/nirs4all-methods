@@ -8077,3 +8077,28 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     the same best CV score to floating precision (`0.32402508454613366` vs
     `0.32402508454613355`) with expected route counters; observed smoke timing
     was `0.252s` many-batched vs `0.307s` legacy.
+
+## 2026-06-06 — PLS Many-Batched Full-Output Guard
+
+- Extended the live one-GPU CUDA guard
+  `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides` beyond
+  score-only route equivalence.
+- The test now runs `n4m.sweep_run(... score_only=False)` twice on the CUDA
+  build: once on the default many-batched route and once with
+  `N4M_CUDA_PLS_MANY_LEGACY=1` forcing the older parallel-fold path.
+- It asserts that the many-batched CV route is used for the default run, the
+  legacy parallel-fold route is used for the override, the final full-data PLS
+  fit stays on the CUDA device, and both routes match on candidate scores,
+  OOF predictions, final predictions, coefficients and intercept.
+- This closes the release guard gap left after the W/P tile-storage change:
+  the host repack contract is now covered by a non-`score_only` output check,
+  not only by CV score comparisons.
+- Validation:
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src
+    N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python
+    -m pytest
+    bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides
+    -q`: `1 passed`.
+  - `PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python -m
+    py_compile bindings/python/tests/test_moment_model_wrappers.py`: PASS.
+  - `git diff --check`: PASS.
