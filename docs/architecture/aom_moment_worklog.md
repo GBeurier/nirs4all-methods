@@ -7966,3 +7966,35 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
 - Validation:
   - facade/catalog inventory tests: `40 passed`.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — PLS Many-Batched cuBLAS Scalar Batching
+
+- Tightened the existing one-GPU exact PLS1 many-batched CUDA engine in
+  `cpp/src/core/cuda_dispatch.cpp` without changing ABI or public method
+  surfaces.
+- The route still uses host C++ + cuBLAS only; CMake explicitly does not enable
+  CUDA language or custom `.cu` kernels. A true fused IKPLS/cartesian executor
+  remains separate engine work.
+- Inside `pls1_moment_components_many_batched_tiled`, added reusable per-tile
+  device buffers for scalar batch vectors (`dscale`, `dnorm_sq`, `dtt`,
+  `dqdot`).
+- Replaced several component x job scalar operations with batched cuBLAS calls:
+  vector norms and both `tt=w'Cw` / `qdot=w's` reductions now use
+  `cublasDgemmStridedBatched`; column scaling for `s -> w`, `Cw -> p` and
+  `p*sqrt(tt) -> outer` now uses `cublasDdgmm`.
+- The deterministic sign convention remains per job because the current
+  host-C++ CUDA path has no custom kernel for branchy sign normalization.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - live one-GPU CUDA wrapper route guard:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_internal_tests -j2`:
+    PASS.
+  - `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - manual 32-chain / 128 exact-CV PLS fit smoke: many-batched and legacy
+    selected the same best score to floating precision; many-batched used
+    `1` many-batched batch / `128` many-batched jobs and zero parallel-fold
+    jobs, while legacy used `1` parallel-fold batch / `128` jobs.
