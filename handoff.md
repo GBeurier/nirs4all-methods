@@ -1994,3 +1994,29 @@ Claude Code release-readiness audit follow-up (2026-06-06):
     production methods covered.
   - `catalog/scripts/split_legacy_methods.py --check`: PASS, 208 per-method
     files up to date.
+
+CUDA PLS many-batched route telemetry follow-up (2026-06-06):
+
+- The dedicated
+  `benchmarks/cross_binding/moment_sweep_timing_cuda_many_batched_smoke.csv`
+  artifact pins the optional exact PLS moment CUDA `many_batched` path with one
+  visible GPU, `--cuda-pls-min-device-features 1`, `--cuda-pls-many-batched`,
+  and no parallel-fold scheduling.
+- The PLS rows in that smoke report host CV fits `0`, CUDA-device CV fits equal
+  to total PLS CV fits, `n_pls_moment_cuda_parallel_fold_batches/jobs=0`,
+  `n_pls_moment_cuda_many_batched_batches=1`, and
+  `n_pls_moment_cuda_many_batched_jobs=n_pls_moment_cv_fits`.
+- Regenerated `benchmarks/cross_binding/aom_moment_cuda_facade_smoke.json` so
+  its staged/focus/strict facade sections also carry the new many-batched
+  fields; they remain `0` in that artifact because it exercises the
+  parallel-fold facade smoke route.
+- Wrapper fallback coverage now also asserts the new many-batched counters stay
+  at zero when CUDA is requested but the device threshold intentionally keeps
+  execution on the CPU route.
+- Validation:
+  - py_compile on the touched smoke/test files: PASS.
+  - exact wrapper fallback test: `1 passed`.
+  - full CUDA artifact guard file: `22 passed`.
+  - full moment wrapper test file: `74 passed`.
+  - catalog strict ABI/reference/split checks: PASS.
+  - `git diff --check`: PASS.
