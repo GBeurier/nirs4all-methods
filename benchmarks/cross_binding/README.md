@@ -440,7 +440,21 @@ The CSV should contain 54 rows: 9 methods × 3 shapes × 2 backends. The
 (`<= 1e-10`), proving the wrappers replay the native fitted state through the
 CUDA build path. PLS rows should also report nonzero
 `n_pls_moment_cuda_device_cv_fits`, zero `n_pls_moment_host_cv_fits`, and
-device CV fits equal to total PLS moment CV fits.
+device CV fits equal to total PLS moment CV fits. The direct-head CPU artifact
+uses the same schema and is regenerated with:
+
+```bash
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_direct_moment_heads_timing.py \
+  --output benchmarks/cross_binding/direct_moment_heads_timing.csv \
+  --repeats 1
+```
+
+Both CSVs must carry the current PLS route fields, including
+`n_pls_moment_cuda_many_batched_batches` and
+`n_pls_moment_cuda_many_batched_jobs`, so the artifact schema proves whether the
+experimental many-batched route was requested or stayed at zero.
 
 ## Sweep And Selector CUDA Smokes
 

@@ -2362,3 +2362,24 @@ Staged comparator PLS score-mode slice (2026-06-06):
     `22 passed`.
   - py_compile on touched Python files: PASS.
   - `git diff --check`: PASS.
+
+Direct moment heads CPU/CUDA artifact schema slice (2026-06-06):
+
+- Regenerated `benchmarks/cross_binding/direct_moment_heads_timing.csv` and
+  `benchmarks/cross_binding/direct_moment_heads_timing_cuda_smoke.csv` with the
+  current 9-head schema (`ridge`, `pls`, `pcr`, `cppls`, `weighted_pls`,
+  `robust_pls`, `ridge_pls`, `continuum_regression`, `ecr`) over three shapes
+  and both native-function/sklearn replay rows.
+- Both artifacts now include the current PLS route fields, including
+  `n_pls_moment_cuda_many_batched_batches/jobs`. CPU rows prove host routing;
+  CUDA PLS rows prove one-GPU device routing with parallel folds enabled and
+  many-batched explicitly off.
+- Added a CPU artifact guard and strengthened the CUDA artifact guard so stale
+  direct-head CSV schemas cannot silently pass release-readiness.
+- Validation:
+  - focused direct-head artifact tests:
+    `2 passed, 21 deselected`.
+  - full CUDA/artifact guard file:
+    `23 passed`.
+  - py_compile on touched benchmark/test files: PASS.
+  - `git diff --check`: PASS.
