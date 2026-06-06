@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import os
 import subprocess
 import sys
@@ -31,6 +32,9 @@ DEFAULT_CPU_LIB = REPO / "build" / "dev-release" / "cpp" / "src" / "libn4m.so"
 DEFAULT_CUDA_LIB = REPO / "build" / "cuda-on" / "cpp" / "src" / "libn4m.so"
 DEFAULT_PYTHONPATH = REPO / "bindings" / "python" / "src"
 DEFAULT_OUT = REPO / "benchmarks" / "cross_binding" / "moment_gpu_crossover.csv"
+DEFAULT_SUMMARY_OUT = (
+    REPO / "benchmarks" / "cross_binding" / "moment_gpu_crossover.md"
+)
 DEFAULT_SHAPES = "260x48,260x256,512x512,256x1024"
 
 
@@ -341,9 +345,149 @@ def add_speedups(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     return out
 
 
+def _parse_finite_float(value: object) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _format_ms(value: object) -> str:
+    parsed = _parse_finite_float(value)
+    if parsed is None:
+        return ""
+    return f"{parsed:.3f}"
+
+
+def _format_speedup(value: object) -> str:
+    parsed = _parse_finite_float(value)
+    if parsed is None or parsed <= 0.0:
+        return ""
+    return f"{parsed:.2f}x"
+
+
+def _row_error(row: dict[str, object]) -> str:
+    return str(row.get("error", "") or "")
+
+
+def markdown_summary(rows: list[dict[str, object]]) -> str:
+    """Render a compact CPU/CUDA decision table from crossover rows."""
+    cases: dict[tuple[str, int, int], dict[str, dict[str, object]]] = {}
+    for row in rows:
+        try:
+            key = (
+                str(row["head"]),
+                int(row["n_samples"]),
+                int(row["n_features"]),
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+        case = cases.setdefault(key, {})
+        if row.get("backend") == "cpu":
+            case["cpu"] = row
+        elif row.get("backend") == "cuda":
+            profile = str(row.get("cuda_pls_profile", "") or "default")
+            case[f"cuda:{profile}"] = row
+
+    lines = [
+        "# Moment GPU Crossover",
+        "",
+        "Synthetic score-only `n4m.sweep_run` timing for CPU vs one-GPU CUDA "
+        "moment screens. `recommended_backend` is source-free and depends only "
+        "on shape/head timing, not dataset identity.",
+        "",
+        "| head | shape | CPU ms | CUDA default ms | CUDA many-batched ms | "
+        "best CUDA profile | best CUDA vs CPU | many-batched vs default | "
+        "recommended |",
+        "|---|---:|---:|---:|---:|---|---:|---:|---|",
+    ]
+    for key in sorted(cases, key=lambda item: (item[0], item[1], item[2])):
+        head, n_samples, n_features = key
+        case = cases[key]
+        cpu = case.get("cpu", {})
+        cuda_default = case.get("cuda:default", {})
+        cuda_many = case.get("cuda:many_batched", {}) if head == "pls" else {}
+        cuda_rows = [
+            row
+            for row in (cuda_default, cuda_many)
+            if row and not _row_error(row)
+        ]
+        best_cuda = None
+        best_cuda_speedup = -1.0
+        for row in cuda_rows:
+            speedup = _parse_finite_float(row.get("speedup_vs_cpu")) or 0.0
+            if speedup > best_cuda_speedup:
+                best_cuda = row
+                best_cuda_speedup = speedup
+        best_profile = (
+            str(best_cuda.get("cuda_pls_profile", "") or "default")
+            if best_cuda
+            else ""
+        )
+        recommended = "cpu"
+        if best_cuda and str(best_cuda.get("recommended_backend", "")) == "cuda":
+            recommended = (
+                f"cuda:{best_profile}" if head == "pls" else "cuda:default"
+            )
+        many_vs_default = (
+            cuda_many.get("speedup_vs_cuda_default", "")
+            if cuda_many and not _row_error(cuda_many)
+            else ""
+        )
+        lines.append(
+            "| {head} | {shape} | {cpu_ms} | {cuda_default_ms} | "
+            "{cuda_many_ms} | {best_profile} | {best_speedup} | "
+            "{many_vs_default} | {recommended} |".format(
+                head=head,
+                shape=f"{n_samples}x{n_features}",
+                cpu_ms=_format_ms(cpu.get("elapsed_ms_median", "")),
+                cuda_default_ms=_format_ms(
+                    cuda_default.get("elapsed_ms_median", "")
+                ),
+                cuda_many_ms=_format_ms(cuda_many.get("elapsed_ms_median", "")),
+                best_profile=best_profile,
+                best_speedup=_format_speedup(best_cuda_speedup),
+                many_vs_default=_format_speedup(many_vs_default),
+                recommended=recommended,
+            )
+        )
+
+    errored = [row for row in rows if _row_error(row)]
+    if errored:
+        lines.extend(["", "## Errors", ""])
+        lines.append("| backend | profile | head | shape | error |")
+        lines.append("|---|---|---|---:|---|")
+        for row in errored:
+            lines.append(
+                "| {backend} | {profile} | {head} | {shape} | {error} |".format(
+                    backend=row.get("backend", ""),
+                    profile=row.get("cuda_pls_profile", ""),
+                    head=row.get("head", ""),
+                    shape=f"{row.get('n_samples', '')}x{row.get('n_features', '')}",
+                    error=str(row.get("error", "")).replace("|", "\\|"),
+                )
+            )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_markdown(path: Path, rows: list[dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(markdown_summary(rows), encoding="utf-8")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default=str(DEFAULT_OUT))
+    parser.add_argument(
+        "--summary-output",
+        default="",
+        help=(
+            "Optional Markdown summary path. Use "
+            f"{DEFAULT_SUMMARY_OUT.relative_to(REPO)} for the committed smoke."
+        ),
+    )
     parser.add_argument("--cpu-lib", default=str(DEFAULT_CPU_LIB))
     parser.add_argument("--cuda-lib", default=str(DEFAULT_CUDA_LIB))
     parser.add_argument("--pythonpath", default=str(DEFAULT_PYTHONPATH))
@@ -407,9 +551,11 @@ def main(argv: list[str] | None = None) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = list(rows[0])
     with out.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
+    if args.summary_output:
+        write_markdown(Path(args.summary_output), rows)
     print(out)
     return 0
 

@@ -6937,3 +6937,25 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
   - Added `test_native_sweep_run_blas_sse_scores_match_scalar_build` so the
     dev-vs-BLAS candidate-score comparison is a permanent pytest guard.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — Moment GPU Crossover Artifact Refresh
+
+- Added `--summary-output` to
+  `benchmarks/cross_binding/bench_moment_gpu_crossover.py`. The Markdown
+  summary renders one row per `(head, shape)` with CPU time, CUDA default time,
+  PLS-only CUDA many-batched time, best CUDA profile, speedups and recommended
+  backend. The recommendation remains source-free: shape/head timing only, no
+  dataset identity.
+- Regenerated `benchmarks/cross_binding/moment_gpu_crossover.csv` and added
+  `benchmarks/cross_binding/moment_gpu_crossover.md` with one visible GPU,
+  `--repeats 3`, `--cuda-pls-min-device-features 1` and
+  `--compare-cuda-pls-many-batched`. The CSV now matches ABI `1.21.0`, includes
+  CPU baseline, CUDA default and CUDA many-batched profiles, and had zero
+  child-process errors.
+- Current smoke interpretation: PLS stays on CPU at `260x256`, CUDA default
+  wins at `512x512` and `256x1024`, and many-batched remains slower than CUDA
+  default on those larger PLS rows.
+- Validation:
+  - py_compile on the touched benchmark/test files: PASS.
+  - targeted benchmark-tool pytest: `1 passed, 20 deselected`; full file:
+    `21 passed`.
