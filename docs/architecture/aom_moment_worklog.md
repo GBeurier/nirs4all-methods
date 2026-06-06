@@ -1,5 +1,36 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Legacy catalog validator accepts current AOM/moment schema
+
+Purpose:
+
+- Keep the old `catalog/scripts/validate_catalog.py` gate green while the
+  catalog transition still keeps `catalog/methods.yaml` as an auditable legacy
+  source beside the split per-method files.
+
+Changes:
+
+- Updated `catalog/schema/method_v1.json` so the legacy schema matches the
+  current split method schema for Python-backed orchestration methods:
+  `abi_symbols` may be empty when native building blocks are catalogued
+  separately, and `parity.tolerances` is an accepted migrated tolerance block.
+- Added a regression test in
+  `bindings/python/tests/test_catalog_python_bindings.py` that runs
+  `catalog/scripts/validate_catalog.py` against the current repo.
+
+Validation:
+
+- `catalog/scripts/validate_catalog.py`: PASS.
+- `catalog/scripts/validate.py`: PASS.
+- `catalog/scripts/split_legacy_methods.py --check`: PASS.
+- `test_catalog_python_bindings.py`: `12 passed`.
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- This closes a catalog gate mismatch. It does not change the remaining
+  performance-only fused/batched Ridge/PLS many-chain executor gap.
+
 ## 2026-06-06 - Sweep and crossover timing artifacts refreshed to ABI 1.22
 
 Purpose:

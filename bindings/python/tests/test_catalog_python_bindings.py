@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -100,6 +102,18 @@ def test_methods_index_total_matches_catalog_file_count():
     match = re.search(r"_Total catalogued native methods_: \*\*(\d+)\*\*", index)
     assert match is not None
     assert int(match.group(1)) == len(list(_CATALOG_METHODS.glob("*.yaml")))
+
+
+def test_legacy_catalog_validator_accepts_current_catalog_schema():
+    script = _REPO_ROOT / "catalog" / "scripts" / "validate_catalog.py"
+    proc = subprocess.run(
+        [sys.executable, str(script)],
+        cwd=_REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
 
 
 def test_direct_moment_heads_advertise_the_shared_timing_benchmark():
