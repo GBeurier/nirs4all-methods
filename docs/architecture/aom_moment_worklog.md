@@ -7859,3 +7859,26 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
   - `test_catalog_python_bindings.py`: `12 passed`.
   - py_compile on touched Python facade/test files: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — AOM Score Campaign CUDA Many-Batched Guard
+
+- Extended the live CUDA PLS route test to exercise
+  `aom_chain_score_campaign`, the chunked global score-only campaign surface
+  used for large preprocessing screens.
+- The new path runs four strict-linear chains over two chunks with PLS exact-CV
+  scoring and `cuda_pls_many_batched=True`. It proves campaign aggregation of
+  `2` score-batch calls, `16` score-batch jobs, `2` CUDA many-batched batches
+  and `16` CUDA many-batched jobs.
+- The test reruns the same campaign with `N4M_CUDA_PLS_MANY_LEGACY=1`, proving
+  the candidate identity/signature and scores are unchanged while route counters
+  switch to `2` CUDA parallel-fold batches / `16` jobs and zero many-batched
+  jobs.
+- Validation:
+  - targeted live CUDA route test:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+  - full dev wrapper suite: `83 passed`.
+  - py_compile on `test_moment_model_wrappers.py`: PASS.
+  - `git diff --check`: PASS.
+- This closes a campaign-level evidence gap for the existing many-batched CUDA
+  route. It does not claim the future fused IKPLS/cartesian CUDA grinder.

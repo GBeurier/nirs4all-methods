@@ -2779,3 +2779,27 @@ AOM score-only campaign facade closure (2026-06-06):
   tighter, but the nontrivial remaining work is still the fused/batched IKPLS
   many-chain/many-fold CUDA executor and broader fused cartesian performance
   engine, not public API wiring.
+
+AOM score-campaign CUDA many-batched guard (2026-06-06):
+
+- Strengthened the live CUDA PLS route test so it now covers the actual
+  chunked `aom_chain_score_campaign` surface, not only direct
+  `sweep_run` / `aom_chain_sweep_run` calls.
+- The guard runs a 4-chain, 2-chunk, PLS-only exact-CV campaign with
+  `cuda_pls_many_batched=True` and proves that the campaign aggregates
+  `2` native score-batch calls, `16` score-batch jobs, `2` CUDA many-batched
+  batches and `16` CUDA many-batched jobs.
+- The same campaign is rerun with `N4M_CUDA_PLS_MANY_LEGACY=1`; scores and
+  candidate identity signatures remain equivalent, while counters move to
+  `2` CUDA parallel-fold batches / `16` jobs and `0` many-batched jobs.
+- Validation:
+  - targeted live CUDA route test:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+  - full dev-release `test_moment_model_wrappers.py`: `83 passed`.
+  - py_compile on `test_moment_model_wrappers.py`: PASS.
+  - `git diff --check`: PASS.
+- Remaining true gap is unchanged: this proves the campaign-level route and
+  telemetry for the existing many-batched CUDA path, but it is still not the
+  fused/batched IKPLS many-chain/many-fold executor or complete fused CUDA
+  cartesian kernel suite.

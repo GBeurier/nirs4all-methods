@@ -4365,6 +4365,79 @@ os.environ["N4M_CUDA_PLS_MANY_LEGACY"] = "1"
 legacy_override = run_once()
 os.environ.pop("N4M_CUDA_PLS_MANY_LEGACY", None)
 
+campaign_chains = [
+    [("identity", ())],
+    [("savgol_smooth", (5, 2))],
+    [("finite_difference", (1,))],
+    [("savgol_smooth", (5, 2)), ("finite_difference", (1,))],
+]
+
+def campaign_signature(report):
+    rows = []
+    for row in report["top_candidates"]:
+        rows.append((
+            int(row["chain_id"]),
+            str(row["head"]),
+            int(round(float(row["param"]))),
+            float(row["cv_rmse"]),
+        ))
+    return sorted(rows)
+
+def summarize_campaign(report):
+    return {
+        "signature": campaign_signature(report),
+        "n_chunks": int(report["n_chunks"]),
+        "n_chunk_score_calls": int(report["n_chunk_score_calls"]),
+        "n_candidates": int(report["n_candidates"]),
+        "n_pls_moment_cv_fits": int(report["n_pls_moment_cv_fits"]),
+        "n_pls_moment_cuda_device_cv_fits": int(
+            report["n_pls_moment_cuda_device_cv_fits"]
+        ),
+        "n_pls_moment_cuda_parallel_fold_batches": int(
+            report["n_pls_moment_cuda_parallel_fold_batches"]
+        ),
+        "n_pls_moment_cuda_parallel_fold_jobs": int(
+            report["n_pls_moment_cuda_parallel_fold_jobs"]
+        ),
+        "n_pls_moment_cuda_many_batched_batches": int(
+            report["n_pls_moment_cuda_many_batched_batches"]
+        ),
+        "n_pls_moment_cuda_many_batched_jobs": int(
+            report["n_pls_moment_cuda_many_batched_jobs"]
+        ),
+        "n_pls_moment_score_batch_calls": int(
+            report["n_pls_moment_score_batch_calls"]
+        ),
+        "n_pls_moment_score_batch_jobs": int(
+            report["n_pls_moment_score_batch_jobs"]
+        ),
+    }
+
+def run_campaign():
+    return n4m.aom_chain_score_campaign(
+        X,
+        y,
+        chains=campaign_chains,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=(),
+        pls_components=(1, 2),
+        heads=("pls",),
+        scale_x=False,
+        moment_policy="force_moments",
+        pls_score_mode="cv",
+        chain_chunk_size=2,
+        top_k=8,
+        cuda_pls_parallel_folds=True,
+        cuda_pls_min_device_features=1,
+        cuda_pls_many_batched=True,
+    )
+
+campaign_many = summarize_campaign(run_campaign())
+os.environ["N4M_CUDA_PLS_MANY_LEGACY"] = "1"
+campaign_legacy = summarize_campaign(run_campaign())
+os.environ.pop("N4M_CUDA_PLS_MANY_LEGACY", None)
+
 t = np.arange(24, dtype=np.float64)
 X_bad = np.ascontiguousarray(
     np.column_stack([t, t + 1.0, 2.0 * t + 3.0]), dtype=np.float64
@@ -4432,6 +4505,8 @@ def summarize_single(res):
 print(json.dumps({
     "many_first": many_first,
     "legacy_override": legacy_override,
+    "campaign_many": campaign_many,
+    "campaign_legacy": campaign_legacy,
     "recovered": {
         "candidate_scores": np.asarray(
             recovered["candidate_scores"], dtype=float
@@ -4500,6 +4575,48 @@ print(json.dumps({
     assert legacy_override["selected_cv_rmse"] == pytest.approx(
         many_first["selected_cv_rmse"], rel=1e-10, abs=1e-10
     )
+
+    campaign_many = payload["campaign_many"]
+    campaign_legacy = payload["campaign_legacy"]
+    assert campaign_many["n_chunks"] == 2
+    assert campaign_many["n_chunk_score_calls"] == 2
+    assert campaign_many["n_candidates"] == 8
+    assert campaign_many["n_pls_moment_score_batch_calls"] == 2
+    assert campaign_many["n_pls_moment_score_batch_jobs"] == 16
+    assert campaign_many["n_pls_moment_cv_fits"] == 16
+    assert campaign_many["n_pls_moment_cuda_device_cv_fits"] == 16
+    assert campaign_many["n_pls_moment_cuda_parallel_fold_batches"] == 0
+    assert campaign_many["n_pls_moment_cuda_parallel_fold_jobs"] == 0
+    assert campaign_many["n_pls_moment_cuda_many_batched_batches"] == 2
+    assert campaign_many["n_pls_moment_cuda_many_batched_jobs"] == 16
+
+    assert campaign_legacy["n_chunks"] == campaign_many["n_chunks"]
+    assert campaign_legacy["n_chunk_score_calls"] == campaign_many[
+        "n_chunk_score_calls"
+    ]
+    assert campaign_legacy["n_candidates"] == campaign_many["n_candidates"]
+    assert campaign_legacy["n_pls_moment_score_batch_calls"] == campaign_many[
+        "n_pls_moment_score_batch_calls"
+    ]
+    assert campaign_legacy["n_pls_moment_score_batch_jobs"] == campaign_many[
+        "n_pls_moment_score_batch_jobs"
+    ]
+    assert campaign_legacy["n_pls_moment_cuda_device_cv_fits"] == campaign_many[
+        "n_pls_moment_cuda_device_cv_fits"
+    ]
+    assert campaign_legacy["n_pls_moment_cuda_parallel_fold_batches"] == 2
+    assert campaign_legacy["n_pls_moment_cuda_parallel_fold_jobs"] == 16
+    assert campaign_legacy["n_pls_moment_cuda_many_batched_batches"] == 0
+    assert campaign_legacy["n_pls_moment_cuda_many_batched_jobs"] == 0
+    np.testing.assert_allclose(
+        [row[3] for row in campaign_legacy["signature"]],
+        [row[3] for row in campaign_many["signature"]],
+        rtol=1e-10,
+        atol=1e-10,
+    )
+    assert [row[:3] for row in campaign_legacy["signature"]] == [
+        row[:3] for row in campaign_many["signature"]
+    ]
 
     recovered = payload["recovered"]
     recovered_scores = np.asarray(recovered["candidate_scores"], dtype=float)
