@@ -454,25 +454,21 @@ long long as_cublas_stride(std::size_t value) {
     return static_cast<long long>(value);
 }
 
-void cublas_copy_contiguous(const double* src,
-                            double* dst,
-                            std::size_t n,
-                            const char* what) {
-    std::size_t offset = 0;
-    std::size_t remaining = n;
-    while (remaining > 0) {
-        const std::size_t chunk =
-            std::min<std::size_t>(
-                remaining,
-                static_cast<std::size_t>(std::numeric_limits<int>::max()));
-        const int chunk_i = static_cast<int>(chunk);
-        check_cublas(
-            cublasDcopy_v2(
-                state().handle, chunk_i, src + offset, 1, dst + offset, 1),
-            what);
-        offset += chunk;
-        remaining -= chunk;
+void copy_d2d_contiguous(const double* src,
+                         double* dst,
+                         std::size_t n,
+                         const char* what) {
+    if (n == 0) {
+        return;
     }
+    if (mul_overflows(n, sizeof(double))) {
+        throw std::runtime_error(std::string("CUDA copy size overflow in ") +
+                                 what);
+    }
+    check_cuda(
+        cudaMemcpyAsync(dst, src, n * sizeof(double),
+                        cudaMemcpyDeviceToDevice, nullptr),
+        what);
 }
 
 class CudaStream {
@@ -907,9 +903,9 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
             double* signed_w = workspace.douter;
 
             const std::size_t component_tile_offset = comp * batch_vec_elems;
-            cublas_copy_contiguous(
+            copy_d2d_contiguous(
                 signed_w, workspace.dW + component_tile_offset,
-                batch_vec_elems, "cublasDcopy_v2(W tile)");
+                batch_vec_elems, "cudaMemcpyAsync(W tile)");
 
             check_cublas(
                 cublasDgemmStridedBatched(
@@ -1073,9 +1069,9 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                 score_update_remaining -= chunk;
             }
 
-            cublas_copy_contiguous(
+            copy_d2d_contiguous(
                 workspace.dp_load, workspace.dP + component_tile_offset,
-                batch_vec_elems, "cublasDcopy_v2(P tile)");
+                batch_vec_elems, "cudaMemcpyAsync(P tile)");
 
             for (std::size_t local = 0; local < batch; ++local) {
                 const double tt = h_tt[local];

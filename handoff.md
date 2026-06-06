@@ -3201,3 +3201,31 @@ Continuation update - PLS many-batched native sign kernel (2026-06-06):
 - Scope note: this is real movement away from host-only cuBLAS orchestration
   for the PLS many-batched path, but the full fused cartesian/IKPLS executor is
   still not implemented.
+
+Continuation update - PLS many-batched device copy cleanup (2026-06-06):
+
+- Continued the same CUDA many-batched engine cleanup in
+  `cpp/src/core/cuda_dispatch.cpp`.
+- Replaced the helper that used chunked `cublasDcopy_v2` for contiguous W/P
+  tile storage with a `cudaMemcpyAsync(..., cudaMemcpyDeviceToDevice, nullptr)`
+  helper:
+  - signed W tile copy happens immediately after the sign kernel and before
+    `douter` is reused;
+  - P tile copy still happens after `dp_load` is finalized;
+  - final host repack remains unchanged.
+- Validation completed:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS;
+  - one-GPU CUDA wrapper guard
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`;
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` and
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS;
+  - manual 32-chain / 128 exact-CV PLS smoke matched many-batched and legacy
+    best CV scores with expected route counters (`1` many-batched batch /
+    `128` jobs vs `1` parallel-fold batch / `128` jobs).
+- Scope note: this removes two extra cuBLAS launches per component from the
+  current tiled route, but it is still incremental engine work rather than the
+  complete fused cartesian/IKPLS executor.

@@ -8175,3 +8175,34 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     matching best CV scores (`0.18291980848004097` vs
     `0.18291980848004116`) with expected counters; observed smoke timing was
     `0.174215s` many-batched vs `0.227833s` legacy, still only a route smoke.
+
+## 2026-06-06 — PLS Many-Batched Device Copy Cleanup
+
+- Removed the remaining cuBLAS dependency from two plain contiguous tile-copy
+  operations in `pls1_moment_components_many_batched_tiled`.
+- The component-major `W` and `P` tiles are now copied with `cudaMemcpyAsync`
+  device-to-device instead of chunked `cublasDcopy_v2` calls. These copies are
+  not BLAS operations; using the CUDA runtime avoids two extra cuBLAS launches
+  per component while preserving stream-ordering with the current default-stream
+  cuBLAS handle.
+- The same scratch/lifetime contract is preserved:
+  - signed weights are copied to `dW` before `douter` is reused for C deflation;
+  - `dp_load` is copied to `dP` after loadings are finalized;
+  - the host repack from component-major tiles into row-major `p x n_components`
+    outputs is unchanged.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src
+    N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python
+    -m pytest
+    bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides
+    -q`: `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` and
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - manual 32-chain / 128 exact-CV PLS smoke: many-batched and legacy selected
+    matching best CV scores (`0.18291980848004097` vs
+    `0.18291980848004116`) with expected counters; observed smoke timing was
+    `0.180833s` many-batched vs `0.239451s` legacy, still only a route smoke.
