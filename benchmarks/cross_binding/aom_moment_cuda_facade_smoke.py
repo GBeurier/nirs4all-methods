@@ -78,6 +78,10 @@ def main():
         is n4m.NativeAOMMomentPLSScreenRefitRegressor
     )
     assert (
+        moment.NativeAOMMomentPLSExactScreenRefitRegressor
+        is n4m.NativeAOMMomentPLSExactScreenRefitRegressor
+    )
+    assert (
         moment.NativeAOMMomentRidgeScreenRefitRegressor
         is n4m.NativeAOMMomentRidgeScreenRefitRegressor
     )
@@ -100,6 +104,10 @@ def main():
     assert (
         aom.NativeAOMStagedChainCampaignRegressor
         is n4m.NativeAOMStagedChainCampaignRegressor
+    )
+    assert (
+        aom.NativeAOMMomentPLSExactScreenRefitRegressor
+        is n4m.NativeAOMMomentPLSExactScreenRefitRegressor
     )
     assert (
         aom.NativeAOMSavgolFocusRegressor
@@ -289,6 +297,54 @@ def main():
     if staged_host_cv != 0:
         raise RuntimeError("staged estimator unexpectedly used host PLS CV fits")
 
+    pls_exact = n4m.NativeAOMMomentPLSExactScreenRefitRegressor(
+        chains=[
+            [("identity", ())],
+            [("savgol_smooth", (5, 2))],
+        ],
+        cv=cv,
+        fold_ids=folds,
+        pls_components=[1],
+        chain_chunk_size=2,
+        top_k=2,
+        refit_top_k=1,
+        scale_x=False,
+        cuda_pls_parallel_folds=True,
+        cuda_pls_min_device_features=1,
+    ).fit(X, y)
+    pls_exact_pred = pls_exact.predict(X)
+    if pls_exact_pred.shape != y.shape:
+        raise RuntimeError(
+            "NativeAOMMomentPLSExactScreenRefitRegressor predict shape mismatch"
+        )
+    pls_exact_diag = pls_exact.get_diagnostics()
+    if pls_exact_diag["preset"] != "moment_pls_exact_cv_screen_refit":
+        raise RuntimeError("PLS exact preset reported an unexpected preset id")
+    if pls_exact_diag["pls_score_mode"] != "cv":
+        raise RuntimeError("PLS exact preset did not run exact-CV screen")
+    if pls_exact_diag["refit_pls_score_mode"] != "cv":
+        raise RuntimeError("PLS exact preset did not exact-CV refit")
+    pls_exact_screen_device_cv = int(
+        pls_exact.screen_report_.get("n_pls_moment_cuda_device_cv_fits", 0)
+    )
+    pls_exact_screen_host_cv = int(
+        pls_exact.screen_report_.get("n_pls_moment_host_cv_fits", 0)
+    )
+    pls_exact_refit_device_cv = int(
+        pls_exact.refit_report_.get("n_pls_moment_cuda_device_cv_fits", 0)
+    )
+    pls_exact_refit_host_cv = int(
+        pls_exact.refit_report_.get("n_pls_moment_host_cv_fits", 0)
+    )
+    if pls_exact_screen_device_cv <= 0:
+        raise RuntimeError("PLS exact preset did not route screen on CUDA")
+    if pls_exact_screen_host_cv != 0:
+        raise RuntimeError("PLS exact preset unexpectedly used host screen CV")
+    if pls_exact_refit_device_cv <= 0:
+        raise RuntimeError("PLS exact preset did not route refit on CUDA")
+    if pls_exact_refit_host_cv != 0:
+        raise RuntimeError("PLS exact preset unexpectedly used host refit CV")
+
     X_mixed = X[:, : min(128, X.shape[1])]
     staged_mixed_default = n4m.NativeAOMStagedChainCampaignRegressor(
         plan="compact",
@@ -444,6 +500,7 @@ def main():
             "aom_staged_campaign_estimator_aliases_top_level": True,
             "aom_savgol_focus_estimator_aliases_top_level": True,
             "aom_strict_family_lite_estimator_aliases_top_level": True,
+            "aom_pls_exact_screen_refit_estimator_aliases_top_level": True,
             "aom_moment_winner_reuse_aliases_top_level": True,
             "aom_moment_audit_report_aliases_top_level": True,
             "aom_moment_route_summary_alias_top_level": True,
@@ -531,6 +588,23 @@ def main():
             "n_pls_moment_cuda_many_batched_jobs": int(
                 staged.refit_report_.get("n_pls_moment_cuda_many_batched_jobs", 0)
             ),
+        },
+        "pls_exact_screen_refit_estimator": {
+            "selected_cv_rmse": float(pls_exact.selected_cv_rmse_),
+            "selected_head": str(pls_exact.selected_head_),
+            "selected_param": int(pls_exact.selected_param_),
+            "preset": str(pls_exact_diag["preset"]),
+            "pls_score_mode": str(pls_exact_diag["pls_score_mode"]),
+            "refit_pls_score_mode": str(pls_exact_diag["refit_pls_score_mode"]),
+            "screen_complete": bool(pls_exact.campaign_report_["screen_complete"]),
+            "selection_uses_test_set": False,
+            "n_screen_candidates": int(pls_exact_diag["n_screen_candidates"]),
+            "n_refit_candidates": int(pls_exact_diag["n_refit_candidates"]),
+            "n_screen_pls_moment_cuda_device_cv_fits": pls_exact_screen_device_cv,
+            "n_screen_pls_moment_host_cv_fits": pls_exact_screen_host_cv,
+            "n_refit_pls_moment_cuda_device_cv_fits": pls_exact_refit_device_cv,
+            "n_refit_pls_moment_host_cv_fits": pls_exact_refit_host_cv,
+            "n_pls_gcv_proxy_fits": int(pls_exact_diag["n_pls_gcv_proxy_fits"]),
         },
         "staged_mixed_default_estimator": {
             "selected_cv_rmse": float(staged_mixed_default.selected_cv_rmse_),

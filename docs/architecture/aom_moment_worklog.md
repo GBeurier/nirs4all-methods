@@ -1,5 +1,31 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - CUDA facade smoke covers PLS exact preset
+
+Purpose:
+
+- Make the new public PLS exact-CV screen/refit preset prove the same
+  CPU/GPU facade and CUDA-route readiness as the existing AOM/moment reusable
+  presets.
+
+Changes:
+
+- Extended `aom_moment_cuda_facade_smoke.py` to assert
+  `NativeAOMMomentPLSExactScreenRefitRegressor` aliases through both
+  `n4m.moment` and `n4m.aom`.
+- Added a tiny exact-CV PLS screen/refit fit on one visible GPU, checking
+  `pls_score_mode="cv"`, `refit_pls_score_mode="cv"`, zero GCV-proxy fits,
+  CUDA device CV counters for both screen and refit, and zero host PLS CV fits.
+- Regenerated `aom_moment_cuda_facade_smoke.json` with ABI `1.22.0` and added
+  artifact assertions for the new `pls_exact_screen_refit_estimator` section.
+
+Validation:
+
+- Regenerated the CUDA facade smoke artifact through `build/cuda-on` with
+  `CUDA_VISIBLE_DEVICES=0`.
+- `test_aom_moment_cuda_smoke_artifacts.py`: `22 passed`.
+- py_compile and `git diff --check` passed.
+
 ## 2026-06-06 - PLS exact-CV screen/refit reusable preset
 
 Purpose:
