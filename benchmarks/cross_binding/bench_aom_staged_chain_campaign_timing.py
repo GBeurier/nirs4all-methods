@@ -101,6 +101,7 @@ def run_campaign(
     resume: bool,
     max_chunks_per_run: int | None,
     moment_policy: str,
+    pls_score_mode: str,
     cuda_pls_parallel_folds: bool,
     cuda_pls_min_device_features: int | None,
     cuda_pls_many_batched: bool,
@@ -125,6 +126,7 @@ def run_campaign(
         max_chunks_per_run=max_chunks_per_run,
         scale_x=False,
         moment_policy=moment_policy,
+        pls_score_mode=pls_score_mode,
         cuda_pls_parallel_folds=cuda_pls_parallel_folds,
         cuda_pls_min_device_features=cuda_pls_min_device_features,
         cuda_pls_many_batched=cuda_pls_many_batched,
@@ -182,6 +184,15 @@ def main() -> int:
             "Screen + refit moment routing policy passed to the campaign "
             "(e.g. auto, force_moments). 'force_moments' requires a build with "
             "the moment chain-sweep path enabled"
+        ),
+    )
+    parser.add_argument(
+        "--pls-score-mode",
+        choices=("cv", "gcv_proxy"),
+        default="cv",
+        help=(
+            "PLS first-pass screen score mode. Use gcv_proxy for explicit "
+            "proxy-vs-exact timing/recall campaigns; exact-CV refit is unchanged."
         ),
     )
     parser.add_argument("--components", default="1,2")
@@ -259,6 +270,7 @@ def main() -> int:
                 resume=not bool(args.no_resume),
                 max_chunks_per_run=args.max_chunks_per_run,
                 moment_policy=args.moment_policy,
+                pls_score_mode=args.pls_score_mode,
                 cuda_pls_parallel_folds=args.cuda_pls_parallel_folds,
                 cuda_pls_min_device_features=args.cuda_pls_min_device_features,
                 cuda_pls_many_batched=args.cuda_pls_many_batched,
@@ -316,6 +328,7 @@ def main() -> int:
             "n_components": int(components.size),
             "n_ridge_lambdas": int(lambdas.size),
             "moment_policy": str(args.moment_policy),
+            "pls_score_mode": str(report.get("pls_score_mode", args.pls_score_mode)),
             "cuda_pls_parallel_folds": bool(args.cuda_pls_parallel_folds),
             "cuda_pls_min_device_features": args.cuda_pls_min_device_features,
             "cuda_pls_many_batched": bool(args.cuda_pls_many_batched),

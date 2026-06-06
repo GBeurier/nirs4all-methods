@@ -569,6 +569,10 @@ back with the same `(chain, head, param)` scores. The point is launch shape, not
 selection policy; it lets the existing Ridge and PLS head-homogeneous fast paths
 run during broad preprocessing screens. Use `--split-head-scoring off` only when
 you need the legacy single native call per mixed chunk for timing comparison.
+Use `--pls-score-mode cv` (the default) for exact-CV PLS screens, or
+`--pls-score-mode gcv_proxy` for explicit proxy-vs-exact recall campaigns; the
+retained-candidate refit remains exact-CV either way and the CSV/diagnostics
+record the requested mode.
 
 The checked 10-row CUDA audit artifact
 `aom_staged_real_cohort_compact10_split_head_auto_20260606.csv` validates that
@@ -733,6 +737,7 @@ N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
   --heads pls --components 1 --ridge-lambdas 0.1 --max-chains 4 \
   --chain-chunk-size 2 --top-k 4 --refit-top-k 3 \
   --refit-per-head-top-k 1 --moment-policy auto \
+  --pls-score-mode cv \
   --cuda-pls-min-device-features 1 --cuda-pls-parallel-folds
 ```
 

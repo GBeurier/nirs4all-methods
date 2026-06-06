@@ -8,6 +8,19 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- Staged benchmark PLS score-mode switch:
+  - `run_aom_staged_real_cohort.py` and
+    `bench_aom_staged_chain_campaign_timing.py` now expose
+    `--pls-score-mode {cv,gcv_proxy}` and forward it to
+    `n4m.aom_staged_chain_campaign`.
+  - The selected mode is persisted in real-cohort CSV rows, diagnostics JSON
+    runner metadata and staged timing CSV rows. Default remains exact-CV
+    (`cv`); `gcv_proxy` is explicit for proxy-vs-exact recall/timing
+    campaigns, while refit remains exact-CV.
+  - Validation: `test_aom_benchmark_tools.py` passed (`21 passed`);
+    a synthetic staged timing smoke with `--pls-score-mode gcv_proxy` wrote
+    `pls_score_mode=gcv_proxy`; py_compile and `git diff --check` passed.
+
 - PLS exact-CV reusable screen/refit preset:
   - Commit `570ef01 feat(aom): add exact PLS screen-refit preset` adds
     `NativeAOMMomentPLSExactScreenRefitRegressor`, a PLS-only
