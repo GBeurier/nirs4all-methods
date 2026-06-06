@@ -111,6 +111,51 @@ def test_pls_cross_validate_reference_matches_pls_sweep():
     assert got["n_pls_materialized_cv_fits"] == expected["n_pls_materialized_cv_fits"]
 
 
+def test_pls_moment_fallback_builds_fold_designs_on_demand():
+    X = np.ascontiguousarray(
+        [
+            [0.0, 1.0, 2.0],
+            [1.0, 0.0, 3.0],
+            [2.0, 1.0, 0.0],
+            [3.0, 2.0, 1.0],
+            [4.0, 3.0, 2.0],
+            [5.0, 4.0, 3.0],
+        ],
+        dtype=np.float64,
+    )
+    y = 0.5 * X[:, 0] - X[:, 1]
+    folds = np.asarray([0, 1, 0, 1, 0, 1], dtype=np.int32)
+    components = np.asarray([1, 2], dtype=np.int32)
+
+    for score_only in (True, False):
+        got = n4m.sweep_run(
+            X,
+            y,
+            cv=2,
+            fold_ids=folds,
+            ridge_lambdas=[],
+            pls_components=components,
+            heads=("pls",),
+            score_only=score_only,
+        )
+        assert got["candidate_scores"].shape == (2, 4)
+        assert np.isfinite(got["candidate_scores"][0, 3])
+        assert got["n_pls_moment_cv_fits"] == 0
+        assert got["n_pls_materialized_cv_fits"] > 0
+
+    ref = n4m.pls_cross_validate(
+        X,
+        y,
+        cv=2,
+        fold_ids=folds,
+        component_grid=components,
+        score_only=True,
+    )
+    assert ref["candidate_scores"].shape == (2, 4)
+    assert np.isfinite(ref["candidate_scores"][0, 3])
+    assert ref["n_pls_materialized_cv_fits"] > 0
+
+
 def _assert_aom_route_partitions(res):
     assert (
         res["n_ridge_operator_moment_candidates"]

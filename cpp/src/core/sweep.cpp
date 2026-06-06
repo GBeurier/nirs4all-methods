@@ -1857,10 +1857,16 @@ n4m_status_t run_moment_sweep(Context& ctx,
     };
 
     std::vector<FoldMaterializedDesign> fold_designs;
-    if (need_fold_designs) {
+    auto ensure_fold_designs = [&]() -> n4m_status_t {
+        if (!fold_designs.empty()) return N4M_OK;
         st = ensure_full_copies();
         if (st != N4M_OK) return st;
         fold_designs = build_fold_designs(Xc, Yc, p, q, train_rows);
+        return N4M_OK;
+    };
+    if (need_fold_designs) {
+        st = ensure_fold_designs();
+        if (st != N4M_OK) return st;
     }
 
     std::vector<RidgeDualDesign> fold_dual_designs(
@@ -2188,6 +2194,8 @@ n4m_status_t run_moment_sweep(Context& ctx,
         }
 
         if (!pls_used_moment_route) {
+            st = ensure_fold_designs();
+            if (st != N4M_OK) return st;
             for (std::int32_t fold = 0; fold < actual_cv; ++fold) {
                 const auto fold_ix = static_cast<std::size_t>(fold);
                 const auto& design = fold_designs[fold_ix];
