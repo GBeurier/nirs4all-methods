@@ -2611,3 +2611,22 @@ Sweep/stack/crossover timing refresh slice (2026-06-06):
   - full `test_aom_moment_cuda_smoke_artifacts.py`: `43 passed`.
 - Remaining true gap is unchanged: release evidence is now current, but the
   fused/batched Ridge/PLS many-chain executor is still not implemented.
+
+Legacy catalog validator slice (2026-06-06):
+
+- Fixed the legacy `catalog/scripts/validate_catalog.py` gate by aligning
+  `catalog/schema/method_v1.json` with the current split method schema:
+  Python-backed orchestration methods may use `abi_symbols: []`, and migrated
+  `parity.tolerances` blocks are accepted.
+- Added a regression test in
+  `bindings/python/tests/test_catalog_python_bindings.py` so the legacy
+  validator must stay green against the current repo while `methods.yaml`
+  remains an auditable legacy source.
+- Validation:
+  - `catalog/scripts/validate_catalog.py`: PASS.
+  - `catalog/scripts/validate.py`: PASS.
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS.
+  - `test_catalog_python_bindings.py`: `12 passed`.
+  - `git diff --check`: PASS.
+- Remaining true gap is unchanged: this closes a release/catalog gate mismatch,
+  not the fused/batched Ridge/PLS many-chain executor.
