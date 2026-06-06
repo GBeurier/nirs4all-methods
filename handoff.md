@@ -8,6 +8,22 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- Real-cohort benchmark PLS batch telemetry export:
+  - `benchmarks/cross_binding/run_aom_staged_real_cohort.py` now persists the
+    staged PLS score-batch counters in result CSV rows and diagnostics JSON:
+    screen/refit `n_*_pls_moment_score_batch_calls` and
+    `n_*_pls_moment_score_batch_jobs`.
+  - `compare_aom_staged_variants.py` now includes those counters in variant
+    route totals, so benchmark summaries can report how much of a run actually
+    used grouped PLS batch scoring.
+  - This closes the loop from native/staged telemetry to campaign artifacts:
+    real-cohort benchmark CSVs now prove both CV/device counts and batch-route
+    engagement.
+  - Validation so far: targeted staged-real-cohort/variant tests passed
+    (`3 passed`); full `test_aom_benchmark_tools.py` passed (`21 passed`);
+    staged campaign tests passed (`16 passed`); py_compile on touched
+    benchmark scripts/tests and `git diff --check` passed.
+
 - Staged PLS batch telemetry propagation:
   - `aom_staged_chain_campaign` now carries PLS moment score-batch
     calls/jobs through every level where the other PLS CV/CUDA counters were

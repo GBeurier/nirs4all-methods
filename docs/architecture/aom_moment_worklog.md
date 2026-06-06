@@ -7266,3 +7266,25 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     `80 passed`.
   - py_compile on touched Python modules/tests: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — Real-Cohort PLS Batch Telemetry Export Slice
+
+- Extended `run_aom_staged_real_cohort.py` so real benchmark rows and compact
+  diagnostics JSON carry the staged PLS score-batch counters:
+  `n_screen_pls_moment_score_batch_calls/jobs` and
+  `n_refit_pls_moment_score_batch_calls/jobs`.
+- Extended `compare_aom_staged_variants.py` route-counter aggregation with the
+  same fields. Variant summaries can now report total grouped PLS batch calls
+  and jobs alongside CV/device/many-batched counters.
+- This makes campaign artifacts sufficient to audit whether a real-cohort run
+  stayed on the intended grouped PLS route, without reopening per-dataset JSON
+  reports or inferring from CV fit counts.
+- Validation:
+  - targeted staged-real-cohort/variant tests:
+    `3 passed, 18 deselected`.
+  - full benchmark tool tests:
+    `21 passed`.
+  - staged campaign tests:
+    `16 passed`.
+  - py_compile on touched benchmark scripts/tests: PASS.
+  - `git diff --check`: PASS.

@@ -80,6 +80,8 @@ RESULT_FIELDS = (
     "n_screen_pls_moment_cuda_parallel_fold_jobs",
     "n_screen_pls_moment_cuda_many_batched_batches",
     "n_screen_pls_moment_cuda_many_batched_jobs",
+    "n_screen_pls_moment_score_batch_calls",
+    "n_screen_pls_moment_score_batch_jobs",
     "n_refit_pls_moment_cv_fits",
     "n_refit_pls_moment_host_cv_fits",
     "n_refit_pls_moment_cuda_device_cv_fits",
@@ -87,6 +89,8 @@ RESULT_FIELDS = (
     "n_refit_pls_moment_cuda_parallel_fold_jobs",
     "n_refit_pls_moment_cuda_many_batched_batches",
     "n_refit_pls_moment_cuda_many_batched_jobs",
+    "n_refit_pls_moment_score_batch_calls",
+    "n_refit_pls_moment_score_batch_jobs",
     "selected_head",
     "selected_param",
     "selected_campaign_stage",
@@ -164,6 +168,8 @@ REPORT_COUNTER_KEYS = (
     "n_screen_pls_moment_cuda_parallel_fold_jobs",
     "n_screen_pls_moment_cuda_many_batched_batches",
     "n_screen_pls_moment_cuda_many_batched_jobs",
+    "n_screen_pls_moment_score_batch_calls",
+    "n_screen_pls_moment_score_batch_jobs",
     "n_refit_pls_moment_cv_fits",
     "n_refit_pls_moment_host_cv_fits",
     "n_refit_pls_moment_cuda_device_cv_fits",
@@ -171,6 +177,8 @@ REPORT_COUNTER_KEYS = (
     "n_refit_pls_moment_cuda_parallel_fold_jobs",
     "n_refit_pls_moment_cuda_many_batched_batches",
     "n_refit_pls_moment_cuda_many_batched_jobs",
+    "n_refit_pls_moment_score_batch_calls",
+    "n_refit_pls_moment_score_batch_jobs",
     "n_ridge_moment_cv_fits",
     "n_ridge_moment_eigen_path_preparations",
     "n_ridge_moment_eigen_path_cv_fits",
@@ -799,6 +807,12 @@ def run_one(args, item: dict[str, str]) -> dict[str, Any]:
             "n_screen_pls_moment_cuda_many_batched_jobs": int(
                 report.get("n_screen_pls_moment_cuda_many_batched_jobs", 0)
             ),
+            "n_screen_pls_moment_score_batch_calls": int(
+                report.get("n_screen_pls_moment_score_batch_calls", 0)
+            ),
+            "n_screen_pls_moment_score_batch_jobs": int(
+                report.get("n_screen_pls_moment_score_batch_jobs", 0)
+            ),
             "n_refit_pls_moment_cv_fits": int(
                 report.get("n_refit_pls_moment_cv_fits", 0)
             ),
@@ -819,6 +833,12 @@ def run_one(args, item: dict[str, str]) -> dict[str, Any]:
             ),
             "n_refit_pls_moment_cuda_many_batched_jobs": int(
                 report.get("n_refit_pls_moment_cuda_many_batched_jobs", 0)
+            ),
+            "n_refit_pls_moment_score_batch_calls": int(
+                report.get("n_refit_pls_moment_score_batch_calls", 0)
+            ),
+            "n_refit_pls_moment_score_batch_jobs": int(
+                report.get("n_refit_pls_moment_score_batch_jobs", 0)
             ),
             "selected_head": str(best["head"]),
             "selected_param": float(best["param"]),

@@ -1033,11 +1033,15 @@ def test_real_cohort_runner_writes_route_counters_and_diagnostics(
         "n_screen_pls_moment_cuda_device_cv_fits": 12,
         "n_screen_pls_moment_cuda_parallel_fold_batches": 3,
         "n_screen_pls_moment_cuda_parallel_fold_jobs": 12,
+        "n_screen_pls_moment_score_batch_calls": 3,
+        "n_screen_pls_moment_score_batch_jobs": 12,
         "n_refit_pls_moment_cv_fits": 4,
         "n_refit_pls_moment_host_cv_fits": 0,
         "n_refit_pls_moment_cuda_device_cv_fits": 4,
         "n_refit_pls_moment_cuda_parallel_fold_batches": 1,
         "n_refit_pls_moment_cuda_parallel_fold_jobs": 4,
+        "n_refit_pls_moment_score_batch_calls": 1,
+        "n_refit_pls_moment_score_batch_jobs": 4,
         "model_config_summaries": [{"scale_x": True, "best_refit_cv_rmse": 0.4}],
         "selected_model_config": {"scale_x": True},
         "selected_model_config_id": 1,
@@ -1109,10 +1113,14 @@ def test_real_cohort_runner_writes_route_counters_and_diagnostics(
     assert row["n_screen_pls_moment_host_cv_fits"] == 0
     assert row["n_screen_pls_moment_cuda_device_cv_fits"] == 12
     assert row["n_screen_pls_moment_cuda_parallel_fold_jobs"] == 12
+    assert row["n_screen_pls_moment_score_batch_calls"] == 3
+    assert row["n_screen_pls_moment_score_batch_jobs"] == 12
     assert row["n_refit_pls_moment_cv_fits"] == 4
     assert row["n_refit_pls_moment_host_cv_fits"] == 0
     assert row["n_refit_pls_moment_cuda_device_cv_fits"] == 4
     assert row["n_refit_pls_moment_cuda_parallel_fold_jobs"] == 4
+    assert row["n_refit_pls_moment_score_batch_calls"] == 1
+    assert row["n_refit_pls_moment_score_batch_jobs"] == 4
     assert row["cuda_pls_parallel_folds"] is True
     assert row["cuda_pls_min_device_features"] == 1
     assert row["backend_min_cuda_product"] == 1
@@ -1148,6 +1156,10 @@ def test_real_cohort_runner_writes_route_counters_and_diagnostics(
     assert diagnostics["counters"]["n_ridge_moment_score_batch_calls"] == 2
     assert diagnostics["counters"]["n_ridge_moment_score_batch_jobs"] == 24
     assert diagnostics["counters"]["n_screen_pls_moment_cuda_device_cv_fits"] == 12
+    assert diagnostics["counters"]["n_screen_pls_moment_score_batch_calls"] == 3
+    assert diagnostics["counters"]["n_screen_pls_moment_score_batch_jobs"] == 12
+    assert diagnostics["counters"]["n_refit_pls_moment_score_batch_calls"] == 1
+    assert diagnostics["counters"]["n_refit_pls_moment_score_batch_jobs"] == 4
     # audit payload persisted: offline test-set scoring never changes selection
     assert "audit" in diagnostics
     audit_diag = diagnostics["audit"]
@@ -1588,8 +1600,12 @@ def test_staged_variant_comparator_groups_configs_and_sums_routes(tmp_path):
             "rmsep": "1.0",
             "n_screen_pls_moment_cv_fits": "10",
             "n_screen_pls_moment_cuda_device_cv_fits": "10",
+            "n_screen_pls_moment_score_batch_calls": "2",
+            "n_screen_pls_moment_score_batch_jobs": "10",
             "n_refit_pls_moment_cv_fits": "4",
             "n_refit_pls_moment_cuda_device_cv_fits": "4",
+            "n_refit_pls_moment_score_batch_calls": "1",
+            "n_refit_pls_moment_score_batch_jobs": "4",
         },
         {
             "database_name": "DB",
@@ -1611,8 +1627,12 @@ def test_staged_variant_comparator_groups_configs_and_sums_routes(tmp_path):
             "rmsep": "",
             "n_screen_pls_moment_cv_fits": "",
             "n_screen_pls_moment_cuda_device_cv_fits": "",
+            "n_screen_pls_moment_score_batch_calls": "",
+            "n_screen_pls_moment_score_batch_jobs": "",
             "n_refit_pls_moment_cv_fits": "",
             "n_refit_pls_moment_cuda_device_cv_fits": "",
+            "n_refit_pls_moment_score_batch_calls": "",
+            "n_refit_pls_moment_score_batch_jobs": "",
         },
         {
             "database_name": "DB",
@@ -1634,8 +1654,12 @@ def test_staged_variant_comparator_groups_configs_and_sums_routes(tmp_path):
             "rmsep": "0.8",
             "n_screen_pls_moment_cv_fits": "5",
             "n_screen_pls_moment_cuda_device_cv_fits": "5",
+            "n_screen_pls_moment_score_batch_calls": "1",
+            "n_screen_pls_moment_score_batch_jobs": "5",
             "n_refit_pls_moment_cv_fits": "2",
             "n_refit_pls_moment_cuda_device_cv_fits": "2",
+            "n_refit_pls_moment_score_batch_calls": "1",
+            "n_refit_pls_moment_score_batch_jobs": "2",
         },
     ])
 
@@ -1654,8 +1678,12 @@ def test_staged_variant_comparator_groups_configs_and_sums_routes(tmp_path):
     assert compact["median_score"] == pytest.approx(1.0)
     assert compact["total_n_screen_pls_moment_cv_fits"] == 10
     assert compact["total_n_screen_pls_moment_cuda_device_cv_fits"] == 10
+    assert compact["total_n_screen_pls_moment_score_batch_calls"] == 2
+    assert compact["total_n_screen_pls_moment_score_batch_jobs"] == 10
     assert compact["total_n_refit_pls_moment_cv_fits"] == 4
     assert compact["total_n_refit_pls_moment_cuda_device_cv_fits"] == 4
+    assert compact["total_n_refit_pls_moment_score_batch_calls"] == 1
+    assert compact["total_n_refit_pls_moment_score_batch_jobs"] == 4
     assert "alpha" not in compact["config_key"]
     assert "beta" not in compact["config_key"]
     assert "secret" not in compact["config_key"]
