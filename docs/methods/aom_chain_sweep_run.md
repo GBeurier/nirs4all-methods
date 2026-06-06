@@ -607,12 +607,14 @@ screen/refit/final counters; after exact-CV refit, the `final_*` fields should
 show zero final CV fits and only the selected all-row fit needed to build the
 reusable model.
 
-Two sklearn presets wrap the same estimator for the common end-user workflows:
+Reusable sklearn presets wrap the same estimator for the common end-user
+workflows:
 
 ```python
 from n4m.sklearn import (
     NativeAOMMomentScreenRefitRegressor,
     NativeAOMMomentPLSScreenRefitRegressor,
+    NativeAOMMomentPLSExactScreenRefitRegressor,
     NativeAOMMomentRidgeScreenRefitRegressor,
 )
 
@@ -628,6 +630,15 @@ mixed_model = NativeAOMMomentScreenRefitRegressor(
 ).fit(X_train, y_train)
 
 pls_model = NativeAOMMomentPLSScreenRefitRegressor(
+    profile="lab",
+    max_chains=5000,
+    pls_components=(1, 2, 3, 4, 6, 8),
+    top_k=100,
+    refit_top_k=25,
+    fold_ids=fold_ids,
+).fit(X_train, y_train)
+
+pls_exact_model = NativeAOMMomentPLSExactScreenRefitRegressor(
     profile="lab",
     max_chains=5000,
     pls_components=(1, 2, 3, 4, 6, 8),
@@ -657,9 +668,12 @@ train-only retention budget for exact verification, not a new score.
 `ridge_lambdas=()`, `pls_score_mode="gcv_proxy"`,
 `moment_policy="force_moments"` and `chain_ordering="prefix"`, then exact-CV
 refits retained rows with `pls_score_mode="cv"`.
+`NativeAOMMomentPLSExactScreenRefitRegressor` fixes the same PLS-only moment
+surface but uses `pls_score_mode="cv"` for the first-pass screen too; it is the
+auditable exact-screen preset when proxy recall is the question.
 `NativeAOMMomentRidgeScreenRefitRegressor` fixes `heads=("ridge",)`,
 `pls_components=()`, `moment_policy="force_moments"` and the same prefix-aware
-chunk ordering. All three keep `profile`, custom
+chunk ordering. All presets keep `profile`, custom
 `chains`/`families`/`templates`, checkpointing, incremental
 `max_chunks_per_run`, top-k budgets and exact-refit execution parameters
 configurable. Because these presets are strict moment presets, they raise

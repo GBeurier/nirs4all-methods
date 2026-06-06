@@ -1,5 +1,30 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - PLS exact-CV screen/refit reusable preset
+
+Purpose:
+
+- Expose a simple PLS-only end-user preset for exact-CV preprocessing screens,
+  separate from the existing PLS GCV-proxy screen preset, so screen-recall
+  audits and reuse experiments can opt into exact train-CV ranking directly.
+
+Changes:
+
+- Added `NativeAOMMomentPLSExactScreenRefitRegressor`, a PLS-only
+  `NativeAOMScreenRefitRegressor` preset with `pls_score_mode="cv"`,
+  `ridge_lambdas=()`, `heads=("pls",)`, `moment_policy="force_moments"` and
+  prefix-aware chain ordering.
+- Exported the preset through `n4m`, `n4m.sklearn`, `n4m.aom` and
+  `n4m.moment`; added `moment_pls_exact_screen_refit` inventory entries beside
+  the existing PLS GCV and Ridge exact presets.
+- Updated method docs, coverage matrix and catalog notes to distinguish PLS
+  GCV-proxy -> exact-refit from PLS exact-screen -> exact-refit.
+
+Validation:
+
+- Targeted wrapper/facade pytest, py_compile and diff checks run in the
+  corresponding patch validation.
+
 ## 2026-06-06 - PLS exact batch fallback prefix reuse
 
 Purpose:
