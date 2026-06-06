@@ -50,6 +50,8 @@ ROUTE_COUNTER_COLUMNS = (
     "n_screen_pls_moment_cuda_parallel_fold_jobs",
     "n_screen_pls_moment_cuda_many_batched_batches",
     "n_screen_pls_moment_cuda_many_batched_jobs",
+    "n_screen_pls_moment_score_batch_calls",
+    "n_screen_pls_moment_score_batch_jobs",
     "n_refit_pls_moment_cv_fits",
     "n_refit_pls_moment_host_cv_fits",
     "n_refit_pls_moment_cuda_device_cv_fits",
@@ -57,6 +59,8 @@ ROUTE_COUNTER_COLUMNS = (
     "n_refit_pls_moment_cuda_parallel_fold_jobs",
     "n_refit_pls_moment_cuda_many_batched_batches",
     "n_refit_pls_moment_cuda_many_batched_jobs",
+    "n_refit_pls_moment_score_batch_calls",
+    "n_refit_pls_moment_score_batch_jobs",
 )
 IDENTITY_COLUMN_TOKENS = (
     "dataset",
