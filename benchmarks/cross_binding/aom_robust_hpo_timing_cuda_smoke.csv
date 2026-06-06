@@ -1,7 +1,7 @@
 backend,profile,n_samples,n_features,cv,n_candidates,selected_chain_id,selected_head_id,selected_param,selected_cv_rmse,prediction_replay_max_abs_error,elapsed_ms_median,library_path,abi
-native_abi,compact,32,64,3,84,5,0,1.0,1.0737800444092243,,368.5158370062709,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_sklearn,compact,32,64,3,84,5,0,1.0,1.0737800444092243,8.881784197001252e-16,172.5917739677243,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_abi,compact,64,128,3,84,3,1,2.0,1.03369439208021,,201.64340798510239,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_sklearn,compact,64,128,3,84,3,1,2.0,1.03369439208021,1.5543122344752192e-15,200.77161001972854,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_abi,compact,96,256,3,84,1,1,8.0,1.1078716759907792,,258.94648098619655,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_sklearn,compact,96,256,3,84,1,1,8.0,1.1078716759907792,4.440892098500626e-15,211.4683099789545,build/cuda-on/cpp/src/libn4m.so,1.21.0
+native_abi,compact,32,64,3,84,5,0,1.0,1.0737800444092243,,1822.9565770016052,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_sklearn,compact,32,64,3,84,5,0,1.0,1.0737800444092243,8.881784197001252e-16,370.5878820037469,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_abi,compact,64,128,3,84,3,1,2.0,1.03369439208021,,503.70544800534844,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_sklearn,compact,64,128,3,84,3,1,2.0,1.03369439208021,1.5543122344752192e-15,564.5372290164232,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_abi,compact,96,256,3,84,1,1,8.0,1.1078716759907792,,721.5793009963818,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_sklearn,compact,96,256,3,84,1,1,8.0,1.1078716759907792,4.440892098500626e-15,907.250166987069,build/cuda-on/cpp/src/libn4m.so,1.22.0

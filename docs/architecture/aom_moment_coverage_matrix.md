@@ -75,7 +75,10 @@ Timing artifact note: the strict AOM portfolio now has committed CPU
 `aom_ridge_pls_superblock_timing.csv`, `aom_chain_ridge_pls_timing.csv`,
 `aom_ridge_global_timing.csv` and `aom_staged_chain_campaign_timing.csv`.
 Release guards assert those CPU rows use the host/dev-release route while the
-existing CUDA smokes keep the one-GPU `build/cuda-on` route.
+existing CUDA smokes keep the one-GPU `build/cuda-on` route. The strict AOM
+portfolio timing artifacts for preprocess, selectors, diversity wrappers,
+superblocks, robust HPO and staged campaign are refreshed against ABI 1.22.0
+for both CPU/dev-release and CUDA/cuda-on evidence.
 
 | Surface | Required shape before completion | Reason it is still open |
 |---|---|---|

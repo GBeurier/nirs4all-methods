@@ -12,6 +12,7 @@ import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _BENCH = _REPO_ROOT / "benchmarks" / "cross_binding"
+_AOM_ARTIFACT_ABI = "1.22.0"
 
 
 def _rows(name: str) -> list[dict[str, str]]:
@@ -47,6 +48,10 @@ def _assert_cuda_build_path(path: str) -> None:
 
 def _assert_dev_release_build_path(path: str) -> None:
     assert "build/dev-release" in path, path
+
+
+def _assert_current_aom_artifact_abi(row: dict[str, str]) -> None:
+    assert row.get("abi") == _AOM_ARTIFACT_ABI
 
 
 def _assert_direct_moment_heads_rows(
@@ -355,6 +360,7 @@ def test_staged_campaign_cuda_smoke_artifact_proves_train_only_cuda_screen():
 
     assert row["backend"] == "native_aom_staged_chain_campaign"
     _assert_cuda_build_path(row["library_path"])
+    _assert_current_aom_artifact_abi(row)
     assert _bool(row, "screen_complete") is True
     assert _int(row, "n_remaining_stage_chunks_total") == 0
     assert row["selection_metric"] == "refit_cv_rmse"
@@ -547,8 +553,24 @@ def test_aom_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
 
 
 def test_aom_selector_cuda_smoke_artifact_covers_function_and_sklearn_replay():
-    rows = _rows("aom_selector_timing_cuda_smoke.csv")
+    _assert_aom_selector_rows(
+        _rows("aom_selector_timing_cuda_smoke.csv"),
+        expect_cuda_build=True,
+    )
 
+
+def test_aom_selector_cpu_artifact_covers_function_and_sklearn_replay():
+    _assert_aom_selector_rows(
+        _rows("aom_selector_timing.csv"),
+        expect_cuda_build=False,
+    )
+
+
+def _assert_aom_selector_rows(
+    rows: list[dict[str, str]],
+    *,
+    expect_cuda_build: bool,
+) -> None:
     expected_methods = {"aom_pls", "pop_pls"}
     expected_surfaces = {"function", "sklearn"}
     shapes_by_method: dict[str, set[tuple[int, int]]] = {}
@@ -561,7 +583,11 @@ def test_aom_selector_cuda_smoke_artifact_covers_function_and_sklearn_replay():
     for row in rows:
         method = row["method"]
         shape = (_int(row, "n_samples"), _int(row, "n_features"))
-        _assert_cuda_build_path(row["library_path"])
+        if expect_cuda_build:
+            _assert_cuda_build_path(row["library_path"])
+        else:
+            _assert_dev_release_build_path(row["library_path"])
+        _assert_current_aom_artifact_abi(row)
         assert _int(row, "n_operators") > 0
         assert 1 <= _int(row, "selected_n_components") <= _int(
             row, "max_components"
@@ -624,6 +650,7 @@ def _assert_aom_preprocess_rows(
             _assert_cuda_build_path(row["library_path"])
         else:
             _assert_dev_release_build_path(row["library_path"])
+        _assert_current_aom_artifact_abi(row)
         operator = row["operator"]
         assert _int(row, "n_operators") == 1
         assert _int(row, "operator_kind") == expected_operator_kinds[operator]
@@ -687,6 +714,7 @@ def test_diversity_cpu_artifacts_cover_native_and_sklearn_replay(
 
     for row in rows:
         _assert_dev_release_build_path(row["library_path"])
+        _assert_current_aom_artifact_abi(row)
         elapsed_key = (
             "elapsed_ms_median" if "elapsed_ms_median" in row else "elapsed_ms"
         )
@@ -780,6 +808,7 @@ def test_diversity_cuda_smoke_artifacts_cover_native_and_sklearn_replay(
 
     for row in rows:
         _assert_cuda_build_path(row["library_path"])
+        _assert_current_aom_artifact_abi(row)
         if "ridge_backend" in row:
             assert row["ridge_backend"] in {"native", "native_aom_chain_sweep"}
         if "pls_backend" in row:
@@ -831,13 +860,33 @@ def test_diversity_cuda_smoke_artifacts_cover_native_and_sklearn_replay(
 
 
 def test_robust_hpo_cuda_smoke_artifact_covers_native_winner_path():
-    rows = _rows("aom_robust_hpo_timing_cuda_smoke.csv")
+    _assert_robust_hpo_rows(
+        _rows("aom_robust_hpo_timing_cuda_smoke.csv"),
+        expect_cuda_build=True,
+    )
 
+
+def test_robust_hpo_cpu_artifact_covers_native_winner_path():
+    _assert_robust_hpo_rows(
+        _rows("aom_robust_hpo_timing.csv"),
+        expect_cuda_build=False,
+    )
+
+
+def _assert_robust_hpo_rows(
+    rows: list[dict[str, str]],
+    *,
+    expect_cuda_build: bool,
+) -> None:
     assert {row["backend"] for row in rows} == {"native_abi", "native_sklearn"}
     assert {row["profile"] for row in rows} == {"compact"}
     seen_by_shape: dict[tuple[int, int], set[str]] = {}
     for row in rows:
-        _assert_cuda_build_path(row["library_path"])
+        if expect_cuda_build:
+            _assert_cuda_build_path(row["library_path"])
+        else:
+            _assert_dev_release_build_path(row["library_path"])
+        _assert_current_aom_artifact_abi(row)
         shape = (_int(row, "n_samples"), _int(row, "n_features"))
         seen_by_shape.setdefault(shape, set()).add(row["backend"])
         assert _int(row, "n_candidates") > 0
@@ -853,6 +902,7 @@ def test_aom_staged_chain_campaign_cpu_artifact_covers_host_route():
     row = _only_row("aom_staged_chain_campaign_timing.csv")
 
     _assert_dev_release_build_path(row["library_path"])
+    _assert_current_aom_artifact_abi(row)
     assert row["backend"] == "native_aom_staged_chain_campaign"
     assert row["plan"] == "compact"
     assert row["heads"] == "pls"

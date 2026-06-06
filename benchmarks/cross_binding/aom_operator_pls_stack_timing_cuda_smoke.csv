@@ -1,7 +1,7 @@
 backend,profile,n_samples,n_features,cv,n_operators,n_specs,n_operator_features,selected_components,selected_alpha,selected_oof_rmse,best_single_criterion,n_pls_stack_cv_fits,n_pls_stack_final_fits,n_ridge_stack_cv_fits,n_ridge_stack_final_fits,n_operator_pls_stack_fit_calls,n_operator_pls_stack_pls_fit_calls,n_operator_pls_stack_ridge_fit_calls,prediction_replay_max_abs_error,elapsed_ms_median,library_path,abi
-native_aom_operator_pls_stack,compact,32,64,4,12,4,24,2,1.0,0.47753464915192323,0.47753464915192323,240,12,20,1,21,252,21,0.0,13.852739008143544,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_operator_pls_stack_sklearn,compact,32,64,4,12,4,24,2,1.0,0.47753464915192323,0.47753464915192323,240,12,20,1,21,252,21,6.661338147750939e-16,19.362166000064462,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_operator_pls_stack,compact,48,96,4,12,4,12,1,0.01,0.5242772739972641,0.5242772739972641,240,12,20,1,21,252,21,0.0,74.96635097777471,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_operator_pls_stack_sklearn,compact,48,96,4,12,4,12,1,0.01,0.5242772739972641,0.5242772739972641,240,12,20,1,21,252,21,2.220446049250313e-15,59.81867900118232,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_operator_pls_stack,compact,64,128,4,12,4,12,1,0.01,0.5495412809412247,0.5495412809412247,240,12,20,1,21,252,21,0.0,92.40783000132069,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_operator_pls_stack_sklearn,compact,64,128,4,12,4,12,1,0.01,0.5495412809412247,0.5495412809412247,240,12,20,1,21,252,21,1.021405182655144e-14,112.90954001015052,build/cuda-on/cpp/src/libn4m.so,1.21.0
+native_aom_operator_pls_stack,compact,32,64,4,12,4,24,2,1.0,0.47753464915192323,0.47753464915192323,240,12,20,1,21,252,21,0.0,21.53221203479916,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_operator_pls_stack_sklearn,compact,32,64,4,12,4,24,2,1.0,0.47753464915192323,0.47753464915192323,240,12,20,1,21,252,21,6.661338147750939e-16,16.856562986504287,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_operator_pls_stack,compact,48,96,4,12,4,12,1,0.01,0.5242772739972641,0.5242772739972641,240,12,20,1,21,252,21,0.0,36.279330030083656,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_operator_pls_stack_sklearn,compact,48,96,4,12,4,12,1,0.01,0.5242772739972641,0.5242772739972641,240,12,20,1,21,252,21,2.220446049250313e-15,27.51091797836125,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_operator_pls_stack,compact,64,128,4,12,4,12,1,0.01,0.5495412809412247,0.5495412809412247,240,12,20,1,21,252,21,0.0,37.61746495729312,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_operator_pls_stack_sklearn,compact,64,128,4,12,4,12,1,0.01,0.5495412809412247,0.5495412809412247,240,12,20,1,21,252,21,1.021405182655144e-14,36.82829800527543,build/cuda-on/cpp/src/libn4m.so,1.22.0

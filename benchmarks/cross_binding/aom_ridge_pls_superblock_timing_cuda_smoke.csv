@@ -1,7 +1,7 @@
 backend,n_samples,n_features,cv,block_scaling,n_operators,operator_kinds,n_features_superblock,n_candidates,n_components,ridge_lambda,selected_cv_rmse,best_cv_rmse,ridge_pls_backend,n_ridge_pls_fit_calls,prediction_replay_max_abs_error,elapsed_ms_median,library_path,abi
-native_aom_ridge_pls_superblock,32,32,4,rms,3,0 15 8,96,4,2,0.1,0.6705452945014284,0.6705452945014284,native,17,0.0,2221.6190500184894,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_ridge_pls_superblock_sklearn,32,32,4,rms,3,0 15 8,96,4,2,0.1,0.6705452945014284,0.6705452945014284,native,17,0.0,200.11005399283022,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_ridge_pls_superblock,64,64,4,rms,3,0 15 8,192,4,2,0.0,0.5954266791997468,0.5954266791997468,native,17,0.0,122.58977902820334,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_ridge_pls_superblock_sklearn,64,64,4,rms,3,0 15 8,192,4,2,0.0,0.5954266791997468,0.5954266791997468,native,17,0.0,120.96987396944314,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_ridge_pls_superblock,96,128,4,rms,3,0 15 8,384,4,2,0.1,0.6683371551907231,0.6683371551907231,native,17,0.0,224.82807899359614,build/cuda-on/cpp/src/libn4m.so,1.21.0
-native_aom_ridge_pls_superblock_sklearn,96,128,4,rms,3,0 15 8,384,4,2,0.1,0.6683371551907231,0.6683371551907231,native,17,0.0,609.5334049896337,build/cuda-on/cpp/src/libn4m.so,1.21.0
+native_aom_ridge_pls_superblock,32,32,4,rms,3,0 15 8,96,4,2,0.1,0.6705452945014284,0.6705452945014284,native,17,0.0,1086.5615850198083,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock_sklearn,32,32,4,rms,3,0 15 8,96,4,2,0.1,0.6705452945014284,0.6705452945014284,native,17,0.0,63.93530097557232,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock,64,64,4,rms,3,0 15 8,192,4,2,0.0,0.5954266791997468,0.5954266791997468,native,17,0.0,118.76548797590658,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock_sklearn,64,64,4,rms,3,0 15 8,192,4,2,0.0,0.5954266791997468,0.5954266791997468,native,17,0.0,90.07936203852296,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock,96,128,4,rms,3,0 15 8,384,4,2,0.1,0.6683371551907231,0.6683371551907231,native,17,0.0,154.0956879616715,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock_sklearn,96,128,4,rms,3,0 15 8,384,4,2,0.1,0.6683371551907231,0.6683371551907231,native,17,0.0,78.530469967518,build/cuda-on/cpp/src/libn4m.so,1.22.0
