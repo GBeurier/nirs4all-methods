@@ -1,5 +1,5 @@
 {
-  "abi": "1.21.0",
+  "abi": "1.22.0",
   "aom": {
     "n_candidates": 2,
     "n_pls_materialized_cv_fits": 0,
@@ -39,6 +39,7 @@
     "aom_moment_screen_refit_estimators_alias_top_level": true,
     "aom_moment_winner_reuse_aliases_top_level": true,
     "aom_pls_aliases_top_level": true,
+    "aom_pls_exact_screen_refit_estimator_aliases_top_level": true,
     "aom_preprocess_aliases_top_level": true,
     "aom_savgol_focus_estimator_aliases_top_level": true,
     "aom_staged_campaign_aliases_top_level": true,
@@ -58,6 +59,23 @@
   },
   "n_features": 1024,
   "n_samples": 80,
+  "pls_exact_screen_refit_estimator": {
+    "n_pls_gcv_proxy_fits": 0,
+    "n_refit_candidates": 1,
+    "n_refit_pls_moment_cuda_device_cv_fits": 4,
+    "n_refit_pls_moment_host_cv_fits": 0,
+    "n_screen_candidates": 2,
+    "n_screen_pls_moment_cuda_device_cv_fits": 8,
+    "n_screen_pls_moment_host_cv_fits": 0,
+    "pls_score_mode": "cv",
+    "preset": "moment_pls_exact_cv_screen_refit",
+    "refit_pls_score_mode": "cv",
+    "screen_complete": true,
+    "selected_cv_rmse": 0.6677137410278924,
+    "selected_head": "pls",
+    "selected_param": 1,
+    "selection_uses_test_set": false
+  },
   "pop_pls": {
     "n_operators": 2,
     "prediction_replay_max_abs_error": 1.6653345369377348e-15,

@@ -69,6 +69,7 @@ def test_cuda_facade_smoke_artifact_proves_facades_and_staged_cuda_route():
     assert facades["aom_staged_campaign_estimator_aliases_top_level"] is True
     assert facades["aom_savgol_focus_estimator_aliases_top_level"] is True
     assert facades["aom_strict_family_lite_estimator_aliases_top_level"] is True
+    assert facades["aom_pls_exact_screen_refit_estimator_aliases_top_level"] is True
     assert facades["aom_pls_aliases_top_level"] is True
     assert facades["pop_pls_aliases_top_level"] is True
     assert facades["aom_diversity_aliases_top_level"] is True
@@ -95,6 +96,22 @@ def test_cuda_facade_smoke_artifact_proves_facades_and_staged_cuda_route():
     assert staged["n_pls_moment_cuda_device_cv_fits"] > 0
     assert staged["n_pls_moment_host_cv_fits"] == 0
     assert staged["n_pls_moment_cuda_parallel_fold_jobs"] > 0
+
+    pls_exact = data["pls_exact_screen_refit_estimator"]
+    assert pls_exact["screen_complete"] is True
+    assert pls_exact["selection_uses_test_set"] is False
+    assert pls_exact["selected_head"] == "pls"
+    assert pls_exact["selected_param"] >= 1
+    assert pls_exact["preset"] == "moment_pls_exact_cv_screen_refit"
+    assert pls_exact["pls_score_mode"] == "cv"
+    assert pls_exact["refit_pls_score_mode"] == "cv"
+    assert pls_exact["n_screen_candidates"] >= 2
+    assert pls_exact["n_refit_candidates"] >= 1
+    assert pls_exact["n_screen_pls_moment_cuda_device_cv_fits"] > 0
+    assert pls_exact["n_screen_pls_moment_host_cv_fits"] == 0
+    assert pls_exact["n_refit_pls_moment_cuda_device_cv_fits"] > 0
+    assert pls_exact["n_refit_pls_moment_host_cv_fits"] == 0
+    assert pls_exact["n_pls_gcv_proxy_fits"] == 0
 
     staged_mixed = data["staged_mixed_default_estimator"]
     assert staged_mixed["screen_complete"] is True

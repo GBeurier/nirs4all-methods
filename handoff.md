@@ -26,6 +26,12 @@ Completed and validated in the latest pass:
     touched Python modules/tests passed; catalog validation and split-method
     checks passed; `git diff --check` passed. Branch was pushed to
     `origin/release-readiness-fixes`.
+  - Follow-up CUDA facade smoke coverage added after the commit: the
+    regenerated `benchmarks/cross_binding/aom_moment_cuda_facade_smoke.json`
+    now has `pls_exact_screen_refit_estimator` with exact-CV screen/refit
+    (`pls_score_mode=cv`, `refit_pls_score_mode=cv`), zero GCV-proxy fits,
+    screen/refit CUDA device CV fits `8/4` and host PLS CV fits `0`.
+    `test_aom_moment_cuda_smoke_artifacts.py` passed (`22 passed`).
 
 - Real-cohort benchmark PLS batch telemetry export:
   - `benchmarks/cross_binding/run_aom_staged_real_cohort.py` now persists the
