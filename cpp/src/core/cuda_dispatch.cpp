@@ -125,6 +125,12 @@ struct Pls1MomentBatchWorkspaceView {
     double* dnorm_sq{nullptr};
     double* dtt{nullptr};
     double* dqdot{nullptr};
+    double* dinv_tt{nullptr};
+    double* dsqrt_tt{nullptr};
+    double* ddefl{nullptr};
+    double* dcur_yy{nullptr};
+    double* dQ{nullptr};
+    int* dfail{nullptr};
 };
 
 constexpr std::size_t kMaxParallelFoldStreams = 4;
@@ -219,6 +225,12 @@ public:
         dnorm_sq_.ensure(n_jobs);
         dtt_.ensure(n_jobs);
         dqdot_.ensure(n_jobs);
+        dinv_tt_.ensure(n_jobs);
+        dsqrt_tt_.ensure(n_jobs);
+        ddefl_.ensure(n_jobs);
+        dcur_yy_.ensure(n_jobs);
+        dQ_.ensure(n_jobs * max_components);
+        dfail_.ensure(3);
         return {
             dC_.get(),
             ds_.get(),
@@ -232,6 +244,12 @@ public:
             dnorm_sq_.get(),
             dtt_.get(),
             dqdot_.get(),
+            dinv_tt_.get(),
+            dsqrt_tt_.get(),
+            ddefl_.get(),
+            dcur_yy_.get(),
+            dQ_.get(),
+            dfail_.get(),
         };
     }
 
@@ -248,6 +266,12 @@ private:
     ReusableDeviceBuffer<double> dnorm_sq_;
     ReusableDeviceBuffer<double> dtt_;
     ReusableDeviceBuffer<double> dqdot_;
+    ReusableDeviceBuffer<double> dinv_tt_;
+    ReusableDeviceBuffer<double> dsqrt_tt_;
+    ReusableDeviceBuffer<double> ddefl_;
+    ReusableDeviceBuffer<double> dcur_yy_;
+    ReusableDeviceBuffer<double> dQ_;
+    ReusableDeviceBuffer<int> dfail_;
 };
 
 Pls1MomentWorkspaceView workspace_view(DevicePtr<double>& dC,
@@ -779,18 +803,17 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
     const std::size_t max_tile_jobs =
         choose_pls_batch_tile_jobs(n_jobs, p, max_components);
 
+    // Per-component scalar work (norm/scale/tt/qdot/q-load/inv-tt/sqrt-tt and the
+    // running Y residual) now stays resident on the device: it is prepared by the
+    // three scalar kernels below instead of being copied host<->device every
+    // component. Only the final W/P/Q tiles, the residual and a 3-int failure
+    // flag are read back, once per tile.
     std::vector<double> hC;
     std::vector<double> hs;
     std::vector<double> hW;
     std::vector<double> hP;
-    std::vector<double> current_yy;
-    std::vector<double> h_norm_sq;
-    std::vector<double> h_scale;
-    std::vector<double> h_tt;
-    std::vector<double> h_qdot;
-    std::vector<double> h_q_load;
-    std::vector<double> h_inv_tt;
-    std::vector<double> h_sqrt_tt;
+    std::vector<double> hQ;
+    std::vector<double> h_cur_yy;
 
     const double one = 1.0;
     const double zero = 0.0;
@@ -810,36 +833,24 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
 
         hC.assign(batch * pp, 0.0);
         hs.assign(batch * p, 0.0);
-        current_yy.assign(batch, 0.0);
-        h_norm_sq.assign(batch, 0.0);
-        h_scale.assign(batch, 0.0);
-        h_tt.assign(batch, 0.0);
-        h_qdot.assign(batch, 0.0);
-        h_q_load.assign(batch, 0.0);
-        h_inv_tt.assign(batch, 0.0);
-        h_sqrt_tt.assign(batch, 0.0);
         for (std::size_t local = 0; local < batch; ++local) {
             const std::size_t job = begin + local;
             std::copy(C[job], C[job] + pp, hC.data() + local * pp);
             std::copy(s[job], s[job] + p, hs.data() + local * p);
-            current_yy[local] = yy[job];
         }
         copy_h2d(workspace.dC, hC.data(), hC.size() * sizeof(double));
         copy_h2d(workspace.ds, hs.data(), hs.size() * sizeof(double));
+        copy_h2d(workspace.dcur_yy, yy + begin, batch * sizeof(double));
+        check_cuda(cudaMemset(workspace.dfail, 0, 3 * sizeof(int)),
+                   "reset PLS1 moment batch fail flag");
 
         for (std::size_t comp = 0; comp < max_components; ++comp) {
-            for (std::size_t local = 0; local < batch; ++local) {
-                const std::size_t job = begin + local;
-                if (current_yy[local] <= eps ||
-                    !std::isfinite(current_yy[local])) {
-                    if (error != nullptr) {
-                        *error = "CUDA PLS1 moment Y residual vanished in "
-                                 "batched job " + std::to_string(job);
-                    }
-                    return 1;
-                }
-            }
+            const int comp_i = static_cast<int>(comp);
 
+            // The s-norm gemm fills dnorm_sq with ||s||^2 per job; the Y-residual
+            // and X-weight guards plus the normalization scale are applied on the
+            // device in pls1_moment_prepare_scale_many, so the running residual
+            // never round-trips to the host.
             check_cublas(
                 cublasDgemmStridedBatched(
                     state().handle,
@@ -862,26 +873,11 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     batch_i),
                 "cublasDgemmStridedBatched(s norm)");
 
-            copy_d2h(h_norm_sq.data(), workspace.dnorm_sq,
-                     h_norm_sq.size() * sizeof(double));
-            for (std::size_t local = 0; local < batch; ++local) {
-                const std::size_t job = begin + local;
-                double norm_sq = h_norm_sq[local];
-                if (norm_sq < 0.0 && norm_sq > -eps) {
-                    norm_sq = 0.0;
-                }
-                const double s_norm = std::sqrt(norm_sq);
-                if (s_norm <= eps || !std::isfinite(s_norm)) {
-                    if (error != nullptr) {
-                        *error = "CUDA PLS1 moment X weights vanished in "
-                                 "batched job " + std::to_string(job);
-                    }
-                    return 1;
-                }
-                h_scale[local] = 1.0 / (s_norm + eps * current_yy[local]);
-            }
-            copy_h2d(workspace.dscale, h_scale.data(),
-                     h_scale.size() * sizeof(double));
+            check_cuda(
+                pls1_moment_prepare_scale_many(
+                    workspace.dnorm_sq, workspace.dcur_yy, eps, comp_i, batch,
+                    workspace.dscale, workspace.dfail, nullptr),
+                "PLS1 many-batched scale preparation");
             check_cublas(
                 cublasDdgmm(
                     state().handle,
@@ -971,37 +967,16 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     1,
                     batch_i),
                 "cublasDgemmStridedBatched(w*s)");
-            copy_d2h(h_tt.data(), workspace.dtt,
-                     h_tt.size() * sizeof(double));
-            copy_d2h(h_qdot.data(), workspace.dqdot,
-                     h_qdot.size() * sizeof(double));
+            // X-score / Y-loading guards, the Y loading stored into the device Q
+            // accumulator, and the three deflation scales 1/tt, sqrt(tt) and
+            // -tt*q are all prepared on the device; tt/qdot never read back.
+            check_cuda(
+                pls1_moment_prepare_loadings_many(
+                    workspace.dtt, workspace.dqdot, eps, comp_i, batch,
+                    workspace.dQ, workspace.dinv_tt, workspace.dsqrt_tt,
+                    workspace.ddefl, workspace.dfail, nullptr),
+                "PLS1 many-batched loading preparation");
 
-            for (std::size_t local = 0; local < batch; ++local) {
-                const std::size_t job = begin + local;
-                const double tt = h_tt[local];
-                if (tt <= eps || !std::isfinite(tt)) {
-                    if (error != nullptr) {
-                        *error = "CUDA PLS1 moment X score vanished in "
-                                 "batched job " + std::to_string(job);
-                    }
-                    return 1;
-                }
-                const double q_load = h_qdot[local] / tt;
-                if (!std::isfinite(q_load)) {
-                    if (error != nullptr) {
-                        *error = "CUDA PLS1 moment Y loading is not finite in "
-                                 "batched job " + std::to_string(job);
-                    }
-                    return 1;
-                }
-                Q[job][comp] = q_load;
-                h_q_load[local] = q_load;
-                h_inv_tt[local] = 1.0 / tt;
-                h_sqrt_tt[local] = std::sqrt(tt);
-            }
-
-            copy_h2d(workspace.dscale, h_inv_tt.data(),
-                     h_inv_tt.size() * sizeof(double));
             check_cublas(
                 cublasDdgmm(
                     state().handle,
@@ -1010,14 +985,12 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     batch_i,
                     workspace.dcw,
                     pi,
-                    workspace.dscale,
+                    workspace.dinv_tt,
                     1,
                     workspace.dp_load,
                     pi),
                 "cublasDdgmm(Cw loadings)");
 
-            copy_h2d(workspace.dscale, h_sqrt_tt.data(),
-                     h_sqrt_tt.size() * sizeof(double));
             check_cublas(
                 cublasDdgmm(
                     state().handle,
@@ -1026,17 +999,12 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     batch_i,
                     workspace.dp_load,
                     pi,
-                    workspace.dscale,
+                    workspace.dsqrt_tt,
                     1,
                     workspace.douter,
                     pi),
                 "cublasDdgmm(C deflation vector)");
 
-            for (std::size_t local = 0; local < batch; ++local) {
-                h_scale[local] = -h_tt[local] * h_q_load[local];
-            }
-            copy_h2d(workspace.dscale, h_scale.data(),
-                     h_scale.size() * sizeof(double));
             check_cublas(
                 cublasDdgmm(
                     state().handle,
@@ -1045,7 +1013,7 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     batch_i,
                     workspace.dp_load,
                     pi,
-                    workspace.dscale,
+                    workspace.ddefl,
                     1,
                     workspace.dcw,
                     pi),
@@ -1073,16 +1041,13 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                 workspace.dp_load, workspace.dP + component_tile_offset,
                 batch_vec_elems, "cudaMemcpyAsync(P tile)");
 
-            for (std::size_t local = 0; local < batch; ++local) {
-                const double tt = h_tt[local];
-                const double q_load = h_q_load[local];
-
-                current_yy[local] -= tt * q_load * q_load;
-                if (current_yy[local] < 0.0 &&
-                    current_yy[local] > -1e-9) {
-                    current_yy[local] = 0.0;
-                }
-            }
+            // Update the device-resident Y residual yy -= tt*q*q (with the same
+            // tiny-negative clamp) before the next component's residual guard.
+            check_cuda(
+                pls1_moment_update_yy_many(
+                    workspace.dtt, workspace.dQ, comp_i, batch,
+                    workspace.dcur_yy, nullptr),
+                "PLS1 many-batched Y residual update");
 
             check_cublas(
                 cublasDgemmStridedBatched(
@@ -1107,10 +1072,46 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                 "cublasDgemmStridedBatched(C deflation)");
         }
 
+        int h_fail[3] = {kPls1MomentBatchOk, 0, 0};
+        copy_d2h(h_fail, workspace.dfail, sizeof(h_fail));
+        if (h_fail[0] != kPls1MomentBatchOk) {
+            // The scalar kernels recorded the earliest component's failure; later
+            // components of this tile produced don't-care outputs that the caller
+            // discards on status 1. Rebuild the legacy host error message.
+            if (error != nullptr) {
+                const char* reason = "Y loading is not finite";
+                switch (h_fail[0]) {
+                    case kPls1MomentBatchYResidualVanished:
+                        reason = "Y residual vanished";
+                        break;
+                    case kPls1MomentBatchXWeightsVanished:
+                        reason = "X weights vanished";
+                        break;
+                    case kPls1MomentBatchXScoreVanished:
+                        reason = "X score vanished";
+                        break;
+                    default:
+                        break;
+                }
+                const std::size_t job =
+                    begin + static_cast<std::size_t>(h_fail[1]);
+                *error = std::string("CUDA PLS1 moment ") + reason +
+                         " in batched job " + std::to_string(job);
+            }
+            return 1;
+        }
+
         hW.assign(batch * pa, 0.0);
         hP.assign(batch * pa, 0.0);
+        hQ.assign(batch * max_components, 0.0);
         copy_d2h(hW.data(), workspace.dW, hW.size() * sizeof(double));
         copy_d2h(hP.data(), workspace.dP, hP.size() * sizeof(double));
+        copy_d2h(hQ.data(), workspace.dQ, hQ.size() * sizeof(double));
+        if (yy_out != nullptr) {
+            h_cur_yy.assign(batch, 0.0);
+            copy_d2h(h_cur_yy.data(), workspace.dcur_yy,
+                     h_cur_yy.size() * sizeof(double));
+        }
         for (std::size_t local = 0; local < batch; ++local) {
             const std::size_t job = begin + local;
             for (std::size_t comp = 0; comp < max_components; ++comp) {
@@ -1122,9 +1123,10 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     W[job][feature * max_components + comp] = w_comp[feature];
                     P[job][feature * max_components + comp] = p_comp[feature];
                 }
+                Q[job][comp] = hQ[comp * batch + local];
             }
             if (yy_out != nullptr) {
-                yy_out[job] = current_yy[local];
+                yy_out[job] = h_cur_yy[local];
             }
         }
     }

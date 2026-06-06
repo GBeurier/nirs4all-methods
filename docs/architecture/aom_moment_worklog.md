@@ -8206,3 +8206,75 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     matching best CV scores (`0.18291980848004097` vs
     `0.18291980848004116`) with expected counters; observed smoke timing was
     `0.180833s` many-batched vs `0.239451s` legacy, still only a route smoke.
+
+## 2026-06-06 — PLS Many-Batched On-Device Scalar Preparation
+
+- Removed the per-component host<->device scalar ping-pong from
+  `pls1_moment_components_many_batched_tiled`. The legacy inner loop copied
+  `dnorm_sq`, `dtt` and `dqdot` to the host every component, computed the
+  normalization scale, the Y loading `q`, `1/tt`, `sqrt(tt)`, the score
+  deflation scale and the running Y residual on the host, and copied four
+  scalar vectors back to the device — seven synchronous `cudaMemcpy` per
+  component plus the host-side `Q[job][comp]` write and residual accumulator.
+- Three bounded native CUDA kernels in `cpp/src/core/cuda_kernels.cu` now do
+  this on the device (one thread per job):
+  - `pls1_moment_prepare_scale_many`: folds the Y-residual guard (previously the
+    check at the top of the component loop) and the X-weight guard into the
+    s-norm result, and writes the normalization scale `1/(||s|| + eps*yy)`;
+  - `pls1_moment_prepare_loadings_many`: applies the X-score and Y-loading
+    guards, stores `q` into a device Q accumulator (component-major
+    `dQ[comp*batch + job]`) and prepares the three deflation scales `1/tt`,
+    `sqrt(tt)` and `-tt*q`;
+  - `pls1_moment_update_yy_many`: updates the device residual `yy -= tt*q*q`
+    with the same tiny-negative clamp.
+- The running Y residual (`dcur_yy`) and the Y loadings (`dQ`) are now resident
+  on the device for the whole tile; only the final `W`/`P`/`Q` tiles, the
+  residual (when `yy_out` is requested) and a 3-int failure flag are read back,
+  once per tile. The three loading `cublasDdgmm` calls consume the
+  device-resident `dinv_tt`/`dsqrt_tt`/`ddefl` scales directly instead of a
+  re-uploaded `dscale`.
+- Failure semantics are preserved. Each guard records the first failure
+  (earliest component via the sequential kernel order, recorded by `atomicCAS`)
+  into the shared flag as `{code, job-local, comp}`; the host rebuilds the exact
+  legacy message (`"CUDA PLS1 moment <reason> in batched job N"`) and returns
+  status `1`. On the abort path the remaining components of the tile produce
+  don't-care, per-job-isolated outputs that the caller already discards on
+  status `1`; the happy path pays zero in-loop synchronizations.
+- No ABI, catalog or Python-surface change — the new functions are internal
+  `n4m::cuda_dispatch` helpers. `libn4m.so` stays at `1.22.0`.
+- This is still a focused executor over the existing cuBLAS + small native
+  kernels, not the fused cartesian/IKPLS kernel suite.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j4`:
+    PASS (`libn4m.so.1.22.0`).
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_tests -j4`
+    and `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_tests`:
+    `351 passed, 0 failed` (incl.
+    `sweep/cuda_many_batched_opt_in_matches_default`).
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j4` and
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src
+    N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python
+    -m pytest
+    bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides
+    -v`: `1 passed` — this guard covers both the many-batched-vs-legacy 1e-10
+    score/counter equivalence and the rank-deficient `recovered` block
+    (component-1 finite, component-2 `inf`, device/host CV fits `4`/`2`).
+  - Targeted CUDA pytest set
+    (`test_aom_benchmark_tools`, `test_catalog_python_bindings`,
+    `test_aom_moment_cuda_smoke_artifacts`, `test_aom_moment_facade`,
+    `test_moment_model_wrappers`, `test_aom_staged_campaign`): `215 passed`.
+  - Manual rank-deficient many-batched repro (n=24, p=64, rank-1 design, route
+    forced): component-1 score `1.24e-07` finite, component-2 `Infinity`,
+    `n_pls_moment_cuda_many_batched_jobs=4`, `n_pls_materialized_cv_fits=0`.
+  - Timing smoke (n=64, p=1024, cv=5, components 1..6): many-batched `0.145s`
+    vs legacy `0.147s`, scores equal to 1e-9 — marginal, no regression (the
+    glue was a small fraction of the gemm-dominated cost; the win grows with
+    fold/component count).
+  - `catalog/scripts/split_legacy_methods.py --check`: PASS (208 files);
+    `validate.py --check-references`: PASS (208/208);
+    `validate.py --strict-abi`: PASS; `reconcile_abi.py --check`: 702/702;
+    dev-release `n4m_c` build: no work (CPU build unaffected);
+    `git diff --check`: clean.

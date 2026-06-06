@@ -3229,3 +3229,226 @@ Continuation update - PLS many-batched device copy cleanup (2026-06-06):
 - Scope note: this removes two extra cuBLAS launches per component from the
   current tiled route, but it is still incremental engine work rather than the
   complete fused cartesian/IKPLS executor.
+
+Agent resume handoff (2026-06-06):
+
+- Repository state when this handoff was written:
+  - branch: `release-readiness-fixes`;
+  - remote tracking: `origin/release-readiness-fixes`;
+  - worktree was clean before this handoff-only update;
+  - latest pushed code commit before this note:
+    `2ffb305 perf(cuda): use D2D copies for PLS many-batched tiles`.
+- Use one GPU for all CUDA validation:
+  - `CUDA_VISIBLE_DEVICES=0`;
+  - Python interpreter: `/home/delete/.venv/bin/python`;
+  - CUDA Python binding lib path:
+    `N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so`;
+  - dev CPU/lib path when needed:
+    `N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so`.
+- Scope reminder from the user:
+  - keep this inside AOM/moment methods, no non-moment/nonlinear methods;
+  - no dataset-name/source/id routing;
+  - objective is usable public methods plus fast CPU/GPU screening engines,
+    with winning preconfigured variants and ultra-configurable variants for
+    experimentation.
+- Public method wiring status:
+  - AOM/moment method facades are broadly present, documented, and smoked;
+  - the remaining real work is engine/performance hardening and broad final
+    benchmarks, not basic method exposure;
+  - do not claim final benchmark conclusions from the small smoke timings below.
+- Latest CUDA PLS many-batched work:
+  - `f4a7eb0` added `cpp/src/core/cuda_kernels.cu` and
+    `cpp/src/core/cuda_kernels.hpp`, enabled CUDA language only under
+    `N4M_WITH_CUDA=ON`, made CMake discover `nvcc` through CUDAToolkit, kept
+    project warning flags off CUDA translation units, and replaced the old
+    per-job `cublasIdamax_v2`/host sign gather path with one CUDA block per job
+    for deterministic sign normalization;
+  - `2ffb305` replaced chunked `cublasDcopy_v2` contiguous W/P tile storage
+    with `cudaMemcpyAsync(..., cudaMemcpyDeviceToDevice, nullptr)` in
+    `cpp/src/core/cuda_dispatch.cpp`;
+  - earlier already-present many-batched optimizations include batched scalar
+    reductions/scaling (`ba569b3`), sign gather (`75890e9`, superseded by the
+    native sign kernel), score deflation batching (`f5df945`), W/P tile storage
+    (`ccefb1a`), and final output contract coverage (`e6a0039`);
+  - the current route is cuBLAS plus small native CUDA kernels. It is not yet a
+    true fused cartesian/IKPLS executor.
+- Validation already completed for `f4a7eb0`:
+  - `/home/delete/.venv/bin/cmake --preset cuda-on`: PASS;
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS;
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src
+    N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python
+    -m pytest
+    bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides
+    -q`: `1 passed`;
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` and
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS;
+  - `/home/delete/.venv/bin/cmake --build build/dev-release --target n4m_c -j2`:
+    PASS;
+  - `/home/delete/.venv/bin/cmake --build --preset cuda-on --parallel 2`:
+    PASS;
+  - `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_tests`:
+    `351 passed, 0 failed`;
+  - manual many/legacy smoke scores matched; rough smoke timing was about
+    `0.174215s` many-batched vs `0.227833s` legacy.
+- Validation already completed for `2ffb305`:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS;
+  - the same one-GPU targeted pytest above: `1 passed`;
+  - internal CUDA tests: PASS;
+  - manual many/legacy smoke scores matched; rough smoke timing was about
+    `0.180833s` many-batched vs `0.239451s` legacy;
+  - `git diff --cached --check`: PASS.
+- Interrupted continuation just before this handoff:
+  - inspected `cpp/src/core/cuda_dispatch.cpp` around the remaining scalar
+    vectors and inspected `cpp/src/core/cuda_kernels.cu/.hpp`;
+  - identified scalar host/device ping-pong inside
+    `pls1_moment_components_many_batched_tiled` as the next plausible
+    incremental CUDA target;
+  - no code was changed in that interrupted continuation.
+- Most useful next implementation target:
+  - reduce device/host scalar glue in
+    `pls1_moment_components_many_batched_tiled`;
+  - today the path still copies `dnorm_sq`, `dtt`, and `dqdot` scalar vectors to
+    host each component, computes `h_scale`, `h_inv_tt`, `h_sqrt_tt`,
+    `h_q_load`, updates `current_yy`, and copies scalar vectors back to device;
+  - a bounded native CUDA kernel could prepare these scalar vectors and update
+    device `yy`, but preserve exact failure semantics and host-visible `Q` /
+    `yy_out` outputs;
+  - this is smaller than a true fused executor but bigger than the recent copy
+    cleanup because it touches numerical control flow.
+- Other remaining work after scalar glue:
+  - reduce host packing/repack overhead for `hC`/`hs` and final `hW`/`hP`
+    outputs if profiling shows it matters;
+  - design a real fused cartesian/IKPLS screen executor across preprocessing
+    chains and folds. That is a larger C++/CUDA design task and is not present
+    yet;
+  - run the broad benchmark campaign only after the engine path stabilizes.
+- Quick resume commands:
+  - `git status --short --branch`;
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`;
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src
+    N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python
+    -m pytest
+    bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides
+    -q`;
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2`;
+  - `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`;
+  - rerun `/home/delete/.venv/bin/cmake --preset cuda-on` if CMake files
+    change.
+
+## Continuation (2026-06-06) — benchmark campaign + scalar-glue kernel + gate
+
+User direction at this fork: do the benchmark campaign, the scalar-glue kernel
+and the green-gate/conclude steps now; defer the larger fused cartesian/IKPLS
+executor (the "big C++/CUDA task") to a separate discussion. All GPU work used
+`CUDA_VISIBLE_DEVICES=0` (RTX 4090).
+
+### 1. Focused benchmark campaign vs AOM / TabPFN oracles
+
+Ran the handoff's "Suggested next step" on the current engine (with
+`--cuda-pls-many-batched` so it exercised the tiled route that was about to be
+optimized):
+
+```bash
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/run_aom_staged_real_cohort.py \
+  --output benchmarks/cross_binding/aom_staged_real_cohort_compact10_continue_20260606.csv \
+  --limit 10 --plan compact --max-chains 12 --top-k 12 --refit-top-k 6 \
+  --refit-per-head-top-k 2 --no-resume --scale-x-grid false,true \
+  --diagnostics-dir benchmarks/cross_binding/aom_staged_compact10_continue_20260606 \
+  --cuda-pls-many-batched --cuda-pls-parallel-folds \
+  --cuda-pls-min-device-features 1 --backend-min-cuda-product 1
+```
+
+- 10/10 datasets OK (BERRY and FUSARIUM ran here too — no `--max-features` cap),
+  all `selection_uses_test_set=False`.
+- Oracle summary
+  (`aom_staged_compact10_continue_20260606_oracle_summary.md`):
+  AOM-PLS paired median ratio `1.03079` (1 target win), AOM-Ridge
+  `1.05918` (0 wins), TabPFN `1.05956` (4 wins). These match the earlier
+  compact10 scale-grid run exactly, confirming the many-batched route is
+  score-consistent with the prior engine state.
+- Rank audit (`..._rank_audit.md`): only 2/10 train-CV winners equal the test
+  oracle (BERRY, MANURE P2O5 — both high CV/test Spearman). **ECOSIS is the
+  standout recall failure**: selected `ridge:0.1 savgol_smooth(7,2)` (test
+  41.40) vs oracle `pls:1 detrend_poly(2)` (test 26.25), gap ratio `0.577`,
+  CV/test Spearman `-0.738` — genuinely anti-aligned, not a budget problem
+  (reproduces the documented ECOSIS pathology).
+- Impact (`..._impact_summary.md`): `detrend_poly(1/2)` and `identity` dominate
+  the winning preprocessing; SavGol/derivatives rarely win under this profile.
+- Honest conclusion: the staged compact screen is competitive but trails all
+  three oracles on median (~3-6%); it is not yet a winner. The recall gap is
+  dataset-specific (ECOSIS) and is a screen-vs-holdout ranking problem, not a
+  retained-candidate-budget problem.
+
+### 2. PLS many-batched on-device scalar preparation (the named next target)
+
+Implemented the scalar-glue reduction the previous handoff identified in
+`pls1_moment_components_many_batched_tiled`. Three bounded CUDA kernels
+(`cpp/src/core/cuda_kernels.cu` / `.hpp`:
+`pls1_moment_prepare_scale_many`, `pls1_moment_prepare_loadings_many`,
+`pls1_moment_update_yy_many`) now compute the per-component scalars on the
+device, keeping the running Y residual (`dcur_yy`) and Y loadings (`dQ`)
+device-resident. The seven synchronous per-component scalar `cudaMemcpy` are
+gone; only `W`/`P`/`Q` tiles, the residual and a 3-int failure flag are read
+back once per tile. Failure semantics are preserved exactly: each guard records
+the first failure into the shared flag, the host rebuilds the exact legacy
+message and returns status `1`; on the abort path later components produce
+per-job-isolated don't-care outputs the caller already discards. No ABI /
+catalog / Python-surface change; `libn4m.so` stays `1.22.0`. Full detail in
+`docs/architecture/aom_moment_worklog.md` (2026-06-06 "On-Device Scalar
+Preparation").
+
+Validation: `n4m_tests` `351 passed` (incl.
+`sweep/cuda_many_batched_opt_in_matches_default`); `n4m_internal_tests` PASS;
+the `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides` guard
+PASS (covers both the 1e-10 many-vs-legacy equivalence and the rank-deficient
+`recovered` block: component-1 finite, component-2 `inf`); targeted CUDA pytest
+set `215 passed`; a manual rank-deficient many-batched repro returned finite
+component-1 / `Infinity` component-2 with `n_pls_materialized_cv_fits=0`; timing
+smoke (n=64, p=1024, cv=5, comps 1..6) `0.145s` many-batched vs `0.147s` legacy
+with scores equal to 1e-9 (marginal, no regression — the glue was a small
+fraction of the gemm-dominated cost).
+
+### 3. Green gate
+
+- CUDA: `n4m_c` PASS, `n4m_tests` `351 passed`, `n4m_internal_tests` PASS.
+- CUDA pytest (`test_aom_benchmark_tools`, `test_catalog_python_bindings`,
+  `test_aom_moment_cuda_smoke_artifacts`, `test_aom_moment_facade`,
+  `test_moment_model_wrappers`, `test_aom_staged_campaign`): `215 passed`
+  (the committed CUDA smoke artifacts still match — counters/scores unchanged).
+- Catalog: `split_legacy_methods.py --check` PASS (208), `validate.py
+  --check-references` PASS (208/208), `validate.py --strict-abi` PASS,
+  `reconcile_abi.py --check` 702/702.
+- dev-release `n4m_c` build unaffected (CPU build excludes the CUDA TUs);
+  `git diff --check` clean.
+
+### Release-readiness summary (honest)
+
+- Public method surface for the AOM/moment family is broad, documented and
+  smoked (direct heads, moment stack, AOM chain/staged campaigns, presets,
+  PLS exact/GCV screen-refit, PCR, the facades). Catalog/ABI/reference checks
+  are green; the wiring work is effectively complete.
+- The fast CPU/GPU screening engine works and routes PLS CV through CUDA with
+  clean device/host counters. The recent perf passes (sign kernel, D2D tile
+  copies, and now on-device scalar prep) have removed the remaining host
+  orchestration from the tiled many-batched route. The realized speedups are
+  marginal at the shapes tested — the cuBLAS gemms dominate.
+- True remaining engine gaps (unchanged from "Remaining work" above): a fused
+  many-chain/many-fold/many-candidate IKPLS executor; CUDA fused sweep kernels
+  for the full cartesian; full arbitrary-chain moment coverage. The benchmark
+  recall ceiling (ECOSIS-style screen-vs-holdout disagreement) is a modeling
+  problem, separate from engine throughput.
+
+### Deferred (per user) — the big C++/CUDA task
+
+Not started: the fused cartesian/IKPLS screen executor across preprocessing
+chains and folds (Remaining-work §1/§3). To be scoped in a separate
+discussion. The next plausible bounded increment before that remains reducing
+the host packing/repack of `hC`/`hs` and the final `hW`/`hP` outputs if
+profiling shows it matters.
