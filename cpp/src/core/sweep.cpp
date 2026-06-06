@@ -3241,80 +3241,120 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
     }
 
     out.assign(n_chains, SweepResult{});
+    std::vector<n4m_status_t> status_by_chain(n_chains, N4M_OK);
+    std::vector<std::string> error_by_chain(n_chains);
+    const auto n_chains_i = static_cast<std::int64_t>(n_chains);
+
+    N4M_PARALLEL_FOR_STATIC
+    for (std::int64_t chain_i = 0; chain_i < n_chains_i; ++chain_i) {
+        const auto chain = static_cast<std::size_t>(chain_i);
+        try {
+            std::vector<double> sse(components.size(), 0.0);
+            std::vector<std::int64_t> count(components.size(), 0);
+            for (std::size_t fold = 0; fold < n_folds; ++fold) {
+                const auto job = chain * n_folds + fold;
+                for (std::size_t comp_ix = 0; comp_ix < components.size();
+                     ++comp_ix) {
+                    const auto comp =
+                        static_cast<std::size_t>(components[comp_ix]);
+                    sse[comp_ix] += ridge_heldout_sse_from_moments(
+                        heldout_stats_by_chain[chain][fold],
+                        prefix_fits_by_job[job][comp - 1]);
+                    count[comp_ix] +=
+                        heldout_stats_by_chain[chain][fold].n_samples;
+                }
+            }
+
+            SweepResult result{};
+            result.n_samples = all_stats_by_chain[chain].n_samples;
+            result.n_features = all_stats_by_chain[chain].n_features;
+            result.n_targets = all_stats_by_chain[chain].n_targets;
+            result.cv = static_cast<std::int32_t>(n_folds);
+            result.n_candidates =
+                static_cast<std::int64_t>(components.size());
+            result.n_pls_moment_candidates = result.n_candidates;
+            result.n_pls_moment_cv_fits = static_cast<std::int64_t>(n_folds);
+            if (used_cuda_device_cv) {
+                result.n_pls_moment_cuda_device_cv_fits =
+                    result.n_pls_moment_cv_fits;
+            } else {
+                result.n_pls_moment_host_cv_fits =
+                    result.n_pls_moment_cv_fits;
+            }
+            if (chain == 0) {
+                result.n_pls_moment_score_batch_calls = 1;
+                result.n_pls_moment_score_batch_jobs =
+                    static_cast<std::int64_t>(train_stats.size());
+            }
+            if (chain == 0 && used_cuda_device_cv &&
+                used_cuda_parallel_folds) {
+                result.n_pls_moment_cuda_parallel_fold_batches = 1;
+                result.n_pls_moment_cuda_parallel_fold_jobs =
+                    static_cast<std::int64_t>(train_stats.size());
+            }
+            if (chain == 0 && used_cuda_device_cv &&
+                used_cuda_many_batched) {
+                result.n_pls_moment_cuda_many_batched_batches = 1;
+                result.n_pls_moment_cuda_many_batched_jobs =
+                    static_cast<std::int64_t>(train_stats.size());
+            }
+            result.score_only = 1;
+            result.candidate_scores.assign(components.size() * 4U, 0.0);
+
+            double best = std::numeric_limits<double>::infinity();
+            std::size_t best_id = 0;
+            for (std::size_t comp_ix = 0; comp_ix < components.size();
+                 ++comp_ix) {
+                const double rmse = (count[comp_ix] > 0)
+                    ? std::sqrt(std::max(0.0, sse[comp_ix]) /
+                                static_cast<double>(count[comp_ix]))
+                    : std::numeric_limits<double>::infinity();
+                result.candidate_scores[comp_ix * 4U + 0U] =
+                    static_cast<double>(comp_ix);
+                result.candidate_scores[comp_ix * 4U + 1U] = 1.0;
+                result.candidate_scores[comp_ix * 4U + 2U] =
+                    static_cast<double>(components[comp_ix]);
+                result.candidate_scores[comp_ix * 4U + 3U] = rmse;
+                if (rmse < best) {
+                    best = rmse;
+                    best_id = comp_ix;
+                }
+            }
+            if (!std::isfinite(best)) {
+                status_by_chain[chain] = N4M_ERR_NUMERICAL_FAILURE;
+                error_by_chain[chain] =
+                    "PLS1 moment batch score: all candidates failed";
+                continue;
+            }
+
+            result.selected_candidate_id = static_cast<std::int64_t>(best_id);
+            result.selected_head_id = 1;
+            result.selected_param = static_cast<double>(components[best_id]);
+            result.selected_cv_rmse = best;
+            out[chain] = std::move(result);
+        } catch (const std::bad_alloc&) {
+            status_by_chain[chain] = N4M_ERR_OUT_OF_MEMORY;
+            error_by_chain[chain] =
+                "out of memory while scoring PLS1 moment batch chain";
+        } catch (const std::exception& exc) {
+            status_by_chain[chain] = N4M_ERR_INTERNAL;
+            error_by_chain[chain] = exc.what();
+        } catch (...) {
+            status_by_chain[chain] = N4M_ERR_INTERNAL;
+            error_by_chain[chain] =
+                "unexpected exception while scoring PLS1 moment batch chain";
+        }
+    }
+
     for (std::size_t chain = 0; chain < n_chains; ++chain) {
-        std::vector<double> sse(components.size(), 0.0);
-        std::vector<std::int64_t> count(components.size(), 0);
-        for (std::size_t fold = 0; fold < n_folds; ++fold) {
-            const auto job = chain * n_folds + fold;
-            for (std::size_t comp_ix = 0; comp_ix < components.size(); ++comp_ix) {
-                const auto comp = static_cast<std::size_t>(components[comp_ix]);
-                sse[comp_ix] += ridge_heldout_sse_from_moments(
-                    heldout_stats_by_chain[chain][fold],
-                    prefix_fits_by_job[job][comp - 1]);
-                count[comp_ix] += heldout_stats_by_chain[chain][fold].n_samples;
+        if (status_by_chain[chain] != N4M_OK) {
+            if (!error_by_chain[chain].empty()) {
+                ctx.set_error(error_by_chain[chain].c_str());
+            } else {
+                ctx.set_error("PLS1 moment batch score failed");
             }
+            return status_by_chain[chain];
         }
-
-        SweepResult result{};
-        result.n_samples = all_stats_by_chain[chain].n_samples;
-        result.n_features = all_stats_by_chain[chain].n_features;
-        result.n_targets = all_stats_by_chain[chain].n_targets;
-        result.cv = static_cast<std::int32_t>(n_folds);
-        result.n_candidates = static_cast<std::int64_t>(components.size());
-        result.n_pls_moment_candidates = result.n_candidates;
-        result.n_pls_moment_cv_fits = static_cast<std::int64_t>(n_folds);
-        if (used_cuda_device_cv) {
-            result.n_pls_moment_cuda_device_cv_fits =
-                result.n_pls_moment_cv_fits;
-        } else {
-            result.n_pls_moment_host_cv_fits = result.n_pls_moment_cv_fits;
-        }
-        if (chain == 0) {
-            result.n_pls_moment_score_batch_calls = 1;
-            result.n_pls_moment_score_batch_jobs =
-                static_cast<std::int64_t>(train_stats.size());
-        }
-        if (chain == 0 && used_cuda_device_cv && used_cuda_parallel_folds) {
-            result.n_pls_moment_cuda_parallel_fold_batches = 1;
-            result.n_pls_moment_cuda_parallel_fold_jobs =
-                static_cast<std::int64_t>(train_stats.size());
-        }
-        if (chain == 0 && used_cuda_device_cv && used_cuda_many_batched) {
-            result.n_pls_moment_cuda_many_batched_batches = 1;
-            result.n_pls_moment_cuda_many_batched_jobs =
-                static_cast<std::int64_t>(train_stats.size());
-        }
-        result.score_only = 1;
-        result.candidate_scores.assign(components.size() * 4U, 0.0);
-
-        double best = std::numeric_limits<double>::infinity();
-        std::size_t best_id = 0;
-        for (std::size_t comp_ix = 0; comp_ix < components.size(); ++comp_ix) {
-            const double rmse = (count[comp_ix] > 0)
-                ? std::sqrt(std::max(0.0, sse[comp_ix]) /
-                            static_cast<double>(count[comp_ix]))
-                : std::numeric_limits<double>::infinity();
-            result.candidate_scores[comp_ix * 4U + 0U] =
-                static_cast<double>(comp_ix);
-            result.candidate_scores[comp_ix * 4U + 1U] = 1.0;
-            result.candidate_scores[comp_ix * 4U + 2U] =
-                static_cast<double>(components[comp_ix]);
-            result.candidate_scores[comp_ix * 4U + 3U] = rmse;
-            if (rmse < best) {
-                best = rmse;
-                best_id = comp_ix;
-            }
-        }
-        if (!std::isfinite(best)) {
-            ctx.set_error("PLS1 moment batch score: all candidates failed");
-            return N4M_ERR_NUMERICAL_FAILURE;
-        }
-
-        result.selected_candidate_id = static_cast<std::int64_t>(best_id);
-        result.selected_head_id = 1;
-        result.selected_param = static_cast<double>(components[best_id]);
-        result.selected_cv_rmse = best;
-        out[chain] = std::move(result);
     }
 
     ctx.clear_error();

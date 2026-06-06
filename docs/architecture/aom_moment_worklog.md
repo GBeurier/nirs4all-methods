@@ -6959,3 +6959,28 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
   - py_compile on the touched benchmark/test files: PASS.
   - targeted benchmark-tool pytest: `1 passed, 20 deselected`; full file:
     `21 passed`.
+
+## 2026-06-06 — PLS Exact Batch OpenMP Aggregation Slice
+
+- Parallelized the exact PLS moment score-only batch path's per-chain held-out
+  SSE/result aggregation with `N4M_PARALLEL_FOR_STATIC`, after shared prefix
+  fits have already been computed.
+- The patch keeps public scores, candidate ordering, ABI and counters unchanged;
+  per-chain failures are stored in thread-local vectors and reported through
+  `Context` only after the parallel region.
+- Added `test_native_aom_pls_moment_batch_omp_scores_match_scalar_build` to
+  compare scalar and OpenMP builds in subprocesses, including candidate-score
+  parity and exact batch counter checks.
+- Synthetic timing smoke (`n=192, p=32`, 31 chains, PLS exact CV,
+  components `1/2/4`, five repeats): dev `3.00 ms`, OpenMP one thread
+  `3.10 ms`, OpenMP four threads `2.45 ms`, with unchanged selected score and
+  score matrix shape.
+- Validation:
+  - dev, OpenMP and CUDA `n4m_c` builds: PASS.
+  - full dev `test_moment_model_wrappers.py`: `76 passed`.
+  - targeted dev and OpenMP wrapper checks:
+    `2 passed, 74 deselected` each.
+  - Claude Code Opus/max review found no blocking issue: no data race, no
+    ABI/API/counter change, deterministic per-chain accumulation preserved.
+    Residual non-blocking note: CI does not appear to build `omp-on`, so the
+    new parity guard is mostly a local guard until an OpenMP CI job exists.

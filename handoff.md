@@ -2090,3 +2090,28 @@ Moment GPU crossover artifact refresh (2026-06-06):
   - `py_compile` on the touched benchmark/test files: PASS.
   - targeted benchmark-tool pytest:
     `1 passed, 20 deselected`; full file: `21 passed`.
+
+PLS exact batch OpenMP aggregation slice (2026-06-06):
+
+- Parallelized the per-chain held-out SSE/result aggregation inside
+  `score_pls1_moment_sweeps_score_only()` with `N4M_PARALLEL_FOR_STATIC` after
+  the shared PLS prefix fits have been computed.
+- Public scores, candidate ordering, ABI and counters stay unchanged. Chain-local
+  errors are collected outside the parallel region before touching `Context`.
+- Added a subprocess dev-vs-OpenMP guard,
+  `test_native_aom_pls_moment_batch_omp_scores_match_scalar_build`, that checks
+  candidate score parity and the existing exact PLS batch counters.
+- Small synthetic timing smoke (`n=192, p=32`, 31 chains, PLS exact CV,
+  components `1/2/4`, five repeats): dev `3.00 ms`, OpenMP with one thread
+  `3.10 ms`, OpenMP with four threads `2.45 ms`, same selected score and
+  candidate-score shape. This is a modest CPU-path win, not the deferred fused
+  CUDA/IKPLS cartesian grinder.
+- Validation:
+  - dev, OpenMP and CUDA `n4m_c` builds: PASS.
+  - full dev `test_moment_model_wrappers.py`: `76 passed`.
+  - targeted dev and OpenMP wrapper checks:
+    `2 passed, 74 deselected` each.
+  - Claude Code Opus/max review found no blocking issue: no data race, no
+    ABI/API/counter change, deterministic per-chain accumulation preserved.
+    Residual non-blocking note: CI does not appear to build `omp-on`, so the
+    new parity guard is mostly a local guard until an OpenMP CI job exists.
