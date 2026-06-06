@@ -1,5 +1,39 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Rank-deficient PLS moment fallback guard
+
+Purpose:
+
+- Make the PLS moment sweep robust when a numerically degenerate fold cannot
+  use the exact moment-prefix route and must fall back to materialized PLS.
+
+Changes:
+
+- Added a lazy `ensure_fold_designs()` helper in `run_moment_sweep`.
+- The PLS fallback path now builds fold-local materialized designs on demand
+  before reading `fold_designs[fold]`. Previously, compatible PLS1 moment
+  screens could skip early fold-design construction, then fail the moment route
+  on a rank-deficient fold and dereference an empty vector during fallback.
+- Added `test_pls_moment_fallback_builds_fold_designs_on_demand`, covering the
+  previously crashing tiny fixture with `score_only=True`, `score_only=False`
+  and the public `n4m.pls_cross_validate(..., score_only=True)` wrapper.
+
+Validation:
+
+- Rebuilt `build/dev-release` and `build/cuda-on` `n4m_c`.
+- Manual reproduction on the previous segfault fixture now returns candidate
+  scores, with component 1 finite, component 2 `inf`, `n_pls_moment_cv_fits=0`
+  and materialized fallback counters.
+- Targeted dev pytest:
+  `test_pls_moment_fallback_builds_fold_designs_on_demand` and
+  `test_pls_cross_validate_reference_matches_pls_sweep`.
+- Targeted CUDA pytest on one GPU:
+  `test_pls_moment_fallback_builds_fold_designs_on_demand`,
+  `test_pls_cross_validate_reference_matches_pls_sweep` and
+  `many_batched_precedes`.
+- Full dev-release `test_moment_model_wrappers.py`: `79 passed`.
+- Python `py_compile` on touched tests/modules and `git diff --check` passed.
+
 ## 2026-06-06 - PLS CV ABI reference surface
 
 Purpose:
@@ -32,12 +66,10 @@ Validation:
   `split_legacy_methods.py --check`, `reconcile_abi.py --check`,
   `git diff --check` and `scripts/bump_version.sh --check`.
 
-Residual risk:
+Follow-up:
 
-- A tiny rank-deficient PLS fixture reproduced a segfault in the pre-existing
-  `n4m.sweep_run(..., heads=("pls",))` path before the new wrapper was called.
-  The reference wrapper equivalence test uses a deterministic non-degenerate
-  fixture; the separate PLS degeneracy bug remains open.
+- The tiny rank-deficient PLS fallback crash found during this validation pass
+  is fixed by the later "Rank-deficient PLS moment fallback guard" entry above.
 
 ## 2026-06-06 - Compact-wide audit10 benchmark follow-up
 

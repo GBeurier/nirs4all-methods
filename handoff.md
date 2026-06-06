@@ -8,6 +8,21 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- Rank-deficient PLS moment fallback segfault fix:
+  - Fixed `run_moment_sweep` so PLS moment-route failures can lazily build
+    fold-local materialized designs before falling back. Previously, compatible
+    PLS1 moment screens could decide that fold designs were unnecessary, then
+    hit a numerical/rank-deficient moment fit failure and dereference an empty
+    `fold_designs` vector in the fallback path.
+  - Added `test_pls_moment_fallback_builds_fold_designs_on_demand`, covering
+    the tiny rank-deficient fixture in both `score_only=True` and `False`, plus
+    the public `n4m.pls_cross_validate(..., score_only=True)` path.
+  - Validation after this fix: rebuilt dev-release and CUDA `n4m_c`; the
+    previous segfault fixture now returns finite/inf candidate scores with
+    `n_pls_moment_cv_fits=0` and materialized fallback counters; targeted
+    dev/CUDA pytest passed; full dev-release `test_moment_model_wrappers.py`
+    passed (`79 passed`); `py_compile` and `git diff --check` passed.
+
 - PLS CV ABI reference surface:
   - Added ABI 1.22.0 symbol
     `n4m_pls_cross_validate(ctx, cfg, X, Y, fold_ids, n_fold_ids, n_folds,
@@ -28,10 +43,8 @@ Completed and validated in the latest pass:
     touched Python modules/tests passed; catalog strict ABI/reference/split
     checks, `reconcile_abi.py --check`, `git diff --check` and
     `scripts/bump_version.sh --check` passed.
-  - During validation, a tiny rank-deficient PLS fixture crashed the existing
-    `n4m.sweep_run(..., heads=("pls",))` path before the new wrapper was called.
-    The equivalence test now uses a deterministic non-degenerate fixture; the
-    separate PLS degeneracy bug is not fixed in this slice.
+  - Follow-up status: the tiny rank-deficient PLS fallback crash found during
+    validation is now fixed and covered by the latest test above.
   - Remaining true gap: actual grouped/fused host/device executor,
     score-equivalence tests and timings for the 200k-chain PLS grinder.
 
