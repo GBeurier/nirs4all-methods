@@ -3240,12 +3240,19 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
     bool used_cuda_device_cv = false;
     bool used_cuda_parallel_folds = false;
     bool used_cuda_many_batched = false;
+    bool have_batched_prefix_fits = false;
     n4m_status_t fit_status = fit_pls1_moment_prefixes_for_folds(
         ctx, cfg, train_stats, max_comp, prefix_fits_by_job,
         &used_cuda_device_cv, &used_cuda_parallel_folds,
         &used_cuda_many_batched);
-    if (fit_status != N4M_OK) {
-        return fit_status;
+    if (fit_status == N4M_OK) {
+        have_batched_prefix_fits = true;
+    } else {
+        // A rank-deficient late component should not fail a broad screen when
+        // smaller component prefixes are still scoreable. Fall back to slower
+        // per-chain/fold/component moment fits and mark only failed candidates
+        // as infinite below.
+        ctx.clear_error();
     }
 
     out.assign(n_chains, SweepResult{});
@@ -3259,17 +3266,61 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
         try {
             std::vector<double> sse(components.size(), 0.0);
             std::vector<std::int64_t> count(components.size(), 0);
-            for (std::size_t fold = 0; fold < n_folds; ++fold) {
-                const auto job = chain * n_folds + fold;
-                for (std::size_t comp_ix = 0; comp_ix < components.size();
-                     ++comp_ix) {
-                    const auto comp =
-                        static_cast<std::size_t>(components[comp_ix]);
-                    sse[comp_ix] += ridge_heldout_sse_from_moments(
-                        heldout_stats_by_chain[chain][fold],
-                        prefix_fits_by_job[job][comp - 1]);
-                    count[comp_ix] +=
-                        heldout_stats_by_chain[chain][fold].n_samples;
+            std::vector<unsigned char> ok(components.size(), 1);
+            std::int64_t moment_cv_fits = 0;
+            std::int64_t moment_host_cv_fits = 0;
+            std::int64_t moment_cuda_device_cv_fits = 0;
+            if (have_batched_prefix_fits) {
+                for (std::size_t fold = 0; fold < n_folds; ++fold) {
+                    const auto job = chain * n_folds + fold;
+                    for (std::size_t comp_ix = 0; comp_ix < components.size();
+                         ++comp_ix) {
+                        const auto comp =
+                            static_cast<std::size_t>(components[comp_ix]);
+                        sse[comp_ix] += ridge_heldout_sse_from_moments(
+                            heldout_stats_by_chain[chain][fold],
+                            prefix_fits_by_job[job][comp - 1]);
+                        count[comp_ix] +=
+                            heldout_stats_by_chain[chain][fold].n_samples;
+                    }
+                }
+                moment_cv_fits = static_cast<std::int64_t>(n_folds);
+                if (used_cuda_device_cv) {
+                    moment_cuda_device_cv_fits = moment_cv_fits;
+                } else {
+                    moment_host_cv_fits = moment_cv_fits;
+                }
+            } else {
+                Context fit_ctx;
+                for (std::size_t fold = 0; fold < n_folds; ++fold) {
+                    const auto job = chain * n_folds + fold;
+                    for (std::size_t comp_ix = 0; comp_ix < components.size();
+                         ++comp_ix) {
+                        if (ok[comp_ix] == 0) continue;
+                        const auto comp = components[comp_ix];
+                        std::vector<RidgeMomentFit> prefix_fits;
+                        bool used_cuda_device = false;
+                        ++moment_cv_fits;
+                        const n4m_status_t st = fit_pls1_moment_prefixes(
+                            fit_ctx, cfg, train_stats[job], comp,
+                            prefix_fits, &used_cuda_device);
+                        if (used_cuda_device) {
+                            ++moment_cuda_device_cv_fits;
+                        } else {
+                            ++moment_host_cv_fits;
+                        }
+                        if (st != N4M_OK ||
+                            prefix_fits.size() < static_cast<std::size_t>(comp)) {
+                            ok[comp_ix] = 0;
+                            fit_ctx.clear_error();
+                            continue;
+                        }
+                        sse[comp_ix] += ridge_heldout_sse_from_moments(
+                            heldout_stats_by_chain[chain][fold],
+                            prefix_fits[static_cast<std::size_t>(comp - 1)]);
+                        count[comp_ix] +=
+                            heldout_stats_by_chain[chain][fold].n_samples;
+                    }
                 }
             }
 
@@ -3281,26 +3332,22 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
             result.n_candidates =
                 static_cast<std::int64_t>(components.size());
             result.n_pls_moment_candidates = result.n_candidates;
-            result.n_pls_moment_cv_fits = static_cast<std::int64_t>(n_folds);
-            if (used_cuda_device_cv) {
-                result.n_pls_moment_cuda_device_cv_fits =
-                    result.n_pls_moment_cv_fits;
-            } else {
-                result.n_pls_moment_host_cv_fits =
-                    result.n_pls_moment_cv_fits;
-            }
-            if (chain == 0) {
+            result.n_pls_moment_cv_fits = moment_cv_fits;
+            result.n_pls_moment_host_cv_fits = moment_host_cv_fits;
+            result.n_pls_moment_cuda_device_cv_fits =
+                moment_cuda_device_cv_fits;
+            if (have_batched_prefix_fits && chain == 0) {
                 result.n_pls_moment_score_batch_calls = 1;
                 result.n_pls_moment_score_batch_jobs =
                     static_cast<std::int64_t>(train_stats.size());
             }
-            if (chain == 0 && used_cuda_device_cv &&
+            if (have_batched_prefix_fits && chain == 0 && used_cuda_device_cv &&
                 used_cuda_parallel_folds) {
                 result.n_pls_moment_cuda_parallel_fold_batches = 1;
                 result.n_pls_moment_cuda_parallel_fold_jobs =
                     static_cast<std::int64_t>(train_stats.size());
             }
-            if (chain == 0 && used_cuda_device_cv &&
+            if (have_batched_prefix_fits && chain == 0 && used_cuda_device_cv &&
                 used_cuda_many_batched) {
                 result.n_pls_moment_cuda_many_batched_batches = 1;
                 result.n_pls_moment_cuda_many_batched_jobs =
@@ -3313,7 +3360,7 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
             std::size_t best_id = 0;
             for (std::size_t comp_ix = 0; comp_ix < components.size();
                  ++comp_ix) {
-                const double rmse = (count[comp_ix] > 0)
+                const double rmse = (ok[comp_ix] != 0 && count[comp_ix] > 0)
                     ? std::sqrt(std::max(0.0, sse[comp_ix]) /
                                 static_cast<double>(count[comp_ix]))
                     : std::numeric_limits<double>::infinity();
@@ -3328,17 +3375,13 @@ n4m_status_t score_pls1_moment_sweeps_score_only(
                     best_id = comp_ix;
                 }
             }
-            if (!std::isfinite(best)) {
-                status_by_chain[chain] = N4M_ERR_NUMERICAL_FAILURE;
-                error_by_chain[chain] =
-                    "PLS1 moment batch score: all candidates failed";
-                continue;
+            result.selected_cv_rmse = best;
+            result.selected_head_id = 1;
+            if (std::isfinite(best)) {
+                result.selected_candidate_id = static_cast<std::int64_t>(best_id);
+                result.selected_param = static_cast<double>(components[best_id]);
             }
 
-            result.selected_candidate_id = static_cast<std::int64_t>(best_id);
-            result.selected_head_id = 1;
-            result.selected_param = static_cast<double>(components[best_id]);
-            result.selected_cv_rmse = best;
             out[chain] = std::move(result);
         } catch (const std::bad_alloc&) {
             status_by_chain[chain] = N4M_ERR_OUT_OF_MEMORY;

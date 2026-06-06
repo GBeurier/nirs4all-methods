@@ -1,5 +1,44 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - AOM exact PLS batch partial-failure guard
+
+Purpose:
+
+- Keep broad strict-moment AOM PLS screens usable when a degenerate late
+  component fails but smaller component prefixes are still scoreable.
+
+Changes:
+
+- `score_pls1_moment_sweeps_score_only` still uses the fast batched prefix path
+  when it succeeds.
+- If that global batched prefix fit fails, it now clears the transient error and
+  retries via per-chain/fold/component moment fits. Scoreable component
+  candidates keep finite exact-CV scores; failed component candidates are marked
+  with `inf`.
+- A chain whose all component candidates fail now returns all-`inf` candidates
+  instead of aborting the whole batch. The higher-level AOM screen still returns
+  `N4M_ERR_NUMERICAL_FAILURE` if no finite candidate exists anywhere.
+- The fallback remains moment-only and does not materialize transformed `X`;
+  successful fast-path runs keep the existing `n_pls_moment_score_batch_*`
+  counters.
+- Added
+  `test_aom_pls_moment_batch_degenerate_components_do_not_abort_screen`.
+
+Validation:
+
+- Rebuilt `build/dev-release` and `build/cuda-on` `n4m_c`.
+- Manual CPU/CUDA reproduction on a rank-deficient identity-chain AOM PLS screen
+  now returns finite component-1 scores, `inf` component-2 scores,
+  `n_materialized_candidates=0`, `n_pls_materialized_cv_fits=0` and moment CV
+  fit counters.
+- Targeted dev pytest:
+  `test_aom_pls_moment_batch_degenerate_components_do_not_abort_screen`,
+  `test_pls_moment_fallback_builds_fold_designs_on_demand` and
+  `test_pls_cross_validate_reference_matches_pls_sweep`.
+- Targeted CUDA pytest on one GPU: same tests plus `many_batched_precedes`.
+- Full dev-release `test_moment_model_wrappers.py`: `80 passed`.
+- Python `py_compile` on touched tests/modules and `git diff --check` passed.
+
 ## 2026-06-06 - Rank-deficient PLS moment fallback guard
 
 Purpose:

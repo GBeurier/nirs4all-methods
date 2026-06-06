@@ -8,6 +8,24 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- AOM PLS exact batch partial-failure guard:
+  - `score_pls1_moment_sweeps_score_only` now keeps broad force-moment screens
+    alive when a rank-deficient late component makes the global batched prefix
+    fit fail. It falls back to slower per-chain/fold/component moment fits,
+    keeps scoreable components finite and marks failed components as `inf`
+    instead of aborting the whole AOM screen.
+  - This remains a moment-only fallback: no transformed `X` materialization is
+    introduced, and normal successful batch runs still report the existing
+    `n_pls_moment_score_batch_*` counters.
+  - Added
+    `test_aom_pls_moment_batch_degenerate_components_do_not_abort_screen`.
+  - Validation after this fix: rebuilt dev-release and CUDA `n4m_c`; manual
+    CPU/CUDA reproduction on a rank-deficient identity-chain AOM PLS screen now
+    returns finite component-1 scores and `inf` component-2 scores with
+    `n_materialized_candidates=0`; targeted dev/CUDA pytest passed; full
+    dev-release `test_moment_model_wrappers.py` passed (`80 passed`);
+    `py_compile` and `git diff --check` passed.
+
 - Rank-deficient PLS moment fallback segfault fix:
   - Fixed `run_moment_sweep` so PLS moment-route failures can lazily build
     fold-local materialized designs before falling back. Previously, compatible
