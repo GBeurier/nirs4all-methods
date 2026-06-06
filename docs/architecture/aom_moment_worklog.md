@@ -1,5 +1,38 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - AOM/moment inventory objective guard
+
+Purpose:
+
+- Add a direct guard for the user-facing objective: the public AOM and moment
+  facades must advertise the reusable winner surfaces, the global configurable
+  screen/refit campaigns, the winning staged presets, direct moment heads,
+  moment stack and CPU/CUDA capability metadata.
+
+Changes:
+
+- Strengthened `bindings/python/tests/test_aom_moment_facade.py` with explicit
+  inventory checks for:
+  `screen_refit_campaign`, `moment_fast_screen_refit_campaign`,
+  `staged_chain_campaign`, `NativeAOMStagedChainCampaignRegressor`,
+  `NativeAOMSavgolFocusRegressor`, `NativeAOMStrictFamilyLiteRegressor`,
+  `aom_chain_fixed_fit_run`, `NativeAOMFixedCandidateRegressor`, direct
+  Ridge/PLS/PCR/CPPLS/weighted/robust/Ridge-PLS/continuum/ECR heads,
+  `moment_stack`, `NativeMomentStackRegressor`, and the source-free
+  CPU/CUDA backend recommendation helper.
+- The guard asserts these inventory rows expose CPU and CUDA-build capability
+  flags and reuse metadata, so a future facade cleanup cannot silently hide the
+  deployable surfaces while lower-level imports still work.
+
+Validation:
+
+- `test_aom_moment_facade.py`: `28 passed`.
+
+Follow-up:
+
+- This improves completion evidence for the public API surface. It does not
+  implement the future fused/batched Ridge/PLS many-chain executor.
+
 ## 2026-06-06 - Legacy catalog validator accepts current AOM/moment schema
 
 Purpose:

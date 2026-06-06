@@ -33,6 +33,10 @@ def _rows(facade):
     return facade.available_methods()
 
 
+def _rows_by_name(facade):
+    return {row["name"]: row for row in _rows(facade)}
+
+
 def _catalog_path(catalog_id):
     return _CATALOG_ROOT / f"{catalog_id}.yaml"
 
@@ -325,6 +329,72 @@ def test_catalogued_native_aom_moment_bindings_are_exposed_on_a_facade():
             missing.append(method_id)
 
     assert missing == []
+
+
+def test_aom_inventory_covers_reuse_presets_and_global_campaign_surfaces():
+    rows = _rows_by_name(aom)
+    required = {
+        "screen_refit_campaign": "ultra_configurable_campaign",
+        "moment_fast_screen_refit_campaign": "preconfigured_global_screen_refit",
+        "staged_chain_campaign": "staged_screen_refit_orchestration",
+        "staged_chain_campaign_estimator": "staged_screen_refit_estimator",
+        "savgol_focus_regressor": "winning_preconfigured_screen_refit",
+        "strict_family_lite_regressor": "cost_safe_family_audit",
+        "aom_chain_fixed_fit": "winner_reuse",
+        "fixed_candidate": "winner_reuse",
+        "chain_sweep": "native_candidate_screen",
+        "profile_sweep": "native_candidate_screen",
+    }
+
+    for name, role in required.items():
+        row = rows[name]
+        assert row["role"] == role
+        assert row["cpu"] is True
+        assert row["cuda"] is True
+        assert row.get("doc_path"), (name, row)
+        assert row.get("reuse"), (name, row)
+
+
+def test_moment_inventory_covers_direct_heads_stack_and_aom_reuse_surfaces():
+    rows = _rows_by_name(moment)
+    required = {
+        "moments",
+        "sweep_run",
+        "moment_sweep",
+        "ridge",
+        "ridge_regressor",
+        "pls",
+        "pls_regressor",
+        "cppls",
+        "cppls_regressor",
+        "weighted_pls",
+        "weighted_pls_regressor",
+        "robust_pls",
+        "robust_pls_regressor",
+        "ridge_pls",
+        "ridge_pls_regressor",
+        "continuum_regression",
+        "continuum_regression_regressor",
+        "ecr",
+        "ecr_regressor",
+        "moment_stack",
+        "moment_stack_regressor",
+        "moment_mixed_screen_refit",
+        "moment_pls_screen_refit",
+        "moment_pls_exact_screen_refit",
+        "moment_ridge_screen_refit",
+        "aom_chain_fixed_fit",
+        "fixed_candidate",
+        "backend_recommendation",
+    }
+
+    missing = sorted(required - set(rows))
+    assert missing == []
+    for name in required:
+        row = rows[name]
+        assert row["cpu"] is True
+        assert row["cuda"] is True
+        assert row.get("reuse"), (name, row)
 
 
 @pytest.mark.parametrize("label", sorted(_FACADES))

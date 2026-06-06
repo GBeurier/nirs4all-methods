@@ -2630,3 +2630,27 @@ Legacy catalog validator slice (2026-06-06):
   - `git diff --check`: PASS.
 - Remaining true gap is unchanged: this closes a release/catalog gate mismatch,
   not the fused/batched Ridge/PLS many-chain executor.
+
+AOM/moment inventory objective guard slice (2026-06-06):
+
+- Strengthened `bindings/python/tests/test_aom_moment_facade.py` with explicit
+  inventory assertions for the user-facing objective:
+  - global configurable screen/refit surfaces:
+    `screen_refit_campaign`, `moment_fast_screen_refit_campaign`,
+    `staged_chain_campaign`, and
+    `NativeAOMStagedChainCampaignRegressor`;
+  - winning reusable presets:
+    `NativeAOMSavgolFocusRegressor` and
+    `NativeAOMStrictFamilyLiteRegressor`;
+  - selected-winner reuse:
+    `aom_chain_fixed_fit_run` and
+    `NativeAOMFixedCandidateRegressor`;
+  - direct moment heads, `moment_stack`, and source-free CPU/CUDA backend
+    recommendation.
+- The guard requires CPU/CUDA capability flags and reuse metadata on those
+  inventory rows, so a facade/inventory cleanup cannot silently hide the
+  surfaces even if low-level imports still work.
+- Validation:
+  - `test_aom_moment_facade.py`: `28 passed`.
+- Remaining true gap is unchanged: this is public API/readiness evidence, not
+  the fused/batched Ridge/PLS many-chain executor.
