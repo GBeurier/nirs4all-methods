@@ -3862,6 +3862,122 @@ def test_cuda_pls_parallel_folds_option_is_score_preserving_on_cpu_path():
     assert campaign["n_pls_moment_score_batch_jobs"] == len(chains) * 4
 
 
+def test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides():
+    root = Path(__file__).resolve().parents[3]
+    cuda_lib = root / "build/cuda-on/cpp/src/libn4m.so"
+    if not cuda_lib.exists():
+        pytest.skip("requires cuda-on libn4m build")
+
+    code = r"""
+import json
+import os
+import numpy as np
+import n4m
+
+plan = n4m.moment_screen_backend_recommendation(
+    96,
+    16,
+    head="pls",
+    cuda_available=None,
+    min_cuda_product=1,
+    cuda_pls_min_device_features=1,
+    cuda_pls_many_batched=True,
+)
+if not plan["loaded_cuda_available"]:
+    print(json.dumps({"skip": "CUDA runtime unavailable"}))
+    raise SystemExit
+
+rng = np.random.default_rng(20260608)
+X = rng.standard_normal((96, 16))
+y = 0.7 * X[:, 0] - 0.25 * X[:, 5] + 0.05 * rng.standard_normal(X.shape[0])
+folds = np.arange(X.shape[0], dtype=np.int32) % 4
+
+def run_once():
+    res = n4m.sweep_run(
+        X,
+        y,
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=(),
+        pls_components=(1, 2),
+        heads=("pls",),
+        scale_x=False,
+        score_only=True,
+        cuda_pls_parallel_folds=True,
+        cuda_pls_min_device_features=1,
+        cuda_pls_many_batched=True,
+    )
+    return {
+        "candidate_scores": np.asarray(res["candidate_scores"], dtype=float).tolist(),
+        "selected_cv_rmse": float(res["selected_cv_rmse"]),
+        "n_pls_moment_cv_fits": int(res["n_pls_moment_cv_fits"]),
+        "n_pls_moment_cuda_device_cv_fits": int(
+            res["n_pls_moment_cuda_device_cv_fits"]
+        ),
+        "n_pls_moment_cuda_parallel_fold_batches": int(
+            res["n_pls_moment_cuda_parallel_fold_batches"]
+        ),
+        "n_pls_moment_cuda_parallel_fold_jobs": int(
+            res["n_pls_moment_cuda_parallel_fold_jobs"]
+        ),
+        "n_pls_moment_cuda_many_batched_batches": int(
+            res["n_pls_moment_cuda_many_batched_batches"]
+        ),
+        "n_pls_moment_cuda_many_batched_jobs": int(
+            res["n_pls_moment_cuda_many_batched_jobs"]
+        ),
+    }
+
+many_first = run_once()
+os.environ["N4M_CUDA_PLS_MANY_LEGACY"] = "1"
+legacy_override = run_once()
+print(json.dumps({
+    "many_first": many_first,
+    "legacy_override": legacy_override,
+}))
+"""
+
+    env = os.environ.copy()
+    env["N4M_LIB_PATH"] = str(cuda_lib)
+    env["PYTHONPATH"] = str(root / "bindings/python/src")
+    env.pop("N4M_CUDA_PLS_MANY_LEGACY", None)
+    env.pop("N4M_CUDA_PLS_MANY_BATCHED", None)
+    out = subprocess.check_output(
+        [sys.executable, "-c", code],
+        cwd=root,
+        env=env,
+        text=True,
+    )
+    payload = json.loads(out)
+    if payload.get("skip"):
+        pytest.skip(payload["skip"])
+
+    many_first = payload["many_first"]
+    legacy_override = payload["legacy_override"]
+    n_cv = many_first["n_pls_moment_cv_fits"]
+    assert n_cv == 4
+    assert many_first["n_pls_moment_cuda_device_cv_fits"] == n_cv
+    assert many_first["n_pls_moment_cuda_parallel_fold_batches"] == 0
+    assert many_first["n_pls_moment_cuda_parallel_fold_jobs"] == 0
+    assert many_first["n_pls_moment_cuda_many_batched_batches"] == 1
+    assert many_first["n_pls_moment_cuda_many_batched_jobs"] == n_cv
+
+    assert legacy_override["n_pls_moment_cuda_device_cv_fits"] == n_cv
+    assert legacy_override["n_pls_moment_cuda_parallel_fold_batches"] == 1
+    assert legacy_override["n_pls_moment_cuda_parallel_fold_jobs"] == n_cv
+    assert legacy_override["n_pls_moment_cuda_many_batched_batches"] == 0
+    assert legacy_override["n_pls_moment_cuda_many_batched_jobs"] == 0
+    np.testing.assert_allclose(
+        legacy_override["candidate_scores"],
+        many_first["candidate_scores"],
+        rtol=1e-10,
+        atol=1e-10,
+    )
+    assert legacy_override["selected_cv_rmse"] == pytest.approx(
+        many_first["selected_cv_rmse"], rel=1e-10, abs=1e-10
+    )
+
+
 def test_native_aom_chain_sweep_moment_prefix_cache_counters():
     rng = np.random.default_rng(55)
     X = rng.standard_normal((140, 24))

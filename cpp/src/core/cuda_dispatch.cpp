@@ -331,9 +331,13 @@ bool truthy_env(const char* name) {
            value == "YES";
 }
 
+bool cuda_pls_many_legacy_requested() {
+    return truthy_env("N4M_CUDA_PLS_MANY_LEGACY");
+}
+
 bool cuda_pls_many_batched_requested() {
     return truthy_env("N4M_CUDA_PLS_MANY_BATCHED") &&
-           !truthy_env("N4M_CUDA_PLS_MANY_LEGACY");
+           !cuda_pls_many_legacy_requested();
 }
 
 std::size_t cuda_pls_batch_tile_budget_bytes() {
@@ -1077,6 +1081,34 @@ int pls1_moment_components_many(std::size_t n_jobs,
             }
         }
 
+        const bool use_many_batched =
+            !cuda_pls_many_legacy_requested() &&
+            (many_batched || cuda_pls_many_batched_requested()) &&
+            n_jobs > 1;
+        if (use_many_batched) {
+            std::string batched_error;
+            try {
+                const int batched_status =
+                    pls1_moment_components_many_batched_tiled(
+                        n_jobs, p, max_components, C, s, yy, eps,
+                        W, P, Q, yy_out, &batched_error);
+                if (batched_status == 0 || batched_status == 1) {
+                    if (batched_status == 0 && used_many_batched != nullptr) {
+                        *used_many_batched = true;
+                    }
+                    if (batched_status != 0 && error != nullptr) {
+                        *error = batched_error;
+                    }
+                    return batched_status;
+                }
+            } catch (const std::bad_alloc&) {
+                // Fall back to the requested parallel or sequential path below.
+            } catch (const std::runtime_error&) {
+                // Fall back when the runtime lacks a strided-batched primitive
+                // or a transient cuBLAS/device error affects only this path.
+            }
+        }
+
         const bool use_parallel_folds =
             parallel_folds || cuda_pls_parallel_folds_requested(n_jobs);
         if (use_parallel_folds) {
@@ -1133,31 +1165,6 @@ int pls1_moment_components_many(std::size_t n_jobs,
                 }
             }
             return 0;
-        }
-
-        if ((many_batched || cuda_pls_many_batched_requested()) &&
-            n_jobs > 1) {
-            std::string batched_error;
-            try {
-                const int batched_status =
-                    pls1_moment_components_many_batched_tiled(
-                        n_jobs, p, max_components, C, s, yy, eps,
-                        W, P, Q, yy_out, &batched_error);
-                if (batched_status == 0 || batched_status == 1) {
-                    if (batched_status == 0 && used_many_batched != nullptr) {
-                        *used_many_batched = true;
-                    }
-                    if (batched_status != 0 && error != nullptr) {
-                        *error = batched_error;
-                    }
-                    return batched_status;
-                }
-            } catch (const std::bad_alloc&) {
-                // Fall back to the legacy sequential-many path below.
-            } catch (const std::runtime_error&) {
-                // Fall back when the runtime lacks a strided-batched primitive
-                // or a transient cuBLAS/device error affects only this path.
-            }
         }
 
         return pls1_moment_components_many_sequential(
