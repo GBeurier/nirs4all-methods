@@ -69,6 +69,8 @@
   "report_schema": "n4m.aom_moment_cuda_facade_smoke.v1",
   "savgol_focus_estimator": {
     "n_pls_moment_cuda_device_cv_fits": 8,
+    "n_pls_moment_cuda_many_batched_batches": 0,
+    "n_pls_moment_cuda_many_batched_jobs": 0,
     "n_pls_moment_cuda_parallel_fold_batches": 1,
     "n_pls_moment_cuda_parallel_fold_jobs": 8,
     "n_pls_moment_host_cv_fits": 0,
@@ -102,6 +104,8 @@
   },
   "staged_estimator": {
     "n_pls_moment_cuda_device_cv_fits": 8,
+    "n_pls_moment_cuda_many_batched_batches": 0,
+    "n_pls_moment_cuda_many_batched_jobs": 0,
     "n_pls_moment_cuda_parallel_fold_batches": 1,
     "n_pls_moment_cuda_parallel_fold_jobs": 8,
     "n_pls_moment_host_cv_fits": 0,
@@ -133,6 +137,8 @@
   },
   "strict_family_lite_estimator": {
     "n_pls_moment_cuda_device_cv_fits": 4,
+    "n_pls_moment_cuda_many_batched_batches": 0,
+    "n_pls_moment_cuda_many_batched_jobs": 0,
     "n_pls_moment_cuda_parallel_fold_batches": 1,
     "n_pls_moment_cuda_parallel_fold_jobs": 4,
     "n_pls_moment_host_cv_fits": 0,

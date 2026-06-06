@@ -461,6 +461,14 @@ N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
 CUDA_VISIBLE_DEVICES=0 \
 PYTHONPATH=bindings/python/src \
 N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_moment_sweep_timing.py \
+  --output benchmarks/cross_binding/moment_sweep_timing_cuda_many_batched_smoke.csv \
+  --repeats 1 --native-only --cv 5 \
+  --cuda-pls-min-device-features 1 --cuda-pls-many-batched
+
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
   /home/delete/.venv/bin/python benchmarks/cross_binding/bench_aom_sweep_timing.py \
   --output benchmarks/cross_binding/aom_sweep_timing_cuda_smoke.csv \
   --repeats 1 --cv 4 --profile compact \
@@ -476,6 +484,11 @@ N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
 
 For the sweep CSVs, every exact PLS moment CV row should have host CV fits at
 zero and CUDA-device CV fits equal to total PLS moment CV fits. The moment
+sweep `many_batched` smoke keeps `cuda_pls_parallel_folds=False` and proves
+the alternate CUDA route directly: PLS rows should report
+`n_pls_moment_cuda_many_batched_batches=1`,
+`n_pls_moment_cuda_many_batched_jobs=n_pls_moment_cv_fits`, and zero
+parallel-fold batches/jobs. The moment
 sweep smoke also includes a tall Ridge cell (`96x48`) so at least one Ridge
 row reports nonzero `n_ridge_moment_cv_fits`; this keeps the multi-lambda
 Ridge moment scorer covered separately from the wide dual/materialized Ridge

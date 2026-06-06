@@ -3658,6 +3658,8 @@ def test_cuda_pls_parallel_folds_option_is_score_preserving_on_cpu_path():
     )
     assert requested["n_pls_moment_cuda_parallel_fold_batches"] == 0.0
     assert requested["n_pls_moment_cuda_parallel_fold_jobs"] == 0.0
+    assert requested["n_pls_moment_cuda_many_batched_batches"] == 0.0
+    assert requested["n_pls_moment_cuda_many_batched_jobs"] == 0.0
 
     chains = [[("identity", ())], [("savgol_smooth", (5, 2))]]
     campaign = n4m.aom_chain_score_campaign(
@@ -3685,6 +3687,8 @@ def test_cuda_pls_parallel_folds_option_is_score_preserving_on_cpu_path():
     ] is True
     assert campaign["n_pls_moment_cuda_parallel_fold_batches"] == 0
     assert campaign["n_pls_moment_cuda_parallel_fold_jobs"] == 0
+    assert campaign["n_pls_moment_cuda_many_batched_batches"] == 0
+    assert campaign["n_pls_moment_cuda_many_batched_jobs"] == 0
     assert campaign["n_pls_moment_score_batch_calls"] == 1
     assert campaign["n_pls_moment_score_batch_jobs"] == len(chains) * 4
 

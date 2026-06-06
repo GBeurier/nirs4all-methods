@@ -6866,3 +6866,28 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     production methods covered.
   - `catalog/scripts/split_legacy_methods.py --check`: PASS, 208 per-method
     files up to date.
+
+## 2026-06-06 — CUDA PLS Many-Batched Route Telemetry
+
+- Added a dedicated committed smoke CSV,
+  `benchmarks/cross_binding/moment_sweep_timing_cuda_many_batched_smoke.csv`,
+  generated on one GPU with `--cuda-pls-min-device-features 1` and
+  `--cuda-pls-many-batched`.
+- The PLS rows prove the alternate exact PLS moment CUDA route independently of
+  parallel-fold scheduling: host CV fits stay at `0`, CUDA-device CV fits equal
+  total PLS CV fits, parallel-fold batches/jobs stay at `0`, and
+  many-batched counters report one batch and one job per CV fold.
+- Regenerated `benchmarks/cross_binding/aom_moment_cuda_facade_smoke.json` so
+  the staged/focus/strict facade sections record the new many-batched counters;
+  those remain `0` there because that artifact exercises the parallel-fold
+  facade route.
+- Strengthened the wrapper fallback test so the new many-batched counters are
+  asserted at zero when the CUDA knobs are requested but the device threshold
+  intentionally forces the CPU path.
+- Validation:
+  - py_compile on the touched smoke/test files: PASS.
+  - exact wrapper fallback test: `1 passed`.
+  - full CUDA artifact guard file: `22 passed`.
+  - full moment wrapper test file: `74 passed`.
+  - catalog strict ABI/reference/split checks: PASS.
+  - `git diff --check`: PASS.
