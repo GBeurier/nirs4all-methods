@@ -2875,3 +2875,16 @@ Real-cohort PLS many-batched CUDA smoke artifact (2026-06-06):
 - Remaining true gap is unchanged: this proves the current benchmark runner and
   many-batched telemetry on a held-out real split, but it is not the fused
   cartesian/IKPLS CUDA engine.
+
+Coverage-matrix release audit refresh (2026-06-06):
+
+- Updated `docs/architecture/aom_moment_coverage_matrix.md` so the integrated
+  campaign rows mention CUDA many-batched batch/job counters and the staged
+  real-cohort row points to the ABI `1.22.0` DIESEL PLS many-batched smoke.
+- Added a dedicated many-batched artifact note listing the direct moment sweep,
+  AOM sweep, screen/refit and real held-out runner smokes. The note explicitly
+  scopes them as current route telemetry / exact-CV compatibility evidence,
+  not the deferred fused cartesian/IKPLS CUDA engine.
+- Validation:
+  - facade/catalog inventory tests: `40 passed`.
+  - `git diff --check`: PASS.
