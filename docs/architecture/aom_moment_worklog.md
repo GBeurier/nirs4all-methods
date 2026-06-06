@@ -7882,3 +7882,23 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
   - `git diff --check`: PASS.
 - This closes a campaign-level evidence gap for the existing many-batched CUDA
   route. It does not claim the future fused IKPLS/cartesian CUDA grinder.
+
+## 2026-06-06 — AOM Sweep CUDA Many-Batched Timing Artifact
+
+- Added `aom_sweep_timing_cuda_many_batched_smoke.csv`, generated with the
+  existing `bench_aom_sweep_timing.py` script on `build/cuda-on` using
+  `--cuda-pls-min-device-features 1 --cuda-pls-many-batched`.
+- The new artifact keeps the full 49-row AOM sweep timing surface and proves
+  the many-batched exact-CV PLS route at artifact level: PLS rows have zero
+  parallel-fold jobs, positive many-batched batches, and many-batched jobs equal
+  PLS moment CV fits.
+- Updated the artifact test helper to distinguish CUDA parallel-fold and CUDA
+  many-batched AOM sweep profiles, then added
+  `test_aom_sweep_cuda_many_batched_smoke_artifact_routes_exact_pls_cv`.
+- Validation:
+  - full artifact guard file: `50 passed`.
+  - focused AOM sweep artifact slice: `4 passed`.
+  - py_compile on touched benchmark/test files: PASS.
+  - `git diff --check`: PASS.
+- This strengthens release evidence for the existing AOM many-batched CUDA
+  path, without claiming the deferred fused/batched IKPLS cartesian executor.

@@ -643,6 +643,8 @@ def _assert_aom_sweep_rows(
     *,
     expect_cuda_build: bool,
     expect_cuda_pls: bool,
+    expect_parallel_folds: bool = False,
+    expect_many_batched: bool = False,
 ) -> None:
     required_batch_fields = {
         "n_ridge_moment_score_batch_calls",
@@ -667,14 +669,14 @@ def _assert_aom_sweep_rows(
     for row in rows:
         if expect_cuda_build:
             _assert_cuda_build_path(row["library_path"])
-            assert _bool(row, "cuda_pls_parallel_folds") is True
+            assert _bool(row, "cuda_pls_parallel_folds") is expect_parallel_folds
             assert _int(row, "cuda_pls_min_device_features") == 1
         else:
             _assert_dev_release_build_path(row["library_path"])
             assert _bool(row, "cuda_pls_parallel_folds") is False
             assert row["cuda_pls_min_device_features"] == ""
         _assert_current_artifact_abi(row)
-        assert _bool(row, "cuda_pls_many_batched") is False
+        assert _bool(row, "cuda_pls_many_batched") is expect_many_batched
         assert _int(row, "n_chains") > 0
         assert _int(row, "n_candidates") > 0
         if not row["backend"].startswith("native_aom_chain_fixed_fit"):
@@ -685,12 +687,20 @@ def _assert_aom_sweep_rows(
         if expect_cuda_pls:
             assert _int(row, "n_pls_moment_host_cv_fits") == 0
             assert _int(row, "n_pls_moment_cuda_device_cv_fits") == n_cv
-            assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == n_cv
+            if expect_many_batched:
+                assert _int(row, "n_pls_moment_cuda_parallel_fold_batches") == 0
+                assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
+                assert _int(row, "n_pls_moment_cuda_many_batched_batches") > 0
+                assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == n_cv
+            else:
+                assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == n_cv
+                assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
         else:
             assert _int(row, "n_pls_moment_host_cv_fits") == n_cv
             assert _int(row, "n_pls_moment_cuda_device_cv_fits") == 0
             assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
-        assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
+            assert _int(row, "n_pls_moment_cuda_many_batched_batches") == 0
+            assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
 
     assert any(
         row["backend"] == "native_aom_chain_sweep_ridge_exact_score_only"
@@ -731,6 +741,16 @@ def test_aom_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
         _rows("aom_sweep_timing_cuda_smoke.csv"),
         expect_cuda_build=True,
         expect_cuda_pls=True,
+        expect_parallel_folds=True,
+    )
+
+
+def test_aom_sweep_cuda_many_batched_smoke_artifact_routes_exact_pls_cv():
+    _assert_aom_sweep_rows(
+        _rows("aom_sweep_timing_cuda_many_batched_smoke.csv"),
+        expect_cuda_build=True,
+        expect_cuda_pls=True,
+        expect_many_batched=True,
     )
 
 

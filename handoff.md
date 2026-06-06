@@ -2803,3 +2803,27 @@ AOM score-campaign CUDA many-batched guard (2026-06-06):
   telemetry for the existing many-batched CUDA path, but it is still not the
   fused/batched IKPLS many-chain/many-fold executor or complete fused CUDA
   cartesian kernel suite.
+
+AOM sweep CUDA many-batched timing artifact (2026-06-06):
+
+- Added the committed smoke timing artifact
+  `benchmarks/cross_binding/aom_sweep_timing_cuda_many_batched_smoke.csv`,
+  generated from `bench_aom_sweep_timing.py` with
+  `--cuda-pls-min-device-features 1 --cuda-pls-many-batched` on the one-GPU
+  `build/cuda-on` lib.
+- The artifact mirrors the existing 49-row AOM sweep timing surface and proves
+  that exact-CV PLS rows run on the CUDA many-batched route: PLS rows have
+  `n_pls_moment_cuda_parallel_fold_jobs=0`,
+  positive `n_pls_moment_cuda_many_batched_batches`, and
+  `n_pls_moment_cuda_many_batched_jobs == n_pls_moment_cv_fits`.
+- Updated `test_aom_moment_cuda_smoke_artifacts.py` so AOM sweep artifact
+  validation distinguishes the CUDA parallel-fold smoke from the CUDA
+  many-batched smoke, while keeping CPU artifact expectations unchanged.
+- Validation:
+  - `test_aom_moment_cuda_smoke_artifacts.py`: `50 passed`.
+  - focused AOM sweep artifact tests: `4 passed`.
+  - py_compile on touched benchmark/test files: PASS.
+  - `git diff --check`: PASS.
+- Remaining true gap is unchanged: this adds release evidence for the existing
+  AOM many-batched CUDA route; it is not the future fused/batched IKPLS
+  cartesian executor.
