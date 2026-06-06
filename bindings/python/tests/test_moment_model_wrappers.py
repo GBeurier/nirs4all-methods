@@ -197,6 +197,36 @@ def test_aom_pls_moment_batch_degenerate_components_do_not_abort_screen():
     assert got["n_pls_moment_cv_fits"] == len(chains) * 3
 
 
+def test_aom_pls_force_moments_bypasses_cpu_wide_materialization_heuristic():
+    rng = np.random.default_rng(20260608)
+    X = rng.standard_normal((120, 32))
+    y = 0.7 * X[:, 0] - 0.2 * X[:, 11] + 0.03 * rng.standard_normal(X.shape[0])
+    folds = np.arange(X.shape[0], dtype=np.int32) % 4
+
+    got = n4m.aom_chain_sweep_run(
+        X,
+        y,
+        [[("identity", ())]],
+        cv=4,
+        fold_ids=folds,
+        ridge_lambdas=[],
+        pls_components=[1, 2, 3],
+        heads=("pls",),
+        scale_x=False,
+        moment_policy="force_moments",
+        pls_score_mode="cv",
+        score_only=True,
+    )
+
+    assert got["n_materialized_candidates"] == 0.0
+    assert got["n_pls_materialized_cv_fits"] == 0.0
+    assert got["n_pls_moment_score_batch_calls"] == 1.0
+    assert got["n_pls_moment_score_batch_jobs"] == 4.0
+    assert got["n_candidates"] == 3.0
+    assert got["n_pls_operator_moment_candidates"] == 3.0
+    assert np.isfinite(got["selected_cv_rmse"])
+
+
 def _assert_aom_route_partitions(res):
     assert (
         res["n_ridge_operator_moment_candidates"]
