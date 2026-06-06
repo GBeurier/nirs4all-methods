@@ -453,11 +453,12 @@ batches on the selected single GPU. This preserves exact CV scores and reports
 `n_pls_moment_cuda_parallel_fold_jobs`. It is a scheduling option over the
 current exact moment jobs, not fused IKPLS.
 
-An experimental cuBLAS-only many-job scheduler is also available for profiling
-with `cuda_pls_many_batched=True` or the `N4M_CUDA_PLS_MANY_BATCHED=1`
-environment fallback. It tiles independent exact PLS1 moment jobs on one GPU
-and batches the dominant `p^2` operations with `cublasDgemmStridedBatched`,
-while preserving the same scores. If both CUDA PLS schedulers are requested,
+An experimental many-job CUDA scheduler is also available for profiling with
+`cuda_pls_many_batched=True` or the `N4M_CUDA_PLS_MANY_BATCHED=1`
+environment fallback. It tiles independent exact PLS1 moment jobs on one GPU,
+batches the dominant `p^2` operations with `cublasDgemmStridedBatched`, and
+uses a small native CUDA kernel for per-job sign normalization while preserving
+the same scores. If both CUDA PLS schedulers are requested,
 `cuda_pls_many_batched=True` is tried before `cuda_pls_parallel_folds=True`.
 It is not the default because current smoke timings did not beat the legacy
 sequential-many workspace path. Use `N4M_CUDA_PLS_MANY_LEGACY=1` to force the

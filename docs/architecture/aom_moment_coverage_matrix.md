@@ -292,12 +292,13 @@ CUDA engine.
   until a device-resident batched IKPLS workspace exists. Other PLS regimes
   keep materialized prefix scoring with coefficient-prefix reuse across
   component counts.
-- The CUDA PLS many-job dispatcher has an experimental opt-in tiled
-  strided-batched cuBLAS path (`N4M_CUDA_PLS_MANY_BATCHED=1`) that preserves
-  exact scores and falls back to the legacy sequential-many workspace path, but
-  smoke timing did not justify making it the default. The production gap is
-  still device-resident scalar reductions/glue kernels or a fused IKPLS-style
-  screen.
+- The CUDA PLS many-job dispatcher has an experimental opt-in tiled path
+  (`N4M_CUDA_PLS_MANY_BATCHED=1`) that uses strided-batched cuBLAS for the
+  component products plus a native CUDA sign-normalization kernel, preserves
+  exact scores, and falls back to the legacy sequential-many workspace path.
+  Broader timings still do not justify making it the default. The production
+  gap is now the remaining device-resident scalar glue and a fused
+  IKPLS-style cartesian screen.
 - AOM Ridge candidate rows with `p <= n_train` transform strict-linear chain
   operators into moment space and score held-out SSE from moments, including
   inside mixed Ridge+PLS sweeps. Dense medium-wide Ridge grids use this exact

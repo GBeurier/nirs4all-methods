@@ -227,10 +227,11 @@ per-fold scores. Passing `cuda_pls_parallel_folds=True` to `sweep_run` or
 `NativeMomentSweepRegressor` enables bounded stream-parallel batches for those
 independent exact PLS1 moment jobs on the selected single GPU; the historical
 `N4M_CUDA_PLS_PARALLEL_FOLDS=1` environment variable remains a profiling
-override. `N4M_CUDA_PLS_MANY_BATCHED=1` enables an experimental cuBLAS-only
-tiled scheduler for the default many-job exact PLS1 moment path; it preserves
-scores but remains opt-in because smoke timings did not beat the legacy
-sequential-many workspace path. Passing `cuda_pls_many_batched=True` to
+override. `N4M_CUDA_PLS_MANY_BATCHED=1` enables an experimental tiled CUDA
+scheduler for the default many-job exact PLS1 moment path; it uses
+strided-batched cuBLAS for the dominant component products plus a small native
+CUDA sign-normalization kernel, preserves scores, and remains opt-in until
+broader timings justify making it automatic. Passing `cuda_pls_many_batched=True` to
 `sweep_run` or `NativeMomentSweepRegressor` enables the same route without an
 environment variable and takes precedence over `cuda_pls_parallel_folds=True`
 when both knobs are set. `N4M_CUDA_PLS_MANY_LEGACY=1` forces the legacy

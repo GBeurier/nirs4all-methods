@@ -8134,3 +8134,44 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     `0.18291980848004116`) with expected counters; observed smoke timing was
     `0.219937s` many-batched vs `0.229734s` legacy, which remains a route
     smoke rather than a final benchmark claim.
+
+## 2026-06-06 — PLS Many-Batched Native Sign Kernel
+
+- Added the first small native CUDA kernel to the PLS many-batched engine:
+  `cpp/src/core/cuda_kernels.cu`.
+- The CUDA backend now enables CUDA language only when `N4M_WITH_CUDA=ON`.
+  The existing host-C++ `cuda_dispatch.cpp` still owns cuBLAS orchestration;
+  the new `.cu` helper is limited to sign normalization inside
+  `pls1_moment_components_many_batched_tiled`.
+- Replaced the previous per-job `cublasIdamax_v2` + scalar device-copy +
+  host sign gather path with one block per job/column:
+  - each block finds the first maximum-absolute-weight index for that job;
+  - it uses the selected weight sign to produce a signed weight column;
+  - the signed tile is written into the existing `douter` scratch buffer;
+  - downstream W-tile copy, `C*w`, `w*Cw` and `w*s` consume that signed tile
+    before `douter` is reused for C deflation.
+- Updated CMake so CUDA builds can locate `nvcc` through `find_package(CUDAToolkit)`
+  even when `nvcc` is not in `PATH`, and so project C/C++ warning flags are not
+  applied to CUDA translation units.
+- This removes the remaining per-job sign `Idamax`/gather host orchestration
+  from the tiled many-batched route. It is still a focused kernel inside the
+  current executor, not yet a fused cartesian/IKPLS kernel suite.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --preset cuda-on`: PASS.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src
+    N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python
+    -m pytest
+    bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides
+    -q`: `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` and
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - `/home/delete/.venv/bin/cmake --build build/dev-release --target n4m_c -j2`:
+    PASS.
+  - manual 32-chain / 128 exact-CV PLS smoke: many-batched and legacy selected
+    matching best CV scores (`0.18291980848004097` vs
+    `0.18291980848004116`) with expected counters; observed smoke timing was
+    `0.174215s` many-batched vs `0.227833s` legacy, still only a route smoke.

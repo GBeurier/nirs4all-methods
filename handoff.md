@@ -3162,3 +3162,42 @@ Continuation update - PLS many-batched batched sign scaling (2026-06-06):
 - Scope note: this removes another component x negative-job cuBLAS loop from
   the current host-C++ + cuBLAS path, but it still is not the true fused
   cartesian/IKPLS CUDA executor.
+
+Continuation update - PLS many-batched native sign kernel (2026-06-06):
+
+- Added the first focused native CUDA kernel for the tiled PLS many-batched
+  path:
+  - new private files `cpp/src/core/cuda_kernels.cu` and
+    `cpp/src/core/cuda_kernels.hpp`;
+  - CMake now enables CUDA language only under `N4M_WITH_CUDA=ON`;
+  - the CUDA preset can discover `nvcc` through `find_package(CUDAToolkit)` even
+    when `nvcc` is not in `PATH`;
+  - project C/C++ warning flags are excluded from CUDA translation units.
+- Replaced the previous per-job sign `cublasIdamax_v2` / device-copy /
+  host-gather path in `pls1_moment_components_many_batched_tiled` with one
+  CUDA block per job:
+  - each block scans the job's normalized weight column;
+  - tie handling keeps the first maximum-absolute-weight index, matching the
+    old deterministic convention;
+  - the kernel writes the sign-corrected weight column into `douter`;
+  - W-tile storage and the downstream `C*w`, `w*Cw`, `w*s` products consume
+    that signed tile before `douter` is reused for C-deflation.
+- Validation completed:
+  - `/home/delete/.venv/bin/cmake --preset cuda-on`: PASS;
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS;
+  - one-GPU CUDA wrapper guard
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`;
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` and
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS;
+  - `/home/delete/.venv/bin/cmake --build build/dev-release --target n4m_c -j2`:
+    PASS;
+  - manual 32-chain / 128 exact-CV PLS smoke matched many-batched and legacy
+    best CV scores with expected route counters (`1` many-batched batch /
+    `128` jobs vs `1` parallel-fold batch / `128` jobs).
+- Scope note: this is real movement away from host-only cuBLAS orchestration
+  for the PLS many-batched path, but the full fused cartesian/IKPLS executor is
+  still not implemented.
