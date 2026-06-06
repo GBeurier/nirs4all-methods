@@ -2986,3 +2986,34 @@ PLS many-batched sign gather cleanup (2026-06-06):
     `0.32402508454613355`) and expected route counters (`1` many-batched
     batch / `128` jobs vs `1` parallel-fold batch / `128` jobs). The tiny smoke
     was not faster, so do not treat this as a timing claim.
+
+PLS many-batched score-deflation batching (2026-06-06):
+
+- Continued the same many-batched PLS engine cleanup in
+  `cpp/src/core/cuda_dispatch.cpp`.
+- Replaced the per-job `cublasDaxpy_v2` score-vector deflation
+  (`s -= tt*q_load*p_load`) with a tile-level update:
+  - compute per-job `-tt*q_load` scales on host;
+  - use `cublasDdgmm` to write all scaled `p_load` columns into the reusable
+    `dcw` buffer;
+  - add that contiguous tile buffer into `ds` with one chunked
+    `cublasDaxpy_v2`.
+- This removes another component x job cuBLAS call from the current
+  host-C++ + cuBLAS path while keeping exact moment PLS scores. Remaining
+  non-fused parts include per-job `Idamax` sign choice and W/P strided storage
+  copies.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - live one-GPU CUDA wrapper route guard:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` plus
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - Manual 32-chain synthetic PLS exact-CV smoke: many-batched and legacy had
+    matching best CV score (`0.32402508454613366` vs
+    `0.32402508454613355`) with expected route counters. Observed smoke timing
+    was `0.249s` many-batched vs `0.313s` legacy, but this is still a tiny
+    route smoke rather than the final benchmark.
