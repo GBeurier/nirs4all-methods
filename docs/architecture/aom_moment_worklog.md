@@ -7998,3 +7998,29 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     selected the same best score to floating precision; many-batched used
     `1` many-batched batch / `128` many-batched jobs and zero parallel-fold
     jobs, while legacy used `1` parallel-fold batch / `128` jobs.
+
+## 2026-06-06 — PLS Many-Batched Sign Gather
+
+- Removed the remaining explicit host synchronization per job in the
+  many-batched PLS sign convention path.
+- `pls1_moment_components_many_batched_tiled` now gathers the selected
+  dominant-weight sign values into a reusable device vector with scalar
+  device-device `cublasDcopy_v2` calls, then performs one device-to-host copy
+  for the whole tile/component before applying any negative sign flips.
+- This keeps the deterministic CPU-compatible sign convention while reducing
+  host synchronization pressure in large many-chain/fold batches. The per-job
+  `cublasIdamax_v2` calls remain because the current backend is still host
+  C++ + cuBLAS and has no custom sign-normalization kernel.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - live one-GPU CUDA wrapper route guard:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_internal_tests -j2`
+    and `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - manual 32-chain / 128 exact-CV PLS smoke: many-batched and legacy selected
+    the same best CV score to floating precision and used the expected route
+    counters. The small smoke did not show a speed gain, so this is recorded as
+    a synchronization-structure cleanup rather than a benchmark claim.

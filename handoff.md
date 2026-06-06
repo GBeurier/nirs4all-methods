@@ -2958,3 +2958,31 @@ PLS many-batched cuBLAS scalar batching (2026-06-06):
   overhead in the current many-batched path, but it is not a fused
   IKPLS/cartesian CUDA kernel executor and it does not broaden arbitrary-chain
   moment coverage.
+
+PLS many-batched sign gather cleanup (2026-06-06):
+
+- Continued the same `cpp/src/core/cuda_dispatch.cpp` hotspot after the scalar
+  batching commit.
+- Added a reusable per-tile `dsign` device buffer and host staging vector.
+  The many-batched sign convention now gathers each job's dominant-weight value
+  into `dsign` with scalar device-device `cublasDcopy_v2` calls, performs one
+  device-to-host copy for the tile/component, then applies any negative sign
+  flips.
+- This removes the previous `copy_d2h_stream_sync` call inside the per-job sign
+  loop. Per-job `cublasIdamax_v2` remains because there is no custom CUDA
+  kernel in this host-C++ + cuBLAS backend.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - live one-GPU CUDA wrapper route guard:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` plus
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - Manual 32-chain synthetic PLS exact-CV smoke: many-batched and legacy had
+    matching best CV score (`0.3240250845461336` vs
+    `0.32402508454613355`) and expected route counters (`1` many-batched
+    batch / `128` jobs vs `1` parallel-fold batch / `128` jobs). The tiny smoke
+    was not faster, so do not treat this as a timing claim.
