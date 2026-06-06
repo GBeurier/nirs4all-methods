@@ -414,6 +414,40 @@ The CSV should show nonzero `n_base_oof_pls_moment_cuda_device_cv_fits` and
 `n_base_final_pls_moment_cuda_device_cv_fits`, with the corresponding host PLS
 CV counters equal to zero.
 
+## PLS Cross-Validate Reference ABI Smoke
+
+`bench_pls_cross_validate_timing.py` records the reserved
+`n4m.pls_cross_validate` / `n4m_pls_cross_validate` reference surface that the
+future fused PLS grinder is expected to accelerate. The current implementation
+delegates to `sweep_run(heads=("pls",))`, so each row records max absolute
+candidate-score and prediction deltas against that sweep reference.
+
+```bash
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_pls_cross_validate_timing.py \
+  --output benchmarks/cross_binding/pls_cross_validate_timing.csv \
+  --repeats 1
+```
+
+The one-GPU smoke lowers the PLS device threshold and enables bounded
+parallel-fold scheduling:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_pls_cross_validate_timing.py \
+  --output benchmarks/cross_binding/pls_cross_validate_timing_cuda_smoke.csv \
+  --repeats 1 --cuda-pls-min-device-features 1 --cuda-pls-parallel-folds
+```
+
+Both CSVs contain six rows: three shapes × full/score-only calls. The
+equivalence deltas should stay at numerical zero. CPU rows prove host exact-CV
+routing, while CUDA rows prove the same reference ABI can route PLS CV/final
+fits through the CUDA device path. This is still a reference hook and timing
+baseline, not the final fused many-chain IKPLS executor.
+
 ## Direct Moment Heads CUDA Smoke
 
 `bench_direct_moment_heads_timing.py` times the reusable moment/linear heads

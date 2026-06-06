@@ -1,5 +1,40 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - PLS cross-validate reference ABI artifacts
+
+Purpose:
+
+- Pin the reserved `n4m.pls_cross_validate` /
+  `n4m_pls_cross_validate` reference surface with small CPU/CUDA smoke timing
+  artifacts before the future grouped/fused PLS grinder exists.
+
+Changes:
+
+- Added `bench_pls_cross_validate_timing.py`, which times full and
+  score-only `n4m.pls_cross_validate` calls across three synthetic shapes.
+- Each row compares the public PLS CV hook against
+  `n4m.sweep_run(heads=("pls",))` on the same folds/component grid and records
+  max absolute candidate-score, OOF-prediction and prediction deltas.
+- Regenerated CPU and one-GPU CUDA smoke CSVs:
+  `pls_cross_validate_timing.csv` and
+  `pls_cross_validate_timing_cuda_smoke.csv`.
+- Added artifact guards proving CPU rows use host exact-CV routing while CUDA
+  rows use the device PLS CV/final-fit route with parallel folds enabled,
+  many-batched off and numerical-zero equivalence deltas.
+- Documented the benchmark command in `benchmarks/cross_binding/README.md`.
+
+Validation:
+
+- `test_aom_moment_cuda_smoke_artifacts.py`: `25 passed`.
+- Python `py_compile` on the new benchmark and artifact test passed.
+- `git diff --check` passed.
+
+Follow-up:
+
+- This is a reference ABI/timing hook only. The real open item remains the
+  fused/batched host/device IKPLS-style executor for many preprocessing chains,
+  folds and candidates.
+
 ## 2026-06-06 - Staged benchmark PLS score-mode switch
 
 Purpose:

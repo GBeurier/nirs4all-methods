@@ -2383,3 +2383,34 @@ Direct moment heads CPU/CUDA artifact schema slice (2026-06-06):
     `23 passed`.
   - py_compile on touched benchmark/test files: PASS.
   - `git diff --check`: PASS.
+
+PLS cross-validate reference ABI artifact slice (2026-06-06):
+
+- Added `benchmarks/cross_binding/bench_pls_cross_validate_timing.py` to time
+  the reserved `n4m.pls_cross_validate` /
+  `n4m_pls_cross_validate` reference surface in both full and score-only modes.
+- Regenerated `benchmarks/cross_binding/pls_cross_validate_timing.csv` and
+  `benchmarks/cross_binding/pls_cross_validate_timing_cuda_smoke.csv`.
+  Each artifact has six rows: three shapes times full/score-only calls.
+- The benchmark compares the public PLS CV hook against
+  `n4m.sweep_run(heads=("pls",))` on identical folds/component grids. The
+  recorded candidate-score, OOF-prediction and prediction max deltas are
+  numerical zero.
+- CPU rows prove host exact-CV routing on `build/dev-release`; CUDA rows prove
+  one-GPU device routing on `build/cuda-on` with
+  `CUDA_VISIBLE_DEVICES=0`, `cuda_pls_parallel_folds=True`,
+  `cuda_pls_min_device_features=1` and many-batched off.
+- Added artifact guards in
+  `bindings/python/tests/test_aom_moment_cuda_smoke_artifacts.py` and README
+  commands in `benchmarks/cross_binding/README.md`.
+- Validation:
+  - full CUDA/artifact guard file:
+    `25 passed`.
+  - py_compile on the new benchmark and touched artifact test: PASS.
+  - `git diff --check`: PASS.
+- Claude Code Opus/max review was launched for this slice. It verified the
+  binding calls, result fields, build/GPU availability and sibling benchmark
+  conventions, found no blocker, and was interrupted before making edits
+  because the remaining work was limited to log/handoff updates.
+- Remaining true gap: this is still only the PLS CV reference ABI/timing hook,
+  not the deferred fused/batched IKPLS-style many-chain executor.

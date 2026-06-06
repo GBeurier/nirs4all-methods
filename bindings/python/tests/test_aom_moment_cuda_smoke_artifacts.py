@@ -135,6 +135,93 @@ def _assert_direct_moment_heads_rows(
         assert backends == expected_backends
 
 
+def _assert_pls_cross_validate_rows(
+    rows: list[dict[str, str]],
+    *,
+    expect_cuda_pls: bool,
+) -> None:
+    expected_backends = {"pls_cross_validate", "pls_cross_validate_score_only"}
+    required_fields = {
+        "candidate_score_max_abs_delta",
+        "oof_prediction_max_abs_delta",
+        "prediction_max_abs_delta",
+        "n_pls_moment_candidates",
+        "n_pls_moment_cv_fits",
+        "n_pls_moment_host_cv_fits",
+        "n_pls_moment_cuda_device_cv_fits",
+        "n_pls_moment_cuda_parallel_fold_batches",
+        "n_pls_moment_cuda_parallel_fold_jobs",
+        "n_pls_moment_cuda_many_batched_batches",
+        "n_pls_moment_cuda_many_batched_jobs",
+        "n_pls_moment_final_fits",
+        "n_pls_moment_host_final_fits",
+        "n_pls_moment_cuda_device_final_fits",
+    }
+    assert len(rows) == 6
+    assert {row["backend"] for row in rows} == expected_backends
+    assert required_fields.issubset(rows[0])
+    assert {(_int(row, "n_samples"), _int(row, "n_features")) for row in rows} == {
+        (48, 24),
+        (96, 64),
+        (160, 128),
+    }
+
+    backends_by_shape: dict[tuple[int, int], set[str]] = {}
+    for row in rows:
+        backend = row["backend"]
+        shape = (_int(row, "n_samples"), _int(row, "n_features"))
+        score_only = backend.endswith("_score_only")
+        assert _bool(row, "score_only") is score_only
+        assert row["component_grid"] == "1|2|3"
+        assert _int(row, "n_component_grid") == 3
+        assert _int(row, "cv") == 4
+        assert _int(row, "n_pls_moment_candidates") == 3
+        assert _int(row, "n_pls_moment_cv_fits") == 4
+        assert math.isfinite(_float(row, "selected_cv_rmse"))
+        assert _float(row, "candidate_score_max_abs_delta") <= 1e-12
+        assert _float(row, "oof_prediction_max_abs_delta") <= 1e-12
+        assert _float(row, "prediction_max_abs_delta") <= 1e-12
+        assert _int(row, "n_pls_moment_cuda_many_batched_batches") == 0
+        assert _int(row, "n_pls_moment_cuda_many_batched_jobs") == 0
+
+        if expect_cuda_pls:
+            _assert_cuda_build_path(row["library_path"])
+            assert _bool(row, "cuda_pls_parallel_folds") is True
+            assert _int(row, "cuda_pls_min_device_features") == 1
+            assert _bool(row, "cuda_pls_many_batched") is False
+            assert _int(row, "n_pls_moment_host_cv_fits") == 0
+            assert _int(row, "n_pls_moment_cuda_device_cv_fits") == 4
+            assert _int(row, "n_pls_moment_cuda_parallel_fold_batches") == 1
+            assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 4
+            if score_only:
+                assert _int(row, "n_pls_moment_final_fits") == 0
+                assert _int(row, "n_pls_moment_cuda_device_final_fits") == 0
+            else:
+                assert _int(row, "n_pls_moment_final_fits") == 1
+                assert _int(row, "n_pls_moment_host_final_fits") == 0
+                assert _int(row, "n_pls_moment_cuda_device_final_fits") == 1
+        else:
+            assert "build/dev-release" in row["library_path"], row["library_path"]
+            assert _bool(row, "cuda_pls_parallel_folds") is False
+            assert row["cuda_pls_min_device_features"] == ""
+            assert _bool(row, "cuda_pls_many_batched") is False
+            assert _int(row, "n_pls_moment_host_cv_fits") == 4
+            assert _int(row, "n_pls_moment_cuda_device_cv_fits") == 0
+            assert _int(row, "n_pls_moment_cuda_parallel_fold_jobs") == 0
+            if score_only:
+                assert _int(row, "n_pls_moment_final_fits") == 0
+                assert _int(row, "n_pls_moment_host_final_fits") == 0
+            else:
+                assert _int(row, "n_pls_moment_final_fits") == 1
+                assert _int(row, "n_pls_moment_host_final_fits") == 1
+                assert _int(row, "n_pls_moment_cuda_device_final_fits") == 0
+
+        backends_by_shape.setdefault(shape, set()).add(backend)
+
+    for backends in backends_by_shape.values():
+        assert backends == expected_backends
+
+
 def _loads_json_without_duplicate_keys(text: str):
     def no_duplicate_object(pairs):
         seen = {}
@@ -294,6 +381,16 @@ def test_direct_moment_heads_cuda_smoke_artifact_covers_native_and_sklearn_repla
 def test_direct_moment_heads_cpu_artifact_covers_current_schema_and_replay():
     rows = _rows("direct_moment_heads_timing.csv")
     _assert_direct_moment_heads_rows(rows, expect_cuda_pls=False)
+
+
+def test_pls_cross_validate_cuda_smoke_artifact_routes_reference_abi_on_device():
+    rows = _rows("pls_cross_validate_timing_cuda_smoke.csv")
+    _assert_pls_cross_validate_rows(rows, expect_cuda_pls=True)
+
+
+def test_pls_cross_validate_cpu_artifact_covers_reference_abi_schema():
+    rows = _rows("pls_cross_validate_timing.csv")
+    _assert_pls_cross_validate_rows(rows, expect_cuda_pls=False)
 
 
 def test_moment_sweep_cuda_smoke_artifact_routes_exact_pls_cv_on_device():
