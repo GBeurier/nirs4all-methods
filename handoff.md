@@ -2414,3 +2414,29 @@ PLS cross-validate reference ABI artifact slice (2026-06-06):
   because the remaining work was limited to log/handoff updates.
 - Remaining true gap: this is still only the PLS CV reference ABI/timing hook,
   not the deferred fused/batched IKPLS-style many-chain executor.
+
+Force-moments CPU wide PLS route slice (2026-06-06):
+
+- Fixed `run_aom_chain_sweep` route selection so
+  `moment_policy="force_moments"` bypasses the CPU wide Ridge/PLS
+  materialization heuristics before trying admissible operator-moment routes.
+- The motivating case was PLS exact-CV AOM moment scoring: before this patch,
+  identity-only `force_moments` screens at `n=120, p=32`, `cv=4` were rejected
+  as `UNSUPPORTED` because `should_materialize_cpu_wide_pls()` fired before the
+  moment batch route. They now run as exact PLS moment score-batch jobs with
+  zero materialized candidates.
+- Added
+  `test_aom_pls_force_moments_bypasses_cpu_wide_materialization_heuristic`.
+- Validation:
+  - rebuilt `build/dev-release`, `build/cuda-on`, `build/omp-on` and
+    `build/blas-on` `n4m_c`.
+  - targeted force-moments + existing BLAS/OMP parity pytest:
+    `3 passed, 78 deselected`.
+  - manual dev-release sweep over `p=16,32,48,64,80,96`:
+    all passed with `n_materialized_candidates=0` and PLS score-batch jobs.
+  - manual dev/OMP/BLAS `p=96` smoke:
+    matching selected scores, zero materialized candidates.
+  - manual one-GPU CUDA `p=96` smoke:
+    zero materialized candidates and four CUDA PLS parallel-fold jobs.
+- Remaining true gap is unchanged: this broadens the forced moment screen
+  surface, but it is not the fused/batched IKPLS many-chain executor.

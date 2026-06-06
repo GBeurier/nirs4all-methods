@@ -1,5 +1,45 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - Force-moments bypasses CPU wide PLS materialization heuristic
+
+Purpose:
+
+- Make `moment_policy="force_moments"` mean "try the admissible
+  operator-moment route" even when the CPU wide-PLS heuristic would normally
+  materialize for speed.
+
+Changes:
+
+- In `run_aom_chain_sweep`, CPU wide Ridge/PLS materialization heuristics are
+  disabled under the explicit `force_moments` policy before route selection.
+- This unblocks exact-CV PLS AOM moment screens for wider strict-moment chains
+  on CPU. A previously rejected identity PLS screen at `n=120, p=32`,
+  `cv=4`, `pls_components=[1,2,3]` now stays on the PLS moment score-batch
+  route with zero materialized candidates.
+- Added
+  `test_aom_pls_force_moments_bypasses_cpu_wide_materialization_heuristic`.
+
+Validation:
+
+- Rebuilt `build/dev-release`, `build/cuda-on`, `build/omp-on` and
+  `build/blas-on` `n4m_c`.
+- Targeted pytest:
+  `3 passed, 78 deselected` for the new force-moments guard plus existing
+  BLAS/OMP score-parity guards.
+- Manual dev-release width sweep over `p=16,32,48,64,80,96` now returns
+  exact PLS moment score-batch rows with `n_materialized_candidates=0`.
+- Manual one-GPU CUDA smoke at `p=96` with
+  `CUDA_VISIBLE_DEVICES=0`, `cuda_pls_min_device_features=1` and
+  `cuda_pls_parallel_folds=True` reports four CUDA PLS fold jobs and zero
+  materialized candidates.
+- Manual dev/OMP/BLAS smoke at `p=96` reports matching selected scores and
+  zero materialized candidates.
+
+Follow-up:
+
+- This is a semantics/coverage fix for forced moment screens, not the full
+  fused many-chain IKPLS executor.
+
 ## 2026-06-06 - PLS cross-validate reference ABI artifacts
 
 Purpose:

@@ -2474,10 +2474,16 @@ void account_pls_fit_counters(AomSweepResult& out,
         static_cast<std::int32_t>(N4M_AOM_MOMENT_MATERIALIZED);
     if (allow_operator_moments && fold_status == N4M_OK) {
         const auto fold_rows = aom_fold_rows_from_ids(ids, actual_cv);
+        // In force_moments mode, performance heuristics must not force a
+        // materialized fallback before the admissible moment route is tried.
         const bool cpu_wide_ridge_materialized =
+            !force_operator_moments &&
             should_materialize_cpu_wide_ridge(X, fold_rows);
         const bool cpu_wide_pls_materialized =
-            use_pls_gcv_proxy ? false : should_materialize_cpu_wide_pls(X, fold_rows);
+            use_pls_gcv_proxy
+                ? false
+                : (!force_operator_moments &&
+                   should_materialize_cpu_wide_pls(X, fold_rows));
         const bool ridge_path =
             !cpu_wide_ridge_materialized &&
             can_use_operator_moment_ridge_path(
