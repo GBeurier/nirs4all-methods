@@ -1,5 +1,48 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - PLS moment lower-prefix batch recovery for public sweeps
+
+Purpose:
+
+- Keep public PLS exact-CV sweep paths on the shared host/CUDA prefix route
+  when the requested maximum component is rank-deficient but a lower requested
+  component remains valid.
+
+Changes:
+
+- `score_pls1_moment_sweep()` and `run_moment_sweep()` now mirror the
+  many-chain AOM score-only path: after a max-prefix failure they first try to
+  recover a lower requested prefix through `fit_pls1_moment_prefixes_for_folds`
+  across all folds, then only run fold-local fallback attempts for components
+  above that recovered prefix.
+- Added a small shared counter helper for fold-batch PLS prefix fits and
+  removed the now-unused per-job recovery helper.
+- The public score semantics are unchanged: recovered lower components keep
+  finite exact moment CV scores, failed later components stay `inf`, and no
+  materialized fold designs are introduced.
+- Extended the live one-GPU CUDA route test so degenerate `sweep_run()` and
+  `pls_cross_validate()` calls prove the recovered component-1 prefix uses
+  CUDA parallel-fold counters while only the failed higher component adds one
+  host fallback attempt.
+
+Validation:
+
+- `build/dev-release` `n4m_c` and `n4m_internal_tests`: PASS.
+- `build/cuda-on` `n4m_c`: PASS.
+- `./build/dev-release/cpp/tests/n4m_internal_tests`: PASS.
+- `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_moment_model_wrappers.py -q`:
+  `83 passed`.
+- `PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_aom_staged_campaign.py -q`:
+  `16 passed`.
+- `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python -m pytest bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides -q`:
+  `1 passed`.
+
+Follow-up:
+
+- This is a real exact-CV route hardening/perf slice for public sweeps and the
+  PLS CV reference hook. It is still not the full fused/batched IKPLS
+  many-chain/many-fold executor or the complete CUDA cartesian grinder.
+
 ## 2026-06-06 - AOM/moment inventory objective guard
 
 Purpose:

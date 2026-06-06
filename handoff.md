@@ -2721,3 +2721,35 @@ Screen/refit release-evidence refresh and completion audit slice (2026-06-06):
   many-chain/many-fold executor, broader arbitrary-chain moment coverage
   without materialization, and full fused CUDA sweep kernels for the complete
   cartesian.
+
+PLS moment lower-prefix batch recovery for public sweeps (2026-06-06):
+
+- Hardened the public exact PLS moment sweep paths after the method/facade
+  readiness audit. `score_pls1_moment_sweep()` and `run_moment_sweep()` now
+  keep a shared host/CUDA fold-batch route for lower requested PLS prefixes
+  when the maximum requested component is rank-deficient.
+- Behavior now matches the many-chain AOM score-only path more closely:
+  after a max-prefix failure, the code first calls the fold-batch prefix fitter
+  for the next lower requested prefix; only components above the recovered
+  prefix are retried fold-by-fold. Lower recovered components keep finite exact
+  CV scores, failed higher components remain `inf`, and no materialized fold
+  designs are introduced.
+- Added a shared PLS prefix-batch counter helper and removed the unused older
+  per-job recovery helper.
+- Extended the live one-GPU CUDA test so degenerate `sweep_run()` and
+  `pls_cross_validate()` calls prove the recovered component-1 prefix uses CUDA
+  parallel-fold counters (`2` device jobs in the smoke) and only the failed
+  higher component adds one host fallback attempt.
+- Validation:
+  - `build/dev-release` `n4m_c` and `n4m_internal_tests`: PASS.
+  - `build/cuda-on` `n4m_c`: PASS.
+  - `./build/dev-release/cpp/tests/n4m_internal_tests`: PASS.
+  - full dev-release `test_moment_model_wrappers.py`: `83 passed`.
+  - dev-release `test_aom_staged_campaign.py`: `16 passed`.
+  - one-GPU CUDA targeted wrapper test:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+- Remaining true gap is unchanged: this removes another avoidable fallback in
+  public exact PLS moment CV, but it is still not the fused/batched IKPLS
+  many-chain/many-fold executor, broader arbitrary-chain moment coverage, or
+  full fused CUDA cartesian kernel suite.
