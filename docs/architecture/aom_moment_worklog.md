@@ -8102,3 +8102,35 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
   - `PYTHONPATH=bindings/python/src /home/delete/.venv/bin/python -m
     py_compile bindings/python/tests/test_moment_model_wrappers.py`: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — PLS Many-Batched Batched Sign Scaling
+
+- Tightened another piece of the CUDA PLS many-batched component loop in
+  `cpp/src/core/cuda_dispatch.cpp`.
+- The deterministic sign convention still uses per-job `cublasIdamax_v2` to
+  find the dominant loading, because this host-C++ + cuBLAS backend still has
+  no custom CUDA kernel.
+- After gathering the sign values, the code no longer applies one
+  `cublasDscal_v2` per negative job. When any job in the tile needs a sign
+  flip, it builds a `+1/-1` scale vector and applies all sign flips with one
+  column-wise `cublasDdgmm` into the reusable `douter` tile buffer.
+- The signed weight tile is copied to the component-major `W` output tile
+  before `douter` is reused for the later C-deflation vector, preserving the
+  host output layout introduced by the W/P tile-storage change.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src
+    N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python
+    -m pytest
+    bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides
+    -q`: `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2` and
+    `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - manual 32-chain / 128 exact-CV PLS smoke: many-batched and legacy selected
+    matching best CV scores (`0.18291980848004097` vs
+    `0.18291980848004116`) with expected counters; observed smoke timing was
+    `0.219937s` many-batched vs `0.229734s` legacy, which remains a route
+    smoke rather than a final benchmark claim.
