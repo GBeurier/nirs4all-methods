@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import csv
 import json
+import os
+import subprocess
+import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -1076,6 +1080,79 @@ def test_native_sweep_run_ridge_moment_scores_match_numpy_path():
         atol=1e-10,
     )
     assert res["n_ridge_moment_cv_fits"] == len(lambdas) * 4
+
+
+def test_native_sweep_run_blas_sse_scores_match_scalar_build():
+    root = Path(__file__).resolve().parents[3]
+    dev_lib = root / "build/dev-release/cpp/src/libn4m.so"
+    blas_lib = root / "build/blas-on/cpp/src/libn4m.so"
+    if not dev_lib.exists() or not blas_lib.exists():
+        pytest.skip("requires dev-release and blas-on libn4m builds")
+
+    code = r"""
+import json
+import numpy as np
+import n4m
+
+rng = np.random.default_rng(20260606)
+X = rng.standard_normal((200, 80))
+beta = np.zeros(X.shape[1])
+beta[[0, 7, 19, 45, 72]] = [0.7, -0.35, 0.25, -0.18, 0.12]
+y = X @ beta + 0.03 * rng.standard_normal(X.shape[0])
+folds = np.arange(X.shape[0], dtype=np.int32) % 4
+
+res = n4m.sweep_run(
+    X,
+    y,
+    cv=4,
+    fold_ids=folds,
+    ridge_lambdas=[0.001, 0.01, 0.1, 1.0, 10.0],
+    pls_components=[1, 2, 4],
+    heads=("ridge", "pls"),
+    center_x=False,
+    center_y=False,
+    scale_x=False,
+    score_only=True,
+)
+print(json.dumps({
+    "candidate_scores": np.asarray(res["candidate_scores"], dtype=float).tolist(),
+    "selected_candidate_id": int(res["selected_candidate_id"]),
+    "selected_cv_rmse": float(res["selected_cv_rmse"]),
+    "selected_head_id": float(res["selected_head_id"]),
+    "selected_param": float(res["selected_param"]),
+}))
+"""
+
+    def run_with_lib(lib_path: Path) -> dict:
+        env = os.environ.copy()
+        env["N4M_LIB_PATH"] = str(lib_path)
+        env["PYTHONPATH"] = str(root / "bindings/python/src")
+        env["OPENBLAS_NUM_THREADS"] = "1"
+        out = subprocess.check_output(
+            [sys.executable, "-c", code],
+            cwd=root,
+            env=env,
+            text=True,
+        )
+        return json.loads(out)
+
+    scalar = run_with_lib(dev_lib)
+    blas = run_with_lib(blas_lib)
+
+    scalar_scores = np.asarray(scalar["candidate_scores"], dtype=float)
+    blas_scores = np.asarray(blas["candidate_scores"], dtype=float)
+    assert blas_scores.shape == scalar_scores.shape
+    np.testing.assert_allclose(blas_scores, scalar_scores, rtol=1e-10, atol=1e-10)
+    assert blas["selected_candidate_id"] == scalar["selected_candidate_id"]
+    assert blas["selected_head_id"] == pytest.approx(
+        scalar["selected_head_id"], rel=0.0, abs=1e-12
+    )
+    assert blas["selected_param"] == pytest.approx(
+        scalar["selected_param"], rel=0.0, abs=1e-12
+    )
+    assert blas["selected_cv_rmse"] == pytest.approx(
+        scalar["selected_cv_rmse"], rel=1e-10, abs=1e-10
+    )
 
 
 def test_native_sweep_run_accepts_explicit_folds_multi_output_y():

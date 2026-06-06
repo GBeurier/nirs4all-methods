@@ -2066,4 +2066,6 @@ Moment SSE BLAS engine slice (2026-06-06):
   - dev-vs-BLAS two-process candidate-score comparison on `n=200, p=80`:
     same selected Ridge lambda (`1.0`), max absolute candidate-score delta
     `6.63e-15`.
+  - The dev-vs-BLAS candidate-score comparison is now pinned by
+    `test_native_sweep_run_blas_sse_scores_match_scalar_build`.
   - `git diff --check`: PASS.
