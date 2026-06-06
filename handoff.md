@@ -8,6 +8,28 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- PLS exact batch lower-prefix downgrade:
+  - `score_pls1_moment_sweeps_score_only` now keeps a shared batch/GPU route
+    after a maximum-component prefix failure when a lower requested PLS prefix
+    is still valid across all chain/fold jobs.
+  - The path first retries lower requested prefixes as one grouped
+    `fit_pls1_moment_prefixes_for_folds` job. Recovered lower components are
+    scored from that batch, preserving many-batched / parallel-fold CUDA
+    counters when those routes are active.
+  - Components above the recovered grouped prefix are not blindly marked
+    failed. They continue through the exact per-job fallback, so healthy
+    chains/folds can still keep higher components finite while rank-deficient
+    jobs mark only the failing components `inf`.
+  - This is another step toward the 200k-chain PLS grinder: a late
+    rank-deficient component no longer forces the whole screen down to scalar
+    per-job fits for lower prefixes.
+  - Validation so far: dev internal tests passed; targeted dev wrapper checks
+    passed (`8 passed`); CUDA `n4m_c`/`n4m_internal_tests` build and internal
+    tests passed; targeted one-GPU CUDA wrapper checks passed (`6 passed`);
+    the live CUDA many-batched guard now covers the downgraded rank-deficient
+    batch route; full dev-release `test_moment_model_wrappers.py` passed
+    (`80 passed`); `py_compile` and `git diff --check` passed.
+
 - PLS exact single-chain fallback prefix recovery:
   - `run_moment_sweep` and the internal `score_pls1_moment_sweep` no longer
     have to abandon the exact moment route just because the requested maximum

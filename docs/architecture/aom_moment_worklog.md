@@ -7210,3 +7210,34 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     `80 passed`.
   - py_compile on `test_moment_model_wrappers.py`: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — PLS Exact Batch Lower-Prefix Downgrade Slice
+
+- Improved the score-only AOM PLS batch path when a maximum requested component
+  prefix fails. Instead of immediately scalarizing every chain/fold job, the
+  batch scorer now retries lower requested prefixes through the shared
+  `fit_pls1_moment_prefixes_for_folds` route.
+- If a lower prefix succeeds globally, lower components are scored from that
+  grouped batch and keep the existing CUDA route telemetry, including the
+  many-batched counters. Components above the recovered grouped prefix still
+  run through exact per-job fallback, so healthy chains can keep higher
+  components finite while rank-deficient chains mark only their failed
+  components `inf`.
+- This is score-preserving relative to the previous exact fallback while
+  reducing the amount of scalar fallback work after late-component failures.
+  It is a practical step toward the full cartesian PLS grinder because a single
+  bad high component no longer destroys batching for all lower prefixes.
+- Validation:
+  - dev `n4m_c` / `n4m_internal_tests` build and internal tests: PASS.
+  - targeted dev wrapper checks:
+    `8 passed, 72 deselected`.
+  - CUDA `n4m_c` / `n4m_internal_tests` build and internal tests: PASS.
+  - targeted one-GPU CUDA wrapper checks:
+    `6 passed, 74 deselected`.
+  - live CUDA many-batched guard now asserts the rank-deficient downgraded
+    batch uses one many-batched prefix batch before host fallback handles the
+    failing higher component.
+  - full dev wrapper:
+    `80 passed`.
+  - py_compile on `test_moment_model_wrappers.py`: PASS.
+  - `git diff --check`: PASS.
