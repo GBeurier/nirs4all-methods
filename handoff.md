@@ -2345,3 +2345,20 @@ CUDA PLS scheduler precedence slice (2026-06-06):
     `1 passed, 76 deselected`.
   - py_compile on `test_moment_model_wrappers.py`: PASS.
   - `git diff --check`: PASS.
+
+Staged comparator PLS score-mode slice (2026-06-06):
+
+- Added `pls_score_mode` to `compare_aom_staged_variants.py` config keys and
+  labels, matching the staged real-cohort CSV field order emitted by the runner.
+  Exact-CV (`cv`) and proxy (`gcv_proxy`) campaign CSV rows now summarize as
+  separate variants instead of collapsing behind the same plan/head/budget key.
+- Added `test_staged_variant_comparator_distinguishes_pls_score_mode`, which
+  also guards the no dataset-name/source routing invariant by proving multiple
+  `cv` datasets group together while identity tokens stay out of `config_key`.
+- Validation:
+  - focused comparator tests:
+    `4 passed, 18 deselected`.
+  - full benchmark tool tests:
+    `22 passed`.
+  - py_compile on touched Python files: PASS.
+  - `git diff --check`: PASS.

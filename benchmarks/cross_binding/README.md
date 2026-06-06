@@ -761,8 +761,10 @@ Raw/Opt reference per dataset.
 
 Use `compare_aom_staged_variants.py` to compare multiple staged campaign CSVs
 against each other before going back to the external oracles. It groups rows by
-campaign configuration columns (`plan`, `stages_json`, heads, budget, property
-filters and CUDA knobs), not by dataset identity. Dataset keys are used only for
+campaign configuration columns (`plan`, `stages_json`, heads, budget, scoring
+knobs like `pls_score_mode`, property filters and CUDA knobs), not by dataset
+identity. Exact-CV (`cv`) and proxy (`gcv_proxy`) screens therefore stay in
+separate variants and are labeled accordingly. Dataset keys are used only for
 offline paired score comparisons:
 
 ```bash
