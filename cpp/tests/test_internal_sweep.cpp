@@ -246,6 +246,34 @@ void test_pls1_moment_batch_fallback_reuses_recovered_prefixes() {
     SWEEP_CHECK(std::isinf(degenerate.candidate_scores[7]));
 }
 
+void test_pls1_moment_single_fallback_recovers_prefix() {
+    ::n4m::core::Context ctx;
+    ::n4m::core::Config cfg;
+
+    n4m_matrix_view_t X = make_view(kDegenerateX, kN, kP);
+    n4m_matrix_view_t Y = make_view(kDegenerateY, kN, 1);
+    const std::int32_t comps[2] = {1, 2};
+
+    ::n4m::core::MomentStats all_stats;
+    SWEEP_CHECK(::n4m::core::compute_moments(ctx, X, Y, all_stats) == N4M_OK);
+    std::vector<::n4m::core::MomentStats> heldout;
+    build_heldout_stats(ctx, X, Y, heldout);
+
+    ::n4m::core::SweepResult scored;
+    SWEEP_CHECK(::n4m::core::score_pls1_moment_sweep(
+                    ctx, cfg, all_stats, heldout, comps, 2, scored) == N4M_OK);
+
+    SWEEP_CHECK(scored.n_candidates == 2);
+    SWEEP_CHECK(scored.n_pls_moment_cv_fits == kCv + 1);
+    SWEEP_CHECK(scored.n_pls_moment_host_cv_fits == kCv + 1);
+    SWEEP_CHECK(scored.n_pls_materialized_cv_fits == 0);
+    SWEEP_CHECK(std::isfinite(scored.candidate_scores[3]));
+    SWEEP_CHECK(std::isinf(scored.candidate_scores[7]));
+    SWEEP_CHECK(scored.selected_candidate_id == 0);
+    SWEEP_CHECK(scored.selected_head_id == 1);
+    SWEEP_CHECK(std::fabs(scored.selected_param - 1.0) <= kTol);
+}
+
 void test_ridge_moment_batch_scores_match_single_chain() {
     ::n4m::core::Context ctx;
     ::n4m::core::Config cfg;
@@ -358,6 +386,7 @@ int run_internal_sweep_tests() {
     test_pls1_moment_scores_match_materialized_cv(true);
     test_pls1_moment_batch_scores_match_single_chain();
     test_pls1_moment_batch_fallback_reuses_recovered_prefixes();
+    test_pls1_moment_single_fallback_recovers_prefix();
     test_ridge_moment_batch_scores_match_single_chain();
     test_pls1_gcv_moment_batch_scores_match_single_chain();
     if (g_sweep_failures == 0) {
