@@ -6934,4 +6934,6 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
   - `test_aom_benchmark_tools.py` on dev and BLAS libs: `20 passed` each.
   - dev-vs-BLAS candidate-score comparison on `n=200, p=80`: same selected
     lambda and max absolute score delta `6.63e-15`.
+  - Added `test_native_sweep_run_blas_sse_scores_match_scalar_build` so the
+    dev-vs-BLAS candidate-score comparison is a permanent pytest guard.
   - `git diff --check`: PASS.
