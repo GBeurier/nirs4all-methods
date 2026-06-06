@@ -2920,3 +2920,41 @@ Stop snapshot for next continuation (2026-06-06):
      target.
   3. If not attacking engine work, run a deliberate benchmark campaign rather
      than adding more release-evidence smokes.
+
+PLS many-batched cuBLAS scalar batching (2026-06-06):
+
+- After the stop snapshot, resumed the engine/performance gap rather than API
+  wiring. A Claude Code MCP agent was started in `opus`/`max` mode for a review
+  of the same hotspot, but it only reached the inspection phase; the session was
+  interrupted before edits to avoid concurrent changes.
+- Implemented a bounded C++/cuBLAS improvement in
+  `cpp/src/core/cuda_dispatch.cpp`:
+  - added reusable per-tile device scalar buffers (`dscale`, `dnorm_sq`,
+    `dtt`, `dqdot`) to the many-batched PLS workspace;
+  - replaced per-job `nrm2` and the two per-job dot-products with
+    `cublasDgemmStridedBatched` reductions over the whole tile;
+  - replaced per-job copy/scale sequences for normalized weights, PLS
+    loadings and C-deflation vectors with `cublasDdgmm` column scaling;
+  - kept sign normalization and W/P row-major storage copies per job for now,
+    because the repo's CUDA backend is host C++ + cuBLAS only and does not
+    compile custom `.cu` kernels.
+- Validation completed:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - `CUDA_VISIBLE_DEVICES=0 PYTHONPATH=bindings/python/src
+    N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so /home/delete/.venv/bin/python
+    -m pytest
+    bindings/python/tests/test_moment_model_wrappers.py::test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides
+    -q`: `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target
+    n4m_internal_tests -j2`: PASS.
+  - `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - Manual 32-chain synthetic PLS exact-CV smoke: many-batched and legacy had
+    matching best CV score (`0.3240250845461336` vs
+    `0.32402508454613355`); many-batched used `1` many-batched batch /
+    `128` jobs, legacy used `1` parallel-fold batch / `128` jobs.
+- Remaining true gap is narrower but still real: this reduces scalar cuBLAS
+  overhead in the current many-batched path, but it is not a fused
+  IKPLS/cartesian CUDA kernel executor and it does not broaden arbitrary-chain
+  moment coverage.

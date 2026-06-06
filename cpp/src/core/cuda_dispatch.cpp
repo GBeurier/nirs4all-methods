@@ -120,6 +120,10 @@ struct Pls1MomentBatchWorkspaceView {
     double* douter{nullptr};
     double* dW{nullptr};
     double* dP{nullptr};
+    double* dscale{nullptr};
+    double* dnorm_sq{nullptr};
+    double* dtt{nullptr};
+    double* dqdot{nullptr};
 };
 
 constexpr std::size_t kMaxParallelFoldStreams = 4;
@@ -210,6 +214,10 @@ public:
         douter_.ensure(n_jobs * p);
         dW_.ensure(n_jobs * p * max_components);
         dP_.ensure(n_jobs * p * max_components);
+        dscale_.ensure(n_jobs);
+        dnorm_sq_.ensure(n_jobs);
+        dtt_.ensure(n_jobs);
+        dqdot_.ensure(n_jobs);
         return {
             dC_.get(),
             ds_.get(),
@@ -219,6 +227,10 @@ public:
             douter_.get(),
             dW_.get(),
             dP_.get(),
+            dscale_.get(),
+            dnorm_sq_.get(),
+            dtt_.get(),
+            dqdot_.get(),
         };
     }
 
@@ -231,6 +243,10 @@ private:
     ReusableDeviceBuffer<double> douter_;
     ReusableDeviceBuffer<double> dW_;
     ReusableDeviceBuffer<double> dP_;
+    ReusableDeviceBuffer<double> dscale_;
+    ReusableDeviceBuffer<double> dnorm_sq_;
+    ReusableDeviceBuffer<double> dtt_;
+    ReusableDeviceBuffer<double> dqdot_;
 };
 
 Pls1MomentWorkspaceView workspace_view(DevicePtr<double>& dC,
@@ -388,6 +404,7 @@ bool pls_batch_elems_per_job(std::size_t p,
     if (!checked_add_mul(elems, p, p)) return false;                  // C
     if (!checked_add_mul(elems, 5, p)) return false;                  // s/w/Cw/p/outer
     if (!checked_add_mul(elems, 2 * max_components, p)) return false; // W/P
+    if (!checked_add_mul(elems, 4, 1)) return false;                  // scalar batch buffers
     *out = elems;
     return true;
 }
@@ -742,7 +759,13 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
     std::vector<double> hW;
     std::vector<double> hP;
     std::vector<double> current_yy;
-    std::vector<double> tt_by_job;
+    std::vector<double> h_norm_sq;
+    std::vector<double> h_scale;
+    std::vector<double> h_tt;
+    std::vector<double> h_qdot;
+    std::vector<double> h_q_load;
+    std::vector<double> h_inv_tt;
+    std::vector<double> h_sqrt_tt;
 
     const double one = 1.0;
     const double zero = 0.0;
@@ -762,7 +785,13 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
         hC.assign(batch * pp, 0.0);
         hs.assign(batch * p, 0.0);
         current_yy.assign(batch, 0.0);
-        tt_by_job.assign(batch, 0.0);
+        h_norm_sq.assign(batch, 0.0);
+        h_scale.assign(batch, 0.0);
+        h_tt.assign(batch, 0.0);
+        h_qdot.assign(batch, 0.0);
+        h_q_load.assign(batch, 0.0);
+        h_inv_tt.assign(batch, 0.0);
+        h_sqrt_tt.assign(batch, 0.0);
         for (std::size_t local = 0; local < batch; ++local) {
             const std::size_t job = begin + local;
             std::copy(C[job], C[job] + pp, hC.data() + local * pp);
@@ -783,33 +812,67 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     }
                     return 1;
                 }
+            }
 
-                double* const ds_j = workspace.ds + local * p;
-                double* const dw_j = workspace.dw + local * p;
-                check_cublas(
-                    cublasDcopy_v2(state().handle, pi, ds_j, 1, dw_j, 1),
-                    "cublasDcopy_v2");
-                double inv_yy = 1.0 / current_yy[local];
-                check_cublas(
-                    cublasDscal_v2(state().handle, pi, &inv_yy, dw_j, 1),
-                    "cublasDscal_v2");
+            check_cublas(
+                cublasDgemmStridedBatched(
+                    state().handle,
+                    CUBLAS_OP_T,
+                    CUBLAS_OP_N,
+                    1,
+                    1,
+                    pi,
+                    &one,
+                    workspace.ds,
+                    pi,
+                    stride_vec,
+                    workspace.ds,
+                    pi,
+                    stride_vec,
+                    &zero,
+                    workspace.dnorm_sq,
+                    1,
+                    1,
+                    batch_i),
+                "cublasDgemmStridedBatched(s norm)");
 
-                double w_norm = 0.0;
-                check_cublas(
-                    cublasDnrm2_v2(state().handle, pi, dw_j, 1, &w_norm),
-                    "cublasDnrm2_v2");
-                if (w_norm <= eps || !std::isfinite(w_norm)) {
+            copy_d2h(h_norm_sq.data(), workspace.dnorm_sq,
+                     h_norm_sq.size() * sizeof(double));
+            for (std::size_t local = 0; local < batch; ++local) {
+                const std::size_t job = begin + local;
+                double norm_sq = h_norm_sq[local];
+                if (norm_sq < 0.0 && norm_sq > -eps) {
+                    norm_sq = 0.0;
+                }
+                const double s_norm = std::sqrt(norm_sq);
+                if (s_norm <= eps || !std::isfinite(s_norm)) {
                     if (error != nullptr) {
                         *error = "CUDA PLS1 moment X weights vanished in "
                                  "batched job " + std::to_string(job);
                     }
                     return 1;
                 }
-                double inv_w_norm = 1.0 / (w_norm + eps);
-                check_cublas(
-                    cublasDscal_v2(state().handle, pi, &inv_w_norm, dw_j, 1),
-                    "cublasDscal_v2");
+                h_scale[local] = 1.0 / (s_norm + eps * current_yy[local]);
+            }
+            copy_h2d(workspace.dscale, h_scale.data(),
+                     h_scale.size() * sizeof(double));
+            check_cublas(
+                cublasDdgmm(
+                    state().handle,
+                    CUBLAS_SIDE_RIGHT,
+                    pi,
+                    batch_i,
+                    workspace.ds,
+                    pi,
+                    workspace.dscale,
+                    1,
+                    workspace.dw,
+                    pi),
+                "cublasDdgmm(s normalized weights)");
 
+            for (std::size_t local = 0; local < batch; ++local) {
+                const std::size_t job = begin + local;
+                double* const dw_j = workspace.dw + local * p;
                 int sign_idx = 0;
                 check_cublas(
                     cublasIdamax_v2(state().handle, pi, dw_j, 1, &sign_idx),
@@ -856,21 +919,56 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     batch_i),
                 "cublasDgemmStridedBatched(C*w)");
 
+            check_cublas(
+                cublasDgemmStridedBatched(
+                    state().handle,
+                    CUBLAS_OP_T,
+                    CUBLAS_OP_N,
+                    1,
+                    1,
+                    pi,
+                    &one,
+                    workspace.dw,
+                    pi,
+                    stride_vec,
+                    workspace.dcw,
+                    pi,
+                    stride_vec,
+                    &zero,
+                    workspace.dtt,
+                    1,
+                    1,
+                    batch_i),
+                "cublasDgemmStridedBatched(w*Cw)");
+            check_cublas(
+                cublasDgemmStridedBatched(
+                    state().handle,
+                    CUBLAS_OP_T,
+                    CUBLAS_OP_N,
+                    1,
+                    1,
+                    pi,
+                    &one,
+                    workspace.dw,
+                    pi,
+                    stride_vec,
+                    workspace.ds,
+                    pi,
+                    stride_vec,
+                    &zero,
+                    workspace.dqdot,
+                    1,
+                    1,
+                    batch_i),
+                "cublasDgemmStridedBatched(w*s)");
+            copy_d2h(h_tt.data(), workspace.dtt,
+                     h_tt.size() * sizeof(double));
+            copy_d2h(h_qdot.data(), workspace.dqdot,
+                     h_qdot.size() * sizeof(double));
+
             for (std::size_t local = 0; local < batch; ++local) {
                 const std::size_t job = begin + local;
-                double* const ds_j = workspace.ds + local * p;
-                double* const dw_j = workspace.dw + local * p;
-                double* const dcw_j = workspace.dcw + local * p;
-                double* const dp_j = workspace.dp_load + local * p;
-                double* const douter_j = workspace.douter + local * p;
-                double* const dW_j = workspace.dW + local * pa;
-                double* const dP_j = workspace.dP + local * pa;
-
-                double tt = 0.0;
-                check_cublas(
-                    cublasDdot_v2(state().handle, pi, dw_j, 1,
-                                  dcw_j, 1, &tt),
-                    "cublasDdot_v2");
+                const double tt = h_tt[local];
                 if (tt <= eps || !std::isfinite(tt)) {
                     if (error != nullptr) {
                         *error = "CUDA PLS1 moment X score vanished in "
@@ -878,14 +976,7 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     }
                     return 1;
                 }
-                tt_by_job[local] = tt;
-
-                double q_dot = 0.0;
-                check_cublas(
-                    cublasDdot_v2(state().handle, pi, dw_j, 1,
-                                  ds_j, 1, &q_dot),
-                    "cublasDdot_v2");
-                const double q_load = q_dot / tt;
+                const double q_load = h_qdot[local] / tt;
                 if (!std::isfinite(q_load)) {
                     if (error != nullptr) {
                         *error = "CUDA PLS1 moment Y loading is not finite in "
@@ -894,14 +985,51 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     return 1;
                 }
                 Q[job][comp] = q_load;
+                h_q_load[local] = q_load;
+                h_inv_tt[local] = 1.0 / tt;
+                h_sqrt_tt[local] = std::sqrt(tt);
+            }
 
-                check_cublas(
-                    cublasDcopy_v2(state().handle, pi, dcw_j, 1, dp_j, 1),
-                    "cublasDcopy_v2");
-                double inv_tt = 1.0 / tt;
-                check_cublas(
-                    cublasDscal_v2(state().handle, pi, &inv_tt, dp_j, 1),
-                    "cublasDscal_v2");
+            copy_h2d(workspace.dscale, h_inv_tt.data(),
+                     h_inv_tt.size() * sizeof(double));
+            check_cublas(
+                cublasDdgmm(
+                    state().handle,
+                    CUBLAS_SIDE_RIGHT,
+                    pi,
+                    batch_i,
+                    workspace.dcw,
+                    pi,
+                    workspace.dscale,
+                    1,
+                    workspace.dp_load,
+                    pi),
+                "cublasDdgmm(Cw loadings)");
+
+            copy_h2d(workspace.dscale, h_sqrt_tt.data(),
+                     h_sqrt_tt.size() * sizeof(double));
+            check_cublas(
+                cublasDdgmm(
+                    state().handle,
+                    CUBLAS_SIDE_RIGHT,
+                    pi,
+                    batch_i,
+                    workspace.dp_load,
+                    pi,
+                    workspace.dscale,
+                    1,
+                    workspace.douter,
+                    pi),
+                "cublasDdgmm(C deflation vector)");
+
+            for (std::size_t local = 0; local < batch; ++local) {
+                double* const ds_j = workspace.ds + local * p;
+                double* const dw_j = workspace.dw + local * p;
+                double* const dp_j = workspace.dp_load + local * p;
+                double* const dW_j = workspace.dW + local * pa;
+                double* const dP_j = workspace.dP + local * pa;
+                const double tt = h_tt[local];
+                const double q_load = h_q_load[local];
 
                 check_cublas(
                     cublasDcopy_v2(state().handle, pi, dw_j, 1,
@@ -911,14 +1039,6 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     cublasDcopy_v2(state().handle, pi, dp_j, 1,
                                    dP_j + comp, ai),
                     "cublasDcopy_v2");
-
-                check_cublas(
-                    cublasDcopy_v2(state().handle, pi, dp_j, 1, douter_j, 1),
-                    "cublasDcopy_v2");
-                double sqrt_tt = std::sqrt(tt);
-                check_cublas(
-                    cublasDscal_v2(state().handle, pi, &sqrt_tt, douter_j, 1),
-                    "cublasDscal_v2");
 
                 double score_alpha = -tt * q_load;
                 check_cublas(
