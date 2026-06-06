@@ -7180,3 +7180,33 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     `1 passed, 76 deselected`.
   - py_compile on `test_moment_model_wrappers.py`: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — PLS Exact Single-Chain Prefix Recovery Slice
+
+- Extended the exact PLS moment fallback strategy from score-only batches to
+  single-chain `run_moment_sweep` and the internal `score_pls1_moment_sweep`.
+  When the requested maximum component prefix fails, these paths now retry
+  smaller requested prefixes in descending order and reuse recovered lower
+  prefixes for fold-CV scoring.
+- The slice preserves the moment-only semantics: no transformed `X`
+  materialization is introduced for the recovered case, components above the
+  recovered prefix become `inf`, and lower recovered components keep exact
+  held-out moment SSE scoring.
+- Final PLS moment refits now fit the selected component prefix instead of the
+  largest component in the grid, so a selected lower component is not blocked by
+  a rejected higher component.
+- Added direct internal coverage for `score_pls1_moment_sweep` prefix recovery
+  and updated the public wrapper rank-deficient fallback test so
+  `n4m.sweep_run` and `n4m.pls_cross_validate` expect recovered moment fits
+  rather than materialized PLS fallback on the covered case.
+- Validation so far:
+  - dev and CUDA `n4m_c` / `n4m_internal_tests` builds: PASS.
+  - dev and CUDA internal tests: PASS.
+  - targeted dev wrapper checks:
+    `3 passed, 77 deselected`.
+  - targeted one-GPU CUDA wrapper checks:
+    `4 passed, 76 deselected`.
+  - full dev wrapper:
+    `80 passed`.
+  - py_compile on `test_moment_model_wrappers.py`: PASS.
+  - `git diff --check`: PASS.

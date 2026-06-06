@@ -140,8 +140,9 @@ def test_pls_moment_fallback_builds_fold_designs_on_demand():
         )
         assert got["candidate_scores"].shape == (2, 4)
         assert np.isfinite(got["candidate_scores"][0, 3])
-        assert got["n_pls_moment_cv_fits"] == 0
-        assert got["n_pls_materialized_cv_fits"] > 0
+        assert np.isinf(got["candidate_scores"][1, 3])
+        assert got["n_pls_moment_cv_fits"] > 0
+        assert got["n_pls_materialized_cv_fits"] == 0
 
     ref = n4m.pls_cross_validate(
         X,
@@ -153,7 +154,9 @@ def test_pls_moment_fallback_builds_fold_designs_on_demand():
     )
     assert ref["candidate_scores"].shape == (2, 4)
     assert np.isfinite(ref["candidate_scores"][0, 3])
-    assert ref["n_pls_materialized_cv_fits"] > 0
+    assert np.isinf(ref["candidate_scores"][1, 3])
+    assert ref["n_pls_moment_cv_fits"] > 0
+    assert ref["n_pls_materialized_cv_fits"] == 0
 
 
 def test_aom_pls_moment_batch_degenerate_components_do_not_abort_screen():

@@ -8,6 +8,29 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- PLS exact single-chain fallback prefix recovery:
+  - `run_moment_sweep` and the internal `score_pls1_moment_sweep` no longer
+    have to abandon the exact moment route just because the requested maximum
+    PLS component prefix is numerically/rank deficient. After a max-prefix
+    failure, they now try the largest still-needed requested prefix, descend
+    only when needed, and reuse recovered lower prefixes for exact fold-CV
+    scoring.
+  - Components above the recovered prefix are marked `inf`; smaller recovered
+    components keep their exact moment scores. `n4m.sweep_run` and
+    `n4m.pls_cross_validate` therefore avoid the old materialized fallback on
+    the covered rank-deficient case, while preserving train-CV semantics and
+    not introducing transformed `X` materialization.
+  - Final PLS moment refits now request only the selected component prefix
+    instead of the largest grid component, so a valid lower selected component
+    can still complete after a higher component was rejected during CV.
+  - No ABI or public-method surface changed. The recovery counters count actual
+    prefix-fit attempts; components not recovered remain failed/`inf`.
+  - Validation after this C++ fallback fix: rebuilt dev-release and CUDA
+    `n4m_c`/`n4m_internal_tests`; dev and CUDA internal tests passed; targeted
+    dev pytest passed (`3 passed`); targeted one-GPU CUDA pytest passed
+    (`4 passed`); full dev-release `test_moment_model_wrappers.py` passed
+    (`80 passed`); `py_compile` and `git diff --check` passed.
+
 - PLS exact batch fallback prefix reuse:
   - `score_pls1_moment_sweeps_score_only` no longer refits every requested
     component independently after a global batched prefix failure. The fallback
