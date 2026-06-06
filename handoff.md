@@ -8,6 +8,24 @@ This branch has a broad AOM/moment integration in `nirs4all-methods`.
 
 Completed and validated in the latest pass:
 
+- PLS exact batch fallback prefix reuse:
+  - `score_pls1_moment_sweeps_score_only` no longer refits every requested
+    component independently after a global batched prefix failure. The fallback
+    now tries the largest still-needed requested prefix per chain/fold job,
+    descends only if that prefix fails, and reuses every recovered lower prefix
+    for scoring.
+  - This preserves the exact fold-CV scores and the existing failure semantics:
+    a component that fails on any fold is marked `inf`, smaller recovered
+    prefixes stay finite, and no transformed `X` materialization is introduced.
+  - The fallback fit counters now count actual prefix-fit attempts, so healthy
+    jobs in a mixed healthy/degenerate batch fall back to one PLS fit per fold
+    instead of one fit per component per fold.
+  - Validation after this C++ fallback fix: rebuilt dev-release and CUDA
+    `n4m_c`/`n4m_internal_tests`; dev and CUDA internal tests passed; targeted
+    dev pytest passed (`3 passed`); targeted one-GPU CUDA pytest passed
+    (`4 passed`); full dev-release `test_moment_model_wrappers.py` passed
+    (`80 passed`).
+
 - Fixed-candidate CUDA option surface alignment:
   - `n4m.aom_chain_fixed_fit_run` and `NativeAOMFixedCandidateRegressor` now
     accept the same public PLS CUDA option names advertised by the AOM/moment

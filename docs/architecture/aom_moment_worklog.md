@@ -1,5 +1,37 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-06 - PLS exact batch fallback prefix reuse
+
+Purpose:
+
+- Reduce the cost of the robust PLS exact score-only fallback after a global
+  batched prefix fit fails on a rank-deficient late component.
+
+Changes:
+
+- `score_pls1_moment_sweeps_score_only` now builds a unique descending list of
+  requested component prefixes and, in the fallback path, tries only the largest
+  still-needed prefix for each chain/fold job before descending.
+- When a lower prefix is recovered, all requested components at or below that
+  prefix reuse the same `RidgeMomentFit` prefix vector. Components above the
+  recovered prefix are marked failed/`inf`, matching the previous exact-CV
+  fallback semantics.
+- Already-failed component candidates are not retried on later folds.
+- Counters now report actual fallback prefix-fit attempts. In mixed batches, a
+  healthy job whose max prefix succeeds after the global batch failed pays one
+  fit per fold rather than one fit per component per fold.
+- No ABI or public Python surface change.
+
+Validation:
+
+- Rebuilt dev-release `n4m_c` and `n4m_internal_tests`.
+- Rebuilt CUDA `n4m_c` and `n4m_internal_tests` with `CUDA_VISIBLE_DEVICES=0`.
+- Dev and CUDA `n4m_internal_tests` passed.
+- Targeted dev pytest over PLS fallback/reference degeneracy tests: `3 passed`.
+- Targeted one-GPU CUDA pytest over the same plus many-batched precedence:
+  `4 passed`.
+- Full dev-release `test_moment_model_wrappers.py`: `80 passed`.
+
 ## 2026-06-06 - Fixed-candidate CUDA option surface alignment
 
 Purpose:
