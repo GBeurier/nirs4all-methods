@@ -8024,3 +8024,31 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     the same best CV score to floating precision and used the expected route
     counters. The small smoke did not show a speed gain, so this is recorded as
     a synchronization-structure cleanup rather than a benchmark claim.
+
+## 2026-06-06 — PLS Many-Batched Score Deflation Batching
+
+- Batched the PLS score-vector deflation update in the same
+  `pls1_moment_components_many_batched_tiled` path.
+- The previous implementation still ran one `cublasDaxpy_v2` per job for
+  `s -= tt * q_load * p_load`. The updated path computes the per-job
+  `-tt*q_load` scale vector on host, uses `cublasDdgmm` to form all scaled
+  `p_load` columns into the reusable `dcw` tile buffer, then applies one
+  contiguous `cublasDaxpy_v2` over the tile, chunked only for cuBLAS int-range
+  safety.
+- This removes another component x job cuBLAS call from the current
+  host-C++ + cuBLAS many-batched engine while preserving exact PLS moment
+  scores.
+- Validation:
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_c -j2`:
+    PASS.
+  - live one-GPU CUDA wrapper route guard:
+    `test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides`:
+    `1 passed`.
+  - `/home/delete/.venv/bin/cmake --build build/cuda-on --target n4m_internal_tests -j2`
+    and `CUDA_VISIBLE_DEVICES=0 ./build/cuda-on/cpp/tests/n4m_internal_tests`:
+    PASS.
+  - manual 32-chain / 128 exact-CV PLS smoke: many-batched and legacy selected
+    the same best CV score to floating precision (`0.32402508454613366` vs
+    `0.32402508454613355`) with expected route counters. The observed smoke
+    timings were `0.249s` many-batched vs `0.313s` legacy; this remains a small
+    smoke, not a final benchmark claim.

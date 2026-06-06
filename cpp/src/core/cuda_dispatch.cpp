@@ -1035,7 +1035,43 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                 "cublasDdgmm(C deflation vector)");
 
             for (std::size_t local = 0; local < batch; ++local) {
-                double* const ds_j = workspace.ds + local * p;
+                h_scale[local] = -h_tt[local] * h_q_load[local];
+            }
+            copy_h2d(workspace.dscale, h_scale.data(),
+                     h_scale.size() * sizeof(double));
+            check_cublas(
+                cublasDdgmm(
+                    state().handle,
+                    CUBLAS_SIDE_RIGHT,
+                    pi,
+                    batch_i,
+                    workspace.dp_load,
+                    pi,
+                    workspace.dscale,
+                    1,
+                    workspace.dcw,
+                    pi),
+                "cublasDdgmm(score deflation vector)");
+            std::size_t score_update_offset = 0;
+            std::size_t score_update_remaining = batch * p;
+            while (score_update_remaining > 0) {
+                const std::size_t chunk =
+                    std::min<std::size_t>(
+                        score_update_remaining,
+                        static_cast<std::size_t>(
+                            std::numeric_limits<int>::max()));
+                const int chunk_i = static_cast<int>(chunk);
+                check_cublas(
+                    cublasDaxpy_v2(
+                        state().handle, chunk_i, &one,
+                        workspace.dcw + score_update_offset, 1,
+                        workspace.ds + score_update_offset, 1),
+                    "cublasDaxpy_v2(score deflation)");
+                score_update_offset += chunk;
+                score_update_remaining -= chunk;
+            }
+
+            for (std::size_t local = 0; local < batch; ++local) {
                 double* const dw_j = workspace.dw + local * p;
                 double* const dp_j = workspace.dp_load + local * p;
                 double* const dW_j = workspace.dW + local * pa;
@@ -1051,12 +1087,6 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     cublasDcopy_v2(state().handle, pi, dp_j, 1,
                                    dP_j + comp, ai),
                     "cublasDcopy_v2");
-
-                double score_alpha = -tt * q_load;
-                check_cublas(
-                    cublasDaxpy_v2(state().handle, pi, &score_alpha,
-                                   dp_j, 1, ds_j, 1),
-                    "cublasDaxpy_v2");
 
                 current_yy[local] -= tt * q_load * q_load;
                 if (current_yy[local] < 0.0 &&
