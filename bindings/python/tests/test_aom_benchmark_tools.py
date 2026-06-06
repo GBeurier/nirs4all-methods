@@ -1822,6 +1822,95 @@ def test_staged_variant_comparator_groups_custom_skips_with_custom_ok(tmp_path):
     assert json.loads(rows[0]["config_key"])["plan"] == "custom"
 
 
+def test_staged_variant_comparator_distinguishes_pls_score_mode(tmp_path):
+    compare = _load_script(
+        "compare_aom_staged_variants",
+        "benchmarks/cross_binding/compare_aom_staged_variants.py",
+    )
+
+    # Three rows identical in every campaign config column except
+    # ``pls_score_mode``: two exact-CV (``cv``) rows on different datasets and
+    # one proxy (``gcv_proxy``) row. Exact-vs-proxy must NOT collapse into one
+    # variant, and dataset identity/source/name must never enter the config key.
+    path = _write_csv(tmp_path / "score_modes.csv", [
+        {
+            "database_name": "DB",
+            "dataset": "alpha",
+            "dataset_id": "secret-alpha",
+            "source_name": "cohort-alpha",
+            "status": "ok",
+            "plan": "compact",
+            "heads": "ridge,pls",
+            "max_chains": "12",
+            "moment_policy": "auto",
+            "pls_score_mode": "cv",
+            "rmsep": "1.0",
+        },
+        {
+            "database_name": "DB",
+            "dataset": "beta",
+            "dataset_id": "secret-beta",
+            "source_name": "cohort-beta",
+            "status": "ok",
+            "plan": "compact",
+            "heads": "ridge,pls",
+            "max_chains": "12",
+            "moment_policy": "auto",
+            "pls_score_mode": "cv",
+            "rmsep": "1.2",
+        },
+        {
+            "database_name": "DB",
+            "dataset": "gamma",
+            "dataset_id": "secret-gamma",
+            "source_name": "cohort-gamma",
+            "status": "ok",
+            "plan": "compact",
+            "heads": "ridge,pls",
+            "max_chains": "12",
+            "moment_policy": "auto",
+            "pls_score_mode": "gcv_proxy",
+            "rmsep": "0.9",
+        },
+    ])
+
+    records = compare.load_input_rows([f"trial={path}"])
+    rows = compare.summarize_variant_groups(records, score_column="rmsep")
+
+    by_mode = {}
+    for row in rows:
+        config = json.loads(row["config_key"])
+        by_mode[config["pls_score_mode"]] = row
+
+    # cv and gcv_proxy resolve to two distinct variants; same plan does not merge.
+    assert set(by_mode) == {"cv", "gcv_proxy"}
+    assert len(rows) == 2
+
+    cv_row = by_mode["cv"]
+    proxy_row = by_mode["gcv_proxy"]
+    assert cv_row["variant_id"] != proxy_row["variant_id"]
+
+    # Two different cv datasets collapse into one variant: grouping is config-only.
+    assert cv_row["n_rows"] == 2
+    assert cv_row["n_ok"] == 2
+    assert proxy_row["n_rows"] == 1
+    assert proxy_row["n_ok"] == 1
+
+    # Labels disambiguate the score mode so summaries are not ambiguous.
+    assert "pls_score_mode=cv" in cv_row["variant_label"]
+    assert "pls_score_mode=gcv_proxy" in proxy_row["variant_label"]
+
+    # No dataset-name/source routing: identity tokens never enter the config key.
+    for row in rows:
+        assert "alpha" not in row["config_key"]
+        assert "beta" not in row["config_key"]
+        assert "gamma" not in row["config_key"]
+        assert "secret" not in row["config_key"]
+        assert "source_name" not in row["config_key"]
+        assert "cohort-" not in row["config_key"]
+        assert compare.config_uses_only_campaign_columns(row["config_key"])
+
+
 def test_rank_audit_summarizer_reads_diagnostics_and_writes_summary(tmp_path, monkeypatch):
     """summarize_aom_rank_audit reads diagnostics JSON files with audit payloads.
 

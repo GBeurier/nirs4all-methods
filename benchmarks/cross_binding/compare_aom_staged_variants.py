@@ -33,6 +33,7 @@ CONFIG_COLUMNS = (
     "refit_top_k",
     "refit_per_head_top_k",
     "moment_policy",
+    "pls_score_mode",
     "split_head_scoring",
     "max_train_samples",
     "max_features",
@@ -191,6 +192,9 @@ def variant_label(config: dict[str, object]) -> str:
     max_chains = config.get("max_chains")
     if max_chains:
         parts.append("max_chains=" + str(max_chains))
+    pls_score_mode = config.get("pls_score_mode")
+    if pls_score_mode:
+        parts.append("pls_score_mode=" + str(pls_score_mode))
     return " | ".join(parts)
 
 

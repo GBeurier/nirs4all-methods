@@ -7366,3 +7366,21 @@ Follow-up AOM Ridge-PLS solve-count telemetry (2026-06-06):
     `16 passed`.
   - py_compile on touched benchmark scripts/tests: PASS.
   - `git diff --check`: PASS.
+
+## 2026-06-06 — Staged Comparator PLS Score-Mode Slice
+
+- Added `pls_score_mode` to `compare_aom_staged_variants.py` campaign config
+  keys and variant labels, so exact-CV (`cv`) and proxy (`gcv_proxy`) PLS
+  staged campaign rows stay in separate summary variants.
+- Added a comparator regression test that keeps two `cv` rows on different
+  datasets grouped together while separating the `gcv_proxy` row, and asserts
+  dataset identity/source/name tokens are not present in the config key.
+- Updated the cross-binding benchmark README to document that score-mode knobs
+  participate in variant grouping.
+- Validation:
+  - focused staged comparator tests:
+    `4 passed, 18 deselected`.
+  - full benchmark tool tests:
+    `22 passed`.
+  - py_compile on touched Python files: PASS.
+  - `git diff --check`: PASS.
