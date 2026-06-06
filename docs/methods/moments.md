@@ -90,6 +90,7 @@ The preconfigured AOM/moment screen-refit estimators are also re-exported from
 
 - `NativeAOMMomentScreenRefitRegressor`
 - `NativeAOMMomentPLSScreenRefitRegressor`
+- `NativeAOMMomentPLSExactScreenRefitRegressor`
 - `NativeAOMMomentRidgeScreenRefitRegressor`
 
 These are the reusable estimator counterparts to

@@ -2877,6 +2877,94 @@ class NativeAOMMomentPLSScreenRefitRegressor(NativeAOMScreenRefitRegressor):
         return report
 
 
+class NativeAOMMomentPLSExactScreenRefitRegressor(NativeAOMScreenRefitRegressor):
+    """Preset PLS AOM moment screen with exact-CV screen and refit.
+
+    This is the exact-screen counterpart to
+    ``NativeAOMMomentPLSScreenRefitRegressor``. It keeps the model head fixed
+    to PLS and uses the moment PLS exact-CV score path in both the broad screen
+    and retained-candidate refit, so it is the reusable preset for auditing
+    screen recall without the GCV proxy.
+    """
+
+    def __init__(
+        self,
+        chains=None,
+        *,
+        profile: str = "lab",
+        families: dict | None = None,
+        templates: Sequence[Sequence[str]] | None = None,
+        max_chains: int | None = None,
+        chain_chunk_size: int = 4096,
+        top_k: int = 50,
+        refit_top_k: int | None = None,
+        final_rank: int = 0,
+        cv: int = 5,
+        fold_ids=None,
+        pls_components: Sequence[int] | None = (1, 2, 3, 4, 6, 8),
+        center_x: bool | None = None,
+        scale_x: bool | None = None,
+        center_y: bool | None = None,
+        scale_y: bool | None = None,
+        moment_policy: str | int = "force_moments",
+        refit_moment_policy: str | int | None = None,
+        final_moment_policy: str | int | None = None,
+        chain_ordering: str = "prefix",
+        checkpoint_path=None,
+        resume: bool = True,
+        max_chunks_per_run: int | None = None,
+        backend_cuda_available: bool | None = None,
+        backend_min_cuda_product: int | None = None,
+        cuda_pls_parallel_folds: bool | None = None,
+        cuda_pls_min_device_features: int | None = None,
+        cuda_pls_many_batched: bool | None = None,
+        refit_sort_by: str | None = "refit_cv_rmse",
+        refit_execution: str = "auto",
+        refit_auto_max_extra_fraction: float = 1.0,
+    ) -> None:
+        super().__init__(
+            chains=chains,
+            profile=profile,
+            families=families,
+            templates=templates,
+            max_chains=max_chains,
+            chain_chunk_size=chain_chunk_size,
+            top_k=top_k,
+            refit_top_k=refit_top_k,
+            final_rank=final_rank,
+            cv=cv,
+            fold_ids=fold_ids,
+            ridge_lambdas=(),
+            pls_components=pls_components,
+            heads=("pls",),
+            center_x=center_x,
+            scale_x=scale_x,
+            center_y=center_y,
+            scale_y=scale_y,
+            moment_policy=moment_policy,
+            refit_moment_policy=refit_moment_policy,
+            final_moment_policy=final_moment_policy,
+            pls_score_mode="cv",
+            chain_ordering=chain_ordering,
+            checkpoint_path=checkpoint_path,
+            resume=resume,
+            max_chunks_per_run=max_chunks_per_run,
+            backend_cuda_available=backend_cuda_available,
+            backend_min_cuda_product=backend_min_cuda_product,
+            cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+            cuda_pls_min_device_features=cuda_pls_min_device_features,
+            cuda_pls_many_batched=cuda_pls_many_batched,
+            refit_sort_by=refit_sort_by,
+            refit_execution=refit_execution,
+            refit_auto_max_extra_fraction=refit_auto_max_extra_fraction,
+        )
+
+    def get_diagnostics(self) -> dict[str, object]:
+        report = super().get_diagnostics()
+        report["preset"] = "moment_pls_exact_cv_screen_refit"
+        return report
+
+
 class NativeAOMMomentRidgeScreenRefitRegressor(NativeAOMScreenRefitRegressor):
     """Preset Ridge AOM moment screen with exact-CV refit.
 
@@ -4174,6 +4262,7 @@ __all__ = [
     "NativeAOMFixedCandidateRegressor",
     "NativeAOMMomentScreenRefitRegressor",
     "NativeAOMMomentPLSScreenRefitRegressor",
+    "NativeAOMMomentPLSExactScreenRefitRegressor",
     "NativeAOMMomentRidgeScreenRefitRegressor",
     "NativeAOMOperatorPLSStackRegressor",
     "NativeAOMPLSRegressor",

@@ -17,6 +17,7 @@ from n4m.sklearn import (
     NativeAOMFixedCandidateRegressor,
     NativeAOMMomentScreenRefitRegressor,
     NativeAOMMomentPLSScreenRefitRegressor,
+    NativeAOMMomentPLSExactScreenRefitRegressor,
     NativeAOMMomentRidgeScreenRefitRegressor,
     NativeAOMOperatorPLSStackRegressor,
     NativeAOMPLSRegressor,
@@ -352,6 +353,10 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         is NativeAOMMomentPLSScreenRefitRegressor
     )
     assert (
+        moment.NativeAOMMomentPLSExactScreenRefitRegressor
+        is NativeAOMMomentPLSExactScreenRefitRegressor
+    )
+    assert (
         moment.NativeAOMMomentRidgeScreenRefitRegressor
         is NativeAOMMomentRidgeScreenRefitRegressor
     )
@@ -405,6 +410,7 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "aom_moment_screen_refit_campaign",
         "moment_mixed_screen_refit",
         "moment_pls_screen_refit",
+        "moment_pls_exact_screen_refit",
         "moment_ridge_screen_refit",
         "aom_screen_refit_candidate_pool",
         "aom_refit_execution_plan",
@@ -536,6 +542,9 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
     assert inventory_by_name["moment_pls_screen_refit"][
         "entry"
     ] == "NativeAOMMomentPLSScreenRefitRegressor"
+    assert inventory_by_name["moment_pls_exact_screen_refit"][
+        "entry"
+    ] == "NativeAOMMomentPLSExactScreenRefitRegressor"
     assert inventory_by_name["moment_ridge_screen_refit"][
         "entry"
     ] == "NativeAOMMomentRidgeScreenRefitRegressor"
@@ -3410,11 +3419,16 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
         aom.NativeAOMMomentScreenRefitRegressor
         is NativeAOMMomentScreenRefitRegressor
     )
+    assert (
+        aom.NativeAOMMomentPLSExactScreenRefitRegressor
+        is NativeAOMMomentPLSExactScreenRefitRegressor
+    )
     inventory = aom.available_methods()
     inventory_names = {row["name"] for row in inventory}
     assert {
         "moment_mixed_screen_refit",
         "moment_pls_screen_refit",
+        "moment_pls_exact_screen_refit",
         "moment_ridge_screen_refit",
         "moment_fast_screen_refit_campaign",
         "screen_refit_campaign",
@@ -3456,6 +3470,9 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
     assert inventory_by_name["moment_fast_screen_refit_campaign"][
         "entry"
     ] == "aom_moment_screen_refit_campaign"
+    assert inventory_by_name["moment_pls_exact_screen_refit"][
+        "entry"
+    ] == "NativeAOMMomentPLSExactScreenRefitRegressor"
     assert {
         "moment_policy",
         "pls_score_mode",
@@ -3597,6 +3614,29 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
     assert pls_diag["selected_head"] == "pls"
     assert pls_diag["n_pls_gcv_proxy_fits"] == len(chains)
     assert pls_diag["final_n_pls_gcv_proxy_fits"] == 0
+
+    pls_exact_model = NativeAOMMomentPLSExactScreenRefitRegressor(
+        chains=chains,
+        cv=4,
+        fold_ids=folds,
+        pls_components=(1,),
+        chain_chunk_size=2,
+        top_k=2,
+        refit_top_k=1,
+        scale_x=False,
+    ).fit(X, y)
+    assert hasattr(n4m, "NativeAOMMomentPLSExactScreenRefitRegressor")
+    assert pls_exact_model.heads == ("pls",)
+    assert pls_exact_model.ridge_lambdas == ()
+    assert pls_exact_model.pls_score_mode == "cv"
+    assert pls_exact_model.moment_policy == "force_moments"
+    assert pls_exact_model.predict(X).shape == y.shape
+    pls_exact_diag = pls_exact_model.get_diagnostics()
+    assert pls_exact_diag["preset"] == "moment_pls_exact_cv_screen_refit"
+    assert pls_exact_diag["selected_head"] == "pls"
+    assert pls_exact_diag["pls_score_mode"] == "cv"
+    assert pls_exact_diag["refit_pls_score_mode"] == "cv"
+    assert pls_exact_diag["n_pls_gcv_proxy_fits"] == 0
 
     ridge_model = NativeAOMMomentRidgeScreenRefitRegressor(
         chains=chains,
