@@ -124,6 +124,7 @@ struct Pls1MomentBatchWorkspaceView {
     double* dnorm_sq{nullptr};
     double* dtt{nullptr};
     double* dqdot{nullptr};
+    double* dsign{nullptr};
 };
 
 constexpr std::size_t kMaxParallelFoldStreams = 4;
@@ -218,6 +219,7 @@ public:
         dnorm_sq_.ensure(n_jobs);
         dtt_.ensure(n_jobs);
         dqdot_.ensure(n_jobs);
+        dsign_.ensure(n_jobs);
         return {
             dC_.get(),
             ds_.get(),
@@ -231,6 +233,7 @@ public:
             dnorm_sq_.get(),
             dtt_.get(),
             dqdot_.get(),
+            dsign_.get(),
         };
     }
 
@@ -247,6 +250,7 @@ private:
     ReusableDeviceBuffer<double> dnorm_sq_;
     ReusableDeviceBuffer<double> dtt_;
     ReusableDeviceBuffer<double> dqdot_;
+    ReusableDeviceBuffer<double> dsign_;
 };
 
 Pls1MomentWorkspaceView workspace_view(DevicePtr<double>& dC,
@@ -404,7 +408,7 @@ bool pls_batch_elems_per_job(std::size_t p,
     if (!checked_add_mul(elems, p, p)) return false;                  // C
     if (!checked_add_mul(elems, 5, p)) return false;                  // s/w/Cw/p/outer
     if (!checked_add_mul(elems, 2 * max_components, p)) return false; // W/P
-    if (!checked_add_mul(elems, 4, 1)) return false;                  // scalar batch buffers
+    if (!checked_add_mul(elems, 5, 1)) return false;                  // scalar batch buffers
     *out = elems;
     return true;
 }
@@ -766,6 +770,7 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
     std::vector<double> h_q_load;
     std::vector<double> h_inv_tt;
     std::vector<double> h_sqrt_tt;
+    std::vector<double> h_sign;
 
     const double one = 1.0;
     const double zero = 0.0;
@@ -792,6 +797,7 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
         h_q_load.assign(batch, 0.0);
         h_inv_tt.assign(batch, 0.0);
         h_sqrt_tt.assign(batch, 0.0);
+        h_sign.assign(batch, 0.0);
         for (std::size_t local = 0; local < batch; ++local) {
             const std::size_t job = begin + local;
             std::copy(C[job], C[job] + pp, hC.data() + local * pp);
@@ -884,12 +890,18 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
                     }
                     return 1;
                 }
-                double sign_value = 0.0;
-                copy_d2h_stream_sync(
-                    &sign_value,
-                    dw_j + static_cast<std::size_t>(sign_idx - 1),
-                    sizeof(double), nullptr);
-                if (sign_value < 0.0) {
+                check_cublas(
+                    cublasDcopy_v2(
+                        state().handle, 1,
+                        dw_j + static_cast<std::size_t>(sign_idx - 1), 1,
+                        workspace.dsign + local, 1),
+                    "cublasDcopy_v2(sign gather)");
+            }
+            copy_d2h(h_sign.data(), workspace.dsign,
+                     h_sign.size() * sizeof(double));
+            for (std::size_t local = 0; local < batch; ++local) {
+                double* const dw_j = workspace.dw + local * p;
+                if (h_sign[local] < 0.0) {
                     double neg_one = -1.0;
                     check_cublas(
                         cublasDscal_v2(state().handle, pi, &neg_one, dw_j, 1),
