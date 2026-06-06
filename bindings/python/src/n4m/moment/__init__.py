@@ -10,20 +10,27 @@ from __future__ import annotations
 from .. import python as _native
 from ..sklearn import (
     NativeAOMChainRidgePLSRegressor,
+    NativeAOMChainSweepRegressor,
     NativeAOMFixedCandidateRegressor,
     NativeAOMMomentPLSScreenRefitRegressor,
     NativeAOMMomentPLSExactScreenRefitRegressor,
     NativeAOMMomentRidgeScreenRefitRegressor,
     NativeAOMMomentScreenRefitRegressor,
+    NativeAOMOperatorPLSStackRegressor,
+    NativeAOMPLSRegressor,
     NativeAOMPLSSuperblockRegressor,
     NativeAOMRidgePLSSuperblockRegressor,
     NativeAOMRidgeActiveSuperblockRegressor,
+    NativeAOMRidgeBlenderRegressor,
     NativeAOMRidgeGlobalRegressor,
     NativeAOMRidgeMKLSuperblockRegressor,
     NativeAOMRidgeSuperblockRegressor,
+    NativeAOMRobustHPORegressor,
     NativeAOMSavgolFocusRegressor,
+    NativeAOMScreenRefitRegressor,
     NativeAOMStrictFamilyLiteRegressor,
     NativeAOMStagedChainCampaignRegressor,
+    NativeAOMSweepRegressor,
     NativeContinuumRegressionRegressor,
     NativeCPPLSRegressor,
     NativeECRRegressor,
@@ -35,6 +42,7 @@ from ..sklearn import (
     NativeRidgePLSRegressor,
     NativeRobustPLSRegressor,
     NativeWeightedPLSRegressor,
+    NativePOPPLSRegressor,
 )
 
 moments = _native.moments
@@ -42,6 +50,11 @@ moments_train_from_heldout = _native.moments_train_from_heldout
 moment_screen_backend_recommendation = _native.moment_screen_backend_recommendation
 sweep_run = _native.sweep_run
 pls_cross_validate = _native.pls_cross_validate
+aom_preprocess = _native.aom_preprocess
+aom_global_select = _native.aom_global_select
+aom_per_component_select = _native.aom_per_component_select
+aom_sweep_run = _native.aom_sweep_run
+aom_chain_sweep_run = _native.aom_chain_sweep_run
 aom_chain_screen_refit_campaign = _native.aom_chain_screen_refit_campaign
 aom_moment_screen_refit_campaign = _native.aom_moment_screen_refit_campaign
 aom_staged_chain_campaign = _native.aom_staged_chain_campaign
@@ -49,7 +62,10 @@ aom_screen_refit_candidate_pool = _native.aom_screen_refit_candidate_pool
 aom_refit_execution_plan = _native.aom_refit_execution_plan
 aom_refit_candidates = _native.aom_refit_candidates
 aom_chain_fixed_fit_run = _native.aom_chain_fixed_fit_run
+aom_robust_hpo = _native.aom_robust_hpo
+aom_ridge_blender = _native.aom_ridge_blender
 aom_chain_ridge_pls = _native.aom_chain_ridge_pls
+aom_operator_pls_stack = _native.aom_operator_pls_stack
 aom_pls_superblock = _native.aom_pls_superblock
 aom_ridge_active_superblock = _native.aom_ridge_active_superblock
 aom_ridge_global = _native.aom_ridge_global
@@ -116,6 +132,32 @@ _PLS_CV_OPTIONS = (
 )
 _MOMENT_SWEEP_ESTIMATOR_OPTIONS = tuple(
     option for option in _MOMENT_SWEEP_OPTIONS if option != "score_only"
+)
+_AOM_PREPROCESS_OPTIONS = (
+    "operators",
+    "gating_mode",
+)
+_AOM_SWEEP_OPTIONS = (
+    "chains",
+    "profile",
+    "cv",
+    "fold_ids",
+    "ridge_lambdas",
+    "pls_components",
+    "heads",
+    *_MODEL_SCALE_OPTIONS,
+    "moment_policy",
+    "pls_score_mode",
+    "score_only",
+    *_CUDA_PLS_OPTIONS,
+)
+_AOM_RIDGE_BLENDER_OPTIONS = (
+    "profile",
+    "cv",
+    "fold_ids",
+    "ridge_lambdas",
+    "regularizer",
+    *_MODEL_SCALE_OPTIONS,
 )
 _AOM_RIDGE_SUPERBLOCK_OPTIONS = (
     "operators",
@@ -200,6 +242,28 @@ _AOM_RIDGE_MKL_SUPERBLOCK_OPTIONS = (
     "block_scaling",
     "center_x",
     "center_y",
+)
+_AOM_OPERATOR_PLS_STACK_OPTIONS = (
+    "profile",
+    "cv",
+    "fold_ids",
+    "components",
+    "alphas",
+    "std_penalty",
+    "gap_penalty",
+    *_MODEL_SCALE_OPTIONS,
+)
+_AOM_ROBUST_HPO_OPTIONS = (
+    "profile",
+    "cv",
+    "heads",
+)
+_AOM_SELECTOR_OPTIONS = (
+    "operators",
+    "max_components",
+    "cv",
+    "fold_ids",
+    "scale_x",
 )
 _AOM_MOMENT_SCREEN_REFIT_OPTIONS = (
     "chains",
@@ -517,11 +581,93 @@ _METHOD_INVENTORY = (
         "cpu": True,
         "cuda": True,
         "catalog_id": "utilities.sweep",
-        "catalog_role": "catalog_binding",
+        "catalog_role": "campaign_helper",
         "wrapper_of": "sweep_run",
         "doc_path": "docs/methods/sweep_run.md",
         "config_options": _PLS_CV_OPTIONS,
         "notes": "ABI 1.22 exact PLS-only CV reference surface; currently score-equivalent to the PLS branch of sweep_run.",
+    },
+    {
+        "name": "aom_preprocess",
+        "entry": "aom_preprocess",
+        "kind": "function",
+        "role": "strict_operator_preprocess",
+        "heads": (),
+        "reuse": "transformed_operator_views",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.aom_preprocessing",
+        "catalog_role": "catalog_binding",
+        "doc_path": "docs/methods/aom_preprocess.md",
+        "config_options": _AOM_PREPROCESS_OPTIONS,
+        "notes": "Native strict-linear AOM preprocessing primitive for reusable operator views.",
+    },
+    {
+        "name": "aom_chain_sweep",
+        "entry": "aom_chain_sweep_run",
+        "kind": "function",
+        "role": "native_aom_candidate_screen",
+        "heads": ("ridge", "pls"),
+        "reuse": "candidate_table",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.aom_chain_sweep",
+        "catalog_role": "catalog_binding",
+        "doc_path": "docs/methods/aom_chain_sweep_run.md",
+        "config_options": _AOM_SWEEP_OPTIONS,
+        "notes": "Caller-provided strict-linear chain screen over Ridge/PLS grids with moment-policy route control.",
+    },
+    {
+        "name": "aom_chain_sweep_regressor",
+        "entry": "NativeAOMChainSweepRegressor",
+        "kind": "sklearn_estimator",
+        "role": "native_aom_candidate_screen",
+        "heads": ("ridge", "pls"),
+        "reuse": "selected_final_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.aom_chain_sweep",
+        "catalog_role": "sklearn_wrapper",
+        "wrapper_of": "aom_chain_sweep_run",
+        "doc_path": "docs/methods/aom_chain_sweep_run.md",
+        "config_options": tuple(
+            option for option in _AOM_SWEEP_OPTIONS if option != "score_only"
+        ),
+        "notes": "Reusable estimator over explicit strict-linear chain grids.",
+    },
+    {
+        "name": "aom_profile_sweep",
+        "entry": "aom_sweep_run",
+        "kind": "function",
+        "role": "native_aom_candidate_screen",
+        "heads": ("ridge", "pls"),
+        "reuse": "candidate_table",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.aom_sweep",
+        "catalog_role": "catalog_binding",
+        "doc_path": "docs/methods/aom_sweep_run.md",
+        "config_options": _AOM_SWEEP_OPTIONS,
+        "notes": "Built-in compact/wide strict-linear AOM profile screen over Ridge/PLS grids.",
+    },
+    {
+        "name": "aom_profile_sweep_regressor",
+        "entry": "NativeAOMSweepRegressor",
+        "kind": "sklearn_estimator",
+        "role": "native_aom_candidate_screen",
+        "heads": ("ridge", "pls"),
+        "reuse": "selected_final_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.aom_sweep",
+        "catalog_role": "sklearn_wrapper",
+        "wrapper_of": "aom_sweep_run",
+        "doc_path": "docs/methods/aom_sweep_run.md",
+        "config_options": tuple(
+            option for option in _AOM_SWEEP_OPTIONS
+            if option not in {"chains", "score_only"}
+        ),
+        "notes": "Reusable estimator over built-in strict-linear AOM profiles.",
     },
     {
         "name": "aom_moment_screen_refit_campaign",
@@ -603,6 +749,38 @@ _METHOD_INVENTORY = (
         "config_options": _STRICT_FAMILY_LITE_ESTIMATOR_OPTIONS,
         "preset_plan": "strict_family_focus",
         "notes": "Cost-safe strict-family staged AOM/moment preset over SavGol, Norris-Williams, finite-difference, Gaussian, FCK and Whittaker stages with small default refit budget.",
+    },
+    {
+        "name": "aom_screen_refit_regressor",
+        "entry": "NativeAOMScreenRefitRegressor",
+        "kind": "sklearn_estimator",
+        "role": "ultra_configurable_screen_refit_estimator",
+        "heads": ("ridge", "pls"),
+        "reuse": "selected_final_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.aom_chain_screen_refit",
+        "catalog_role": "sklearn_wrapper",
+        "wrapper_of": "aom_chain_screen_refit_campaign",
+        "doc_path": "docs/methods/aom_chain_sweep_run.md",
+        "config_options": _AOM_MOMENT_SCREEN_REFIT_OPTIONS,
+        "notes": "Fully configurable sklearn screen-refit estimator over strict AOM/moment chains.",
+    },
+    {
+        "name": "aom_ridge_blender",
+        "entry": "NativeAOMRidgeBlenderRegressor",
+        "kind": "sklearn_estimator",
+        "role": "linear_aom_diversity",
+        "heads": ("ridge",),
+        "reuse": "selected_blend_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.ridge_blender",
+        "catalog_role": "sklearn_wrapper",
+        "wrapper_of": "aom_ridge_blender",
+        "doc_path": "docs/methods/aom_ridge_blender.md",
+        "config_options": _AOM_RIDGE_BLENDER_OPTIONS,
+        "notes": "Strict-linear AOM Ridge OOF simplex blender with folded input coefficients.",
     },
     {
         "name": "aom_ridge_superblock",
@@ -701,6 +879,22 @@ _METHOD_INVENTORY = (
         "notes": "Select one strict-linear sequential AOM chain plus Ridge-PLS components/lambda by train CV, then fold coefficients back to raw input space.",
     },
     {
+        "name": "aom_operator_pls_stack",
+        "entry": "NativeAOMOperatorPLSStackRegressor",
+        "kind": "sklearn_estimator",
+        "role": "linear_aom_diversity",
+        "heads": ("pls", "ridge"),
+        "reuse": "selected_stack_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.operator_pls_stack",
+        "catalog_role": "sklearn_wrapper",
+        "wrapper_of": "aom_operator_pls_stack",
+        "doc_path": "docs/methods/aom_operator_pls_stack.md",
+        "config_options": _AOM_OPERATOR_PLS_STACK_OPTIONS,
+        "notes": "Strict-operator PLS1 score stack with Ridge head and folded input coefficients.",
+    },
+    {
         "name": "aom_ridge_mkl_superblock",
         "entry": "NativeAOMRidgeMKLSuperblockRegressor",
         "kind": "sklearn_estimator",
@@ -715,6 +909,54 @@ _METHOD_INVENTORY = (
         "doc_path": "docs/methods/aom_ridge_mkl_superblock.md",
         "config_options": _AOM_RIDGE_MKL_SUPERBLOCK_OPTIONS,
         "notes": "Concatenate strict-linear AOM operator views, learn train-only KTA block weights, and fit one Ridge head with folded input coefficients.",
+    },
+    {
+        "name": "aom_robust_hpo",
+        "entry": "NativeAOMRobustHPORegressor",
+        "kind": "sklearn_estimator",
+        "role": "preconfigured_aom_profile",
+        "heads": ("ridge", "pls"),
+        "reuse": "selected_profile_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.robust_hpo",
+        "catalog_role": "sklearn_wrapper",
+        "wrapper_of": "aom_robust_hpo",
+        "doc_path": "docs/methods/aom_robust_hpo.md",
+        "config_options": _AOM_ROBUST_HPO_OPTIONS,
+        "notes": "Compact/wide native strict-linear AOM product screen preset.",
+    },
+    {
+        "name": "aom_pls",
+        "entry": "NativeAOMPLSRegressor",
+        "kind": "sklearn_estimator",
+        "role": "legacy_aom_selector",
+        "heads": ("pls",),
+        "reuse": "selected_operator_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.aom_pls",
+        "catalog_role": "sklearn_wrapper",
+        "wrapper_of": "aom_global_select",
+        "doc_path": "docs/methods/aom_pls.md",
+        "config_options": _AOM_SELECTOR_OPTIONS,
+        "notes": "Global AOM PLS selector surface exposed from the moment facade for reuse.",
+    },
+    {
+        "name": "pop_pls",
+        "entry": "NativePOPPLSRegressor",
+        "kind": "sklearn_estimator",
+        "role": "legacy_aom_selector",
+        "heads": ("pls",),
+        "reuse": "per_component_operator_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.pop_pls",
+        "catalog_role": "sklearn_wrapper",
+        "wrapper_of": "aom_per_component_select",
+        "doc_path": "docs/methods/pop_pls.md",
+        "config_options": _AOM_SELECTOR_OPTIONS,
+        "notes": "Per-component POP-PLS selector surface exposed from the moment facade for reuse.",
     },
     {
         "name": "moment_mixed_screen_refit",
@@ -1349,20 +1591,27 @@ def available_methods() -> list[dict[str, object]]:
 
 __all__ = [
     "NativeAOMChainRidgePLSRegressor",
+    "NativeAOMChainSweepRegressor",
     "NativeAOMFixedCandidateRegressor",
     "NativeAOMMomentPLSScreenRefitRegressor",
     "NativeAOMMomentPLSExactScreenRefitRegressor",
     "NativeAOMMomentRidgeScreenRefitRegressor",
     "NativeAOMMomentScreenRefitRegressor",
+    "NativeAOMOperatorPLSStackRegressor",
+    "NativeAOMPLSRegressor",
     "NativeAOMPLSSuperblockRegressor",
     "NativeAOMRidgePLSSuperblockRegressor",
     "NativeAOMRidgeActiveSuperblockRegressor",
+    "NativeAOMRidgeBlenderRegressor",
     "NativeAOMRidgeGlobalRegressor",
     "NativeAOMRidgeMKLSuperblockRegressor",
     "NativeAOMRidgeSuperblockRegressor",
+    "NativeAOMRobustHPORegressor",
     "NativeAOMSavgolFocusRegressor",
+    "NativeAOMScreenRefitRegressor",
     "NativeAOMStrictFamilyLiteRegressor",
     "NativeAOMStagedChainCampaignRegressor",
+    "NativeAOMSweepRegressor",
     "NativeContinuumRegressionRegressor",
     "NativeCPPLSRegressor",
     "NativeECRRegressor",
@@ -1373,6 +1622,8 @@ __all__ = [
     "NativeRidgePLSRegressor",
     "NativeRobustPLSRegressor",
     "NativeWeightedPLSRegressor",
+    "NativePOPPLSRegressor",
+    "aom_chain_sweep_run",
     "aom_chain_screen_refit_campaign",
     "aom_chain_fixed_fit_run",
     "aom_chain_ridge_pls",
@@ -1383,19 +1634,26 @@ __all__ = [
     "aom_candidate_report_records",
     "aom_candidate_table",
     "aom_evaluate_candidates",
+    "aom_global_select",
     "aom_load_candidate_report",
     "aom_moment_screen_refit_campaign",
+    "aom_operator_pls_stack",
+    "aom_per_component_select",
     "aom_pls_superblock",
+    "aom_preprocess",
     "aom_refit_candidates",
     "aom_refit_execution_plan",
     "aom_ridge_active_superblock",
+    "aom_ridge_blender",
     "aom_ridge_global",
     "aom_ridge_mkl_superblock",
     "aom_ridge_pls_superblock",
     "aom_ridge_superblock",
+    "aom_robust_hpo",
     "aom_save_candidate_report",
     "aom_screen_refit_candidate_pool",
     "aom_staged_chain_campaign",
+    "aom_sweep_run",
     "available_methods",
     "build_aom_strict_chain_grid",
     "continuum_regression",

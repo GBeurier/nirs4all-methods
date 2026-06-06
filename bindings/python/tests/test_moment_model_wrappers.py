@@ -481,6 +481,11 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
     assert moment.moments is n4m.moments
     assert moment.sweep_run is n4m.sweep_run
     assert moment.pls_cross_validate is n4m.pls_cross_validate
+    assert moment.aom_preprocess is n4m.aom_preprocess
+    assert moment.aom_global_select is n4m.aom_global_select
+    assert moment.aom_per_component_select is n4m.aom_per_component_select
+    assert moment.aom_sweep_run is n4m.aom_sweep_run
+    assert moment.aom_chain_sweep_run is n4m.aom_chain_sweep_run
     assert (
         moment.aom_moment_screen_refit_campaign
         is n4m.aom_moment_screen_refit_campaign
@@ -489,6 +494,9 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
     assert moment.aom_refit_execution_plan is n4m.aom_refit_execution_plan
     assert moment.aom_refit_candidates is n4m.aom_refit_candidates
     assert moment.aom_chain_fixed_fit_run is n4m.aom_chain_fixed_fit_run
+    assert moment.aom_robust_hpo is n4m.aom_robust_hpo
+    assert moment.aom_ridge_blender is n4m.aom_ridge_blender
+    assert moment.aom_operator_pls_stack is n4m.aom_operator_pls_stack
     assert moment.build_aom_strict_chain_grid is n4m.build_aom_strict_chain_grid
     assert moment.iter_aom_strict_chain_grid is n4m.iter_aom_strict_chain_grid
     assert moment.decode_aom_chains is n4m.decode_aom_chains
@@ -518,7 +526,9 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         is n4m.moment_screen_backend_recommendation
     )
     assert moment.NativeMomentSweepRegressor is NativeMomentSweepRegressor
+    assert moment.NativeAOMChainSweepRegressor is NativeAOMChainSweepRegressor
     assert moment.NativeAOMFixedCandidateRegressor is NativeAOMFixedCandidateRegressor
+    assert moment.NativeAOMScreenRefitRegressor is NativeAOMScreenRefitRegressor
     assert (
         moment.NativeAOMMomentScreenRefitRegressor
         is NativeAOMMomentScreenRefitRegressor
@@ -535,6 +545,15 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         moment.NativeAOMMomentRidgeScreenRefitRegressor
         is NativeAOMMomentRidgeScreenRefitRegressor
     )
+    assert (
+        moment.NativeAOMOperatorPLSStackRegressor
+        is NativeAOMOperatorPLSStackRegressor
+    )
+    assert moment.NativeAOMPLSRegressor is NativeAOMPLSRegressor
+    assert moment.NativeAOMRidgeBlenderRegressor is NativeAOMRidgeBlenderRegressor
+    assert moment.NativeAOMRobustHPORegressor is NativeAOMRobustHPORegressor
+    assert moment.NativeAOMSweepRegressor is NativeAOMSweepRegressor
+    assert moment.NativePOPPLSRegressor is NativePOPPLSRegressor
     assert moment.NativeRidgeRegressor is NativeRidgeRegressor
     assert moment.NativePLSRegressor is NativePLSRegressor
     assert moment.NativePCRRegressor is NativePCRRegressor
@@ -562,6 +581,11 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "moment_sweep",
         "sweep_run",
         "pls_cross_validate",
+        "aom_preprocess",
+        "aom_chain_sweep",
+        "aom_chain_sweep_regressor",
+        "aom_profile_sweep",
+        "aom_profile_sweep_regressor",
         "ridge",
         "ridge_regressor",
         "pls",
@@ -583,10 +607,16 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "moment_stack",
         "moment_stack_regressor",
         "aom_moment_screen_refit_campaign",
+        "aom_screen_refit_regressor",
         "moment_mixed_screen_refit",
         "moment_pls_screen_refit",
         "moment_pls_exact_screen_refit",
         "moment_ridge_screen_refit",
+        "aom_ridge_blender",
+        "aom_operator_pls_stack",
+        "aom_robust_hpo",
+        "aom_pls",
+        "pop_pls",
         "aom_screen_refit_candidate_pool",
         "aom_refit_execution_plan",
         "aom_refit_candidates",
@@ -624,7 +654,23 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
         "score_only",
     }.issubset(inventory_by_name["pls_cross_validate"]["config_options"])
     assert inventory_by_name["pls_cross_validate"]["wrapper_of"] == "sweep_run"
+    assert inventory_by_name["pls_cross_validate"]["catalog_role"] == (
+        "campaign_helper"
+    )
     assert "score_only" not in inventory_by_name["moment_sweep"]["config_options"]
+    assert inventory_by_name["aom_preprocess"]["entry"] == "aom_preprocess"
+    assert inventory_by_name["aom_chain_sweep"]["entry"] == "aom_chain_sweep_run"
+    assert inventory_by_name["aom_chain_sweep_regressor"]["entry"] == (
+        "NativeAOMChainSweepRegressor"
+    )
+    assert inventory_by_name["aom_profile_sweep"]["entry"] == "aom_sweep_run"
+    assert inventory_by_name["aom_profile_sweep_regressor"]["entry"] == (
+        "NativeAOMSweepRegressor"
+    )
+    assert "score_only" in inventory_by_name["aom_chain_sweep"]["config_options"]
+    assert "score_only" not in inventory_by_name[
+        "aom_chain_sweep_regressor"
+    ]["config_options"]
     assert {
         "start",
         "stop",
@@ -723,6 +769,20 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
     assert inventory_by_name["moment_ridge_screen_refit"][
         "entry"
     ] == "NativeAOMMomentRidgeScreenRefitRegressor"
+    assert inventory_by_name["aom_screen_refit_regressor"][
+        "entry"
+    ] == "NativeAOMScreenRefitRegressor"
+    assert inventory_by_name["aom_ridge_blender"][
+        "entry"
+    ] == "NativeAOMRidgeBlenderRegressor"
+    assert inventory_by_name["aom_operator_pls_stack"][
+        "entry"
+    ] == "NativeAOMOperatorPLSStackRegressor"
+    assert inventory_by_name["aom_robust_hpo"][
+        "entry"
+    ] == "NativeAOMRobustHPORegressor"
+    assert inventory_by_name["aom_pls"]["entry"] == "NativeAOMPLSRegressor"
+    assert inventory_by_name["pop_pls"]["entry"] == "NativePOPPLSRegressor"
     assert inventory_by_name["aom_screen_refit_candidate_pool"][
         "entry"
     ] == "aom_screen_refit_candidate_pool"
