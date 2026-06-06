@@ -82,6 +82,19 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
                                           int64_t n, int64_t k,
                                           double* U, double* S, double* Vt);
 
+/* Full symmetric eigendecomposition of a row-major n x n matrix.
+ *
+ * This is an internal helper, not part of the public C ABI. On success:
+ *   - eigvals receives n eigenvalues.
+ *   - V receives the row-major n x n eigenvector matrix, with eigenvectors
+ *     stored as columns.
+ *
+ * The input A is read-only. Eigenpairs are not sorted; callers that use the
+ * full basis, such as Ridge path scans, do not need a particular order.
+ */
+n4m_status_t n4m_symmetric_eigh(const double* A, int64_t n, double* eigvals,
+                                double* V);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif

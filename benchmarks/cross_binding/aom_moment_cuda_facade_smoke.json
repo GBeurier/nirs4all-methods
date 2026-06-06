@@ -1,11 +1,17 @@
 {
-  "abi": "1.20.0",
+  "abi": "1.21.0",
   "aom": {
     "n_candidates": 2,
     "n_pls_materialized_cv_fits": 0,
     "n_pls_moment_cuda_device_cv_fits": 8,
     "n_pls_moment_host_cv_fits": 0,
     "selected_cv_rmse": 0.6677137410278924
+  },
+  "aom_pls": {
+    "n_operators": 2,
+    "prediction_replay_max_abs_error": 2.220446049250313e-15,
+    "selected_n_components": 1,
+    "selected_operator_index": 0
   },
   "aom_preprocess": {
     "mode": 1,
@@ -14,13 +20,33 @@
       0
     ]
   },
+  "aom_profile_sweep": {
+    "n_candidates": 12,
+    "n_pls_materialized_cv_fits": 0,
+    "n_pls_moment_cuda_device_cv_fits": 48,
+    "n_pls_moment_host_cv_fits": 0,
+    "selected_cv_rmse": 0.6245963952901408
+  },
   "cuda_available": 1,
   "cv": 4,
   "facades": {
     "aom_aliases_top_level": true,
+    "aom_diversity_aliases_top_level": true,
+    "aom_diversity_estimators_alias_top_level": true,
+    "aom_moment_audit_report_aliases_top_level": true,
+    "aom_moment_route_summary_alias_top_level": true,
+    "aom_moment_screen_refit_aliases_top_level": true,
+    "aom_moment_screen_refit_estimators_alias_top_level": true,
+    "aom_moment_winner_reuse_aliases_top_level": true,
+    "aom_pls_aliases_top_level": true,
     "aom_preprocess_aliases_top_level": true,
+    "aom_savgol_focus_estimator_aliases_top_level": true,
+    "aom_staged_campaign_aliases_top_level": true,
+    "aom_staged_campaign_estimator_aliases_top_level": true,
+    "aom_strict_family_lite_estimator_aliases_top_level": true,
     "moment_aliases_top_level": true,
-    "n4m_moments_stays_callable": true
+    "n4m_moments_stays_callable": true,
+    "pop_pls_aliases_top_level": true
   },
   "library_path": "build/cuda-on/cpp/src/libn4m.so",
   "moment": {
@@ -32,5 +58,104 @@
   },
   "n_features": 1024,
   "n_samples": 80,
-  "report_schema": "n4m.aom_moment_cuda_facade_smoke.v1"
+  "pop_pls": {
+    "n_operators": 2,
+    "prediction_replay_max_abs_error": 1.6653345369377348e-15,
+    "selected_n_components": 1,
+    "selected_operator_indices": [
+      0
+    ]
+  },
+  "report_schema": "n4m.aom_moment_cuda_facade_smoke.v1",
+  "savgol_focus_estimator": {
+    "n_pls_moment_cuda_device_cv_fits": 8,
+    "n_pls_moment_cuda_parallel_fold_batches": 1,
+    "n_pls_moment_cuda_parallel_fold_jobs": 8,
+    "n_pls_moment_host_cv_fits": 0,
+    "n_refit_candidates": 2,
+    "n_screen_pls_moment_cuda_device_cv_fits": 64,
+    "n_screen_pls_moment_host_cv_fits": 0,
+    "screen_complete": true,
+    "selected_cv_rmse": 0.635452989432206,
+    "selected_head": "pls",
+    "selected_model_config": {
+      "best_head": "pls",
+      "best_param": 1.0,
+      "best_refit_cv_rmse": 0.635452989432206,
+      "model_config_id": 0,
+      "n_refit_candidates": 2,
+      "n_remaining_stage_chunks_total": 0,
+      "n_screen_candidates_total": 8,
+      "n_stages": 4,
+      "scale_x": false,
+      "screen_complete": true
+    },
+    "selected_scale_x": false,
+    "selected_stage": "savgol_derivative",
+    "selection_uses_test_set": false,
+    "stage_names": [
+      "compact",
+      "savgol_smooth",
+      "savgol_derivative",
+      "savgol_combinations"
+    ]
+  },
+  "staged_estimator": {
+    "n_pls_moment_cuda_device_cv_fits": 8,
+    "n_pls_moment_cuda_parallel_fold_batches": 1,
+    "n_pls_moment_cuda_parallel_fold_jobs": 8,
+    "n_pls_moment_host_cv_fits": 0,
+    "n_refit_candidates": 2,
+    "n_screen_chunk_score_calls": 1,
+    "n_screen_split_head_chunks": 0,
+    "screen_complete": true,
+    "selected_cv_rmse": 0.6677137410278924,
+    "selected_head": "pls",
+    "selected_stage": "compact",
+    "selection_uses_test_set": false,
+    "split_head_scoring": "auto"
+  },
+  "staged_mixed_default_estimator": {
+    "n_refit_candidates": 3,
+    "n_ridge_moment_cv_fits": 8,
+    "n_ridge_moment_score_batch_calls": 1,
+    "n_ridge_moment_score_batch_jobs": 8,
+    "n_screen_chunk_score_calls": 2,
+    "n_screen_pls_moment_cuda_device_cv_fits": 8,
+    "n_screen_pls_moment_host_cv_fits": 0,
+    "n_screen_split_head_chunks": 1,
+    "screen_complete": true,
+    "selected_cv_rmse": 0.5052594228350522,
+    "selected_head": "ridge",
+    "selected_stage": "compact",
+    "selection_uses_test_set": false,
+    "split_head_scoring": "auto"
+  },
+  "strict_family_lite_estimator": {
+    "n_pls_moment_cuda_device_cv_fits": 4,
+    "n_pls_moment_cuda_parallel_fold_batches": 1,
+    "n_pls_moment_cuda_parallel_fold_jobs": 4,
+    "n_pls_moment_host_cv_fits": 0,
+    "n_refit_candidates": 1,
+    "n_screen_pls_moment_cuda_device_cv_fits": 36,
+    "n_screen_pls_moment_host_cv_fits": 0,
+    "screen_complete": true,
+    "selected_cv_rmse": 0.635452989432206,
+    "selected_head": "pls",
+    "selected_model_config": null,
+    "selected_scale_x": false,
+    "selected_stage": "savgol_derivative",
+    "selection_uses_test_set": false,
+    "stage_names": [
+      "compact",
+      "savgol_smooth",
+      "savgol_derivative",
+      "norris_williams",
+      "finite_difference",
+      "gaussian",
+      "fck",
+      "whittaker",
+      "strict_combinations"
+    ]
+  }
 }

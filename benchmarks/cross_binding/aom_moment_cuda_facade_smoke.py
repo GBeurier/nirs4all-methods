@@ -54,6 +54,7 @@ def main():
     assert moment.moments is n4m.moments
     assert moment.sweep_run is n4m.sweep_run
     assert moment.aom_moment_screen_refit_campaign is n4m.aom_moment_screen_refit_campaign
+    assert moment.aom_staged_chain_campaign is n4m.aom_staged_chain_campaign
     assert moment.aom_screen_refit_candidate_pool is n4m.aom_screen_refit_candidate_pool
     assert moment.aom_refit_candidates is n4m.aom_refit_candidates
     assert moment.aom_chain_fixed_fit_run is n4m.aom_chain_fixed_fit_run
@@ -80,9 +81,48 @@ def main():
         moment.NativeAOMMomentRidgeScreenRefitRegressor
         is n4m.NativeAOMMomentRidgeScreenRefitRegressor
     )
+    assert (
+        moment.NativeAOMStagedChainCampaignRegressor
+        is n4m.NativeAOMStagedChainCampaignRegressor
+    )
+    assert (
+        moment.NativeAOMSavgolFocusRegressor
+        is n4m.NativeAOMSavgolFocusRegressor
+    )
+    assert (
+        moment.NativeAOMStrictFamilyLiteRegressor
+        is n4m.NativeAOMStrictFamilyLiteRegressor
+    )
     assert aom.aom_preprocess is n4m.aom_preprocess
     assert aom.aom_chain_sweep_run is n4m.aom_chain_sweep_run
     assert aom.aom_moment_screen_refit_campaign is n4m.aom_moment_screen_refit_campaign
+    assert aom.aom_staged_chain_campaign is n4m.aom_staged_chain_campaign
+    assert (
+        aom.NativeAOMStagedChainCampaignRegressor
+        is n4m.NativeAOMStagedChainCampaignRegressor
+    )
+    assert (
+        aom.NativeAOMSavgolFocusRegressor
+        is n4m.NativeAOMSavgolFocusRegressor
+    )
+    assert (
+        aom.NativeAOMStrictFamilyLiteRegressor
+        is n4m.NativeAOMStrictFamilyLiteRegressor
+    )
+    assert aom.aom_pls is n4m.aom_pls
+    assert aom.pop_pls is n4m.pop_pls
+    assert aom.NativeAOMPLSRegressor is n4m.NativeAOMPLSRegressor
+    assert aom.NativePOPPLSRegressor is n4m.NativePOPPLSRegressor
+    assert aom.aom_ridge_blender is n4m.aom_ridge_blender
+    assert aom.aom_operator_pls_stack is n4m.aom_operator_pls_stack
+    assert (
+        aom.NativeAOMRidgeBlenderRegressor
+        is n4m.NativeAOMRidgeBlenderRegressor
+    )
+    assert (
+        aom.NativeAOMOperatorPLSStackRegressor
+        is n4m.NativeAOMOperatorPLSStackRegressor
+    )
 
     cuda_available = int(n4m.lib.n4m_backend_is_available(5))
     if cuda_available != 1:
@@ -112,6 +152,8 @@ def main():
         heads=("pls",),
         scale_x=False,
         score_only=True,
+        cuda_pls_parallel_folds=True,
+        cuda_pls_min_device_features=1,
     )
     chains = [[("identity", ())], [("savgol_smooth", (5, 2))]]
     aom_res = aom.aom_chain_sweep_run(
@@ -126,14 +168,263 @@ def main():
         scale_x=False,
         score_only=True,
         moment_policy="force_moments",
+        cuda_pls_parallel_folds=True,
+        cuda_pls_min_device_features=1,
+    )
+    aom_profile_res = aom.aom_sweep_run(
+        X,
+        y,
+        profile="compact",
+        cv=cv,
+        fold_ids=folds,
+        ridge_lambdas=[],
+        pls_components=[1],
+        heads=("pls",),
+        scale_x=False,
+        score_only=True,
+        moment_policy="force_moments",
+        cuda_pls_parallel_folds=True,
+        cuda_pls_min_device_features=1,
     )
 
     moment_device_cv = int(moment_res.get("n_pls_moment_cuda_device_cv_fits", 0))
     aom_device_cv = int(aom_res.get("n_pls_moment_cuda_device_cv_fits", 0))
+    aom_profile_device_cv = int(
+        aom_profile_res.get("n_pls_moment_cuda_device_cv_fits", 0)
+    )
     if moment_device_cv <= 0:
         raise RuntimeError("moment.sweep_run did not report CUDA device CV fits")
     if aom_device_cv <= 0:
         raise RuntimeError("aom.aom_chain_sweep_run did not report CUDA device CV fits")
+    if aom_profile_device_cv <= 0:
+        raise RuntimeError("aom.aom_sweep_run did not report CUDA device CV fits")
+
+    selector_operators = ["identity", ("savgol_smooth", (5, 2))]
+    aom_pls_res = n4m.aom_pls(
+        X,
+        y,
+        max_components=1,
+        operators=selector_operators,
+        cv=cv,
+        fold_ids=folds,
+        scale_x=False,
+    )
+    pop_pls_res = n4m.pop_pls(
+        X,
+        y,
+        max_components=1,
+        operators=selector_operators,
+        cv=cv,
+        fold_ids=folds,
+        scale_x=False,
+    )
+    aom_pls_model = n4m.NativeAOMPLSRegressor(
+        max_components=1,
+        operators=selector_operators,
+        cv=cv,
+        fold_ids=folds,
+        scale_x=False,
+    ).fit(X, y)
+    pop_pls_model = n4m.NativePOPPLSRegressor(
+        max_components=1,
+        operators=selector_operators,
+        cv=cv,
+        fold_ids=folds,
+        scale_x=False,
+    ).fit(X, y)
+    aom_pls_replay_error = float(
+        np.max(
+            np.abs(
+                aom_pls_model.predict(X)
+                - np.asarray(aom_pls_res["predictions"], dtype=np.float64).ravel()
+            )
+        )
+    )
+    pop_pls_replay_error = float(
+        np.max(
+            np.abs(
+                pop_pls_model.predict(X)
+                - np.asarray(pop_pls_res["predictions"], dtype=np.float64).ravel()
+            )
+        )
+    )
+    if aom_pls_replay_error > 1e-10:
+        raise RuntimeError("NativeAOMPLSRegressor replay diverged from native result")
+    if pop_pls_replay_error > 1e-10:
+        raise RuntimeError("NativePOPPLSRegressor replay diverged from native result")
+
+    staged = n4m.NativeAOMStagedChainCampaignRegressor(
+        plan="compact",
+        cv=cv,
+        fold_ids=folds,
+        ridge_lambdas=[0.1],
+        pls_components=[1],
+        heads=("pls",),
+        max_chains=2,
+        chain_chunk_size=2,
+        top_k=2,
+        refit_top_k=2,
+        refit_per_head_top_k=1,
+        scale_x=False,
+        moment_policy="auto",
+        cuda_pls_parallel_folds=True,
+        cuda_pls_min_device_features=1,
+        impact=False,
+        rank_diagnostics=True,
+    ).fit(X, y)
+    staged_pred = staged.predict(X)
+    if staged_pred.shape != y.shape:
+        raise RuntimeError("NativeAOMStagedChainCampaignRegressor predict shape mismatch")
+    staged_diag = staged.get_diagnostics()
+    if staged_diag["selection_uses_test_set"] is not False:
+        raise RuntimeError("staged estimator unexpectedly used test-set selection")
+    staged_device_cv = int(
+        staged.refit_report_.get("n_pls_moment_cuda_device_cv_fits", 0)
+    )
+    staged_host_cv = int(
+        staged.refit_report_.get("n_pls_moment_host_cv_fits", 0)
+    )
+    if staged_device_cv <= 0:
+        raise RuntimeError("staged estimator did not report CUDA device CV fits")
+    if staged_host_cv != 0:
+        raise RuntimeError("staged estimator unexpectedly used host PLS CV fits")
+
+    X_mixed = X[:, : min(128, X.shape[1])]
+    staged_mixed_default = n4m.NativeAOMStagedChainCampaignRegressor(
+        plan="compact",
+        cv=cv,
+        fold_ids=folds,
+        ridge_lambdas=[0.1],
+        pls_components=[1],
+        heads=("ridge", "pls"),
+        max_chains=2,
+        chain_chunk_size=2,
+        top_k=4,
+        refit_top_k=3,
+        refit_per_head_top_k=1,
+        scale_x=False,
+        moment_policy="auto",
+        cuda_pls_parallel_folds=True,
+        cuda_pls_min_device_features=1,
+        impact=False,
+        rank_diagnostics=True,
+    ).fit(X_mixed, y)
+    staged_mixed_pred = staged_mixed_default.predict(X_mixed)
+    if staged_mixed_pred.shape != y.shape:
+        raise RuntimeError(
+            "mixed NativeAOMStagedChainCampaignRegressor predict shape mismatch"
+        )
+    mixed_diag = staged_mixed_default.get_diagnostics()
+    if mixed_diag["selection_uses_test_set"] is not False:
+        raise RuntimeError("mixed staged estimator unexpectedly used test-set selection")
+    if mixed_diag["split_head_scoring"] != "auto":
+        raise RuntimeError("mixed staged estimator did not default to split-head auto")
+    mixed_split_chunks = int(mixed_diag["n_screen_split_head_chunks"])
+    mixed_score_calls = int(mixed_diag["n_screen_chunk_score_calls"])
+    mixed_screen_pls_device_cv = int(
+        mixed_diag.get("n_screen_pls_moment_cuda_device_cv_fits", 0)
+    )
+    mixed_screen_pls_host_cv = int(
+        mixed_diag.get("n_screen_pls_moment_host_cv_fits", 0)
+    )
+    if mixed_split_chunks <= 0:
+        raise RuntimeError("mixed staged estimator did not split mixed chunks")
+    if mixed_score_calls <= mixed_split_chunks:
+        raise RuntimeError("mixed staged estimator did not report extra split score calls")
+    if mixed_screen_pls_device_cv <= 0:
+        raise RuntimeError("mixed staged estimator did not route PLS screen on CUDA")
+    if mixed_screen_pls_host_cv != 0:
+        raise RuntimeError("mixed staged estimator unexpectedly used host PLS screen CV")
+
+    savgol_focus = n4m.NativeAOMSavgolFocusRegressor(
+        cv=cv,
+        fold_ids=folds,
+        ridge_lambdas=[0.1],
+        pls_components=[1],
+        heads=("pls",),
+        max_chains=2,
+        chain_chunk_size=2,
+        top_k=2,
+        refit_top_k=2,
+        refit_per_head_top_k=1,
+        scale_x_values=[False, True],
+        impact=False,
+        rank_diagnostics=True,
+    ).fit(X, y)
+    savgol_pred = savgol_focus.predict(X)
+    if savgol_pred.shape != y.shape:
+        raise RuntimeError("NativeAOMSavgolFocusRegressor predict shape mismatch")
+    savgol_diag = savgol_focus.get_diagnostics()
+    if savgol_diag["plan"] != "savgol_focus":
+        raise RuntimeError("SavGol-focus preset did not run plan=savgol_focus")
+    if savgol_diag["selection_uses_test_set"] is not False:
+        raise RuntimeError("SavGol-focus preset unexpectedly used test-set selection")
+    savgol_stages = [str(stage["name"]) for stage in savgol_diag["stages"]]
+    if savgol_stages != [
+        "compact",
+        "savgol_smooth",
+        "savgol_derivative",
+        "savgol_combinations",
+    ]:
+        raise RuntimeError("SavGol-focus preset emitted unexpected stage names")
+    savgol_device_cv = int(
+        savgol_focus.refit_report_.get("n_pls_moment_cuda_device_cv_fits", 0)
+    )
+    savgol_host_cv = int(
+        savgol_focus.refit_report_.get("n_pls_moment_host_cv_fits", 0)
+    )
+    if savgol_device_cv <= 0:
+        raise RuntimeError("SavGol-focus preset did not report CUDA device CV fits")
+    if savgol_host_cv != 0:
+        raise RuntimeError("SavGol-focus preset unexpectedly used host PLS CV fits")
+
+    strict_family_lite = n4m.NativeAOMStrictFamilyLiteRegressor(
+        cv=cv,
+        fold_ids=folds,
+        ridge_lambdas=[0.1],
+        pls_components=[1],
+        heads=("pls",),
+        max_chains=1,
+        chain_chunk_size=1,
+        top_k=1,
+        refit_top_k=1,
+        refit_per_head_top_k=1,
+        scale_x=False,
+        scale_x_values=None,
+        impact=False,
+        rank_diagnostics=True,
+    ).fit(X, y)
+    strict_pred = strict_family_lite.predict(X)
+    if strict_pred.shape != y.shape:
+        raise RuntimeError("NativeAOMStrictFamilyLiteRegressor predict shape mismatch")
+    strict_diag = strict_family_lite.get_diagnostics()
+    if strict_diag["plan"] != "strict_family_focus":
+        raise RuntimeError("Strict-family lite preset did not run plan=strict_family_focus")
+    if strict_diag["selection_uses_test_set"] is not False:
+        raise RuntimeError("Strict-family lite preset unexpectedly used test-set selection")
+    strict_stages = [str(stage["name"]) for stage in strict_diag["stages"]]
+    if strict_stages != [
+        "compact",
+        "savgol_smooth",
+        "savgol_derivative",
+        "norris_williams",
+        "finite_difference",
+        "gaussian",
+        "fck",
+        "whittaker",
+        "strict_combinations",
+    ]:
+        raise RuntimeError("Strict-family lite preset emitted unexpected stage names")
+    strict_device_cv = int(
+        strict_family_lite.refit_report_.get("n_pls_moment_cuda_device_cv_fits", 0)
+    )
+    strict_host_cv = int(
+        strict_family_lite.refit_report_.get("n_pls_moment_host_cv_fits", 0)
+    )
+    if strict_device_cv <= 0:
+        raise RuntimeError("Strict-family lite preset did not report CUDA device CV fits")
+    if strict_host_cv != 0:
+        raise RuntimeError("Strict-family lite preset unexpectedly used host PLS CV fits")
 
     print(json.dumps({
         "report_schema": "n4m.aom_moment_cuda_facade_smoke.v1",
@@ -149,10 +440,18 @@ def main():
             "n4m_moments_stays_callable": True,
             "aom_moment_screen_refit_aliases_top_level": True,
             "aom_moment_screen_refit_estimators_alias_top_level": True,
+            "aom_staged_campaign_aliases_top_level": True,
+            "aom_staged_campaign_estimator_aliases_top_level": True,
+            "aom_savgol_focus_estimator_aliases_top_level": True,
+            "aom_strict_family_lite_estimator_aliases_top_level": True,
             "aom_moment_winner_reuse_aliases_top_level": True,
             "aom_moment_audit_report_aliases_top_level": True,
             "aom_moment_route_summary_alias_top_level": True,
             "aom_preprocess_aliases_top_level": True,
+            "aom_pls_aliases_top_level": True,
+            "pop_pls_aliases_top_level": True,
+            "aom_diversity_aliases_top_level": True,
+            "aom_diversity_estimators_alias_top_level": True,
         },
         "aom_preprocess": {
             "n_operators": int(pre["n_operators"]),
@@ -172,6 +471,200 @@ def main():
             "n_pls_moment_cuda_device_cv_fits": aom_device_cv,
             "n_pls_moment_host_cv_fits": int(aom_res.get("n_pls_moment_host_cv_fits", 0)),
             "n_pls_materialized_cv_fits": int(aom_res.get("n_pls_materialized_cv_fits", 0)),
+        },
+        "aom_profile_sweep": {
+            "selected_cv_rmse": float(aom_profile_res["selected_cv_rmse"]),
+            "n_candidates": int(aom_profile_res["n_candidates"]),
+            "n_pls_moment_cuda_device_cv_fits": aom_profile_device_cv,
+            "n_pls_moment_host_cv_fits": int(
+                aom_profile_res.get("n_pls_moment_host_cv_fits", 0)
+            ),
+            "n_pls_materialized_cv_fits": int(
+                aom_profile_res.get("n_pls_materialized_cv_fits", 0)
+            ),
+        },
+        "aom_pls": {
+            "n_operators": int(aom_pls_res["n_operators"]),
+            "selected_n_components": int(aom_pls_res["selected_n_components"]),
+            "selected_operator_index": int(aom_pls_res["selected_operator_index"]),
+            "prediction_replay_max_abs_error": aom_pls_replay_error,
+        },
+        "pop_pls": {
+            "n_operators": int(pop_pls_res["n_operators"]),
+            "selected_n_components": int(pop_pls_res["selected_n_components"]),
+            "selected_operator_indices": [
+                int(value) for value in pop_pls_res["selected_operator_indices"]
+            ],
+            "prediction_replay_max_abs_error": pop_pls_replay_error,
+        },
+        "staged_estimator": {
+            "selected_cv_rmse": float(staged.selected_cv_rmse_),
+            "selected_head": str(staged.selected_head_),
+            "selected_stage": str(staged.selected_stage_),
+            "split_head_scoring": str(staged_diag["split_head_scoring"]),
+            "n_screen_split_head_chunks": int(
+                staged_diag["n_screen_split_head_chunks"]
+            ),
+            "n_screen_chunk_score_calls": int(
+                staged_diag["n_screen_chunk_score_calls"]
+            ),
+            "n_refit_candidates": int(staged.campaign_report_["n_refit_candidates"]),
+            "screen_complete": bool(staged.campaign_report_["screen_complete"]),
+            "selection_uses_test_set": bool(
+                staged.campaign_report_["selection_uses_test_set"]
+            ),
+            "n_pls_moment_cuda_device_cv_fits": staged_device_cv,
+            "n_pls_moment_host_cv_fits": staged_host_cv,
+            "n_pls_moment_cuda_parallel_fold_batches": int(
+                staged.refit_report_.get(
+                    "n_pls_moment_cuda_parallel_fold_batches", 0
+                )
+            ),
+            "n_pls_moment_cuda_parallel_fold_jobs": int(
+                staged.refit_report_.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+            ),
+            "n_pls_moment_cuda_many_batched_batches": int(
+                staged.refit_report_.get(
+                    "n_pls_moment_cuda_many_batched_batches", 0
+                )
+            ),
+            "n_pls_moment_cuda_many_batched_jobs": int(
+                staged.refit_report_.get("n_pls_moment_cuda_many_batched_jobs", 0)
+            ),
+        },
+        "staged_mixed_default_estimator": {
+            "selected_cv_rmse": float(staged_mixed_default.selected_cv_rmse_),
+            "selected_head": str(staged_mixed_default.selected_head_),
+            "selected_stage": str(staged_mixed_default.selected_stage_),
+            "split_head_scoring": str(mixed_diag["split_head_scoring"]),
+            "n_screen_split_head_chunks": mixed_split_chunks,
+            "n_screen_chunk_score_calls": mixed_score_calls,
+            "n_screen_pls_moment_cuda_device_cv_fits": mixed_screen_pls_device_cv,
+            "n_screen_pls_moment_host_cv_fits": mixed_screen_pls_host_cv,
+            "n_ridge_moment_cv_fits": int(
+                mixed_diag.get("n_ridge_moment_cv_fits", 0)
+            ),
+            "n_ridge_moment_score_batch_calls": int(
+                mixed_diag.get("n_ridge_moment_score_batch_calls", 0)
+            ),
+            "n_ridge_moment_score_batch_jobs": int(
+                mixed_diag.get("n_ridge_moment_score_batch_jobs", 0)
+            ),
+            "n_refit_candidates": int(
+                staged_mixed_default.campaign_report_["n_refit_candidates"]
+            ),
+            "screen_complete": bool(
+                staged_mixed_default.campaign_report_["screen_complete"]
+            ),
+            "selection_uses_test_set": bool(
+                staged_mixed_default.campaign_report_["selection_uses_test_set"]
+            ),
+        },
+        "savgol_focus_estimator": {
+            "selected_cv_rmse": float(savgol_focus.selected_cv_rmse_),
+            "selected_head": str(savgol_focus.selected_head_),
+            "selected_stage": str(savgol_focus.selected_stage_),
+            "selected_scale_x": (
+                None
+                if savgol_focus.selected_scale_x_ is None
+                else bool(savgol_focus.selected_scale_x_)
+            ),
+            "selected_model_config": savgol_focus.selected_model_config_,
+            "n_refit_candidates": int(
+                savgol_focus.campaign_report_["n_refit_candidates"]
+            ),
+            "screen_complete": bool(
+                savgol_focus.campaign_report_["screen_complete"]
+            ),
+            "selection_uses_test_set": bool(
+                savgol_focus.campaign_report_["selection_uses_test_set"]
+            ),
+            "stage_names": savgol_stages,
+            "n_screen_pls_moment_cuda_device_cv_fits": int(
+                savgol_focus.campaign_report_.get(
+                    "n_screen_pls_moment_cuda_device_cv_fits", 0
+                )
+            ),
+            "n_screen_pls_moment_host_cv_fits": int(
+                savgol_focus.campaign_report_.get(
+                    "n_screen_pls_moment_host_cv_fits", 0
+                )
+            ),
+            "n_pls_moment_cuda_device_cv_fits": savgol_device_cv,
+            "n_pls_moment_host_cv_fits": savgol_host_cv,
+            "n_pls_moment_cuda_parallel_fold_batches": int(
+                savgol_focus.refit_report_.get(
+                    "n_pls_moment_cuda_parallel_fold_batches", 0
+                )
+            ),
+            "n_pls_moment_cuda_parallel_fold_jobs": int(
+                savgol_focus.refit_report_.get(
+                    "n_pls_moment_cuda_parallel_fold_jobs", 0
+                )
+            ),
+            "n_pls_moment_cuda_many_batched_batches": int(
+                savgol_focus.refit_report_.get(
+                    "n_pls_moment_cuda_many_batched_batches", 0
+                )
+            ),
+            "n_pls_moment_cuda_many_batched_jobs": int(
+                savgol_focus.refit_report_.get(
+                    "n_pls_moment_cuda_many_batched_jobs", 0
+                )
+            ),
+        },
+        "strict_family_lite_estimator": {
+            "selected_cv_rmse": float(strict_family_lite.selected_cv_rmse_),
+            "selected_head": str(strict_family_lite.selected_head_),
+            "selected_stage": str(strict_family_lite.selected_stage_),
+            "selected_scale_x": (
+                None
+                if strict_family_lite.selected_scale_x_ is None
+                else bool(strict_family_lite.selected_scale_x_)
+            ),
+            "selected_model_config": strict_family_lite.selected_model_config_,
+            "n_refit_candidates": int(
+                strict_family_lite.campaign_report_["n_refit_candidates"]
+            ),
+            "screen_complete": bool(
+                strict_family_lite.campaign_report_["screen_complete"]
+            ),
+            "selection_uses_test_set": bool(
+                strict_family_lite.campaign_report_["selection_uses_test_set"]
+            ),
+            "stage_names": strict_stages,
+            "n_screen_pls_moment_cuda_device_cv_fits": int(
+                strict_family_lite.campaign_report_.get(
+                    "n_screen_pls_moment_cuda_device_cv_fits", 0
+                )
+            ),
+            "n_screen_pls_moment_host_cv_fits": int(
+                strict_family_lite.campaign_report_.get(
+                    "n_screen_pls_moment_host_cv_fits", 0
+                )
+            ),
+            "n_pls_moment_cuda_device_cv_fits": strict_device_cv,
+            "n_pls_moment_host_cv_fits": strict_host_cv,
+            "n_pls_moment_cuda_parallel_fold_batches": int(
+                strict_family_lite.refit_report_.get(
+                    "n_pls_moment_cuda_parallel_fold_batches", 0
+                )
+            ),
+            "n_pls_moment_cuda_parallel_fold_jobs": int(
+                strict_family_lite.refit_report_.get(
+                    "n_pls_moment_cuda_parallel_fold_jobs", 0
+                )
+            ),
+            "n_pls_moment_cuda_many_batched_batches": int(
+                strict_family_lite.refit_report_.get(
+                    "n_pls_moment_cuda_many_batched_batches", 0
+                )
+            ),
+            "n_pls_moment_cuda_many_batched_jobs": int(
+                strict_family_lite.refit_report_.get(
+                    "n_pls_moment_cuda_many_batched_jobs", 0
+                )
+            ),
         },
     }, sort_keys=True))
 

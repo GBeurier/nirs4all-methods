@@ -1598,7 +1598,17 @@ void account_materialized_sweep(AomSweepResult& out,
         sweep.n_pls_moment_cuda_parallel_fold_batches;
     out.n_pls_moment_cuda_parallel_fold_jobs +=
         sweep.n_pls_moment_cuda_parallel_fold_jobs;
+    out.n_pls_moment_cuda_many_batched_batches +=
+        sweep.n_pls_moment_cuda_many_batched_batches;
+    out.n_pls_moment_cuda_many_batched_jobs +=
+        sweep.n_pls_moment_cuda_many_batched_jobs;
     out.n_ridge_moment_cv_fits += sweep.n_ridge_moment_cv_fits;
+    out.n_ridge_moment_eigen_path_preparations +=
+        sweep.n_ridge_moment_eigen_path_preparations;
+    out.n_ridge_moment_eigen_path_cv_fits +=
+        sweep.n_ridge_moment_eigen_path_cv_fits;
+    out.n_ridge_moment_direct_cv_fits +=
+        sweep.n_ridge_moment_direct_cv_fits;
     out.n_ridge_dual_materialized_cv_fits +=
         sweep.n_ridge_dual_materialized_cv_fits;
     out.n_ridge_dual_cross_cv_fits += sweep.n_ridge_dual_cross_cv_fits;
@@ -1630,6 +1640,12 @@ void account_materialized_sweep(AomSweepResult& out,
 void account_ridge_fit_counters(AomSweepResult& out,
                                 const SweepResult& sweep) {
     out.n_ridge_moment_cv_fits += sweep.n_ridge_moment_cv_fits;
+    out.n_ridge_moment_eigen_path_preparations +=
+        sweep.n_ridge_moment_eigen_path_preparations;
+    out.n_ridge_moment_eigen_path_cv_fits +=
+        sweep.n_ridge_moment_eigen_path_cv_fits;
+    out.n_ridge_moment_direct_cv_fits +=
+        sweep.n_ridge_moment_direct_cv_fits;
     out.n_ridge_dual_materialized_cv_fits +=
         sweep.n_ridge_dual_materialized_cv_fits;
     out.n_ridge_dual_cross_cv_fits += sweep.n_ridge_dual_cross_cv_fits;
@@ -1652,6 +1668,10 @@ void account_pls_fit_counters(AomSweepResult& out,
         sweep.n_pls_moment_cuda_parallel_fold_batches;
     out.n_pls_moment_cuda_parallel_fold_jobs +=
         sweep.n_pls_moment_cuda_parallel_fold_jobs;
+    out.n_pls_moment_cuda_many_batched_batches +=
+        sweep.n_pls_moment_cuda_many_batched_batches;
+    out.n_pls_moment_cuda_many_batched_jobs +=
+        sweep.n_pls_moment_cuda_many_batched_jobs;
     out.n_pls_moment_score_batch_calls +=
         sweep.n_pls_moment_score_batch_calls;
     out.n_pls_moment_score_batch_jobs +=
@@ -2730,6 +2750,10 @@ n4m_status_t run_aom_chain_fixed_fit(Context& ctx,
         fit.n_pls_moment_cuda_parallel_fold_batches;
     out.n_pls_moment_cuda_parallel_fold_jobs =
         fit.n_pls_moment_cuda_parallel_fold_jobs;
+    out.n_pls_moment_cuda_many_batched_batches =
+        fit.n_pls_moment_cuda_many_batched_batches;
+    out.n_pls_moment_cuda_many_batched_jobs =
+        fit.n_pls_moment_cuda_many_batched_jobs;
     out.n_pls_materialized_cv_fits = fit.n_pls_materialized_cv_fits;
     out.n_pls_gcv_proxy_candidates = fit.n_pls_gcv_proxy_candidates;
     out.n_pls_gcv_proxy_fits = fit.n_pls_gcv_proxy_fits;

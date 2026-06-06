@@ -78,6 +78,30 @@ Key fitted attributes:
 - `intercept_`
 - `oof_rmse_`
 - `rmse_`
+- `base_oof_diagnostics_`
+- `base_final_diagnostics_`
+
+`get_diagnostics()` includes aggregate PLS route counters for both phases, for
+example `n_base_oof_pls_moment_cuda_device_cv_fits` and
+`n_base_final_pls_moment_cuda_device_cv_fits`. These counters are audit-only;
+they do not affect the OOF split, meta-model fit, or production selection.
+
+CUDA smoke used for release readiness:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+PYTHONPATH=bindings/python/src \
+N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
+  /home/delete/.venv/bin/python benchmarks/cross_binding/bench_moment_stack_timing.py \
+  --output benchmarks/cross_binding/moment_stack_timing_cuda_smoke.csv \
+  --repeats 1 --shapes 80x1024 --base-models pls --cv 4 --inner-cv 4 \
+  --n-components 1 --cuda-pls-min-device-features 1 \
+  --cuda-pls-parallel-folds
+```
+
+The smoke should show nonzero OOF and final
+`n_base_*_pls_moment_cuda_device_cv_fits` and zero corresponding host PLS CV
+fits.
 
 ## Validation
 

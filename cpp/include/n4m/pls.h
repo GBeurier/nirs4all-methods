@@ -1837,10 +1837,13 @@ N4M_API n4m_status_t n4m_pls_logistic_fit(
     int32_t n_classes,
     n4m_method_result_t** out_result);
 
-/* AOM preprocessing fit/transform (Phase 6a). Applies an operator bank
- * through the gating strategy and returns both the per-operator outputs
- * and the gated/mixed transformed matrix. Y is optional (some operators
- * use it, e.g. EPO; pass NULL when not needed). Result keys:
+/* AOM preprocessing fit/transform (Phase 6a). Applies the strict-linear
+ * AOM operator bank through the gating strategy and returns both the
+ * per-operator outputs and the gated/mixed transformed matrix. Supported
+ * operator kinds are the strict AOM family (identity, detrend, Savitzky-Golay,
+ * Norris-Williams, finite difference, Whittaker, FCK and Gaussian); non-strict
+ * sample/reference-dependent operators are rejected. Y is optional and may be
+ * NULL for this strict-linear bank. Result keys:
  *   "transformed"        (n × n_features) — final gated transform
  *   "operator_outputs"   (n_operators × (n × n_features), operator-major,
  *                         stored as a (n_operators × (n*n_features)) matrix)

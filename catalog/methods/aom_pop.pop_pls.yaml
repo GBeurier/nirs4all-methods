@@ -38,7 +38,7 @@ parity:
   tolerances: []
 bench:
   bench_id: "aom_pop.pop_pls"
-  registry_entry: null
+  registry_entry: "benchmarks/cross_binding/bench_aom_selector_timing.py"
 feature_flags: []
 vendored_licenses: []
 bindings:

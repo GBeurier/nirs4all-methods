@@ -103,6 +103,7 @@ int pls1_moment_components_many(std::size_t n_jobs,
                                 bool parallel_folds,
                                 bool many_batched,
                                 bool* used_parallel_folds,
+                                bool* used_many_batched,
                                 std::string* error);
 
 }  // namespace cuda_dispatch

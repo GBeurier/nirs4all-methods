@@ -1,0 +1,43 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.aom_staged_chain_campaign"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "1.21.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/aom_sweep.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+carry_along_tu:
+  - "cpp/src/core/aom_operators.cpp"
+  - "cpp/src/core/sweep.cpp"
+  - "cpp/src/core/moments.cpp"
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/AOM-staged-chain-campaign-contract"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.aom_staged_chain_campaign"
+  registry_entry: "benchmarks/cross_binding/bench_aom_staged_chain_campaign_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "aom_staged_chain_campaign"
+    legacy_aliases: []
+publications: []
+notes: "Python-backed staged strict-chain AOM preprocessing campaign over the same native chain-screen/refit helpers as `aom_pop.aom_chain_screen_refit`. It runs compact, wide, lab, focused strict-family plans such as `savgol_focus` / `strict_family_focus`, or caller-provided strict-linear score-only stages over Ridge, PLS or mixed heads, merges cross-stage global and per-head retained candidates, exact-CV refits the retained union once, and attaches preprocessing-impact plus screen-vs-refit rank diagnostics. Optional `X_audit`/`y_audit` scoring is audit-only; production selection remains train exact-CV (`selection_uses_test_set=False`) and the sklearn wrapper omits audit inputs before fitting the selected row through final-only `aom_pop.aom_chain_fixed_fit`. `NativeAOMSavgolFocusRegressor` is the fast SavGol-focused preset wrapper over this method, using the locally validated `savgol_focus` / `scale_x_values=[False, True]` recipe while preserving selected-candidate reuse. `NativeAOMStrictFamilyLiteRegressor` is the cost-safe strict-family audit preset over the same method, sampling SavGol, Norris-Williams, finite-difference, Gaussian, FCK and Whittaker stages with small screen/refit defaults and no scale grid by default. The workflow supports checkpoint/resume and `max_chunks_per_run` for incremental campaigns, one-GPU CUDA PLS route knobs through the underlying screen/refit helpers, no dataset-name routing, and no hors-moment nonlinear lifts. This is the catalogued global staged preprocessing-selection method for benchmark campaigns, not the future fused CUDA/IKPLS grinder."

@@ -495,6 +495,15 @@ def row(backend, profile, moment_policy, n_samples, n_features, cv, elapsed_ms, 
         "n_ridge_moment_cv_fits": int(
             result.get("n_ridge_moment_cv_fits", 0)
         ),
+        "n_ridge_moment_eigen_path_preparations": int(
+            result.get("n_ridge_moment_eigen_path_preparations", 0)
+        ),
+        "n_ridge_moment_eigen_path_cv_fits": int(
+            result.get("n_ridge_moment_eigen_path_cv_fits", 0)
+        ),
+        "n_ridge_moment_direct_cv_fits": int(
+            result.get("n_ridge_moment_direct_cv_fits", 0)
+        ),
         "n_ridge_dual_materialized_cv_fits": int(
             result.get("n_ridge_dual_materialized_cv_fits", 0)
         ),
@@ -527,6 +536,12 @@ def row(backend, profile, moment_policy, n_samples, n_features, cv, elapsed_ms, 
         ),
         "n_pls_moment_cuda_parallel_fold_jobs": int(
             result.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+        ),
+        "n_pls_moment_cuda_many_batched_batches": int(
+            result.get("n_pls_moment_cuda_many_batched_batches", 0)
+        ),
+        "n_pls_moment_cuda_many_batched_jobs": int(
+            result.get("n_pls_moment_cuda_many_batched_jobs", 0)
         ),
         "n_pls_moment_score_batch_calls": int(
             result.get("n_pls_moment_score_batch_calls", 0)
@@ -570,6 +585,12 @@ def row(backend, profile, moment_policy, n_samples, n_features, cv, elapsed_ms, 
         ),
         "n_refit_pls_moment_cuda_parallel_fold_jobs": int(
             result.get("n_refit_pls_moment_cuda_parallel_fold_jobs", 0)
+        ),
+        "n_refit_pls_moment_cuda_many_batched_batches": int(
+            result.get("n_refit_pls_moment_cuda_many_batched_batches", 0)
+        ),
+        "n_refit_pls_moment_cuda_many_batched_jobs": int(
+            result.get("n_refit_pls_moment_cuda_many_batched_jobs", 0)
         ),
         "n_refit_pls_materialized_cv_fits": int(
             result.get("n_refit_pls_materialized_cv_fits", 0)

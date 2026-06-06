@@ -1,0 +1,43 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.aom_ridge_pls_superblock"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "1.21.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/aom_preprocessing.cpp"
+  - "cpp/src/core/extra_pls.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/aom_pop.h"
+carry_along_tu:
+  - "cpp/src/core/aom_operators.cpp"
+  - "cpp/src/core/moments.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/AOM-Ridge-PLS-superblock-python-contract"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.aom_ridge_pls_superblock"
+  registry_entry: "benchmarks/cross_binding/bench_aom_ridge_pls_superblock_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "aom_ridge_pls_superblock"
+    legacy_aliases: []
+publications: []
+notes: "Python-backed donor-style AOM Ridge-PLS superblock constrained to strict-linear single-operator AOM views. It builds concatenated native aom_preprocess operator outputs, selects the PLS component count and Ridge-PLS lambda by train CV over the superblock, fits through the native ridge_pls binding, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes row-reference-dependent preprocessing, nonlinear lifts, MKL/kernel modes and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU Ridge-PLS superblock grinder."

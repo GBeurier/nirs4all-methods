@@ -2,9 +2,10 @@
 """Timing smoke benchmark for AOM robust-HPO screens.
 
 The native backend exercises ``n4m_aom_robust_hpo_fit`` through
-``n4m.aom_robust_hpo``. The sklearn backend exercises the wider Python
-reference estimator for a comparable compact profile. This is a small timing
-bench, not an oracle-quality accuracy campaign.
+``n4m.aom_robust_hpo``. The sklearn backend exercises the reusable native
+``NativeAOMRobustHPORegressor`` wrapper and checks that it replays the native
+fitted predictions. This is a small timing bench, not an oracle-quality accuracy
+campaign.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m import AOMRobustHPOCompact, AOMRobustHPOWide
+from n4m import NativeAOMRobustHPORegressor
 
 
 def make_dataset(n_samples: int, n_features: int, seed: int):
@@ -53,10 +54,12 @@ def run_native(X, y, profile: str, cv: int, repeats: int):
 
 
 def run_sklearn(X, y, profile: str, cv: int, repeats: int):
-    estimator_cls = AOMRobustHPOWide if profile == "wide" else AOMRobustHPOCompact
-
     def fit_once():
-        model = estimator_cls(cv=cv)
+        model = NativeAOMRobustHPORegressor(
+            profile=profile,
+            cv=cv,
+            heads=("ridge", "pls"),
+        )
         model.fit(X, y)
         return model
 
@@ -75,25 +78,32 @@ def native_row(profile, n_samples, n_features, cv, elapsed_ms, result):
         "selected_head_id": int(result["selected_head_id"]),
         "selected_param": result["selected_param"],
         "selected_cv_rmse": result["selected_cv_rmse"],
+        "prediction_replay_max_abs_error": "",
         "elapsed_ms_median": elapsed_ms,
         "library_path": n4m.library_path(),
         "abi": ".".join(str(v) for v in n4m.abi_version()),
     }
 
 
-def sklearn_row(profile, n_samples, n_features, cv, elapsed_ms, model):
-    report = model.selection_report_
+def sklearn_row(profile, n_samples, n_features, cv, elapsed_ms, X, model):
+    expected = np.asarray(model.result_["predictions"], dtype=np.float64)
+    pred = np.asarray(model.predict(X), dtype=np.float64)
+    if pred.ndim == 1 and expected.ndim == 2 and expected.shape[1] == 1:
+        expected = expected.ravel()
+    replay_error = float(np.max(np.abs(pred - expected)))
+    diagnostics = model.get_diagnostics()
     return {
-        "backend": "python_sklearn",
+        "backend": "native_sklearn",
         "profile": profile,
         "n_samples": n_samples,
         "n_features": n_features,
         "cv": cv,
-        "n_candidates": len(report["ranked"]),
-        "selected_chain_id": report["selected"],
-        "selected_head_id": report["selected"].rsplit("__", 1)[-1],
-        "selected_param": "",
-        "selected_cv_rmse": report["mean_scores"][report["selected"]],
+        "n_candidates": int(diagnostics["n_candidates"]),
+        "selected_chain_id": int(diagnostics["selected_chain_id"]),
+        "selected_head_id": int(model.selected_head_id_),
+        "selected_param": float(diagnostics["selected_param"]),
+        "selected_cv_rmse": float(diagnostics["selected_cv_rmse"]),
+        "prediction_replay_max_abs_error": replay_error,
         "elapsed_ms_median": elapsed_ms,
         "library_path": n4m.library_path(),
         "abi": ".".join(str(v) for v in n4m.abi_version()),
@@ -131,7 +141,15 @@ def main() -> int:
                 continue
             elapsed, model = run_sklearn(X, y, profile, args.cv, args.repeats)
             rows.append(
-                sklearn_row(profile, n_samples, n_features, args.cv, elapsed, model)
+                sklearn_row(
+                    profile,
+                    n_samples,
+                    n_features,
+                    args.cv,
+                    elapsed,
+                    X,
+                    model,
+                )
             )
 
     out = Path(args.output)

@@ -26,7 +26,7 @@ parity:
   tolerances: []
 bench:
   bench_id: "models.pls.pcr"
-  registry_entry: null
+  registry_entry: "benchmarks/cross_binding/bench_direct_moment_heads_timing.py"
 feature_flags: []
 vendored_licenses: []
 bindings:

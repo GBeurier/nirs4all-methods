@@ -152,6 +152,15 @@ def row(
         "n_ridge_moment_cv_fits": int(
             result.get("n_ridge_moment_cv_fits", 0.0)
         ),
+        "n_ridge_moment_eigen_path_preparations": int(
+            result.get("n_ridge_moment_eigen_path_preparations", 0.0)
+        ),
+        "n_ridge_moment_eigen_path_cv_fits": int(
+            result.get("n_ridge_moment_eigen_path_cv_fits", 0.0)
+        ),
+        "n_ridge_moment_direct_cv_fits": int(
+            result.get("n_ridge_moment_direct_cv_fits", 0.0)
+        ),
         "n_ridge_dual_materialized_cv_fits": int(
             result.get("n_ridge_dual_materialized_cv_fits", 0.0)
         ),
@@ -187,6 +196,12 @@ def row(
         ),
         "n_pls_moment_cuda_parallel_fold_jobs": int(
             result.get("n_pls_moment_cuda_parallel_fold_jobs", 0.0)
+        ),
+        "n_pls_moment_cuda_many_batched_batches": int(
+            result.get("n_pls_moment_cuda_many_batched_batches", 0.0)
+        ),
+        "n_pls_moment_cuda_many_batched_jobs": int(
+            result.get("n_pls_moment_cuda_many_batched_jobs", 0.0)
         ),
         "n_pls_moment_score_batch_calls": int(
             result.get("n_pls_moment_score_batch_calls", 0.0)
@@ -249,7 +264,9 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    shapes = [(64, 64), (128, 128), (192, 256)]
+    # Include one tall cell so Ridge uses the exact moment path instead of the
+    # wide dual/materialized route; this keeps the lambda-path scorer covered.
+    shapes = [(64, 64), (128, 128), (192, 256), (96, 48)]
     lambdas = np.asarray([0.001, 0.01, 0.1, 1.0, 10.0], dtype=np.float64)
     components = np.asarray([1, 2, 4], dtype=np.int32)
     rows = []

@@ -62,6 +62,7 @@ from .sklearn import (
     AOMStructuralPolicyWithPgt1200Admissions,
     AOMTrueBankEndpointPortfolio,
     EndpointStabilityDecision,
+    NativeAOMChainRidgePLSRegressor,
     NativeAOMChainSweepRegressor,
     NativeAOMFixedCandidateRegressor,
     NativeAOMMomentScreenRefitRegressor,
@@ -69,9 +70,18 @@ from .sklearn import (
     NativeAOMMomentRidgeScreenRefitRegressor,
     NativeAOMOperatorPLSStackRegressor,
     NativeAOMPLSRegressor,
+    NativeAOMPLSSuperblockRegressor,
+    NativeAOMRidgePLSSuperblockRegressor,
     NativeAOMRidgeBlenderRegressor,
+    NativeAOMRidgeActiveSuperblockRegressor,
+    NativeAOMRidgeGlobalRegressor,
+    NativeAOMRidgeMKLSuperblockRegressor,
+    NativeAOMRidgeSuperblockRegressor,
     NativeAOMRobustHPORegressor,
+    NativeAOMSavgolFocusRegressor,
     NativeAOMScreenRefitRegressor,
+    NativeAOMStrictFamilyLiteRegressor,
+    NativeAOMStagedChainCampaignRegressor,
     NativeAOMSweepRegressor,
     NativeContinuumRegressionRegressor,
     NativeCPPLSRegressor,
@@ -79,8 +89,12 @@ from .sklearn import (
     NativeMomentStackRegressor,
     NativeMomentSweepRegressor,
     NativePCRRegressor,
+    NativePLSRegressor,
     NativePOPPLSRegressor,
     NativeRidgeRegressor,
+    NativeRidgePLSRegressor,
+    NativeRobustPLSRegressor,
+    NativeWeightedPLSRegressor,
     build_aom_control_chain_bank,
     EMSC,
     LSNV,
@@ -168,6 +182,7 @@ aom_per_component_select = python.aom_per_component_select
 aom_pls = python.aom_pls
 pop_pls = python.pop_pls
 aom_preprocess = python.aom_preprocess
+aom_chain_ridge_pls = python.aom_chain_ridge_pls
 aom_sweep_run = python.aom_sweep_run
 aom_chain_sweep_run = python.aom_chain_sweep_run
 aom_chain_fixed_fit_run = python.aom_chain_fixed_fit_run
@@ -180,6 +195,7 @@ aom_candidate_report_records = python.aom_candidate_report_records
 aom_chain_score_campaign = python.aom_chain_score_campaign
 aom_chain_screen_refit_campaign = python.aom_chain_screen_refit_campaign
 aom_moment_screen_refit_campaign = python.aom_moment_screen_refit_campaign
+aom_staged_chain_campaign = python.aom_staged_chain_campaign
 aom_screen_refit_candidate_pool = python.aom_screen_refit_candidate_pool
 aom_refit_execution_plan = python.aom_refit_execution_plan
 aom_refit_candidates = python.aom_refit_candidates
@@ -190,14 +206,24 @@ build_aom_strict_chain_grid = python.build_aom_strict_chain_grid
 iter_aom_strict_chain_grid = python.iter_aom_strict_chain_grid
 decode_aom_chains = python.decode_aom_chains
 aom_ridge_blender = python.aom_ridge_blender
+aom_ridge_active_superblock = python.aom_ridge_active_superblock
+aom_ridge_global = python.aom_ridge_global
+aom_ridge_mkl_superblock = python.aom_ridge_mkl_superblock
+aom_ridge_superblock = python.aom_ridge_superblock
+aom_ridge_pls_superblock = python.aom_ridge_pls_superblock
+aom_pls_superblock = python.aom_pls_superblock
 aom_operator_pls_stack = python.aom_operator_pls_stack
 moments = python.moments
 moments_train_from_heldout = python.moments_train_from_heldout
 moment_screen_backend_recommendation = python.moment_screen_backend_recommendation
 sweep_run = python.sweep_run
 ridge = python.ridge
+pls = python.pls
 pcr = python.pcr
 cppls = python.cppls
+weighted_pls = python.weighted_pls
+robust_pls = python.robust_pls
+ridge_pls = python.ridge_pls
 continuum_regression = python.continuum_regression
 ecr = python.ecr
 moment_stack = python.moment_stack
@@ -231,15 +257,23 @@ __all__ = [
     "build_aom_control_chain_bank",
     "EndpointStabilityDecision",
     "NativeAOMChainSweepRegressor",
+    "NativeAOMChainRidgePLSRegressor",
     "NativeAOMFixedCandidateRegressor",
     "NativeAOMMomentScreenRefitRegressor",
     "NativeAOMMomentPLSScreenRefitRegressor",
     "NativeAOMMomentRidgeScreenRefitRegressor",
     "NativeAOMOperatorPLSStackRegressor",
     "NativeAOMPLSRegressor",
+    "NativeAOMPLSSuperblockRegressor",
+    "NativeAOMRidgePLSSuperblockRegressor",
     "NativeAOMRidgeBlenderRegressor",
+    "NativeAOMRidgeActiveSuperblockRegressor",
+    "NativeAOMRidgeGlobalRegressor",
+    "NativeAOMRidgeMKLSuperblockRegressor",
+    "NativeAOMRidgeSuperblockRegressor",
     "NativeAOMRobustHPORegressor",
     "NativeAOMScreenRefitRegressor",
+    "NativeAOMStagedChainCampaignRegressor",
     "NativeAOMSweepRegressor",
     "NativeContinuumRegressionRegressor",
     "NativeCPPLSRegressor",
@@ -247,8 +281,12 @@ __all__ = [
     "NativeMomentStackRegressor",
     "NativeMomentSweepRegressor",
     "NativePCRRegressor",
+    "NativePLSRegressor",
     "NativePOPPLSRegressor",
     "NativeRidgeRegressor",
+    "NativeRidgePLSRegressor",
+    "NativeRobustPLSRegressor",
+    "NativeWeightedPLSRegressor",
     "AirPLS",
     "ArPLS",
     "AreaNormalization",
@@ -312,10 +350,12 @@ __all__ = [
     "__version__",
     "abi_version",
     "aom_chain_screen_refit_campaign",
+    "aom_chain_ridge_pls",
     "aom_chain_fixed_fit_run",
     "aom_chain_sweep_run",
     "aom_chain_score_campaign",
     "aom_moment_screen_refit_campaign",
+    "aom_staged_chain_campaign",
     "aom_screen_refit_candidate_pool",
     "aom_candidate_operator_summary",
     "aom_candidate_preprocessing_impact",
@@ -330,8 +370,14 @@ __all__ = [
     "aom_per_component_select",
     "aom_preprocess",
     "aom_pls",
+    "aom_pls_superblock",
     "aom_refit_execution_plan",
     "aom_ridge_blender",
+    "aom_ridge_active_superblock",
+    "aom_ridge_global",
+    "aom_ridge_mkl_superblock",
+    "aom_ridge_pls_superblock",
+    "aom_ridge_superblock",
     "aom_robust_hpo",
     "aom_refit_candidates",
     "aom_save_candidate_report",
@@ -357,14 +403,18 @@ __all__ = [
     "r2",
     "pop_pls",
     "pcr",
+    "pls",
     "ridge",
+    "ridge_pls",
     "rmse",
+    "robust_pls",
     "rpd",
     "rpiq",
     "sep",
     "signal_type_detector",
     "sweep_run",
     "transfer_metrics",
+    "weighted_pls",
     "version",
 ]
 

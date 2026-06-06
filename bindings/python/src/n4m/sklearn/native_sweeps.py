@@ -117,6 +117,7 @@ class _NativeLinearResultRegressor(BaseEstimator):
 
         self.result_ = result
         self._coef_matrix_ = np.ascontiguousarray(coef)
+        self.input_coefficients_ = self._coef_matrix_.copy()
         self.intercept_ = float(intercept[0]) if intercept.size == 1 else intercept.copy()
         self.coef_ = (
             self._coef_matrix_[:, 0].copy()
@@ -124,6 +125,7 @@ class _NativeLinearResultRegressor(BaseEstimator):
             else self._coef_matrix_.T.copy()
         )
         self.predictions_ = np.asarray(result["predictions"], dtype=np.float64).copy()
+        self.rmse_ = float(result.get("rmse", np.nan))
         self.oof_predictions_ = np.asarray(result["oof_predictions"], dtype=np.float64).copy()
         self.candidate_scores_ = np.asarray(result["candidate_scores"], dtype=np.float64).copy()
         self.selected_candidate_id_ = int(result["selected_candidate_id"])
@@ -169,6 +171,15 @@ class _NativeLinearResultRegressor(BaseEstimator):
             "n_ridge_moment_cv_fits": int(
                 self.result_.get("n_ridge_moment_cv_fits", 0.0)
             ),
+            "n_ridge_moment_eigen_path_preparations": int(
+                self.result_.get("n_ridge_moment_eigen_path_preparations", 0.0)
+            ),
+            "n_ridge_moment_eigen_path_cv_fits": int(
+                self.result_.get("n_ridge_moment_eigen_path_cv_fits", 0.0)
+            ),
+            "n_ridge_moment_direct_cv_fits": int(
+                self.result_.get("n_ridge_moment_direct_cv_fits", 0.0)
+            ),
             "n_ridge_dual_materialized_cv_fits": int(
                 self.result_.get("n_ridge_dual_materialized_cv_fits", 0.0)
             ),
@@ -192,6 +203,8 @@ class _NativeLinearResultRegressor(BaseEstimator):
             "n_pls_moment_cuda_device_cv_fits": int(self.result_.get("n_pls_moment_cuda_device_cv_fits", 0.0)),
             "n_pls_moment_cuda_parallel_fold_batches": int(self.result_.get("n_pls_moment_cuda_parallel_fold_batches", 0.0)),
             "n_pls_moment_cuda_parallel_fold_jobs": int(self.result_.get("n_pls_moment_cuda_parallel_fold_jobs", 0.0)),
+            "n_pls_moment_cuda_many_batched_batches": int(self.result_.get("n_pls_moment_cuda_many_batched_batches", 0.0)),
+            "n_pls_moment_cuda_many_batched_jobs": int(self.result_.get("n_pls_moment_cuda_many_batched_jobs", 0.0)),
             "n_pls_moment_score_batch_calls": int(self.result_.get("n_pls_moment_score_batch_calls", 0.0)),
             "n_pls_moment_score_batch_jobs": int(self.result_.get("n_pls_moment_score_batch_jobs", 0.0)),
             "n_pls_materialized_cv_fits": int(self.result_.get("n_pls_materialized_cv_fits", 0.0)),
@@ -324,7 +337,8 @@ class _NativeDirectMomentRegressor(BaseEstimator):
             if key in self.result_:
                 report[key] = self._scalar_value(
                     self.result_[key],
-                    integer=key in {"n_samples", "n_features", "n_targets", "n_components"},
+                    integer=key.startswith("n_")
+                    or key in {"cv", "n_samples", "n_features", "n_targets", "n_components"},
                 )
         return report
 
@@ -409,6 +423,91 @@ class NativePCRRegressor(_NativeDirectMomentRegressor):
         }
 
 
+class NativePLSRegressor(_NativeDirectMomentRegressor):
+    """Sklearn-style wrapper for native moment PLS via ``sweep_run``."""
+
+    _method_name = "pls"
+    _diagnostic_scalar_keys = (
+        "n_components",
+        "selected_param",
+        "selected_cv_rmse",
+        "n_candidates",
+        "n_pls_moment_cv_fits",
+        "n_pls_moment_host_cv_fits",
+        "n_pls_moment_cuda_device_cv_fits",
+        "n_pls_moment_cuda_parallel_fold_batches",
+        "n_pls_moment_cuda_parallel_fold_jobs",
+        "n_pls_moment_cuda_many_batched_batches",
+        "n_pls_moment_cuda_many_batched_jobs",
+        "n_pls_materialized_cv_fits",
+        "n_pls_moment_final_fits",
+        "n_pls_moment_host_final_fits",
+        "n_pls_moment_cuda_device_final_fits",
+        "n_pls_materialized_final_fits",
+        "cv",
+    )
+
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        pls_components: Sequence[int] | None = None,
+        cv: int = 5,
+        fold_ids=None,
+        center_x: bool | None = None,
+        scale_x: bool | None = None,
+        center_y: bool | None = None,
+        scale_y: bool | None = None,
+        cuda_pls_parallel_folds: bool | None = None,
+        cuda_pls_min_device_features: int | None = None,
+        cuda_pls_many_batched: bool | None = None,
+    ) -> None:
+        self.n_components = int(n_components)
+        self.pls_components = (
+            None if pls_components is None else tuple(int(v) for v in pls_components)
+        )
+        self.cv = int(cv)
+        self.fold_ids = fold_ids
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.cuda_pls_parallel_folds = cuda_pls_parallel_folds
+        self.cuda_pls_min_device_features = cuda_pls_min_device_features
+        self.cuda_pls_many_batched = cuda_pls_many_batched
+
+    def _fit_native_result(self, X: np.ndarray, y: np.ndarray) -> dict:
+        return _native.pls(
+            X,
+            y,
+            n_components=self.n_components,
+            pls_components=self.pls_components,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            center_x=self.center_x,
+            scale_x=self.scale_x,
+            center_y=self.center_y,
+            scale_y=self.scale_y,
+            cuda_pls_parallel_folds=self.cuda_pls_parallel_folds,
+            cuda_pls_min_device_features=self.cuda_pls_min_device_features,
+            cuda_pls_many_batched=self.cuda_pls_many_batched,
+        )
+
+    def _config_diagnostics(self) -> dict[str, object]:
+        return {
+            "n_components": self.n_components,
+            "pls_components": self.pls_components,
+            "cv": self.cv,
+            "center_x": self.center_x,
+            "scale_x": self.scale_x,
+            "center_y": self.center_y,
+            "scale_y": self.scale_y,
+            "cuda_pls_parallel_folds": self.cuda_pls_parallel_folds,
+            "cuda_pls_min_device_features": self.cuda_pls_min_device_features,
+            "cuda_pls_many_batched": self.cuda_pls_many_batched,
+        }
+
+
 class NativeCPPLSRegressor(_NativeDirectMomentRegressor):
     """Sklearn-style wrapper for native Powered PLS."""
 
@@ -431,6 +530,149 @@ class NativeCPPLSRegressor(_NativeDirectMomentRegressor):
         return {
             "gamma": self.gamma,
             "n_components": self.n_components,
+        }
+
+
+class NativeWeightedPLSRegressor(_NativeDirectMomentRegressor):
+    """Sklearn-style wrapper for native sample-weighted PLS."""
+
+    _method_name = "weighted_pls"
+
+    def __init__(
+        self,
+        *,
+        sample_weights=None,
+        n_components: int = 2,
+        center_x: bool | None = None,
+        scale_x: bool | None = None,
+        center_y: bool | None = None,
+        scale_y: bool | None = None,
+    ) -> None:
+        self.sample_weights = sample_weights
+        self.n_components = int(n_components)
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+    def _fit_native_result(self, X: np.ndarray, y: np.ndarray) -> dict:
+        return _native.weighted_pls(
+            X,
+            y,
+            sample_weights=self.sample_weights,
+            n_components=self.n_components,
+            center_x=self.center_x,
+            scale_x=self.scale_x,
+            center_y=self.center_y,
+            scale_y=self.scale_y,
+        )
+
+    def _config_diagnostics(self) -> dict[str, object]:
+        n_weights = 0 if self.sample_weights is None else int(np.asarray(self.sample_weights).size)
+        return {
+            "n_components": self.n_components,
+            "sample_weighted": self.sample_weights is not None,
+            "n_sample_weights": n_weights,
+            "center_x": self.center_x,
+            "scale_x": self.scale_x,
+            "center_y": self.center_y,
+            "scale_y": self.scale_y,
+        }
+
+
+class NativeRobustPLSRegressor(_NativeDirectMomentRegressor):
+    """Sklearn-style wrapper for native robust PLS."""
+
+    _method_name = "robust_pls"
+    _diagnostic_scalar_keys = ("huber_k",)
+
+    def __init__(
+        self,
+        *,
+        huber_k: float = 1.345,
+        max_irls_iter: int = 5,
+        n_components: int = 2,
+        center_x: bool | None = None,
+        scale_x: bool | None = None,
+        center_y: bool | None = None,
+        scale_y: bool | None = None,
+    ) -> None:
+        self.huber_k = float(huber_k)
+        self.max_irls_iter = int(max_irls_iter)
+        self.n_components = int(n_components)
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+    def _fit_native_result(self, X: np.ndarray, y: np.ndarray) -> dict:
+        return _native.robust_pls(
+            X,
+            y,
+            huber_k=self.huber_k,
+            max_irls_iter=self.max_irls_iter,
+            n_components=self.n_components,
+            center_x=self.center_x,
+            scale_x=self.scale_x,
+            center_y=self.center_y,
+            scale_y=self.scale_y,
+        )
+
+    def _config_diagnostics(self) -> dict[str, object]:
+        return {
+            "huber_k": self.huber_k,
+            "max_irls_iter": self.max_irls_iter,
+            "n_components": self.n_components,
+            "center_x": self.center_x,
+            "scale_x": self.scale_x,
+            "center_y": self.center_y,
+            "scale_y": self.scale_y,
+        }
+
+
+class NativeRidgePLSRegressor(_NativeDirectMomentRegressor):
+    """Sklearn-style wrapper for native ridge-augmented PLS."""
+
+    _method_name = "ridge_pls"
+    _diagnostic_scalar_keys = ("ridge_lambda",)
+
+    def __init__(
+        self,
+        *,
+        ridge_lambda: float = 0.1,
+        n_components: int = 2,
+        center_x: bool | None = None,
+        scale_x: bool | None = None,
+        center_y: bool | None = None,
+        scale_y: bool | None = None,
+    ) -> None:
+        self.ridge_lambda = float(ridge_lambda)
+        self.n_components = int(n_components)
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+    def _fit_native_result(self, X: np.ndarray, y: np.ndarray) -> dict:
+        return _native.ridge_pls(
+            X,
+            y,
+            ridge_lambda=self.ridge_lambda,
+            n_components=self.n_components,
+            center_x=self.center_x,
+            scale_x=self.scale_x,
+            center_y=self.center_y,
+            scale_y=self.scale_y,
+        )
+
+    def _config_diagnostics(self) -> dict[str, object]:
+        return {
+            "ridge_lambda": self.ridge_lambda,
+            "n_components": self.n_components,
+            "center_x": self.center_x,
+            "scale_x": self.scale_x,
+            "center_y": self.center_y,
+            "scale_y": self.scale_y,
         }
 
 
@@ -558,6 +800,28 @@ class NativeMomentStackRegressor(BaseEstimator):
         "ecr": "ecr",
         "cppls": "cppls",
     }
+    _BASE_DIAGNOSTIC_KEYS = (
+        "selected_cv_rmse",
+        "n_candidates",
+        "n_ridge_moment_cv_fits",
+        "n_ridge_moment_eigen_path_preparations",
+        "n_ridge_moment_eigen_path_cv_fits",
+        "n_ridge_moment_direct_cv_fits",
+        "n_ridge_dual_materialized_cv_fits",
+        "n_ridge_dual_cross_cv_fits",
+        "n_pls_moment_cv_fits",
+        "n_pls_moment_host_cv_fits",
+        "n_pls_moment_cuda_device_cv_fits",
+        "n_pls_moment_cuda_parallel_fold_batches",
+        "n_pls_moment_cuda_parallel_fold_jobs",
+        "n_pls_moment_cuda_many_batched_batches",
+        "n_pls_moment_cuda_many_batched_jobs",
+        "n_pls_materialized_cv_fits",
+        "n_pls_moment_final_fits",
+        "n_pls_moment_host_final_fits",
+        "n_pls_moment_cuda_device_final_fits",
+        "n_pls_materialized_final_fits",
+    )
 
     def __init__(
         self,
@@ -681,11 +945,10 @@ class NativeMomentStackRegressor(BaseEstimator):
                 center_y=self.center_y,
             )
         if name == "pls":
-            return NativeMomentSweepRegressor(
+            return NativePLSRegressor(
+                n_components=n_components,
                 cv=max(2, min(self.inner_cv, n_train)),
-                ridge_lambdas=(),
                 pls_components=self._pls_component_grid(n_features, n_train),
-                heads=("pls",),
                 center_x=self.center_x,
                 scale_x=self.scale_x,
                 center_y=self.center_y,
@@ -722,6 +985,50 @@ class NativeMomentStackRegressor(BaseEstimator):
             raise ValueError("base model prediction must be 1D or 2D")
         return np.ascontiguousarray(pred)
 
+    @classmethod
+    def _base_diagnostic_row(
+        cls, model, name: str, *, phase: str, fold=None
+    ) -> dict[str, object]:
+        row: dict[str, object] = {
+            "phase": str(phase),
+            "base_model": str(name),
+            "estimator": type(model).__name__,
+        }
+        if fold is not None:
+            row["fold"] = int(fold)
+        if not hasattr(model, "get_diagnostics"):
+            return row
+        try:
+            diag = model.get_diagnostics()
+        except RuntimeError:
+            return row
+        if isinstance(diag, dict):
+            method = diag.get("method")
+            if method is not None:
+                row["method"] = str(method)
+            for key in cls._BASE_DIAGNOSTIC_KEYS:
+                if key in diag:
+                    value = diag[key]
+                    if isinstance(value, (np.integer, int)):
+                        row[key] = int(value)
+                    elif isinstance(value, (np.floating, float)):
+                        row[key] = float(value)
+                    elif value is None:
+                        row[key] = None
+                    else:
+                        row[key] = value
+        return row
+
+    @staticmethod
+    def _sum_base_diagnostic(rows, key: str) -> int:
+        total = 0
+        for row in rows:
+            value = row.get(key, 0)
+            if value is None:
+                continue
+            total += int(value)
+        return int(total)
+
     def fit(self, X, y):
         X_arr = _as_X(X)
         y_arr, y_was_1d = _as_y(y, X_arr.shape[0])
@@ -737,6 +1044,7 @@ class NativeMomentStackRegressor(BaseEstimator):
             for _ in base_names
         ]
         fold_scores = np.empty((len(unique_folds), len(base_names)), dtype=np.float64)
+        base_oof_diagnostics = []
         for fold_ix, fold in enumerate(unique_folds):
             valid = folds == fold
             train = ~valid
@@ -747,6 +1055,9 @@ class NativeMomentStackRegressor(BaseEstimator):
             for base_ix, name in enumerate(base_names):
                 model = self._base_estimator(name, X_train.shape[1], X_train.shape[0])
                 model.fit(X_train, y_train)
+                base_oof_diagnostics.append(
+                    self._base_diagnostic_row(model, name, phase="oof", fold=fold)
+                )
                 pred = self._predict_2d(model, X_valid)
                 if pred.shape != y_valid.shape:
                     raise ValueError(f"{name} prediction shape does not match y")
@@ -762,9 +1073,13 @@ class NativeMomentStackRegressor(BaseEstimator):
 
         final_models = []
         final_blocks = []
+        base_final_diagnostics = []
         for name in base_names:
             model = self._base_estimator(name, X_arr.shape[1], X_arr.shape[0])
             model.fit(X_arr, y_arr)
+            base_final_diagnostics.append(
+                self._base_diagnostic_row(model, name, phase="final")
+            )
             final_models.append(model)
             final_blocks.append(self._predict_2d(model, X_arr))
         Z_train = np.column_stack(final_blocks)
@@ -786,6 +1101,10 @@ class NativeMomentStackRegressor(BaseEstimator):
             float(meta_intercept[0]) if meta_intercept.size == 1 else meta_intercept.copy()
         )
         self.base_models_ = final_models
+        self.base_oof_diagnostics_ = tuple(dict(row) for row in base_oof_diagnostics)
+        self.base_final_diagnostics_ = tuple(
+            dict(row) for row in base_final_diagnostics
+        )
         self.n_features_in_ = int(X_arr.shape[1])
         self.n_targets_ = int(y_arr.shape[1])
         self._y_was_1d_ = bool(y_was_1d)
@@ -812,6 +1131,8 @@ class NativeMomentStackRegressor(BaseEstimator):
     def get_diagnostics(self) -> dict[str, object]:
         if not hasattr(self, "base_models_"):
             raise RuntimeError(f"{type(self).__name__}.get_diagnostics called before fit")
+        base_oof = tuple(dict(row) for row in self.base_oof_diagnostics_)
+        base_final = tuple(dict(row) for row in self.base_final_diagnostics_)
         return {
             "method": "moment_stack",
             "base_models": self.base_model_names_,
@@ -832,6 +1153,66 @@ class NativeMomentStackRegressor(BaseEstimator):
             "n_samples": int(self.oof_predictions_.shape[0]),
             "n_features": self.n_features_in_,
             "n_targets": self.n_targets_,
+            "base_oof_diagnostics": base_oof,
+            "base_final_diagnostics": base_final,
+            "n_base_oof_pls_moment_cv_fits": self._sum_base_diagnostic(
+                base_oof, "n_pls_moment_cv_fits"
+            ),
+            "n_base_oof_pls_moment_host_cv_fits": self._sum_base_diagnostic(
+                base_oof, "n_pls_moment_host_cv_fits"
+            ),
+            "n_base_oof_pls_moment_cuda_device_cv_fits": self._sum_base_diagnostic(
+                base_oof, "n_pls_moment_cuda_device_cv_fits"
+            ),
+            "n_base_oof_pls_moment_cuda_parallel_fold_batches": (
+                self._sum_base_diagnostic(
+                    base_oof, "n_pls_moment_cuda_parallel_fold_batches"
+                )
+            ),
+            "n_base_oof_pls_moment_cuda_parallel_fold_jobs": (
+                self._sum_base_diagnostic(
+                    base_oof, "n_pls_moment_cuda_parallel_fold_jobs"
+                )
+            ),
+            "n_base_oof_pls_moment_cuda_many_batched_batches": (
+                self._sum_base_diagnostic(
+                    base_oof, "n_pls_moment_cuda_many_batched_batches"
+                )
+            ),
+            "n_base_oof_pls_moment_cuda_many_batched_jobs": (
+                self._sum_base_diagnostic(
+                    base_oof, "n_pls_moment_cuda_many_batched_jobs"
+                )
+            ),
+            "n_base_final_pls_moment_cv_fits": self._sum_base_diagnostic(
+                base_final, "n_pls_moment_cv_fits"
+            ),
+            "n_base_final_pls_moment_host_cv_fits": self._sum_base_diagnostic(
+                base_final, "n_pls_moment_host_cv_fits"
+            ),
+            "n_base_final_pls_moment_cuda_device_cv_fits": self._sum_base_diagnostic(
+                base_final, "n_pls_moment_cuda_device_cv_fits"
+            ),
+            "n_base_final_pls_moment_cuda_parallel_fold_batches": (
+                self._sum_base_diagnostic(
+                    base_final, "n_pls_moment_cuda_parallel_fold_batches"
+                )
+            ),
+            "n_base_final_pls_moment_cuda_parallel_fold_jobs": (
+                self._sum_base_diagnostic(
+                    base_final, "n_pls_moment_cuda_parallel_fold_jobs"
+                )
+            ),
+            "n_base_final_pls_moment_cuda_many_batched_batches": (
+                self._sum_base_diagnostic(
+                    base_final, "n_pls_moment_cuda_many_batched_batches"
+                )
+            ),
+            "n_base_final_pls_moment_cuda_many_batched_jobs": (
+                self._sum_base_diagnostic(
+                    base_final, "n_pls_moment_cuda_many_batched_jobs"
+                )
+            ),
         }
 
 
@@ -912,6 +1293,15 @@ class NativeAOMSweepRegressor(_NativeLinearResultRegressor):
             "n_moment_prefix_cache_hits": int(self.result_["n_moment_prefix_cache_hits"]),
             "n_moment_prefix_cache_misses": int(self.result_["n_moment_prefix_cache_misses"]),
             "n_ridge_moment_cv_fits": int(self.result_.get("n_ridge_moment_cv_fits", 0.0)),
+            "n_ridge_moment_eigen_path_preparations": int(
+                self.result_.get("n_ridge_moment_eigen_path_preparations", 0.0)
+            ),
+            "n_ridge_moment_eigen_path_cv_fits": int(
+                self.result_.get("n_ridge_moment_eigen_path_cv_fits", 0.0)
+            ),
+            "n_ridge_moment_direct_cv_fits": int(
+                self.result_.get("n_ridge_moment_direct_cv_fits", 0.0)
+            ),
             "n_ridge_dual_materialized_cv_fits": int(self.result_.get("n_ridge_dual_materialized_cv_fits", 0.0)),
             "n_ridge_dual_cross_cv_fits": int(self.result_.get("n_ridge_dual_cross_cv_fits", 0.0)),
             "n_ridge_moment_score_batch_calls": int(self.result_.get("n_ridge_moment_score_batch_calls", 0.0)),
@@ -923,6 +1313,8 @@ class NativeAOMSweepRegressor(_NativeLinearResultRegressor):
             "n_pls_moment_cuda_device_cv_fits": int(self.result_.get("n_pls_moment_cuda_device_cv_fits", 0.0)),
             "n_pls_moment_cuda_parallel_fold_batches": int(self.result_.get("n_pls_moment_cuda_parallel_fold_batches", 0.0)),
             "n_pls_moment_cuda_parallel_fold_jobs": int(self.result_.get("n_pls_moment_cuda_parallel_fold_jobs", 0.0)),
+            "n_pls_moment_cuda_many_batched_batches": int(self.result_.get("n_pls_moment_cuda_many_batched_batches", 0.0)),
+            "n_pls_moment_cuda_many_batched_jobs": int(self.result_.get("n_pls_moment_cuda_many_batched_jobs", 0.0)),
             "n_pls_moment_score_batch_calls": int(self.result_.get("n_pls_moment_score_batch_calls", 0.0)),
             "n_pls_moment_score_batch_jobs": int(self.result_.get("n_pls_moment_score_batch_jobs", 0.0)),
             "n_pls_materialized_cv_fits": int(self.result_["n_pls_materialized_cv_fits"]),
@@ -1002,6 +1394,63 @@ class NativeAOMChainSweepRegressor(NativeAOMSweepRegressor):
             cuda_pls_min_device_features=self.cuda_pls_min_device_features,
             cuda_pls_many_batched=self.cuda_pls_many_batched,
         )
+
+
+class NativeAOMRidgeGlobalRegressor(_NativeLinearResultRegressor):
+    """Strict-linear AOM Ridge global selector with reusable coefficients."""
+
+    _result_coef_key = "input_coefficients"
+
+    def __init__(
+        self,
+        *,
+        operators=None,
+        cv: int = 5,
+        fold_ids=None,
+        ridge_lambdas: Sequence[float] = (1e-4, 1e-2, 1.0, 100.0),
+        center_x: bool | None = None,
+        scale_x: bool | None = None,
+        center_y: bool | None = None,
+        scale_y: bool | None = None,
+        moment_policy: str | int = "auto",
+    ) -> None:
+        self.operators = operators
+        self.cv = int(cv)
+        self.fold_ids = fold_ids
+        self.ridge_lambdas = tuple(float(v) for v in ridge_lambdas)
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.moment_policy = moment_policy
+
+    def _fit_native_result(self, X: np.ndarray, y: np.ndarray) -> dict:
+        return _native.aom_ridge_global(
+            X,
+            y,
+            operators=self.operators,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            ridge_lambdas=self.ridge_lambdas,
+            center_x=self.center_x,
+            scale_x=self.scale_x,
+            center_y=self.center_y,
+            scale_y=self.scale_y,
+            moment_policy=self.moment_policy,
+        )
+
+    def get_diagnostics(self) -> dict[str, object]:
+        report = super().get_diagnostics()
+        report.update({
+            "cv": self.cv,
+            "n_operators": int(self.result_.get("n_operators", 0.0)),
+            "selected_operator": self.result_.get("selected_operator"),
+            "selected_operator_index": int(self.result_.get("selected_operator_index", -1.0)),
+            "selected_operator_kind": int(self.result_.get("selected_operator_kind", -1.0)),
+            "ridge_backend": self.result_.get("ridge_backend"),
+            "moment_policy": self.moment_policy,
+        })
+        return report
 
 
 class NativeAOMFixedCandidateRegressor(_NativeLinearResultRegressor):
@@ -1455,6 +1904,15 @@ class NativeAOMScreenRefitRegressor(BaseEstimator):
             "n_ridge_moment_cv_fits": int(
                 self.screen_report_.get("n_ridge_moment_cv_fits", 0)
             ),
+            "n_ridge_moment_eigen_path_preparations": int(
+                self.screen_report_.get("n_ridge_moment_eigen_path_preparations", 0)
+            ),
+            "n_ridge_moment_eigen_path_cv_fits": int(
+                self.screen_report_.get("n_ridge_moment_eigen_path_cv_fits", 0)
+            ),
+            "n_ridge_moment_direct_cv_fits": int(
+                self.screen_report_.get("n_ridge_moment_direct_cv_fits", 0)
+            ),
             "n_ridge_moment_score_batch_calls": int(
                 self.screen_report_.get("n_ridge_moment_score_batch_calls", 0)
             ),
@@ -1482,6 +1940,15 @@ class NativeAOMScreenRefitRegressor(BaseEstimator):
             "n_refit_ridge_moment_cv_fits": int(
                 self.refit_report_.get("n_ridge_moment_cv_fits", 0)
             ),
+            "n_refit_ridge_moment_eigen_path_preparations": int(
+                self.refit_report_.get("n_ridge_moment_eigen_path_preparations", 0)
+            ),
+            "n_refit_ridge_moment_eigen_path_cv_fits": int(
+                self.refit_report_.get("n_ridge_moment_eigen_path_cv_fits", 0)
+            ),
+            "n_refit_ridge_moment_direct_cv_fits": int(
+                self.refit_report_.get("n_ridge_moment_direct_cv_fits", 0)
+            ),
             "n_refit_ridge_dual_materialized_cv_fits": int(
                 self.refit_report_.get("n_ridge_dual_materialized_cv_fits", 0)
             ),
@@ -1508,6 +1975,12 @@ class NativeAOMScreenRefitRegressor(BaseEstimator):
             ),
             "n_refit_pls_moment_cuda_parallel_fold_jobs": int(
                 self.refit_report_.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+            ),
+            "n_refit_pls_moment_cuda_many_batched_batches": int(
+                self.refit_report_.get("n_pls_moment_cuda_many_batched_batches", 0)
+            ),
+            "n_refit_pls_moment_cuda_many_batched_jobs": int(
+                self.refit_report_.get("n_pls_moment_cuda_many_batched_jobs", 0)
             ),
             "n_refit_pls_moment_score_batch_calls": int(
                 self.refit_report_.get("n_pls_moment_score_batch_calls", 0)
@@ -1585,6 +2058,12 @@ class NativeAOMScreenRefitRegressor(BaseEstimator):
             "final_n_pls_moment_cuda_parallel_fold_jobs": int(
                 final.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
             ),
+            "final_n_pls_moment_cuda_many_batched_batches": int(
+                final.get("n_pls_moment_cuda_many_batched_batches", 0)
+            ),
+            "final_n_pls_moment_cuda_many_batched_jobs": int(
+                final.get("n_pls_moment_cuda_many_batched_jobs", 0)
+            ),
             "final_n_pls_materialized_cv_fits": int(
                 final.get("n_pls_materialized_cv_fits", 0)
             ),
@@ -1606,6 +2085,563 @@ class NativeAOMScreenRefitRegressor(BaseEstimator):
             "moment_policy": self.moment_policy,
             "refit_moment_policy": self.campaign_report_["refit_moment_policy"],
         }
+
+
+class NativeAOMStagedChainCampaignRegressor(BaseEstimator):
+    """Reusable sklearn estimator for staged AOM/moment chain campaigns.
+
+    ``fit`` runs the pure-Python ``aom_staged_chain_campaign`` orchestration,
+    keeps the full staged/refit report inspectable, and then fits the selected
+    exact-CV refit row as a final-only ``NativeAOMFixedCandidateRegressor``.
+    Production selection is train-CV only: the estimator intentionally exposes
+    no held-out audit inputs.
+
+    ``split_head_scoring`` defaults to ``"auto"`` for the reusable sklearn
+    surface. Mixed Ridge/PLS stages are scored as separate head-homogeneous
+    chunks and then merged without changing candidate scores, so the default
+    estimator uses the same fast path as the real-cohort benchmark runner.
+    The lower-level ``aom_staged_chain_campaign`` helper keeps its historical
+    ``"off"`` default for explicit low-level timing comparisons.
+    """
+
+    def __init__(
+        self,
+        *,
+        stages=None,
+        plan: str = "compact_wide_lab",
+        cv: int = 5,
+        fold_ids=None,
+        ridge_lambdas: Sequence[float] = (0.01, 0.1, 1.0, 10.0),
+        pls_components: Sequence[int] | None = (1, 2, 4),
+        heads: Sequence[str] = ("ridge", "pls"),
+        top_k: int = 50,
+        refit_top_k: int | None = None,
+        refit_per_head_top_k: int | None = 10,
+        final_rank: int = 0,
+        families: dict | None = None,
+        templates: Sequence[Sequence[str]] | None = None,
+        max_chains: int | None = None,
+        chain_chunk_size: int = 4096,
+        checkpoint_dir=None,
+        resume: bool = True,
+        max_chunks_per_run: int | None = None,
+        center_x: bool | None = None,
+        scale_x: bool | None = None,
+        scale_x_values: Sequence[bool | None] | None = None,
+        center_y: bool | None = None,
+        scale_y: bool | None = None,
+        moment_policy: str | int = "auto",
+        refit_moment_policy: str | int | None = None,
+        final_moment_policy: str | int | None = None,
+        pls_score_mode: str | int = "cv",
+        chain_ordering: str = "input",
+        split_head_scoring: str = "auto",
+        backend_cuda_available: bool | None = None,
+        backend_min_cuda_product: int | None = None,
+        cuda_pls_parallel_folds: bool | None = None,
+        cuda_pls_min_device_features: int | None = None,
+        cuda_pls_many_batched: bool | None = None,
+        refit_sort_by: str | None = "refit_cv_rmse",
+        refit_execution: str = "auto",
+        refit_auto_max_extra_fraction: float = 1.0,
+        impact: bool = True,
+        rank_diagnostics: bool = True,
+        impact_top_k: int | None = None,
+        return_stage_screens: bool = False,
+    ) -> None:
+        self.stages = stages
+        self.plan = plan
+        self.cv = int(cv)
+        self.fold_ids = fold_ids
+        self.ridge_lambdas = tuple(float(v) for v in ridge_lambdas)
+        self.pls_components = (
+            None if pls_components is None
+            else tuple(int(v) for v in pls_components)
+        )
+        self.heads = tuple(heads)
+        self.top_k = int(top_k)
+        self.refit_top_k = None if refit_top_k is None else int(refit_top_k)
+        self.refit_per_head_top_k = (
+            None if refit_per_head_top_k is None else int(refit_per_head_top_k)
+        )
+        self.final_rank = int(final_rank)
+        self.families = families
+        self.templates = templates
+        self.max_chains = None if max_chains is None else int(max_chains)
+        self.chain_chunk_size = int(chain_chunk_size)
+        self.checkpoint_dir = checkpoint_dir
+        self.resume = bool(resume)
+        self.max_chunks_per_run = (
+            None if max_chunks_per_run is None else int(max_chunks_per_run)
+        )
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.scale_x_values = (
+            None
+            if scale_x_values is None
+            else tuple(None if value is None else bool(value) for value in scale_x_values)
+        )
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.moment_policy = moment_policy
+        self.refit_moment_policy = refit_moment_policy
+        self.final_moment_policy = final_moment_policy
+        self.pls_score_mode = pls_score_mode
+        self.chain_ordering = chain_ordering
+        self.split_head_scoring = split_head_scoring
+        self.backend_cuda_available = backend_cuda_available
+        self.backend_min_cuda_product = (
+            None if backend_min_cuda_product is None
+            else int(backend_min_cuda_product)
+        )
+        self.cuda_pls_parallel_folds = cuda_pls_parallel_folds
+        self.cuda_pls_min_device_features = cuda_pls_min_device_features
+        self.cuda_pls_many_batched = cuda_pls_many_batched
+        self.refit_sort_by = refit_sort_by
+        self.refit_execution = refit_execution
+        self.refit_auto_max_extra_fraction = float(refit_auto_max_extra_fraction)
+        self.impact = bool(impact)
+        self.rank_diagnostics = bool(rank_diagnostics)
+        self.impact_top_k = None if impact_top_k is None else int(impact_top_k)
+        self.return_stage_screens = bool(return_stage_screens)
+
+    def fit(self, X, y):
+        X_arr = _as_X(X)
+        y_arr, _ = _as_y(y, X_arr.shape[0])
+        report = _native.aom_staged_chain_campaign(
+            X_arr,
+            y_arr,
+            stages=self.stages,
+            plan=self.plan,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            ridge_lambdas=self.ridge_lambdas,
+            pls_components=self.pls_components,
+            heads=self.heads,
+            top_k=self.top_k,
+            refit_top_k=self.refit_top_k,
+            refit_per_head_top_k=self.refit_per_head_top_k,
+            families=self.families,
+            templates=self.templates,
+            max_chains=self.max_chains,
+            chain_chunk_size=self.chain_chunk_size,
+            checkpoint_dir=self.checkpoint_dir,
+            resume=self.resume,
+            max_chunks_per_run=self.max_chunks_per_run,
+            center_x=self.center_x,
+            scale_x=self.scale_x,
+            scale_x_values=self.scale_x_values,
+            center_y=self.center_y,
+            scale_y=self.scale_y,
+            moment_policy=self.moment_policy,
+            refit_moment_policy=self.refit_moment_policy,
+            pls_score_mode=self.pls_score_mode,
+            chain_ordering=self.chain_ordering,
+            split_head_scoring=self.split_head_scoring,
+            backend_cuda_available=self.backend_cuda_available,
+            backend_min_cuda_product=self.backend_min_cuda_product,
+            cuda_pls_parallel_folds=self.cuda_pls_parallel_folds,
+            cuda_pls_min_device_features=self.cuda_pls_min_device_features,
+            cuda_pls_many_batched=self.cuda_pls_many_batched,
+            refit_sort_by=self.refit_sort_by,
+            refit_execution=self.refit_execution,
+            refit_auto_max_extra_fraction=self.refit_auto_max_extra_fraction,
+            return_predictions=False,
+            impact=self.impact,
+            rank_diagnostics=self.rank_diagnostics,
+            impact_top_k=self.impact_top_k,
+            return_stage_screens=self.return_stage_screens,
+        )
+
+        rank_index = int(self.final_rank)
+        if rank_index < 0:
+            raise ValueError("final_rank must be >= 0")
+        ordered_rows = sorted(
+            list(report["rows"]),
+            key=lambda row: (
+                float(row.get("refit_cv_rmse", np.inf)),
+                int(row.get("source_index", 0)),
+            ),
+        )
+        if rank_index >= len(ordered_rows):
+            raise ValueError("final_rank is outside the available refit rows")
+        selected_row = ordered_rows[rank_index]
+
+        final_policy = self.final_moment_policy
+        if final_policy is None:
+            final_policy = (
+                self.refit_moment_policy
+                if self.refit_moment_policy is not None
+                else self.moment_policy
+            )
+        selected_config = report.get("selected_model_config", {})
+        final_scale_x = (
+            selected_config["scale_x"]
+            if isinstance(selected_config, dict) and "scale_x" in selected_config
+            else self.scale_x
+        )
+        selected_model = NativeAOMFixedCandidateRegressor.from_candidate(
+            selected_row,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            center_x=self.center_x,
+            scale_x=final_scale_x,
+            center_y=self.center_y,
+            scale_y=self.scale_y,
+            moment_policy=final_policy,
+            cuda_pls_min_device_features=self.cuda_pls_min_device_features,
+            fit_mode="final_only",
+            precomputed_cv_rmse=float(selected_row["refit_cv_rmse"]),
+        ).fit(X_arr, y)
+
+        self.campaign_report_ = report
+        self.staged_report_ = report
+        self.refit_report_ = report["refit"]
+        self.stages_ = list(report["stages"])
+        if "stage_screens" in report:
+            self.stage_screens_ = list(report["stage_screens"])
+        self.selected_refit_row_ = selected_row
+        self.selected_model_ = selected_model
+        self.result_ = selected_model.result_
+        self._coef_matrix_ = selected_model._coef_matrix_.copy()
+        self.coef_ = np.asarray(selected_model.coef_).copy()
+        self.intercept_ = (
+            float(selected_model.intercept_)
+            if np.asarray(selected_model.intercept_).ndim == 0
+            else np.asarray(selected_model.intercept_).copy()
+        )
+        self.predictions_ = selected_model.predictions_.copy()
+        self.oof_predictions_ = selected_model.oof_predictions_.copy()
+        self.candidate_scores_ = selected_model.candidate_scores_.copy()
+        self.selected_candidate_id_ = selected_model.selected_candidate_id_
+        self.selected_head_id_ = selected_model.selected_head_id_
+        self.selected_param_ = selected_model.selected_param_
+        self.selected_cv_rmse_ = float(selected_row["refit_cv_rmse"])
+        self.selected_chain_ = selected_model.chain
+        self.selected_head_ = selected_model.head
+        self.selected_stage_ = selected_row.get("campaign_stage")
+        self.selected_model_config_ = report.get("selected_model_config")
+        self.selected_scale_x_ = final_scale_x
+        self.n_features_in_ = selected_model.n_features_in_
+        self.n_targets_ = selected_model.n_targets_
+        self._y_was_1d_ = selected_model._y_was_1d_
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        return self
+
+    def predict(self, X) -> np.ndarray:
+        if not hasattr(self, "selected_model_"):
+            raise RuntimeError(f"{type(self).__name__}.predict called before fit")
+        return self.selected_model_.predict(X)
+
+    def score(self, X, y) -> float:
+        return _r2_score(y, self.predict(X))
+
+    def get_diagnostics(self) -> dict[str, object]:
+        if not hasattr(self, "campaign_report_"):
+            raise RuntimeError(
+                f"{type(self).__name__}.get_diagnostics called before fit"
+            )
+        report = self.campaign_report_
+        refit = self.refit_report_
+        retention = report.get("retention", {})
+        final = self.selected_model_.get_diagnostics()
+        return {
+            "report_schema": report.get("report_schema"),
+            "plan": report.get("plan"),
+            "n_stages": int(report.get("n_stages", 0)),
+            "stages": list(report.get("stages", ())),
+            "complete": bool(report.get("complete", False)),
+            "screen_complete": bool(report.get("screen_complete", False)),
+            "refit_complete": bool(report.get("refit_complete", False)),
+            "selection_metric": report.get("selection_metric"),
+            "selection_policy": report.get("selection_policy"),
+            "selection_uses_test_set": bool(
+                report.get("selection_uses_test_set", False)
+            ),
+            "split_head_scoring": report.get(
+                "split_head_scoring", self.split_head_scoring
+            ),
+            "n_remaining_stage_chunks_total": int(
+                report.get("n_remaining_stage_chunks_total", 0)
+            ),
+            "n_screen_candidates_total": int(
+                report.get("n_screen_candidates_total", 0)
+            ),
+            "n_screen_split_head_chunks": int(
+                report.get("n_screen_split_head_chunks", 0)
+            ),
+            "n_screen_chunk_score_calls": int(
+                report.get("n_screen_chunk_score_calls", 0)
+            ),
+            "n_merged_global_candidates": int(
+                report.get("n_merged_global_candidates", 0)
+            ),
+            "n_refit_candidates": int(report.get("n_refit_candidates", 0)),
+            "n_ridge_moment_cv_fits": int(
+                report.get("n_ridge_moment_cv_fits", 0)
+            ),
+            "n_ridge_moment_eigen_path_preparations": int(
+                report.get("n_ridge_moment_eigen_path_preparations", 0)
+            ),
+            "n_ridge_moment_eigen_path_cv_fits": int(
+                report.get("n_ridge_moment_eigen_path_cv_fits", 0)
+            ),
+            "n_ridge_moment_direct_cv_fits": int(
+                report.get("n_ridge_moment_direct_cv_fits", 0)
+            ),
+            "n_ridge_moment_score_batch_calls": int(
+                report.get("n_ridge_moment_score_batch_calls", 0)
+            ),
+            "n_ridge_moment_score_batch_jobs": int(
+                report.get("n_ridge_moment_score_batch_jobs", 0)
+            ),
+            "n_screen_pls_moment_cv_fits": int(
+                report.get("n_screen_pls_moment_cv_fits", 0)
+            ),
+            "n_screen_pls_moment_host_cv_fits": int(
+                report.get("n_screen_pls_moment_host_cv_fits", 0)
+            ),
+            "n_screen_pls_moment_cuda_device_cv_fits": int(
+                report.get("n_screen_pls_moment_cuda_device_cv_fits", 0)
+            ),
+            "n_refit_pls_moment_cv_fits": int(
+                report.get("n_refit_pls_moment_cv_fits", 0)
+            ),
+            "n_refit_pls_moment_host_cv_fits": int(
+                report.get("n_refit_pls_moment_host_cv_fits", 0)
+            ),
+            "n_refit_pls_moment_cuda_device_cv_fits": int(
+                report.get("n_refit_pls_moment_cuda_device_cv_fits", 0)
+            ),
+            "refit_top_k": retention.get("refit_top_k"),
+            "refit_per_head_top_k": retention.get("refit_per_head_top_k"),
+            "n_refit_global_candidates": int(
+                retention.get("n_refit_global_candidates", 0)
+            ),
+            "n_refit_per_head_candidates": int(
+                retention.get("n_refit_per_head_candidates", 0)
+            ),
+            "n_refit_union_candidates": int(
+                retention.get("n_refit_union_candidates", 0)
+            ),
+            "n_refit_groups": int(refit.get("n_refit_groups", 0)),
+            "n_refit_scored_candidates": int(
+                refit.get("n_refit_scored_candidates", 0)
+            ),
+            "refit_execution": report.get("refit_execution"),
+            "moment_policy": report.get("moment_policy", self.moment_policy),
+            "refit_moment_policy": report.get("refit_moment_policy"),
+            "selected_stage": self.selected_stage_,
+            "selected_model_config": getattr(self, "selected_model_config_", None),
+            "selected_scale_x": getattr(self, "selected_scale_x_", self.scale_x),
+            "selected_chain": self.selected_chain_,
+            "selected_head": self.selected_head_,
+            "selected_param": self.selected_param_,
+            "selected_refit_cv_rmse": self.selected_cv_rmse_,
+            "selected_cv_rmse": self.selected_cv_rmse_,
+            "impact": report.get("impact"),
+            "rank_diagnostics": report.get("rank_diagnostics"),
+            "final_selected_cv_rmse": float(final["selected_cv_rmse"]),
+            "final_n_candidates": int(final.get("n_candidates", 0)),
+            "final_n_operator_moment_candidates": int(
+                final.get("n_operator_moment_candidates", 0)
+            ),
+            "final_n_materialized_candidates": int(
+                final.get("n_materialized_candidates", 0)
+            ),
+        }
+
+
+class NativeAOMSavgolFocusRegressor(NativeAOMStagedChainCampaignRegressor):
+    """Reusable SavGol-focused staged AOM/moment preset.
+
+    This is the end-user preset for the best focused preprocessing campaign
+    observed in the local strict-linear benchmark pass. It delegates to
+    ``NativeAOMStagedChainCampaignRegressor`` with ``plan="savgol_focus"`` and
+    keeps all production selection train-CV only.
+    """
+
+    def __init__(
+        self,
+        *,
+        cv: int = 5,
+        fold_ids=None,
+        ridge_lambdas: Sequence[float] = (0.1, 1.0, 10.0),
+        pls_components: Sequence[int] | None = (1, 2),
+        heads: Sequence[str] = ("ridge", "pls"),
+        top_k: int = 10,
+        refit_top_k: int | None = 8,
+        refit_per_head_top_k: int | None = 2,
+        final_rank: int = 0,
+        max_chains: int | None = 6,
+        chain_chunk_size: int = 6,
+        checkpoint_dir=None,
+        resume: bool = True,
+        max_chunks_per_run: int | None = None,
+        center_x: bool | None = None,
+        scale_x: bool | None = None,
+        scale_x_values: Sequence[bool | None] | None = (False, True),
+        center_y: bool | None = None,
+        scale_y: bool | None = None,
+        moment_policy: str | int = "auto",
+        refit_moment_policy: str | int | None = None,
+        final_moment_policy: str | int | None = None,
+        pls_score_mode: str | int = "cv",
+        chain_ordering: str = "input",
+        split_head_scoring: str = "auto",
+        backend_cuda_available: bool | None = None,
+        backend_min_cuda_product: int | None = 1,
+        cuda_pls_parallel_folds: bool | None = True,
+        cuda_pls_min_device_features: int | None = 1,
+        cuda_pls_many_batched: bool | None = None,
+        refit_sort_by: str | None = "refit_cv_rmse",
+        refit_execution: str = "auto",
+        refit_auto_max_extra_fraction: float = 1.0,
+        impact: bool = True,
+        rank_diagnostics: bool = True,
+        impact_top_k: int | None = None,
+        return_stage_screens: bool = False,
+    ) -> None:
+        super().__init__(
+            stages=None,
+            plan="savgol_focus",
+            cv=cv,
+            fold_ids=fold_ids,
+            ridge_lambdas=ridge_lambdas,
+            pls_components=pls_components,
+            heads=heads,
+            top_k=top_k,
+            refit_top_k=refit_top_k,
+            refit_per_head_top_k=refit_per_head_top_k,
+            final_rank=final_rank,
+            families=None,
+            templates=None,
+            max_chains=max_chains,
+            chain_chunk_size=chain_chunk_size,
+            checkpoint_dir=checkpoint_dir,
+            resume=resume,
+            max_chunks_per_run=max_chunks_per_run,
+            center_x=center_x,
+            scale_x=scale_x,
+            scale_x_values=scale_x_values,
+            center_y=center_y,
+            scale_y=scale_y,
+            moment_policy=moment_policy,
+            refit_moment_policy=refit_moment_policy,
+            final_moment_policy=final_moment_policy,
+            pls_score_mode=pls_score_mode,
+            chain_ordering=chain_ordering,
+            split_head_scoring=split_head_scoring,
+            backend_cuda_available=backend_cuda_available,
+            backend_min_cuda_product=backend_min_cuda_product,
+            cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+            cuda_pls_min_device_features=cuda_pls_min_device_features,
+            cuda_pls_many_batched=cuda_pls_many_batched,
+            refit_sort_by=refit_sort_by,
+            refit_execution=refit_execution,
+            refit_auto_max_extra_fraction=refit_auto_max_extra_fraction,
+            impact=impact,
+            rank_diagnostics=rank_diagnostics,
+            impact_top_k=impact_top_k,
+            return_stage_screens=return_stage_screens,
+        )
+
+
+class NativeAOMStrictFamilyLiteRegressor(NativeAOMStagedChainCampaignRegressor):
+    """Cost-safe strict-family staged AOM/moment preset.
+
+    This is the reusable audit preset for the broader strict-family staged
+    recipe. It keeps all model selection train-CV-only, but uses a much smaller
+    retained refit pool than the full ``strict_family_focus`` campaign so it can
+    exercise SavGol, Norris-Williams, finite-difference, Gaussian, FCK and
+    Whittaker stages without presenting the heavy profile as a fast default.
+    """
+
+    def __init__(
+        self,
+        *,
+        cv: int = 5,
+        fold_ids=None,
+        ridge_lambdas: Sequence[float] = (0.1, 1.0, 10.0),
+        pls_components: Sequence[int] | None = (1, 2),
+        heads: Sequence[str] = ("ridge", "pls"),
+        top_k: int = 6,
+        refit_top_k: int | None = 4,
+        refit_per_head_top_k: int | None = 1,
+        final_rank: int = 0,
+        max_chains: int | None = 2,
+        chain_chunk_size: int = 2,
+        checkpoint_dir=None,
+        resume: bool = True,
+        max_chunks_per_run: int | None = None,
+        center_x: bool | None = None,
+        scale_x: bool | None = False,
+        scale_x_values: Sequence[bool | None] | None = None,
+        center_y: bool | None = None,
+        scale_y: bool | None = None,
+        moment_policy: str | int = "auto",
+        refit_moment_policy: str | int | None = None,
+        final_moment_policy: str | int | None = None,
+        pls_score_mode: str | int = "cv",
+        chain_ordering: str = "input",
+        split_head_scoring: str = "auto",
+        backend_cuda_available: bool | None = None,
+        backend_min_cuda_product: int | None = 1,
+        cuda_pls_parallel_folds: bool | None = True,
+        cuda_pls_min_device_features: int | None = 1,
+        cuda_pls_many_batched: bool | None = None,
+        refit_sort_by: str | None = "refit_cv_rmse",
+        refit_execution: str = "auto",
+        refit_auto_max_extra_fraction: float = 1.0,
+        impact: bool = True,
+        rank_diagnostics: bool = True,
+        impact_top_k: int | None = None,
+        return_stage_screens: bool = False,
+    ) -> None:
+        super().__init__(
+            stages=None,
+            plan="strict_family_focus",
+            cv=cv,
+            fold_ids=fold_ids,
+            ridge_lambdas=ridge_lambdas,
+            pls_components=pls_components,
+            heads=heads,
+            top_k=top_k,
+            refit_top_k=refit_top_k,
+            refit_per_head_top_k=refit_per_head_top_k,
+            final_rank=final_rank,
+            families=None,
+            templates=None,
+            max_chains=max_chains,
+            chain_chunk_size=chain_chunk_size,
+            checkpoint_dir=checkpoint_dir,
+            resume=resume,
+            max_chunks_per_run=max_chunks_per_run,
+            center_x=center_x,
+            scale_x=scale_x,
+            scale_x_values=scale_x_values,
+            center_y=center_y,
+            scale_y=scale_y,
+            moment_policy=moment_policy,
+            refit_moment_policy=refit_moment_policy,
+            final_moment_policy=final_moment_policy,
+            pls_score_mode=pls_score_mode,
+            chain_ordering=chain_ordering,
+            split_head_scoring=split_head_scoring,
+            backend_cuda_available=backend_cuda_available,
+            backend_min_cuda_product=backend_min_cuda_product,
+            cuda_pls_parallel_folds=cuda_pls_parallel_folds,
+            cuda_pls_min_device_features=cuda_pls_min_device_features,
+            cuda_pls_many_batched=cuda_pls_many_batched,
+            refit_sort_by=refit_sort_by,
+            refit_execution=refit_execution,
+            refit_auto_max_extra_fraction=refit_auto_max_extra_fraction,
+            impact=impact,
+            rank_diagnostics=rank_diagnostics,
+            impact_top_k=impact_top_k,
+            return_stage_screens=return_stage_screens,
+        )
 
 
 class NativeAOMMomentScreenRefitRegressor(NativeAOMScreenRefitRegressor):
@@ -2084,6 +3120,714 @@ class NativeAOMRidgeBlenderRegressor(BaseEstimator):
             "cv": int(self.result_["cv"]),
             "n_features": int(self.result_["n_features"]),
             "n_targets": int(self.result_["n_targets"]),
+            "n_ridge_blender_cv_fits": int(
+                self.result_.get("n_ridge_blender_cv_fits", 0)
+            ),
+            "n_ridge_blender_final_fits": int(
+                self.result_.get("n_ridge_blender_final_fits", 0)
+            ),
+            "n_ridge_blender_fit_calls": int(
+                self.result_.get("n_ridge_blender_fit_calls", 0)
+            ),
+        }
+
+
+class NativeAOMRidgeSuperblockRegressor(BaseEstimator):
+    """Strict-linear AOM operator superblock with a Ridge head."""
+
+    def __init__(
+        self,
+        *,
+        operators=None,
+        alpha: float | None = None,
+        alphas: Sequence[float] = (1e-4, 1e-2, 1.0, 100.0),
+        cv: int = 5,
+        fold_ids=None,
+        block_scaling: str = "rms",
+        center_x: bool = True,
+        center_y: bool = True,
+    ) -> None:
+        self.operators = operators
+        self.alpha = alpha
+        self.alphas = tuple(float(v) for v in alphas)
+        self.cv = int(cv)
+        self.fold_ids = fold_ids
+        self.block_scaling = block_scaling
+        self.center_x = bool(center_x)
+        self.center_y = bool(center_y)
+
+    def fit(self, X, y):
+        X_arr = _as_X(X)
+        y_arr, y_was_1d = _as_y(y, X_arr.shape[0])
+        result = _native.aom_ridge_superblock(
+            X_arr,
+            y_arr,
+            operators=self.operators,
+            alpha=self.alpha,
+            alphas=self.alphas,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            block_scaling=self.block_scaling,
+            center_x=self.center_x,
+            center_y=self.center_y,
+        )
+        coef = np.asarray(result["input_coefficients"], dtype=np.float64)
+        intercept = np.asarray(result["intercept"], dtype=np.float64).reshape(-1)
+        if coef.ndim != 2 or coef.shape[0] != X_arr.shape[1]:
+            raise ValueError("AOM Ridge superblock coefficients do not match X")
+        if intercept.size != coef.shape[1]:
+            raise ValueError("AOM Ridge superblock intercept does not match coefficients")
+
+        self.result_ = result
+        self._coef_matrix_ = np.ascontiguousarray(coef)
+        self.intercept_ = float(intercept[0]) if intercept.size == 1 else intercept.copy()
+        self.coef_ = (
+            self._coef_matrix_[:, 0].copy()
+            if self._coef_matrix_.shape[1] == 1
+            else self._coef_matrix_.T.copy()
+        )
+        self.predictions_ = np.asarray(result["predictions"], dtype=np.float64).copy()
+        self.oof_predictions_ = np.asarray(result["oof_predictions"], dtype=np.float64).copy()
+        self.candidate_scores_ = np.asarray(result["candidate_scores"], dtype=np.float64).copy()
+        self.selected_alpha_ = float(result["selected_alpha"])
+        self.selected_cv_rmse_ = float(result["selected_cv_rmse"])
+        self.n_features_in_ = int(X_arr.shape[1])
+        self.n_targets_ = int(coef.shape[1])
+        self._y_was_1d_ = bool(y_was_1d)
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        return self
+
+    def predict(self, X) -> np.ndarray:
+        if not hasattr(self, "_coef_matrix_"):
+            raise RuntimeError(f"{type(self).__name__}.predict called before fit")
+        X_arr = _as_X(X)
+        if X_arr.shape[1] != self.n_features_in_:
+            raise ValueError("X has a different number of features than during fit")
+        preds = X_arr @ self._coef_matrix_ + np.asarray(self.intercept_).reshape(1, -1)
+        if self._y_was_1d_ and preds.shape[1] == 1:
+            return preds.ravel()
+        return preds
+
+    def score(self, X, y) -> float:
+        return _r2_score(y, self.predict(X))
+
+    def get_diagnostics(self) -> dict[str, object]:
+        if not hasattr(self, "result_"):
+            raise RuntimeError(f"{type(self).__name__}.get_diagnostics called before fit")
+        return {
+            "selected_alpha": self.selected_alpha_,
+            "selected_cv_rmse": self.selected_cv_rmse_,
+            "n_candidates": int(self.result_["n_candidates"]),
+            "n_operators": int(self.result_["n_operators"]),
+            "n_features": int(self.result_["n_features"]),
+            "n_features_superblock": int(self.result_["n_features_superblock"]),
+            "n_targets": int(self.result_["n_targets"]),
+            "cv": int(self.result_["cv"]),
+            "block_scaling": self.result_["block_scaling"],
+            "ridge_backend": self.result_.get("ridge_backend", "unknown"),
+        }
+
+
+class NativeAOMRidgeMKLSuperblockRegressor(BaseEstimator):
+    """Strict-linear AOM Ridge superblock with train-only KTA block weights."""
+
+    def __init__(
+        self,
+        *,
+        operators=None,
+        alpha: float | None = None,
+        alphas: Sequence[float] = (1e-4, 1e-2, 1.0, 100.0),
+        cv: int = 5,
+        fold_ids=None,
+        mkl_top_k: int = 6,
+        block_scaling: str = "none",
+        center_x: bool = True,
+        center_y: bool = True,
+    ) -> None:
+        self.operators = operators
+        self.alpha = alpha
+        self.alphas = tuple(float(v) for v in alphas)
+        self.cv = int(cv)
+        self.fold_ids = fold_ids
+        self.mkl_top_k = int(mkl_top_k)
+        self.block_scaling = block_scaling
+        self.center_x = bool(center_x)
+        self.center_y = bool(center_y)
+
+    def fit(self, X, y):
+        X_arr = _as_X(X)
+        y_arr, y_was_1d = _as_y(y, X_arr.shape[0])
+        result = _native.aom_ridge_mkl_superblock(
+            X_arr,
+            y_arr,
+            operators=self.operators,
+            alpha=self.alpha,
+            alphas=self.alphas,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            mkl_top_k=self.mkl_top_k,
+            block_scaling=self.block_scaling,
+            center_x=self.center_x,
+            center_y=self.center_y,
+        )
+        coef = np.asarray(result["input_coefficients"], dtype=np.float64)
+        intercept = np.asarray(result["intercept"], dtype=np.float64).reshape(-1)
+        if coef.ndim != 2 or coef.shape[0] != X_arr.shape[1]:
+            raise ValueError("AOM Ridge MKL superblock coefficients do not match X")
+        if intercept.size != coef.shape[1]:
+            raise ValueError("AOM Ridge MKL superblock intercept does not match coefficients")
+
+        self.result_ = result
+        self._coef_matrix_ = np.ascontiguousarray(coef)
+        self.intercept_ = float(intercept[0]) if intercept.size == 1 else intercept.copy()
+        self.coef_ = (
+            self._coef_matrix_[:, 0].copy()
+            if self._coef_matrix_.shape[1] == 1
+            else self._coef_matrix_.T.copy()
+        )
+        self.predictions_ = np.asarray(result["predictions"], dtype=np.float64).copy()
+        self.oof_predictions_ = np.asarray(result["oof_predictions"], dtype=np.float64).copy()
+        self.candidate_scores_ = np.asarray(result["candidate_scores"], dtype=np.float64).copy()
+        self.selected_alpha_ = float(result["selected_alpha"])
+        self.selected_cv_rmse_ = float(result["selected_cv_rmse"])
+        self.mkl_weights_ = np.asarray(result["mkl_weights"], dtype=np.float64).reshape(-1).copy()
+        self.mkl_alignment_scores_ = np.asarray(
+            result["mkl_alignment_scores"],
+            dtype=np.float64,
+        ).reshape(-1).copy()
+        self.selected_operator_indices_ = np.asarray(
+            result["selected_operator_indices"],
+            dtype=np.int32,
+        ).copy()
+        self.n_features_in_ = int(X_arr.shape[1])
+        self.n_targets_ = int(coef.shape[1])
+        self._y_was_1d_ = bool(y_was_1d)
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        return self
+
+    def predict(self, X) -> np.ndarray:
+        if not hasattr(self, "_coef_matrix_"):
+            raise RuntimeError(f"{type(self).__name__}.predict called before fit")
+        X_arr = _as_X(X)
+        if X_arr.shape[1] != self.n_features_in_:
+            raise ValueError("X has a different number of features than during fit")
+        preds = X_arr @ self._coef_matrix_ + np.asarray(self.intercept_).reshape(1, -1)
+        if self._y_was_1d_ and preds.shape[1] == 1:
+            return preds.ravel()
+        return preds
+
+    def score(self, X, y) -> float:
+        return _r2_score(y, self.predict(X))
+
+    def get_diagnostics(self) -> dict[str, object]:
+        if not hasattr(self, "result_"):
+            raise RuntimeError(f"{type(self).__name__}.get_diagnostics called before fit")
+        return {
+            "selected_alpha": self.selected_alpha_,
+            "selected_cv_rmse": self.selected_cv_rmse_,
+            "n_candidates": int(self.result_["n_candidates"]),
+            "n_operators": int(self.result_["n_operators"]),
+            "n_mkl_active_operators": int(self.result_["n_mkl_active_operators"]),
+            "selected_operator_indices": self.selected_operator_indices_.tolist(),
+            "mkl_top_k": int(self.result_["mkl_top_k"]),
+            "mkl_mode": self.result_["mkl_mode"],
+            "mkl_weights": self.mkl_weights_.tolist(),
+            "n_features": int(self.result_["n_features"]),
+            "n_features_superblock": int(self.result_["n_features_superblock"]),
+            "n_targets": int(self.result_["n_targets"]),
+            "cv": int(self.result_["cv"]),
+            "block_scaling": self.result_["block_scaling"],
+            "ridge_backend": self.result_.get("ridge_backend", "unknown"),
+        }
+
+
+class NativeAOMRidgeActiveSuperblockRegressor(BaseEstimator):
+    """Strict-linear AOM Ridge superblock with train-only active operator pruning."""
+
+    def __init__(
+        self,
+        *,
+        operators=None,
+        alpha: float | None = None,
+        alphas: Sequence[float] = (1e-4, 1e-2, 1.0, 100.0),
+        cv: int = 5,
+        fold_ids=None,
+        active_top_m: int = 20,
+        active_diversity_threshold: float = 0.98,
+        active_score_method: str = "norm",
+        active_max_per_family: int | None = None,
+        keep_identity: bool = True,
+        block_scaling: str = "rms",
+        center_x: bool = True,
+        center_y: bool = True,
+    ) -> None:
+        self.operators = operators
+        self.alpha = alpha
+        self.alphas = tuple(float(v) for v in alphas)
+        self.cv = int(cv)
+        self.fold_ids = fold_ids
+        self.active_top_m = int(active_top_m)
+        self.active_diversity_threshold = float(active_diversity_threshold)
+        self.active_score_method = str(active_score_method)
+        self.active_max_per_family = active_max_per_family
+        self.keep_identity = bool(keep_identity)
+        self.block_scaling = block_scaling
+        self.center_x = bool(center_x)
+        self.center_y = bool(center_y)
+
+    def fit(self, X, y):
+        X_arr = _as_X(X)
+        y_arr, y_was_1d = _as_y(y, X_arr.shape[0])
+        result = _native.aom_ridge_active_superblock(
+            X_arr,
+            y_arr,
+            operators=self.operators,
+            alpha=self.alpha,
+            alphas=self.alphas,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            active_top_m=self.active_top_m,
+            active_diversity_threshold=self.active_diversity_threshold,
+            active_score_method=self.active_score_method,
+            active_max_per_family=self.active_max_per_family,
+            keep_identity=self.keep_identity,
+            block_scaling=self.block_scaling,
+            center_x=self.center_x,
+            center_y=self.center_y,
+        )
+        coef = np.asarray(result["input_coefficients"], dtype=np.float64)
+        intercept = np.asarray(result["intercept"], dtype=np.float64).reshape(-1)
+        if coef.ndim != 2 or coef.shape[0] != X_arr.shape[1]:
+            raise ValueError("AOM Ridge active-superblock coefficients do not match X")
+        if intercept.size != coef.shape[1]:
+            raise ValueError("AOM Ridge active-superblock intercept does not match coefficients")
+
+        self.result_ = result
+        self._coef_matrix_ = np.ascontiguousarray(coef)
+        self.intercept_ = float(intercept[0]) if intercept.size == 1 else intercept.copy()
+        self.coef_ = (
+            self._coef_matrix_[:, 0].copy()
+            if self._coef_matrix_.shape[1] == 1
+            else self._coef_matrix_.T.copy()
+        )
+        self.predictions_ = np.asarray(result["predictions"], dtype=np.float64).copy()
+        self.oof_predictions_ = np.asarray(result["oof_predictions"], dtype=np.float64).copy()
+        self.candidate_scores_ = np.asarray(result["candidate_scores"], dtype=np.float64).copy()
+        self.selected_alpha_ = float(result["selected_alpha"])
+        self.selected_cv_rmse_ = float(result["selected_cv_rmse"])
+        self.selected_operator_indices_ = np.asarray(
+            result["selected_operator_indices"],
+            dtype=np.int32,
+        ).copy()
+        self.selected_operator_kinds_ = np.asarray(
+            result["selected_operator_kinds"],
+            dtype=np.int64,
+        ).copy()
+        self.n_features_in_ = int(X_arr.shape[1])
+        self.n_targets_ = int(coef.shape[1])
+        self._y_was_1d_ = bool(y_was_1d)
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        return self
+
+    def predict(self, X) -> np.ndarray:
+        if not hasattr(self, "_coef_matrix_"):
+            raise RuntimeError(f"{type(self).__name__}.predict called before fit")
+        X_arr = _as_X(X)
+        if X_arr.shape[1] != self.n_features_in_:
+            raise ValueError("X has a different number of features than during fit")
+        preds = X_arr @ self._coef_matrix_ + np.asarray(self.intercept_).reshape(1, -1)
+        if self._y_was_1d_ and preds.shape[1] == 1:
+            return preds.ravel()
+        return preds
+
+    def score(self, X, y) -> float:
+        return _r2_score(y, self.predict(X))
+
+    def get_diagnostics(self) -> dict[str, object]:
+        if not hasattr(self, "result_"):
+            raise RuntimeError(f"{type(self).__name__}.get_diagnostics called before fit")
+        return {
+            "selected_alpha": self.selected_alpha_,
+            "selected_cv_rmse": self.selected_cv_rmse_,
+            "n_candidates": int(self.result_["n_candidates"]),
+            "n_operators": int(self.result_["n_operators"]),
+            "n_active_operators": int(self.result_["n_active_operators"]),
+            "n_active_pruned": int(self.result_["n_active_pruned"]),
+            "selected_operator_indices": self.selected_operator_indices_.tolist(),
+            "selected_operator_kinds": self.selected_operator_kinds_.tolist(),
+            "active_top_m": int(self.result_["active_top_m"]),
+            "active_diversity_threshold": float(self.result_["active_diversity_threshold"]),
+            "active_score_method": self.result_["active_score_method"],
+            "active_max_per_family": int(self.result_["active_max_per_family"]),
+            "keep_identity": bool(self.result_["keep_identity"]),
+            "n_features": int(self.result_["n_features"]),
+            "n_features_superblock": int(self.result_["n_features_superblock"]),
+            "n_targets": int(self.result_["n_targets"]),
+            "cv": int(self.result_["cv"]),
+            "block_scaling": self.result_["block_scaling"],
+            "ridge_backend": self.result_.get("ridge_backend", "unknown"),
+        }
+
+
+class NativeAOMPLSSuperblockRegressor(BaseEstimator):
+    """Strict-linear AOM operator superblock with a PLS head."""
+
+    def __init__(
+        self,
+        *,
+        operators=None,
+        n_components: int = 2,
+        pls_components: Sequence[int] | None = None,
+        cv: int = 5,
+        fold_ids=None,
+        block_scaling: str = "rms",
+        center_x: bool = True,
+        center_y: bool = True,
+        cuda_pls_parallel_folds: bool | None = None,
+        cuda_pls_min_device_features: int | None = None,
+        cuda_pls_many_batched: bool | None = None,
+    ) -> None:
+        self.operators = operators
+        self.n_components = int(n_components)
+        self.pls_components = (
+            None if pls_components is None else tuple(int(v) for v in pls_components)
+        )
+        self.cv = int(cv)
+        self.fold_ids = fold_ids
+        self.block_scaling = block_scaling
+        self.center_x = bool(center_x)
+        self.center_y = bool(center_y)
+        self.cuda_pls_parallel_folds = cuda_pls_parallel_folds
+        self.cuda_pls_min_device_features = cuda_pls_min_device_features
+        self.cuda_pls_many_batched = cuda_pls_many_batched
+
+    def fit(self, X, y):
+        X_arr = _as_X(X)
+        y_arr, y_was_1d = _as_y(y, X_arr.shape[0])
+        result = _native.aom_pls_superblock(
+            X_arr,
+            y_arr,
+            operators=self.operators,
+            n_components=self.n_components,
+            pls_components=self.pls_components,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            block_scaling=self.block_scaling,
+            center_x=self.center_x,
+            center_y=self.center_y,
+            cuda_pls_parallel_folds=self.cuda_pls_parallel_folds,
+            cuda_pls_min_device_features=self.cuda_pls_min_device_features,
+            cuda_pls_many_batched=self.cuda_pls_many_batched,
+        )
+        coef = np.asarray(result["input_coefficients"], dtype=np.float64)
+        intercept = np.asarray(result["intercept"], dtype=np.float64).reshape(-1)
+        if coef.ndim != 2 or coef.shape[0] != X_arr.shape[1]:
+            raise ValueError("AOM PLS superblock coefficients do not match X")
+        if intercept.size != coef.shape[1]:
+            raise ValueError("AOM PLS superblock intercept does not match coefficients")
+
+        self.result_ = result
+        self._coef_matrix_ = np.ascontiguousarray(coef)
+        self.intercept_ = float(intercept[0]) if intercept.size == 1 else intercept.copy()
+        self.coef_ = (
+            self._coef_matrix_[:, 0].copy()
+            if self._coef_matrix_.shape[1] == 1
+            else self._coef_matrix_.T.copy()
+        )
+        self.predictions_ = np.asarray(result["predictions"], dtype=np.float64).copy()
+        self.oof_predictions_ = np.asarray(result["oof_predictions"], dtype=np.float64).copy()
+        self.candidate_scores_ = np.asarray(result["candidate_scores"], dtype=np.float64).copy()
+        self.n_components_ = int(result["n_components"])
+        self.selected_cv_rmse_ = float(result["selected_cv_rmse"])
+        self.n_features_in_ = int(X_arr.shape[1])
+        self.n_targets_ = int(coef.shape[1])
+        self._y_was_1d_ = bool(y_was_1d)
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        return self
+
+    def predict(self, X) -> np.ndarray:
+        if not hasattr(self, "_coef_matrix_"):
+            raise RuntimeError(f"{type(self).__name__}.predict called before fit")
+        X_arr = _as_X(X)
+        if X_arr.shape[1] != self.n_features_in_:
+            raise ValueError("X has a different number of features than during fit")
+        preds = X_arr @ self._coef_matrix_ + np.asarray(self.intercept_).reshape(1, -1)
+        if self._y_was_1d_ and preds.shape[1] == 1:
+            return preds.ravel()
+        return preds
+
+    def score(self, X, y) -> float:
+        return _r2_score(y, self.predict(X))
+
+    def get_diagnostics(self) -> dict[str, object]:
+        if not hasattr(self, "result_"):
+            raise RuntimeError(f"{type(self).__name__}.get_diagnostics called before fit")
+        report = {
+            "n_components": self.n_components_,
+            "selected_cv_rmse": self.selected_cv_rmse_,
+            "n_candidates": int(self.result_["n_candidates"]),
+            "n_operators": int(self.result_["n_operators"]),
+            "n_features": int(self.result_["n_features"]),
+            "n_features_superblock": int(self.result_["n_features_superblock"]),
+            "n_targets": int(self.result_["n_targets"]),
+            "cv": int(self.result_["cv"]),
+            "block_scaling": self.result_["block_scaling"],
+            "pls_backend": self.result_.get("pls_backend", "unknown"),
+        }
+        for key in (
+            "n_pls_moment_cv_fits",
+            "n_pls_moment_host_cv_fits",
+            "n_pls_moment_cuda_device_cv_fits",
+            "n_pls_moment_cuda_parallel_fold_batches",
+            "n_pls_moment_cuda_parallel_fold_jobs",
+            "n_pls_moment_cuda_many_batched_batches",
+            "n_pls_moment_cuda_many_batched_jobs",
+            "n_pls_materialized_cv_fits",
+            "n_pls_moment_final_fits",
+            "n_pls_moment_host_final_fits",
+            "n_pls_moment_cuda_device_final_fits",
+            "n_pls_materialized_final_fits",
+        ):
+            if key in self.result_:
+                report[key] = int(self.result_[key])
+        return report
+
+
+class NativeAOMRidgePLSSuperblockRegressor(BaseEstimator):
+    """Strict-linear AOM operator superblock with a Ridge-PLS head."""
+
+    def __init__(
+        self,
+        *,
+        operators=None,
+        n_components: int = 2,
+        pls_components: Sequence[int] | None = None,
+        ridge_lambda: float | None = None,
+        ridge_lambdas: Sequence[float] = (0.0, 0.1, 1.0, 10.0),
+        cv: int = 5,
+        fold_ids=None,
+        block_scaling: str = "rms",
+        center_x: bool = True,
+    ) -> None:
+        self.operators = operators
+        self.n_components = int(n_components)
+        self.pls_components = (
+            None if pls_components is None else tuple(int(v) for v in pls_components)
+        )
+        self.ridge_lambda = None if ridge_lambda is None else float(ridge_lambda)
+        self.ridge_lambdas = tuple(float(v) for v in ridge_lambdas)
+        self.cv = int(cv)
+        self.fold_ids = fold_ids
+        self.block_scaling = block_scaling
+        self.center_x = bool(center_x)
+
+    def fit(self, X, y):
+        X_arr = _as_X(X)
+        y_arr, y_was_1d = _as_y(y, X_arr.shape[0])
+        result = _native.aom_ridge_pls_superblock(
+            X_arr,
+            y_arr,
+            operators=self.operators,
+            n_components=self.n_components,
+            pls_components=self.pls_components,
+            ridge_lambda=self.ridge_lambda,
+            ridge_lambdas=self.ridge_lambdas,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            block_scaling=self.block_scaling,
+            center_x=self.center_x,
+        )
+        coef = np.asarray(result["input_coefficients"], dtype=np.float64)
+        intercept = np.asarray(result["intercept"], dtype=np.float64).reshape(-1)
+        if coef.ndim != 2 or coef.shape[0] != X_arr.shape[1]:
+            raise ValueError("AOM Ridge-PLS superblock coefficients do not match X")
+        if intercept.size != coef.shape[1]:
+            raise ValueError("AOM Ridge-PLS superblock intercept does not match coefficients")
+
+        self.result_ = result
+        self._coef_matrix_ = np.ascontiguousarray(coef)
+        self.intercept_ = float(intercept[0]) if intercept.size == 1 else intercept.copy()
+        self.coef_ = (
+            self._coef_matrix_[:, 0].copy()
+            if self._coef_matrix_.shape[1] == 1
+            else self._coef_matrix_.T.copy()
+        )
+        self.predictions_ = np.asarray(result["predictions"], dtype=np.float64).copy()
+        self.oof_predictions_ = np.asarray(result["oof_predictions"], dtype=np.float64).copy()
+        self.candidate_scores_ = np.asarray(result["candidate_scores"], dtype=np.float64).copy()
+        self.n_components_ = int(result["n_components"])
+        self.ridge_lambda_ = float(result["ridge_lambda"])
+        self.selected_cv_rmse_ = float(result["selected_cv_rmse"])
+        self.n_features_in_ = int(X_arr.shape[1])
+        self.n_targets_ = int(coef.shape[1])
+        self._y_was_1d_ = bool(y_was_1d)
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        return self
+
+    def predict(self, X) -> np.ndarray:
+        if not hasattr(self, "_coef_matrix_"):
+            raise RuntimeError(f"{type(self).__name__}.predict called before fit")
+        X_arr = _as_X(X)
+        if X_arr.shape[1] != self.n_features_in_:
+            raise ValueError("X has a different number of features than during fit")
+        preds = X_arr @ self._coef_matrix_ + np.asarray(self.intercept_).reshape(1, -1)
+        if self._y_was_1d_ and preds.shape[1] == 1:
+            return preds.ravel()
+        return preds
+
+    def score(self, X, y) -> float:
+        return _r2_score(y, self.predict(X))
+
+    def get_diagnostics(self) -> dict[str, object]:
+        if not hasattr(self, "result_"):
+            raise RuntimeError(f"{type(self).__name__}.get_diagnostics called before fit")
+        return {
+            "n_components": self.n_components_,
+            "ridge_lambda": self.ridge_lambda_,
+            "selected_cv_rmse": self.selected_cv_rmse_,
+            "n_candidates": int(self.result_["n_candidates"]),
+            "n_operators": int(self.result_["n_operators"]),
+            "n_features": int(self.result_["n_features"]),
+            "n_features_superblock": int(self.result_["n_features_superblock"]),
+            "n_targets": int(self.result_["n_targets"]),
+            "cv": int(self.result_["cv"]),
+            "block_scaling": self.result_["block_scaling"],
+            "ridge_pls_backend": self.result_.get("ridge_pls_backend", "unknown"),
+            "n_ridge_pls_fit_calls": int(
+                self.result_.get("n_ridge_pls_fit_calls", 0)
+            ),
+        }
+
+
+class NativeAOMChainRidgePLSRegressor(BaseEstimator):
+    """Strict-linear AOM chain selector with a native Ridge-PLS head."""
+
+    def __init__(
+        self,
+        *,
+        chains=None,
+        profile: str = "compact",
+        families=None,
+        templates: Sequence[Sequence[str]] | None = None,
+        max_chains: int | None = None,
+        n_components: int = 2,
+        pls_components: Sequence[int] | None = None,
+        ridge_lambda: float | None = None,
+        ridge_lambdas: Sequence[float] = (0.0, 0.1, 1.0, 10.0),
+        cv: int = 5,
+        fold_ids=None,
+        center_x: bool = True,
+        center_y: bool = True,
+    ) -> None:
+        self.chains = chains
+        self.profile = profile
+        self.families = families
+        self.templates = (
+            None
+            if templates is None
+            else tuple(tuple(str(name) for name in template) for template in templates)
+        )
+        self.max_chains = None if max_chains is None else int(max_chains)
+        self.n_components = int(n_components)
+        self.pls_components = (
+            None if pls_components is None else tuple(int(v) for v in pls_components)
+        )
+        self.ridge_lambda = None if ridge_lambda is None else float(ridge_lambda)
+        self.ridge_lambdas = tuple(float(v) for v in ridge_lambdas)
+        self.cv = int(cv)
+        self.fold_ids = fold_ids
+        self.center_x = bool(center_x)
+        self.center_y = bool(center_y)
+
+    def fit(self, X, y):
+        X_arr = _as_X(X)
+        y_arr, y_was_1d = _as_y(y, X_arr.shape[0])
+        result = _native.aom_chain_ridge_pls(
+            X_arr,
+            y_arr,
+            chains=self.chains,
+            profile=self.profile,
+            families=self.families,
+            templates=self.templates,
+            max_chains=self.max_chains,
+            n_components=self.n_components,
+            pls_components=self.pls_components,
+            ridge_lambda=self.ridge_lambda,
+            ridge_lambdas=self.ridge_lambdas,
+            cv=self.cv,
+            fold_ids=self.fold_ids,
+            center_x=self.center_x,
+            center_y=self.center_y,
+        )
+        coef = np.asarray(result["input_coefficients"], dtype=np.float64)
+        intercept = np.asarray(result["intercept"], dtype=np.float64).reshape(-1)
+        if coef.ndim != 2 or coef.shape[0] != X_arr.shape[1]:
+            raise ValueError("AOM chain Ridge-PLS coefficients do not match X")
+        if intercept.size != coef.shape[1]:
+            raise ValueError("AOM chain Ridge-PLS intercept does not match coefficients")
+
+        self.result_ = result
+        self._coef_matrix_ = np.ascontiguousarray(coef)
+        self.intercept_ = float(intercept[0]) if intercept.size == 1 else intercept.copy()
+        self.coef_ = (
+            self._coef_matrix_[:, 0].copy()
+            if self._coef_matrix_.shape[1] == 1
+            else self._coef_matrix_.T.copy()
+        )
+        self.predictions_ = np.asarray(result["predictions"], dtype=np.float64).copy()
+        self.oof_predictions_ = np.asarray(result["oof_predictions"], dtype=np.float64).copy()
+        self.candidate_scores_ = np.asarray(result["candidate_scores"], dtype=np.float64).copy()
+        self.selected_chain_ = result["selected_chain"]
+        self.selected_chain_id_ = int(result["selected_chain_id"])
+        self.n_components_ = int(result["n_components"])
+        self.ridge_lambda_ = float(result["ridge_lambda"])
+        self.selected_cv_rmse_ = float(result["selected_cv_rmse"])
+        self.n_features_in_ = int(X_arr.shape[1])
+        self.n_targets_ = int(coef.shape[1])
+        self._y_was_1d_ = bool(y_was_1d)
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        return self
+
+    def predict(self, X) -> np.ndarray:
+        if not hasattr(self, "_coef_matrix_"):
+            raise RuntimeError(f"{type(self).__name__}.predict called before fit")
+        X_arr = _as_X(X)
+        if X_arr.shape[1] != self.n_features_in_:
+            raise ValueError("X has a different number of features than during fit")
+        preds = X_arr @ self._coef_matrix_ + np.asarray(self.intercept_).reshape(1, -1)
+        if self._y_was_1d_ and preds.shape[1] == 1:
+            return preds.ravel()
+        return preds
+
+    def score(self, X, y) -> float:
+        return _r2_score(y, self.predict(X))
+
+    def get_diagnostics(self) -> dict[str, object]:
+        if not hasattr(self, "result_"):
+            raise RuntimeError(f"{type(self).__name__}.get_diagnostics called before fit")
+        return {
+            "n_components": self.n_components_,
+            "ridge_lambda": self.ridge_lambda_,
+            "selected_cv_rmse": self.selected_cv_rmse_,
+            "selected_chain_id": self.selected_chain_id_,
+            "selected_chain_length": int(self.result_["selected_chain_length"]),
+            "n_candidates": int(self.result_["n_candidates"]),
+            "n_chains": int(self.result_["n_chains"]),
+            "n_operators": int(self.result_["n_operators"]),
+            "n_features": int(self.result_["n_features"]),
+            "n_features_transformed": int(self.result_["n_features_transformed"]),
+            "n_targets": int(self.result_["n_targets"]),
+            "cv": int(self.result_["cv"]),
+            "ridge_pls_backend": self.result_.get("ridge_pls_backend", "unknown"),
+            "n_ridge_pls_fit_calls": int(
+                self.result_.get("n_ridge_pls_fit_calls", 0)
+            ),
         }
 
 
@@ -2203,6 +3947,27 @@ class NativeAOMOperatorPLSStackRegressor(BaseEstimator):
             "cv": int(self.result_["cv"]),
             "n_features": int(self.result_["n_features"]),
             "n_targets": int(self.result_["n_targets"]),
+            "n_pls_stack_cv_fits": int(
+                self.result_.get("n_pls_stack_cv_fits", 0)
+            ),
+            "n_pls_stack_final_fits": int(
+                self.result_.get("n_pls_stack_final_fits", 0)
+            ),
+            "n_ridge_stack_cv_fits": int(
+                self.result_.get("n_ridge_stack_cv_fits", 0)
+            ),
+            "n_ridge_stack_final_fits": int(
+                self.result_.get("n_ridge_stack_final_fits", 0)
+            ),
+            "n_operator_pls_stack_fit_calls": int(
+                self.result_.get("n_operator_pls_stack_fit_calls", 0)
+            ),
+            "n_operator_pls_stack_pls_fit_calls": int(
+                self.result_.get("n_operator_pls_stack_pls_fit_calls", 0)
+            ),
+            "n_operator_pls_stack_ridge_fit_calls": int(
+                self.result_.get("n_operator_pls_stack_ridge_fit_calls", 0)
+            ),
         }
 
 
@@ -2360,6 +4125,7 @@ class NativePOPPLSRegressor(_NativeAOMSelectorRegressor):
 
 
 __all__ = [
+    "NativeAOMChainRidgePLSRegressor",
     "NativeAOMChainSweepRegressor",
     "NativeAOMFixedCandidateRegressor",
     "NativeAOMMomentScreenRefitRegressor",
@@ -2368,8 +4134,13 @@ __all__ = [
     "NativeAOMOperatorPLSStackRegressor",
     "NativeAOMPLSRegressor",
     "NativeAOMRidgeBlenderRegressor",
+    "NativeAOMRidgeGlobalRegressor",
+    "NativeAOMRidgeSuperblockRegressor",
     "NativeAOMRobustHPORegressor",
     "NativeAOMScreenRefitRegressor",
+    "NativeAOMSavgolFocusRegressor",
+    "NativeAOMStrictFamilyLiteRegressor",
+    "NativeAOMStagedChainCampaignRegressor",
     "NativeAOMSweepRegressor",
     "NativeContinuumRegressionRegressor",
     "NativeCPPLSRegressor",
@@ -2377,6 +4148,10 @@ __all__ = [
     "NativeMomentStackRegressor",
     "NativeMomentSweepRegressor",
     "NativePCRRegressor",
+    "NativePLSRegressor",
     "NativePOPPLSRegressor",
     "NativeRidgeRegressor",
+    "NativeRidgePLSRegressor",
+    "NativeRobustPLSRegressor",
+    "NativeWeightedPLSRegressor",
 ]
