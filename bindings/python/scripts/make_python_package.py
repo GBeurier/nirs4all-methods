@@ -72,8 +72,8 @@ self-contained — no separate native build is required.
 ```python
 import {module}
 
-print({module}.version())      # project version + ABI, e.g. "{version}+abi.1.9.0"
-print({module}.abi_version())  # ABI triple, e.g. (1, 9, 0)
+print({module}.version())      # project version + ABI, e.g. "{version}+abi.1.22.0"
+print({module}.abi_version())  # ABI triple, e.g. (1, 22, 0)
 ```
 
 `{module}` loads `libn4m` via `ctypes.CDLL` and exposes a Pythonic `Context` /
