@@ -6,15 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
-> **Maintainer note (release cut):** at tag time, promote this block to a dated
-> `## [X.Y.Z] — YYYY-MM-DD` section. The version number is a positioning call
-> (`0.99.0` to continue the 0.NN cadence vs `1.0.0` to declare API stability) —
-> all the ABI growth below is **additive and backward-compatible**, so SemVer
-> does not force a major bump. Full per-symbol record:
-> [`docs/abi/changes_log.md`](docs/abi/changes_log.md).
+## [0.99.0] — 2026-06-10
 
 The public C ABI grew additively from **1.10.0 → 1.22.0** since 0.98.0; every
 bump is backward-compatible (new symbols only — nothing removed or changed).
+Full per-symbol record: [`docs/abi/changes_log.md`](docs/abi/changes_log.md).
 
 ### Added — public C ABI (all additive MINOR bumps)
 - **Direct closed-form Ridge regression** — `n4m_ridge_fit` (primal QR + dual
@@ -35,11 +31,26 @@ bump is backward-compatible (new symbols only — nothing removed or changed).
   paired get/set with additive route counters; defaults preserve prior behaviour
   and candidate scores stay fold-exact.
 
+### Added — bindings
+- **R**: `coef.n4m_fit` returns the (p × q) regression-coefficient matrix (via
+  the existing `n4m_model_get_array` C ABI), in both the `n4m` and slim
+  `pls4all` packages.
+
+### Changed
+- Renamed the R packages' internal `.Call` registration prefix `r_p4a_` →
+  `r_n4m_` (internal symbols only — no public ABI change; the `pls4all` package
+  name and slim subset are unchanged).
+
 ### Performance — CUDA (opt-in `cuda-on` build; no ABI change)
 - GPU full-execution pass (B1–B3): the Ridge GCV solve now routes to cuSOLVER
   SPD Cholesky (`spd_solve`), with device-resident dual-Ridge and a size-gated
   device moment/gram build — **cumulative 4.22× on BERRY/COLZA/LUCAS**, RMSEP
   preserved/bit-identical, bit-equivalent host fallback.
+
+### Fixed
+- LW-PLS parity fixture/doctest realigned to the 2026-05-23 Gaussian-weighted
+  local-PLS engine (the reference generator now matches the C++ engine to
+  6.7e-16; the previously-skipped doctest is active again).
 
 ### Benchmarks
 - Full-57 staged AOM/moment campaign vs AOM-PLS / AOM-Ridge / TabPFN oracles
