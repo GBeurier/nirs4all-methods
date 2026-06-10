@@ -142,8 +142,10 @@ template <typename T>
     for (std::size_t rr = 0; rr < rows; ++rr) {
         const std::int64_t src = row_indices[rr];
         if (src < 0 || src >= src_rows) {
-            ctx.set_errorf("row_indices[%zu]=%lld out of range [0, %lld)",
-                           rr,
+            // %zu is rejected by Windows MinGW gcc's format checker; use %llu
+            // + unsigned long long (portable), as in gpr_pls.cpp.
+            ctx.set_errorf("row_indices[%llu]=%lld out of range [0, %lld)",
+                           static_cast<unsigned long long>(rr),
                            static_cast<long long>(src),
                            static_cast<long long>(src_rows));
             return N4M_ERR_INVALID_ARGUMENT;
