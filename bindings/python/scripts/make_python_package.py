@@ -86,7 +86,8 @@ See <https://github.com/GBeurier/nirs4all-methods> for documentation.
 
 
 def _version() -> str:
-    m = re.search(r'^version\s*=\s*"([^"]+)"', (SRC_PKG / "pyproject.toml").read_text(), re.M)
+    m = re.search(r'^version\s*=\s*"([^"]+)"',
+                  (SRC_PKG / "pyproject.toml").read_text(encoding="utf-8"), re.M)
     return m.group(1) if m else "0.0.0"
 
 
@@ -104,10 +105,16 @@ def generate(name: str) -> Path:
     # Generate a per-package README — do NOT copy bindings/python/README.md,
     # which documents the slim `pls4all` surface and would mislabel the full
     # `nirs4all-methods` (module `n4m`) package on PyPI.
+    # encoding="utf-8" is mandatory: the templates carry non-ASCII (em-dashes,
+    # "Grégory"), and on Windows runners the default text encoding is cp1252 —
+    # writing the generated pyproject.toml as cp1252 makes cibuildwheel's UTF-8
+    # `tomllib.load` crash with UnicodeDecodeError (byte 0x97).
     (out / "README.md").write_text(_README.format(
-        name=name, module=module, description=spec["description"], version=_version()))
+        name=name, module=module, description=spec["description"], version=_version()),
+        encoding="utf-8")
     (out / "pyproject.toml").write_text(_PYPROJECT.format(
-        name=name, version=_version(), module=module, description=spec["description"]))
+        name=name, version=_version(), module=module, description=spec["description"]),
+        encoding="utf-8")
     # Per-module smoke test (cibuildwheel CIBW_TEST_COMMAND target).
     (out / "tests").mkdir()
     # abi_version() forces the embedded libn4m to load and respond, and is
@@ -264,7 +271,7 @@ print("SKLEARN_OPTIONAL_OK")
             f'    assert {module}.__version__\n'
             f'    assert {module}.abi_version()  # loads + queries the embedded libn4m\n'
         )
-    (out / "tests" / "test_import.py").write_text(test_text)
+    (out / "tests" / "test_import.py").write_text(test_text, encoding="utf-8")
     print(f"generated {out.relative_to(REPO)}  (name={name}, module={module})")
     return out
 
