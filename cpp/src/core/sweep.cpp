@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <exception>
 #include <functional>
 #include <limits>
@@ -82,6 +83,36 @@ struct RidgeMomentEigenPath {
     std::vector<double> scale;          // p
 };
 
+struct PreparedDualGpu;
+
+#if defined(N4M_USE_CUDA)
+struct PreparedDualGpu {
+    ::n4m::cuda_dispatch::PreparedDualRidge* handle{nullptr};
+
+    PreparedDualGpu() = default;
+    ~PreparedDualGpu() {
+        ::n4m::cuda_dispatch::destroy_dual_ridge(handle);
+    }
+    PreparedDualGpu(const PreparedDualGpu&) = delete;
+    PreparedDualGpu& operator=(const PreparedDualGpu&) = delete;
+
+    PreparedDualGpu(PreparedDualGpu&& other) noexcept : handle(other.handle) {
+        other.handle = nullptr;
+    }
+
+    PreparedDualGpu& operator=(PreparedDualGpu&& other) noexcept {
+        if (this != &other) {
+            ::n4m::cuda_dispatch::destroy_dual_ridge(handle);
+            handle = other.handle;
+            other.handle = nullptr;
+        }
+        return *this;
+    }
+
+    bool valid() const noexcept { return handle != nullptr; }
+};
+#endif
+
 [[nodiscard]] bool score_only_requested(const Config& cfg) noexcept {
     return cfg.aom_score_only != 0;
 }
@@ -90,6 +121,31 @@ struct RidgeMomentEigenPath {
     return b != 0 &&
            a > (std::numeric_limits<std::size_t>::max() / b);
 }
+
+#if defined(N4M_USE_CUDA)
+// GPU moment/gram build only pays off at scale (consumer-GPU fp64 is weak;
+// below the crossover the host BLAS build + CPU/GPU overlap wins).
+// Same env-tunable crossover as moments; gram gate uses rows*rows*p.
+// 0 disables the gate (always try GPU).
+[[nodiscard]] static std::size_t moment_cuda_min_product() {
+    if (const char* e = std::getenv("N4M_CUDA_MOMENT_MIN_PRODUCT")) {
+        char* end = nullptr;
+        unsigned long long v = std::strtoull(e, &end, 10);
+        if (end != e) return static_cast<std::size_t>(v);
+    }
+    return 15000000000ULL;
+}
+
+[[nodiscard]] bool gram_cuda_product_is_large(std::size_t rows,
+                                              std::size_t p) noexcept {
+    const std::size_t min_product = moment_cuda_min_product();
+    if (min_product == 0U) return true;
+    if (product_overflows(rows, rows)) return true;
+    const std::size_t rr = rows * rows;
+    if (product_overflows(rr, p)) return true;
+    return rr * p >= min_product;
+}
+#endif
 
 constexpr std::int32_t kCudaPls1MomentDefaultMinDeviceFeatures = 1024;
 
@@ -356,11 +412,24 @@ void column_means(const std::vector<double>& mat,
     }
 
     out.K.assign(rows * rows, 0.0);
-    linalg::gemm(linalg::Trans_No, linalg::Trans_Yes,
-                 rows, rows, p, 1.0,
-                 out.X_work.data(), p,
-                 out.X_work.data(), p,
-                 0.0, out.K.data(), rows);
+    bool built_on_device = false;
+#if defined(N4M_USE_CUDA)
+    if (gram_cuda_product_is_large(rows, p) &&
+        ::n4m::cuda_dispatch::cuda_runtime_available()) {
+        std::string err;
+        if (::n4m::cuda_dispatch::build_gram_device(
+                rows, p, out.X_work.data(), out.K.data(), &err) == 0) {
+            built_on_device = true;
+        }
+    }
+#endif
+    if (!built_on_device) {
+        linalg::gemm(linalg::Trans_No, linalg::Trans_Yes,
+                     rows, rows, p, 1.0,
+                     out.X_work.data(), p,
+                     out.X_work.data(), p,
+                     0.0, out.K.data(), rows);
+    }
     return N4M_OK;
 }
 
@@ -427,6 +496,50 @@ void column_means(const std::vector<double>& mat,
                                            std::size_t m,
                                            const std::vector<double>& B,
                                            std::size_t q,
+                                           std::vector<double>& X);
+
+// CUDA dual-Ridge gating: only route the n x n SPD solve to the GPU when a
+// device is present and the system is large enough to amortize H2D/D2H.
+[[nodiscard, maybe_unused]] bool ridge_cuda_dual_enabled(std::size_t n) noexcept {
+#if defined(N4M_USE_CUDA)
+    constexpr std::size_t kRidgeCudaMinDualSamples = 256;
+    if (n < kRidgeCudaMinDualSamples) return false;
+    if (const char* e = std::getenv("N4M_CUDA_RIDGE_DISABLE");
+        e != nullptr && e[0] != '\0' && e[0] != '0') {
+        return false;
+    }
+    return ::n4m::cuda_dispatch::cuda_runtime_available();
+#else
+    (void)n;
+    return false;
+#endif
+}
+
+// Dual SPD solve: GPU Cholesky when enabled, else the host Householder QR.
+[[nodiscard]] n4m_status_t solve_dual_spd(const std::vector<double>& A,
+                                          std::size_t n,
+                                          const std::vector<double>& B,
+                                          std::size_t q,
+                                          std::vector<double>& X) {
+#if defined(N4M_USE_CUDA)
+    if (ridge_cuda_dual_enabled(n)) {
+        // The Ridge lambda/fold loop is serial; the singleton CUDA handles are
+        // used under that same contract.
+        X.assign(n * q, 0.0);
+        std::string err;
+        const int s = ::n4m::cuda_dispatch::spd_solve(n, q, A.data(), B.data(),
+                                                      X.data(), &err);
+        if (s == 0) return N4M_OK;
+        // s==1 (not PD) or s==2 (runtime): fall through to host QR.
+    }
+#endif
+    return solve_square_qr(A, n, B, q, X);
+}
+
+[[nodiscard]] n4m_status_t solve_square_qr(const std::vector<double>& A,
+                                           std::size_t m,
+                                           const std::vector<double>& B,
+                                           std::size_t q,
                                            std::vector<double>& X) {
     std::vector<double> Af = A;
     std::vector<double> tau(m, 0.0);
@@ -457,11 +570,36 @@ void column_means(const std::vector<double>& mat,
     return N4M_OK;
 }
 
+[[nodiscard]] n4m_status_t solve_dual_alpha(Context&,
+                                            const RidgeDualDesign& design,
+                                            double lambda,
+                                            const PreparedDualGpu* gpu,
+                                            std::vector<double>& alpha) {
+    const std::size_t n = design.n_samples;
+    const std::size_t q = design.n_targets;
+#if defined(N4M_USE_CUDA)
+    if (gpu != nullptr && gpu->valid()) {
+        alpha.assign(n * q, 0.0);
+        std::string err;
+        const int s = ::n4m::cuda_dispatch::dual_ridge_solve(
+            gpu->handle, lambda, alpha.data(), &err);
+        if (s == 0) return N4M_OK;
+        // s==1 (not PD) or s==2 (runtime): use the unchanged B1 fallback.
+    }
+#else
+    (void)gpu;
+#endif
+    std::vector<double> K = design.K;
+    for (std::size_t i = 0; i < n; ++i) K[i * n + i] += lambda;
+    return solve_dual_spd(K, n, design.Y_work, q, alpha);
+}
+
 [[nodiscard]] n4m_status_t predict_ridge_from_dual_design(
     Context& ctx,
     const RidgeDualDesign& design,
     double lambda,
-    std::vector<double>& pred) {
+    std::vector<double>& pred,
+    const PreparedDualGpu* gpu = nullptr) {
     if (!std::isfinite(lambda) || lambda < 0.0) {
         ctx.set_error("sweep ridge lambda must be finite and >= 0");
         return N4M_ERR_INVALID_ARGUMENT;
@@ -477,11 +615,8 @@ void column_means(const std::vector<double>& mat,
         return N4M_ERR_INVALID_ARGUMENT;
     }
 
-    std::vector<double> K = design.K;
-    for (std::size_t i = 0; i < n; ++i) K[i * n + i] += lambda;
-
     std::vector<double> alpha;
-    n4m_status_t st = solve_square_qr(K, n, design.Y_work, q, alpha);
+    n4m_status_t st = solve_dual_alpha(ctx, design, lambda, gpu, alpha);
     if (st != N4M_OK) {
         ctx.set_error("sweep dual Ridge solve failed");
         return st;
@@ -508,7 +643,8 @@ void column_means(const std::vector<double>& mat,
     std::size_t q,
     const std::vector<std::int64_t>& heldout_rows,
     double lambda,
-    double& sse) {
+    double& sse,
+    const PreparedDualGpu* gpu = nullptr) {
     if (!std::isfinite(lambda) || lambda < 0.0) {
         ctx.set_error("sweep ridge lambda must be finite and >= 0");
         return N4M_ERR_INVALID_ARGUMENT;
@@ -525,11 +661,8 @@ void column_means(const std::vector<double>& mat,
         return N4M_ERR_INVALID_ARGUMENT;
     }
 
-    std::vector<double> K = design.K;
-    for (std::size_t i = 0; i < n; ++i) K[i * n + i] += lambda;
-
     std::vector<double> alpha;
-    n4m_status_t st = solve_square_qr(K, n, design.Y_work, q, alpha);
+    n4m_status_t st = solve_dual_alpha(ctx, design, lambda, gpu, alpha);
     if (st != N4M_OK) {
         ctx.set_error("sweep dual Ridge solve failed");
         return st;
@@ -562,7 +695,9 @@ void column_means(const std::vector<double>& mat,
 [[nodiscard]] n4m_status_t fit_ridge_from_dual_design(Context& ctx,
                                                       const RidgeDualDesign& design,
                                                       double lambda,
-                                                      RidgeMomentFit& out) {
+                                                      RidgeMomentFit& out,
+                                                      const PreparedDualGpu* gpu =
+                                                          nullptr) {
     if (!std::isfinite(lambda) || lambda < 0.0) {
         ctx.set_error("sweep ridge lambda must be finite and >= 0");
         return N4M_ERR_INVALID_ARGUMENT;
@@ -571,11 +706,8 @@ void column_means(const std::vector<double>& mat,
     const std::size_t p = design.n_features;
     const std::size_t q = design.n_targets;
 
-    std::vector<double> K = design.K;
-    for (std::size_t i = 0; i < n; ++i) K[i * n + i] += lambda;
-
     std::vector<double> alpha;
-    n4m_status_t st = solve_square_qr(K, n, design.Y_work, q, alpha);
+    n4m_status_t st = solve_dual_alpha(ctx, design, lambda, gpu, alpha);
     if (st != N4M_OK) {
         ctx.set_error("sweep dual Ridge solve failed");
         return st;
@@ -1974,6 +2106,10 @@ n4m_status_t run_moment_sweep(Context& ctx,
         static_cast<std::size_t>(actual_cv));
     std::vector<unsigned char> use_dual_cross_fold(
         static_cast<std::size_t>(actual_cv), 0);
+#if defined(N4M_USE_CUDA)
+    std::vector<PreparedDualGpu> fold_prepared_dual(
+        static_cast<std::size_t>(actual_cv));
+#endif
     if (do_ridge) {
         for (std::int32_t fold = 0; fold < actual_cv; ++fold) {
             const auto fold_ix = static_cast<std::size_t>(fold);
@@ -1995,6 +2131,18 @@ n4m_status_t run_moment_sweep(Context& ctx,
                 if (st != N4M_OK) return st;
                 use_dual_cross_fold[fold_ix] = 1;
             }
+#if defined(N4M_USE_CUDA)
+            if (lambdas.size() > 1U &&
+                ridge_cuda_dual_enabled(fold_dual_designs[fold_ix].n_samples)) {
+                std::string err;
+                fold_prepared_dual[fold_ix].handle =
+                    ::n4m::cuda_dispatch::prepare_dual_ridge(
+                        fold_dual_designs[fold_ix].n_samples,
+                        fold_dual_designs[fold_ix].n_targets,
+                        fold_dual_designs[fold_ix].K.data(),
+                        fold_dual_designs[fold_ix].Y_work.data(), &err);
+            }
+#endif
         }
     }
 
@@ -2126,24 +2274,31 @@ n4m_status_t run_moment_sweep(Context& ctx,
             if (!score_only) pred.assign(rows.size() * q, 0.0);
             bool have_pred = false;
             if (use_materialized_fold[fold_ix] != 0) {
+#if defined(N4M_USE_CUDA)
+                const PreparedDualGpu* const dual_gpu =
+                    &fold_prepared_dual[fold_ix];
+#else
+                const PreparedDualGpu* const dual_gpu = nullptr;
+#endif
                 if (use_dual_cross_fold[fold_ix] != 0) {
                     ++out.n_ridge_dual_cross_cv_fits;
                     if (score_only) {
                         double fold_sse = 0.0;
                         st = ridge_dual_cross_heldout_sse(
                             ctx, fold_dual_designs[fold_ix], Yc, q, rows,
-                            lambda, fold_sse);
+                            lambda, fold_sse, dual_gpu);
                         if (st == N4M_OK) sse += fold_sse;
                     } else {
                         st = predict_ridge_from_dual_design(
-                            ctx, fold_dual_designs[fold_ix], lambda, pred);
+                            ctx, fold_dual_designs[fold_ix], lambda, pred,
+                            dual_gpu);
                         have_pred = (st == N4M_OK);
                     }
                 } else {
                     ++out.n_ridge_dual_materialized_cv_fits;
                     st = fit_ridge_from_dual_design(ctx,
                                                     fold_dual_designs[fold_ix],
-                                                    lambda, fit);
+                                                    lambda, fit, dual_gpu);
                     if (st == N4M_OK) {
                         if (score_only) {
                             sse += heldout_sse_from_fit(Xc, Yc, p, q, rows, fit);

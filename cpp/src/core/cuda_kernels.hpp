@@ -66,6 +66,13 @@ cudaError_t pls1_moment_update_yy_many(const double* tt,
                                        double* cur_yy,
                                        cudaStream_t stream) noexcept;
 
+// A += lambda on the diagonal: A[i*n + i] += lambda for i in [0, n).
+// The diagonal index is identical for row-major and column-major storage.
+cudaError_t add_scaled_identity(double* A,
+                                std::size_t n,
+                                double lambda,
+                                cudaStream_t stream) noexcept;
+
 }  // namespace cuda_dispatch
 }  // namespace n4m
 

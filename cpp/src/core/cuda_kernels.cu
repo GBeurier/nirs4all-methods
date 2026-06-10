@@ -190,6 +190,17 @@ __global__ void pls1_moment_update_yy_kernel(const double* tt,
     cur_yy[local] = yy;
 }
 
+__global__ void add_scaled_identity_kernel(double* A, int n, double lambda) {
+    const int i =
+        static_cast<int>(blockIdx.x) * static_cast<int>(blockDim.x) +
+        static_cast<int>(threadIdx.x);
+    if (i >= n) {
+        return;
+    }
+    A[static_cast<std::size_t>(i) * static_cast<std::size_t>(n) +
+      static_cast<std::size_t>(i)] += lambda;
+}
+
 }  // namespace
 
 cudaError_t pls1_moment_normalize_signs_many(const double* weights,
@@ -294,6 +305,26 @@ cudaError_t pls1_moment_update_yy_many(const double* tt,
     const dim3 block(kScalarPrepBlockSize);
     pls1_moment_update_yy_kernel<<<scalar_prep_grid(batch), block, 0, stream>>>(
         tt, q_load, comp, static_cast<int>(batch), cur_yy);
+    return cudaGetLastError();
+}
+
+cudaError_t add_scaled_identity(double* A,
+                                std::size_t n,
+                                double lambda,
+                                cudaStream_t stream) noexcept {
+    if (n == 0) {
+        return cudaSuccess;
+    }
+    if (A == nullptr ||
+        n > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+        return cudaErrorInvalidValue;
+    }
+    constexpr int kBlock = 256;
+    const dim3 grid(static_cast<unsigned int>(
+        (n + static_cast<std::size_t>(kBlock) - 1) /
+        static_cast<std::size_t>(kBlock)));
+    add_scaled_identity_kernel<<<grid, dim3(kBlock), 0, stream>>>(
+        A, static_cast<int>(n), lambda);
     return cudaGetLastError();
 }
 
