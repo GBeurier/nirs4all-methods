@@ -24,6 +24,11 @@ ctest --preset dev-debug --output-on-failure
 cmake --preset blas-omp
 cmake --build --preset blas-omp -j
 
+# GPU (optional CUDA backend; needs nvcc/CUDA toolkit). The CUDA path
+# accelerates the PLS many-batched kernels — most recent perf work lives here.
+cmake --preset cuda-on            # sets N4M_WITH_CUDA=ON
+cmake --build --preset cuda-on -j
+
 # CI parity (one of: ci-linux-{gcc12,gcc13,clang16}-{release,debug},
 #                   ci-macos-clang-{release,debug}, ci-macos-universal2,
 #                   ci-windows-{msvc,mingw}-release, ci-windows-msvc-debug,
@@ -174,8 +179,11 @@ cpp/
   abi/expected_symbols_*.txt      # ABI snapshots (per-platform), diffed in CI
 
 bindings/
-  python/src/n4m/                 # Full n4m Python binding (Phase F-bootstrap target)
+  python/src/n4m/                 # Full n4m Python binding — the dev source tree
   python/src/pls4all/             # Mature pls4all subset (slim PLS-only re-export)
+  python_nirs4all_methods/        # PyPI packaging project for the `nirs4all-methods`
+                                  # wheel (full surface); its src/n4m mirrors the dev tree
+  python_pls4all/                 # PyPI packaging project for the slim `pls4all` wheel
   r/n4m/                          # CRAN n4m package (post-A10 rename from bindings/r/pls4all/)
   matlab/                         # +pls4all classdef package + MEX dispatcher
                                   # (n4m_*_mex entry points). COMPAT.md documents

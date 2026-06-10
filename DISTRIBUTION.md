@@ -5,7 +5,7 @@
 > *how* a release reaches it. It complements `ROADMAP.md` (what we
 > build) and `docs/dev/release_process.md` (which steps a maintainer
 > walks through on cut-day). All technical specifications below refer
-> to the current ABI (`N4M_ABI_VERSION = 1.10.0`) and project version
+> to the current ABI (`N4M_ABI_VERSION = 1.22.0`) and project version
 > (`0.98.0` at the time of writing — see `cpp/include/n4m/n4m_version.h`).
 >
 > **Audience.** Maintainers + future contributors. If you are reading
@@ -168,8 +168,8 @@ nirs4all-methods-${VER}-x86_64-unknown-linux-gnu/
 │   └── n4m_version.h
 ├── lib/
 │   ├── libn4m.so → libn4m.so.1             (SONAME symlink)
-│   ├── libn4m.so.1 → libn4m.so.1.10.0      (ABI MAJOR symlink)
-│   └── libn4m.so.1.10.0                    (real file)
+│   ├── libn4m.so.1 → libn4m.so.1.22.0      (ABI MAJOR symlink)
+│   └── libn4m.so.1.22.0                    (real file)
 ├── lib/cmake/n4m/
 │   ├── n4mConfig.cmake
 │   └── n4mConfigVersion.cmake
@@ -211,7 +211,7 @@ no OpenMP) preset; the **blas-omp** preset is shipped as an
 
 **Current state (audited 2026-05-18):** the previous SOVERSION mismatch
 has been fixed. Linux builds now produce the ABI-major chain
-`libn4m.so -> libn4m.so.1 -> libn4m.so.1.10.0`, derived from
+`libn4m.so -> libn4m.so.1 -> libn4m.so.1.22.0`, derived from
 `N4M_ABI_VERSION_MAJOR` and the full ABI version, not from the project
 semver. The release preflight is therefore:
 
@@ -673,7 +673,7 @@ bundled in one multi-RID package:
 
 The native filenames are the **unversioned loadable names** that
 match the `[DllImport("n4m")]` attribute used by `Nirs4allMethods.cs`. The
-ABI-versioned filenames (`libn4m.so.1.10.0`) ship inside the C++
+ABI-versioned filenames (`libn4m.so.1.22.0`) ship inside the C++
 archive (§2.2) but **not** inside the NuGet native package, because
 the .NET SDK/runtime selects native assets by RID-directory matching,
 not by SONAME.
@@ -1365,7 +1365,7 @@ Software Heritage  → no manifest; passive
 | Zenodo DOI | ⬜ not enabled | one-click toggle in zenodo.org settings |
 | Software Heritage | ⬜ not registered | one-time origin save |
 | Version-sync CI | ✅ present | keep `scripts/bump_version.sh --check` authoritative |
-| SOVERSION fix | ✅ fixed | verify clean release builds produce `libn4m.so.1 -> libn4m.so.1.10.0` |
+| SOVERSION fix | ✅ fixed | verify clean release builds produce `libn4m.so.1 -> libn4m.so.1.22.0` |
 
 Every ⬜ is a small, isolated unit of work. The first cut should
 land in this order:
@@ -1517,7 +1517,7 @@ clean checkout and close the remaining ABI snapshot/doc gaps.
 
 | # | Who | Step | Output |
 |---|-----|------|--------|
-| M0.1 | 🤖 | Verify clean Linux builds produce `libn4m.so -> libn4m.so.1 -> libn4m.so.1.10.0` and no stale `libn4m.so.0` is staged into packages. | ABI identity checked |
+| M0.1 | 🤖 | Verify clean Linux builds produce `libn4m.so -> libn4m.so.1 -> libn4m.so.1.22.0` and no stale `libn4m.so.0` is staged into packages. | ABI identity checked |
 | M0.2 | 🤖 | Run `scripts/bump_version.sh --check` and ensure `version-sync.yml` covers every active manifest. | version guard green |
 | M0.3 | 🤖 | Refresh `cpp/abi/expected_symbols_linux.txt` only if the extra exported symbols are intentionally public. | ABI snapshot intentional |
 | M0.4 | 🤖 | Re-run `ctest --preset dev-release --output-on-failure`. | C++ gate green |
@@ -1535,7 +1535,7 @@ Independent of M2. Can run in parallel.
 |---|-----|------|--------|
 | M1.1 | 🤖 | Refactor `bindings/python/src/pls4all/_ffi.py` to also look in `<package>/.libs/` (wheel layout) | loader works for both editable and wheel install |
 | M1.2 | 🤖 | Add `bindings/python/setup.py` shim with `Distribution.has_ext_modules = lambda self: True` **and** `package_data={"pls4all": [".libs/libn4m*", ".libs/n4m*"]}` + a `MANIFEST.in` that ships the native lib under `pls4all/.libs/`. Constrain `cibuildwheel` to **one CPython per platform/arch** (`CIBW_BUILD=cp312-*`) so retag does not collide. | non-pure platform wheel that *contains* `libn4m` |
-| M1.3 | 🤖 | Add `bindings/python/scripts/build_libn4m_in_wheel.sh` (invoked by `CIBW_BEFORE_ALL_LINUX`/`MACOS`/`WINDOWS`) — builds the C++ core then copies `libn4m.so.1.10.0` / `libn4m.1.10.0.dylib` / `n4m.dll` into `bindings/python/src/pls4all/.libs/` | native blob present at wheel-build time |
+| M1.3 | 🤖 | Add `bindings/python/scripts/build_libn4m_in_wheel.sh` (invoked by `CIBW_BEFORE_ALL_LINUX`/`MACOS`/`WINDOWS`) — builds the C++ core then copies `libn4m.so.1.22.0` / `libn4m.1.22.0.dylib` / `n4m.dll` into `bindings/python/src/pls4all/.libs/` | native blob present at wheel-build time |
 | M1.4 | 🤖 | Add `bindings/python/scripts/retag_wheels.py` — runs **after** repair, rewrites three things in lockstep: the filename `cp312-cp312-*.whl` → `py3-none-*.whl`, the `*.dist-info/WHEEL` `Tag:` metadata lines, and `*.dist-info/RECORD` hashes/paths. Renaming only the file produces a wheel `pip` rejects. | valid `py3-none-${platform}` wheels |
 | M1.5 | 🤖 | Verify `.github/workflows/release-python.yml`: `permissions: id-token: write`, `environment: pypi`, `cibuildwheel` matrix, repair commands for all three OSes, retag step after repair, and an installed-wheel smoke job that runs `pip install ./wheelhouse/pls4all-*.whl` in a clean venv and checks `pls4all.abi_version() == (1, 10, 0)` | reproducible wheel matrix + green smoke |
 | M1.6 | 🤖 | Local dry run: build a single Linux wheel + run `pls4all.tests.test_smoke` | passes locally |
