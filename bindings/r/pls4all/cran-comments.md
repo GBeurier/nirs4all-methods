@@ -3,7 +3,7 @@
 ## Submission summary
 
 * This is a **new submission** to CRAN.
-* `pls4all` 0.98.0 — a portable Partial Least Squares engine for chemometrics:
+* `pls4all` 0.99.0 — a portable Partial Least Squares engine for chemometrics:
   the slim, PLS-focused distribution carved from the nirs4all-methods library
   (every method built on the shared PLS core). The C++17/C/Fortran numerical
   core (222 translation units) is vendored under `src/vendor/` and compiled
