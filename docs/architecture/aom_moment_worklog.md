@@ -1,5 +1,89 @@
 # AOM / Moment Integration Worklog
 
+## 2026-06-08 - B3: device moment/gram build — un-gated reverted; size-gated kept as opt-in
+
+Negative result, kept as the record. Multi-agent: Fable 5 designed
+(`_b3_fable_design.md`), Codex implemented, Fable + Opus reviewed ("ship" — the code
+was correct), Opus benched + reverted.
+
+Hypothesis: the post-B2 #1 CUDA cost (`cudaMemcpy` 1.66s) was the materialized moment
+build (`compute_moments` XᵀX/XᵀY/YᵀY) + dual gram (`Xw·Xwᵀ`) re-uploading the n×p design
+per GEMM. Implemented `build_moments_device`/`build_gram_device` (upload X once,
+symmetric products reuse the device pointer, `cublasDgemm` bit-equivalent to the
+wrapper) as drop-ins in `compute_from_contiguous` and `prepare_ridge_dual_design`.
+
+The implementation was correct — green gate green, both equivalence tests passed on
+GPU, RMSEP bit-identical, Fable + Opus reviews clean. **But the before/after benchmark
+showed a REGRESSION: total 59.9s → 62.3s = 0.96×, BERRY 11.9→15.2 = 0.78×**, only LUCAS
+(p=4200) marginally faster. Root cause: the moment build was already on **host OpenBLAS**
+(multi-threaded, transfer-free) and `recompute_centered_moments` consumes XᵀX **on the
+host**, so routing the build to the GPU only *added* an H2D(X) + the unavoidable
+D2H(XᵀX) the host path never paid. **Reverted to the post-B2 state.**
+
+Lesson: only a *fully device-resident* build→center→consume chain (deferred B4) could
+win on moments, and it is marginal (host build is already fast) + high-risk. Reviews
+verify correctness; only the before/after bench catches a perf regression. Captured GPU
+wins are B1 (ridge solve) + B2 (dual-ridge residency); moment algebra stays on host.
+
+**Follow-up — "do large datasets benefit?" → size-gated B3, KEPT as an opt-in.**
+A micro-benchmark of the isolated XᵀX build (incl. H2D+D2H) showed the GPU *is* faster,
+growing with size: BERRY(6.3G n·p²) 1.18×, LUCAS_pH(21G) 1.10×, LUCAS_SOC(108G) 1.64×,
+synth(48G) 1.82×. A controlled full-pipeline before/after (host vs GPU moment build, B1+B2
+held constant) showed it is a **wash on this consumer hardware**: brix GPU 8.07s ≈ host
+8.4s (noise); and LUCAS_SOC's host fit is **2402s** of which the moment build is ~1% (the
+rest is the n=6111 ridge/PLS, already on GPU via B1/B2) — the isolated 1.6× does not
+translate because the moment build is never the pipeline bottleneck *on a 4090/5090*.
+
+But the device build (`build_moments_device`/`build_gram_device`) is correct,
+bit-equivalent, equivalence-tested, and **size-gated so it never regresses** (host below
+`n·p² = N4M_CUDA_MOMENT_MIN_PRODUCT`, default 15e9; set 0 to always use GPU). It is KEPT
+as an env-controlled opt-in: on a strong-fp64 datacenter GPU (A100/H100, ~10–30× the
+4090/5090 fp64 throughput) or for very large/many moment builds it can be a real win, at
+zero cost when off. Default gate 15e9 leaves the moment build on host except n·p²≥15e9
+(LUCAS-scale), where it is a wash on consumer GPUs and bit-equivalent; set the env var
+higher to force host everywhere, or 0 to force GPU. B1+B2 (4.22×) remains the captured
+win on the measured hardware.
+
+## 2026-06-08 - B2: Device-resident dual-Ridge (upload K once, reuse buffers)
+
+Second GPU-roadmap block. Fable designed (`_b2_fable_design.md`), Codex implemented,
+Fable review (`_b2_fable_review.md`: "ship") + Opus review + bench.
+
+Post-B1 nsys re-profile showed the dual ridge solve re-uploaded the n×n gram `K` per
+(λ×fold) — but `K = design.K` is identical across the λ grid (only `+λI` differs).
+Changes (internal; ABI 1.22.0): `add_scaled_identity` kernel (on-device `A[i·n+i]+=λ`,
+bit-identical to host); `cuda_dispatch::{PreparedDualRidge, prepare_dual_ridge,
+dual_ridge_solve, destroy_dual_ridge}` (upload K + col-major B0 once/fold, per-λ D2D +
+diag-add + reuse a thread-local potrf/potrs workspace, pristine B0 preserved, ~1e-12
+parity); `sweep.cpp` per-fold `PreparedDualGpu` handles (mirroring
+`ridge_moment_eigen_paths`) + `solve_dual_alpha` routing the 3 dual consumers with the
+unchanged B1 `solve_dual_spd` fallback; `PreparedDualGpu` forward-declared so the
+non-CUDA build compiles. Validation: equivalence test on GPU ≤1e-8 + not-PD→1;
+`n4m_tests` 351 (CUDA+dev); catalog/ABI 702/702, symbols internal. **Before/after vs
+post-B1: 63.9s → 59.9s = 1.07× (cumulative orig→B2 4.22×, BERRY 8.90×), RMSEP
+bit-identical.**
+
+## 2026-06-08 - B1: Ridge GCV solve on GPU (cuSOLVER SPD Cholesky)
+
+First GPU-roadmap block (`GPU_ROADMAP_GOAL.md`). Fable designed (`_b1_fable_design.md`),
+Codex implemented, Fable + Opus reviewed (`_b1_fable_review.md`: "fix-then-ship" — one
+finding, an out-of-scope `gemm` scratch-arena change, reverted by Opus).
+
+nsys profiling found the #1 host hotspot = `n4m_householder_qr` (37% of CPU samples) —
+the Ridge GCV solve (CPU Householder QR, O(n³)). For wide p (p>n) every fold solves the
+dual n×n SPD system `(K+λI)α=Y` (SPD for λ>0). Changes (internal; ABI 1.22.0):
+`cuda_dispatch::spd_solve` (cuSOLVER `potrf`+`potrs`, A symmetric uploaded as-is, B/X
+col-major, devInfo after both, returns 0/1-not-PD/2-runtime); `cusolverDnHandle_t` on
+the `CublasState` singleton; `CUDA::cusolver` linked on `n4m_c`/`n4m_c_static`;
+`sweep.cpp` `solve_dual_spd` (GPU when `ridge_cuda_dual_enabled`: n≥256 +
+`N4M_CUDA_RIDGE_DISABLE` kill-switch) with host `solve_square_qr` fallback, swapped only
+the 3 dual sites (primal/k×k-inverse/`ridge.cpp` stay host — Cholesky rejects non-SPD).
+Equivalence test vs host QR ≤1e-8 + rank-deficient→1. Validation: `n4m_internal_tests`
+(SPD test on GPU) + `n4m_tests` 351 (CUDA+dev); catalog `--check-references`/`--strict-abi`
+PASS, `reconcile_abi` 702/702, `spd_solve` absent from the dynamic symbol table.
+**Before/after on BERRY/COLZA/LUCAS: 253.0s → 63.9s = 3.96× (BERRY 8.13×); RMSEP
+bit-identical (BERRY/COLZA) / 5.6e-14 (LUCAS).**
+
 ## 2026-06-06 - PLS moment lower-prefix batch recovery for public sweeps
 
 Purpose:
