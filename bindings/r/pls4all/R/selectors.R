@@ -18,7 +18,7 @@
 vip_select <- function(model, X, top_k) {
   if (!is.matrix(X)) X <- as.matrix(X)
   storage.mode(X) <- "double"
-  res <- .Call("r_p4a_variable_select_rank",
+  res <- .Call("r_n4m_variable_select_rank",
                 model, X, 0L, as.integer(top_k),
                 PACKAGE = "pls4all")
   # C side returns 0-based indices; expose 1-based to R idiom.
@@ -36,7 +36,7 @@ vip_select <- function(model, X, top_k) {
 coefficient_select <- function(model, X, top_k) {
   if (!is.matrix(X)) X <- as.matrix(X)
   storage.mode(X) <- "double"
-  res <- .Call("r_p4a_variable_select_rank",
+  res <- .Call("r_n4m_variable_select_rank",
                 model, X, 1L, as.integer(top_k),
                 PACKAGE = "pls4all")
   if (!is.null(res$selected_indices))
@@ -53,7 +53,7 @@ coefficient_select <- function(model, X, top_k) {
 selectivity_ratio_select <- function(model, X, top_k) {
   if (!is.matrix(X)) X <- as.matrix(X)
   storage.mode(X) <- "double"
-  res <- .Call("r_p4a_variable_select_rank",
+  res <- .Call("r_n4m_variable_select_rank",
                 model, X, 2L, as.integer(top_k),
                 PACKAGE = "pls4all")
   if (!is.null(res$selected_indices))
@@ -74,7 +74,7 @@ selectivity_ratio_select <- function(model, X, top_k) {
 #' @export
 spa_select <- function(X, Y, n_components, top_k) {
   xy <- .coerce_xy(X, Y)
-  res <- .Call("r_p4a_spa_select",
+  res <- .Call("r_n4m_spa_select",
                 xy$X, xy$Y,
                 as.integer(n_components),
                 as.integer(top_k),
@@ -101,7 +101,7 @@ spa_select <- function(X, Y, n_components, top_k) {
 cars_select <- function(X, Y, n_components, n_iterations = 50L,
                          min_features = 5L) {
     # Use the unified dispatcher (which builds a default 5-fold
-    # ValidationPlan). The legacy r_p4a_cars_select path passed NULL
+    # ValidationPlan). The legacy r_n4m_cars_select path passed NULL
     # and the C side now rejects that with E_NULL_POINTER.
     n4m_method("cars_select", X, Y, n_components,
                    params = list(n_iterations = as.integer(n_iterations),

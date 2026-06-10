@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: CECILL-2.1
 
-skip_if_no_libp4a <- function() {
+skip_if_no_libn4m <- function() {
     so <- tryCatch(getLoadedDLLs()[["n4m"]], error = function(e) NULL)
     if (is.null(so)) testthat::skip("n4m DLL not loaded")
 }
@@ -13,7 +13,7 @@ mdatools_compat_data <- function(n = 45, p = 9, seed = 20) {
 }
 
 test_that("pls_mdatools() fits matrix-oriented NIRS workflow", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- mdatools_compat_data()
     fit <- pls_mdatools(xy$X, xy$y, ncomp = 3L, cv = 3L)
     expect_s3_class(fit, "n4m_mdatools_pls")
@@ -25,7 +25,7 @@ test_that("pls_mdatools() fits matrix-oriented NIRS workflow", {
 })
 
 test_that("pls() dispatches matrix calls to the mdatools-compatible path", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- mdatools_compat_data(seed = 21)
     fit <- pls(xy$X, xy$y, ncomp = 2L, method = "simpls")
     expect_s3_class(fit, "n4m_mdatools_pls")
@@ -34,7 +34,7 @@ test_that("pls() dispatches matrix calls to the mdatools-compatible path", {
 })
 
 test_that("mdatools-compatible prediction works when only final component is stored", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- mdatools_compat_data(seed = 23)
     fit <- pls_mdatools(xy$X, xy$y, ncomp = 2L, fit_components = FALSE)
     preds <- predict(fit, x = xy$X, ncomp = 2L)
@@ -44,7 +44,7 @@ test_that("mdatools-compatible prediction works when only final component is sto
 })
 
 test_that("pls_mdatools() supports exclusions and external test results", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- mdatools_compat_data(seed = 22)
     fit <- pls_mdatools(xy$X, xy$y, ncomp = 2L,
                         exclcols = 1L,

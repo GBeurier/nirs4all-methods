@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: CECILL-2.1
 #
-# Unified low-level dispatcher wrapper. Calls the r_p4a_dispatch_fit C
+# Unified low-level dispatcher wrapper. Calls the r_n4m_dispatch_fit C
 # entry point which handles 33 MethodResult fits + 24 selectors + 4
 # diagnostics by algorithm name + a named params list.
 #
@@ -52,7 +52,7 @@ n4m_method <- function(algo, X, Y, n_components, params = list(),
     if (is.null(dim(Y))) Y <- matrix(as.numeric(Y), ncol = 1L)
     storage.mode(X) <- "double"
     storage.mode(Y) <- "double"
-    .Call("r_p4a_dispatch_fit",
+    .Call("r_n4m_dispatch_fit",
           as.character(algo), X, Y, as.integer(n_components), params,
           as.integer(as.logical(center_x)),
           as.integer(as.logical(scale_x)),

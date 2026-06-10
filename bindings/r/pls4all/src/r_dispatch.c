@@ -3,7 +3,7 @@
  * R .Call dispatcher covering ALL MethodResult-returning entry points
  * of libn4m (33 method-result fits + 24 selectors + 4 diagnostics).
  *
- *   res <- .Call("r_p4a_dispatch_fit",
+ *   res <- .Call("r_n4m_dispatch_fit",
  *                  algo, X, Y, n_components, params,
  *                  center_x, scale_x, center_y, scale_y)
  *
@@ -555,7 +555,7 @@ static SEXP pack_aom_per_component_result(n4m_aom_per_component_result_t* res) {
  *  Main dispatcher
  * ===================================================================== */
 
-SEXP r_p4a_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
+SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
                          SEXP n_components_sexp, SEXP params,
                          SEXP center_x_sexp, SEXP scale_x_sexp,
                          SEXP center_y_sexp, SEXP scale_y_sexp) {

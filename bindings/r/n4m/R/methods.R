@@ -38,7 +38,7 @@
 #' @export
 sparse_simpls_fit <- function(X, Y, n_components, sparsity_lambda = 0.05) {
   xy <- .coerce_xy(X, Y)
-  .Call("r_p4a_sparse_simpls_fit",
+  .Call("r_n4m_sparse_simpls_fit",
         xy$X, xy$Y,
         as.integer(n_components),
         as.numeric(sparsity_lambda),
@@ -57,7 +57,7 @@ sparse_simpls_fit <- function(X, Y, n_components, sparsity_lambda = 0.05) {
 #' @export
 cppls_fit <- function(X, Y, n_components, gamma = 0.5) {
   xy <- .coerce_xy(X, Y)
-  .Call("r_p4a_cppls_fit",
+  .Call("r_n4m_cppls_fit",
         xy$X, xy$Y,
         as.integer(n_components),
         as.numeric(gamma),
@@ -81,7 +81,7 @@ weighted_pls_fit <- function(X, Y, n_components, sample_weights) {
   if (length(sample_weights) != nrow(xy$X))
     stop(sprintf("length(sample_weights) (%d) must equal nrow(X) (%d)",
                  length(sample_weights), nrow(xy$X)))
-  .Call("r_p4a_weighted_pls_fit",
+  .Call("r_n4m_weighted_pls_fit",
         xy$X, xy$Y,
         as.integer(n_components),
         as.numeric(sample_weights),
@@ -105,7 +105,7 @@ mb_pls_fit <- function(X, Y, n_components, block_sizes) {
   if (sum(block_sizes) != ncol(xy$X))
     stop(sprintf("sum(block_sizes)=%g must equal ncol(X)=%d",
                  sum(block_sizes), ncol(xy$X)))
-  .Call("r_p4a_mb_pls_fit",
+  .Call("r_n4m_mb_pls_fit",
         xy$X, xy$Y,
         as.integer(n_components),
         as.integer(block_sizes),
@@ -124,7 +124,7 @@ mb_pls_fit <- function(X, Y, n_components, block_sizes) {
 #' @export
 pls_glm_fit <- function(X, Y, n_components, poisson = FALSE) {
   xy <- .coerce_xy(X, Y)
-  .Call("r_p4a_pls_glm_fit",
+  .Call("r_n4m_pls_glm_fit",
         xy$X, xy$Y,
         as.integer(n_components),
         as.integer(as.logical(poisson)),
@@ -141,7 +141,7 @@ pls_glm_fit <- function(X, Y, n_components, poisson = FALSE) {
 #' @export
 mir_pls_fit <- function(X, Y, n_components) {
   xy <- .coerce_xy(X, Y)
-  .Call("r_p4a_mir_pls_fit",
+  .Call("r_n4m_mir_pls_fit",
         xy$X, xy$Y,
         as.integer(n_components),
         PACKAGE = "n4m")
