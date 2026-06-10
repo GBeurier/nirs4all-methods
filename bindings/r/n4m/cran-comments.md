@@ -5,7 +5,7 @@
 * This is a **new submission** to CRAN.
 * `n4m` 0.99.0 — a portable Partial Least Squares (PLS) and
   Near-Infrared Spectroscopy (NIRS) engine. The C++17/C/Fortran numerical
-  core (222 translation units) is vendored under `src/vendor/` and compiled
+  core (233 translation units) is vendored under `src/vendor/` and compiled
   from source at install time. No external system library is required.
 * License: `CeCILL (== 2.1)` (a GPL-compatible French free-software
   license, listed in R's license database).
@@ -33,7 +33,7 @@
 ## Known notes (all expected)
 
 * **GNU make is a SystemRequirements** — the package's Makevars uses
-  `$(shell find ...)` and pattern substitution to enumerate the 222
+  `$(shell find ...)` and pattern substitution to enumerate the 233
   vendored C/C++/Fortran sources without hard-coding each filename. GNU make
   is declared in `SystemRequirements`.
 * **New submission** — first upload.
@@ -43,7 +43,7 @@
 
 ## Compile time
 
-The package vendors and compiles 222 C/C++/Fortran translation units. On a
+The package vendors and compiles 233 C/C++/Fortran translation units. On a
 typical CRAN check farm the install takes ~3–5 minutes. Per CRAN policy this
 is within the acceptable budget.
 
