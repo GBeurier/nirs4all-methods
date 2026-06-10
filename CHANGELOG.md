@@ -38,7 +38,7 @@ Full per-symbol record: [`docs/abi/changes_log.md`](docs/abi/changes_log.md).
 - **R**: the `n4m` and `pls4all` packages are now installable from **R-universe**
   — a `.prepare` pre-build hook vendors the libn4m core into a self-contained
   source tarball, so R-universe (and `R CMD build` from a checkout) build with no
-  external libn4m. See `docs/dev/registration-cran-runiverse.md`.
+  external libn4m. See `docs/dev/release_process.md` (CRAN + R-universe registration).
 
 ### Changed
 - Renamed the R packages' internal `.Call` registration prefix `r_p4a_` →

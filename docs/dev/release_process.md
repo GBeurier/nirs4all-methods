@@ -16,6 +16,28 @@ automated (PyPI, CRAN-tarball build); the JS / MATLAB / Octave bindings are
 | MATLAB | `+pls4all` | File Exchange | **Manual** (no licensed runner; build/test described in `bindings/matlab/COMPAT.md`) | — |
 | Octave | `pls4all` (pkg) | — / Octave Forge | **Build CI-automated** in `cross-binding-parity.yml` (apt octave + `build_mex.m` + `test_parity`); **publish manual** | — |
 
+## Exact release artifacts — what each binding ships, and where to upload it
+
+Every artifact below is also attached to the **GitHub Release** for the tag —
+<https://github.com/GBeurier/nirs4all-methods/releases/tag/v0.99.0> — so all of
+them are downloadable from one place.
+
+| Binding | Registry | Exact file(s) | Upload |
+|---|---|---|---|
+| Python `nirs4all-methods` | PyPI | `nirs4all_methods-0.99.0-*.whl` (cibuildwheel matrix: Linux x86_64/aarch64, macOS x86_64/arm64, Windows x86_64) | **Automated** — Trusted Publishing, *no manual upload* |
+| Python `pls4all` | PyPI | `pls4all-0.99.0-py3-none-*.whl` + `pls4all-0.99.0.tar.gz` (sdist) | **Automated** — Trusted Publishing, *no manual upload* |
+| R `n4m` | CRAN | **`n4m_0.99.0.tar.gz`** (source tarball) | **Manual** — web form (see *R → CRAN* below) |
+| R `pls4all` | CRAN | **`pls4all_0.99.0.tar.gz`** (source tarball) | **Manual** — web form |
+| R `n4m` + `pls4all` | R-universe | — (built from Git, no upload) | **Automated** — registry repo + app (see *R → R-universe*) |
+| JS / WASM `@nirs4all/methods-wasm` | npm | the staged `dist/` package (via `npm publish`) | **Automated** — `release-npm.yml` (needs `NPM_TOKEN` — see *JS → npm*) |
+| MATLAB `+pls4all` | File Exchange | `bindings/matlab/` packaged as a `.zip` / `.mltbx` toolbox | **Manual** upload |
+| Octave `pls4all` | Octave Forge | the Octave package source `.tar.gz` | **Manual** |
+| Source + provenance | GitHub Release | `nirs4all-methods-0.99.0-src.tar.gz` · `…-src.zip` · `nirs4all-methods-0.99.0.cdx.json` (SBOM) · `SHA256SUMS` | **Automated** — `release-source.yml` |
+
+**For R/CRAN, upload the source `.tar.gz` only** — never a binary, the GitHub repo
+zip, or the Python artifacts. The PyPI and npm files publish from CI (no manual
+upload); they are listed here only so the GitHub Release carries every artifact.
+
 ## Pre-release gates (release blockers)
 
 These three CI checks block any release; run them before tagging or publishing
@@ -179,3 +201,147 @@ cross-binding promise (one libn4m → identical numbers in every binding) — th
 are distribution-channel ergonomics, tracked but not blocking. MATLAB itself
 stays out of CI entirely (no licensed runner); the Octave job validates the
 MATLAB ∩ Octave intersection per `bindings/matlab/COMPAT.md`.
+
+---
+
+## R → R-universe (registration)
+
+R-universe builds binaries (Windows/macOS/Linux) straight from Git — no review,
+no submission. Users then
+`install.packages("n4m", repos = "https://gbeurier.r-universe.dev")`.
+
+- **Registry repo** (done): public
+  **<https://github.com/GBeurier/GBeurier.r-universe.dev>** with `packages.json`
+  listing both packages by `subdir`:
+  ```json
+  [
+    { "package": "n4m",     "url": "https://github.com/GBeurier/nirs4all-methods", "subdir": "bindings/r/n4m" },
+    { "package": "pls4all", "url": "https://github.com/GBeurier/nirs4all-methods", "subdir": "bindings/r/pls4all" }
+  ]
+  ```
+  No `branch` field → it tracks `main` (the R packages + `.prepare` hooks are on
+  `main` post-merge).
+- **GitHub App** (one manual browser step — cannot be scripted): install
+  **<https://github.com/apps/r-universe>** on the `GBeurier` account (grant *All
+  repositories*, or at least `GBeurier.r-universe.dev` + `nirs4all-methods`). It is
+  required — it lets R-universe build the universe and post status. Builds
+  (re)trigger on any commit to the registry repo and auto-rebuild every 30 days.
+- **Self-contained build** (already wired): R-universe clones the whole monorepo
+  and runs `bindings/r/{n4m,pls4all}/.prepare` *before* `R CMD build` (while the
+  top-level `cpp/` is on disk); the hook runs `N4M_R_VENDOR=1 ./configure` to
+  vendor the core into `src/vendor/` → a self-contained ~1 MB tarball (233 TUs,
+  far under R-universe's 100 MB cap).
+- **Verify**: watch <https://gbeurier.r-universe.dev> (it *shows* the `R CMD check`
+  result but, unlike CRAN, does not block on a NOTE/WARNING).
+
+## R → CRAN (submission)
+
+CRAN is the canonical R repo (`install.packages("n4m")` with default repos);
+submission is a **manual web form** with human review.
+
+### Build + check (automated)
+`release-r.yml` (tag push, or `workflow_dispatch`) runs `R CMD check --as-cran`
+for both packages across `{n4m, pls4all} × {linux-release, linux-devel,
+macos-arm64-release, windows-release}`, re-vendors fresh via `.prepare`, and — on
+a non-`-rc` `v*` tag — attaches `n4m_0.99.0.tar.gz` + `pls4all_0.99.0.tar.gz` to
+the GitHub Release. Build/attach are **gated on `--as-cran` passing**. Verified
+locally: both packages **0 ERROR / 0 WARNING** (4 expected NOTEs).
+
+Optional pre-submission smoke (recommended for a first submission):
+```r
+devtools::check_win_devel("bindings/r/n4m")   # and bindings/r/pls4all
+devtools::check_mac_release("bindings/r/n4m")
+rhub::rhub_check("bindings/r/n4m")
+```
+
+### Exactly what to upload
+The **R source tarball only** — one submission per package:
+- **`n4m_0.99.0.tar.gz`**
+- **`pls4all_0.99.0.tar.gz`**
+
+Get them from the
+**[v0.99.0 Release assets](https://github.com/GBeurier/nirs4all-methods/releases/tag/v0.99.0)**
+(attached by `release-r.yml`), or a `release-r.yml` *Run workflow* run's
+`{n4m,pls4all}-cran-tarball` artifacts, or locally
+(`cd bindings/r/n4m && sh .prepare && R CMD build .`).
+
+### The submission form — exact values
+At **<https://cran.r-project.org/submit.html>** (submit `n4m` first, then `pls4all`):
+
+| Field | Value |
+|---|---|
+| Your name | `Gregory Beurier` |
+| Your email | `gregory.beurier@cirad.fr` (matches the `Maintainer:` in DESCRIPTION) |
+| Upload | the package's `.tar.gz` |
+| Optional comment | paste the matching block below |
+
+`cran-comments.md` is `.Rbuildignore`d (not in the tarball), so the comment box is
+where these notes go:
+
+**— paste for `n4m` —**
+```text
+New submission.
+
+n4m 0.99.0 — a portable Partial Least Squares (PLS) and Near-Infrared
+Spectroscopy (NIRS) engine. The C++17/C/Fortran numerical core (233 vendored
+translation units under src/vendor/) is compiled from source at install time;
+no external system library is required. License: CeCILL-2.1 (a GPL-compatible
+French free-software license, in R's license database). Imports: stats only.
+
+SystemRequirements: GNU make — the Makevars use $(shell find ...) to enumerate
+the vendored sources without hard-coding each filename.
+
+Test environments:
+- R CMD check --as-cran, R 4.3.3 (Ubuntu): 0 ERRORs, 0 WARNINGs (vignettes built,
+  checkbashisms installed); 4 expected NOTEs only.
+- CI matrix (R release + devel) via GitHub Actions: Ubuntu 22.04, macOS 14
+  (arm64), Windows Server 2022.
+- win-builder (devel + release) and R-hub v2 are run before submission.
+
+Notes (all expected):
+- New submission (first upload).
+- GNU make is declared in SystemRequirements.
+- Any 'compilation flags' NOTE on a local build comes from the host R's Makeconf
+  (e.g. conda's -march=nocona), not from the package Makevars, which use no
+  -O3 / -march=native / -Werror.
+- The optional CUDA backend (cuda_dispatch.cpp) is intentionally excluded from
+  the R build; the package exposes the portable scalar code path only.
+
+Maintainer: Gregory Beurier <gregory.beurier@cirad.fr> (CIRAD).
+```
+
+**— paste for `pls4all` —**
+```text
+New submission.
+
+pls4all 0.99.0 — a portable Partial Least Squares engine for chemometrics: the
+slim, PLS-focused distribution carved from the nirs4all-methods library. The
+C++17/C/Fortran numerical core (233 vendored translation units under src/vendor/)
+is compiled from source at install time; no external system library is required.
+License: CeCILL-2.1 (a GPL-compatible French free-software license, in R's
+license database). Imports: stats only.
+
+SystemRequirements: GNU make — the Makevars use $(shell find ...) to enumerate
+the vendored sources without hard-coding each filename.
+
+Test environments:
+- R CMD check --as-cran, R 4.3.3 (Ubuntu): 0 ERRORs, 0 WARNINGs (vignettes built,
+  checkbashisms installed); 4 expected NOTEs only.
+- CI matrix (R release + devel) via GitHub Actions: Ubuntu 22.04, macOS 14
+  (arm64), Windows Server 2022.
+- win-builder (devel + release) and R-hub v2 are run before submission.
+
+Notes (all expected):
+- New submission (first upload).
+- GNU make is declared in SystemRequirements.
+- Any 'compilation flags' NOTE on a local build comes from the host R's Makeconf
+  (e.g. conda's -march=nocona), not from the package Makevars, which use no
+  -O3 / -march=native / -Werror.
+- The optional CUDA backend (cuda_dispatch.cpp) is intentionally excluded from
+  the R build; the package exposes the portable scalar code path only.
+
+Maintainer: Gregory Beurier <gregory.beurier@cirad.fr> (CIRAD).
+```
+
+After uploading, CRAN emails a confirmation link — click it to complete. For a new
+package, expect the automated incoming checks then a human reviewer.

@@ -219,6 +219,8 @@ implementation.
 - 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md) · [Android](docs/bindings/android.md)
 - ✅ **[Parity methodology](docs/parity/methodology.md)** — every algorithm cross-checked against an external library
 - 🛠️ **[Dev workflow](docs/dev/workflow.md)** · [build](docs/dev/build.md) · [testing](docs/dev/testing.md)
+- 📦 **[Releases & downloads](https://github.com/GBeurier/nirs4all-methods/releases/latest)** — every version's Python wheels, R/CRAN source tarballs, source archive + SBOM, all attached to one GitHub Release
+- 🚀 **[Release & registration process](docs/dev/release_process.md)** — per-binding publish, the **exact files to upload**, and CRAN / R-universe registration
 
 ---
 
