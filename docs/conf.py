@@ -76,6 +76,12 @@ exclude_patterns = [
     "parity_audit_2026_05/**",
     "_bench/**",
     "**/.ipynb_checkpoints",
+    # Internal maintainer docs relocated out of the repo root (not part of the
+    # rendered site — they were never under docs/ before).
+    "archives/**",
+    "dev/RELEASE_READINESS.md",
+    "dev/PRODUCTION_AUDIT.md",
+    "dev/DISTRIBUTION.md",
 ]
 
 # autosectionlabel: prefix labels with the document so duplicate
