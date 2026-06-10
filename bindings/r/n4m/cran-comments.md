@@ -37,9 +37,12 @@
   vendored C/C++/Fortran sources without hard-coding each filename. GNU make
   is declared in `SystemRequirements`.
 * **New submission** — first upload.
-* **Compilation flags** — local conda-forge R sets `-march=nocona`;
-  this comes from R's own Makeconf, not from the package's Makevars.
-  Not present in CRAN-farm builds.
+* **Compilation flags** — the package's Makevars set a single Fortran flag,
+  `PKG_FFLAGS = -std=legacy`, so gfortran accepts the vendored legacy FITPACK
+  FORTRAN 77 (shared DO termination labels, an obsolescent feature) without
+  warnings. It is the only non-default flag and triggers the expected
+  "checking compilation flags in Makevars" NOTE. Any `-march=nocona` on a local
+  build comes from R's own Makeconf (conda-forge R), not the package.
 
 ## Compile time
 
@@ -49,8 +52,9 @@ is within the acceptable budget.
 
 ## Anti-patterns avoided
 
-* No `-O3`, `-march=native`, `-Werror`, or other non-portable compiler
-  flags in the package's Makevars.
+* No `-O3`, `-march=native`, `-Werror`, or LTO flags in the Makevars. The only
+  non-default flag is `PKG_FFLAGS = -std=legacy` for the legacy FITPACK FORTRAN
+  (see "Compilation flags" above) — portable across gfortran versions.
 * No `printf` / `cout` / `Rprintf` from C++ paths during default
   execution.
 * No internet, filesystem write outside `tempdir()`, or shell
