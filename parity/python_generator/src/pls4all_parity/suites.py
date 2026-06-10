@@ -1285,29 +1285,89 @@ def _lw_pls_expected(
     n_components: int,
     n_neighbors: int,
 ) -> dict[str, Any]:
+    """Gaussian-weighted local PLS, mirroring cpp/src/core/lw_pls.cpp.
+
+    The engine (``fit_predict_lw_pls_weighted``) reproduces the nirs4all
+    reference ``operators/models/sklearn/lwpls.py::_lwpls_predict``:
+
+    * Euclidean distances are computed on the *raw* training rows (no internal
+      autoscaling — the reference fits ``LWPLS(scale=False)``).
+    * The kernel bandwidth is ``lambda = max(1.0, 0.5 * n_neighbors)``.
+    * Per query row, weights ``w = exp(-d / std(d, ddof=1) / lambda)`` drive a
+      weighted NIPALS PLS regression over all training points; the prediction
+      is the weighted mean plus the accumulated ``t_q * q_a`` contribution of
+      ``n_components`` components.
+    * The training set is X itself (in-sample), so each row is its own query.
+
+    ``neighbor_indices`` is the contract the C ABI exposes: rows sorted by raw
+    squared Euclidean distance to the query, tie-broken by index.
+    """
     X = np.asarray(X, dtype=np.float64)
     Y = np.asarray(Y, dtype=np.float64)
     if Y.ndim == 1:
         Y = Y.reshape(-1, 1)
-    Xs, _x_mean, _x_scale = _center_scale(X)
-    n = X.shape[0]
+    n, _p = X.shape
+    targets = Y.shape[1]
     k = int(n_neighbors)
     if k < int(n_components) + 1 or k > n:
         raise ValueError("n_neighbors must be in [n_components + 1, n_samples]")
-    predictions = np.zeros((n, Y.shape[1]), dtype=np.float64)
+    lam = max(1.0, 0.5 * float(n_neighbors))
+
+    predictions = np.zeros((n, targets), dtype=np.float64)
     neighbor_indices = np.zeros((n, k), dtype=np.int64)
     for row in range(n):
-        deltas = Xs - Xs[row, :]
-        distances = np.sum(deltas * deltas, axis=1)
-        order = sorted(range(n), key=lambda idx_value: (float(distances[idx_value]), int(idx_value)))
-        selected = np.asarray(order[:k], dtype=np.int64)
-        neighbor_indices[row, :] = selected
-        model = PLSRegression(n_components=int(n_components), scale=True, max_iter=500, tol=1e-6)
-        model.fit(X[selected, :], Y[selected, :])
-        pred = model.predict(X[row:row + 1, :]).astype(np.float64, copy=False)
-        if pred.ndim == 1:
-            pred = pred.reshape(1, -1)
-        predictions[row, :] = pred[0, :]
+        deltas = X - X[row, :]
+        sq_distances = np.sum(deltas * deltas, axis=1)
+        distances = np.sqrt(sq_distances)
+
+        order = sorted(range(n), key=lambda idx_value: (float(sq_distances[idx_value]), int(idx_value)))
+        neighbor_indices[row, :] = np.asarray(order[:k], dtype=np.int64)
+
+        distance_std = distances.std(ddof=1) if n > 1 else 0.0
+        if not (distance_std > 0.0) or not np.isfinite(distance_std):
+            distance_std = 1.0
+
+        w = np.exp(-distances / distance_std / lam)
+        w_sum = float(w.sum())
+        if not (w_sum > 1e-10) or not np.isfinite(w_sum):
+            w = np.ones(n, dtype=np.float64) / n
+            w_sum = 1.0
+
+        for tcol in range(targets):
+            y_col = Y[:, tcol]
+            y_w = float(np.dot(w, y_col) / w_sum)
+            x_w = (w @ X) / w_sum
+
+            centered_y = y_col - y_w
+            centered_x = X - x_w
+            centered_query = X[row, :] - x_w
+
+            prediction = y_w
+            for comp in range(int(n_components)):
+                numerator = centered_x.T @ (w * centered_y)
+                norm_val = float(np.sqrt(np.dot(numerator, numerator)))
+                if not (norm_val > 1e-10) or not np.isfinite(norm_val):
+                    break
+                w_a = numerator / norm_val
+
+                t_a = centered_x @ w_a
+
+                denom = float(np.dot(w * t_a, t_a))
+                if not (denom > 1e-10) or not np.isfinite(denom):
+                    break
+
+                p_a = (centered_x.T @ (w * t_a)) / denom
+                q_a = float(np.dot(w * centered_y, t_a) / denom)
+
+                t_q = float(np.dot(centered_query, w_a))
+                prediction += t_q * q_a
+
+                if comp + 1 < int(n_components):
+                    centered_x = centered_x - np.outer(t_a, p_a)
+                    centered_y = centered_y - t_a * q_a
+                    centered_query = centered_query - t_q * p_a
+
+            predictions[row, tcol] = prediction
     return {
         "predictions": {
             "shape": list(predictions.shape),
@@ -5622,7 +5682,7 @@ def _lw_pls_fixture(
                 "solver":        "nipals",
                 "n_components":  int(n_components),
                 "n_neighbors":   int(n_neighbors),
-                "reference":     "Python global-autoscaled kNN local-window PLS using sklearn PLSRegression",
+                "reference":     "Gaussian-weighted local PLS on raw rows (lambda = max(1, 0.5 * n_neighbors)), mirroring nirs4all lwpls.py::_lwpls_predict",
             },
         },
         "data": {

@@ -849,10 +849,18 @@ methods:
       - cpp/src/core/common/matrix_view.cpp
       - cpp/src/core/common/version.cpp
     parity:
-      fixtures: []
-      tolerance_row: tbd
+      fixtures:
+        - parity/fixtures/synthetic_lw_pls_local_window_v1.json
+      tolerance_row: sklearn/PLSRegression-local-window-LWPLS
       divergence_id: null
       references: []
+      tolerances:
+        - row_key: sklearn/PLSRegression-local-window-LWPLS
+          reference: Gaussian-weighted local PLS on raw rows (lambda = max(1, 0.5 * n_neighbors)), mirroring nirs4all lwpls.py::_lwpls_predict
+          abs_tol: "1e-8"
+          rel_tol: "1e-8"
+          comparison_set: predictions, neighbor indices
+          notes: Generator reference agrees with the C++ engine to max_abs 6.7e-16; doctest gates at 1e-8.
     bench:
       bench_id: models.local.lw_pls
       registry_entry: null

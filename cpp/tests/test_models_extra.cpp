@@ -8,6 +8,7 @@
 //   - MB-PLS        n4m_mb_pls_fit       (block-weighted multi-block PLS)
 //   - PLS-LDA       n4m_pls_lda_fit      (LDA on PLS scores)
 //   - PLS-Logistic  n4m_pls_logistic_fit (multinomial logistic on PLS scores)
+//   - LW-PLS        n4m_lw_pls_fit       (Gaussian-weighted local PLS)
 //
 // Fixtures + expected arrays come from the generated headers under
 // cpp/tests/fixtures/. Per parity/tolerances.md the relevant rows
@@ -15,14 +16,12 @@
 //  `sklearn/PLSRegression-scores-plus-numpy-LDA`,
 //  `sklearn/PLSRegression-scores-plus-numpy-logistic`) gate at abs/rel 1e-8.
 //
-// LW-PLS (`n4m_lw_pls_fit`) is intentionally NOT wired here: the committed
-// synthetic_lw_pls_local_window_v1 fixture predates a 2026-05-23 change to
-// cpp/src/core/lw_pls.cpp and no longer matches the engine — neither the
-// predictions nor the kNN neighbor indices agree (verified directly against
-// both the public ABI shim and the internal core fit_predict_lw_pls). That is
-// a pre-existing engine/fixture drift, not a property of the C ABI, so per the
-// "correctness over coverage" rule the family is skipped and flagged for a
-// separate fixture-regeneration / parity fix.
+// LW-PLS gates against synthetic_lw_pls_local_window_v1, regenerated from the
+// Gaussian-weighted local-PLS algorithm the engine implements (the reference
+// mirrors nirs4all lwpls.py::_lwpls_predict bit-for-bit; the generated
+// fixture agrees with the C++ core to ~7e-16). The default NIPALS solver
+// selects the Gaussian path; neighbor indices are the rows sorted by raw
+// squared Euclidean distance and are checked exactly.
 
 #include "n4m/n4m.h"
 
@@ -33,6 +32,7 @@
 #include <string>
 #include <vector>
 
+#include "fixtures/lw_pls_fixtures.hpp"
 #include "fixtures/mb_pls_fixtures.hpp"
 #include "fixtures/pls_lda_fixtures.hpp"
 #include "fixtures/pls_logistic_fixtures.hpp"
@@ -202,10 +202,54 @@ void test_pls_logistic() {
     }
 }
 
+void test_lw_pls() {
+    for (const auto& fx : ::n4m::test::fixtures::kLwPlsFixtures) {
+        n4m_context_t* ctx = nullptr;
+        n4m_config_t*  cfg = nullptr;
+        N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, fx.n_components) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, N4M_ALGO_PLS_REGRESSION) == N4M_OK);
+        // The default NIPALS solver selects the Gaussian-weighted local PLS the
+        // fixture encodes; SIMPLS would opt into the legacy k-NN cutoff variant.
+        N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_config_set_deflation(cfg, N4M_DEFLATION_REGRESSION) == N4M_OK);
+
+        n4m_matrix_view_t X = make_view(fx.X);
+        n4m_matrix_view_t Y = make_view(fx.Y);
+        n4m_method_result_t* result = nullptr;
+        N4M_TEST_REQUIRE(n4m_lw_pls_fit(
+            ctx, cfg, &X, &Y, fx.n_neighbors, &result) == N4M_OK);
+        N4M_TEST_REQUIRE(result != nullptr);
+
+        double n_neighbors = 0.0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_scalar(result, "n_neighbors", &n_neighbors) == N4M_OK);
+        N4M_TEST_REQUIRE(static_cast<std::int32_t>(n_neighbors) == fx.n_neighbors);
+
+        check_result_matrix(result, "predictions", fx.predictions);
+
+        // Neighbor indices — exact int64 match.
+        const std::int64_t* nbr = nullptr;
+        std::int64_t nbr_size = 0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_int64_vector(
+            result, "neighbor_indices_i64", &nbr, &nbr_size) == N4M_OK);
+        N4M_TEST_REQUIRE(nbr != nullptr);
+        N4M_TEST_REQUIRE(static_cast<std::size_t>(nbr_size) == fx.neighbor_indices.size);
+        for (std::size_t i = 0; i < fx.neighbor_indices.size; ++i) {
+            N4M_TEST_REQUIRE(nbr[i] == fx.neighbor_indices.values[i]);
+        }
+
+        n4m_method_result_destroy(result);
+        n4m_config_destroy(cfg);
+        n4m_context_destroy(ctx);
+    }
+}
+
 }  // namespace
 
 void register_models_extra_tests(n4m_testing::Runner& r) {
     r.run("models_extra/mb_pls",       test_mb_pls);
     r.run("models_extra/pls_lda",      test_pls_lda);
     r.run("models_extra/pls_logistic", test_pls_logistic);
+    r.run("models_extra/lw_pls",       test_lw_pls);
 }
