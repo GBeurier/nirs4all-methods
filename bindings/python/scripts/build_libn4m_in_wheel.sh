@@ -58,7 +58,10 @@ echo "::group::pls4all libn4m build (preset=${PRESET})"
 # mounted from an earlier matrix entry.
 rm -rf "${BUILD_DIR}"
 
-cmake --preset "${PRESET}"
+# The wheel ships a release artifact, not a CI lint gate — never treat compiler
+# warnings as errors here (the CI presets enable -Werror / MSVC C2220, which a
+# benign STL narrowing warning, e.g. C4244 in <xutility>, would otherwise fail).
+cmake --preset "${PRESET}" -D N4M_WARNINGS_AS_ERRORS=OFF
 cmake --build --preset "${PRESET}" --parallel --target n4m_c
 
 echo "::endgroup::"

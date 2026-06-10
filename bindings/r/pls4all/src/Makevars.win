@@ -9,6 +9,9 @@ PKG_CPPFLAGS = -Ivendor/cpp/include -Ivendor/cpp/src -Ivendor/generated \
                -DN4M_STATIC=1 -DN4M_HAVE_FITPACK=1
 
 CXX_STD = CXX17
+# Vendored FITPACK is legacy FORTRAN 77 (shared DO termination labels); silence
+# gfortran's F2018 deleted-feature warnings so the install step stays clean.
+PKG_FFLAGS = -std=legacy
 
 VEND_C   := $(shell find vendor -name '*.c')
 # cuda_dispatch.cpp is the CUDA backend (needs cuBLAS); excluded from the

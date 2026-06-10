@@ -69,6 +69,10 @@ if [ "${N4M_R_VENDOR:-0}" = "1" ] || [ "$VENDORED_PRESENT" = "1" ]; then
 PKG_CPPFLAGS = -Ivendor/cpp/include -Ivendor/cpp/src -Ivendor/generated \
                -DN4M_STATIC=1 -DN4M_HAVE_FITPACK=1
 CXX_STD = CXX17
+# Vendored FITPACK is legacy FORTRAN 77 (shared DO termination labels, deleted
+# in F2018). -std=legacy silences gfortran's "deleted feature" warnings so
+# `R CMD check --as-cran` does not flag the install step.
+PKG_FFLAGS = -std=legacy
 
 VEND_C   := $(shell find vendor -name '*.c')
 # cuda_dispatch.cpp is the CUDA backend (needs cublas); excluded from the
