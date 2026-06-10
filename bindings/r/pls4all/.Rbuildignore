@@ -3,6 +3,9 @@
 ^.*\.Rproj$
 ^_pkgdown\.yml$
 ^docs$
+# R-universe pre-build hook (runs from the git checkout before R CMD build);
+# it must NOT ship in the source tarball.
+^\.prepare$
 # Compiled artefacts must NEVER ship in the source tarball — CRAN's
 # build farm compiles from source, and pre-existing .o files would
 # either get used stale or break the cross-platform install.

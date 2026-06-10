@@ -35,6 +35,10 @@ Full per-symbol record: [`docs/abi/changes_log.md`](docs/abi/changes_log.md).
 - **R**: `coef.n4m_fit` returns the (p × q) regression-coefficient matrix (via
   the existing `n4m_model_get_array` C ABI), in both the `n4m` and slim
   `pls4all` packages.
+- **R**: the `n4m` and `pls4all` packages are now installable from **R-universe**
+  — a `.prepare` pre-build hook vendors the libn4m core into a self-contained
+  source tarball, so R-universe (and `R CMD build` from a checkout) build with no
+  external libn4m. See `docs/dev/registration-cran-runiverse.md`.
 
 ### Changed
 - Renamed the R packages' internal `.Call` registration prefix `r_p4a_` →
