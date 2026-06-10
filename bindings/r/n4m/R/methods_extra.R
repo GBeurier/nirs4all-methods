@@ -370,7 +370,7 @@ pls_logistic_fit <- function(X, y_labels, n_components, n_classes = NULL) {
 #' @param Y optional numeric vector of supervisory targets. When `NULL`,
 #'   the unsupervised gating path is used (a zero target vector is
 #'   substituted internally).
-#' @param n_operators number of operators in the AOM bank (default `3L`).
+#' @param n_operators number of operators in the AOM bank (default `1L`).
 #' @param gating_mode integer code selecting the gating strategy:
 #'   `0L` = hard-select per component, `1L` = soft-mixture (default `0L`).
 #'
@@ -382,11 +382,16 @@ pls_logistic_fit <- function(X, y_labels, n_components, n_classes = NULL) {
 #' set.seed(1)
 #' X <- matrix(rnorm(40 * 10), nrow = 40)
 #' Y <- as.numeric(X[, 1] + rnorm(40, sd = 0.1))
-#' fit <- aom_preprocess(X, Y, n_operators = 2L)
+#' fit <- aom_preprocess(X, Y)
 #' class(fit)
 #'
 #' @export
-aom_preprocess <- function(X, Y = NULL, n_operators = 3L, gating_mode = 0L) {
+aom_preprocess <- function(X, Y = NULL, n_operators = 1L, gating_mode = 0L) {
+    # NOTE: n_operators > 1 currently errors ("unsupported strict-linear AOM
+    # operator") — the native count-based auto-bank emits an unsupported
+    # operator kind at index >= 1. Default limited to a single adaptive operator
+    # pending the C-core auto-bank fix; for multi-operator banks use the richer
+    # operator-bank API (exposed in the Python binding).
     X <- as.matrix(X)
     if (is.null(Y)) Y <- rep(0, nrow(X))
     n4m_method("aom_preprocess", X, Y, 1L,
