@@ -10,7 +10,7 @@
 #   - external parity: n4m vs the R `pls` package's SIMPLS for
 #     the canonical PLS variant (sparse_pls @ lambda=0 matches)
 
-skip_if_no_libp4a <- function() {
+skip_if_no_libn4m <- function() {
     so <- tryCatch(getLoadedDLLs()[["pls4all"]], error = function(e) NULL)
     if (is.null(so)) testthat::skip("n4m DLL not loaded")
 }
@@ -23,7 +23,7 @@ deterministic_xy <- function(n = 50, p = 20, seed = 0) {
 }
 
 test_that("sparse_pls(formula) round-trips predict on training data", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- deterministic_xy()
     fit <- sparse_pls(y ~ ., data = xy$df, ncomp = 5L, sparsity_lambda = 0.05)
     preds <- predict(fit, newdata = xy$df)
@@ -32,7 +32,7 @@ test_that("sparse_pls(formula) round-trips predict on training data", {
 })
 
 test_that("cppls(formula) round-trips and respects gamma", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- deterministic_xy()
     fit <- cppls(y ~ ., data = xy$df, ncomp = 5L, gamma = 0.5)
     preds <- predict(fit, newdata = xy$df)
@@ -41,7 +41,7 @@ test_that("cppls(formula) round-trips and respects gamma", {
 })
 
 test_that("weighted_pls(formula) requires weights", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- deterministic_xy()
     expect_error(weighted_pls(y ~ ., data = xy$df, ncomp = 5L),
                   "weights")
@@ -52,7 +52,7 @@ test_that("weighted_pls(formula) requires weights", {
 })
 
 test_that("mb_pls(formula) requires summing block_sizes", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- deterministic_xy()
     expect_error(mb_pls(y ~ ., data = xy$df, ncomp = 3L,
                          block_sizes = c(7, 7)), "must equal")
@@ -64,7 +64,7 @@ test_that("mb_pls(formula) requires summing block_sizes", {
 })
 
 test_that("pls_glm(formula) accepts gaussian and poisson families", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- deterministic_xy()
     g <- pls_glm(y ~ ., data = xy$df, ncomp = 5L, family = "gaussian")
     expect_equal(g$method, "pls_glm_gaussian")
@@ -73,7 +73,7 @@ test_that("pls_glm(formula) accepts gaussian and poisson families", {
 })
 
 test_that("mir_pls(formula) runs end-to-end", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- deterministic_xy()
     fit <- mir_pls(y ~ ., data = xy$df, ncomp = 5L)
     preds <- predict(fit, newdata = xy$df)
@@ -87,7 +87,7 @@ test_that("mir_pls(formula) runs end-to-end", {
 # and pure SIMPLS in current C implementations) against the R `pls`
 # package's `plsr(method = "simpls")`.
 test_that("n4m SIMPLS matches `pls::plsr` SIMPLS within tolerance", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     skip_if_not_installed("pls")
     xy <- deterministic_xy()
     df <- xy$df

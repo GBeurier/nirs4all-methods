@@ -1,12 +1,12 @@
 # R binding
 
-Phase 7c scaffolding. Minimal `.Call` gateway over `libp4a` with
+Phase 7c scaffolding. Minimal `.Call` gateway over `libn4m` with
 fit/predict wrappers for every shipped PLS regression solver. Builds and
 installs from `bindings/r/n4m/`.
 
 ## Build / install
 
-The package needs a copy of `libp4a` already built. Build the C ABI
+The package needs a copy of `libn4m` already built. Build the C ABI
 first:
 
 ```bash
@@ -24,7 +24,7 @@ R CMD INSTALL \
     n4m
 ```
 
-At load time R needs to find `libp4a`. Either install the shared library
+At load time R needs to find `libn4m`. Either install the shared library
 on the system path or export `LD_LIBRARY_PATH` (Linux) /
 `DYLD_LIBRARY_PATH` (macOS) / `PATH` (Windows).
 
@@ -50,17 +50,17 @@ sqrt(mean((preds - y) ^ 2))
 
 ## Available solvers
 
-| `algo`                    | Algorithm/solver in libp4a                   |
+| `algo`                    | Algorithm/solver in libn4m                   |
 |---------------------------|----------------------------------------------|
-| `pls_nipals`              | `P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_NIPALS`            |
-| `pls_orthogonal_scores`   | `P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_ORTHOGONAL_SCORES` |
-| `pls_simpls`              | `P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_SIMPLS`            |
-| `pls_kernel_algorithm`    | `P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_KERNEL_ALGORITHM`  |
-| `pls_wide_kernel`         | `P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_WIDE_KERNEL`       |
-| `pls_svd`                 | `P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_SVD`               |
-| `pls_power`               | `P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_POWER`             |
-| `pls_randomized_svd`      | `P4A_ALGO_PLS_REGRESSION + P4A_SOLVER_RANDOMIZED_SVD`    |
-| `pcr_svd`                 | `P4A_ALGO_PCR + P4A_SOLVER_SVD`                          |
+| `pls_nipals`              | `N4M_ALGO_PLS_REGRESSION + N4M_SOLVER_NIPALS`            |
+| `pls_orthogonal_scores`   | `N4M_ALGO_PLS_REGRESSION + N4M_SOLVER_ORTHOGONAL_SCORES` |
+| `pls_simpls`              | `N4M_ALGO_PLS_REGRESSION + N4M_SOLVER_SIMPLS`            |
+| `pls_kernel_algorithm`    | `N4M_ALGO_PLS_REGRESSION + N4M_SOLVER_KERNEL_ALGORITHM`  |
+| `pls_wide_kernel`         | `N4M_ALGO_PLS_REGRESSION + N4M_SOLVER_WIDE_KERNEL`       |
+| `pls_svd`                 | `N4M_ALGO_PLS_REGRESSION + N4M_SOLVER_SVD`               |
+| `pls_power`               | `N4M_ALGO_PLS_REGRESSION + N4M_SOLVER_POWER`             |
+| `pls_randomized_svd`      | `N4M_ALGO_PLS_REGRESSION + N4M_SOLVER_RANDOMIZED_SVD`    |
+| `pcr_svd`                 | `N4M_ALGO_PCR + N4M_SOLVER_SVD`                          |
 
 ## Scope
 

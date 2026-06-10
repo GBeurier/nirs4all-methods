@@ -14,7 +14,7 @@
 pls_diagnostics <- function(model, X) {
   if (!is.matrix(X)) X <- as.matrix(X)
   storage.mode(X) <- "double"
-  .Call("r_p4a_pls_diagnostics_compute",
+  .Call("r_n4m_pls_diagnostics_compute",
         model, X,
         PACKAGE = "pls4all")
 }
@@ -34,7 +34,7 @@ pls_diagnostics <- function(model, X) {
 #' @export
 approximate_press <- function(X, Y, max_components) {
   xy <- .coerce_xy(X, Y)
-  .Call("r_p4a_approximate_press_compute",
+  .Call("r_n4m_approximate_press_compute",
         xy$X, xy$Y,
         as.integer(max_components),
         PACKAGE = "pls4all")
@@ -60,7 +60,7 @@ pls_monitoring <- function(model, X_reference, X_monitor, alpha = 0.95) {
   storage.mode(X_monitor) <- "double"
   if (ncol(X_reference) != ncol(X_monitor))
     stop("X_reference and X_monitor must have the same ncol")
-  .Call("r_p4a_pls_monitoring_run",
+  .Call("r_n4m_pls_monitoring_run",
         model, X_reference, X_monitor, as.numeric(alpha),
         PACKAGE = "pls4all")
 }

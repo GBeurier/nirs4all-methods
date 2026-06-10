@@ -323,3 +323,65 @@ SEXP r_n4m_predict(SEXP model_ptr, SEXP X) {
     UNPROTECT(3);
     return out;
 }
+
+/* ---- tagged model-array accessor ------------------------------------- */
+
+/* Return a fitted-model array (e.g. coefficients) as a column-major R
+ * matrix. `which_sexp` is the integer n4m_model_array_t tag. The core
+ * allocates the array; we copy it into an R matrix (reading stride-aware
+ * so any layout the core returns is handled) and release the core buffer
+ * with n4m_array_free before returning — we never free across the
+ * boundary except via that call. */
+SEXP r_n4m_model_get_array(SEXP model_ptr, SEXP which_sexp) {
+    if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
+    if (Rf_length(which_sexp) != 1 || TYPEOF(which_sexp) != INTSXP)
+        Rf_error("which must be a length-1 integer");
+    n4m_model_t* model = (n4m_model_t*)R_ExternalPtrAddr(model_ptr);
+    if (model == NULL) Rf_error("model handle is NULL (already freed?)");
+    const int which = INTEGER(which_sexp)[0];
+
+    n4m_context_t* ctx = NULL;
+    n4m_status_t status = n4m_context_create(&ctx);
+    if (status != N4M_OK) r_throw_status("n4m_context_create", status, NULL);
+
+    n4m_array_t* arr = NULL;
+    status = n4m_model_get_array(ctx, model, (n4m_model_array_t)which, &arr);
+    if (status != N4M_OK) {
+        /* r_throw_status copies the last_error message then destroys ctx. */
+        r_throw_status("n4m_model_get_array", status, ctx);
+    }
+
+    int64_t rows = 0;
+    int64_t cols = 0;
+    status = n4m_array_shape(arr, &rows, &cols);
+    if (status != N4M_OK) {
+        n4m_array_free(arr);
+        r_throw_status("n4m_array_shape", status, ctx);
+    }
+    n4m_matrix_view_t view;
+    status = n4m_array_view(arr, &view);
+    if (status != N4M_OK) {
+        n4m_array_free(arr);
+        r_throw_status("n4m_array_view", status, ctx);
+    }
+    if (view.dtype != N4M_DTYPE_F64) {
+        n4m_array_free(arr);
+        n4m_context_destroy(ctx);
+        Rf_error("n4m_model_get_array returned a non-f64 array");
+    }
+
+    /* Stride-aware copy into a column-major R matrix (rows x cols). */
+    SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)rows, (int)cols));
+    double* outdat = REAL(out);
+    const double* src = (const double*)view.data;
+    for (int64_t i = 0; i < rows; ++i) {
+        for (int64_t j = 0; j < cols; ++j) {
+            outdat[i + j * rows] =
+                src[i * view.row_stride + j * view.col_stride];
+        }
+    }
+    n4m_array_free(arr);
+    n4m_context_destroy(ctx);
+    UNPROTECT(1);
+    return out;
+}

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: CECILL-2.1
 
-skip_if_no_libp4a <- function() {
+skip_if_no_libn4m <- function() {
     so <- tryCatch(getLoadedDLLs()[["pls4all"]], error = function(e) NULL)
     if (is.null(so)) testthat::skip("n4m DLL not loaded")
 }
@@ -15,7 +15,7 @@ pls_compat_data <- function(n = 50, p = 8, seed = 10) {
 }
 
 test_that("plsr() exposes pls-like formula fit, predict and RMSEP", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- pls_compat_data()
     fit <- plsr(y ~ ., data = xy$df, ncomp = 3L, method = "simpls")
     expect_s3_class(fit, "n4m_mvr")
@@ -33,7 +33,7 @@ test_that("plsr() exposes pls-like formula fit, predict and RMSEP", {
 })
 
 test_that("pcr() runs through the PCR-compatible path", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- pls_compat_data(seed = 11)
     fit <- pcr(y ~ ., data = xy$df, ncomp = 3L)
     preds <- predict(fit, newdata = xy$df)
@@ -42,7 +42,7 @@ test_that("pcr() runs through the PCR-compatible path", {
 })
 
 test_that("pls-compatible prediction works when only final component is stored", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- pls_compat_data(seed = 13)
     fit <- plsr(y ~ ., data = xy$df, ncomp = 2L, method = "simpls",
                 fit_components = FALSE)
@@ -55,7 +55,7 @@ test_that("pls-compatible prediction works when only final component is stored",
 })
 
 test_that("plsr() can compute simple CV metrics", {
-    skip_if_no_libp4a()
+    skip_if_no_libn4m()
     xy <- pls_compat_data(n = 30, p = 6, seed = 12)
     fit <- plsr(y ~ ., data = xy$df, ncomp = 2L, method = "simpls",
                 validation = "CV", segments = 3L)

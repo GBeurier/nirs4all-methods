@@ -226,7 +226,7 @@ static SEXP pack_and_destroy(n4m_method_result_t* mr,
  * Method-result fits
  * ==================================================================== */
 
-SEXP r_p4a_sparse_simpls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
+SEXP r_n4m_sparse_simpls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
                               SEXP sparsity_lambda_sexp) {
     const int nc = INTEGER(n_components_sexp)[0];
     const double lambda = REAL(sparsity_lambda_sexp)[0];
@@ -254,7 +254,7 @@ SEXP r_p4a_sparse_simpls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
     return pack_and_destroy(mr, keys, 6, NULL, NULL);
 }
 
-SEXP r_p4a_cppls_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP gamma_sexp) {
+SEXP r_n4m_cppls_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP gamma_sexp) {
     const int nc = INTEGER(n_components_sexp)[0];
     const double gamma = REAL(gamma_sexp)[0];
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
@@ -280,7 +280,7 @@ SEXP r_p4a_cppls_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP gamma_sexp) {
     return pack_and_destroy(mr, keys, 5, NULL, NULL);
 }
 
-SEXP r_p4a_weighted_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
+SEXP r_n4m_weighted_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
                              SEXP sample_weights_sexp) {
     if (TYPEOF(sample_weights_sexp) != REALSXP)
         Rf_error("sample_weights must be numeric");
@@ -315,7 +315,7 @@ SEXP r_p4a_weighted_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
     return pack_and_destroy(mr, keys, 5, NULL, NULL);
 }
 
-SEXP r_p4a_mb_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
+SEXP r_n4m_mb_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
                        SEXP block_sizes_sexp) {
     if (TYPEOF(block_sizes_sexp) != INTSXP && TYPEOF(block_sizes_sexp) != REALSXP)
         Rf_error("block_sizes must be integer or numeric");
@@ -360,7 +360,7 @@ SEXP r_p4a_mb_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
     return pack_and_destroy(mr, keys, 7, NULL, NULL);
 }
 
-SEXP r_p4a_pls_glm_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP poisson_sexp) {
+SEXP r_n4m_pls_glm_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP poisson_sexp) {
     const int nc = INTEGER(n_components_sexp)[0];
     const int poisson = INTEGER(poisson_sexp)[0];
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
@@ -387,7 +387,7 @@ SEXP r_p4a_pls_glm_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP poisson_sexp
     return pack_and_destroy(mr, keys, 5, NULL, NULL);
 }
 
-SEXP r_p4a_mir_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp) {
+SEXP r_n4m_mir_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp) {
     const int nc = INTEGER(n_components_sexp)[0];
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
     SEXP X_rm, Y_rm;
@@ -419,7 +419,7 @@ SEXP r_p4a_mir_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp) {
 /* VIP (0) / coefficient (1) / selectivity ratio (2) variants of
  * variable_select_rank. Operates on a fitted model + the X used for
  * fitting (or another X if the model has been re-applied). */
-SEXP r_p4a_variable_select_rank(SEXP model_ptr, SEXP X, SEXP method_sexp,
+SEXP r_n4m_variable_select_rank(SEXP model_ptr, SEXP X, SEXP method_sexp,
                                  SEXP top_k_sexp) {
     if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
     if (TYPEOF(X) != REALSXP) Rf_error("X must be numeric");
@@ -449,7 +449,7 @@ SEXP r_p4a_variable_select_rank(SEXP model_ptr, SEXP X, SEXP method_sexp,
     return pack_and_destroy(mr, keys, 1, NULL, "selected_indices");
 }
 
-SEXP r_p4a_spa_select(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP top_k_sexp) {
+SEXP r_n4m_spa_select(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP top_k_sexp) {
     const int nc = INTEGER(n_components_sexp)[0];
     const int top_k = INTEGER(top_k_sexp)[0];
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
@@ -477,7 +477,7 @@ SEXP r_p4a_spa_select(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP top_k_sexp) {
 
 /* CARS — passes NULL ValidationPlan (C side falls back to a default
  * 5-fold scheme). */
-SEXP r_p4a_cars_select(SEXP X, SEXP Y, SEXP n_components_sexp,
+SEXP r_n4m_cars_select(SEXP X, SEXP Y, SEXP n_components_sexp,
                         SEXP n_iterations_sexp, SEXP min_features_sexp) {
     const int nc = INTEGER(n_components_sexp)[0];
     const int n_iter = INTEGER(n_iterations_sexp)[0];
@@ -512,7 +512,7 @@ SEXP r_p4a_cars_select(SEXP X, SEXP Y, SEXP n_components_sexp,
 /* Compute T², Q, DModX from a fitted model + design matrix X.
  * A NULL X_reference mirrors the Python/MATLAB default: the core falls back
  * to the training score distribution stored on the fitted model. */
-SEXP r_p4a_pls_diagnostics_compute(SEXP model_ptr, SEXP X) {
+SEXP r_n4m_pls_diagnostics_compute(SEXP model_ptr, SEXP X) {
     if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
     if (TYPEOF(X) != REALSXP) Rf_error("X must be numeric");
     n4m_model_t* model = (n4m_model_t*)R_ExternalPtrAddr(model_ptr);
@@ -539,7 +539,7 @@ SEXP r_p4a_pls_diagnostics_compute(SEXP model_ptr, SEXP X) {
     return pack_and_destroy(mr, keys, 3, NULL, NULL);
 }
 
-SEXP r_p4a_approximate_press_compute(SEXP X, SEXP Y, SEXP max_components_sexp) {
+SEXP r_n4m_approximate_press_compute(SEXP X, SEXP Y, SEXP max_components_sexp) {
     const int max_k = INTEGER(max_components_sexp)[0];
     int64_t n_rows = 0, n_cols = 0, y_cols = 0;
     SEXP X_rm, Y_rm;
@@ -564,7 +564,7 @@ SEXP r_p4a_approximate_press_compute(SEXP X, SEXP Y, SEXP max_components_sexp) {
     return pack_and_destroy(mr, keys, 2, "selected_n_components", NULL);
 }
 
-SEXP r_p4a_pls_monitoring_run(SEXP model_ptr, SEXP X_ref, SEXP X_mon,
+SEXP r_n4m_pls_monitoring_run(SEXP model_ptr, SEXP X_ref, SEXP X_mon,
                                SEXP alpha_sexp) {
     if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
     if (TYPEOF(X_ref) != REALSXP || TYPEOF(X_mon) != REALSXP)

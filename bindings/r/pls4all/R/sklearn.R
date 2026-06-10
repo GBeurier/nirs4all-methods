@@ -204,16 +204,28 @@ predict.n4m_fit <- function(object, newdata = NULL, ...) {
     preds
 }
 
+#' Extract the regression coefficients of a [pls()]-fitted model.
+#'
+#' Returns the `(p x q)` coefficient matrix (`p` predictors by `q`
+#' targets) read from the fitted libn4m model via the `n4m_model_get_array`
+#' C ABI (tag `N4M_MODEL_COEFFICIENTS`). Rows are named after the
+#' predictors when their names are available from the model terms.
+#'
+#' @param object A `n4m_fit` returned by [pls()].
+#' @param ... Ignored (for S3 generic compatibility).
+#' @return A numeric `p x q` matrix of regression coefficients.
 #' @export
 coef.n4m_fit <- function(object, ...) {
-    # The tier-1 binding currently doesn't expose model arrays directly;
-    # callers can use the formula-driven predict path, or reach for the
-    # underlying handle via `object$model`. Once `n4m_model_get_array` is
-    # bound on the R side, this generic will return the (p x q)
-    # coefficient matrix.
-    stop("coef.n4m_fit is not yet implemented; the R binding does ",
-         "not currently expose `n4m_model_get_array` for coefficient ",
-         "retrieval. Tracked in roadmap/phase-54a-r-tier2.md.")
+    coefs <- .Call("r_n4m_model_get_array", object$model, 0L,
+                   PACKAGE = "pls4all")
+    if (!is.matrix(coefs)) {
+        coefs <- as.matrix(coefs)
+    }
+    xnames <- attr(stats::delete.response(object$terms), "term.labels")
+    if (!is.null(xnames) && length(xnames) == nrow(coefs)) {
+        rownames(coefs) <- xnames
+    }
+    coefs
 }
 
 #' @export
