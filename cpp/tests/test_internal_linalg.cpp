@@ -19,6 +19,12 @@
 #include <cstdint>
 #include <vector>
 
+#if defined(N4M_USE_CUDA)
+#  include <string>
+
+#  include "core/cuda_dispatch.hpp"
+#endif
+
 extern "C" {
 #include "core/common/linalg.h"
 }
@@ -51,6 +57,129 @@ n4m_status_t qr_lstsq(const std::vector<double>& A_in, int64_t rows,
     x_out->assign(static_cast<size_t>(cols), 0.0);
     return n4m_back_solve_R(A.data(), rows, cols, b.data(), x_out->data());
 }
+
+#if defined(N4M_USE_CUDA)
+n4m_status_t qr_square_multi(const std::vector<double>& A_in,
+                             std::size_t n,
+                             const std::vector<double>& B,
+                             std::size_t q,
+                             std::vector<double>* X_out) {
+    std::vector<double> A = A_in;
+    std::vector<double> tau(n, 0.0);
+    n4m_status_t st = n4m_householder_qr(
+        A.data(), static_cast<int64_t>(n), static_cast<int64_t>(n), tau.data());
+    if (st != N4M_OK) return st;
+
+    X_out->assign(n * q, 0.0);
+    std::vector<double> rhs(n, 0.0);
+    std::vector<double> sol(n, 0.0);
+    for (std::size_t target = 0; target < q; ++target) {
+        for (std::size_t i = 0; i < n; ++i) {
+            rhs[i] = B[i * q + target];
+        }
+        st = n4m_apply_qt(A.data(), static_cast<int64_t>(n),
+                          static_cast<int64_t>(n), tau.data(), rhs.data());
+        if (st != N4M_OK) return st;
+        st = n4m_back_solve_R(A.data(), static_cast<int64_t>(n),
+                              static_cast<int64_t>(n), rhs.data(), sol.data());
+        if (st != N4M_OK) return st;
+        for (std::size_t i = 0; i < n; ++i) {
+            (*X_out)[i * q + target] = sol[i];
+        }
+    }
+    return N4M_OK;
+}
+
+void fill_moment_build_design(std::size_t n,
+                              std::size_t p,
+                              std::size_t q,
+                              std::vector<double>& X,
+                              std::vector<double>& Y) {
+    X.assign(n * p, 0.0);
+    Y.assign(n * q, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t col = 0; col < p; ++col) {
+            const double a = static_cast<double>((row + 1) * (col + 3));
+            const double b = static_cast<double>((row + 5) * (col + 1));
+            X[row * p + col] =
+                0.2 * std::sin(0.017 * a) + 0.1 * std::cos(0.031 * b);
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            const double phase = static_cast<double>((row + 7) * (target + 2));
+            Y[row * q + target] =
+                0.3 * std::sin(0.023 * phase) +
+                0.05 * static_cast<double>(target + 1);
+        }
+    }
+}
+
+void reference_moments(const std::vector<double>& X,
+                       const std::vector<double>& Y,
+                       std::size_t n,
+                       std::size_t p,
+                       std::size_t q,
+                       std::vector<double>& XtX,
+                       std::vector<double>& XtY,
+                       std::vector<double>& YtY) {
+    XtX.assign(p * p, 0.0);
+    XtY.assign(p * q, 0.0);
+    YtY.assign(q * q, 0.0);
+    for (std::size_t i = 0; i < p; ++i) {
+        for (std::size_t j = 0; j < p; ++j) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += X[row * p + i] * X[row * p + j];
+            }
+            XtX[i * p + j] = sum;
+        }
+        for (std::size_t target = 0; target < q; ++target) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += X[row * p + i] * Y[row * q + target];
+            }
+            XtY[i * q + target] = sum;
+        }
+    }
+    for (std::size_t i = 0; i < q; ++i) {
+        for (std::size_t j = 0; j < q; ++j) {
+            double sum = 0.0;
+            for (std::size_t row = 0; row < n; ++row) {
+                sum += Y[row * q + i] * Y[row * q + j];
+            }
+            YtY[i * q + j] = sum;
+        }
+    }
+}
+
+void reference_gram(const std::vector<double>& X,
+                    std::size_t n,
+                    std::size_t p,
+                    std::vector<double>& K) {
+    K.assign(n * n, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t col = 0; col < n; ++col) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                sum += X[row * p + feature] * X[col * p + feature];
+            }
+            K[row * n + col] = sum;
+        }
+    }
+}
+
+double max_abs_diff(const std::vector<double>& lhs,
+                    const std::vector<double>& rhs) {
+    LIN_CHECK(lhs.size() == rhs.size());
+    const std::size_t n = lhs.size() < rhs.size() ? lhs.size() : rhs.size();
+    double max_abs = 0.0;
+    for (std::size_t i = 0; i < n; ++i) {
+        const double diff = std::fabs(lhs[i] - rhs[i]);
+        if (diff > max_abs) max_abs = diff;
+    }
+    return max_abs;
+}
+
+#endif
 
 // Well-conditioned overdetermined system with an exact solution:
 //   x = [2, -1, 0.5]; b = A x exactly, so the least-squares fit recovers x.
@@ -262,6 +391,243 @@ void test_simpls_cgs2_reorthogonalisation() {
     LIN_CHECK(off_double < 1e-12);
 }
 
+#if defined(N4M_USE_CUDA)
+void test_cuda_build_moments_matches_host() {
+    if (!n4m::cuda_dispatch::cuda_runtime_available()) {
+        std::printf("[internal] CUDA moment build ... skipped (no GPU)\n");
+        return;
+    }
+
+    constexpr std::size_t n = 96;
+    constexpr std::size_t p = 160;
+    constexpr std::size_t q = 3;
+    constexpr double kBuildTol = 1e-8;
+
+    std::vector<double> X;
+    std::vector<double> Y;
+    fill_moment_build_design(n, p, q, X, Y);
+
+    std::vector<double> xtx_ref;
+    std::vector<double> xty_ref;
+    std::vector<double> yty_ref;
+    reference_moments(X, Y, n, p, q, xtx_ref, xty_ref, yty_ref);
+
+    std::vector<double> xtx_dev(p * p, 0.0);
+    std::vector<double> xty_dev(p * q, 0.0);
+    std::vector<double> yty_dev(q * q, 0.0);
+    std::string err;
+    int status = n4m::cuda_dispatch::build_moments_device(
+        n, p, q, X.data(), Y.data(), xtx_dev.data(), xty_dev.data(),
+        yty_dev.data(), &err);
+    LIN_CHECK(status == 0);
+    if (status != 0) return;
+
+    LIN_CHECK(max_abs_diff(xtx_ref, xtx_dev) <= kBuildTol);
+    LIN_CHECK(max_abs_diff(xty_ref, xty_dev) <= kBuildTol);
+    LIN_CHECK(max_abs_diff(yty_ref, yty_dev) <= kBuildTol);
+
+    std::vector<double> xtx_skip(p * p, 0.0);
+    std::vector<double> xty_skip(p * q, 0.0);
+    err.clear();
+    status = n4m::cuda_dispatch::build_moments_device(
+        n, p, q, X.data(), Y.data(), xtx_skip.data(), xty_skip.data(),
+        nullptr, &err);
+    LIN_CHECK(status == 0);
+    if (status == 0) {
+        LIN_CHECK(max_abs_diff(xtx_ref, xtx_skip) <= kBuildTol);
+        LIN_CHECK(max_abs_diff(xty_ref, xty_skip) <= kBuildTol);
+    }
+}
+
+void test_cuda_build_gram_matches_host() {
+    if (!n4m::cuda_dispatch::cuda_runtime_available()) {
+        std::printf("[internal] CUDA gram build ... skipped (no GPU)\n");
+        return;
+    }
+
+    constexpr std::size_t n = 96;
+    constexpr std::size_t p = 160;
+    constexpr std::size_t q = 3;
+    constexpr double kBuildTol = 1e-8;
+
+    std::vector<double> X;
+    std::vector<double> Y;
+    fill_moment_build_design(n, p, q, X, Y);
+
+    std::vector<double> k_ref;
+    reference_gram(X, n, p, k_ref);
+
+    std::vector<double> k_dev(n * n, 0.0);
+    std::string err;
+    const int status = n4m::cuda_dispatch::build_gram_device(
+        n, p, X.data(), k_dev.data(), &err);
+    LIN_CHECK(status == 0);
+    if (status == 0) {
+        LIN_CHECK(max_abs_diff(k_ref, k_dev) <= kBuildTol);
+    }
+}
+
+void test_cuda_spd_solve_matches_qr() {
+    if (!n4m::cuda_dispatch::cuda_runtime_available()) {
+        std::printf("[internal] CUDA SPD solve ... skipped (no GPU)\n");
+        return;
+    }
+
+    constexpr std::size_t n = 64;
+    constexpr std::size_t q = 3;
+    constexpr double kSpdTol = 1e-8;
+
+    std::vector<double> G(n * n, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t col = 0; col < n; ++col) {
+            const double a = static_cast<double>((row + 1) * (col + 3));
+            const double b = static_cast<double>((row + 5) * (col + 1));
+            G[row * n + col] = 0.05 * (std::sin(0.17 * a) + std::cos(0.11 * b));
+        }
+    }
+
+    std::vector<double> A(n * n, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t col = 0; col < n; ++col) {
+            double sum = 0.0;
+            for (std::size_t k = 0; k < n; ++k) {
+                sum += G[k * n + row] * G[k * n + col];
+            }
+            A[row * n + col] = sum / static_cast<double>(n);
+        }
+        A[row * n + row] += 1.0;
+    }
+
+    std::vector<double> B(n * q, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t target = 0; target < q; ++target) {
+            const double phase = static_cast<double>((row + 1) * (target + 2));
+            B[row * q + target] =
+                0.25 * std::sin(0.13 * phase) + 0.1 * static_cast<double>(target + 1);
+        }
+    }
+
+    std::vector<double> X_ref;
+    LIN_CHECK(qr_square_multi(A, n, B, q, &X_ref) == N4M_OK);
+
+    std::vector<double> X_dev(n * q, 0.0);
+    std::string err;
+    const int spd_status =
+        n4m::cuda_dispatch::spd_solve(n, q, A.data(), B.data(), X_dev.data(), &err);
+    LIN_CHECK(spd_status == 0);
+    if (spd_status == 0 && X_ref.size() == X_dev.size()) {
+        double max_abs = 0.0;
+        for (std::size_t i = 0; i < X_ref.size(); ++i) {
+            const double diff = std::fabs(X_ref[i] - X_dev[i]);
+            if (diff > max_abs) max_abs = diff;
+        }
+        LIN_CHECK(max_abs <= kSpdTol);
+    }
+
+    std::vector<double> A_singular(n * n, 0.0);
+    for (std::size_t i = 0; i + 1 < n; ++i) {
+        A_singular[i * n + i] = 1.0;
+    }
+    std::vector<double> X_singular(n * q, 0.0);
+    err.clear();
+    LIN_CHECK(n4m::cuda_dispatch::spd_solve(
+                  n, q, A_singular.data(), B.data(), X_singular.data(), &err) == 1);
+}
+
+void test_cuda_prepared_dual_ridge_matches_spd_solve() {
+    if (!n4m::cuda_dispatch::cuda_runtime_available()) {
+        std::printf("[internal] CUDA prepared dual Ridge ... skipped (no GPU)\n");
+        return;
+    }
+
+    constexpr std::size_t n = 64;
+    constexpr std::size_t q = 3;
+    constexpr double kSpdTol = 1e-8;
+
+    std::vector<double> G(n * n, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t col = 0; col < n; ++col) {
+            const double a = static_cast<double>((row + 2) * (col + 5));
+            const double b = static_cast<double>((row + 7) * (col + 3));
+            G[row * n + col] =
+                0.05 * (std::sin(0.19 * a) + std::cos(0.07 * b));
+        }
+    }
+
+    std::vector<double> K(n * n, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t col = 0; col < n; ++col) {
+            double sum = 0.0;
+            for (std::size_t k = 0; k < n; ++k) {
+                sum += G[k * n + row] * G[k * n + col];
+            }
+            K[row * n + col] = sum / static_cast<double>(n);
+        }
+    }
+
+    std::vector<double> B(n * q, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t target = 0; target < q; ++target) {
+            const double phase = static_cast<double>((row + 3) * (target + 1));
+            B[row * q + target] =
+                0.2 * std::sin(0.17 * phase) +
+                0.05 * static_cast<double>(target + 1);
+        }
+    }
+
+    std::string err;
+    n4m::cuda_dispatch::PreparedDualRidge* h =
+        n4m::cuda_dispatch::prepare_dual_ridge(
+            n, q, K.data(), B.data(), &err);
+    LIN_CHECK(h != nullptr);
+    if (h == nullptr) {
+        return;
+    }
+
+    const double lambdas[] = {1e-3, 0.1, 1.0, 10.0};
+    for (double lambda : lambdas) {
+        std::vector<double> Klambda = K;
+        for (std::size_t i = 0; i < n; ++i) {
+            Klambda[i * n + i] += lambda;
+        }
+        std::vector<double> X_ref(n * q, 0.0);
+        err.clear();
+        LIN_CHECK(n4m::cuda_dispatch::spd_solve(
+                      n, q, Klambda.data(), B.data(), X_ref.data(), &err) == 0);
+
+        std::vector<double> X_dev(n * q, 0.0);
+        err.clear();
+        LIN_CHECK(n4m::cuda_dispatch::dual_ridge_solve(
+                      h, lambda, X_dev.data(), &err) == 0);
+
+        double max_abs = 0.0;
+        for (std::size_t i = 0; i < X_ref.size(); ++i) {
+            const double diff = std::fabs(X_ref[i] - X_dev[i]);
+            if (diff > max_abs) max_abs = diff;
+        }
+        LIN_CHECK(max_abs <= kSpdTol);
+    }
+    n4m::cuda_dispatch::destroy_dual_ridge(h);
+
+    std::vector<double> K_singular(n * n, 0.0);
+    for (std::size_t i = 0; i + 1 < n; ++i) {
+        K_singular[i * n + i] = 1.0;
+    }
+    n4m::cuda_dispatch::PreparedDualRidge* h_singular =
+        n4m::cuda_dispatch::prepare_dual_ridge(
+            n, q, K_singular.data(), B.data(), &err);
+    LIN_CHECK(h_singular != nullptr);
+    if (h_singular != nullptr) {
+        std::vector<double> X_singular(n * q, 0.0);
+        err.clear();
+        LIN_CHECK(n4m::cuda_dispatch::dual_ridge_solve(
+                      h_singular, 0.0, X_singular.data(), &err) == 1);
+        n4m::cuda_dispatch::destroy_dual_ridge(h_singular);
+    }
+}
+
+#endif
+
 }  // namespace
 
 // Entry point invoked from the n4m_internal_tests main (test_internal_rng_choice.cpp).
@@ -271,6 +637,12 @@ int run_internal_linalg_tests() {
     test_rankdeficient_flagged();
     test_near_axis_orthonormal();
     test_simpls_cgs2_reorthogonalisation();
+#if defined(N4M_USE_CUDA)
+    test_cuda_build_moments_matches_host();
+    test_cuda_build_gram_matches_host();
+    test_cuda_spd_solve_matches_qr();
+    test_cuda_prepared_dual_ridge_matches_spd_solve();
+#endif
     if (g_linalg_failures == 0) {
         std::printf("[internal] linalg QR/back-solve ... ok\n");
     } else {

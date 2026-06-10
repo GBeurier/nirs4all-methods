@@ -26,12 +26,14 @@
 #include "cuda_kernels.hpp"
 
 #include <cublas_v2.h>
+#include <cusolverDn.h>
 #include <cuda_runtime.h>
 
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <limits>
+#include <memory>
 #include <new>
 #include <stdexcept>
 #include <string>
@@ -45,6 +47,7 @@ namespace {
 
 struct CublasState {
     cublasHandle_t handle{};
+    cusolverDnHandle_t solver{};
     bool available{false};
 
     CublasState() noexcept {
@@ -58,11 +61,17 @@ struct CublasState {
         if (cublasCreate_v2(&handle) != CUBLAS_STATUS_SUCCESS) {
             return;
         }
+        if (cusolverDnCreate(&solver) != CUSOLVER_STATUS_SUCCESS) {
+            cublasDestroy_v2(handle);
+            handle = nullptr;
+            return;
+        }
         available = true;
     }
 
     ~CublasState() {
         if (available) {
+            cusolverDnDestroy(solver);
             cublasDestroy_v2(handle);
         }
     }
@@ -174,6 +183,70 @@ public:
 private:
     T* ptr_{nullptr};
     std::size_t capacity_{0};
+};
+
+class ReusableDualWorkspace {
+public:
+    void ensure(std::size_t n, std::size_t q, int lwork) {
+        dA_.ensure(n * n);
+        dB_.ensure(n * q);
+        dWork_.ensure(static_cast<std::size_t>(lwork));
+        dInfo_.ensure(1);
+    }
+
+    double* dA() const noexcept { return dA_.get(); }
+    double* dB() const noexcept { return dB_.get(); }
+    double* dWork() const noexcept { return dWork_.get(); }
+    int* dInfo() const noexcept { return dInfo_.get(); }
+
+private:
+    ReusableDeviceBuffer<double> dA_;
+    ReusableDeviceBuffer<double> dB_;
+    ReusableDeviceBuffer<double> dWork_;
+    ReusableDeviceBuffer<int> dInfo_;
+};
+
+class ReusableMomentBuildWorkspace {
+public:
+    void ensure(std::size_t x_elems,
+                std::size_t y_elems,
+                std::size_t xtx_elems,
+                std::size_t xty_elems,
+                std::size_t yty_elems) {
+        dX_.ensure(x_elems);
+        dY_.ensure(y_elems);
+        dXtX_.ensure(xtx_elems);
+        dXtY_.ensure(xty_elems);
+        dYtY_.ensure(yty_elems);
+    }
+
+    double* dX() const noexcept { return dX_.get(); }
+    double* dY() const noexcept { return dY_.get(); }
+    double* dXtX() const noexcept { return dXtX_.get(); }
+    double* dXtY() const noexcept { return dXtY_.get(); }
+    double* dYtY() const noexcept { return dYtY_.get(); }
+
+private:
+    ReusableDeviceBuffer<double> dX_;
+    ReusableDeviceBuffer<double> dY_;
+    ReusableDeviceBuffer<double> dXtX_;
+    ReusableDeviceBuffer<double> dXtY_;
+    ReusableDeviceBuffer<double> dYtY_;
+};
+
+class ReusableGramBuildWorkspace {
+public:
+    void ensure(std::size_t x_elems, std::size_t k_elems) {
+        dX_.ensure(x_elems);
+        dK_.ensure(k_elems);
+    }
+
+    double* dX() const noexcept { return dX_.get(); }
+    double* dK() const noexcept { return dK_.get(); }
+
+private:
+    ReusableDeviceBuffer<double> dX_;
+    ReusableDeviceBuffer<double> dK_;
 };
 
 class ReusablePls1MomentWorkspace {
@@ -338,6 +411,12 @@ void copy_d2h_stream_sync(void* dst, const void* src, std::size_t bytes,
 void check_cublas(cublasStatus_t st, const char* what) {
     if (st != CUBLAS_STATUS_SUCCESS) {
         throw std::runtime_error(std::string("cuBLAS error in ") + what);
+    }
+}
+
+void check_cusolver(cusolverStatus_t st, const char* what) {
+    if (st != CUSOLVER_STATUS_SUCCESS) {
+        throw std::runtime_error(std::string("cuSOLVER error in ") + what);
     }
 }
 
@@ -1137,6 +1216,469 @@ int pls1_moment_components_many_batched_tiled(std::size_t n_jobs,
 
 bool cuda_runtime_available() noexcept {
     return state().available;
+}
+
+int build_moments_device(std::size_t n,
+                         std::size_t p,
+                         std::size_t q,
+                         const double* X,
+                         const double* Y,
+                         double* XtX,
+                         double* XtY,
+                         double* YtY,
+                         std::string* error) {
+    try {
+        if (error != nullptr) {
+            error->clear();
+        }
+        if (!cuda_runtime_available()) {
+            set_error(error, "moment build: no GPU available");
+            return 2;
+        }
+        if (n == 0 || p == 0 || q == 0 || X == nullptr || Y == nullptr ||
+            XtX == nullptr || XtY == nullptr) {
+            set_error(error, "moment build received invalid buffers");
+            return 2;
+        }
+        if (n > static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
+            p > static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
+            q > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            set_error(error, "moment build dimensions exceed cuBLAS int range");
+            return 2;
+        }
+        if (mul_overflows(n, p) || mul_overflows(n, q) ||
+            mul_overflows(p, p) || mul_overflows(p, q) ||
+            (YtY != nullptr && mul_overflows(q, q))) {
+            set_error(error, "moment build dimensions are too large");
+            return 2;
+        }
+
+        const std::size_t x_elems = n * p;
+        const std::size_t y_elems = n * q;
+        const std::size_t xtx_elems = p * p;
+        const std::size_t xty_elems = p * q;
+        const std::size_t yty_elems = (YtY != nullptr) ? (q * q) : 0U;
+        if (mul_overflows(x_elems, sizeof(double)) ||
+            mul_overflows(y_elems, sizeof(double)) ||
+            mul_overflows(xtx_elems, sizeof(double)) ||
+            mul_overflows(xty_elems, sizeof(double)) ||
+            (YtY != nullptr && mul_overflows(yty_elems, sizeof(double)))) {
+            set_error(error, "moment build buffers are too large");
+            return 2;
+        }
+
+        thread_local ReusableMomentBuildWorkspace ws;
+        ws.ensure(x_elems, y_elems, xtx_elems, xty_elems, yty_elems);
+
+        copy_h2d(ws.dX(), X, x_elems * sizeof(double));
+        copy_h2d(ws.dY(), Y, y_elems * sizeof(double));
+
+        const double alpha = 1.0;
+        const double beta = 0.0;
+        const int ni = static_cast<int>(n);
+        const int pi = static_cast<int>(p);
+        const int qi = static_cast<int>(q);
+
+        check_cublas(
+            cublasDgemm_v2(state().handle,
+                           CUBLAS_OP_N, CUBLAS_OP_T,
+                           pi, pi, ni,
+                           &alpha,
+                           ws.dX(), pi,
+                           ws.dX(), pi,
+                           &beta,
+                           ws.dXtX(), pi),
+            "moment build XtX");
+        check_cublas(
+            cublasDgemm_v2(state().handle,
+                           CUBLAS_OP_N, CUBLAS_OP_T,
+                           qi, pi, ni,
+                           &alpha,
+                           ws.dY(), qi,
+                           ws.dX(), pi,
+                           &beta,
+                           ws.dXtY(), qi),
+            "moment build XtY");
+        if (YtY != nullptr) {
+            check_cublas(
+                cublasDgemm_v2(state().handle,
+                               CUBLAS_OP_N, CUBLAS_OP_T,
+                               qi, qi, ni,
+                               &alpha,
+                               ws.dY(), qi,
+                               ws.dY(), qi,
+                               &beta,
+                               ws.dYtY(), qi),
+                "moment build YtY");
+        }
+
+        copy_d2h(XtX, ws.dXtX(), xtx_elems * sizeof(double));
+        copy_d2h(XtY, ws.dXtY(), xty_elems * sizeof(double));
+        if (YtY != nullptr) {
+            copy_d2h(YtY, ws.dYtY(), yty_elems * sizeof(double));
+        }
+        return 0;
+    } catch (const std::bad_alloc&) {
+        set_error(error, "moment build ran out of memory");
+        return 2;
+    } catch (const std::exception& ex) {
+        if (error != nullptr) {
+            *error = std::string("moment build failed: ") + ex.what();
+        }
+        return 2;
+    } catch (...) {
+        set_error(error, "moment build failed");
+        return 2;
+    }
+}
+
+int build_gram_device(std::size_t n,
+                      std::size_t p,
+                      const double* Xw,
+                      double* K,
+                      std::string* error) {
+    try {
+        if (error != nullptr) {
+            error->clear();
+        }
+        if (!cuda_runtime_available()) {
+            set_error(error, "gram build: no GPU available");
+            return 2;
+        }
+        if (n == 0 || p == 0 || Xw == nullptr || K == nullptr) {
+            set_error(error, "gram build received invalid buffers");
+            return 2;
+        }
+        if (n > static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
+            p > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            set_error(error, "gram build dimensions exceed cuBLAS int range");
+            return 2;
+        }
+        if (mul_overflows(n, p) || mul_overflows(n, n)) {
+            set_error(error, "gram build dimensions are too large");
+            return 2;
+        }
+
+        const std::size_t x_elems = n * p;
+        const std::size_t k_elems = n * n;
+        if (mul_overflows(x_elems, sizeof(double)) ||
+            mul_overflows(k_elems, sizeof(double))) {
+            set_error(error, "gram build buffers are too large");
+            return 2;
+        }
+
+        thread_local ReusableGramBuildWorkspace ws;
+        ws.ensure(x_elems, k_elems);
+
+        copy_h2d(ws.dX(), Xw, x_elems * sizeof(double));
+
+        const double alpha = 1.0;
+        const double beta = 0.0;
+        const int ni = static_cast<int>(n);
+        const int pi = static_cast<int>(p);
+
+        check_cublas(
+            cublasDgemm_v2(state().handle,
+                           CUBLAS_OP_T, CUBLAS_OP_N,
+                           ni, ni, pi,
+                           &alpha,
+                           ws.dX(), pi,
+                           ws.dX(), pi,
+                           &beta,
+                           ws.dK(), ni),
+            "gram build K");
+
+        copy_d2h(K, ws.dK(), k_elems * sizeof(double));
+        return 0;
+    } catch (const std::bad_alloc&) {
+        set_error(error, "gram build ran out of memory");
+        return 2;
+    } catch (const std::exception& ex) {
+        if (error != nullptr) {
+            *error = std::string("gram build failed: ") + ex.what();
+        }
+        return 2;
+    } catch (...) {
+        set_error(error, "gram build failed");
+        return 2;
+    }
+}
+
+int spd_solve(std::size_t n,
+              std::size_t q,
+              const double* A,
+              const double* B,
+              double* X,
+              std::string* error) {
+    try {
+        if (error != nullptr) {
+            error->clear();
+        }
+        if (!cuda_runtime_available()) {
+            set_error(error, "ridge SPD solve: no GPU available");
+            return 2;
+        }
+        if (n == 0 || q == 0 || A == nullptr || B == nullptr || X == nullptr) {
+            set_error(error, "ridge SPD solve received invalid buffers");
+            return 2;
+        }
+        if (n > static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
+            q > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            set_error(error, "ridge SPD solve dimensions exceed cuSOLVER int range");
+            return 2;
+        }
+        if (mul_overflows(n, n) || mul_overflows(n, q)) {
+            set_error(error, "ridge SPD solve dimensions are too large");
+            return 2;
+        }
+        const std::size_t a_elems = n * n;
+        const std::size_t bx_elems = n * q;
+        if (mul_overflows(a_elems, sizeof(double)) ||
+            mul_overflows(bx_elems, sizeof(double))) {
+            set_error(error, "ridge SPD solve buffers are too large");
+            return 2;
+        }
+
+        const int ni = static_cast<int>(n);
+        const int qi = static_cast<int>(q);
+        DevicePtr<double> dA(a_elems);
+        DevicePtr<double> dB(bx_elems);
+        DevicePtr<int> dInfo(1);
+
+        copy_h2d(dA.get(), A, a_elems * sizeof(double));
+
+        std::vector<double> Bcm(bx_elems, 0.0);
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t target = 0; target < q; ++target) {
+                Bcm[target * n + i] = B[i * q + target];
+            }
+        }
+        copy_h2d(dB.get(), Bcm.data(), bx_elems * sizeof(double));
+
+        // A is fully materialized and symmetric, so either triangle is valid.
+        const cublasFillMode_t uplo = CUBLAS_FILL_MODE_LOWER;
+        int lwork = 0;
+        check_cusolver(
+            cusolverDnDpotrf_bufferSize(state().solver, uplo, ni, dA.get(), ni,
+                                        &lwork),
+            "potrf_bufferSize");
+        DevicePtr<double> dWork(static_cast<std::size_t>(lwork));
+        check_cusolver(
+            cusolverDnDpotrf(state().solver, uplo, ni, dA.get(), ni,
+                             dWork.get(), lwork, dInfo.get()),
+            "potrf");
+        int info = 0;
+        copy_d2h(&info, dInfo.get(), sizeof(int));
+        if (info > 0) {
+            set_error(error, "ridge SPD solve: matrix not positive definite");
+            return 1;
+        }
+        if (info < 0) {
+            set_error(error, "ridge SPD solve: potrf invalid argument");
+            return 2;
+        }
+
+        check_cusolver(
+            cusolverDnDpotrs(state().solver, uplo, ni, qi, dA.get(), ni,
+                             dB.get(), ni, dInfo.get()),
+            "potrs");
+        copy_d2h(&info, dInfo.get(), sizeof(int));
+        if (info != 0) {
+            set_error(error, "ridge SPD solve: potrs failed");
+            return 2;
+        }
+
+        std::vector<double> Xcm(bx_elems, 0.0);
+        copy_d2h(Xcm.data(), dB.get(), bx_elems * sizeof(double));
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t target = 0; target < q; ++target) {
+                X[i * q + target] = Xcm[target * n + i];
+            }
+        }
+        return 0;
+    } catch (const std::bad_alloc&) {
+        set_error(error, "ridge SPD solve ran out of memory");
+        return 2;
+    } catch (const std::exception& ex) {
+        if (error != nullptr) {
+            *error = std::string("ridge SPD solve failed: ") + ex.what();
+        }
+        return 2;
+    } catch (...) {
+        set_error(error, "ridge SPD solve failed");
+        return 2;
+    }
+}
+
+struct PreparedDualRidge {
+    std::size_t n{0};
+    std::size_t q{0};
+    int lwork{0};
+    ReusableDeviceBuffer<double> dK;
+    ReusableDeviceBuffer<double> dB0;
+};
+
+PreparedDualRidge* prepare_dual_ridge(std::size_t n,
+                                      std::size_t q,
+                                      const double* K,
+                                      const double* B,
+                                      std::string* error) {
+    try {
+        if (error != nullptr) {
+            error->clear();
+        }
+        if (!cuda_runtime_available()) {
+            set_error(error, "prepared dual Ridge: no GPU available");
+            return nullptr;
+        }
+        if (n == 0 || q == 0 || K == nullptr || B == nullptr) {
+            set_error(error, "prepared dual Ridge received invalid buffers");
+            return nullptr;
+        }
+        if (n > static_cast<std::size_t>(std::numeric_limits<int>::max()) ||
+            q > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            set_error(error,
+                      "prepared dual Ridge dimensions exceed cuSOLVER int range");
+            return nullptr;
+        }
+        if (mul_overflows(n, n) || mul_overflows(n, q)) {
+            set_error(error, "prepared dual Ridge dimensions are too large");
+            return nullptr;
+        }
+        const std::size_t k_elems = n * n;
+        const std::size_t b_elems = n * q;
+        if (mul_overflows(k_elems, sizeof(double)) ||
+            mul_overflows(b_elems, sizeof(double))) {
+            set_error(error, "prepared dual Ridge buffers are too large");
+            return nullptr;
+        }
+
+        auto h = std::make_unique<PreparedDualRidge>();
+        h->n = n;
+        h->q = q;
+        h->dK.ensure(k_elems);
+        copy_h2d(h->dK.get(), K, k_elems * sizeof(double));
+
+        std::vector<double> Bcm(b_elems, 0.0);
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t target = 0; target < q; ++target) {
+                Bcm[target * n + i] = B[i * q + target];
+            }
+        }
+        h->dB0.ensure(b_elems);
+        copy_h2d(h->dB0.get(), Bcm.data(), b_elems * sizeof(double));
+
+        const cublasFillMode_t uplo = CUBLAS_FILL_MODE_LOWER;
+        const int ni = static_cast<int>(n);
+        check_cusolver(
+            cusolverDnDpotrf_bufferSize(state().solver, uplo, ni,
+                                        h->dK.get(), ni, &h->lwork),
+            "prepared dual Ridge potrf_bufferSize");
+        return h.release();
+    } catch (const std::bad_alloc&) {
+        set_error(error, "prepared dual Ridge ran out of memory");
+        return nullptr;
+    } catch (const std::exception& ex) {
+        if (error != nullptr) {
+            *error = std::string("prepared dual Ridge failed: ") + ex.what();
+        }
+        return nullptr;
+    } catch (...) {
+        set_error(error, "prepared dual Ridge failed");
+        return nullptr;
+    }
+}
+
+int dual_ridge_solve(PreparedDualRidge* handle,
+                     double lambda,
+                     double* X,
+                     std::string* error) {
+    try {
+        if (error != nullptr) {
+            error->clear();
+        }
+        if (!cuda_runtime_available()) {
+            set_error(error, "prepared dual Ridge solve: no GPU available");
+            return 2;
+        }
+        if (handle == nullptr || X == nullptr || handle->n == 0 ||
+            handle->q == 0 || handle->lwork < 0) {
+            set_error(error, "prepared dual Ridge solve received invalid handle");
+            return 2;
+        }
+        const std::size_t n = handle->n;
+        const std::size_t q = handle->q;
+        const std::size_t k_elems = n * n;
+        const std::size_t b_elems = n * q;
+        const int ni = static_cast<int>(n);
+        const int qi = static_cast<int>(q);
+        const cublasFillMode_t uplo = CUBLAS_FILL_MODE_LOWER;
+
+        thread_local ReusableDualWorkspace ws;
+        // A and B are fully overwritten before every solve. If a previous fold
+        // made the thread-local buffers larger, cuSOLVER only sees the leading
+        // ni-by-ni / ni-by-qi regions with ld=ni.
+        ws.ensure(n, q, handle->lwork);
+
+        copy_d2d_contiguous(handle->dK.get(), ws.dA(), k_elems,
+                            "dual_ridge K->A");
+        check_cuda(add_scaled_identity(ws.dA(), n, lambda, nullptr),
+                   "add_scaled_identity");
+        copy_d2d_contiguous(handle->dB0.get(), ws.dB(), b_elems,
+                            "dual_ridge B0->B");
+
+        check_cusolver(
+            cusolverDnDpotrf(state().solver, uplo, ni, ws.dA(), ni,
+                             ws.dWork(), handle->lwork, ws.dInfo()),
+            "prepared dual Ridge potrf");
+        int info = 0;
+        copy_d2h(&info, ws.dInfo(), sizeof(int));
+        if (info > 0) {
+            set_error(error,
+                      "prepared dual Ridge solve: matrix not positive definite");
+            return 1;
+        }
+        if (info < 0) {
+            set_error(error,
+                      "prepared dual Ridge solve: potrf invalid argument");
+            return 2;
+        }
+
+        check_cusolver(
+            cusolverDnDpotrs(state().solver, uplo, ni, qi, ws.dA(), ni,
+                             ws.dB(), ni, ws.dInfo()),
+            "prepared dual Ridge potrs");
+        copy_d2h(&info, ws.dInfo(), sizeof(int));
+        if (info != 0) {
+            set_error(error, "prepared dual Ridge solve: potrs failed");
+            return 2;
+        }
+
+        std::vector<double> Xcm(b_elems, 0.0);
+        copy_d2h(Xcm.data(), ws.dB(), b_elems * sizeof(double));
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t target = 0; target < q; ++target) {
+                X[i * q + target] = Xcm[target * n + i];
+            }
+        }
+        return 0;
+    } catch (const std::bad_alloc&) {
+        set_error(error, "prepared dual Ridge solve ran out of memory");
+        return 2;
+    } catch (const std::exception& ex) {
+        if (error != nullptr) {
+            *error = std::string("prepared dual Ridge solve failed: ") +
+                     ex.what();
+        }
+        return 2;
+    } catch (...) {
+        set_error(error, "prepared dual Ridge solve failed");
+        return 2;
+    }
+}
+
+void destroy_dual_ridge(PreparedDualRidge* handle) noexcept {
+    delete handle;
 }
 
 int pls1_moment_components(std::size_t p,

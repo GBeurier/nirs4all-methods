@@ -282,7 +282,7 @@ if(N4M_BUILD_STATIC)
     # resolve cudaMalloc/cublas* like the shared lib.
     if(N4M_WITH_CUDA)
         target_compile_definitions(n4m_c_static PRIVATE N4M_USE_CUDA=1)
-        target_link_libraries(n4m_c_static PRIVATE CUDA::cudart CUDA::cublas)
+        target_link_libraries(n4m_c_static PRIVATE CUDA::cudart CUDA::cublas CUDA::cusolver)
     endif()
     n4m_add_warnings(n4m_c_static)
 endif()

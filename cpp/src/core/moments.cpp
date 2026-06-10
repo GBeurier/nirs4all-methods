@@ -6,11 +6,20 @@
 
 #include <cmath>
 #include <cstddef>
+#if defined(N4M_USE_CUDA)
+#  include <cstdlib>
+#endif
 #include <limits>
+#if defined(N4M_USE_CUDA)
+#  include <string>
+#endif
 #include <vector>
 
 #include "core/common/linalg.hpp"
 #include "core/common/matrix_view.hpp"
+#if defined(N4M_USE_CUDA)
+#  include "core/cuda_dispatch.hpp"
+#endif
 
 namespace n4m::core {
 
@@ -20,6 +29,30 @@ namespace {
     return b != 0 &&
            a > (std::numeric_limits<std::size_t>::max() / b);
 }
+
+#if defined(N4M_USE_CUDA)
+// GPU moment/gram build only pays off at scale (consumer-GPU fp64 is weak;
+// below the crossover the host BLAS build + CPU/GPU overlap wins).
+// n*p*p product; env-tunable. 0 disables the gate (always try GPU).
+[[nodiscard]] static std::size_t moment_cuda_min_product() {
+    if (const char* e = std::getenv("N4M_CUDA_MOMENT_MIN_PRODUCT")) {
+        char* end = nullptr;
+        unsigned long long v = std::strtoull(e, &end, 10);
+        if (end != e) return static_cast<std::size_t>(v);
+    }
+    return 15000000000ULL;
+}
+
+[[nodiscard]] bool moment_cuda_product_is_large(std::size_t n,
+                                                std::size_t p) noexcept {
+    const std::size_t min_product = moment_cuda_min_product();
+    if (min_product == 0U) return true;
+    if (product_overflows(n, p)) return true;
+    const std::size_t np = n * p;
+    if (product_overflows(np, p)) return true;
+    return np * p >= min_product;
+}
+#endif
 
 [[nodiscard]] n4m_status_t validate_xy(Context& ctx,
                                        const n4m_matrix_view_t& X,
@@ -187,18 +220,32 @@ void column_sums(const std::vector<double>& data,
     out.xty.assign(pp * qq, 0.0);
     out.yty.assign(qq * qq, 0.0);
 
-    linalg::gemm(linalg::Trans_Yes, linalg::Trans_No,
-                 pp, pp, nn, 1.0,
-                 X.data(), pp, X.data(), pp,
-                 0.0, out.xtx.data(), pp);
-    linalg::gemm(linalg::Trans_Yes, linalg::Trans_No,
-                 pp, qq, nn, 1.0,
-                 X.data(), pp, Y.data(), qq,
-                 0.0, out.xty.data(), qq);
-    linalg::gemm(linalg::Trans_Yes, linalg::Trans_No,
-                 qq, qq, nn, 1.0,
-                 Y.data(), qq, Y.data(), qq,
-                 0.0, out.yty.data(), qq);
+    bool built_on_device = false;
+#if defined(N4M_USE_CUDA)
+    if (moment_cuda_product_is_large(nn, pp) &&
+        ::n4m::cuda_dispatch::cuda_runtime_available()) {
+        std::string err;
+        if (::n4m::cuda_dispatch::build_moments_device(
+                nn, pp, qq, X.data(), Y.data(),
+                out.xtx.data(), out.xty.data(), out.yty.data(), &err) == 0) {
+            built_on_device = true;
+        }
+    }
+#endif
+    if (!built_on_device) {
+        linalg::gemm(linalg::Trans_Yes, linalg::Trans_No,
+                     pp, pp, nn, 1.0,
+                     X.data(), pp, X.data(), pp,
+                     0.0, out.xtx.data(), pp);
+        linalg::gemm(linalg::Trans_Yes, linalg::Trans_No,
+                     pp, qq, nn, 1.0,
+                     X.data(), pp, Y.data(), qq,
+                     0.0, out.xty.data(), qq);
+        linalg::gemm(linalg::Trans_Yes, linalg::Trans_No,
+                     qq, qq, nn, 1.0,
+                     Y.data(), qq, Y.data(), qq,
+                     0.0, out.yty.data(), qq);
+    }
     return recompute_centered_moments(ctx, out);
 }
 

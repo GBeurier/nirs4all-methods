@@ -91,6 +91,8 @@ if(TARGET n4m_c_static)
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/cpp/src
         ${PROJECT_BINARY_DIR}/generated)
+    target_compile_definitions(n4m_internal_tests PRIVATE
+        $<$<BOOL:${N4M_WITH_CUDA}>:N4M_USE_CUDA=1>)
     n4m_add_warnings(n4m_internal_tests)
     add_test(NAME n4m_internal_tests COMMAND n4m_internal_tests)
     set_tests_properties(n4m_internal_tests PROPERTIES
