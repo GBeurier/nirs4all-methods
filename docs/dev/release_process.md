@@ -108,11 +108,32 @@ npm publish --access public
 ```
 
 Notes: the version is already correct if `bump_version.sh --check` passed (it
-edits `package.json` + `package-lock.json`). The scope `@pls4all` must exist on
-the npm org and the publisher must be a member. **The WASM-staging step (2) is
-not yet scripted** — a `prepublishOnly` copy (or a CMake install rule) should be
-added before this path is automated; until then verify step 3's file list every
-time.
+edits `package.json` + `package-lock.json`). The scope `@nirs4all` must exist on
+the npm org and the publisher must be a member.
+
+#### One-time npm registration (required for the automated `release-npm.yml`)
+
+`release-npm.yml` publishes `@nirs4all/methods-wasm` automatically on a non-`-rc`
+`v*` tag — it builds the WASM (pinned `setup-emsdk`), then runs `npm publish`
+with `NODE_AUTH_TOKEN=${{ secrets.NPM_TOKEN }}` + provenance. **Until the scope +
+token below exist, that one leg fails** (the PyPI / R / source legs are
+independent and still succeed). To enable it:
+
+1. **Own the `@nirs4all` scope** on [npmjs.com](https://www.npmjs.com) — sign in
+   as the maintainer, *Add Organization* → create the free org `nirs4all` (so the
+   scope `@nirs4all` is yours). The publishing account must be a member, and the
+   package name `@nirs4all/methods-wasm` must be free/owned.
+2. **Generate an automation token** — npmjs.com → *Access Tokens* → *Generate New
+   Token* → **Granular Access** (or **Automation**), granting **Read and write**
+   on the `@nirs4all` scope / `@nirs4all/methods-wasm` package. Copy it.
+3. **Add it as a GitHub Actions secret** — repo *Settings → Secrets and variables
+   → Actions → New repository secret*, name **`NPM_TOKEN`**, value = the token.
+4. **Publish** — either re-run `release-npm.yml` (*Run workflow* → `publish=true`)
+   for the already-cut `v0.99.0`, or it publishes automatically on the next tag.
+
+`release-npm.yml` requests `id-token: write`, so once the scope + token exist the
+package publishes with a verified npm provenance attestation. The WASM staging is
+handled by the package's `prepack` script in CI — no manual step.
 
 ### MATLAB → File Exchange (`+pls4all`)
 
