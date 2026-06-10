@@ -127,6 +127,7 @@ benchmarks/cross_binding/data/.predictions/
 benchmarks/cross_binding/data/.reference_oracles/
 benchmarks/cross_binding/data/.x_target/
 benchmarks/cross_binding/results/
+benchmarks/cross_binding/*_ckpt/
 
 docs/_build/
 
