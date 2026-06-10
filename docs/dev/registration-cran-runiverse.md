@@ -23,24 +23,40 @@ Source of truth for versions: `cpp/include/n4m/n4m_version.h` (currently 0.99.0)
 R-universe builds binaries (Windows/macOS/Linux) straight from Git — no review,
 no submission. Users then `install.packages(..., repos = "https://GBeurier.r-universe.dev")`.
 
-### 1a. Create the registry repository
-Create a **public** GitHub repo named **exactly** `GBeurier.r-universe.dev` (the
-name must be `{ghuser}.r-universe.dev`).
+### 1a. Create the registry repository — ✓ DONE
+Created (public): **https://github.com/GBeurier/GBeurier.r-universe.dev**, with
+`packages.json` + `README.md` already pushed. (The name must be
+`{ghuser}.r-universe.dev`.)
 
-### 1b. Add `packages.json` at its root
+### 1b. `packages.json` — ✓ DONE
+Already committed at the registry repo root:
 ```json
 [
   { "package": "n4m",     "url": "https://github.com/GBeurier/nirs4all-methods", "subdir": "bindings/r/n4m" },
   { "package": "pls4all", "url": "https://github.com/GBeurier/nirs4all-methods", "subdir": "bindings/r/pls4all" }
 ]
 ```
-- `branch` is optional and defaults to the repo's **default branch** (`main`) — so
-  the R packages (and the `.prepare` hook below) must be **merged to `main`** first.
-  To test from a feature branch before merging, add e.g. `"branch": "release-readiness-fixes"`.
+- No `branch` field → it tracks the repo's **default branch** (`main`), so the R
+  packages + the `.prepare` hooks must be **merged to `main`** before R-universe
+  can build. To validate from the feature branch *before* merging, add
+  `"branch": "release-readiness-fixes"` to each entry (and remove it after merge).
 
-### 1c. Install the R-universe GitHub App
-On your GitHub account, install the **R-universe** app (it only needs
-read/write commit-status permission, so it can post the green build check).
+### 1c. Install the R-universe GitHub App — 👤 YOU (required; cannot be automated)
+This is the **one manual step that must be done in the browser** — installing a
+GitHub App is an interactive authorization, so it cannot be scripted. It is
+**required**: the app is what lets R-universe build your universe and post the
+build status. Steps:
+1. Go to **https://github.com/apps/r-universe** → **Install** (or **Configure**).
+2. Choose the **GBeurier** account.
+3. Grant access to **All repositories** (simplest), or at minimum to both
+   `GBeurier.r-universe.dev` *and* `nirs4all-methods`.
+4. Confirm. Within a few minutes the universe appears at
+   **https://gbeurier.r-universe.dev** and the first build starts (builds are
+   (re)triggered by any commit to the registry repo, and auto-rebuild every 30 days).
+
+> If `github.com/apps/r-universe` 404s, search "r-universe" in the GitHub
+> Marketplace, or follow the install link from
+> [docs.r-universe.dev](https://docs.r-universe.dev/publish/set-up.html).
 
 ### 1d. How the build is made self-contained (already wired)
 R-universe clones the **whole monorepo** and runs a pre-build hook,
@@ -91,15 +107,107 @@ rhub::rhub_check("bindings/r/n4m")
 Each package ships `bindings/r/<pkg>/cran-comments.md` — update the check-results
 summary (platforms tested, 0 ERRORs/0 WARNINGs, any expected NOTEs) before submitting.
 
-### 2c. Submit
-Upload the tarball at **https://cran.r-project.org/submit.html** — `n4m` first,
-then `pls4all`. Both are **new packages**, so expect extra scrutiny: respond to
-the automated incoming checks, then the manual reviewer. A new submission that
-declares a self-contained native build (no `SystemRequirements: libn4m`) and
-passes the `--as-cran` matrix is the smooth path.
+### 2c. Exactly what to upload
+The **R source tarball** — one submission per package, the `.tar.gz` only (NOT a
+binary, NOT the GitHub repo zip, NOT the PyPI/Python artifacts):
+
+- `n4m_0.99.0.tar.gz`
+- `pls4all_0.99.0.tar.gz`
+
+Get each from any of:
+- the **GitHub Release `v0.99.0`** assets (attached automatically by `release-r.yml`), or
+- a manual **`release-r.yml` → "Run workflow"** run → download the
+  `n4m-cran-tarball` / `pls4all-cran-tarball` artifacts, or
+- locally: `cd bindings/r/n4m && sh .prepare && R CMD build .` → `n4m_0.99.0.tar.gz`
+  (same in `bindings/r/pls4all`).
+
+### 2d. The submission form — exact values
+At **https://cran.r-project.org/submit.html** (submit `n4m` first, then `pls4all`
+as a separate submission):
+
+| Form field | Value |
+|---|---|
+| Your name | `Gregory Beurier` |
+| Your email | `gregory.beurier@cirad.fr` — must match the `Maintainer:` in DESCRIPTION (it does) |
+| Upload package | the package's `.tar.gz` |
+| Optional comment | paste the matching block below |
+
+`cran-comments.md` is **not** shipped inside the tarball (it is `.Rbuildignore`d),
+so the form's **comment box is where these notes must go**:
+
+**— paste for `n4m` —**
+```text
+New submission.
+
+n4m 0.99.0 — a portable Partial Least Squares (PLS) and Near-Infrared
+Spectroscopy (NIRS) engine. The C++17/C/Fortran numerical core (233 vendored
+translation units under src/vendor/) is compiled from source at install time;
+no external system library is required. License: CeCILL-2.1 (a GPL-compatible
+French free-software license, in R's license database). Imports: stats only.
+
+SystemRequirements: GNU make — the Makevars use $(shell find ...) to enumerate
+the vendored sources without hard-coding each filename.
+
+Test environments:
+- R CMD check --as-cran, R 4.3.3 (Ubuntu): 0 ERRORs. The only WARNINGs seen
+  locally are 'checkbashisms' not being installed and a skipped-vignette
+  artifact; both are absent on the CRAN build farm.
+- CI matrix (R release + devel) via GitHub Actions: Ubuntu 22.04, macOS 14
+  (arm64), Windows Server 2022.
+- win-builder (devel + release) and R-hub v2 are run before submission.
+
+Notes (all expected):
+- New submission (first upload).
+- GNU make is declared in SystemRequirements.
+- Any 'compilation flags' NOTE on a local build comes from the host R's Makeconf
+  (e.g. conda's -march=nocona), not from the package Makevars, which use no
+  -O3 / -march=native / -Werror.
+- The optional CUDA backend (cuda_dispatch.cpp) is intentionally excluded from
+  the R build; the package exposes the portable scalar code path only.
+
+Maintainer: Gregory Beurier <gregory.beurier@cirad.fr> (CIRAD).
+```
+
+**— paste for `pls4all` —**
+```text
+New submission.
+
+pls4all 0.99.0 — a portable Partial Least Squares engine for chemometrics: the
+slim, PLS-focused distribution carved from the nirs4all-methods library. The
+C++17/C/Fortran numerical core (233 vendored translation units under src/vendor/)
+is compiled from source at install time; no external system library is required.
+License: CeCILL-2.1 (a GPL-compatible French free-software license, in R's
+license database). Imports: stats only.
+
+SystemRequirements: GNU make — the Makevars use $(shell find ...) to enumerate
+the vendored sources without hard-coding each filename.
+
+Test environments:
+- R CMD check --as-cran, R 4.3.3 (Ubuntu): 0 ERRORs. The only WARNINGs seen
+  locally are 'checkbashisms' not being installed and a skipped-vignette
+  artifact; both are absent on the CRAN build farm.
+- CI matrix (R release + devel) via GitHub Actions: Ubuntu 22.04, macOS 14
+  (arm64), Windows Server 2022.
+- win-builder (devel + release) and R-hub v2 are run before submission.
+
+Notes (all expected):
+- New submission (first upload).
+- GNU make is declared in SystemRequirements.
+- Any 'compilation flags' NOTE on a local build comes from the host R's Makeconf
+  (e.g. conda's -march=nocona), not from the package Makevars, which use no
+  -O3 / -march=native / -Werror.
+- The optional CUDA backend (cuda_dispatch.cpp) is intentionally excluded from
+  the R build; the package exposes the portable scalar code path only.
+
+Maintainer: Gregory Beurier <gregory.beurier@cirad.fr> (CIRAD).
+```
+
+After uploading, CRAN emails a confirmation link — click it to complete the
+submission. For a new package, expect the automated incoming checks, then a human
+reviewer.
 
 > CRAN ≠ the GitHub Release: the tag produces the tarballs as downloadable Release
-> assets, but **you** upload them to CRAN via the web form — there is no automated
+> assets, but **you** upload them to CRAN via this form — there is no automated
 > CRAN submission.
 
 ---
