@@ -15,7 +15,16 @@ import { getModule } from "./ffi.js";
 export { loadModule, getModule, makeMatrixView, readArrayView } from "./ffi.js";
 export { Context } from "./context.js";
 export { Config } from "./config.js";
-export { Model, fitPls, predictPls, type PlsModel } from "./model.js";
+export { Model, fitPls, predictPls, fitModel, predictModel, fitAom, fitPop, computeSplit, type PlsModel, type FittedModel, type AomModel, type PopModel, type SplitKind, type SplitOptions } from "./model.js";
+export {
+    ppCreate,
+    ppFit,
+    ppTransform,
+    ppGetState,
+    ppSetState,
+    ppDestroy,
+    type PpOperator,
+} from "./preprocessing.js";
 export { MethodResult } from "./methodResult.js";
 export {
     Status,

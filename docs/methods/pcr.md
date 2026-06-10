@@ -69,16 +69,15 @@ Every pls4all binding tab dispatches into the same C kernel; the external librar
 :class-label: lang-c
 
 ```c
-/* C ABI — libn4m (Model.fit path) */
+/* C ABI — libn4m direct MethodResult path */
 n4m_context_t* ctx = n4m_context_create();
 n4m_config_t*  cfg = n4m_config_create();
-n4m_config_set_algorithm(cfg, N4M_ALGORITHM_PLS_REGRESSION);
-n4m_config_set_solver   (cfg, N4M_SOLVER_SIMPLS);
 n4m_config_set_n_components(cfg, 4);
-n4m_model_t* mdl = NULL;
-n4m_model_fit(ctx, cfg, &x_view, &y_view, &mdl);
-n4m_model_predict(ctx, mdl, &x_test_view, &y_hat_view);
-n4m_model_destroy(mdl);
+n4m_method_result_t* res = NULL;
+n4m_pcr_fit(ctx, cfg, &x_view, &y_view, &res);
+/* res contains coefficients, predictions, x_mean/x_scale, y_mean/y_scale,
+ * weights_w, loadings_p, rotations_r, rmse and n_components. */
+n4m_method_result_destroy(res);
 n4m_config_destroy(cfg);
 n4m_context_destroy(ctx);
 ```
@@ -93,11 +92,26 @@ n4m_context_destroy(ctx);
 import pls4all
 from pls4all import Algorithm, Solver
 with pls4all.Context() as ctx, pls4all.Config() as cfg:
-    cfg.algorithm = Algorithm.PLS_REGRESSION
-    cfg.solver = Solver.SIMPLS
+    cfg.algorithm = Algorithm.PCR
+    cfg.solver = Solver.SVD
     cfg.n_components = 4
     with pls4all.Model.fit(ctx, cfg, X, y) as mdl:
         y_hat = mdl.predict(X_test)
+```
+
+:::
+
+:::{tab-item} Python · n4m direct
+:sync: python-n4m
+:class-label: lang-python
+
+```python
+import n4m
+from n4m.sklearn import NativePCRRegressor
+
+res = n4m.pcr(X, y, n_components=4, scale_x=True)
+mdl = NativePCRRegressor(n_components=4, scale_x=True).fit(X, y)
+y_hat = mdl.predict(X_test)
 ```
 
 :::

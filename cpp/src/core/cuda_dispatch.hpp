@@ -14,6 +14,7 @@
 #define PLS4ALL_CORE_CUDA_DISPATCH_HPP
 
 #include <cstddef>
+#include <string>
 
 namespace n4m {
 namespace cuda_dispatch {
@@ -58,6 +59,107 @@ void ger(std::size_t M, std::size_t N,
          const double* x,   // length M
          const double* y,   // length N
          double* A, std::size_t lda);
+
+// Device-resident PLS1 moment component loop. Inputs C (p x p row-major) and
+// s (p) are copied to device once; the per-component C*w, dot products,
+// covariance deflation and score-vector deflation stay on device. W and P are
+// returned row-major as p x max_components, matching the CPU sweep code.
+//
+// Return codes:
+//   0: success
+//   1: numerical failure (same conditions as the scalar PLS1 moment loop)
+//   2: CUDA/runtime/allocation failure
+int pls1_moment_components(std::size_t p,
+                           std::size_t max_components,
+                           const double* C,
+                           const double* s,
+                           double yy,
+                           double eps,
+                           double* W,
+                           double* P,
+                           double* Q,
+                           double* yy_out,
+                           std::string* error);
+
+// Same numerical loop as pls1_moment_components, but processes several
+// independent moment designs with one reusable device workspace by default.
+// Passing parallel_folds=true, or setting N4M_CUDA_PLS_PARALLEL_FOLDS=1,
+// uses the older bounded stream-parallel probe path. Passing many_batched=true,
+// or setting N4M_CUDA_PLS_MANY_BATCHED=1, enables an experimental one-GPU tiled
+// path that batches the p^2 component work with cuBLAS strided-batched calls
+// while preserving fold-level exact CV scores. This is still not fused IKPLS
+// across preprocessing chains.
+int pls1_moment_components_many(std::size_t n_jobs,
+                                std::size_t p,
+                                std::size_t max_components,
+                                const double* const* C,
+                                const double* const* s,
+                                const double* yy,
+                                double eps,
+                                double* const* W,
+                                double* const* P,
+                                double* const* Q,
+                                double* yy_out,
+                                bool parallel_folds,
+                                bool many_batched,
+                                bool* used_parallel_folds,
+                                bool* used_many_batched,
+                                std::string* error);
+
+// Fused moment build. Uploads X (n x p) and Y (n x q) once, computes
+// XtX/XtY/YtY with cuBLAS fp64 GEMM, and writes row-major host outputs.
+// YtY may be nullptr to skip that product. Return codes:
+//   0: success
+//   2: CUDA/runtime/allocation failure, overflow, or no GPU available
+int build_moments_device(std::size_t n,
+                         std::size_t p,
+                         std::size_t q,
+                         const double* X,
+                         const double* Y,
+                         double* XtX,
+                         double* XtY,
+                         double* YtY,
+                         std::string* error);
+
+// Fused gram build. Uploads Xw (n x p) once and computes
+// K = Xw * Xw^T with cuBLAS fp64 GEMM. Return codes:
+//   0: success
+//   2: CUDA/runtime/allocation failure, overflow, or no GPU available
+int build_gram_device(std::size_t n,
+                      std::size_t p,
+                      const double* Xw,
+                      double* K,
+                      std::string* error);
+
+// Device SPD linear solve via cuSOLVER Cholesky. Solves A X = B where
+// A is n x n row-major symmetric positive definite and B/X are n x q
+// row-major. The caller's A/B are not modified. Return codes:
+//   0: success
+//   1: not positive definite (caller should fall back to host QR)
+//   2: CUDA / cuSOLVER / allocation failure, or no GPU available
+int spd_solve(std::size_t n,
+              std::size_t q,
+              const double* A,
+              const double* B,
+              double* X,
+              std::string* error);
+
+// Per-fold prepared dual-Ridge solver. Holds device-resident K and pristine RHS
+// B so the lambda grid reuses one H2D upload per fold.
+struct PreparedDualRidge;
+
+PreparedDualRidge* prepare_dual_ridge(std::size_t n,
+                                      std::size_t q,
+                                      const double* K,
+                                      const double* B,
+                                      std::string* error);
+
+int dual_ridge_solve(PreparedDualRidge* handle,
+                     double lambda,
+                     double* X,
+                     std::string* error);
+
+void destroy_dual_ridge(PreparedDualRidge* handle) noexcept;
 
 }  // namespace cuda_dispatch
 }  // namespace n4m

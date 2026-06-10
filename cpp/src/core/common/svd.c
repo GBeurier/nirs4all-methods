@@ -260,6 +260,30 @@ static n4m_status_t symmetric_eigh(double* A, int64_t n, double* eigvals,
     return st;
 }
 
+n4m_status_t n4m_symmetric_eigh(const double* A, int64_t n, double* eigvals,
+                                double* V) {
+    if (A == NULL || eigvals == NULL || V == NULL) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    if (n < 1) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const size_t n_size = (size_t)n;
+    if (n_size > SIZE_MAX / n_size ||
+        n_size * n_size > SIZE_MAX / sizeof(double)) {
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+    const size_t nn = n_size * n_size;
+    double* work = (double*)malloc(nn * sizeof(double));
+    if (work == NULL) {
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+    memcpy(work, A, nn * sizeof(double));
+    const n4m_status_t st = symmetric_eigh(work, n, eigvals, V);
+    free(work);
+    return st;
+}
+
 static void sort_eigpairs_desc(double* V, double* eigvals, int64_t n) {
     for (int64_t i = 0; i < n - 1; ++i) {
         int64_t best = i;

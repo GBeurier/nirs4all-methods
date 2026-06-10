@@ -1,13 +1,69 @@
 # Changelog
 
-All notable changes to `pls4all` will be documented in this file.
+All notable changes to `nirs4all-methods` (`n4m`) will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-Next track: language bindings (Rust, Go, Ruby, Lua, Nim, …) catch-up to
-the n4m ABI 1.9 symbols.
+## [0.99.0] — 2026-06-10
+
+The public C ABI grew additively from **1.10.0 → 1.22.0** since 0.98.0; every
+bump is backward-compatible (new symbols only — nothing removed or changed).
+Full per-symbol record: [`docs/abi/changes_log.md`](docs/abi/changes_log.md).
+
+### Added — public C ABI (all additive MINOR bumps)
+- **Direct closed-form Ridge regression** — `n4m_ridge_fit` (primal QR + dual
+  forms), parity with numpy/sklearn at ~1e-15 (ABI 1.11.0).
+- **Native AOM / moment screening family** — robust-HPO screen (1.12.0),
+  row-additive moment substrate (1.13.0), native Ridge/PLS sweep (1.14.0),
+  configurable native AOM preprocessing sweep (1.15.0), user-defined AOM chain
+  sweep `n4m_aom_chain_sweep_run` (1.16.0), AOM Ridge OOF simplex blender
+  `n4m_aom_ridge_blender_fit` (1.17.0), AOM operator PLS score stack
+  `n4m_aom_operator_pls_stack_fit` (1.18.0), plus AOM chain fixed final fit
+  `n4m_aom_chain_fixed_fit_run`, a score-only screen output mode, and the
+  `N4M_OP_GAUSSIAN` strict operator kind (1.18.x).
+- **PLS cross-validation reference surface** — `n4m_pls_cross_validate`, exact
+  PLS-only CV over one matrix; catalogued as ABI infrastructure and reserved for
+  a future fused/batched IKPLS executor (1.22.0).
+- **CUDA PLS scheduling config helpers** — parallel-fold scheduling (1.19.0),
+  device-feature threshold (1.20.0) and many-design batching (1.21.0), each a
+  paired get/set with additive route counters; defaults preserve prior behaviour
+  and candidate scores stay fold-exact.
+
+### Added — bindings
+- **R**: `coef.n4m_fit` returns the (p × q) regression-coefficient matrix (via
+  the existing `n4m_model_get_array` C ABI), in both the `n4m` and slim
+  `pls4all` packages.
+- **R**: the `n4m` and `pls4all` packages are now installable from **R-universe**
+  — a `.prepare` pre-build hook vendors the libn4m core into a self-contained
+  source tarball, so R-universe (and `R CMD build` from a checkout) build with no
+  external libn4m. See `docs/dev/registration-cran-runiverse.md`.
+
+### Changed
+- Renamed the R packages' internal `.Call` registration prefix `r_p4a_` →
+  `r_n4m_` (internal symbols only — no public ABI change; the `pls4all` package
+  name and slim subset are unchanged).
+
+### Performance — CUDA (opt-in `cuda-on` build; no ABI change)
+- GPU full-execution pass (B1–B3): the Ridge GCV solve now routes to cuSOLVER
+  SPD Cholesky (`spd_solve`), with device-resident dual-Ridge and a size-gated
+  device moment/gram build — **cumulative 4.22× on BERRY/COLZA/LUCAS**, RMSEP
+  preserved/bit-identical, bit-equivalent host fallback.
+
+### Fixed
+- LW-PLS parity fixture/doctest realigned to the 2026-05-23 Gaussian-weighted
+  local-PLS engine (the reference generator now matches the C++ engine to
+  6.7e-16; the previously-skipped doctest is active again).
+
+### Benchmarks
+- Full-57 staged AOM/moment campaign vs AOM-PLS / AOM-Ridge / TabPFN oracles
+  (51 datasets): competitive but not dominant (paired median ratios
+  1.04 / 1.10 / 1.11). Recall characterized as largely irreducible selection
+  variance (top-5 recall 0.784 — a selection, not candidate-budget, gap).
+
+Next track: language bindings (Rust, Go, Ruby, Lua, Nim, …) catch-up to the
+current n4m ABI 1.22 symbols.
 
 ## [0.98.0] — 2026-05-26
 

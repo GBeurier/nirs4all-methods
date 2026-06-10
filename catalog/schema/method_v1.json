@@ -56,8 +56,8 @@
     "abi_symbols": {
       "type": "array",
       "items": {"type": "string", "pattern": "^n4m_[a-z0-9_]+$"},
-      "minItems": 1,
-      "description": "All C ABI symbols this method exports. Joined against cpp/abi/expected_symbols_*.txt during release."
+      "minItems": 0,
+      "description": "All C ABI symbols this method exports. Python-backed orchestration methods may use an empty list when their native building blocks are catalogued separately. Joined against cpp/abi/expected_symbols_*.txt during release."
     },
     "tu": {
       "type": "array",
@@ -87,6 +87,22 @@
         "tolerance_row": {
           "type": "string",
           "description": "Row key in parity/tolerances.md."
+        },
+        "tolerances": {
+          "type": "array",
+          "description": "Per-reference tolerance rows migrated from parity/tolerances.md.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "row_key": {"type": "string"},
+              "reference": {"type": "string"},
+              "abs_tol": {"type": ["string", "number"]},
+              "rel_tol": {"type": ["string", "number"]},
+              "comparison_set": {"type": "string"},
+              "notes": {"type": "string"}
+            }
+          }
         },
         "divergence_id": {
           "type": ["string", "null"],

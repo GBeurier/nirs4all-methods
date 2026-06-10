@@ -1,4 +1,4 @@
-"""Sphinx config for pls4all docs.
+"""Sphinx config for nirs4all-methods docs.
 
 Root document is `about.md` (the project info page). The actual landing
 page at `/index.html` is a fully custom interactive benchmark dashboard
@@ -24,13 +24,13 @@ _sys.path.insert(0, str(_Path(__file__).parent / "_extras"))
 
 # ---- project --------------------------------------------------------
 
-project = "pls4all"
+project = "nirs4all-methods"
 author = "G. Beurier and contributors"
 copyright = f"{_dt.datetime.now().year}, {author}"
 
 # Read version from cpp version header when available, else fallback.
-release = "0.98.0"
-version = "0.98"
+release = "0.99.0"
+version = "0.99"
 
 # ---- extensions -----------------------------------------------------
 
@@ -76,6 +76,12 @@ exclude_patterns = [
     "parity_audit_2026_05/**",
     "_bench/**",
     "**/.ipynb_checkpoints",
+    # Internal maintainer docs relocated out of the repo root (not part of the
+    # rendered site — they were never under docs/ before).
+    "archives/**",
+    "dev/RELEASE_READINESS.md",
+    "dev/PRODUCTION_AUDIT.md",
+    "dev/DISTRIBUTION.md",
 ]
 
 # autosectionlabel: prefix labels with the document so duplicate
@@ -85,8 +91,8 @@ autosectionlabel_prefix_document = True
 # ---- html theme -----------------------------------------------------
 
 html_theme = "alabaster"  # ships with sphinx, no extra dep
-html_title = "pls4all"
-html_short_title = "pls4all"
+html_title = "nirs4all-methods"
+html_short_title = "nirs4all-methods"
 html_show_sourcelink = True
 
 html_theme_options = {
@@ -94,7 +100,7 @@ html_theme_options = {
                     "and thin first-class bindings for Python, R, MATLAB, "
                     "JavaScript, Android, Go, Rust, Julia, Ruby, .NET, Lua, Nim.",
     "github_user": "GBeurier",
-    "github_repo": "pls4all",
+    "github_repo": "nirs4all-methods",
     # Alabaster's github_button is a third-party iframe (ghbtns.com) that
     # interrupts the sidebar visually. Disabled — a quiet repo link in
     # the footer (or wordmark hover) is sufficient.
@@ -182,7 +188,7 @@ def setup(app):
     # `### Benchmarks` section in `source-read`. See
     # `_extras/method_benchmark_tables.py` for the data-flow.
     from sphinx.util import logging as _sphinx_logging
-    _docs_log = _sphinx_logging.getLogger("pls4all-docs")
+    _docs_log = _sphinx_logging.getLogger("nirs4all-methods-docs")
     method_blocks, method_blocks_source = load_or_build_blocks()
     if method_blocks_source == "none":
         _docs_log.warning(

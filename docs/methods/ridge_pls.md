@@ -45,6 +45,24 @@ pls4all.RidgePlsRegression  L2-augmented PLS regression.
 
 ### Usage
 
+Direct `n4m` Python helper:
+
+```python
+import n4m
+
+res = n4m.ridge_pls(
+    X,
+    y,
+    n_components=4,
+    ridge_lambda=0.5,
+)
+y_hat = res["predictions"]
+coef = res["coefficients"]
+```
+
+The `n4m.sklearn.NativeRidgePLSRegressor` wrapper replays predictions from the
+returned coefficients plus reconstructed intercept.
+
 Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
 
 **pls4all bindings**

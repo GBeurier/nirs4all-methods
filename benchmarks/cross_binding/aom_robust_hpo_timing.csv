@@ -1,0 +1,7 @@
+backend,profile,n_samples,n_features,cv,n_candidates,selected_chain_id,selected_head_id,selected_param,selected_cv_rmse,prediction_replay_max_abs_error,elapsed_ms_median,library_path,abi
+native_abi,compact,32,64,3,84,5,0,1.0,1.0737800444092243,,24.732606019824743,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_sklearn,compact,32,64,3,84,5,0,1.0,1.0737800444092243,8.881784197001252e-16,10.277570981997997,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_abi,compact,64,128,3,84,3,1,2.0,1.03369439208021,,98.99228502763435,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_sklearn,compact,64,128,3,84,3,1,2.0,1.03369439208021,1.3322676295501878e-15,141.32784999674186,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_abi,compact,96,256,3,84,1,1,8.0,1.107871675990779,,385.0222080363892,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_sklearn,compact,96,256,3,84,1,1,8.0,1.107871675990779,3.1086244689504383e-15,265.0600510532968,build/dev-release/cpp/src/libn4m.so,1.22.0

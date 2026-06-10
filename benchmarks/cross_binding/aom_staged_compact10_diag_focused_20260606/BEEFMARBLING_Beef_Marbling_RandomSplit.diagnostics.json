@@ -1,0 +1,2752 @@
+{
+  "best": {
+    "campaign_stage": "identity_detrend_norris",
+    "campaign_stages": [
+      "identity_detrend_norris"
+    ],
+    "candidate_id": 7,
+    "chain": [
+      [
+        "detrend_poly",
+        [
+          2.0
+        ]
+      ],
+      [
+        "norris_williams",
+        [
+          5.0,
+          5.0,
+          1.0
+        ]
+      ]
+    ],
+    "chain_id": 5,
+    "cv_rank": 1,
+    "global_candidate_id": 27,
+    "head": "ridge",
+    "head_id": 0,
+    "model_config_id": 1,
+    "n_materialized_candidates": 0,
+    "n_operator_moment_candidates": 0,
+    "n_pls_gcv_proxy_fits": 0,
+    "n_pls_materialized_cv_fits": 0,
+    "n_pls_moment_cv_fits": 0,
+    "n_ridge_dual_cross_cv_fits": 0,
+    "n_ridge_dual_materialized_cv_fits": 0,
+    "n_ridge_moment_cv_fits": 0,
+    "n_ridge_moment_score_batch_calls": 0,
+    "n_ridge_moment_score_batch_jobs": 0,
+    "oof_rmse": 72.06991342134691,
+    "param": 10.0,
+    "rank_delta": 0,
+    "refit_cv_rmse": 72.06991342134691,
+    "refit_group_id": 0,
+    "refit_group_n_materialized_candidates": 0,
+    "refit_group_n_operator_moment_candidates": 6,
+    "refit_group_n_pls_gcv_proxy_fits": 0,
+    "refit_group_n_pls_materialized_cv_fits": 0,
+    "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+    "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+    "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+    "refit_group_n_pls_moment_cv_fits": 0,
+    "refit_group_n_pls_moment_host_cv_fits": 0,
+    "refit_group_n_ridge_dual_cross_cv_fits": 0,
+    "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+    "refit_group_n_ridge_moment_cv_fits": 30,
+    "refit_group_n_ridge_moment_score_batch_calls": 1,
+    "refit_group_n_ridge_moment_score_batch_jobs": 30,
+    "refit_score_metric": "cv_rmse",
+    "scale_x": true,
+    "screen_cv_rmse": 72.06991342838626,
+    "screen_rank": 1,
+    "screen_score": 72.06991342838626,
+    "screen_score_metric": "cv_rmse",
+    "screen_score_route": "structured_operator_moment",
+    "screen_score_route_id": 3,
+    "source_index": 0,
+    "train_rmse": NaN
+  },
+  "counters": {
+    "n_refit_candidates": 8,
+    "n_refit_pls_moment_cuda_device_cv_fits": 20,
+    "n_refit_pls_moment_cuda_parallel_fold_batches": 2,
+    "n_refit_pls_moment_cuda_parallel_fold_jobs": 20,
+    "n_refit_pls_moment_cv_fits": 20,
+    "n_refit_pls_moment_host_cv_fits": 0,
+    "n_remaining_stage_chunks_total": 0,
+    "n_screen_candidates_total": 160,
+    "n_screen_pls_moment_cuda_device_cv_fits": 160,
+    "n_screen_pls_moment_cuda_parallel_fold_batches": 32,
+    "n_screen_pls_moment_cuda_parallel_fold_jobs": 160,
+    "n_screen_pls_moment_cv_fits": 160,
+    "n_screen_pls_moment_host_cv_fits": 0,
+    "screen_complete": true
+  },
+  "database_name": "BEEFMARBLING",
+  "dataset": "Beef_Marbling_RandomSplit",
+  "dataset_key": "BEEFMARBLING/Beef_Marbling_RandomSplit",
+  "heads": "ridge,pls",
+  "impact": {
+    "best": {
+      "campaign_stage": "identity_detrend_norris",
+      "campaign_stages": [
+        "identity_detrend_norris"
+      ],
+      "candidate_id": 7,
+      "chain": [
+        [
+          "detrend_poly",
+          [
+            2.0
+          ]
+        ],
+        [
+          "norris_williams",
+          [
+            5.0,
+            5.0,
+            1.0
+          ]
+        ]
+      ],
+      "chain_id": 5,
+      "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+      "cv_rank": 1,
+      "global_candidate_id": 27,
+      "head": "ridge",
+      "head_id": 0,
+      "n_materialized_candidates": 0,
+      "n_operator_moment_candidates": 0,
+      "n_pls_gcv_proxy_fits": 0,
+      "n_pls_materialized_cv_fits": 0,
+      "n_pls_moment_cv_fits": 0,
+      "n_ridge_dual_cross_cv_fits": 0,
+      "n_ridge_dual_materialized_cv_fits": 0,
+      "n_ridge_moment_cv_fits": 0,
+      "n_ridge_moment_score_batch_calls": 0,
+      "n_ridge_moment_score_batch_jobs": 0,
+      "oof_rmse": 72.06991342134691,
+      "param": 10.0,
+      "rank_delta": 0,
+      "refit_cv_rmse": 72.06991342134691,
+      "refit_group_id": 0,
+      "refit_group_n_materialized_candidates": 0,
+      "refit_group_n_operator_moment_candidates": 6,
+      "refit_group_n_pls_gcv_proxy_fits": 0,
+      "refit_group_n_pls_materialized_cv_fits": 0,
+      "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+      "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+      "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+      "refit_group_n_pls_moment_cv_fits": 0,
+      "refit_group_n_pls_moment_host_cv_fits": 0,
+      "refit_group_n_ridge_dual_cross_cv_fits": 0,
+      "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+      "refit_group_n_ridge_moment_cv_fits": 30,
+      "refit_group_n_ridge_moment_score_batch_calls": 1,
+      "refit_group_n_ridge_moment_score_batch_jobs": 30,
+      "refit_score_metric": "cv_rmse",
+      "screen_cv_rmse": 72.06991342838626,
+      "screen_rank": 1,
+      "screen_score": 72.06991342838626,
+      "screen_score_metric": "cv_rmse",
+      "screen_score_route": "structured_operator_moment",
+      "screen_score_route_id": 3,
+      "source_index": 0,
+      "train_rmse": NaN
+    },
+    "best_score": 72.06991342134691,
+    "by_head_operator": [
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.5,
+        "group": "ridge|detrend_poly",
+        "mean_rank": 2.5,
+        "mean_score": 72.16603785905329,
+        "median_score": 72.15614853031278,
+        "n_candidates": 4
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.5,
+        "group": "ridge|norris_williams",
+        "mean_rank": 2.5,
+        "mean_score": 72.16603785905329,
+        "median_score": 72.15614853031278,
+        "n_candidates": 4
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "savgol_variety",
+          "campaign_stages": [
+            "savgol_variety"
+          ],
+          "candidate_id": 2,
+          "chain": [
+            [
+              "savgol_derivative",
+              [
+                15.0,
+                3.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 8,
+          "chain_json": "[[\"savgol_derivative\",[15.0,3.0,1.0]]]",
+          "cv_rank": 5,
+          "global_candidate_id": 42,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.39399874124483,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.39399874124483,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.39399873892633,
+          "screen_rank": 5,
+          "screen_score": 72.39399873892633,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "banded_operator_moment",
+          "screen_score_route_id": 2,
+          "source_index": 4,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.3240853198979181,
+        "best_rank": 5,
+        "best_score": 72.39399874124483,
+        "candidate_fraction": 0.25,
+        "group": "ridge|savgol_derivative",
+        "mean_rank": 5.5,
+        "mean_score": 72.40533351354038,
+        "median_score": 72.40533351354038,
+        "n_candidates": 2
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 9,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 7,
+          "global_candidate_id": 29,
+          "head": "pls",
+          "head_id": 1,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 87.85190083195221,
+          "param": 2.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 87.85190083195221,
+          "refit_group_id": 1,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 2,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 10,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 1,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 10,
+          "refit_group_n_pls_moment_cv_fits": 10,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 0,
+          "refit_group_n_ridge_moment_score_batch_calls": 0,
+          "refit_group_n_ridge_moment_score_batch_jobs": 0,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 87.85190083195221,
+          "screen_rank": 7,
+          "screen_score": 87.85190083195221,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 6,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 15.781987410605296,
+        "best_rank": 7,
+        "best_score": 87.85190083195221,
+        "candidate_fraction": 0.25,
+        "group": "pls|detrend_poly",
+        "mean_rank": 7.5,
+        "mean_score": 87.87088135161221,
+        "median_score": 87.87088135161221,
+        "n_candidates": 2
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 9,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 7,
+          "global_candidate_id": 29,
+          "head": "pls",
+          "head_id": 1,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 87.85190083195221,
+          "param": 2.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 87.85190083195221,
+          "refit_group_id": 1,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 2,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 10,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 1,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 10,
+          "refit_group_n_pls_moment_cv_fits": 10,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 0,
+          "refit_group_n_ridge_moment_score_batch_calls": 0,
+          "refit_group_n_ridge_moment_score_batch_jobs": 0,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 87.85190083195221,
+          "screen_rank": 7,
+          "screen_score": 87.85190083195221,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 6,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 15.781987410605296,
+        "best_rank": 7,
+        "best_score": 87.85190083195221,
+        "candidate_fraction": 0.25,
+        "group": "pls|norris_williams",
+        "mean_rank": 7.5,
+        "mean_score": 87.87088135161221,
+        "median_score": 87.87088135161221,
+        "n_candidates": 2
+      }
+    ],
+    "by_head_stage_option": [
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.25,
+        "group": "ridge|derivative|norris_williams(5,5,1)",
+        "mean_rank": 1.5,
+        "mean_score": 72.08301916908512,
+        "median_score": 72.08301916908512,
+        "n_candidates": 2
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.25,
+        "group": "ridge|baseline|detrend_poly(2)",
+        "mean_rank": 2.0,
+        "mean_score": 72.14304278257455,
+        "median_score": 72.14304278257455,
+        "n_candidates": 2
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 17,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                1.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 3,
+          "chain_json": "[[\"detrend_poly\",[1.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 2,
+          "global_candidate_id": 17,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.09612491682333,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.09612491682333,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.0961249112056,
+          "screen_rank": 2,
+          "screen_score": 72.0961249112056,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 1,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.026211495476417213,
+        "best_rank": 2,
+        "best_score": 72.09612491682333,
+        "candidate_fraction": 0.25,
+        "group": "ridge|baseline|detrend_poly(1)",
+        "mean_rank": 3.0,
+        "mean_score": 72.18903293553203,
+        "median_score": 72.18903293553203,
+        "n_candidates": 2
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 12,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                7.0,
+                7.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 6,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[7.0,7.0,1.0]]]",
+          "cv_rank": 3,
+          "global_candidate_id": 32,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.21617214380221,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.21617214380221,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.2161721510214,
+          "screen_rank": 3,
+          "screen_score": 72.2161721510214,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 2,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.14625872245530047,
+        "best_rank": 3,
+        "best_score": 72.21617214380221,
+        "candidate_fraction": 0.25,
+        "group": "ridge|derivative|norris_williams(7,7,1)",
+        "mean_rank": 3.5,
+        "mean_score": 72.24905654902146,
+        "median_score": 72.24905654902146,
+        "n_candidates": 2
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "savgol_variety",
+          "campaign_stages": [
+            "savgol_variety"
+          ],
+          "candidate_id": 2,
+          "chain": [
+            [
+              "savgol_derivative",
+              [
+                15.0,
+                3.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 8,
+          "chain_json": "[[\"savgol_derivative\",[15.0,3.0,1.0]]]",
+          "cv_rank": 5,
+          "global_candidate_id": 42,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.39399874124483,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.39399874124483,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.39399873892633,
+          "screen_rank": 5,
+          "screen_score": 72.39399873892633,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "banded_operator_moment",
+          "screen_score_route_id": 2,
+          "source_index": 4,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.3240853198979181,
+        "best_rank": 5,
+        "best_score": 72.39399874124483,
+        "candidate_fraction": 0.125,
+        "group": "ridge|derivative|savgol_derivative(15,3,1)",
+        "mean_rank": 5.0,
+        "mean_score": 72.39399874124483,
+        "median_score": 72.39399874124483,
+        "n_candidates": 1
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "savgol_variety",
+          "campaign_stages": [
+            "savgol_variety"
+          ],
+          "candidate_id": 17,
+          "chain": [
+            [
+              "savgol_derivative",
+              [
+                11.0,
+                2.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 7,
+          "chain_json": "[[\"savgol_derivative\",[11.0,2.0,1.0]]]",
+          "cv_rank": 6,
+          "global_candidate_id": 37,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.41666828583594,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.41666828583594,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.41666828608518,
+          "screen_rank": 6,
+          "screen_score": 72.41666828608518,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "banded_operator_moment",
+          "screen_score_route_id": 2,
+          "source_index": 5,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.3467548644890286,
+        "best_rank": 6,
+        "best_score": 72.41666828583594,
+        "candidate_fraction": 0.125,
+        "group": "ridge|derivative|savgol_derivative(11,2,1)",
+        "mean_rank": 6.0,
+        "mean_score": 72.41666828583594,
+        "median_score": 72.41666828583594,
+        "n_candidates": 1
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 9,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 7,
+          "global_candidate_id": 29,
+          "head": "pls",
+          "head_id": 1,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 87.85190083195221,
+          "param": 2.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 87.85190083195221,
+          "refit_group_id": 1,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 2,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 10,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 1,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 10,
+          "refit_group_n_pls_moment_cv_fits": 10,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 0,
+          "refit_group_n_ridge_moment_score_batch_calls": 0,
+          "refit_group_n_ridge_moment_score_batch_jobs": 0,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 87.85190083195221,
+          "screen_rank": 7,
+          "screen_score": 87.85190083195221,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 6,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 15.781987410605296,
+        "best_rank": 7,
+        "best_score": 87.85190083195221,
+        "candidate_fraction": 0.125,
+        "group": "pls|baseline|detrend_poly(2)",
+        "mean_rank": 7.0,
+        "mean_score": 87.85190083195221,
+        "median_score": 87.85190083195221,
+        "n_candidates": 1
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 9,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 7,
+          "global_candidate_id": 29,
+          "head": "pls",
+          "head_id": 1,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 87.85190083195221,
+          "param": 2.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 87.85190083195221,
+          "refit_group_id": 1,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 2,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 10,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 1,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 10,
+          "refit_group_n_pls_moment_cv_fits": 10,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 0,
+          "refit_group_n_ridge_moment_score_batch_calls": 0,
+          "refit_group_n_ridge_moment_score_batch_jobs": 0,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 87.85190083195221,
+          "screen_rank": 7,
+          "screen_score": 87.85190083195221,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 6,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 15.781987410605296,
+        "best_rank": 7,
+        "best_score": 87.85190083195221,
+        "candidate_fraction": 0.25,
+        "group": "pls|derivative|norris_williams(5,5,1)",
+        "mean_rank": 7.5,
+        "mean_score": 87.87088135161221,
+        "median_score": 87.87088135161221,
+        "n_candidates": 2
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 19,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                1.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 3,
+          "chain_json": "[[\"detrend_poly\",[1.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 8,
+          "global_candidate_id": 19,
+          "head": "pls",
+          "head_id": 1,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 87.88986187127223,
+          "param": 2.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 87.88986187127223,
+          "refit_group_id": 1,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 2,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 10,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 1,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 10,
+          "refit_group_n_pls_moment_cv_fits": 10,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 0,
+          "refit_group_n_ridge_moment_score_batch_calls": 0,
+          "refit_group_n_ridge_moment_score_batch_jobs": 0,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 87.88986187127223,
+          "screen_rank": 8,
+          "screen_score": 87.88986187127223,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 7,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 15.81994844992532,
+        "best_rank": 8,
+        "best_score": 87.88986187127223,
+        "candidate_fraction": 0.125,
+        "group": "pls|baseline|detrend_poly(1)",
+        "mean_rank": 8.0,
+        "mean_score": 87.88986187127223,
+        "median_score": 87.88986187127223,
+        "n_candidates": 1
+      }
+    ],
+    "by_operator": [
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.75,
+        "group": "detrend_poly",
+        "mean_rank": 4.166666666666667,
+        "mean_score": 77.40098568990626,
+        "median_score": 72.24905654902146,
+        "n_candidates": 6
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.75,
+        "group": "norris_williams",
+        "mean_rank": 4.166666666666667,
+        "mean_score": 77.40098568990626,
+        "median_score": 72.24905654902146,
+        "n_candidates": 6
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "savgol_variety",
+          "campaign_stages": [
+            "savgol_variety"
+          ],
+          "candidate_id": 2,
+          "chain": [
+            [
+              "savgol_derivative",
+              [
+                15.0,
+                3.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 8,
+          "chain_json": "[[\"savgol_derivative\",[15.0,3.0,1.0]]]",
+          "cv_rank": 5,
+          "global_candidate_id": 42,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.39399874124483,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.39399874124483,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.39399873892633,
+          "screen_rank": 5,
+          "screen_score": 72.39399873892633,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "banded_operator_moment",
+          "screen_score_route_id": 2,
+          "source_index": 4,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.3240853198979181,
+        "best_rank": 5,
+        "best_score": 72.39399874124483,
+        "candidate_fraction": 0.25,
+        "group": "savgol_derivative",
+        "mean_rank": 5.5,
+        "mean_score": 72.40533351354038,
+        "median_score": 72.40533351354038,
+        "n_candidates": 2
+      }
+    ],
+    "by_position": [
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.75,
+        "group": "position_1",
+        "mean_rank": 4.166666666666667,
+        "mean_score": 77.40098568990626,
+        "median_score": 72.24905654902146,
+        "n_candidates": 6
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 1.0,
+        "group": "position_0",
+        "mean_rank": 4.5,
+        "mean_score": 76.1520726458148,
+        "median_score": 72.33796984774277,
+        "n_candidates": 8
+      }
+    ],
+    "by_stage_family": [
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.75,
+        "group": "baseline",
+        "mean_rank": 4.166666666666667,
+        "mean_score": 77.40098568990626,
+        "median_score": 72.24905654902146,
+        "n_candidates": 6
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 1.0,
+        "group": "derivative",
+        "mean_rank": 4.5,
+        "mean_score": 76.1520726458148,
+        "median_score": 72.33796984774277,
+        "n_candidates": 8
+      }
+    ],
+    "by_stage_operator": [
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.75,
+        "group": "baseline|detrend_poly",
+        "mean_rank": 4.166666666666667,
+        "mean_score": 77.40098568990626,
+        "median_score": 72.24905654902146,
+        "n_candidates": 6
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.75,
+        "group": "derivative|norris_williams",
+        "mean_rank": 4.166666666666667,
+        "mean_score": 77.40098568990626,
+        "median_score": 72.24905654902146,
+        "n_candidates": 6
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "savgol_variety",
+          "campaign_stages": [
+            "savgol_variety"
+          ],
+          "candidate_id": 2,
+          "chain": [
+            [
+              "savgol_derivative",
+              [
+                15.0,
+                3.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 8,
+          "chain_json": "[[\"savgol_derivative\",[15.0,3.0,1.0]]]",
+          "cv_rank": 5,
+          "global_candidate_id": 42,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.39399874124483,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.39399874124483,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.39399873892633,
+          "screen_rank": 5,
+          "screen_score": 72.39399873892633,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "banded_operator_moment",
+          "screen_score_route_id": 2,
+          "source_index": 4,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.3240853198979181,
+        "best_rank": 5,
+        "best_score": 72.39399874124483,
+        "candidate_fraction": 0.25,
+        "group": "derivative|savgol_derivative",
+        "mean_rank": 5.5,
+        "mean_score": 72.40533351354038,
+        "median_score": 72.40533351354038,
+        "n_candidates": 2
+      }
+    ],
+    "by_stage_option": [
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.375,
+        "group": "baseline|detrend_poly(2)",
+        "mean_rank": 3.6666666666666665,
+        "mean_score": 77.37932879903377,
+        "median_score": 72.21617214380221,
+        "n_candidates": 3
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 7,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 5,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 1,
+          "global_candidate_id": 27,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.06991342134691,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.06991342134691,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.06991342838626,
+          "screen_rank": 1,
+          "screen_score": 72.06991342838626,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 0,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.0,
+        "best_rank": 1,
+        "best_score": 72.06991342134691,
+        "candidate_fraction": 0.5,
+        "group": "derivative|norris_williams(5,5,1)",
+        "mean_rank": 4.5,
+        "mean_score": 79.97695026034867,
+        "median_score": 79.97401287438777,
+        "n_candidates": 4
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 17,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                1.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                5.0,
+                5.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 3,
+          "chain_json": "[[\"detrend_poly\",[1.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+          "cv_rank": 2,
+          "global_candidate_id": 17,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.09612491682333,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.09612491682333,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.0961249112056,
+          "screen_rank": 2,
+          "screen_score": 72.0961249112056,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 1,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.026211495476417213,
+        "best_rank": 2,
+        "best_score": 72.09612491682333,
+        "candidate_fraction": 0.375,
+        "group": "baseline|detrend_poly(1)",
+        "mean_rank": 4.666666666666667,
+        "mean_score": 77.42264258077876,
+        "median_score": 72.28194095424071,
+        "n_candidates": 3
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "identity_detrend_norris",
+          "campaign_stages": [
+            "identity_detrend_norris"
+          ],
+          "candidate_id": 12,
+          "chain": [
+            [
+              "detrend_poly",
+              [
+                2.0
+              ]
+            ],
+            [
+              "norris_williams",
+              [
+                7.0,
+                7.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 6,
+          "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[7.0,7.0,1.0]]]",
+          "cv_rank": 3,
+          "global_candidate_id": 32,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.21617214380221,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.21617214380221,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.2161721510214,
+          "screen_rank": 3,
+          "screen_score": 72.2161721510214,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "structured_operator_moment",
+          "screen_score_route_id": 3,
+          "source_index": 2,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.14625872245530047,
+        "best_rank": 3,
+        "best_score": 72.21617214380221,
+        "candidate_fraction": 0.25,
+        "group": "derivative|norris_williams(7,7,1)",
+        "mean_rank": 3.5,
+        "mean_score": 72.24905654902146,
+        "median_score": 72.24905654902146,
+        "n_candidates": 2
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "savgol_variety",
+          "campaign_stages": [
+            "savgol_variety"
+          ],
+          "candidate_id": 2,
+          "chain": [
+            [
+              "savgol_derivative",
+              [
+                15.0,
+                3.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 8,
+          "chain_json": "[[\"savgol_derivative\",[15.0,3.0,1.0]]]",
+          "cv_rank": 5,
+          "global_candidate_id": 42,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.39399874124483,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.39399874124483,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.39399873892633,
+          "screen_rank": 5,
+          "screen_score": 72.39399873892633,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "banded_operator_moment",
+          "screen_score_route_id": 2,
+          "source_index": 4,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.3240853198979181,
+        "best_rank": 5,
+        "best_score": 72.39399874124483,
+        "candidate_fraction": 0.125,
+        "group": "derivative|savgol_derivative(15,3,1)",
+        "mean_rank": 5.0,
+        "mean_score": 72.39399874124483,
+        "median_score": 72.39399874124483,
+        "n_candidates": 1
+      },
+      {
+        "best_candidate": {
+          "campaign_stage": "savgol_variety",
+          "campaign_stages": [
+            "savgol_variety"
+          ],
+          "candidate_id": 17,
+          "chain": [
+            [
+              "savgol_derivative",
+              [
+                11.0,
+                2.0,
+                1.0
+              ]
+            ]
+          ],
+          "chain_id": 7,
+          "chain_json": "[[\"savgol_derivative\",[11.0,2.0,1.0]]]",
+          "cv_rank": 6,
+          "global_candidate_id": 37,
+          "head": "ridge",
+          "head_id": 0,
+          "n_materialized_candidates": 0,
+          "n_operator_moment_candidates": 0,
+          "n_pls_gcv_proxy_fits": 0,
+          "n_pls_materialized_cv_fits": 0,
+          "n_pls_moment_cv_fits": 0,
+          "n_ridge_dual_cross_cv_fits": 0,
+          "n_ridge_dual_materialized_cv_fits": 0,
+          "n_ridge_moment_cv_fits": 0,
+          "n_ridge_moment_score_batch_calls": 0,
+          "n_ridge_moment_score_batch_jobs": 0,
+          "oof_rmse": 72.41666828583594,
+          "param": 10.0,
+          "rank_delta": 0,
+          "refit_cv_rmse": 72.41666828583594,
+          "refit_group_id": 0,
+          "refit_group_n_materialized_candidates": 0,
+          "refit_group_n_operator_moment_candidates": 6,
+          "refit_group_n_pls_gcv_proxy_fits": 0,
+          "refit_group_n_pls_materialized_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+          "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+          "refit_group_n_pls_moment_cv_fits": 0,
+          "refit_group_n_pls_moment_host_cv_fits": 0,
+          "refit_group_n_ridge_dual_cross_cv_fits": 0,
+          "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+          "refit_group_n_ridge_moment_cv_fits": 30,
+          "refit_group_n_ridge_moment_score_batch_calls": 1,
+          "refit_group_n_ridge_moment_score_batch_jobs": 30,
+          "refit_score_metric": "cv_rmse",
+          "screen_cv_rmse": 72.41666828608518,
+          "screen_rank": 6,
+          "screen_score": 72.41666828608518,
+          "screen_score_metric": "cv_rmse",
+          "screen_score_route": "banded_operator_moment",
+          "screen_score_route_id": 2,
+          "source_index": 5,
+          "train_rmse": NaN
+        },
+        "best_improvement_vs_identity": null,
+        "best_loss_vs_global_best": 0.3467548644890286,
+        "best_rank": 6,
+        "best_score": 72.41666828583594,
+        "candidate_fraction": 0.125,
+        "group": "derivative|savgol_derivative(11,2,1)",
+        "mean_rank": 6.0,
+        "mean_score": 72.41666828583594,
+        "median_score": 72.41666828583594,
+        "n_candidates": 1
+      }
+    ],
+    "higher_is_better": false,
+    "identity_baseline": null,
+    "identity_baseline_by_head": {},
+    "n_candidates": 8,
+    "score_key": "refit_cv_rmse"
+  },
+  "model_config_summaries": [
+    {
+      "best_head": "ridge",
+      "best_param": 0.1,
+      "best_refit_cv_rmse": 90.9967661163739,
+      "model_config_id": 0,
+      "n_refit_candidates": 8,
+      "n_remaining_stage_chunks_total": 0,
+      "n_screen_candidates_total": 80,
+      "n_stages": 2,
+      "scale_x": false,
+      "screen_complete": true
+    },
+    {
+      "best_head": "ridge",
+      "best_param": 10.0,
+      "best_refit_cv_rmse": 72.06991342134691,
+      "model_config_id": 1,
+      "n_refit_candidates": 8,
+      "n_remaining_stage_chunks_total": 0,
+      "n_screen_candidates_total": 80,
+      "n_stages": 2,
+      "scale_x": true,
+      "screen_complete": true
+    }
+  ],
+  "plan": "custom",
+  "rank_diagnostics": {
+    "best_eval": {
+      "campaign_stage": "identity_detrend_norris",
+      "campaign_stages": [
+        "identity_detrend_norris"
+      ],
+      "candidate_id": 7,
+      "chain": [
+        [
+          "detrend_poly",
+          [
+            2.0
+          ]
+        ],
+        [
+          "norris_williams",
+          [
+            5.0,
+            5.0,
+            1.0
+          ]
+        ]
+      ],
+      "chain_id": 5,
+      "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+      "cv_rank": 1,
+      "global_candidate_id": 27,
+      "head": "ridge",
+      "head_id": 0,
+      "n_materialized_candidates": 0,
+      "n_operator_moment_candidates": 0,
+      "n_pls_gcv_proxy_fits": 0,
+      "n_pls_materialized_cv_fits": 0,
+      "n_pls_moment_cv_fits": 0,
+      "n_ridge_dual_cross_cv_fits": 0,
+      "n_ridge_dual_materialized_cv_fits": 0,
+      "n_ridge_moment_cv_fits": 0,
+      "n_ridge_moment_score_batch_calls": 0,
+      "n_ridge_moment_score_batch_jobs": 0,
+      "oof_rmse": 72.06991342134691,
+      "param": 10.0,
+      "rank_delta": 0,
+      "refit_cv_rmse": 72.06991342134691,
+      "refit_group_id": 0,
+      "refit_group_n_materialized_candidates": 0,
+      "refit_group_n_operator_moment_candidates": 6,
+      "refit_group_n_pls_gcv_proxy_fits": 0,
+      "refit_group_n_pls_materialized_cv_fits": 0,
+      "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+      "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+      "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+      "refit_group_n_pls_moment_cv_fits": 0,
+      "refit_group_n_pls_moment_host_cv_fits": 0,
+      "refit_group_n_ridge_dual_cross_cv_fits": 0,
+      "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+      "refit_group_n_ridge_moment_cv_fits": 30,
+      "refit_group_n_ridge_moment_score_batch_calls": 1,
+      "refit_group_n_ridge_moment_score_batch_jobs": 30,
+      "refit_score_metric": "cv_rmse",
+      "screen_cv_rmse": 72.06991342838626,
+      "screen_rank": 1,
+      "screen_score": 72.06991342838626,
+      "screen_score_metric": "cv_rmse",
+      "screen_score_route": "structured_operator_moment",
+      "screen_score_route_id": 3,
+      "source_index": 0,
+      "train_rmse": NaN
+    },
+    "best_eval_screen_rank": 1,
+    "best_screen": {
+      "campaign_stage": "identity_detrend_norris",
+      "campaign_stages": [
+        "identity_detrend_norris"
+      ],
+      "candidate_id": 7,
+      "chain": [
+        [
+          "detrend_poly",
+          [
+            2.0
+          ]
+        ],
+        [
+          "norris_williams",
+          [
+            5.0,
+            5.0,
+            1.0
+          ]
+        ]
+      ],
+      "chain_id": 5,
+      "chain_json": "[[\"detrend_poly\",[2.0]],[\"norris_williams\",[5.0,5.0,1.0]]]",
+      "cv_rank": 1,
+      "global_candidate_id": 27,
+      "head": "ridge",
+      "head_id": 0,
+      "n_materialized_candidates": 0,
+      "n_operator_moment_candidates": 0,
+      "n_pls_gcv_proxy_fits": 0,
+      "n_pls_materialized_cv_fits": 0,
+      "n_pls_moment_cv_fits": 0,
+      "n_ridge_dual_cross_cv_fits": 0,
+      "n_ridge_dual_materialized_cv_fits": 0,
+      "n_ridge_moment_cv_fits": 0,
+      "n_ridge_moment_score_batch_calls": 0,
+      "n_ridge_moment_score_batch_jobs": 0,
+      "oof_rmse": 72.06991342134691,
+      "param": 10.0,
+      "rank_delta": 0,
+      "refit_cv_rmse": 72.06991342134691,
+      "refit_group_id": 0,
+      "refit_group_n_materialized_candidates": 0,
+      "refit_group_n_operator_moment_candidates": 6,
+      "refit_group_n_pls_gcv_proxy_fits": 0,
+      "refit_group_n_pls_materialized_cv_fits": 0,
+      "refit_group_n_pls_moment_cuda_device_cv_fits": 0,
+      "refit_group_n_pls_moment_cuda_parallel_fold_batches": 0,
+      "refit_group_n_pls_moment_cuda_parallel_fold_jobs": 0,
+      "refit_group_n_pls_moment_cv_fits": 0,
+      "refit_group_n_pls_moment_host_cv_fits": 0,
+      "refit_group_n_ridge_dual_cross_cv_fits": 0,
+      "refit_group_n_ridge_dual_materialized_cv_fits": 0,
+      "refit_group_n_ridge_moment_cv_fits": 30,
+      "refit_group_n_ridge_moment_score_batch_calls": 1,
+      "refit_group_n_ridge_moment_score_batch_jobs": 30,
+      "refit_score_metric": "cv_rmse",
+      "screen_cv_rmse": 72.06991342838626,
+      "screen_rank": 1,
+      "screen_score": 72.06991342838626,
+      "screen_score_metric": "cv_rmse",
+      "screen_score_route": "structured_operator_moment",
+      "screen_score_route_id": 3,
+      "source_index": 0,
+      "train_rmse": NaN
+    },
+    "best_screen_eval_rank": 1,
+    "eval_score_key": "refit_cv_rmse",
+    "max_abs_rank_delta": 0,
+    "mean_abs_rank_delta": 0.0,
+    "median_abs_rank_delta": 0.0,
+    "n_candidates": 8,
+    "screen_score_key": "screen_cv_rmse",
+    "spearman_rank_correlation": 1.0,
+    "topk": [
+      {
+        "effective_k": 1,
+        "eval_top_k_recall": 1.0,
+        "k": 1,
+        "overlap_count": 1,
+        "overlap_fraction": 1.0,
+        "screen_top_k_precision": 1.0
+      },
+      {
+        "effective_k": 3,
+        "eval_top_k_recall": 1.0,
+        "k": 3,
+        "overlap_count": 3,
+        "overlap_fraction": 1.0,
+        "screen_top_k_precision": 1.0
+      },
+      {
+        "effective_k": 5,
+        "eval_top_k_recall": 1.0,
+        "k": 5,
+        "overlap_count": 5,
+        "overlap_fraction": 1.0,
+        "screen_top_k_precision": 1.0
+      },
+      {
+        "effective_k": 8,
+        "eval_top_k_recall": 1.0,
+        "k": 10,
+        "overlap_count": 8,
+        "overlap_fraction": 1.0,
+        "screen_top_k_precision": 1.0
+      },
+      {
+        "effective_k": 8,
+        "eval_top_k_recall": 1.0,
+        "k": 20,
+        "overlap_count": 8,
+        "overlap_fraction": 1.0,
+        "screen_top_k_precision": 1.0
+      }
+    ]
+  },
+  "route_summary": null,
+  "runner": {
+    "backend_min_cuda_product": null,
+    "cohort": "diverse11_cohort.csv",
+    "cuda_pls_many_batched": false,
+    "cuda_pls_min_device_features": 1,
+    "cuda_pls_parallel_folds": true,
+    "cv": 5,
+    "max_chains": 12,
+    "refit_per_head_top_k": 2,
+    "refit_top_k": 6,
+    "top_k": 12
+  },
+  "scale_x": true,
+  "scale_x_values": "false,true",
+  "selected_head": "ridge",
+  "selected_model_config": {
+    "best_head": "ridge",
+    "best_param": 10.0,
+    "best_refit_cv_rmse": 72.06991342134691,
+    "model_config_id": 1,
+    "n_refit_candidates": 8,
+    "n_remaining_stage_chunks_total": 0,
+    "n_screen_candidates_total": 80,
+    "n_stages": 2,
+    "scale_x": true,
+    "screen_complete": true
+  },
+  "selected_model_config_id": 1,
+  "selected_param": 10.0,
+  "selection_uses_test_set": false
+}

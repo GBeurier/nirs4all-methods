@@ -20,6 +20,11 @@ name: release-r
 
 on:
   workflow_dispatch: {}
+  # A tag push runs check -> build-tarball -> publish-release-asset (the last is
+  # if-gated on a tag ref). Without this trigger that job was dead code and the
+  # CRAN tarball was never auto-attached to the Release (see docs/dev/release_process.md).
+  push:
+    tags: ['v[0-9]*.[0-9]*.[0-9]*']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

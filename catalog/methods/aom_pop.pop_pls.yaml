@@ -10,6 +10,9 @@ abi_symbols:
   - "n4m_aom_per_component_result_destroy"
   - "n4m_aom_per_component_result_get_best_score"
   - "n4m_aom_per_component_result_get_component_scores"
+  - "n4m_aom_per_component_result_get_coefficients"
+  - "n4m_aom_per_component_result_get_input_coefficients"
+  - "n4m_aom_per_component_result_get_intercept"
   - "n4m_aom_per_component_result_get_max_components"
   - "n4m_aom_per_component_result_get_n_operators"
   - "n4m_aom_per_component_result_get_operator_kinds"
@@ -35,9 +38,14 @@ parity:
   tolerances: []
 bench:
   bench_id: "aom_pop.pop_pls"
-  registry_entry: null
+  registry_entry: "benchmarks/cross_binding/bench_aom_selector_timing.py"
 feature_flags: []
 vendored_licenses: []
-bindings: {}
+bindings:
+  python:
+    module: "n4m.python"
+    class: "aom_per_component_select"
+    legacy_aliases:
+      - "pop_pls"
 publications: []
-notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+notes: "Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration; pop_pls remains the public legacy alias."

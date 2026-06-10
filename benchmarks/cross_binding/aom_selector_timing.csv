@@ -1,0 +1,13 @@
+method,surface,n_samples,n_features,cv,n_operators,max_components,selected_n_components,best_score,replay_max_abs,elapsed_ms_median,library_path,abi,selected_operator_index
+aom_pls,function,24,32,4,9,2,2,0.5235594784247113,4.440892098500626e-16,5.112932005431503,build/dev-release/cpp/src/libn4m.so,1.22.0,0
+pop_pls,function,24,32,4,9,2,1,0.9861428893486908,8.881784197001252e-16,0.9708879515528679,build/dev-release/cpp/src/libn4m.so,1.22.0,6
+aom_pls,sklearn,24,32,4,9,2,2,0.5235594784247113,4.440892098500626e-16,0.8386439876630902,build/dev-release/cpp/src/libn4m.so,1.22.0,0
+pop_pls,sklearn,24,32,4,9,2,1,0.9861428893486908,8.881784197001252e-16,0.8526190067641437,build/dev-release/cpp/src/libn4m.so,1.22.0,6
+aom_pls,function,36,64,4,9,2,1,0.6680075239296548,6.661338147750939e-16,5.5512990220449865,build/dev-release/cpp/src/libn4m.so,1.22.0,2
+pop_pls,function,36,64,4,9,2,1,0.7560480113220435,4.440892098500626e-16,1.9995729671791196,build/dev-release/cpp/src/libn4m.so,1.22.0,5
+aom_pls,sklearn,36,64,4,9,2,1,0.6680075239296548,6.661338147750939e-16,9.59348602918908,build/dev-release/cpp/src/libn4m.so,1.22.0,2
+pop_pls,sklearn,36,64,4,9,2,1,0.7560480113220435,4.440892098500626e-16,1.8451630021445453,build/dev-release/cpp/src/libn4m.so,1.22.0,5
+aom_pls,function,48,96,4,9,2,2,0.822677231447078,1.7763568394002505e-15,10.43029100401327,build/dev-release/cpp/src/libn4m.so,1.22.0,5
+pop_pls,function,48,96,4,9,2,1,1.0104152952583654,1.3322676295501878e-15,11.680037016049027,build/dev-release/cpp/src/libn4m.so,1.22.0,2
+aom_pls,sklearn,48,96,4,9,2,2,0.822677231447078,1.7763568394002505e-15,2.5351649965159595,build/dev-release/cpp/src/libn4m.so,1.22.0,5
+pop_pls,sklearn,48,96,4,9,2,1,1.0104152952583654,1.3322676295501878e-15,11.463441012892872,build/dev-release/cpp/src/libn4m.so,1.22.0,2

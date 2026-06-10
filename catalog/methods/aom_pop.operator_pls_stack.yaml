@@ -1,0 +1,42 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.operator_pls_stack"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "1.18.0"
+abi_symbols:
+  - "n4m_aom_operator_pls_stack_fit"
+tu:
+  - "cpp/src/core/aom_operator_pls_stack.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+carry_along_tu:
+  - "cpp/src/core/aom_operators.cpp"
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/AOM-operator-PLS-stack-native-contract"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.operator_pls_stack"
+  registry_entry: "benchmarks/cross_binding/bench_aom_operator_pls_stack_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "aom_operator_pls_stack"
+    legacy_aliases: []
+publications: []
+notes: "Native strict-linear AOM operator PLS1 score stack over compact/wide operator banks with a Ridge head. Compact has 12 operators; wide has 31 strict-linear operators, including Gaussian, FCK and Whittaker variants. Single-target only. It returns fold scores, final stack features, Ridge-head coefficients for audit, and folded input_coefficients plus input_intercept for replay through NativeAOMOperatorPLSStackRegressor; native v1 builds in CUDA-enabled configurations but is not yet a fused batched GPU stack."

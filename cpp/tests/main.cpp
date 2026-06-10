@@ -91,6 +91,48 @@ void register_augmenters_phase17_tests(n4m_testing::Runner& r);
 // test_augmenters_edge_splines_random.cpp.
 void register_augmenters_edge_splines_random_tests(n4m_testing::Runner& r);
 
+// Model-fixture parity tests for the core regression-solver PLS families
+// (public n4m_model_fit / predict / get_array path) live in test_models_pls.cpp.
+void register_models_pls_tests(n4m_testing::Runner& r);
+
+// Method-result model families (MB-PLS, LW-PLS, PLS-LDA, PLS-Logistic) reachable
+// through the dedicated public n4m_*_fit ABI live in test_models_extra.cpp.
+void register_models_extra_tests(n4m_testing::Runner& r);
+
+// Adversarial C-ABI boundary / memory-ownership tests live in
+// test_c_abi_memory.cpp.
+void register_c_abi_memory_tests(n4m_testing::Runner& r);
+
+// Multi-context threading tests live in test_threading.cpp.
+void register_threading_tests(n4m_testing::Runner& r);
+
+// Direct closed-form Ridge regression parity tests (public n4m_ridge_fit)
+// live in test_ridge.cpp.
+void register_ridge_tests(n4m_testing::Runner& r);
+
+// Native row-additive moment substrate tests (public n4m_moments_*) live in
+// test_moments.cpp.
+void register_moments_tests(n4m_testing::Runner& r);
+
+// Native moment sweep tests (public n4m_sweep_run) live in test_sweep.cpp.
+void register_sweep_tests(n4m_testing::Runner& r);
+
+// Native AOM robust-HPO screening smoke tests live in
+// test_aom_robust_hpo.cpp.
+void register_aom_robust_hpo_tests(n4m_testing::Runner& r);
+
+// Native AOM Ridge simplex blender tests live in test_aom_ridge_blender.cpp.
+void register_aom_ridge_blender_tests(n4m_testing::Runner& r);
+
+// Native AOM operator PLS stack tests live in test_aom_operator_pls_stack.cpp.
+void register_aom_operator_pls_stack_tests(n4m_testing::Runner& r);
+
+// Native AOM preprocessing sweep tests live in test_aom_sweep.cpp.
+void register_aom_sweep_tests(n4m_testing::Runner& r);
+
+// Historical native AOM/POP selector tests live in test_aom_selection.cpp.
+void register_aom_selection_tests(n4m_testing::Runner& r);
+
 namespace {
 
 void test_version_string_nonempty() {
@@ -179,5 +221,17 @@ int main() {
     register_augmenters_wavelength_spectral_tests(r);
     register_augmenters_phase17_tests(r);
     register_augmenters_edge_splines_random_tests(r);
+    register_models_pls_tests(r);
+    register_models_extra_tests(r);
+    register_c_abi_memory_tests(r);
+    register_threading_tests(r);
+    register_moments_tests(r);
+    register_ridge_tests(r);
+    register_sweep_tests(r);
+    register_aom_operator_pls_stack_tests(r);
+    register_aom_ridge_blender_tests(r);
+    register_aom_robust_hpo_tests(r);
+    register_aom_selection_tests(r);
+    register_aom_sweep_tests(r);
     return r.finalize();
 }

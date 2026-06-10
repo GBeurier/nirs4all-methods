@@ -1,0 +1,7 @@
+backend,n_samples,n_features,cv,block_scaling,n_operators,operator_kinds,n_features_superblock,n_candidates,n_components,ridge_lambda,selected_cv_rmse,best_cv_rmse,ridge_pls_backend,n_ridge_pls_fit_calls,prediction_replay_max_abs_error,elapsed_ms_median,library_path,abi
+native_aom_ridge_pls_superblock,32,32,4,rms,3,0 15 8,96,4,2,0.1,0.6705452945014285,0.6705452945014285,native,17,0.0,24.81442497810349,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock_sklearn,32,32,4,rms,3,0 15 8,96,4,2,0.1,0.6705452945014285,0.6705452945014285,native,17,0.0,10.855060012545437,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock,64,64,4,rms,3,0 15 8,192,4,2,0.0,0.5954266791997468,0.5954266791997468,native,17,0.0,23.181816970463842,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock_sklearn,64,64,4,rms,3,0 15 8,192,4,2,0.0,0.5954266791997468,0.5954266791997468,native,17,0.0,21.306280978024006,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock,96,128,4,rms,3,0 15 8,384,4,2,0.1,0.6683371551907231,0.6683371551907231,native,17,0.0,66.3325369823724,build/dev-release/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_pls_superblock_sklearn,96,128,4,rms,3,0 15 8,384,4,2,0.1,0.6683371551907231,0.6683371551907231,native,17,0.0,72.35286996001378,build/dev-release/cpp/src/libn4m.so,1.22.0

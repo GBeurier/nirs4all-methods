@@ -33,7 +33,24 @@ endforeach()
 list(APPEND _js_export_list
     "_malloc" "_free"
     "_n4m_wasm_pls_fit_legacy"
-    "_n4m_wasm_pls_predict_from_coeffs")
+    "_n4m_wasm_pls_predict_from_coeffs"
+    # Generic model dispatcher (Tier A algorithm-enum + Tier B coeff fits)
+    "_n4m_wasm_model_fit"
+    "_n4m_wasm_model_predict_from_coeffs"
+    # AOM-PLS — operator-adaptive PLS (strict bank screen + SIMPLS on the winner)
+    "_n4m_wasm_aom_fit"
+    # POP-PLS — per-component AOM (one operator per latent component)
+    "_n4m_wasm_pop_fit"
+    # Splitters (Kennard-Stone / SPXY / KMeans / KBinsStratified → test mask)
+    "_n4m_wasm_split"
+    # Generic preprocessing dispatcher (raw-pointer surface; numerics in libn4m)
+    "_n4m_wasm_pp_create"
+    "_n4m_wasm_pp_fit"
+    "_n4m_wasm_pp_transform"
+    "_n4m_wasm_pp_state_len"
+    "_n4m_wasm_pp_get_state"
+    "_n4m_wasm_pp_set_state"
+    "_n4m_wasm_pp_destroy")
 string(REPLACE ";" "," _js_export_flag "${_js_export_list}")
 
 add_executable(pls4all_wasm

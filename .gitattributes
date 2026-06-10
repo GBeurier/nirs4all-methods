@@ -55,3 +55,12 @@ CMakeLists.txt text eol=lf
 .clang-tidy     export-ignore
 .mcp.json       export-ignore
 docs/reviews/   export-ignore
+# Regenerable cross-binding benchmark DATA (committed before the .gitignore rule
+# landed; huge — ~700 MB of .x_target/*.csv + .reference_oracles/*.npy). Not
+# source: exclude from the release source archive. (Untracking from history is a
+# separate maintainer decision.)
+benchmarks/cross_binding/data/   export-ignore
+# Committed benchmark CAMPAIGN RESULTS (diagnostics JSON + oracle/rank/recall
+# summaries + result CSVs) — provenance for the dashboard, not library source.
+# Keep them in-repo but out of the PyPI/CRAN source tarball (~14 MB).
+benchmarks/cross_binding/aom_staged_*   export-ignore

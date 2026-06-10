@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pls4all"
-version = "0.98.0"
+version = "0.99.0"
 description = "Python binding for the pls4all C ABI — a portable PLS / NIRS engine."
 authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1"
@@ -51,7 +51,7 @@ where = ["src"]
 include = ["pls4all", "pls4all.*"]
 
 # Bundle the native shared library shipped inside the wheel.
-# cibuildwheel's build_libp4a_in_wheel.sh stages libn4m into
+# cibuildwheel's build_libn4m_in_wheel.sh stages libn4m into
 # src/pls4all/lib/ before the sdist/wheel is built; the patterns below
 # tell setuptools to ship every variant (Linux .so, macOS .dylib,
 # Windows .dll, the auditwheel-renamed forms, and the SONAME symlinks).

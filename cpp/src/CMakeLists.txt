@@ -23,7 +23,11 @@ configure_file(
 # ---------------------------------------------------------------------------
 add_library(n4m_core OBJECT
     core/aom_operators.cpp
-    core/aom_preprocessing.cpp
+  core/aom_preprocessing.cpp
+  core/aom_operator_pls_stack.cpp
+  core/aom_ridge_blender.cpp
+  core/aom_robust_hpo.cpp
+    core/aom_sweep.cpp
     core/aom_selection.cpp
     core/bipls_selection.cpp
     core/bve_selection.cpp
@@ -48,6 +52,7 @@ add_library(n4m_core OBJECT
     core/metrics.cpp
     core/model.cpp
     core/model_selection.cpp
+    core/moments.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp
     core/extra_pls.cpp
@@ -56,6 +61,7 @@ add_library(n4m_core OBJECT
     core/pls_diagnostics.cpp
     core/pls_monitoring.cpp
     core/recursive_pls.cpp
+    core/ridge.cpp
     core/tensor_pls.cpp
     core/interval_selection.cpp
     core/lw_pls.cpp
@@ -71,12 +77,15 @@ add_library(n4m_core OBJECT
     core/spa_selection.cpp
     core/stability_selection.cpp
     core/st_selection.cpp
+    core/sweep.cpp
     core/uve_selection.cpp
     core/validation.cpp
     core/vip_spa_selection.cpp
     core/vissa_selection.cpp)
 if(N4M_WITH_CUDA)
-    target_sources(n4m_core PRIVATE core/cuda_dispatch.cpp)
+    target_sources(n4m_core PRIVATE
+        core/cuda_dispatch.cpp
+        core/cuda_kernels.cu)
 endif()
 target_include_directories(n4m_core
     PUBLIC  ${PROJECT_SOURCE_DIR}/cpp/include
@@ -95,8 +104,8 @@ endif()
 # Dead-code stripping in non-Debug configs (multi-config-safe).
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     target_compile_options(n4m_core PRIVATE
-        $<$<NOT:$<CONFIG:Debug>>:-ffunction-sections>
-        $<$<NOT:$<CONFIG:Debug>>:-fdata-sections>)
+        $<$<AND:$<NOT:$<COMPILE_LANGUAGE:CUDA>>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>
+        $<$<AND:$<NOT:$<COMPILE_LANGUAGE:CUDA>>,$<NOT:$<CONFIG:Debug>>>:-fdata-sections>)
 endif()
 n4m_add_warnings(n4m_core)
 
@@ -154,7 +163,7 @@ endif()
 
 # ---------------------------------------------------------------------------
 # Optional OpenMP backend (Phase 44). Default OFF — when ON we annotate
-# the hot inner loops in model.cpp with #pragma omp parallel for via the
+# the hot inner loops in model.cpp/sweep.cpp with #pragma omp parallel for via the
 # N4M_PARALLEL_FOR_STATIC macro in cpp/src/core/parallel.hpp. The OFF
 # build is bit-identical to pre-Phase-44.
 #
@@ -190,11 +199,10 @@ endif()
 
 # ---------------------------------------------------------------------------
 # Optional CUDA backend (Phase 45). Default OFF — when ON we route the
-# linalg dispatch through cuBLAS via cpp/src/core/cuda_dispatch.cpp.
-# Phase 45 uses host-side cuBLAS only, no custom CUDA kernels, so we do
-# not call enable_language(CUDA) — the .cpp file compiles with the host
-# C++ compiler and the CUDA include path. CUDA::cudart and CUDA::cublas
-# carry the link dependencies.
+# linalg dispatch through cuBLAS via cpp/src/core/cuda_dispatch.cpp and compile
+# a small native CUDA helper in cpp/src/core/cuda_kernels.cu for the PLS
+# many-batched sign-normalization path. CUDA::cudart and CUDA::cublas carry
+# the link dependencies.
 #
 # Runtime safety: a build with N4M_WITH_CUDA=ON still loads cleanly
 # on a machine without a GPU. cuda_dispatch::cuda_runtime_available()
@@ -274,10 +282,7 @@ if(N4M_BUILD_STATIC)
     # resolve cudaMalloc/cublas* like the shared lib.
     if(N4M_WITH_CUDA)
         target_compile_definitions(n4m_c_static PRIVATE N4M_USE_CUDA=1)
-        target_link_libraries(n4m_c_static PRIVATE CUDA::cudart CUDA::cublas)
+        target_link_libraries(n4m_c_static PRIVATE CUDA::cudart CUDA::cublas CUDA::cusolver)
     endif()
     n4m_add_warnings(n4m_c_static)
 endif()
-
-
-

@@ -7,13 +7,14 @@ work grows fast enough with n×p to amortise kernel-launch + host↔device copy
 overhead. Elementwise / small-matrix ops (most preprocessing + augmentation)
 will be *slower* on GPU at the dashboard sizes.
 
-There is no live CUDA timing data yet (the `cuda-on` build exists but isn't
-benchmarked), so this uses a PROXY available today: the **BLAS+OpenMP vs native
+This broad method classifier still uses a proxy: the **BLAS+OpenMP vs native
 scalar speedup** from the committed timings. BLAS and CUDA accelerate the SAME
 GEMM path, so a method that BLAS already speeds up at the largest size is the
 prime CUDA candidate; a method that runs identically with/without BLAS (the
-"≡ native" elementwise ops) will not benefit from CUDA either. Corroborated by
-the static set of core TUs that actually call the GEMM/GEMV linalg path.
+"equivalent to native" elementwise ops) will not benefit from CUDA either.
+Corroborated by the static set of core TUs that actually call the GEMM/GEMV
+linalg path. For live CPU-vs-CUDA moment sweep timings, use
+`bench_moment_gpu_crossover.py`.
 
 Output: `docs/benchmarks/cuda_diagnostic.md`.
 """
@@ -106,8 +107,10 @@ def render_md(rows: list[dict]) -> str:
          f"{HEAVY_MS:.0f} ms); `marginal` = speedup ≥ 1.2; else `not_applicable`. "
          "The backend is built + correctness-verified; a full live GPU timing "
          "sweep (which sizes actually win, given launch + host↔device copy "
-         "overhead) is the remaining refinement — treat the buckets below as the "
-         "prioritisation for it. Structurally GEMM-bound core TUs: "
+         "overhead) is the remaining refinement for the broad method matrix. "
+         "The live moment sweep crossover benchmark is "
+         "`bench_moment_gpu_crossover.py`. Treat the buckets below as the "
+         "prioritisation for broad CUDA timing. Structurally GEMM-bound core TUs: "
          f"`{'`, `'.join(sorted(GEMM_TUS))}`.",
          ""]
     titles = {BENEFIT: "✅ Would benefit from CUDA",

@@ -4,7 +4,7 @@
 \alias{aom_preprocess}
 \title{Adaptive Operator-Mixture preprocessing fit/transform.}
 \usage{
-aom_preprocess(X, Y = NULL, n_operators = 3L, gating_mode = 0L)
+aom_preprocess(X, Y = NULL, n_operators = 1L, gating_mode = 0L)
 }
 \arguments{
 \item{X}{numeric matrix of spectra (rows = samples, cols = wavelengths).}
@@ -13,7 +13,7 @@ aom_preprocess(X, Y = NULL, n_operators = 3L, gating_mode = 0L)
 the unsupervised gating path is used (a zero target vector is
 substituted internally).}
 
-\item{n_operators}{number of operators in the AOM bank (default `3L`).}
+\item{n_operators}{number of operators in the AOM bank (default `1L`).}
 
 \item{gating_mode}{integer code selecting the gating strategy:
 `0L` = hard-select per component, `1L` = soft-mixture (default `0L`).}
@@ -33,7 +33,7 @@ spectra ready to feed into a downstream regression solver.
 set.seed(1)
 X <- matrix(rnorm(40 * 10), nrow = 40)
 Y <- as.numeric(X[, 1] + rnorm(40, sd = 0.1))
-fit <- aom_preprocess(X, Y, n_operators = 2L)
+fit <- aom_preprocess(X, Y)
 class(fit)
 
 }

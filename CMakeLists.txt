@@ -107,10 +107,19 @@ endif()
 
 # Same pattern for CUDA: hoist find_package(CUDAToolkit) so the
 # CUDA::cudart / CUDA::cublas imported targets are visible everywhere.
-# Phase 45 uses host-side cuBLAS only, no .cu compilation, so we do
-# NOT enable_language(CUDA).
+# CUDA builds use host-side cuBLAS plus a small native CUDA kernel for the
+# PLS many-batched sign-normalization path, so enable CUDA language only when
+# the optional backend is requested.
 if(N4M_WITH_CUDA)
     find_package(CUDAToolkit REQUIRED)
+    if(NOT CMAKE_CUDA_COMPILER AND CUDAToolkit_NVCC_EXECUTABLE)
+        set(CMAKE_CUDA_COMPILER "${CUDAToolkit_NVCC_EXECUTABLE}" CACHE FILEPATH
+            "CUDA compiler" FORCE)
+    endif()
+    enable_language(CUDA)
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    set(CMAKE_CUDA_EXTENSIONS OFF)
 endif()
 
 # n4m needs at least one library output to be useful.

@@ -27,7 +27,7 @@ Pulled from the
 method catalog; committed timing snapshots are regenerated, not hand
 maintained).
 
-| Method | pls4all C++ | pls4all Python | pls4all R | R formula | R `pls` compat | R `mdatools` compat | pls4all MATLAB | Reference |
+| Method | n4m C++ | n4m Python | n4m R | R formula | R `pls` compat | R `mdatools` compat | n4m MATLAB | Reference |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | PLS SIMPLS | **1.03 ms** | 1.11 ms | 2.50 ms | 6.00 ms | 6.63 ms | 4.17 ms | 1.58 ms | sklearn 1.33 ms |
 | AOM-PLS | 2.64 ms | **2.60 ms** | 3.66 ms | 4.92 ms | 5.13 ms | 4.86 ms | 2.78 ms | nirs4all 10.8 ms |
@@ -45,7 +45,7 @@ gates and per-algorithm tables are in
 ### Python
 
 ```bash
-git clone https://github.com/GBeurier/pls4all.git && cd pls4all
+git clone https://github.com/GBeurier/nirs4all-methods.git && cd nirs4all-methods
 cmake --preset blas-omp && cmake --build --preset blas-omp -j
 pip install -e bindings/python
 ```
@@ -108,9 +108,9 @@ predict(mdl, Xnew)
 
 | Binding | Tier 1 surface | Tier 2 idiomatic form |
 |---|---|---|
-| **Python** (`pls4all.sklearn`) | Registry-driven tier-1 API + AOM/POP low-level ABI | **68 sklearn classes + 8 fns** (`BaseEstimator` mixins, `.n4a` pickling, GridSearchCV-ready) |
-| **R** (`pls4all` package) | **COMPLETE** — 73 registry methods via `pls4all_method()` and wrappers | NIRS-first idioms — base R formula+S3 (16 wrappers) · `pls`-compatible `plsr()` / `pcr()` · `mdatools`-compatible matrix `pls(x, y, ...)` |
-| **MATLAB / Octave** (`+pls4all`) | **COMPLETE** — 73 registry methods via the single MEX dispatcher | **18 classdefs** + unified `pls4all.fit(algo, X, y, ...)` factory |
+| **Python** (`n4m.sklearn`) | Registry-driven tier-1 API + AOM/POP low-level ABI | **68 sklearn classes + 8 fns** (`BaseEstimator` mixins, `.n4a` pickling, GridSearchCV-ready) |
+| **R** (`n4m` package) | **COMPLETE** — 73 registry methods via `n4m_method()` and wrappers | NIRS-first idioms — base R formula+S3 (16 wrappers) · `pls`-compatible `plsr()` / `pcr()` · `mdatools`-compatible matrix `pls(x, y, ...)` |
+| **MATLAB / Octave** (`+n4m`) | **COMPLETE** — 73 registry methods via the single MEX dispatcher | **18 classdefs** + unified `n4m.fit(algo, X, y, ...)` factory |
 | Julia, JS, Go, Rust, Ruby, .NET, Lua, Nim | SIMPLS via native FFI | 1 idiomatic class per language (PoC) |
 | JNI / JVM | SIMPLS via JNI | (deferred) |
 
@@ -129,7 +129,7 @@ libraries observed in the benchmark; `nirs4all` is the sanctioned in-tree
 Python reference provider for methods that do not have a packaged external
 implementation.
 
-| Method | Backend C++ | pls4all R | pls4all MATLAB | Python | R | MATLAB |
+| Method | Backend C++ | n4m R | n4m MATLAB | Python | R | MATLAB |
 |---|---:|---|---|---|---|---|
 | `pls` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `scikit-learn`<br>`ikpls` | `pls`<br>`mixOmics` | `Octave plsregress` |
 | `pcr` | ✓ | `dispatcher`<br>`formula/S3` | `MEX/dispatcher`<br>`classdef/factory` | `scikit-learn` | `pls` | — |
@@ -239,7 +239,7 @@ Full list at [`Overview.md`](Overview.md) ; canonical spec at
 ## Build
 
 ```bash
-git clone https://github.com/GBeurier/pls4all.git && cd pls4all
+git clone https://github.com/GBeurier/nirs4all-methods.git && cd nirs4all-methods
 
 # Reference build (single-thread, no BLAS — useful for parity)
 cmake --preset dev-release
@@ -250,8 +250,8 @@ ctest --preset dev-release --output-on-failure
 cmake --preset blas-omp
 cmake --build --preset blas-omp -j
 
-./build/blas-omp/cpp/cli/pls4all_cli --version
-./build/blas-omp/cpp/cli/pls4all_cli --abi-info
+./build/blas-omp/cpp/cli/n4m_cli --version
+./build/blas-omp/cpp/cli/n4m_cli --abi-info
 ```
 
 Zero mandatory dependencies — no Eigen, no Boost, no BLAS, no pybind11,
@@ -273,7 +273,7 @@ python -m pip install -r benchmarks/cross_binding/requirements-git.txt
 # N_RUNS is the adaptive total-run cap, including the warmstart.
 benchmarks/cross_binding/run_overnight.sh
 
-# Exhaustive stress matrix: all pls4all bindings/tiers, all CPU libp4a
+# Exhaustive stress matrix: all n4m bindings/tiers, all CPU libn4m
 # backend variants, the default 11-size dataset sweep, threads 1/3/10,
 # and the registry-declared external references.
 FULL_MATRIX=1 benchmarks/cross_binding/run_overnight.sh
@@ -312,12 +312,12 @@ CeCILL-2.1 ([`LICENSE`](LICENSE), compatible with the GPL family,
 recognised by French law).
 
 ```bibtex
-@software{pls4all,
+@software{nirs4all_methods,
   author  = {Beurier, Grégory and contributors},
-  title   = {pls4all: A portable Partial Least Squares engine with a stable C ABI},
+  title   = {nirs4all-methods: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
-  url     = {https://github.com/GBeurier/pls4all},
-  version = {0.98.0}
+  url     = {https://github.com/GBeurier/nirs4all-methods},
+  version = {0.99.0}
 }
 ```
 
@@ -327,7 +327,7 @@ A machine-readable [`CITATION.cff`](CITATION.cff) is provided.
 
 ## Roadmap
 
-`pls4all` keeps the detailed historical phase log in
+`n4m` keeps the detailed historical phase log in
 [`ROADMAP.md`](ROADMAP.md). The active roadmap is now focused on making the
 same C ABI catalog available through more language bindings.
 
@@ -343,13 +343,13 @@ same C ABI catalog available through more language bindings.
 ### Method requests
 
 Users can request a missing method through
-[GitHub Issues](https://github.com/GBeurier/pls4all/issues). Please include
+[GitHub Issues](https://github.com/GBeurier/nirs4all-methods/issues). Please include
 the reference implementation or library, the paper / DOI, expected inputs and
 outputs, and any small reproducible dataset that can become a parity fixture.
 
 ---
 
-`pls4all` builds on lessons learned from the experimental
+`n4m` builds on lessons learned from the experimental
 [`aompls`](https://github.com/GBeurier/aompls) library and on the rich
 PLS ecosystem in scikit-learn, R `pls` / `ropls` / `mixOmics` /
 `plsVarSel`, and `nirs4all`.

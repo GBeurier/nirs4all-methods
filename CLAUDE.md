@@ -24,6 +24,11 @@ ctest --preset dev-debug --output-on-failure
 cmake --preset blas-omp
 cmake --build --preset blas-omp -j
 
+# GPU (optional CUDA backend; needs nvcc/CUDA toolkit). The CUDA path
+# accelerates the PLS many-batched kernels — most recent perf work lives here.
+cmake --preset cuda-on            # sets N4M_WITH_CUDA=ON
+cmake --build --preset cuda-on -j
+
 # CI parity (one of: ci-linux-{gcc12,gcc13,clang16}-{release,debug},
 #                   ci-macos-clang-{release,debug}, ci-macos-universal2,
 #                   ci-windows-{msvc,mingw}-release, ci-windows-msvc-debug,
@@ -121,6 +126,8 @@ readelf -d build/dev-release/cpp/src/libn4m.so.<ver> \
   | grep -E 'SONAME|NEEDED|RPATH|RUNPATH'
 ```
 
+To regenerate the per-platform ABI snapshots after an intentional surface change, use `scripts/regen_abi_snapshots.sh`.
+
 ABI versioning (`N4M_ABI_VERSION_*` in `cpp/include/n4m/n4m_version.h`) is **independent of project version** and bumps only on surface change. `n4m_check_abi_compatibility(header_major, header_minor)` is how bindings detect header/runtime skew.
 
 ## Architecture — load-bearing rules
@@ -172,8 +179,11 @@ cpp/
   abi/expected_symbols_*.txt      # ABI snapshots (per-platform), diffed in CI
 
 bindings/
-  python/src/n4m/                 # Full n4m Python binding (Phase F-bootstrap target)
+  python/src/n4m/                 # Full n4m Python binding — the dev source tree
   python/src/pls4all/             # Mature pls4all subset (slim PLS-only re-export)
+  python_nirs4all_methods/        # PyPI packaging project for the `nirs4all-methods`
+                                  # wheel (full surface); its src/n4m mirrors the dev tree
+  python_pls4all/                 # PyPI packaging project for the slim `pls4all` wheel
   r/n4m/                          # CRAN n4m package (post-A10 rename from bindings/r/pls4all/)
   matlab/                         # +pls4all classdef package + MEX dispatcher
                                   # (n4m_*_mex entry points). COMPAT.md documents
@@ -216,7 +226,7 @@ docs/                             # Sphinx site source
 | `n4m_tests`       | EXE    | doctest binary, links core + c_api.                        |
 | `n4m_cli`         | EXE    | `--version`, `--abi-info`, `--selfcheck`.                  |
 
-Symbol visibility is hidden by default; only `N4M_API`-decorated declarations are exported. On MSVC a `.def` file additionally drives exports. The Linux version script `cpp/src/c_api/n4m_linux.map` carries the `N4M_1` ABI version tag.
+Symbol visibility is hidden by default; only `N4M_API`-decorated declarations are exported. On Windows the `N4M_API` macro expands to `__declspec(dllexport)` (`__attribute__((dllexport))` under MinGW/GCC) — see `cpp/include/n4m/n4m_export.h.in`; there is no `.def` file. The Linux version script `cpp/src/c_api/n4m_linux.map` carries the `N4M_1` ABI version tag.
 
 ## Development workflow (Codex review loop)
 

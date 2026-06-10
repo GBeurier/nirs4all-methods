@@ -27,7 +27,7 @@ jobs:
             | awk '{print $3}' \
             | grep "^n4m_\|^N4M_" \
             | sed 's/@@.*//' \
-            | sort -u > /tmp/exported.txt
+            | LC_ALL=C sort -u > /tmp/exported.txt
           echo "----- exported -----"
           cat /tmp/exported.txt
           echo "----- expected -----"
@@ -38,6 +38,22 @@ jobs:
         run: |
           if grep -vE '^n4m_|^N4M_[0-9]+$' /tmp/exported.txt; then
             echo "Forbidden non-n4m_ symbol exported"
+            exit 1
+          fi
+      - name: SONAME / linkage sanity (release blocker gate)
+        run: |
+          LIB=$(find build -name 'libn4m.so.*' ! -type l | head -n 1)
+          echo "Inspecting $LIB"
+          readelf -d "$LIB" | grep -E 'SONAME|NEEDED|RPATH|RUNPATH' || true
+          SONAME=$(readelf -d "$LIB" | sed -n 's/.*SONAME.*\[\(.*\)\]/\1/p')
+          echo "SONAME=$SONAME"
+          if [ "$SONAME" != "libn4m.so.1" ]; then
+            echo "ERROR: unexpected SONAME '$SONAME' (expected libn4m.so.1 = ABI major)"
+            exit 1
+          fi
+          if readelf -d "$LIB" | grep -qE 'RPATH|RUNPATH'; then
+            echo "ERROR: libn4m carries an RPATH/RUNPATH — a non-portable absolute search path that breaks redistributable packages"
+            readelf -d "$LIB" | grep -E 'RPATH|RUNPATH'
             exit 1
           fi
       - name: Runtime-dependency audit (forbidden libs)
@@ -62,8 +78,15 @@ jobs:
         run: |
           LIB=$(find build -name 'libn4m*.dylib' | head -n 1)
           echo "Inspecting $LIB"
-          nm -gU "$LIB" | awk '{print $3}' | sed 's/^_//' | sort -u > /tmp/exported.txt
+          nm -gU "$LIB" | awk '{print $3}' | sed 's/^_//' | LC_ALL=C sort -u > /tmp/exported.txt
           cat /tmp/exported.txt
+      - name: Diff against committed ABI snapshot (fail-closed)
+        run: |
+          # The macOS export set must equal the committed snapshot exactly
+          # (same n4m_* names as Linux, minus the Linux-only N4M_1 version node).
+          LC_ALL=C sort -u cpp/abi/expected_symbols_macos.txt > /tmp/expected.txt
+          echo "----- diff (expected vs exported) -----"
+          diff -u /tmp/expected.txt /tmp/exported.txt
       - name: Assert every exported symbol starts with n4m_
         run: |
           if grep -vE '^n4m_|^N4M_[0-9]+$' /tmp/exported.txt; then
@@ -106,8 +129,33 @@ jobs:
             }
           }
           if (-not $dumpbinPath) { Write-Error "dumpbin not found"; exit 1 }
-          & $dumpbinPath /EXPORTS $dll.FullName |
-            Select-String -Pattern '^\s+\d+\s+\w+\s+\w+\s+(n4m_\w+)' |
-            ForEach-Object { $_.Matches[0].Groups[1].Value } |
-            Sort-Object -Unique | Out-File -Encoding ascii exported.txt
+          # Capture the NAME column of every export (last token), not just n4m_*,
+          # so an accidental non-n4m_ N4M_API export is caught by the prefix
+          # assertion below (mirrors the Linux/macOS prefix check).
+          $raw = & $dumpbinPath /EXPORTS $dll.FullName |
+            Select-String -CaseSensitive -Pattern '^\s+\d+\s+[0-9A-Fa-f]+\s+[0-9A-Fa-f]+\s+(\S+)' |
+            ForEach-Object { $_.Matches[0].Groups[1].Value }
+          if (-not $raw) { Write-Error "no exports parsed from dumpbin output"; exit 1 }
+          $bad = $raw | Where-Object { $_ -cnotmatch '^n4m_' }
+          if ($bad) {
+            Write-Host "Forbidden non-n4m_ exports:"; $bad | ForEach-Object { Write-Host "  $_" }
+            Write-Error "Forbidden non-n4m_ symbol exported"; exit 1
+          }
+          $raw | Sort-Object -Unique -CaseSensitive | Out-File -Encoding ascii exported.txt
           Get-Content exported.txt
+      - name: Diff against committed ABI snapshot (fail-closed)
+        shell: pwsh
+        run: |
+          # Set comparison (order-independent, case-sensitive): the Windows
+          # export set must equal the committed snapshot (same n4m_* names as
+          # Linux/macOS). -CaseSensitive catches a case-only ABI drift.
+          $expected = Get-Content cpp/abi/expected_symbols_windows.txt | Where-Object { $_ -ne '' } | Sort-Object -Unique -CaseSensitive
+          $exported = Get-Content exported.txt | Where-Object { $_ -ne '' } | Sort-Object -Unique -CaseSensitive
+          $delta = Compare-Object -ReferenceObject $expected -DifferenceObject $exported -CaseSensitive
+          if ($delta) {
+            Write-Host "ABI symbol surface drift on Windows:"
+            $delta | ForEach-Object { $side = if ($_.SideIndicator -eq '<=') { 'missing (in snapshot, not built)' } else { 'unexpected (built, not in snapshot)' }; Write-Host ("  {0}: {1}" -f $side, $_.InputObject) }
+            Write-Error "Windows ABI snapshot mismatch — regenerate cpp/abi/expected_symbols_windows.txt"
+            exit 1
+          }
+          Write-Host "Windows ABI snapshot OK ($($exported.Count) symbols)"

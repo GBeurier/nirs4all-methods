@@ -145,7 +145,7 @@ endif()
 # so link unguarded — a missing cuBLAS should fail loudly, not silently skip.
 if(N4M_WITH_CUDA)
     target_compile_definitions(n4m_c PRIVATE N4M_USE_CUDA=1)
-    target_link_libraries(n4m_c PRIVATE CUDA::cudart CUDA::cublas)
+    target_link_libraries(n4m_c PRIVATE CUDA::cudart CUDA::cublas CUDA::cusolver)
 endif()
 
 # n4m_cli (cpp/cli/) and n4m_tests (cpp/tests/) are wired by the

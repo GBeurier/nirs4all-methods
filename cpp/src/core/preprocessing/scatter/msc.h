@@ -63,6 +63,24 @@ n4m_status_t n4m_pp_msc_state_inverse_apply(const n4m_pp_msc_state_t* state,
                                              int64_t rows, int64_t cols,
                                              double* out);
 
+/* Number of features in the fitted reference spectrum (0 if unfitted).
+ * NULL-safe (returns 0). Lets a binding serialize the fitted state. */
+int64_t n4m_pp_msc_state_n_features(const n4m_pp_msc_state_t* state);
+
+/* Copy the fitted reference spectrum (length n_features) into `out`. Returns
+ * N4M_ERR_NOT_FITTED when unfitted, N4M_ERR_SHAPE_MISMATCH when `cols` differs
+ * from the fitted feature count. */
+n4m_status_t n4m_pp_msc_state_get_reference(const n4m_pp_msc_state_t* state,
+                                             double* out, int64_t cols);
+
+/* Restore a fitted state directly from a reference spectrum (length `cols`,
+ * >= 2). Recomputes the cached mean/denominator and marks the state fitted —
+ * the inverse of get_reference. This is how a binding round-trips MSC state
+ * (e.g. for predict-later) without re-fitting on the original training data. */
+n4m_status_t n4m_pp_msc_state_set_reference(n4m_pp_msc_state_t* state,
+                                             const double* reference,
+                                             int64_t cols);
+
 #ifdef __cplusplus
 }
 #endif

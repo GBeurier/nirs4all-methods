@@ -123,6 +123,16 @@ namespace {
         ctx.set_errorf("n_iterations must be >= 1; got %d", static_cast<int>(n_iterations));
         return N4M_ERR_INVALID_ARGUMENT;
     }
+    // Upper cap: n_iterations pre-sizes coefficient_scores (n_iterations * p),
+    // so an absurd count is an out-of-memory / denial-of-service vector. Real
+    // CARS runs use tens-to-hundreds of Monte-Carlo iterations; 100000 is far
+    // above any legitimate use and bounds the allocation.
+    constexpr std::int32_t kMaxIterations = 100000;
+    if (n_iterations > kMaxIterations) {
+        ctx.set_errorf("n_iterations must be <= %d; got %d",
+                       static_cast<int>(kMaxIterations), static_cast<int>(n_iterations));
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
     if (cfg.n_components < 1 || static_cast<std::int64_t>(cfg.n_components) > X.cols) {
         ctx.set_errorf("n_components must be in [1, %lld]; got %d",
                        static_cast<long long>(X.cols),

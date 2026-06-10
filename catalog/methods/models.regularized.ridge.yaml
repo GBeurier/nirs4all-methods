@@ -1,0 +1,40 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "models.regularized.ridge"
+family: "models.regularized"
+category: "models"
+subcategory: "regularized"
+since_abi: "1.16.0"
+abi_symbols:
+  - "n4m_ridge_fit"
+tu:
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/c_api/c_api_method_result.cpp"
+headers:
+  - "cpp/include/n4m/pls.h"
+carry_along_tu:
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "models.regularized.ridge"
+  registry_entry: "benchmarks/cross_binding/bench_direct_moment_heads_timing.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.python"
+    class: "ridge"
+    legacy_aliases: []
+publications: []
+notes: "Direct closed-form Ridge regression head with primal/dual handling in the native core. This is the reusable linear head used by the moment and AOM Ridge screens."

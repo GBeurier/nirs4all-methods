@@ -1,13 +1,15 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * pls4all — public C ABI v1.1.0.
+ * nirs4all-methods — PLS-domain public C ABI (version: see N4M_ABI_VERSION_* in n4m_version.h).
  *
  * Stability: experimental until v1.0.0. Every breaking change before that
  * version bumps the ABI MAJOR (see n4m_version.h). After v1.0.0 the ABI
  * follows strict semver: breaking changes bump MAJOR, additive changes bump
  * MINOR, bugfixes bump PATCH.
  *
- * This is the ONLY header consumers of libn4m are expected to include.
+ * This is the PLS-domain header. n4m.h is the umbrella header carrying the
+ * common-core surface (status / backend / dtype / matrix-view / context /
+ * version); this header includes it and adds the PLS-domain declarations.
  *
  * Universal rules of the surface:
  *   - Every exported function is `noexcept` — no C++ exception ever crosses
@@ -27,7 +29,7 @@
  *     `n4m_array_t*` and the opaque handles below; both have explicit
  *     `n4m_*_destroy` / `n4m_array_free` functions.
  *
- * Current implementation status (rev 1.1.0 of this header — May 2026):
+ * Current implementation status (see N4M_ABI_VERSION_* in n4m_version.h — May 2026):
  *   - Lifecycle / config / version / matrix-view are fully implemented.
  *   - Pipeline / operator-bank / gating-strategy / validation-plan
  *     lifecycle is implemented; AOM global and POP per-component
@@ -39,7 +41,8 @@
  *     N4M_OP_SAVGOL_DERIVATIVE, N4M_OP_NORRIS_WILLIAMS,
  *     N4M_OP_ASLS_BASELINE, N4M_OP_WAVELET_DENOISE, N4M_OP_OSC and
  *     N4M_OP_EPO.
- *     N4M_OP_FINITE_DIFFERENCE, N4M_OP_WHITTAKER and N4M_OP_FCK are
+ *     N4M_OP_FINITE_DIFFERENCE, N4M_OP_WHITTAKER, N4M_OP_FCK and
+ *     N4M_OP_GAUSSIAN are
  *     currently implemented by the internal strict-linear AOM operator
  *     kernels.
  *   - n4m_model_fit implements dependency-free NIPALS, orthogonal-scores,
@@ -167,6 +170,24 @@ typedef enum n4m_rng_kind_t {
     N4M_RNG_NUMPY_MT   = 3
 } n4m_rng_kind_t;
 
+/* AOM sweep route policy. AUTO uses exact operator-moment routes when the
+ * current guards consider them valid and falls back to materialized chains
+ * otherwise. MATERIALIZED forces the legacy materialized-chain screen, useful
+ * for timing/score comparisons and for avoiding moment-route regressions.
+ * FORCE_MOMENTS rejects any candidate screen that would need a materialized
+ * fallback; the selected chain may still be materialized once after scoring
+ * to populate public predictions and input-space coefficients. */
+typedef enum n4m_aom_moment_policy_t {
+    N4M_AOM_MOMENT_AUTO          = 0,
+    N4M_AOM_MOMENT_MATERIALIZED  = 1,
+    N4M_AOM_MOMENT_FORCE_MOMENTS = 2
+} n4m_aom_moment_policy_t;
+
+typedef enum n4m_aom_pls_score_mode_t {
+    N4M_AOM_PLS_SCORE_CV        = 0,
+    N4M_AOM_PLS_SCORE_GCV_PROXY = 1
+} n4m_aom_pls_score_mode_t;
+
 /* ============================================================================
  * 8. Config lifecycle and setters
  * ==========================================================================
@@ -206,15 +227,15 @@ N4M_API n4m_status_t n4m_config_set_store_diagnostics(n4m_config_t*, int32_t ena
 /* Switch `n4m_sparse_simpls_fit` between the default Chun & Keles 2010
  * spls algorithm (enabled=0; matches R `spls::spls`) and the legacy
  * per-component absolute soft-threshold of the SIMPLS direction
- * (enabled=1; behaviour of pls4all <= 0.97.3). */
+ * (enabled=1; behaviour of nirs4all-methods <= 0.97.3). */
 N4M_API n4m_status_t n4m_config_set_sparse_simpls_legacy(n4m_config_t*,
                                                           int32_t enabled);
 N4M_API n4m_status_t n4m_config_get_sparse_simpls_legacy(const n4m_config_t*,
                                                           int32_t* out_enabled);
 /* Switch `n4m_robust_pls_fit` between Partial Robust M-regression
  * (enabled=0; default; matches R `chemometrics::prm` bit-for-bit) and the
- * legacy Huber-IRLS over weighted SIMPLS (enabled=1; behaviour of pls4all
- * <= 0.97.3). */
+ * legacy Huber-IRLS over weighted SIMPLS (enabled=1; behaviour of
+ * nirs4all-methods <= 0.97.3). */
 N4M_API n4m_status_t n4m_config_set_robust_pls_legacy(n4m_config_t*,
                                                        int32_t enabled);
 N4M_API n4m_status_t n4m_config_get_robust_pls_legacy(const n4m_config_t*,
@@ -222,12 +243,53 @@ N4M_API n4m_status_t n4m_config_get_robust_pls_legacy(const n4m_config_t*,
 /* Switch `n4m_approximate_press_compute` between true leave-one-out PRESS
  * (enabled=0; default; matches R `pls::plsr(validation='LOO', method='simpls',
  * scale=FALSE)` bit-for-bit) and the legacy Eastment-Krzanowski leverage-
- * inflated training-residual approximation (enabled=1; behaviour of pls4all
- * <= 0.97.3). */
+ * inflated training-residual approximation (enabled=1; behaviour of
+ * nirs4all-methods <= 0.97.3). */
 N4M_API n4m_status_t n4m_config_set_approximate_press_legacy(n4m_config_t*,
                                                               int32_t enabled);
 N4M_API n4m_status_t n4m_config_get_approximate_press_legacy(const n4m_config_t*,
                                                               int32_t* out_enabled);
+N4M_API n4m_status_t n4m_config_set_aom_moment_policy(n4m_config_t*,
+                                                       n4m_aom_moment_policy_t);
+N4M_API n4m_status_t n4m_config_get_aom_moment_policy(const n4m_config_t*,
+                                                       n4m_aom_moment_policy_t*);
+N4M_API n4m_status_t n4m_config_set_aom_pls_score_mode(n4m_config_t*,
+                                                       n4m_aom_pls_score_mode_t);
+N4M_API n4m_status_t n4m_config_get_aom_pls_score_mode(
+    const n4m_config_t*,
+    n4m_aom_pls_score_mode_t*);
+/* When enabled on AOM sweep methods, return the candidate table and selected
+ * identifiers without the final selected-chain refit/materialization outputs.
+ * This is intended for very large preprocessing screens where downstream code
+ * only needs ranks/scores first. Default is disabled. */
+N4M_API n4m_status_t n4m_config_set_aom_score_only(n4m_config_t*, int32_t enabled);
+N4M_API n4m_status_t n4m_config_get_aom_score_only(const n4m_config_t*, int32_t*);
+/* Optional CUDA scheduling knob for exact PLS1 moment CV. When enabled on a
+ * CUDA build, independent fold/moment jobs may run in bounded stream-parallel
+ * batches on the single selected GPU. Scores are unchanged; this only affects
+ * scheduling and timings. Default is disabled. */
+N4M_API n4m_status_t n4m_config_set_cuda_pls_parallel_folds(n4m_config_t*,
+                                                             int32_t enabled);
+N4M_API n4m_status_t n4m_config_get_cuda_pls_parallel_folds(const n4m_config_t*,
+                                                             int32_t*);
+/* Optional CUDA PLS1 moment routing threshold. The default is 1024 features,
+ * matching the conservative built-in guard. Set a lower positive value only
+ * when benchmarking whether medium-width exact moment PLS screens benefit
+ * from the device route on the selected single GPU. */
+N4M_API n4m_status_t n4m_config_set_cuda_pls_min_device_features(
+    n4m_config_t*, int32_t n_features);
+N4M_API n4m_status_t n4m_config_get_cuda_pls_min_device_features(
+    const n4m_config_t*, int32_t*);
+/* Optional CUDA PLS1 moment many-design batching knob. When enabled on a CUDA
+ * build with more than one independent fold/moment job, the tiled
+ * strided-batched device path is used instead of the reusable sequential
+ * workspace. Scores are unchanged; this only affects scheduling and timings.
+ * Default is disabled; the N4M_CUDA_PLS_MANY_BATCHED env var is an equivalent
+ * fallback opt-in. */
+N4M_API n4m_status_t n4m_config_set_cuda_pls_many_batched(n4m_config_t*,
+                                                          int32_t enabled);
+N4M_API n4m_status_t n4m_config_get_cuda_pls_many_batched(const n4m_config_t*,
+                                                          int32_t*);
 N4M_API n4m_status_t n4m_config_set_dtype            (n4m_config_t*, n4m_dtype_t);
 
 /* Composability hooks — these are non-owning pointers; the lifetime of the
@@ -283,7 +345,8 @@ typedef enum n4m_operator_kind_t {
     N4M_OP_WAVELET_DENOISE     = 14,
     N4M_OP_FINITE_DIFFERENCE   = 15,
     N4M_OP_WHITTAKER           = 16,
-    N4M_OP_FCK                 = 17
+    N4M_OP_FCK                 = 17,
+    N4M_OP_GAUSSIAN            = 18
 } n4m_operator_kind_t;
 
 /* Operator-bank lifecycle. An operator bank is an unordered collection of
@@ -535,7 +598,7 @@ N4M_API n4m_status_t n4m_validation_plan_get_n_folds(
  * a non-empty bank of strict-linear operators (see N4M_OP_IDENTITY,
  * N4M_OP_DETREND_POLY, N4M_OP_SAVGOL_SMOOTH, N4M_OP_SAVGOL_DERIVATIVE,
  * N4M_OP_NORRIS_WILLIAMS, N4M_OP_FINITE_DIFFERENCE, N4M_OP_WHITTAKER,
- * N4M_OP_FCK). Non-strict operators (e.g. N4M_OP_SNV) return
+ * N4M_OP_FCK, N4M_OP_GAUSSIAN). Non-strict operators (e.g. N4M_OP_SNV) return
  * N4M_ERR_UNSUPPORTED.
  *
  * On entry to *_select, *out_result is set to NULL. On success the out
@@ -556,6 +619,13 @@ N4M_API n4m_status_t n4m_validation_plan_get_n_folds(
  *   - selected_operator_indices[k] (POP, int32): bank index of the
  *     operator picked at component k for the selected prefix.
  *   - predictions: full-fit predictions, shape (X.rows, Y.cols).
+ *   - coefficients: selected model coefficients, shape (X.cols, Y.cols);
+ *     for global AOM these are in transformed-operator space, while for POP
+ *     they are already in original input space.
+ *   - input_coefficients: original input-space coefficients, shape
+ *     (X.cols, Y.cols), so X_new @ input_coefficients + intercept predicts
+ *     without replaying the selected operator.
+ *   - intercept: input-space intercept, shape (1, Y.cols).
  *
  * Errors: the universal status-code contract in the header prelude
  * applies. Additional cases:
@@ -605,6 +675,15 @@ N4M_API n4m_status_t n4m_aom_global_result_get_rmse_curves(
 N4M_API n4m_status_t n4m_aom_global_result_get_predictions(
     const n4m_aom_global_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols);
+N4M_API n4m_status_t n4m_aom_global_result_get_coefficients(
+    const n4m_aom_global_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols);
+N4M_API n4m_status_t n4m_aom_global_result_get_input_coefficients(
+    const n4m_aom_global_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols);
+N4M_API n4m_status_t n4m_aom_global_result_get_intercept(
+    const n4m_aom_global_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols);
 
 N4M_API n4m_status_t n4m_aom_per_component_select(
     n4m_context_t* ctx,
@@ -641,6 +720,15 @@ N4M_API n4m_status_t n4m_aom_per_component_result_get_prefix_scores(
     const n4m_aom_per_component_result_t* result,
     const double** out_data, int32_t* out_size);
 N4M_API n4m_status_t n4m_aom_per_component_result_get_predictions(
+    const n4m_aom_per_component_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols);
+N4M_API n4m_status_t n4m_aom_per_component_result_get_coefficients(
+    const n4m_aom_per_component_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols);
+N4M_API n4m_status_t n4m_aom_per_component_result_get_input_coefficients(
+    const n4m_aom_per_component_result_t* result,
+    const double** out_data, int64_t* out_rows, int64_t* out_cols);
+N4M_API n4m_status_t n4m_aom_per_component_result_get_intercept(
     const n4m_aom_per_component_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols);
 
@@ -686,6 +774,344 @@ N4M_API n4m_status_t n4m_method_result_get_scalar(
     const char* name,
     double* out_value);
 
+/* ---- Moment substrate ---- */
+
+/* Raw row-additive sufficient statistics for moment-based linear screens.
+ *
+ * n4m_moments_compute accumulates all rows; n4m_moments_subset_compute
+ * accumulates the rows named by `row_indices`; n4m_moments_subtract computes
+ * lhs - rhs from two compatible moment results. The subtraction path keeps the
+ * raw additive buffers and recomputes centered moments from the remaining
+ * train-row sums, which is the exact fold-subtraction primitive needed by PLS
+ * / Ridge screens.
+ *
+ * Result double matrices:
+ *   "x_sum" (1 x p), "y_sum" (1 x q)
+ *   "xtx" (p x p), "xty" (p x q), "yty" (q x q)       raw moments
+ *   "x_mean" (1 x p), "y_mean" (1 x q)
+ *   "cxx" (p x p), "cxy" (p x q), "cyy" (q x q)       centered moments
+ * Scalars:
+ *   "n_samples", "n_features", "n_targets"
+ *
+ * Inputs may be F64 or F32 matrix views. Internal accumulation and returned
+ * buffers are always F64. In CUDA builds the Gram products go through the
+ * existing compile-time linalg dispatch; this is not yet the fused CUDA
+ * sweep/grinder API.
+ */
+N4M_API n4m_status_t n4m_moments_compute(
+    n4m_context_t* ctx,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    n4m_method_result_t** out_result);
+
+N4M_API n4m_status_t n4m_moments_subset_compute(
+    n4m_context_t* ctx,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const int64_t* row_indices,
+    int64_t n_indices,
+    n4m_method_result_t** out_result);
+
+N4M_API n4m_status_t n4m_moments_subtract(
+    n4m_context_t* ctx,
+    const n4m_method_result_t* lhs,
+    const n4m_method_result_t* rhs,
+    n4m_method_result_t** out_result);
+
+/* Native sweep. ABI v1 supports exact Ridge CV over row-additive moments or
+ * precomputed dual Ridge folds. Compatible single-target NIPALS/regression PLS1
+ * component grids are scored from train/held-out moments; CUDA builds use a
+ * device-resident cuBLAS component loop for very wide p>=1024 PLS1 moment
+ * screens and a scalar host loop below that measured crossover. Other PLS
+ * regimes use materialized fold-local prefix scoring. Batched/fused IKPLS
+ * acceleration across many preprocessing variants is not part of ABI v1.
+ *
+ * `cv` must be in [2, n_samples] when `fold_ids` is NULL+0. In that case
+ * contiguous balanced folds are generated. When `fold_ids` is provided,
+ * `n_fold_ids` must equal n_samples; `cv <= 0` means infer max(fold_ids)+1.
+ *
+ * heads_mask bits: 1 = Ridge, 2 = PLS. At least one bit is required.
+ * `ridge_lambdas` can be NULL+0 to use cfg.ridge_lambda, or a non-empty array
+ * of finite lambdas >= 0. `pls_components` can be NULL+0 to use
+ * cfg.n_components, or a non-empty array of positive component counts.
+ * When `n4m_config_set_aom_score_only(cfg, 1)` is enabled, the sweep keeps
+ * candidate scores and selected ids but returns model/prediction matrices as
+ * empty 0 x 0 outputs.
+ *
+ * Result double matrices:
+ *   "candidate_scores" (n_candidates x 4), row-major columns:
+ *      candidate_id, head_id (0=Ridge, 1=PLS), param (lambda/components),
+ *      cv_rmse
+ *   "oof_predictions" (n_samples x n_targets) for the selected candidate
+ *   "predictions"     (n_samples x n_targets) final refit in-sample
+ *   "coefficients"    (n_features x n_targets), "intercept" (1 x n_targets)
+ *   "x_mean" (1 x n_features), "x_scale" (1 x n_features),
+ *   "y_mean" (1 x n_targets)
+ * Int vectors:
+ *   "fold_ids" (n_samples)
+ * Scalars:
+ *   "selected_candidate_id", "selected_head_id", "selected_param",
+ *   "selected_cv_rmse", "n_candidates", "n_pls_moment_candidates",
+ *   "n_pls_moment_cv_fits", "n_pls_moment_host_cv_fits",
+ *   "n_pls_moment_cuda_device_cv_fits", "n_pls_materialized_cv_fits",
+ *   "n_pls_moment_final_fits", "n_pls_moment_host_final_fits",
+ *   "n_pls_moment_cuda_device_final_fits",
+ *   "n_pls_materialized_final_fits",
+ *   "score_only", "cv", "n_samples", "n_features", "n_targets"
+ */
+N4M_API n4m_status_t n4m_sweep_run(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const double* ridge_lambdas,
+    int64_t n_ridge_lambdas,
+    const int32_t* pls_components,
+    int64_t n_pls_components,
+    int32_t heads_mask,
+    n4m_method_result_t** out_result);
+
+/* PLS-only cross-validation surface.
+ *
+ * ABI 1.22 provides a stable reference endpoint for exact PLS CV. The current
+ * implementation delegates to n4m_sweep_run with heads_mask=PLS, so scores and
+ * route counters match the PLS branch of the sweep path. It is not yet the
+ * grouped/fused multi-chain IKPLS grinder; that executor can replace the
+ * internals later without changing this signature.
+ *
+ * `fold_ids` follows n4m_sweep_run semantics: when provided,
+ * `n_fold_ids == n_samples`; `n_folds <= 0` means infer max(fold_ids)+1.
+ * `component_grid` is a non-empty array of positive component counts.
+ */
+N4M_API n4m_status_t n4m_pls_cross_validate(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    int32_t n_folds,
+    const int32_t* component_grid,
+    int64_t n_component_grid,
+    n4m_method_result_t** out_result);
+
+/* Native AOM preprocessing sweep. Applies the strict-linear AOM chain bank
+ * selected by `profile` (0=compact, 1=wide), then runs the same Ridge/PLS
+ * candidate screen as n4m_sweep_run on every transformed matrix.
+ *
+ * Result double matrices mirror n4m_sweep_run except:
+ *   "candidate_scores" has shape (n_candidates x 5), row-major columns:
+ *      candidate_id, chain_id, head_id (0=Ridge, 1=PLS),
+ *      param (lambda/components), cv_rmse
+ *   "chain_params" has shape (1 x n_chain_params) and stores the flat
+ *      parameter payload for the exported chain descriptor.
+ * Result int vectors additionally include:
+ *   "candidate_routes" (n_candidates), route codes
+ *      0=materialized, 1=dense operator moment, 2=banded operator moment,
+ *      3=structured operator moment,
+ *   "chain_offsets" (n_chains + 1), "op_kinds" (n_ops), and
+ *   "param_offsets" (n_ops + 1). Together with "chain_params" they reproduce
+ *   the exact strict-linear preprocessing bank used for candidate chain_id
+ *   values.
+ * Scalars additionally include:
+ *   "selected_chain_id", "selected_sweep_candidate_id", "n_chains",
+ *   "profile", route counters:
+ *   "n_operator_moment_candidates",
+ *   "n_ridge_operator_moment_candidates",
+ *   "n_pls_operator_moment_candidates",
+ *   "n_banded_operator_moment_candidates",
+ *   "n_structured_operator_moment_candidates",
+ *   "n_dense_operator_moment_candidates",
+ *   "n_materialized_candidates",
+ *   "n_ridge_materialized_candidates",
+ *   "n_pls_materialized_candidates",
+ *   "n_moment_prefix_cache_hits", "n_moment_prefix_cache_misses",
+ *   "n_pls_moment_cv_fits", "n_pls_moment_host_cv_fits",
+ *   "n_pls_moment_cuda_device_cv_fits", "n_pls_materialized_cv_fits",
+ *   "n_pls_moment_final_fits", "n_pls_moment_host_final_fits",
+ *   "n_pls_moment_cuda_device_final_fits",
+ *   "n_pls_materialized_final_fits"
+ */
+N4M_API n4m_status_t n4m_aom_sweep_run(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t profile,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const double* ridge_lambdas,
+    int64_t n_ridge_lambdas,
+    const int32_t* pls_components,
+    int64_t n_pls_components,
+    int32_t heads_mask,
+    n4m_method_result_t** out_result);
+
+/* Native AOM preprocessing sweep over caller-provided strict-linear chains.
+ *
+ * Chain descriptor:
+ *   chain_offsets: length n_chains + 1, monotonic, first=0, last=n_ops.
+ *   op_kinds: length n_ops, values from n4m_operator_kind_t.
+ *   param_offsets: length n_ops + 1, monotonic, first=0, last=n_params.
+ *   params: flat double parameter payload.
+ *
+ * Supported strict-linear operators are identity, detrend polynomial,
+ * Savitzky-Golay smooth/derivative, Norris-Williams, finite difference,
+ * Whittaker, FCK and Gaussian. Empty chains are rejected; use an explicit
+ * identity operator for the raw chain.
+ *
+ * Result double matrices/scalars match n4m_aom_sweep_run. The scalar
+ * "profile" is -1 to indicate a caller-provided chain descriptor.
+ */
+N4M_API n4m_status_t n4m_aom_chain_sweep_run(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const int32_t* chain_offsets,
+    int64_t n_chain_offsets,
+    const int32_t* op_kinds,
+    int64_t n_op_kinds,
+    const int32_t* param_offsets,
+    int64_t n_param_offsets,
+    const double* params,
+    int64_t n_params,
+    const double* ridge_lambdas,
+    int64_t n_ridge_lambdas,
+    const int32_t* pls_components,
+    int64_t n_pls_components,
+    int32_t heads_mask,
+    n4m_method_result_t** out_result);
+
+/* Fit one already-selected caller-provided AOM chain/head/param on all rows
+ * without running CV. This is a model-building endpoint, not a ranking
+ * endpoint: the returned "selected_cv_rmse" and candidate score RMSE are NaN
+ * unless a higher-level wrapper replaces them with an externally verified
+ * score. `head_id` is 0=Ridge or 1=PLS; `param` is Ridge lambda or PLS
+ * component count. Result matrices/scalars match n4m_aom_chain_sweep_run, but
+ * OOF predictions and fold ids are empty and "cv" is 0.
+ */
+N4M_API n4m_status_t n4m_aom_chain_fixed_fit_run(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const int32_t* chain_offsets,
+    int64_t n_chain_offsets,
+    const int32_t* op_kinds,
+    int64_t n_op_kinds,
+    const int32_t* param_offsets,
+    int64_t n_param_offsets,
+    const double* params,
+    int64_t n_params,
+    int32_t head_id,
+    double param,
+    n4m_method_result_t** out_result);
+
+/* Native AOM Ridge simplex blender over strict-linear chain banks.
+ *
+ * This evaluates every (chain, lambda) Ridge candidate with fold-local OOF
+ * predictions, solves a non-negative simplex blend over the OOF prediction
+ * columns, then refits every candidate on all rows and returns the weighted
+ * final in-sample predictions. Lambdas must be finite and strictly positive.
+ *
+ * `profile`: 0=compact, 1=wide. `regularizer` is the non-negative shrinkage
+ * toward uniform simplex weights. `fold_ids` follows n4m_sweep_run semantics.
+ *
+ * Result double matrices:
+ *   "candidate_scores" (n_candidates x 5), columns:
+ *      candidate_id, chain_id, lambda, cv_rmse, simplex_weight
+ *   "weights" (1 x n_candidates)
+ *   "oof_predictions" (n_samples x n_targets) weighted OOF blend
+ *   "predictions" (n_samples x n_targets) weighted final-refit blend
+ *   "input_coefficients" (n_features x n_targets) weighted final-refit
+ *      coefficients folded into the original input feature space
+ *   "intercept" (1 x n_targets) weighted final-refit intercept
+ *   "oof_candidate_predictions" ((n_samples*n_targets) x n_candidates)
+ *   "candidate_predictions" ((n_samples*n_targets) x n_candidates)
+ * Int vectors:
+ *   "fold_ids" (n_samples)
+ * Scalars:
+ *   "selected_candidate_id", "selected_chain_id", "selected_param",
+ *   "selected_cv_rmse", "blend_oof_rmse", "regularizer", "n_candidates",
+ *   "n_chains", "profile", "cv", "n_samples", "n_features", "n_targets"
+ */
+N4M_API n4m_status_t n4m_aom_ridge_blender_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t profile,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const double* ridge_lambdas,
+    int64_t n_ridge_lambdas,
+    double regularizer,
+    n4m_method_result_t** out_result);
+
+/* Native strict-linear AOM operator PLS score stack with Ridge head.
+ *
+ * The method builds the compact/wide strict-linear AOM operator bank, fits a
+ * fold-local PLS1 score projector for each operator, concatenates the scores,
+ * selects (n_components, alpha) by CV criterion, then refits the selected
+ * stack on all rows. This ABI surface is intentionally single-target (`Y`
+ * must have one column), matching the PLS1 reference estimator.
+ *
+ * `profile`: 0=compact, 1=wide. If `fold_ids` is null, contiguous balanced
+ * folds are generated from `cv`; otherwise `fold_ids` must have n_samples
+ * entries. `components` and `alphas` must be non-empty. `std_penalty` and
+ * `gap_penalty` are non-negative additions to the selection criterion:
+ * mean_oof_rmse + std_penalty * std_oof_rmse
+ *               + gap_penalty * max(0, mean_oof_rmse - mean_train_rmse).
+ *
+ * Result double matrices:
+ *   "candidate_scores" (n_specs x 7), columns:
+ *      spec_id, n_components, alpha, mean_oof_rmse, std_oof_rmse,
+ *      mean_train_rmse, criterion
+ *   "fold_scores" (n_specs x cv)
+ *   "oof_predictions" (n_samples x 1) selected-spec OOF predictions
+ *   "predictions" (n_samples x 1) final refit predictions
+ *   "stack_features" (n_samples x n_operator_features) final score stack
+ *   "coefficients" (n_operator_features x 1) final Ridge head
+ *   "intercept" (1 x 1) final Ridge head intercept on stack_features
+ *   "input_coefficients" (n_features x 1) selected stack folded into the
+ *      original input feature space
+ *   "input_intercept" (1 x 1) folded input-space intercept
+ * Int vectors:
+ *   "fold_ids" (n_samples)
+ *   "operator_feature_offsets" (n_operators + 1)
+ * Scalars:
+ *   "selected_spec_id", "selected_components", "selected_alpha",
+ *   "selected_oof_rmse", "selected_train_rmse", "selected_criterion",
+ *   "std_penalty", "gap_penalty", "n_operator_features", "n_specs",
+ *   "n_operators", "profile", "cv", "n_samples", "n_features",
+ *   "n_targets"
+ */
+N4M_API n4m_status_t n4m_aom_operator_pls_stack_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t profile,
+    int32_t cv,
+    const int32_t* fold_ids,
+    int64_t n_fold_ids,
+    const int32_t* components,
+    int64_t n_components,
+    const double* alphas,
+    int64_t n_alphas,
+    double std_penalty,
+    double gap_penalty,
+    n4m_method_result_t** out_result);
+
 /* ---- Fit entry points ---- */
 
 /* Sparse SIMPLS (§7). Soft-thresholds the SIMPLS direction by
@@ -703,6 +1129,22 @@ N4M_API n4m_status_t n4m_sparse_simpls_fit(
     const n4m_matrix_view_t* X,
     const n4m_matrix_view_t* Y,
     double sparsity_lambda,
+    n4m_method_result_t** out_result);
+
+/* Principal Components Regression (PCR). Forces Algorithm.PCR + Solver.SVD
+ * on top of the caller's centering/scaling/n_components config. The result
+ * contains:
+ *   "coefficients" (n_features x n_targets, row-major)
+ *   "predictions"  (n_samples  x n_targets, row-major)
+ *   "x_mean", "x_scale", "y_mean", "y_scale"
+ *   "weights_w", "loadings_p", "rotations_r" (n_features x n_components)
+ *   scalar "rmse", scalar "n_components"
+ */
+N4M_API n4m_status_t n4m_pcr_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
     n4m_method_result_t** out_result);
 
 /* Domain-invariant PLS (§13). Penalizes the SIMPLS direction's alignment
@@ -807,6 +1249,73 @@ N4M_API n4m_status_t n4m_continuum_regression_fit(
     const n4m_matrix_view_t* X,
     const n4m_matrix_view_t* Y,
     double tau,
+    n4m_method_result_t** out_result);
+
+/* Direct (closed-form) multi-output Ridge regression — genuine
+ *   beta = (Xc'Xc + lambda I)^-1 Xc'Yc
+ * on column-centered X, Y, with intercept = y_mean - x_mean.beta (the penalty
+ * is NOT applied to the intercept, for sklearn.linear_model.Ridge parity).
+ * This is distinct from n4m_ridge_pls_fit (ridge-augmented SIMPLS).
+ *
+ * Solver is chosen automatically by shape: PRIMAL (augmented-QR) when
+ * p <= n, DUAL (Gram-on-samples) when p > n; both give identical coefficients.
+ * Centering follows cfg.center_x/center_y (gated by cfg.ridge_fit_intercept);
+ * cfg.scale_x scales X columns (a zero-variance column gets scale 1.0, sklearn
+ * convention -> 0 coefficient). cfg.scale_y is IGNORED: Y is never scaled, to
+ * match sklearn.linear_model.Ridge. Coefficients/intercept are on the original
+ * (de-scaled) X scale.
+ *
+ * `lambdas`/`n_lambdas` reserve a lambda-path/selection extension. v1 uses a
+ * single lambda: pass NULL+0 to take cfg.ridge_lambda, or a 1-element array to
+ * override it (lambdas[0]); n_lambdas > 1 is rejected (N4M_ERR_INVALID_ARGUMENT)
+ * until the path ships. lambda must be finite and >= 0 (lambda=0 is OLS and
+ * may be ill-posed for p >= n). The result contains:
+ *   "coefficients" (p x q), "intercept" (1 x q), "x_mean" (1 x p),
+ *   "x_scale" (1 x p), "y_mean" (1 x q), "predictions" (n x q)
+ *   scalar "rmse", scalar "lambda"
+ */
+N4M_API n4m_status_t n4m_ridge_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const double* lambdas,
+    int64_t n_lambdas,
+    n4m_method_result_t** out_result);
+
+/* AOM robust-HPO preprocessing screen (strict-linear native subset).
+ *
+ * Profiles:
+ *   profile = 0: compact bank (raw, detrend, SavGol variants, NW, diff,
+ *                a few strict-linear compositions)
+ *   profile = 1: wide bank (compact + wider SavGol/NW/Whittaker variants)
+ *
+ * heads_mask bits:
+ *   1 = Ridge heads, 2 = PLS heads, 3 = both.
+ *
+ * The result contains:
+ *   "predictions"                (n_samples x 1)
+ *   "coefficients_transformed"   (n_transformed_features x 1)
+ *   "intercept"                  (1 x 1)
+ *   "candidate_scores"           (n_candidates x 4), row-major columns:
+ *                                 chain_id, head_id (0=ridge, 1=pls),
+ *                                 param, mean CV RMSE
+ *   scalar "selected_chain_id", "selected_head_id", "selected_param",
+ *          "selected_cv_rmse", "n_chains", "n_candidates", "profile", "cv"
+ *
+ * Native v1 is intentionally limited to strict-linear, shape-preserving
+ * AOM operators so the screen can transform each chain once without
+ * train-fold-fitted preprocessing leakage. The Python sklearn wrapper remains
+ * the wider fold-local surface for stateful SNV/MSC/EMSC-style chains.
+ */
+N4M_API n4m_status_t n4m_aom_robust_hpo_fit(
+    n4m_context_t* ctx,
+    const n4m_config_t* cfg,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    int32_t profile,
+    int32_t cv,
+    int32_t heads_mask,
     n4m_method_result_t** out_result);
 
 /* N-PLS (§22). 3-way tensor regression via Bro's algorithm. X must be a
@@ -1352,10 +1861,13 @@ N4M_API n4m_status_t n4m_pls_logistic_fit(
     int32_t n_classes,
     n4m_method_result_t** out_result);
 
-/* AOM preprocessing fit/transform (Phase 6a). Applies an operator bank
- * through the gating strategy and returns both the per-operator outputs
- * and the gated/mixed transformed matrix. Y is optional (some operators
- * use it, e.g. EPO; pass NULL when not needed). Result keys:
+/* AOM preprocessing fit/transform (Phase 6a). Applies the strict-linear
+ * AOM operator bank through the gating strategy and returns both the
+ * per-operator outputs and the gated/mixed transformed matrix. Supported
+ * operator kinds are the strict AOM family (identity, detrend, Savitzky-Golay,
+ * Norris-Williams, finite difference, Whittaker, FCK and Gaussian); non-strict
+ * sample/reference-dependent operators are rejected. Y is optional and may be
+ * NULL for this strict-linear bank. Result keys:
  *   "transformed"        (n × n_features) — final gated transform
  *   "operator_outputs"   (n_operators × (n × n_features), operator-major,
  *                         stored as a (n_operators × (n*n_features)) matrix)

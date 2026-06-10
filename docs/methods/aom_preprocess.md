@@ -4,16 +4,20 @@ _Group_: **Diagnostic** · _Registry tolerance_: `5.0`
 
 ## Description
 
-AOM preprocessing pipeline (§17 Phase 4)
+AOM operator-bank preprocessing primitive (`aom_pop.aom_preprocessing`)
 
-> **Registry note** — In-tree `nirs4all.operators.models.sklearn.aom_pls` is the sanctioned provider. pls4all currently exposes the preprocessing primitive, while nirs4all exposes the full AOM/POP estimator stack; parity is qualitative.
+> **Registry note** — `nirs4all-methods` exposes this primitive directly as
+> `n4m.aom_preprocess` and `n4m.aom.aom_preprocess`. In-tree
+> `nirs4all.operators.models.sklearn.aom_pls` remains the sanctioned reference
+> provider for qualitative AOM parity.
 
 ### Parameters
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_operators` | `int` | `3` | registry benchmark cell value |
-| `gating_mode` | `int` | `0` | registry benchmark cell value |
+| `operators` | sequence of AOM operator specs | compact strict-linear bank | Same syntax as `n4m.aom_pls` / `n4m.aom_chain_sweep_run`: strings, integer enum ids, `(kind, params)` tuples or `{"kind": ..., "params": ...}` mappings. |
+| `gating_mode` | `{"soft", "hard", 1, 0}` | `"soft"` | `soft` averages all operator outputs; `hard` selects the first operator deterministically. |
+| `y` | array-like or `None` | `None` | Optional response matrix passed to the native fit path for operators that need supervised fit state. |
 
 ## Explanations
 
@@ -23,7 +27,7 @@ Beurier, G., Reiter, R., Noûs, C., Rouan, L. & Cornet, D. (2026). *Reframing pr
 
 ### Mathematical principle
 
-`aom_preprocess` is the **operator-bank primitive** that AOM-PLS and POP-PLS build on. Given the centered spectral matrix $\mathbf{X} \in \mathbb{R}^{n\times p}$ and a finite bank of strict-linear operators $\{\mathbf{A}_b\}_{b=1}^{M} \subset \mathbb{R}^{p\times p}$ — matrices fully determined by the wavelength grid (identity, Savitzky–Golay smooth/derivative, finite difference, polynomial detrending, Norris–Williams, Whittaker; SNV / MSC / EMSC / ASLS / OSC are excluded because they depend on $\mathbf{y}$ or on a reference spectrum) — `aom_preprocess` materializes the $M$ preprocessed views $\mathbf{X}_b = \mathbf{X}\mathbf{A}_b^{\top}$ and gates them.
+`aom_preprocess` is the **operator-bank primitive** that AOM-PLS and POP-PLS build on. Given the centered spectral matrix $\mathbf{X} \in \mathbb{R}^{n\times p}$ and a finite bank of strict-linear operators $\{\mathbf{A}_b\}_{b=1}^{M} \subset \mathbb{R}^{p\times p}$ — matrices fully determined by the wavelength grid — `aom_preprocess` materializes the $M$ preprocessed views $\mathbf{X}_b = \mathbf{X}\mathbf{A}_b^{\top}$ and gates them. The direct `n4m_aom_preprocess_fit` surface currently supports the reusable strict-linear operator subset covered by the smoke tests: identity, first-degree polynomial detrending, Savitzky-Golay smoothing, Savitzky-Golay first derivative, Norris-Williams, finite difference, Gaussian smoothing, Whittaker smoothing and FCK. Strict chains and model-scoring diversity are handled by the AOM sweep/campaign operator-moment paths. SNV / MSC / EMSC / ASLS / OSC remain excluded from the moment contract because they depend on per-sample normalization, $\mathbf{y}$, or a reference spectrum.
 
 Two gating modes are supported:
 
@@ -43,7 +47,18 @@ so a downstream PLS step can score the whole bank by $M$ cheap $O(pq)$ left acti
 
 ### Implementation
 
-`n4m_aom_preprocess_fit`. Reference: git-pinned oracle `nirs4all.operators.models.sklearn.aom_pls` (sanctioned exception).
+`n4m_aom_preprocess_fit` via the native C ABI. Python exposes this as
+`n4m.aom_preprocess` and `n4m.aom.aom_preprocess`; both return the native
+MethodResult fields as NumPy arrays/scalars:
+
+- `transformed`: final gated transform, shape `(n_samples, n_features)`;
+- `operator_outputs`: operator-major matrix of per-operator transformed views;
+- `weights`: gating weights;
+- `operator_kinds`: integer AOM operator ids;
+- `n_operators`, `n_samples`, `n_features`, `mode`.
+
+Reference: git-pinned oracle `nirs4all.operators.models.sklearn.aom_pls`
+(sanctioned exception).
 
 MATLAB header (`bindings/matlab/+pls4all/aom_preprocess.m`):
 
@@ -53,9 +68,45 @@ pls4all.aom_preprocess  AOM preprocessing fit/transform.
 
 ### Usage
 
-Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
+The `nirs4all-methods` Python package exposes the product surface directly.
+The lower-level C ABI and legacy `pls4all` examples below dispatch into the
+same native kernel.
 
-**pls4all bindings**
+**nirs4all-methods Python**
+
+```python
+import n4m
+import n4m.aom as aom
+
+res = n4m.aom_preprocess(
+    X,
+    y,
+    operators=[
+        "identity",
+        ("savgol_smooth", [5, 2]),
+        ("detrend_poly", [1]),
+        ("savgol_derivative", [5, 2, 1]),
+        ("norris_williams", [5, 5, 1]),
+        ("finite_difference", [1]),
+        ("gaussian", [1.0]),
+        ("whittaker", [100.0]),
+        ("fck", [1.0]),
+    ],
+    gating_mode="soft",
+)
+
+X_aom = res["transformed"]
+operator_views = res["operator_outputs"]
+weights = res["weights"]
+assert aom.aom_preprocess is n4m.aom_preprocess
+```
+
+For model selection rather than standalone preprocessing, prefer
+`n4m.aom_pls`, `n4m.pop_pls`, `n4m.aom_sweep_run` or
+`n4m.aom_chain_sweep_run`; those surfaces fold selected operators back into
+input-space coefficients for direct prediction reuse.
+
+**Native and compatibility bindings**
 
 ::::{tab-set}
 :class: pls4all-bindings
@@ -66,41 +117,48 @@ Every pls4all binding tab dispatches into the same C kernel; the external librar
 
 ```c
 /* C ABI — libn4m */
-n4m_context_t* ctx = n4m_context_create();
-n4m_config_t*  cfg = n4m_config_create();
+n4m_context_t* ctx = NULL;
+n4m_operator_bank_t* bank = NULL;
+n4m_gating_strategy_t* gate = NULL;
 n4m_method_result_t* res = NULL;
-n4m_aom_preprocess_fit(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
-/* … read coefficients / mask / scores via */
-/* n4m_method_result_get_double_matrix / vector / scalar … */
+n4m_context_create(&ctx);
+n4m_operator_bank_create(&bank);
+n4m_gating_strategy_create(&gate, N4M_GATING_SOFT);
+/* add operators to bank with n4m_operator_bank_add */
+n4m_aom_preprocess_fit(ctx, bank, gate, &x_view, &y_view, &res);
+/* read transformed/operator_outputs/weights via double-matrix getters */
+/* read operator_kinds via n4m_method_result_get_int64_vector */
 n4m_method_result_destroy(res);
-n4m_config_destroy(cfg);
+n4m_gating_strategy_destroy(gate);
+n4m_operator_bank_destroy(bank);
 n4m_context_destroy(ctx);
 ```
 
 :::
 
-:::{tab-item} Python · pls4all (raw)
+:::{tab-item} Python · n4m
 :sync: python-raw
 :class-label: lang-python
 
 ```python
-import pls4all
-from pls4all._methods import aom_preprocess_fit
-with pls4all.Context() as ctx, pls4all.Config() as cfg:
-    res = aom_preprocess_fit(ctx, cfg, X, y)
-# then: res.matrix("predictions"), res.matrix("coefficients"),
-# res.vector("mask"), res.scalar("intercept"), …
+import n4m
+
+res = n4m.aom_preprocess(X, y, operators=["identity"], gating_mode="soft")
+X_aom = res["transformed"]
+operator_kinds = res["operator_kinds"]
 ```
 
 :::
 
-:::{tab-item} Python · pls4all.sklearn
+:::{tab-item} Python · n4m.sklearn
 :sync: python-sklearn
 :class-label: lang-python
 
 ```python
-from pls4all.sklearn import aom_preprocess
-result = aom_preprocess(X, y, n_components=2)
+from n4m.sklearn import NativeAOMPLSRegressor
+
+model = NativeAOMPLSRegressor(max_components=2, cv=4).fit(X, y)
+yhat = model.predict(X)
 ```
 
 :::

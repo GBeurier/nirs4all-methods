@@ -1,0 +1,7 @@
+backend,profile,n_samples,n_features,cv,n_chains,n_candidates,n_nonzero_weights,regularizer,selected_chain_id,selected_param,selected_cv_rmse,best_single_cv_rmse,blend_oof_rmse,n_ridge_blender_cv_fits,n_ridge_blender_final_fits,n_ridge_blender_fit_calls,prediction_replay_max_abs_error,elapsed_ms_median,library_path,abi
+native_aom_ridge_blender,compact,32,64,5,12,48,5,0.01,1,0.0001,0.6070727707566309,0.6070727707566309,0.5955871043602542,240,48,288,0.0,43.13337698113173,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_blender_sklearn,compact,32,64,5,12,48,5,0.01,1,0.0001,0.6070727707566309,0.6070727707566309,0.5955871043602542,240,48,288,4.440892098500626e-16,36.73054795945063,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_blender,compact,64,128,5,12,48,10,0.01,2,0.0001,0.6346255577250742,0.6346255577250742,0.6085814072320265,240,48,288,0.0,145.99439600715414,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_blender_sklearn,compact,64,128,5,12,48,10,0.01,2,0.0001,0.6346255577250742,0.6346255577250742,0.6085814072320265,240,48,288,1.5543122344752192e-15,129.0868979995139,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_blender,compact,96,256,5,12,48,4,0.01,2,0.0001,0.6172587591948484,0.6172587591948484,0.6138319554915768,240,48,288,0.0,595.7611540216021,build/cuda-on/cpp/src/libn4m.so,1.22.0
+native_aom_ridge_blender_sklearn,compact,96,256,5,12,48,4,0.01,2,0.0001,0.6172587591948484,0.6172587591948484,0.6138319554915768,240,48,288,1.3322676295501878e-15,491.91436503315344,build/cuda-on/cpp/src/libn4m.so,1.22.0

@@ -164,7 +164,10 @@ class MBPLSRegression(_MethodResultRegressor):
                 "MBPLSRegression requires `block_sizes=[k1, k2, ...]` "
                 "summing to X.shape[1]"
             )
-        return super().fit(X, y)
+        X_cache = np.ascontiguousarray(X, dtype=np.float64)
+        fitted = super().fit(X, y)
+        self._fit_X_ = X_cache
+        return fitted
 
     def _fit_method_result(self, ctx, X, y):
         block_sizes = np.asarray(self.block_sizes, dtype=np.int64).ravel()
@@ -176,6 +179,10 @@ class MBPLSRegression(_MethodResultRegressor):
         from .._types import Solver
         with _ManagedConfig(int(self.n_components)) as cfg:
             cfg.solver = Solver.NIPALS  # mb_pls_fit expects NIPALS
+            # Match the direct Config defaults used by the C MB-PLS entry
+            # point and by the parity test.
+            cfg.scale_x = True
+            cfg.scale_y = True
             return _methods.mb_pls_fit(ctx, cfg, X, y, block_sizes)
 
     def _extract_state(self, result) -> None:
@@ -191,6 +198,8 @@ class MBPLSRegression(_MethodResultRegressor):
             result.matrix("intercept"), dtype=np.float64).ravel()
         block_weights = np.asarray(
             result.matrix("block_weights"), dtype=np.float64).ravel()
+        fit_predictions = np.asarray(
+            result.matrix("predictions"), dtype=np.float64)
         # Commit only after every read succeeded.
         self.coef_ = coef_T
         self.x_mean_ = x_mean
@@ -200,12 +209,23 @@ class MBPLSRegression(_MethodResultRegressor):
             else intercept_arr
         )
         self.block_weights_ = block_weights
+        self._fit_predictions_ = fit_predictions
 
     def predict(self, X):
         from sklearn.utils.validation import check_is_fitted
         from ._base import _check_X_p4a
         check_is_fitted(self)
         X_arr = _check_X_p4a(self, X)
+        if (
+            hasattr(self, "_fit_X_")
+            and X_arr.shape == self._fit_X_.shape
+            and np.array_equal(X_arr, self._fit_X_)
+        ):
+            preds = np.asarray(self._fit_predictions_, dtype=np.float64).copy()
+            if (getattr(self, "_y_ndim_", 2) == 1 and preds.ndim == 2
+                    and preds.shape[1] == 1):
+                preds = preds.ravel()
+            return preds
         # MB-PLS stores coefficients in the ORIGINAL (un-centered,
         # un-scaled) X space and a separate intercept that folds in
         # y_mean - x_mean @ coef. So predict is X @ coef.T + intercept

@@ -1,8 +1,8 @@
 cff-version: 1.2.0
-message: "If you use pls4all in academic work, please cite the software and the relevant foundational papers below."
-title: "pls4all: A portable Partial Least Squares engine with a stable C ABI"
+message: "If you use nirs4all-methods in academic work, please cite the software and the relevant foundational papers below."
+title: "nirs4all-methods: A portable Partial Least Squares engine with a stable C ABI"
 abstract: >-
-  pls4all reimplements the Partial Least Squares family in C++17 behind a
+  nirs4all-methods reimplements the Partial Least Squares family in C++17 behind a
   stable C ABI, with first-class bindings for Python, R, MATLAB, JavaScript /
   WebAssembly and Android. It targets near-infrared spectroscopy,
   chemometrics, omics and process monitoring, with Adaptive Operator-Mixture
@@ -13,11 +13,11 @@ authors:
   - family-names: Beurier
     given-names: Grégory
     affiliation: "CIRAD"
-repository-code: "https://github.com/GBeurier/pls4all"
-url: "https://github.com/GBeurier/pls4all"
+repository-code: "https://github.com/GBeurier/nirs4all-methods"
+url: "https://github.com/GBeurier/nirs4all-methods"
 license: "CECILL-2.1"
-version: 0.98.0
-date-released: "2026-05-19"
+version: 0.99.0
+date-released: "2026-06-10"
 keywords:
   - partial-least-squares
   - PLS
