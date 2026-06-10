@@ -3452,3 +3452,43 @@ chains and folds (Remaining-work §1/§3). To be scoped in a separate
 discussion. The next plausible bounded increment before that remains reducing
 the host packing/repack of `hC`/`hs` and the final `hW`/`hP` outputs if
 profiling shows it matters.
+
+> Update 2026-06-08 (see the dated section below): the "big task" was scoped
+> and a measured (nsys) profile **redirected** it — the fused IKPLS scorer was
+> the wrong layer; the real win was the Ridge GCV solve. B1+B2 captured a
+> cumulative **4.22×**; the full device-resident chain (B4) was investigated
+> and **not pursued** (the moment build is never the pipeline bottleneck).
+
+## Continuation (2026-06-08) — GPU full-execution roadmap (B1–B3) + full-57 campaign
+
+User direction: make the three screening layers run on GPU with a measured
+before/after at each step (multi-agent: Fable design/review, Codex impl, Opus
+orchestration + gate). nsys on BERRY (p=2101, 71.3 s) showed the Ridge GCV
+solve was 37% of host time — not the assumed fused IKPLS scorer. Reordered the
+work accordingly (`docs/architecture/GPU_ROADMAP_GOAL.md` +
+`fused_moment_executor_design.md` + its Codex review +
+`_b{1,2,3}_fable_{design,review}.md`).
+
+- **B1 — Ridge GCV solve → cuSOLVER SPD Cholesky** (`spd_solve`). ✅ done,
+  **3.83×** on BERRY/COLZA/LUCAS (BERRY 7.59×), RMSEP preserved, host fallback.
+- **B2 — device-resident dual-Ridge** (`prepare_dual_ridge`/`dual_ridge_solve`/
+  `destroy_dual_ridge`, upload K once + reuse buffers). ✅ done, cumulative
+  **4.22×**, RMSEP bit-identical.
+- **B3 — device moment/gram build** (`build_moments_device`/`build_gram_device`).
+  ⚙️ size-gated opt-in (`N4M_CUDA_MOMENT_MIN_PRODUCT`, default 15e9); host build
+  is optimal below it. Bit-equivalent, default = host.
+- **B4 — full device-resident chain.** Not pursued (moment build ~1% of a LUCAS
+  fit; never the bottleneck).
+- **Full-57 staged campaign** (`benchmarks/cross_binding/aom_staged_full57_20260608*`,
+  51 datasets): competitive but not dominant vs AOM-PLS/AOM-Ridge/TabPFN
+  (median 1.04/1.10/1.11); recall = largely irreducible selection variance
+  (top-5 recall 0.784).
+
+No ABI/version change (internal `cuda_dispatch` symbols only; libn4m stays
+1.22.0, project 0.98.0). Green gate green: dev-release + cuda-on build & ctest
+(2/2 on GPU), catalog 208, ABI 702/702, version sync. **Committed this session**
+on `release-readiness-fixes`: `d61806a` (perf core+tests), `c92b4b6` (roadmap
+docs), `ebc5594` (full-57 campaign), followed by release-hygiene doc/CHANGELOG
+fixes. Remaining to publish = maintainer decisions (version number + CHANGELOG
+cut) + account/runner-bound steps (PyPI Trusted-Publisher, NPM_TOKEN+emsdk,
+CRAN web-form).
