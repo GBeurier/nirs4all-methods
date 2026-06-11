@@ -4,9 +4,11 @@
 
 * This is a **new submission** to CRAN.
 * `n4m` 0.99.0 — a portable Partial Least Squares (PLS) and
-  Near-Infrared Spectroscopy (NIRS) engine. The C++17/C/Fortran numerical
-  core (233 translation units) is vendored under `src/vendor/` and compiled
-  from source at install time. No external system library is required.
+  Near-Infrared Spectroscopy (NIRS) engine. The C++17/C numerical
+  core (222 translation units) is vendored under `src/vendor/` and compiled
+  from source at install time. The package contains **no Fortran**: it is a
+  pure C/C++ build, so no Fortran toolchain is needed and no Fortran flags are
+  set. No external system library is required.
 * License: `CeCILL (== 2.1)` (a GPL-compatible French free-software
   license, listed in R's license database).
 * The same numerical core powers the project's Python (PyPI),
@@ -16,11 +18,11 @@
 
 ## Test environments
 
-* Local development smoke (Ubuntu/WSL2, R 4.3.3): `R CMD check --as-cran
-  --no-manual` → 0 errors; the only WARNING and the extra NOTEs are
-  environment artifacts (no `checkbashisms` installed locally; conda-R's
-  `-march=nocona` Makeconf flag; offline URL/NTP checks) — none originate
-  from the package. See "Known notes" below.
+* Local development check (Ubuntu/WSL2, conda R 4.6.0): `R CMD check --as-cran
+  --no-manual` → **0 errors, 0 warnings, 2 NOTEs**. The two NOTEs are
+  (a) "New submission" and (b) a single non-portable compilation flag
+  `-march=nocona` that comes from conda-forge R's own `Makeconf`, not from the
+  package — neither originates from the package. See "Known notes" below.
 * Submission-grade checks are run on **current R (release + devel)** before
   upload, via the GitHub Actions CI matrix (`.github/workflows/release-r.yml`):
   - Ubuntu 22.04 (R release + devel)
@@ -33,28 +35,29 @@
 ## Known notes (all expected)
 
 * **GNU make is a SystemRequirements** — the package's Makevars uses
-  `$(shell find ...)` and pattern substitution to enumerate the 233
-  vendored C/C++/Fortran sources without hard-coding each filename. GNU make
+  `$(shell find ...)` and pattern substitution to enumerate the 222
+  vendored C/C++ sources without hard-coding each filename. GNU make
   is declared in `SystemRequirements`.
 * **New submission** — first upload.
-* **Compilation flags** — the package's Makevars set a single Fortran flag,
-  `PKG_FFLAGS = -std=legacy`, so gfortran accepts the vendored legacy FITPACK
-  FORTRAN 77 (shared DO termination labels, an obsolescent feature) without
-  warnings. It is the only non-default flag and triggers the expected
-  "checking compilation flags in Makevars" NOTE. Any `-march=nocona` on a local
-  build comes from R's own Makeconf (conda-forge R), not the package.
+* **No Fortran, no non-default compilation flags** — the package is a pure
+  C/C++ build. It vendors and compiles only C/C++ sources and sets no
+  non-default compilation flag (no `PKG_FFLAGS`, no `-std=legacy`). The
+  spline-smoothing augmenter uses a from-scratch C cubic smoothing-spline
+  (Reinsch) implementation, so the build needs no Fortran toolchain. The only
+  non-portable flag in the install log, `-march=nocona`, is injected by
+  conda-forge R's own `Makeconf`, not by the package.
 
 ## Compile time
 
-The package vendors and compiles 233 C/C++/Fortran translation units. On a
+The package vendors and compiles 222 C/C++ translation units. On a
 typical CRAN check farm the install takes ~3–5 minutes. Per CRAN policy this
 is within the acceptable budget.
 
 ## Anti-patterns avoided
 
-* No `-O3`, `-march=native`, `-Werror`, or LTO flags in the Makevars. The only
-  non-default flag is `PKG_FFLAGS = -std=legacy` for the legacy FITPACK FORTRAN
-  (see "Compilation flags" above) — portable across gfortran versions.
+* No `-O3`, `-march=native`, `-Werror`, LTO, or `PKG_FFLAGS` flags in the
+  Makevars. The package sets no non-default compilation flag at all (it is a
+  pure C/C++ build with no Fortran).
 * No `printf` / `cout` / `Rprintf` from C++ paths during default
   execution.
 * No internet, filesystem write outside `tempdir()`, or shell
@@ -73,9 +76,12 @@ The active R surface is now NIRS-first: base formula/S3, `pls`-style
 
 ## Reviewer-facing notes
 
-* The vendored C++ sources are an exact textual copy of `cpp/include/`
+* The vendored C/C++ sources are a textual copy of `cpp/include/`
   and `cpp/src/` from the project's GitHub repository at the tag
-  matching this version. The sync is automated via
+  matching this version, with one directory omitted: the optional vendored
+  FITPACK Fortran (`cpp/src/core/common/_vendored/fitpack/`) is **not**
+  shipped, because the R build selects the package's own from-scratch C cubic
+  smoothing-spline (Reinsch) path. The sync is automated via
   `scripts/bump_version.sh` and verified by the
   `.github/workflows/version-sync.yml` workflow on every PR.
 * The `CUDA` backend file `cuda_dispatch.cpp` is intentionally
