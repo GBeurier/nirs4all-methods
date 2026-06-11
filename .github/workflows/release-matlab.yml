@@ -34,7 +34,10 @@ jobs:
         run: |
           VER=$(sed -nE 's/.*N4M_PROJECT_VERSION_STRING[[:space:]]+"([^"]+)".*/\1/p' cpp/include/n4m/n4m_version.h)
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
-          echo "prefix=nirs4all-methods-matlab-$VER" >> "$GITHUB_OUTPUT"
+          # matlab-octave: the same +pls4all package + build_mex.m serve BOTH
+          # MATLAB and Octave (build_mex.m uses mkoctfile under Octave). The name
+          # makes the package discoverable to both audiences (see COMPAT.md).
+          echo "prefix=nirs4all-methods-matlab-octave-$VER" >> "$GITHUB_OUTPUT"
 
       - name: Build the MATLAB/Octave package (deterministic git archive)
         run: |
