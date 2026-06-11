@@ -1,0 +1,60 @@
+# MATLAB / Octave binding package for every release tag.
+#
+# The bindings/matlab tree (the +pls4all classdef package, build_mex.m, the MEX
+# sources and the test suite) is a SOURCE distribution: users download the zip,
+# run build_mex.m to compile the MEX entry points against their own MATLAB or
+# Octave, then use the +pls4all package. The same archive serves MATLAB and
+# Octave (see bindings/matlab/COMPAT.md). It is attached to the GitHub Release
+# so users can download it without cloning the repo.
+#
+# Trigger: tag push v*.*.* (attach gated on a non-rc tag), or workflow_dispatch
+# for a dry run (build the artifact, no Release upload).
+name: release-matlab
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write   # attach the asset to the Release
+
+jobs:
+  matlab-package:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: meta
+        run: |
+          VER=$(sed -nE 's/.*N4M_PROJECT_VERSION_STRING[[:space:]]+"([^"]+)".*/\1/p' cpp/include/n4m/n4m_version.h)
+          echo "ver=$VER" >> "$GITHUB_OUTPUT"
+          echo "prefix=nirs4all-methods-matlab-$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Build the MATLAB/Octave package (deterministic git archive)
+        run: |
+          mkdir -p dist
+          # Archive only the bindings/matlab subtree under a clean top-level dir.
+          git archive --format=zip \
+            --prefix="${{ steps.meta.outputs.prefix }}/" \
+            HEAD:bindings/matlab \
+            -o "dist/${{ steps.meta.outputs.prefix }}.zip"
+          unzip -l "dist/${{ steps.meta.outputs.prefix }}.zip" | tail -3
+
+      - name: Upload to the matching Release
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ steps.meta.outputs.prefix }}.zip
+          fail_on_unmatched_files: true
+
+      - name: Upload artifact (always, for dry runs / inspection)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.prefix }}
+          path: dist/
