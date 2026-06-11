@@ -236,6 +236,7 @@
   "buildPresets": [
     { "name": "dev-debug",                "configurePreset": "dev-debug" },
     { "name": "dev-release",              "configurePreset": "dev-release" },
+    { "name": "emscripten",               "configurePreset": "emscripten" },
     { "name": "blas-on",                  "configurePreset": "blas-on" },
     { "name": "omp-on",                   "configurePreset": "omp-on" },
     { "name": "blas-omp",                 "configurePreset": "blas-omp" },
