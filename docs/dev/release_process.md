@@ -13,8 +13,7 @@ automated (PyPI, CRAN-tarball build); the JS / MATLAB / Octave bindings are
 | R | `n4m` | CRAN | **Semi-automated** — `release-r.yml` vendors libn4m into `src/vendor/`, runs `R CMD check --as-cran` on the Linux/macOS/Windows + release/devel matrix, and (on tag push) attaches the tarball to the GitHub Release. **Submission is the irreducible manual web form.** | `workflow_dispatch`; tag push attaches the tarball |
 | R | `pls4all` (slim) | CRAN | **Semi-automated** — same `release-r.yml`, the matrix has a `pkg: [n4m, pls4all]` leg. | `workflow_dispatch`; tag push attaches the tarball |
 | JS / WASM | `@nirs4all/methods-wasm` | npm | **Build CI-automated** in `cross-binding-parity.yml` (emsdk pinned, `npm test` parity); **publish manual** (this doc) | — |
-| MATLAB | `+pls4all` | File Exchange | **Manual** (no licensed runner; build/test described in `bindings/matlab/COMPAT.md`) | — |
-| Octave | `pls4all` (pkg) | — / Octave Forge | **Build CI-automated** in `cross-binding-parity.yml` (apt octave + `build_mex.m` + `test_parity`); **publish manual** | — |
+| MATLAB / Octave | `+pls4all` | GitHub Release | **Automated** — `release-matlab.yml` attaches `nirs4all-methods-matlab-octave-<version>.zip` to the Release. ONE binding serves both: users build the MEX with `build_mex.m` (MATLAB) or `mkoctfile` via `build_mex.m` (Octave); see `bindings/matlab/COMPAT.md`. A File Exchange / Octave Forge listing is optional + manual. | tag push attaches the zip |
 
 ## Exact release artifacts — what each binding ships, and where to upload it
 
@@ -30,8 +29,7 @@ them are downloadable from one place.
 | R `pls4all` | CRAN | **`pls4all_0.99.0.tar.gz`** (source tarball) | **Manual** — web form |
 | R `n4m` + `pls4all` | R-universe | — (built from Git, no upload) | **Automated** — registry repo + app (see *R → R-universe*) |
 | JS / WASM `@nirs4all/methods-wasm` | npm | the staged `dist/` package (via `npm publish`) | **Automated** — `release-npm.yml` (needs `NPM_TOKEN` — see *JS → npm*) |
-| MATLAB `+pls4all` | File Exchange | `bindings/matlab/` packaged as a `.zip` / `.mltbx` toolbox | **Manual** upload |
-| Octave `pls4all` | Octave Forge | the Octave package source `.tar.gz` | **Manual** |
+| MATLAB / Octave `+pls4all` | GitHub Release | **`nirs4all-methods-matlab-octave-<version>.zip`** — the `bindings/matlab/` source (`+pls4all` package + `build_mex.m` + MEX sources + tests). ONE package for both; download + run `build_mex.m`. | **Automated** — `release-matlab.yml` attaches it (File Exchange / Octave Forge optional + manual) |
 | Source + provenance | GitHub Release | `nirs4all-methods-0.99.0-src.tar.gz` · `…-src.zip` · `nirs4all-methods-0.99.0.cdx.json` (SBOM) · `SHA256SUMS` | **Automated** — `release-source.yml` |
 
 **For R/CRAN, upload the source `.tar.gz` only** — never a binary, the GitHub repo
@@ -93,8 +91,10 @@ on the `pls4all` name is structurally impossible:
 
 ## Manual binding publication
 
-The JS, MATLAB, and Octave bindings have **no publish workflow**. Their native
-glue (WASM module, MEX dispatcher) is built locally and published by hand. Each
+The **MATLAB/Octave** package is attached to the GitHub Release automatically by
+`release-matlab.yml` (`nirs4all-methods-matlab-octave-<version>.zip`); the optional
+File Exchange / Octave Forge *listing* is still manual. The **JS/WASM** package is
+built + published to npm by `release-npm.yml` (`@nirs4all/methods-wasm`). Each
 binding's artifact is built from the **same `libn4m` source** at the released
 version; always run the pre-release gates first.
 
