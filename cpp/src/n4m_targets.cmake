@@ -52,7 +52,12 @@ file(GLOB _N4M_FITPACK_FORTRAN
 )
 
 set(_N4M_FITPACK_ENABLED OFF)
-if(_N4M_FITPACK_FORTRAN)
+# NOT EMSCRIPTEN: emscripten/WASM has no Fortran compiler, but check_language()
+# would still find a HOST gfortran on the runner and wrongly enable FITPACK —
+# the host Fortran objects aren't WASM, so the WASM link fails with undefined
+# curfit_/splev_. Force FITPACK off for WASM (spline_smoothing.c has a
+# non-FITPACK fallback under N4M_HAVE_FITPACK=0).
+if(_N4M_FITPACK_FORTRAN AND NOT EMSCRIPTEN)
     include(CheckLanguage)
     check_language(Fortran)
     if(CMAKE_Fortran_COMPILER)
