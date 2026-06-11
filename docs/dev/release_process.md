@@ -260,9 +260,16 @@ The **R source tarball only** — one submission per package:
 - **`pls4all_0.99.0.tar.gz`**
 
 Get them from the
-**[v0.99.0 Release assets](https://github.com/GBeurier/nirs4all-methods/releases/tag/v0.99.0)**
-(attached by `release-r.yml`), or a `release-r.yml` *Run workflow* run's
-`{n4m,pls4all}-cran-tarball` artifacts, or locally
+**[v0.99.0 Release assets](https://github.com/GBeurier/nirs4all-methods/releases/tag/v0.99.0)**:
+the files are named exactly **`n4m_<version>.tar.gz`** and **`pls4all_<version>.tar.gz`**
+(attached by `release-r.yml`). There is **no `-cran-tarball` suffix on the Release** —
+download `n4m_0.99.0.tar.gz` and `pls4all_0.99.0.tar.gz` directly and upload those.
+
+> `<pkg>-cran-tarball` is only the GitHub **Actions artifact** name that wraps the
+> *same* `<pkg>_<version>.tar.gz` on a `release-r.yml` *Run workflow* run — relevant
+> only if you download from the Actions run instead of the Release.
+
+You can also build the tarball locally
 (`cd bindings/r/n4m && sh .prepare && R CMD build .`).
 
 ### The submission form — exact values
