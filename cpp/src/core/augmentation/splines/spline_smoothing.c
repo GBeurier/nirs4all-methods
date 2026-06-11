@@ -194,8 +194,10 @@ static int n4m_reinsch_smooth(const double* y, int m, double target_s,
         }
 
         if (p == 0.0) {
-            /* p = 0 is the interpolating natural spline (F2 = 0). If the
-             * input is essentially flat, F2 stays ~0 and we are done. */
+            /* p = 0 is the least-squares straight-line projection (maximal
+             * smoothing), where F2 (the residual sum of squares) is at its
+             * UPPER bound — not interpolation. If the input is essentially
+             * flat even that bound is ~0, so there is nothing to smooth. */
             double max_qy = 0.0;
             for (int i = 1; i < m - 1; ++i) {
                 double a = fabs(qy[i]);
@@ -206,7 +208,7 @@ static int n4m_reinsch_smooth(const double* y, int m, double target_s,
              * curfit would also accept a smoother fit: seed p from the
              * roughness scale and let Newton converge F2 up toward S.
              *
-             * F2 at the *least-squares straight line* (p -> inf) is the
+             * F2 at the *least-squares straight line* (p = 0) is the
              * upper bound; if that bound is already <= S, the straight line
              * is the answer. We approximate by climbing p from a scaled
              * seed. */
