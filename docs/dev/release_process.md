@@ -352,3 +352,22 @@ Maintainer: Gregory Beurier <gregory.beurier@cirad.fr> (CIRAD).
 
 After uploading, CRAN emails a confirmation link — click it to complete. For a new
 package, expect the automated incoming checks then a human reviewer.
+
+## Operational notes (lessons from the 0.99.0 multi-registry release)
+
+- **npm needs an Automation token.** A regular/Granular token without "bypass 2FA"
+  fails `npm publish` with `403 — 2FA required` (or `E404` on the scoped PUT if it
+  lacks `@nirs4all` org write). Use a **classic Automation** token (or a Granular
+  token with read+write on the `@nirs4all` org) as the `NPM_TOKEN` secret.
+- **`release-npm.yml` dispatch defaults to a dry run.** Its `publish` input is
+  `default: false` — pass `-f publish=true` to actually publish:
+  `gh workflow run release-npm.yml --ref main -f publish=true`.
+- **Re-run a publish on `main`, not by replaying an old tag.** `gh run rerun <id>`
+  on a tag-triggered run replays the *tagged* commit; re-running the `v0.99.0` npm
+  run failed with `No such build preset: emscripten` because that tag predates the
+  preset. Dispatch the workflow on `main` instead. (`gh run rerun` also has no
+  `--failed` flag in current gh.)
+- **`pls4all` Trusted Publisher** = repo `nirs4all-methods`, workflow
+  `release-python.yml`, env `pypi` (NOT the historical `GBeurier/pls4all` repo).
+- **`vX.Y.Z` tags publish only if non-pre-release** (no `-`); the PyPI/Release jobs
+  gate on `!contains(ref, '-')`.
