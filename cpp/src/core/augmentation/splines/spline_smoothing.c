@@ -3,6 +3,7 @@
 
 #include <limits.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -59,8 +60,19 @@ struct n4m_aug_spline_smooth_state_t {
  *           R_{j,j} = (h_{j-1}+h_j)/3,  R_{j,j+1} = h_j/6
  *           -> with h=1: diag 2/3, off-diag 1/6;
  *       D = diag(dy_i) = I here.
- *   Q^T D^2 Q is symmetric pentadiagonal; with h=1 and D=I its bands are
- *       diag 6 (5 at the two ends), super-1 -4, super-2 1.
+ *   The unknowns are the (m-2) interior second derivatives, so the system
+ *   matrix is the SQUARE Gram Q^T D^2 Q of size (m-2) x (m-2). With h=1 and
+ *   D=I it is symmetric pentadiagonal with CONSTANT bands
+ *       diag 6, super-1 -4, super-2 1
+ *   on every interior row, endpoints included: column j of Q is the full
+ *   second-difference vector e_{j-1} - 2 e_j + e_{j+1} for every
+ *   j = 1..m-2 (all of its three support rows 0..m-1 are valid), so
+ *   <col_j, col_j> = 1 + 4 + 1 = 6 with no endpoint reduction. (The
+ *   "1,5,6,...,5,1" diagonal sometimes quoted for smoothing splines is the
+ *   m x m Gram Q Q^T of the *full-grid* formulation, a different system; the
+ *   (m-2)-interior system used here has a uniform-6 diagonal, and only with a
+ *   uniform 6 does the p=0 limit Q^T Q u = Q^T y reduce g = y - Q u to the
+ *   exact least-squares straight line.)
  *   The smoothed values are  g = y - D^2 Q u  =  y - (Q u)  (D = I), where
  *       (Q u)_i = u_{i-1} - 2 u_i + u_{i+1}  (u_0 = u_{m-1} = 0).
  *   The residual sum of squares is F2(p) = || D^2 Q u ||^2 = || Q u ||^2,
@@ -126,8 +138,13 @@ static int n4m_reinsch_smooth(const double* y, int m, double target_s,
         /* Assemble symmetric pentadiagonal M = Q^T Q + p R over interior
          * indices [1, m-2]; store bands in d (diag), l1 (+1), l2 (+2). */
         for (int i = 1; i < m - 1; ++i) {
-            double qq_diag = (i == 1 || i == m - 2) ? 5.0 : 6.0;
-            d[i]  = qq_diag + p * r_diag;
+            /* (m-2)-interior Gram Q^T Q: constant pentadiagonal bands
+             * diag 6, super-1 -4, super-2 1 on EVERY interior row (no
+             * endpoint reduction — column j of Q is the full 1,-2,1 stencil
+             * for all j=1..m-2). Add the penalty p*R (R: diag 2/3, off 1/6).
+             * The R off-diagonal couples only adjacent unknowns, so it lands
+             * on the super-1 band; the super-2 band stays at 1. */
+            d[i]  = 6.0 + p * r_diag;
             l1[i] = (i + 1 <= m - 2) ? (-4.0 + p * r_off) : 0.0;
             l2[i] = (i + 2 <= m - 2) ? (1.0) : 0.0;
         }
@@ -255,12 +272,27 @@ n4m_status_t n4m_aug_spline_smooth_state_apply(
     (void)rng_void;
     if (X == NULL || out == NULL) return N4M_ERR_NULL_POINTER;
     if (rows < 0 || cols < 0) return N4M_ERR_INVALID_ARGUMENT;
+
+    /* Total-size guard. rows/cols are API-accepted int64_t; their product (the
+     * element count) and its byte size feed both the passthrough memcpy and
+     * the per-row pointer arithmetic X + i*cols. Reject dims whose product
+     * would overflow int64_t, or whose byte size would overflow size_t, BEFORE
+     * the multiplication is performed (signed overflow is UB) and before any
+     * pointer is formed — otherwise an absurd-but-legal (rows, cols) could wrap
+     * the index/size and produce a wild pointer. The division tests never
+     * overflow because both operands are non-negative here. */
+    if (rows != 0 && cols > INT64_MAX / rows) return N4M_ERR_INVALID_ARGUMENT;
+    const int64_t total = rows * cols;
+    if ((uint64_t)total > (uint64_t)(SIZE_MAX / sizeof(double)))
+        return N4M_ERR_INVALID_ARGUMENT;
+    const size_t total_bytes = (size_t)total * sizeof(double);
+
     if (rows == 0 || cols == 0) {
-        if (out != X) memcpy(out, X, (size_t)(rows * cols) * sizeof(double));
+        if (out != X) memcpy(out, X, total_bytes);
         return N4M_OK;
     }
     if (cols < 4) {
-        if (out != X) memcpy(out, X, (size_t)(rows * cols) * sizeof(double));
+        if (out != X) memcpy(out, X, total_bytes);
         return N4M_OK;
     }
 #if !N4M_HAVE_FITPACK
