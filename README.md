@@ -68,6 +68,15 @@ print(m.score(X, y))            # sklearn-compatible
 
 ### R
 
+**Install the released binaries from R-universe** (no C++/R toolchain to set up):
+
+```r
+install.packages("n4m",     repos = c("https://gbeurier.r-universe.dev", getOption("repos")))
+install.packages("pls4all", repos = c("https://gbeurier.r-universe.dev", getOption("repos")))  # slim PLS-only subset
+```
+
+Or build from this checkout:
+
 ```bash
 N4M_INCLUDE_DIR=$PWD/cpp/include \
   N4M_LIB_DIR=$PWD/build/blas-omp/cpp/src \
