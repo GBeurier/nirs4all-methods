@@ -64,15 +64,15 @@ jobs:
       matrix:
         os:
           - ubuntu-22.04
-          - macos-13
           - macos-14
           - windows-2022
         arch:
           - x86_64
           - aarch64
         exclude:
-          - os: macos-13
-            arch: aarch64
+          # macos-14 builds ONE universal2 wheel (x86_64 + arm64). macos-13 is
+          # dropped: the GitHub macos-13 (Intel) runner queue is unreliable
+          # (hours-long), and the universal2 wheel covers Intel Macs anyway.
           - os: macos-14
             arch: x86_64
           - os: windows-2022
@@ -104,9 +104,10 @@ jobs:
           package-dir: bindings/python_nirs4all_methods
         env:
           CIBW_ARCHS_LINUX:   ${{ matrix.arch }}
-          # cibuildwheel on macOS names the Apple-silicon arch "arm64", not the
-          # Linux "aarch64" the matrix uses — translate so macos-14 is valid.
-          CIBW_ARCHS_MACOS:   ${{ matrix.arch == 'aarch64' && 'arm64' || matrix.arch }}
+          # macos-14 builds a single universal2 wheel (x86_64 + arm64) via the
+          # ci-macos-universal2 preset below — covers Intel + Apple Silicon and
+          # avoids the unreliable macos-13 runner.
+          CIBW_ARCHS_MACOS:   universal2
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_BUILD: cp310-* cp311-* cp312-* cp313-*
           CIBW_SKIP: "*-musllinux_*"
@@ -119,7 +120,7 @@ jobs:
           # finds the toolchain itself); Linux/macOS use the default dev-release.
           # This propagates to CIBW_BEFORE_ALL on the host-built platforms;
           # the Linux container uses build_libn4m_in_wheel.sh's dev-release default.
-          PLS4ALL_BUILD_PRESET: ${{ runner.os == 'Windows' && 'ci-windows-msvc-release' || 'dev-release' }}
+          PLS4ALL_BUILD_PRESET: ${{ runner.os == 'Windows' && 'ci-windows-msvc-release' || runner.os == 'macOS' && 'ci-macos-universal2' || 'dev-release' }}
           # Pin the macOS minimum so all three agree: clang/CMake build libn4m.dylib
           # with -mmacosx-version-min=11.0 (dev-release sets no CMAKE_OSX_DEPLOYMENT_TARGET,
           # so it inherits this env), cibuildwheel tags the wheel macosx_11_0_*, and
