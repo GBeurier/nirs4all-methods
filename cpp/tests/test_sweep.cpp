@@ -74,15 +74,30 @@ bool set_process_env(const char* name, const char* value) noexcept {
 #endif
 }
 
+std::string get_process_env(const char* name, bool& found) {
+#if defined(_WIN32)
+    char* value = nullptr;
+    std::size_t len = 0;
+    if (_dupenv_s(&value, &len, name) != 0 || value == nullptr) {
+        found = false;
+        return {};
+    }
+    std::string out(value, len > 0 ? len - 1U : 0U);
+    std::free(value);
+    found = true;
+    return out;
+#else
+    const char* value = std::getenv(name);
+    found = value != nullptr;
+    return found ? std::string(value) : std::string{};
+#endif
+}
+
 class EnvVarOverride {
 public:
     EnvVarOverride(const char* name, const char* value)
         : name_(name) {
-        const char* previous = std::getenv(name);
-        if (previous != nullptr) {
-            had_previous_ = true;
-            previous_ = previous;
-        }
+        previous_ = get_process_env(name, had_previous_);
         N4M_TEST_REQUIRE(set_process_env(name_.c_str(), value));
     }
 
