@@ -113,7 +113,6 @@ SEXP r_n4m_snv_transform(SEXP X, SEXP with_mean, SEXP with_std, SEXP ddof) {
     int64_t rows = 0;
     int64_t cols = 0;
     r_pp_matrix_shape(X, &rows, &cols);
-    const int offset = r_pp_flag(zero_based, 0) ? 0 : 1;
 
     SEXP X_rm = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)(rows * cols)));
     SEXP out_rm = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)(rows * cols)));
@@ -190,6 +189,7 @@ SEXP r_n4m_kennard_stone_split(SEXP X, SEXP test_size, SEXP zero_based) {
     int64_t rows = 0;
     int64_t cols = 0;
     r_pp_matrix_shape(X, &rows, &cols);
+    const int offset = r_pp_flag(zero_based, 0) ? 0 : 1;
 
     SEXP X_rm = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)(rows * cols)));
     r_pp_copy_r_to_rowmajor(X, rows, cols, REAL(X_rm));
