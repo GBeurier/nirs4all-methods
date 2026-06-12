@@ -3100,9 +3100,7 @@ def _pls_logistic_pls4all(ctx, cfg, X, Y, *, n_components, n_classes,
 
 def _aom_preprocess_pls4all(ctx, cfg, X, Y, *, n_operators, gating_mode,
                              **_):
-    """Build an OperatorBank with a few canonical NIRS preprocessors
-    (Identity, Center, SNV, Pareto, Autoscale) and run the AOM
-    preprocessing kernel under the selected gating mode."""
+    """Build a compact strict-linear OperatorBank and run AOM preprocessing."""
     import ctypes
     import pls4all
     from pls4all._ffi import lib
@@ -3116,17 +3114,7 @@ def _aom_preprocess_pls4all(ctx, cfg, X, Y, *, n_operators, gating_mode,
         lib.n4m_gating_strategy_destroy.restype = None
         lib.n4m_gating_strategy_destroy.argtypes = [ctypes.c_void_p]
 
-    bank = pls4all.OperatorBank()
-    canon = [
-        pls4all.OperatorKind.IDENTITY,
-        pls4all.OperatorKind.CENTER,
-        pls4all.OperatorKind.PARETO_SCALE,
-        pls4all.OperatorKind.AUTOSCALE,
-        pls4all.OperatorKind.SNV,
-    ][:int(n_operators)]
-    for k in canon:
-        bank.add(k)
-
+    bank = _aom_compact_bank_pls4all(int(n_operators))
     gate_handle = ctypes.c_void_p(0)
     status = lib.n4m_gating_strategy_create(
         ctypes.byref(gate_handle), int(gating_mode))
