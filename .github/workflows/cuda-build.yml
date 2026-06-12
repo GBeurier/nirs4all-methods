@@ -1,11 +1,12 @@
 # CUDA backend build-check. GitHub-hosted runners have no GPU, so this is a
 # COMPILE + LINK check of the cuda-on preset (it catches build/link regressions
-# like a wrong include path or a missing CUDA::cudart/cublas/cusolver link — all of
-# which broke the build before). The GPU runtime + CUDA↔CPU bit-parity were
+# like a wrong include path or a missing CUDA::cudart/cublas/cusolver/cusparse
+# link — all of which broke the build before). The GPU runtime + CUDA↔CPU bit-parity were
 # verified locally on RTX 4090 / 5090 (rmse_rel = 0 on pcr/pls/mb_pls/gpr_pls).
 #
 # n4m compiles cuda_dispatch.cpp with the host C++ compiler and a small
-# cuda_kernels.cu helper with nvcc, so this needs nvcc plus cudart/cublas/cusolver libs.
+# cuda_kernels.cu helper with nvcc, so this needs nvcc plus cudart/cublas/cusolver
+# and cuSOLVER's transitive cusparse/nvJitLink libs.
 name: CUDA build
 
 on:
@@ -36,7 +37,7 @@ jobs:
           # cuBLAS/cuSOLVER ship as `libcu*` packages, so they belong in
           # non-cuda-sub-packages; nvcc/cudart are the `cuda-`-prefixed ones.
           sub-packages: '["nvcc", "cudart", "cudart-dev"]'
-          non-cuda-sub-packages: '["libcublas", "libcublas-dev", "libcusolver", "libcusolver-dev"]'
+          non-cuda-sub-packages: '["libcublas", "libcublas-dev", "libcusolver", "libcusolver-dev", "libcusparse", "libcusparse-dev", "libnvjitlink", "libnvjitlink-dev"]'
 
       - name: Configure + build cuda-on (compile/link check)
         run: |
@@ -45,6 +46,6 @@ jobs:
 
       - name: CLI selfcheck + abi-info (CPU path of the CUDA-linked lib)
         run: |
-          export LD_LIBRARY_PATH=build/cuda-on/cpp/src
+          export LD_LIBRARY_PATH="$PWD/build/cuda-on/cpp/src:${CUDA_PATH}/lib64:${LD_LIBRARY_PATH:-}"
           ./build/cuda-on/cpp/cli/n4m_cli --abi-info
           ./build/cuda-on/cpp/cli/n4m_cli --selfcheck
