@@ -44,6 +44,13 @@ SCENARIOS: tuple[tuple[str, int, int, int, int], ...] = (
 
 TOOL_VERSION = "phase-c-min-1"
 PASS, FAIL, SKIP = "PASS", "FAIL", "SKIP"
+DEFAULT_TOL = 1e-12
+METHOD_TOLS = {
+    # PCR is an SVD/eigen route and shows tiny runner-to-runner floating drift
+    # under CI BLAS/compiler changes. Keep this strict; only relax above the
+    # observed 2.5e-12 noise floor.
+    "pcr": 1e-11,
+}
 
 
 def scenario_id(method: str, n: int, p: int, seed: int) -> str:
@@ -128,7 +135,7 @@ def process(method: str, n: int, p: int, nc: int, seed: int, *,
     if not path.exists():
         return SnapVerdict(method, sid, FAIL, f"missing snapshot {path.relative_to(REPO)} (run --write)")
     snap = json.loads(path.read_text())
-    match, note = compare_output(preds, snap)
+    match, note = compare_output(preds, snap, tol=METHOD_TOLS.get(method, DEFAULT_TOL))
     return SnapVerdict(method, sid, PASS if match else FAIL, note)
 
 
