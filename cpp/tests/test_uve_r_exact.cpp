@@ -30,6 +30,8 @@
 #include "core/uve_selection.hpp"
 #include "core/validation.hpp"
 
+int run_uve_r_exact_tests();
+
 namespace {
 
 using ::n4m::core::Config;

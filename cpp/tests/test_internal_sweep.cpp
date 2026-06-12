@@ -13,6 +13,8 @@
 #include "core/moments.hpp"
 #include "core/sweep.hpp"
 
+int run_internal_sweep_tests();
+
 namespace {
 
 int g_sweep_failures = 0;

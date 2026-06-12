@@ -29,6 +29,8 @@ extern "C" {
 #include "core/common/linalg.h"
 }
 
+int run_internal_linalg_tests();
+
 namespace {
 
 int g_linalg_failures = 0;

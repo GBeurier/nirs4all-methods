@@ -36,6 +36,8 @@
 #include "fixtures/component_cv_fixtures.hpp"
 #include "fixtures/cross_validation_fixtures.hpp"
 
+int run_internal_cv_tests();
+
 namespace {
 
 using ::n4m::test::fixtures::MatrixRef;
