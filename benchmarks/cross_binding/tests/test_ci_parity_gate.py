@@ -28,6 +28,14 @@ def test_matching_binding_passes(tmp_path):
     assert rmse_rel == 0.0
 
 
+def test_select_bindings_filters_languages():
+    assert [b[0] for b in gate.select_bindings(["python"])] == ["python_tier1"]
+    assert [b[0] for b in gate.select_bindings(["r", "octave"])] == [
+        "r_tier1",
+        "matlab_tier1",
+    ]
+
+
 def test_diverging_binding_fails(tmp_path):
     cpp = np.array([1.0, 2.0, 3.0])
     rec = _rec_ok(tmp_path, "r_tier1", cpp + 1e-3)

@@ -21,10 +21,9 @@ WHAT THIS PROVES DEPENDS ON WHICH LANGUAGES RAN:
   - The `cpp` baseline and `python_tier1` both route through the SAME
     `MethodSpec.pls4all_fn` ctypes path (see bench_python_tier1.py header), so a
     *Python-only* run is NOT a cross-binding proof — it is a harness +
-    Python-self-consistency smoke. CI runs exactly that today (R/Octave/JS CI
-    builds do not exist yet — see cross-binding-parity.yml), so the CI workflow
-    passes `--require python` and is named honestly as a smoke check, not the
-    full gate.
+    Python-self-consistency smoke. CI runs exactly that in the harness job via
+    `--languages python --require python`; R/Octave/JS are covered by their own
+    build-and-smoke jobs in cross-binding-parity.yml.
 
 Degradation is explicit: a binding whose driver or toolchain is absent is
 reported `SKIP` (visible), never silently `PASS`. A `--require`d language must
@@ -77,6 +76,14 @@ CELLS = [
 
 SEED_BASE = 20240517
 PASS, FAIL, SKIP = "PASS", "FAIL", "SKIP"
+
+
+def select_bindings(languages: list[str] | None = None) -> list[tuple[str, str, str, str]]:
+    """Return the wired bindings selected for this gate invocation."""
+    if languages is None:
+        return BINDINGS
+    wanted = {lang.lower() for lang in languages}
+    return [binding for binding in BINDINGS if binding[2].lower() in wanted]
 
 
 @dataclass
@@ -154,7 +161,8 @@ def gate_exit_code(verdicts: list[Verdict], required_langs: list[str]) -> int:
 
 
 def run_gate(lib_dir: str, build_key: str, tol: float, threads: int,
-             timeout: int, required_langs: list[str]) -> tuple[list[Verdict], int]:
+             timeout: int, required_langs: list[str],
+             languages: list[str] | None = None) -> tuple[list[Verdict], int]:
     from benchmarks.cross_binding import orchestrator
 
     os.environ.setdefault("N4M_R_ENV_NOWARN", "1")
@@ -173,7 +181,7 @@ def run_gate(lib_dir: str, build_key: str, tol: float, threads: int,
                                     f"baseline failed: {base.get('reason', '?')}"))
             continue
         cpp_pred = np.load(base["predictions_path"])
-        for name, script, lang, tier in BINDINGS:
+        for name, script, lang, tier in select_bindings(languages):
             rec = orchestrator.run_backend(
                 name, script, lang, tier, "pls4all_binding", algo, n, p, nc,
                 1, threads, build_key, SEED_BASE, timeout)
@@ -213,11 +221,14 @@ def main(argv: list[str] | None = None) -> int:
                     help="per-cell subprocess timeout (s)")
     ap.add_argument("--require", nargs="*", default=[],
                     help="languages that MUST run+pass (else gate fails)")
+    ap.add_argument("--languages", nargs="+",
+                    choices=sorted({binding[2].lower() for binding in BINDINGS}),
+                    help="wired binding languages to run (default: all)")
     args = ap.parse_args(argv)
 
     lib_dir = str(Path(args.lib_dir).resolve())
     verdicts, code = run_gate(lib_dir, args.build_key, args.tol, args.threads,
-                              args.timeout, args.require)
+                              args.timeout, args.require, args.languages)
     print(render(verdicts, args.require, code))
     return code
 
