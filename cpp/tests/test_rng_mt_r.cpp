@@ -49,8 +49,6 @@ constexpr double kRNorm[6] = {
 
 #if defined(__APPLE__)
 constexpr double kRNormTol = 2e-15;
-#else
-constexpr double kRNormTol = 0.0;
 #endif
 
 void test_runif_bit_exact_vs_R() {
