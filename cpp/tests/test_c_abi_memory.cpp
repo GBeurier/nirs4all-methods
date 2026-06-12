@@ -23,6 +23,8 @@
 
 #include "harness.hpp"
 
+void register_c_abi_memory_tests(n4m_testing::Runner& r);
+
 namespace {
 
 // A small, well-conditioned PLS1 problem fit through the public ABI. Returns

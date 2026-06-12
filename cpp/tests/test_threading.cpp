@@ -23,6 +23,8 @@
 
 #include "harness.hpp"
 
+void register_threading_tests(n4m_testing::Runner& r);
+
 namespace {
 
 constexpr std::int64_t kRows = 6;
