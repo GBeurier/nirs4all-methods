@@ -14,6 +14,7 @@
 #include "n4m/n4m.h"
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -27,7 +28,7 @@ namespace {
 constexpr std::int64_t kRows = 6;
 constexpr std::int64_t kFeatures = 4;
 constexpr std::int32_t kComponents = 2;
-constexpr int kThreads = 6;
+constexpr std::size_t kThreads = 6;
 
 const double kX[kRows * kFeatures] = {
     0.11, 0.52, 0.33, 0.04,
@@ -98,12 +99,12 @@ void test_multi_context_fit_is_bit_identical() {
     // so all kThreads are inside fit_coefficients() concurrently. Without this a
     // scheduler (or a library-wide lock) could serialize the fits and the
     // bit-identity assertion would pass without ever exercising true overlap.
-    std::atomic<int> ready{0};
+    std::atomic<std::size_t> ready{0};
     std::atomic<bool> go{false};
 
-    for (int t = 0; t < kThreads; ++t) {
+    for (std::size_t t = 0; t < kThreads; ++t) {
         pool.emplace_back([t, &results, &errors, &ready, &go]() {
-            ready.fetch_add(1, std::memory_order_acq_rel);
+            ready.fetch_add(std::size_t{1}, std::memory_order_acq_rel);
             while (!go.load(std::memory_order_acquire)) {
                 std::this_thread::yield();
             }
@@ -122,7 +123,7 @@ void test_multi_context_fit_is_bit_identical() {
     go.store(true, std::memory_order_release);   // release all workers at once
     for (auto& th : pool) th.join();
 
-    for (int t = 0; t < kThreads; ++t) {
+    for (std::size_t t = 0; t < kThreads; ++t) {
         if (!errors[t].empty()) {
             throw std::runtime_error("thread " + std::to_string(t) + " failed: " + errors[t]);
         }

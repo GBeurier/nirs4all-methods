@@ -210,6 +210,7 @@ N4M_API n4m_status_t n4m_config_clone(const n4m_config_t* src,
 /* ---- Setters ---- */
 N4M_API n4m_status_t n4m_config_set_algorithm        (n4m_config_t*, n4m_algorithm_t);
 N4M_API n4m_status_t n4m_config_set_solver           (n4m_config_t*, n4m_solver_t);
+N4M_API n4m_status_t n4m_config_set_rng_kind         (n4m_config_t*, n4m_rng_kind_t);
 N4M_API n4m_status_t n4m_config_set_deflation        (n4m_config_t*, n4m_deflation_t);
 /* `n_components` must be >= 1. There is no upper cap at the ABI level; if
  * the value exceeds rank(X) at fit time, Phase 1+ returns
@@ -305,6 +306,7 @@ N4M_API n4m_status_t n4m_config_set_gating_strategy  (n4m_config_t*,
 /* ---- Getters ---- */
 N4M_API n4m_status_t n4m_config_get_algorithm        (const n4m_config_t*, n4m_algorithm_t*);
 N4M_API n4m_status_t n4m_config_get_solver           (const n4m_config_t*, n4m_solver_t*);
+N4M_API n4m_status_t n4m_config_get_rng_kind         (const n4m_config_t*, n4m_rng_kind_t*);
 N4M_API n4m_status_t n4m_config_get_deflation        (const n4m_config_t*, n4m_deflation_t*);
 N4M_API n4m_status_t n4m_config_get_n_components     (const n4m_config_t*, int32_t*);
 N4M_API n4m_status_t n4m_config_get_center_x         (const n4m_config_t*, int32_t*);
