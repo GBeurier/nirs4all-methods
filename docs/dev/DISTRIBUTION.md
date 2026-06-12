@@ -72,7 +72,7 @@ this repo, and they stop being a future risk.
 | Repository | URL | Role |
 |------------|-----|------|
 | **GitHub** primary | `github.com/GBeurier/nirs4all-methods` | source, CI, Releases, Pages docs |
-| **GitHub Pages** | `gbeurier.github.io/nirs4all-methods/` | docs deployed by `.github/workflows/docs.yml` on every push to `main` (live benchmark CSV → Sphinx) |
+| **GitHub Pages** | `methods.nirs4all.org/` | docs deployed by `.github/workflows/docs.yml` on every push to `main` (live benchmark CSV → Sphinx) |
 | **Read the Docs** | `nirs4all-methods.readthedocs.io/` | docs built by RTD webhook (uses committed `bench-data.json` fallback) — see §3.bis |
 | **Zenodo** | `zenodo.org/account/settings/github/` enabled for `GBeurier/nirs4all-methods` | DOI per tag, archival, citable |
 | **Software Heritage** | `archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/GBeurier/nirs4all-methods` | passive mirror — register the origin once |
@@ -923,7 +923,7 @@ The Sphinx site in `docs/` is published in parallel to **two** independent surfa
 
 | Target | URL | Triggered by | Benchmark data source |
 |---|---|---|---|
-| **GitHub Pages** | `https://gbeurier.github.io/nirs4all-methods/` | `.github/workflows/docs.yml` on push to `main` | live `benchmarks/cross_binding/results/full_matrix.csv` if present, else `docs/_static/bench-data.json` |
+| **GitHub Pages** | `https://methods.nirs4all.org/` | `.github/workflows/docs.yml` on push to `main` | live `benchmarks/cross_binding/results/full_matrix.csv` if present, else `docs/_static/bench-data.json` |
 | **Read the Docs** | `https://nirs4all-methods.readthedocs.io/` | RTD webhook on every push (all branches + tags) | committed `docs/_static/bench-data.json` only — RTD's build env doesn't carry the full benchmark cache |
 
 **Why both?**

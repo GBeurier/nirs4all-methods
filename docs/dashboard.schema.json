@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gbeurier.github.io/nirs4all-methods/dashboard.schema.json",
+  "$id": "https://methods.nirs4all.org/dashboard.schema.json",
   "title": "n4m dashboard payload (D-min contract)",
   "description": "Canonical contract for the benchmark/parity dashboard payload emitted by docs/_extras/build_landing.py:build_payload and consumed by the dashboard template + the per-method doc pages. The full SPA (Phase D-SPA) will consume the same contract. Forward-compatible: additional keys are allowed; the fields below are the stable surface.",
   "type": "object",

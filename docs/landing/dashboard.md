@@ -1,7 +1,7 @@
-# GitHub Pages dashboard (`pls4all.github.io`)
+# GitHub Pages dashboard (`methods.nirs4all.org`)
 
 The project's public landing page —
-[`https://gbeurier.github.io/pls4all/`](https://gbeurier.github.io/pls4all/)
+[`https://methods.nirs4all.org/`](https://methods.nirs4all.org/)
 — is a fully interactive dashboard built from the same canonical
 benchmark CSV that drives this documentation's
 [per-method tables](../methods/index.md).
@@ -166,7 +166,7 @@ python docs/_extras/build_landing.py \
 
 The same HTML output is published from **two** locations:
 
-- **GitHub Pages** — `https://gbeurier.github.io/pls4all/` — built by
+- **GitHub Pages** — `https://methods.nirs4all.org/` — built by
   `.github/workflows/docs.yml` on every push to `main`. This is the
   canonical landing page.
 - **Read the Docs** — see [`readthedocs.md`](../dev/readthedocs.md)

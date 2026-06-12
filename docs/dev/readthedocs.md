@@ -4,7 +4,7 @@ The documentation builds in two environments:
 
 | Target | Triggered by | Source of truth for benchmark data |
 |---|---|---|
-| **GitHub Pages** (`https://gbeurier.github.io/pls4all/`) | Push to `main` via `.github/workflows/docs.yml` | Live `benchmarks/cross_binding/results/full_matrix.csv` if present, else `docs/_static/bench-data.json` |
+| **GitHub Pages** (`https://methods.nirs4all.org/`) | Push to `main` via `.github/workflows/docs.yml` | Live `benchmarks/cross_binding/results/full_matrix.csv` if present, else `docs/_static/bench-data.json` |
 | **Read the Docs** (`pls4all.readthedocs.io`) | RTD webhook on every push | `docs/_static/bench-data.json` (the committed fallback) |
 
 The two builds share the same Sphinx config (`docs/conf.py`).

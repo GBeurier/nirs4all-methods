@@ -39,7 +39,7 @@ classifiers = [
 Homepage = "https://github.com/GBeurier/pls4all"
 Repository = "https://github.com/GBeurier/pls4all"
 Issues = "https://github.com/GBeurier/pls4all/issues"
-Documentation = "https://gbeurier.github.io/pls4all/"
+Documentation = "https://methods.nirs4all.org/"
 
 [tool.setuptools.packages.find]
 where = ["src"]

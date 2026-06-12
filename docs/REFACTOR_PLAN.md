@@ -1285,7 +1285,7 @@ Organized into **6 sequential phases** (each phase can take multiple PRs). Respe
 | D14 | Delete `docs/landing/`, `docs/_extras/build_landing.py`, `docs/_static/bench-data.json`, `docs/_templates/landing.html`, `docs/benchmarks/cross_binding.md` (generated) | All replaced by the SPA |
 | D15 | Sphinx hook: embed parity badge + mini timing table per method page | Read `dashboard.json` at build time to enrich method pages |
 
-**Phase D exit criterion**: `https://gbeurier.github.io/nirs4all-methods/` serves the SPA after a manual `dashboard-publish` dispatch, `make dashboard-data && make dashboard-serve` works locally, drill-down works on at least 5 pilot methods, the stale-badge logic is wired.
+**Phase D exit criterion**: `https://methods.nirs4all.org/` serves the SPA after a manual `dashboard-publish` dispatch, `make dashboard-data && make dashboard-serve` works locally, drill-down works on at least 5 pilot methods, the stale-badge logic is wired.
 
 ### Phase E — Sub-packages (packaging-only)
 

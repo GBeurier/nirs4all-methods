@@ -67,7 +67,7 @@
     "pages": {
       "enabled": true,
       "status": null,
-      "url": "https://gbeurier.github.io/nirs4all-methods/",
+      "url": "https://methods.nirs4all.org/",
       "build_type": "workflow",
       "source_branch": "main",
       "https_enforced": true,
