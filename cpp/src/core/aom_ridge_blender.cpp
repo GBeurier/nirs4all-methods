@@ -229,11 +229,11 @@ std::vector<std::vector<std::int64_t>> train_rows_from_folds(
     std::int64_t n,
     const std::vector<std::vector<std::int64_t>>& fold_rows) {
     std::vector<std::vector<std::int64_t>> out(fold_rows.size());
-    std::vector<char> held(static_cast<std::size_t>(n), 0);
+    std::vector<char> held(static_cast<std::size_t>(n), static_cast<char>(0));
     for (std::size_t fold = 0; fold < fold_rows.size(); ++fold) {
-        std::fill(held.begin(), held.end(), 0);
+        std::fill(held.begin(), held.end(), static_cast<char>(0));
         for (const auto row : fold_rows[fold]) {
-            held[static_cast<std::size_t>(row)] = 1;
+            held[static_cast<std::size_t>(row)] = static_cast<char>(1);
         }
         auto& dst = out[fold];
         dst.reserve(static_cast<std::size_t>(n) - fold_rows[fold].size());

@@ -48,6 +48,8 @@
 #include "fixtures/wide_kernel_fixtures.hpp"
 #include "harness.hpp"
 
+void register_models_pls_tests(n4m_testing::Runner& r);
+
 namespace {
 
 using ::n4m::test::fixtures::MatrixRef;

@@ -2555,7 +2555,8 @@ n4m_status_t run_moment_sweep(Context& ctx,
             } else {
                 std::fill(pls_sse.begin(), pls_sse.end(), 0.0);
                 std::fill(pls_count.begin(), pls_count.end(), 0);
-                std::fill(pls_ok.begin(), pls_ok.end(), 1);
+                std::fill(pls_ok.begin(), pls_ok.end(),
+                          static_cast<unsigned char>(1));
                 if (!score_only) {
                     for (auto& oof : pls_oof) std::fill(oof.begin(), oof.end(), 0.0);
                 }

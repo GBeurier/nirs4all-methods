@@ -182,7 +182,7 @@ void test_operator_pls_stack_compact_contract() {
 
 void test_operator_pls_stack_rejects_multi_output_y() {
     constexpr std::int64_t n = 12;
-    constexpr std::int64_t p = 8;
+    constexpr std::int64_t p = 12;
     std::vector<double> X;
     std::vector<double> y;
     make_dataset(X, y, n, p);

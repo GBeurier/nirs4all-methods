@@ -38,6 +38,8 @@
 #include "fixtures/pls_logistic_fixtures.hpp"
 #include "harness.hpp"
 
+void register_models_extra_tests(n4m_testing::Runner& r);
+
 namespace {
 
 using ::n4m::test::fixtures::MatrixRef;

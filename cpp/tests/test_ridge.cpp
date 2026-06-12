@@ -25,6 +25,8 @@
 
 #include "harness.hpp"
 
+void register_ridge_tests(n4m_testing::Runner& r);
+
 namespace {
 
 constexpr double kTol = 1e-10;

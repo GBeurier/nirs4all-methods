@@ -257,11 +257,11 @@ std::vector<std::vector<std::int64_t>> train_rows_from_folds(
     std::int64_t n,
     const std::vector<std::vector<std::int64_t>>& fold_rows) {
     std::vector<std::vector<std::int64_t>> out(fold_rows.size());
-    std::vector<char> held(static_cast<std::size_t>(n), 0);
+    std::vector<char> held(static_cast<std::size_t>(n), static_cast<char>(0));
     for (std::size_t fold = 0; fold < fold_rows.size(); ++fold) {
-        std::fill(held.begin(), held.end(), 0);
+        std::fill(held.begin(), held.end(), static_cast<char>(0));
         for (const auto row : fold_rows[fold]) {
-            held[static_cast<std::size_t>(row)] = 1;
+            held[static_cast<std::size_t>(row)] = static_cast<char>(1);
         }
         auto& dst = out[fold];
         dst.reserve(static_cast<std::size_t>(n) - fold_rows[fold].size());
@@ -940,12 +940,6 @@ n4m_status_t fit_aom_operator_pls_stack(
         return N4M_ERR_INVALID_ARGUMENT;
     }
 
-    std::vector<double> Xall;
-    std::vector<double> Yall;
-    n4m_status_t status = copy_matrix(ctx, X, "X", Xall);
-    if (status != N4M_OK) return status;
-    status = copy_matrix(ctx, Y, "Y", Yall);
-    if (status != N4M_OK) return status;
     if (X.rows != Y.rows) {
         ctx.set_error("AOM operator PLS stack X and Y rows must match");
         return N4M_ERR_SHAPE_MISMATCH;
@@ -954,6 +948,13 @@ n4m_status_t fit_aom_operator_pls_stack(
         ctx.set_error("AOM operator PLS stack currently supports one Y target");
         return N4M_ERR_INVALID_ARGUMENT;
     }
+
+    std::vector<double> Xall;
+    std::vector<double> Yall;
+    n4m_status_t status = copy_matrix(ctx, X, "X", Xall);
+    if (status != N4M_OK) return status;
+    status = copy_matrix(ctx, Y, "Y", Yall);
+    if (status != N4M_OK) return status;
     for (std::int64_t i = 0; i < n_components; ++i) {
         if (components[i] < 1) {
             ctx.set_error("AOM operator PLS stack components must be positive");
