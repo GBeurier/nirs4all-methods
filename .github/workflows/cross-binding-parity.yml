@@ -78,10 +78,14 @@ jobs:
         run: |
           python -m pip install "scikit-learn" scipy
           # The orchestrator forces PLS4ALL_LIB_PATH inside LIBP4A_BUILDS[build];
-          # 'dev-release' maps to build/dev-release/cpp/src. Point that slot at
-          # the CI build (both are plain Release => bit-identical numbers).
+          # 'dev-release' and the external-oracle reference build 'blas-omp' map
+          # to build/<label>/cpp/src. Point both slots at the CI build; this
+          # gate is numerical parity, not a BLAS/OMP performance sweep.
           mkdir -p build
           ln -sfn ci-linux-gcc12-release build/dev-release
+          ln -sfn ci-linux-gcc12-release build/blas-omp
+          export PLS4ALL_LIB_PATH="$PWD/build/ci-linux-gcc12-release/cpp/src/libn4m.so"
+          export N4M_LIB_PATH="$PLS4ALL_LIB_PATH"
           python benchmarks/cross_binding/orchestrator.py \
             --algorithms pls pcr recursive_pls ridge_pls gpr_pls bagging_pls random_subspace_pls \
             --registry-cells --threads 1 \
