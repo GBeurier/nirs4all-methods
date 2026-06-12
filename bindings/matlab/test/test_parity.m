@@ -39,6 +39,10 @@ end
 
 % Fit through the MEX shim.
 [coefs, x_mean, y_mean, preds] = pls4all.pls_fit(X, Y, n_components);
+snv = pls4all.snv_transform(X);
+savgol = pls4all.savgol_transform(X, 'window_length', 5, 'polyorder', 2, ...
+                                  'deriv', 0, 'delta', 1.0, 'mode', 'interp');
+split = pls4all.kennard_stone_split(X, 'test_size', 0.25, 'zero_based', true);
 
 fixture_coefs = reshape(fixture.coefficients, p, q);
 fixture_x_mean = reshape(fixture.x_mean, 1, p);
@@ -63,6 +67,12 @@ fprintf("rmse_rel predictions     = %.3e\n", err_preds);
 tol = 1e-12;
 failed = (err_coefs > tol) || (err_x_mean > tol) || ...
          (err_y_mean > tol) || (err_preds > tol);
+if any(~isfinite(snv(:))) || any(~isfinite(savgol(:)))
+    failed = true;
+end
+if isempty(split.train) || isempty(split.test) || min(split.train) < 0 || min(split.test) < 0
+    failed = true;
+end
 if failed
     fprintf(2, "PARITY GATE FAIL (tol = %.1e)\n", tol);
     exit(1);

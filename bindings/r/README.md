@@ -53,7 +53,7 @@ libn4m C ABI:
 
 ```R
 X_snv <- snv_transform(X)
-X_sg <- savgol_transform(X, window_length = 11, polyorder = 2,
+X_sg <- savgol_transform(X, window_length = 11, polyorder = 3,
                          deriv = 0, mode = "interp")
 split <- kennard_stone_split(X, test_size = 0.3)
 ```

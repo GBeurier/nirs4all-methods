@@ -8,7 +8,7 @@ snv_transform(X, with_mean = TRUE, with_std = TRUE, ddof = 0L)
 savgol_transform(
   X,
   window_length,
-  polyorder = 2L,
+  polyorder = 3L,
   deriv = 0L,
   delta = 1,
   mode = "mirror",

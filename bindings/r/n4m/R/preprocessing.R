@@ -37,7 +37,7 @@ snv_transform <- function(X, with_mean = TRUE, with_std = TRUE, ddof = 0L) {
 #' @param cval Constant fill value used when `mode = "constant"`.
 #' @return Numeric matrix with the same shape as `X`.
 #' @export
-savgol_transform <- function(X, window_length, polyorder = 2L, deriv = 0L,
+savgol_transform <- function(X, window_length, polyorder = 3L, deriv = 0L,
                              delta = 1.0, mode = "mirror", cval = 0.0) {
     if (!is.matrix(X)) X <- as.matrix(X)
     storage.mode(X) <- "double"
