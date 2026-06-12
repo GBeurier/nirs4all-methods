@@ -167,7 +167,7 @@ void test_aom_ridge_blender_compact_contract_and_weighted_predictions() {
 
 void test_aom_ridge_blender_rejects_non_positive_lambda() {
     constexpr std::int64_t n = 12;
-    constexpr std::int64_t p = 8;
+    constexpr std::int64_t p = 10;
     std::vector<double> X;
     std::vector<double> y;
     make_dataset(X, y, n, p);
