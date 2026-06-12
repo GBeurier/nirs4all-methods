@@ -142,7 +142,7 @@ jobs:
           cmake --build --preset ci-linux-gcc12-release --target n4m_donor_bench --parallel
           pip install pytest
           pip install nirs4all || echo "nirs4all unavailable — Layer-3 reference checks will skip"
-          pytest benchmarks/cross_binding/tests/test_donor_binding_specs.py -q
+          PYTHONPATH="$PWD:${PYTHONPATH:-}" python -m pytest benchmarks/cross_binding/tests/test_donor_binding_specs.py -q
 
       - name: Verify parity-reference lockfile matches the registry
         # Structural gate over benchmarks/parity_timing/registry.py. The
