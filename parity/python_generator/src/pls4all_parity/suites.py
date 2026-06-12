@@ -8054,33 +8054,11 @@ def synthetic_pls_lda_multiclass_v1() -> dict[str, Any]:
 
 def synthetic_pls_logistic_multiclass_v1() -> dict[str, Any]:
     """24 samples, 6 features and 3 classes for PLS-score logistic parity."""
-    seed = 99
-    rng = np.random.default_rng(seed)
-    labels = np.repeat(np.arange(3, dtype=np.int32), 8)
-    class_centers = 0.6 * np.array([
-        [0.85, -0.35],
-        [-0.55, 0.72],
-        [-0.32, -0.64],
-    ], dtype=np.float64)
-    latent = np.vstack([
-        class_centers[int(label)] + rng.standard_normal(size=2) * 0.42
-        for label in labels
-    ])
-    trend = np.linspace(-0.45, 0.55, labels.size)
-    X = np.column_stack([
-        0.74 * latent[:, 0] + 0.22 * latent[:, 1] + 0.06 * trend,
-        -0.24 * latent[:, 0] + 0.61 * latent[:, 1] - 0.04 * trend,
-        0.48 * latent[:, 0] - 0.21 * latent[:, 1],
-        -0.18 * latent[:, 0] - 0.37 * latent[:, 1] + 0.03 * trend,
-        np.sin(np.linspace(0.0, 1.25 * np.pi, labels.size)) * 0.28,
-        rng.standard_normal(size=labels.size) * 0.09,
-    ])
-    return _pls_logistic_fixture("synthetic_pls_logistic_multiclass_v1",
-                                 seed=seed,
-                                 X=X,
-                                 labels=labels,
-                                 n_classes=3,
-                                 n_components=2)
+    # This fixture depends on sklearn/BLAS score-space least-squares paths that
+    # can drift by last bits across CI runners. Treat the checked-in JSON as the
+    # golden source until the reference is rewritten as a fully deterministic
+    # NumPy recurrence.
+    return _checked_in_fixture("synthetic_pls_logistic_multiclass_v1")
 
 
 def synthetic_mb_pls_block_weighted_v1() -> dict[str, Any]:
@@ -8117,27 +8095,10 @@ def synthetic_mb_pls_block_weighted_v1() -> dict[str, Any]:
 
 def synthetic_lw_pls_local_window_v1() -> dict[str, Any]:
     """18 samples, 5 features and 2 targets for local-window LW-PLS parity."""
-    seed = 101
-    rng = np.random.default_rng(seed)
-    latent = rng.standard_normal(size=(18, 3))
-    trend = np.linspace(-0.7, 0.8, 18)
-    X = np.column_stack([
-        0.91 * latent[:, 0] + 0.14 * trend,
-        -0.42 * latent[:, 0] + 0.35 * latent[:, 1],
-        0.58 * latent[:, 1] - 0.26 * latent[:, 2],
-        0.33 * latent[:, 0] + 0.51 * latent[:, 2],
-        np.sin(np.linspace(0.0, 2.3 * np.pi, 18)) + 0.12 * latent[:, 1],
-    ]) + rng.standard_normal(size=(18, 5)) * 0.045
-    Y = np.column_stack([
-        1.02 * latent[:, 0] - 0.48 * latent[:, 2] + 0.08 * trend,
-        -0.56 * latent[:, 1] + 0.62 * latent[:, 2] - 0.05 * trend,
-    ]) + rng.standard_normal(size=(18, 2)) * 0.04
-    return _lw_pls_fixture("synthetic_lw_pls_local_window_v1",
-                           seed=seed,
-                           X=X,
-                           Y=Y,
-                           n_components=2,
-                           n_neighbors=9)
+    # This fixture depends on local weighted PLS solves that can drift by last
+    # bits across BLAS builds. Keep the committed JSON as golden until the
+    # generator uses a platform-independent linear solver path.
+    return _checked_in_fixture("synthetic_lw_pls_local_window_v1")
 
 
 def synthetic_variable_importance_pls2_v1() -> dict[str, Any]:
