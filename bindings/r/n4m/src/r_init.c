@@ -14,6 +14,10 @@ SEXP r_n4m_fit(SEXP X, SEXP Y, SEXP algo, SEXP n_components, SEXP store_scores,
                     SEXP center_x, SEXP scale_x, SEXP center_y, SEXP scale_y);
 SEXP r_n4m_predict(SEXP model_ptr, SEXP X);
 SEXP r_n4m_model_get_array(SEXP model_ptr, SEXP which);
+SEXP r_n4m_snv_transform(SEXP X, SEXP with_mean, SEXP with_std, SEXP ddof);
+SEXP r_n4m_savgol_transform(SEXP X, SEXP window_length, SEXP polyorder,
+                            SEXP deriv, SEXP delta, SEXP mode, SEXP cval);
+SEXP r_n4m_kennard_stone_split(SEXP X, SEXP test_size, SEXP zero_based);
 
 /* r_methods.c — MethodResult fits */
 SEXP r_n4m_sparse_simpls_fit(SEXP X, SEXP Y, SEXP n_components, SEXP sparsity_lambda);
@@ -47,6 +51,9 @@ static const R_CallMethodDef callMethods[] = {
     {"r_n4m_fit",         (DL_FUNC)&r_n4m_fit,         9},
     {"r_n4m_predict",     (DL_FUNC)&r_n4m_predict,     2},
     {"r_n4m_model_get_array", (DL_FUNC)&r_n4m_model_get_array, 2},
+    {"r_n4m_snv_transform", (DL_FUNC)&r_n4m_snv_transform, 4},
+    {"r_n4m_savgol_transform", (DL_FUNC)&r_n4m_savgol_transform, 7},
+    {"r_n4m_kennard_stone_split", (DL_FUNC)&r_n4m_kennard_stone_split, 3},
 
     /* MethodResult fits */
     {"r_n4m_sparse_simpls_fit", (DL_FUNC)&r_n4m_sparse_simpls_fit, 4},

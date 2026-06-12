@@ -7,6 +7,9 @@ export(n4m_version)
 export(n4m_abi_version)
 export(n4m_fit)
 export(n4m_predict)
+export(snv_transform)
+export(savgol_transform)
+export(kennard_stone_split)
 
 # Tier 1 — MethodResult fits
 export(sparse_simpls_fit)

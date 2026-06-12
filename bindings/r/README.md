@@ -48,6 +48,16 @@ preds <- n4m_predict(model, X)
 sqrt(mean((preds - y) ^ 2))
 ```
 
+Preprocessing and splitters are exposed as thin wrappers over the same
+libn4m C ABI:
+
+```R
+X_snv <- snv_transform(X)
+X_sg <- savgol_transform(X, window_length = 11, polyorder = 2,
+                         deriv = 0, mode = "interp")
+split <- kennard_stone_split(X, test_size = 0.3)
+```
+
 ## Available solvers
 
 | `algo`                    | Algorithm/solver in libn4m                   |
