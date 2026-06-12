@@ -1036,9 +1036,13 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int window = n_params >= 1 ? (int)params[0] : 11;
             int poly = n_params >= 2 ? (int)params[1] : 2;
             int deriv = n_params >= 3 ? (int)params[2] : 0;
+            n4m_pp_savgol_mode_t mode = n_params >= 4
+                ? (n4m_pp_savgol_mode_t)((int)params[3])
+                : N4M_PP_SAVGOL_MIRROR;
+            double cval = n_params >= 5 ? params[4] : 0.0;
             n4m_pp_savgol_handle_t* h = NULL;
             s = n4m_pp_savgol_create(&h, window, poly, deriv, 1.0,
-                                     N4M_PP_SAVGOL_MIRROR, 0.0);
+                                     mode, cval);
             w->h = h;
             break;
         }
@@ -1440,13 +1444,12 @@ void n4m_wasm_pp_destroy(void* handle) {
  * use it (KS, KMeans); SPXY and KBins require it. Returns 0 on success, a
  * N4M_ERR_* otherwise; on failure out_test_mask is left untouched.
  * ==========================================================================*/
-__attribute__((used))
-int n4m_wasm_split(int kind, double test_size, unsigned int seed,
-                   int p0, int p1,
-                   const double* x, const double* y,
-                   int n, int p, int q,
-                   int* out_test_mask) {
-    if (out_test_mask == NULL) return N4M_ERR_NULL_POINTER;
+static n4m_status_t n4m_wasm_run_split_result(int kind, double test_size, unsigned int seed,
+                                              int p0, int p1,
+                                              const double* x, const double* y,
+                                              int n, int p, int q,
+                                              n4m_split_result_t* out_res) {
+    if (out_res == NULL) return N4M_ERR_NULL_POINTER;
     if (x == NULL && kind != 3) return N4M_ERR_NULL_POINTER; /* KBins needs only Y */
     if ((kind == 1 || kind == 3) && y == NULL) return N4M_ERR_NULL_POINTER;
     if (n < 2 || (x != NULL && p < 1)) return N4M_ERR_INVALID_ARGUMENT;
@@ -1456,20 +1459,20 @@ int n4m_wasm_split(int kind, double test_size, unsigned int seed,
     if (x != NULL) n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
     if (y != NULL) n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q < 1 ? 1 : q, N4M_DTYPE_F64);
 
-    n4m_split_result_t res = {0};
+    *out_res = (n4m_split_result_t){0};
     n4m_status_t s = N4M_ERR_NOT_IMPLEMENTED;
     switch (kind) {
         case 0: { /* KennardStone */
             n4m_split_kennard_stone_handle_t* h = NULL;
             s = n4m_split_kennard_stone_create(&h, test_size);
-            if (s == N4M_OK) s = n4m_split_kennard_stone_split(h, xv, &res);
+            if (s == N4M_OK) s = n4m_split_kennard_stone_split(h, xv, out_res);
             n4m_split_kennard_stone_destroy(h);
             break;
         }
         case 1: { /* SPXY (joint X-Y) */
             n4m_split_spxy_handle_t* h = NULL;
             s = n4m_split_spxy_create(&h, test_size);
-            if (s == N4M_OK) s = n4m_split_spxy_split(h, xv, yv, &res);
+            if (s == N4M_OK) s = n4m_split_spxy_split(h, xv, yv, out_res);
             n4m_split_spxy_destroy(h);
             break;
         }
@@ -1477,7 +1480,7 @@ int n4m_wasm_split(int kind, double test_size, unsigned int seed,
             int max_iter = p0 > 0 ? p0 : 100;
             n4m_split_kmeans_handle_t* h = NULL;
             s = n4m_split_kmeans_create(&h, test_size, (uint64_t)seed, max_iter);
-            if (s == N4M_OK) s = n4m_split_kmeans_split(h, xv, &res);
+            if (s == N4M_OK) s = n4m_split_kmeans_split(h, xv, out_res);
             n4m_split_kmeans_destroy(h);
             break;
         }
@@ -1487,13 +1490,27 @@ int n4m_wasm_split(int kind, double test_size, unsigned int seed,
             n4m_split_kbins_stratified_handle_t* h = NULL;
             s = n4m_split_kbins_stratified_create(&h, test_size, (uint64_t)seed,
                                                   n_bins, strategy);
-            if (s == N4M_OK) s = n4m_split_kbins_stratified_split(h, yv, &res);
+            if (s == N4M_OK) s = n4m_split_kbins_stratified_split(h, yv, out_res);
             n4m_split_kbins_stratified_destroy(h);
             break;
         }
         default:
             return N4M_ERR_INVALID_ARGUMENT;
     }
+    return s;
+}
+
+__attribute__((used))
+int n4m_wasm_split(int kind, double test_size, unsigned int seed,
+                   int p0, int p1,
+                   const double* x, const double* y,
+                   int n, int p, int q,
+                   int* out_test_mask) {
+    if (out_test_mask == NULL) return N4M_ERR_NULL_POINTER;
+
+    n4m_split_result_t res = {0};
+    n4m_status_t s = n4m_wasm_run_split_result(kind, test_size, seed, p0, p1,
+                                               x, y, n, p, q, &res);
     if (s != N4M_OK) { n4m_split_result_destroy(&res); return s; }
 
     /* Fill the mask: default train (0), mark test rows (1). */
@@ -1504,6 +1521,32 @@ int n4m_wasm_split(int kind, double test_size, unsigned int seed,
             if (row >= 0 && row < (int64_t)n) out_test_mask[(int)row] = 1;
         }
     }
+    n4m_split_result_destroy(&res);
+    return N4M_OK;
+}
+
+__attribute__((used))
+int n4m_wasm_split_indices(int kind, double test_size, unsigned int seed,
+                           int p0, int p1,
+                           const double* x, const double* y,
+                           int n, int p, int q,
+                           int* out_train_idx, int* out_n_train,
+                           int* out_test_idx, int* out_n_test) {
+    if (out_train_idx == NULL || out_n_train == NULL ||
+        out_test_idx == NULL || out_n_test == NULL) {
+        return N4M_ERR_NULL_POINTER;
+    }
+
+    n4m_split_result_t res = {0};
+    n4m_status_t s = n4m_wasm_run_split_result(kind, test_size, seed, p0, p1,
+                                               x, y, n, p, q, &res);
+    if (s != N4M_OK) { n4m_split_result_destroy(&res); return s; }
+
+    *out_n_train = (int)res.n_train;
+    *out_n_test = (int)res.n_test;
+    for (int64_t i = 0; i < res.n_train; ++i) out_train_idx[i] = (int)res.train_idx[i];
+    for (int64_t i = 0; i < res.n_test; ++i) out_test_idx[i] = (int)res.test_idx[i];
+
     n4m_split_result_destroy(&res);
     return N4M_OK;
 }

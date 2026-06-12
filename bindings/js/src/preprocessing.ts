@@ -13,7 +13,9 @@
 // Param vectors (order matters):
 //   StandardNormalVariate : []                       (SNV; with_mean/std on)
 //   MSC                   : []                        (stateful — call fit first)
-//   SavitzkyGolay         : [window, polyorder, deriv]
+//   SavitzkyGolay         : [window, polyorder, deriv, mode?, cval?]
+//                           mode follows n4m_pp_savgol_mode_t:
+//                           0 mirror, 1 constant, 2 nearest, 3 wrap, 4 interp
 //   Derivative            : [order]                   (1 → 1st, ≥2 → 2nd derivative)
 //   Detrend               : [polyorder]
 //   Normalize             : []                        (vector L2 norm)

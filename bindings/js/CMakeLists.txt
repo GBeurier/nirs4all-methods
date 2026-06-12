@@ -43,6 +43,7 @@ list(APPEND _js_export_list
     "_n4m_wasm_pop_fit"
     # Splitters (Kennard-Stone / SPXY / KMeans / KBinsStratified → test mask)
     "_n4m_wasm_split"
+    "_n4m_wasm_split_indices"
     # Generic preprocessing dispatcher (raw-pointer surface; numerics in libn4m)
     "_n4m_wasm_pp_create"
     "_n4m_wasm_pp_fit"

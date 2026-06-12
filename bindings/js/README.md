@@ -56,6 +56,9 @@ const y = new Float64Array(rows);
 const model = n4m.fitPls({ data: X, rows, cols },
                          { data: y, rows, cols: 1 }, 3);
 const preds = n4m.predictPls(model, { data: X, rows, cols });
+
+const split = n4m.computeSplitIndices("KennardStone", { data: X, rows, cols }, null);
+// `computeSplit()` remains available when a compact train/test mask is enough.
 ```
 
 `Context` / `Config` / `MethodResult` are also exported for the lower-level
