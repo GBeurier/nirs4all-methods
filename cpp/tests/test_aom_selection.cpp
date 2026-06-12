@@ -8,6 +8,8 @@
 
 #include "harness.hpp"
 
+void register_aom_selection_tests(n4m_testing::Runner& r);
+
 namespace {
 
 n4m_matrix_view_t make_view(double* data, std::int64_t rows, std::int64_t cols) {

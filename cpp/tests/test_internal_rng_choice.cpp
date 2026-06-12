@@ -14,6 +14,7 @@
 // with numpy.random.default_rng(seed).
 
 #include <cstdint>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
@@ -39,7 +40,7 @@ void test_bounded() {
     n4m_pcg64_engine_seed(&rng, 123);
     const uint64_t m[]   = {200, 5, 1000, 7, 255, 16, 99999, 3};
     const uint64_t want[] = {3, 3, 592, 0, 231, 3, 25508, 0};
-    for (int i = 0; i < 8; ++i) {
+    for (std::size_t i = 0; i < 8; ++i) {
         CHECK(n4m_aug_rng_bounded(&rng, m[i] - 1) == want[i]);
     }
 }
@@ -50,7 +51,7 @@ void test_integers() {
     n4m_pcg64_engine_seed(&rng, 123);
     const uint64_t m[]    = {200, 5, 1000, 7, 255, 16, 99999, 3};
     const uint64_t want[] = {3, 3, 592, 0, 231, 3, 25508, 0};  // same stream as bounded
-    for (int i = 0; i < 8; ++i) {
+    for (std::size_t i = 0; i < 8; ++i) {
         CHECK(n4m_aug_rng_integers(&rng, m[i]) == want[i]);  // integers(m) == bounded(m-1)
     }
     CHECK(n4m_aug_rng_integers(&rng, 1) == 0u);  // degenerate range -> 0, no draw
@@ -135,9 +136,9 @@ void test_choice_tail_shuffle() {
     n4m_pcg64_engine_seed(&rng, 0);
     CHECK(n4m_aug_rng_choice_no_replace(&rng, 15000, 4000, out.data()) == 0);
     const int64_t first8[] = {3537, 2636, 897, 13659, 13712, 4255, 10666, 8649};
-    for (int i = 0; i < 8; ++i) CHECK(out[i] == first8[i]);
+    for (std::size_t i = 0; i < 8; ++i) CHECK(out[i] == first8[i]);
     const int64_t last4[] = {4045, 7666, 9553, 12759};
-    for (int i = 0; i < 4; ++i) CHECK(out[3996 + i] == last4[i]);
+    for (std::size_t i = 0; i < 4; ++i) CHECK(out[3996 + i] == last4[i]);
     int64_t sum = 0;
     for (int64_t v : out) sum += v;
     CHECK(sum == 30101813);

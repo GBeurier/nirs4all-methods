@@ -1,11 +1,11 @@
 # CUDA backend build-check. GitHub-hosted runners have no GPU, so this is a
 # COMPILE + LINK check of the cuda-on preset (it catches build/link regressions
-# like a wrong include path or a missing CUDA::cudart/cublas link — both of
+# like a wrong include path or a missing CUDA::cudart/cublas/cusolver link — all of
 # which broke the build before). The GPU runtime + CUDA↔CPU bit-parity were
 # verified locally on RTX 4090 / 5090 (rmse_rel = 0 on pcr/pls/mb_pls/gpr_pls).
 #
 # n4m compiles cuda_dispatch.cpp with the host C++ compiler and a small
-# cuda_kernels.cu helper with nvcc, so this needs nvcc plus cudart/cublas libs.
+# cuda_kernels.cu helper with nvcc, so this needs nvcc plus cudart/cublas/cusolver libs.
 name: CUDA build
 
 on:
@@ -28,15 +28,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends ninja-build cmake
 
-      - name: Install CUDA toolkit (headers + cudart + cublas)
+      - name: Install CUDA toolkit (headers + cudart + cublas + cusolver)
         uses: Jimver/cuda-toolkit@v0.2.21
         with:
           cuda: "12.5.0"
           method: network
-          # cuBLAS ships as `libcublas*` (not `cuda-cublas*`), so it belongs in
+          # cuBLAS/cuSOLVER ship as `libcu*` packages, so they belong in
           # non-cuda-sub-packages; nvcc/cudart are the `cuda-`-prefixed ones.
           sub-packages: '["nvcc", "cudart", "cudart-dev"]'
-          non-cuda-sub-packages: '["libcublas", "libcublas-dev"]'
+          non-cuda-sub-packages: '["libcublas", "libcublas-dev", "libcusolver", "libcusolver-dev"]'
 
       - name: Configure + build cuda-on (compile/link check)
         run: |
