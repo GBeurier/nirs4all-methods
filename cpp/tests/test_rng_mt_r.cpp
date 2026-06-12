@@ -67,11 +67,11 @@ void test_rnorm_bit_exact_vs_R() {
     n4m_rng_mt_r_set_seed(&buf, 11u);
     for (int i = 0; i < 6; ++i) {
         const double got = n4m_rng_mt_r_norm(&buf);
-        if (kRNormTol == 0.0) {
-            N4M_TEST_REQUIRE(got == kRNorm[i]);
-        } else {
-            N4M_TEST_REQUIRE(std::fabs(got - kRNorm[i]) <= kRNormTol);
-        }
+#if defined(__APPLE__)
+        N4M_TEST_REQUIRE(std::fabs(got - kRNorm[i]) <= kRNormTol);
+#else
+        N4M_TEST_REQUIRE(got == kRNorm[i]);
+#endif
     }
 }
 
