@@ -153,3 +153,40 @@ transform, fitted-array accessors and binary import/export.
 Build matrix: Linux × {gcc-12, gcc-13, clang-16}, macOS × clang
 (arm64 + universal2), Windows × {MSVC, MinGW}. ASAN / UBSAN / TSAN green.
 ABI symbol gate enforced on every PR.
+
+## The nirs4all ecosystem
+
+<!-- RTD slugs are assumed equal to the repo name; edit a :link: URL below if a slug differs at import. -->
+
+::::{grid} 1 2 2 2
+:gutter: 2
+
+:::{grid-item-card} nirs4all
+:link: https://nirs4all.readthedocs.io/en/latest/
+Main Python modelling library — pipelines, SpectroDataset, predictions.
+:::
+:::{grid-item-card} nirs4all-formats
+:link: https://nirs4all-formats.readthedocs.io/en/latest/
+Rust readers for ~58 NIRS/spectroscopy file formats.
+:::
+:::{grid-item-card} nirs4all-io
+:link: https://nirs4all-io.readthedocs.io/en/latest/
+Dataset-assembly bridge → SpectroDataset.
+:::
+:::{grid-item-card} nirs4all-datasets
+:link: https://nirs4all-datasets.readthedocs.io/en/latest/
+Curated DOI-pinned NIRS dataset catalog (n4a-datasets).
+:::
+:::{grid-item-card} nirs4all-lite
+:link: https://nirs4all-lite.readthedocs.io/en/latest/
+Portable aggregate distribution (Rust + bindings).
+:::
+:::{grid-item-card} dag-ml
+:link: https://dag-ml.readthedocs.io/en/latest/
+Reproducible, OOF/leakage-safe ML coordinator.
+:::
+:::{grid-item-card} dag-ml-data
+:link: https://dag-ml-data.readthedocs.io/en/latest/
+Typed sample-aligned multi-source data contracts.
+:::
+::::
