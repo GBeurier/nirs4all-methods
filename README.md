@@ -319,8 +319,11 @@ Full re-run commands in
 
 ## License & citation
 
-CeCILL-2.1 ([`LICENSE`](LICENSE), compatible with the GPL family,
-recognised by French law).
+`nirs4all-methods` is dual-licensed open-source — **`CeCILL-2.1 OR AGPL-3.0-or-later`** (your
+choice; CeCILL-2.1 is recognised by French law and GPL-family-compatible) — with an optional
+**commercial license** for closed-source / SaaS use. For any commercial use, contact
+<nirs4all-admin@cirad.fr>. See [`LICENSING.md`](LICENSING.md), the texts under
+[`LICENSES/`](LICENSES/), and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ```bibtex
 @software{nirs4all_methods,
