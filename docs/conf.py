@@ -124,7 +124,21 @@ html_static_path = ["_static"]
 
 # Alabaster auto-injects _static/custom.css via its layout, so
 # listing it again in html_css_files would duplicate the <link>.
-html_js_files = ["tab-combo.js", "sidebar-scroll.js"]
+# The last entry is the GoatCounter beacon (privacy-friendly, no cookies) on the
+# themed pages; the custom landing.html carries its own copy. All methods pages
+# report the single ecosystem path "/methods" so the cockpit shows one row.
+html_js_files = [
+    "tab-combo.js",
+    "sidebar-scroll.js",
+    (
+        "https://gc.zgo.at/count.js",
+        {
+            "data-goatcounter": "https://nirs4all.goatcounter.com/count",
+            "data-goatcounter-settings": '{"path": "/methods"}',
+            "async": "async",
+        },
+    ),
+]
 
 # Templates dir — Sphinx auto-discovers `_templates/`, but list it
 # explicitly so the custom landing.html template is picked up.
