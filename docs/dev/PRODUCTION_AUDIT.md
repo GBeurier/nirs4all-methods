@@ -19,7 +19,7 @@ CSVs). Every number below is reproduced from current code unless explicitly tagg
 | Biggest remaining blocker to production? | **None in the parity matrix.** Remaining work is forward tracks (P1/P2): catalog-as-single-source-of-truth, donor-augmenter fixture replay, CI parity-gate widening + macOS/Win ABI snapshots, WASM-lite, method-add ergonomics. |
 
 **Bottom line:** **P0 is complete** — the parity matrix has zero genuine n4m divergences, the dashboard reads honestly,
-and the user's "méthodes en défaut" were all benchmark-harness artifacts (now fixed), not broken math. The engine is
+and the user's "failing methods" were all benchmark-harness artifacts (now fixed), not broken math. The engine is
 production-correct. What's left is forward-looking hardening (P1/P2), not correctness.
 
 ---

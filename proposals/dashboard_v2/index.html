@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nirs4all-methods · parity &amp; benchmark explorer</title>
+<meta name="description" content="Browse the libn4m parity and benchmark matrix: per-method binding vs reference parity, timing-vs-size curves, and divergence — fully offline.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#methods">Skip to methods</a>
+
+<nav class="topbar" aria-label="Primary">
+  <div class="nav-inner">
+    <a class="nav-logo" href="#" aria-label="nirs4all-methods home">
+      <span class="mark" aria-hidden="true"></span>
+      <span><b>nirs4all</b>-methods</span>
+      <span class="ver" id="navVersion">libn4m</span>
+    </a>
+    <div class="nav-spacer"></div>
+    <div class="nav-stat"><b id="navAlgos">—</b><span>methods</span></div>
+    <div class="nav-divider" aria-hidden="true"></div>
+    <div class="nav-stat"><b id="navCells">—</b><span>parity cells</span></div>
+    <div class="nav-divider" aria-hidden="true"></div>
+    <div class="nav-stat"><b id="navGenerated">—</b><span>generated</span></div>
+  </div>
+</nav>
+
+<main class="shell">
+
+  <header class="hero">
+    <div class="eyebrow">parity &amp; benchmark explorer · proposal v2</div>
+    <h1>Does <span class="grad">libn4m</span> match its reference — and do all bindings match the core?</h1>
+    <p class="lede">
+      Every method, every language binding, every problem size. Each cell answers two distinct
+      questions: <strong>binding parity</strong> (do Python / R / MATLAB match the C++ core?) and
+      <strong>reference parity</strong> (does the C++ core match the canonical external library?).
+      Search, filter, and drill into timing curves and the full multi-reference table.
+    </p>
+    <div class="provenance" id="provenance" aria-label="Benchmark host provenance"></div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Headline counts"></section>
+
+  <div class="legend" role="note" aria-label="Verdict legend">
+    <strong>Verdicts</strong>
+    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>exact</span>
+    <span class="badge cross"><span class="gly" aria-hidden="true">◐</span>cross-check</span>
+    <span class="badge diverg"><span class="gly" aria-hidden="true">▲</span>divergent</span>
+    <span class="badge na"><span class="gly" aria-hidden="true">∅</span>not&nbsp;available</span>
+    <span class="badge nr"><span class="gly" aria-hidden="true">·</span>not&nbsp;run&nbsp;(NR)</span>
+    <span class="badge error"><span class="gly" aria-hidden="true">✕</span>error</span>
+    <span style="margin-left:auto;color:var(--text-3)">color is always paired with a glyph &amp; label · NR is never coerced to a number</span>
+  </div>
+
+  <div class="controls" role="search">
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" class="search" id="search" placeholder="Fuzzy search method, ABI symbol, or category…" aria-label="Search methods, symbols, categories" autocomplete="off" spellcheck="false">
+      <span class="search-kbd" aria-hidden="true">/</span>
+    </div>
+
+    <span class="ctl-label">category</span>
+    <select class="ctl" id="filterCategory" aria-label="Filter by category"></select>
+
+    <span class="ctl-label">origin</span>
+    <select class="ctl" id="filterOrigin" aria-label="Filter by origin">
+      <option value="">all origins</option>
+      <option value="pls4all">pls4all native</option>
+      <option value="donor">donor</option>
+      <option value="external">external</option>
+    </select>
+
+    <span class="ctl-label">parity</span>
+    <select class="ctl" id="filterParity" aria-label="Filter by parity status">
+      <option value="">any status</option>
+      <option value="clean">all-exact (clean)</option>
+      <option value="attention">has divergence / cross-check</option>
+      <option value="hasref">has reference gate</option>
+      <option value="hasdoc">documented</option>
+    </select>
+
+    <div class="seg" role="group" aria-label="Sort order">
+      <button type="button" data-sort="category" aria-pressed="true">by category</button>
+      <button type="button" data-sort="name">A–Z</button>
+      <button type="button" data-sort="slowest">slowest</button>
+      <button type="button" data-sort="attention">needs attention</button>
+    </div>
+
+    <span class="result-count" id="resultCount" aria-live="polite"></span>
+  </div>
+
+  <div id="methods" aria-label="Methods overview"></div>
+
+</main>
+
+<!-- drill-down drawer -->
+<div class="overlay" id="overlay" tabindex="-1"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true">
+  <div class="drawer-head">
+    <div class="dh-top">
+      <div>
+        <h2 id="drawerTitle">—</h2>
+        <div class="dh-sym mono" id="drawerSym"></div>
+      </div>
+      <button class="btn-close" id="drawerClose" aria-label="Close detail panel" title="Close (Esc)">✕</button>
+    </div>
+    <div class="dh-meta" id="drawerMeta"></div>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<div class="chart-tip" id="chartTip" role="tooltip" aria-hidden="true"></div>
+
+<footer class="foot">
+  <p>
+    <strong>nirs4all-methods</strong> parity &amp; benchmark explorer — alternative dashboard proposal (v2).
+    Data is the canonical <code class="mono">bench-data.json</code> contract, rendered fully offline (no network, no CDN).
+    Reference parity = libn4m C++ core vs canonical external library · Binding parity = each language binding vs the C++ core.
+    See <code class="mono">docs/dashboard_contract.md</code> for verdict semantics.
+  </p>
+</footer>
+
+<script src="bench-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

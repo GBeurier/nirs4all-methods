@@ -29,7 +29,7 @@ The two repos are **architecturally identical** (portable C++17 core, single sta
 | **Calibration transfer** (PDS, DS) | `pls4all` | 2 | ❌ flat |
 | **GPR-on-PLS / GLM / Cox** | `pls4all` | 3 | ❌ flat |
 
-**Key observation.** The user's phrase _"ce sont les mêmes"_ is true at the **architectural** level (same C ABI mental model, same CMake presets, same Codex+Opus review workflow) but false at the **scope** level. The repos do not duplicate methods; they cover complementary halves of the NIRS pipeline. The merge therefore is **not a deduplication** — it is a **unification with reorganisation**.
+**Key observation.** The user's phrase _"they are the same"_ is true at the **architectural** level (same C ABI mental model, same CMake presets, same Codex+Opus review workflow) but false at the **scope** level. The repos do not duplicate methods; they cover complementary halves of the NIRS pipeline. The merge therefore is **not a deduplication** — it is a **unification with reorganisation**.
 
 **The decision.** Use **`pls4all` as the merge-base** (more code, more bindings, more parity infrastructure, more mature benchmark dashboard) and **port `nirs4all-methods` into it** while simultaneously **reorganising both halves into the `nirs4all-methods` tree**. Then rename the resulting repo to `nirs4all-methods` and reduce `pls4all` to a CRAN/PyPI-publishable **slim subset** carved from a method manifest.
 
@@ -865,4 +865,3 @@ Codex reviewed the v0 draft of this document (2026-05-21) and returned a punch l
 Codex's verdict: "Sound strategic direction… Not executable as written. Fix the import/rename mechanics, CRAN packaging model, common-core consolidation, and machine-readable parity/catalog contracts before implementation. The estimate is optimistic; with review and packaging hardening, think closer to 8-12 weeks than 6."
 
 All four "fix before implementation" gates are now in the plan. Timeline updated to **8–12 weeks** (§9 total).
-

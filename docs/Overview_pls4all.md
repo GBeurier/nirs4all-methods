@@ -1,50 +1,50 @@
-Pour une librairie C++ PLS/NIRS sérieuse, je ne ferais pas une classe par acronyme. Je ferais plutôt un **moteur PLS composable** avec plusieurs axes : type de tâche, solveur, déflection, régularisation, orthogonalisation, blocs, sélection de variables, preprocessing, validation, adaptation de domaine, puis éventuellement backend GPU/batch.
+For a serious C++ PLS/NIRS library, I would not make a class by acronym. I would rather make a **composable PLS engine** with several axes: task type, solver, deflection, regularization, orthogonalization, blocks, variable selection, preprocessing, validation, domain adaptation, then possibly GPU/batch backend.
 
-L’existant confirme cette structuration : scikit-learn expose déjà `PLSRegression`, `PLSCanonical`, `CCA` et `PLSSVD`, avec une logique autour de la covariance croisée et de NIPALS/SVD ; le package R `pls` expose PLSR, PCR, CPPLS, NIPALS/orthogonal scores, SIMPLS, kernel PLS et wide-kernel PLS ; `ropls` couvre PLS(-DA)/OPLS(-DA) avec diagnostics ; `mixOmics` couvre sPLS et MB-sPLS ; et `plsVarSel` / `auswahl` montrent l’importance énorme des wrappers de sélection de variables autour de la PLS. ([Scikit-learn][1])
+The existing structure confirms this structure: scikit-learn already exposes `PLSRegression`, `PLSCanonical`, `CCA` and `PLSSVD`, with logic around cross covariance and NIPALS/SVD; the R package `pls` exposes PLSR, PCR, CPPLS, NIPALS/orthogonal scores, SIMPLS, kernel PLS and wide-kernel PLS; `ropls` covers PLS(-DA)/OPLS(-DA) with diagnostics; `mixOmics` covers sPLS and MB-sPLS; and `plsVarSel` / `auswahl` show the enormous importance of variable selection wrappers around the PLS. ([Scikit-learn][1])
 
-## Statut courant (mai 2026)
+## Current Status (May 2026)
 
-Snapshot de ce qui est livré dans le tag `phase-49-vissa-pls`
-(`0.97.0+abi.1.14.0`). La feuille de route détaillée est dans
-[`ROADMAP.md`](ROADMAP.md) ; les notes par phase sont dans `roadmap/phase-*.md`.
-Le détail des parity gates par méthode est dans `benchmarks/results/parity_gate/`.
+Snapshot of what is delivered in the `phase-49-vissa-pls` tag
+(`0.97.0+abi.1.14.0`). The detailed roadmap is in
+[`ROADMAP.md`](ROADMAP.md) ; phase notes are in `roadmap/phase-*.md`.
+Details of parity gates by method are in `benchmarks/results/parity_gate/`.
 
-| Section de l'Overview | Statut | Détail |
+| Overview Section | Status | Detail |
 |----------------------|--------|---------|
-| §1 Famille cœur (PLS1/PLS2/PLSRegression/PLSSVD/PCR/CPPLS) | livré sauf CPPLS | PLS1/PLS2, PLSRegression, PLSCanonical, PLSSVD, PCR — CPPLS reporté. |
-| §2 Solveurs numériques (NIPALS, OrthScores, SIMPLS, Kernel, WideKernel, SVD, Power, Randomized-SVD) | livré | les 8 solveurs sont actifs dans `n4m_model_fit`. |
-| §3 Modes de déflection (regression, canonical, orthogonal) | livré pour les modèles déjà actifs | déflection X-only / Y-only / symmetric repoussée. |
-| §4–§5 PLS-DA / PLS-LDA / PLS-logistic | livré | dummy-coding PLS-DA, têtes LDA/logistic déterministes en NumPy. |
-| §6 OPLS / OPLS-DA / multi-réponses prédictives partagées | livré | déflection orthogonale, scores prédictifs partagés. |
-| §7 Sparse / pénalisée | livré (interne) | Sparse SIMPLS via soft-thresholding (`N4M_ALGO_SPARSE_PLS`), `fit_sparse_pls_da`, `fit_group_sparse_pls`, `fit_fused_sparse_pls`. |
-| §8 Multi-blocs | livré (interne) | MB-PLS livré ; `fit_o2pls`, `fit_so_pls`, `fit_on_pls`, `fit_rosa` ajoutés. sPLS-DA dans §7. |
-| §9 Multiway / tensor PLS | livré (interne) | `fit_n_pls` + `predict_n_pls` (Bro 3-way). PARAFAC-PLS / Tucker-PLS comme variantes futures. |
-| §10.1 Kernel algorithm linéaire / wide-kernel | livré | solveurs `KERNEL_ALGORITHM` et `WIDE_KERNEL`. |
-| §10.2 Kernel non-linéaire RBF/polynomial | livré (interne) | `fit_kernel_pls` / `predict_kernel_pls` pour RBF, polynomial, sigmoid via Gram dual. |
-| §11 LW-PLS / local PLS | livré (interne) | LW-PLS livré (uniform-weight) — couvre JIT-PLS. Adaptive PLS / weighted kernel reportés. |
-| §12 Dynamic / recursive PLS | livré (interne) | Recursive PLS moving-window via `fit_predict_recursive_pls`. Mise à jour incrémentale stricte reportée. |
-| §13 Domain adaptation (DI-PLS, PDS, EPO/OSC supervisés) | partiel | OSC, EPO et DI-PLS livrés (DI-PLS interne) ; PDS et DS reportés. |
-| §14 Sélection de variables | livré pour 5a–5u | rangers, intervalles, biPLS, siPLS, stabilité, UVE, EMCUVE, randomization, SPA, CARS, Random Frog, SCARS, GA, Shaving, REP, IPW, ST, BVE, T2, WVC, WVC-threshold. |
-| §15 AOM-PLS / POP-PLS | livré 6a–6f | strict-linear AOM operators (identity, detrend, SG, fd, NW, Whittaker, FCK), AOM-SIMPLS global selection, POP-SIMPLS covariance per-component selection, surface C ABI publique. |
-| §16 Preprocessing NIRS | livré | identity/center/autoscale/Pareto/SNV/MSC/EMSC/Detrend/SG/SG-derivative/Norris-Williams/ASLS/Wavelet(Haar)/OSC/EPO. |
-| §17 Diagnostics PLS / chimiométrie | livré (interne) | VIP, selectivity ratio, métriques régression/classification, T² Hotelling, Q-residuals, DModX (`cpp/src/core/pls_diagnostics.{hpp,cpp}`). Approximate-PRESS encore à porter. |
-| §18 Validation et choix de composantes | livré | splitters, CV engines, sélection de composantes SIMPLS, règle one-SE (`select_one_se_components`), `approximate_press` (PRESS + sélection). Règles bayésiennes encore à porter. |
-| §19 Monitoring / process control | livré (interne) | Seuils empiriques T² / Q à α configurable + flags d'alarme (`pls_monitoring_fit` / `pls_monitoring_evaluate`). |
-| §20 Ensembles de PLS | livré (interne) | `fit_bagging_pls`, `fit_boosting_pls`, `fit_random_subspace_pls`. |
-| §20 Ensembles de PLS | non livré | reporté. |
-| §21 Variantes GPU/batch | non livré | Acceleration Roadmap (BLAS, OpenMP, CUDA) reste optionnelle, jamais sur le chemin critique de l'ABI. |
-| §22 Modèles à exclure | n/a | rien à livrer. |
-| §23 Priorisation réaliste v0.1–v0.7 | v0.1–v0.6 essentiellement couvert | v0.7 batch/GPU reporté. |
+| §1 Core family (PLS1/PLS2/PLSRegression/PLSSVD/PCR/CPPLS) | delivered except CPPLS | PLS1/PLS2, PLSRegression, PLSCanonical, PLSSVD, PCR — CPPLS postponed. |
+| §2 Numerical solvers (NIPALS, OrthScores, SIMPLS, Kernel, WideKernel, SVD, Power, Randomized-SVD) | delivered | all 8 solvers are active in `n4m_model_fit`. |
+| §3 Deflection modes (regression, canonical, orthogonal) | delivered for already active models | X-only / Y-only / symmetric deflection pushed back. |
+| §4–§5 PLS-DA / PLS-LDA / PLS-logistic | delivered | dummy-coding PLS-DA, deterministic LDA/logistic heads in NumPy. |
+| §6 OPLS / OPLS-DA / shared predictive multi-response | delivered | orthogonal deflection, shared predictive scores. |
+| §7 Sparse / penalized | delivered (internal) | Sparse SIMPLS via soft-thresholding (`N4M_ALGO_SPARSE_PLS`), `fit_sparse_pls_da`, `fit_group_sparse_pls`, `fit_fused_sparse_pls`. |
+| §8 Multi-blocks | delivered (internal) | MB-PLS delivered; Added `fit_o2pls`, `fit_so_pls`, `fit_on_pls`, `fit_rosa`. sPLS-DA in §7. |
+| §9 Multiway / tensor PLS | delivered (internal) | `fit_n_pls` + `predict_n_pls` (Bro 3-way). PARAFAC-PLS / Tucker-PLS as future variants. |
+| §10.1 Kernel linear algorithm / wide-kernel | delivered | solvers `KERNEL_ALGORITHM` and `WIDE_KERNEL`. |
+| §10.2 RBF/polynomial non-linear kernel | delivered (internal) | `fit_kernel_pls` / `predict_kernel_pls` for RBF, polynomial, sigmoid via Gram dual. |
+| §11 LW-PLS / local PLS | delivered (internal) | LW-PLS delivered (uniform-weight) — covers JIT-PLS. Adaptive PLS / weighted kernel postponed. |
+| §12 Dynamic / recursive PLS | delivered (internal) | Recursive PLS moving-window via `fit_predict_recursive_pls`. Strict incremental update postponed. |
+| §13 Domain adaptation (supervised DI-PLS, PDS, EPO/OSC) | partial | OSC, EPO and DI-PLS delivered (internal DI-PLS); PDS and DS postponed. |
+| §14 Selection of variables | delivered for 5a–5u | rangers, intervals, biPLS, siPLS, stability, UVE, EMCUVE, randomization, SPA, CARS, Random Frog, SCARS, GA, Shaving, REP, IPW, ST, BVE, T2, WVC, WVC-threshold. |
+| §15 AOM-PLS / POP-PLS | delivered 6a–6f | strict-linear AOM operators (identity, detrend, SG, fd, NW, Whittaker, FCK), AOM-SIMPLS global selection, POP-SIMPLS covariance per-component selection, public C ABI surface. |
+| §16 NIRS Preprocessing | delivered | identity/center/autoscale/Pareto/SNV/MSC/EMSC/Detrend/SG/SG-derivative/Norris-Williams/ASLS/Wavelet(Haar)/OSC/EPO. |
+| §17 PLS diagnostics / chemometrics | delivered (internal) | VIP, selectivity ratio, regression/classification metrics, T² Hotelling, Q-residuals, DModX (`cpp/src/core/pls_diagnostics.{hpp,cpp}`). Approximate-PRESS still to port. |
+| §18 Validation and choice of components | delivered | splitters, CV engines, SIMPLS component selection, one-SE rule (`select_one_se_components`), `approximate_press` (PRESS + selection). Bayesian rules still to port. |
+| §19 Monitoring / process control | delivered (internal) | Empirical thresholds T² / Q at configurable α + alarm flags (`pls_monitoring_fit` / `pls_monitoring_evaluate`). |
+| §20 PLS Sets | delivered (internal) | `fit_bagging_pls`, `fit_boosting_pls`, `fit_random_subspace_pls`. |
+| §20 PLS Sets | not delivered | postponed. |
+| §21 GPU/batch variants | not delivered | Acceleration Roadmap (BLAS, OpenMP, CUDA) remains optional, never on the ABI critical path. |
+| §22 Models to exclude | n/a | nothing to deliver. |
+| §23 Realistic prioritization v0.1–v0.7 | v0.1–v0.6 mostly covered | v0.7 batch/GPU postponed. |
 
-Les benchmarks de performance (multi-langage : C++ natif, Python, R, etc.,
-multi-taille : 200/500/1000/2000/10000 échantillons × 100/1000/10000
-variables) sont en cours d'instrumentation sous `benchmarks/` — voir
-[`ROADMAP.md`](ROADMAP.md) section "Benchmark Roadmap" pour le détail des
-phases 7a (livré), 7b, 7c, 7d, 7e (en préparation).
+Performance benchmarks (multi-language: native C++, Python, R, etc.,
+multi-size: 200/500/1000/2000/10000 samples × 100/1000/10000
+variables) are being instrumented under `benchmarks/` — see
+[`ROADMAP.md`](ROADMAP.md) “Benchmark Roadmap” section for details of
+phases 7a (delivered), 7b, 7c, 7d, 7e (in preparation).
 
-## 1. Famille cœur : les modèles PLS de base
+## 1. Core family: the basic PLS models
 
-À proposer dès le socle.
+To be offered from the base.
 
 ```text
 PLS1
@@ -57,20 +57,20 @@ PCR
 CPPLS / powered PLS
 ```
 
-Détail :
+Detail :
 
-| Variante           | Rôle                                                                                          |
+| Variant | Role |
 | ------------------ | --------------------------------------------------------------------------------------------- |
-| `PLS1`             | Régression PLS avec une seule variable Y.                                                     |
-| `PLS2`             | Régression PLS multi-sortie.                                                                  |
-| `PLSRegression`    | API générique PLS1/PLS2 selon la dimension de Y.                                              |
-| `PLSCanonical`     | Relation symétrique entre deux blocs X et Y.                                                  |
-| `PLSSVD`           | SVD directe de la covariance croisée `XᵀY`.                                                   |
-| `CCA` / PLS mode B | Très proche de certaines variantes canoniques.                                                |
-| `PCR`              | Pas PLS strictement, mais baseline indispensable en chimiométrie.                             |
-| `CPPLS`            | Canonical Powered PLS, utile comme variante intermédiaire entre régression et discrimination. |
+| `PLS1` | PLS regression with a single variable Y. |
+| `PLS2` | Multi-output PLS regression.                                                                  |
+| `PLSRegression` | Generic PLS1/PLS2 API according to the dimension of Y. |
+| `PLSCanonical` | Symmetric relationship between two blocks X and Y. |
+| `PLSSVD` | Direct SVD of the cross covariance `XᵀY`.                                                   |
+| `CCA` / PLS mode B | Very close to certain canonical variants.                                                |
+| `PCR` | Not strictly PLS, but essential baseline in chemometrics.                             |
+| `CPPLS` | Canonical Powered PLS, useful as an intermediate variant between regression and discrimination. |
 
-Dans la librairie, je ferais au minimum :
+In the library, I would do at least:
 
 ```cpp
 PLSRegressor
@@ -80,9 +80,9 @@ PCRRegressor
 CPPLSRegressor
 ```
 
-## 2. Variantes de solveurs numériques
+## 2. Variants of numerical solvers
 
-Ici, il faut distinguer **le modèle statistique** et **l’algorithme de calcul**.
+Here, we must distinguish **the statistical model** and **the calculation algorithm**.
 
 ```text
 NIPALS
@@ -98,22 +98,22 @@ Missing-aware NIPALS
 Batched PLS
 ```
 
-Détail :
+Detail :
 
 | Solveur               | Pourquoi l’avoir                                                                             |
 | --------------------- | -------------------------------------------------------------------------------------------- |
-| `NIPALS`              | Référence historique, gère bien les grands `p`, extensible, compatible missing values.       |
-| `OrthogonalScoresPLS` | Version NIPALS/orthogonal scores très utilisée dans les packages R.                          |
-| `SIMPLS`              | Rapide, direct, élégant, souvent bon pour PLSR classique.                                    |
-| `KernelPLSAlgorithm`  | Attention : ici “kernel” au sens algorithme linéaire efficace, pas kernel RBF.               |
-| `WideKernelPLS`       | Variante adaptée aux matrices larges, cas fréquent en spectroscopie.                         |
-| `PLSSVD`              | Très utile pour transformation/covariance, moins pour toute la logique régression itérative. |
-| `PowerMethodPLS`      | Alternative à SVD complète, utile pour gros problèmes.                                       |
-| `RandomizedSVDPLS`    | Pour très grandes matrices ou backend GPU/batch.                                             |
-| `StableSIMPLS`        | SIMPLS avec garde-fous numériques, car SIMPLS peut être instable dans certains cas.          |
-| `MissingNIPALS`       | Gestion des `NaN` sans imputation complète.                                                  |
+| `NIPALS` | Historical reference, handles large `p` well, extensible, compatible missing values.       |
+| `OrthogonalScoresPLS` | NIPALS/orthogonal scores version widely used in R packages. |
+| `SIMPLS` | Fast, direct, elegant, often good for classic PLSR.                                    |
+| `KernelPLSAlgorithm` | Warning: here “kernel” in the sense of an efficient linear algorithm, not RBF kernel.               |
+| `WideKernelPLS` | Variant adapted to large matrices, a frequent case in spectroscopy.                         |
+| `PLSSVD` | Very useful for transformation/covariance, less so for all iterative regression logic. |
+| `PowerMethodPLS` | Alternative to complete SVD, useful for big problems.                                       |
+| `RandomizedSVDPLS` | For very large matrices or GPU/batch backend.                                             |
+| `StableSIMPLS` | SIMPLS with digital guardrails, because SIMPLS can be unstable in some cases.          |
+| `MissingNIPALS` | Management of `NaN` without complete imputation.                                                  |
 
-À prévoir dans le code :
+To be provided in the code:
 
 ```cpp
 enum class PLSSolver {
@@ -128,9 +128,9 @@ enum class PLSSolver {
 };
 ```
 
-## 3. Modes de déflection
+## 3. Deflection modes
 
-C’est fondamental. Beaucoup de “variantes PLS” sont en fait des choix différents de déflection.
+It’s fundamental. Many “PLS variants” are actually different choices of deflection.
 
 ```text
 Regression deflation
@@ -145,7 +145,7 @@ Block-wise deflation
 Sequential deflation
 ```
 
-À exposer explicitement :
+To expose explicitly:
 
 ```cpp
 enum class DeflationMode {
@@ -161,21 +161,21 @@ enum class DeflationMode {
 };
 ```
 
-Important aussi :
+Also important:
 
 ```text
-- normalisation des scores ;
-- normalisation des poids ;
-- convention de signe ;
-- mode de calcul des rotations ;
-- coefficients cumulés par nombre de composantes ;
-- intercepts et scalings sauvegardés ;
-- reconstruction X / Y optionnelle.
+- score normalization;
+- weight normalization;
+- sign convention;
+- rotation calculation mode;
+- cumulative coefficients by number of components;
+- saved intercepts and scalings;
+- optional X / Y reconstruction.
 ```
 
-## 4. PLS de régression et variantes de perte
+## 4. Regression PLS and loss variants
 
-À proposer pour couvrir les cas NIRS réels.
+To be proposed to cover real NIRS cases.
 
 ```text
 Standard PLSR
@@ -191,24 +191,24 @@ Quantile PLS
 Bayesian / probabilistic PLS
 ```
 
-Priorité :
+Priority :
 
-| Variante                   |                                              Priorité |
+| Variant |                                              Priority |
 | -------------------------- | ----------------------------------------------------: |
 | Standard PLSR              |                                         indispensable |
 | Weighted PLS               |                                         indispensable |
-| Robust PLS                 |                                            très utile |
-| Ridge/regularized PLS      |                                                 utile |
-| Continuum regression       |                                 utile mais secondaire |
-| MIR-PLS                    | intéressant pour toi, surtout si tu l’as déjà exploré |
+| Robust PLS |                                            very useful |
+| Ridge/regularized PLS |                                                 useful |
+| Continuum regression |                                 useful but secondary |
+| MIR-PLS | interesting for you, especially if you have already explored it |
 | Bayesian/probabilistic PLS |                                 recherche / optionnel |
 | Quantile PLS               |                                                 niche |
 
-Pour la NIRS, `WeightedPLS` est important : les poids échantillons permettent de gérer des jeux déséquilibrés, des lots, des distances locales, ou des mesures de confiance.
+For NIRS, `WeightedPLS` is important: sample weights make it possible to manage unbalanced games, batches, local distances, or confidence measures.
 
 ## 5. PLS discriminante / classification
 
-À proposer parce que beaucoup de papiers NIRS font de la classification.
+To propose because many NIRS papers do classification.
 
 ```text
 PLS-DA
@@ -226,23 +226,23 @@ Multiclass PLS-DA
 Multilabel PLS-DA
 ```
 
-Détail :
+Detail :
 
-| Variante      | Principe                                                     |
+| Variant | Principle |
 | ------------- | ------------------------------------------------------------ |
-| `PLSDA`       | Y one-hot ou dummy, puis régression PLS + règle de décision. |
-| `OPLSDA`      | Version orthogonalisée pour séparation/interprétation.       |
-| `SparsePLSDA` | Sélection de variables intégrée.                             |
-| `PLSLDA`      | Scores PLS puis LDA. Très utile et robuste.                  |
-| `PLSLogistic` | Scores PLS puis régression logistique.                       |
+| `PLSDA` | Y one-hot or dummy, then PLS regression + decision rule. |
+| `OPLSDA` | Orthogonalized version for separation/interpretation.       |
+| `SparsePLSDA` | Integrated variable selection.                             |
+| `PLSLDA` | PLS then LDA scores. Very useful and robust.                  |
+| `PLSLogistic` | PLS scores then logistic regression.                       |
 | `PLSGLM`      | Extension aux familles binomiale, Poisson, etc.              |
-| `PLSCox`      | Pour données de survie, plutôt hors NIRS classique.          |
+| `PLSCox` | For survival data, rather outside classic NIRS.          |
 
-Je mettrais `PLSDA`, `OPLSDA`, `PLSLDA` et `SparsePLSDA` dans le socle avancé.
+I would put `PLSDA`, `OPLSDA`, `PLSLDA` and `SparsePLSDA` in the advanced base.
 
-## 6. PLS orthogonale et variantes interprétables
+## 6. Orthogonal PLS and interpretable variants
 
-Indispensable pour chimiométrie, omics, spectroscopie.
+Essential for chemometrics, omics, spectroscopy.
 
 ```text
 OPLS
@@ -256,19 +256,19 @@ Orthogonalized PLS
 Predictive-orthogonal decomposition
 ```
 
-Détail :
+Detail :
 
-| Variante  | Rôle                                                                                     |
+| Variant | Role |
 | --------- | ---------------------------------------------------------------------------------------- |
-| `OPLS`    | Sépare variation prédictive et variation orthogonale à Y.                                |
-| `OPLSDA`  | Classification avec composantes prédictives/orthogonales.                                |
-| `O2PLS`   | Modélise variation commune et spécifique de deux blocs.                                  |
+| `OPLS` | Separates predictive variation and orthogonal variation to Y. |
+| `OPLSDA` | Classification with predictive/orthogonal components.                                |
+| `O2PLS` | Models common and specific variation of two blocks.                                  |
 | `OSCPLS`  | Orthogonal Signal Correction avant ou pendant PLS.                                       |
 | `DOSCPLS` | Direct Orthogonal Signal Correction.                                                     |
-| `EPOPLS`  | External Parameter Orthogonalization, utile pour température, humidité, instrument, etc. |
-| `OnPLS`   | Multi-blocs avec séparation variation globale/locale/unique.                             |
+| `EPOPLS` | External Parameter Orthogonalization, useful for temperature, humidity, instrument, etc. |
+| `OnPLS` | Multi-blocks with global/local/single variation separation.                             |
 
-Pour ton contexte NIRS, je mettrais en priorité :
+For your NIRS context, I would prioritize:
 
 ```text
 OPLS
@@ -278,9 +278,9 @@ EPO-PLS
 O2PLS
 ```
 
-## 7. PLS sparse, pénalisée et sélection intégrée
+## 7. Sparse PLS, penalized and integrated selection
 
-À proposer tôt, mais pas forcément dès le MVP.
+To be offered early, but not necessarily from the MVP.
 
 ```text
 sPLS
@@ -296,22 +296,22 @@ Sparse OPLS
 Sparse MB-PLS
 ```
 
-Détail :
+Detail :
 
-| Variante         | Utilité NIRS                                                           |
+| Variant | NIRS Utility |
 | ---------------- | ---------------------------------------------------------------------- |
-| `SparsePLS`      | Sélection de longueurs d’onde directement dans le modèle.              |
-| `GroupSparsePLS` | Sélection de bandes spectrales plutôt que points isolés.               |
-| `FusedSparsePLS` | Favorise des longueurs d’onde contiguës. Très pertinent spectralement. |
-| `ElasticNetPLS`  | Combine sparsité et stabilité sur variables corrélées.                 |
-| `SparseOPLS`     | Interprétation + sélection.                                            |
-| `SparseMBPLS`    | Multi-blocs + sélection.                                               |
+| `SparsePLS` | Selection of wavelengths directly in the model.              |
+| `GroupSparsePLS` | Selection of spectral bands rather than isolated points.               |
+| `FusedSparsePLS` | Favors contiguous wavelengths. Very spectrally relevant. |
+| `ElasticNetPLS` | Combines sparsity and stability on correlated variables.                 |
+| `SparseOPLS` | Interpretation + selection.                                            |
+| `SparseMBPLS` | Multi-blocks + selection.                                               |
 
-Pour la NIRS, `GroupSparsePLS` et `FusedSparsePLS` sont plus cohérents que du Lasso pur point par point, car les longueurs d’onde voisines sont fortement corrélées.
+For NIRS, `GroupSparsePLS` and `FusedSparsePLS` are more coherent than pure point-to-point Lasso, because neighboring wavelengths are strongly correlated.
 
-## 8. PLS multi-blocs / multi-tables
+## 8. Multi-block/multi-table PLS
 
-À prévoir comme gros axe de la librairie.
+To be planned as a major axis of the bookstore.
 
 ```text
 MB-PLS
@@ -329,21 +329,21 @@ OnPLS
 DIABLO-like MB-sPLS-DA
 ```
 
-Détail :
+Detail :
 
-| Variante            | Rôle                                                           |
+| Variant | Role |
 | ------------------- | -------------------------------------------------------------- |
-| `MBPLS`             | Plusieurs blocs X alignés sur les mêmes échantillons.          |
-| `MBSparsePLS`       | Multi-blocs + sélection de variables.                          |
-| `MBPLSDA`           | Classification multi-blocs.                                    |
-| `SOPLS`             | Sequential Orthogonalized PLS, blocs traités séquentiellement. |
+| `MBPLS` | Several X blocks aligned on the same samples.          |
+| `MBSparsePLS` | Multi-blocks + variable selection.                          |
+| `MBPLSDA` | Multi-block classification.                                    |
+| `SOPLS` | Sequential Orthogonalized PLS, blocks processed sequentially. |
 | `ROSA`              | Response-Oriented Sequential Alternation.                      |
-| `HierarchicalMBPLS` | Scores par bloc puis modèle supérieur.                         |
-| `ConsensusPLS`      | Fusion de plusieurs modèles/blocs.                             |
-| `OnPLS`             | Décomposition variation commune/locale/unique.                 |
-| `DIABLO`-like       | Version classification supervisée multi-omics/multi-blocs.     |
+| `HierarchicalMBPLS` | Scores by block then higher model.                         |
+| `ConsensusPLS` | Merging multiple models/blocks.                             |
+| `OnPLS` | Common/local/unique variation decomposition.                 |
+| `DIABLO`-like | Supervised multi-omics/multi-block classification version.     |
 
-À prévoir côté API :
+To be expected on the API side:
 
 ```cpp
 struct Block {
@@ -358,7 +358,7 @@ MBPLSModel fit(const std::vector<Block>& blocks, const Matrix& Y);
 
 ## 9. Multiway / tensor PLS
 
-Très utile si tu veux couvrir imagerie spectrale, EEM, séries temporelles, cubes hyperspectraux.
+Very useful if you want to cover spectral imaging, EEM, time series, hyperspectral cubes.
 
 ```text
 N-PLS
@@ -371,7 +371,7 @@ N-way PLS-DA
 Multiway MB-PLS
 ```
 
-Exemples d’entrée :
+Example entries:
 
 ```text
 samples × wavelengths × time
@@ -380,24 +380,24 @@ samples × excitation × emission
 samples × wavelengths × instruments
 ```
 
-À mon avis, ce n’est pas MVP, mais il faut prévoir la structure de données.
+In my opinion, it's not MVP, but you have to predict the data structure.
 
-## 10. Kernel et non-linéaire
+## 10. Kernel and non-linear
 
-Deux familles à bien distinguer.
+Two families to clearly distinguish.
 
-### 10.1 Kernel algorithm PLS linéaire
+### 10.1 Kernel linear PLS algorithm
 
-C’est l’algorithme “kernel PLS” historique pour calculer efficacement une PLS linéaire sur matrices larges. À inclure.
+This is the historic “kernel PLS” algorithm to efficiently calculate linear PLS on large matrices. To be included.
 
 ```text
 Kernel algorithm PLS
 Wide-kernel PLS
 ```
 
-### 10.2 Kernel PLS non-linéaire
+### 10.2 Non-linear PLS kernel
 
-Là on parle de noyaux type machine learning.
+Here we are talking about machine learning type kernels.
 
 ```text
 RBF Kernel PLS
@@ -410,7 +410,7 @@ Sparse Kernel PLS
 Local Kernel PLS
 ```
 
-À proposer en API :
+To propose as an API:
 
 ```cpp
 enum class KernelType {
@@ -422,11 +422,11 @@ enum class KernelType {
 };
 ```
 
-Mais je mettrais ça après le cœur linéaire, parce que la validation et le tuning deviennent vite lourds.
+But I would put that after the linear core, because validation and tuning quickly become cumbersome.
 
 ## 11. Local PLS, adaptive PLS, just-in-time PLS
 
-Très important pour gros jeux hétérogènes NIRS.
+Very important for large heterogeneous NIRS games.
 
 ```text
 Local PLS
@@ -442,19 +442,19 @@ Local kernel PLS
 Wavelet local PLS
 ```
 
-Principe :
+Principle:
 
 ```text
-Pour chaque prédiction :
-    1. trouver les voisins ou échantillons pertinents ;
-    2. pondérer les échantillons ;
-    3. fitter une PLS locale ;
-    4. prédire le nouvel échantillon.
+For each prediction:
+    1. find the relevant neighbors or samples ;
+    2. weight the samples ;
+    3. fit a local PLS ;
+    4. predict the new sample.
 ```
 
-C’est coûteux, mais c’est exactement le genre de chose qu’un backend C++/batch/GPU peut accélérer.
+It's expensive, but it's exactly the kind of thing a C++/batch/GPU backend can speed up.
 
-À prévoir :
+To expect:
 
 ```cpp
 LocalPLSRegressor
@@ -466,7 +466,7 @@ MixturePLSRegressor
 
 ## 12. Dynamic PLS / process PLS / time-aware PLS
 
-À proposer si tu veux couvrir procédés, monitoring, séries temporelles, phénotypage temporel.
+To be suggested if you want to cover processes, monitoring, time series, temporal phenotyping.
 
 ```text
 Dynamic PLS
@@ -482,7 +482,7 @@ Dynamic MB-PLS
 State-space PLS
 ```
 
-Attention au nom `DiPLS` : dans la littérature récente NIRS, `di-PLS` peut aussi désigner **domain-invariant PLS**, donc je séparerais :
+Be careful with the name `DiPLS`: in recent NIRS literature, `di-PLS` can also refer to **domain-invariant PLS**, so I would separate:
 
 ```text
 DPLS  = Dynamic PLS
@@ -491,7 +491,7 @@ diPLS = Domain-invariant PLS
 
 ## 13. Domain adaptation / calibration transfer
 
-Très important en NIRS réelle : instrument, lot, température, humidité, site, espèce, matrice, forme physique de l’échantillon.
+Very important in real NIRS: instrument, batch, temperature, humidity, site, species, matrix, physical form of the sample.
 
 ```text
 Domain-invariant PLS / di-PLS
@@ -508,9 +508,9 @@ OSC/EPO transfer PLS
 Batch-corrected PLS
 ```
 
-`di-PLS` est explicitement présenté comme une technique d’adaptation de domaine permettant de réduire les différences entre domaines liés, par exemple pour adapter une calibration NIR d’une forme physique d’échantillon vers une autre sans nouvelles mesures de référence. ([ScienceDirect][2])
+`di-PLS` is explicitly presented as a domain adaptation technique to reduce differences between related domains, for example to adapt an NIR calibration from one physical form of sample to another without new reference measurements. ([ScienceDirect][2])
 
-Je mettrais dans la librairie :
+I would put in the library:
 
 ```cpp
 DomainInvariantPLS
@@ -521,9 +521,9 @@ SlopeBiasAdapter
 SpikingAdapter
 ```
 
-## 14. Sélection de variables / longueurs d’onde autour de la PLS
+## 14. Selection of variables / wavelengths around the PLS
 
-Ce n’est pas toujours une “variante PLS” au sens strict, mais pour une librairie NIRS, c’est indispensable.
+It is not always a “PLS variant” in the strict sense, but for a NIRS library, it is essential.
 
 ### 14.1 Scores/filter simples
 
@@ -542,7 +542,7 @@ Bootstrap coefficients
 Permutation importance
 ```
 
-### 14.2 UVE / Monte Carlo / stabilité
+### 14.2 UVE / Monte Carlo / stability
 
 ```text
 UVE-PLS
@@ -554,7 +554,7 @@ Bootstrap UVE
 Jackknife UVE
 ```
 
-### 14.3 Méthodes intervalle / bandes spectrales
+### 14.3 Interval / spectral band methods
 
 ```text
 iPLS
@@ -569,7 +569,7 @@ windowed VIP
 windowed CARS
 ```
 
-### 14.4 Méthodes wrapper / métaheuristiques
+### 14.4 Wrapper / metaheuristic methods
 
 ```text
 GA-PLS
@@ -587,9 +587,9 @@ VCPA-PLS
 BOSS-PLS
 ```
 
-### 14.5 Méthodes explicitement listées dans `plsVarSel`
+### 14.5 Methods explicitly listed in `plsVarSel`
 
-À intégrer ou reproduire proprement :
+To integrate or reproduce properly:
 
 ```text
 BVE-PLS
@@ -610,9 +610,9 @@ LDA-from-PLS
 LDA-from-PLS-CV
 ```
 
-`plsVarSel` liste précisément ce type de fonctions autour de la sélection de variables PLS, notamment `bve_pls`, `ga_pls`, `ipw_pls`, `mcuve_pls`, `rep_pls`, `spa_pls`, `stpls`, `VIP`, `T2_pls` et `WVC_pls`. ([CRAN][3])
+`plsVarSel` lists precisely this type of functions around PLS variable selection, including `bve_pls`, `ga_pls`, `ipw_pls`, `mcuve_pls`, `rep_pls`, `spa_pls`, `stpls`, `VIP`, `T2_pls` and `WVC_pls`. ([CRAN][3])
 
-Côté C++ :
+C++ side:
 
 ```cpp
 class VariableSelector {
@@ -629,9 +629,9 @@ class GeneticPLSSelector;
 class RandomFrogSelector;
 ```
 
-## 15. AOM-PLS et variantes liées à ton axe
+## 15. AOM-PLS and variants linked to your axis
 
-Pour toi, c’est probablement le plus différenciant.
+For you, this is probably the most differentiating thing.
 
 ```text
 AOM-PLS
@@ -655,21 +655,21 @@ Per-block AOM-PLS
 Per-target AOM-PLS
 ```
 
-Je séparerais clairement :
+I would clearly separate:
 
-| Variante       | Principe                                                   |
+| Variant | Principle |
 | -------------- | ---------------------------------------------------------- |
-| `AOMPLS`       | Mélange pondéré d’opérateurs de preprocessing dans la PLS. |
-| `POPPLS`       | Choix discret d’un opérateur par composante.               |
-| `SoftAOMPLS`   | Mélange différentiable ou pondéré.                         |
-| `HardAOMPLS`   | Sélection d’un opérateur unique.                           |
-| `SparseAOMPLS` | Pénalité pour forcer peu d’opérateurs.                     |
-| `BlockAOMPLS`  | Opérateurs différents selon les blocs.                     |
-| `AOMOPLS`      | AOM + séparation prédictif/orthogonal.                     |
-| `AOMMBPLS`     | AOM + multi-blocs.                                         |
-| `AOMLWPLS`     | AOM + modèle local.                                        |
+| `AOMPLS` | Weighted mixture of preprocessing operators in PLS. |
+| `POPPLS` | Discrete choice of an operator per component.               |
+| `SoftAOMPLS` | Differentiable or weighted mixture.                         |
+| `HardAOMPLS` | Selection of a single operator.                           |
+| `SparseAOMPLS` | Penalty for forcing few operators.                     |
+| `BlockAOMPLS` | Different operators depending on the blocks.                     |
+| `AOMOPLS` | AOM + predictive/orthogonal separation.                     |
+| `AOMMBPLS` | AOM + multi-blocks.                                         |
+| `AOMLWPLS` | AOM + local model.                                        |
 
-Pour une librairie C++, je représenterais ça avec des opérateurs linéaires :
+For a C++ library, I would represent this with linear operators:
 
 ```cpp
 class SpectralOperator {
@@ -684,9 +684,9 @@ class AOMPLSRegressor {
 };
 ```
 
-## 16. Preprocessing NIRS à inclure dans la librairie
+## 16. NIRS preprocessing to include in the library
 
-Même si ce ne sont pas des variantes de PLS, une librairie PLS/NIRS doit les avoir, sinon elle ne sera pas autonome.
+Even if they are not PLS variants, a PLS/NIRS library must have them, otherwise it will not be standalone.
 
 ```text
 Mean centering
@@ -719,11 +719,11 @@ EPO
 DOSC
 ```
 
-Pour AOM, tous ces preprocessings doivent idéalement être représentés comme des opérateurs réutilisables.
+For AOM, all these preprocessings should ideally be represented as reusable operators.
 
-## 17. Diagnostics PLS / chimiométrie
+## 17. PLS diagnostics / chemometrics
 
-À proposer comme API de diagnostic, pas comme plots seulement.
+To propose as a diagnostic API, not just plots.
 
 ```text
 Scores
@@ -748,11 +748,11 @@ Outlier flags
 Applicability domain
 ```
 
-`ropls` met en avant R²/Q², permutation testing, outlier detection, VIP et coefficients de régression comme éléments importants de l’analyse PLS/OPLS. ([Bioconductor][4])
+`ropls` highlights R²/Q², permutation testing, outlier detection, VIP and regression coefficients as important elements of PLS/OPLS analysis. ([Bioconductor][4])
 
-## 18. Validation, sélection du nombre de composantes, incertitude
+## 18. Validation, selection of the number of components, uncertainty
 
-À inclure très tôt. Sinon les modèles ne seront pas comparables.
+To be included very early. Otherwise the models will not be comparable.
 
 ```text
 K-fold CV
@@ -777,7 +777,7 @@ Coefficient confidence intervals
 Prediction intervals
 ```
 
-Métriques à exposer :
+Metrics to expose:
 
 ```text
 RMSEC
@@ -803,11 +803,11 @@ AUC
 MCC
 ```
 
-Le package R `pls` expose déjà CV, LOO, MSEP/RMSEP/R² et jackknife ; il faut au moins reproduire ce niveau-là proprement. ([CRAN][5])
+The R package `pls` already exposes CV, LOO, MSEP/RMSEP/R² and jackknife; we must at least reproduce this level properly. ([CRAN][5])
 
 ## 19. Monitoring / process control avec PLS
 
-Pour applications industrielles ou séries temporelles.
+For industrial applications or time series.
 
 ```text
 PLS monitoring
@@ -823,11 +823,11 @@ Batch process PLS
 Multiblock process monitoring
 ```
 
-Ce n’est pas prioritaire pour NIRS calibration classique, mais très utile pour “soft sensors”.
+This is not a priority for classic NIRS calibration, but very useful for “soft sensors”.
 
 ## 20. Ensembles de PLS
 
-Intéressant pour robustesse et gros benchmarks.
+Interesting for robustness and large benchmarks.
 
 ```text
 Bagging PLS
@@ -842,7 +842,7 @@ Mixture-of-experts PLS
 Cluster ensemble PLS
 ```
 
-À prévoir comme wrappers :
+To use as wrappers:
 
 ```cpp
 BaggingPLS
@@ -852,9 +852,9 @@ ConsensusPLS
 MixturePLS
 ```
 
-## 21. Variantes GPU/batch à prévoir dès le design C++
+## 21. GPU/batch variants to plan for in C++ design
 
-Même si tu pars CPU C++ maintenant, il faut que l’API permette plus tard :
+Even if you start CPU C++ now, the API must allow it later:
 
 ```text
 Batched PLS fit
@@ -874,14 +874,14 @@ Ce n’est pas juste :
 fit_one_pls_on_gpu()
 ```
 
-Le vrai gain GPU sera plutôt :
+The real GPU gain will instead be:
 
 ```text
 fit 10 000 PLS sur des combinaisons :
     preprocessing × variables × folds × n_components × targets
 ```
 
-Donc prévoir dès maintenant :
+So plan now:
 
 ```cpp
 struct PLSBatchJob {
@@ -895,9 +895,9 @@ struct PLSBatchJob {
 std::vector<PLSResult> fit_batch(const std::vector<PLSBatchJob>& jobs);
 ```
 
-## 22. Modèles à exclure ou repousser
+## 22. Models to exclude or reject
 
-Je ne les mettrais pas dans le cœur initial :
+I wouldn't put them in the initial core:
 
 ```text
 PLS-SEM / Partial Least Squares Structural Equation Modeling
@@ -907,21 +907,21 @@ Deep PLS
 Highly specialized survival PLS
 ```
 
-Note Phase 47 (2026-05-16) : **Gaussian-process PLS** est désormais
-implémenté (`gpr_pls_fit`, parity sklearn rmse_rel ~ 2.3e-10). La
-tête GP est exposée comme primitive standalone
-(`fit_gp_on_scores`) pour permettre une future GPR-on-AOMPLS.
+Note Phase 47 (2026-05-16): **Gaussian-process PLS** is now
+implemented (`gpr_pls_fit`, parity sklearn rmse_rel ~ 2.3e-10). There
+GP head is exposed as standalone primitive
+(`fit_gp_on_scores`) to allow a future GPR-on-AOMPLS.
 
-Note Phase 48-49 (2026-05-16) : sur la liste §14.4 des
-métaheuristiques wrapper, **PSO-PLS** (`pso_select`, Kennedy &
-Eberhart 1997, paper-only) et **VISSA-PLS** (`vissa_select`, Deng
-et al. 2014, paper-only) sont désormais livrés. Les autres
-métaheuristiques exotiques (ACO, simulated annealing, IRIV, VCPA,
-BOSS, CARS-SPA) restent reportées.
+Note Phase 48-49 (2026-05-16): in the §14.4 list of
+wrapper metaheuristics, **PSO-PLS** (`pso_select`, Kennedy &
+Eberhart 1997, paper-only) and **VISSA-PLS** (`vissa_select`, Deng
+et al. 2014, paper-only) are now delivered. The other
+exotic metaheuristics (ACO, simulated annealing, IRIV, VCPA,
+BOSS, CARS-SPA) remain postponed.
 
-`PLS-SEM` est un autre monde : sociométrie, modèles à équations structurelles, graphes causaux/latents. Ça risque de polluer une librairie NIRS.
+`PLS-SEM` is another world: sociometry, structural equation models, causal/latent graphs. It risks polluting a NIRS library.
 
-## 23. Priorisation réaliste
+## 23. Realistic prioritization
 
 ### MVP C++ v0.1
 
@@ -941,7 +941,7 @@ coefficients per component
 mean/scale/intercept serialization
 ```
 
-### v0.2 chimiométrie/NIRS
+### v0.2 chemometrics/NIRS
 
 ```text
 SNV
@@ -962,7 +962,7 @@ Q residuals
 DModX
 ```
 
-### v0.3 sélection de variables
+### v0.3 variable selection
 
 ```text
 VIP selector
@@ -981,7 +981,7 @@ Shaving
 BVE-PLS
 ```
 
-### v0.4 avancé
+### v0.4 advanced
 
 ```text
 sPLS
@@ -996,7 +996,7 @@ Domain-invariant PLS
 Transfer PLS
 ```
 
-### v0.5 multi-blocs
+### v0.5 multi-block
 
 ```text
 MB-PLS
@@ -1034,9 +1034,9 @@ batched local PLS
 CUDA/cuBLAS or vendor backend
 ```
 
-## Synthèse
+## Summary
 
-La librairie devrait proposer, à terme, ces grandes familles :
+The library should eventually offer these major families:
 
 ```text
 1. PLS1 / PLS2 / PLSRegression
@@ -1053,12 +1053,12 @@ La librairie devrait proposer, à terme, ces grandes familles :
 12. Dynamic / recursive / online PLS
 13. Domain-invariant / transfer PLS
 14. Variable selection : VIP, MCUVE, CARS, SPA, iPLS, GA, Random Frog, etc.
-15. AOM-PLS et variantes par composante/bloc/opérateur
-16. Diagnostics, validation, monitoring et incertitude
+15. AOM-PLS and variants by component/block/operator
+16. Diagnostics, validation, monitoring, and uncertainty
 17. Batch/GPU-ready implementations
 ```
 
-Le cœur C++ doit donc être pensé comme :
+The C++ core must therefore be thought of as:
 
 ```text
 PLS engine
@@ -1072,7 +1072,7 @@ PLS engine
 + batch execution
 ```
 
-Pas comme une collection plate de 150 classes indépendantes.
+Not like a flat collection of 150 independent classes.
 
 [1]: https://scikit-learn.org/stable/modules/cross_decomposition.html "1.8. Cross decomposition — scikit-learn 1.8.0 documentation"
 [2]: https://www.sciencedirect.com/science/article/pii/S0039914021003829 "A brief note on application of domain-invariant PLS for adapting near-infrared spectroscopy calibrations between different physical forms of samples - ScienceDirect"

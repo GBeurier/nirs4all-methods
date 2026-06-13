@@ -2891,7 +2891,7 @@ Coverage-matrix release audit refresh (2026-06-06):
 
 Stop snapshot for next continuation (2026-06-06):
 
-- User requested: "Met à jour ou créé le handoff, et stop." No new engine work
+- User requested: "Update or create the handoff, then stop." No new engine work
   was started after that instruction.
 - Current branch at stop: `release-readiness-fixes`, pushed to origin before
   this handoff-only update. Latest pushed commit before this note:
@@ -3052,7 +3052,7 @@ PLS many-batched W/P tile storage (2026-06-06):
 
 Final stop handoff update (2026-06-06):
 
-- User requested: "Met à jour ou créé le handoff, et stop." Work stops here;
+- User requested: "Update or create the handoff, then stop." Work stops here;
   no additional code, benchmark or test expansion was started after this
   instruction.
 - Repository state at this stop:

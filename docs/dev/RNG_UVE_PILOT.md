@@ -62,7 +62,7 @@ a config flag; the current splitmix kernel stays as the default), and the only
 real risk is the LOO-PRESS argmin tie-sensitivity. Estimated ~1 day for the uve
 path itself + a fixture parity test vs R.
 
-## Stop decision (per maintainer: "selon les difficultés rencontrées, on arrête")
+## Stop decision (per maintainer: "stop when the run gets too difficult")
 
 This is the difficulty checkpoint. Status:
 - **Foundation: DONE + proven** (3 RNG engines bit-exact, unified dispatch with

@@ -17,7 +17,7 @@ Description: A portable Partial Least Squares engine for chemometrics: the
     DModX), and calibration transfer (PDS, DS). The spectroscopy-specific
     surface (spectral preprocessing, augmentation, sample filters, signal-type
     detection) lives in the full 'nirs4all-methods' distribution. The same
-    C++17 numerical core powers both; here it is vendored and compiled from
+    'C++17' numerical core powers both; here it is vendored and compiled from
     source at install time, with no external system libraries required.
 License: CeCILL (== 2.1)
 URL: https://github.com/GBeurier/nirs4all-methods

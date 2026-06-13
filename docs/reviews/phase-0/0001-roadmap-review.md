@@ -134,7 +134,7 @@ Do not write any files. Do not edit anything. Output your full report on stdout.
 - §5.3: Windows export checking with `dumpbin /EXPORTS` is explicitly included.
 ## Disposition
 
-Per the project's review rule (`si Codex n'est pas d'accord avec toi, donne-lui plus d'info; si il est toujours en désaccord, considère qu'il a raison`), every Codex correction was reviewed for soundness. All 29 actionable items (10 critical + 13 important + 6 minor) were accepted; revision 2 of the roadmap incorporates each of them.
+Per the project's review rule (`if Codex disagrees with you, give it more information; if it still disagrees, assume it is right`), every Codex correction was reviewed for soundness. All 29 actionable items (10 critical + 13 important + 6 minor) were accepted; revision 2 of the roadmap incorporates each of them.
 
 Concrete dispositions:
 

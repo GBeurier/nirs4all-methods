@@ -14,7 +14,7 @@ Description: Implements a portable Partial Least Squares (PLS) and
     continuum, multi-block, GLM, MIR), adaptive AOM-PLS and POP-PLS
     operator selection, variable-selection methods (SPA, CARS, GA,
     random frog, stability selection, VIP), diagnostics (Hotelling T2,
-    Q residuals, DModX), and calibration transfer (PDS, DS). The C++17
+    Q residuals, DModX), and calibration transfer (PDS, DS). The 'C++17'
     implementation is vendored and compiled from source at install
     time; no external system libraries are required.
 License: CeCILL (== 2.1)
