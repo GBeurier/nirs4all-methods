@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d9488">
+<title>nirs4all-methods · full parity matrix</title>
+<meta name="description" content="The full libn4m methods × implementation-columns parity/benchmark matrix: binding-vs-reference verdicts, ΔRMSE / Jaccard divergence, timing — fully offline, no CDN.">
+<link rel="stylesheet" href="{{ pathto('_static/dashboard.css', 1) }}">
+</head>
+<body class="dash-matrix">
+<a class="skip-link" href="#matrix">Skip to matrix</a>
+
+<nav class="topbar" aria-label="Primary">
+  <div class="nav-inner">
+    <a class="nav-logo" href="{{ pathto('index') }}" aria-label="nirs4all-methods home">
+      <span class="mark" aria-hidden="true"></span>
+      <span><b>nirs4all</b>-methods</span>
+      <span class="ver" id="navVersion">libn4m</span>
+    </a>
+    <div class="nav-spacer"></div>
+    <div class="nav-stat"><b id="navAlgos">—</b><span>methods</span></div>
+    <div class="nav-divider" aria-hidden="true"></div>
+    <div class="nav-stat"><b id="navCells">—</b><span>parity cells</span></div>
+    <div class="nav-divider" aria-hidden="true"></div>
+    <div class="nav-stat"><b id="navGenerated">—</b><span>generated</span></div>
+    <div class="nav-divider" aria-hidden="true"></div>
+    <a class="nav-cta back" href="{{ pathto('index') }}" aria-label="Back to the card explorer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      Card explorer
+    </a>
+  </div>
+</nav>
+
+<main class="shell matrix-shell">
+
+  <header class="hero">
+    <div class="eyebrow">full parity &amp; benchmark matrix</div>
+    <h1>Methods × <span class="grad">implementations</span> — the complete grid</h1>
+    <p class="lede">
+      One row per method × problem size × thread count; one column per implementation (C++ build tiers,
+      every language binding, and the canonical external references). Each cell pairs a value with a
+      parity verdict — <strong>reference gate</strong> for the C++ core &amp; external libraries,
+      <strong>binding gate</strong> for the language bindings. Switch to <strong>divergence</strong> to read
+      ΔRMSE (numeric methods) and Jaccard set-overlap (selectors). <strong>NR</strong> (not run) and
+      <strong>n/a</strong> (not available) stay distinct and are never coerced into a number.
+      Prefer a guided view? Open the <a href="{{ pathto('index') }}">card explorer</a>.
+    </p>
+    <div class="provenance" id="provenance" aria-label="Benchmark host provenance"></div>
+  </header>
+
+  <div class="legend" role="note" aria-label="Verdict legend">
+    <strong>Verdicts</strong>
+    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>exact</span>
+    <span class="badge cross"><span class="gly" aria-hidden="true">⇄</span>cross-check</span>
+    <span class="badge cross"><span class="gly" aria-hidden="true">≈</span>drift</span>
+    <span class="badge diverg"><span class="gly" aria-hidden="true">✗</span>divergent</span>
+    <span class="badge na"><span class="gly" aria-hidden="true">–</span>not&nbsp;available</span>
+    <span class="badge nr"><span class="gly" aria-hidden="true">NR</span>not&nbsp;run</span>
+    <span class="badge error"><span class="gly" aria-hidden="true">!</span>error</span>
+    <span class="badge" style="color:var(--amber);background:rgba(217,119,6,.1);border-color:rgba(217,119,6,.3)"><span class="gly" aria-hidden="true">◆</span>canonical&nbsp;reference</span>
+    <span style="margin-left:auto;color:var(--text-3)">≡ = build-insensitive (matches native) · color is always paired with a glyph</span>
+  </div>
+
+  <!-- toolbar -->
+  <div class="mx-controls" role="search">
+    <div class="search-wrap" style="flex:1 1 260px;min-width:200px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" class="search" id="mxSearch" placeholder="Search method or namespace…" aria-label="Search methods" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="mx-group"><span class="ctl-label">category</span><select class="ctl" id="mxCategory" aria-label="Filter by category"></select></div>
+    <div class="mx-group"><span class="ctl-label">origin</span><select class="ctl" id="mxOrigin" aria-label="Filter by origin"></select></div>
+    <div class="mx-group"><span class="ctl-label">size</span><select class="ctl" id="mxSize" aria-label="Filter by problem size"></select></div>
+    <div class="mx-group"><span class="ctl-label">threads</span><select class="ctl" id="mxThreads" aria-label="Filter by thread count"></select></div>
+    <div class="mx-group"><span class="ctl-label">parity</span>
+      <select class="ctl" id="mxParity" aria-label="Filter by parity status">
+        <option value="">any status</option>
+        <option value="exact">has exact</option>
+        <option value="attention">has divergence / cross-check</option>
+        <option value="divergent">has divergent</option>
+        <option value="cross_check">has cross-check</option>
+        <option value="error">has error</option>
+      </select>
+    </div>
+
+    <div class="seg mx-viz" role="group" aria-label="Cell value mode">
+      <button type="button" data-viz="duration" aria-pressed="true">duration</button>
+      <button type="button" data-viz="divergence" aria-pressed="false">parity δ/J</button>
+      <button type="button" data-viz="speedup" aria-pressed="false">speed-up</button>
+    </div>
+
+    <button type="button" class="ctl" id="mxScoreToggle" aria-pressed="false">show score cards</button>
+  </div>
+
+  <!-- per-method score cards (toggle) -->
+  <section class="mx-scorewrap collapsed" id="mxScoreWrap" aria-label="Per-method score cards">
+    <div id="mxScores"></div>
+  </section>
+
+  <!-- the matrix -->
+  <div class="mx-tablecard">
+    <div class="mx-tablewrap" id="matrix">
+      <table class="mx" aria-label="Methods by implementation parity and benchmark matrix">
+        <thead id="mxHead"></thead>
+        <tbody id="mxBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="mx-meta" id="mxMeta"></div>
+
+</main>
+
+<footer class="foot">
+  <p>
+    <strong>nirs4all-methods</strong> full parity matrix.
+    Data is the canonical <code class="mono">bench-data.json</code> contract, rendered fully offline (no network, no CDN).
+    Reference parity = libn4m C++ core vs canonical external library · Binding parity = each language binding vs the C++ core.
+    Back to the <a href="{{ pathto('index') }}">card explorer</a>,
+    <a href="{{ pathto('about') }}">project info</a>, or
+    <a href="{{ pathto('benchmarks/methodology') }}">methodology</a>.
+  </p>
+</footer>
+
+<script>window.BENCH_DATA = {{ bench_data_json | safe }};</script>
+<script src="{{ pathto('_static/matrix.js', 1) }}"></script>
+</body>
+</html>

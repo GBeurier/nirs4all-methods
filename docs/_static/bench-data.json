@@ -2,7 +2,7 @@
   "generated_at": "2026-05-30 10:15 UTC",
   "host": {
     "os": "Linux 6.6.114.1-microsoft-standard-WSL2 (x86_64)",
-    "python": "3.10.12",
+    "python": "3.11.15",
     "cpu_model": "12th Gen Intel(R) Core(TM) i9-12900K",
     "cpu_count_logical": 24,
     "cpu_count_physical": 12,

@@ -144,9 +144,11 @@ html_js_files = [
 # explicitly so the custom landing.html template is picked up.
 templates_path = ["_templates"]
 
-# Override `/index.html` with the custom interactive dashboard.
+# Override `/index.html` with the custom card-explorer dashboard, and add
+# `/matrix.html` for the full methods × implementation parity/benchmark grid.
+# Both read the same injected `window.BENCH_DATA` payload (see setup()).
 # Sphinx still renders about.md (master_doc) at `/about.html`.
-html_additional_pages = {"index": "landing.html"}
+html_additional_pages = {"index": "landing.html", "matrix": "matrix.html"}
 
 
 def setup(app):
