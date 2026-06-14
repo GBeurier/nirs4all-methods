@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // Parity tests for the Phase 20 transfer-metrics utility
-// (n4m_transfer_metrics_compute). One smoke test exercises the
+// (n4m_domain_adaptation_transfer_metrics_compute). One smoke test exercises the
 // create-input / compute / consume happy path on a small inline matrix;
 // one parity test loads transfer_metrics_v1.json, runs the C engine on
 // each case, and asserts within tolerance against the frozen NumPy
@@ -70,7 +70,7 @@ void test_transfer_metrics_smoke() {
     n4m_matrix_view_t Xs = make_rowmajor_view(X_src, N, P);
     n4m_matrix_view_t Xt = make_rowmajor_view(X_tgt, N, P);
     n4m_transfer_metrics_t out{};
-    const n4m_status_t st = n4m_transfer_metrics_compute(
+    const n4m_status_t st = n4m_domain_adaptation_transfer_metrics_compute(
         Xs, Xt,
         /*n_components=*/3, /*k_neighbors=*/3, /*seed=*/42, &out);
     N4M_TEST_REQUIRE(st == N4M_OK);
@@ -102,13 +102,13 @@ void test_transfer_metrics_invalid_args() {
     n4m_matrix_view_t Xt = make_rowmajor_view(X_tgt, N, P);
     n4m_transfer_metrics_t out{};
     // out NULL
-    N4M_TEST_REQUIRE(n4m_transfer_metrics_compute(Xs, Xt, 2, 2, 0, nullptr)
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_transfer_metrics_compute(Xs, Xt, 2, 2, 0, nullptr)
                      == N4M_ERR_NULL_POINTER);
     // n_components < 1
-    N4M_TEST_REQUIRE(n4m_transfer_metrics_compute(Xs, Xt, 0, 2, 0, &out)
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_transfer_metrics_compute(Xs, Xt, 0, 2, 0, &out)
                      == N4M_ERR_INVALID_ARGUMENT);
     // k_neighbors < 2
-    N4M_TEST_REQUIRE(n4m_transfer_metrics_compute(Xs, Xt, 2, 1, 0, &out)
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_transfer_metrics_compute(Xs, Xt, 2, 1, 0, &out)
                      == N4M_ERR_INVALID_ARGUMENT);
 }
 
@@ -280,7 +280,7 @@ void verify_transfer_metrics_parity() {
         n4m_matrix_view_t Xs = make_rowmajor_view(src.data(), c.src_rows, c.src_cols);
         n4m_matrix_view_t Xt = make_rowmajor_view(tgt.data(), c.tgt_rows, c.tgt_cols);
         n4m_transfer_metrics_t out{};
-        const n4m_status_t st = n4m_transfer_metrics_compute(
+        const n4m_status_t st = n4m_domain_adaptation_transfer_metrics_compute(
             Xs, Xt, c.n_components, c.k_neighbors, c.seed, &out);
         N4M_TEST_REQUIRE(st == N4M_OK);
 

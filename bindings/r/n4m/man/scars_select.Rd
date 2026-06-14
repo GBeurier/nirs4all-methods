@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{scars_select}
 \alias{scars_select}
+\alias{n4m_feature_select_scars}
 \title{SCARS — Stability + CARS.}
 \usage{
 scars_select(

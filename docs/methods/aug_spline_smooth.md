@@ -1,6 +1,6 @@
 # `aug_spline_smooth` — Spline Smoothing Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineSmoothingAugmenter` · _C ABI_: `n4m_aug_spline_smooth_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineSmoothingAugmenter` · _C ABI_: `n4m_augmentation_spline_smoothing_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Spline smoothing augmenter.
 
 ### Implementation
 
-C ABI `n4m_aug_spline_smooth_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SplineSmoothingAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_spline_smoothing_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SplineSmoothingAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

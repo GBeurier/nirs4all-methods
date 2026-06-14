@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{wvc_select}
 \alias{wvc_select}
+\alias{n4m_feature_select_wvc}
 \title{WVC-PLS — weighted vector correlation top-k selector.}
 \usage{
 wvc_select(X, Y, n_components, top_k = 10L, normalize = TRUE)

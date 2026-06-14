@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Timing smoke benchmark for n4m.aom_pls_superblock."""
+"""Timing smoke benchmark for aom_pls_superblock."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m.sklearn import NativeAOMPLSSuperblockRegressor
+from n4m.compose.aom_superblock import AOMPLSSuperblockRegressor
+from n4m.compose.aom_superblock import aom_pls_superblock
 
 
 OPERATORS = (
@@ -49,7 +50,7 @@ def median_ms(fn, repeats: int) -> tuple[float, object]:
 
 
 def run_function(X, y, folds, cv, components, block_scaling, cuda_threshold):
-    return n4m.aom_pls_superblock(
+    return aom_pls_superblock(
         X,
         y,
         operators=OPERATORS,
@@ -63,7 +64,7 @@ def run_function(X, y, folds, cv, components, block_scaling, cuda_threshold):
 
 
 def run_wrapper(X, y, folds, cv, components, block_scaling, cuda_threshold):
-    return NativeAOMPLSSuperblockRegressor(
+    return AOMPLSSuperblockRegressor(
         operators=OPERATORS,
         pls_components=components,
         cv=cv,

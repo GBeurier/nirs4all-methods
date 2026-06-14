@@ -7,11 +7,11 @@ category: "models"
 subcategory: "classification"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pls_lda_fit"
+  - "n4m_estimators_pls_lda_fit"
 tu:
   - "cpp/src/core/pls_lda.cpp"
 headers:
-  - "cpp/include/n4m/models.h"
+  - "cpp/include/n4m/estimators/classification.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_estimators_pls_lda_fit"
+fq_name: "n4m.estimators.classification.pls_lda"
+leaf: "pls_lda"
+legacy_ids:
+  - "models.classification.pls_lda"
+namespace: "estimators.classification"

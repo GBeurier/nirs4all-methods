@@ -1,6 +1,6 @@
 # `split_binned_strat_group_kfold` — Binned Stratified Group K Fold Splitter
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.BinnedStratifiedGroupKFoldSplitter` · _C ABI_: `n4m_split_binned_strat_group_kfold_*`
+_Group_: **Splitters** · _Binding_: `n4m.sklearn.BinnedStratifiedGroupKFoldSplitter` · _C ABI_: `n4m_model_selection_binned_strat_group_kfold_*`
 
 ## Description
 
@@ -28,7 +28,7 @@ Stratified group k-fold splitter after binning continuous ``y``.
 
 ### Implementation
 
-C ABI `n4m_split_binned_strat_group_kfold_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BinnedStratifiedGroupKFoldSplitter`. The same numerical kernel backs every language binding.
+C ABI `n4m_model_selection_binned_strat_group_kfold_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BinnedStratifiedGroupKFoldSplitter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

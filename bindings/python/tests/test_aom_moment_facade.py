@@ -1,26 +1,28 @@
-"""Facade-consistency guard for the n4m.aom / n4m.moment product surfaces.
+"""Facade-consistency guard for the private AOM / moment product surfaces.
 
-Both facades are thin re-export layers over the single ``libn4m`` runtime: every
-method they advertise in ``available_methods()`` must resolve as a real attribute
-of the facade and be the exact ``n4m.python`` / ``n4m.sklearn`` object — never a
-copy and never a name with no backing export. This caught the n4m.aom ``pop_pls``
-gap, where the inventory named ``NativePOPPLSRegressor`` but the facade did not
-re-export it.
+After the Phase 3a namespace clean break, the flat AOM/moment facades live as the
+private implementation modules ``n4m._impl.aom_facade`` / ``n4m._impl.moment_facade``
+(the public surface is the ``n4m.<role>`` packages). Both facades remain thin
+re-export layers over the single ``libn4m`` runtime: every method they advertise in
+``available_methods()`` must resolve as a real attribute of the facade and be the
+exact backing implementation object — never a copy and never a name with no backing
+export. This caught the ``pop_pls`` gap, where the inventory named
+``NativePOPPLSRegressor`` but the facade did not re-export it.
 """
 from __future__ import annotations
 
+import importlib
 from collections import defaultdict
 from pathlib import Path
 
 import pytest
 
-import n4m
-import n4m.aom as aom
-import n4m.moment as moment
-from n4m import python as native
-from n4m import sklearn as native_sklearn
+import n4m._impl as native_sklearn
+from n4m._impl import aom_facade as aom
+from n4m._impl import moment_facade as moment
+from n4m._impl import native
 
-_FACADES = {"n4m.aom": aom, "n4m.moment": moment}
+_FACADES = {"n4m._impl.aom_facade": aom, "n4m._impl.moment_facade": moment}
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _CATALOG_ROOT = _REPO_ROOT / "catalog" / "methods"
 
@@ -144,12 +146,15 @@ def test_facade_entries_are_the_underlying_objects(label):
 
 
 @pytest.mark.parametrize("label", sorted(_FACADES))
-def test_facade_entries_are_shared_with_top_level_package(label):
+def test_facade_entries_are_shared_with_backing_implementation(label):
+    # The public surface no longer re-exports these at the top level; the facade
+    # entries must still be the exact backing implementation objects.
     facade = _FACADES[label]
     for row in _rows(facade):
-        name, entry = row["name"], row["entry"]
-        assert hasattr(n4m, entry), (label, name, entry)
-        assert getattr(facade, entry) is getattr(n4m, entry), (label, name, entry)
+        name, entry, kind = row["name"], row["entry"], row["kind"]
+        source = _SOURCE_FOR_KIND.get(kind, native)
+        assert hasattr(source, entry), (label, name, entry)
+        assert getattr(facade, entry) is getattr(source, entry), (label, name, entry)
 
 
 @pytest.mark.parametrize("label", sorted(_FACADES))
@@ -227,7 +232,9 @@ def test_inventory_catalog_binding_roles_are_coherent(label):
         assert binding is not None, (label, row["name"], catalog_id)
 
         expected_class = row.get("wrapper_of", row["entry"])
-        assert binding["module"] == "n4m.python", (
+        # The catalog now records the public role module for each python binding
+        # (Phase 3a clean break); it must resolve and expose the recorded class.
+        assert binding["module"].startswith("n4m."), (
             label,
             row["name"],
             row["entry"],
@@ -241,8 +248,11 @@ def test_inventory_catalog_binding_roles_are_coherent(label):
             row.get("catalog_role"),
             binding,
         )
+        bound_module = importlib.import_module(binding["module"])
+        assert hasattr(bound_module, binding["class"]), (label, row["name"], binding)
         assert hasattr(native, binding["class"]), (label, row["name"], binding)
         for alias in binding["legacy_aliases"]:
+            assert hasattr(bound_module, alias), (label, row["name"], alias)
             assert hasattr(native, alias), (label, row["name"], alias)
         if row.get("catalog_role") == "alias":
             assert row["entry"] in binding["legacy_aliases"], (label, row["name"], binding)
@@ -286,15 +296,9 @@ def test_inventory_wrapper_targets_are_exported_on_the_same_surface(label):
         if not wrapper:
             continue
         assert hasattr(native, wrapper), (label, row["name"], wrapper)
-        assert hasattr(n4m, wrapper), (label, row["name"], wrapper)
         assert hasattr(facade, wrapper), (label, row["name"], wrapper)
         assert wrapper in facade.__all__, (label, row["name"], wrapper)
         assert getattr(facade, wrapper) is getattr(native, wrapper), (
-            label,
-            row["name"],
-            wrapper,
-        )
-        assert getattr(facade, wrapper) is getattr(n4m, wrapper), (
             label,
             row["name"],
             wrapper,
@@ -323,7 +327,7 @@ def test_catalogued_native_aom_moment_bindings_are_exposed_on_a_facade():
         if method_id is None or not method_id.startswith(relevant_prefixes):
             continue
         binding = _catalog_python_binding(text)
-        if binding is None or binding["module"] != "n4m.python":
+        if binding is None or not binding["module"].startswith("n4m."):
             continue
         if method_id not in exposed_catalog_ids:
             missing.append(method_id)
@@ -477,6 +481,8 @@ def test_preset_sklearn_wrappers_are_bounded_reusable_presets(label):
 
 def test_pop_pls_wrapper_shared_across_surfaces():
     # The POP-PLS sklearn wrapper must be the same object on the aom facade, the
-    # top-level n4m package, and the sklearn layer.
-    assert aom.NativePOPPLSRegressor is n4m.NativePOPPLSRegressor
+    # sklearn layer, and the public role module.
+    from n4m.model_selection.aom_search import POPPLSRegressor
+
     assert aom.NativePOPPLSRegressor is native_sklearn.NativePOPPLSRegressor
+    assert aom.NativePOPPLSRegressor is POPPLSRegressor

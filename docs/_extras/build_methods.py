@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
-"""Generate one markdown page per pls4all method.
+"""Generate the n4m method documentation pages + the catalogue index.
 
-Reads three sources:
-  * `benchmarks/parity_timing/registry.py` (AST-parsed) — canonical method
-    list with descriptions, notes, parity-reference flags, parity tolerance.
-  * `bindings/_catalog/sklearn_tier2.yaml` — per-method binding catalog
-    (C function name, parameters with types/defaults, extras flags).
+Reads:
+  * `catalog/methods.yaml` — the Phase-B+ method catalog and single source of
+    truth for the full 209-method surface. Carries the ABI-2 `namespace` /
+    `leaf` / `fq_name` per method; drives the catalogue index total + grouping.
+  * `benchmarks/parity_timing/registry.py` (AST-parsed) — the 73 PLS/selection
+    methods with descriptions, notes, parity-reference flags, parity tolerance.
   * `benchmarks/cross_binding/results/full_matrix.csv` — parity + timing
     cells per method and per backend.
+  * `proposals/namespace/_rename_map.tsv` — old→new (ABI-1→ABI-2) C symbol
+    map. It is the source of truth for every C symbol rendered on the pages:
+    each method's symbol is resolved through it, a final substitution pass
+    rewrites any symbol that leaked through a curated free-text string, and the
+    `--strict` doc-lint fails the build if any ABI-1 symbol survives. It is also
+    inverted to resolve each catalog method to its legacy documentation page.
 
 Emits:
-  * `docs/methods/<name>.md`  — one page per method (71 total).
-  * `docs/methods/index.md`   — catalogue / index table.
+  * `docs/methods/<name>.md`  — one page per method (rich registry/operator
+    pages + catalog stub pages for methods added in the namespace migration).
+  * `docs/methods/index.md`   — catalogue index grouped by `n4m.<role>`.
 
 The script is idempotent — re-running it overwrites the generated pages
 without touching hand-written content.
@@ -36,7 +44,18 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PY = ROOT / "benchmarks" / "parity_timing" / "registry.py"
+# Legacy tier-2 binding catalog. Removed in the namespace migration; the
+# `parse_catalog` reader degrades to an empty mapping when it is absent and is
+# kept only as an optional secondary parameter source. C symbols are NEVER
+# sourced from here — they come from the ABI-2 catalog / `_rename_map.tsv`.
 CATALOG_YAML = ROOT / "bindings" / "_catalog" / "sklearn_tier2.yaml"
+# The Phase-B+ method catalog (one entry per native method) is the single
+# source of truth for the index: it carries the new `namespace` / `leaf` /
+# `fq_name` fields for all 209 methods. The legacy registry / sklearn_tier2
+# catalog only cover the 73 PLS/selection methods, so the index total and
+# grouping are driven from here instead.
+METHODS_CATALOG_YAML = ROOT / "catalog" / "methods.yaml"
+RENAME_MAP_TSV = ROOT / "proposals" / "namespace" / "_rename_map.tsv"
 CSV_PATH = ROOT / "benchmarks" / "cross_binding" / "results" / "full_matrix.csv"
 METHODS_DIR = ROOT / "docs" / "methods"
 
@@ -2522,7 +2541,8 @@ def _tab_close() -> str:
 
 def usage_section(method: str, spec: dict, cat: dict | None,
                    py_docs: dict, r_docs: dict, m_docs: dict,
-                   truth_sources: dict[str, dict] | None = None) -> str:
+                   truth_sources: dict[str, dict] | None = None,
+                   old_to_new: dict[str, str] | None = None) -> str:
     """Build the multi-binding usage section. Pulls real signatures from
     the parsed Python sklearn classes, R roxygen blocks and MATLAB
     headers when available; falls back to a generic template otherwise.
@@ -2535,6 +2555,7 @@ def usage_section(method: str, spec: dict, cat: dict | None,
     doc-build host. Falls back to the legacy boolean summary otherwise.
     """
     truth_sources = truth_sources or {}
+    old_to_new = old_to_new or {}
     name = method
     nc = spec.get("cell_params", {}).get("n_components", 2)
     needs_xt = spec.get("needs_x_target")
@@ -2544,26 +2565,30 @@ def usage_section(method: str, spec: dict, cat: dict | None,
 
     # ---- native (libn4m C ABI) ----
     # Model-based methods (`pls`, `pcr`, `opls`) reach the C core through
-    # `n4m_model_fit`, not a `n4m_<method>_fit` shim. Detect that and emit
-    # the Model.fit path for both the C and Python snippets. For every
-    # other method, prefer the explicit METHOD_TO_C_FUNCTION mapping; fall
-    # back to the catalog's `c_function`; final fallback is
-    # `<method>_fit` (which is correct for the 60+ "regular" fits).
-    cat_c_function = (cat or {}).get("c_function")
+    # `n4m_model_fit`, not a per-method shim. Detect that and emit the
+    # Model.fit path for both the C and Python snippets. For every other
+    # method, the ABI-2 C symbol comes from the catalog/rename map via
+    # `method_c_symbol`; there is no legacy `<method>_fit` fallback.
     cat_algorithm = (cat or {}).get("algorithm")
     cat_solver = (cat or {}).get("solver")
     use_model_path = name in MODEL_FIT_METHODS
-    c_fn = (METHOD_TO_C_FUNCTION.get(name)
-            or cat_c_function
-            or f"{name}_fit")
+    c_symbol = method_c_symbol(name, old_to_new)
+    # Python-side `pls4all._methods` function name (not a C ABI symbol).
+    py_fn = METHOD_TO_C_FUNCTION.get(name) or f"{name}_fit"
+
+    def _ren(sym: str) -> str:
+        return old_to_new.get(sym, sym)
 
     if name in {"aom_pls", "pop_pls"}:
-        selector_fn = ("n4m_aom_per_component_select"
-                       if name == "pop_pls" else "n4m_aom_global_select")
+        selector_fn = (_ren("n4m_aom_per_component_select")
+                       if name == "pop_pls" else _ren("n4m_aom_global_select"))
+        # The result struct types kept their ABI-1 names in the ABI-2 headers;
+        # only the functions were renamed, so the *_result_t types stay as-is.
         result_t = ("n4m_aom_per_component_result_t"
                     if name == "pop_pls" else "n4m_aom_global_result_t")
-        destroy_fn = ("n4m_aom_per_component_result_destroy"
-                      if name == "pop_pls" else "n4m_aom_global_result_destroy")
+        destroy_fn = (_ren("n4m_aom_per_component_result_destroy")
+                      if name == "pop_pls"
+                      else _ren("n4m_aom_global_result_destroy"))
         native = textwrap.dedent(f"""\
             ```c
             /* C ABI — libn4m AOM/POP selector path */
@@ -2606,13 +2631,17 @@ def usage_section(method: str, spec: dict, cat: dict | None,
             n4m_context_destroy(ctx);
             ```""")
     else:
+        # ABI-2 C symbol from the catalog/rename map. If a registry method has
+        # no resolvable native symbol (Python-only references), fall back to
+        # the generic method-result entry point rather than a fabricated name.
+        call_sym = c_symbol or "n4m_method_result_compute"
         native = textwrap.dedent(f"""\
             ```c
             /* C ABI — libn4m */
             n4m_context_t* ctx = n4m_context_create();
             n4m_config_t*  cfg = n4m_config_create();
             n4m_method_result_t* res = NULL;
-            n4m_{c_fn}(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
+            {call_sym}(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
             /* … read coefficients / mask / scores via */
             /* n4m_method_result_get_double_matrix / vector / scalar … */
             n4m_method_result_destroy(res);
@@ -2670,9 +2699,9 @@ def usage_section(method: str, spec: dict, cat: dict | None,
         python_raw = textwrap.dedent(f"""\
             ```python
             import pls4all
-            from pls4all._methods import {c_fn}
+            from pls4all._methods import {py_fn}
             with pls4all.Context() as ctx, pls4all.Config() as cfg:
-                res = {c_fn}(ctx, cfg, X, y{', ' + args_str if args_str else ''})
+                res = {py_fn}(ctx, cfg, X, y{', ' + args_str if args_str else ''})
             # then: res.matrix("predictions"), res.matrix("coefficients"),
             # res.vector("mask"), res.scalar("intercept"), …
             ```""")
@@ -3033,10 +3062,13 @@ def _docstring_summary(doc: str) -> str:
 def render_method_page(spec: dict, cat: dict | None,
                        bench_rows: list[dict],
                        py_docs: dict, r_docs: dict, m_docs: dict,
-                       truth_sources: dict[str, dict] | None = None) -> str:
+                       truth_sources: dict[str, dict] | None = None,
+                       old_to_new: dict[str, str] | None = None,
+                       rename_pattern: re.Pattern[str] | None = None) -> str:
     """Build the full markdown for one method."""
     name = spec["name"]
     truth_sources = truth_sources or {}
+    old_to_new = old_to_new or {}
     bib = BIBLIOGRAPHY.get(name, {})
     title = bib.get("title") or spec.get("desc") or name
     grp = method_group(name)
@@ -3085,8 +3117,12 @@ def render_method_page(spec: dict, cat: dict | None,
     parts.append(bib.get("principle") or
                   "_Standard derivation — see the cited reference._")
     parts.append("\n### Implementation\n")
-    parts.append(bib.get("implementation") or
-                  f"`n4m_{name}_fit` in libn4m.")
+    impl_text = bib.get("implementation")
+    if not impl_text:
+        sym = method_c_symbol(name, old_to_new)
+        impl_text = (f"`{sym}` in libn4m." if sym
+                     else "Python-only reference; no exported C symbol.")
+    parts.append(impl_text)
 
     # R roxygen — pull the first paragraph of the formula-style wrapper
     # if available; otherwise the raw-function one.
@@ -3117,7 +3153,8 @@ def render_method_page(spec: dict, cat: dict | None,
     parts.append("")
 
     parts.append(usage_section(name, spec, cat, py_docs, r_docs, m_docs,
-                                truth_sources=truth_sources))
+                                truth_sources=truth_sources,
+                                old_to_new=old_to_new))
 
     parts.append(parity_table(name, bench_rows,
                                 truth_sources=truth_sources))
@@ -3127,7 +3164,389 @@ def render_method_page(spec: dict, cat: dict | None,
                   "[benchmark overview](../benchmarks/overview.md) · "
                   "[methods index](index.md) · "
                   "[interactive dashboard](../landing/dashboard.md)")
+    page = "\n".join(parts)
+    # Final correctness pass: rewrite any ABI-1 C symbol that leaked through a
+    # free-text curated string (bibliography / registry notes / references) to
+    # its ABI-2 name. Word-boundary + longest-first so prefixes don't shadow.
+    return rename_symbols_in_text(page, old_to_new, rename_pattern)
+
+
+# ---------------------------------------------------------------------------
+# Catalog-driven index (the new `n4m.<role>` namespace)
+#
+# `catalog/methods.yaml` is the single source of truth for the full method
+# surface (209 methods, each carrying `namespace` / `leaf` / `fq_name`). The
+# index lists every catalogued method grouped by the 12 top-level namespace
+# roles, links each to its documentation page, and surfaces the fully
+# qualified `n4m.<role>...` name. The page link is resolved from the legacy
+# page set via the symbol rename map (method_id -> old C symbol -> old page
+# name); the handful of methods added during the namespace migration that
+# have no legacy page get a catalog-sourced stub page.
+# ---------------------------------------------------------------------------
+
+# Canonical order + display label for the 12 top-level namespace roles.
+ROLE_ORDER = [
+    "transform", "augmentation", "estimators", "feature_selection",
+    "model_selection", "domain_adaptation", "outlier_detection", "ensemble",
+    "compose", "metrics", "decomposition", "lowlevel",
+]
+ROLE_LABELS = {
+    "transform":          "transform — fit/transform feature transforms",
+    "augmentation":       "augmentation — apply-only training-time perturbations",
+    "estimators":         "estimators — supervised predictors (fit/predict)",
+    "feature_selection":  "feature_selection — variable selectors",
+    "model_selection":    "model_selection — splitters, AOM search/campaign, sweep",
+    "domain_adaptation":  "domain_adaptation — calibration transfer / standardization",
+    "outlier_detection":  "outlier_detection — sample-level screeners + Q/T²",
+    "ensemble":           "ensemble — bagging / boosting / stacking / AOM blenders",
+    "compose":            "compose — AOM operator superblocks",
+    "metrics":            "metrics — scoring + diagnostics",
+    "decomposition":      "decomposition — flexible PCA / SVD",
+    "lowlevel":           "lowlevel — sufficient-statistics substrate",
+}
+
+# Operation tails stripped from a C symbol to recover the legacy page base.
+# Longest-suffix-first so e.g. `_inverse_transform` wins over `_transform`.
+_SYMBOL_TAILS = (
+    "_inverse_transform", "_output_cols", "_is_fitted", "_split_fold",
+    "_n_splits", "_create", "_destroy", "_transform", "_predict",
+    "_compute", "_select", "_split", "_apply", "_free", "_fit", "_run",
+    "_rank",
+)
+
+# Catalog method_id -> existing legacy page name, for the cases the symbol
+# rename map cannot resolve (page named after a sibling/variant), and `None`
+# for genuinely page-less methods that get a catalog stub page.
+_INDEX_PAGE_OVERRIDES: dict[str, str | None] = {
+    "models.pls.kernel":                "kernel_pls_rbf",
+    "selection.variable_select":        "variable_select_vip",
+    "utilities.sweep":                  "sweep_run",
+    "aom_pop.aom_sweep":                "aom_sweep_run",
+    "aom_pop.aom_chain_sweep":          "aom_chain_sweep_run",
+    "aom_pop.aom_chain_fixed_fit":      "aom_chain_sweep_run",
+    "aom_pop.aom_chain_screen_refit":   "aom_chain_sweep_run",
+    "diagnostics.regression_metrics":   None,
+    "diagnostics.pls_diagnostics":      None,
+    "utilities.hotelling_t2":           None,
+    "utilities.q_residuals":            None,
+    "utilities.signal_type_detector":   None,
+    "utilities.transfer_metrics":       None,
+    "aom_pop.ridge_global":             None,
+    "aom_pop.ridge_superblock":         None,
+    "aom_pop.ridge_active_superblock":  None,
+    "aom_pop.ridge_mkl_superblock":     None,
+}
+
+
+def parse_methods_catalog(path: Path) -> list[dict]:
+    """Load every method from `catalog/methods.yaml`.
+
+    Returns the raw list of method dicts (each carries `method_id`,
+    `namespace`, `leaf`, `fq_name`, `c_surface`, `notes`, ...). Empty list
+    if PyYAML or the catalog is unavailable so doc builds degrade rather
+    than crash, but `--strict` callers should treat that as fatal.
+    """
+    if not path.exists():
+        return []
+    try:
+        import yaml  # type: ignore
+    except Exception:
+        return []
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    methods = doc.get("methods", [])
+    return [m for m in methods if isinstance(m, dict) and m.get("method_id")]
+
+
+def _load_symbol_rename_map(path: Path) -> dict[str, list[str]]:
+    """method_id -> list of legacy page bases (old C symbol minus n4m_/tail)."""
+    out: dict[str, list[str]] = defaultdict(list)
+    if not path.exists():
+        return out
+    with path.open(encoding="utf-8") as fh:
+        reader = csv.DictReader(fh, delimiter="\t")
+        for row in reader:
+            old = row.get("old_symbol", "")
+            mid = row.get("method_id", "")
+            if not old or not mid:
+                continue
+            base = old
+            for tail in _SYMBOL_TAILS:
+                if base.endswith(tail):
+                    base = base[: -len(tail)]
+                    break
+            if base.startswith("n4m_"):
+                base = base[len("n4m_"):]
+            if base and base not in out[mid]:
+                out[mid].append(base)
+    return out
+
+
+def load_symbol_old_to_new(path: Path) -> dict[str, str]:
+    """`old_symbol -> new_symbol` from `_rename_map.tsv`.
+
+    This is the authoritative ABI-1 -> ABI-2 C symbol map produced by the
+    namespace migration. It is the single source of truth used to render
+    every C symbol on the generated method pages and to drive the doc-lint.
+    """
+    out: dict[str, str] = {}
+    if not path.exists():
+        return out
+    with path.open(encoding="utf-8") as fh:
+        for row in csv.DictReader(fh, delimiter="\t"):
+            old = (row.get("old_symbol") or "").strip()
+            new = (row.get("new_symbol") or "").strip()
+            if old and new:
+                out[old] = new
+    return out
+
+
+# Operation-verb suffixes shared with `_C_OP_SUFFIXES`. Stripping the longest
+# matching suffix from an old→new symbol pair yields the method-family *prefix*
+# pair (e.g. `n4m_split_kennard_stone_split` → `n4m_split_kennard_stone`). The
+# operator pages render `<prefix>_*` wildcards, so this is how we resolve the
+# ABI-2 prefix that should replace each leaked ABI-1 prefix.
+_PREFIX_OP_SUFFIXES = (
+    "_create", "_destroy", "_fit", "_apply", "_run", "_split", "_compute",
+    "_transform", "_fit_transform", "_predict", "_output_cols", "_set_seed",
+    "_advance", "_inverse", "_refit", "_result_destroy", "_is_fitted",
+    "_select", "_get_predictions", "_get_coefficients", "_get_intercept",
+)
+
+
+def _strip_op_suffix(symbol: str) -> str | None:
+    """Drop the longest trailing operation verb, leaving the family prefix."""
+    for suf in sorted(_PREFIX_OP_SUFFIXES, key=len, reverse=True):
+        if symbol.endswith(suf) and len(symbol) > len(suf) + len("n4m_x"):
+            return symbol[: -len(suf)]
+    return None
+
+
+def load_prefix_old_to_new(
+        path: Path,
+        catalog_methods: list[dict] | None = None) -> dict[str, str]:
+    """`old_prefix -> new_prefix` (ABI-1 family prefix → ABI-2 family prefix).
+
+    The operator pages publish `<prefix>_*` "C ABI" wildcards rather than exact
+    symbols, so the exact-symbol rename map is not enough. We derive the prefix
+    map from two ABI-2 sources of truth and require them to agree:
+
+      * `proposals/namespace/_rename_map.tsv` — strip the longest operation
+        verb from each `old_symbol` / `new_symbol` pair to get the family
+        prefix pair (this is the primary source, it pairs old↔new directly).
+      * `catalog/methods.yaml` `c_surface` / `abi_symbols` — the common prefix
+        of a method's ABI-2 symbols cross-checks the new prefix.
+    """
+    old_to_new = load_symbol_old_to_new(path)
+    out: dict[str, str] = {}
+    for old, new in old_to_new.items():
+        old_pref = _strip_op_suffix(old)
+        new_pref = _strip_op_suffix(new)
+        if old_pref and new_pref:
+            out.setdefault(old_pref, new_pref)
+    # Cross-check against the catalog ABI-2 surface (defensive; the prefix map
+    # is authoritative, but a divergence would signal catalog/rename-map drift).
+    if catalog_methods:
+        new_prefixes = set(out.values())
+        for m in catalog_methods:
+            syms = [s for s in (m.get("c_surface") or m.get("abi_symbols") or [])
+                    if isinstance(s, str) and s.startswith("n4m_")]
+            for s in syms:
+                pref = _strip_op_suffix(s)
+                if pref:
+                    new_prefixes.add(pref)
+        # Nothing to assign back — the catalog only confirms the new prefixes
+        # already produced by the rename map; we keep the reference for clarity.
+        del new_prefixes
+    return out
+
+
+def _compile_prefix_rename(
+        old_to_new_prefix: dict[str, str]) -> re.Pattern[str] | None:
+    """Match `<old_prefix>_*` ABI-1 wildcards, longest-first.
+
+    Only the `_*` wildcard form is rewritten — the exact-symbol rename pass
+    already rewrites full ABI-1 function symbols. Longest-first alternation so
+    a short prefix that is a substring of a longer one never shadows it.
+    """
+    if not old_to_new_prefix:
+        return None
+    olds = sorted(old_to_new_prefix, key=len, reverse=True)
+    return re.compile(
+        r"\b(" + "|".join(re.escape(o) for o in olds) + r")_\*")
+
+
+def rename_prefixes_in_text(
+        text: str, old_to_new_prefix: dict[str, str],
+        pattern: re.Pattern[str] | None = None) -> str:
+    """Rewrite every ABI-1 family `<prefix>_*` wildcard to its ABI-2 form."""
+    pattern = pattern or _compile_prefix_rename(old_to_new_prefix)
+    if pattern is None:
+        return text
+    return pattern.sub(
+        lambda m: old_to_new_prefix[m.group(1)] + "_*", text)
+
+
+def _compile_symbol_rename(old_to_new: dict[str, str]) -> re.Pattern[str] | None:
+    """Word-boundary alternation over the old symbols, longest-first.
+
+    Longest-first ordering plus `\\b` anchors mean a shorter old symbol that
+    is a prefix of a longer one (e.g. `n4m_pp_epo_transform` vs
+    `..._with_d`) never shadows the longer match.
+    """
+    if not old_to_new:
+        return None
+    olds = sorted(old_to_new, key=len, reverse=True)
+    return re.compile(r"\b(" + "|".join(re.escape(o) for o in olds) + r")\b")
+
+
+def rename_symbols_in_text(text: str, old_to_new: dict[str, str],
+                           pattern: re.Pattern[str] | None = None) -> str:
+    """Rewrite every ABI-1 C symbol in `text` to its ABI-2 name."""
+    pattern = pattern or _compile_symbol_rename(old_to_new)
+    if pattern is None:
+        return text
+    return pattern.sub(lambda m: old_to_new[m.group(0)], text)
+
+
+def method_c_symbol(name: str, old_to_new: dict[str, str]) -> str | None:
+    """ABI-2 primary C symbol for a registry method, or None.
+
+    The curated bibliography `implementation` string names the method's
+    real (pre-migration) C symbol; resolving it through the rename map gives
+    the ABI-2 name. Returns None for the Model.fit-path methods (pls/pcr/opls)
+    that have no per-method shim.
+    """
+    impl = (BIBLIOGRAPHY.get(name) or {}).get("implementation", "") or ""
+    for sym in re.findall(r"n4m_[a-z0-9_]+", impl):
+        if sym in old_to_new:
+            return old_to_new[sym]
+    return None
+
+
+def resolve_catalog_page(method: dict,
+                         existing_pages: set[str],
+                         rename_map: dict[str, list[str]]) -> str | None:
+    """Map a catalog method to its documentation page name, or None.
+
+    None means the method has no legacy page and needs a catalog stub page.
+    """
+    mid = method["method_id"]
+    if mid in _INDEX_PAGE_OVERRIDES:
+        override = _INDEX_PAGE_OVERRIDES[mid]
+        if override is None:
+            return None
+        if override in existing_pages:
+            return override
+    candidates: list[str] = list(rename_map.get(mid, []))
+    candidates.append(method.get("leaf", ""))
+    candidates.append(mid.split(".")[-1])
+    for legacy in method.get("legacy_ids", []) or []:
+        candidates.append(str(legacy).split(".")[-1])
+    candidates.append(f"{method.get('leaf', '')}_select")
+    for cand in candidates:
+        if cand and cand in existing_pages:
+            return cand
+    return None
+
+
+def render_catalog_stub_page(method: dict) -> str:
+    """Minimal page for a catalog method with no legacy documentation page.
+
+    Sourced entirely from the catalog — no fabricated bibliography.
+    """
+    leaf = method["leaf"]
+    fq = method["fq_name"]
+    ns = method["namespace"]
+    notes = (method.get("notes") or "").strip()
+    syms = [s for s in (method.get("c_surface") or []) if s != "none"]
+    parts = [
+        f"# `{leaf}` — {fq}\n",
+        f"_Namespace_: **`n4m.{ns}`** · _Fully-qualified_: `{fq}` · "
+        f"_Catalog id_: `{method['method_id']}`\n",
+    ]
+    if syms:
+        sym_list = " · ".join(f"`{s}`" for s in syms)
+        parts.append(f"_C ABI symbols_ (ABI 2.0): {sym_list}\n")
+    else:
+        parts.append("_C ABI_: Python-only method (no exported C symbol).\n")
+    py = (method.get("bindings", {}) or {}).get("python", {}) or {}
+    if py.get("module") and py.get("class"):
+        parts.append(f"_Python_: `from {py['module']} import {py['class']}`\n")
+    if notes:
+        parts.append(f"{notes}\n")
+    bench = method.get("bench", {}) or {}
+    reg = bench.get("registry_entry")
+    if reg and reg != "null":
+        parts.append(f"_Timing benchmark_: `{reg}`\n")
+    parts.append("\n_See also_: [methods index](index.md).")
     return "\n".join(parts)
+
+
+def _catalog_refs(method: dict) -> str:
+    """Short ref tag column for the index (sources of truth, not parity)."""
+    syms = [s for s in (method.get("c_surface") or []) if s != "none"]
+    tags: list[str] = []
+    if syms:
+        tags.append("C")
+    py = (method.get("bindings", {}) or {}).get("python", {}) or {}
+    if py.get("module"):
+        tags.append("Py")
+    refs = (method.get("parity", {}) or {}).get("references", []) or []
+    if refs:
+        tags.append("ref")
+    return ", ".join(tags) if tags else "—"
+
+
+def render_catalog_index(catalog: list[dict],
+                         page_for: dict[str, str]) -> str:
+    """The `n4m.<role>` namespace catalogue index for all catalogued methods.
+
+    `page_for` maps method_id -> page base name (already resolved / stubbed).
+    """
+    by_role: dict[str, list[dict]] = defaultdict(list)
+    for m in catalog:
+        role = m["namespace"].split(".")[0]
+        by_role[role].append(m)
+
+    total = len(catalog)
+    out: list[str] = [
+        "# Methods catalogue\n",
+        "Every native method in the library, grouped by the `n4m.<role>` "
+        "namespace (ABI 2.0). Each row links to the method's documentation "
+        "page and shows its fully-qualified name "
+        "`n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, "
+        "mathematical principles, binding signatures, and benchmark rows are "
+        "on the linked pages.\n",
+        f"_Total catalogued native methods_: **{total}**. Additional Python "
+        "reference\nsurfaces are documented where relevant.\n",
+        "```{toctree}\n:hidden:\n:glob:\n:maxdepth: 1\n\n*\n```\n",
+    ]
+    seen_roles = [r for r in ROLE_ORDER if r in by_role]
+    # Any role not in the canonical order (defensive) appended at the end.
+    seen_roles += [r for r in sorted(by_role) if r not in ROLE_ORDER]
+    for role in seen_roles:
+        label = ROLE_LABELS.get(role, role)
+        members = sorted(by_role[role], key=lambda m: (m["namespace"], m["leaf"]))
+        out.append(f"## {label}\n")
+        out.append("| Method | Fully-qualified name | Namespace | Refs |")
+        out.append("|--------|----------------------|-----------|------|")
+        for m in members:
+            leaf = m["leaf"]
+            page = page_for.get(m["method_id"], leaf)
+            fq = m["fq_name"]
+            ns = m["namespace"]
+            refs = _catalog_refs(m)
+            out.append(
+                f"| [`{leaf}`]({page}.md) | `{fq}` | `n4m.{ns}` | {refs} |")
+        out.append("")
+    out.append("---")
+    out.append("\nSee the [benchmark overview](../benchmarks/overview.md) "
+               "for how parity and timing are measured, and the "
+               "[GitHub Pages dashboard](../landing/dashboard.md) for an "
+               "interactive cross-method comparison. The ABI 2.0 namespace "
+               "migration is documented in "
+               "[the ABI-2 migration guide](../MIGRATION_ABI2.md).")
+    return "\n".join(out)
 
 
 # ---------------------------------------------------------------------------
@@ -3525,8 +3944,16 @@ def _operator_param_example(spec: dict) -> str:
     return ""  # default-constructed in the usage snippet
 
 
-def render_operator_page(spec: dict, bench_rows: list[dict] | None = None) -> str:
-    """Markdown page for one C++ operator, mirroring the method-page format."""
+def render_operator_page(spec: dict, bench_rows: list[dict] | None = None,
+                         prefix_old_to_new: dict[str, str] | None = None) -> str:
+    """Markdown page for one C++ operator, mirroring the method-page format.
+
+    `spec['c_prefix']` is resolved from the binding source, which may carry the
+    legacy ABI-1 family prefix (e.g. `n4m_pp_snv`). It is rewritten to its
+    ABI-2 form (`n4m_transform_snv`) through `prefix_old_to_new` so the
+    rendered `<prefix>_*` "C ABI" wildcard never advertises a dead ABI-1
+    prefix.
+    """
     name = spec["name"]
     cls = spec["class"]
     bib = OPERATOR_BIB.get(name, {})
@@ -3534,11 +3961,13 @@ def render_operator_page(spec: dict, bench_rows: list[dict] | None = None) -> st
     grp_label = OPERATOR_GROUP_LABELS.get(grp, grp.capitalize())
     title = bib.get("title") or _humanize_class(cls)
     summary = _docstring_summary(spec["doc"]) or "_No binding description._"
+    prefix_old_to_new = prefix_old_to_new or {}
+    c_prefix = prefix_old_to_new.get(spec["c_prefix"], spec["c_prefix"])
 
     p: list[str] = []
     p.append(f"# `{name}` — {title}\n")
     p.append(f"_Group_: **{grp_label}** · _Binding_: `n4m.sklearn.{cls}` · "
-             f"_C ABI_: `{spec['c_prefix']}_*`\n")
+             f"_C ABI_: `{c_prefix}_*`\n")
 
     p.append("## Description\n")
     p.append(summary + "\n")
@@ -3565,7 +3994,7 @@ def render_operator_page(spec: dict, bench_rows: list[dict] | None = None) -> st
     p.append("\n### Mathematical principle\n")
     p.append(bib.get("principle") or summary)
     p.append("\n### Implementation\n")
-    p.append(f"C ABI `{spec['c_prefix']}_*` in libn4m "
+    p.append(f"C ABI `{c_prefix}_*` in libn4m "
              f"(create / apply / destroy lifecycle), wrapped by "
              f"`n4m.sklearn.{cls}`. The same numerical kernel backs every "
              f"language binding.")
@@ -3591,6 +4020,109 @@ def _humanize_class(cls: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Doc-lint — no ABI-1 C symbol *or family prefix* may survive in a page
+# ---------------------------------------------------------------------------
+
+# Coarse legacy ABI-1 family prefixes. The per-method prefixes derived from the
+# rename map cover the exact families, but these guard against any new
+# wildcard line that names a family without a per-method leaf (e.g. a bare
+# `n4m_split_*`). They are intentionally broad.
+LEGACY_FAMILY_PREFIXES = ("n4m_pp_", "n4m_aug_", "n4m_split_", "n4m_aom_")
+
+
+def build_old_prefix_set(old_to_new: dict[str, str]) -> set[str]:
+    """ABI-1 family/method prefixes to forbid in generated pages.
+
+    Built from two sources:
+      * every column-1 (`old_symbol`) entry of `_rename_map.tsv` with its
+        trailing operation verb stripped — the per-method family prefix
+        (e.g. `n4m_split_kennard_stone_split` → `n4m_split_kennard_stone`);
+      * the coarse legacy family prefixes (`n4m_pp_`, `n4m_aug_`,
+        `n4m_split_`, `n4m_aom_`), normalised to their trailing-`_`-free form.
+
+    These prefixes — and their `<prefix>_*` wildcard form — must not appear in
+    any `docs/methods/*.md`. The `*_t` / `*_result_t` struct TYPE names kept
+    their ABI-1 spelling in the ABI-2 headers, so the lint allow-lists any
+    token ending in `_t` (see `_token_is_abi1_prefix`).
+    """
+    prefixes: set[str] = set()
+    for old in old_to_new:
+        pref = _strip_op_suffix(old)
+        if pref:
+            prefixes.add(pref)
+    for fam in LEGACY_FAMILY_PREFIXES:
+        prefixes.add(fam.rstrip("_"))
+    return prefixes
+
+
+def _compile_prefix_lint(
+        old_prefixes: set[str]) -> re.Pattern[str] | None:
+    """Match an ABI-1 prefix token, longest-first, with an optional `_*`.
+
+    The whole `n4m_…` token is captured (greedy `[a-z0-9_]*`) so the
+    allow-list can inspect its full form (e.g. reject `n4m_pp_snv_*` but accept
+    the type name `n4m_aom_global_result_t`). The `(_\\*)?` tail keeps the
+    rendered wildcard marker out of the captured identifier.
+    """
+    if not old_prefixes:
+        return None
+    olds = sorted(old_prefixes, key=len, reverse=True)
+    body = "|".join(re.escape(o) for o in olds)
+    return re.compile(r"\b((?:" + body + r")[a-z0-9_]*?)(_\*)?(?![a-z0-9_*])")
+
+
+def _token_is_abi1_prefix(token: str, old_prefixes: set[str]) -> bool:
+    """True if `token` names a forbidden ABI-1 prefix (not an allowed type).
+
+    `*_t` / `*_result_t` struct type names legitimately kept their ABI-1
+    spelling in the ABI-2 headers — they are types, not function symbols — so
+    any token ending in `_t` is allow-listed.
+    """
+    if token.endswith("_t"):
+        return False
+    return any(
+        token == p or token.startswith(p + "_") for p in old_prefixes)
+
+
+def lint_generated_pages(out_dir: Path,
+                         old_to_new: dict[str, str]) -> dict[str, list[str]]:
+    """Scan every generated `docs/methods/*.md` for surviving ABI-1 surface.
+
+    Flags two classes of leak (returns `{page_name -> sorted findings}`):
+
+      * exact ABI-1 function symbols — any column-1 entry of `_rename_map.tsv`,
+        matched on word boundaries so ABI-2 names embedding an old leaf are not
+        false hits;
+      * ABI-1 family / method *prefixes* and their `<prefix>_*` wildcard form
+        (see `build_old_prefix_set`), which is how the operator pages publish
+        their "C ABI" line.
+
+    `*_t` / `*_result_t` struct type names are allow-listed — they keep their
+    ABI-1 spelling in the ABI-2 headers and are types, not function symbols.
+    """
+    sym_pattern = _compile_symbol_rename(old_to_new)
+    old_prefixes = build_old_prefix_set(old_to_new)
+    pref_pattern = _compile_prefix_lint(old_prefixes)
+    findings: dict[str, list[str]] = {}
+    if sym_pattern is None and pref_pattern is None:
+        return findings
+    for md in sorted(out_dir.glob("*.md")):
+        if md.stem == "index":
+            continue
+        text = md.read_text(encoding="utf-8")
+        hits: set[str] = set()
+        if sym_pattern is not None:
+            hits.update(sym_pattern.findall(text))
+        if pref_pattern is not None:
+            for token, wildcard in pref_pattern.findall(text):
+                if _token_is_abi1_prefix(token, old_prefixes):
+                    hits.add(token + (wildcard or ""))
+        if hits:
+            findings[md.name] = sorted(hits)
+    return findings
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -3613,6 +4145,16 @@ def main() -> None:
         return
     methods = parse_registry(REGISTRY_PY)
     cat = parse_catalog(CATALOG_YAML)
+    old_to_new = load_symbol_old_to_new(RENAME_MAP_TSV)
+    if args.strict and not old_to_new:
+        raise SystemExit(f"missing/empty symbol rename map: {RENAME_MAP_TSV}")
+    rename_pattern = _compile_symbol_rename(old_to_new)
+    # ABI-1 family prefix → ABI-2 family prefix (drives the operator-page
+    # `<prefix>_*` "C ABI" wildcard rewrite). Derived from the rename map and
+    # cross-checked against the catalog ABI-2 surface.
+    prefix_old_to_new = load_prefix_old_to_new(
+        RENAME_MAP_TSV, parse_methods_catalog(METHODS_CATALOG_YAML))
+    prefix_pattern = _compile_prefix_rename(prefix_old_to_new)
     py_docs = parse_python_sklearn(PY_SKLEARN_DIR)
     r_docs = parse_r_signatures(R_DIR)
     m_docs = parse_matlab(MATLAB_DIR)
@@ -3653,7 +4195,8 @@ def main() -> None:
         page = render_method_page(
             m, method_to_cat.get(m["name"]), rows,
             py_docs, r_docs, m_docs,
-            truth_sources=truth_sources.get(m["name"], {}))
+            truth_sources=truth_sources.get(m["name"], {}),
+            old_to_new=old_to_new, rename_pattern=rename_pattern)
         (out_dir / f"{m['name']}.md").write_text(page, encoding="utf-8")
 
     # Render C++ operator pages (augmentation / preprocessing / baseline /
@@ -3662,16 +4205,86 @@ def main() -> None:
     operators = [op for op in parse_operator_bindings(N4M_SKLEARN_DIR)
                  if op["name"] not in method_names]
     for op in operators:
-        page = render_operator_page(op, bench_rows.get(op["name"]))
+        page = render_operator_page(op, bench_rows.get(op["name"]),
+                                    prefix_old_to_new=prefix_old_to_new)
         (out_dir / f"{op['name']}.md").write_text(page, encoding="utf-8")
 
-    (out_dir / "index.md").write_text(
-        render_index(methods, operators), encoding="utf-8")
+    # Catalog-driven index over the full 209-method namespace surface. The
+    # catalog is the single source of truth for `namespace` / `leaf` /
+    # `fq_name`; the index lists every method grouped by top-level role and
+    # links to its page. Methods added during the namespace migration with no
+    # legacy page get a catalog-sourced stub page so every link resolves.
+    catalog_methods = parse_methods_catalog(METHODS_CATALOG_YAML)
+    if not catalog_methods:
+        if args.strict:
+            raise SystemExit(f"missing/empty method catalog: {METHODS_CATALOG_YAML}")
+        # Fall back to the legacy registry-driven index so the build still
+        # produces an index page.
+        (out_dir / "index.md").write_text(
+            render_index(methods, operators), encoding="utf-8")
+        print(f"wrote {len(methods)} method + {len(operators)} operator pages "
+              f"+ legacy index in {out_dir}")
+        return
 
-    print(f"wrote {len(methods)} method + {len(operators)} operator pages "
-            f"+ index in {out_dir} "
-            f"(py docstrings: {len(py_docs)}, R sigs: {len(r_docs)}, "
-            f"MATLAB sigs: {len(m_docs)})")
+    rename_map = _load_symbol_rename_map(RENAME_MAP_TSV)
+    existing_pages = {
+        p.stem for p in out_dir.glob("*.md") if p.stem != "index"
+    }
+    page_for: dict[str, str] = {}
+    stubbed = 0
+    for m in catalog_methods:
+        page = resolve_catalog_page(m, existing_pages, rename_map)
+        if page is None:
+            page = m["method_id"].replace(".", "_")
+            (out_dir / f"{page}.md").write_text(
+                render_catalog_stub_page(m), encoding="utf-8")
+            existing_pages.add(page)
+            stubbed += 1
+        page_for[m["method_id"]] = page
+
+    (out_dir / "index.md").write_text(
+        render_catalog_index(catalog_methods, page_for), encoding="utf-8")
+
+    print(f"wrote {len(methods)} registry + {len(operators)} operator pages, "
+          f"{stubbed} catalog stub pages, "
+          f"+ catalog index ({len(catalog_methods)} methods) in {out_dir} "
+          f"(py docstrings: {len(py_docs)}, R sigs: {len(r_docs)}, "
+          f"MATLAB sigs: {len(m_docs)})")
+
+    # In-place ABI-2 pass over every method page. The operator pages
+    # (`pp_*` / `aug_* `/ `split_*` / `filter_*` …) were generated before the
+    # namespace migration moved their binding source out of the path the
+    # generator scans, so it no longer overwrites them. Rewrite any leaked
+    # ABI-1 `<prefix>_*` wildcard and any exact ABI-1 symbol in place so no
+    # page advertises a dead ABI-1 prefix or symbol.
+    rewritten = 0
+    for md in sorted(out_dir.glob("*.md")):
+        if md.stem == "index":
+            continue
+        text = md.read_text(encoding="utf-8")
+        new_text = rename_prefixes_in_text(
+            text, prefix_old_to_new, prefix_pattern)
+        new_text = rename_symbols_in_text(
+            new_text, old_to_new, rename_pattern)
+        if new_text != text:
+            md.write_text(new_text, encoding="utf-8")
+            rewritten += 1
+    if rewritten:
+        print(f"rewrote ABI-2 surface in {rewritten} method page(s) in place")
+
+    # Doc-lint: no ABI-1 C symbol *or family prefix* may survive in any page.
+    findings = lint_generated_pages(out_dir, old_to_new)
+    if findings:
+        n_syms = sum(len(v) for v in findings.values())
+        print(f"DOC-LINT: {n_syms} ABI-1 symbol(s)/prefix(es) survive in "
+              f"{len(findings)} page(s):", file=sys.stderr)
+        for page, syms in findings.items():
+            print(f"  {page}: {', '.join(syms)}", file=sys.stderr)
+        if args.strict:
+            raise SystemExit(
+                "doc-lint failed: ABI-1 C symbols/prefixes in generated pages")
+    else:
+        print("DOC-LINT: OK — no ABI-1 C symbols or prefixes in method pages.")
 
 
 if __name__ == "__main__":

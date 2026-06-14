@@ -1,8 +1,8 @@
 # Methods catalogue
 
-Every method in the library — the PLS / selection algorithms from `benchmarks.parity_timing.registry.METHODS` and the C++ preprocessing / augmentation / filter / splitter operators from the n4m binding — documented with parameters, bibliographic source, mathematical principle, binding signatures, and benchmark rows.
+Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages.
 
-_Total catalogued native methods_: **208**. Additional Python reference
+_Total catalogued native methods_: **209**. Additional Python reference
 surfaces are documented where relevant.
 
 ```{toctree}
@@ -13,316 +13,275 @@ surfaces are documented where relevant.
 *
 ```
 
-## Core PLS
+## transform — fit/transform feature transforms
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`cppls`](cppls.md) | CPPLS (Canonical Powered PLS, Indahl Liland & Næs 2009) | `0.1` | R |
-| [`opls`](opls.md) | Orthogonal PLS (Trygg & Wold 2002) | `0.001` | R |
-| [`pcr`](pcr.md) | Principal Components Regression | `1e-06` | Py, R |
-| [`pls`](pls.md) | SIMPLS PLS regression baseline | `0.1` | Py, R, ikpls, mixOmics |
-| [`recursive_pls`](recursive_pls.md) | Recursive (moving-window) PLS | `0.1` | Py, R |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`cow_align`](pp_cow_align.md) | `n4m.transform.alignment.cow_align` | `n4m.transform.alignment` | C |
+| [`dtw_align`](pp_dtw_align.md) | `n4m.transform.alignment.dtw_align` | `n4m.transform.alignment` | C |
+| [`icoshift_align`](pp_icoshift_align.md) | `n4m.transform.alignment.icoshift_align` | `n4m.transform.alignment` | C |
+| [`xcorr_align`](pp_xcorr_align.md) | `n4m.transform.alignment.xcorr_align` | `n4m.transform.alignment` | C |
+| [`airpls`](pp_airpls.md) | `n4m.transform.baseline.airpls` | `n4m.transform.baseline` | C |
+| [`arpls`](pp_arpls.md) | `n4m.transform.baseline.arpls` | `n4m.transform.baseline` | C |
+| [`asls`](pp_asls.md) | `n4m.transform.baseline.asls` | `n4m.transform.baseline` | C |
+| [`beads`](pp_beads.md) | `n4m.transform.baseline.beads` | `n4m.transform.baseline` | C |
+| [`detrend`](pp_detrend.md) | `n4m.transform.baseline.detrend` | `n4m.transform.baseline` | C |
+| [`iasls`](pp_iasls.md) | `n4m.transform.baseline.iasls` | `n4m.transform.baseline` | C |
+| [`imodpoly`](pp_imodpoly.md) | `n4m.transform.baseline.imodpoly` | `n4m.transform.baseline` | C |
+| [`modpoly`](pp_modpoly.md) | `n4m.transform.baseline.modpoly` | `n4m.transform.baseline` | C |
+| [`rolling_ball`](pp_rolling_ball.md) | `n4m.transform.baseline.rolling_ball` | `n4m.transform.baseline` | C |
+| [`saps`](pp_saps.md) | `n4m.transform.baseline.saps` | `n4m.transform.baseline` | C |
+| [`snip`](pp_snip.md) | `n4m.transform.baseline.snip` | `n4m.transform.baseline` | C |
+| [`osc`](pp_osc.md) | `n4m.transform.orthogonalization.osc` | `n4m.transform.orthogonalization` | C |
+| [`crop`](pp_crop.md) | `n4m.transform.resampling.crop` | `n4m.transform.resampling` | C |
+| [`kbins_discretizer`](pp_kbins_disc.md) | `n4m.transform.resampling.kbins_discretizer` | `n4m.transform.resampling` | C |
+| [`range_discretizer`](pp_range_disc.md) | `n4m.transform.resampling.range_discretizer` | `n4m.transform.resampling` | C |
+| [`resample_transformer`](pp_resample.md) | `n4m.transform.resampling.resample_transformer` | `n4m.transform.resampling` | C |
+| [`resampler`](pp_resampler.md) | `n4m.transform.resampling.resampler` | `n4m.transform.resampling` | C |
+| [`baseline_center`](pp_baseline.md) | `n4m.transform.scaling.baseline_center` | `n4m.transform.scaling` | C |
+| [`log_transform`](pp_log.md) | `n4m.transform.scaling.log_transform` | `n4m.transform.scaling` | C |
+| [`normalize`](pp_normalize.md) | `n4m.transform.scaling.normalize` | `n4m.transform.scaling` | C |
+| [`simple_scale`](pp_simple_scale.md) | `n4m.transform.scaling.simple_scale` | `n4m.transform.scaling` | C |
+| [`area_normalization`](pp_area.md) | `n4m.transform.scatter.area_normalization` | `n4m.transform.scatter` | C |
+| [`emsc`](pp_emsc.md) | `n4m.transform.scatter.emsc` | `n4m.transform.scatter` | C |
+| [`local_centering`](pp_local_centering.md) | `n4m.transform.scatter.local_centering` | `n4m.transform.scatter` | C |
+| [`local_snv`](pp_lsnv.md) | `n4m.transform.scatter.local_snv` | `n4m.transform.scatter` | C |
+| [`localized_msc`](pp_localized_msc.md) | `n4m.transform.scatter.localized_msc` | `n4m.transform.scatter` | C |
+| [`msc`](pp_msc.md) | `n4m.transform.scatter.msc` | `n4m.transform.scatter` | C |
+| [`piecewise_msc`](pp_piecewise_msc.md) | `n4m.transform.scatter.piecewise_msc` | `n4m.transform.scatter` | C |
+| [`piecewise_snv`](pp_piecewise_snv.md) | `n4m.transform.scatter.piecewise_snv` | `n4m.transform.scatter` | C |
+| [`robust_snv`](pp_rnv.md) | `n4m.transform.scatter.robust_snv` | `n4m.transform.scatter` | C |
+| [`snv`](pp_snv.md) | `n4m.transform.scatter.snv` | `n4m.transform.scatter` | C |
+| [`vsn`](pp_vsn.md) | `n4m.transform.scatter.vsn` | `n4m.transform.scatter` | C |
+| [`weighted_snv`](pp_weighted_snv.md) | `n4m.transform.scatter.weighted_snv` | `n4m.transform.scatter` | C |
+| [`fraction_to_percent`](pp_frac_to_pct.md) | `n4m.transform.signal_conversion.fraction_to_percent` | `n4m.transform.signal_conversion` | C |
+| [`from_absorbance`](pp_from_absorbance.md) | `n4m.transform.signal_conversion.from_absorbance` | `n4m.transform.signal_conversion` | C |
+| [`kubelka_munk`](pp_kubelka_munk.md) | `n4m.transform.signal_conversion.kubelka_munk` | `n4m.transform.signal_conversion` | C |
+| [`percent_to_fraction`](pp_pct_to_frac.md) | `n4m.transform.signal_conversion.percent_to_fraction` | `n4m.transform.signal_conversion` | C |
+| [`signal_type_detector`](utilities_signal_type_detector.md) | `n4m.transform.signal_conversion.signal_type_detector` | `n4m.transform.signal_conversion` | C |
+| [`to_absorbance`](pp_to_absorbance.md) | `n4m.transform.signal_conversion.to_absorbance` | `n4m.transform.signal_conversion` | C |
+| [`derivative`](pp_derivate.md) | `n4m.transform.smoothing.derivative` | `n4m.transform.smoothing` | C |
+| [`first_derivative`](pp_first_derivative.md) | `n4m.transform.smoothing.first_derivative` | `n4m.transform.smoothing` | C |
+| [`gaussian`](pp_gaussian.md) | `n4m.transform.smoothing.gaussian` | `n4m.transform.smoothing` | C |
+| [`norris_williams`](pp_norris_williams.md) | `n4m.transform.smoothing.norris_williams` | `n4m.transform.smoothing` | C |
+| [`savitzky_golay`](pp_savgol.md) | `n4m.transform.smoothing.savitzky_golay` | `n4m.transform.smoothing` | C |
+| [`second_derivative`](pp_second_derivative.md) | `n4m.transform.smoothing.second_derivative` | `n4m.transform.smoothing` | C |
+| [`fck_static`](pp_fck_static.md) | `n4m.transform.specialized.fck_static` | `n4m.transform.specialized` | C |
+| [`haar`](pp_haar.md) | `n4m.transform.wavelet.haar` | `n4m.transform.wavelet` | C |
+| [`wavelet`](pp_wavelet.md) | `n4m.transform.wavelet.wavelet` | `n4m.transform.wavelet` | C |
+| [`wavelet_denoise`](pp_wavelet_denoise.md) | `n4m.transform.wavelet.wavelet_denoise` | `n4m.transform.wavelet` | C |
+| [`wavelet_features`](pp_wavelet_features.md) | `n4m.transform.wavelet.wavelet_features` | `n4m.transform.wavelet` | C |
+| [`wavelet_pca`](pp_wavelet_pca.md) | `n4m.transform.wavelet.wavelet_pca` | `n4m.transform.wavelet` | C |
+| [`wavelet_svd`](pp_wavelet_svd.md) | `n4m.transform.wavelet.wavelet_svd` | `n4m.transform.wavelet` | C |
 
-## Sparse
+## augmentation — apply-only training-time perturbations
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`fused_sparse_pls`](fused_sparse_pls.md) | Fused sparse PLS (§7) | `0.05` | — |
-| [`group_sparse_pls`](group_sparse_pls.md) | Group sparse PLS (§7) | `0.05` | Py, R |
-| [`sparse_pls_da`](sparse_pls_da.md) | Sparse PLS-DA (§7) | `2.0` | Py, R |
-| [`sparse_simpls`](sparse_simpls.md) | Sparse SIMPLS with soft-threshold lambda | `1.0` | Py, R |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`linear_drift`](aug_linear_drift.md) | `n4m.augmentation.drift.linear_drift` | `n4m.augmentation.drift` | C |
+| [`path_length`](aug_path_length.md) | `n4m.augmentation.drift.path_length` | `n4m.augmentation.drift` | C |
+| [`poly_drift`](aug_poly_drift.md) | `n4m.augmentation.drift.poly_drift` | `n4m.augmentation.drift` | C |
+| [`detector_rolloff`](aug_detector_rolloff.md) | `n4m.augmentation.instrument.detector_rolloff` | `n4m.augmentation.instrument` | C |
+| [`edge_artifacts`](aug_edge_artifacts.md) | `n4m.augmentation.instrument.edge_artifacts` | `n4m.augmentation.instrument` | C |
+| [`edge_curvature`](aug_edge_curve.md) | `n4m.augmentation.instrument.edge_curvature` | `n4m.augmentation.instrument` | C |
+| [`moisture`](aug_moisture.md) | `n4m.augmentation.instrument.moisture` | `n4m.augmentation.instrument` | C |
+| [`stray_light`](aug_stray_light.md) | `n4m.augmentation.instrument.stray_light` | `n4m.augmentation.instrument` | C |
+| [`temperature`](aug_temperature.md) | `n4m.augmentation.instrument.temperature` | `n4m.augmentation.instrument` | C |
+| [`truncated_peak`](aug_truncated_peak.md) | `n4m.augmentation.instrument.truncated_peak` | `n4m.augmentation.instrument` | C |
+| [`local_mixup`](aug_local_mixup.md) | `n4m.augmentation.mixup.local_mixup` | `n4m.augmentation.mixup` | C |
+| [`mixup`](aug_mixup.md) | `n4m.augmentation.mixup.mixup` | `n4m.augmentation.mixup` | C |
+| [`random_x_op`](aug_random_x_op.md) | `n4m.augmentation.mixup.random_x_op` | `n4m.augmentation.mixup` | C |
+| [`rotate_translate`](aug_rotate_translate.md) | `n4m.augmentation.mixup.rotate_translate` | `n4m.augmentation.mixup` | C |
+| [`gaussian_noise`](aug_gaussian_noise.md) | `n4m.augmentation.noise.gaussian_noise` | `n4m.augmentation.noise` | C |
+| [`hetero_noise`](aug_hetero_noise.md) | `n4m.augmentation.noise.hetero_noise` | `n4m.augmentation.noise` | C |
+| [`multiplicative_noise`](aug_multiplicative_noise.md) | `n4m.augmentation.noise.multiplicative_noise` | `n4m.augmentation.noise` | C |
+| [`spike_noise`](aug_spike_noise.md) | `n4m.augmentation.noise.spike_noise` | `n4m.augmentation.noise` | C |
+| [`batch_effect`](aug_batch_effect.md) | `n4m.augmentation.scattering.batch_effect` | `n4m.augmentation.scattering` | C |
+| [`dead_band`](aug_dead_band.md) | `n4m.augmentation.scattering.dead_band` | `n4m.augmentation.scattering` | C |
+| [`emsc_distort`](aug_emsc_distort.md) | `n4m.augmentation.scattering.emsc_distort` | `n4m.augmentation.scattering` | C |
+| [`instrument_broaden`](aug_instrument_broaden.md) | `n4m.augmentation.scattering.instrument_broaden` | `n4m.augmentation.scattering` | C |
+| [`particle_size`](aug_particle_size.md) | `n4m.augmentation.scattering.particle_size` | `n4m.augmentation.scattering` | C |
+| [`scatter_sim_msc`](aug_scatter_sim.md) | `n4m.augmentation.scattering.scatter_sim_msc` | `n4m.augmentation.scattering` | C |
+| [`band_mask`](aug_band_mask.md) | `n4m.augmentation.spectral.band_mask` | `n4m.augmentation.spectral` | C |
+| [`band_perturb`](aug_band_perturb.md) | `n4m.augmentation.spectral.band_perturb` | `n4m.augmentation.spectral` | C |
+| [`channel_dropout`](aug_channel_dropout.md) | `n4m.augmentation.spectral.channel_dropout` | `n4m.augmentation.spectral` | C |
+| [`gauss_jitter`](aug_gauss_jitter.md) | `n4m.augmentation.spectral.gauss_jitter` | `n4m.augmentation.spectral` | C |
+| [`local_clip`](aug_local_clip.md) | `n4m.augmentation.spectral.local_clip` | `n4m.augmentation.spectral` | C |
+| [`magnitude_warp`](aug_magnitude_warp.md) | `n4m.augmentation.spectral.magnitude_warp` | `n4m.augmentation.spectral` | C |
+| [`unsharp_mask`](aug_unsharp_mask.md) | `n4m.augmentation.spectral.unsharp_mask` | `n4m.augmentation.spectral` | C |
+| [`spline_curve_simplification`](aug_spline_curve_simplify.md) | `n4m.augmentation.splines.spline_curve_simplification` | `n4m.augmentation.splines` | C |
+| [`spline_smoothing`](aug_spline_smooth.md) | `n4m.augmentation.splines.spline_smoothing` | `n4m.augmentation.splines` | C |
+| [`spline_x_perturbations`](aug_spline_x_perturb.md) | `n4m.augmentation.splines.spline_x_perturbations` | `n4m.augmentation.splines` | C |
+| [`spline_x_simplification`](aug_spline_x_simplify.md) | `n4m.augmentation.splines.spline_x_simplification` | `n4m.augmentation.splines` | C |
+| [`spline_y_perturbations`](aug_spline_y_perturb.md) | `n4m.augmentation.splines.spline_y_perturbations` | `n4m.augmentation.splines` | C |
+| [`local_warp`](aug_local_warp.md) | `n4m.augmentation.wavelength.local_warp` | `n4m.augmentation.wavelength` | C |
+| [`wavelength_shift`](aug_wavelength_shift.md) | `n4m.augmentation.wavelength.wavelength_shift` | `n4m.augmentation.wavelength` | C |
+| [`wavelength_stretch`](aug_wavelength_stretch.md) | `n4m.augmentation.wavelength.wavelength_stretch` | `n4m.augmentation.wavelength` | C |
 
-## Ensemble
+## estimators — supervised predictors (fit/predict)
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`bagging_pls`](bagging_pls.md) | Bagging PLS (§20) | `1e-06` | Py |
-| [`boosting_pls`](boosting_pls.md) | Boosting PLS (§20) | `1e-06` | R |
-| [`moment_stack`](moment_stack.md) | Train-only OOF stack over native moment heads | `n/a` | n4m |
-| [`random_subspace_pls`](random_subspace_pls.md) | Random-subspace PLS (§20) | `1e-06` | Py |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`pls_lda`](pls_lda.md) | `n4m.estimators.classification.pls_lda` | `n4m.estimators.classification` | C |
+| [`pls_logistic`](pls_logistic.md) | `n4m.estimators.classification.pls_logistic` | `n4m.estimators.classification` | C |
+| [`pls_qda`](pls_qda.md) | `n4m.estimators.classification.pls_qda` | `n4m.estimators.classification` | C |
+| [`sparse_pls_da`](sparse_pls_da.md) | `n4m.estimators.classification.sparse_pls_da` | `n4m.estimators.classification` | C |
+| [`mb_pls`](mb_pls.md) | `n4m.estimators.multiblock.mb_pls` | `n4m.estimators.multiblock` | C |
+| [`mir_pls`](mir_pls.md) | `n4m.estimators.multiblock.mir_pls` | `n4m.estimators.multiblock` | C |
+| [`o2pls`](o2pls.md) | `n4m.estimators.multiblock.o2pls` | `n4m.estimators.multiblock` | C |
+| [`on_pls`](on_pls.md) | `n4m.estimators.multiblock.on_pls` | `n4m.estimators.multiblock` | C |
+| [`rosa`](rosa.md) | `n4m.estimators.multiblock.rosa` | `n4m.estimators.multiblock` | C |
+| [`so_pls`](so_pls.md) | `n4m.estimators.multiblock.so_pls` | `n4m.estimators.multiblock` | C |
+| [`pls_glm`](pls_glm.md) | `n4m.estimators.regression.glm.pls_glm` | `n4m.estimators.regression.glm` | C |
+| [`gpr_pls`](gpr_pls.md) | `n4m.estimators.regression.kernel.gpr_pls` | `n4m.estimators.regression.kernel` | C |
+| [`kernel_pls`](kernel_pls_rbf.md) | `n4m.estimators.regression.kernel.kernel_pls` | `n4m.estimators.regression.kernel` | C |
+| [`continuum_regression`](continuum_regression.md) | `n4m.estimators.regression.latent.continuum_regression` | `n4m.estimators.regression.latent` | C, Py |
+| [`cppls`](cppls.md) | `n4m.estimators.regression.latent.cppls` | `n4m.estimators.regression.latent` | C, Py |
+| [`ecr`](ecr.md) | `n4m.estimators.regression.latent.ecr` | `n4m.estimators.regression.latent` | C, Py |
+| [`missing_aware_nipals`](missing_aware_nipals.md) | `n4m.estimators.regression.latent.missing_aware_nipals` | `n4m.estimators.regression.latent` | C |
+| [`pcr`](pcr.md) | `n4m.estimators.regression.latent.pcr` | `n4m.estimators.regression.latent` | C, Py |
+| [`pls`](pls.md) | `n4m.estimators.regression.latent.pls` | `n4m.estimators.regression.latent` | C, Py |
+| [`lw_pls`](lw_pls.md) | `n4m.estimators.regression.local.lw_pls` | `n4m.estimators.regression.local` | C |
+| [`recursive_pls`](recursive_pls.md) | `n4m.estimators.regression.online.recursive_pls` | `n4m.estimators.regression.online` | C |
+| [`ridge`](ridge.md) | `n4m.estimators.regression.regularized.ridge` | `n4m.estimators.regression.regularized` | C, Py |
+| [`ridge_pls`](ridge_pls.md) | `n4m.estimators.regression.regularized.ridge_pls` | `n4m.estimators.regression.regularized` | C, Py |
+| [`robust_pls`](robust_pls.md) | `n4m.estimators.regression.robust.robust_pls` | `n4m.estimators.regression.robust` | C, Py |
+| [`weighted_pls`](weighted_pls.md) | `n4m.estimators.regression.robust.weighted_pls` | `n4m.estimators.regression.robust` | C, Py |
+| [`fused_sparse_pls`](fused_sparse_pls.md) | `n4m.estimators.regression.sparse.fused_sparse_pls` | `n4m.estimators.regression.sparse` | C |
+| [`group_sparse_pls`](group_sparse_pls.md) | `n4m.estimators.regression.sparse.group_sparse_pls` | `n4m.estimators.regression.sparse` | C |
+| [`sparse_simpls`](sparse_simpls.md) | `n4m.estimators.regression.sparse.sparse_simpls` | `n4m.estimators.regression.sparse` | C |
+| [`n_pls`](n_pls.md) | `n4m.estimators.regression.tensor.n_pls` | `n4m.estimators.regression.tensor` | C |
+| [`pls_cox`](pls_cox.md) | `n4m.estimators.survival.pls_cox` | `n4m.estimators.survival` | C |
 
-## Robust / weighted
+## feature_selection — variable selectors
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`robust_pls`](robust_pls.md) | Robust PLS (Partial Robust M-regression, Serneels 2005) | `0.1` | R |
-| [`weighted_pls`](weighted_pls.md) | Sample-weighted PLS (sqrt(w)-prescaled NIPALS) | `0.1` | Py |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`correlation`](filter_correlation.md) | `n4m.feature_selection.filter.correlation` | `n4m.feature_selection.filter` | C |
+| [`variance`](filter_variance.md) | `n4m.feature_selection.filter.variance` | `n4m.feature_selection.filter` | C |
+| [`interval`](interval_generator.md) | `n4m.feature_selection.interval.interval` | `n4m.feature_selection.interval` | C |
+| [`variable_select`](variable_select_vip.md) | `n4m.feature_selection.ranking.variable_select` | `n4m.feature_selection.ranking` | C |
+| [`bipls`](bipls_select.md) | `n4m.feature_selection.wrapper.bipls` | `n4m.feature_selection.wrapper` | C |
+| [`bve`](bve_select.md) | `n4m.feature_selection.wrapper.bve` | `n4m.feature_selection.wrapper` | C |
+| [`cars`](cars_select.md) | `n4m.feature_selection.wrapper.cars` | `n4m.feature_selection.wrapper` | C |
+| [`emcuve`](emcuve_select.md) | `n4m.feature_selection.wrapper.emcuve` | `n4m.feature_selection.wrapper` | C |
+| [`ga`](ga_select.md) | `n4m.feature_selection.wrapper.ga` | `n4m.feature_selection.wrapper` | C |
+| [`ipw`](ipw_select.md) | `n4m.feature_selection.wrapper.ipw` | `n4m.feature_selection.wrapper` | C |
+| [`irf`](irf_select.md) | `n4m.feature_selection.wrapper.irf` | `n4m.feature_selection.wrapper` | C |
+| [`iriv`](iriv_select.md) | `n4m.feature_selection.wrapper.iriv` | `n4m.feature_selection.wrapper` | C |
+| [`pso`](pso_select.md) | `n4m.feature_selection.wrapper.pso` | `n4m.feature_selection.wrapper` | C |
+| [`random_frog`](random_frog_select.md) | `n4m.feature_selection.wrapper.random_frog` | `n4m.feature_selection.wrapper` | C |
+| [`randomization`](randomization_select.md) | `n4m.feature_selection.wrapper.randomization` | `n4m.feature_selection.wrapper` | C |
+| [`rep`](rep_select.md) | `n4m.feature_selection.wrapper.rep` | `n4m.feature_selection.wrapper` | C |
+| [`scars`](scars_select.md) | `n4m.feature_selection.wrapper.scars` | `n4m.feature_selection.wrapper` | C |
+| [`shaving`](shaving_select.md) | `n4m.feature_selection.wrapper.shaving` | `n4m.feature_selection.wrapper` | C |
+| [`sipls`](sipls_select.md) | `n4m.feature_selection.wrapper.sipls` | `n4m.feature_selection.wrapper` | C |
+| [`spa`](spa_select.md) | `n4m.feature_selection.wrapper.spa` | `n4m.feature_selection.wrapper` | C |
+| [`st`](st_select.md) | `n4m.feature_selection.wrapper.st` | `n4m.feature_selection.wrapper` | C |
+| [`stability`](stability_select.md) | `n4m.feature_selection.wrapper.stability` | `n4m.feature_selection.wrapper` | C |
+| [`t2`](t2_select.md) | `n4m.feature_selection.wrapper.t2` | `n4m.feature_selection.wrapper` | C |
+| [`uve`](uve_select.md) | `n4m.feature_selection.wrapper.uve` | `n4m.feature_selection.wrapper` | C |
+| [`vip_spa`](vip_spa_select.md) | `n4m.feature_selection.wrapper.vip_spa` | `n4m.feature_selection.wrapper` | C |
+| [`vissa`](vissa_select.md) | `n4m.feature_selection.wrapper.vissa` | `n4m.feature_selection.wrapper` | C |
+| [`wvc`](wvc_select.md) | `n4m.feature_selection.wrapper.wvc` | `n4m.feature_selection.wrapper` | C |
+| [`wvc_threshold`](wvc_threshold_select.md) | `n4m.feature_selection.wrapper.wvc_threshold` | `n4m.feature_selection.wrapper` | C |
 
-## Nonlinear / local
+## model_selection — splitters, AOM search/campaign, sweep
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`continuum_regression`](continuum_regression.md) | Continuum regression (interpolates PLS / OLS) | `1e-06` | Py, R |
-| [`gpr_pls`](gpr_pls.md) | GPR-on-PLS — RBF Gaussian Process on PLS scores (§47) | `1e-08` | Py |
-| [`kernel_pls_rbf`](kernel_pls_rbf.md) | Non-linear kernel PLS (RBF kernel) | `2.0` | R |
-| [`lw_pls`](lw_pls.md) | LW-PLS — Locally-weighted PLS (§17 Phase 4) | `5.0` | Py |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`aom_chain_screen_refit`](aom_chain_sweep_run.md) | `n4m.model_selection.aom_campaign.aom_chain_screen_refit` | `n4m.model_selection.aom_campaign` | C, Py |
+| [`aom_staged_chain_campaign`](aom_staged_chain_campaign.md) | `n4m.model_selection.aom_campaign.aom_staged_chain_campaign` | `n4m.model_selection.aom_campaign` | C, Py |
+| [`aom_chain_fixed_fit`](aom_chain_sweep_run.md) | `n4m.model_selection.aom_search.aom_chain_fixed_fit` | `n4m.model_selection.aom_search` | C, Py |
+| [`aom_chain_ridge_pls`](aom_chain_ridge_pls.md) | `n4m.model_selection.aom_search.aom_chain_ridge_pls` | `n4m.model_selection.aom_search` | C, Py |
+| [`aom_chain_sweep`](aom_chain_sweep_run.md) | `n4m.model_selection.aom_search.aom_chain_sweep` | `n4m.model_selection.aom_search` | C, Py |
+| [`aom_pls`](aom_pls.md) | `n4m.model_selection.aom_search.aom_pls` | `n4m.model_selection.aom_search` | C, Py |
+| [`aom_preprocessing`](aom_preprocess.md) | `n4m.model_selection.aom_search.aom_preprocessing` | `n4m.model_selection.aom_search` | C, Py |
+| [`aom_sweep`](aom_sweep_run.md) | `n4m.model_selection.aom_search.aom_sweep` | `n4m.model_selection.aom_search` | C, Py |
+| [`pop_pls`](pop_pls.md) | `n4m.model_selection.aom_search.pop_pls` | `n4m.model_selection.aom_search` | C, Py |
+| [`ridge_global`](aom_pop_ridge_global.md) | `n4m.model_selection.aom_search.ridge_global` | `n4m.model_selection.aom_search` | C, Py |
+| [`robust_hpo`](aom_robust_hpo.md) | `n4m.model_selection.aom_search.robust_hpo` | `n4m.model_selection.aom_search` | C, Py |
+| [`binned_strat_group_kfold`](split_binned_strat_group_kfold.md) | `n4m.model_selection.splitters.binned_strat_group_kfold` | `n4m.model_selection.splitters` | C |
+| [`data_twinning`](split_split_splitter.md) | `n4m.model_selection.splitters.data_twinning` | `n4m.model_selection.splitters` | C |
+| [`kbins_stratified`](split_kbins_stratified.md) | `n4m.model_selection.splitters.kbins_stratified` | `n4m.model_selection.splitters` | C |
+| [`kennard_stone`](split_kennard_stone.md) | `n4m.model_selection.splitters.kennard_stone` | `n4m.model_selection.splitters` | C |
+| [`kmeans`](split_kmeans.md) | `n4m.model_selection.splitters.kmeans` | `n4m.model_selection.splitters` | C |
+| [`spxy`](split_spxy.md) | `n4m.model_selection.splitters.spxy` | `n4m.model_selection.splitters` | C |
+| [`spxy_fold`](split_spxy_fold.md) | `n4m.model_selection.splitters.spxy_fold` | `n4m.model_selection.splitters` | C |
+| [`spxy_g_fold`](split_spxy_g_fold.md) | `n4m.model_selection.splitters.spxy_g_fold` | `n4m.model_selection.splitters` | C |
+| [`systematic_circular`](split_systematic_circular.md) | `n4m.model_selection.splitters.systematic_circular` | `n4m.model_selection.splitters` | C |
+| [`sweep`](sweep_run.md) | `n4m.model_selection.sweep.sweep` | `n4m.model_selection.sweep` | C, Py |
 
-## Multi-block / cross-modal
+## domain_adaptation — calibration transfer / standardization
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`mb_pls`](mb_pls.md) | MB-PLS — Multi-block PLS (§17 Phase 4) | `2.0` | Py |
-| [`mir_pls`](mir_pls.md) | MIR-PLS — Inverse-regression PLS (§13) | `0.05` | — |
-| [`n_pls`](n_pls.md) | N-PLS — 3-way tensor PLS (PARAFAC + OLS by default; Bro 1996 opt-in) | `1e-06` | Py |
-| [`o2pls`](o2pls.md) | O2PLS — bi-directional OPLS (Trygg & Wold 2003) | `1e-10` | R |
-| [`on_pls`](on_pls.md) | OnPLS — Orthogonal multi-block decomposition (§18) | `1e-06` | Py |
-| [`rosa`](rosa.md) | ROSA — Response-Oriented Sequential Alternation (§19) | `1e-06` | Py, R |
-| [`so_pls`](so_pls.md) | SO-PLS — Sequential & Orthogonalized multi-block PLS (§17) | `1e-06` | R |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`di_pls`](di_pls.md) | `n4m.domain_adaptation.invariant.di_pls` | `n4m.domain_adaptation.invariant` | C |
+| [`transfer_metrics`](utilities_transfer_metrics.md) | `n4m.domain_adaptation.metrics.transfer_metrics` | `n4m.domain_adaptation.metrics` | C |
+| [`epo`](pp_epo.md) | `n4m.domain_adaptation.orthogonalization.epo` | `n4m.domain_adaptation.orthogonalization` | C |
+| [`direct_standardization`](pp_direct_standardization.md) | `n4m.domain_adaptation.standardization.direct_standardization` | `n4m.domain_adaptation.standardization` | C |
+| [`ds`](ds.md) | `n4m.domain_adaptation.standardization.ds` | `n4m.domain_adaptation.standardization` | C |
+| [`pds`](pds.md) | `n4m.domain_adaptation.standardization.pds` | `n4m.domain_adaptation.standardization` | C |
+| [`piecewise_direct_standardization`](pp_piecewise_direct_standardization.md) | `n4m.domain_adaptation.standardization.piecewise_direct_standardization` | `n4m.domain_adaptation.standardization` | C |
+| [`robust_direct_standardization`](pp_robust_direct_standardization.md) | `n4m.domain_adaptation.standardization.robust_direct_standardization` | `n4m.domain_adaptation.standardization` | C |
+| [`slope_bias`](pp_slope_bias.md) | `n4m.domain_adaptation.standardization.slope_bias` | `n4m.domain_adaptation.standardization` | C |
 
-## Calibration transfer
+## outlier_detection — sample-level screeners + Q/T²
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`di_pls`](di_pls.md) | Domain-invariant PLS | `1e-06` | Py |
-| [`ds`](ds.md) | DS — Direct Standardization (§13) | `0.5` | R |
-| [`ecr`](ecr.md) | Elastic Component Regression (Phase 50) | `0.001` | Py |
-| [`pds`](pds.md) | PDS — Piecewise Direct Standardization (§13) | `0.5` | R |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`composite`](filter_composite.md) | `n4m.outlier_detection.composite` | `n4m.outlier_detection` | C |
+| [`high_leverage`](filter_leverage.md) | `n4m.outlier_detection.high_leverage` | `n4m.outlier_detection` | C |
+| [`hotelling_t2`](utilities_hotelling_t2.md) | `n4m.outlier_detection.hotelling_t2` | `n4m.outlier_detection` | C |
+| [`q_residuals`](utilities_q_residuals.md) | `n4m.outlier_detection.q_residuals` | `n4m.outlier_detection` | C |
+| [`spectral_quality`](filter_quality.md) | `n4m.outlier_detection.spectral_quality` | `n4m.outlier_detection` | C |
+| [`x_outlier`](filter_x_outlier.md) | `n4m.outlier_detection.x_outlier` | `n4m.outlier_detection` | C |
+| [`y_outlier`](filter_y_outlier.md) | `n4m.outlier_detection.y_outlier` | `n4m.outlier_detection` | C |
 
-## Classification & GLM
+## ensemble — bagging / boosting / stacking / AOM blenders
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`pls_cox`](pls_cox.md) | PLS-Cox (§5) — Cox PH on PLS scores | `1e-06` | Py |
-| [`pls_glm`](pls_glm.md) | PLS-GLM (§5) — softmax/Poisson IRLS on PLS scores | `1e-06` | R |
-| [`pls_lda`](pls_lda.md) | PLS-LDA — LDA on PLS scores (§17 Phase 4) | `5.0` | Py |
-| [`pls_logistic`](pls_logistic.md) | PLS-Logistic — Logistic regression on PLS scores | `5.0` | Py |
-| [`pls_qda`](pls_qda.md) | PLS-QDA (§5) — quadratic discriminant on PLS scores | `1e-06` | Py |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`aom_operator_pls_stack`](aom_operator_pls_stack.md) | `n4m.ensemble.aom_operator_pls_stack` | `n4m.ensemble` | C, Py |
+| [`aom_ridge_blender`](aom_ridge_blender.md) | `n4m.ensemble.aom_ridge_blender` | `n4m.ensemble` | C, Py |
+| [`bagging_pls`](bagging_pls.md) | `n4m.ensemble.bagging_pls` | `n4m.ensemble` | C |
+| [`boosting_pls`](boosting_pls.md) | `n4m.ensemble.boosting_pls` | `n4m.ensemble` | C |
+| [`moment_stack`](moment_stack.md) | `n4m.ensemble.moment_stack` | `n4m.ensemble` | C, Py |
+| [`random_subspace_pls`](random_subspace_pls.md) | `n4m.ensemble.random_subspace_pls` | `n4m.ensemble` | C |
 
-## Missing data
+## compose — AOM operator superblocks
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`missing_aware_nipals`](missing_aware_nipals.md) | Missing-aware NIPALS PLS (§13) | `10.0` | R |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`aom_pls_superblock`](aom_pls_superblock.md) | `n4m.compose.aom_superblock.aom_pls_superblock` | `n4m.compose.aom_superblock` | C, Py |
+| [`aom_ridge_pls_superblock`](aom_ridge_pls_superblock.md) | `n4m.compose.aom_superblock.aom_ridge_pls_superblock` | `n4m.compose.aom_superblock` | C, Py |
+| [`ridge_active_superblock`](aom_pop_ridge_active_superblock.md) | `n4m.compose.aom_superblock.ridge_active_superblock` | `n4m.compose.aom_superblock` | C, Py |
+| [`ridge_mkl_superblock`](aom_pop_ridge_mkl_superblock.md) | `n4m.compose.aom_superblock.ridge_mkl_superblock` | `n4m.compose.aom_superblock` | C, Py |
+| [`ridge_superblock`](aom_pop_ridge_superblock.md) | `n4m.compose.aom_superblock.ridge_superblock` | `n4m.compose.aom_superblock` | C, Py |
 
-## Regularised
+## metrics — scoring + diagnostics
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`ridge`](ridge.md) | Direct closed-form Ridge regression | `1e-10` | Py |
-| [`ridge_pls`](ridge_pls.md) | Ridge-augmented PLS | `0.1` | Py |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`pls_diagnostics`](diagnostics_pls_diagnostics.md) | `n4m.metrics.diagnostics.pls_diagnostics` | `n4m.metrics.diagnostics` | C |
+| [`pls_monitoring`](pls_monitoring.md) | `n4m.metrics.diagnostics.pls_monitoring` | `n4m.metrics.diagnostics` | C |
+| [`approximate_press`](approximate_press.md) | `n4m.metrics.scoring.approximate_press` | `n4m.metrics.scoring` | C |
+| [`one_se_rule`](one_se_rule.md) | `n4m.metrics.scoring.one_se_rule` | `n4m.metrics.scoring` | C |
+| [`regression_metrics`](diagnostics_regression_metrics.md) | `n4m.metrics.scoring.regression_metrics` | `n4m.metrics.scoring` | C |
 
-## Diagnostic
+## decomposition — flexible PCA / SVD
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`aom_chain_fixed_fit`](aom_chain_sweep_run.md) | Final-only reusable fit for one selected strict-linear AOM chain/head/parameter | `1e-09` | n4m |
-| [`aom_chain_ridge_pls`](aom_chain_ridge_pls.md) | Strict-linear AOM single-chain Ridge-PLS selector | `1e-08` | n4m |
-| [`aom_chain_screen_refit`](aom_chain_sweep_run.md) | Two-pass strict-linear AOM preprocessing screen with exact-CV refit and reusable final model | `1e-09` | n4m |
-| [`aom_chain_sweep_run`](aom_chain_sweep_run.md) | User-defined native AOM strict-linear chain sweep | `1e-09` | n4m |
-| [`aom_pls`](aom_pls.md) | Native AOM global strict-linear operator selector for PLS | `1e-09` | n4m |
-| [`aom_pls_superblock`](aom_pls_superblock.md) | Strict-linear AOM-PLS operator superblock | `1e-09` | n4m |
-| [`aom_operator_pls_stack`](aom_operator_pls_stack.md) | Native AOM strict-operator PLS score stack with Ridge head | `1e-09` | n4m |
-| [`aom_staged_chain_campaign`](aom_staged_chain_campaign.md) | Staged strict-chain AOM/moment preprocessing screen/refit campaign | `n/a` | n4m |
-| [`aom_ridge_blender`](aom_ridge_blender.md) | Native fold-safe AOM-Ridge OOF simplex blender | `1e-09` | n4m |
-| [`aom_ridge_active_superblock`](aom_ridge_active_superblock.md) | Strict-linear AOM Ridge active-superblock selector | `1e-09` | n4m |
-| [`aom_ridge_global`](aom_ridge_global.md) | Strict-linear AOM Ridge global operator selector | `1e-09` | n4m |
-| [`aom_ridge_mkl_superblock`](aom_ridge_mkl_superblock.md) | Strict-linear AOM Ridge MKL-light weighted superblock | `1e-09` | n4m |
-| [`aom_ridge_pls_superblock`](aom_ridge_pls_superblock.md) | Strict-linear AOM Ridge-PLS operator superblock | `1e-09` | n4m |
-| [`aom_ridge_superblock`](aom_ridge_superblock.md) | Strict-linear AOM Ridge superblock over native Ridge fits | `1e-09` | n4m |
-| [`aom_robust_hpo`](aom_robust_hpo.md) | Native strict-linear AOM robust-HPO preprocessing screen | `1e-10` | n4m |
-| [`aom_sweep_run`](aom_sweep_run.md) | Configurable native AOM strict-linear preprocessing sweep | `1e-09` | n4m |
-| [`aom_preprocess`](aom_preprocess.md) | Native AOM operator-bank preprocessing primitive | `5.0` | n4m |
-| [`approximate_press`](approximate_press.md) | Approximate-PRESS component selection (§29) | `1e-10` | R |
-| [`one_se_rule`](one_se_rule.md) | One-SE component selection rule (§10) | `1e-06` | R |
-| [`pls_diagnostic_dmodx`](pls_diagnostic_dmodx.md) | PLS Distance-to-Model X (§9) | `5.0` | R |
-| [`pls_diagnostic_q`](pls_diagnostic_q.md) | PLS Q residuals / SPE (§9) | `5.0` | R |
-| [`pls_diagnostic_t2`](pls_diagnostic_t2.md) | PLS Hotelling T² (§9) | `10.0` | R |
-| [`pls_monitoring`](pls_monitoring.md) | PLS process monitoring (T²/Q thresholds + alarms) (§19) | `10.0` | R |
-| [`pop_pls`](pop_pls.md) | Native POP-PLS per-component strict-linear operator selector | `1e-09` | n4m |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`flexible_pca`](pp_flex_pca.md) | `n4m.decomposition.flexible_pca` | `n4m.decomposition` | C |
+| [`flexible_svd`](pp_flex_svd.md) | `n4m.decomposition.flexible_svd` | `n4m.decomposition` | C |
 
-## Variable selector
+## lowlevel — sufficient-statistics substrate
 
-| Method | Description | Tolerance | Refs |
-|--------|-------------|-----------|------|
-| [`bipls_select`](bipls_select.md) | biPLS backward interval elimination (§18 Phase 5p) | `0.7` | R |
-| [`bve_select`](bve_select.md) | Backward Variable Elimination (§18 Phase 5k) | `1e-06` | R |
-| [`cars_select`](cars_select.md) | CARS competitive adaptive reweighted sampling | `0.0` | R |
-| [`emcuve_select`](emcuve_select.md) | EMCUVE ensemble MC-UVE (§18 Phase 5n) | `1e-06` | R |
-| [`ga_select`](ga_select.md) | GA-PLS genetic algorithm selection | `1e-06` | R |
-| [`interval_select`](interval_select.md) | Interval/iPLS forward selection (§18 Phase 5b) | `1e-06` | R |
-| [`ipw_select`](ipw_select.md) | IPW-PLS iterative predictor weighting (§18 Phase 5t) | `1e-06` | R |
-| [`irf_select`](irf_select.md) | Interval Random Frog (Phase 52) | `1e-06` | Py |
-| [`iriv_select`](iriv_select.md) | Iteratively Retains Informative Variables (Phase 51) | `1e-06` | Py |
-| [`pso_select`](pso_select.md) | PSO-PLS — Binary Particle Swarm variable selection (§48) | `1e-06` | Py |
-| [`random_frog_select`](random_frog_select.md) | Random Frog selection (§18 Phase 5g) | `1e-06` | Py |
-| [`randomization_select`](randomization_select.md) | Randomization-test selector (§18 Phase 5o) | `1e-06` | R |
-| [`rep_select`](rep_select.md) | REP-PLS repeated VIP selection (§18 Phase 5s) | `1e-06` | R |
-| [`scars_select`](scars_select.md) | SCARS stability + CARS (§18 Phase 5h) | `1e-06` | Py |
-| [`shaving_select`](shaving_select.md) | Shaving iterative variable trimming | `1e-06` | R |
-| [`sipls_select`](sipls_select.md) | siPLS synergistic interval selection (§18 Phase 5q) | `0.7` | — |
-| [`spa_select`](spa_select.md) | SPA Successive Projections (§18 Phase 5e) | `1e-06` | R |
-| [`st_select`](st_select.md) | ST-PLS soft-thresholded sparse PLS (§18 Phase 5u) | `1e-06` | R |
-| [`stability_select`](stability_select.md) | Stability/MCUVE selection (§18 Phase 5c) | `1e-06` | R |
-| [`t2_select`](t2_select.md) | T²-PLS loading-weight selection (§18 Phase 5l) | `1.2` | R |
-| [`uve_select`](uve_select.md) | UVE noise-thresholded selection (§18 Phase 5d) | `1e-06` | R |
-| [`variable_select_coef`](variable_select_coef.md) | \|Coef\| top-k selection (§18 Phase 5a, method=1) | `1.1` | R |
-| [`variable_select_sr`](variable_select_sr.md) | Selectivity-Ratio top-k (§18 Phase 5a, method=2) | `1e-06` | R |
-| [`variable_select_vip`](variable_select_vip.md) | VIP top-k variable selection (§18 Phase 5a, method=0) | `1e-06` | R |
-| [`vip_spa_select`](vip_spa_select.md) | VIP_SPA — VIP-mask then SPA greedy (Phase 53) | `1e-06` | Py |
-| [`vissa_select`](vissa_select.md) | VISSA-PLS — Variable Iterative Space Shrinkage (§49) | `1e-06` | Py |
-| [`wvc_select`](wvc_select.md) | WVC weighted-variable-component top-k | `0.7` | R |
-| [`wvc_threshold_select`](wvc_threshold_select.md) | WVC threshold-based selection (§18 Phase 5r) | `1e-06` | R |
-
-## Preprocessing
-
-| Operator | Binding | Description |
-|----------|---------|-------------|
-| [`pp_area`](pp_area.md) | `n4m.sklearn.AreaNormalization` | Per-row area normalisation. |
-| [`pp_baseline`](pp_baseline.md) | `n4m.sklearn.BaselineCenter` | Column-mean baseline centering. |
-| [`pp_crop`](pp_crop.md) | `n4m.sklearn.CropTransformer` | Slice wavelength columns in the half-open interval ``[start, end)``. |
-| [`pp_derivate`](pp_derivate.md) | `n4m.sklearn.Derivate` | Finite-difference derivative along the wavelength axis. |
-| [`pp_emsc`](pp_emsc.md) | `n4m.sklearn.EMSC` | Extended Multiplicative Scatter Correction (polynomial). |
-| [`pp_first_derivative`](pp_first_derivative.md) | `n4m.sklearn.FirstDerivative` | ``np.gradient(X, delta, axis=1, edge_order=...)`` (shape-preserving). |
-| [`pp_frac_to_pct`](pp_frac_to_pct.md) | `n4m.sklearn.FractionToPercent` | Convert fractional reflectance/transmittance to percent. |
-| [`pp_from_absorbance`](pp_from_absorbance.md) | `n4m.sklearn.FromAbsorbance` | R = 10**(-A), optionally returned as percent. |
-| [`pp_gaussian`](pp_gaussian.md) | `n4m.sklearn.Gaussian` | SciPy-compatible 1-D Gaussian filter along the wavelength axis. |
-| [`pp_kbins_disc`](pp_kbins_disc.md) | `n4m.sklearn.IntegerKBinsDiscretizer` | Per-column integer binning using uniform or quantile edges. |
-| [`pp_kubelka_munk`](pp_kubelka_munk.md) | `n4m.sklearn.KubelkaMunk` | KM = (1 - R)^2 / (2 R), with R guarded by epsilon. |
-| [`pp_log`](pp_log.md) | `n4m.sklearn.LogTransform` | Element-wise logarithm with optional fit-time auto-offset. |
-| [`pp_lsnv`](pp_lsnv.md) | `n4m.sklearn.LSNV` | Sliding-window (local) SNV. |
-| [`pp_msc`](pp_msc.md) | `n4m.sklearn.MSC` | Multiplicative Scatter Correction. |
-| [`pp_normalize`](pp_normalize.md) | `n4m.sklearn.Normalize` | Column-wise normalisation. |
-| [`pp_norris_williams`](pp_norris_williams.md) | `n4m.sklearn.NorrisWilliams` | Segment smoothing followed by gap finite differences. |
-| [`pp_pct_to_frac`](pp_pct_to_frac.md) | `n4m.sklearn.PercentToFraction` | Convert percent reflectance/transmittance to fraction. |
-| [`pp_range_disc`](pp_range_disc.md) | `n4m.sklearn.RangeDiscretizer` | Integer binning against monotonic numeric edges. |
-| [`pp_resample`](pp_resample.md) | `n4m.sklearn.ResampleTransformer` | Resize spectra to a fixed column count. |
-| [`pp_resampler`](pp_resampler.md) | `n4m.sklearn.Resampler` | Interpolate spectra from a fitted source wavelength grid to a target grid. |
-| [`pp_rnv`](pp_rnv.md) | `n4m.sklearn.RNV` | Robust SNV using median + k * MAD. |
-| [`pp_savgol`](pp_savgol.md) | `n4m.sklearn.SavitzkyGolay` | scipy.signal.savgol_filter parity. |
-| [`pp_second_derivative`](pp_second_derivative.md) | `n4m.sklearn.SecondDerivative` | Two passes of ``np.gradient`` (shape-preserving). |
-| [`pp_simple_scale`](pp_simple_scale.md) | `n4m.sklearn.SimpleScale` | Column-wise min-max scaling to ``[0, 1]``. |
-| [`pp_snv`](pp_snv.md) | `n4m.sklearn.SNV` | Standard Normal Variate normalisation. |
-| [`pp_to_absorbance`](pp_to_absorbance.md) | `n4m.sklearn.ToAbsorbance` | A = -log10(max(R, epsilon)). Optional %-scaling. |
-
-## Baseline correction
-
-| Operator | Binding | Description |
-|----------|---------|-------------|
-| [`pp_airpls`](pp_airpls.md) | `n4m.sklearn.AirPLS` | Adaptive iteratively reweighted PLS (Zhang 2010). |
-| [`pp_arpls`](pp_arpls.md) | `n4m.sklearn.ArPLS` | Asymmetrically reweighted penalized least squares. |
-| [`pp_asls`](pp_asls.md) | `n4m.sklearn.AsLS` | Asymmetric Least Squares (Eilers & Boelens 2005). |
-| [`pp_beads`](pp_beads.md) | `n4m.sklearn.BEADS` | Baseline estimation and denoising with sparsity. |
-| [`pp_detrend`](pp_detrend.md) | `n4m.sklearn.Detrend` | Polynomial baseline subtraction. |
-| [`pp_iasls`](pp_iasls.md) | `n4m.sklearn.IAsLS` | Improved asymmetric least-squares baseline correction. |
-| [`pp_imodpoly`](pp_imodpoly.md) | `n4m.sklearn.IModPoly` | Improved modified polynomial baseline correction. |
-| [`pp_modpoly`](pp_modpoly.md) | `n4m.sklearn.ModPoly` | Modified polynomial baseline correction. |
-| [`pp_rolling_ball`](pp_rolling_ball.md) | `n4m.sklearn.RollingBall` | Rolling-ball morphological baseline correction. |
-| [`pp_snip`](pp_snip.md) | `n4m.sklearn.SNIP` | Statistics-sensitive nonlinear iterative peak-clipping baseline. |
-
-## Signal transforms
-
-| Operator | Binding | Description |
-|----------|---------|-------------|
-| [`filter_correlation`](filter_correlation.md) | `n4m.sklearn.CorrelationFilter` | Model-agnostic feature filter by absolute correlation to ``y``. |
-| [`filter_variance`](filter_variance.md) | `n4m.sklearn.VarianceFilter` | Model-agnostic feature filter by variance. |
-| [`interval_generator`](interval_generator.md) | `n4m.sklearn.IntervalGenerator` | Generate fixed or overlapping wavelength intervals. |
-| [`pp_cow_align`](pp_cow_align.md) | `n4m.sklearn.CorrelationOptimizedWarping` | Segment-wise correlation optimized warping approximation. |
-| [`pp_direct_standardization`](pp_direct_standardization.md) | `n4m.sklearn.DirectStandardization` | Direct standardization transfer map between paired instruments. |
-| [`pp_dtw_align`](pp_dtw_align.md) | `n4m.sklearn.DynamicTimeWarpingAlignment` | Dynamic-time-warping alignment to a fixed-length reference. |
-| [`pp_icoshift_align`](pp_icoshift_align.md) | `n4m.sklearn.IcoshiftAlignment` | Interval correlation shifting with fixed-size intervals. |
-| [`pp_local_centering`](pp_local_centering.md) | `n4m.sklearn.LocalCentering` | Transfer by subtracting source mean and adding target mean. |
-| [`pp_localized_msc`](pp_localized_msc.md) | `n4m.sklearn.LocalizedMSC` | Feature-wise MSC using a moving local wavelength window. |
-| [`pp_piecewise_direct_standardization`](pp_piecewise_direct_standardization.md) | `n4m.sklearn.PiecewiseDirectStandardization` | PDS: local regressions mapping source windows to target wavelengths. |
-| [`pp_piecewise_msc`](pp_piecewise_msc.md) | `n4m.sklearn.PiecewiseMSC` | Apply MSC independently inside fixed wavelength intervals. |
-| [`pp_piecewise_snv`](pp_piecewise_snv.md) | `n4m.sklearn.PiecewiseSNV` | Apply SNV independently inside fixed wavelength intervals. |
-| [`pp_robust_direct_standardization`](pp_robust_direct_standardization.md) | `n4m.sklearn.RobustDirectStandardization` | Direct standardization with iterative residual trimming. |
-| [`pp_saps`](pp_saps.md) | `n4m.sklearn.ScoreAugmentedProjectionStandardization` | Score-augmented projection standardization inspired by SA-PBS. |
-| [`pp_slope_bias`](pp_slope_bias.md) | `n4m.sklearn.SlopeBiasCorrection` | Linear slope/bias correction for transferred predictions. |
-| [`pp_vsn`](pp_vsn.md) | `n4m.sklearn.VariableSortingNormalization` | VSN-style data-derived weighted SNV. |
-| [`pp_weighted_snv`](pp_weighted_snv.md) | `n4m.sklearn.WeightedSNV` | Weighted standard normal variate normalization. |
-| [`pp_xcorr_align`](pp_xcorr_align.md) | `n4m.sklearn.CrossCorrelationAlignment` | Whole-spectrum integer shift chosen by maximum correlation. |
-
-## Feature extraction
-
-| Operator | Binding | Description |
-|----------|---------|-------------|
-| [`pp_epo`](pp_epo.md) | `n4m.sklearn.EPO` | External Parameter Orthogonalisation. |
-| [`pp_fck_static`](pp_fck_static.md) | `n4m.sklearn.FCKStaticTransformer` | Static fractional convolutional kernel bank transformer. |
-| [`pp_flex_pca`](pp_flex_pca.md) | `n4m.sklearn.FlexiblePCA` | PCA with integer or explained-variance component selection. |
-| [`pp_flex_svd`](pp_flex_svd.md) | `n4m.sklearn.FlexibleSVD` | SVD with integer component selection. |
-| [`pp_osc`](pp_osc.md) | `n4m.sklearn.OSC` | Orthogonal Signal Correction. |
-
-## Augmentation
-
-| Operator | Binding | Description |
-|----------|---------|-------------|
-| [`aug_band_mask`](aug_band_mask.md) | `n4m.sklearn.BandMasking` | Mask random spectral bands with zero-fill or interpolation. |
-| [`aug_band_perturb`](aug_band_perturb.md) | `n4m.sklearn.BandPerturbationAugmenter` | Random band-local gain and offset perturbations. |
-| [`aug_batch_effect`](aug_batch_effect.md) | `n4m.sklearn.BatchEffectAugmenter` | Random offset, slope and gain batch effects. |
-| [`aug_channel_dropout`](aug_channel_dropout.md) | `n4m.sklearn.ChannelDropout` | Randomly drop individual wavelength channels. |
-| [`aug_dead_band`](aug_dead_band.md) | `n4m.sklearn.DeadBandAugmenter` | Simulate dead spectral detector bands. |
-| [`aug_detector_rolloff`](aug_detector_rolloff.md) | `n4m.sklearn.DetectorRollOffAugmenter` | Detector edge roll-off artifact. |
-| [`aug_edge_artifacts`](aug_edge_artifacts.md) | `n4m.sklearn.EdgeArtifactsAugmenter` | Combined edge artifact augmenter. |
-| [`aug_edge_curve`](aug_edge_curve.md) | `n4m.sklearn.EdgeCurvatureAugmenter` | Curved edge response artifact. |
-| [`aug_emsc_distort`](aug_emsc_distort.md) | `n4m.sklearn.EMSCDistortionAugmenter` | Random EMSC-like multiplicative, additive and polynomial distortion. |
-| [`aug_gauss_jitter`](aug_gauss_jitter.md) | `n4m.sklearn.GaussianJitter` | Gaussian smoothing jitter. |
-| [`aug_gaussian_noise`](aug_gaussian_noise.md) | `n4m.sklearn.GaussianAdditiveNoise` | Add IID Gaussian noise to each element of ``X``. |
-| [`aug_hetero_noise`](aug_hetero_noise.md) | `n4m.sklearn.HeteroscedasticNoiseAugmenter` | Noise whose standard deviation depends on signal magnitude. |
-| [`aug_instrument_broaden`](aug_instrument_broaden.md) | `n4m.sklearn.InstrumentalBroadeningAugmenter` | Instrumental spectral broadening via Gaussian convolution. |
-| [`aug_linear_drift`](aug_linear_drift.md) | `n4m.sklearn.LinearBaselineDrift` | Add random offset and linear slope drift. |
-| [`aug_local_clip`](aug_local_clip.md) | `n4m.sklearn.LocalClip` | Clip random local spectral regions. |
-| [`aug_local_mixup`](aug_local_mixup.md) | `n4m.sklearn.LocalMixupAugmenter` | Neighbor-constrained mixup augmentation. |
-| [`aug_local_warp`](aug_local_warp.md) | `n4m.sklearn.LocalWarpAugmenter` | Random local wavelength warping. |
-| [`aug_magnitude_warp`](aug_magnitude_warp.md) | `n4m.sklearn.MagnitudeWarp` | Smooth multiplicative magnitude warp. |
-| [`aug_mixup`](aug_mixup.md) | `n4m.sklearn.MixupAugmenter` | Batch-wise mixup augmentation. |
-| [`aug_moisture`](aug_moisture.md) | `n4m.sklearn.MoistureAugmenter` | Water activity and moisture-content spectral perturbation. |
-| [`aug_multiplicative_noise`](aug_multiplicative_noise.md) | `n4m.sklearn.MultiplicativeNoise` | Apply per-element multiplicative Gaussian noise. |
-| [`aug_particle_size`](aug_particle_size.md) | `n4m.sklearn.ParticleSizeAugmenter` | Particle-size and path-length scattering simulation. |
-| [`aug_path_length`](aug_path_length.md) | `n4m.sklearn.PathLengthAugmenter` | Simulate multiplicative path-length variation. |
-| [`aug_poly_drift`](aug_poly_drift.md) | `n4m.sklearn.PolynomialBaselineDrift` | Add random polynomial baseline drift. |
-| [`aug_random_x_op`](aug_random_x_op.md) | `n4m.sklearn.RandomXOperation` | Random element-wise multiply/add/subtract operation. |
-| [`aug_rotate_translate`](aug_rotate_translate.md) | `n4m.sklearn.RotateTranslateAugmenter` | Random rotate/translate spectral augmentation. |
-| [`aug_scatter_sim`](aug_scatter_sim.md) | `n4m.sklearn.ScatterSimulationMSC` | MSC-style multiplicative/additive scatter simulation. |
-| [`aug_spike_noise`](aug_spike_noise.md) | `n4m.sklearn.SpikeNoise` | Inject random spike artifacts into spectra. |
-| [`aug_spline_curve_simplify`](aug_spline_curve_simplify.md) | `n4m.sklearn.SplineCurveSimplificationAugmenter` | Cubic B-spline refit through a random control subset along the curve. |
-| [`aug_spline_smooth`](aug_spline_smooth.md) | `n4m.sklearn.SplineSmoothingAugmenter` | Spline smoothing augmenter. |
-| [`aug_spline_x_perturb`](aug_spline_x_perturb.md) | `n4m.sklearn.SplineXPerturbationAugmenter` | Spline x-axis perturbation augmenter. |
-| [`aug_spline_x_simplify`](aug_spline_x_simplify.md) | `n4m.sklearn.SplineXSimplificationAugmenter` | Cubic B-spline refit through a random control subset on the x-axis. |
-| [`aug_spline_y_perturb`](aug_spline_y_perturb.md) | `n4m.sklearn.SplineYPerturbationAugmenter` | Spline y-axis perturbation augmenter. |
-| [`aug_stray_light`](aug_stray_light.md) | `n4m.sklearn.StrayLightAugmenter` | Stray-light edge artifact. |
-| [`aug_temperature`](aug_temperature.md) | `n4m.sklearn.TemperatureAugmenter` | Temperature-induced shift, intensity and broadening perturbations. |
-| [`aug_truncated_peak`](aug_truncated_peak.md) | `n4m.sklearn.TruncatedPeakAugmenter` | Truncated peaks near spectral edges. |
-| [`aug_unsharp_mask`](aug_unsharp_mask.md) | `n4m.sklearn.UnsharpMask` | Random unsharp spectral mask. |
-| [`aug_wavelength_shift`](aug_wavelength_shift.md) | `n4m.sklearn.WavelengthShift` | Random spectral shift with linear interpolation. |
-| [`aug_wavelength_stretch`](aug_wavelength_stretch.md) | `n4m.sklearn.WavelengthStretch` | Random wavelength-axis stretching. |
-| [`pp_haar`](pp_haar.md) | `n4m.sklearn.Haar` | Single-level Haar DWT coefficient transform. |
-| [`pp_wavelet`](pp_wavelet.md) | `n4m.sklearn.Wavelet` | Single-level DWT coefficient transform. |
-| [`pp_wavelet_denoise`](pp_wavelet_denoise.md) | `n4m.sklearn.WaveletDenoise` | Multi-level DWT VisuShrink denoising. |
-| [`pp_wavelet_features`](pp_wavelet_features.md) | `n4m.sklearn.WaveletFeatures` | Multi-level DWT summary features. |
-| [`pp_wavelet_pca`](pp_wavelet_pca.md) | `n4m.sklearn.WaveletPCA` | DWT coefficient projection through PCA scores. |
-| [`pp_wavelet_svd`](pp_wavelet_svd.md) | `n4m.sklearn.WaveletSVD` | DWT coefficient projection through SVD scores. |
-
-## Sample / feature filters
-
-| Operator | Binding | Description |
-|----------|---------|-------------|
-| [`filter_composite`](filter_composite.md) | `n4m.sklearn.CompositeFilter` | Boolean composition of leverage and quality filters. |
-| [`filter_leverage`](filter_leverage.md) | `n4m.sklearn.HighLeverageFilter` | Hat-matrix or PCA score-space leverage filter. |
-| [`filter_quality`](filter_quality.md) | `n4m.sklearn.SpectralQualityFilter` | Stateless row-level spectrum quality filter. |
-| [`filter_x_outlier`](filter_x_outlier.md) | `n4m.sklearn.XOutlierFilter` | Multivariate outlier filter on the design matrix ``X``. |
-| [`filter_y_outlier`](filter_y_outlier.md) | `n4m.sklearn.YOutlierFilter` | Univariate outlier filter on the target vector ``y``. |
-
-## Splitters
-
-| Operator | Binding | Description |
-|----------|---------|-------------|
-| [`split_binned_strat_group_kfold`](split_binned_strat_group_kfold.md) | `n4m.sklearn.BinnedStratifiedGroupKFoldSplitter` | Stratified group k-fold splitter after binning continuous ``y``. |
-| [`split_kbins_stratified`](split_kbins_stratified.md) | `n4m.sklearn.KBinsStratifiedSplitter` | Stratified split using K equal-width or quantile bins of ``y``. |
-| [`split_kennard_stone`](split_kennard_stone.md) | `n4m.sklearn.KennardStoneSplitter` | Kennard-Stone train/test split. |
-| [`split_kmeans`](split_kmeans.md) | `n4m.sklearn.KMeansSplitter` | K-means++ diversity splitter. |
-| [`split_split_splitter`](split_split_splitter.md) | `n4m.sklearn.SPlitSplitter` | SPlit data-twinning splitter. |
-| [`split_spxy`](split_spxy.md) | `n4m.sklearn.SPXYSplitter` | SPXY (Sample set Partitioning based on X and Y) train/test split. |
-| [`split_spxy_fold`](split_spxy_fold.md) | `n4m.sklearn.SPXYFoldSplitter` | SPXY k-fold splitter over paired ``X`` and ``y`` matrices. |
-| [`split_spxy_g_fold`](split_spxy_g_fold.md) | `n4m.sklearn.SPXYGroupFoldSplitter` | Group-aware SPXY k-fold splitter. |
-| [`split_systematic_circular`](split_systematic_circular.md) | `n4m.sklearn.SystematicCircularSplitter` | Systematic circular split over sorted or ordered targets. |
-
-## Utilities
-
-| Method | Binding | Description |
-|--------|---------|-------------|
-| [`moments`](moments.md) | `n4m.moments` | Raw and centered row-additive moment sufficient statistics for exact linear screens. |
-| [`sweep_run`](sweep_run.md) | `n4m.sweep_run` | Native moment Ridge-CV sweep over candidate lambdas. |
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`moments`](moments.md) | `n4m.lowlevel.moments.moments` | `n4m.lowlevel.moments` | C, Py |
 
 ---
 
-See the [benchmark overview](../benchmarks/overview.md) for how parity and timing are measured, and the [GitHub Pages dashboard](../landing/dashboard.md) for an interactive cross-method comparison.
+See the [benchmark overview](../benchmarks/overview.md) for how parity and timing are measured, and the [GitHub Pages dashboard](../landing/dashboard.md) for an interactive cross-method comparison. The ABI 2.0 namespace migration is documented in [the ABI-2 migration guide](../MIGRATION_ABI2.md).

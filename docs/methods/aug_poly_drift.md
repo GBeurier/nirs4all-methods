@@ -1,6 +1,6 @@
 # `aug_poly_drift` — Polynomial Baseline Drift
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.PolynomialBaselineDrift` · _C ABI_: `n4m_aug_poly_drift_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.PolynomialBaselineDrift` · _C ABI_: `n4m_augmentation_poly_drift_*`
 
 ## Description
 
@@ -28,7 +28,7 @@ Add random polynomial baseline drift.
 
 ### Implementation
 
-C ABI `n4m_aug_poly_drift_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.PolynomialBaselineDrift`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_poly_drift_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.PolynomialBaselineDrift`. The same numerical kernel backs every language binding.
 
 ### Usage
 

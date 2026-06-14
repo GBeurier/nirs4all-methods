@@ -102,20 +102,20 @@ void test_detector_rolloff() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     // NULL out
-    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_detector_rolloff_create(
         nullptr, rng, 4, 1.0, 0.02, 1) == N4M_ERR_NULL_POINTER);
     // NULL rng
     n4m_aug_detector_rolloff_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_detector_rolloff_create(
         &h, nullptr, 4, 1.0, 0.02, 1) == N4M_ERR_NULL_POINTER);
     N4M_TEST_REQUIRE(h == nullptr);
     // Invalid detector model
-    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_detector_rolloff_create(
         &h, rng, 42, 1.0, 0.02, 1) == N4M_ERR_INVALID_ARGUMENT);
     N4M_TEST_REQUIRE(h == nullptr);
 
     // Valid create
-    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_detector_rolloff_create(
         &h, rng, /*model=*/4, /*strength=*/1.0,
         /*noise=*/0.02, /*baseline=*/1) == N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
@@ -125,22 +125,22 @@ void test_detector_rolloff() {
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_apply(h, X, W, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_detector_rolloff_apply(h, X, W, O) == N4M_OK);
 
     // Second apply with the same seed produces identical output.
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_apply(h, X, W, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_detector_rolloff_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "detector_rolloff determinism");
 
     // Shape mismatch on output buffer.
     std::vector<double> bad(10);
     n4m_matrix_view_t Obad = rowmajor_view(bad.data(), 1, 10);
-    N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_apply(h, X, W, Obad)
+    N4M_TEST_REQUIRE(n4m_augmentation_detector_rolloff_apply(h, X, W, Obad)
                       == N4M_ERR_SHAPE_MISMATCH);
 
-    n4m_aug_detector_rolloff_destroy(h);
-    n4m_aug_detector_rolloff_destroy(nullptr);
+    n4m_augmentation_detector_rolloff_destroy(h);
+    n4m_augmentation_detector_rolloff_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 
     // Parity vs frozen nirs4all reference (seed echoed as kSeed = 3298921130).
@@ -161,17 +161,17 @@ void test_detector_rolloff() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_detector_rolloff_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_create(
+        N4M_TEST_REQUIRE(n4m_augmentation_detector_rolloff_create(
             &hh, r, model, strength, noise, baseline) == N4M_OK);
         std::vector<double> in = fx.input, wl = fx.wavelengths;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_detector_rolloff_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_detector_rolloff_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "detector_rolloff parity[" + c.name + "]");
-        n4m_aug_detector_rolloff_destroy(hh);
+        n4m_augmentation_detector_rolloff_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -189,20 +189,20 @@ void test_stray_light() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     n4m_aug_stray_light_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_stray_light_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_stray_light_create(
         &h, rng, 0.001, 2.0, 0.1, 1) == N4M_OK);
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_stray_light_apply(h, X, W, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_stray_light_apply(h, X, W, O) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_stray_light_apply(h, X, W, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_stray_light_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "stray_light determinism");
 
-    n4m_aug_stray_light_destroy(h);
+    n4m_augmentation_stray_light_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 
     // Parity vs frozen nirs4all reference.
@@ -223,17 +223,17 @@ void test_stray_light() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_stray_light_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_stray_light_create(
+        N4M_TEST_REQUIRE(n4m_augmentation_stray_light_create(
             &hh, r, fraction, edge_enh, edge_width, peak_trunc) == N4M_OK);
         std::vector<double> in = fx.input, wl = fx.wavelengths;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_stray_light_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_stray_light_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "stray_light parity[" + c.name + "]");
-        n4m_aug_stray_light_destroy(hh);
+        n4m_augmentation_stray_light_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -251,20 +251,20 @@ void test_edge_curvature() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     n4m_aug_edge_curve_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_edge_curve_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_edge_curvature_create(
         &h, rng, 0.02, /*type=*/1, 0.0, 0.7) == N4M_OK);
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_edge_curve_apply(h, X, W, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_edge_curvature_apply(h, X, W, O) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_edge_curve_apply(h, X, W, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_edge_curvature_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "edge_curve determinism");
 
-    n4m_aug_edge_curve_destroy(h);
+    n4m_augmentation_edge_curvature_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 
     // Parity vs frozen nirs4all reference.
@@ -285,17 +285,17 @@ void test_edge_curvature() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_edge_curve_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_edge_curve_create(
+        N4M_TEST_REQUIRE(n4m_augmentation_edge_curvature_create(
             &hh, r, curvature, type, asymmetry, edge_focus) == N4M_OK);
         std::vector<double> in = fx.input, wl = fx.wavelengths;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_edge_curve_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_edge_curvature_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "edge_curve parity[" + c.name + "]");
-        n4m_aug_edge_curve_destroy(hh);
+        n4m_augmentation_edge_curvature_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -313,7 +313,7 @@ void test_truncated_peak() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     n4m_aug_truncated_peak_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_truncated_peak_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_truncated_peak_create(
         &h, rng, /*prob=*/0.5, /*amp_min=*/0.01, /*amp_max=*/0.1,
         /*w_min=*/50.0, /*w_max=*/200.0, /*left=*/1, /*right=*/1) == N4M_OK);
 
@@ -321,13 +321,13 @@ void test_truncated_peak() {
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_truncated_peak_apply(h, X, W, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_truncated_peak_apply(h, X, W, O) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_truncated_peak_apply(h, X, W, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_truncated_peak_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "truncated_peak determinism");
 
-    n4m_aug_truncated_peak_destroy(h);
+    n4m_augmentation_truncated_peak_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 
     // Parity vs frozen nirs4all reference.
@@ -354,17 +354,17 @@ void test_truncated_peak() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_truncated_peak_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_truncated_peak_create(
+        N4M_TEST_REQUIRE(n4m_augmentation_truncated_peak_create(
             &hh, r, prob, amp_min, amp_max, w_min, w_max, left, right) == N4M_OK);
         std::vector<double> in = fx.input, wl = fx.wavelengths;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_truncated_peak_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_truncated_peak_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "truncated_peak parity[" + c.name + "]");
-        n4m_aug_truncated_peak_destroy(hh);
+        n4m_augmentation_truncated_peak_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -387,35 +387,35 @@ void test_edge_artifacts_combined() {
                          N4M_AUG_EDGE_ARTIFACTS_EDGE_CURVATURE    |
                          N4M_AUG_EDGE_ARTIFACTS_TRUNCATED_PEAKS;
     n4m_aug_edge_artifacts_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_edge_artifacts_create(
         &h, rng, all, 1.0, /*detector=*/4) == N4M_OK);
 
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_apply(h, X, W, O) == N4M_OK);
-    n4m_aug_edge_artifacts_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_edge_artifacts_apply(h, X, W, O) == N4M_OK);
+    n4m_augmentation_edge_artifacts_destroy(h);
     h = nullptr;
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_edge_artifacts_create(
         &h, rng, all, 1.0, /*detector=*/4) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_apply(h, X, W, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_edge_artifacts_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "edge_artifacts determinism");
 
-    n4m_aug_edge_artifacts_destroy(h);
+    n4m_augmentation_edge_artifacts_destroy(h);
 
     // Subset of flags (only stray light): output must differ from full
     // set, both must run cleanly.
     h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_edge_artifacts_create(
         &h, rng, N4M_AUG_EDGE_ARTIFACTS_STRAY_LIGHT, 1.0, 4) == N4M_OK);
     std::vector<double> O3(Xv.size());
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O33 = rowmajor_view(O3.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_apply(h, X, W, O33) == N4M_OK);
-    n4m_aug_edge_artifacts_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_edge_artifacts_apply(h, X, W, O33) == N4M_OK);
+    n4m_augmentation_edge_artifacts_destroy(h);
 
     n4m_rng_pcg64_destroy(rng);
 
@@ -435,17 +435,17 @@ void test_edge_artifacts_combined() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_edge_artifacts_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_create(
+        N4M_TEST_REQUIRE(n4m_augmentation_edge_artifacts_create(
             &hh, r, flags, strength, model) == N4M_OK);
         std::vector<double> in = fx.input, wl = fx.wavelengths;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_edge_artifacts_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_edge_artifacts_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "edge_artifacts parity[" + c.name + "]");
-        n4m_aug_edge_artifacts_destroy(hh);
+        n4m_augmentation_edge_artifacts_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -463,13 +463,13 @@ void test_spline_smoothing() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     n4m_aug_spline_smooth_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_spline_smooth_create(&h, rng) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_smoothing_create(&h, rng) == N4M_OK);
 
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_smooth_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_smoothing_apply(h, X, O) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_smooth_apply(h, X, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_smoothing_apply(h, X, O22) == N4M_OK);
     // Stateless: same input -> same output regardless of RNG state.
     require_equal_arrays(O1, O2, 0.0, "spline_smooth idempotence");
 
@@ -490,7 +490,7 @@ void test_spline_smoothing() {
         throw std::runtime_error("spline_smooth: implausible output scale");
     }
 
-    n4m_aug_spline_smooth_destroy(h);
+    n4m_augmentation_spline_smoothing_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 
     // Bit-exact replay is build-dependent: spline_smooth is the only
@@ -512,15 +512,15 @@ void test_spline_smoothing() {
             n4m_rng_pcg64_state_t* r = nullptr;
             N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
             n4m_aug_spline_smooth_handle_t* hh = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_spline_smooth_create(&hh, r) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_augmentation_spline_smoothing_create(&hh, r) == N4M_OK);
             std::vector<double> in = fx.input;
             std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
             n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
             n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-            N4M_TEST_REQUIRE(n4m_aug_spline_smooth_apply(hh, Xv2, Ov2) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_augmentation_spline_smoothing_apply(hh, Xv2, Ov2) == N4M_OK);
             n4m_testing::assert_close(out, c.expected_output,
                                       "spline_smooth parity[" + c.name + "]");
-            n4m_aug_spline_smooth_destroy(hh);
+            n4m_augmentation_spline_smoothing_destroy(hh);
             n4m_rng_pcg64_destroy(r);
         }
     }
@@ -539,20 +539,20 @@ void test_spline_x_perturbations() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     n4m_aug_spline_x_perturb_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_x_perturbations_create(
         &h, rng, /*degree=*/3, /*density=*/0.05,
         /*range_min=*/-0.1, /*range_max=*/0.1) == N4M_OK);
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_x_perturbations_apply(h, X, O) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_apply(h, X, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_x_perturbations_apply(h, X, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "spline_x_perturb determinism");
 
-    n4m_aug_spline_x_perturb_destroy(h);
+    n4m_augmentation_spline_x_perturbations_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 
     // Parity vs frozen nirs4all reference.
@@ -573,16 +573,16 @@ void test_spline_x_perturbations() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_spline_x_perturb_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_create(
+        N4M_TEST_REQUIRE(n4m_augmentation_spline_x_perturbations_create(
             &hh, r, degree, density, range_min, range_max) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_spline_x_perturb_apply(hh, Xv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_spline_x_perturbations_apply(hh, Xv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "spline_x_perturb parity[" + c.name + "]");
-        n4m_aug_spline_x_perturb_destroy(hh);
+        n4m_augmentation_spline_x_perturbations_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -600,19 +600,19 @@ void test_spline_y_perturbations() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     n4m_aug_spline_y_perturb_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_y_perturbations_create(
         &h, rng, /*spline_points=*/-1, /*intensity=*/0.005) == N4M_OK);
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_y_perturbations_apply(h, X, O) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_apply(h, X, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_y_perturbations_apply(h, X, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "spline_y_perturb determinism");
 
-    n4m_aug_spline_y_perturb_destroy(h);
+    n4m_augmentation_spline_y_perturbations_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 
     // Parity vs frozen nirs4all reference.
@@ -629,16 +629,16 @@ void test_spline_y_perturbations() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_spline_y_perturb_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_create(
+        N4M_TEST_REQUIRE(n4m_augmentation_spline_y_perturbations_create(
             &hh, r, points, intensity) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_spline_y_perturb_apply(hh, Xv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_spline_y_perturbations_apply(hh, Xv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "spline_y_perturb parity[" + c.name + "]");
-        n4m_aug_spline_y_perturb_destroy(hh);
+        n4m_augmentation_spline_y_perturbations_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -656,24 +656,24 @@ void test_spline_x_simplification() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
     n4m_aug_spline_x_simplify_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_x_simplification_create(
         &h, rng, /*points=*/8, /*uniform=*/0) == N4M_OK);
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t Oa = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(h, X, Oa) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_x_simplification_apply(h, X, Oa) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t Ob = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(h, X, Ob) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_x_simplification_apply(h, X, Ob) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "spline_x_simplify determinism");
 
     // Shape mismatch on output buffer.
     std::vector<double> bad(10);
     n4m_matrix_view_t Obad = rowmajor_view(bad.data(), 1, 10);
-    N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(h, X, Obad)
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_x_simplification_apply(h, X, Obad)
                       == N4M_ERR_SHAPE_MISMATCH);
-    n4m_aug_spline_x_simplify_destroy(h);
+    n4m_augmentation_spline_x_simplification_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 
     // Parity vs frozen nirs4all reference.
@@ -691,16 +691,16 @@ void test_spline_x_simplification() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_spline_x_simplify_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_create(&hh, r, pts, uniform)
+        N4M_TEST_REQUIRE(n4m_augmentation_spline_x_simplification_create(&hh, r, pts, uniform)
                           == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_spline_x_simplify_apply(hh, Xv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_spline_x_simplification_apply(hh, Xv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "spline_x_simplify parity[" + c.name + "]");
-        n4m_aug_spline_x_simplify_destroy(hh);
+        n4m_augmentation_spline_x_simplification_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -718,19 +718,19 @@ void test_spline_curve_simplification() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
     n4m_aug_spline_curve_simplify_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_curve_simplification_create(
         &h, rng, /*points=*/8, /*uniform=*/0) == N4M_OK);
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t Oa = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_apply(h, X, Oa) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_curve_simplification_apply(h, X, Oa) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t Ob = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_apply(h, X, Ob) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_spline_curve_simplification_apply(h, X, Ob) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "spline_curve_simplify determinism");
 
-    n4m_aug_spline_curve_simplify_destroy(h);
+    n4m_augmentation_spline_curve_simplification_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 
     // Parity vs frozen nirs4all reference.
@@ -748,16 +748,16 @@ void test_spline_curve_simplification() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_spline_curve_simplify_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_create(&hh, r, pts, uniform)
+        N4M_TEST_REQUIRE(n4m_augmentation_spline_curve_simplification_create(&hh, r, pts, uniform)
                           == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_spline_curve_simplify_apply(hh, Xv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_spline_curve_simplification_apply(hh, Xv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "spline_curve_simplify parity[" + c.name + "]");
-        n4m_aug_spline_curve_simplify_destroy(hh);
+        n4m_augmentation_spline_curve_simplification_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -775,19 +775,19 @@ void test_rotate_translate() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(kSeed, &rng) == N4M_OK);
 
     n4m_aug_rotate_translate_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_rotate_translate_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_rotate_translate_create(
         &h, rng, /*p_range=*/2.0, /*y_factor=*/3.0) == N4M_OK);
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_rotate_translate_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_rotate_translate_apply(h, X, O) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_rotate_translate_apply(h, X, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_rotate_translate_apply(h, X, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "rotate_translate determinism");
 
-    n4m_aug_rotate_translate_destroy(h);
+    n4m_augmentation_rotate_translate_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 
     // Parity vs frozen nirs4all reference.
@@ -804,16 +804,16 @@ void test_rotate_translate() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_rotate_translate_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_rotate_translate_create(
+        N4M_TEST_REQUIRE(n4m_augmentation_rotate_translate_create(
             &hh, r, p_range, y_factor) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_rotate_translate_apply(hh, Xv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_rotate_translate_apply(hh, Xv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "rotate_translate parity[" + c.name + "]");
-        n4m_aug_rotate_translate_destroy(hh);
+        n4m_augmentation_rotate_translate_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }
@@ -832,16 +832,16 @@ void test_random_x_operation() {
 
     // Multiplicative
     n4m_aug_random_x_op_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_create(
         &h, rng, /*op=*/0, 0.97, 1.03) == N4M_OK);
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_apply(h, X, O) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(h, X, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_apply(h, X, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "random_x_op multiplicative determinism");
 
     // Output is roughly within [0.97*input, 1.03*input].
@@ -853,27 +853,27 @@ void test_random_x_operation() {
                 "random_x_op out of mul range at i=" + std::to_string(i));
         }
     }
-    n4m_aug_random_x_op_destroy(h);
+    n4m_augmentation_random_x_op_destroy(h);
 
     // Additive
     h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_create(
         &h, rng, /*op=*/1, -0.01, 0.01) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(h, X, O) == N4M_OK);
-    n4m_aug_random_x_op_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_apply(h, X, O) == N4M_OK);
+    n4m_augmentation_random_x_op_destroy(h);
 
     // Subtractive
     h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_create(
         &h, rng, /*op=*/2, 0.0, 0.01) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(h, X, O) == N4M_OK);
-    n4m_aug_random_x_op_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_apply(h, X, O) == N4M_OK);
+    n4m_augmentation_random_x_op_destroy(h);
 
     // Invalid op_kind.
     h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_create(
         &h, rng, /*op=*/99, 0.97, 1.03) == N4M_ERR_INVALID_ARGUMENT);
 
     n4m_rng_pcg64_destroy(rng);
@@ -894,16 +894,16 @@ void test_random_x_operation() {
         n4m_rng_pcg64_state_t* r = nullptr;
         N4M_TEST_REQUIRE(n4m_rng_pcg64_create(seed, &r) == N4M_OK);
         n4m_aug_random_x_op_handle_t* hh = nullptr;
-        N4M_TEST_REQUIRE(n4m_aug_random_x_op_create(
+        N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_create(
             &hh, r, op, range_min, range_max) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_aug_random_x_op_apply(hh, Xv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_random_x_op_apply(hh, Xv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "random_x_op parity[" + c.name + "]");
-        n4m_aug_random_x_op_destroy(hh);
+        n4m_augmentation_random_x_op_destroy(hh);
         n4m_rng_pcg64_destroy(r);
     }
 }

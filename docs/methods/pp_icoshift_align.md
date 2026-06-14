@@ -1,6 +1,6 @@
 # `pp_icoshift_align` — Icoshift Alignment
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.IcoshiftAlignment` · _C ABI_: `n4m_pp_icoshift_align_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.IcoshiftAlignment` · _C ABI_: `n4m_transform_icoshift_align_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Interval correlation shifting with fixed-size intervals.
 
 ### Implementation
 
-C ABI `n4m_pp_icoshift_align_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IcoshiftAlignment`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_icoshift_align_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IcoshiftAlignment`. The same numerical kernel backs every language binding.
 
 ### Usage
 

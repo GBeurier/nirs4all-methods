@@ -257,96 +257,96 @@ def _read_matrix_double_i64(getter, handle) -> tuple[list[float], int, int]:
 
 
 class AomGlobalResult(_AomResultBase):
-    _destroy_fn = staticmethod(lib.n4m_aom_global_result_destroy)
+    _destroy_fn = staticmethod(lib.n4m_model_selection_aom_pls_result_destroy)
 
     @property
     def n_operators(self) -> int:
-        return _read_int32(lib.n4m_aom_global_result_get_n_operators, self._h)
+        return _read_int32(lib.n4m_model_selection_aom_pls_result_get_n_operators, self._h)
 
     @property
     def max_components(self) -> int:
-        return _read_int32(lib.n4m_aom_global_result_get_max_components, self._h)
+        return _read_int32(lib.n4m_model_selection_aom_pls_result_get_max_components, self._h)
 
     @property
     def selected_operator_index(self) -> int:
-        return _read_int32(lib.n4m_aom_global_result_get_selected_operator_index, self._h)
+        return _read_int32(lib.n4m_model_selection_aom_pls_result_get_selected_operator_index, self._h)
 
     @property
     def selected_n_components(self) -> int:
-        return _read_int32(lib.n4m_aom_global_result_get_selected_n_components, self._h)
+        return _read_int32(lib.n4m_model_selection_aom_pls_result_get_selected_n_components, self._h)
 
     @property
     def best_score(self) -> float:
-        return _read_double(lib.n4m_aom_global_result_get_best_score, self._h)
+        return _read_double(lib.n4m_model_selection_aom_pls_result_get_best_score, self._h)
 
     @property
     def operator_kinds(self) -> list[int]:
-        return _read_buf_int(lib.n4m_aom_global_result_get_operator_kinds,
+        return _read_buf_int(lib.n4m_model_selection_aom_pls_result_get_operator_kinds,
                              self._h, ctypes.c_int)
 
     @property
     def operator_scores(self) -> list[float]:
-        return _read_buf_double(lib.n4m_aom_global_result_get_operator_scores,
+        return _read_buf_double(lib.n4m_model_selection_aom_pls_result_get_operator_scores,
                                 self._h)
 
     @property
     def rmse_curves(self) -> tuple[list[float], int, int]:
         return _read_matrix_double_i32(
-            lib.n4m_aom_global_result_get_rmse_curves, self._h)
+            lib.n4m_model_selection_aom_pls_result_get_rmse_curves, self._h)
 
     @property
     def predictions(self) -> tuple[list[float], int, int]:
         return _read_matrix_double_i64(
-            lib.n4m_aom_global_result_get_predictions, self._h)
+            lib.n4m_model_selection_aom_pls_result_get_predictions, self._h)
 
 
 class AomPerComponentResult(_AomResultBase):
-    _destroy_fn = staticmethod(lib.n4m_aom_per_component_result_destroy)
+    _destroy_fn = staticmethod(lib.n4m_model_selection_pop_pls_result_destroy)
 
     @property
     def n_operators(self) -> int:
-        return _read_int32(lib.n4m_aom_per_component_result_get_n_operators, self._h)
+        return _read_int32(lib.n4m_model_selection_pop_pls_result_get_n_operators, self._h)
 
     @property
     def max_components(self) -> int:
-        return _read_int32(lib.n4m_aom_per_component_result_get_max_components, self._h)
+        return _read_int32(lib.n4m_model_selection_pop_pls_result_get_max_components, self._h)
 
     @property
     def selected_n_components(self) -> int:
         return _read_int32(
-            lib.n4m_aom_per_component_result_get_selected_n_components, self._h)
+            lib.n4m_model_selection_pop_pls_result_get_selected_n_components, self._h)
 
     @property
     def best_score(self) -> float:
         return _read_double(
-            lib.n4m_aom_per_component_result_get_best_score, self._h)
+            lib.n4m_model_selection_pop_pls_result_get_best_score, self._h)
 
     @property
     def operator_kinds(self) -> list[int]:
         return _read_buf_int(
-            lib.n4m_aom_per_component_result_get_operator_kinds,
+            lib.n4m_model_selection_pop_pls_result_get_operator_kinds,
             self._h, ctypes.c_int)
 
     @property
     def selected_operator_indices(self) -> list[int]:
         return _read_buf_int(
-            lib.n4m_aom_per_component_result_get_selected_operator_indices,
+            lib.n4m_model_selection_pop_pls_result_get_selected_operator_indices,
             self._h, ctypes.c_int32)
 
     @property
     def component_scores(self) -> tuple[list[float], int, int]:
         return _read_matrix_double_i32(
-            lib.n4m_aom_per_component_result_get_component_scores, self._h)
+            lib.n4m_model_selection_pop_pls_result_get_component_scores, self._h)
 
     @property
     def prefix_scores(self) -> list[float]:
         return _read_buf_double(
-            lib.n4m_aom_per_component_result_get_prefix_scores, self._h)
+            lib.n4m_model_selection_pop_pls_result_get_prefix_scores, self._h)
 
     @property
     def predictions(self) -> tuple[list[float], int, int]:
         return _read_matrix_double_i64(
-            lib.n4m_aom_per_component_result_get_predictions, self._h)
+            lib.n4m_model_selection_pop_pls_result_get_predictions, self._h)
 
 
 def aom_global_select(
@@ -366,7 +366,7 @@ def aom_global_select(
     x_view, _x_buf = _make_view_from_seq(X, x_rows, x_cols)
     y_view, _y_buf = _make_view_from_seq(Y, y_rows, y_cols)
     out = ctypes.c_void_p(0)
-    status = lib.n4m_aom_global_select(
+    status = lib.n4m_model_selection_aom_pls_select(
         ctx.handle, cfg.handle, bank.handle,
         ctypes.byref(x_view), ctypes.byref(y_view),
         plan.handle, ctypes.c_int32(int(max_components)),
@@ -375,11 +375,11 @@ def aom_global_select(
     _check(status, ctx)
     if not out:
         raise Pls4allError(int(Status.ERR_INTERNAL),
-                           "n4m_aom_global_select returned a NULL handle")
+                           "n4m_model_selection_aom_pls_select returned a NULL handle")
     try:
         return AomGlobalResult(out)
     except BaseException:
-        lib.n4m_aom_global_result_destroy(out)
+        lib.n4m_model_selection_aom_pls_result_destroy(out)
         raise
 
 
@@ -400,7 +400,7 @@ def aom_per_component_select(
     x_view, _x_buf = _make_view_from_seq(X, x_rows, x_cols)
     y_view, _y_buf = _make_view_from_seq(Y, y_rows, y_cols)
     out = ctypes.c_void_p(0)
-    status = lib.n4m_aom_per_component_select(
+    status = lib.n4m_model_selection_pop_pls_select(
         ctx.handle, cfg.handle, bank.handle,
         ctypes.byref(x_view), ctypes.byref(y_view),
         plan.handle, ctypes.c_int32(int(max_components)),
@@ -409,11 +409,11 @@ def aom_per_component_select(
     _check(status, ctx)
     if not out:
         raise Pls4allError(int(Status.ERR_INTERNAL),
-                           "n4m_aom_per_component_select returned a NULL handle")
+                           "n4m_model_selection_pop_pls_select returned a NULL handle")
     try:
         return AomPerComponentResult(out)
     except BaseException:
-        lib.n4m_aom_per_component_result_destroy(out)
+        lib.n4m_model_selection_pop_pls_result_destroy(out)
         raise
 
 

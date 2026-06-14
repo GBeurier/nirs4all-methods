@@ -1,6 +1,6 @@
 # `aug_spline_x_simplify` — Spline X Simplification Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineXSimplificationAugmenter` · _C ABI_: `n4m_aug_spline_x_simplify_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineXSimplificationAugmenter` · _C ABI_: `n4m_augmentation_spline_x_simplification_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Simplify each spectrum by refitting a cubic interpolating B-spline through a ran
 
 ### Implementation
 
-C ABI `n4m_aug_spline_x_simplify_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SplineXSimplificationAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_spline_x_simplification_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SplineXSimplificationAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

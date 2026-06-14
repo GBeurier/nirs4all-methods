@@ -1,6 +1,6 @@
 # `aom_ridge_blender` - native AOM Ridge OOF simplex blender
 
-_Group_: **Diagnostic / AOM** · _ABI_: `n4m_aom_ridge_blender_fit`
+_Group_: **Diagnostic / AOM** · _ABI_: `n4m_ensemble_aom_ridge_blender_fit`
 
 `aom_ridge_blender` runs a native strict-linear AOM Ridge candidate pool,
 builds out-of-fold predictions for every chain/lambda candidate, solves a

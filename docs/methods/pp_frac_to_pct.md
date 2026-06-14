@@ -1,6 +1,6 @@
 # `pp_frac_to_pct` — Fraction To Percent
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.FractionToPercent` · _C ABI_: `n4m_pp_frac_to_pct_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.FractionToPercent` · _C ABI_: `n4m_transform_fraction_to_percent_*`
 
 ## Description
 
@@ -22,7 +22,7 @@ Convert fractional reflectance/transmittance to percent.
 
 ### Implementation
 
-C ABI `n4m_pp_frac_to_pct_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FractionToPercent`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_fraction_to_percent_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FractionToPercent`. The same numerical kernel backs every language binding.
 
 ### Usage
 

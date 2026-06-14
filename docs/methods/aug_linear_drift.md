@@ -1,6 +1,6 @@
 # `aug_linear_drift` — Linear baseline-drift augmentation
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.LinearBaselineDrift` · _C ABI_: `n4m_aug_linear_drift_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.LinearBaselineDrift` · _C ABI_: `n4m_augmentation_linear_drift_*`
 
 ## Description
 
@@ -29,7 +29,7 @@ Adds a random linear ramp $a + b\,\boldsymbol{\lambda}$ across the wavelength ax
 
 ### Implementation
 
-C ABI `n4m_aug_linear_drift_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LinearBaselineDrift`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_linear_drift_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LinearBaselineDrift`. The same numerical kernel backs every language binding.
 
 ### Usage
 

@@ -7,13 +7,13 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_split_systematic_circular_create"
-  - "n4m_split_systematic_circular_destroy"
-  - "n4m_split_systematic_circular_split"
+  - "n4m_model_selection_systematic_circular_create"
+  - "n4m_model_selection_systematic_circular_destroy"
+  - "n4m_model_selection_systematic_circular_split"
 tu:
   - "cpp/src/core/splitters/systematic_circular.c"
 headers:
-  - "cpp/include/n4m/splitters.h"
+  - "cpp/include/n4m/model_selection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_model_selection_systematic_circular_create"
+  - "n4m_model_selection_systematic_circular_destroy"
+  - "n4m_model_selection_systematic_circular_split"
+fq_name: "n4m.model_selection.splitters.systematic_circular"
+leaf: "systematic_circular"
+legacy_ids:
+  - "splitters.systematic_circular"
+namespace: "model_selection.splitters"

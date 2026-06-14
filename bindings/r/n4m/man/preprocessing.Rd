@@ -1,6 +1,8 @@
 \name{snv_transform}
 \alias{snv_transform}
 \alias{savgol_transform}
+\alias{n4m_transform_snv}
+\alias{n4m_transform_savgol}
 \title{Portable preprocessing transforms}
 \usage{
 snv_transform(X, with_mean = TRUE, with_std = TRUE, ddof = 0L)

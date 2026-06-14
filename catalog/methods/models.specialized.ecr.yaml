@@ -7,11 +7,11 @@ category: "models"
 subcategory: "specialized"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_ecr_fit"
+  - "n4m_estimators_ecr_fit"
 tu:
   - "cpp/src/core/ecr.cpp"
 headers:
-  - "cpp/include/n4m/models.h"
+  - "cpp/include/n4m/estimators/regression.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -30,8 +30,15 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.estimators.regression.latent"
     class: "ecr"
     legacy_aliases: []
 publications: []
 notes: "Auto-discovered from source tree in M2. Python binding refined during AOM/moment product integration."
+c_surface:
+  - "n4m_estimators_ecr_fit"
+fq_name: "n4m.estimators.regression.latent.ecr"
+leaf: "ecr"
+legacy_ids:
+  - "models.specialized.ecr"
+namespace: "estimators.regression.latent"

@@ -7,11 +7,11 @@ category: "diagnostics"
 subcategory: "validation"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_one_se_rule_compute"
+  - "n4m_metrics_one_se_rule_compute"
 tu:
   - "cpp/src/core/model_selection.cpp"
 headers:
-  - "cpp/include/n4m/diagnostics.h"
+  - "cpp/include/n4m/metrics.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_metrics_one_se_rule_compute"
+fq_name: "n4m.metrics.scoring.one_se_rule"
+leaf: "one_se_rule"
+legacy_ids:
+  - "diagnostics.model_selection"
+namespace: "metrics.scoring"

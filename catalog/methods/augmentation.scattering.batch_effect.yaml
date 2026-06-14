@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "scattering"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_batch_effect_apply"
-  - "n4m_aug_batch_effect_create"
-  - "n4m_aug_batch_effect_destroy"
+  - "n4m_augmentation_batch_effect_apply"
+  - "n4m_augmentation_batch_effect_create"
+  - "n4m_augmentation_batch_effect_destroy"
 tu:
   - "cpp/src/core/augmentation/scattering/batch_effect.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/scattering.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_batch_effect_apply"
+  - "n4m_augmentation_batch_effect_create"
+  - "n4m_augmentation_batch_effect_destroy"
+fq_name: "n4m.augmentation.scattering.batch_effect"
+leaf: "batch_effect"
+legacy_ids:
+  - "augmentation.scattering.batch_effect"
+namespace: "augmentation.scattering"

@@ -76,18 +76,18 @@ void test_to_absorbance_smoke() {
     double X[6] = {0.5, 0.4, 0.3, 0.6, 0.5, 0.4};
     double Y[6] = {0};
     n4m_pp_to_absorbance_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_to_absorbance_create(
+    N4M_TEST_REQUIRE(n4m_transform_to_absorbance_create(
                          &h, /*is_percent=*/0, /*epsilon=*/1e-10,
                          /*clip_negative=*/1) == N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_pp_to_absorbance_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_to_absorbance_transform(h, Xv, Yv) == N4M_OK);
     // -log10(0.5) ≈ 0.30103, -log10(0.1) is not present; check first cell.
     N4M_TEST_REQUIRE(std::fabs(Y[0] - (-std::log10(0.5))) < 1e-15);
     N4M_TEST_REQUIRE(std::fabs(Y[5] - (-std::log10(0.4))) < 1e-15);
-    n4m_pp_to_absorbance_destroy(h);
-    n4m_pp_to_absorbance_destroy(nullptr);  // null-safe
+    n4m_transform_to_absorbance_destroy(h);
+    n4m_transform_to_absorbance_destroy(nullptr);  // null-safe
 }
 
 void test_from_absorbance_smoke() {
@@ -95,43 +95,43 @@ void test_from_absorbance_smoke() {
     double X[4] = {0.3, 0.4, 0.2, 0.1};
     double Y[4] = {0};
     n4m_pp_from_absorbance_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_from_absorbance_create(&h, /*is_percent=*/0)
+    N4M_TEST_REQUIRE(n4m_transform_from_absorbance_create(&h, /*is_percent=*/0)
                      == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 2);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 2);
-    N4M_TEST_REQUIRE(n4m_pp_from_absorbance_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_from_absorbance_transform(h, Xv, Yv) == N4M_OK);
     N4M_TEST_REQUIRE(std::fabs(Y[0] - std::pow(10.0, -0.3)) < 1e-15);
     N4M_TEST_REQUIRE(std::fabs(Y[3] - std::pow(10.0, -0.1)) < 1e-15);
-    n4m_pp_from_absorbance_destroy(h);
-    n4m_pp_from_absorbance_destroy(nullptr);
+    n4m_transform_from_absorbance_destroy(h);
+    n4m_transform_from_absorbance_destroy(nullptr);
 }
 
 void test_pct_to_frac_smoke() {
     double X[4] = {50.0, 60.0, 70.0, 80.0};
     double Y[4] = {0};
     n4m_pp_pct_to_frac_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_pct_to_frac_create(&h) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_percent_to_fraction_create(&h) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 2);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 2);
-    N4M_TEST_REQUIRE(n4m_pp_pct_to_frac_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_percent_to_fraction_transform(h, Xv, Yv) == N4M_OK);
     N4M_TEST_REQUIRE(std::fabs(Y[0] - 0.5) < 1e-15);
     N4M_TEST_REQUIRE(std::fabs(Y[3] - 0.8) < 1e-15);
-    n4m_pp_pct_to_frac_destroy(h);
-    n4m_pp_pct_to_frac_destroy(nullptr);
+    n4m_transform_percent_to_fraction_destroy(h);
+    n4m_transform_percent_to_fraction_destroy(nullptr);
 }
 
 void test_frac_to_pct_smoke() {
     double X[4] = {0.5, 0.6, 0.7, 0.8};
     double Y[4] = {0};
     n4m_pp_frac_to_pct_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_frac_to_pct_create(&h) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_fraction_to_percent_create(&h) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 2);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 2);
-    N4M_TEST_REQUIRE(n4m_pp_frac_to_pct_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_fraction_to_percent_transform(h, Xv, Yv) == N4M_OK);
     N4M_TEST_REQUIRE(std::fabs(Y[0] - 50.0) < 1e-15);
     N4M_TEST_REQUIRE(std::fabs(Y[3] - 80.0) < 1e-15);
-    n4m_pp_frac_to_pct_destroy(h);
-    n4m_pp_frac_to_pct_destroy(nullptr);
+    n4m_transform_fraction_to_percent_destroy(h);
+    n4m_transform_fraction_to_percent_destroy(nullptr);
 }
 
 void test_kubelka_munk_smoke() {
@@ -139,16 +139,16 @@ void test_kubelka_munk_smoke() {
     double X[4] = {0.5, 0.4, 0.6, 0.5};
     double Y[4] = {0};
     n4m_pp_kubelka_munk_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_kubelka_munk_create(&h, /*is_percent=*/0,
+    N4M_TEST_REQUIRE(n4m_transform_kubelka_munk_create(&h, /*is_percent=*/0,
                                                   /*epsilon=*/1e-10) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 2);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 2);
-    N4M_TEST_REQUIRE(n4m_pp_kubelka_munk_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_kubelka_munk_transform(h, Xv, Yv) == N4M_OK);
     N4M_TEST_REQUIRE(std::fabs(Y[0] - 0.25) < 1e-15);
     // F(0.4) = 0.36 / 0.8 = 0.45.
     N4M_TEST_REQUIRE(std::fabs(Y[1] - 0.45) < 1e-15);
-    n4m_pp_kubelka_munk_destroy(h);
-    n4m_pp_kubelka_munk_destroy(nullptr);
+    n4m_transform_kubelka_munk_destroy(h);
+    n4m_transform_kubelka_munk_destroy(nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -166,7 +166,7 @@ void verify_to_absorbance_parity() {
             params_get_bool(c.params_json, "clip_negative", true) ? 1 : 0;
 
         n4m_pp_to_absorbance_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_to_absorbance_create(
+        N4M_TEST_REQUIRE(n4m_transform_to_absorbance_create(
                              &h, is_percent, epsilon, clip_negative) == N4M_OK);
         std::vector<double> in = fx.input;
         // Percent cases: the Python reference was invoked on R * 100.0, so
@@ -179,9 +179,9 @@ void verify_to_absorbance_parity() {
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_to_absorbance_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_to_absorbance_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "to_absorbance/" + c.name);
-        n4m_pp_to_absorbance_destroy(h);
+        n4m_transform_to_absorbance_destroy(h);
     }
 }
 
@@ -192,14 +192,14 @@ void verify_from_absorbance_parity() {
             params_get_bool(c.params_json, "is_percent", false) ? 1 : 0;
 
         n4m_pp_from_absorbance_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_from_absorbance_create(&h, is_percent) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_from_absorbance_create(&h, is_percent) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_from_absorbance_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_from_absorbance_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "from_absorbance/" + c.name);
-        n4m_pp_from_absorbance_destroy(h);
+        n4m_transform_from_absorbance_destroy(h);
     }
 }
 
@@ -207,14 +207,14 @@ void verify_pct_to_frac_parity() {
     ParityFixture fx = load_fixture("pct_to_frac_v1.json");
     for (const auto& c : fx.cases) {
         n4m_pp_pct_to_frac_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_pct_to_frac_create(&h) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_percent_to_fraction_create(&h) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_pct_to_frac_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_percent_to_fraction_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "pct_to_frac/" + c.name);
-        n4m_pp_pct_to_frac_destroy(h);
+        n4m_transform_percent_to_fraction_destroy(h);
     }
 }
 
@@ -222,14 +222,14 @@ void verify_frac_to_pct_parity() {
     ParityFixture fx = load_fixture("frac_to_pct_v1.json");
     for (const auto& c : fx.cases) {
         n4m_pp_frac_to_pct_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_frac_to_pct_create(&h) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_fraction_to_percent_create(&h) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_frac_to_pct_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_fraction_to_percent_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "frac_to_pct/" + c.name);
-        n4m_pp_frac_to_pct_destroy(h);
+        n4m_transform_fraction_to_percent_destroy(h);
     }
 }
 
@@ -242,7 +242,7 @@ void verify_kubelka_munk_parity() {
             params_get_double(c.params_json, "epsilon", 1e-10);
 
         n4m_pp_kubelka_munk_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_kubelka_munk_create(&h, is_percent, epsilon)
+        N4M_TEST_REQUIRE(n4m_transform_kubelka_munk_create(&h, is_percent, epsilon)
                          == N4M_OK);
         std::vector<double> in = fx.input;
         if (is_percent) {
@@ -251,9 +251,9 @@ void verify_kubelka_munk_parity() {
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_kubelka_munk_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_kubelka_munk_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "kubelka_munk/" + c.name);
-        n4m_pp_kubelka_munk_destroy(h);
+        n4m_transform_kubelka_munk_destroy(h);
     }
 }
 

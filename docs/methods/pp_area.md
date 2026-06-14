@@ -1,6 +1,6 @@
 # `pp_area` — Area Normalization
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.AreaNormalization` · _C ABI_: `n4m_pp_area_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.AreaNormalization` · _C ABI_: `n4m_transform_area_normalization_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ Per-row area normalisation.
 
 ### Implementation
 
-C ABI `n4m_pp_area_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.AreaNormalization`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_area_normalization_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.AreaNormalization`. The same numerical kernel backs every language binding.
 
 ### Usage
 

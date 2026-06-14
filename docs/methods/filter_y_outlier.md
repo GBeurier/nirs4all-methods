@@ -1,6 +1,6 @@
 # `filter_y_outlier` — Y Outlier Filter
 
-_Group_: **Sample / feature filters** · _Binding_: `n4m.sklearn.YOutlierFilter` · _C ABI_: `n4m_filter_y_outlier_*`
+_Group_: **Sample / feature filters** · _Binding_: `n4m.sklearn.YOutlierFilter` · _C ABI_: `n4m_outlier_detection_y_outlier_*`
 
 ## Description
 
@@ -43,7 +43,7 @@ Univariate outlier filter on the target vector ``y``.
 
 ### Implementation
 
-C ABI `n4m_filter_y_outlier_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.YOutlierFilter`. The same numerical kernel backs every language binding.
+C ABI `n4m_outlier_detection_y_outlier_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.YOutlierFilter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

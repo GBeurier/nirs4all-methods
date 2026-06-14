@@ -54,7 +54,7 @@ n4m_status_t require_rowmajor_f64(const n4m_matrix_view_t& v,
 
 extern "C" {
 
-N4M_API n4m_status_t n4m_transfer_metrics_compute(
+N4M_API n4m_status_t n4m_domain_adaptation_transfer_metrics_compute(
     n4m_matrix_view_t X_source,
     n4m_matrix_view_t X_target,
     int32_t n_components,

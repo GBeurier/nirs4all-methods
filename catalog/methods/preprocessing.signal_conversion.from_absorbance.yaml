@@ -7,13 +7,13 @@ category: "preprocessing"
 subcategory: "signal_conversion"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_from_absorbance_create"
-  - "n4m_pp_from_absorbance_destroy"
-  - "n4m_pp_from_absorbance_transform"
+  - "n4m_transform_from_absorbance_create"
+  - "n4m_transform_from_absorbance_destroy"
+  - "n4m_transform_from_absorbance_transform"
 tu:
   - "cpp/src/core/preprocessing/signal_conversion/from_absorbance.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/signal_conversion.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_from_absorbance_create"
+  - "n4m_transform_from_absorbance_destroy"
+  - "n4m_transform_from_absorbance_transform"
+fq_name: "n4m.transform.signal_conversion.from_absorbance"
+leaf: "from_absorbance"
+legacy_ids:
+  - "preprocessing.signal_conversion.from_absorbance"
+namespace: "transform.signal_conversion"

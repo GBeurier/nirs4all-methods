@@ -7,16 +7,16 @@ category: "filters"
 subcategory: "feature"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_filter_variance_create"
-  - "n4m_filter_variance_destroy"
-  - "n4m_filter_variance_fit"
-  - "n4m_filter_variance_is_fitted"
-  - "n4m_filter_variance_output_cols"
-  - "n4m_filter_variance_transform"
+  - "n4m_feature_selection_variance_create"
+  - "n4m_feature_selection_variance_destroy"
+  - "n4m_feature_selection_variance_fit"
+  - "n4m_feature_selection_variance_is_fitted"
+  - "n4m_feature_selection_variance_output_cols"
+  - "n4m_feature_selection_variance_transform"
 tu:
   - "cpp/src/c_api/c_api_advanced.cpp"
 headers:
-  - "cpp/include/n4m/n4m.h"
+  - "cpp/include/n4m/feature_selection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -36,3 +36,15 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+c_surface:
+  - "n4m_feature_selection_variance_create"
+  - "n4m_feature_selection_variance_destroy"
+  - "n4m_feature_selection_variance_fit"
+  - "n4m_feature_selection_variance_is_fitted"
+  - "n4m_feature_selection_variance_output_cols"
+  - "n4m_feature_selection_variance_transform"
+fq_name: "n4m.feature_selection.filter.variance"
+leaf: "variance"
+legacy_ids:
+  - "filters.variance"
+namespace: "feature_selection.filter"

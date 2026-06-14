@@ -1,6 +1,6 @@
 # `split_spxy` — S P X Y Splitter
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.SPXYSplitter` · _C ABI_: `n4m_split_spxy_*`
+_Group_: **Splitters** · _Binding_: `n4m.sklearn.SPXYSplitter` · _C ABI_: `n4m_model_selection_spxy_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ SPXY (Sample set Partitioning based on X and Y) train/test split.
 
 ### Implementation
 
-C ABI `n4m_split_spxy_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SPXYSplitter`. The same numerical kernel backs every language binding.
+C ABI `n4m_model_selection_spxy_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SPXYSplitter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

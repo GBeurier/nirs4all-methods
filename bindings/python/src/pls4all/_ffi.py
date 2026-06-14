@@ -47,10 +47,19 @@ def _glob_libs(directory: Path) -> list[Path]:
 def _candidate_paths() -> list[Path]:
     paths: list[Path] = []
 
-    # (1) Explicit override always wins.
-    env = os.environ.get("PLS4ALL_LIB_PATH")
-    if env:
-        paths.append(Path(env))
+    # (1) Explicit override always wins. PLS4ALL_LIB_PATH is the package-specific
+    #     knob; N4M_LIB_PATH is the shared libn4m override honoured by every
+    #     binding (pls4all and n4m load the same C library). Either may point at
+    #     a file or a directory to search.
+    for var in ("PLS4ALL_LIB_PATH", "N4M_LIB_PATH"):
+        env = os.environ.get(var)
+        if not env:
+            continue
+        envp = Path(env)
+        if envp.is_file():
+            paths.append(envp)
+        else:
+            paths.extend(_glob_libs(envp))
 
     # (2) Auditwheel / delocate / delvewheel place the bundled library in a
     #     sibling `<package>.libs/` directory at install time. The library
@@ -89,7 +98,7 @@ def _load_library() -> ctypes.CDLL:
     for p, e in errors:
         msg.append(f"  - {p}: {e}")
     msg.append(
-        "Set the PLS4ALL_LIB_PATH environment variable to the absolute path of "
+        "Set PLS4ALL_LIB_PATH (or N4M_LIB_PATH) to the absolute path of "
         "libn4m.so / libn4m.dylib / n4m.dll."
     )
     raise ImportError("\n".join(msg))
@@ -251,54 +260,54 @@ class MatrixView(ctypes.Structure):
 
 
 # ---- n4m_aom_global_* ----
-lib.n4m_aom_global_select.restype  = ctypes.c_int
-lib.n4m_aom_global_select.argtypes = [
+lib.n4m_model_selection_aom_pls_select.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_select.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
     ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
     ctypes.c_void_p, ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
 ]
-lib.n4m_aom_global_result_destroy.restype  = None
-lib.n4m_aom_global_result_destroy.argtypes = [ctypes.c_void_p]
-lib.n4m_aom_global_result_get_n_operators.restype  = ctypes.c_int
-lib.n4m_aom_global_result_get_n_operators.argtypes = [
+lib.n4m_model_selection_aom_pls_result_destroy.restype  = None
+lib.n4m_model_selection_aom_pls_result_destroy.argtypes = [ctypes.c_void_p]
+lib.n4m_model_selection_aom_pls_result_get_n_operators.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_n_operators.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_global_result_get_max_components.restype  = ctypes.c_int
-lib.n4m_aom_global_result_get_max_components.argtypes = [
+lib.n4m_model_selection_aom_pls_result_get_max_components.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_max_components.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_global_result_get_selected_operator_index.restype  = ctypes.c_int
-lib.n4m_aom_global_result_get_selected_operator_index.argtypes = [
+lib.n4m_model_selection_aom_pls_result_get_selected_operator_index.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_selected_operator_index.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_global_result_get_selected_n_components.restype  = ctypes.c_int
-lib.n4m_aom_global_result_get_selected_n_components.argtypes = [
+lib.n4m_model_selection_aom_pls_result_get_selected_n_components.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_selected_n_components.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_global_result_get_best_score.restype  = ctypes.c_int
-lib.n4m_aom_global_result_get_best_score.argtypes = [
+lib.n4m_model_selection_aom_pls_result_get_best_score.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_best_score.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_double),
 ]
-lib.n4m_aom_global_result_get_operator_kinds.restype  = ctypes.c_int
-lib.n4m_aom_global_result_get_operator_kinds.argtypes = [
+lib.n4m_model_selection_aom_pls_result_get_operator_kinds.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_operator_kinds.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_int)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_global_result_get_operator_scores.restype  = ctypes.c_int
-lib.n4m_aom_global_result_get_operator_scores.argtypes = [
+lib.n4m_model_selection_aom_pls_result_get_operator_scores.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_operator_scores.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_global_result_get_rmse_curves.restype  = ctypes.c_int
-lib.n4m_aom_global_result_get_rmse_curves.argtypes = [
+lib.n4m_model_selection_aom_pls_result_get_rmse_curves.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_rmse_curves.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
     ctypes.POINTER(ctypes.c_int32), ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_global_result_get_predictions.restype  = ctypes.c_int
-lib.n4m_aom_global_result_get_predictions.argtypes = [
+lib.n4m_model_selection_aom_pls_result_get_predictions.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_predictions.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
     ctypes.POINTER(ctypes.c_int64), ctypes.POINTER(ctypes.c_int64),
@@ -389,56 +398,56 @@ lib.n4m_array_free.restype  = None
 lib.n4m_array_free.argtypes = [ctypes.c_void_p]
 
 # ---- n4m_aom_per_component_* ----
-lib.n4m_aom_per_component_select.restype  = ctypes.c_int
-lib.n4m_aom_per_component_select.argtypes = [
+lib.n4m_model_selection_pop_pls_select.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_select.argtypes = [
     ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
     ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
     ctypes.c_void_p, ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
 ]
-lib.n4m_aom_per_component_result_destroy.restype  = None
-lib.n4m_aom_per_component_result_destroy.argtypes = [ctypes.c_void_p]
-lib.n4m_aom_per_component_result_get_n_operators.restype  = ctypes.c_int
-lib.n4m_aom_per_component_result_get_n_operators.argtypes = [
+lib.n4m_model_selection_pop_pls_result_destroy.restype  = None
+lib.n4m_model_selection_pop_pls_result_destroy.argtypes = [ctypes.c_void_p]
+lib.n4m_model_selection_pop_pls_result_get_n_operators.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_n_operators.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_per_component_result_get_max_components.restype  = ctypes.c_int
-lib.n4m_aom_per_component_result_get_max_components.argtypes = [
+lib.n4m_model_selection_pop_pls_result_get_max_components.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_max_components.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_per_component_result_get_selected_n_components.restype  = ctypes.c_int
-lib.n4m_aom_per_component_result_get_selected_n_components.argtypes = [
+lib.n4m_model_selection_pop_pls_result_get_selected_n_components.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_selected_n_components.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_per_component_result_get_best_score.restype  = ctypes.c_int
-lib.n4m_aom_per_component_result_get_best_score.argtypes = [
+lib.n4m_model_selection_pop_pls_result_get_best_score.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_best_score.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_double),
 ]
-lib.n4m_aom_per_component_result_get_operator_kinds.restype  = ctypes.c_int
-lib.n4m_aom_per_component_result_get_operator_kinds.argtypes = [
+lib.n4m_model_selection_pop_pls_result_get_operator_kinds.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_operator_kinds.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_int)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_per_component_result_get_selected_operator_indices.restype  = ctypes.c_int
-lib.n4m_aom_per_component_result_get_selected_operator_indices.argtypes = [
+lib.n4m_model_selection_pop_pls_result_get_selected_operator_indices.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_selected_operator_indices.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_int32)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_per_component_result_get_component_scores.restype  = ctypes.c_int
-lib.n4m_aom_per_component_result_get_component_scores.argtypes = [
+lib.n4m_model_selection_pop_pls_result_get_component_scores.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_component_scores.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
     ctypes.POINTER(ctypes.c_int32), ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_per_component_result_get_prefix_scores.restype  = ctypes.c_int
-lib.n4m_aom_per_component_result_get_prefix_scores.argtypes = [
+lib.n4m_model_selection_pop_pls_result_get_prefix_scores.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_prefix_scores.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_aom_per_component_result_get_predictions.restype  = ctypes.c_int
-lib.n4m_aom_per_component_result_get_predictions.argtypes = [
+lib.n4m_model_selection_pop_pls_result_get_predictions.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_predictions.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
     ctypes.POINTER(ctypes.c_int64), ctypes.POINTER(ctypes.c_int64),

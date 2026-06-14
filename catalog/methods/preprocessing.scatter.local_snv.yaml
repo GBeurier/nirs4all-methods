@@ -7,13 +7,13 @@ category: "preprocessing"
 subcategory: "scatter"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_lsnv_create"
-  - "n4m_pp_lsnv_destroy"
-  - "n4m_pp_lsnv_transform"
+  - "n4m_transform_local_snv_create"
+  - "n4m_transform_local_snv_destroy"
+  - "n4m_transform_local_snv_transform"
 tu:
   - "cpp/src/core/preprocessing/scatter/local_snv.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/scatter.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_local_snv_create"
+  - "n4m_transform_local_snv_destroy"
+  - "n4m_transform_local_snv_transform"
+fq_name: "n4m.transform.scatter.local_snv"
+leaf: "local_snv"
+legacy_ids:
+  - "preprocessing.scatter.local_snv"
+namespace: "transform.scatter"

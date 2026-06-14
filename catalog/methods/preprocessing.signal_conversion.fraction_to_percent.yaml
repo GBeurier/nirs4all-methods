@@ -7,13 +7,13 @@ category: "preprocessing"
 subcategory: "signal_conversion"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_frac_to_pct_create"
-  - "n4m_pp_frac_to_pct_destroy"
-  - "n4m_pp_frac_to_pct_transform"
+  - "n4m_transform_fraction_to_percent_create"
+  - "n4m_transform_fraction_to_percent_destroy"
+  - "n4m_transform_fraction_to_percent_transform"
 tu:
   - "cpp/src/core/preprocessing/signal_conversion/fraction_to_percent.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/signal_conversion.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_fraction_to_percent_create"
+  - "n4m_transform_fraction_to_percent_destroy"
+  - "n4m_transform_fraction_to_percent_transform"
+fq_name: "n4m.transform.signal_conversion.fraction_to_percent"
+leaf: "fraction_to_percent"
+legacy_ids:
+  - "preprocessing.signal_conversion.fraction_to_percent"
+namespace: "transform.signal_conversion"

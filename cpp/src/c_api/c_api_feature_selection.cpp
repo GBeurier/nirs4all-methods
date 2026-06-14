@@ -19,7 +19,7 @@
 // The public symbol prefix is `n4m_pp_flex_pca_*` / `n4m_pp_flex_svd_*`.
 // Until n4m.h is updated at integration time, the new declarations live
 // here behind `extern "C"` so the library exports them under
-// `N4M_1` (via the existing version script wildcard).
+// `N4M_2` (via the existing version script wildcard).
 
 #include <cstddef>
 #include <cstdint>
@@ -42,35 +42,35 @@ extern "C" {
 typedef struct n4m_pp_flex_pca_handle_t n4m_pp_flex_pca_handle_t;
 typedef struct n4m_pp_flex_svd_handle_t n4m_pp_flex_svd_handle_t;
 
-N4M_API n4m_status_t n4m_pp_flex_pca_create(n4m_pp_flex_pca_handle_t** out,
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_create(n4m_pp_flex_pca_handle_t** out,
                                              double n_components);
-N4M_API void         n4m_pp_flex_pca_destroy(n4m_pp_flex_pca_handle_t* handle);
-N4M_API n4m_status_t n4m_pp_flex_pca_fit(n4m_pp_flex_pca_handle_t* handle,
+N4M_API void         n4m_decomposition_flexible_pca_destroy(n4m_pp_flex_pca_handle_t* handle);
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_fit(n4m_pp_flex_pca_handle_t* handle,
                                           n4m_matrix_view_t X);
-N4M_API n4m_status_t n4m_pp_flex_pca_transform(
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_transform(
     const n4m_pp_flex_pca_handle_t* handle,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out);
-N4M_API n4m_status_t n4m_pp_flex_pca_is_fitted(
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_is_fitted(
     const n4m_pp_flex_pca_handle_t* handle,
     int* out_fitted);
-N4M_API n4m_status_t n4m_pp_flex_pca_output_cols(
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_output_cols(
     const n4m_pp_flex_pca_handle_t* handle,
     int64_t* out_cols);
 
-N4M_API n4m_status_t n4m_pp_flex_svd_create(n4m_pp_flex_svd_handle_t** out,
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_create(n4m_pp_flex_svd_handle_t** out,
                                              double n_components);
-N4M_API void         n4m_pp_flex_svd_destroy(n4m_pp_flex_svd_handle_t* handle);
-N4M_API n4m_status_t n4m_pp_flex_svd_fit(n4m_pp_flex_svd_handle_t* handle,
+N4M_API void         n4m_decomposition_flexible_svd_destroy(n4m_pp_flex_svd_handle_t* handle);
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_fit(n4m_pp_flex_svd_handle_t* handle,
                                           n4m_matrix_view_t X);
-N4M_API n4m_status_t n4m_pp_flex_svd_transform(
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_transform(
     const n4m_pp_flex_svd_handle_t* handle,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out);
-N4M_API n4m_status_t n4m_pp_flex_svd_is_fitted(
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_is_fitted(
     const n4m_pp_flex_svd_handle_t* handle,
     int* out_fitted);
-N4M_API n4m_status_t n4m_pp_flex_svd_output_cols(
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_output_cols(
     const n4m_pp_flex_svd_handle_t* handle,
     int64_t* out_cols);
 
@@ -149,7 +149,7 @@ extern "C" {
 // FlexiblePCA
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_flex_pca_create(n4m_pp_flex_pca_handle_t** out,
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_create(n4m_pp_flex_pca_handle_t** out,
                                              double n_components) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -178,7 +178,7 @@ N4M_API n4m_status_t n4m_pp_flex_pca_create(n4m_pp_flex_pca_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_flex_pca_destroy(n4m_pp_flex_pca_handle_t* h) {
+N4M_API void n4m_decomposition_flexible_pca_destroy(n4m_pp_flex_pca_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_flex_pca_state_free(h->state);
@@ -188,7 +188,7 @@ N4M_API void n4m_pp_flex_pca_destroy(n4m_pp_flex_pca_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_flex_pca_fit(n4m_pp_flex_pca_handle_t* h,
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_fit(n4m_pp_flex_pca_handle_t* h,
                                           n4m_matrix_view_t X) {
     if (h == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -204,7 +204,7 @@ N4M_API n4m_status_t n4m_pp_flex_pca_fit(n4m_pp_flex_pca_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_flex_pca_transform(
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_transform(
     const n4m_pp_flex_pca_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -228,7 +228,7 @@ N4M_API n4m_status_t n4m_pp_flex_pca_transform(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_flex_pca_is_fitted(
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_is_fitted(
     const n4m_pp_flex_pca_handle_t* h, int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -241,7 +241,7 @@ N4M_API n4m_status_t n4m_pp_flex_pca_is_fitted(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_flex_pca_output_cols(
+N4M_API n4m_status_t n4m_decomposition_flexible_pca_output_cols(
     const n4m_pp_flex_pca_handle_t* h, int64_t* out_cols) {
     if (h == nullptr || out_cols == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -261,7 +261,7 @@ N4M_API n4m_status_t n4m_pp_flex_pca_output_cols(
 // FlexibleSVD
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_flex_svd_create(n4m_pp_flex_svd_handle_t** out,
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_create(n4m_pp_flex_svd_handle_t** out,
                                              double n_components) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -289,7 +289,7 @@ N4M_API n4m_status_t n4m_pp_flex_svd_create(n4m_pp_flex_svd_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_flex_svd_destroy(n4m_pp_flex_svd_handle_t* h) {
+N4M_API void n4m_decomposition_flexible_svd_destroy(n4m_pp_flex_svd_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_flex_svd_state_free(h->state);
@@ -299,7 +299,7 @@ N4M_API void n4m_pp_flex_svd_destroy(n4m_pp_flex_svd_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_flex_svd_fit(n4m_pp_flex_svd_handle_t* h,
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_fit(n4m_pp_flex_svd_handle_t* h,
                                           n4m_matrix_view_t X) {
     if (h == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -315,7 +315,7 @@ N4M_API n4m_status_t n4m_pp_flex_svd_fit(n4m_pp_flex_svd_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_flex_svd_transform(
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_transform(
     const n4m_pp_flex_svd_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -339,7 +339,7 @@ N4M_API n4m_status_t n4m_pp_flex_svd_transform(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_flex_svd_is_fitted(
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_is_fitted(
     const n4m_pp_flex_svd_handle_t* h, int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -352,7 +352,7 @@ N4M_API n4m_status_t n4m_pp_flex_svd_is_fitted(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_flex_svd_output_cols(
+N4M_API n4m_status_t n4m_decomposition_flexible_svd_output_cols(
     const n4m_pp_flex_svd_handle_t* h, int64_t* out_cols) {
     if (h == nullptr || out_cols == nullptr) {
         return N4M_ERR_NULL_POINTER;

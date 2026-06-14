@@ -1,6 +1,6 @@
 # `pp_gaussian` — Gaussian smoothing
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.Gaussian` · _C ABI_: `n4m_pp_gaussian_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.Gaussian` · _C ABI_: `n4m_transform_gaussian_*`
 
 ## Description
 
@@ -28,7 +28,7 @@ Convolves each spectrum with a discretised Gaussian kernel of a given standard d
 
 ### Implementation
 
-C ABI `n4m_pp_gaussian_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Gaussian`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_gaussian_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Gaussian`. The same numerical kernel backs every language binding.
 
 ### Usage
 

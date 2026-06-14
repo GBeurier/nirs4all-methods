@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m.sklearn import NativeAOMOperatorPLSStackRegressor
+from n4m._impl import NativeAOMOperatorPLSStackRegressor
 
 
 def make_dataset(n_samples: int, n_features: int, seed: int):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run ``n4m.aom_staged_chain_campaign`` on real NIRS train/test splits.
+"""Run ``aom_staged_chain_campaign`` on real NIRS train/test splits.
 
 This is the lightweight production-selection benchmark runner for the staged
 AOM/moment workflow. It loads the fixed train/test CSV splits used by the local
@@ -24,6 +24,7 @@ from typing import Any
 import numpy as np
 
 import n4m
+from n4m.model_selection.aom_campaign import aom_staged_chain_campaign
 
 
 DEFAULT_COHORT = (
@@ -715,7 +716,7 @@ def run_one(args, item: dict[str, str]) -> dict[str, Any]:
                 for char in key
             ).strip("._")
             checkpoint_dir = str(Path(args.checkpoint_dir) / safe_key)
-        report = n4m.aom_staged_chain_campaign(
+        report = aom_staged_chain_campaign(
             X_train,
             y_train,
             stages=getattr(args, "stages", None),

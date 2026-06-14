@@ -90,7 +90,7 @@ struct n4m_aug_mixup_handle_t {
 
 extern "C" {
 
-N4M_API n4m_status_t n4m_aug_mixup_create(n4m_aug_mixup_handle_t** out,
+N4M_API n4m_status_t n4m_augmentation_mixup_create(n4m_aug_mixup_handle_t** out,
                                            n4m_rng_pcg64_state_t* rng,
                                            double alpha) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
@@ -109,7 +109,7 @@ N4M_API n4m_status_t n4m_aug_mixup_create(n4m_aug_mixup_handle_t** out,
     }
 }
 
-N4M_API n4m_status_t n4m_aug_mixup_apply(const n4m_aug_mixup_handle_t* h,
+N4M_API n4m_status_t n4m_augmentation_mixup_apply(const n4m_aug_mixup_handle_t* h,
                                           n4m_matrix_view_t X,
                                           n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -129,7 +129,7 @@ N4M_API n4m_status_t n4m_aug_mixup_apply(const n4m_aug_mixup_handle_t* h,
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_mixup_destroy(n4m_aug_mixup_handle_t* h) {
+N4M_API void n4m_augmentation_mixup_destroy(n4m_aug_mixup_handle_t* h) {
     try {
         if (h != nullptr) {
             n4m_aug_mixup_state_free(h->state);
@@ -146,7 +146,7 @@ struct n4m_aug_local_mixup_handle_t {
     n4m_rng_pcg64_state_t* rng;
 };
 
-N4M_API n4m_status_t n4m_aug_local_mixup_create(n4m_aug_local_mixup_handle_t** out,
+N4M_API n4m_status_t n4m_augmentation_local_mixup_create(n4m_aug_local_mixup_handle_t** out,
                                                  n4m_rng_pcg64_state_t* rng,
                                                  double alpha,
                                                  int32_t k_neighbors) {
@@ -163,7 +163,7 @@ N4M_API n4m_status_t n4m_aug_local_mixup_create(n4m_aug_local_mixup_handle_t** o
       catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API n4m_status_t n4m_aug_local_mixup_apply(const n4m_aug_local_mixup_handle_t* h,
+N4M_API n4m_status_t n4m_augmentation_local_mixup_apply(const n4m_aug_local_mixup_handle_t* h,
                                                 n4m_matrix_view_t X,
                                                 n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -181,7 +181,7 @@ N4M_API n4m_status_t n4m_aug_local_mixup_apply(const n4m_aug_local_mixup_handle_
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_local_mixup_destroy(n4m_aug_local_mixup_handle_t* h) {
+N4M_API void n4m_augmentation_local_mixup_destroy(n4m_aug_local_mixup_handle_t* h) {
     try {
         if (h != nullptr) {
             n4m_aug_local_mixup_state_free(h->state);
@@ -198,7 +198,7 @@ struct n4m_aug_scatter_sim_handle_t {
     n4m_rng_pcg64_state_t* rng;
 };
 
-N4M_API n4m_status_t n4m_aug_scatter_sim_create(n4m_aug_scatter_sim_handle_t** out,
+N4M_API n4m_status_t n4m_augmentation_scatter_sim_msc_create(n4m_aug_scatter_sim_handle_t** out,
                                                  n4m_rng_pcg64_state_t* rng,
                                                  double a_low, double a_high,
                                                  double b_low, double b_high) {
@@ -215,7 +215,7 @@ N4M_API n4m_status_t n4m_aug_scatter_sim_create(n4m_aug_scatter_sim_handle_t** o
       catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API n4m_status_t n4m_aug_scatter_sim_apply(const n4m_aug_scatter_sim_handle_t* h,
+N4M_API n4m_status_t n4m_augmentation_scatter_sim_msc_apply(const n4m_aug_scatter_sim_handle_t* h,
                                                 n4m_matrix_view_t X,
                                                 n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -233,7 +233,7 @@ N4M_API n4m_status_t n4m_aug_scatter_sim_apply(const n4m_aug_scatter_sim_handle_
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_scatter_sim_destroy(n4m_aug_scatter_sim_handle_t* h) {
+N4M_API void n4m_augmentation_scatter_sim_msc_destroy(n4m_aug_scatter_sim_handle_t* h) {
     try {
         if (h != nullptr) {
             n4m_aug_scatter_sim_state_free(h->state);
@@ -252,7 +252,7 @@ struct n4m_aug_particle_size_handle_t {
     int64_t n_wavelengths;
 };
 
-N4M_API n4m_status_t n4m_aug_particle_size_create(
+N4M_API n4m_status_t n4m_augmentation_particle_size_create(
     n4m_aug_particle_size_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double mean_size_um, double size_variation_um,
@@ -283,7 +283,7 @@ N4M_API n4m_status_t n4m_aug_particle_size_create(
       catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API n4m_status_t n4m_aug_particle_size_apply(
+N4M_API n4m_status_t n4m_augmentation_particle_size_apply(
     const n4m_aug_particle_size_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -303,7 +303,7 @@ N4M_API n4m_status_t n4m_aug_particle_size_apply(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_particle_size_destroy(n4m_aug_particle_size_handle_t* h) {
+N4M_API void n4m_augmentation_particle_size_destroy(n4m_aug_particle_size_handle_t* h) {
     try {
         if (h != nullptr) {
             n4m_aug_particle_size_state_free(h->state);
@@ -323,7 +323,7 @@ struct n4m_aug_emsc_distort_handle_t {
     int64_t n_wavelengths;
 };
 
-N4M_API n4m_status_t n4m_aug_emsc_distort_create(
+N4M_API n4m_status_t n4m_augmentation_emsc_distort_create(
     n4m_aug_emsc_distort_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double mult_low, double mult_high,
@@ -351,7 +351,7 @@ N4M_API n4m_status_t n4m_aug_emsc_distort_create(
       catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API n4m_status_t n4m_aug_emsc_distort_apply(
+N4M_API n4m_status_t n4m_augmentation_emsc_distort_apply(
     const n4m_aug_emsc_distort_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -371,7 +371,7 @@ N4M_API n4m_status_t n4m_aug_emsc_distort_apply(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_emsc_distort_destroy(n4m_aug_emsc_distort_handle_t* h) {
+N4M_API void n4m_augmentation_emsc_distort_destroy(n4m_aug_emsc_distort_handle_t* h) {
     try {
         if (h != nullptr) {
             n4m_aug_emsc_distort_state_free(h->state);
@@ -391,7 +391,7 @@ struct n4m_aug_batch_effect_handle_t {
     int64_t n_wavelengths;
 };
 
-N4M_API n4m_status_t n4m_aug_batch_effect_create(
+N4M_API n4m_status_t n4m_augmentation_batch_effect_create(
     n4m_aug_batch_effect_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double offset_std, double slope_std, double gain_std,
@@ -417,7 +417,7 @@ N4M_API n4m_status_t n4m_aug_batch_effect_create(
       catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API n4m_status_t n4m_aug_batch_effect_apply(
+N4M_API n4m_status_t n4m_augmentation_batch_effect_apply(
     const n4m_aug_batch_effect_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -440,7 +440,7 @@ N4M_API n4m_status_t n4m_aug_batch_effect_apply(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_batch_effect_destroy(n4m_aug_batch_effect_handle_t* h) {
+N4M_API void n4m_augmentation_batch_effect_destroy(n4m_aug_batch_effect_handle_t* h) {
     try {
         if (h != nullptr) {
             n4m_aug_batch_effect_state_free(h->state);
@@ -460,7 +460,7 @@ struct n4m_aug_instrument_broaden_handle_t {
     int64_t n_wavelengths;
 };
 
-N4M_API n4m_status_t n4m_aug_instrument_broaden_create(
+N4M_API n4m_status_t n4m_augmentation_instrument_broaden_create(
     n4m_aug_instrument_broaden_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double fwhm,
@@ -487,7 +487,7 @@ N4M_API n4m_status_t n4m_aug_instrument_broaden_create(
       catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API n4m_status_t n4m_aug_instrument_broaden_apply(
+N4M_API n4m_status_t n4m_augmentation_instrument_broaden_apply(
     const n4m_aug_instrument_broaden_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -509,7 +509,7 @@ N4M_API n4m_status_t n4m_aug_instrument_broaden_apply(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_instrument_broaden_destroy(
+N4M_API void n4m_augmentation_instrument_broaden_destroy(
     n4m_aug_instrument_broaden_handle_t* h) {
     try {
         if (h != nullptr) {
@@ -528,7 +528,7 @@ struct n4m_aug_dead_band_handle_t {
     n4m_rng_pcg64_state_t* rng;
 };
 
-N4M_API n4m_status_t n4m_aug_dead_band_create(
+N4M_API n4m_status_t n4m_augmentation_dead_band_create(
     n4m_aug_dead_band_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t n_bands,
@@ -550,7 +550,7 @@ N4M_API n4m_status_t n4m_aug_dead_band_create(
       catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API n4m_status_t n4m_aug_dead_band_apply(
+N4M_API n4m_status_t n4m_augmentation_dead_band_apply(
     const n4m_aug_dead_band_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -569,7 +569,7 @@ N4M_API n4m_status_t n4m_aug_dead_band_apply(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_dead_band_destroy(n4m_aug_dead_band_handle_t* h) {
+N4M_API void n4m_augmentation_dead_band_destroy(n4m_aug_dead_band_handle_t* h) {
     try {
         if (h != nullptr) {
             n4m_aug_dead_band_state_free(h->state);
@@ -588,7 +588,7 @@ struct n4m_aug_temperature_handle_t {
     int64_t n_wavelengths;
 };
 
-N4M_API n4m_status_t n4m_aug_temperature_create(
+N4M_API n4m_status_t n4m_augmentation_temperature_create(
     n4m_aug_temperature_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double temperature_delta,
@@ -615,7 +615,7 @@ N4M_API n4m_status_t n4m_aug_temperature_create(
       catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API n4m_status_t n4m_aug_temperature_apply(
+N4M_API n4m_status_t n4m_augmentation_temperature_apply(
     const n4m_aug_temperature_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -635,7 +635,7 @@ N4M_API n4m_status_t n4m_aug_temperature_apply(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_temperature_destroy(n4m_aug_temperature_handle_t* h) {
+N4M_API void n4m_augmentation_temperature_destroy(n4m_aug_temperature_handle_t* h) {
     try {
         if (h != nullptr) {
             n4m_aug_temperature_state_free(h->state);
@@ -655,7 +655,7 @@ struct n4m_aug_moisture_handle_t {
     int64_t n_wavelengths;
 };
 
-N4M_API n4m_status_t n4m_aug_moisture_create(
+N4M_API n4m_status_t n4m_augmentation_moisture_create(
     n4m_aug_moisture_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double water_activity_delta,
@@ -686,7 +686,7 @@ N4M_API n4m_status_t n4m_aug_moisture_create(
       catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API n4m_status_t n4m_aug_moisture_apply(
+N4M_API n4m_status_t n4m_augmentation_moisture_apply(
     const n4m_aug_moisture_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -706,7 +706,7 @@ N4M_API n4m_status_t n4m_aug_moisture_apply(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_moisture_destroy(n4m_aug_moisture_handle_t* h) {
+N4M_API void n4m_augmentation_moisture_destroy(n4m_aug_moisture_handle_t* h) {
     try {
         if (h != nullptr) {
             n4m_aug_moisture_state_free(h->state);

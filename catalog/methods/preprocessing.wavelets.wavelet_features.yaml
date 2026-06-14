@@ -7,15 +7,15 @@ category: "preprocessing"
 subcategory: "wavelets"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_wavelet_features_create"
-  - "n4m_pp_wavelet_features_create_ex"
-  - "n4m_pp_wavelet_features_destroy"
-  - "n4m_pp_wavelet_features_output_cols"
-  - "n4m_pp_wavelet_features_transform"
+  - "n4m_transform_wavelet_features_create"
+  - "n4m_transform_wavelet_features_create_ex"
+  - "n4m_transform_wavelet_features_destroy"
+  - "n4m_transform_wavelet_features_output_cols"
+  - "n4m_transform_wavelet_features_transform"
 tu:
   - "cpp/src/core/preprocessing/wavelets/wavelet_features.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/wavelet.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -35,3 +35,14 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_wavelet_features_create"
+  - "n4m_transform_wavelet_features_create_ex"
+  - "n4m_transform_wavelet_features_destroy"
+  - "n4m_transform_wavelet_features_output_cols"
+  - "n4m_transform_wavelet_features_transform"
+fq_name: "n4m.transform.wavelet.wavelet_features"
+leaf: "wavelet_features"
+legacy_ids:
+  - "preprocessing.wavelets.wavelet_features"
+namespace: "transform.wavelet"

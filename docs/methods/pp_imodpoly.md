@@ -1,6 +1,6 @@
 # `pp_imodpoly` — I Mod Poly
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.IModPoly` · _C ABI_: `n4m_pp_imodpoly_*`
+_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.IModPoly` · _C ABI_: `n4m_transform_imodpoly_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Improved modified polynomial baseline correction.
 
 ### Implementation
 
-C ABI `n4m_pp_imodpoly_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IModPoly`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_imodpoly_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IModPoly`. The same numerical kernel backs every language binding.
 
 ### Usage
 

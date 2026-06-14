@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "splines"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_spline_x_perturb_apply"
-  - "n4m_aug_spline_x_perturb_create"
-  - "n4m_aug_spline_x_perturb_destroy"
+  - "n4m_augmentation_spline_x_perturbations_apply"
+  - "n4m_augmentation_spline_x_perturbations_create"
+  - "n4m_augmentation_spline_x_perturbations_destroy"
 tu:
   - "cpp/src/core/augmentation/splines/spline_x_perturbations.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/splines.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_spline_x_perturbations_apply"
+  - "n4m_augmentation_spline_x_perturbations_create"
+  - "n4m_augmentation_spline_x_perturbations_destroy"
+fq_name: "n4m.augmentation.splines.spline_x_perturbations"
+leaf: "spline_x_perturbations"
+legacy_ids:
+  - "augmentation.splines.spline_x_perturbations"
+namespace: "augmentation.splines"

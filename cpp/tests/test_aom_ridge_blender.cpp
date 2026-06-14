@@ -90,7 +90,7 @@ void test_aom_ridge_blender_compact_contract_and_weighted_predictions() {
     n4m_matrix_view_t Yv = view(y.data(), n, 1);
 
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_ridge_blender_fit(
+    N4M_TEST_REQUIRE(n4m_ensemble_aom_ridge_blender_fit(
                          ctx, cfg, &Xv, &Yv,
                          /*profile=*/0,
                          cv,
@@ -180,7 +180,7 @@ void test_aom_ridge_blender_rejects_non_positive_lambda() {
     n4m_matrix_view_t Xv = view(X.data(), n, p);
     n4m_matrix_view_t Yv = view(y.data(), n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_ridge_blender_fit(
+    N4M_TEST_REQUIRE(n4m_ensemble_aom_ridge_blender_fit(
                          ctx, cfg, &Xv, &Yv, 0, 3,
                          nullptr, 0, lambdas, 1, 0.0, &result) ==
                      N4M_ERR_INVALID_ARGUMENT);
@@ -214,7 +214,7 @@ void test_aom_ridge_blender_wide_includes_fck_moment_bank() {
     n4m_matrix_view_t Yv = view(y.data(), n, 1);
 
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_ridge_blender_fit(
+    N4M_TEST_REQUIRE(n4m_ensemble_aom_ridge_blender_fit(
                          ctx, cfg, &Xv, &Yv,
                          /*profile=*/1,
                          cv,

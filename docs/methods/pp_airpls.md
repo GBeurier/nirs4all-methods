@@ -1,6 +1,6 @@
 # `pp_airpls` — Air P L S
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.AirPLS` · _C ABI_: `n4m_pp_airpls_*`
+_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.AirPLS` · _C ABI_: `n4m_transform_airpls_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Adaptive iteratively reweighted PLS (Zhang 2010).
 
 ### Implementation
 
-C ABI `n4m_pp_airpls_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.AirPLS`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_airpls_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.AirPLS`. The same numerical kernel backs every language binding.
 
 ### Usage
 

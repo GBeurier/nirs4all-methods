@@ -364,35 +364,35 @@ static int n4m_wasm_model_fit_tier_b(
     switch (kind) {
         case MK_RIDGE: {
             double lambda = n_params >= 1 ? params[0] : 1.0;
-            /* n4m_ridge_fit reads cfg.ridge_lambda when lambdas==NULL; pass the
+            /* n4m_estimators_ridge_fit reads cfg.ridge_lambda when lambdas==NULL; pass the
              * single override array so the param vector is authoritative. */
-            s = n4m_ridge_fit(ctx, cfg, &xv, &yv, &lambda, 1, &res);
+            s = n4m_estimators_ridge_fit(ctx, cfg, &xv, &yv, &lambda, 1, &res);
             break;
         }
         case MK_RIDGE_PLS: {
             double ridge_lambda = n_params >= 1 ? params[0] : 1.0;
-            s = n4m_ridge_pls_fit(ctx, cfg, &xv, &yv, ridge_lambda, &res);
+            s = n4m_estimators_ridge_pls_fit(ctx, cfg, &xv, &yv, ridge_lambda, &res);
             break;
         }
         case MK_CONTINUUM: {
             double tau = n_params >= 1 ? params[0] : 0.5;
-            s = n4m_continuum_regression_fit(ctx, cfg, &xv, &yv, tau, &res);
+            s = n4m_estimators_continuum_regression_fit(ctx, cfg, &xv, &yv, tau, &res);
             break;
         }
         case MK_ROBUST_PLS: {
             double huber_k = n_params >= 1 ? params[0] : 1.345;
             int max_irls = n_params >= 2 ? (int)params[1] : 5;
-            s = n4m_robust_pls_fit(ctx, cfg, &xv, &yv, huber_k, max_irls, &res);
+            s = n4m_estimators_robust_pls_fit(ctx, cfg, &xv, &yv, huber_k, max_irls, &res);
             break;
         }
         case MK_CPPLS: {
             double gamma = n_params >= 1 ? params[0] : 0.5;
-            s = n4m_cppls_fit(ctx, cfg, &xv, &yv, gamma, &res);
+            s = n4m_estimators_cppls_fit(ctx, cfg, &xv, &yv, gamma, &res);
             break;
         }
         case MK_SPARSE_SIMPLS: {
             double sparsity = n_params >= 1 ? params[0] : 0.0;
-            s = n4m_sparse_simpls_fit(ctx, cfg, &xv, &yv, sparsity, &res);
+            s = n4m_estimators_sparse_simpls_fit(ctx, cfg, &xv, &yv, sparsity, &res);
             break;
         }
         case MK_GROUP_SPARSE_PLS: {
@@ -402,7 +402,7 @@ static int n4m_wasm_model_fit_tier_b(
             int32_t* groups = (int32_t*)calloc((size_t)(p > 0 ? p : 1),
                                                 sizeof(int32_t));
             if (groups == NULL) { s = N4M_ERR_OUT_OF_MEMORY; break; }
-            s = n4m_group_sparse_pls_fit(ctx, cfg, &xv, &yv, groups, p,
+            s = n4m_estimators_group_sparse_pls_fit(ctx, cfg, &xv, &yv, groups, p,
                                          group_lambda, &res);
             free(groups);
             break;
@@ -410,26 +410,26 @@ static int n4m_wasm_model_fit_tier_b(
         case MK_FUSED_SPARSE_PLS: {
             double l1 = n_params >= 1 ? params[0] : 0.0;
             double fusion = n_params >= 2 ? params[1] : 0.0;
-            s = n4m_fused_sparse_pls_fit(ctx, cfg, &xv, &yv, l1, fusion, &res);
+            s = n4m_estimators_fused_sparse_pls_fit(ctx, cfg, &xv, &yv, l1, fusion, &res);
             break;
         }
         case MK_BAGGING_PLS: {
             int n_estimators = n_params >= 1 ? (int)params[0] : 10;
             uint64_t seed = n_params >= 2 ? (uint64_t)params[1] : 0;
-            s = n4m_bagging_pls_fit(ctx, cfg, &xv, &yv, n_estimators, seed, &res);
+            s = n4m_ensemble_bagging_pls_fit(ctx, cfg, &xv, &yv, n_estimators, seed, &res);
             break;
         }
         case MK_BOOSTING_PLS: {
             int n_estimators = n_params >= 1 ? (int)params[0] : 10;
             double lr = n_params >= 2 ? params[1] : 0.1;
-            s = n4m_boosting_pls_fit(ctx, cfg, &xv, &yv, n_estimators, lr, &res);
+            s = n4m_ensemble_boosting_pls_fit(ctx, cfg, &xv, &yv, n_estimators, lr, &res);
             break;
         }
         case MK_RANDOM_SUBSPACE_PLS: {
             int n_estimators = n_params >= 1 ? (int)params[0] : 10;
             int feats = n_params >= 2 ? (int)params[1] : (p > 1 ? p / 2 : 1);
             uint64_t seed = n_params >= 3 ? (uint64_t)params[2] : 0;
-            s = n4m_random_subspace_pls_fit(ctx, cfg, &xv, &yv, n_estimators,
+            s = n4m_ensemble_random_subspace_pls_fit(ctx, cfg, &xv, &yv, n_estimators,
                                             feats, seed, &res);
             break;
         }
@@ -437,7 +437,7 @@ static int n4m_wasm_model_fit_tier_b(
             /* Multiple-Inverse-Regression PLS: SIMPLS on (Y, X) then
              * pseudo-inverse → X→Y coefficients. No extra params; centred
              * coefficient triple (coefficients/x_mean/y_mean). */
-            s = n4m_mir_pls_fit(ctx, cfg, &xv, &yv, &res);
+            s = n4m_estimators_mir_pls_fit(ctx, cfg, &xv, &yv, &res);
             break;
         }
         case MK_MB_PLS: {
@@ -447,13 +447,13 @@ static int n4m_wasm_model_fit_tier_b(
              * intercept + x.B — the same explicit-intercept path as Ridge. */
             int64_t block_sizes[1];
             block_sizes[0] = (int64_t)p;
-            s = n4m_mb_pls_fit(ctx, cfg, &xv, &yv, block_sizes, 1, &res);
+            s = n4m_estimators_mb_pls_fit(ctx, cfg, &xv, &yv, block_sizes, 1, &res);
             break;
         }
         case MK_MISSING_NIPALS: {
             /* Missing-aware NIPALS PLS: same centred coefficient triple as a
              * regular SIMPLS PLS but tolerant of NaN entries in X. */
-            s = n4m_missing_aware_nipals_fit(ctx, cfg, &xv, &yv, &res);
+            s = n4m_estimators_missing_aware_nipals_fit(ctx, cfg, &xv, &yv, &res);
             break;
         }
         default:
@@ -604,7 +604,7 @@ int n4m_wasm_model_predict_from_coeffs(const double* coefficients,
  * predicts on RAW X via the affine form  y = intercept + X.B  (no replay of the
  * selected operator). AOM-PLS (global) picks ONE operator for the whole model;
  * POP-PLS (per-component) picks one operator PER latent component. The numerics
- * stay 100% in libn4m (n4m_aom_global_select / n4m_aom_per_component_select);
+ * stay 100% in libn4m (n4m_model_selection_aom_pls_select / n4m_model_selection_pop_pls_select);
  * this is only bank/plan construction + marshalling.
  *
  * Default bank (when operator_kinds == NULL): a small set of STRICT-linear
@@ -777,9 +777,9 @@ int n4m_wasm_aom_fit(const double* x, const double* y,
 
     /* ---- Run the global AOM selector ---- */
     n4m_aom_global_result_t* res = NULL;
-    s = n4m_aom_global_select(ctx, cfg, bank, &xv, &yv, plan, mc, &res);
+    s = n4m_model_selection_aom_pls_select(ctx, cfg, bank, &xv, &yv, plan, mc, &res);
     if (s != N4M_OK || res == NULL) {
-        if (res != NULL) n4m_aom_global_result_destroy(res);
+        if (res != NULL) n4m_model_selection_aom_pls_result_destroy(res);
         n4m_validation_plan_destroy(plan);
         n4m_operator_bank_destroy(bank);
         n4m_config_destroy(cfg);
@@ -791,7 +791,7 @@ int n4m_wasm_aom_fit(const double* x, const double* y,
     s = N4M_OK;
     const double* coeff = NULL;
     int64_t crows = 0, ccols = 0;
-    if (n4m_aom_global_result_get_input_coefficients(
+    if (n4m_model_selection_aom_pls_result_get_input_coefficients(
             res, &coeff, &crows, &ccols) == N4M_OK &&
         coeff != NULL && crows == p && ccols == q) {
         memcpy(coefficients_out, coeff, (size_t)p * (size_t)q * sizeof(double));
@@ -801,7 +801,7 @@ int n4m_wasm_aom_fit(const double* x, const double* y,
     const double* inter = NULL;
     int64_t irows = 0, icols = 0;
     if (s == N4M_OK &&
-        n4m_aom_global_result_get_intercept(res, &inter, &irows, &icols) ==
+        n4m_model_selection_aom_pls_result_get_intercept(res, &inter, &irows, &icols) ==
             N4M_OK &&
         inter != NULL && irows == 1 && icols == q) {
         memcpy(intercept_out, inter, (size_t)q * sizeof(double));
@@ -810,16 +810,16 @@ int n4m_wasm_aom_fit(const double* x, const double* y,
     }
     if (s == N4M_OK && selected_op_out != NULL) {
         int32_t sel = -1;
-        n4m_aom_global_result_get_selected_operator_index(res, &sel);
+        n4m_model_selection_aom_pls_result_get_selected_operator_index(res, &sel);
         *selected_op_out = (int)sel;
     }
     if (s == N4M_OK && best_score_out != NULL) {
         double sc = 0.0;
-        n4m_aom_global_result_get_best_score(res, &sc);
+        n4m_model_selection_aom_pls_result_get_best_score(res, &sc);
         *best_score_out = sc;
     }
 
-    n4m_aom_global_result_destroy(res);
+    n4m_model_selection_aom_pls_result_destroy(res);
     n4m_validation_plan_destroy(plan);
     n4m_operator_bank_destroy(bank);
     n4m_config_destroy(cfg);
@@ -829,7 +829,7 @@ int n4m_wasm_aom_fit(const double* x, const double* y,
 
 /* POP-PLS (per-component): one operator picked PER latent component.
  *
- * Same bank/plan construction as AOM; runs n4m_aom_per_component_select, then
+ * Same bank/plan construction as AOM; runs n4m_model_selection_pop_pls_select, then
  * exports INPUT-SPACE coefficients + intercept (predict on RAW X via the same
  * affine path) plus the per-component selected-operator list (bank index of the
  * operator picked at each of the selected n_components components).
@@ -873,9 +873,9 @@ int n4m_wasm_pop_fit(const double* x, const double* y,
 
     /* ---- Run the per-component (POP) AOM selector ---- */
     n4m_aom_per_component_result_t* res = NULL;
-    s = n4m_aom_per_component_select(ctx, cfg, bank, &xv, &yv, plan, mc, &res);
+    s = n4m_model_selection_pop_pls_select(ctx, cfg, bank, &xv, &yv, plan, mc, &res);
     if (s != N4M_OK || res == NULL) {
-        if (res != NULL) n4m_aom_per_component_result_destroy(res);
+        if (res != NULL) n4m_model_selection_pop_pls_result_destroy(res);
         n4m_validation_plan_destroy(plan);
         n4m_operator_bank_destroy(bank);
         n4m_config_destroy(cfg);
@@ -887,7 +887,7 @@ int n4m_wasm_pop_fit(const double* x, const double* y,
     s = N4M_OK;
     const double* coeff = NULL;
     int64_t crows = 0, ccols = 0;
-    if (n4m_aom_per_component_result_get_input_coefficients(
+    if (n4m_model_selection_pop_pls_result_get_input_coefficients(
             res, &coeff, &crows, &ccols) == N4M_OK &&
         coeff != NULL && crows == p && ccols == q) {
         memcpy(coefficients_out, coeff, (size_t)p * (size_t)q * sizeof(double));
@@ -897,7 +897,7 @@ int n4m_wasm_pop_fit(const double* x, const double* y,
     const double* inter = NULL;
     int64_t irows = 0, icols = 0;
     if (s == N4M_OK &&
-        n4m_aom_per_component_result_get_intercept(res, &inter, &irows,
+        n4m_model_selection_pop_pls_result_get_intercept(res, &inter, &irows,
                                                    &icols) == N4M_OK &&
         inter != NULL && irows == 1 && icols == q) {
         memcpy(intercept_out, inter, (size_t)q * sizeof(double));
@@ -909,7 +909,7 @@ int n4m_wasm_pop_fit(const double* x, const double* y,
      * component) + selected component count + best prefix score ---- */
     int32_t n_selected = 0;
     if (s == N4M_OK) {
-        n4m_aom_per_component_result_get_selected_n_components(res, &n_selected);
+        n4m_model_selection_pop_pls_result_get_selected_n_components(res, &n_selected);
         if (n_selected < 0) n_selected = 0;
         if (n_selected > mc) n_selected = mc;
     }
@@ -917,7 +917,7 @@ int n4m_wasm_pop_fit(const double* x, const double* y,
         for (int k = 0; k < mc; ++k) selected_ops_out[k] = -1;
         const int32_t* sel = NULL;
         int32_t sel_len = 0;
-        if (n4m_aom_per_component_result_get_selected_operator_indices(
+        if (n4m_model_selection_pop_pls_result_get_selected_operator_indices(
                 res, &sel, &sel_len) == N4M_OK && sel != NULL) {
             int copy = (int)(sel_len < n_selected ? sel_len : n_selected);
             for (int k = 0; k < copy; ++k) selected_ops_out[k] = (int)sel[k];
@@ -928,11 +928,11 @@ int n4m_wasm_pop_fit(const double* x, const double* y,
     }
     if (s == N4M_OK && best_score_out != NULL) {
         double sc = 0.0;
-        n4m_aom_per_component_result_get_best_score(res, &sc);
+        n4m_model_selection_pop_pls_result_get_best_score(res, &sc);
         *best_score_out = sc;
     }
 
-    n4m_aom_per_component_result_destroy(res);
+    n4m_model_selection_pop_pls_result_destroy(res);
     n4m_validation_plan_destroy(plan);
     n4m_operator_bank_destroy(bank);
     n4m_config_destroy(cfg);
@@ -998,7 +998,7 @@ static int pp_kind_for(const char* op, const double* params, int n_params) {
     if (strcmp(op, "NorrisWilliams") == 0) return PPK_NORRIS_WILLIAMS;
     if (strcmp(op, "LogTransform") == 0) return PPK_LOG;
     if (strcmp(op, "WaveletDenoise") == 0) return PPK_WAVELET_DENOISE;
-    /* Note: n4m_pp_normalize is COLUMN-wise L2 (batch-dependent), not the
+    /* Note: n4m_transform_normalize is COLUMN-wise L2 (batch-dependent), not the
      * per-spectrum normalization a catalog node would want — intentionally
      * not exposed here until a row-wise L2 operator lands in libn4m. */
     return 0;
@@ -1023,7 +1023,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
     switch (kind) {
         case PPK_SNV: {
             n4m_pp_snv_handle_t* h = NULL;
-            s = n4m_pp_snv_create(&h, 1, 1, 0);
+            s = n4m_transform_snv_create(&h, 1, 1, 0);
             w->h = h;
             break;
         }
@@ -1041,34 +1041,34 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
                 : N4M_PP_SAVGOL_MIRROR;
             double cval = n_params >= 5 ? params[4] : 0.0;
             n4m_pp_savgol_handle_t* h = NULL;
-            s = n4m_pp_savgol_create(&h, window, poly, deriv, 1.0,
+            s = n4m_transform_savitzky_golay_create(&h, window, poly, deriv, 1.0,
                                      mode, cval);
             w->h = h;
             break;
         }
         case PPK_DERIV1: {
             n4m_pp_first_derivative_handle_t* h = NULL;
-            s = n4m_pp_first_derivative_create(&h, 1.0, 2);
+            s = n4m_transform_first_derivative_create(&h, 1.0, 2);
             w->h = h;
             break;
         }
         case PPK_DERIV2: {
             n4m_pp_second_derivative_handle_t* h = NULL;
-            s = n4m_pp_second_derivative_create(&h, 1.0, 2);
+            s = n4m_transform_second_derivative_create(&h, 1.0, 2);
             w->h = h;
             break;
         }
         case PPK_DETREND: {
             int poly = n_params >= 1 ? (int)params[0] : 1;
             n4m_pp_detrend_handle_t* h = NULL;
-            s = n4m_pp_detrend_create(&h, poly);
+            s = n4m_transform_detrend_create(&h, poly);
             w->h = h;
             break;
         }
         case PPK_GAUSSIAN: {
             double sigma = n_params >= 1 ? params[0] : 2.0;
             n4m_pp_gaussian_handle_t* h = NULL;
-            s = n4m_pp_gaussian_create(&h, sigma, 0,
+            s = n4m_transform_gaussian_create(&h, sigma, 0,
                                        N4M_PP_GAUSSIAN_REFLECT, 0.0, 4.0);
             w->h = h;
             break;
@@ -1080,7 +1080,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int max_it = n_params >= 3 ? (int)params[2] : 50;
             double tol = n_params >= 4 ? params[3] : 1e-3;
             n4m_pp_asls_handle_t* h = NULL;
-            s = n4m_pp_asls_create(&h, lam, pp, max_it, tol);
+            s = n4m_transform_asls_create(&h, lam, pp, max_it, tol);
             w->h = h;
             break;
         }
@@ -1089,7 +1089,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int max_it = n_params >= 2 ? (int)params[1] : 50;
             double tol = n_params >= 3 ? params[2] : 1e-3;
             n4m_pp_airpls_handle_t* h = NULL;
-            s = n4m_pp_airpls_create(&h, lam, max_it, tol);
+            s = n4m_transform_airpls_create(&h, lam, max_it, tol);
             w->h = h;
             break;
         }
@@ -1098,7 +1098,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int max_it = n_params >= 2 ? (int)params[1] : 50;
             double tol = n_params >= 3 ? params[2] : 1e-3;
             n4m_pp_arpls_handle_t* h = NULL;
-            s = n4m_pp_arpls_create(&h, lam, max_it, tol);
+            s = n4m_transform_arpls_create(&h, lam, max_it, tol);
             w->h = h;
             break;
         }
@@ -1107,7 +1107,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int max_it = n_params >= 2 ? (int)params[1] : 250;
             double tol = n_params >= 3 ? params[2] : 1e-3;
             n4m_pp_modpoly_handle_t* h = NULL;
-            s = n4m_pp_modpoly_create(&h, poly, max_it, tol);
+            s = n4m_transform_modpoly_create(&h, poly, max_it, tol);
             w->h = h;
             break;
         }
@@ -1116,14 +1116,14 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int max_it = n_params >= 2 ? (int)params[1] : 250;
             double tol = n_params >= 3 ? params[2] : 1e-3;
             n4m_pp_imodpoly_handle_t* h = NULL;
-            s = n4m_pp_imodpoly_create(&h, poly, max_it, tol);
+            s = n4m_transform_imodpoly_create(&h, poly, max_it, tol);
             w->h = h;
             break;
         }
         case PPK_SNIP: {
             int mhw = n_params >= 1 ? (int)params[0] : 20;
             n4m_pp_snip_handle_t* h = NULL;
-            s = n4m_pp_snip_create(&h, mhw);
+            s = n4m_transform_snip_create(&h, mhw);
             w->h = h;
             break;
         }
@@ -1131,7 +1131,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int hw = n_params >= 1 ? (int)params[0] : 20;
             int shw = n_params >= 2 ? (int)params[1] : 0;
             n4m_pp_rolling_ball_handle_t* h = NULL;
-            s = n4m_pp_rolling_ball_create(&h, hw, shw);
+            s = n4m_transform_rolling_ball_create(&h, hw, shw);
             w->h = h;
             break;
         }
@@ -1142,7 +1142,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int max_it = n_params >= 4 ? (int)params[3] : 50;
             double tol = n_params >= 5 ? params[4] : 1e-3;
             n4m_pp_iasls_handle_t* h = NULL;
-            s = n4m_pp_iasls_create(&h, lam, pp, poly, max_it, tol);
+            s = n4m_transform_iasls_create(&h, lam, pp, poly, max_it, tol);
             w->h = h;
             break;
         }
@@ -1153,7 +1153,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int max_it = n_params >= 4 ? (int)params[3] : 50;
             double tol = n_params >= 5 ? params[4] : 1e-3;
             n4m_pp_beads_handle_t* h = NULL;
-            s = n4m_pp_beads_create(&h, lam0, lam1, lam2, max_it, tol);
+            s = n4m_transform_beads_create(&h, lam0, lam1, lam2, max_it, tol);
             w->h = h;
             break;
         }
@@ -1163,26 +1163,26 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             double eps = n_params >= 2 ? params[1] : 1e-8;
             int clip_neg = n_params >= 3 ? (int)params[2] : 1;
             n4m_pp_to_absorbance_handle_t* h = NULL;
-            s = n4m_pp_to_absorbance_create(&h, is_percent, eps, clip_neg);
+            s = n4m_transform_to_absorbance_create(&h, is_percent, eps, clip_neg);
             w->h = h;
             break;
         }
         case PPK_FROM_ABS: {
             int is_percent = n_params >= 1 ? (int)params[0] : 0;
             n4m_pp_from_absorbance_handle_t* h = NULL;
-            s = n4m_pp_from_absorbance_create(&h, is_percent);
+            s = n4m_transform_from_absorbance_create(&h, is_percent);
             w->h = h;
             break;
         }
         case PPK_PCT_TO_FRAC: {
             n4m_pp_pct_to_frac_handle_t* h = NULL;
-            s = n4m_pp_pct_to_frac_create(&h);
+            s = n4m_transform_percent_to_fraction_create(&h);
             w->h = h;
             break;
         }
         case PPK_FRAC_TO_PCT: {
             n4m_pp_frac_to_pct_handle_t* h = NULL;
-            s = n4m_pp_frac_to_pct_create(&h);
+            s = n4m_transform_fraction_to_percent_create(&h);
             w->h = h;
             break;
         }
@@ -1190,7 +1190,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int is_percent = n_params >= 1 ? (int)params[0] : 0;
             double eps = n_params >= 2 ? params[1] : 1e-8;
             n4m_pp_kubelka_munk_handle_t* h = NULL;
-            s = n4m_pp_kubelka_munk_create(&h, is_percent, eps);
+            s = n4m_transform_kubelka_munk_create(&h, is_percent, eps);
             w->h = h;
             break;
         }
@@ -1200,7 +1200,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int with_scale = n_params >= 2 ? (int)params[1] : 1;
             double k = n_params >= 3 ? params[2] : 1.4826;
             n4m_pp_rnv_handle_t* h = NULL;
-            s = n4m_pp_rnv_create(&h, with_center, with_scale, k);
+            s = n4m_transform_robust_snv_create(&h, with_center, with_scale, k);
             w->h = h;
             break;
         }
@@ -1209,14 +1209,14 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int pad_mode = n_params >= 2 ? (int)params[1] : 0;
             double constant = n_params >= 3 ? params[2] : 0.0;
             n4m_pp_lsnv_handle_t* h = NULL;
-            s = n4m_pp_lsnv_create(&h, window, pad_mode, constant);
+            s = n4m_transform_local_snv_create(&h, window, pad_mode, constant);
             w->h = h;
             break;
         }
         case PPK_AREA: {
             int method = n_params >= 1 ? (int)params[0] : 1;
             n4m_pp_area_handle_t* h = NULL;
-            s = n4m_pp_area_create(&h, method);
+            s = n4m_transform_area_normalization_create(&h, method);
             w->h = h;
             break;
         }
@@ -1226,7 +1226,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int order = n_params >= 3 ? (int)params[2] : 1;
             double delta = n_params >= 4 ? params[3] : 1.0;
             n4m_pp_norris_williams_handle_t* h = NULL;
-            s = n4m_pp_norris_williams_create(&h, segment, gap, order, delta);
+            s = n4m_transform_norris_williams_create(&h, segment, gap, order, delta);
             w->h = h;
             break;
         }
@@ -1236,7 +1236,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             double offset = n_params >= 2 ? params[1] : 0.0;
             double min_value = n_params >= 3 ? params[2] : 1e-8;
             n4m_pp_log_handle_t* h = NULL;
-            s = n4m_pp_log_create(&h, base, offset, 0, min_value);
+            s = n4m_transform_log_transform_create(&h, base, offset, 0, min_value);
             w->h = h;
             break;
         }
@@ -1247,7 +1247,7 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
             int thr = n_params >= 4 ? (int)params[3] : 0;
             int noise = n_params >= 5 ? (int)params[4] : 0;
             n4m_pp_wavelet_denoise_handle_t* h = NULL;
-            s = n4m_pp_wavelet_denoise_create(
+            s = n4m_transform_wavelet_denoise_create(
                 &h, (n4m_pp_wavelet_family_t)family,
                 (n4m_pp_wavelet_boundary_t)boundary, level,
                 (n4m_pp_wavelet_threshold_t)thr,
@@ -1291,60 +1291,60 @@ int n4m_wasm_pp_transform(void* handle, const double* X, int n, int p,
     if (vi != N4M_OK) return vi;
     switch (w->kind) {
         case PPK_SNV:
-            return n4m_pp_snv_transform((const n4m_pp_snv_handle_t*)w->h, xv, ov);
+            return n4m_transform_snv_transform((const n4m_pp_snv_handle_t*)w->h, xv, ov);
         case PPK_SAVGOL:
-            return n4m_pp_savgol_transform((const n4m_pp_savgol_handle_t*)w->h, xv, ov);
+            return n4m_transform_savitzky_golay_transform((const n4m_pp_savgol_handle_t*)w->h, xv, ov);
         case PPK_DERIV1:
-            return n4m_pp_first_derivative_transform((const n4m_pp_first_derivative_handle_t*)w->h, xv, ov);
+            return n4m_transform_first_derivative_transform((const n4m_pp_first_derivative_handle_t*)w->h, xv, ov);
         case PPK_DERIV2:
-            return n4m_pp_second_derivative_transform((const n4m_pp_second_derivative_handle_t*)w->h, xv, ov);
+            return n4m_transform_second_derivative_transform((const n4m_pp_second_derivative_handle_t*)w->h, xv, ov);
         case PPK_DETREND:
-            return n4m_pp_detrend_transform((const n4m_pp_detrend_handle_t*)w->h, xv, ov);
+            return n4m_transform_detrend_transform((const n4m_pp_detrend_handle_t*)w->h, xv, ov);
         case PPK_GAUSSIAN:
-            return n4m_pp_gaussian_transform((const n4m_pp_gaussian_handle_t*)w->h, xv, ov);
+            return n4m_transform_gaussian_transform((const n4m_pp_gaussian_handle_t*)w->h, xv, ov);
         /* ---- A2a baseline correctors ---- */
         case PPK_ASLS:
-            return n4m_pp_asls_transform((const n4m_pp_asls_handle_t*)w->h, xv, ov);
+            return n4m_transform_asls_transform((const n4m_pp_asls_handle_t*)w->h, xv, ov);
         case PPK_AIRPLS:
-            return n4m_pp_airpls_transform((const n4m_pp_airpls_handle_t*)w->h, xv, ov);
+            return n4m_transform_airpls_transform((const n4m_pp_airpls_handle_t*)w->h, xv, ov);
         case PPK_ARPLS:
-            return n4m_pp_arpls_transform((const n4m_pp_arpls_handle_t*)w->h, xv, ov);
+            return n4m_transform_arpls_transform((const n4m_pp_arpls_handle_t*)w->h, xv, ov);
         case PPK_MODPOLY:
-            return n4m_pp_modpoly_transform((const n4m_pp_modpoly_handle_t*)w->h, xv, ov);
+            return n4m_transform_modpoly_transform((const n4m_pp_modpoly_handle_t*)w->h, xv, ov);
         case PPK_IMODPOLY:
-            return n4m_pp_imodpoly_transform((const n4m_pp_imodpoly_handle_t*)w->h, xv, ov);
+            return n4m_transform_imodpoly_transform((const n4m_pp_imodpoly_handle_t*)w->h, xv, ov);
         case PPK_SNIP:
-            return n4m_pp_snip_transform((const n4m_pp_snip_handle_t*)w->h, xv, ov);
+            return n4m_transform_snip_transform((const n4m_pp_snip_handle_t*)w->h, xv, ov);
         case PPK_ROLLING_BALL:
-            return n4m_pp_rolling_ball_transform((const n4m_pp_rolling_ball_handle_t*)w->h, xv, ov);
+            return n4m_transform_rolling_ball_transform((const n4m_pp_rolling_ball_handle_t*)w->h, xv, ov);
         case PPK_IASLS:
-            return n4m_pp_iasls_transform((const n4m_pp_iasls_handle_t*)w->h, xv, ov);
+            return n4m_transform_iasls_transform((const n4m_pp_iasls_handle_t*)w->h, xv, ov);
         case PPK_BEADS:
-            return n4m_pp_beads_transform((const n4m_pp_beads_handle_t*)w->h, xv, ov);
+            return n4m_transform_beads_transform((const n4m_pp_beads_handle_t*)w->h, xv, ov);
         /* ---- A2b signal conversions ---- */
         case PPK_TO_ABS:
-            return n4m_pp_to_absorbance_transform((const n4m_pp_to_absorbance_handle_t*)w->h, xv, ov);
+            return n4m_transform_to_absorbance_transform((const n4m_pp_to_absorbance_handle_t*)w->h, xv, ov);
         case PPK_FROM_ABS:
-            return n4m_pp_from_absorbance_transform((const n4m_pp_from_absorbance_handle_t*)w->h, xv, ov);
+            return n4m_transform_from_absorbance_transform((const n4m_pp_from_absorbance_handle_t*)w->h, xv, ov);
         case PPK_PCT_TO_FRAC:
-            return n4m_pp_pct_to_frac_transform((const n4m_pp_pct_to_frac_handle_t*)w->h, xv, ov);
+            return n4m_transform_percent_to_fraction_transform((const n4m_pp_pct_to_frac_handle_t*)w->h, xv, ov);
         case PPK_FRAC_TO_PCT:
-            return n4m_pp_frac_to_pct_transform((const n4m_pp_frac_to_pct_handle_t*)w->h, xv, ov);
+            return n4m_transform_fraction_to_percent_transform((const n4m_pp_frac_to_pct_handle_t*)w->h, xv, ov);
         case PPK_KUBELKA_MUNK:
-            return n4m_pp_kubelka_munk_transform((const n4m_pp_kubelka_munk_handle_t*)w->h, xv, ov);
+            return n4m_transform_kubelka_munk_transform((const n4m_pp_kubelka_munk_handle_t*)w->h, xv, ov);
         /* ---- A2c scatter / scaling / derivative ---- */
         case PPK_RNV:
-            return n4m_pp_rnv_transform((const n4m_pp_rnv_handle_t*)w->h, xv, ov);
+            return n4m_transform_robust_snv_transform((const n4m_pp_rnv_handle_t*)w->h, xv, ov);
         case PPK_LSNV:
-            return n4m_pp_lsnv_transform((const n4m_pp_lsnv_handle_t*)w->h, xv, ov);
+            return n4m_transform_local_snv_transform((const n4m_pp_lsnv_handle_t*)w->h, xv, ov);
         case PPK_AREA:
-            return n4m_pp_area_transform((const n4m_pp_area_handle_t*)w->h, xv, ov);
+            return n4m_transform_area_normalization_transform((const n4m_pp_area_handle_t*)w->h, xv, ov);
         case PPK_NORRIS_WILLIAMS:
-            return n4m_pp_norris_williams_transform((const n4m_pp_norris_williams_handle_t*)w->h, xv, ov);
+            return n4m_transform_norris_williams_transform((const n4m_pp_norris_williams_handle_t*)w->h, xv, ov);
         case PPK_LOG:
-            return n4m_pp_log_transform((const n4m_pp_log_handle_t*)w->h, xv, ov);
+            return n4m_transform_log_transform_transform((const n4m_pp_log_handle_t*)w->h, xv, ov);
         case PPK_WAVELET_DENOISE:
-            return n4m_pp_wavelet_denoise_transform((const n4m_pp_wavelet_denoise_handle_t*)w->h, xv, ov);
+            return n4m_transform_wavelet_denoise_transform((const n4m_pp_wavelet_denoise_handle_t*)w->h, xv, ov);
         default: return N4M_ERR_INVALID_ARGUMENT;
     }
 }
@@ -1391,36 +1391,36 @@ void n4m_wasm_pp_destroy(void* handle) {
     if (handle == NULL) return;
     struct n4m_wasm_pp_s* w = (struct n4m_wasm_pp_s*)handle;
     switch (w->kind) {
-        case PPK_SNV:      n4m_pp_snv_destroy((n4m_pp_snv_handle_t*)w->h); break;
+        case PPK_SNV:      n4m_transform_snv_destroy((n4m_pp_snv_handle_t*)w->h); break;
         case PPK_MSC:      n4m_pp_msc_state_free((n4m_pp_msc_state_t*)w->h); break;
-        case PPK_SAVGOL:   n4m_pp_savgol_destroy((n4m_pp_savgol_handle_t*)w->h); break;
-        case PPK_DERIV1:   n4m_pp_first_derivative_destroy((n4m_pp_first_derivative_handle_t*)w->h); break;
-        case PPK_DERIV2:   n4m_pp_second_derivative_destroy((n4m_pp_second_derivative_handle_t*)w->h); break;
-        case PPK_DETREND:  n4m_pp_detrend_destroy((n4m_pp_detrend_handle_t*)w->h); break;
-        case PPK_GAUSSIAN: n4m_pp_gaussian_destroy((n4m_pp_gaussian_handle_t*)w->h); break;
+        case PPK_SAVGOL:   n4m_transform_savitzky_golay_destroy((n4m_pp_savgol_handle_t*)w->h); break;
+        case PPK_DERIV1:   n4m_transform_first_derivative_destroy((n4m_pp_first_derivative_handle_t*)w->h); break;
+        case PPK_DERIV2:   n4m_transform_second_derivative_destroy((n4m_pp_second_derivative_handle_t*)w->h); break;
+        case PPK_DETREND:  n4m_transform_detrend_destroy((n4m_pp_detrend_handle_t*)w->h); break;
+        case PPK_GAUSSIAN: n4m_transform_gaussian_destroy((n4m_pp_gaussian_handle_t*)w->h); break;
         /* ---- A2a baseline correctors ---- */
-        case PPK_ASLS:         n4m_pp_asls_destroy((n4m_pp_asls_handle_t*)w->h); break;
-        case PPK_AIRPLS:       n4m_pp_airpls_destroy((n4m_pp_airpls_handle_t*)w->h); break;
-        case PPK_ARPLS:        n4m_pp_arpls_destroy((n4m_pp_arpls_handle_t*)w->h); break;
-        case PPK_MODPOLY:      n4m_pp_modpoly_destroy((n4m_pp_modpoly_handle_t*)w->h); break;
-        case PPK_IMODPOLY:     n4m_pp_imodpoly_destroy((n4m_pp_imodpoly_handle_t*)w->h); break;
-        case PPK_SNIP:         n4m_pp_snip_destroy((n4m_pp_snip_handle_t*)w->h); break;
-        case PPK_ROLLING_BALL: n4m_pp_rolling_ball_destroy((n4m_pp_rolling_ball_handle_t*)w->h); break;
-        case PPK_IASLS:        n4m_pp_iasls_destroy((n4m_pp_iasls_handle_t*)w->h); break;
-        case PPK_BEADS:        n4m_pp_beads_destroy((n4m_pp_beads_handle_t*)w->h); break;
+        case PPK_ASLS:         n4m_transform_asls_destroy((n4m_pp_asls_handle_t*)w->h); break;
+        case PPK_AIRPLS:       n4m_transform_airpls_destroy((n4m_pp_airpls_handle_t*)w->h); break;
+        case PPK_ARPLS:        n4m_transform_arpls_destroy((n4m_pp_arpls_handle_t*)w->h); break;
+        case PPK_MODPOLY:      n4m_transform_modpoly_destroy((n4m_pp_modpoly_handle_t*)w->h); break;
+        case PPK_IMODPOLY:     n4m_transform_imodpoly_destroy((n4m_pp_imodpoly_handle_t*)w->h); break;
+        case PPK_SNIP:         n4m_transform_snip_destroy((n4m_pp_snip_handle_t*)w->h); break;
+        case PPK_ROLLING_BALL: n4m_transform_rolling_ball_destroy((n4m_pp_rolling_ball_handle_t*)w->h); break;
+        case PPK_IASLS:        n4m_transform_iasls_destroy((n4m_pp_iasls_handle_t*)w->h); break;
+        case PPK_BEADS:        n4m_transform_beads_destroy((n4m_pp_beads_handle_t*)w->h); break;
         /* ---- A2b signal conversions ---- */
-        case PPK_TO_ABS:       n4m_pp_to_absorbance_destroy((n4m_pp_to_absorbance_handle_t*)w->h); break;
-        case PPK_FROM_ABS:     n4m_pp_from_absorbance_destroy((n4m_pp_from_absorbance_handle_t*)w->h); break;
-        case PPK_PCT_TO_FRAC:  n4m_pp_pct_to_frac_destroy((n4m_pp_pct_to_frac_handle_t*)w->h); break;
-        case PPK_FRAC_TO_PCT:  n4m_pp_frac_to_pct_destroy((n4m_pp_frac_to_pct_handle_t*)w->h); break;
-        case PPK_KUBELKA_MUNK: n4m_pp_kubelka_munk_destroy((n4m_pp_kubelka_munk_handle_t*)w->h); break;
+        case PPK_TO_ABS:       n4m_transform_to_absorbance_destroy((n4m_pp_to_absorbance_handle_t*)w->h); break;
+        case PPK_FROM_ABS:     n4m_transform_from_absorbance_destroy((n4m_pp_from_absorbance_handle_t*)w->h); break;
+        case PPK_PCT_TO_FRAC:  n4m_transform_percent_to_fraction_destroy((n4m_pp_pct_to_frac_handle_t*)w->h); break;
+        case PPK_FRAC_TO_PCT:  n4m_transform_fraction_to_percent_destroy((n4m_pp_frac_to_pct_handle_t*)w->h); break;
+        case PPK_KUBELKA_MUNK: n4m_transform_kubelka_munk_destroy((n4m_pp_kubelka_munk_handle_t*)w->h); break;
         /* ---- A2c scatter / scaling / derivative ---- */
-        case PPK_RNV:             n4m_pp_rnv_destroy((n4m_pp_rnv_handle_t*)w->h); break;
-        case PPK_LSNV:            n4m_pp_lsnv_destroy((n4m_pp_lsnv_handle_t*)w->h); break;
-        case PPK_AREA:            n4m_pp_area_destroy((n4m_pp_area_handle_t*)w->h); break;
-        case PPK_NORRIS_WILLIAMS: n4m_pp_norris_williams_destroy((n4m_pp_norris_williams_handle_t*)w->h); break;
-        case PPK_LOG:             n4m_pp_log_destroy((n4m_pp_log_handle_t*)w->h); break;
-        case PPK_WAVELET_DENOISE: n4m_pp_wavelet_denoise_destroy((n4m_pp_wavelet_denoise_handle_t*)w->h); break;
+        case PPK_RNV:             n4m_transform_robust_snv_destroy((n4m_pp_rnv_handle_t*)w->h); break;
+        case PPK_LSNV:            n4m_transform_local_snv_destroy((n4m_pp_lsnv_handle_t*)w->h); break;
+        case PPK_AREA:            n4m_transform_area_normalization_destroy((n4m_pp_area_handle_t*)w->h); break;
+        case PPK_NORRIS_WILLIAMS: n4m_transform_norris_williams_destroy((n4m_pp_norris_williams_handle_t*)w->h); break;
+        case PPK_LOG:             n4m_transform_log_transform_destroy((n4m_pp_log_handle_t*)w->h); break;
+        case PPK_WAVELET_DENOISE: n4m_transform_wavelet_denoise_destroy((n4m_pp_wavelet_denoise_handle_t*)w->h); break;
         default: break;
     }
     free(w);
@@ -1464,34 +1464,34 @@ static n4m_status_t n4m_wasm_run_split_result(int kind, double test_size, unsign
     switch (kind) {
         case 0: { /* KennardStone */
             n4m_split_kennard_stone_handle_t* h = NULL;
-            s = n4m_split_kennard_stone_create(&h, test_size);
-            if (s == N4M_OK) s = n4m_split_kennard_stone_split(h, xv, out_res);
-            n4m_split_kennard_stone_destroy(h);
+            s = n4m_model_selection_kennard_stone_create(&h, test_size);
+            if (s == N4M_OK) s = n4m_model_selection_kennard_stone_split(h, xv, out_res);
+            n4m_model_selection_kennard_stone_destroy(h);
             break;
         }
         case 1: { /* SPXY (joint X-Y) */
             n4m_split_spxy_handle_t* h = NULL;
-            s = n4m_split_spxy_create(&h, test_size);
-            if (s == N4M_OK) s = n4m_split_spxy_split(h, xv, yv, out_res);
-            n4m_split_spxy_destroy(h);
+            s = n4m_model_selection_spxy_create(&h, test_size);
+            if (s == N4M_OK) s = n4m_model_selection_spxy_split(h, xv, yv, out_res);
+            n4m_model_selection_spxy_destroy(h);
             break;
         }
         case 2: { /* KMeans (k-means++) — p0 = max_iter */
             int max_iter = p0 > 0 ? p0 : 100;
             n4m_split_kmeans_handle_t* h = NULL;
-            s = n4m_split_kmeans_create(&h, test_size, (uint64_t)seed, max_iter);
-            if (s == N4M_OK) s = n4m_split_kmeans_split(h, xv, out_res);
-            n4m_split_kmeans_destroy(h);
+            s = n4m_model_selection_kmeans_create(&h, test_size, (uint64_t)seed, max_iter);
+            if (s == N4M_OK) s = n4m_model_selection_kmeans_split(h, xv, out_res);
+            n4m_model_selection_kmeans_destroy(h);
             break;
         }
         case 3: { /* KBinsStratified (Y) — p0 = n_bins, p1 = strategy */
             int n_bins = p0 > 1 ? p0 : 5;
             int strategy = p1; /* 0 uniform, 1 quantile */
             n4m_split_kbins_stratified_handle_t* h = NULL;
-            s = n4m_split_kbins_stratified_create(&h, test_size, (uint64_t)seed,
+            s = n4m_model_selection_kbins_stratified_create(&h, test_size, (uint64_t)seed,
                                                   n_bins, strategy);
-            if (s == N4M_OK) s = n4m_split_kbins_stratified_split(h, yv, out_res);
-            n4m_split_kbins_stratified_destroy(h);
+            if (s == N4M_OK) s = n4m_model_selection_kbins_stratified_split(h, yv, out_res);
+            n4m_model_selection_kbins_stratified_destroy(h);
             break;
         }
         default:

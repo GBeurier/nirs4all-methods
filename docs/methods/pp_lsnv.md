@@ -1,6 +1,6 @@
 # `pp_lsnv` — L S N V
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.LSNV` · _C ABI_: `n4m_pp_lsnv_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.LSNV` · _C ABI_: `n4m_transform_local_snv_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Sliding-window (local) SNV.
 
 ### Implementation
 
-C ABI `n4m_pp_lsnv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LSNV`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_local_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LSNV`. The same numerical kernel backs every language binding.
 
 ### Usage
 

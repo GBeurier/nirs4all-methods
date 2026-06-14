@@ -1,6 +1,6 @@
 # `filter_x_outlier` — X Outlier Filter
 
-_Group_: **Sample / feature filters** · _Binding_: `n4m.sklearn.XOutlierFilter` · _C ABI_: `n4m_filter_x_outlier_*`
+_Group_: **Sample / feature filters** · _Binding_: `n4m.sklearn.XOutlierFilter` · _C ABI_: `n4m_outlier_detection_x_outlier_*`
 
 ## Description
 
@@ -42,7 +42,7 @@ Multivariate outlier filter on the design matrix ``X``.
 
 ### Implementation
 
-C ABI `n4m_filter_x_outlier_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.XOutlierFilter`. The same numerical kernel backs every language binding.
+C ABI `n4m_outlier_detection_x_outlier_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.XOutlierFilter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

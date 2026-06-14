@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{shaving_select}
 \alias{shaving_select}
+\alias{n4m_feature_select_shaving}
 \title{Shaving selector.}
 \usage{
 shaving_select(

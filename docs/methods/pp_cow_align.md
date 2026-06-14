@@ -1,6 +1,6 @@
 # `pp_cow_align` — Correlation Optimized Warping
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.CorrelationOptimizedWarping` · _C ABI_: `n4m_pp_cow_align_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.CorrelationOptimizedWarping` · _C ABI_: `n4m_transform_cow_align_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Segment-wise correlation optimized warping approximation.
 
 ### Implementation
 
-C ABI `n4m_pp_cow_align_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.CorrelationOptimizedWarping`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_cow_align_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.CorrelationOptimizedWarping`. The same numerical kernel backs every language binding.
 
 ### Usage
 

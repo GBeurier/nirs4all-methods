@@ -1,6 +1,6 @@
 # `aug_spike_noise` — Spike Noise
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SpikeNoise` · _C ABI_: `n4m_aug_spike_noise_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SpikeNoise` · _C ABI_: `n4m_augmentation_spike_noise_*`
 
 ## Description
 
@@ -29,7 +29,7 @@ Inject random spike artifacts into spectra.
 
 ### Implementation
 
-C ABI `n4m_aug_spike_noise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SpikeNoise`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_spike_noise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SpikeNoise`. The same numerical kernel backs every language binding.
 
 ### Usage
 

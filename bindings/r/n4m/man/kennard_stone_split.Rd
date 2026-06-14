@@ -1,5 +1,6 @@
 \name{kennard_stone_split}
 \alias{kennard_stone_split}
+\alias{n4m_model_selection_kennard_stone}
 \title{Kennard-Stone train/test split}
 \usage{
 kennard_stone_split(X, test_size = 0.25, zero_based = FALSE)

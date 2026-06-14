@@ -1,6 +1,6 @@
 # `pp_second_derivative` — Second derivative
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SecondDerivative` · _C ABI_: `n4m_pp_second_derivative_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SecondDerivative` · _C ABI_: `n4m_transform_second_derivative_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Approximates $\mathrm{d}^2\mathbf{x}/\mathrm{d}\lambda^2$. The second derivative
 
 ### Implementation
 
-C ABI `n4m_pp_second_derivative_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SecondDerivative`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_second_derivative_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SecondDerivative`. The same numerical kernel backs every language binding.
 
 ### Usage
 

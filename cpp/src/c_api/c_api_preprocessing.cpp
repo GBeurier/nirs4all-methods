@@ -265,7 +265,7 @@ extern "C" {
 // SNV
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_snv_create(n4m_pp_snv_handle_t** out,
+N4M_API n4m_status_t n4m_transform_snv_create(n4m_pp_snv_handle_t** out,
                                         int with_mean, int with_std, int ddof) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -291,7 +291,7 @@ N4M_API n4m_status_t n4m_pp_snv_create(n4m_pp_snv_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_snv_destroy(n4m_pp_snv_handle_t* h) {
+N4M_API void n4m_transform_snv_destroy(n4m_pp_snv_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_snv_state_free(h->state);
@@ -301,7 +301,7 @@ N4M_API void n4m_pp_snv_destroy(n4m_pp_snv_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_snv_transform(const n4m_pp_snv_handle_t* h,
+N4M_API n4m_status_t n4m_transform_snv_transform(const n4m_pp_snv_handle_t* h,
                                            n4m_matrix_view_t X,
                                            n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -323,7 +323,7 @@ N4M_API n4m_status_t n4m_pp_snv_transform(const n4m_pp_snv_handle_t* h,
 // LocalSNV
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_lsnv_create(n4m_pp_lsnv_handle_t** out,
+N4M_API n4m_status_t n4m_transform_local_snv_create(n4m_pp_lsnv_handle_t** out,
                                         int32_t window, int32_t pad_mode,
                                         double constant_value) {
     if (out == nullptr) {
@@ -356,7 +356,7 @@ N4M_API n4m_status_t n4m_pp_lsnv_create(n4m_pp_lsnv_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_lsnv_destroy(n4m_pp_lsnv_handle_t* h) {
+N4M_API void n4m_transform_local_snv_destroy(n4m_pp_lsnv_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_lsnv_state_free(h->state);
@@ -366,7 +366,7 @@ N4M_API void n4m_pp_lsnv_destroy(n4m_pp_lsnv_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_lsnv_transform(const n4m_pp_lsnv_handle_t* h,
+N4M_API n4m_status_t n4m_transform_local_snv_transform(const n4m_pp_lsnv_handle_t* h,
                                             n4m_matrix_view_t X,
                                             n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -388,7 +388,7 @@ N4M_API n4m_status_t n4m_pp_lsnv_transform(const n4m_pp_lsnv_handle_t* h,
 // RobustSNV
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_rnv_create(n4m_pp_rnv_handle_t** out,
+N4M_API n4m_status_t n4m_transform_robust_snv_create(n4m_pp_rnv_handle_t** out,
                                         int with_center, int with_scale,
                                         double k) {
     if (out == nullptr) {
@@ -412,7 +412,7 @@ N4M_API n4m_status_t n4m_pp_rnv_create(n4m_pp_rnv_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_rnv_destroy(n4m_pp_rnv_handle_t* h) {
+N4M_API void n4m_transform_robust_snv_destroy(n4m_pp_rnv_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_rnv_state_free(h->state);
@@ -422,7 +422,7 @@ N4M_API void n4m_pp_rnv_destroy(n4m_pp_rnv_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_rnv_transform(const n4m_pp_rnv_handle_t* h,
+N4M_API n4m_status_t n4m_transform_robust_snv_transform(const n4m_pp_rnv_handle_t* h,
                                            n4m_matrix_view_t X,
                                            n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -449,7 +449,7 @@ N4M_API n4m_status_t n4m_pp_rnv_transform(const n4m_pp_rnv_handle_t* h,
 // AreaNormalization
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_area_create(n4m_pp_area_handle_t** out,
+N4M_API n4m_status_t n4m_transform_area_normalization_create(n4m_pp_area_handle_t** out,
                                          int32_t method) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -475,7 +475,7 @@ N4M_API n4m_status_t n4m_pp_area_create(n4m_pp_area_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_area_destroy(n4m_pp_area_handle_t* h) {
+N4M_API void n4m_transform_area_normalization_destroy(n4m_pp_area_handle_t* h) {
     if (h == nullptr) return;
     try {
         if (h->static_handle) return;
@@ -485,7 +485,7 @@ N4M_API void n4m_pp_area_destroy(n4m_pp_area_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_area_transform(const n4m_pp_area_handle_t* h,
+N4M_API n4m_status_t n4m_transform_area_normalization_transform(const n4m_pp_area_handle_t* h,
                                             n4m_matrix_view_t X,
                                             n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -512,7 +512,7 @@ N4M_API n4m_status_t n4m_pp_area_transform(const n4m_pp_area_handle_t* h,
 // Normalize
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_normalize_create(n4m_pp_normalize_handle_t** out,
+N4M_API n4m_status_t n4m_transform_normalize_create(n4m_pp_normalize_handle_t** out,
                                               double feature_min,
                                               double feature_max) {
     if (out == nullptr) {
@@ -537,7 +537,7 @@ N4M_API n4m_status_t n4m_pp_normalize_create(n4m_pp_normalize_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_normalize_destroy(n4m_pp_normalize_handle_t* h) {
+N4M_API void n4m_transform_normalize_destroy(n4m_pp_normalize_handle_t* h) {
     if (h == nullptr) return;
     try {
         if (h->static_handle) return;
@@ -547,7 +547,7 @@ N4M_API void n4m_pp_normalize_destroy(n4m_pp_normalize_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_normalize_transform(
+N4M_API n4m_status_t n4m_transform_normalize_transform(
     const n4m_pp_normalize_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -576,7 +576,7 @@ N4M_API n4m_status_t n4m_pp_normalize_transform(
 // SimpleScale
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_simple_scale_create(
+N4M_API n4m_status_t n4m_transform_simple_scale_create(
     n4m_pp_simple_scale_handle_t** out) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -590,7 +590,7 @@ N4M_API n4m_status_t n4m_pp_simple_scale_create(
     return N4M_OK;
 }
 
-N4M_API void n4m_pp_simple_scale_destroy(n4m_pp_simple_scale_handle_t* h) {
+N4M_API void n4m_transform_simple_scale_destroy(n4m_pp_simple_scale_handle_t* h) {
     if (h == nullptr) return;
     try {
         if (h->static_handle) return;
@@ -601,7 +601,7 @@ N4M_API void n4m_pp_simple_scale_destroy(n4m_pp_simple_scale_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_simple_scale_transform(
+N4M_API n4m_status_t n4m_transform_simple_scale_transform(
     const n4m_pp_simple_scale_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -624,7 +624,7 @@ N4M_API n4m_status_t n4m_pp_simple_scale_transform(
 // LogTransform
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_log_create(n4m_pp_log_handle_t** out,
+N4M_API n4m_status_t n4m_transform_log_transform_create(n4m_pp_log_handle_t** out,
                                         double base, double offset,
                                         int auto_offset, double min_value) {
     if (out == nullptr) {
@@ -658,7 +658,7 @@ N4M_API n4m_status_t n4m_pp_log_create(n4m_pp_log_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_log_destroy(n4m_pp_log_handle_t* h) {
+N4M_API void n4m_transform_log_transform_destroy(n4m_pp_log_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_log_state_free(h->state);
@@ -668,7 +668,7 @@ N4M_API void n4m_pp_log_destroy(n4m_pp_log_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_log_fit(n4m_pp_log_handle_t* h,
+N4M_API n4m_status_t n4m_transform_log_transform_fit(n4m_pp_log_handle_t* h,
                                      n4m_matrix_view_t X) {
     if (h == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -684,7 +684,7 @@ N4M_API n4m_status_t n4m_pp_log_fit(n4m_pp_log_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_log_is_fitted(const n4m_pp_log_handle_t* h,
+N4M_API n4m_status_t n4m_transform_log_transform_is_fitted(const n4m_pp_log_handle_t* h,
                                            int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -697,7 +697,7 @@ N4M_API n4m_status_t n4m_pp_log_is_fitted(const n4m_pp_log_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_log_transform(const n4m_pp_log_handle_t* h,
+N4M_API n4m_status_t n4m_transform_log_transform_transform(const n4m_pp_log_handle_t* h,
                                            n4m_matrix_view_t X,
                                            n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -724,7 +724,7 @@ N4M_API n4m_status_t n4m_pp_log_transform(const n4m_pp_log_handle_t* h,
 // MSC (Phase 3 stateful)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_msc_create(n4m_pp_msc_handle_t** out) {
+N4M_API n4m_status_t n4m_transform_msc_create(n4m_pp_msc_handle_t** out) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
     }
@@ -746,7 +746,7 @@ N4M_API n4m_status_t n4m_pp_msc_create(n4m_pp_msc_handle_t** out) {
     }
 }
 
-N4M_API void n4m_pp_msc_destroy(n4m_pp_msc_handle_t* h) {
+N4M_API void n4m_transform_msc_destroy(n4m_pp_msc_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_msc_state_free(h->state);
@@ -756,7 +756,7 @@ N4M_API void n4m_pp_msc_destroy(n4m_pp_msc_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_msc_fit(n4m_pp_msc_handle_t* h,
+N4M_API n4m_status_t n4m_transform_msc_fit(n4m_pp_msc_handle_t* h,
                                      n4m_matrix_view_t X) {
     if (h == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -772,7 +772,7 @@ N4M_API n4m_status_t n4m_pp_msc_fit(n4m_pp_msc_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_msc_transform(n4m_pp_msc_handle_t* h,
+N4M_API n4m_status_t n4m_transform_msc_transform(n4m_pp_msc_handle_t* h,
                                            n4m_matrix_view_t X,
                                            n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -795,7 +795,7 @@ N4M_API n4m_status_t n4m_pp_msc_transform(n4m_pp_msc_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_msc_inverse_transform(
+N4M_API n4m_status_t n4m_transform_msc_inverse_transform(
     const n4m_pp_msc_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -819,7 +819,7 @@ N4M_API n4m_status_t n4m_pp_msc_inverse_transform(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_msc_is_fitted(const n4m_pp_msc_handle_t* h,
+N4M_API n4m_status_t n4m_transform_msc_is_fitted(const n4m_pp_msc_handle_t* h,
                                            int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -836,7 +836,7 @@ N4M_API n4m_status_t n4m_pp_msc_is_fitted(const n4m_pp_msc_handle_t* h,
 // EMSC (Phase 3 stateful)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_emsc_create(n4m_pp_emsc_handle_t** out,
+N4M_API n4m_status_t n4m_transform_emsc_create(n4m_pp_emsc_handle_t** out,
                                          int32_t degree) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -862,7 +862,7 @@ N4M_API n4m_status_t n4m_pp_emsc_create(n4m_pp_emsc_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_emsc_destroy(n4m_pp_emsc_handle_t* h) {
+N4M_API void n4m_transform_emsc_destroy(n4m_pp_emsc_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_emsc_state_free(h->state);
@@ -872,7 +872,7 @@ N4M_API void n4m_pp_emsc_destroy(n4m_pp_emsc_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_emsc_fit(n4m_pp_emsc_handle_t* h,
+N4M_API n4m_status_t n4m_transform_emsc_fit(n4m_pp_emsc_handle_t* h,
                                       n4m_matrix_view_t X) {
     if (h == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -888,7 +888,7 @@ N4M_API n4m_status_t n4m_pp_emsc_fit(n4m_pp_emsc_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_emsc_transform(const n4m_pp_emsc_handle_t* h,
+N4M_API n4m_status_t n4m_transform_emsc_transform(const n4m_pp_emsc_handle_t* h,
                                             n4m_matrix_view_t X,
                                             n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -911,7 +911,7 @@ N4M_API n4m_status_t n4m_pp_emsc_transform(const n4m_pp_emsc_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_emsc_is_fitted(const n4m_pp_emsc_handle_t* h,
+N4M_API n4m_status_t n4m_transform_emsc_is_fitted(const n4m_pp_emsc_handle_t* h,
                                             int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -928,7 +928,7 @@ N4M_API n4m_status_t n4m_pp_emsc_is_fitted(const n4m_pp_emsc_handle_t* h,
 // Baseline (column-mean centering, Phase 3 stateful)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_baseline_create(n4m_pp_baseline_handle_t** out) {
+N4M_API n4m_status_t n4m_transform_baseline_center_create(n4m_pp_baseline_handle_t** out) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
     }
@@ -951,7 +951,7 @@ N4M_API n4m_status_t n4m_pp_baseline_create(n4m_pp_baseline_handle_t** out) {
     }
 }
 
-N4M_API void n4m_pp_baseline_destroy(n4m_pp_baseline_handle_t* h) {
+N4M_API void n4m_transform_baseline_center_destroy(n4m_pp_baseline_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_baseline_state_free(h->state);
@@ -961,7 +961,7 @@ N4M_API void n4m_pp_baseline_destroy(n4m_pp_baseline_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_baseline_fit(n4m_pp_baseline_handle_t* h,
+N4M_API n4m_status_t n4m_transform_baseline_center_fit(n4m_pp_baseline_handle_t* h,
                                           n4m_matrix_view_t X) {
     if (h == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -977,7 +977,7 @@ N4M_API n4m_status_t n4m_pp_baseline_fit(n4m_pp_baseline_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_baseline_transform(
+N4M_API n4m_status_t n4m_transform_baseline_center_transform(
     const n4m_pp_baseline_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1001,7 +1001,7 @@ N4M_API n4m_status_t n4m_pp_baseline_transform(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_baseline_inverse_transform(
+N4M_API n4m_status_t n4m_transform_baseline_center_inverse_transform(
     const n4m_pp_baseline_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1025,7 +1025,7 @@ N4M_API n4m_status_t n4m_pp_baseline_inverse_transform(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_baseline_is_fitted(
+N4M_API n4m_status_t n4m_transform_baseline_center_is_fitted(
     const n4m_pp_baseline_handle_t* h, int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -1042,7 +1042,7 @@ N4M_API n4m_status_t n4m_pp_baseline_is_fitted(
 // Derivate (Phase 3 stateful)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_derivate_create(n4m_pp_derivate_handle_t** out,
+N4M_API n4m_status_t n4m_transform_derivative_create(n4m_pp_derivate_handle_t** out,
                                              int32_t order, double delta) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -1069,7 +1069,7 @@ N4M_API n4m_status_t n4m_pp_derivate_create(n4m_pp_derivate_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_derivate_destroy(n4m_pp_derivate_handle_t* h) {
+N4M_API void n4m_transform_derivative_destroy(n4m_pp_derivate_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_derivate_state_free(h->state);
@@ -1079,7 +1079,7 @@ N4M_API void n4m_pp_derivate_destroy(n4m_pp_derivate_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_derivate_fit(n4m_pp_derivate_handle_t* h,
+N4M_API n4m_status_t n4m_transform_derivative_fit(n4m_pp_derivate_handle_t* h,
                                           n4m_matrix_view_t X) {
     if (h == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -1095,7 +1095,7 @@ N4M_API n4m_status_t n4m_pp_derivate_fit(n4m_pp_derivate_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_derivate_transform(
+N4M_API n4m_status_t n4m_transform_derivative_transform(
     const n4m_pp_derivate_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1119,7 +1119,7 @@ N4M_API n4m_status_t n4m_pp_derivate_transform(
     }
 }
 
-N4M_API int64_t n4m_pp_derivate_output_cols(int32_t order,
+N4M_API int64_t n4m_transform_derivative_output_cols(int32_t order,
                                               int64_t input_cols) {
     try {
         return n4m_pp_derivate_output_cols_helper(order, input_cols);
@@ -1132,7 +1132,7 @@ N4M_API int64_t n4m_pp_derivate_output_cols(int32_t order,
 // SavitzkyGolay (Phase 4 stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_savgol_create(n4m_pp_savgol_handle_t** out,
+N4M_API n4m_status_t n4m_transform_savitzky_golay_create(n4m_pp_savgol_handle_t** out,
                                            int32_t window_length,
                                            int32_t polyorder,
                                            int32_t deriv,
@@ -1182,7 +1182,7 @@ N4M_API n4m_status_t n4m_pp_savgol_create(n4m_pp_savgol_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_savgol_destroy(n4m_pp_savgol_handle_t* h) {
+N4M_API void n4m_transform_savitzky_golay_destroy(n4m_pp_savgol_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_savgol_state_free(h->state);
@@ -1192,7 +1192,7 @@ N4M_API void n4m_pp_savgol_destroy(n4m_pp_savgol_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_savgol_transform(const n4m_pp_savgol_handle_t* h,
+N4M_API n4m_status_t n4m_transform_savitzky_golay_transform(const n4m_pp_savgol_handle_t* h,
                                               n4m_matrix_view_t X,
                                               n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -1219,7 +1219,7 @@ N4M_API n4m_status_t n4m_pp_savgol_transform(const n4m_pp_savgol_handle_t* h,
 // FirstDerivative (Phase 4 stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_first_derivative_create(
+N4M_API n4m_status_t n4m_transform_first_derivative_create(
     n4m_pp_first_derivative_handle_t** out, double delta, int32_t edge_order) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -1250,7 +1250,7 @@ N4M_API n4m_status_t n4m_pp_first_derivative_create(
     }
 }
 
-N4M_API void n4m_pp_first_derivative_destroy(
+N4M_API void n4m_transform_first_derivative_destroy(
     n4m_pp_first_derivative_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -1261,7 +1261,7 @@ N4M_API void n4m_pp_first_derivative_destroy(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_first_derivative_transform(
+N4M_API n4m_status_t n4m_transform_first_derivative_transform(
     const n4m_pp_first_derivative_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1289,7 +1289,7 @@ N4M_API n4m_status_t n4m_pp_first_derivative_transform(
 // SecondDerivative (Phase 4 stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_second_derivative_create(
+N4M_API n4m_status_t n4m_transform_second_derivative_create(
     n4m_pp_second_derivative_handle_t** out, double delta, int32_t edge_order) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -1320,7 +1320,7 @@ N4M_API n4m_status_t n4m_pp_second_derivative_create(
     }
 }
 
-N4M_API void n4m_pp_second_derivative_destroy(
+N4M_API void n4m_transform_second_derivative_destroy(
     n4m_pp_second_derivative_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -1331,7 +1331,7 @@ N4M_API void n4m_pp_second_derivative_destroy(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_second_derivative_transform(
+N4M_API n4m_status_t n4m_transform_second_derivative_transform(
     const n4m_pp_second_derivative_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1359,7 +1359,7 @@ N4M_API n4m_status_t n4m_pp_second_derivative_transform(
 // NorrisWilliams (Phase 4 stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_norris_williams_create(
+N4M_API n4m_status_t n4m_transform_norris_williams_create(
     n4m_pp_norris_williams_handle_t** out,
     int32_t segment, int32_t gap, int32_t derivative_order, double delta) {
     if (out == nullptr) {
@@ -1397,7 +1397,7 @@ N4M_API n4m_status_t n4m_pp_norris_williams_create(
     }
 }
 
-N4M_API void n4m_pp_norris_williams_destroy(
+N4M_API void n4m_transform_norris_williams_destroy(
     n4m_pp_norris_williams_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -1408,7 +1408,7 @@ N4M_API void n4m_pp_norris_williams_destroy(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_norris_williams_transform(
+N4M_API n4m_status_t n4m_transform_norris_williams_transform(
     const n4m_pp_norris_williams_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1436,7 +1436,7 @@ N4M_API n4m_status_t n4m_pp_norris_williams_transform(
 // Gaussian (Phase 4 stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_gaussian_create(
+N4M_API n4m_status_t n4m_transform_gaussian_create(
     n4m_pp_gaussian_handle_t** out,
     double sigma, int32_t order,
     n4m_pp_gaussian_mode_t mode,
@@ -1480,7 +1480,7 @@ N4M_API n4m_status_t n4m_pp_gaussian_create(
     }
 }
 
-N4M_API void n4m_pp_gaussian_destroy(n4m_pp_gaussian_handle_t* h) {
+N4M_API void n4m_transform_gaussian_destroy(n4m_pp_gaussian_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_gaussian_state_free(h->state);
@@ -1490,7 +1490,7 @@ N4M_API void n4m_pp_gaussian_destroy(n4m_pp_gaussian_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_gaussian_transform(
+N4M_API n4m_status_t n4m_transform_gaussian_transform(
     const n4m_pp_gaussian_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1518,7 +1518,7 @@ N4M_API n4m_status_t n4m_pp_gaussian_transform(
 // Detrend (Phase 5a stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_detrend_create(n4m_pp_detrend_handle_t** out,
+N4M_API n4m_status_t n4m_transform_detrend_create(n4m_pp_detrend_handle_t** out,
                                             int32_t polyorder) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -1545,7 +1545,7 @@ N4M_API n4m_status_t n4m_pp_detrend_create(n4m_pp_detrend_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_detrend_destroy(n4m_pp_detrend_handle_t* h) {
+N4M_API void n4m_transform_detrend_destroy(n4m_pp_detrend_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_detrend_state_free(h->state);
@@ -1555,7 +1555,7 @@ N4M_API void n4m_pp_detrend_destroy(n4m_pp_detrend_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_detrend_transform(
+N4M_API n4m_status_t n4m_transform_detrend_transform(
     const n4m_pp_detrend_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1583,7 +1583,7 @@ N4M_API n4m_status_t n4m_pp_detrend_transform(
 // AsLS (Phase 5a stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_asls_create(n4m_pp_asls_handle_t** out,
+N4M_API n4m_status_t n4m_transform_asls_create(n4m_pp_asls_handle_t** out,
                                          double lam, double p,
                                          int32_t max_iter, double tol) {
     if (out == nullptr) {
@@ -1613,7 +1613,7 @@ N4M_API n4m_status_t n4m_pp_asls_create(n4m_pp_asls_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_asls_destroy(n4m_pp_asls_handle_t* h) {
+N4M_API void n4m_transform_asls_destroy(n4m_pp_asls_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_asls_state_free(h->state);
@@ -1623,7 +1623,7 @@ N4M_API void n4m_pp_asls_destroy(n4m_pp_asls_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_asls_transform(const n4m_pp_asls_handle_t* h,
+N4M_API n4m_status_t n4m_transform_asls_transform(const n4m_pp_asls_handle_t* h,
                                             n4m_matrix_view_t X,
                                             n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -1650,7 +1650,7 @@ N4M_API n4m_status_t n4m_pp_asls_transform(const n4m_pp_asls_handle_t* h,
 // AirPLS (Phase 5a stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_airpls_create(n4m_pp_airpls_handle_t** out,
+N4M_API n4m_status_t n4m_transform_airpls_create(n4m_pp_airpls_handle_t** out,
                                            double lam,
                                            int32_t max_iter, double tol) {
     if (out == nullptr) {
@@ -1679,7 +1679,7 @@ N4M_API n4m_status_t n4m_pp_airpls_create(n4m_pp_airpls_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_airpls_destroy(n4m_pp_airpls_handle_t* h) {
+N4M_API void n4m_transform_airpls_destroy(n4m_pp_airpls_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_airpls_state_free(h->state);
@@ -1689,7 +1689,7 @@ N4M_API void n4m_pp_airpls_destroy(n4m_pp_airpls_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_airpls_transform(
+N4M_API n4m_status_t n4m_transform_airpls_transform(
     const n4m_pp_airpls_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1717,7 +1717,7 @@ N4M_API n4m_status_t n4m_pp_airpls_transform(
 // ArPLS (Phase 5a stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_arpls_create(n4m_pp_arpls_handle_t** out,
+N4M_API n4m_status_t n4m_transform_arpls_create(n4m_pp_arpls_handle_t** out,
                                           double lam,
                                           int32_t max_iter, double tol) {
     if (out == nullptr) {
@@ -1746,7 +1746,7 @@ N4M_API n4m_status_t n4m_pp_arpls_create(n4m_pp_arpls_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_arpls_destroy(n4m_pp_arpls_handle_t* h) {
+N4M_API void n4m_transform_arpls_destroy(n4m_pp_arpls_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_arpls_state_free(h->state);
@@ -1756,7 +1756,7 @@ N4M_API void n4m_pp_arpls_destroy(n4m_pp_arpls_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_arpls_transform(const n4m_pp_arpls_handle_t* h,
+N4M_API n4m_status_t n4m_transform_arpls_transform(const n4m_pp_arpls_handle_t* h,
                                              n4m_matrix_view_t X,
                                              n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -1783,7 +1783,7 @@ N4M_API n4m_status_t n4m_pp_arpls_transform(const n4m_pp_arpls_handle_t* h,
 // ModPoly (Phase 5b stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_modpoly_create(n4m_pp_modpoly_handle_t** out,
+N4M_API n4m_status_t n4m_transform_modpoly_create(n4m_pp_modpoly_handle_t** out,
                                             int32_t polyorder,
                                             int32_t max_iter, double tol) {
     if (out == nullptr) {
@@ -1812,7 +1812,7 @@ N4M_API n4m_status_t n4m_pp_modpoly_create(n4m_pp_modpoly_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_modpoly_destroy(n4m_pp_modpoly_handle_t* h) {
+N4M_API void n4m_transform_modpoly_destroy(n4m_pp_modpoly_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_modpoly_state_free(h->state);
@@ -1822,7 +1822,7 @@ N4M_API void n4m_pp_modpoly_destroy(n4m_pp_modpoly_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_modpoly_transform(const n4m_pp_modpoly_handle_t* h,
+N4M_API n4m_status_t n4m_transform_modpoly_transform(const n4m_pp_modpoly_handle_t* h,
                                                n4m_matrix_view_t X,
                                                n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -1849,7 +1849,7 @@ N4M_API n4m_status_t n4m_pp_modpoly_transform(const n4m_pp_modpoly_handle_t* h,
 // IModPoly (Phase 5b stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_imodpoly_create(n4m_pp_imodpoly_handle_t** out,
+N4M_API n4m_status_t n4m_transform_imodpoly_create(n4m_pp_imodpoly_handle_t** out,
                                              int32_t polyorder,
                                              int32_t max_iter, double tol) {
     if (out == nullptr) {
@@ -1878,7 +1878,7 @@ N4M_API n4m_status_t n4m_pp_imodpoly_create(n4m_pp_imodpoly_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_imodpoly_destroy(n4m_pp_imodpoly_handle_t* h) {
+N4M_API void n4m_transform_imodpoly_destroy(n4m_pp_imodpoly_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_imodpoly_state_free(h->state);
@@ -1888,7 +1888,7 @@ N4M_API void n4m_pp_imodpoly_destroy(n4m_pp_imodpoly_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_imodpoly_transform(
+N4M_API n4m_status_t n4m_transform_imodpoly_transform(
     const n4m_pp_imodpoly_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -1916,7 +1916,7 @@ N4M_API n4m_status_t n4m_pp_imodpoly_transform(
 // SNIP (Phase 5b stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_snip_create(n4m_pp_snip_handle_t** out,
+N4M_API n4m_status_t n4m_transform_snip_create(n4m_pp_snip_handle_t** out,
                                          int32_t max_half_window) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -1943,7 +1943,7 @@ N4M_API n4m_status_t n4m_pp_snip_create(n4m_pp_snip_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_snip_destroy(n4m_pp_snip_handle_t* h) {
+N4M_API void n4m_transform_snip_destroy(n4m_pp_snip_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_snip_state_free(h->state);
@@ -1953,7 +1953,7 @@ N4M_API void n4m_pp_snip_destroy(n4m_pp_snip_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_snip_transform(const n4m_pp_snip_handle_t* h,
+N4M_API n4m_status_t n4m_transform_snip_transform(const n4m_pp_snip_handle_t* h,
                                             n4m_matrix_view_t X,
                                             n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -1980,7 +1980,7 @@ N4M_API n4m_status_t n4m_pp_snip_transform(const n4m_pp_snip_handle_t* h,
 // RollingBall (Phase 5b stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_rolling_ball_create(
+N4M_API n4m_status_t n4m_transform_rolling_ball_create(
     n4m_pp_rolling_ball_handle_t** out,
     int32_t half_window, int32_t smooth_half_window) {
     if (out == nullptr) {
@@ -2009,7 +2009,7 @@ N4M_API n4m_status_t n4m_pp_rolling_ball_create(
     }
 }
 
-N4M_API void n4m_pp_rolling_ball_destroy(n4m_pp_rolling_ball_handle_t* h) {
+N4M_API void n4m_transform_rolling_ball_destroy(n4m_pp_rolling_ball_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_rolling_ball_state_free(h->state);
@@ -2019,7 +2019,7 @@ N4M_API void n4m_pp_rolling_ball_destroy(n4m_pp_rolling_ball_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_rolling_ball_transform(
+N4M_API n4m_status_t n4m_transform_rolling_ball_transform(
     const n4m_pp_rolling_ball_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -2047,15 +2047,15 @@ N4M_API n4m_status_t n4m_pp_rolling_ball_transform(
 // IAsLS (Phase 5b stateless)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_iasls_create(n4m_pp_iasls_handle_t** out,
+N4M_API n4m_status_t n4m_transform_iasls_create(n4m_pp_iasls_handle_t** out,
                                           double lam, double p,
                                           int32_t polyorder,
                                           int32_t max_iter, double tol) {
-    return n4m_pp_iasls_create_ex(out, lam, p, 1e-4, polyorder, 2,
+    return n4m_transform_iasls_create_ex(out, lam, p, 1e-4, polyorder, 2,
                                    max_iter, tol);
 }
 
-N4M_API n4m_status_t n4m_pp_iasls_create_ex(n4m_pp_iasls_handle_t** out,
+N4M_API n4m_status_t n4m_transform_iasls_create_ex(n4m_pp_iasls_handle_t** out,
                                              double lam, double p,
                                              double lam_1,
                                              int32_t polyorder,
@@ -2091,7 +2091,7 @@ N4M_API n4m_status_t n4m_pp_iasls_create_ex(n4m_pp_iasls_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_iasls_destroy(n4m_pp_iasls_handle_t* h) {
+N4M_API void n4m_transform_iasls_destroy(n4m_pp_iasls_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_iasls_state_free(h->state);
@@ -2101,7 +2101,7 @@ N4M_API void n4m_pp_iasls_destroy(n4m_pp_iasls_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_iasls_transform(const n4m_pp_iasls_handle_t* h,
+N4M_API n4m_status_t n4m_transform_iasls_transform(const n4m_pp_iasls_handle_t* h,
                                              n4m_matrix_view_t X,
                                              n4m_matrix_view_t out) {
     if (h == nullptr) {
@@ -2128,7 +2128,7 @@ N4M_API n4m_status_t n4m_pp_iasls_transform(const n4m_pp_iasls_handle_t* h,
 // BEADS (Phase 5b stateless, pybaselines-compatible full banded variant)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_beads_create(n4m_pp_beads_handle_t** out,
+N4M_API n4m_status_t n4m_transform_beads_create(n4m_pp_beads_handle_t** out,
                                           double lam_0, double lam_1,
                                           double lam_2,
                                           int32_t max_iter, double tol) {
@@ -2159,7 +2159,7 @@ N4M_API n4m_status_t n4m_pp_beads_create(n4m_pp_beads_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_beads_destroy(n4m_pp_beads_handle_t* h) {
+N4M_API void n4m_transform_beads_destroy(n4m_pp_beads_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_beads_state_free(h->state);
@@ -2169,7 +2169,7 @@ N4M_API void n4m_pp_beads_destroy(n4m_pp_beads_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_beads_transform(const n4m_pp_beads_handle_t* h,
+N4M_API n4m_status_t n4m_transform_beads_transform(const n4m_pp_beads_handle_t* h,
                                              n4m_matrix_view_t X,
                                              n4m_matrix_view_t out) {
     if (h == nullptr) {

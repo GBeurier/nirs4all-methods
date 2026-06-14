@@ -1,6 +1,6 @@
 # `pp_range_disc` — Range Discretizer
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.RangeDiscretizer` · _C ABI_: `n4m_pp_range_disc_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.RangeDiscretizer` · _C ABI_: `n4m_transform_range_discretizer_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Integer binning against monotonic numeric edges.
 
 ### Implementation
 
-C ABI `n4m_pp_range_disc_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RangeDiscretizer`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_range_discretizer_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RangeDiscretizer`. The same numerical kernel backs every language binding.
 
 ### Usage
 

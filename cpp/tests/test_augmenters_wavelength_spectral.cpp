@@ -87,19 +87,19 @@ void test_wavelength_shift_smoke() {
     };
     double Y[8 * 4];
     n4m_aug_wavelength_shift_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_wavelength_shift_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_wavelength_shift_create(
         &h, rng, -1.0, 1.0, nullptr, 0) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 8);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 8);
-    N4M_TEST_REQUIRE(n4m_aug_wavelength_shift_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_wavelength_shift_destroy(h);
-    n4m_aug_wavelength_shift_destroy(nullptr);
+    N4M_TEST_REQUIRE(n4m_augmentation_wavelength_shift_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_wavelength_shift_destroy(h);
+    n4m_augmentation_wavelength_shift_destroy(nullptr);
 
     // Invalid: NULL RNG.
-    N4M_TEST_REQUIRE(n4m_aug_wavelength_shift_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_wavelength_shift_create(
         &h, nullptr, 0.0, 1.0, nullptr, 0) == N4M_ERR_NULL_POINTER);
     // Invalid: shift_hi < shift_lo.
-    N4M_TEST_REQUIRE(n4m_aug_wavelength_shift_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_wavelength_shift_create(
         &h, rng, 2.0, 1.0, nullptr, 0) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -113,15 +113,15 @@ void test_wavelength_stretch_smoke() {
                       4.5, 3.5, 2.5, 1.5 };
     double Y[16];
     n4m_aug_wavelength_stretch_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_wavelength_stretch_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_wavelength_stretch_create(
         &h, rng, 0.95, 1.05, nullptr, 0) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 4);
-    N4M_TEST_REQUIRE(n4m_aug_wavelength_stretch_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_wavelength_stretch_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_wavelength_stretch_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_wavelength_stretch_destroy(h);
 
     // stretch_lo <= 0 rejected.
-    N4M_TEST_REQUIRE(n4m_aug_wavelength_stretch_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_wavelength_stretch_create(
         &h, rng, 0.0, 1.0, nullptr, 0) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -135,15 +135,15 @@ void test_local_warp_smoke() {
                       1.1, 0.9, 0.7, 0.5 };
     double Y[16];
     n4m_aug_local_warp_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_local_warp_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_local_warp_create(
         &h, rng, 5, 0.5, nullptr, 0) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 4);
-    N4M_TEST_REQUIRE(n4m_aug_local_warp_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_local_warp_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_local_warp_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_local_warp_destroy(h);
 
     // n_control_points < 2 rejected.
-    N4M_TEST_REQUIRE(n4m_aug_local_warp_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_local_warp_create(
         &h, rng, 1, 0.5, nullptr, 0) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -157,15 +157,15 @@ void test_band_perturb_smoke() {
                       4.5, 3.5, 2.5, 1.5 };
     double Y[16];
     n4m_aug_band_perturb_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_band_perturb_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_band_perturb_create(
         &h, rng, 2, 1, 3, 0.9, 1.1, -0.1, 0.1) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 4);
-    N4M_TEST_REQUIRE(n4m_aug_band_perturb_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_band_perturb_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_band_perturb_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_band_perturb_destroy(h);
 
     // bw_hi <= bw_lo rejected.
-    N4M_TEST_REQUIRE(n4m_aug_band_perturb_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_band_perturb_create(
         &h, rng, 2, 5, 5, 0.9, 1.1, -0.1, 0.1) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -179,15 +179,15 @@ void test_band_mask_smoke() {
                       4.5, 3.5, 2.5, 1.5 };
     double Y[16];
     n4m_aug_band_mask_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_band_mask_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_band_mask_create(
         &h, rng, 1, 2, 1, 3, /*mode=zero*/0) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 4);
-    N4M_TEST_REQUIRE(n4m_aug_band_mask_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_band_mask_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_band_mask_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_band_mask_destroy(h);
 
     // Invalid mode rejected.
-    N4M_TEST_REQUIRE(n4m_aug_band_mask_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_band_mask_create(
         &h, rng, 1, 2, 1, 3, /*mode=*/99) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -201,15 +201,15 @@ void test_channel_dropout_smoke() {
                       4.5, 3.5, 2.5, 1.5 };
     double Y[16];
     n4m_aug_channel_dropout_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_channel_dropout_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_channel_dropout_create(
         &h, rng, 0.2, /*mode=interp*/1) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 4);
-    N4M_TEST_REQUIRE(n4m_aug_channel_dropout_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_channel_dropout_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_channel_dropout_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_channel_dropout_destroy(h);
 
     // Probability out of range rejected.
-    N4M_TEST_REQUIRE(n4m_aug_channel_dropout_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_channel_dropout_create(
         &h, rng, 1.5, 0) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -223,15 +223,15 @@ void test_gauss_jitter_smoke() {
                       4.5, 3.5, 2.5, 1.5 };
     double Y[16];
     n4m_aug_gauss_jitter_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_gauss_jitter_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_gauss_jitter_create(
         &h, rng, 0.5, 1.5, /*kernel_width=*/5) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 4);
-    N4M_TEST_REQUIRE(n4m_aug_gauss_jitter_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_gauss_jitter_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_gauss_jitter_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_gauss_jitter_destroy(h);
 
     // sigma_lo <= 0 rejected.
-    N4M_TEST_REQUIRE(n4m_aug_gauss_jitter_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_gauss_jitter_create(
         &h, rng, 0.0, 1.0, 5) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -245,15 +245,15 @@ void test_unsharp_mask_smoke() {
                       4.5, 3.5, 2.5, 1.5 };
     double Y[16];
     n4m_aug_unsharp_mask_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_unsharp_mask_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_unsharp_mask_create(
         &h, rng, 0.1, 0.5, 1.0, 5) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 4);
-    N4M_TEST_REQUIRE(n4m_aug_unsharp_mask_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_unsharp_mask_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_unsharp_mask_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_unsharp_mask_destroy(h);
 
     // sigma <= 0 rejected.
-    N4M_TEST_REQUIRE(n4m_aug_unsharp_mask_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_unsharp_mask_create(
         &h, rng, 0.1, 0.5, 0.0, 5) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -267,15 +267,15 @@ void test_magnitude_warp_smoke() {
                       4.5, 3.5, 2.5, 1.5 };
     double Y[16];
     n4m_aug_magnitude_warp_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_magnitude_warp_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_magnitude_warp_create(
         &h, rng, 3, 0.9, 1.1, nullptr, 0) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 4);
-    N4M_TEST_REQUIRE(n4m_aug_magnitude_warp_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_magnitude_warp_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_magnitude_warp_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_magnitude_warp_destroy(h);
 
     // n_control_points < 2 rejected.
-    N4M_TEST_REQUIRE(n4m_aug_magnitude_warp_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_magnitude_warp_create(
         &h, rng, 1, 0.9, 1.1, nullptr, 0) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -289,15 +289,15 @@ void test_local_clip_smoke() {
                       4.5, 3.5, 2.5, 1.5 };
     double Y[16];
     n4m_aug_local_clip_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_local_clip_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_local_clip_create(
         &h, rng, 1, 1, 3) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 4, 4);
-    N4M_TEST_REQUIRE(n4m_aug_local_clip_apply(h, Xv, Yv) == N4M_OK);
-    n4m_aug_local_clip_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_local_clip_apply(h, Xv, Yv) == N4M_OK);
+    n4m_augmentation_local_clip_destroy(h);
 
     // width_hi <= width_lo rejected.
-    N4M_TEST_REQUIRE(n4m_aug_local_clip_create(
+    N4M_TEST_REQUIRE(n4m_augmentation_local_clip_create(
         &h, rng, 1, 5, 5) == N4M_ERR_INVALID_ARGUMENT);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -339,11 +339,11 @@ void verify_wavelength_shift_parity() {
             const double lo = params_get_double(params, "shift_lo", -1.0);
             const double hi = params_get_double(params, "shift_hi",  1.0);
             n4m_aug_wavelength_shift_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_wavelength_shift_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_wavelength_shift_create(
                 &h, rng, lo, hi, nullptr, 0) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_wavelength_shift_apply(h, X, out)
+            N4M_TEST_REQUIRE(n4m_augmentation_wavelength_shift_apply(h, X, out)
                              == N4M_OK);
-            n4m_aug_wavelength_shift_destroy(h);
+            n4m_augmentation_wavelength_shift_destroy(h);
         });
 }
 
@@ -356,11 +356,11 @@ void verify_wavelength_stretch_parity() {
             const double lo = params_get_double(params, "stretch_lo", 0.95);
             const double hi = params_get_double(params, "stretch_hi", 1.05);
             n4m_aug_wavelength_stretch_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_wavelength_stretch_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_wavelength_stretch_create(
                 &h, rng, lo, hi, nullptr, 0) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_wavelength_stretch_apply(h, X, out)
+            N4M_TEST_REQUIRE(n4m_augmentation_wavelength_stretch_apply(h, X, out)
                              == N4M_OK);
-            n4m_aug_wavelength_stretch_destroy(h);
+            n4m_augmentation_wavelength_stretch_destroy(h);
         });
 }
 
@@ -374,10 +374,10 @@ void verify_local_warp_parity() {
                 params_get_int(params, "n_control_points", 5));
             const double ms = params_get_double(params, "max_shift", 1.0);
             n4m_aug_local_warp_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_local_warp_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_local_warp_create(
                 &h, rng, k, ms, nullptr, 0) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_local_warp_apply(h, X, out) == N4M_OK);
-            n4m_aug_local_warp_destroy(h);
+            N4M_TEST_REQUIRE(n4m_augmentation_local_warp_apply(h, X, out) == N4M_OK);
+            n4m_augmentation_local_warp_destroy(h);
         });
 }
 
@@ -398,10 +398,10 @@ void verify_band_perturb_parity() {
             const double o_lo = params_get_double(params, "offset_lo", -0.01);
             const double o_hi = params_get_double(params, "offset_hi",  0.01);
             n4m_aug_band_perturb_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_band_perturb_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_band_perturb_create(
                 &h, rng, nb, bw_lo, bw_hi, g_lo, g_hi, o_lo, o_hi) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_band_perturb_apply(h, X, out) == N4M_OK);
-            n4m_aug_band_perturb_destroy(h);
+            N4M_TEST_REQUIRE(n4m_augmentation_band_perturb_apply(h, X, out) == N4M_OK);
+            n4m_augmentation_band_perturb_destroy(h);
         });
 }
 
@@ -423,10 +423,10 @@ void verify_band_mask_parity() {
                                                         "zero");
             const std::int32_t mode_id = (mode == "interp") ? 1 : 0;
             n4m_aug_band_mask_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_band_mask_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_band_mask_create(
                 &h, rng, nb_lo, nb_hi, bw_lo, bw_hi, mode_id) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_band_mask_apply(h, X, out) == N4M_OK);
-            n4m_aug_band_mask_destroy(h);
+            N4M_TEST_REQUIRE(n4m_augmentation_band_mask_apply(h, X, out) == N4M_OK);
+            n4m_augmentation_band_mask_destroy(h);
         });
 }
 
@@ -440,11 +440,11 @@ void verify_channel_dropout_parity() {
             const std::string mode = params_get_string(params, "mode", "zero");
             const std::int32_t mode_id = (mode == "interp") ? 1 : 0;
             n4m_aug_channel_dropout_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_channel_dropout_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_channel_dropout_create(
                 &h, rng, p, mode_id) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_channel_dropout_apply(h, X, out)
+            N4M_TEST_REQUIRE(n4m_augmentation_channel_dropout_apply(h, X, out)
                              == N4M_OK);
-            n4m_aug_channel_dropout_destroy(h);
+            n4m_augmentation_channel_dropout_destroy(h);
         });
 }
 
@@ -459,11 +459,11 @@ void verify_gauss_jitter_parity() {
             const std::int32_t w = static_cast<std::int32_t>(
                 params_get_int(params, "kernel_width", 9));
             n4m_aug_gauss_jitter_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_gauss_jitter_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_gauss_jitter_create(
                 &h, rng, lo, hi, w) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_gauss_jitter_apply(h, X, out)
+            N4M_TEST_REQUIRE(n4m_augmentation_gauss_jitter_apply(h, X, out)
                              == N4M_OK);
-            n4m_aug_gauss_jitter_destroy(h);
+            n4m_augmentation_gauss_jitter_destroy(h);
         });
 }
 
@@ -479,11 +479,11 @@ void verify_unsharp_mask_parity() {
             const std::int32_t w = static_cast<std::int32_t>(
                 params_get_int(params, "kernel_width", 11));
             n4m_aug_unsharp_mask_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_unsharp_mask_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_unsharp_mask_create(
                 &h, rng, a_lo, a_hi, sg, w) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_unsharp_mask_apply(h, X, out)
+            N4M_TEST_REQUIRE(n4m_augmentation_unsharp_mask_apply(h, X, out)
                              == N4M_OK);
-            n4m_aug_unsharp_mask_destroy(h);
+            n4m_augmentation_unsharp_mask_destroy(h);
         });
 }
 
@@ -498,11 +498,11 @@ void verify_magnitude_warp_parity() {
             const double g_lo = params_get_double(params, "gain_lo", 0.9);
             const double g_hi = params_get_double(params, "gain_hi", 1.1);
             n4m_aug_magnitude_warp_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_magnitude_warp_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_magnitude_warp_create(
                 &h, rng, k, g_lo, g_hi, nullptr, 0) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_magnitude_warp_apply(h, X, out)
+            N4M_TEST_REQUIRE(n4m_augmentation_magnitude_warp_apply(h, X, out)
                              == N4M_OK);
-            n4m_aug_magnitude_warp_destroy(h);
+            n4m_augmentation_magnitude_warp_destroy(h);
         });
 }
 
@@ -519,11 +519,11 @@ void verify_local_clip_parity() {
             const std::int32_t w_hi = static_cast<std::int32_t>(
                 params_get_int(params, "width_hi", 15));
             n4m_aug_local_clip_handle_t* h = nullptr;
-            N4M_TEST_REQUIRE(n4m_aug_local_clip_create(
+            N4M_TEST_REQUIRE(n4m_augmentation_local_clip_create(
                 &h, rng, nr, w_lo, w_hi) == N4M_OK);
-            N4M_TEST_REQUIRE(n4m_aug_local_clip_apply(h, X, out)
+            N4M_TEST_REQUIRE(n4m_augmentation_local_clip_apply(h, X, out)
                              == N4M_OK);
-            n4m_aug_local_clip_destroy(h);
+            n4m_augmentation_local_clip_destroy(h);
         });
 }
 

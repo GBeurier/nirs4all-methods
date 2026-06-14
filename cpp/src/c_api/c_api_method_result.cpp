@@ -713,7 +713,7 @@ N4M_API n4m_status_t n4m_method_result_get_scalar(
 
 /* ---- moment substrate ---- */
 
-N4M_API n4m_status_t n4m_moments_compute(
+N4M_API n4m_status_t n4m_lowlevel_moments_compute(
     n4m_context_t* ctx,
     const n4m_matrix_view_t* X,
     const n4m_matrix_view_t* Y,
@@ -721,7 +721,7 @@ N4M_API n4m_status_t n4m_moments_compute(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_moments_compute");
+        set_error(ctx, "null pointer in n4m_lowlevel_moments_compute");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -735,18 +735,18 @@ N4M_API n4m_status_t n4m_moments_compute(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_moments_compute");
+        set_error(ctx, "out of memory in n4m_lowlevel_moments_compute");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_moments_compute");
+        set_error(ctx, "internal error in n4m_lowlevel_moments_compute");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_moments_subset_compute(
+N4M_API n4m_status_t n4m_lowlevel_moments_subset_compute(
     n4m_context_t* ctx,
     const n4m_matrix_view_t* X,
     const n4m_matrix_view_t* Y,
@@ -756,7 +756,7 @@ N4M_API n4m_status_t n4m_moments_subset_compute(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_moments_subset_compute");
+        set_error(ctx, "null pointer in n4m_lowlevel_moments_subset_compute");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -770,18 +770,18 @@ N4M_API n4m_status_t n4m_moments_subset_compute(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_moments_subset_compute");
+        set_error(ctx, "out of memory in n4m_lowlevel_moments_subset_compute");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_moments_subset_compute");
+        set_error(ctx, "internal error in n4m_lowlevel_moments_subset_compute");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_moments_subtract(
+N4M_API n4m_status_t n4m_lowlevel_moments_subtract(
     n4m_context_t* ctx,
     const n4m_method_result_t* lhs,
     const n4m_method_result_t* rhs,
@@ -789,7 +789,7 @@ N4M_API n4m_status_t n4m_moments_subtract(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || lhs == nullptr || rhs == nullptr) {
-        set_error(ctx, "null pointer in n4m_moments_subtract");
+        set_error(ctx, "null pointer in n4m_lowlevel_moments_subtract");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -810,18 +810,18 @@ N4M_API n4m_status_t n4m_moments_subtract(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_moments_subtract");
+        set_error(ctx, "out of memory in n4m_lowlevel_moments_subtract");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_moments_subtract");
+        set_error(ctx, "internal error in n4m_lowlevel_moments_subtract");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_sweep_run(
+N4M_API n4m_status_t n4m_model_selection_sweep_run(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -838,7 +838,7 @@ N4M_API n4m_status_t n4m_sweep_run(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_sweep_run");
+        set_error(ctx, "null pointer in n4m_model_selection_sweep_run");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -854,18 +854,18 @@ N4M_API n4m_status_t n4m_sweep_run(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_sweep_run");
+        set_error(ctx, "out of memory in n4m_model_selection_sweep_run");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_sweep_run");
+        set_error(ctx, "internal error in n4m_model_selection_sweep_run");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_aom_sweep_run(
+N4M_API n4m_status_t n4m_model_selection_aom_sweep_run(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -883,7 +883,7 @@ N4M_API n4m_status_t n4m_aom_sweep_run(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_aom_sweep_run");
+        set_error(ctx, "null pointer in n4m_model_selection_aom_sweep_run");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -899,18 +899,18 @@ N4M_API n4m_status_t n4m_aom_sweep_run(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_aom_sweep_run");
+        set_error(ctx, "out of memory in n4m_model_selection_aom_sweep_run");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_aom_sweep_run");
+        set_error(ctx, "internal error in n4m_model_selection_aom_sweep_run");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_aom_chain_sweep_run(
+N4M_API n4m_status_t n4m_model_selection_aom_chain_sweep_run(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -935,7 +935,7 @@ N4M_API n4m_status_t n4m_aom_chain_sweep_run(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_aom_chain_sweep_run");
+        set_error(ctx, "null pointer in n4m_model_selection_aom_chain_sweep_run");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -953,18 +953,18 @@ N4M_API n4m_status_t n4m_aom_chain_sweep_run(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_aom_chain_sweep_run");
+        set_error(ctx, "out of memory in n4m_model_selection_aom_chain_sweep_run");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_aom_chain_sweep_run");
+        set_error(ctx, "internal error in n4m_model_selection_aom_chain_sweep_run");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_aom_chain_fixed_fit_run(
+N4M_API n4m_status_t n4m_model_selection_aom_chain_fixed_fit_run(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -983,7 +983,7 @@ N4M_API n4m_status_t n4m_aom_chain_fixed_fit_run(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_aom_chain_fixed_fit_run");
+        set_error(ctx, "null pointer in n4m_model_selection_aom_chain_fixed_fit_run");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1000,18 +1000,18 @@ N4M_API n4m_status_t n4m_aom_chain_fixed_fit_run(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_aom_chain_fixed_fit_run");
+        set_error(ctx, "out of memory in n4m_model_selection_aom_chain_fixed_fit_run");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_aom_chain_fixed_fit_run");
+        set_error(ctx, "internal error in n4m_model_selection_aom_chain_fixed_fit_run");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_aom_ridge_blender_fit(
+N4M_API n4m_status_t n4m_ensemble_aom_ridge_blender_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1027,7 +1027,7 @@ N4M_API n4m_status_t n4m_aom_ridge_blender_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_aom_ridge_blender_fit");
+        set_error(ctx, "null pointer in n4m_ensemble_aom_ridge_blender_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1043,18 +1043,18 @@ N4M_API n4m_status_t n4m_aom_ridge_blender_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_aom_ridge_blender_fit");
+        set_error(ctx, "out of memory in n4m_ensemble_aom_ridge_blender_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_aom_ridge_blender_fit");
+        set_error(ctx, "internal error in n4m_ensemble_aom_ridge_blender_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_aom_operator_pls_stack_fit(
+N4M_API n4m_status_t n4m_ensemble_aom_operator_pls_stack_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1073,7 +1073,7 @@ N4M_API n4m_status_t n4m_aom_operator_pls_stack_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_aom_operator_pls_stack_fit");
+        set_error(ctx, "null pointer in n4m_ensemble_aom_operator_pls_stack_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1089,20 +1089,20 @@ N4M_API n4m_status_t n4m_aom_operator_pls_stack_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_aom_operator_pls_stack_fit");
+        set_error(ctx, "out of memory in n4m_ensemble_aom_operator_pls_stack_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_aom_operator_pls_stack_fit");
+        set_error(ctx, "internal error in n4m_ensemble_aom_operator_pls_stack_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
 /* ---- fit entry points ---- */
 
-N4M_API n4m_status_t n4m_sparse_simpls_fit(
+N4M_API n4m_status_t n4m_estimators_sparse_simpls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1112,7 +1112,7 @@ N4M_API n4m_status_t n4m_sparse_simpls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_sparse_simpls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_sparse_simpls_fit");
         return N4M_ERR_NULL_POINTER;
     }
 
@@ -1152,15 +1152,15 @@ N4M_API n4m_status_t n4m_sparse_simpls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_sparse_simpls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_sparse_simpls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_sparse_simpls_fit");
+        set_error(ctx, "internal error in n4m_estimators_sparse_simpls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_pcr_fit(
+N4M_API n4m_status_t n4m_estimators_pcr_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1169,7 +1169,7 @@ N4M_API n4m_status_t n4m_pcr_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_pcr_fit");
+        set_error(ctx, "null pointer in n4m_estimators_pcr_fit");
         return N4M_ERR_NULL_POINTER;
     }
 
@@ -1217,15 +1217,15 @@ N4M_API n4m_status_t n4m_pcr_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pcr_fit");
+        set_error(ctx, "out of memory in n4m_estimators_pcr_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pcr_fit");
+        set_error(ctx, "internal error in n4m_estimators_pcr_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_di_pls_fit(
+N4M_API n4m_status_t n4m_domain_adaptation_di_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X_source,
@@ -1237,7 +1237,7 @@ N4M_API n4m_status_t n4m_di_pls_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X_source == nullptr ||
         Y_source == nullptr || X_target == nullptr) {
-        set_error(ctx, "null pointer in n4m_di_pls_fit");
+        set_error(ctx, "null pointer in n4m_domain_adaptation_di_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
 
@@ -1277,15 +1277,15 @@ N4M_API n4m_status_t n4m_di_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_di_pls_fit");
+        set_error(ctx, "out of memory in n4m_domain_adaptation_di_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_di_pls_fit");
+        set_error(ctx, "internal error in n4m_domain_adaptation_di_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_recursive_pls_run(
+N4M_API n4m_status_t n4m_estimators_recursive_pls_run(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1295,7 +1295,7 @@ N4M_API n4m_status_t n4m_recursive_pls_run(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_recursive_pls_run");
+        set_error(ctx, "null pointer in n4m_estimators_recursive_pls_run");
         return N4M_ERR_NULL_POINTER;
     }
 
@@ -1340,10 +1340,10 @@ N4M_API n4m_status_t n4m_recursive_pls_run(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_recursive_pls_run");
+        set_error(ctx, "out of memory in n4m_estimators_recursive_pls_run");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_recursive_pls_run");
+        set_error(ctx, "internal error in n4m_estimators_recursive_pls_run");
         return N4M_ERR_INTERNAL;
     }
 }
@@ -1373,7 +1373,7 @@ void pack_weighted_result(n4m_method_result_s& handle,
 
 }  // namespace
 
-N4M_API n4m_status_t n4m_cppls_fit(
+N4M_API n4m_status_t n4m_estimators_cppls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1383,7 +1383,7 @@ N4M_API n4m_status_t n4m_cppls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_cppls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_cppls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1414,15 +1414,15 @@ N4M_API n4m_status_t n4m_cppls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_cppls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_cppls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_cppls_fit");
+        set_error(ctx, "internal error in n4m_estimators_cppls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_weighted_pls_fit(
+N4M_API n4m_status_t n4m_estimators_weighted_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1434,7 +1434,7 @@ N4M_API n4m_status_t n4m_weighted_pls_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         sample_weights == nullptr) {
-        set_error(ctx, "null pointer in n4m_weighted_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_weighted_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (sample_weights_size != X->rows) {
@@ -1455,15 +1455,15 @@ N4M_API n4m_status_t n4m_weighted_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_weighted_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_weighted_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_weighted_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_weighted_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_robust_pls_fit(
+N4M_API n4m_status_t n4m_estimators_robust_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1474,7 +1474,7 @@ N4M_API n4m_status_t n4m_robust_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_robust_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_robust_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1491,15 +1491,15 @@ N4M_API n4m_status_t n4m_robust_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_robust_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_robust_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_robust_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_robust_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_ridge_pls_fit(
+N4M_API n4m_status_t n4m_estimators_ridge_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1509,7 +1509,7 @@ N4M_API n4m_status_t n4m_ridge_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_ridge_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_ridge_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1525,15 +1525,15 @@ N4M_API n4m_status_t n4m_ridge_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_ridge_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_ridge_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_ridge_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_ridge_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_continuum_regression_fit(
+N4M_API n4m_status_t n4m_estimators_continuum_regression_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1543,7 +1543,7 @@ N4M_API n4m_status_t n4m_continuum_regression_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_continuum_regression_fit");
+        set_error(ctx, "null pointer in n4m_estimators_continuum_regression_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1559,15 +1559,15 @@ N4M_API n4m_status_t n4m_continuum_regression_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_continuum_regression_fit");
+        set_error(ctx, "out of memory in n4m_estimators_continuum_regression_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_continuum_regression_fit");
+        set_error(ctx, "internal error in n4m_estimators_continuum_regression_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_ridge_fit(
+N4M_API n4m_status_t n4m_estimators_ridge_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1578,14 +1578,14 @@ N4M_API n4m_status_t n4m_ridge_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_ridge_fit");
+        set_error(ctx, "null pointer in n4m_estimators_ridge_fit");
         return N4M_ERR_NULL_POINTER;
     }
     // v1 contract: NULL+0 (use cfg.ridge_lambda) or a single-element array.
     // n_lambdas > 1 is reserved for the not-yet-implemented GCV/lambda-path and
     // is rejected rather than silently using only lambdas[0].
     if (n_lambdas < 0 || n_lambdas > 1 || (n_lambdas > 0 && lambdas == nullptr)) {
-        set_error(ctx, "n4m_ridge_fit: invalid (lambdas, n_lambdas) — v1 accepts "
+        set_error(ctx, "n4m_estimators_ridge_fit: invalid (lambdas, n_lambdas) — v1 accepts "
                        "NULL+0 (use cfg.ridge_lambda) or a single lambda; the "
                        "multi-lambda path is reserved/not yet implemented");
         return N4M_ERR_INVALID_ARGUMENT;
@@ -1619,15 +1619,15 @@ N4M_API n4m_status_t n4m_ridge_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_ridge_fit");
+        set_error(ctx, "out of memory in n4m_estimators_ridge_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_ridge_fit");
+        set_error(ctx, "internal error in n4m_estimators_ridge_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_aom_robust_hpo_fit(
+N4M_API n4m_status_t n4m_model_selection_robust_hpo_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1639,7 +1639,7 @@ N4M_API n4m_status_t n4m_aom_robust_hpo_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_aom_robust_hpo_fit");
+        set_error(ctx, "null pointer in n4m_model_selection_robust_hpo_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1682,15 +1682,15 @@ N4M_API n4m_status_t n4m_aom_robust_hpo_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_aom_robust_hpo_fit");
+        set_error(ctx, "out of memory in n4m_model_selection_robust_hpo_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_aom_robust_hpo_fit");
+        set_error(ctx, "internal error in n4m_model_selection_robust_hpo_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_n_pls_fit(
+N4M_API n4m_status_t n4m_estimators_n_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X_flat,
@@ -1702,7 +1702,7 @@ N4M_API n4m_status_t n4m_n_pls_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X_flat == nullptr ||
         Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_n_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_n_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1737,15 +1737,15 @@ N4M_API n4m_status_t n4m_n_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_n_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_n_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_n_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_n_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_o2pls_fit(
+N4M_API n4m_status_t n4m_estimators_o2pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1757,7 +1757,7 @@ N4M_API n4m_status_t n4m_o2pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_o2pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_o2pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1798,15 +1798,15 @@ N4M_API n4m_status_t n4m_o2pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_o2pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_o2pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_o2pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_o2pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_sparse_pls_da_fit(
+N4M_API n4m_status_t n4m_estimators_sparse_pls_da_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1817,7 +1817,7 @@ N4M_API n4m_status_t n4m_sparse_pls_da_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr ||
         y_labels == nullptr) {
-        set_error(ctx, "null pointer in n4m_sparse_pls_da_fit");
+        set_error(ctx, "null pointer in n4m_estimators_sparse_pls_da_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (y_labels_size != X->rows) {
@@ -1885,10 +1885,10 @@ N4M_API n4m_status_t n4m_sparse_pls_da_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_sparse_pls_da_fit");
+        set_error(ctx, "out of memory in n4m_estimators_sparse_pls_da_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_sparse_pls_da_fit");
+        set_error(ctx, "internal error in n4m_estimators_sparse_pls_da_fit");
         return N4M_ERR_INTERNAL;
     }
 }
@@ -1920,7 +1920,7 @@ void pack_group_sparse_result(
 
 }  // namespace
 
-N4M_API n4m_status_t n4m_group_sparse_pls_fit(
+N4M_API n4m_status_t n4m_estimators_group_sparse_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1933,7 +1933,7 @@ N4M_API n4m_status_t n4m_group_sparse_pls_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         group_assignment == nullptr) {
-        set_error(ctx, "null pointer in n4m_group_sparse_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_group_sparse_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (group_assignment_size != X->cols) {
@@ -1957,15 +1957,15 @@ N4M_API n4m_status_t n4m_group_sparse_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_group_sparse_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_group_sparse_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_group_sparse_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_group_sparse_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_fused_sparse_pls_fit(
+N4M_API n4m_status_t n4m_estimators_fused_sparse_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -1976,7 +1976,7 @@ N4M_API n4m_status_t n4m_fused_sparse_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_fused_sparse_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_fused_sparse_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -1994,10 +1994,10 @@ N4M_API n4m_status_t n4m_fused_sparse_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_fused_sparse_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_fused_sparse_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_fused_sparse_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_fused_sparse_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
@@ -2031,7 +2031,7 @@ void pack_ensemble_result(n4m_method_result_s& handle,
 
 }  // namespace
 
-N4M_API n4m_status_t n4m_pls_monitoring_run(
+N4M_API n4m_status_t n4m_metrics_pls_monitoring_run(
     n4m_context_t* ctx,
     const n4m_model_t* model,
     const n4m_matrix_view_t* X_reference,
@@ -2042,7 +2042,7 @@ N4M_API n4m_status_t n4m_pls_monitoring_run(
     *out_result = nullptr;
     if (ctx == nullptr || model == nullptr || X_reference == nullptr ||
         X_monitor == nullptr) {
-        set_error(ctx, "null pointer in n4m_pls_monitoring_run");
+        set_error(ctx, "null pointer in n4m_metrics_pls_monitoring_run");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2079,15 +2079,15 @@ N4M_API n4m_status_t n4m_pls_monitoring_run(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pls_monitoring_run");
+        set_error(ctx, "out of memory in n4m_metrics_pls_monitoring_run");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pls_monitoring_run");
+        set_error(ctx, "internal error in n4m_metrics_pls_monitoring_run");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_one_se_rule_compute(
+N4M_API n4m_status_t n4m_metrics_one_se_rule_compute(
     n4m_context_t* ctx,
     const double* fold_rmse_matrix,
     int32_t max_components,
@@ -2096,7 +2096,7 @@ N4M_API n4m_status_t n4m_one_se_rule_compute(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || fold_rmse_matrix == nullptr) {
-        set_error(ctx, "null pointer in n4m_one_se_rule_compute");
+        set_error(ctx, "null pointer in n4m_metrics_one_se_rule_compute");
         return N4M_ERR_NULL_POINTER;
     }
     if (max_components < 1 || n_folds < 2) {
@@ -2154,15 +2154,15 @@ N4M_API n4m_status_t n4m_one_se_rule_compute(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_one_se_rule_compute");
+        set_error(ctx, "out of memory in n4m_metrics_one_se_rule_compute");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_one_se_rule_compute");
+        set_error(ctx, "internal error in n4m_metrics_one_se_rule_compute");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_so_pls_fit(
+N4M_API n4m_status_t n4m_estimators_so_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X_blocks,
@@ -2175,7 +2175,7 @@ N4M_API n4m_status_t n4m_so_pls_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X_blocks == nullptr ||
         Y == nullptr || n_components_per_block == nullptr) {
-        set_error(ctx, "null pointer in n4m_so_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_so_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (n_blocks < 1) {
@@ -2221,15 +2221,15 @@ N4M_API n4m_status_t n4m_so_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_so_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_so_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_so_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_so_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_on_pls_fit(
+N4M_API n4m_status_t n4m_estimators_on_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X_blocks,
@@ -2242,7 +2242,7 @@ N4M_API n4m_status_t n4m_on_pls_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X_blocks == nullptr ||
         n_unique_per_block == nullptr) {
-        set_error(ctx, "null pointer in n4m_on_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_on_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (n_unique_per_block_size != static_cast<std::int64_t>(n_blocks)) {
@@ -2292,15 +2292,15 @@ N4M_API n4m_status_t n4m_on_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_on_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_on_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_on_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_on_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_rosa_fit(
+N4M_API n4m_status_t n4m_estimators_rosa_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X_blocks,
@@ -2312,7 +2312,7 @@ N4M_API n4m_status_t n4m_rosa_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X_blocks == nullptr ||
         Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_rosa_fit");
+        set_error(ctx, "null pointer in n4m_estimators_rosa_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2349,15 +2349,15 @@ N4M_API n4m_status_t n4m_rosa_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_rosa_fit");
+        set_error(ctx, "out of memory in n4m_estimators_rosa_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_rosa_fit");
+        set_error(ctx, "internal error in n4m_estimators_rosa_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_bagging_pls_fit(
+N4M_API n4m_status_t n4m_ensemble_bagging_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -2368,7 +2368,7 @@ N4M_API n4m_status_t n4m_bagging_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_bagging_pls_fit");
+        set_error(ctx, "null pointer in n4m_ensemble_bagging_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2383,15 +2383,15 @@ N4M_API n4m_status_t n4m_bagging_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_bagging_pls_fit");
+        set_error(ctx, "out of memory in n4m_ensemble_bagging_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_bagging_pls_fit");
+        set_error(ctx, "internal error in n4m_ensemble_bagging_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_boosting_pls_fit(
+N4M_API n4m_status_t n4m_ensemble_boosting_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -2402,7 +2402,7 @@ N4M_API n4m_status_t n4m_boosting_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_boosting_pls_fit");
+        set_error(ctx, "null pointer in n4m_ensemble_boosting_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2417,15 +2417,15 @@ N4M_API n4m_status_t n4m_boosting_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_boosting_pls_fit");
+        set_error(ctx, "out of memory in n4m_ensemble_boosting_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_boosting_pls_fit");
+        set_error(ctx, "internal error in n4m_ensemble_boosting_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_random_subspace_pls_fit(
+N4M_API n4m_status_t n4m_ensemble_random_subspace_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -2437,7 +2437,7 @@ N4M_API n4m_status_t n4m_random_subspace_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_random_subspace_pls_fit");
+        set_error(ctx, "null pointer in n4m_ensemble_random_subspace_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2456,16 +2456,16 @@ N4M_API n4m_status_t n4m_random_subspace_pls_fit(
         return N4M_OK;
     } catch (const std::bad_alloc&) {
         set_error(ctx,
-                   "out of memory in n4m_random_subspace_pls_fit");
+                   "out of memory in n4m_ensemble_random_subspace_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx,
-                   "internal error in n4m_random_subspace_pls_fit");
+                   "internal error in n4m_ensemble_random_subspace_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_gpr_pls_fit(
+N4M_API n4m_status_t n4m_estimators_gpr_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -2477,7 +2477,7 @@ N4M_API n4m_status_t n4m_gpr_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_gpr_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_gpr_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2508,15 +2508,15 @@ N4M_API n4m_status_t n4m_gpr_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_gpr_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_gpr_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_gpr_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_gpr_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_pls_fit_simple(
+N4M_API n4m_status_t n4m_estimators_pls_fit(
     const double* x, const double* y,
     int32_t n, int32_t p, int32_t q, int32_t n_components,
     double* coefficients_out,
@@ -2586,7 +2586,7 @@ N4M_API n4m_status_t n4m_pls_fit_simple(
     }
 }
 
-N4M_API n4m_status_t n4m_pls_glm_fit(
+N4M_API n4m_status_t n4m_estimators_pls_glm_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -2596,7 +2596,7 @@ N4M_API n4m_status_t n4m_pls_glm_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_pls_glm_fit");
+        set_error(ctx, "null pointer in n4m_estimators_pls_glm_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2643,15 +2643,15 @@ N4M_API n4m_status_t n4m_pls_glm_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pls_glm_fit");
+        set_error(ctx, "out of memory in n4m_estimators_pls_glm_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pls_glm_fit");
+        set_error(ctx, "internal error in n4m_estimators_pls_glm_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_pls_qda_fit(
+N4M_API n4m_status_t n4m_estimators_pls_qda_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -2662,7 +2662,7 @@ N4M_API n4m_status_t n4m_pls_qda_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr ||
         y_labels == nullptr) {
-        set_error(ctx, "null pointer in n4m_pls_qda_fit");
+        set_error(ctx, "null pointer in n4m_estimators_pls_qda_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (y_labels_size != X->rows) {
@@ -2735,15 +2735,15 @@ N4M_API n4m_status_t n4m_pls_qda_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pls_qda_fit");
+        set_error(ctx, "out of memory in n4m_estimators_pls_qda_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pls_qda_fit");
+        set_error(ctx, "internal error in n4m_estimators_pls_qda_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_pls_cox_fit(
+N4M_API n4m_status_t n4m_estimators_pls_cox_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -2756,7 +2756,7 @@ N4M_API n4m_status_t n4m_pls_cox_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr ||
         survival_times == nullptr || event_indicators == nullptr) {
-        set_error(ctx, "null pointer in n4m_pls_cox_fit");
+        set_error(ctx, "null pointer in n4m_estimators_pls_cox_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (survival_times_size != X->rows ||
@@ -2808,15 +2808,15 @@ N4M_API n4m_status_t n4m_pls_cox_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pls_cox_fit");
+        set_error(ctx, "out of memory in n4m_estimators_pls_cox_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pls_cox_fit");
+        set_error(ctx, "internal error in n4m_estimators_pls_cox_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_pds_fit(
+N4M_API n4m_status_t n4m_domain_adaptation_pds_fit(
     n4m_context_t* ctx,
     const n4m_matrix_view_t* X_source,
     const n4m_matrix_view_t* X_target,
@@ -2825,7 +2825,7 @@ N4M_API n4m_status_t n4m_pds_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || X_source == nullptr || X_target == nullptr) {
-        set_error(ctx, "null pointer in n4m_pds_fit");
+        set_error(ctx, "null pointer in n4m_domain_adaptation_pds_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2870,15 +2870,15 @@ N4M_API n4m_status_t n4m_pds_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pds_fit");
+        set_error(ctx, "out of memory in n4m_domain_adaptation_pds_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pds_fit");
+        set_error(ctx, "internal error in n4m_domain_adaptation_pds_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_ds_fit(
+N4M_API n4m_status_t n4m_domain_adaptation_ds_fit(
     n4m_context_t* ctx,
     const n4m_matrix_view_t* X_source,
     const n4m_matrix_view_t* X_target,
@@ -2886,7 +2886,7 @@ N4M_API n4m_status_t n4m_ds_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || X_source == nullptr || X_target == nullptr) {
-        set_error(ctx, "null pointer in n4m_ds_fit");
+        set_error(ctx, "null pointer in n4m_domain_adaptation_ds_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2930,15 +2930,15 @@ N4M_API n4m_status_t n4m_ds_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_ds_fit");
+        set_error(ctx, "out of memory in n4m_domain_adaptation_ds_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_ds_fit");
+        set_error(ctx, "internal error in n4m_domain_adaptation_ds_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_mir_pls_fit(
+N4M_API n4m_status_t n4m_estimators_mir_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -2947,7 +2947,7 @@ N4M_API n4m_status_t n4m_mir_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_mir_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_mir_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -2977,15 +2977,15 @@ N4M_API n4m_status_t n4m_mir_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_mir_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_mir_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_mir_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_mir_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_missing_aware_nipals_fit(
+N4M_API n4m_status_t n4m_estimators_missing_aware_nipals_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -2994,7 +2994,7 @@ N4M_API n4m_status_t n4m_missing_aware_nipals_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_missing_aware_nipals_fit");
+        set_error(ctx, "null pointer in n4m_estimators_missing_aware_nipals_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3011,16 +3011,16 @@ N4M_API n4m_status_t n4m_missing_aware_nipals_fit(
         return N4M_OK;
     } catch (const std::bad_alloc&) {
         set_error(ctx,
-                   "out of memory in n4m_missing_aware_nipals_fit");
+                   "out of memory in n4m_estimators_missing_aware_nipals_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx,
-                   "internal error in n4m_missing_aware_nipals_fit");
+                   "internal error in n4m_estimators_missing_aware_nipals_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_pls_diagnostics_compute(
+N4M_API n4m_status_t n4m_metrics_pls_diagnostics_compute(
     n4m_context_t* ctx,
     const n4m_model_t* model,
     const n4m_matrix_view_t* X,
@@ -3029,7 +3029,7 @@ N4M_API n4m_status_t n4m_pls_diagnostics_compute(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || model == nullptr || X == nullptr) {
-        set_error(ctx, "null pointer in n4m_pls_diagnostics_compute");
+        set_error(ctx, "null pointer in n4m_metrics_pls_diagnostics_compute");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3059,15 +3059,15 @@ N4M_API n4m_status_t n4m_pls_diagnostics_compute(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pls_diagnostics_compute");
+        set_error(ctx, "out of memory in n4m_metrics_pls_diagnostics_compute");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pls_diagnostics_compute");
+        set_error(ctx, "internal error in n4m_metrics_pls_diagnostics_compute");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_approximate_press_compute(
+N4M_API n4m_status_t n4m_metrics_approximate_press_compute(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3077,7 +3077,7 @@ N4M_API n4m_status_t n4m_approximate_press_compute(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_approximate_press_compute");
+        set_error(ctx, "null pointer in n4m_metrics_approximate_press_compute");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3101,15 +3101,15 @@ N4M_API n4m_status_t n4m_approximate_press_compute(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_approximate_press_compute");
+        set_error(ctx, "out of memory in n4m_metrics_approximate_press_compute");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_approximate_press_compute");
+        set_error(ctx, "internal error in n4m_metrics_approximate_press_compute");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_kernel_pls_fit(
+N4M_API n4m_status_t n4m_estimators_kernel_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     int32_t kernel_type,
@@ -3122,7 +3122,7 @@ N4M_API n4m_status_t n4m_kernel_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_kernel_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_kernel_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (kernel_type < 0 || kernel_type > 3) {
@@ -3161,10 +3161,10 @@ N4M_API n4m_status_t n4m_kernel_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_kernel_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_kernel_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_kernel_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_kernel_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
@@ -3173,7 +3173,7 @@ N4M_API n4m_status_t n4m_kernel_pls_fit(
  * §17 — ABI shims for internal-only core algos closing the parity-gate gap
  * ==========================================================================*/
 
-N4M_API n4m_status_t n4m_mb_pls_fit(
+N4M_API n4m_status_t n4m_estimators_mb_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3185,7 +3185,7 @@ N4M_API n4m_status_t n4m_mb_pls_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         block_sizes == nullptr) {
-        set_error(ctx, "null pointer in n4m_mb_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_mb_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (n_blocks <= 0) {
@@ -3227,15 +3227,15 @@ N4M_API n4m_status_t n4m_mb_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_mb_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_mb_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_mb_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_mb_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_lw_pls_fit(
+N4M_API n4m_status_t n4m_estimators_lw_pls_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3245,7 +3245,7 @@ N4M_API n4m_status_t n4m_lw_pls_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_lw_pls_fit");
+        set_error(ctx, "null pointer in n4m_estimators_lw_pls_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3278,10 +3278,10 @@ N4M_API n4m_status_t n4m_lw_pls_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_lw_pls_fit");
+        set_error(ctx, "out of memory in n4m_estimators_lw_pls_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_lw_pls_fit");
+        set_error(ctx, "internal error in n4m_estimators_lw_pls_fit");
         return N4M_ERR_INTERNAL;
     }
 }
@@ -3289,7 +3289,7 @@ N4M_API n4m_status_t n4m_lw_pls_fit(
 namespace {
 
 // Build a row-major n4m_matrix_view_t over a contiguous int32 buffer of
-// length `size`. Used by n4m_pls_lda_fit / n4m_pls_logistic_fit to bridge
+// length `size`. Used by n4m_estimators_pls_lda_fit / n4m_estimators_pls_logistic_fit to bridge
 // the raw label pointer signature to the matrix-view consumer.
 n4m_matrix_view_t make_labels_view(const std::int32_t* labels,
                                     std::int64_t size) noexcept {
@@ -3306,7 +3306,7 @@ n4m_matrix_view_t make_labels_view(const std::int32_t* labels,
 
 }  // namespace
 
-N4M_API n4m_status_t n4m_pls_lda_fit(
+N4M_API n4m_status_t n4m_estimators_pls_lda_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3318,7 +3318,7 @@ N4M_API n4m_status_t n4m_pls_lda_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr ||
         y_labels == nullptr) {
-        set_error(ctx, "null pointer in n4m_pls_lda_fit");
+        set_error(ctx, "null pointer in n4m_estimators_pls_lda_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (y_labels_size != X->rows) {
@@ -3349,15 +3349,15 @@ N4M_API n4m_status_t n4m_pls_lda_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pls_lda_fit");
+        set_error(ctx, "out of memory in n4m_estimators_pls_lda_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pls_lda_fit");
+        set_error(ctx, "internal error in n4m_estimators_pls_lda_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_pls_logistic_fit(
+N4M_API n4m_status_t n4m_estimators_pls_logistic_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3369,7 +3369,7 @@ N4M_API n4m_status_t n4m_pls_logistic_fit(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr ||
         y_labels == nullptr) {
-        set_error(ctx, "null pointer in n4m_pls_logistic_fit");
+        set_error(ctx, "null pointer in n4m_estimators_pls_logistic_fit");
         return N4M_ERR_NULL_POINTER;
     }
     if (y_labels_size != X->rows) {
@@ -3408,15 +3408,15 @@ N4M_API n4m_status_t n4m_pls_logistic_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pls_logistic_fit");
+        set_error(ctx, "out of memory in n4m_estimators_pls_logistic_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pls_logistic_fit");
+        set_error(ctx, "internal error in n4m_estimators_pls_logistic_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_aom_preprocess_fit(
+N4M_API n4m_status_t n4m_model_selection_aom_preprocessing_fit(
     n4m_context_t* ctx,
     const n4m_operator_bank_t* bank,
     const n4m_gating_strategy_t* gate,
@@ -3426,7 +3426,7 @@ N4M_API n4m_status_t n4m_aom_preprocess_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || bank == nullptr || gate == nullptr || X == nullptr) {
-        set_error(ctx, "null pointer in n4m_aom_preprocess_fit");
+        set_error(ctx, "null pointer in n4m_model_selection_aom_preprocessing_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3458,10 +3458,10 @@ N4M_API n4m_status_t n4m_aom_preprocess_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_aom_preprocess_fit");
+        set_error(ctx, "out of memory in n4m_model_selection_aom_preprocessing_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_aom_preprocess_fit");
+        set_error(ctx, "internal error in n4m_model_selection_aom_preprocessing_fit");
         return N4M_ERR_INTERNAL;
     }
 }
@@ -3470,7 +3470,7 @@ N4M_API n4m_status_t n4m_aom_preprocess_fit(
  * §18 — ABI shims for Phase 5 variable-selection methods
  * ==========================================================================*/
 
-N4M_API n4m_status_t n4m_variable_select_rank(
+N4M_API n4m_status_t n4m_feature_selection_variable_select_rank(
     n4m_context_t* ctx,
     const n4m_model_t* model,
     const n4m_matrix_view_t* X,
@@ -3480,7 +3480,7 @@ N4M_API n4m_status_t n4m_variable_select_rank(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || model == nullptr || X == nullptr) {
-        set_error(ctx, "null pointer in n4m_variable_select_rank");
+        set_error(ctx, "null pointer in n4m_feature_selection_variable_select_rank");
         return N4M_ERR_NULL_POINTER;
     }
     if (method < 0 || method > 2) {
@@ -3508,15 +3508,15 @@ N4M_API n4m_status_t n4m_variable_select_rank(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_variable_select_rank");
+        set_error(ctx, "out of memory in n4m_feature_selection_variable_select_rank");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_variable_select_rank");
+        set_error(ctx, "internal error in n4m_feature_selection_variable_select_rank");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_interval_select(
+N4M_API n4m_status_t n4m_feature_selection_interval_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3529,7 +3529,7 @@ N4M_API n4m_status_t n4m_interval_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_interval_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_interval_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3584,15 +3584,15 @@ N4M_API n4m_status_t n4m_interval_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_interval_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_interval_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_interval_select");
+        set_error(ctx, "internal error in n4m_feature_selection_interval_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_stability_select(
+N4M_API n4m_status_t n4m_feature_selection_stability_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3604,7 +3604,7 @@ N4M_API n4m_status_t n4m_stability_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_stability_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_stability_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3637,15 +3637,15 @@ N4M_API n4m_status_t n4m_stability_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_stability_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_stability_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_stability_select");
+        set_error(ctx, "internal error in n4m_feature_selection_stability_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_uve_select(
+N4M_API n4m_status_t n4m_feature_selection_uve_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3658,7 +3658,7 @@ N4M_API n4m_status_t n4m_uve_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_uve_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_uve_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3696,15 +3696,15 @@ N4M_API n4m_status_t n4m_uve_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_uve_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_uve_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_uve_select");
+        set_error(ctx, "internal error in n4m_feature_selection_uve_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_spa_select(
+N4M_API n4m_status_t n4m_feature_selection_spa_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3714,7 +3714,7 @@ N4M_API n4m_status_t n4m_spa_select(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_spa_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_spa_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3743,15 +3743,15 @@ N4M_API n4m_status_t n4m_spa_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_spa_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_spa_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_spa_select");
+        set_error(ctx, "internal error in n4m_feature_selection_spa_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_cars_select(
+N4M_API n4m_status_t n4m_feature_selection_cars_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3764,7 +3764,7 @@ N4M_API n4m_status_t n4m_cars_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_cars_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_cars_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3805,15 +3805,15 @@ N4M_API n4m_status_t n4m_cars_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_cars_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_cars_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_cars_select");
+        set_error(ctx, "internal error in n4m_feature_selection_cars_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_random_frog_select(
+N4M_API n4m_status_t n4m_feature_selection_random_frog_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3830,7 +3830,7 @@ N4M_API n4m_status_t n4m_random_frog_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_random_frog_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_random_frog_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3880,15 +3880,15 @@ N4M_API n4m_status_t n4m_random_frog_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_random_frog_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_random_frog_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_random_frog_select");
+        set_error(ctx, "internal error in n4m_feature_selection_random_frog_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_scars_select(
+N4M_API n4m_status_t n4m_feature_selection_scars_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3903,7 +3903,7 @@ N4M_API n4m_status_t n4m_scars_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_scars_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_scars_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -3950,15 +3950,15 @@ N4M_API n4m_status_t n4m_scars_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_scars_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_scars_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_scars_select");
+        set_error(ctx, "internal error in n4m_feature_selection_scars_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_ga_select(
+N4M_API n4m_status_t n4m_feature_selection_ga_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -3975,7 +3975,7 @@ N4M_API n4m_status_t n4m_ga_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_ga_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_ga_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4027,15 +4027,15 @@ N4M_API n4m_status_t n4m_ga_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_ga_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_ga_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_ga_select");
+        set_error(ctx, "internal error in n4m_feature_selection_ga_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_pso_select(
+N4M_API n4m_status_t n4m_feature_selection_pso_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4053,7 +4053,7 @@ N4M_API n4m_status_t n4m_pso_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_pso_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_pso_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4095,15 +4095,15 @@ N4M_API n4m_status_t n4m_pso_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_pso_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_pso_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_pso_select");
+        set_error(ctx, "internal error in n4m_feature_selection_pso_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_vissa_select(
+N4M_API n4m_status_t n4m_feature_selection_vissa_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4120,7 +4120,7 @@ N4M_API n4m_status_t n4m_vissa_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_vissa_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_vissa_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4167,15 +4167,15 @@ N4M_API n4m_status_t n4m_vissa_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_vissa_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_vissa_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_vissa_select");
+        set_error(ctx, "internal error in n4m_feature_selection_vissa_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_shaving_select(
+N4M_API n4m_status_t n4m_feature_selection_shaving_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4189,7 +4189,7 @@ N4M_API n4m_status_t n4m_shaving_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_shaving_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_shaving_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4230,15 +4230,15 @@ N4M_API n4m_status_t n4m_shaving_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_shaving_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_shaving_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_shaving_select");
+        set_error(ctx, "internal error in n4m_feature_selection_shaving_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_bve_select(
+N4M_API n4m_status_t n4m_feature_selection_bve_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4251,7 +4251,7 @@ N4M_API n4m_status_t n4m_bve_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_bve_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_bve_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4293,15 +4293,15 @@ N4M_API n4m_status_t n4m_bve_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_bve_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_bve_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_bve_select");
+        set_error(ctx, "internal error in n4m_feature_selection_bve_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_t2_select(
+N4M_API n4m_status_t n4m_feature_selection_t2_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4315,7 +4315,7 @@ N4M_API n4m_status_t n4m_t2_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr || alpha_thresholds == nullptr) {
-        set_error(ctx, "null pointer in n4m_t2_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_t2_select");
         return N4M_ERR_NULL_POINTER;
     }
     if (n_alphas <= 0) {
@@ -4377,15 +4377,15 @@ N4M_API n4m_status_t n4m_t2_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_t2_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_t2_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_t2_select");
+        set_error(ctx, "internal error in n4m_feature_selection_t2_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_wvc_select(
+N4M_API n4m_status_t n4m_feature_selection_wvc_select(
     n4m_context_t* ctx,
     const n4m_matrix_view_t* X,
     const n4m_matrix_view_t* Y,
@@ -4396,7 +4396,7 @@ N4M_API n4m_status_t n4m_wvc_select(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_wvc_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_wvc_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4435,15 +4435,15 @@ N4M_API n4m_status_t n4m_wvc_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_wvc_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_wvc_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_wvc_select");
+        set_error(ctx, "internal error in n4m_feature_selection_wvc_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_wvc_threshold_select(
+N4M_API n4m_status_t n4m_feature_selection_wvc_threshold_select(
     n4m_context_t* ctx,
     const n4m_matrix_view_t* X,
     const n4m_matrix_view_t* Y,
@@ -4456,7 +4456,7 @@ N4M_API n4m_status_t n4m_wvc_threshold_select(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_wvc_threshold_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_wvc_threshold_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4493,15 +4493,15 @@ N4M_API n4m_status_t n4m_wvc_threshold_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_wvc_threshold_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_wvc_threshold_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_wvc_threshold_select");
+        set_error(ctx, "internal error in n4m_feature_selection_wvc_threshold_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_emcuve_select(
+N4M_API n4m_status_t n4m_feature_selection_emcuve_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4516,7 +4516,7 @@ N4M_API n4m_status_t n4m_emcuve_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_emcuve_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_emcuve_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4557,15 +4557,15 @@ N4M_API n4m_status_t n4m_emcuve_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_emcuve_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_emcuve_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_emcuve_select");
+        set_error(ctx, "internal error in n4m_feature_selection_emcuve_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_randomization_select(
+N4M_API n4m_status_t n4m_feature_selection_randomization_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4577,7 +4577,7 @@ N4M_API n4m_status_t n4m_randomization_select(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_randomization_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_randomization_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4616,15 +4616,15 @@ N4M_API n4m_status_t n4m_randomization_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_randomization_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_randomization_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_randomization_select");
+        set_error(ctx, "internal error in n4m_feature_selection_randomization_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_bipls_select(
+N4M_API n4m_status_t n4m_feature_selection_bipls_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4637,7 +4637,7 @@ N4M_API n4m_status_t n4m_bipls_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_bipls_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_bipls_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4680,15 +4680,15 @@ N4M_API n4m_status_t n4m_bipls_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_bipls_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_bipls_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_bipls_select");
+        set_error(ctx, "internal error in n4m_feature_selection_bipls_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_sipls_select(
+N4M_API n4m_status_t n4m_feature_selection_sipls_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4701,7 +4701,7 @@ N4M_API n4m_status_t n4m_sipls_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_sipls_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_sipls_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4740,15 +4740,15 @@ N4M_API n4m_status_t n4m_sipls_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_sipls_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_sipls_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_sipls_select");
+        set_error(ctx, "internal error in n4m_feature_selection_sipls_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_rep_select(
+N4M_API n4m_status_t n4m_feature_selection_rep_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4762,7 +4762,7 @@ N4M_API n4m_status_t n4m_rep_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_rep_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_rep_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4811,15 +4811,15 @@ N4M_API n4m_status_t n4m_rep_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_rep_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_rep_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_rep_select");
+        set_error(ctx, "internal error in n4m_feature_selection_rep_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_ipw_select(
+N4M_API n4m_status_t n4m_feature_selection_ipw_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4834,7 +4834,7 @@ N4M_API n4m_status_t n4m_ipw_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_ipw_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_ipw_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -4883,15 +4883,15 @@ N4M_API n4m_status_t n4m_ipw_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_ipw_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_ipw_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_ipw_select");
+        set_error(ctx, "internal error in n4m_feature_selection_ipw_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_st_select(
+N4M_API n4m_status_t n4m_feature_selection_st_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4905,7 +4905,7 @@ N4M_API n4m_status_t n4m_st_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr || thresholds == nullptr) {
-        set_error(ctx, "null pointer in n4m_st_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_st_select");
         return N4M_ERR_NULL_POINTER;
     }
     if (n_thresholds <= 0) {
@@ -4960,17 +4960,17 @@ N4M_API n4m_status_t n4m_st_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_st_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_st_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_st_select");
+        set_error(ctx, "internal error in n4m_feature_selection_st_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
 /* ---------------- §19 Phase 50+ numerical methods (ECR / IRIV / IRF) ----- */
 
-N4M_API n4m_status_t n4m_ecr_fit(
+N4M_API n4m_status_t n4m_estimators_ecr_fit(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -4980,7 +4980,7 @@ N4M_API n4m_status_t n4m_ecr_fit(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_ecr_fit");
+        set_error(ctx, "null pointer in n4m_estimators_ecr_fit");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -5022,15 +5022,15 @@ N4M_API n4m_status_t n4m_ecr_fit(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_ecr_fit");
+        set_error(ctx, "out of memory in n4m_estimators_ecr_fit");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_ecr_fit");
+        set_error(ctx, "internal error in n4m_estimators_ecr_fit");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_iriv_select(
+N4M_API n4m_status_t n4m_feature_selection_iriv_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -5043,7 +5043,7 @@ N4M_API n4m_status_t n4m_iriv_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_iriv_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_iriv_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -5085,15 +5085,15 @@ N4M_API n4m_status_t n4m_iriv_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_iriv_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_iriv_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_iriv_select");
+        set_error(ctx, "internal error in n4m_feature_selection_iriv_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_irf_select(
+N4M_API n4m_status_t n4m_feature_selection_irf_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -5109,7 +5109,7 @@ N4M_API n4m_status_t n4m_irf_select(
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr ||
         plan == nullptr) {
-        set_error(ctx, "null pointer in n4m_irf_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_irf_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -5158,15 +5158,15 @@ N4M_API n4m_status_t n4m_irf_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_irf_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_irf_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_irf_select");
+        set_error(ctx, "internal error in n4m_feature_selection_irf_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API n4m_status_t n4m_vip_spa_select(
+N4M_API n4m_status_t n4m_feature_selection_vip_spa_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
@@ -5177,7 +5177,7 @@ N4M_API n4m_status_t n4m_vip_spa_select(
     if (out_result == nullptr) return N4M_ERR_NULL_POINTER;
     *out_result = nullptr;
     if (ctx == nullptr || cfg == nullptr || X == nullptr || Y == nullptr) {
-        set_error(ctx, "null pointer in n4m_vip_spa_select");
+        set_error(ctx, "null pointer in n4m_feature_selection_vip_spa_select");
         return N4M_ERR_NULL_POINTER;
     }
     try {
@@ -5218,10 +5218,10 @@ N4M_API n4m_status_t n4m_vip_spa_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_vip_spa_select");
+        set_error(ctx, "out of memory in n4m_feature_selection_vip_spa_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_vip_spa_select");
+        set_error(ctx, "internal error in n4m_feature_selection_vip_spa_select");
         return N4M_ERR_INTERNAL;
     }
 }

@@ -7,12 +7,12 @@ category: "aom_pop"
 subcategory: "aom"
 since_abi: "1.18.0"
 abi_symbols:
-  - "n4m_aom_operator_pls_stack_fit"
+  - "n4m_ensemble_aom_operator_pls_stack_fit"
 tu:
   - "cpp/src/core/aom_operator_pls_stack.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/ensemble.h"
 carry_along_tu:
   - "cpp/src/core/aom_operators.cpp"
   - "cpp/src/core/ridge.cpp"
@@ -35,8 +35,15 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.ensemble"
     class: "aom_operator_pls_stack"
     legacy_aliases: []
 publications: []
 notes: "Native strict-linear AOM operator PLS1 score stack over compact/wide operator banks with a Ridge head. Compact has 12 operators; wide has 31 strict-linear operators, including Gaussian, FCK and Whittaker variants. Single-target only. It returns fold scores, final stack features, Ridge-head coefficients for audit, and folded input_coefficients plus input_intercept for replay through NativeAOMOperatorPLSStackRegressor; native v1 builds in CUDA-enabled configurations but is not yet a fused batched GPU stack."
+c_surface:
+  - "n4m_ensemble_aom_operator_pls_stack_fit"
+fq_name: "n4m.ensemble.aom_operator_pls_stack"
+leaf: "aom_operator_pls_stack"
+legacy_ids:
+  - "aom_pop.operator_pls_stack"
+namespace: "ensemble"

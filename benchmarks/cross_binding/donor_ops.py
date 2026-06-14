@@ -83,8 +83,8 @@ def make_groups(n: int) -> np.ndarray:
 # Spec model
 # ---------------------------------------------------------------------------
 # Reasons a binding tier is not mapped (rendered honestly as "—").
-NO_RAW = "no_raw_fn"            # raw n4m.python has no public fn for this op
-NO_ESTIMATOR = "no_estimator"  # n4m.sklearn has no idiomatic class
+NO_RAW = "no_raw_fn"            # raw n4m._impl.native has no public fn for this op
+NO_ESTIMATOR = "no_estimator"  # the role package has no idiomatic class
 SEMANTIC_MISMATCH = "semantic_mismatch"  # an estimator exists but is not comparable
 BINDING_DEFERRED = "binding_deferred"    # intentionally out of scope
 
@@ -604,7 +604,7 @@ def run_raw(spec: DonorOpSpec, inp: dict[str, Any], seed: int) -> np.ndarray:
     """Invoke the raw `n4m.python` tier and reduce its output."""
     if spec.raw_fn is None:
         raise RuntimeError(spec.raw_reason or NO_RAW)
-    from n4m import python as npy
+    from n4m._impl import native as npy
     fn = getattr(npy, spec.raw_fn)
     X = inp["X"]
     kw = dict(spec.raw_kwargs)
@@ -642,9 +642,11 @@ def run_idiom(spec: DonorOpSpec, inp: dict[str, Any], seed: int) -> np.ndarray:
     """Invoke the idiomatic `n4m.sklearn` tier and reduce its output."""
     if spec.idiom_cls is None:
         raise RuntimeError(spec.idiom_reason or NO_ESTIMATOR)
-    import importlib
-    mod = importlib.import_module(f"n4m.sklearn.{spec.idiom_module}")
-    cls = getattr(mod, spec.idiom_cls)
+    # The flat `n4m.sklearn.<module>` surface was removed in the ABI-2 namespace
+    # migration. The idiomatic estimator classes now live in the role packages,
+    # all re-exported from the n4m._impl substrate; resolve the class there.
+    from n4m import _impl
+    cls = getattr(_impl, spec.idiom_cls)
     X = inp["X"]
     kw = dict(spec.idiom_kwargs)
     if spec.category == "aug":

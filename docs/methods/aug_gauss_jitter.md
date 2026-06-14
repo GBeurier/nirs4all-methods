@@ -1,6 +1,6 @@
 # `aug_gauss_jitter` — Gaussian Jitter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.GaussianJitter` · _C ABI_: `n4m_aug_gauss_jitter_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.GaussianJitter` · _C ABI_: `n4m_augmentation_gauss_jitter_*`
 
 ## Description
 
@@ -28,7 +28,7 @@ Gaussian smoothing jitter.
 
 ### Implementation
 
-C ABI `n4m_aug_gauss_jitter_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.GaussianJitter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_gauss_jitter_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.GaussianJitter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

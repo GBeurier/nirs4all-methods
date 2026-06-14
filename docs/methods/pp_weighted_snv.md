@@ -1,6 +1,6 @@
 # `pp_weighted_snv` — Weighted S N V
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.WeightedSNV` · _C ABI_: `n4m_pp_weighted_snv_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.WeightedSNV` · _C ABI_: `n4m_transform_weighted_snv_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Weighted standard normal variate normalization.
 
 ### Implementation
 
-C ABI `n4m_pp_weighted_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WeightedSNV`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_weighted_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WeightedSNV`. The same numerical kernel backs every language binding.
 
 ### Usage
 

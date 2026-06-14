@@ -7,14 +7,14 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_split_binned_strat_group_kfold_create"
-  - "n4m_split_binned_strat_group_kfold_destroy"
-  - "n4m_split_binned_strat_group_kfold_n_splits"
-  - "n4m_split_binned_strat_group_kfold_split_fold"
+  - "n4m_model_selection_binned_strat_group_kfold_create"
+  - "n4m_model_selection_binned_strat_group_kfold_destroy"
+  - "n4m_model_selection_binned_strat_group_kfold_n_splits"
+  - "n4m_model_selection_binned_strat_group_kfold_split_fold"
 tu:
   - "cpp/src/core/splitters/binned_strat_group_kfold.c"
 headers:
-  - "cpp/include/n4m/splitters.h"
+  - "cpp/include/n4m/model_selection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -34,3 +34,13 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_model_selection_binned_strat_group_kfold_create"
+  - "n4m_model_selection_binned_strat_group_kfold_destroy"
+  - "n4m_model_selection_binned_strat_group_kfold_n_splits"
+  - "n4m_model_selection_binned_strat_group_kfold_split_fold"
+fq_name: "n4m.model_selection.splitters.binned_strat_group_kfold"
+leaf: "binned_strat_group_kfold"
+legacy_ids:
+  - "splitters.binned_strat_group_kfold"
+namespace: "model_selection.splitters"

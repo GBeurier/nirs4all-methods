@@ -1,6 +1,6 @@
 # `aug_spline_y_perturb` — Spline Y Perturbation Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineYPerturbationAugmenter` · _C ABI_: `n4m_aug_spline_y_perturb_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineYPerturbationAugmenter` · _C ABI_: `n4m_augmentation_spline_y_perturbations_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Spline y-axis perturbation augmenter.
 
 ### Implementation
 
-C ABI `n4m_aug_spline_y_perturb_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SplineYPerturbationAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_spline_y_perturbations_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SplineYPerturbationAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

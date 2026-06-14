@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m.sklearn import NativeAOMPLSRegressor, NativePOPPLSRegressor
+from n4m._impl import NativeAOMPLSRegressor, NativePOPPLSRegressor
 
 
 def make_dataset(n_samples: int, n_features: int, seed: int):

@@ -185,11 +185,11 @@ def test_aom_preprocess_timing_script_writes_direct_operator_rows(tmp_path, monk
         bench,
         "n4m",
         SimpleNamespace(
-            aom_preprocess=fake_aom_preprocess,
             library_path=lambda: "build/cuda-on/cpp/src/libn4m.so",
             abi_version=lambda: (1, 21, 0),
         ),
     )
+    monkeypatch.setattr(bench, "aom_preprocess", fake_aom_preprocess)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -302,12 +302,12 @@ def test_aom_ridge_superblock_timing_script_writes_native_and_wrapper_rows(tmp_p
         bench,
         "n4m",
         SimpleNamespace(
-            aom_ridge_superblock=fake_result,
             library_path=lambda: "build/cuda-on/cpp/src/libn4m.so",
             abi_version=lambda: (1, 21, 0),
         ),
     )
-    monkeypatch.setattr(bench, "NativeAOMRidgeSuperblockRegressor", FakeModel)
+    monkeypatch.setattr(bench, "aom_ridge_superblock", fake_result)
+    monkeypatch.setattr(bench, "AOMRidgeSuperblockRegressor", FakeModel)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -399,12 +399,12 @@ def test_aom_ridge_active_superblock_timing_script_writes_native_and_wrapper_row
         bench,
         "n4m",
         SimpleNamespace(
-            aom_ridge_active_superblock=fake_result,
             library_path=lambda: "build/cuda-on/cpp/src/libn4m.so",
             abi_version=lambda: (1, 21, 0),
         ),
     )
-    monkeypatch.setattr(bench, "NativeAOMRidgeActiveSuperblockRegressor", FakeModel)
+    monkeypatch.setattr(bench, "aom_ridge_active_superblock", fake_result)
+    monkeypatch.setattr(bench, "AOMRidgeActiveSuperblockRegressor", FakeModel)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -499,12 +499,12 @@ def test_aom_ridge_mkl_superblock_timing_script_writes_native_and_wrapper_rows(t
         bench,
         "n4m",
         SimpleNamespace(
-            aom_ridge_mkl_superblock=fake_result,
             library_path=lambda: "build/cuda-on/cpp/src/libn4m.so",
             abi_version=lambda: (1, 21, 0),
         ),
     )
-    monkeypatch.setattr(bench, "NativeAOMRidgeMKLSuperblockRegressor", FakeModel)
+    monkeypatch.setattr(bench, "aom_ridge_mkl_superblock", fake_result)
+    monkeypatch.setattr(bench, "AOMRidgeMKLSuperblockRegressor", FakeModel)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -609,12 +609,12 @@ def test_aom_pls_superblock_timing_script_writes_native_and_wrapper_rows(tmp_pat
         bench,
         "n4m",
         SimpleNamespace(
-            aom_pls_superblock=fake_result,
             library_path=lambda: "build/cuda-on/cpp/src/libn4m.so",
             abi_version=lambda: (1, 21, 0),
         ),
     )
-    monkeypatch.setattr(bench, "NativeAOMPLSSuperblockRegressor", FakeModel)
+    monkeypatch.setattr(bench, "aom_pls_superblock", fake_result)
+    monkeypatch.setattr(bench, "AOMPLSSuperblockRegressor", FakeModel)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -719,12 +719,12 @@ def test_aom_ridge_pls_superblock_timing_script_writes_native_and_wrapper_rows(
         bench,
         "n4m",
         SimpleNamespace(
-            aom_ridge_pls_superblock=fake_result,
             library_path=lambda: "build/cuda-on/cpp/src/libn4m.so",
             abi_version=lambda: (1, 21, 0),
         ),
     )
-    monkeypatch.setattr(bench, "NativeAOMRidgePLSSuperblockRegressor", FakeModel)
+    monkeypatch.setattr(bench, "aom_ridge_pls_superblock", fake_result)
+    monkeypatch.setattr(bench, "AOMRidgePLSSuperblockRegressor", FakeModel)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -804,12 +804,12 @@ def test_aom_ridge_global_timing_script_writes_native_and_wrapper_rows(tmp_path,
         bench,
         "n4m",
         SimpleNamespace(
-            aom_ridge_global=fake_result,
             library_path=lambda: "build/cuda-on/cpp/src/libn4m.so",
             abi_version=lambda: (1, 21, 0),
         ),
     )
-    monkeypatch.setattr(bench, "NativeAOMRidgeGlobalRegressor", FakeModel)
+    monkeypatch.setattr(bench, "aom_ridge_global", fake_result)
+    monkeypatch.setattr(bench, "AOMRidgeGlobalRegressor", FakeModel)
     monkeypatch.setattr(
         sys,
         "argv",
@@ -1096,7 +1096,7 @@ def test_real_cohort_runner_writes_route_counters_and_diagnostics(
         captured_campaign_kwargs.update(kwargs)
         return fake_report
 
-    monkeypatch.setattr(runner.n4m, "aom_staged_chain_campaign", fake_campaign)
+    monkeypatch.setattr(runner, "aom_staged_chain_campaign", fake_campaign)
     monkeypatch.setattr(runner.n4m, "library_path", lambda: "build/cuda-on/libn4m.so")
     monkeypatch.setattr(runner.n4m, "abi_version", lambda: (1, 21, 0))
 
@@ -1280,7 +1280,7 @@ def test_real_cohort_runner_can_skip_by_dataset_properties(monkeypatch):
         raise AssertionError("campaign should not run for skipped property rows")
 
     monkeypatch.setattr(runner, "load_split", fake_load_split)
-    monkeypatch.setattr(runner.n4m, "aom_staged_chain_campaign", fail_campaign)
+    monkeypatch.setattr(runner, "aom_staged_chain_campaign", fail_campaign)
     monkeypatch.setattr(runner.n4m, "library_path", lambda: "build/cuda-on/libn4m.so")
     monkeypatch.setattr(runner.n4m, "abi_version", lambda: (1, 21, 0))
 

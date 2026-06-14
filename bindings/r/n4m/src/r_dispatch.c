@@ -471,15 +471,15 @@ static SEXP pack_aom_global_result(n4m_aom_global_result_t* res) {
     int32_t selected_op = 0, selected_k = 0, n_ops = 0, max_k = 0;
     double best_score = 0.0;
 
-    n4m_aom_global_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
-    n4m_aom_global_result_get_operator_kinds(res, &kinds, &n_kinds);
-    n4m_aom_global_result_get_operator_scores(res, &op_scores, &n_scores);
-    n4m_aom_global_result_get_rmse_curves(res, &curves, &curve_rows, &curve_cols);
-    n4m_aom_global_result_get_selected_operator_index(res, &selected_op);
-    n4m_aom_global_result_get_selected_n_components(res, &selected_k);
-    n4m_aom_global_result_get_n_operators(res, &n_ops);
-    n4m_aom_global_result_get_max_components(res, &max_k);
-    n4m_aom_global_result_get_best_score(res, &best_score);
+    n4m_model_selection_aom_pls_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    n4m_model_selection_aom_pls_result_get_operator_kinds(res, &kinds, &n_kinds);
+    n4m_model_selection_aom_pls_result_get_operator_scores(res, &op_scores, &n_scores);
+    n4m_model_selection_aom_pls_result_get_rmse_curves(res, &curves, &curve_rows, &curve_cols);
+    n4m_model_selection_aom_pls_result_get_selected_operator_index(res, &selected_op);
+    n4m_model_selection_aom_pls_result_get_selected_n_components(res, &selected_k);
+    n4m_model_selection_aom_pls_result_get_n_operators(res, &n_ops);
+    n4m_model_selection_aom_pls_result_get_max_components(res, &max_k);
+    n4m_model_selection_aom_pls_result_get_best_score(res, &best_score);
 
     const char* names[] = {
         "predictions", "operator_kinds", "operator_scores",
@@ -499,7 +499,7 @@ static SEXP pack_aom_global_result(n4m_aom_global_result_t* res) {
     vals[8] = PROTECT(Rf_ScalarReal(best_score));
     SEXP out = make_list(names, vals, 9);
     UNPROTECT(9);
-    n4m_aom_global_result_destroy(res);
+    n4m_model_selection_aom_pls_result_destroy(res);
     return out;
 }
 
@@ -517,17 +517,17 @@ static SEXP pack_aom_per_component_result(n4m_aom_per_component_result_t* res) {
     int32_t selected_k = 0, n_ops = 0, max_k = 0;
     double best_score = 0.0;
 
-    n4m_aom_per_component_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
-    n4m_aom_per_component_result_get_operator_kinds(res, &kinds, &n_kinds);
-    n4m_aom_per_component_result_get_selected_operator_indices(
+    n4m_model_selection_pop_pls_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    n4m_model_selection_pop_pls_result_get_operator_kinds(res, &kinds, &n_kinds);
+    n4m_model_selection_pop_pls_result_get_selected_operator_indices(
         res, &selected_ops, &n_selected);
-    n4m_aom_per_component_result_get_component_scores(
+    n4m_model_selection_pop_pls_result_get_component_scores(
         res, &component_scores, &comp_rows, &comp_cols);
-    n4m_aom_per_component_result_get_prefix_scores(res, &prefix_scores, &n_prefix);
-    n4m_aom_per_component_result_get_selected_n_components(res, &selected_k);
-    n4m_aom_per_component_result_get_n_operators(res, &n_ops);
-    n4m_aom_per_component_result_get_max_components(res, &max_k);
-    n4m_aom_per_component_result_get_best_score(res, &best_score);
+    n4m_model_selection_pop_pls_result_get_prefix_scores(res, &prefix_scores, &n_prefix);
+    n4m_model_selection_pop_pls_result_get_selected_n_components(res, &selected_k);
+    n4m_model_selection_pop_pls_result_get_n_operators(res, &n_ops);
+    n4m_model_selection_pop_pls_result_get_max_components(res, &max_k);
+    n4m_model_selection_pop_pls_result_get_best_score(res, &best_score);
 
     const char* names[] = {
         "predictions", "operator_kinds", "selected_operator_indices",
@@ -547,7 +547,7 @@ static SEXP pack_aom_per_component_result(n4m_aom_per_component_result_t* res) {
     vals[8] = PROTECT(Rf_ScalarReal(best_score));
     SEXP out = make_list(names, vals, 9);
     UNPROTECT(9);
-    n4m_aom_per_component_result_destroy(res);
+    n4m_model_selection_pop_pls_result_destroy(res);
     return out;
 }
 
@@ -621,7 +621,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
 
     if (strcmp(algo, "sparse_simpls") == 0) {
         double l = get_double(params, "sparsity_lambda", 0.05);
-        st = n4m_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
+        st = n4m_estimators_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions", "x_mean",
                                           "y_mean", "weights_w", NULL};
@@ -629,11 +629,11 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "cppls") == 0) {
         double g = get_double(params, "gamma", 0.5);
-        st = n4m_cppls_fit(ctx, cfg, &Xv, &Yv, g, &mr);
+        st = n4m_estimators_cppls_fit(ctx, cfg, &Xv, &Yv, g, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ecr") == 0) {
         double a = get_double(params, "alpha", 0.5);
-        st = n4m_ecr_fit(ctx, cfg, &Xv, &Yv, a, &mr);
+        st = n4m_estimators_ecr_fit(ctx, cfg, &Xv, &Yv, a, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean", "x_scale", "y_scale",
@@ -654,32 +654,36 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         double dl = get_double(params, "di_lambda", 1.0);
         n4m_matrix_view_t XTv;
         n4m_matrix_view_init_rowmajor(&XTv, REAL(XT_rm), xt_n, xt_p, N4M_DTYPE_F64);
-        st = n4m_di_pls_fit(ctx, cfg, &Xv, &Yv, &XTv, dl, &mr);
+        st = n4m_domain_adaptation_di_pls_fit(ctx, cfg, &Xv, &Yv, &XTv, dl, &mr);
         UNPROTECT(1);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "weighted_pls") == 0) {
         SEXP w = get_list_element(params, "sample_weights");
         if (w == R_NilValue || TYPEOF(w) != REALSXP || Rf_length(w) != n)
             cleanup_err(ctx, cfg, "weighted_pls requires numeric params$sample_weights of length n");
-        st = n4m_weighted_pls_fit(ctx, cfg, &Xv, &Yv,
+        st = n4m_estimators_weighted_pls_fit(ctx, cfg, &Xv, &Yv,
                                    REAL(w), (int64_t)Rf_length(w), &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "robust_pls") == 0) {
         double k = get_double(params, "huber_k", 1.345);
         int it = get_int(params, "max_irls_iter", 20);
-        st = n4m_robust_pls_fit(ctx, cfg, &Xv, &Yv, k, it, &mr);
+        st = n4m_estimators_robust_pls_fit(ctx, cfg, &Xv, &Yv, k, it, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ridge_pls") == 0) {
         double l = get_double(params, "ridge_lambda", 1.0);
-        st = n4m_ridge_pls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
+        st = n4m_estimators_ridge_pls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
+        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+    } else if (strcmp(algo, "ridge") == 0) {
+        double alpha = get_double(params, "ridge_lambda", 1.0);
+        st = n4m_estimators_ridge_fit(ctx, cfg, &Xv, &Yv, &alpha, (int64_t)1, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "continuum_regression") == 0) {
         double t = get_double(params, "tau", 0.5);
-        st = n4m_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
+        st = n4m_estimators_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "recursive_pls") == 0) {
         int w = get_int(params, "window_size", 50);
-        st = n4m_recursive_pls_run(ctx, cfg, &Xv, &Yv, w, &mr);
+        st = n4m_estimators_recursive_pls_run(ctx, cfg, &Xv, &Yv, w, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"predictions", NULL};
             static const char* iv[] = {"in_window", NULL};
@@ -691,14 +695,14 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int mk = get_int(params, "mode_k", 0);
         if (mj <= 0 || mk <= 0 || mj * mk != p)
             cleanup_err(ctx, cfg, "n_pls requires mode_j * mode_k == ncol(X)");
-        st = n4m_n_pls_fit(ctx, cfg, &Xv, mj, mk, &Yv, &mr);
+        st = n4m_estimators_n_pls_fit(ctx, cfg, &Xv, mj, mk, &Yv, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "kernel_pls") == 0) {
         int kt = get_int(params, "kernel_type", 1);
         double gamma = get_double(params, "gamma", 0.0);
         double coef0 = get_double(params, "coef0", 1.0);
         int deg = get_int(params, "degree", 3);
-        st = n4m_kernel_pls_fit(ctx, cfg, kt, gamma, coef0, deg, &Xv, &Yv, &mr);
+        st = n4m_estimators_kernel_pls_fit(ctx, cfg, kt, gamma, coef0, deg, &Xv, &Yv, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"predictions", "alpha", "y_mean", NULL};
             static const char* sc[] = {"rmse", "kernel_type", NULL};
@@ -708,7 +712,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int np = get_int(params, "n_predictive", 2);
         int nx = get_int(params, "n_x_orthogonal", 1);
         int ny2 = get_int(params, "n_y_orthogonal", 1);
-        st = n4m_o2pls_fit(ctx, cfg, &Xv, &Yv, np, nx, ny2, &mr);
+        st = n4m_estimators_o2pls_fit(ctx, cfg, &Xv, &Yv, np, nx, ny2, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean",
@@ -723,7 +727,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int nl = 0;
         int32_t* labels = coerce_int32_vec(yl, &nl);
         if (nl != n) cleanup_err(ctx, cfg, "y_labels must have length n");
-        st = n4m_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
+        st = n4m_estimators_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean",
@@ -737,7 +741,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int32_t* groups = coerce_int32_vec(g, &gn);
         if (gn != p) cleanup_err(ctx, cfg, "group_assignment must have length ncol(X)");
         double gl = get_double(params, "group_lambda", 0.05);
-        st = n4m_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
+        st = n4m_estimators_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
         if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "n_groups", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
@@ -745,7 +749,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "fused_sparse_pls") == 0) {
         double l1 = get_double(params, "l1_lambda", 0.05);
         double fl = get_double(params, "fusion_lambda", 0.05);
-        st = n4m_fused_sparse_pls_fit(ctx, cfg, &Xv, &Yv, l1, fl, &mr);
+        st = n4m_estimators_fused_sparse_pls_fit(ctx, cfg, &Xv, &Yv, l1, fl, &mr);
         if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "l1_lambda", "fusion_lambda", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
@@ -789,9 +793,9 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             int ncn = 0;
             int32_t* ncpb = coerce_int32_vec(ncpb_sexp, &ncn);
             if (ncn != bsn) cleanup_err(ctx, cfg, "n_components_per_block must have length n_blocks");
-            st = n4m_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
+            st = n4m_estimators_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
         } else if (strcmp(algo, "rosa") == 0) {
-            st = n4m_rosa_fit(ctx, cfg, blocks, bsn, &Yv, n_components, &mr);
+            st = n4m_estimators_rosa_fit(ctx, cfg, blocks, bsn, &Yv, n_components, &mr);
         } else {
             int njoint = get_int(params, "n_joint", 1);
             SEXP upb_sexp = get_list_element(params, "n_unique_per_block");
@@ -800,7 +804,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             int upbn = 0;
             int32_t* upb = coerce_int32_vec(upb_sexp, &upbn);
             if (upbn != bsn) cleanup_err(ctx, cfg, "n_unique_per_block must have length n_blocks");
-            st = n4m_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
+            st = n4m_estimators_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
         }
         if (st == N4M_OK) {
             static const char* dm[] = {"predictions", "y_mean",
@@ -816,7 +820,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "bagging_pls") == 0) {
         int ne = get_int(params, "n_estimators", 50);
         uint64_t seed = get_u64(params, "seed", 0);
-        st = n4m_bagging_pls_fit(ctx, cfg, &Xv, &Yv, ne, seed, &mr);
+        st = n4m_ensemble_bagging_pls_fit(ctx, cfg, &Xv, &Yv, ne, seed, &mr);
         if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "n_estimators", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
@@ -824,7 +828,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "boosting_pls") == 0) {
         int ne = get_int(params, "n_estimators", 50);
         double lr = get_double(params, "learning_rate", 0.1);
-        st = n4m_boosting_pls_fit(ctx, cfg, &Xv, &Yv, ne, lr, &mr);
+        st = n4m_ensemble_boosting_pls_fit(ctx, cfg, &Xv, &Yv, ne, lr, &mr);
         if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "n_estimators", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
@@ -833,7 +837,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int ne = get_int(params, "n_estimators", 50);
         int fps = get_int(params, "features_per_subspace", 10);
         uint64_t seed = get_u64(params, "seed", 0);
-        st = n4m_random_subspace_pls_fit(ctx, cfg, &Xv, &Yv, ne, fps, seed, &mr);
+        st = n4m_ensemble_random_subspace_pls_fit(ctx, cfg, &Xv, &Yv, ne, fps, seed, &mr);
         if (st == N4M_OK) {
             static const char* sc[] = {"rmse", "n_estimators", "features_per_subspace", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
@@ -842,7 +846,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         double ls = get_double(params, "length_scale", 1.0);
         double nl = get_double(params, "noise_level", 1e-4);
         uint64_t seed = get_u64(params, "seed", 0);
-        st = n4m_gpr_pls_fit(ctx, cfg, &Xv, &Yv, ls, nl, seed, &mr);
+        st = n4m_estimators_gpr_pls_fit(ctx, cfg, &Xv, &Yv, ls, nl, seed, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"rotation_r", "x_mean", "alpha", "L_lower",
                                           "training_scores", "predictions",
@@ -853,7 +857,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "pls_glm") == 0) {
         int poisson = get_int(params, "poisson", 0);
-        st = n4m_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
+        st = n4m_estimators_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "intercept",
                                           "predictions", "x_mean", NULL};
@@ -866,7 +870,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int nl = 0;
         int32_t* labels = coerce_int32_vec(yl, &nl);
         if (nl != n) cleanup_err(ctx, cfg, "y_labels must have length n");
-        st = n4m_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
+        st = n4m_estimators_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"class_means", "class_covariances",
                                           "log_class_priors", "rotations_r",
@@ -885,7 +889,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int en = 0;
         int32_t* ev = coerce_int32_vec(ev_sexp, &en);
         if (en != n) cleanup_err(ctx, cfg, "event_indicators must have length n");
-        st = n4m_pls_cox_fit(ctx, cfg, &Xv, REAL(sts_sexp), Rf_length(sts_sexp),
+        st = n4m_estimators_pls_cox_fit(ctx, cfg, &Xv, REAL(sts_sexp), Rf_length(sts_sexp),
                               ev, en, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "baseline_hazard",
@@ -904,7 +908,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int hw = get_int(params, "window_half_width", 2);
         n4m_matrix_view_t XTv;
         n4m_matrix_view_init_rowmajor(&XTv, REAL(XT_rm), xtn, xtp, N4M_DTYPE_F64);
-        st = n4m_pds_fit(ctx, &Xv, &XTv, hw, &mr);
+        st = n4m_domain_adaptation_pds_fit(ctx, &Xv, &XTv, hw, &mr);
         UNPROTECT(1);
         if (st == N4M_OK) {
             static const char* dm[] = {"transformation", "predictions", NULL};
@@ -921,7 +925,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         colmajor_to_rowmajor(REAL(xt), REAL(XT_rm), xtn, xtp);
         n4m_matrix_view_t XTv;
         n4m_matrix_view_init_rowmajor(&XTv, REAL(XT_rm), xtn, xtp, N4M_DTYPE_F64);
-        st = n4m_ds_fit(ctx, &Xv, &XTv, &mr);
+        st = n4m_domain_adaptation_ds_fit(ctx, &Xv, &XTv, &mr);
         UNPROTECT(1);
         if (st == N4M_OK) {
             static const char* dm[] = {"transformation", "bias",
@@ -929,10 +933,10 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             out = pack_result(mr, dm, NULL, NULL, REG_SCALAR);
         }
     } else if (strcmp(algo, "mir_pls") == 0) {
-        st = n4m_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
+        st = n4m_estimators_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "missing_aware_nipals") == 0) {
-        st = n4m_missing_aware_nipals_fit(ctx, cfg, &Xv, &Yv, &mr);
+        st = n4m_estimators_missing_aware_nipals_fit(ctx, cfg, &Xv, &Yv, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "mb_pls") == 0) {
         SEXP bs = get_list_element(params, "block_sizes");
@@ -952,7 +956,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
                          "sum(block_sizes)=%lld must equal ncol(X)=%d",
                          (long long)bsum, p);
         n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
-        st = n4m_mb_pls_fit(ctx, cfg, &Xv, &Yv, bsv, bsn, &mr);
+        st = n4m_estimators_mb_pls_fit(ctx, cfg, &Xv, &Yv, bsv, bsn, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
                                           "x_mean", "x_scale", "intercept",
@@ -962,7 +966,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "lw_pls") == 0) {
         int nn = get_int(params, "n_neighbors", 30);
-        st = n4m_lw_pls_fit(ctx, cfg, &Xv, &Yv, nn, &mr);
+        st = n4m_estimators_lw_pls_fit(ctx, cfg, &Xv, &Yv, nn, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"predictions", "neighbor_indices", NULL};
             static const char* i64[] = {"neighbor_indices_i64", NULL};
@@ -978,7 +982,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;
         }
-        st = n4m_pls_lda_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
+        st = n4m_estimators_pls_lda_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"decision_scores", NULL};
             static const char* iv[] = {"predictions", NULL};
@@ -994,7 +998,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;
         }
-        st = n4m_pls_logistic_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
+        st = n4m_estimators_pls_logistic_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"decision_scores", "probabilities",
                                           "intercepts", "coefficients", NULL};
@@ -1025,7 +1029,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
                 &gate, (n4m_gating_mode_t)mode);
         }
         if (st == N4M_OK) {
-            st = n4m_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
+            st = n4m_model_selection_aom_preprocessing_fit(ctx, bank, gate, &Xv, &Yv, &mr);
         }
         if (gate) n4m_gating_strategy_destroy(gate);
         if (bank) n4m_operator_bank_destroy(bank);
@@ -1055,12 +1059,12 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
         if (st == N4M_OK && strcmp(algo, "aom_pls") == 0) {
             n4m_aom_global_result_t* aom = NULL;
-            st = n4m_aom_global_select(ctx, cfg, bank, &Xv, &Yv, plan,
+            st = n4m_model_selection_aom_pls_select(ctx, cfg, bank, &Xv, &Yv, plan,
                                         max_components, &aom);
             if (st == N4M_OK) out = pack_aom_global_result(aom);
         } else if (st == N4M_OK) {
             n4m_aom_per_component_result_t* pop = NULL;
-            st = n4m_aom_per_component_select(ctx, cfg, bank, &Xv, &Yv, plan,
+            st = n4m_model_selection_pop_pls_select(ctx, cfg, bank, &Xv, &Yv, plan,
                                                max_components, &pop);
             if (st == N4M_OK) out = pack_aom_per_component_result(pop);
         }
@@ -1071,7 +1075,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     /* ---------------- Selectors ---------------- */
     else if (strcmp(algo, "spa_select") == 0) {
         int tk = get_int(params, "top_k", 10);
-        st = n4m_spa_select(ctx, cfg, &Xv, &Yv, tk, &mr);
+        st = n4m_feature_selection_spa_select(ctx, cfg, &Xv, &Yv, tk, &mr);
         if (st == N4M_OK) {
             static const char* i64[] = {"selected_indices", NULL};
             static const char* sc[] = {"best_rmse", NULL};
@@ -1080,7 +1084,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "wvc_select") == 0) {
         int tk = get_int(params, "top_k", 10);
         int norm = get_int(params, "normalize", 1);
-        st = n4m_wvc_select(ctx, &Xv, &Yv, n_components, tk, norm, &mr);
+        st = n4m_feature_selection_wvc_select(ctx, &Xv, &Yv, n_components, tk, norm, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"scores", NULL};
             static const char* i64[] = {"selected_indices", NULL};
@@ -1091,7 +1095,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         double thr = get_double(params, "threshold", 0.0);
         double tf = get_double(params, "threshold_factor", 1.0);
         int ms = get_int(params, "min_selected", 1);
-        st = n4m_wvc_threshold_select(ctx, &Xv, &Yv, n_components, norm, thr, tf, ms, &mr);
+        st = n4m_feature_selection_wvc_threshold_select(ctx, &Xv, &Yv, n_components, norm, thr, tf, ms, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"scores", NULL};
             static const char* i64[] = {"selected_indices", NULL};
@@ -1101,7 +1105,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int np = get_int(params, "n_permutations", 100);
         uint64_t seed = get_u64(params, "randomization_seed", 0);
         double a = get_double(params, "alpha", 0.05);
-        st = n4m_randomization_select(ctx, cfg, &Xv, &Yv, np, seed, a, &mr);
+        st = n4m_feature_selection_randomization_select(ctx, cfg, &Xv, &Yv, np, seed, a, &mr);
         if (st == N4M_OK) {
             static const char* i64[] = {"selected_indices", NULL};
             static const char* sc[] = {"best_rmse", NULL};
@@ -1110,7 +1114,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "vip_spa_select") == 0) {
         double vt = get_double(params, "vip_threshold", 0.3);
         int tk = get_int(params, "top_k", 10);
-        st = n4m_vip_spa_select(ctx, cfg, &Xv, &Yv, vt, tk, &mr);
+        st = n4m_feature_selection_vip_spa_select(ctx, cfg, &Xv, &Yv, vt, tk, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"vip_scores", "vip_mask", "selection_scores", NULL};
             static const char* i64[] = {"selected_indices", NULL};
@@ -1129,30 +1133,30 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             out = pack_result(mr, dmat_keys, iv_keys, i64_keys, sc_keys); \
     }
     DISPATCH_PLAN_SELECT("cars_select",
-        n4m_cars_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_cars_select(ctx, cfg, &Xv, &Yv, _plan,
                          get_int(params, "n_iterations", 50),
                          get_int(params, "min_features", 5), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("interval_select",
-        n4m_interval_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_interval_select(ctx, cfg, &Xv, &Yv, _plan,
                              get_int(params, "interval_width", 10),
                              get_int(params, "step", 1), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("stability_select",
-        n4m_stability_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_stability_select(ctx, cfg, &Xv, &Yv, _plan,
                               get_int(params, "top_k", 10), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("uve_select",
-        n4m_uve_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_uve_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "noise_features", p),
                         get_u64(params, "noise_seed", 0), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("random_frog_select",
-        n4m_random_frog_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_random_frog_select(ctx, cfg, &Xv, &Yv, _plan,
                                 get_int(params, "n_iterations", 100),
                                 get_int(params, "initial_size", 30),
                                 get_int(params, "min_size", n_components),
@@ -1162,7 +1166,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("scars_select",
-        n4m_scars_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_scars_select(ctx, cfg, &Xv, &Yv, _plan,
                           get_int(params, "n_iterations", 50),
                           get_int(params, "min_features", 5),
                           get_double(params, "sample_fraction", 0.8),
@@ -1170,7 +1174,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("ga_select",
-        n4m_ga_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_ga_select(ctx, cfg, &Xv, &Yv, _plan,
                        get_int(params, "n_generations", 50),
                        get_int(params, "population_size", 50),
                        get_int(params, "min_features", n_components),
@@ -1180,7 +1184,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("pso_select",
-        n4m_pso_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_pso_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_swarm", 30),
                         get_int(params, "n_iterations", 50),
                         get_double(params, "w", 0.729),
@@ -1192,7 +1196,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("vissa_select",
-        n4m_vissa_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_vissa_select(ctx, cfg, &Xv, &Yv, _plan,
                           get_int(params, "n_iterations", 20),
                           get_int(params, "n_submodels", 100),
                           get_double(params, "ratio_kept", 0.1),
@@ -1203,20 +1207,20 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("shaving_select",
-        n4m_shaving_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_shaving_select(ctx, cfg, &Xv, &Yv, _plan,
                             get_int(params, "n_steps", 10),
                             get_int(params, "min_features", 5),
                             get_double(params, "shave_fraction", 0.1), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("bve_select",
-        n4m_bve_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_bve_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_steps", 10),
                         get_int(params, "min_features", 5), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("emcuve_select",
-        n4m_emcuve_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_emcuve_select(ctx, cfg, &Xv, &Yv, _plan,
                            get_int(params, "noise_features", p),
                            get_u64(params, "noise_seed", 0),
                            get_int(params, "n_ensembles", 5),
@@ -1224,26 +1228,26 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("bipls_select",
-        n4m_bipls_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_bipls_select(ctx, cfg, &Xv, &Yv, _plan,
                           get_int(params, "interval_width", 10),
                           get_int(params, "min_intervals", 1), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("sipls_select",
-        n4m_sipls_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_sipls_select(ctx, cfg, &Xv, &Yv, _plan,
                           get_int(params, "interval_width", 10),
                           get_int(params, "combination_size", 2), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("rep_select",
-        n4m_rep_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_rep_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_steps", 10),
                         get_int(params, "min_features", 5),
                         get_int(params, "remove_count", 1), &mr),
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("ipw_select",
-        n4m_ipw_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_ipw_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_iterations", 10),
                         get_int(params, "top_k", 10),
                         get_double(params, "damping", 0.5),
@@ -1251,14 +1255,14 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         NULL, NULL, SEL_IDX,
         SEL_RMSE)
     DISPATCH_PLAN_SELECT("iriv_select",
-        n4m_iriv_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_iriv_select(ctx, cfg, &Xv, &Yv, _plan,
                          get_int(params, "max_rounds", 20),
                          get_u64(params, "seed", 0), &mr),
         IRIV_DMAT,
         NULL, SEL_IDX,
         IRIV_SC)
     DISPATCH_PLAN_SELECT("irf_select",
-        n4m_irf_select(ctx, cfg, &Xv, &Yv, _plan,
+        n4m_feature_selection_irf_select(ctx, cfg, &Xv, &Yv, _plan,
                         get_int(params, "n_iterations", 100),
                         get_int(params, "window_size", 10),
                         get_int(params, "initial_intervals", 10),
@@ -1276,7 +1280,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int ms = get_int(params, "min_selected", n_components);
         n4m_validation_plan_t* _plan = make_default_plan(n, 3);
         if (!_plan) cleanup_err(ctx, cfg, "t2_select plan creation failed");
-        st = n4m_t2_select(ctx, cfg, &Xv, &Yv, _plan,
+        st = n4m_feature_selection_t2_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);
         n4m_validation_plan_destroy(_plan);
         if (st == N4M_OK) {
@@ -1291,7 +1295,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int ms = get_int(params, "min_selected", n_components);
         n4m_validation_plan_t* _plan = make_default_plan(n, 3);
         if (!_plan) cleanup_err(ctx, cfg, "st_select plan creation failed");
-        st = n4m_st_select(ctx, cfg, &Xv, &Yv, _plan,
+        st = n4m_feature_selection_st_select(ctx, cfg, &Xv, &Yv, _plan,
                             REAL(thr), Rf_length(thr), ms, &mr);
         n4m_validation_plan_destroy(_plan);
         if (st == N4M_OK) {
@@ -1303,7 +1307,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
 
     /* ---------------- Diagnostics ---------------- */
     else if (strcmp(algo, "approximate_press_compute") == 0) {
-        st = n4m_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
+        st = n4m_metrics_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"press_per_component",
                                           "rmse_per_component", NULL};
@@ -1318,7 +1322,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         int max_k = INTEGER(fr_dim)[0], n_folds = INTEGER(fr_dim)[1];
         double* fr_rm = (double*)R_alloc((size_t)max_k * n_folds, sizeof(double));
         colmajor_to_rowmajor(REAL(fr), fr_rm, max_k, n_folds);
-        st = n4m_one_se_rule_compute(ctx, fr_rm, max_k, n_folds, &mr);
+        st = n4m_metrics_one_se_rule_compute(ctx, fr_rm, max_k, n_folds, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"mean_rmse_per_component", NULL};
             static const char* iv[] = {"best_n_components", "one_se_n_components", NULL};

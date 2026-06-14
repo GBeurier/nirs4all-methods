@@ -1,6 +1,6 @@
 # `aug_moisture` — Moisture Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.MoistureAugmenter` · _C ABI_: `n4m_aug_moisture_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.MoistureAugmenter` · _C ABI_: `n4m_augmentation_moisture_*`
 
 ## Description
 
@@ -36,7 +36,7 @@ Water activity and moisture-content spectral perturbation.
 
 ### Implementation
 
-C ABI `n4m_aug_moisture_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.MoistureAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_moisture_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.MoistureAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

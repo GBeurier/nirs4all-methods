@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{pso_select}
 \alias{pso_select}
+\alias{n4m_feature_select_pso}
 \title{PSO-PLS (Binary Particle Swarm Optimization).}
 \usage{
 pso_select(

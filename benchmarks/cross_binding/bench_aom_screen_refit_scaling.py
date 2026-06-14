@@ -20,6 +20,8 @@ from pathlib import Path
 import numpy as np
 
 import n4m
+from n4m._impl import native as _nat
+from n4m._impl import NativeAOMFixedCandidateRegressor
 
 
 def make_dataset(n_samples: int, n_features: int, seed: int):
@@ -91,7 +93,7 @@ def run_screen(
         pls_components = components
         pls_score_mode = "gcv_proxy"
         heads = ("pls",)
-    return n4m.aom_chain_score_campaign(
+    return _nat.aom_chain_score_campaign(
         X,
         y,
         chains=chains,
@@ -136,12 +138,12 @@ def run_refit(
     cuda_pls_min_device_features: int | None,
     cuda_pls_many_batched: bool,
 ):
-    pool = n4m.aom_screen_refit_candidate_pool(
+    pool = _nat.aom_screen_refit_candidate_pool(
         screen,
         refit_top_k=top_k,
         refit_per_head_top_k=refit_per_head_top_k,
     )
-    refit = n4m.aom_refit_candidates(
+    refit = _nat.aom_refit_candidates(
         X,
         y,
         pool["rows"],
@@ -170,7 +172,7 @@ def run_final_fit(
     refit,
     cuda_pls_min_device_features: int | None,
 ):
-    return n4m.NativeAOMFixedCandidateRegressor.from_refit_report(
+    return NativeAOMFixedCandidateRegressor.from_refit_report(
         refit,
         cv=cv,
         fold_ids=folds,
@@ -290,7 +292,7 @@ def main() -> int:
 
     X, y = make_dataset(args.n_samples, args.n_features, args.seed)
     folds = balanced_folds(args.n_samples, args.cv)
-    chains = n4m.build_aom_strict_chain_grid("lab", max_chains=args.n_chains)
+    chains = _nat.build_aom_strict_chain_grid("lab", max_chains=args.n_chains)
     if not chains:
         raise ValueError("chain grid is empty")
 
@@ -330,12 +332,12 @@ def main() -> int:
                 "union_batched_score, or auto"
             )
         for top_k in refit_top_k_values:
-            plan_pool = n4m.aom_screen_refit_candidate_pool(
+            plan_pool = _nat.aom_screen_refit_candidate_pool(
                 screen,
                 refit_top_k=top_k,
                 refit_per_head_top_k=refit_per_head_top_k,
             )
-            plan = n4m.aom_refit_execution_plan(
+            plan = _nat.aom_refit_execution_plan(
                 plan_pool["rows"],
                 top_k=None,
                 auto_max_extra_fraction=args.refit_auto_max_extra_fraction,

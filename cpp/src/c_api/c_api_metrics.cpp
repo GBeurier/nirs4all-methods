@@ -2,7 +2,7 @@
 //
 // extern "C" wrappers for the Phase 19 NIRS regression metrics
 // (n4m_metric_*) and the multivariate outlier statistics
-// (n4m_util_hotelling_t2, n4m_util_q_residuals). All wrappers are stateless
+// (n4m_outlier_detection_hotelling_t2, n4m_outlier_detection_q_residuals). All wrappers are stateless
 // — there is no handle lifecycle.
 //
 // The 8 metric wrappers translate (y_true, y_pred, n) to the internal
@@ -68,42 +68,42 @@ n4m_status_t dispatch_metric(const double* y_true,
 
 extern "C" {
 
-N4M_API n4m_status_t n4m_metric_rmse(const double* y_true, const double* y_pred,
+N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse(const double* y_true, const double* y_pred,
                                       int64_t n, double* out) {
     return dispatch_metric<n4m_metric_rmse_impl>(y_true, y_pred, n, out);
 }
 
-N4M_API n4m_status_t n4m_metric_mae(const double* y_true, const double* y_pred,
+N4M_API n4m_status_t n4m_metrics_regression_metrics_mae(const double* y_true, const double* y_pred,
                                      int64_t n, double* out) {
     return dispatch_metric<n4m_metric_mae_impl>(y_true, y_pred, n, out);
 }
 
-N4M_API n4m_status_t n4m_metric_bias(const double* y_true, const double* y_pred,
+N4M_API n4m_status_t n4m_metrics_regression_metrics_bias(const double* y_true, const double* y_pred,
                                       int64_t n, double* out) {
     return dispatch_metric<n4m_metric_bias_impl>(y_true, y_pred, n, out);
 }
 
-N4M_API n4m_status_t n4m_metric_sep(const double* y_true, const double* y_pred,
+N4M_API n4m_status_t n4m_metrics_regression_metrics_sep(const double* y_true, const double* y_pred,
                                      int64_t n, double* out) {
     return dispatch_metric<n4m_metric_sep_impl>(y_true, y_pred, n, out);
 }
 
-N4M_API n4m_status_t n4m_metric_rpd(const double* y_true, const double* y_pred,
+N4M_API n4m_status_t n4m_metrics_regression_metrics_rpd(const double* y_true, const double* y_pred,
                                      int64_t n, double* out) {
     return dispatch_metric<n4m_metric_rpd_impl>(y_true, y_pred, n, out);
 }
 
-N4M_API n4m_status_t n4m_metric_rpiq(const double* y_true, const double* y_pred,
+N4M_API n4m_status_t n4m_metrics_regression_metrics_rpiq(const double* y_true, const double* y_pred,
                                       int64_t n, double* out) {
     return dispatch_metric<n4m_metric_rpiq_impl>(y_true, y_pred, n, out);
 }
 
-N4M_API n4m_status_t n4m_metric_r2(const double* y_true, const double* y_pred,
+N4M_API n4m_status_t n4m_metrics_regression_metrics_r2(const double* y_true, const double* y_pred,
                                     int64_t n, double* out) {
     return dispatch_metric<n4m_metric_r2_impl>(y_true, y_pred, n, out);
 }
 
-N4M_API n4m_status_t n4m_metric_nrmse(const double* y_true,
+N4M_API n4m_status_t n4m_metrics_regression_metrics_nrmse(const double* y_true,
                                        const double* y_pred,
                                        int64_t n, double* out) {
     return dispatch_metric<n4m_metric_nrmse_impl>(y_true, y_pred, n, out);
@@ -113,7 +113,7 @@ N4M_API n4m_status_t n4m_metric_nrmse(const double* y_true,
 // Hotelling T²
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_util_hotelling_t2(n4m_matrix_view_t X,
+N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
                                             int32_t n_components,
                                             double alpha,
                                             double* t2_per_sample,
@@ -141,7 +141,7 @@ N4M_API n4m_status_t n4m_util_hotelling_t2(n4m_matrix_view_t X,
 // Q-residuals
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_util_q_residuals(n4m_matrix_view_t X,
+N4M_API n4m_status_t n4m_outlier_detection_q_residuals(n4m_matrix_view_t X,
                                            int32_t n_components,
                                            double alpha,
                                            double* q_per_sample,

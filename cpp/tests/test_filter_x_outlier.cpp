@@ -132,45 +132,45 @@ void test_x_outlier_mahalanobis_smoke() {
     }
     for (int j = 0; j < 4; ++j) X[29 * 4 + j] = 50.0;  // far outlier
     n4m_filter_x_outlier_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, METHOD_MAHALANOBIS, /*use_threshold=*/0, /*threshold=*/0.0,
         /*n_components=*/0, /*contamination=*/0.1,
         /*seed=*/42, /*n_estimators=*/100, /*max_samples=*/256) == N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
     int fitted = 1;
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 0);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 30, 4);
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_fit(h, Xv) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_fit(h, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 1);
     std::vector<std::uint8_t> mask(30, 0);
     n4m_filter_stats_t stats{};
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_apply(h, Xv, mask.data(), &stats)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_apply(h, Xv, mask.data(), &stats)
                      == N4M_OK);
     N4M_TEST_REQUIRE(stats.n_samples == 30);
     N4M_TEST_REQUIRE(mask[29] == 0);  // outlier excluded
-    n4m_filter_x_outlier_destroy(h);
-    n4m_filter_x_outlier_destroy(nullptr);
+    n4m_outlier_detection_x_outlier_destroy(h);
+    n4m_outlier_detection_x_outlier_destroy(nullptr);
 
     // Invalid create params.
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, 99, 0, 0.0, 0, 0.1, 0, 100, 256) == N4M_ERR_INVALID_ARGUMENT);
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, METHOD_MAHALANOBIS, 0, 0.0, 0, /*bad contamination=*/0.0, 0,
         100, 256) == N4M_ERR_INVALID_ARGUMENT);
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, METHOD_MAHALANOBIS, 0, 0.0, /*neg n_comp=*/-1, 0.1, 0, 100,
         256) == N4M_ERR_INVALID_ARGUMENT);
 
     // _apply before _fit -> NOT_FITTED.
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, METHOD_MAHALANOBIS, 0, 0.0, 0, 0.1, 0, 100, 256) == N4M_OK);
     std::vector<std::uint8_t> tmp(30, 0);
     n4m_filter_stats_t st2{};
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_apply(h, Xv, tmp.data(), &st2)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_apply(h, Xv, tmp.data(), &st2)
                      == N4M_ERR_NOT_FITTED);
-    n4m_filter_x_outlier_destroy(h);
+    n4m_outlier_detection_x_outlier_destroy(h);
 }
 
 void test_x_outlier_robust_mahalanobis_smoke() {
@@ -183,18 +183,18 @@ void test_x_outlier_robust_mahalanobis_smoke() {
     }
     for (int j = 0; j < 4; ++j) X[11 * 4 + j] = 8.0;
     n4m_filter_x_outlier_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, METHOD_ROBUST_MAHALANOBIS, 0, 0.0, 0, 0.1, 42, 100, 256)
         == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 12, 4);
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_fit(h, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_fit(h, Xv) == N4M_OK);
     std::vector<std::uint8_t> mask(12, 0);
     n4m_filter_stats_t stats{};
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_apply(h, Xv, mask.data(), &stats)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_apply(h, Xv, mask.data(), &stats)
                      == N4M_OK);
     N4M_TEST_REQUIRE(stats.n_samples == 12);
     N4M_TEST_REQUIRE(mask[11] == 0);
-    n4m_filter_x_outlier_destroy(h);
+    n4m_outlier_detection_x_outlier_destroy(h);
 }
 
 void test_x_outlier_pca_residual_smoke() {
@@ -208,18 +208,18 @@ void test_x_outlier_pca_residual_smoke() {
     // Outlier whose spectrum is far from the linear low-rank trend.
     for (int j = 0; j < 5; ++j) X[11 * 5 + j] = (j % 2 == 0) ? 5.0 : -5.0;
     n4m_filter_x_outlier_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, METHOD_PCA_RESIDUAL, 0, 0.0, /*n_components=*/2, 0.1, 0, 100,
         256) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 12, 5);
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_fit(h, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_fit(h, Xv) == N4M_OK);
     std::vector<std::uint8_t> mask(12, 0);
     n4m_filter_stats_t stats{};
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_apply(h, Xv, mask.data(), &stats)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_apply(h, Xv, mask.data(), &stats)
                      == N4M_OK);
     N4M_TEST_REQUIRE(stats.n_samples == 12);
     N4M_TEST_REQUIRE(mask[11] == 0);
-    n4m_filter_x_outlier_destroy(h);
+    n4m_outlier_detection_x_outlier_destroy(h);
 }
 
 void test_x_outlier_pca_leverage_smoke() {
@@ -231,17 +231,17 @@ void test_x_outlier_pca_leverage_smoke() {
     }
     for (int j = 0; j < 5; ++j) X[11 * 5 + j] = 6.0;
     n4m_filter_x_outlier_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, METHOD_PCA_LEVERAGE, 0, 0.0, 2, 0.1, 0, 100, 256) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 12, 5);
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_fit(h, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_fit(h, Xv) == N4M_OK);
     std::vector<std::uint8_t> mask(12, 0);
     n4m_filter_stats_t stats{};
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_apply(h, Xv, mask.data(), &stats)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_apply(h, Xv, mask.data(), &stats)
                      == N4M_OK);
     N4M_TEST_REQUIRE(stats.n_samples == 12);
     N4M_TEST_REQUIRE(mask[11] == 0);
-    n4m_filter_x_outlier_destroy(h);
+    n4m_outlier_detection_x_outlier_destroy(h);
 }
 
 void test_x_outlier_isolation_forest_smoke() {
@@ -254,20 +254,20 @@ void test_x_outlier_isolation_forest_smoke() {
     }
     for (int j = 0; j < 4; ++j) X[19 * 4 + j] = 5.0;
     n4m_filter_x_outlier_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, METHOD_ISOLATION_FOREST, 0, 0.0, 0, /*contamination=*/0.1,
         /*seed=*/42, /*n_estimators=*/50, /*max_samples=*/15) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 20, 4);
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_fit(h, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_fit(h, Xv) == N4M_OK);
     std::vector<std::uint8_t> mask(20, 0);
     n4m_filter_stats_t stats{};
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_apply(h, Xv, mask.data(), &stats)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_apply(h, Xv, mask.data(), &stats)
                      == N4M_OK);
     N4M_TEST_REQUIRE(stats.n_samples == 20);
     // The contamination quantile should ID at least one outlier; the
     // planted extreme row should be it.
     N4M_TEST_REQUIRE(stats.n_excluded >= 1);
-    n4m_filter_x_outlier_destroy(h);
+    n4m_outlier_detection_x_outlier_destroy(h);
 }
 
 void test_x_outlier_lof_smoke() {
@@ -280,18 +280,18 @@ void test_x_outlier_lof_smoke() {
     }
     for (int j = 0; j < 4; ++j) X[19 * 4 + j] = 5.0;
     n4m_filter_x_outlier_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
         &h, METHOD_LOF, 0, 0.0, 0, /*contamination=*/0.1, 0, 100, 256)
         == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 20, 4);
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_fit(h, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_fit(h, Xv) == N4M_OK);
     std::vector<std::uint8_t> mask(20, 0);
     n4m_filter_stats_t stats{};
-    N4M_TEST_REQUIRE(n4m_filter_x_outlier_apply(h, Xv, mask.data(), &stats)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_apply(h, Xv, mask.data(), &stats)
                      == N4M_OK);
     N4M_TEST_REQUIRE(stats.n_samples == 20);
     N4M_TEST_REQUIRE(stats.n_excluded >= 1);
-    n4m_filter_x_outlier_destroy(h);
+    n4m_outlier_detection_x_outlier_destroy(h);
 }
 
 // ---------------------------------------------------------------------------
@@ -323,17 +323,17 @@ void run_parity(const std::string& filename, std::int32_t method,
             params_get_int(c.params_json, "random_state", 0));
 
         n4m_filter_x_outlier_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_filter_x_outlier_create(
+        N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_create(
             &h, method, has_threshold ? 1 : 0, threshold,
             n_comp, contamination,
             static_cast<std::uint64_t>(random_state),
             100, 256) == N4M_OK);
         std::vector<double> in = fx.input;
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_filter_x_outlier_fit(h, Xv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_fit(h, Xv) == N4M_OK);
         std::vector<std::uint8_t> mask(static_cast<std::size_t>(fx.rows), 0);
         n4m_filter_stats_t stats{};
-        N4M_TEST_REQUIRE(n4m_filter_x_outlier_apply(
+        N4M_TEST_REQUIRE(n4m_outlier_detection_x_outlier_apply(
             h, Xv, mask.data(), &stats) == N4M_OK);
         const std::string tag = filename + "/" + c.name;
         if (deterministic) {
@@ -341,7 +341,7 @@ void run_parity(const std::string& filename, std::int32_t method,
         } else {
             require_count_close(mask, c.expected_output, count_tolerance, tag);
         }
-        n4m_filter_x_outlier_destroy(h);
+        n4m_outlier_detection_x_outlier_destroy(h);
     }
 }
 

@@ -122,7 +122,7 @@ void test_global_selector_exports_replayable_coefficients() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_aom_global_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_global_select(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_pls_select(
         ctx, cfg, bank, &Xv, &Yv, plan, 2, &result) == N4M_OK);
     N4M_TEST_REQUIRE(result != nullptr);
 
@@ -132,23 +132,23 @@ void test_global_selector_exports_replayable_coefficients() {
     const double* intercept = nullptr;
     std::int64_t rows = 0;
     std::int64_t cols = 0;
-    N4M_TEST_REQUIRE(n4m_aom_global_result_get_predictions(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_pls_result_get_predictions(
         result, &predictions, &rows, &cols) == N4M_OK);
     N4M_TEST_REQUIRE(rows == n && cols == 1);
-    N4M_TEST_REQUIRE(n4m_aom_global_result_get_coefficients(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_pls_result_get_coefficients(
         result, &coefficients, &rows, &cols) == N4M_OK);
     N4M_TEST_REQUIRE(rows == p && cols == 1);
-    N4M_TEST_REQUIRE(n4m_aom_global_result_get_input_coefficients(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_pls_result_get_input_coefficients(
         result, &input_coefficients, &rows, &cols) == N4M_OK);
     N4M_TEST_REQUIRE(rows == p && cols == 1);
-    N4M_TEST_REQUIRE(n4m_aom_global_result_get_intercept(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_pls_result_get_intercept(
         result, &intercept, &rows, &cols) == N4M_OK);
     N4M_TEST_REQUIRE(rows == 1 && cols == 1);
 
     check_linear_replay(X, n, p, predictions, coefficients,
                         input_coefficients, intercept);
 
-    n4m_aom_global_result_destroy(result);
+    n4m_model_selection_aom_pls_result_destroy(result);
     teardown_selector(ctx, cfg, bank, plan);
 }
 
@@ -178,7 +178,7 @@ void test_pop_selector_exports_replayable_coefficients() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_aom_per_component_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_per_component_select(
+    N4M_TEST_REQUIRE(n4m_model_selection_pop_pls_select(
         ctx, cfg, bank, &Xv, &Yv, plan, 2, &result) == N4M_OK);
     N4M_TEST_REQUIRE(result != nullptr);
 
@@ -188,23 +188,23 @@ void test_pop_selector_exports_replayable_coefficients() {
     const double* intercept = nullptr;
     std::int64_t rows = 0;
     std::int64_t cols = 0;
-    N4M_TEST_REQUIRE(n4m_aom_per_component_result_get_predictions(
+    N4M_TEST_REQUIRE(n4m_model_selection_pop_pls_result_get_predictions(
         result, &predictions, &rows, &cols) == N4M_OK);
     N4M_TEST_REQUIRE(rows == n && cols == 1);
-    N4M_TEST_REQUIRE(n4m_aom_per_component_result_get_coefficients(
+    N4M_TEST_REQUIRE(n4m_model_selection_pop_pls_result_get_coefficients(
         result, &coefficients, &rows, &cols) == N4M_OK);
     N4M_TEST_REQUIRE(rows == p && cols == 1);
-    N4M_TEST_REQUIRE(n4m_aom_per_component_result_get_input_coefficients(
+    N4M_TEST_REQUIRE(n4m_model_selection_pop_pls_result_get_input_coefficients(
         result, &input_coefficients, &rows, &cols) == N4M_OK);
     N4M_TEST_REQUIRE(rows == p && cols == 1);
-    N4M_TEST_REQUIRE(n4m_aom_per_component_result_get_intercept(
+    N4M_TEST_REQUIRE(n4m_model_selection_pop_pls_result_get_intercept(
         result, &intercept, &rows, &cols) == N4M_OK);
     N4M_TEST_REQUIRE(rows == 1 && cols == 1);
 
     check_linear_replay(X, n, p, predictions, coefficients,
                         input_coefficients, intercept);
 
-    n4m_aom_per_component_result_destroy(result);
+    n4m_model_selection_pop_pls_result_destroy(result);
     teardown_selector(ctx, cfg, bank, plan);
 }
 

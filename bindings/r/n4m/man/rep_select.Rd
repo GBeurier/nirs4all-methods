@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{rep_select}
 \alias{rep_select}
+\alias{n4m_feature_select_rep}
 \title{REP-PLS.}
 \usage{
 rep_select(

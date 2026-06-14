@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-06-14
+
+**Breaking release.** The public surface is reorganized under an explicit
+`n4m.<role>` namespace and the C ABI is cleanly broken to **2.0** — there are
+**no runtime aliases**. Downstream consumers must migrate; see
+[`docs/MIGRATION_ABI2.md`](docs/MIGRATION_ABI2.md). ABI semver is bumped
+independently to 2.0.0; project version 0.99.0 → 1.0.0.
+
+### Changed — BREAKING
+- **C ABI 2.0 (clean break).** All 566 exported method symbols are renamed to
+  `n4m_<role>_<leaf><verb>` — e.g. `n4m_ridge_fit` → `n4m_estimators_ridge_fit`,
+  `n4m_pp_snv_create` → `n4m_transform_snv_create`, `n4m_cars_select` →
+  `n4m_feature_selection_cars_select`, `n4m_pls_fit_simple` →
+  `n4m_estimators_pls_fit`. The terse 1.x symbols are **removed** (no aliases).
+  SONAME → `libn4m.so.2`; linker version node `N4M_1` → `N4M_2`.
+- **Header layout.** `n4m.h` is now an umbrella over 12 role headers (`transform`,
+  `estimators`, `feature_selection`, `augmentation`, `model_selection`,
+  `domain_adaptation`, `ensemble`, `compose`, `outlier_detection`, `metrics`,
+  `decomposition`, `lowlevel`) + per-role sub-headers. `pls.h` and the legacy
+  category stub headers are removed.
+- **Python.** The flat `n4m.python` module is replaced by `n4m.<role>` subpackages
+  with public class names (`from n4m.estimators.regression.regularized import Ridge`,
+  `from n4m.transform.scatter import SNV`, `from n4m.feature_selection.wrapper import CARS`).
+  No top-level re-exports, no public `Native*`.
+- **R / MATLAB·Octave / JS-WASM** bindings call the ABI-2 symbols; R adds
+  role-named wrappers (`n4m_regression_ridge()`, `n4m_transform_snv()`, …).
+
+### Added
+- **Catalog is the namespace source of truth.** Every method carries
+  `namespace` / `leaf` / `fq_name` / `c_surface` / `legacy_ids` (209 methods; the
+  `selection.wvc` double surface is split into `wvc` + `wvc_threshold`).
+- `docs/MIGRATION_ABI2.md` — old→new symbol / import / header migration guide.
+- A doc-lint that fails if any legacy ABI-1 symbol or prefix leaks into the
+  generated method pages.
+
+### Notes
+- Parity fixtures were **not** regenerated — this release renames surfaces only;
+  numerical behaviour is unchanged.
+
 ## [0.99.0] — 2026-06-10
 
 The public C ABI grew additively from **1.10.0 → 1.22.0** since 0.98.0; every

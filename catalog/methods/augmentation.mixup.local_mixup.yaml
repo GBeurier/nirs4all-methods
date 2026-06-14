@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "mixup"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_local_mixup_apply"
-  - "n4m_aug_local_mixup_create"
-  - "n4m_aug_local_mixup_destroy"
+  - "n4m_augmentation_local_mixup_apply"
+  - "n4m_augmentation_local_mixup_create"
+  - "n4m_augmentation_local_mixup_destroy"
 tu:
   - "cpp/src/core/augmentation/mixup/local_mixup.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/mixup.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_local_mixup_apply"
+  - "n4m_augmentation_local_mixup_create"
+  - "n4m_augmentation_local_mixup_destroy"
+fq_name: "n4m.augmentation.mixup.local_mixup"
+leaf: "local_mixup"
+legacy_ids:
+  - "augmentation.mixup.local_mixup"
+namespace: "augmentation.mixup"

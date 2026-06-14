@@ -81,6 +81,10 @@ def real_symbols() -> list[str]:
 
 
 def is_infra(sym: str) -> bool:
+    # The `model_selection` ABI-2 role collides with the generic `n4m_model_`
+    # trained-model handle prefix; it is a method role, never infra.
+    if sym.startswith("n4m_model_selection_"):
+        return False
     return sym in INFRA_SYMBOLS or sym.startswith(INFRA_PREFIXES)
 
 

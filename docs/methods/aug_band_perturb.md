@@ -1,6 +1,6 @@
 # `aug_band_perturb` — Band Perturbation Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.BandPerturbationAugmenter` · _C ABI_: `n4m_aug_band_perturb_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.BandPerturbationAugmenter` · _C ABI_: `n4m_augmentation_band_perturb_*`
 
 ## Description
 
@@ -32,7 +32,7 @@ Random band-local gain and offset perturbations.
 
 ### Implementation
 
-C ABI `n4m_aug_band_perturb_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BandPerturbationAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_band_perturb_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BandPerturbationAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

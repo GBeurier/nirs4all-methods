@@ -1,6 +1,6 @@
 # `pp_simple_scale` — Simple Scale
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SimpleScale` · _C ABI_: `n4m_pp_simple_scale_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SimpleScale` · _C ABI_: `n4m_transform_simple_scale_*`
 
 ## Description
 
@@ -22,7 +22,7 @@ Column-wise min-max scaling to ``[0, 1]``.
 
 ### Implementation
 
-C ABI `n4m_pp_simple_scale_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SimpleScale`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_simple_scale_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SimpleScale`. The same numerical kernel backs every language binding.
 
 ### Usage
 

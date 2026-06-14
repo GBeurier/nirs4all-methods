@@ -1,6 +1,6 @@
 # `aug_local_mixup` — Local Mixup Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.LocalMixupAugmenter` · _C ABI_: `n4m_aug_local_mixup_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.LocalMixupAugmenter` · _C ABI_: `n4m_augmentation_local_mixup_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Neighbor-constrained mixup augmentation.
 
 ### Implementation
 
-C ABI `n4m_aug_local_mixup_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LocalMixupAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_local_mixup_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LocalMixupAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

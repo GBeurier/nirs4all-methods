@@ -7,17 +7,17 @@ category: "selection"
 subcategory: "wrapper"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_interval_generator_create"
-  - "n4m_interval_generator_destroy"
-  - "n4m_interval_generator_fit"
-  - "n4m_interval_generator_is_fitted"
-  - "n4m_interval_generator_output_cols"
-  - "n4m_interval_generator_transform"
-  - "n4m_interval_select"
+  - "n4m_feature_selection_interval_generator_create"
+  - "n4m_feature_selection_interval_generator_destroy"
+  - "n4m_feature_selection_interval_generator_fit"
+  - "n4m_feature_selection_interval_generator_is_fitted"
+  - "n4m_feature_selection_interval_generator_output_cols"
+  - "n4m_feature_selection_interval_generator_transform"
+  - "n4m_feature_selection_interval_select"
 tu:
   - "cpp/src/core/interval_selection.cpp"
 headers:
-  - "cpp/include/n4m/selection.h"
+  - "cpp/include/n4m/feature_selection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -37,3 +37,16 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_feature_selection_interval_generator_create"
+  - "n4m_feature_selection_interval_generator_destroy"
+  - "n4m_feature_selection_interval_generator_fit"
+  - "n4m_feature_selection_interval_generator_is_fitted"
+  - "n4m_feature_selection_interval_generator_output_cols"
+  - "n4m_feature_selection_interval_generator_transform"
+  - "n4m_feature_selection_interval_select"
+fq_name: "n4m.feature_selection.interval.interval"
+leaf: "interval"
+legacy_ids:
+  - "selection.interval"
+namespace: "feature_selection.interval"

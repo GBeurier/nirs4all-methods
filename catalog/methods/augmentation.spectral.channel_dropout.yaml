@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "spectral"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_channel_dropout_apply"
-  - "n4m_aug_channel_dropout_create"
-  - "n4m_aug_channel_dropout_destroy"
+  - "n4m_augmentation_channel_dropout_apply"
+  - "n4m_augmentation_channel_dropout_create"
+  - "n4m_augmentation_channel_dropout_destroy"
 tu:
   - "cpp/src/core/augmentation/spectral/channel_dropout.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/spectral.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_channel_dropout_apply"
+  - "n4m_augmentation_channel_dropout_create"
+  - "n4m_augmentation_channel_dropout_destroy"
+fq_name: "n4m.augmentation.spectral.channel_dropout"
+leaf: "channel_dropout"
+legacy_ids:
+  - "augmentation.spectral.channel_dropout"
+namespace: "augmentation.spectral"

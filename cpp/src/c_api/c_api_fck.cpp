@@ -7,8 +7,8 @@
 // is constant for the handle's lifetime. The exposed surface is therefore
 // the canonical stateless triplet plus a shape-helper:
 //
-//   n4m_pp_fck_static_create / _transform / _destroy
-//   n4m_pp_fck_static_output_cols
+//   n4m_transform_fck_static_create / _transform / _destroy
+//   n4m_transform_fck_static_output_cols
 //
 // The internal C engine lives in core/preprocessing/specialized/fck_static.c;
 // the engine guarantees no exception ever escapes (pure C), but we still
@@ -87,7 +87,7 @@ n4m_status_t require_rowmajor_f64_mut(n4m_matrix_view_t& v,
 
 extern "C" {
 
-N4M_API n4m_status_t n4m_pp_fck_static_create(
+N4M_API n4m_status_t n4m_transform_fck_static_create(
     n4m_pp_fck_static_handle_t** out,
     int32_t kernel_size,
     const double* filter_orders,
@@ -138,7 +138,7 @@ N4M_API n4m_status_t n4m_pp_fck_static_create(
     }
 }
 
-N4M_API void n4m_pp_fck_static_destroy(n4m_pp_fck_static_handle_t* h) {
+N4M_API void n4m_transform_fck_static_destroy(n4m_pp_fck_static_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_fck_static_state_free(h->state);
@@ -148,7 +148,7 @@ N4M_API void n4m_pp_fck_static_destroy(n4m_pp_fck_static_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_fck_static_transform(
+N4M_API n4m_status_t n4m_transform_fck_static_transform(
     const n4m_pp_fck_static_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -180,7 +180,7 @@ N4M_API n4m_status_t n4m_pp_fck_static_transform(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_fck_static_output_cols(int32_t n_kernels,
+N4M_API n4m_status_t n4m_transform_fck_static_output_cols(int32_t n_kernels,
                                                     int32_t n_features,
                                                     int32_t* out) {
     if (out == nullptr) {

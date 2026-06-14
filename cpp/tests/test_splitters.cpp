@@ -164,10 +164,10 @@ void test_kennard_stone_smoke() {
     double X[20] = { 0.0, 0.0,  1.0, 0.0,  2.0, 0.0,  3.0, 0.0,  4.0, 0.0,
                       5.0, 0.0,  6.0, 0.0,  7.0, 0.0,  8.0, 0.0,  9.0, 0.0 };
     n4m_split_kennard_stone_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_split_kennard_stone_create(&h, 0.5) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_selection_kennard_stone_create(&h, 0.5) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 10, 2);
     n4m_split_result_t r{};
-    N4M_TEST_REQUIRE(n4m_split_kennard_stone_split(h, Xv, &r) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_selection_kennard_stone_split(h, Xv, &r) == N4M_OK);
     N4M_TEST_REQUIRE(r.n_train == 5);
     N4M_TEST_REQUIRE(r.n_test == 5);
     N4M_TEST_REQUIRE(r.train_idx != nullptr);
@@ -181,12 +181,12 @@ void test_kennard_stone_smoke() {
     N4M_TEST_REQUIRE(has_0);
     N4M_TEST_REQUIRE(has_9);
     n4m_split_result_destroy(&r);
-    n4m_split_kennard_stone_destroy(h);
-    n4m_split_kennard_stone_destroy(nullptr);
+    n4m_model_selection_kennard_stone_destroy(h);
+    n4m_model_selection_kennard_stone_destroy(nullptr);
     // Invalid test_size.
-    N4M_TEST_REQUIRE(n4m_split_kennard_stone_create(&h, 0.0)
+    N4M_TEST_REQUIRE(n4m_model_selection_kennard_stone_create(&h, 0.0)
                      == N4M_ERR_INVALID_ARGUMENT);
-    N4M_TEST_REQUIRE(n4m_split_kennard_stone_create(&h, 1.5)
+    N4M_TEST_REQUIRE(n4m_model_selection_kennard_stone_create(&h, 1.5)
                      == N4M_ERR_INVALID_ARGUMENT);
 }
 
@@ -194,36 +194,36 @@ void test_spxy_smoke() {
     double X[20] = { 0,0,  1,0,  2,0,  3,0,  4,0,  5,0,  6,0,  7,0,  8,0,  9,0 };
     double Y[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     n4m_split_spxy_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_split_spxy_create(&h, 0.5) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_selection_spxy_create(&h, 0.5) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 10, 2);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 10, 1);
     n4m_split_result_t r{};
-    N4M_TEST_REQUIRE(n4m_split_spxy_split(h, Xv, Yv, &r) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_selection_spxy_split(h, Xv, Yv, &r) == N4M_OK);
     N4M_TEST_REQUIRE(r.n_train == 5);
     N4M_TEST_REQUIRE(r.n_test == 5);
     n4m_split_result_destroy(&r);
-    n4m_split_spxy_destroy(h);
+    n4m_model_selection_spxy_destroy(h);
 }
 
 void test_spxy_fold_smoke() {
     double X[20] = { 0,0,  1,0,  2,0,  3,0,  4,0,  5,0,  6,0,  7,0,  8,0,  9,0 };
     double Y[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     n4m_split_spxy_fold_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_split_spxy_fold_create(&h, /*n_splits=*/5,
+    N4M_TEST_REQUIRE(n4m_model_selection_spxy_fold_create(&h, /*n_splits=*/5,
                                                 /*y_metric=*/1) == N4M_OK);
     int32_t k = 0;
-    N4M_TEST_REQUIRE(n4m_split_spxy_fold_n_splits(h, &k) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_selection_spxy_fold_n_splits(h, &k) == N4M_OK);
     N4M_TEST_REQUIRE(k == 5);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 10, 2);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 10, 1);
     for (int32_t f = 0; f < 5; ++f) {
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_spxy_fold_split_fold(h, Xv, Yv, f, &r)
+        N4M_TEST_REQUIRE(n4m_model_selection_spxy_fold_split_fold(h, Xv, Yv, f, &r)
                          == N4M_OK);
         N4M_TEST_REQUIRE(r.n_train + r.n_test == 10);
         n4m_split_result_destroy(&r);
     }
-    n4m_split_spxy_fold_destroy(h);
+    n4m_model_selection_spxy_fold_destroy(h);
 }
 
 void test_spxy_g_fold_smoke() {
@@ -231,21 +231,21 @@ void test_spxy_g_fold_smoke() {
     double Y[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     int64_t groups[10] = { 0, 0, 1, 1, 2, 2, 3, 3, 4, 4 };  // 5 groups, 2 each
     n4m_split_spxy_g_fold_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_split_spxy_g_fold_create(&h, /*n_splits=*/5,
+    N4M_TEST_REQUIRE(n4m_model_selection_spxy_g_fold_create(&h, /*n_splits=*/5,
                                                    /*y_metric=*/1,
                                                    /*aggregation=*/0) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 10, 2);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 10, 1);
     for (int32_t f = 0; f < 5; ++f) {
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_spxy_g_fold_split_fold(h, Xv, Yv, groups,
+        N4M_TEST_REQUIRE(n4m_model_selection_spxy_g_fold_split_fold(h, Xv, Yv, groups,
                                                           10, f, &r) == N4M_OK);
         // Each fold should hold exactly one group's samples (2 each).
         N4M_TEST_REQUIRE(r.n_test == 2);
         N4M_TEST_REQUIRE(r.n_train == 8);
         n4m_split_result_destroy(&r);
     }
-    n4m_split_spxy_g_fold_destroy(h);
+    n4m_model_selection_spxy_g_fold_destroy(h);
 }
 
 void test_kmeans_smoke() {
@@ -254,12 +254,12 @@ void test_kmeans_smoke() {
     double X[24] = { 0,0, 1,0, 2,0, 3,0, 4,0, 5,0,
                      6,0, 7,0, 8,0, 9,0, 10,0, 11,0 };
     n4m_split_kmeans_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_split_kmeans_create(&h, /*test_size=*/0.333,
+    N4M_TEST_REQUIRE(n4m_model_selection_kmeans_create(&h, /*test_size=*/0.333,
                                               /*seed=*/42, /*max_iter=*/100)
                      == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 12, 2);
     n4m_split_result_t r{};
-    N4M_TEST_REQUIRE(n4m_split_kmeans_split(h, Xv, &r) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_selection_kmeans_split(h, Xv, &r) == N4M_OK);
     N4M_TEST_REQUIRE(r.n_train >= 1);
     N4M_TEST_REQUIRE(r.n_train + r.n_test == 12);
     // train indices must be unique and sorted ascending.
@@ -267,25 +267,25 @@ void test_kmeans_smoke() {
         N4M_TEST_REQUIRE(r.train_idx[i] > r.train_idx[i - 1]);
     }
     n4m_split_result_destroy(&r);
-    n4m_split_kmeans_destroy(h);
+    n4m_model_selection_kmeans_destroy(h);
 }
 
 void test_kbins_stratified_smoke() {
     double Y[20];
     for (int i = 0; i < 20; ++i) Y[i] = static_cast<double>(i);
     n4m_split_kbins_stratified_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_split_kbins_stratified_create(&h, /*test_size=*/0.25,
+    N4M_TEST_REQUIRE(n4m_model_selection_kbins_stratified_create(&h, /*test_size=*/0.25,
                                                         /*seed=*/123,
                                                         /*n_bins=*/4,
                                                         /*strategy=*/0)
                      == N4M_OK);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 20, 1);
     n4m_split_result_t r{};
-    N4M_TEST_REQUIRE(n4m_split_kbins_stratified_split(h, Yv, &r) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_selection_kbins_stratified_split(h, Yv, &r) == N4M_OK);
     N4M_TEST_REQUIRE(r.n_test >= 1);
     N4M_TEST_REQUIRE(r.n_train + r.n_test == 20);
     n4m_split_result_destroy(&r);
-    n4m_split_kbins_stratified_destroy(h);
+    n4m_model_selection_kbins_stratified_destroy(h);
 }
 
 void test_bsgk_smoke() {
@@ -299,37 +299,37 @@ void test_bsgk_smoke() {
         groups[i] = i / 2;  // 15 groups of 2
     }
     n4m_split_binned_strat_group_kfold_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_split_binned_strat_group_kfold_create(
+    N4M_TEST_REQUIRE(n4m_model_selection_binned_strat_group_kfold_create(
         &h, /*n_splits=*/3, /*n_bins=*/2, /*strategy=*/0,
         /*shuffle=*/1, /*seed=*/7) == N4M_OK);
     int32_t k = 0;
-    N4M_TEST_REQUIRE(n4m_split_binned_strat_group_kfold_n_splits(h, &k)
+    N4M_TEST_REQUIRE(n4m_model_selection_binned_strat_group_kfold_n_splits(h, &k)
                      == N4M_OK);
     N4M_TEST_REQUIRE(k == 3);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 30, 1);
     for (int32_t f = 0; f < 3; ++f) {
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_binned_strat_group_kfold_split_fold(
+        N4M_TEST_REQUIRE(n4m_model_selection_binned_strat_group_kfold_split_fold(
             h, Yv, groups, 30, f, &r) == N4M_OK);
         N4M_TEST_REQUIRE(r.n_train + r.n_test == 30);
         n4m_split_result_destroy(&r);
     }
-    n4m_split_binned_strat_group_kfold_destroy(h);
+    n4m_model_selection_binned_strat_group_kfold_destroy(h);
 }
 
 void test_systematic_circular_smoke() {
     double Y[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     n4m_split_systematic_circular_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_split_systematic_circular_create(&h, 0.25, 42)
+    N4M_TEST_REQUIRE(n4m_model_selection_systematic_circular_create(&h, 0.25, 42)
                      == N4M_OK);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 10, 1);
     n4m_split_result_t r{};
-    N4M_TEST_REQUIRE(n4m_split_systematic_circular_split(h, Yv, &r)
+    N4M_TEST_REQUIRE(n4m_model_selection_systematic_circular_split(h, Yv, &r)
                      == N4M_OK);
     N4M_TEST_REQUIRE(r.n_train + r.n_test == 10);
     N4M_TEST_REQUIRE(r.n_train >= 1);
     n4m_split_result_destroy(&r);
-    n4m_split_systematic_circular_destroy(h);
+    n4m_model_selection_systematic_circular_destroy(h);
 }
 
 void test_split_splitter_smoke() {
@@ -341,16 +341,16 @@ void test_split_splitter_smoke() {
         X[i * 3 + 2] = static_cast<double>((i % 3)) * 0.5;
     }
     n4m_split_split_splitter_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_split_split_splitter_create(&h, 0.25, 7) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_selection_data_twinning_create(&h, 0.25, 7) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 20, 3);
     n4m_split_result_t r{};
-    N4M_TEST_REQUIRE(n4m_split_split_splitter_split(h, Xv, &r) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_selection_data_twinning_split(h, Xv, &r) == N4M_OK);
     N4M_TEST_REQUIRE(r.n_train + r.n_test == 20);
     // test_size 0.25 → r=4 → expected n_test = ceil(20/4) = 5.
     N4M_TEST_REQUIRE(r.n_test == 5);
     N4M_TEST_REQUIRE(r.n_train == 15);
     n4m_split_result_destroy(&r);
-    n4m_split_split_splitter_destroy(h);
+    n4m_model_selection_data_twinning_destroy(h);
 }
 
 // ---------------------------------------------------------------------------
@@ -366,11 +366,11 @@ void verify_kennard_stone_parity() {
     for (const auto& c : fx.cases) {
         const double test_size = params_get_double(c.params_json, "test_size", 0.25);
         n4m_split_kennard_stone_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_split_kennard_stone_create(&h, test_size) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_model_selection_kennard_stone_create(&h, test_size) == N4M_OK);
         std::vector<double> X = fx.input;
         n4m_matrix_view_t Xv = make_rowmajor_view(X.data(), fx.rows, fx.cols);
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_kennard_stone_split(h, Xv, &r) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_model_selection_kennard_stone_split(h, Xv, &r) == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
         std::vector<std::int64_t> got_test(r.test_idx, r.test_idx + r.n_test);
         const auto want_train = parse_int_array(c.params_json, "train_idx");
@@ -378,7 +378,7 @@ void verify_kennard_stone_parity() {
         assert_indices_equal(got_train, want_train, "ks/" + c.name + "/train");
         assert_indices_equal(got_test,  want_test,  "ks/" + c.name + "/test");
         n4m_split_result_destroy(&r);
-        n4m_split_kennard_stone_destroy(h);
+        n4m_model_selection_kennard_stone_destroy(h);
     }
 }
 
@@ -389,13 +389,13 @@ void verify_spxy_parity() {
     for (const auto& c : fx.cases) {
         const double test_size = params_get_double(c.params_json, "test_size", 0.25);
         n4m_split_spxy_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_split_spxy_create(&h, test_size) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_model_selection_spxy_create(&h, test_size) == N4M_OK);
         std::vector<double> X = fx.input;
         std::vector<double> Y = fx.fit_input;
         n4m_matrix_view_t Xv = make_rowmajor_view(X.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(Y.data(), fx.fit_rows, fx.fit_cols);
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_spxy_split(h, Xv, Yv, &r) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_model_selection_spxy_split(h, Xv, Yv, &r) == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
         std::vector<std::int64_t> got_test(r.test_idx, r.test_idx + r.n_test);
         assert_indices_equal(got_train,
@@ -405,7 +405,7 @@ void verify_spxy_parity() {
                               parse_int_array(c.params_json, "test_idx"),
                               "spxy/" + c.name + "/test");
         n4m_split_result_destroy(&r);
-        n4m_split_spxy_destroy(h);
+        n4m_model_selection_spxy_destroy(h);
     }
 }
 
@@ -420,14 +420,14 @@ void verify_spxy_fold_parity() {
         const int fold_idx = static_cast<int>(
             params_get_int(c.params_json, "fold_idx", 0));
         n4m_split_spxy_fold_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_split_spxy_fold_create(&h, n_splits, y_metric)
+        N4M_TEST_REQUIRE(n4m_model_selection_spxy_fold_create(&h, n_splits, y_metric)
                          == N4M_OK);
         std::vector<double> X = fx.input;
         std::vector<double> Y = fx.fit_input;
         n4m_matrix_view_t Xv = make_rowmajor_view(X.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(Y.data(), fx.fit_rows, fx.fit_cols);
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_spxy_fold_split_fold(h, Xv, Yv, fold_idx, &r)
+        N4M_TEST_REQUIRE(n4m_model_selection_spxy_fold_split_fold(h, Xv, Yv, fold_idx, &r)
                          == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
         std::vector<std::int64_t> got_test(r.test_idx, r.test_idx + r.n_test);
@@ -438,7 +438,7 @@ void verify_spxy_fold_parity() {
                               parse_int_array(c.params_json, "test_idx"),
                               "spxy_fold/" + c.name + "/test");
         n4m_split_result_destroy(&r);
-        n4m_split_spxy_fold_destroy(h);
+        n4m_model_selection_spxy_fold_destroy(h);
     }
 }
 
@@ -452,14 +452,14 @@ void verify_spxy_g_fold_parity() {
         const int fold_idx   = static_cast<int>(params_get_int(c.params_json, "fold_idx", 0));
         const auto groups_vec = parse_int_array(c.params_json, "groups");
         n4m_split_spxy_g_fold_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_split_spxy_g_fold_create(&h, n_splits, y_metric,
+        N4M_TEST_REQUIRE(n4m_model_selection_spxy_g_fold_create(&h, n_splits, y_metric,
                                                        aggregation) == N4M_OK);
         std::vector<double> X = fx.input;
         std::vector<double> Y = fx.fit_input;
         n4m_matrix_view_t Xv = make_rowmajor_view(X.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(Y.data(), fx.fit_rows, fx.fit_cols);
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_spxy_g_fold_split_fold(
+        N4M_TEST_REQUIRE(n4m_model_selection_spxy_g_fold_split_fold(
             h, Xv, Yv, groups_vec.data(),
             static_cast<int64_t>(groups_vec.size()), fold_idx, &r) == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
@@ -471,7 +471,7 @@ void verify_spxy_g_fold_parity() {
                               parse_int_array(c.params_json, "test_idx"),
                               "spxy_g_fold/" + c.name + "/test");
         n4m_split_result_destroy(&r);
-        n4m_split_spxy_g_fold_destroy(h);
+        n4m_model_selection_spxy_g_fold_destroy(h);
     }
 }
 
@@ -482,13 +482,13 @@ void verify_kmeans_parity() {
         const std::int64_t seed = params_get_int(c.params_json, "seed", 0);
         const int max_iter = static_cast<int>(params_get_int(c.params_json, "max_iter", 100));
         n4m_split_kmeans_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_split_kmeans_create(&h, test_size,
+        N4M_TEST_REQUIRE(n4m_model_selection_kmeans_create(&h, test_size,
                                                   static_cast<uint64_t>(seed),
                                                   max_iter) == N4M_OK);
         std::vector<double> X = fx.input;
         n4m_matrix_view_t Xv = make_rowmajor_view(X.data(), fx.rows, fx.cols);
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_kmeans_split(h, Xv, &r) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_model_selection_kmeans_split(h, Xv, &r) == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
         std::vector<std::int64_t> got_test(r.test_idx, r.test_idx + r.n_test);
         // k-means is FP-iterative; tolerate one boundary sample swapping
@@ -500,7 +500,7 @@ void verify_kmeans_parity() {
                                  parse_int_array(c.params_json, "test_idx"),
                                  "kmeans/" + c.name + "/test");
         n4m_split_result_destroy(&r);
-        n4m_split_kmeans_destroy(h);
+        n4m_model_selection_kmeans_destroy(h);
     }
 }
 
@@ -513,12 +513,12 @@ void verify_kbins_stratified_parity() {
         const int n_bins = static_cast<int>(params_get_int(c.params_json, "n_bins", 5));
         const int strategy = static_cast<int>(params_get_int(c.params_json, "strategy", 0));
         n4m_split_kbins_stratified_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_split_kbins_stratified_create(&h, test_size,
+        N4M_TEST_REQUIRE(n4m_model_selection_kbins_stratified_create(&h, test_size,
             static_cast<uint64_t>(seed), n_bins, strategy) == N4M_OK);
         std::vector<double> Y = fx.fit_input;
         n4m_matrix_view_t Yv = make_rowmajor_view(Y.data(), fx.fit_rows, fx.fit_cols);
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_kbins_stratified_split(h, Yv, &r) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_model_selection_kbins_stratified_split(h, Yv, &r) == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
         std::vector<std::int64_t> got_test(r.test_idx, r.test_idx + r.n_test);
         assert_indices_equal(got_train,
@@ -528,7 +528,7 @@ void verify_kbins_stratified_parity() {
                               parse_int_array(c.params_json, "test_idx"),
                               "kbins/" + c.name + "/test");
         n4m_split_result_destroy(&r);
-        n4m_split_kbins_stratified_destroy(h);
+        n4m_model_selection_kbins_stratified_destroy(h);
     }
 }
 
@@ -544,13 +544,13 @@ void verify_bsgk_parity() {
         const int fold_idx = static_cast<int>(params_get_int(c.params_json, "fold_idx", 0));
         const auto groups_vec = parse_int_array(c.params_json, "groups");
         n4m_split_binned_strat_group_kfold_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_split_binned_strat_group_kfold_create(
+        N4M_TEST_REQUIRE(n4m_model_selection_binned_strat_group_kfold_create(
             &h, n_splits, n_bins, strategy, shuffle,
             static_cast<uint64_t>(seed)) == N4M_OK);
         std::vector<double> Y = fx.fit_input;
         n4m_matrix_view_t Yv = make_rowmajor_view(Y.data(), fx.fit_rows, fx.fit_cols);
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_binned_strat_group_kfold_split_fold(
+        N4M_TEST_REQUIRE(n4m_model_selection_binned_strat_group_kfold_split_fold(
             h, Yv, groups_vec.data(),
             static_cast<int64_t>(groups_vec.size()), fold_idx, &r) == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
@@ -562,7 +562,7 @@ void verify_bsgk_parity() {
                               parse_int_array(c.params_json, "test_idx"),
                               "bsgk/" + c.name + "/test");
         n4m_split_result_destroy(&r);
-        n4m_split_binned_strat_group_kfold_destroy(h);
+        n4m_model_selection_binned_strat_group_kfold_destroy(h);
     }
 }
 
@@ -573,12 +573,12 @@ void verify_systematic_circular_parity() {
         const double test_size = params_get_double(c.params_json, "test_size", 0.25);
         const std::int64_t seed = params_get_int(c.params_json, "seed", 0);
         n4m_split_systematic_circular_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_split_systematic_circular_create(
+        N4M_TEST_REQUIRE(n4m_model_selection_systematic_circular_create(
             &h, test_size, static_cast<uint64_t>(seed)) == N4M_OK);
         std::vector<double> Y = fx.fit_input;
         n4m_matrix_view_t Yv = make_rowmajor_view(Y.data(), fx.fit_rows, fx.fit_cols);
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_systematic_circular_split(h, Yv, &r) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_model_selection_systematic_circular_split(h, Yv, &r) == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
         std::vector<std::int64_t> got_test(r.test_idx, r.test_idx + r.n_test);
         assert_indices_equal(got_train,
@@ -588,7 +588,7 @@ void verify_systematic_circular_parity() {
                               parse_int_array(c.params_json, "test_idx"),
                               "syscirc/" + c.name + "/test");
         n4m_split_result_destroy(&r);
-        n4m_split_systematic_circular_destroy(h);
+        n4m_model_selection_systematic_circular_destroy(h);
     }
 }
 
@@ -598,12 +598,12 @@ void verify_split_splitter_parity() {
         const double test_size = params_get_double(c.params_json, "test_size", 0.25);
         const std::int64_t seed = params_get_int(c.params_json, "seed", 0);
         n4m_split_split_splitter_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_split_split_splitter_create(
+        N4M_TEST_REQUIRE(n4m_model_selection_data_twinning_create(
             &h, test_size, static_cast<uint64_t>(seed)) == N4M_OK);
         std::vector<double> X = fx.input;
         n4m_matrix_view_t Xv = make_rowmajor_view(X.data(), fx.rows, fx.cols);
         n4m_split_result_t r{};
-        N4M_TEST_REQUIRE(n4m_split_split_splitter_split(h, Xv, &r) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_model_selection_data_twinning_split(h, Xv, &r) == N4M_OK);
         std::vector<std::int64_t> got_train(r.train_idx, r.train_idx + r.n_train);
         std::vector<std::int64_t> got_test(r.test_idx, r.test_idx + r.n_test);
         assert_indices_equal(got_train,
@@ -613,7 +613,7 @@ void verify_split_splitter_parity() {
                               parse_int_array(c.params_json, "test_idx"),
                               "split/" + c.name + "/test");
         n4m_split_result_destroy(&r);
-        n4m_split_split_splitter_destroy(h);
+        n4m_model_selection_data_twinning_destroy(h);
     }
 }
 

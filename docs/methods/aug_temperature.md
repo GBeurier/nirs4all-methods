@@ -1,6 +1,6 @@
 # `aug_temperature` — Temperature Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.TemperatureAugmenter` · _C ABI_: `n4m_aug_temperature_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.TemperatureAugmenter` · _C ABI_: `n4m_augmentation_temperature_*`
 
 ## Description
 
@@ -34,7 +34,7 @@ Temperature-induced shift, intensity and broadening perturbations.
 
 ### Implementation
 
-C ABI `n4m_aug_temperature_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.TemperatureAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_temperature_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.TemperatureAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

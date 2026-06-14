@@ -65,7 +65,7 @@ struct n4m_filter_x_outlier_handle_t {
 // before the definition (silences -Wmissing-declarations).
 // ---------------------------------------------------------------------------
 extern "C" {
-N4M_API n4m_status_t n4m_filter_x_outlier_create(
+N4M_API n4m_status_t n4m_outlier_detection_x_outlier_create(
     n4m_filter_x_outlier_handle_t** out,
     std::int32_t method,
     int          use_threshold,
@@ -75,12 +75,12 @@ N4M_API n4m_status_t n4m_filter_x_outlier_create(
     std::uint64_t seed,
     std::int32_t n_estimators,
     std::int64_t max_samples);
-N4M_API void n4m_filter_x_outlier_destroy(n4m_filter_x_outlier_handle_t* h);
-N4M_API n4m_status_t n4m_filter_x_outlier_fit(
+N4M_API void n4m_outlier_detection_x_outlier_destroy(n4m_filter_x_outlier_handle_t* h);
+N4M_API n4m_status_t n4m_outlier_detection_x_outlier_fit(
     n4m_filter_x_outlier_handle_t* h, n4m_matrix_view_t X);
-N4M_API n4m_status_t n4m_filter_x_outlier_is_fitted(
+N4M_API n4m_status_t n4m_outlier_detection_x_outlier_is_fitted(
     const n4m_filter_x_outlier_handle_t* h, int* out_fitted);
-N4M_API n4m_status_t n4m_filter_x_outlier_apply(
+N4M_API n4m_status_t n4m_outlier_detection_x_outlier_apply(
     const n4m_filter_x_outlier_handle_t* h,
     n4m_matrix_view_t X,
     std::uint8_t* mask_out,
@@ -114,7 +114,7 @@ extern "C" {
 // XOutlierFilter — 5 ABI entry points.
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_filter_x_outlier_create(
+N4M_API n4m_status_t n4m_outlier_detection_x_outlier_create(
     n4m_filter_x_outlier_handle_t** out,
     std::int32_t method,
     int          use_threshold,
@@ -148,7 +148,7 @@ N4M_API n4m_status_t n4m_filter_x_outlier_create(
     }
 }
 
-N4M_API void n4m_filter_x_outlier_destroy(n4m_filter_x_outlier_handle_t* h) {
+N4M_API void n4m_outlier_detection_x_outlier_destroy(n4m_filter_x_outlier_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_filter_x_outlier_state_free(h->state);
@@ -158,7 +158,7 @@ N4M_API void n4m_filter_x_outlier_destroy(n4m_filter_x_outlier_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_filter_x_outlier_fit(
+N4M_API n4m_status_t n4m_outlier_detection_x_outlier_fit(
     n4m_filter_x_outlier_handle_t* h,
     n4m_matrix_view_t X) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -173,7 +173,7 @@ N4M_API n4m_status_t n4m_filter_x_outlier_fit(
     }
 }
 
-N4M_API n4m_status_t n4m_filter_x_outlier_is_fitted(
+N4M_API n4m_status_t n4m_outlier_detection_x_outlier_is_fitted(
     const n4m_filter_x_outlier_handle_t* h, int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -186,7 +186,7 @@ N4M_API n4m_status_t n4m_filter_x_outlier_is_fitted(
     }
 }
 
-N4M_API n4m_status_t n4m_filter_x_outlier_apply(
+N4M_API n4m_status_t n4m_outlier_detection_x_outlier_apply(
     const n4m_filter_x_outlier_handle_t* h,
     n4m_matrix_view_t X,
     std::uint8_t* mask_out,

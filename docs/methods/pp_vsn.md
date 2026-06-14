@@ -1,6 +1,6 @@
 # `pp_vsn` — Variable Sorting Normalization
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.VariableSortingNormalization` · _C ABI_: `n4m_pp_vsn_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.VariableSortingNormalization` · _C ABI_: `n4m_transform_vsn_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ VSN-style data-derived weighted SNV.
 
 ### Implementation
 
-C ABI `n4m_pp_vsn_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.VariableSortingNormalization`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_vsn_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.VariableSortingNormalization`. The same numerical kernel backs every language binding.
 
 ### Usage
 

@@ -32,8 +32,8 @@ import sys
 import numpy as np
 
 import n4m
-import n4m.aom as aom
-import n4m.moment as moment
+from n4m._impl import aom_facade as aom
+from n4m._impl import moment_facade as moment
 
 
 def main():
@@ -48,89 +48,49 @@ def main():
     if n_features < 1024:
         raise ValueError("n_features must be >= 1024 to smoke the CUDA PLS1 device loop")
 
-    assert n4m.aom is aom
-    assert n4m.moment is moment
-    assert callable(n4m.moments)
-    assert moment.moments is n4m.moments
-    assert moment.sweep_run is n4m.sweep_run
-    assert moment.aom_moment_screen_refit_campaign is n4m.aom_moment_screen_refit_campaign
-    assert moment.aom_staged_chain_campaign is n4m.aom_staged_chain_campaign
-    assert moment.aom_screen_refit_candidate_pool is n4m.aom_screen_refit_candidate_pool
-    assert moment.aom_refit_candidates is n4m.aom_refit_candidates
-    assert moment.aom_chain_fixed_fit_run is n4m.aom_chain_fixed_fit_run
-    assert moment.build_aom_strict_chain_grid is n4m.build_aom_strict_chain_grid
-    assert moment.decode_aom_chains is n4m.decode_aom_chains
-    assert moment.aom_candidate_table is n4m.aom_candidate_table
-    assert moment.aom_evaluate_candidates is n4m.aom_evaluate_candidates
-    assert moment.aom_candidate_operator_summary is n4m.aom_candidate_operator_summary
-    assert moment.aom_candidate_route_summary is n4m.aom_candidate_route_summary
-    assert moment.aom_candidate_rank_diagnostics is n4m.aom_candidate_rank_diagnostics
-    assert moment.aom_candidate_report_records is n4m.aom_candidate_report_records
-    assert moment.aom_save_candidate_report is n4m.aom_save_candidate_report
-    assert moment.aom_load_candidate_report is n4m.aom_load_candidate_report
-    assert moment.NativeAOMFixedCandidateRegressor is n4m.NativeAOMFixedCandidateRegressor
-    assert (
-        moment.NativeAOMMomentScreenRefitRegressor
-        is n4m.NativeAOMMomentScreenRefitRegressor
+    # The public flat re-exports were removed in the ABI-2 namespace migration;
+    # the AOM / moment surface now lives behind the n4m._impl facades, which the
+    # role packages re-export. Verify the facade surface exposes the callables
+    # this smoke exercises and that the facades agree with the role packages.
+    from n4m.lowlevel.moments import moments as role_moments
+    from n4m.model_selection.sweep import sweep_run as role_sweep_run
+    from n4m.model_selection.aom_search import (
+        aom_pls as role_aom_pls,
+        pop_pls as role_pop_pls,
     )
-    assert (
-        moment.NativeAOMMomentPLSScreenRefitRegressor
-        is n4m.NativeAOMMomentPLSScreenRefitRegressor
-    )
-    assert (
-        moment.NativeAOMMomentPLSExactScreenRefitRegressor
-        is n4m.NativeAOMMomentPLSExactScreenRefitRegressor
-    )
-    assert (
-        moment.NativeAOMMomentRidgeScreenRefitRegressor
-        is n4m.NativeAOMMomentRidgeScreenRefitRegressor
-    )
-    assert (
-        moment.NativeAOMStagedChainCampaignRegressor
-        is n4m.NativeAOMStagedChainCampaignRegressor
-    )
-    assert (
-        moment.NativeAOMSavgolFocusRegressor
-        is n4m.NativeAOMSavgolFocusRegressor
-    )
-    assert (
-        moment.NativeAOMStrictFamilyLiteRegressor
-        is n4m.NativeAOMStrictFamilyLiteRegressor
-    )
-    assert aom.aom_preprocess is n4m.aom_preprocess
-    assert aom.aom_chain_sweep_run is n4m.aom_chain_sweep_run
-    assert aom.aom_moment_screen_refit_campaign is n4m.aom_moment_screen_refit_campaign
-    assert aom.aom_staged_chain_campaign is n4m.aom_staged_chain_campaign
-    assert (
-        aom.NativeAOMStagedChainCampaignRegressor
-        is n4m.NativeAOMStagedChainCampaignRegressor
-    )
-    assert (
-        aom.NativeAOMMomentPLSExactScreenRefitRegressor
-        is n4m.NativeAOMMomentPLSExactScreenRefitRegressor
-    )
-    assert (
-        aom.NativeAOMSavgolFocusRegressor
-        is n4m.NativeAOMSavgolFocusRegressor
-    )
-    assert (
-        aom.NativeAOMStrictFamilyLiteRegressor
-        is n4m.NativeAOMStrictFamilyLiteRegressor
-    )
-    assert aom.aom_pls is n4m.aom_pls
-    assert aom.pop_pls is n4m.pop_pls
-    assert aom.NativeAOMPLSRegressor is n4m.NativeAOMPLSRegressor
-    assert aom.NativePOPPLSRegressor is n4m.NativePOPPLSRegressor
-    assert aom.aom_ridge_blender is n4m.aom_ridge_blender
-    assert aom.aom_operator_pls_stack is n4m.aom_operator_pls_stack
-    assert (
-        aom.NativeAOMRidgeBlenderRegressor
-        is n4m.NativeAOMRidgeBlenderRegressor
-    )
-    assert (
-        aom.NativeAOMOperatorPLSStackRegressor
-        is n4m.NativeAOMOperatorPLSStackRegressor
-    )
+
+    assert callable(n4m.lowlevel.moments.moments)
+    assert moment.moments is role_moments
+    assert moment.sweep_run is role_sweep_run
+    assert aom.aom_pls is role_aom_pls
+    assert aom.pop_pls is role_pop_pls
+    for name in (
+        "aom_moment_screen_refit_campaign", "aom_staged_chain_campaign",
+        "aom_screen_refit_candidate_pool", "aom_refit_candidates",
+        "aom_chain_fixed_fit_run", "build_aom_strict_chain_grid",
+        "decode_aom_chains", "aom_candidate_table", "aom_evaluate_candidates",
+        "aom_candidate_operator_summary", "aom_candidate_route_summary",
+        "aom_candidate_rank_diagnostics", "aom_candidate_report_records",
+        "aom_save_candidate_report", "aom_load_candidate_report",
+        "NativeAOMFixedCandidateRegressor", "NativeAOMMomentScreenRefitRegressor",
+        "NativeAOMMomentPLSScreenRefitRegressor",
+        "NativeAOMMomentPLSExactScreenRefitRegressor",
+        "NativeAOMMomentRidgeScreenRefitRegressor",
+        "NativeAOMStagedChainCampaignRegressor", "NativeAOMSavgolFocusRegressor",
+        "NativeAOMStrictFamilyLiteRegressor",
+    ):
+        assert hasattr(moment, name), name
+    for name in (
+        "aom_preprocess", "aom_chain_sweep_run", "aom_sweep_run",
+        "aom_moment_screen_refit_campaign", "aom_staged_chain_campaign",
+        "aom_pls", "pop_pls", "aom_ridge_blender", "aom_operator_pls_stack",
+        "NativeAOMStagedChainCampaignRegressor",
+        "NativeAOMMomentPLSExactScreenRefitRegressor",
+        "NativeAOMSavgolFocusRegressor", "NativeAOMStrictFamilyLiteRegressor",
+        "NativeAOMPLSRegressor", "NativePOPPLSRegressor",
+        "NativeAOMRidgeBlenderRegressor", "NativeAOMOperatorPLSStackRegressor",
+    ):
+        assert hasattr(aom, name), name
 
     cuda_available = int(n4m.lib.n4m_backend_is_available(5))
     if cuda_available != 1:
@@ -208,7 +168,7 @@ def main():
         raise RuntimeError("aom.aom_sweep_run did not report CUDA device CV fits")
 
     selector_operators = ["identity", ("savgol_smooth", (5, 2))]
-    aom_pls_res = n4m.aom_pls(
+    aom_pls_res = aom.aom_pls(
         X,
         y,
         max_components=1,
@@ -217,7 +177,7 @@ def main():
         fold_ids=folds,
         scale_x=False,
     )
-    pop_pls_res = n4m.pop_pls(
+    pop_pls_res = aom.pop_pls(
         X,
         y,
         max_components=1,
@@ -226,14 +186,14 @@ def main():
         fold_ids=folds,
         scale_x=False,
     )
-    aom_pls_model = n4m.NativeAOMPLSRegressor(
+    aom_pls_model = aom.NativeAOMPLSRegressor(
         max_components=1,
         operators=selector_operators,
         cv=cv,
         fold_ids=folds,
         scale_x=False,
     ).fit(X, y)
-    pop_pls_model = n4m.NativePOPPLSRegressor(
+    pop_pls_model = aom.NativePOPPLSRegressor(
         max_components=1,
         operators=selector_operators,
         cv=cv,
@@ -261,7 +221,7 @@ def main():
     if pop_pls_replay_error > 1e-10:
         raise RuntimeError("NativePOPPLSRegressor replay diverged from native result")
 
-    staged = n4m.NativeAOMStagedChainCampaignRegressor(
+    staged = aom.NativeAOMStagedChainCampaignRegressor(
         plan="compact",
         cv=cv,
         fold_ids=folds,
@@ -297,7 +257,7 @@ def main():
     if staged_host_cv != 0:
         raise RuntimeError("staged estimator unexpectedly used host PLS CV fits")
 
-    pls_exact = n4m.NativeAOMMomentPLSExactScreenRefitRegressor(
+    pls_exact = moment.NativeAOMMomentPLSExactScreenRefitRegressor(
         chains=[
             [("identity", ())],
             [("savgol_smooth", (5, 2))],
@@ -346,7 +306,7 @@ def main():
         raise RuntimeError("PLS exact preset unexpectedly used host refit CV")
 
     X_mixed = X[:, : min(128, X.shape[1])]
-    staged_mixed_default = n4m.NativeAOMStagedChainCampaignRegressor(
+    staged_mixed_default = aom.NativeAOMStagedChainCampaignRegressor(
         plan="compact",
         cv=cv,
         fold_ids=folds,
@@ -392,7 +352,7 @@ def main():
     if mixed_screen_pls_host_cv != 0:
         raise RuntimeError("mixed staged estimator unexpectedly used host PLS screen CV")
 
-    savgol_focus = n4m.NativeAOMSavgolFocusRegressor(
+    savgol_focus = aom.NativeAOMSavgolFocusRegressor(
         cv=cv,
         fold_ids=folds,
         ridge_lambdas=[0.1],
@@ -434,7 +394,7 @@ def main():
     if savgol_host_cv != 0:
         raise RuntimeError("SavGol-focus preset unexpectedly used host PLS CV fits")
 
-    strict_family_lite = n4m.NativeAOMStrictFamilyLiteRegressor(
+    strict_family_lite = aom.NativeAOMStrictFamilyLiteRegressor(
         cv=cv,
         fold_ids=folds,
         ridge_lambdas=[0.1],

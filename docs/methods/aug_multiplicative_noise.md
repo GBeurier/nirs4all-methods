@@ -1,6 +1,6 @@
 # `aug_multiplicative_noise` — Multiplicative Noise
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.MultiplicativeNoise` · _C ABI_: `n4m_aug_multiplicative_noise_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.MultiplicativeNoise` · _C ABI_: `n4m_augmentation_multiplicative_noise_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Apply per-element multiplicative Gaussian noise.
 
 ### Implementation
 
-C ABI `n4m_aug_multiplicative_noise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.MultiplicativeNoise`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_multiplicative_noise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.MultiplicativeNoise`. The same numerical kernel backs every language binding.
 
 ### Usage
 

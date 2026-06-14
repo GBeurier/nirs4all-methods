@@ -3,7 +3,7 @@
 
 The Python binding loads one libn4m shared object per process, so this script
 spawns separate child interpreters for the CPU and CUDA builds. It times
-score-only `n4m.sweep_run` Ridge/PLS screens on identical synthetic datasets
+score-only `sweep_run` Ridge/PLS screens on identical synthetic datasets
 and writes one CSV row per backend/shape/head.
 
 Use `--compare-cuda-pls-many-batched` to run CUDA twice on the same shapes:
@@ -46,6 +46,7 @@ import time
 
 import numpy as np
 import n4m
+from n4m.model_selection.sweep import sweep_run
 
 
 def make_dataset(n_samples, n_features, seed):
@@ -75,7 +76,7 @@ def median_ms(fn, repeats):
 
 def run_case(X, y, folds, cv, head, cuda_pls_min_device_features, cuda_pls_many_batched):
     if head == "ridge":
-        return n4m.sweep_run(
+        return sweep_run(
             X,
             y,
             cv=cv,
@@ -85,7 +86,7 @@ def run_case(X, y, folds, cv, head, cuda_pls_min_device_features, cuda_pls_many_
             scale_x=False,
             score_only=True,
         )
-    return n4m.sweep_run(
+    return sweep_run(
         X,
         y,
         cv=cv,
@@ -393,7 +394,7 @@ def markdown_summary(rows: list[dict[str, object]]) -> str:
     lines = [
         "# Moment GPU Crossover",
         "",
-        "Synthetic score-only `n4m.sweep_run` timing for CPU vs one-GPU CUDA "
+        "Synthetic score-only `sweep_run` timing for CPU vs one-GPU CUDA "
         "moment screens. `recommended_backend` is source-free and depends only "
         "on shape/head timing, not dataset identity.",
         "",

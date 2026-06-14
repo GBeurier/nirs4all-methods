@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// Public ABI tests for n4m_aom_sweep_run. The result shape is intentionally
+// Public ABI tests for n4m_model_selection_aom_sweep_run. The result shape is intentionally
 // checked because this surface is meant to feed downstream preprocessing-rank
 // analysis.
 
@@ -231,7 +231,7 @@ void test_aom_sweep_compact_contract_and_oof_score() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_sweep_run(
                          ctx, cfg, &Xv, &Yv, 0, cv, folds, n,
                          lambdas, n_lambdas, comps, n_components, 3,
                          &result) == N4M_OK);
@@ -358,7 +358,7 @@ void test_aom_chain_sweep_custom_descriptor_contract() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 4, op_kinds, 4,
                          param_offsets, 5, params, 4,
@@ -448,7 +448,7 @@ void test_aom_chain_sweep_ridge_operator_moments_match_materialized() {
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* ridge_only = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 4, op_kinds, 4,
                          param_offsets, 5, params, 4,
@@ -456,7 +456,7 @@ void test_aom_chain_sweep_ridge_operator_moments_match_materialized() {
                          &ridge_only) == N4M_OK);
 
     n4m_method_result_t* materialized = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 4, op_kinds, 4,
                          param_offsets, 5, params, 4,
@@ -530,7 +530,7 @@ void test_aom_chain_sweep_wide_positive_ridge_operator_moments_match_materialize
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* wide_moment = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 4, op_kinds, 4,
                          param_offsets, 5, params, 4,
@@ -538,7 +538,7 @@ void test_aom_chain_sweep_wide_positive_ridge_operator_moments_match_materialize
                          nullptr, 0, 1, &wide_moment) == N4M_OK);
 
     n4m_method_result_t* materialized = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 4, op_kinds, 4,
                          param_offsets, 5, params, 4,
@@ -606,7 +606,7 @@ void test_aom_chain_sweep_banded_ridge_matches_materialized_sweep() {
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* banded = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 1,
                          param_offsets, 2, params, 1,
@@ -614,7 +614,7 @@ void test_aom_chain_sweep_banded_ridge_matches_materialized_sweep() {
                          &banded) == N4M_OK);
 
     n4m_method_result_t* materialized = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xtv, &Yv, cv, folds, n,
                          lambdas, n_lambdas, nullptr, 0, 1,
                          &materialized) == N4M_OK);
@@ -682,7 +682,7 @@ void test_aom_chain_sweep_banded_pls_matches_materialized_sweep() {
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* banded = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 1,
                          param_offsets, 2, params, 1,
@@ -690,7 +690,7 @@ void test_aom_chain_sweep_banded_pls_matches_materialized_sweep() {
                          &banded) == N4M_OK);
 
     n4m_method_result_t* materialized = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xtv, &Yv, cv, folds, n,
                          nullptr, 0, comps, n_components, 2,
                          &materialized) == N4M_OK);
@@ -762,7 +762,7 @@ void test_aom_chain_sweep_gaussian_banded_moment_route() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 1,
                          param_offsets, 2, params, 1,
@@ -817,7 +817,7 @@ void test_aom_chain_sweep_structured_detrend_ridge_matches_materialized_sweep() 
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* structured = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 2,
                          param_offsets, 3, params, 2,
@@ -825,7 +825,7 @@ void test_aom_chain_sweep_structured_detrend_ridge_matches_materialized_sweep() 
                          &structured) == N4M_OK);
 
     n4m_method_result_t* materialized = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xtv, &Yv, cv, folds, n,
                          lambdas, n_lambdas, nullptr, 0, 1,
                          &materialized) == N4M_OK);
@@ -894,7 +894,7 @@ void test_aom_chain_sweep_structured_detrend_pls_matches_materialized_sweep() {
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* structured = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 2,
                          param_offsets, 3, params, 2,
@@ -902,7 +902,7 @@ void test_aom_chain_sweep_structured_detrend_pls_matches_materialized_sweep() {
                          &structured) == N4M_OK);
 
     n4m_method_result_t* materialized = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xtv, &Yv, cv, folds, n,
                          nullptr, 0, comps, n_components, 2,
                          &materialized) == N4M_OK);
@@ -973,7 +973,7 @@ void test_aom_chain_sweep_mixed_hybrid_matches_split_runs() {
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* mixed = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 4, op_kinds, 4,
                          param_offsets, 5, params, 4,
@@ -981,7 +981,7 @@ void test_aom_chain_sweep_mixed_hybrid_matches_split_runs() {
                          &mixed) == N4M_OK);
 
     n4m_method_result_t* ridge_only = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 4, op_kinds, 4,
                          param_offsets, 5, params, 4,
@@ -989,7 +989,7 @@ void test_aom_chain_sweep_mixed_hybrid_matches_split_runs() {
                          &ridge_only) == N4M_OK);
 
     n4m_method_result_t* pls_only = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 4, op_kinds, 4,
                          param_offsets, 5, params, 4,
@@ -1106,7 +1106,7 @@ void test_aom_chain_sweep_materialized_policy_matches_auto_scores() {
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* auto_result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, auto_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 3, op_kinds, 3,
                          param_offsets, 4, params, 2,
@@ -1114,7 +1114,7 @@ void test_aom_chain_sweep_materialized_policy_matches_auto_scores() {
                          &auto_result) == N4M_OK);
 
     n4m_method_result_t* materialized_result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, materialized_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 3, op_kinds, 3,
                          param_offsets, 4, params, 2,
@@ -1203,7 +1203,7 @@ void test_aom_chain_sweep_force_moments_policy_accepts_full_moment_grid() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 3, op_kinds, 2,
                          param_offsets, 3, params, 1,
@@ -1273,7 +1273,7 @@ void test_aom_chain_sweep_force_moments_score_only_skips_final_refit() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 3, op_kinds, 2,
                          param_offsets, 3, params, 1,
@@ -1360,13 +1360,13 @@ void test_aom_chain_sweep_materialized_score_only_keeps_scores() {
 
     n4m_method_result_t* full = nullptr;
     n4m_method_result_t* score_only = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, full_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 3, op_kinds, 2,
                          param_offsets, 3, params, 2,
                          lambdas, n_lambdas, comps, n_components, 3,
                          &full) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, score_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 3, op_kinds, 2,
                          param_offsets, 3, params, 2,
@@ -1429,7 +1429,7 @@ void test_aom_chain_sweep_force_moments_policy_rejects_fallback() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(Y.data(), n, 2);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 1,
                          param_offsets, 2, nullptr, 0,
@@ -1492,7 +1492,7 @@ void test_aom_chain_sweep_moment_prefix_cache_counters() {
     N4M_TEST_REQUIRE(n4m_config_set_aom_score_only(cfg, 1) == N4M_OK);
 
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 6, op_kinds, 8,
                          param_offsets, 9, params, 12,
@@ -1546,7 +1546,7 @@ void test_aom_chain_sweep_wide_ridge_auto_route_is_backend_aware() {
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* auto_result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, auto_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 1,
                          param_offsets, 2, params, 1,
@@ -1554,7 +1554,7 @@ void test_aom_chain_sweep_wide_ridge_auto_route_is_backend_aware() {
                          &auto_result) == N4M_OK);
 
     n4m_method_result_t* materialized_result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, materialized_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 1,
                          param_offsets, 2, params, 1,
@@ -1634,7 +1634,7 @@ void test_aom_chain_sweep_wide_pls_auto_route_is_backend_aware() {
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* auto_result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, auto_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 1,
                          param_offsets, 2, params, 1,
@@ -1642,7 +1642,7 @@ void test_aom_chain_sweep_wide_pls_auto_route_is_backend_aware() {
                          &auto_result) == N4M_OK);
 
     n4m_method_result_t* materialized_result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, materialized_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 2, op_kinds, 1,
                          param_offsets, 2, params, 1,
@@ -1731,7 +1731,7 @@ void test_aom_chain_sweep_structured_whittaker_matches_materialized_policy() {
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
 
     n4m_method_result_t* auto_result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, auto_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 3, op_kinds, 3,
                          param_offsets, 4, params, 5,
@@ -1739,7 +1739,7 @@ void test_aom_chain_sweep_structured_whittaker_matches_materialized_policy() {
                          &auto_result) == N4M_OK);
 
     n4m_method_result_t* materialized_result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, materialized_cfg, &Xv, &Yv, cv, folds, n,
                          chain_offsets, 3, op_kinds, 3,
                          param_offsets, 4, params, 5,
@@ -1808,7 +1808,7 @@ void test_aom_chain_sweep_rejects_non_strict_operator() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_chain_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_chain_sweep_run(
                          ctx, cfg, &Xv, &Yv, 5, nullptr, 0,
                          chain_offsets, 2, op_kinds, 1,
                          param_offsets, 2, nullptr, 0,
@@ -1874,7 +1874,7 @@ void test_aom_preprocess_direct_strict_linear_bank() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_method_result_t* soft = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_preprocess_fit(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_preprocessing_fit(
                          ctx, bank, soft_gate, &Xv, &Yv, &soft) == N4M_OK);
     N4M_TEST_REQUIRE(soft != nullptr);
 
@@ -1926,7 +1926,7 @@ void test_aom_preprocess_direct_strict_linear_bank() {
     }
 
     n4m_method_result_t* hard = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_preprocess_fit(
+    N4M_TEST_REQUIRE(n4m_model_selection_aom_preprocessing_fit(
                          ctx, bank, hard_gate, &Xv, nullptr, &hard) == N4M_OK);
     N4M_TEST_REQUIRE(hard != nullptr);
     const auto hard_transformed = get_matrix(hard, "transformed", n, p);

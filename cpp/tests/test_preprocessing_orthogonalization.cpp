@@ -105,39 +105,39 @@ void test_osc_smoke() {
     double Y[6] = {0};
 
     n4m_pp_osc_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_osc_create(&h, /*n_components=*/1, /*scale=*/1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_create(&h, /*n_components=*/1, /*scale=*/1) == N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
 
     int fitted = 1;
-    N4M_TEST_REQUIRE(n4m_pp_osc_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 0);
 
     n4m_matrix_view_t Xfv = make_rowmajor_view(Xfit, 5, 3);
-    N4M_TEST_REQUIRE(n4m_pp_osc_fit(h, Xfv, yfit, 5) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_fit(h, Xfv, yfit, 5) == N4M_OK);
 
-    N4M_TEST_REQUIRE(n4m_pp_osc_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 1);
 
     n4m_matrix_view_t Xv = make_rowmajor_view(Xt, 2, 3);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_pp_osc_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_transform(h, Xv, Yv) == N4M_OK);
     for (int k = 0; k < 6; ++k) {
         N4M_TEST_REQUIRE(std::isfinite(Y[k]));
     }
 
     // inverse_transform returns N4M_ERR_UNSUPPORTED (OSC is not invertible).
-    N4M_TEST_REQUIRE(n4m_pp_osc_inverse_transform(h, Xv, Yv) == N4M_ERR_UNSUPPORTED);
+    N4M_TEST_REQUIRE(n4m_transform_osc_inverse_transform(h, Xv, Yv) == N4M_ERR_UNSUPPORTED);
 
     // not_fitted contract: create-fresh-then-transform without fit -> NOT_FITTED.
     n4m_pp_osc_handle_t* h2 = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_osc_create(&h2, /*n_components=*/1, /*scale=*/1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_create(&h2, /*n_components=*/1, /*scale=*/1) == N4M_OK);
     double Y2[6] = {0};
     n4m_matrix_view_t Y2v = make_rowmajor_view(Y2, 2, 3);
-    N4M_TEST_REQUIRE(n4m_pp_osc_transform(h2, Xv, Y2v) == N4M_ERR_NOT_FITTED);
-    n4m_pp_osc_destroy(h2);
+    N4M_TEST_REQUIRE(n4m_transform_osc_transform(h2, Xv, Y2v) == N4M_ERR_NOT_FITTED);
+    n4m_transform_osc_destroy(h2);
 
-    n4m_pp_osc_destroy(h);
-    n4m_pp_osc_destroy(nullptr);  // null-safe
+    n4m_transform_osc_destroy(h);
+    n4m_transform_osc_destroy(nullptr);  // null-safe
 }
 
 void test_epo_smoke() {
@@ -156,39 +156,39 @@ void test_epo_smoke() {
     double Y[8] = {0};
 
     n4m_pp_epo_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_epo_create(&h, /*scale=*/1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_create(&h, /*scale=*/1) == N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
 
     int fitted = 1;
-    N4M_TEST_REQUIRE(n4m_pp_epo_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 0);
 
     n4m_matrix_view_t Xfv = make_rowmajor_view(Xfit, 4, 4);
-    N4M_TEST_REQUIRE(n4m_pp_epo_fit(h, Xfv, dfit, 4) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_fit(h, Xfv, dfit, 4) == N4M_OK);
 
-    N4M_TEST_REQUIRE(n4m_pp_epo_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 1);
 
     // Transform without d is a pass-through (output == input).
     n4m_matrix_view_t Xv = make_rowmajor_view(Xt, 2, 4);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 4);
-    N4M_TEST_REQUIRE(n4m_pp_epo_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_transform(h, Xv, Yv) == N4M_OK);
     for (int k = 0; k < 8; ++k) {
         N4M_TEST_REQUIRE(std::fabs(Y[k] - Xt[k]) < 1e-12);
     }
 
-    N4M_TEST_REQUIRE(n4m_pp_epo_inverse_transform(h, Xv, Yv) == N4M_ERR_UNSUPPORTED);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_inverse_transform(h, Xv, Yv) == N4M_ERR_UNSUPPORTED);
 
     // not_fitted contract.
     n4m_pp_epo_handle_t* h2 = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_epo_create(&h2, /*scale=*/1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_create(&h2, /*scale=*/1) == N4M_OK);
     double Y2[8] = {0};
     n4m_matrix_view_t Y2v = make_rowmajor_view(Y2, 2, 4);
-    N4M_TEST_REQUIRE(n4m_pp_epo_transform(h2, Xv, Y2v) == N4M_ERR_NOT_FITTED);
-    n4m_pp_epo_destroy(h2);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_transform(h2, Xv, Y2v) == N4M_ERR_NOT_FITTED);
+    n4m_domain_adaptation_epo_destroy(h2);
 
-    n4m_pp_epo_destroy(h);
-    n4m_pp_epo_destroy(nullptr);  // null-safe
+    n4m_domain_adaptation_epo_destroy(h);
+    n4m_domain_adaptation_epo_destroy(nullptr);  // null-safe
 }
 
 // ---------------------------------------------------------------------------
@@ -207,14 +207,14 @@ void verify_osc_parity() {
         const std::string variant = params_get_string(c.params_json,
                                                        "variant", "transform");
         n4m_pp_osc_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_osc_create(&h, nc, scale ? 1 : 0) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_osc_create(&h, nc, scale ? 1 : 0) == N4M_OK);
 
         std::vector<double> fit_in = fx.fit_input;
         n4m_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
                                                     fx.fit_rows, fx.fit_cols);
         // y must live in a mutable copy since fixture_parser stores it const.
         std::vector<double> y_copy = y_fit;
-        N4M_TEST_REQUIRE(n4m_pp_osc_fit(h, Xfv, y_copy.data(),
+        N4M_TEST_REQUIRE(n4m_transform_osc_fit(h, Xfv, y_copy.data(),
                                           static_cast<std::int64_t>(y_copy.size())) == N4M_OK);
         if (variant == "fit_transform") {
             // Apply to the fit matrix.
@@ -224,7 +224,7 @@ void verify_osc_parity() {
                                                        fx.fit_rows, fx.fit_cols);
             n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                        fx.fit_rows, fx.fit_cols);
-            N4M_TEST_REQUIRE(n4m_pp_osc_transform(h, Xv, Yv) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_transform_osc_transform(h, Xv, Yv) == N4M_OK);
             assert_close(out, c.expected_output, "osc/" + c.name);
         } else {
             std::vector<double> in = fx.input;
@@ -233,10 +233,10 @@ void verify_osc_parity() {
                                                        fx.rows, fx.cols);
             n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                        fx.rows, fx.cols);
-            N4M_TEST_REQUIRE(n4m_pp_osc_transform(h, Xv, Yv) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_transform_osc_transform(h, Xv, Yv) == N4M_OK);
             assert_close(out, c.expected_output, "osc/" + c.name);
         }
-        n4m_pp_osc_destroy(h);
+        n4m_transform_osc_destroy(h);
     }
 }
 
@@ -250,12 +250,12 @@ void verify_epo_parity() {
         const std::string variant = params_get_string(c.params_json,
                                                        "variant", "transform");
         n4m_pp_epo_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_epo_create(&h, scale ? 1 : 0) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_create(&h, scale ? 1 : 0) == N4M_OK);
         std::vector<double> fit_in = fx.fit_input;
         n4m_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
                                                     fx.fit_rows, fx.fit_cols);
         std::vector<double> d_copy = d_fit;
-        N4M_TEST_REQUIRE(n4m_pp_epo_fit(h, Xfv, d_copy.data(),
+        N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_fit(h, Xfv, d_copy.data(),
                                           static_cast<std::int64_t>(d_copy.size())) == N4M_OK);
         if (variant == "fit_transform") {
             // The fit_transform path applies the learned projection using d
@@ -328,10 +328,10 @@ void verify_epo_parity() {
                                                        fx.rows, fx.cols);
             n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                        fx.rows, fx.cols);
-            N4M_TEST_REQUIRE(n4m_pp_epo_transform(h, Xv, Yv) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_transform(h, Xv, Yv) == N4M_OK);
             assert_close(out, c.expected_output, "epo/" + c.name);
         }
-        n4m_pp_epo_destroy(h);
+        n4m_domain_adaptation_epo_destroy(h);
     }
 }
 
@@ -341,7 +341,7 @@ void verify_epo_parity() {
 
 void test_osc_refit_replaces_state() {
     n4m_pp_osc_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_osc_create(&h, /*n_components=*/1, /*scale=*/1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_create(&h, /*n_components=*/1, /*scale=*/1) == N4M_OK);
 
     // Two distinct (X, y) datasets.  Same shape, distinct content.
     double X1[12] = {
@@ -370,22 +370,22 @@ void test_osc_refit_replaces_state() {
     n4m_matrix_view_t voutA = make_rowmajor_view(outA, 2, 3);
     n4m_matrix_view_t voutB = make_rowmajor_view(outB, 2, 3);
 
-    N4M_TEST_REQUIRE(n4m_pp_osc_fit(h, vX1, y1, 4) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_osc_transform(h, vX3, voutA) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_osc_fit(h, vX2, y2, 4) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_osc_transform(h, vX3, voutB) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_fit(h, vX1, y1, 4) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_transform(h, vX3, voutA) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_fit(h, vX2, y2, 4) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_osc_transform(h, vX3, voutB) == N4M_OK);
 
     bool any_diff = false;
     for (int i = 0; i < 6; ++i) {
         if (std::fabs(outA[i] - outB[i]) > 1e-9) { any_diff = true; break; }
     }
     N4M_TEST_REQUIRE(any_diff);
-    n4m_pp_osc_destroy(h);
+    n4m_transform_osc_destroy(h);
 }
 
 void test_epo_refit_replaces_state() {
     n4m_pp_epo_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_epo_create(&h, /*scale=*/1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_create(&h, /*scale=*/1) == N4M_OK);
 
     // For EPO _transform is a pass-through, so we cannot detect refit
     // through transform alone. Instead we verify that the internal fitted
@@ -409,14 +409,14 @@ void test_epo_refit_replaces_state() {
 
     n4m_matrix_view_t vX1 = make_rowmajor_view(X1, 4, 3);
     n4m_matrix_view_t vX2 = make_rowmajor_view(X2, 4, 3);
-    N4M_TEST_REQUIRE(n4m_pp_epo_fit(h, vX1, d1, 4) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_fit(h, vX1, d1, 4) == N4M_OK);
     int fitted = 0;
-    N4M_TEST_REQUIRE(n4m_pp_epo_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 1);
-    N4M_TEST_REQUIRE(n4m_pp_epo_fit(h, vX2, d2, 4) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_epo_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_fit(h, vX2, d2, 4) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_domain_adaptation_epo_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 1);
-    n4m_pp_epo_destroy(h);
+    n4m_domain_adaptation_epo_destroy(h);
 }
 
 }  // namespace

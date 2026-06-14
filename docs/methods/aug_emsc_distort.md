@@ -1,6 +1,6 @@
 # `aug_emsc_distort` — E M S C Distortion Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.EMSCDistortionAugmenter` · _C ABI_: `n4m_aug_emsc_distort_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.EMSCDistortionAugmenter` · _C ABI_: `n4m_augmentation_emsc_distort_*`
 
 ## Description
 
@@ -33,7 +33,7 @@ Random EMSC-like multiplicative, additive and polynomial distortion.
 
 ### Implementation
 
-C ABI `n4m_aug_emsc_distort_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.EMSCDistortionAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_emsc_distort_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.EMSCDistortionAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

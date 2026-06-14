@@ -1,6 +1,6 @@
 # `pp_wavelet_pca` — Wavelet P C A
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletPCA` · _C ABI_: `n4m_pp_wavelet_pca_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletPCA` · _C ABI_: `n4m_transform_wavelet_pca_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ DWT coefficient projection through PCA scores.
 
 ### Implementation
 
-C ABI `n4m_pp_wavelet_pca_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletPCA`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_wavelet_pca_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletPCA`. The same numerical kernel backs every language binding.
 
 ### Usage
 

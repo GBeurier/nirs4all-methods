@@ -1,6 +1,6 @@
 # `filter_variance` — Variance Filter
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.VarianceFilter` · _C ABI_: `n4m_filter_variance_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.VarianceFilter` · _C ABI_: `n4m_feature_selection_variance_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Model-agnostic feature filter by variance.
 
 ### Implementation
 
-C ABI `n4m_filter_variance_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.VarianceFilter`. The same numerical kernel backs every language binding.
+C ABI `n4m_feature_selection_variance_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.VarianceFilter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

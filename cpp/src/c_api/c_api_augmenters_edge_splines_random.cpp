@@ -171,7 +171,7 @@ extern "C" {
 // DetectorRollOff
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_detector_rolloff_create(
+N4M_API n4m_status_t n4m_augmentation_detector_rolloff_create(
     n4m_aug_detector_rolloff_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t detector_model,
@@ -198,7 +198,7 @@ N4M_API n4m_status_t n4m_aug_detector_rolloff_create(
     }
 }
 
-N4M_API void n4m_aug_detector_rolloff_destroy(
+N4M_API void n4m_augmentation_detector_rolloff_destroy(
     n4m_aug_detector_rolloff_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -207,7 +207,7 @@ N4M_API void n4m_aug_detector_rolloff_destroy(
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_detector_rolloff_apply(
+N4M_API n4m_status_t n4m_augmentation_detector_rolloff_apply(
     const n4m_aug_detector_rolloff_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t wavelengths,
@@ -236,7 +236,7 @@ N4M_API n4m_status_t n4m_aug_detector_rolloff_apply(
 // StrayLight
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_stray_light_create(
+N4M_API n4m_status_t n4m_augmentation_stray_light_create(
     n4m_aug_stray_light_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double stray_light_fraction,
@@ -261,7 +261,7 @@ N4M_API n4m_status_t n4m_aug_stray_light_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_stray_light_destroy(n4m_aug_stray_light_handle_t* h) {
+N4M_API void n4m_augmentation_stray_light_destroy(n4m_aug_stray_light_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_stray_light_state_free(h->state);
@@ -269,7 +269,7 @@ N4M_API void n4m_aug_stray_light_destroy(n4m_aug_stray_light_handle_t* h) {
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_stray_light_apply(
+N4M_API n4m_status_t n4m_augmentation_stray_light_apply(
     const n4m_aug_stray_light_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t wavelengths,
@@ -296,7 +296,7 @@ N4M_API n4m_status_t n4m_aug_stray_light_apply(
 // EdgeCurvature
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_edge_curve_create(
+N4M_API n4m_status_t n4m_augmentation_edge_curvature_create(
     n4m_aug_edge_curve_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double curvature_strength,
@@ -320,7 +320,7 @@ N4M_API n4m_status_t n4m_aug_edge_curve_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_edge_curve_destroy(n4m_aug_edge_curve_handle_t* h) {
+N4M_API void n4m_augmentation_edge_curvature_destroy(n4m_aug_edge_curve_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_edge_curvature_state_free(h->state);
@@ -328,7 +328,7 @@ N4M_API void n4m_aug_edge_curve_destroy(n4m_aug_edge_curve_handle_t* h) {
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_edge_curve_apply(
+N4M_API n4m_status_t n4m_augmentation_edge_curvature_apply(
     const n4m_aug_edge_curve_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t wavelengths,
@@ -355,7 +355,7 @@ N4M_API n4m_status_t n4m_aug_edge_curve_apply(
 // TruncatedPeak
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_truncated_peak_create(
+N4M_API n4m_status_t n4m_augmentation_truncated_peak_create(
     n4m_aug_truncated_peak_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double peak_probability,
@@ -381,7 +381,7 @@ N4M_API n4m_status_t n4m_aug_truncated_peak_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_truncated_peak_destroy(
+N4M_API void n4m_augmentation_truncated_peak_destroy(
     n4m_aug_truncated_peak_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -390,7 +390,7 @@ N4M_API void n4m_aug_truncated_peak_destroy(
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_truncated_peak_apply(
+N4M_API n4m_status_t n4m_augmentation_truncated_peak_apply(
     const n4m_aug_truncated_peak_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t wavelengths,
@@ -423,7 +423,7 @@ N4M_API n4m_status_t n4m_aug_truncated_peak_apply(
 // alternates between X (or out) and a heap-allocated temporary depending
 // on how many sub-augmenters are enabled.
 
-N4M_API n4m_status_t n4m_aug_edge_artifacts_create(
+N4M_API n4m_status_t n4m_augmentation_edge_artifacts_create(
     n4m_aug_edge_artifacts_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t enabled_flags,
@@ -508,7 +508,7 @@ N4M_API n4m_status_t n4m_aug_edge_artifacts_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_edge_artifacts_destroy(
+N4M_API void n4m_augmentation_edge_artifacts_destroy(
     n4m_aug_edge_artifacts_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -520,7 +520,7 @@ N4M_API void n4m_aug_edge_artifacts_destroy(
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_edge_artifacts_apply(
+N4M_API n4m_status_t n4m_augmentation_edge_artifacts_apply(
     const n4m_aug_edge_artifacts_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t wavelengths,
@@ -575,7 +575,7 @@ N4M_API n4m_status_t n4m_aug_edge_artifacts_apply(
 // Spline_Smoothing
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_spline_smooth_create(
+N4M_API n4m_status_t n4m_augmentation_spline_smoothing_create(
     n4m_aug_spline_smooth_handle_t** out,
     n4m_rng_pcg64_state_t* rng) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
@@ -594,14 +594,14 @@ N4M_API n4m_status_t n4m_aug_spline_smooth_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_spline_smooth_destroy(
+N4M_API void n4m_augmentation_spline_smoothing_destroy(
     n4m_aug_spline_smooth_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_aug_spline_smooth_state_free(h->state); delete h; }
     catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_spline_smooth_apply(
+N4M_API n4m_status_t n4m_augmentation_spline_smoothing_apply(
     const n4m_aug_spline_smooth_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -623,7 +623,7 @@ N4M_API n4m_status_t n4m_aug_spline_smooth_apply(
 // Spline_X_Perturbations
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_spline_x_perturb_create(
+N4M_API n4m_status_t n4m_augmentation_spline_x_perturbations_create(
     n4m_aug_spline_x_perturb_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t spline_degree,
@@ -648,14 +648,14 @@ N4M_API n4m_status_t n4m_aug_spline_x_perturb_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_spline_x_perturb_destroy(
+N4M_API void n4m_augmentation_spline_x_perturbations_destroy(
     n4m_aug_spline_x_perturb_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_aug_spline_x_perturb_state_free(h->state); delete h; }
     catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_spline_x_perturb_apply(
+N4M_API n4m_status_t n4m_augmentation_spline_x_perturbations_apply(
     const n4m_aug_spline_x_perturb_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -677,7 +677,7 @@ N4M_API n4m_status_t n4m_aug_spline_x_perturb_apply(
 // Spline_Y_Perturbations
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_spline_y_perturb_create(
+N4M_API n4m_status_t n4m_augmentation_spline_y_perturbations_create(
     n4m_aug_spline_y_perturb_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t spline_points,
@@ -699,14 +699,14 @@ N4M_API n4m_status_t n4m_aug_spline_y_perturb_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_spline_y_perturb_destroy(
+N4M_API void n4m_augmentation_spline_y_perturbations_destroy(
     n4m_aug_spline_y_perturb_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_aug_spline_y_perturb_state_free(h->state); delete h; }
     catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_spline_y_perturb_apply(
+N4M_API n4m_status_t n4m_augmentation_spline_y_perturbations_apply(
     const n4m_aug_spline_y_perturb_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -728,7 +728,7 @@ N4M_API n4m_status_t n4m_aug_spline_y_perturb_apply(
 // Spline_X_Simplification
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_spline_x_simplify_create(
+N4M_API n4m_status_t n4m_augmentation_spline_x_simplification_create(
     n4m_aug_spline_x_simplify_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t spline_points,
@@ -750,14 +750,14 @@ N4M_API n4m_status_t n4m_aug_spline_x_simplify_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_spline_x_simplify_destroy(
+N4M_API void n4m_augmentation_spline_x_simplification_destroy(
     n4m_aug_spline_x_simplify_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_aug_spline_x_simplify_state_free(h->state); delete h; }
     catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_spline_x_simplify_apply(
+N4M_API n4m_status_t n4m_augmentation_spline_x_simplification_apply(
     const n4m_aug_spline_x_simplify_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -779,7 +779,7 @@ N4M_API n4m_status_t n4m_aug_spline_x_simplify_apply(
 // Spline_Curve_Simplification
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_spline_curve_simplify_create(
+N4M_API n4m_status_t n4m_augmentation_spline_curve_simplification_create(
     n4m_aug_spline_curve_simplify_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t spline_points,
@@ -802,14 +802,14 @@ N4M_API n4m_status_t n4m_aug_spline_curve_simplify_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_spline_curve_simplify_destroy(
+N4M_API void n4m_augmentation_spline_curve_simplification_destroy(
     n4m_aug_spline_curve_simplify_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_aug_spline_curve_simplify_state_free(h->state); delete h; }
     catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_spline_curve_simplify_apply(
+N4M_API n4m_status_t n4m_augmentation_spline_curve_simplification_apply(
     const n4m_aug_spline_curve_simplify_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -831,7 +831,7 @@ N4M_API n4m_status_t n4m_aug_spline_curve_simplify_apply(
 // Rotate_Translate
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_rotate_translate_create(
+N4M_API n4m_status_t n4m_augmentation_rotate_translate_create(
     n4m_aug_rotate_translate_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double p_range,
@@ -852,14 +852,14 @@ N4M_API n4m_status_t n4m_aug_rotate_translate_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_rotate_translate_destroy(
+N4M_API void n4m_augmentation_rotate_translate_destroy(
     n4m_aug_rotate_translate_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_aug_rotate_translate_state_free(h->state); delete h; }
     catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_rotate_translate_apply(
+N4M_API n4m_status_t n4m_augmentation_rotate_translate_apply(
     const n4m_aug_rotate_translate_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -881,7 +881,7 @@ N4M_API n4m_status_t n4m_aug_rotate_translate_apply(
 // Random_X_Operation
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_aug_random_x_op_create(
+N4M_API n4m_status_t n4m_augmentation_random_x_op_create(
     n4m_aug_random_x_op_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t op_kind,
@@ -904,13 +904,13 @@ N4M_API n4m_status_t n4m_aug_random_x_op_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_aug_random_x_op_destroy(n4m_aug_random_x_op_handle_t* h) {
+N4M_API void n4m_augmentation_random_x_op_destroy(n4m_aug_random_x_op_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_aug_random_x_op_state_free(h->state); delete h; }
     catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_random_x_op_apply(
+N4M_API n4m_status_t n4m_augmentation_random_x_op_apply(
     const n4m_aug_random_x_op_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;

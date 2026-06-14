@@ -184,6 +184,34 @@
     "notes": {
       "type": "string",
       "description": "Free-text notes (provenance, caveats, etc.)."
+    },
+    "namespace": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)*$",
+      "description": "Target ML/DL namespace (no n4m. prefix, no leaf), e.g. estimators.regression.regularized. Source of truth: proposals/namespace/_target_ml_table.tsv."
+    },
+    "leaf": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "Canonical leaf name within the target namespace, e.g. ridge."
+    },
+    "fq_name": {
+      "type": "string",
+      "pattern": "^n4m(\\.[a-z_][a-z0-9_]*)+$",
+      "description": "Fully-qualified target name = n4m.<namespace>.<leaf>, e.g. n4m.estimators.regression.regularized.ridge."
+    },
+    "c_surface": {
+      "oneOf": [
+        {"type": "array", "items": {"type": "string", "pattern": "^n4m_[a-z0-9_]+$"}, "minItems": 1},
+        {"type": "string", "enum": ["none"]}
+      ],
+      "description": "Reconciled C ABI surface for this method: the real abi_symbols list, or the literal 'none' for methods that export 0 ABI symbols (Python-only AOM superblocks/campaigns + moment_stack). These are the CURRENT/seed symbols; ABI 2.0 renames them in a later phase."
+    },
+    "legacy_ids": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)+$"},
+      "minItems": 1,
+      "description": "Stable legacy catalog id(s) this method derives from (provenance). For unsplit methods this is just the current method_id; for split rows it records the originating id(s)."
     }
   }
 }

@@ -2,6 +2,7 @@
 % Please edit documentation in R/selectors.R
 \name{vip_select}
 \alias{vip_select}
+\alias{n4m_feature_select_vip}
 \title{VIP (Variable Importance in Projection) ranker.}
 \usage{
 vip_select(model, X, top_k)

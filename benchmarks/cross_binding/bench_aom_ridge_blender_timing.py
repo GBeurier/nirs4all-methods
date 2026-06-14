@@ -12,7 +12,8 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m.sklearn import NativeAOMRidgeBlenderRegressor
+from n4m._impl import NativeAOMRidgeBlenderRegressor
+from n4m._impl import native as _nat
 
 
 def make_dataset(n_samples: int, n_features: int, seed: int):
@@ -42,7 +43,7 @@ def median_ms(fn, repeats: int) -> tuple[float, object]:
 
 
 def run_blender(X, y, folds, cv, profile, lambdas, regularizer):
-    return n4m.aom_ridge_blender(
+    return _nat.aom_ridge_blender(
         X,
         y,
         profile=profile,

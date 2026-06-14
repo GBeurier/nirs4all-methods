@@ -7,12 +7,12 @@ category: "models"
 subcategory: "pls"
 since_abi: "1.21.0"
 abi_symbols:
-  - "n4m_pcr_fit"
+  - "n4m_estimators_pcr_fit"
 tu:
   - "cpp/src/core/model.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/estimators/regression.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,9 +31,16 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.estimators.regression.latent"
     class: "pcr"
     legacy_aliases: []
 publications:
   - "Massy, W. F. (1965). Principal Components Regression in Exploratory Statistical Research."
 notes: "Direct native Principal Components Regression MethodResult ABI. Added during AOM/moment product integration so PCR follows the same n4m.python and sklearn wrapper pattern as Ridge/CPPLS/continuum/ECR."
+c_surface:
+  - "n4m_estimators_pcr_fit"
+fq_name: "n4m.estimators.regression.latent.pcr"
+leaf: "pcr"
+legacy_ids:
+  - "models.pls.pcr"
+namespace: "estimators.regression.latent"

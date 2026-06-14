@@ -7,13 +7,13 @@ category: "preprocessing"
 subcategory: "scatter"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_area_create"
-  - "n4m_pp_area_destroy"
-  - "n4m_pp_area_transform"
+  - "n4m_transform_area_normalization_create"
+  - "n4m_transform_area_normalization_destroy"
+  - "n4m_transform_area_normalization_transform"
 tu:
   - "cpp/src/core/preprocessing/scatter/area_normalization.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/scatter.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_area_normalization_create"
+  - "n4m_transform_area_normalization_destroy"
+  - "n4m_transform_area_normalization_transform"
+fq_name: "n4m.transform.scatter.area_normalization"
+leaf: "area_normalization"
+legacy_ids:
+  - "preprocessing.scatter.area_normalization"
+namespace: "transform.scatter"

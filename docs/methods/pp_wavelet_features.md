@@ -1,6 +1,6 @@
 # `pp_wavelet_features` — Wavelet Features
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletFeatures` · _C ABI_: `n4m_pp_wavelet_features_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletFeatures` · _C ABI_: `n4m_transform_wavelet_features_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Multi-level DWT summary features.
 
 ### Implementation
 
-C ABI `n4m_pp_wavelet_features_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletFeatures`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_wavelet_features_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletFeatures`. The same numerical kernel backs every language binding.
 
 ### Usage
 

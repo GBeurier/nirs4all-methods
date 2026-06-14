@@ -2,9 +2,9 @@
 //
 // Item #19 regression guard: a JS-built n4m_matrix_view_t* reaches the deep
 // entrypoints correctly once i64 dims are marshalled as BigInt under
-// WASM_BIGINT=1. Proves the generic method_result path (n4m_sparse_simpls_fit)
+// WASM_BIGINT=1. Proves the generic method_result path (n4m_estimators_sparse_simpls_fit)
 // and the generic model path (n4m_model_fit -> get_array -> array_view) match
-// the raw-pointer oracle (n4m_pls_fit_simple) byte-for-byte.
+// the raw-pointer oracle (n4m_estimators_pls_fit) byte-for-byte.
 
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -65,7 +65,7 @@ let oracle;
     const xp = M._malloc(n*p*8); M.HEAPF64.set(X, xp/8);
     const yp = M._malloc(n*q*8); M.HEAPF64.set(Y, yp/8);
     const cp = M._malloc(p*q*8), xm = M._malloc(p*8), ym = M._malloc(q*8);
-    cc("n4m_pls_fit_simple", "number",
+    cc("n4m_estimators_pls_fit", "number",
         ["number","number","number","number","number","number","number","number","number","number"],
         [xp, yp, n, p, q, ncomp, cp, xm, ym, 0]);
     oracle = Array.from(M.HEAPF64.subarray(cp/8, cp/8 + p*q));
@@ -80,13 +80,13 @@ let ok = true;
 {
     const c = cfg(); const xv = makeView(X, n, p), yv = makeView(Y, n, q);
     const resPP = M._malloc(4); M.setValue(resPP, 0, "i32");
-    const st = cc("n4m_sparse_simpls_fit", "number",
+    const st = cc("n4m_estimators_sparse_simpls_fit", "number",
         ["number","number","number","number","number","number"],
         [ctx, c, xv.vp, yv.vp, 0.0, resPP]);
     const res = M.getValue(resPP, "i32"); M._free(resPP);
     const coef = resultMatrix(res, "coefficients");
     const pass = st === 0 && approx(coef, oracle);
-    console.log("method_result path (n4m_sparse_simpls_fit):", pass ? "OK" : "FAIL", coef);
+    console.log("method_result path (n4m_estimators_sparse_simpls_fit):", pass ? "OK" : "FAIL", coef);
     ok = ok && pass;
     cc("n4m_method_result_destroy", null, ["number"], [res]);
     xv.free(); yv.free(); cc("n4m_config_destroy", null, ["number"], [c]);

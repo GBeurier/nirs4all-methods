@@ -2,6 +2,7 @@
 % Please edit documentation in R/selectors.R
 \name{selectivity_ratio_select}
 \alias{selectivity_ratio_select}
+\alias{n4m_feature_select_selectivity_ratio}
 \title{Selectivity-ratio ranker.}
 \usage{
 selectivity_ratio_select(model, X, top_k)

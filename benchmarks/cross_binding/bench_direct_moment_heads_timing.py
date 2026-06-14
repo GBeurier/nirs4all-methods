@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m.sklearn import (
+from n4m._impl import (
     NativeContinuumRegressionRegressor,
     NativeCPPLSRegressor,
     NativeECRRegressor,

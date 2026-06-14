@@ -7,14 +7,14 @@ category: "preprocessing"
 subcategory: "resampling"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_resample_create"
-  - "n4m_pp_resample_destroy"
-  - "n4m_pp_resample_output_cols"
-  - "n4m_pp_resample_transform"
+  - "n4m_transform_resample_transformer_create"
+  - "n4m_transform_resample_transformer_destroy"
+  - "n4m_transform_resample_transformer_output_cols"
+  - "n4m_transform_resample_transformer_transform"
 tu:
   - "cpp/src/core/preprocessing/resampling/resample_transformer.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/resampling.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -34,3 +34,13 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_resample_transformer_create"
+  - "n4m_transform_resample_transformer_destroy"
+  - "n4m_transform_resample_transformer_output_cols"
+  - "n4m_transform_resample_transformer_transform"
+fq_name: "n4m.transform.resampling.resample_transformer"
+leaf: "resample_transformer"
+legacy_ids:
+  - "preprocessing.resampling.resample_transformer"
+namespace: "transform.resampling"

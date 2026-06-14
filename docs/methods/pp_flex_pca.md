@@ -1,6 +1,6 @@
 # `pp_flex_pca` — Flexible P C A
 
-_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.FlexiblePCA` · _C ABI_: `n4m_pp_flex_pca_*`
+_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.FlexiblePCA` · _C ABI_: `n4m_decomposition_flexible_pca_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ PCA with integer or explained-variance component selection.
 
 ### Implementation
 
-C ABI `n4m_pp_flex_pca_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FlexiblePCA`. The same numerical kernel backs every language binding.
+C ABI `n4m_decomposition_flexible_pca_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FlexiblePCA`. The same numerical kernel backs every language binding.
 
 ### Usage
 

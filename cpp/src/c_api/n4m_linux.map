@@ -9,7 +9,7 @@
  * major version.
  */
 
-N4M_1 {
+N4M_2 {
     global:
         n4m_*;
     local:

@@ -86,8 +86,8 @@ Two ways to reach the engine, both bit-exact vs native:
   producers by symbol, passing `n4m_matrix_view_t*` arguments built from JS.
 
 The generic path **works** and is regression-tested (`test/run_generic_method.mjs`
-fits `n4m_sparse_simpls_fit` and the generic `n4m_model_fit` and matches the raw
-`n4m_pls_fit_simple` oracle byte-for-byte). The previous "Emscripten miscompiles
+fits `n4m_estimators_sparse_simpls_fit` and the generic `n4m_model_fit` and matches the raw
+`n4m_estimators_pls_fit` oracle byte-for-byte). The previous "Emscripten miscompiles
 matrix-view parameters" diagnosis was **wrong**: the bug was the TS `ccall` layer
 passing a JS `number` for the `int64_t` `rows`/`cols` fields. Marshalling those
 dims as `BigInt` under `WASM_BIGINT` (`ffi.ts` / `makeMatrixView`) made the deep
@@ -98,7 +98,7 @@ import { loadModule, Context, Config, MethodResult } from "@nirs4all/methods-was
 await loadModule();
 const ctx = new Context(), cfg = new Config();
 const X = makeMatrixView(rows, cols, dataF64);   // row-major Float64Array
-const res = MethodResult.run("n4m_sparse_simpls_fit", ctx, cfg, [X /* , Y */]);
+const res = MethodResult.run("n4m_estimators_sparse_simpls_fit", ctx, cfg, [X /* , Y */]);
 const coef = res.matrix("coefficients");          // typed array + shape
 res.destroy(); cfg.destroy(); ctx.destroy();
 ```

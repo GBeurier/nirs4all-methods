@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Timing smoke benchmark for n4m.aom_ridge_global."""
+"""Timing smoke benchmark for aom_ridge_global."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m.sklearn import NativeAOMRidgeGlobalRegressor
+from n4m.model_selection.aom_search import AOMRidgeGlobalRegressor
+from n4m.model_selection.aom_search import aom_ridge_global
 
 
 OPERATORS = (
@@ -49,7 +50,7 @@ def median_ms(fn, repeats: int) -> tuple[float, object]:
 
 
 def run_function(X, y, folds, cv, lambdas, moment_policy):
-    return n4m.aom_ridge_global(
+    return aom_ridge_global(
         X,
         y,
         operators=OPERATORS,
@@ -62,7 +63,7 @@ def run_function(X, y, folds, cv, lambdas, moment_policy):
 
 
 def run_wrapper(X, y, folds, cv, lambdas, moment_policy):
-    return NativeAOMRidgeGlobalRegressor(
+    return AOMRidgeGlobalRegressor(
         operators=OPERATORS,
         cv=cv,
         fold_ids=folds,

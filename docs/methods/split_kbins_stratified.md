@@ -1,6 +1,6 @@
 # `split_kbins_stratified` — K Bins Stratified Splitter
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.KBinsStratifiedSplitter` · _C ABI_: `n4m_split_kbins_stratified_*`
+_Group_: **Splitters** · _Binding_: `n4m.sklearn.KBinsStratifiedSplitter` · _C ABI_: `n4m_model_selection_kbins_stratified_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Stratified split using K equal-width or quantile bins of ``y``.
 
 ### Implementation
 
-C ABI `n4m_split_kbins_stratified_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KBinsStratifiedSplitter`. The same numerical kernel backs every language binding.
+C ABI `n4m_model_selection_kbins_stratified_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KBinsStratifiedSplitter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

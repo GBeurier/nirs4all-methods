@@ -7,18 +7,18 @@ category: "diagnostics"
 subcategory: "validation"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_metric_bias"
-  - "n4m_metric_mae"
-  - "n4m_metric_nrmse"
-  - "n4m_metric_r2"
-  - "n4m_metric_rmse"
-  - "n4m_metric_rpd"
-  - "n4m_metric_rpiq"
-  - "n4m_metric_sep"
+  - "n4m_metrics_regression_metrics_bias"
+  - "n4m_metrics_regression_metrics_mae"
+  - "n4m_metrics_regression_metrics_nrmse"
+  - "n4m_metrics_regression_metrics_r2"
+  - "n4m_metrics_regression_metrics_rmse"
+  - "n4m_metrics_regression_metrics_rpd"
+  - "n4m_metrics_regression_metrics_rpiq"
+  - "n4m_metrics_regression_metrics_sep"
 tu:
   - "cpp/src/core/metrics.cpp"
 headers:
-  - "cpp/include/n4m/diagnostics.h"
+  - "cpp/include/n4m/metrics.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -38,3 +38,17 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_metrics_regression_metrics_bias"
+  - "n4m_metrics_regression_metrics_mae"
+  - "n4m_metrics_regression_metrics_nrmse"
+  - "n4m_metrics_regression_metrics_r2"
+  - "n4m_metrics_regression_metrics_rmse"
+  - "n4m_metrics_regression_metrics_rpd"
+  - "n4m_metrics_regression_metrics_rpiq"
+  - "n4m_metrics_regression_metrics_sep"
+fq_name: "n4m.metrics.scoring.regression_metrics"
+leaf: "regression_metrics"
+legacy_ids:
+  - "diagnostics.regression_metrics"
+namespace: "metrics.scoring"

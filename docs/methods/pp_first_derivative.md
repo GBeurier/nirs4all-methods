@@ -1,6 +1,6 @@
 # `pp_first_derivative` — First derivative
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.FirstDerivative` · _C ABI_: `n4m_pp_first_derivative_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.FirstDerivative` · _C ABI_: `n4m_transform_first_derivative_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Approximates $\mathrm{d}\mathbf{x}/\mathrm{d}\lambda$ by finite differences. The
 
 ### Implementation
 
-C ABI `n4m_pp_first_derivative_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FirstDerivative`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_first_derivative_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FirstDerivative`. The same numerical kernel backs every language binding.
 
 ### Usage
 

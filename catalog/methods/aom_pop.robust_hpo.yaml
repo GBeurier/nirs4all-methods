@@ -7,12 +7,12 @@ category: "aom_pop"
 subcategory: "aom"
 since_abi: "1.12.0"
 abi_symbols:
-  - "n4m_aom_robust_hpo_fit"
+  - "n4m_model_selection_robust_hpo_fit"
 tu:
   - "cpp/src/core/aom_robust_hpo.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/model_selection.h"
 carry_along_tu:
   - "cpp/src/core/aom_operators.cpp"
   - "cpp/src/core/ridge.cpp"
@@ -35,8 +35,15 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.model_selection.aom_search"
     class: "aom_robust_hpo"
     legacy_aliases: []
 publications: []
 notes: "Native strict-linear AOM robust-HPO screen over compact/wide preprocessing banks and Ridge/PLS heads. Compact has 12 chains; wide has 31 strict-linear chains, including Gaussian, FCK and Whittaker variants. Exposes input_coefficients plus intercept for replay in original feature space and backs NativeAOMRobustHPORegressor. Builds in CPU and CUDA-enabled libn4m configurations; native v1 is not the fused batched GPU grinder."
+c_surface:
+  - "n4m_model_selection_robust_hpo_fit"
+fq_name: "n4m.model_selection.aom_search.robust_hpo"
+leaf: "robust_hpo"
+legacy_ids:
+  - "aom_pop.robust_hpo"
+namespace: "model_selection.aom_search"

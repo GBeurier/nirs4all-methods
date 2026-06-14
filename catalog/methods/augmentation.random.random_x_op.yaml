@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "random"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_random_x_op_apply"
-  - "n4m_aug_random_x_op_create"
-  - "n4m_aug_random_x_op_destroy"
+  - "n4m_augmentation_random_x_op_apply"
+  - "n4m_augmentation_random_x_op_create"
+  - "n4m_augmentation_random_x_op_destroy"
 tu:
   - "cpp/src/core/augmentation/random/random_x_op.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/mixup.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_random_x_op_apply"
+  - "n4m_augmentation_random_x_op_create"
+  - "n4m_augmentation_random_x_op_destroy"
+fq_name: "n4m.augmentation.mixup.random_x_op"
+leaf: "random_x_op"
+legacy_ids:
+  - "augmentation.random.random_x_op"
+namespace: "augmentation.mixup"

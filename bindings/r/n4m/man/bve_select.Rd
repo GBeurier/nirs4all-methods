@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{bve_select}
 \alias{bve_select}
+\alias{n4m_feature_select_bve}
 \title{BVE-PLS.}
 \usage{
 bve_select(X, Y, n_components, n_steps = 10L, min_features = 5L)

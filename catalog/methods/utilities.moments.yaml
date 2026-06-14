@@ -7,14 +7,14 @@ category: "utilities"
 subcategory: "moments"
 since_abi: "1.16.0"
 abi_symbols:
-  - "n4m_moments_compute"
-  - "n4m_moments_subset_compute"
-  - "n4m_moments_subtract"
+  - "n4m_lowlevel_moments_compute"
+  - "n4m_lowlevel_moments_subset_compute"
+  - "n4m_lowlevel_moments_subtract"
 tu:
   - "cpp/src/core/moments.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/lowlevel.h"
 carry_along_tu:
   - "cpp/src/core/common/linalg.c"
   - "cpp/src/core/common/context.cpp"
@@ -34,9 +34,18 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.lowlevel.moments"
     class: "moments"
     legacy_aliases:
       - "moments_train_from_heldout"
 publications: []
 notes: "Row-additive sufficient-statistics substrate returning raw and centered X'X, X'Y and Y'Y moments. Fold subtraction is exact for train-from-heldout moment screens."
+c_surface:
+  - "n4m_lowlevel_moments_compute"
+  - "n4m_lowlevel_moments_subset_compute"
+  - "n4m_lowlevel_moments_subtract"
+fq_name: "n4m.lowlevel.moments.moments"
+leaf: "moments"
+legacy_ids:
+  - "utilities.moments"
+namespace: "lowlevel.moments"

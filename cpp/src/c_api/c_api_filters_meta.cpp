@@ -100,7 +100,7 @@ extern "C" {
 // HighLeverageFilter
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_filter_leverage_create(
+N4M_API n4m_status_t n4m_outlier_detection_high_leverage_create(
     n4m_filter_leverage_handle_t** out,
     int32_t method,
     double  threshold_multiplier,
@@ -133,7 +133,7 @@ N4M_API n4m_status_t n4m_filter_leverage_create(
     }
 }
 
-N4M_API void n4m_filter_leverage_destroy(n4m_filter_leverage_handle_t* h) {
+N4M_API void n4m_outlier_detection_high_leverage_destroy(n4m_filter_leverage_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_filter_leverage_state_free(h->state);
@@ -143,7 +143,7 @@ N4M_API void n4m_filter_leverage_destroy(n4m_filter_leverage_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_filter_leverage_fit(n4m_filter_leverage_handle_t* h,
+N4M_API n4m_status_t n4m_outlier_detection_high_leverage_fit(n4m_filter_leverage_handle_t* h,
                                               n4m_matrix_view_t X) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
     try {
@@ -157,7 +157,7 @@ N4M_API n4m_status_t n4m_filter_leverage_fit(n4m_filter_leverage_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_filter_leverage_is_fitted(
+N4M_API n4m_status_t n4m_outlier_detection_high_leverage_is_fitted(
     const n4m_filter_leverage_handle_t* h, int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -170,7 +170,7 @@ N4M_API n4m_status_t n4m_filter_leverage_is_fitted(
     }
 }
 
-N4M_API n4m_status_t n4m_filter_leverage_apply(
+N4M_API n4m_status_t n4m_outlier_detection_high_leverage_apply(
     const n4m_filter_leverage_handle_t* h,
     n4m_matrix_view_t X,
     uint8_t* mask_out,
@@ -195,7 +195,7 @@ N4M_API n4m_status_t n4m_filter_leverage_apply(
     }
 }
 
-N4M_API double n4m_filter_leverage_threshold(
+N4M_API double n4m_outlier_detection_high_leverage_threshold(
     const n4m_filter_leverage_handle_t* h) {
     if (h == nullptr) return 0.0;
     try {
@@ -209,7 +209,7 @@ N4M_API double n4m_filter_leverage_threshold(
 // SpectralQualityFilter
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_filter_quality_create(
+N4M_API n4m_status_t n4m_outlier_detection_spectral_quality_create(
     n4m_filter_quality_handle_t** out,
     double max_nan_ratio,
     double max_zero_ratio,
@@ -243,7 +243,7 @@ N4M_API n4m_status_t n4m_filter_quality_create(
     }
 }
 
-N4M_API void n4m_filter_quality_destroy(n4m_filter_quality_handle_t* h) {
+N4M_API void n4m_outlier_detection_spectral_quality_destroy(n4m_filter_quality_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_filter_quality_state_free(h->state);
@@ -253,7 +253,7 @@ N4M_API void n4m_filter_quality_destroy(n4m_filter_quality_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_filter_quality_apply(
+N4M_API n4m_status_t n4m_outlier_detection_spectral_quality_apply(
     const n4m_filter_quality_handle_t* h,
     n4m_matrix_view_t X,
     uint8_t* mask_out,
@@ -286,7 +286,7 @@ N4M_API n4m_status_t n4m_filter_quality_apply(
 // them — the caller must keep the sub-filter handles alive until the
 // composite is destroyed and free them separately afterwards.
 
-N4M_API n4m_status_t n4m_filter_composite_create(
+N4M_API n4m_status_t n4m_outlier_detection_composite_create(
     n4m_filter_composite_handle_t** out,
     int32_t mode) {
     if (out == nullptr) {
@@ -310,7 +310,7 @@ N4M_API n4m_status_t n4m_filter_composite_create(
     }
 }
 
-N4M_API void n4m_filter_composite_destroy(n4m_filter_composite_handle_t* h) {
+N4M_API void n4m_outlier_detection_composite_destroy(n4m_filter_composite_handle_t* h) {
     if (h == nullptr) return;
     try {
         delete h;  // does NOT free sub-filters
@@ -319,7 +319,7 @@ N4M_API void n4m_filter_composite_destroy(n4m_filter_composite_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_filter_composite_add_leverage(
+N4M_API n4m_status_t n4m_outlier_detection_composite_add_leverage(
     n4m_filter_composite_handle_t* h,
     n4m_filter_leverage_handle_t* sub) {
     if (h == nullptr || sub == nullptr) {
@@ -333,7 +333,7 @@ N4M_API n4m_status_t n4m_filter_composite_add_leverage(
     }
 }
 
-N4M_API n4m_status_t n4m_filter_composite_add_quality(
+N4M_API n4m_status_t n4m_outlier_detection_composite_add_quality(
     n4m_filter_composite_handle_t* h,
     n4m_filter_quality_handle_t* sub) {
     if (h == nullptr || sub == nullptr) {
@@ -347,7 +347,7 @@ N4M_API n4m_status_t n4m_filter_composite_add_quality(
     }
 }
 
-N4M_API n4m_status_t n4m_filter_composite_apply(
+N4M_API n4m_status_t n4m_outlier_detection_composite_apply(
     const n4m_filter_composite_handle_t* h,
     n4m_matrix_view_t X,
     uint8_t* mask_out,

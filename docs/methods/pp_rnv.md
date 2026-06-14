@@ -1,6 +1,6 @@
 # `pp_rnv` — Robust Normal Variate (RNV)
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.RNV` · _C ABI_: `n4m_pp_rnv_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.RNV` · _C ABI_: `n4m_transform_robust_snv_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ A median/IQR analogue of SNV: each spectrum is corrected as $(\mathbf{x}_i - \ma
 
 ### Implementation
 
-C ABI `n4m_pp_rnv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RNV`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_robust_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RNV`. The same numerical kernel backs every language binding.
 
 ### Usage
 

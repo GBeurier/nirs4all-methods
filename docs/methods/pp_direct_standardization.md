@@ -1,6 +1,6 @@
 # `pp_direct_standardization` — Direct Standardization
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.DirectStandardization` · _C ABI_: `n4m_pp_direct_standardization_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.DirectStandardization` · _C ABI_: `n4m_domain_adaptation_direct_standardization_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Direct standardization transfer map between paired instruments.
 
 ### Implementation
 
-C ABI `n4m_pp_direct_standardization_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.DirectStandardization`. The same numerical kernel backs every language binding.
+C ABI `n4m_domain_adaptation_direct_standardization_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.DirectStandardization`. The same numerical kernel backs every language binding.
 
 ### Usage
 

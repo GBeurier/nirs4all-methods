@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// Public ABI tests for n4m_sweep_run. The key test compares the moment-based
-// OOF predictions against a materialized fold-by-fold n4m_ridge_fit reference.
+// Public ABI tests for n4m_model_selection_sweep_run. The key test compares the moment-based
+// OOF predictions against a materialized fold-by-fold n4m_estimators_ridge_fit reference.
 
 #include "n4m/n4m.h"
 
@@ -152,7 +152,7 @@ std::vector<double> materialized_ridge_oof(const std::int32_t* fold_ids,
         n4m_matrix_view_t Yv = make_view(
             train_y.data(), static_cast<std::int64_t>(train_y.size()), 1);
         n4m_method_result_t* result = nullptr;
-        N4M_TEST_REQUIRE(n4m_ridge_fit(
+        N4M_TEST_REQUIRE(n4m_estimators_ridge_fit(
                              ctx, cfg, &Xv, &Yv, &lambda, 1, &result) == N4M_OK);
         const std::vector<double> coef = get_matrix(result, "coefficients", p, 1);
         const std::vector<double> intercept = get_matrix(result, "intercept", 1, 1);
@@ -210,7 +210,7 @@ double materialized_ridge_rmse_dynamic(const std::vector<double>& X,
         n4m_matrix_view_t Yv = make_view(
             train_y.data(), static_cast<std::int64_t>(train_y.size()), 1);
         n4m_method_result_t* result = nullptr;
-        N4M_TEST_REQUIRE(n4m_ridge_fit(
+        N4M_TEST_REQUIRE(n4m_estimators_ridge_fit(
                              ctx, cfg, &Xv, &Yv, &lambda, 1, &result) == N4M_OK);
         const std::vector<double> coef = get_matrix(result, "coefficients", p, 1);
         const std::vector<double> intercept = get_matrix(result, "intercept", 1, 1);
@@ -324,7 +324,7 @@ void test_sweep_ridge_oof_matches_materialized_cv() {
     n4m_matrix_view_t Xv = make_view(kX, 8, 3);
     n4m_matrix_view_t Yv = make_view(kY, 8, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xv, &Yv, 4, folds, 8,
                          &lambda, 1, nullptr, 0, 1, &result) == N4M_OK);
 
@@ -352,7 +352,7 @@ void test_sweep_selects_minimum_candidate_and_generates_folds() {
     n4m_matrix_view_t Xv = make_view(kX, 8, 3);
     n4m_matrix_view_t Yv = make_view(kY, 8, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xv, &Yv, 4, nullptr, 0,
                          lambdas, 2, nullptr, 0, 1, &result) == N4M_OK);
     const std::vector<double> scores =
@@ -414,7 +414,7 @@ void test_sweep_wide_dual_ridge_scores_match_materialized_cv() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          lambdas, 2, nullptr, 0, 1, &result) == N4M_OK);
 
@@ -428,7 +428,7 @@ void test_sweep_wide_dual_ridge_scores_match_materialized_cv() {
 
     N4M_TEST_REQUIRE(n4m_config_set_aom_score_only(cfg, 1) == N4M_OK);
     n4m_method_result_t* score_only = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds, n,
                          lambdas, 2, nullptr, 0, 1, &score_only) == N4M_OK);
     const std::vector<double> score_only_scores =
@@ -461,7 +461,7 @@ void test_sweep_pls_oof_matches_materialized_cv() {
     n4m_matrix_view_t Xv = make_view(kX, 8, 3);
     n4m_matrix_view_t Yv = make_view(kY, 8, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xv, &Yv, 4, folds, 8,
                          nullptr, 0, comps, 1, 2, &result) == N4M_OK);
 
@@ -510,7 +510,7 @@ void test_sweep_pls_component_grid_matches_materialized_cv_scores() {
     n4m_matrix_view_t Xv = make_view(kX, 8, 3);
     n4m_matrix_view_t Yv = make_view(kY, 8, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xv, &Yv, 4, folds, 8,
                          nullptr, 0, comps, 2, 2, &result) == N4M_OK);
 
@@ -551,7 +551,7 @@ void test_sweep_score_only_keeps_scores_and_skips_outputs() {
     n4m_matrix_view_t Xv = make_view(kX, 8, 3);
     n4m_matrix_view_t Yv = make_view(kY, 8, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xv, &Yv, 4, folds, 8,
                          nullptr, 0, comps, 2, 2, &result) == N4M_OK);
 
@@ -614,7 +614,7 @@ void test_sweep_wide_pls_score_only_uses_moment_route() {
     n4m_matrix_view_t Xv = make_view(X.data(), n, p);
     n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_sweep_run(
+    N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                          ctx, cfg, &Xv, &Yv, cv, folds.data(), n,
                          nullptr, 0, comps, 3, 2, &result) == N4M_OK);
 
@@ -702,7 +702,7 @@ void test_sweep_cuda_many_batched_opt_in_matches_default() {
         n4m_matrix_view_t Xv = make_view(X.data(), n, p);
         n4m_matrix_view_t Yv = make_view(y.data(), n, 1);
         n4m_method_result_t* result = nullptr;
-        N4M_TEST_REQUIRE(n4m_sweep_run(
+        N4M_TEST_REQUIRE(n4m_model_selection_sweep_run(
                              ctx, cfg, &Xv, &Yv, cv, folds.data(), n,
                              nullptr, 0, comps, 3, 2, &result) == N4M_OK);
         N4M_TEST_REQUIRE(

@@ -1,6 +1,6 @@
 # `pp_snv` — Standard Normal Variate (SNV)
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SNV` · _C ABI_: `n4m_pp_snv_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SNV` · _C ABI_: `n4m_transform_snv_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Each spectrum $\mathbf{x}_i$ is centred and scaled by its own row statistics: $\
 
 ### Implementation
 
-C ABI `n4m_pp_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SNV`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SNV`. The same numerical kernel backs every language binding.
 
 ### Usage
 

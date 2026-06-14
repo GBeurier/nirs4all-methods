@@ -7,11 +7,11 @@ category: "models"
 subcategory: "specialized"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_n_pls_fit"
+  - "n4m_estimators_n_pls_fit"
 tu:
   - "cpp/src/core/tensor_pls.cpp"
 headers:
-  - "cpp/include/n4m/models.h"
+  - "cpp/include/n4m/estimators/regression.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_estimators_n_pls_fit"
+fq_name: "n4m.estimators.regression.tensor.n_pls"
+leaf: "n_pls"
+legacy_ids:
+  - "models.specialized.tensor_pls"
+namespace: "estimators.regression.tensor"

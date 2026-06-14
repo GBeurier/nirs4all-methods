@@ -2,6 +2,7 @@
 % Please edit documentation in R/selectors.R
 \name{coefficient_select}
 \alias{coefficient_select}
+\alias{n4m_feature_select_coefficient}
 \title{Coefficient-magnitude ranker.}
 \usage{
 coefficient_select(model, X, top_k)

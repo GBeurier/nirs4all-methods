@@ -1,6 +1,6 @@
 # `aom_chain_sweep_run` - user-defined native AOM chain sweep
 
-_Group_: **Diagnostic / AOM** · _ABI_: `n4m_aom_chain_sweep_run`
+_Group_: **Diagnostic / AOM** · _ABI_: `n4m_model_selection_aom_chain_sweep_run`
 
 ## Description
 
@@ -99,7 +99,7 @@ dataset-dependent router.
 ## C ABI Descriptor
 
 ```c
-n4m_aom_chain_sweep_run(
+n4m_model_selection_aom_chain_sweep_run(
     ctx, cfg, X, Y,
     cv, fold_ids, n_fold_ids,
     chain_offsets, n_chain_offsets,

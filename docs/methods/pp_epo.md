@@ -1,6 +1,6 @@
 # `pp_epo` — E P O
 
-_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.EPO` · _C ABI_: `n4m_pp_epo_*`
+_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.EPO` · _C ABI_: `n4m_domain_adaptation_epo_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ External Parameter Orthogonalisation.
 
 ### Implementation
 
-C ABI `n4m_pp_epo_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.EPO`. The same numerical kernel backs every language binding.
+C ABI `n4m_domain_adaptation_epo_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.EPO`. The same numerical kernel backs every language binding.
 
 ### Usage
 

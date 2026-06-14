@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "drift"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_path_length_apply"
-  - "n4m_aug_path_length_create"
-  - "n4m_aug_path_length_destroy"
+  - "n4m_augmentation_path_length_apply"
+  - "n4m_augmentation_path_length_create"
+  - "n4m_augmentation_path_length_destroy"
 tu:
   - "cpp/src/core/augmentation/drift/path_length.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/drift.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_path_length_apply"
+  - "n4m_augmentation_path_length_create"
+  - "n4m_augmentation_path_length_destroy"
+fq_name: "n4m.augmentation.drift.path_length"
+leaf: "path_length"
+legacy_ids:
+  - "augmentation.drift.path_length"
+namespace: "augmentation.drift"

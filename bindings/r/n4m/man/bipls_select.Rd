@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{bipls_select}
 \alias{bipls_select}
+\alias{n4m_feature_select_bipls}
 \title{biPLS — backward interval PLS.}
 \usage{
 bipls_select(X, Y, n_components, interval_width = 10L, min_intervals = 1L)

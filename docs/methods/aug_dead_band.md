@@ -1,6 +1,6 @@
 # `aug_dead_band` — Dead Band Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.DeadBandAugmenter` · _C ABI_: `n4m_aug_dead_band_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.DeadBandAugmenter` · _C ABI_: `n4m_augmentation_dead_band_*`
 
 ## Description
 
@@ -31,7 +31,7 @@ Simulate dead spectral detector bands.
 
 ### Implementation
 
-C ABI `n4m_aug_dead_band_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.DeadBandAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_dead_band_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.DeadBandAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

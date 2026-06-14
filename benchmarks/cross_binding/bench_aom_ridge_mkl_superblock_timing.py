@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Timing smoke benchmark for n4m.aom_ridge_mkl_superblock."""
+"""Timing smoke benchmark for aom_ridge_mkl_superblock."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m.sklearn import NativeAOMRidgeMKLSuperblockRegressor
+from n4m.compose.aom_superblock import AOMRidgeMKLSuperblockRegressor
+from n4m.compose.aom_superblock import aom_ridge_mkl_superblock
 
 
 OPERATORS = (
@@ -50,7 +51,7 @@ def median_ms(fn, repeats: int) -> tuple[float, object]:
 
 
 def run_function(X, y, folds, cv, alphas, mkl_top_k, block_scaling):
-    return n4m.aom_ridge_mkl_superblock(
+    return aom_ridge_mkl_superblock(
         X,
         y,
         operators=OPERATORS,
@@ -63,7 +64,7 @@ def run_function(X, y, folds, cv, alphas, mkl_top_k, block_scaling):
 
 
 def run_wrapper(X, y, folds, cv, alphas, mkl_top_k, block_scaling):
-    return NativeAOMRidgeMKLSuperblockRegressor(
+    return AOMRidgeMKLSuperblockRegressor(
         operators=OPERATORS,
         alphas=alphas,
         cv=cv,

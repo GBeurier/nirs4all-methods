@@ -76,97 +76,97 @@ void test_savgol_smoke() {
     double X[10] = {1.0, 2.0, 4.0, 7.0, 11.0, 16.0, 22.0, 29.0, 37.0, 46.0};
     double Y[10] = {0};
     n4m_pp_savgol_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_savgol_create(&h, /*w=*/5, /*p=*/2, /*d=*/0,
+    N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(&h, /*w=*/5, /*p=*/2, /*d=*/0,
                                             /*delta=*/1.0,
                                             N4M_PP_SAVGOL_MIRROR, 0.0) ==
                      N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    N4M_TEST_REQUIRE(n4m_pp_savgol_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_transform(h, Xv, Yv) == N4M_OK);
     // The polynomial 1, 2, 4, 7, 11, ... is monotonically increasing; the
     // SG-smoothed values stay close to the raw values away from edges.
     N4M_TEST_REQUIRE(Y[4] > 9.0 && Y[4] < 12.0);
     // Invalid parameters.
     n4m_pp_savgol_handle_t* h_bad = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_savgol_create(&h_bad, /*w=*/4, 2, 0, 1.0,
+    N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(&h_bad, /*w=*/4, 2, 0, 1.0,
                                             N4M_PP_SAVGOL_MIRROR, 0.0) ==
                      N4M_ERR_INVALID_ARGUMENT);  // even window
-    N4M_TEST_REQUIRE(n4m_pp_savgol_create(&h_bad, /*w=*/5, 5, 0, 1.0,
+    N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(&h_bad, /*w=*/5, 5, 0, 1.0,
                                             N4M_PP_SAVGOL_MIRROR, 0.0) ==
                      N4M_ERR_INVALID_ARGUMENT);  // polyorder >= window
-    n4m_pp_savgol_destroy(h);
-    n4m_pp_savgol_destroy(nullptr);
+    n4m_transform_savitzky_golay_destroy(h);
+    n4m_transform_savitzky_golay_destroy(nullptr);
 }
 
 void test_first_derivative_smoke() {
     double X[5] = {0.0, 1.0, 4.0, 9.0, 16.0};  /* x^2 sampled */
     double Y[5] = {0};
     n4m_pp_first_derivative_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_first_derivative_create(&h, /*delta=*/1.0,
+    N4M_TEST_REQUIRE(n4m_transform_first_derivative_create(&h, /*delta=*/1.0,
                                                       /*edge_order=*/2) ==
                      N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 5);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 5);
-    N4M_TEST_REQUIRE(n4m_pp_first_derivative_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_first_derivative_transform(h, Xv, Yv) == N4M_OK);
     // Interior derivative of x^2 at integer points is 2x:
     // Y[1] = (4 - 0) / 2 = 2; Y[2] = (9 - 1) / 2 = 4; Y[3] = (16 - 4) / 2 = 6.
     N4M_TEST_REQUIRE(std::fabs(Y[1] - 2.0) < 1e-12);
     N4M_TEST_REQUIRE(std::fabs(Y[2] - 4.0) < 1e-12);
     N4M_TEST_REQUIRE(std::fabs(Y[3] - 6.0) < 1e-12);
-    n4m_pp_first_derivative_destroy(h);
+    n4m_transform_first_derivative_destroy(h);
 }
 
 void test_second_derivative_smoke() {
     double X[7] = {0.0, 1.0, 4.0, 9.0, 16.0, 25.0, 36.0};  /* x^2 */
     double Y[7] = {0};
     n4m_pp_second_derivative_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_second_derivative_create(&h, /*delta=*/1.0,
+    N4M_TEST_REQUIRE(n4m_transform_second_derivative_create(&h, /*delta=*/1.0,
                                                        /*edge_order=*/2) ==
                      N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 7);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 7);
-    N4M_TEST_REQUIRE(n4m_pp_second_derivative_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_second_derivative_transform(h, Xv, Yv) == N4M_OK);
     // d^2/dx^2 (x^2) = 2 — the second derivative is exactly 2 everywhere
     // for the interior of a parabola sampled on the integers.
     N4M_TEST_REQUIRE(std::fabs(Y[3] - 2.0) < 1e-10);
-    n4m_pp_second_derivative_destroy(h);
+    n4m_transform_second_derivative_destroy(h);
 }
 
 void test_norris_williams_smoke() {
     double X[7] = {1.0, 2.0, 4.0, 7.0, 11.0, 16.0, 22.0};
     double Y[7] = {0};
     n4m_pp_norris_williams_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_norris_williams_create(&h, /*segment=*/3,
+    N4M_TEST_REQUIRE(n4m_transform_norris_williams_create(&h, /*segment=*/3,
                                                      /*gap=*/1,
                                                      /*derivative_order=*/1,
                                                      /*delta=*/1.0) ==
                      N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 7);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 7);
-    N4M_TEST_REQUIRE(n4m_pp_norris_williams_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_norris_williams_transform(h, Xv, Yv) == N4M_OK);
     // Smoke check: the gap-1 derivative produces a sequence centred around
     // the local slope of the input (positive and increasing in this case).
     N4M_TEST_REQUIRE(Y[3] > 0.0);
     N4M_TEST_REQUIRE(Y[5] > Y[1]);
-    n4m_pp_norris_williams_destroy(h);
-    n4m_pp_norris_williams_destroy(nullptr);
+    n4m_transform_norris_williams_destroy(h);
+    n4m_transform_norris_williams_destroy(nullptr);
 }
 
 void test_gaussian_smoke() {
     double X[7] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0};
     double Y[7] = {0};
     n4m_pp_gaussian_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_gaussian_create(&h, /*sigma=*/1.0, /*order=*/0,
+    N4M_TEST_REQUIRE(n4m_transform_gaussian_create(&h, /*sigma=*/1.0, /*order=*/0,
                                               N4M_PP_GAUSSIAN_REFLECT, 0.0,
                                               4.0) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 7);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 7);
-    N4M_TEST_REQUIRE(n4m_pp_gaussian_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_gaussian_transform(h, Xv, Yv) == N4M_OK);
     // Gaussian smoothing of a perfect ramp should leave the centre nearly
     // unchanged.
     N4M_TEST_REQUIRE(std::fabs(Y[3] - 4.0) < 1e-10);
-    n4m_pp_gaussian_destroy(h);
+    n4m_transform_gaussian_destroy(h);
 }
 
 // ---------------------------------------------------------------------------
@@ -206,21 +206,21 @@ void verify_savgol_parity() {
         const double cv = params_get_double(c.params_json, "cval", 0.0);
 
         n4m_pp_savgol_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_savgol_create(&h, w, p, d, delta,
+        N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(&h, w, p, d, delta,
                                                 savgol_mode_from_string(m),
                                                 cv) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_savgol_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_transform(h, Xv, Yv) == N4M_OK);
         // SG: SVD-based scipy lstsq vs our Vandermonde-QR may diverge by a
         // few ULPs on the coefficient computation, then amplified by the
         // convolution sum.  1e-9 abs / 1e-10 rel gives us a comfortable
         // margin while still catching algorithmic bugs.
         assert_close_with(out, c.expected_output, "savgol/" + c.name,
                            1e-9, 1e-10);
-        n4m_pp_savgol_destroy(h);
+        n4m_transform_savitzky_golay_destroy(h);
     }
 }
 
@@ -231,18 +231,18 @@ void verify_first_derivative_parity() {
         const int edge = static_cast<int>(
             params_get_int(c.params_json, "edge_order", 2));
         n4m_pp_first_derivative_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_first_derivative_create(&h, delta, edge) ==
+        N4M_TEST_REQUIRE(n4m_transform_first_derivative_create(&h, delta, edge) ==
                          N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_first_derivative_transform(h, Xv, Yv) ==
+        N4M_TEST_REQUIRE(n4m_transform_first_derivative_transform(h, Xv, Yv) ==
                          N4M_OK);
         // Pure arithmetic — byte-exact tolerance.
         assert_close_with(out, c.expected_output,
                            "first_derivative/" + c.name, 1e-12, 1e-13);
-        n4m_pp_first_derivative_destroy(h);
+        n4m_transform_first_derivative_destroy(h);
     }
 }
 
@@ -253,17 +253,17 @@ void verify_second_derivative_parity() {
         const int edge = static_cast<int>(
             params_get_int(c.params_json, "edge_order", 2));
         n4m_pp_second_derivative_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_second_derivative_create(&h, delta, edge) ==
+        N4M_TEST_REQUIRE(n4m_transform_second_derivative_create(&h, delta, edge) ==
                          N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_second_derivative_transform(h, Xv, Yv) ==
+        N4M_TEST_REQUIRE(n4m_transform_second_derivative_transform(h, Xv, Yv) ==
                          N4M_OK);
         assert_close_with(out, c.expected_output,
                            "second_derivative/" + c.name, 1e-12, 1e-13);
-        n4m_pp_second_derivative_destroy(h);
+        n4m_transform_second_derivative_destroy(h);
     }
 }
 
@@ -278,18 +278,18 @@ void verify_norris_williams_parity() {
             params_get_int(c.params_json, "derivative_order", 1));
         const double delta = params_get_double(c.params_json, "delta", 1.0);
         n4m_pp_norris_williams_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_norris_williams_create(&h, seg, gap, d,
+        N4M_TEST_REQUIRE(n4m_transform_norris_williams_create(&h, seg, gap, d,
                                                          delta) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_norris_williams_transform(h, Xv, Yv) ==
+        N4M_TEST_REQUIRE(n4m_transform_norris_williams_transform(h, Xv, Yv) ==
                          N4M_OK);
         // Pure arithmetic — tight tolerance.
         assert_close_with(out, c.expected_output,
                            "norris_williams/" + c.name, 1e-12, 1e-13);
-        n4m_pp_norris_williams_destroy(h);
+        n4m_transform_norris_williams_destroy(h);
     }
 }
 
@@ -304,20 +304,20 @@ void verify_gaussian_parity() {
         const double cv = params_get_double(c.params_json, "cval", 0.0);
         const double tr = params_get_double(c.params_json, "truncate", 4.0);
         n4m_pp_gaussian_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_gaussian_create(&h, sigma, order,
+        N4M_TEST_REQUIRE(n4m_transform_gaussian_create(&h, sigma, order,
                                                   gaussian_mode_from_string(m),
                                                   cv, tr) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_gaussian_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_gaussian_transform(h, Xv, Yv) == N4M_OK);
         // Gaussian: kernel sum + convolution differ by a couple of ULPs vs
         // scipy's correlate1d (which may use FFT for larger kernels).  We
         // keep the same tolerance as SG.
         assert_close_with(out, c.expected_output,
                            "gaussian/" + c.name, 1e-9, 1e-10);
-        n4m_pp_gaussian_destroy(h);
+        n4m_transform_gaussian_destroy(h);
     }
 }
 

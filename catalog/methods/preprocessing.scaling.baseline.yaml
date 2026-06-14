@@ -7,16 +7,16 @@ category: "preprocessing"
 subcategory: "scaling"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_baseline_create"
-  - "n4m_pp_baseline_destroy"
-  - "n4m_pp_baseline_fit"
-  - "n4m_pp_baseline_inverse_transform"
-  - "n4m_pp_baseline_is_fitted"
-  - "n4m_pp_baseline_transform"
+  - "n4m_transform_baseline_center_create"
+  - "n4m_transform_baseline_center_destroy"
+  - "n4m_transform_baseline_center_fit"
+  - "n4m_transform_baseline_center_inverse_transform"
+  - "n4m_transform_baseline_center_is_fitted"
+  - "n4m_transform_baseline_center_transform"
 tu:
   - "cpp/src/core/preprocessing/scaling/baseline.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/scaling.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -36,3 +36,15 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_baseline_center_create"
+  - "n4m_transform_baseline_center_destroy"
+  - "n4m_transform_baseline_center_fit"
+  - "n4m_transform_baseline_center_inverse_transform"
+  - "n4m_transform_baseline_center_is_fitted"
+  - "n4m_transform_baseline_center_transform"
+fq_name: "n4m.transform.scaling.baseline_center"
+leaf: "baseline_center"
+legacy_ids:
+  - "preprocessing.scaling.baseline"
+namespace: "transform.scaling"

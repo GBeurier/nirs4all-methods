@@ -1,6 +1,6 @@
 # `pp_to_absorbance` — To Absorbance
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.ToAbsorbance` · _C ABI_: `n4m_pp_to_absorbance_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.ToAbsorbance` · _C ABI_: `n4m_transform_to_absorbance_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ A = -log10(max(R, epsilon)). Optional %-scaling.
 
 ### Implementation
 
-C ABI `n4m_pp_to_absorbance_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ToAbsorbance`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_to_absorbance_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ToAbsorbance`. The same numerical kernel backs every language binding.
 
 ### Usage
 

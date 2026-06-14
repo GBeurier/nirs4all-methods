@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // Parity tests for direct (closed-form) Ridge regression via the public
-// n4m_ridge_fit ABI. Expected coefficients / intercepts / predictions are
+// n4m_estimators_ridge_fit ABI. Expected coefficients / intercepts / predictions are
 // computed in numpy (closed-form primal solve on column-centered X, Y with
 // intercept = y_mean - x_mean . beta) and baked in as constants.
 //
@@ -200,7 +200,7 @@ n4m_method_result_t* fit(const double* X, std::int64_t n, std::int64_t p,
     n4m_matrix_view_t Yv = make_view(Y, n, q);
     n4m_method_result_t* result = nullptr;
     N4M_TEST_REQUIRE(
-        n4m_ridge_fit(ctx, cfg, &Xv, &Yv, &lambda, 1, &result) == N4M_OK);
+        n4m_estimators_ridge_fit(ctx, cfg, &Xv, &Yv, &lambda, 1, &result) == N4M_OK);
     N4M_TEST_REQUIRE(result != nullptr);
 
     double got_lambda = 0.0;
@@ -266,11 +266,11 @@ void test_invalid_lambda_rejected() {
     n4m_matrix_view_t Yv = make_view(kY6x1, 6, 1);
     n4m_method_result_t* result = nullptr;
     double bad = std::nan("");
-    N4M_TEST_REQUIRE(n4m_ridge_fit(ctx, cfg, &Xv, &Yv, &bad, 1, &result) ==
+    N4M_TEST_REQUIRE(n4m_estimators_ridge_fit(ctx, cfg, &Xv, &Yv, &bad, 1, &result) ==
                      N4M_ERR_INVALID_ARGUMENT);
     N4M_TEST_REQUIRE(result == nullptr);
     double neg = -1.0;
-    N4M_TEST_REQUIRE(n4m_ridge_fit(ctx, cfg, &Xv, &Yv, &neg, 1, &result) ==
+    N4M_TEST_REQUIRE(n4m_estimators_ridge_fit(ctx, cfg, &Xv, &Yv, &neg, 1, &result) ==
                      N4M_ERR_INVALID_ARGUMENT);
     N4M_TEST_REQUIRE(result == nullptr);
     n4m_config_destroy(cfg);

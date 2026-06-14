@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{ga_select}
 \alias{ga_select}
+\alias{n4m_feature_select_ga}
 \title{GA-PLS — genetic algorithm variable selection.}
 \usage{
 ga_select(

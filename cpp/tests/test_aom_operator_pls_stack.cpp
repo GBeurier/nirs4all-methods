@@ -3,7 +3,6 @@
 // Public ABI tests for native AOM operator PLS score stack.
 
 #include "n4m/n4m.h"
-#include "n4m/pls.h"
 
 #include <cmath>
 #include <cstdint>
@@ -101,7 +100,7 @@ void test_operator_pls_stack_compact_contract() {
     n4m_matrix_view_t Yv = view(y.data(), n, 1);
 
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_operator_pls_stack_fit(
+    N4M_TEST_REQUIRE(n4m_ensemble_aom_operator_pls_stack_fit(
                          ctx, cfg, &Xv, &Yv,
                          /*profile=*/0,
                          cv,
@@ -201,7 +200,7 @@ void test_operator_pls_stack_rejects_multi_output_y() {
     n4m_matrix_view_t Xv = view(X.data(), n, p);
     n4m_matrix_view_t Yv = view(Y2.data(), n, 2);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_operator_pls_stack_fit(
+    N4M_TEST_REQUIRE(n4m_ensemble_aom_operator_pls_stack_fit(
                          ctx, cfg, &Xv, &Yv, 0, 3,
                          nullptr, 0, components, 1, alphas, 1,
                          0.0, 0.0, &result) == N4M_ERR_INVALID_ARGUMENT);
@@ -234,7 +233,7 @@ void test_operator_pls_stack_wide_includes_fck_moment_bank() {
     n4m_matrix_view_t Yv = view(y.data(), n, 1);
 
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_operator_pls_stack_fit(
+    N4M_TEST_REQUIRE(n4m_ensemble_aom_operator_pls_stack_fit(
                          ctx, cfg, &Xv, &Yv,
                          /*profile=*/1,
                          cv,

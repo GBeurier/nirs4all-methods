@@ -12,8 +12,8 @@ tu:
   - "cpp/src/core/sweep.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
-  - "cpp/include/n4m/aom_pop.h"
+  - "cpp/include/n4m/compose.h"
+  - "cpp/include/n4m/compose.h"
 carry_along_tu:
   - "cpp/src/core/aom_operators.cpp"
   - "cpp/src/core/moments.cpp"
@@ -36,8 +36,14 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.compose.aom_superblock"
     class: "aom_pls_superblock"
     legacy_aliases: []
 publications: []
 notes: "Python-backed donor-style AOM-PLS superblock constrained to strict-linear single-operator AOM views. It builds concatenated native aom_preprocess operator outputs, selects the PLS component count by train CV over the superblock, fits through the native PLS binding, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes row-reference-dependent preprocessing, nonlinear lifts and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU PLS superblock grinder."
+c_surface: "none"
+fq_name: "n4m.compose.aom_superblock.aom_pls_superblock"
+leaf: "aom_pls_superblock"
+legacy_ids:
+  - "aom_pop.aom_pls_superblock"
+namespace: "compose.aom_superblock"

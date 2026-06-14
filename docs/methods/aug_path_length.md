@@ -1,6 +1,6 @@
 # `aug_path_length` — Path Length Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.PathLengthAugmenter` · _C ABI_: `n4m_aug_path_length_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.PathLengthAugmenter` · _C ABI_: `n4m_augmentation_path_length_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Simulate multiplicative path-length variation.
 
 ### Implementation
 
-C ABI `n4m_aug_path_length_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.PathLengthAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_path_length_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.PathLengthAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

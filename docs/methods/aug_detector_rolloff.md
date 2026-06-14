@@ -1,6 +1,6 @@
 # `aug_detector_rolloff` — Detector Roll Off Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.DetectorRollOffAugmenter` · _C ABI_: `n4m_aug_detector_rolloff_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.DetectorRollOffAugmenter` · _C ABI_: `n4m_augmentation_detector_rolloff_*`
 
 ## Description
 
@@ -30,7 +30,7 @@ Detector edge roll-off artifact.
 
 ### Implementation
 
-C ABI `n4m_aug_detector_rolloff_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.DetectorRollOffAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_detector_rolloff_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.DetectorRollOffAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

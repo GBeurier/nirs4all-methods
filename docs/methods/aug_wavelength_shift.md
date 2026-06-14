@@ -1,6 +1,6 @@
 # `aug_wavelength_shift` — Wavelength Shift
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WavelengthShift` · _C ABI_: `n4m_aug_wavelength_shift_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WavelengthShift` · _C ABI_: `n4m_augmentation_wavelength_shift_*`
 
 ## Description
 
@@ -28,7 +28,7 @@ Random spectral shift with linear interpolation.
 
 ### Implementation
 
-C ABI `n4m_aug_wavelength_shift_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WavelengthShift`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_wavelength_shift_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WavelengthShift`. The same numerical kernel backs every language binding.
 
 ### Usage
 

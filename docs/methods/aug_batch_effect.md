@@ -1,6 +1,6 @@
 # `aug_batch_effect` — Batch Effect Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.BatchEffectAugmenter` · _C ABI_: `n4m_aug_batch_effect_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.BatchEffectAugmenter` · _C ABI_: `n4m_augmentation_batch_effect_*`
 
 ## Description
 
@@ -30,7 +30,7 @@ Random offset, slope and gain batch effects.
 
 ### Implementation
 
-C ABI `n4m_aug_batch_effect_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BatchEffectAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_batch_effect_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BatchEffectAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

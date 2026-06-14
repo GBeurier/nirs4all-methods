@@ -19,7 +19,8 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m import NativeAOMRobustHPORegressor
+from n4m._impl import NativeAOMRobustHPORegressor
+from n4m._impl import native as _nat
 
 
 def make_dataset(n_samples: int, n_features: int, seed: int):
@@ -46,7 +47,7 @@ def median_ms(fn, repeats: int) -> tuple[float, object]:
 
 def run_native(X, y, profile: str, cv: int, repeats: int):
     return median_ms(
-        lambda: n4m.aom_robust_hpo(
+        lambda: _nat.aom_robust_hpo(
             X, y, profile=profile, cv=cv, heads=("ridge", "pls")
         ),
         repeats,

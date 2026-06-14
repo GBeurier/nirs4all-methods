@@ -128,7 +128,7 @@ extern "C" {
 // WavelengthShift
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_wavelength_shift_create(
+N4M_API n4m_status_t n4m_augmentation_wavelength_shift_create(
     n4m_aug_wavelength_shift_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double shift_lo, double shift_hi,
@@ -153,7 +153,7 @@ N4M_API n4m_status_t n4m_aug_wavelength_shift_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_wavelength_shift_apply(
+N4M_API n4m_status_t n4m_augmentation_wavelength_shift_apply(
     const n4m_aug_wavelength_shift_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -169,7 +169,7 @@ N4M_API n4m_status_t n4m_aug_wavelength_shift_apply(
     }
 }
 
-N4M_API void n4m_aug_wavelength_shift_destroy(
+N4M_API void n4m_augmentation_wavelength_shift_destroy(
     n4m_aug_wavelength_shift_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -184,7 +184,7 @@ N4M_API void n4m_aug_wavelength_shift_destroy(
 // WavelengthStretch
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_wavelength_stretch_create(
+N4M_API n4m_status_t n4m_augmentation_wavelength_stretch_create(
     n4m_aug_wavelength_stretch_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double stretch_lo, double stretch_hi,
@@ -210,7 +210,7 @@ N4M_API n4m_status_t n4m_aug_wavelength_stretch_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_wavelength_stretch_apply(
+N4M_API n4m_status_t n4m_augmentation_wavelength_stretch_apply(
     const n4m_aug_wavelength_stretch_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -226,7 +226,7 @@ N4M_API n4m_status_t n4m_aug_wavelength_stretch_apply(
     }
 }
 
-N4M_API void n4m_aug_wavelength_stretch_destroy(
+N4M_API void n4m_augmentation_wavelength_stretch_destroy(
     n4m_aug_wavelength_stretch_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -241,7 +241,7 @@ N4M_API void n4m_aug_wavelength_stretch_destroy(
 // LocalWavelengthWarp
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_local_warp_create(
+N4M_API n4m_status_t n4m_augmentation_local_warp_create(
     n4m_aug_local_warp_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t n_control_points,
@@ -267,7 +267,7 @@ N4M_API n4m_status_t n4m_aug_local_warp_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_local_warp_apply(
+N4M_API n4m_status_t n4m_augmentation_local_warp_apply(
     const n4m_aug_local_warp_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -283,7 +283,7 @@ N4M_API n4m_status_t n4m_aug_local_warp_apply(
     }
 }
 
-N4M_API void n4m_aug_local_warp_destroy(n4m_aug_local_warp_handle_t* h) {
+N4M_API void n4m_augmentation_local_warp_destroy(n4m_aug_local_warp_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_local_warp_state_free(h->state);
@@ -297,7 +297,7 @@ N4M_API void n4m_aug_local_warp_destroy(n4m_aug_local_warp_handle_t* h) {
 // BandPerturbation
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_band_perturb_create(
+N4M_API n4m_status_t n4m_augmentation_band_perturb_create(
     n4m_aug_band_perturb_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t n_bands,
@@ -324,7 +324,7 @@ N4M_API n4m_status_t n4m_aug_band_perturb_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_band_perturb_apply(
+N4M_API n4m_status_t n4m_augmentation_band_perturb_apply(
     const n4m_aug_band_perturb_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -340,7 +340,7 @@ N4M_API n4m_status_t n4m_aug_band_perturb_apply(
     }
 }
 
-N4M_API void n4m_aug_band_perturb_destroy(n4m_aug_band_perturb_handle_t* h) {
+N4M_API void n4m_augmentation_band_perturb_destroy(n4m_aug_band_perturb_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_band_perturb_state_free(h->state);
@@ -354,7 +354,7 @@ N4M_API void n4m_aug_band_perturb_destroy(n4m_aug_band_perturb_handle_t* h) {
 // BandMasking
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_band_mask_create(
+N4M_API n4m_status_t n4m_augmentation_band_mask_create(
     n4m_aug_band_mask_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t n_bands_lo, int32_t n_bands_hi,
@@ -384,7 +384,7 @@ N4M_API n4m_status_t n4m_aug_band_mask_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_band_mask_apply(
+N4M_API n4m_status_t n4m_augmentation_band_mask_apply(
     const n4m_aug_band_mask_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -400,7 +400,7 @@ N4M_API n4m_status_t n4m_aug_band_mask_apply(
     }
 }
 
-N4M_API void n4m_aug_band_mask_destroy(n4m_aug_band_mask_handle_t* h) {
+N4M_API void n4m_augmentation_band_mask_destroy(n4m_aug_band_mask_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_band_mask_state_free(h->state);
@@ -414,7 +414,7 @@ N4M_API void n4m_aug_band_mask_destroy(n4m_aug_band_mask_handle_t* h) {
 // ChannelDropout
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_channel_dropout_create(
+N4M_API n4m_status_t n4m_augmentation_channel_dropout_create(
     n4m_aug_channel_dropout_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double  dropout_prob,
@@ -444,7 +444,7 @@ N4M_API n4m_status_t n4m_aug_channel_dropout_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_channel_dropout_apply(
+N4M_API n4m_status_t n4m_augmentation_channel_dropout_apply(
     const n4m_aug_channel_dropout_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -460,7 +460,7 @@ N4M_API n4m_status_t n4m_aug_channel_dropout_apply(
     }
 }
 
-N4M_API void n4m_aug_channel_dropout_destroy(
+N4M_API void n4m_augmentation_channel_dropout_destroy(
     n4m_aug_channel_dropout_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -475,7 +475,7 @@ N4M_API void n4m_aug_channel_dropout_destroy(
 // GaussianSmoothingJitter
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_gauss_jitter_create(
+N4M_API n4m_status_t n4m_augmentation_gauss_jitter_create(
     n4m_aug_gauss_jitter_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double  sigma_lo, double sigma_hi,
@@ -499,7 +499,7 @@ N4M_API n4m_status_t n4m_aug_gauss_jitter_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_gauss_jitter_apply(
+N4M_API n4m_status_t n4m_augmentation_gauss_jitter_apply(
     const n4m_aug_gauss_jitter_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -515,7 +515,7 @@ N4M_API n4m_status_t n4m_aug_gauss_jitter_apply(
     }
 }
 
-N4M_API void n4m_aug_gauss_jitter_destroy(n4m_aug_gauss_jitter_handle_t* h) {
+N4M_API void n4m_augmentation_gauss_jitter_destroy(n4m_aug_gauss_jitter_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_gauss_jitter_state_free(h->state);
@@ -529,7 +529,7 @@ N4M_API void n4m_aug_gauss_jitter_destroy(n4m_aug_gauss_jitter_handle_t* h) {
 // UnsharpSpectralMask
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_unsharp_mask_create(
+N4M_API n4m_status_t n4m_augmentation_unsharp_mask_create(
     n4m_aug_unsharp_mask_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double  amount_lo, double amount_hi,
@@ -553,7 +553,7 @@ N4M_API n4m_status_t n4m_aug_unsharp_mask_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_unsharp_mask_apply(
+N4M_API n4m_status_t n4m_augmentation_unsharp_mask_apply(
     const n4m_aug_unsharp_mask_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -569,7 +569,7 @@ N4M_API n4m_status_t n4m_aug_unsharp_mask_apply(
     }
 }
 
-N4M_API void n4m_aug_unsharp_mask_destroy(n4m_aug_unsharp_mask_handle_t* h) {
+N4M_API void n4m_augmentation_unsharp_mask_destroy(n4m_aug_unsharp_mask_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_unsharp_mask_state_free(h->state);
@@ -583,7 +583,7 @@ N4M_API void n4m_aug_unsharp_mask_destroy(n4m_aug_unsharp_mask_handle_t* h) {
 // SmoothMagnitudeWarp
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_magnitude_warp_create(
+N4M_API n4m_status_t n4m_augmentation_magnitude_warp_create(
     n4m_aug_magnitude_warp_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t n_control_points,
@@ -609,7 +609,7 @@ N4M_API n4m_status_t n4m_aug_magnitude_warp_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_magnitude_warp_apply(
+N4M_API n4m_status_t n4m_augmentation_magnitude_warp_apply(
     const n4m_aug_magnitude_warp_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -625,7 +625,7 @@ N4M_API n4m_status_t n4m_aug_magnitude_warp_apply(
     }
 }
 
-N4M_API void n4m_aug_magnitude_warp_destroy(
+N4M_API void n4m_augmentation_magnitude_warp_destroy(
     n4m_aug_magnitude_warp_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -640,7 +640,7 @@ N4M_API void n4m_aug_magnitude_warp_destroy(
 // LocalClipping
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_local_clip_create(
+N4M_API n4m_status_t n4m_augmentation_local_clip_create(
     n4m_aug_local_clip_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t n_regions,
@@ -664,7 +664,7 @@ N4M_API n4m_status_t n4m_aug_local_clip_create(
     }
 }
 
-N4M_API n4m_status_t n4m_aug_local_clip_apply(
+N4M_API n4m_status_t n4m_augmentation_local_clip_apply(
     const n4m_aug_local_clip_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -680,7 +680,7 @@ N4M_API n4m_status_t n4m_aug_local_clip_apply(
     }
 }
 
-N4M_API void n4m_aug_local_clip_destroy(n4m_aug_local_clip_handle_t* h) {
+N4M_API void n4m_augmentation_local_clip_destroy(n4m_aug_local_clip_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_local_clip_state_free(h->state);

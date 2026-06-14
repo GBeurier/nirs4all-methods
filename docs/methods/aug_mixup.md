@@ -1,6 +1,6 @@
 # `aug_mixup` — Mixup augmentation
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.MixupAugmenter` · _C ABI_: `n4m_aug_mixup_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.MixupAugmenter` · _C ABI_: `n4m_augmentation_mixup_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Forms convex combinations of sample pairs, $\tilde{\mathbf{x}} = \lambda\mathbf{
 
 ### Implementation
 
-C ABI `n4m_aug_mixup_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.MixupAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_mixup_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.MixupAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

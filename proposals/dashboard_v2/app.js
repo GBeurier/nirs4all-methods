@@ -23,13 +23,28 @@ const VERDICT = {
   not_run:      { cls: 'nr',     gly: '·', label: 'NR' },
   error:        { cls: 'error',  gly: '✕', label: 'error' },
 };
-function verdict(v) { return VERDICT[v] || { cls: 'na', gly: '?', label: v || '—' }; }
+function verdict(v) {
+  if (v == null) return { cls: 'na', gly: '∅', label: 'n/a' };
+  return VERDICT[v] || { cls: 'na', gly: '∅', label: String(v) };
+}
 
 const LANG_CLASS = {
   'C++': 'lang-cpp', 'Python': 'lang-python', 'R': 'lang-r',
   'MATLAB/Octave': 'lang-matlab', 'external': 'lang-ext',
 };
 function langClass(l) { return LANG_CLASS[l] || 'lang-ext'; }
+
+/* ---------- origin vocabulary (data values → human label + css token) ---------- */
+const ORIGIN_LABEL = {
+  pls4all: 'pls4all native',
+  n4m_donor: 'donor',
+  donor: 'donor',
+  external: 'external',
+};
+function originLabel(o) { return ORIGIN_LABEL[o] || o; }
+// css token: map the data value onto the styled classes that styles.css defines
+const ORIGIN_CLASS = { pls4all: 'pls4all', n4m_donor: 'donor', donor: 'donor', external: 'external' };
+function originClass(o) { return ORIGIN_CLASS[o] || 'external'; }
 
 /* ---------- column lookup ---------- */
 const COLS = DATA.columns;
@@ -38,6 +53,8 @@ const COL_BY_ID = Object.fromEntries(COLS.map(c => [c.id, c]));
 /* ---------- category metadata ---------- */
 const GROUP_LABEL = Object.fromEntries(DATA.algo_groups.map(g => [g.key, g.label]));
 const GROUP_ORDER = DATA.algo_groups.map(g => g.key);
+// published methods docs (custom domain). Method pages are methods/<stem>.html.
+const DOCS_BASE = 'https://methods.nirs4all.org';
 // per-category accent rotation through the brand palette
 const ACCENTS = ['#0d9488', '#0891b2', '#4f46e5', '#d97706', '#10b981', '#0f766e', '#06b6d4', '#4338ca'];
 const GROUP_ACCENT = {};
@@ -55,7 +72,12 @@ function buildMethods() {
     const score = DATA.method_scores[algo];
     const group = DATA.algo_to_group[algo] || 'other';
     const origin = DATA.algo_origin[algo] || 'external';
-    const symbol = DATA.algo_has_doc[algo] || null; // doc/ABI handle
+    // ABI-2 namespace identity (replaces the legacy pp_/aug_/… registry id)
+    const display = (DATA.algo_display && DATA.algo_display[algo]) || algo;
+    const fq = (DATA.algo_fq && DATA.algo_fq[algo]) || null;
+    const docPage = (DATA.algo_has_doc && DATA.algo_has_doc[algo]) || null;
+    const docUrl = docPage ? `${DOCS_BASE}/methods/${docPage}.html` : null;
+    const symbol = docPage; // retained: doc-page handle
     const rows = rowsByAlgo[algo] || [];
 
     // distinct problem sizes for this method
@@ -91,13 +113,13 @@ function buildMethods() {
       .reduce((s, k) => s + (refHist[k] || 0) + (bindHist[k] || 0), 0);
 
     methods.push({
-      algo, group, origin, symbol, rows, sizes,
+      algo, display, fq, docPage, docUrl, group, origin, symbol, rows, sizes,
       langs: [...langs], anyJaccard,
       refHist, bindHist, timing, divRef, divBind, attention,
       hasRef: histTotalReal(refHist) > 0,
-      hasDoc: !!symbol,
-      // searchable haystack
-      hay: (algo + ' ' + (symbol || '') + ' ' + group + ' ' + (GROUP_LABEL[group] || '') + ' ' + origin).toLowerCase(),
+      hasDoc: !!docPage,
+      // searchable haystack: new name + namespace + legacy id (so old IDs still find it)
+      hay: (display + ' ' + (fq || '') + ' ' + algo + ' ' + group + ' ' + (GROUP_LABEL[group] || '') + ' ' + origin).toLowerCase(),
     });
   }
   return methods;
@@ -243,11 +265,21 @@ function meterMeta(h) {
   return s;
 }
 
+// human-readable verdict tally for screen readers (color-independent)
+function meterAriaLabel(label, h) {
+  const order = [
+    ['exact', 'exact'], ['cross_check', 'cross-check'], ['divergent', 'divergent'],
+    ['drift', 'drift'], ['error', 'error'], ['not_available', 'not available'], ['not_run', 'not run'],
+  ];
+  const bits = order.filter(([k]) => h[k]).map(([k, name]) => `${h[k]} ${name}`);
+  return `${label} parity: ${bits.length ? bits.join(', ') : 'no cells'}`;
+}
+
 function parityMeter(label, glyph, h) {
   return `
     <div class="pmeter">
       <div class="pm-label"><span aria-hidden="true">${glyph}</span>${label}</div>
-      <div class="pm-bar" role="img" aria-label="${label} verdict distribution">${meterSegments(h)}</div>
+      <div class="pm-bar" role="img" aria-label="${escapeAttr(meterAriaLabel(label, h))}">${meterSegments(h)}</div>
       <div class="pm-meta">${meterMeta(h)}</div>
     </div>`;
 }
@@ -267,16 +299,24 @@ function methodCard(m) {
   const refBadge = topVerdictBadge(m.refHist);
   const bindBadge = topVerdictBadge(m.bindHist);
   const tMed = m.timing ? fmtMs(m.timing.median_ms) : '—';
-  const sym = m.symbol ? `<div class="m-sym">${escapeHtml(m.symbol)}</div>` : '<div class="m-sym" style="opacity:.6">no doc handle</div>';
+  const sym = m.fq
+    ? `<div class="m-sym" title="namespace">${escapeHtml(m.fq)}</div>`
+    : `<div class="m-sym" style="opacity:.55">${escapeHtml(m.algo)}</div>`;
+  const docLink = m.docUrl
+    ? `<a class="m-doc" href="${escapeAttr(m.docUrl)}" target="_blank" rel="noopener"
+          title="Open documentation (new tab)"
+          aria-label="${escapeAttr(m.display)} documentation, opens in a new tab"
+          onclick="event.stopPropagation()">📄 docs ↗</a>`
+    : '';
   return `
-    <button class="mcard" style="--accent:${accent}" data-algo="${escapeAttr(m.algo)}"
-            aria-label="Open details for ${escapeAttr(m.algo)}">
+    <div class="mcard" style="--accent:${accent}" data-algo="${escapeAttr(m.algo)}"
+         role="button" tabindex="0" aria-label="Open details for ${escapeAttr(m.display)}">
       <div class="m-top">
         <div>
-          <h3>${escapeHtml(m.algo)}</h3>
+          <h3>${escapeHtml(m.display)}</h3>
           ${sym}
         </div>
-        <span class="m-origin ${m.origin}">${m.origin}</span>
+        <span class="m-origin ${originClass(m.origin)}">${escapeHtml(originLabel(m.origin))}</span>
       </div>
       <div class="m-badges">
         <span style="font-size:.62rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;font-weight:700;align-self:center">ref</span>${refBadge}
@@ -290,8 +330,9 @@ function methodCard(m) {
         <span title="languages with at least one cell">${langDots(m.langs)}</span>
         <span title="median wall-clock across timed cells" style="margin-left:auto">⏱ <b>${tMed}</b></span>
         <span title="problem sizes benchmarked">▦ <b>${m.sizes.length}</b> size${m.sizes.length === 1 ? '' : 's'}</span>
+        ${docLink}
       </div>
-    </button>`;
+    </div>`;
 }
 
 function langDots(langs) {
@@ -350,6 +391,9 @@ function render() {
   // wire cards
   el.methods.querySelectorAll('.mcard').forEach(btn => {
     btn.addEventListener('click', () => openDrawer(btn.dataset.algo));
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(btn.dataset.algo); }
+    });
   });
 }
 
@@ -373,10 +417,14 @@ function openDrawer(algo) {
   const m = METHODS.find(x => x.algo === algo);
   if (!m) return;
   lastFocus = document.activeElement;
-  document.getElementById('drawerTitle').textContent = m.algo;
-  document.getElementById('drawerSym').textContent = m.symbol
-    ? `ABI / doc handle: ${m.symbol}`
-    : 'no documented ABI handle for this method';
+  document.getElementById('drawerTitle').textContent = m.display;
+  const _fq = m.fq
+    ? `<span style="font-family:var(--mono)">${escapeHtml(m.fq)}</span>`
+    : `<span style="opacity:.7">${escapeHtml(m.algo)} — no namespace mapping</span>`;
+  const _doc = m.docUrl
+    ? `  ·  <a href="${escapeAttr(m.docUrl)}" target="_blank" rel="noopener">Open documentation ↗</a>`
+    : '';
+  document.getElementById('drawerSym').innerHTML = _fq + _doc;
   document.getElementById('drawerMeta').innerHTML = drawerMetaHtml(m);
   document.getElementById('drawerBody').innerHTML = drawerBodyHtml(m);
 
@@ -403,7 +451,7 @@ function closeDrawer() {
 function drawerMetaHtml(m) {
   const accent = GROUP_ACCENT[m.group];
   let h = `<span class="badge" style="color:${accent};background:${accent}1a;border-color:${accent}40">${escapeHtml(GROUP_LABEL[m.group] || m.group)}</span>`;
-  h += `<span class="m-origin ${m.origin}" style="font-size:.66rem;padding:3px 9px">${m.origin}</span>`;
+  h += `<span class="m-origin ${originClass(m.origin)}" style="font-size:.66rem;padding:3px 9px">${escapeHtml(originLabel(m.origin))}</span>`;
   h += `<span class="prov-chip"><span class="dot" style="background:${accent}"></span>${m.langs.length} language${m.langs.length === 1 ? '' : 's'}</span>`;
   if (m.anyJaccard) h += `<span class="badge cross"><span class="gly" aria-hidden="true">∩</span>selector method · Jaccard parity</span>`;
   if (!m.hasDoc) h += `<span class="badge na"><span class="gly" aria-hidden="true">∅</span>undocumented</span>`;
@@ -424,14 +472,17 @@ function drawerBodyHtml(m) {
     refReal ? `${m.refHist.exact || 0}/${refReal} exact vs canonical lib` : `${m.refHist.not_run || 0} NR · ${m.refHist.not_available || 0} n/a`);
   html += scoreTile('Binding parity', bindReal ? `${fmtPct(m.bindHist.exact || 0, bindReal)}%` : '—',
     bindReal ? `${m.bindHist.exact || 0}/${bindReal} exact vs C++ core` : `${m.bindHist.not_run || 0} NR · ${m.bindHist.not_available || 0} n/a`);
+  // selector methods report divergence as Jaccard set-overlap on BOTH gates; numeric
+  // methods report relative-RMSE Δ. Label + format must follow the method's metric.
+  const divMetric = m.anyJaccard ? 'jaccard' : 'rmse';
+  const divLead = m.anyJaccard ? 'Jaccard overlap (1.00 = identical mask)' : 'max |Δrel-RMSE|';
   if (m.divRef) {
-    const metric = m.anyJaccard ? 'max |Δ| / min J' : 'max |Δrel-RMSE|';
-    html += scoreTile('Reference divergence', fmtDiv(m.divRef.max, m.anyJaccard ? 'jaccard' : 'rmse'),
-      `${metric} · n=${m.divRef.n} · median ${fmtDiv(m.divRef.median, m.anyJaccard ? 'jaccard' : 'rmse')}`);
+    html += scoreTile('Reference divergence', fmtDiv(m.divRef.max, divMetric),
+      `${divLead} · n=${m.divRef.n} · median ${fmtDiv(m.divRef.median, divMetric)}`);
   }
   if (m.divBind) {
-    html += scoreTile('Binding divergence', fmtDiv(m.divBind.max, 'rmse'),
-      `max |Δrel-RMSE| · n=${m.divBind.n} · median ${fmtDiv(m.divBind.median, 'rmse')}`);
+    html += scoreTile('Binding divergence', fmtDiv(m.divBind.max, divMetric),
+      `${divLead} · n=${m.divBind.n} · median ${fmtDiv(m.divBind.median, divMetric)}`);
   }
   if (m.timing) {
     html += scoreTile('Timing', fmtMs(m.timing.median_ms),
@@ -445,9 +496,16 @@ function drawerBodyHtml(m) {
   html += verdictBreakdownCard('Binding gate', '⊻', m.bindHist, 'each binding tier vs the C++ core');
   html += `</div></div>`;
 
-  /* --- 3. timing curves --- */
-  if (m.timing && m.sizes.length >= 1) {
+  /* --- 3. timing curves (only when timed cells actually exist) --- */
+  const hasTiming = m.timing && (m.timing.n || 0) > 0 && m.timing.median_ms != null;
+  if (hasTiming && m.sizes.length >= 1) {
     html += `<div class="dsection"><h3>Timing vs problem size</h3>${timingChartHtml(m)}</div>`;
+  } else {
+    html += `<div class="dsection"><h3>Timing vs problem size</h3>
+      <div class="chart-card" style="color:var(--text-3);font-size:.82rem">
+        No wall-clock timing was recorded for this method — it is a parity-only / fixture method
+        (the matrix still verifies its verdicts, but it carries no benchmarked <span class="mono">ms</span>).
+      </div></div>`;
   }
 
   /* --- 4. multi-reference parity table --- */
@@ -701,7 +759,13 @@ function drawParityTable(m, sizeKey) {
       <td class="num">${ms}</td>
     </tr>`;
 
-    if (cell.divergence_note && cell.parity === 'cross_check') {
+    // surface the informational note whenever ANY gate is a cross-check (not just the
+    // top-level verdict), but skip the terse `selection_exact` marker which carries no
+    // explanation and would just add noise on already-exact selector rows.
+    const isCross = cell.parity === 'cross_check'
+      || cell.reference_parity === 'cross_check'
+      || cell.binding_parity === 'cross_check';
+    if (cell.divergence_note && cell.divergence_note !== 'selection_exact' && isCross) {
       body += `<tr class="note-row"><td colspan="5">◐ ${escapeHtml(cell.divergence_note)}</td></tr>`;
     }
   }
@@ -819,8 +883,18 @@ function renderChrome() {
   catSel.innerHTML = `<option value="">all categories (${DATA.algo_groups.length})</option>` +
     DATA.algo_groups.map(g => {
       const n = METHODS.filter(m => m.group === g.key).length;
-      return n ? `<option value="${g.key}">${escapeHtml(g.label)} (${n})</option>` : '';
+      return n ? `<option value="${escapeAttr(g.key)}">${escapeHtml(g.label)} (${n})</option>` : '';
     }).join('');
+
+  // origin dropdown — derived from the data so options always match real values
+  const originCounts = {};
+  for (const m of METHODS) originCounts[m.origin] = (originCounts[m.origin] || 0) + 1;
+  const originKeys = Object.keys(originCounts).sort((a, b) => originCounts[b] - originCounts[a]);
+  const originSel = document.getElementById('filterOrigin');
+  originSel.innerHTML = `<option value="">all origins (${METHODS.length})</option>` +
+    originKeys.map(o =>
+      `<option value="${escapeAttr(o)}">${escapeHtml(originLabel(o))} (${originCounts[o]})</option>`
+    ).join('');
 }
 
 /* ==========================================================================

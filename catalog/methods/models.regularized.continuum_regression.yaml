@@ -7,11 +7,11 @@ category: "models"
 subcategory: "regularized"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_continuum_regression_fit"
+  - "n4m_estimators_continuum_regression_fit"
 tu:
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/n4m.h"
+  - "cpp/include/n4m/estimators/regression.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -30,8 +30,15 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.estimators.regression.latent"
     class: "continuum_regression"
     legacy_aliases: []
 publications: []
 notes: "Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration."
+c_surface:
+  - "n4m_estimators_continuum_regression_fit"
+fq_name: "n4m.estimators.regression.latent.continuum_regression"
+leaf: "continuum_regression"
+legacy_ids:
+  - "models.regularized.continuum_regression"
+namespace: "estimators.regression.latent"

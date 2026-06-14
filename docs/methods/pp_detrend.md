@@ -1,6 +1,6 @@
 # `pp_detrend` — De-trending
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.Detrend` · _C ABI_: `n4m_pp_detrend_*`
+_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.Detrend` · _C ABI_: `n4m_transform_detrend_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ Fits and subtracts a low-order polynomial (commonly linear or quadratic) along t
 
 ### Implementation
 
-C ABI `n4m_pp_detrend_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Detrend`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_detrend_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Detrend`. The same numerical kernel backs every language binding.
 
 ### Usage
 

@@ -1,6 +1,6 @@
 # `aug_gaussian_noise` — Gaussian additive-noise augmentation
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.GaussianAdditiveNoise` · _C ABI_: `n4m_aug_gaussian_noise_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.GaussianAdditiveNoise` · _C ABI_: `n4m_augmentation_gaussian_noise_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Adds i.i.d. Gaussian noise $\mathbf{x} + \boldsymbol{\varepsilon}$, $\varepsilon
 
 ### Implementation
 
-C ABI `n4m_aug_gaussian_noise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.GaussianAdditiveNoise`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_gaussian_noise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.GaussianAdditiveNoise`. The same numerical kernel backs every language binding.
 
 ### Usage
 

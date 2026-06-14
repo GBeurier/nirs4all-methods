@@ -13,9 +13,9 @@
 #
 # The exported *symbol-name set* is identical across platforms by design (only
 # N4M_API-decorated symbols are exported). The only legitimate cross-platform
-# difference is the Linux-only `N4M_1` version-node line, which the macOS/Windows
+# difference is the Linux-only `N4M_<n>` version-node line (currently `N4M_2`), which the macOS/Windows
 # linkers do not emit. So macOS/Windows snapshots == the Linux n4m_* names with
-# the `N4M_1` line removed; `--derive` produces them from the Linux file when you
+# the `N4M_<n>` line removed; `--derive` produces them from the Linux file when you
 # only have a Linux box.
 #
 # Usage:
@@ -26,7 +26,7 @@
 #   --check     Do not write; regenerate to a temp file and diff against the
 #               committed snapshot. Exit 1 on any drift (CI/pre-commit use).
 #   --derive    (Linux only) Also rewrite macos+windows snapshots from the
-#               freshly regenerated linux snapshot (strip the N4M_1 line).
+#               freshly regenerated linux snapshot (strip the N4M_<n> line).
 #
 # All sorting is pinned to LC_ALL=C so the order is reproducible across hosts.
 set -euo pipefail
@@ -66,7 +66,9 @@ TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 
 if [[ "$PLATFORM" == linux ]]; then
-  # Keep the N4M_1 version-node symbol; strip the per-symbol @@N4M_<n> tag.
+  # Keep the N4M_<n> version-node symbol (currently N4M_2); strip the per-symbol
+  # @@N4M_<n> tag. The version-node tag bumps with the ABI major, so this never
+  # hardcodes a specific node.
   nm -D --defined-only "$LIB" | awk '{print $3}' \
     | grep '^n4m_\|^N4M_' | sed 's/@@.*//' | LC_ALL=C sort -u > "$TMP"
 else  # macos
@@ -93,8 +95,10 @@ if [[ "$DERIVE" == 1 ]]; then
     echo "--derive is Linux-only (derives macos/windows from the linux snapshot)." >&2
     exit 2
   fi
+  # Strip the Linux-only version-node line (N4M_<n>, e.g. N4M_2) generically —
+  # the macOS/Windows linkers do not emit it.
   for p in macos windows; do
-    grep -v '^N4M_1$' "$ABI_DIR/expected_symbols_linux.txt" > "$ABI_DIR/expected_symbols_${p}.txt"
+    grep -vE '^N4M_[0-9]+$' "$ABI_DIR/expected_symbols_linux.txt" > "$ABI_DIR/expected_symbols_${p}.txt"
     echo "Derived $ABI_DIR/expected_symbols_${p}.txt ($(wc -l < "$ABI_DIR/expected_symbols_${p}.txt") symbols)."
   done
   echo "NOTE: the macOS/Windows snapshots are also diffed live on their own runners in abi-check.yml; the derive is a convenience, not a substitute."

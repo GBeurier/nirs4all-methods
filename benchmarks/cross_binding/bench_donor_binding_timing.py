@@ -78,8 +78,8 @@ TIER = {"python_tier1": "tier 1", "python_tier2": "tier 2"}
 # phrase build_landing.parity_code() recognises as `not_available` (an honest
 # "this binding doesn't provide the op" glyph) rather than a runtime `error`.
 REASON_TEXT = {
-    D.NO_RAW: "no raw binding fn — n4m.python does not expose this op",
-    D.NO_ESTIMATOR: "no sklearn estimator for this op",
+    D.NO_RAW: "no raw binding fn — n4m._impl.native does not expose this op",
+    D.NO_ESTIMATOR: "no idiomatic role-package estimator for this op",
     D.SEMANTIC_MISMATCH: "idiomatic wrapper not available (semantic mismatch)",
     D.BINDING_DEFERRED: "binding deferred — not available",
 }

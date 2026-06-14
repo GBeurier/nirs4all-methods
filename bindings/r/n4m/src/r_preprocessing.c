@@ -119,25 +119,25 @@ SEXP r_n4m_snv_transform(SEXP X, SEXP with_mean, SEXP with_std, SEXP ddof) {
     r_pp_copy_r_to_rowmajor(X, rows, cols, REAL(X_rm));
 
     n4m_pp_snv_handle_t* handle = NULL;
-    n4m_status_t status = n4m_pp_snv_create(
+    n4m_status_t status = n4m_transform_snv_create(
         &handle,
         r_pp_flag(with_mean, 1),
         r_pp_flag(with_std, 1),
         r_pp_int_scalar(ddof, "ddof"));
     if (status != N4M_OK) {
         UNPROTECT(2);
-        r_pp_throw_status("n4m_pp_snv_create", status);
+        r_pp_throw_status("n4m_transform_snv_create", status);
     }
 
     n4m_matrix_view_t X_view;
     n4m_matrix_view_t out_view;
     n4m_matrix_view_init_rowmajor(&X_view, REAL(X_rm), rows, cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&out_view, REAL(out_rm), rows, cols, N4M_DTYPE_F64);
-    status = n4m_pp_snv_transform(handle, X_view, out_view);
-    n4m_pp_snv_destroy(handle);
+    status = n4m_transform_snv_transform(handle, X_view, out_view);
+    n4m_transform_snv_destroy(handle);
     if (status != N4M_OK) {
         UNPROTECT(2);
-        r_pp_throw_status("n4m_pp_snv_transform", status);
+        r_pp_throw_status("n4m_transform_snv_transform", status);
     }
 
     SEXP out = PROTECT(r_pp_rowmajor_to_matrix(REAL(out_rm), rows, cols));
@@ -156,7 +156,7 @@ SEXP r_n4m_savgol_transform(SEXP X, SEXP window_length, SEXP polyorder,
     r_pp_copy_r_to_rowmajor(X, rows, cols, REAL(X_rm));
 
     n4m_pp_savgol_handle_t* handle = NULL;
-    n4m_status_t status = n4m_pp_savgol_create(
+    n4m_status_t status = n4m_transform_savitzky_golay_create(
         &handle,
         (int32_t)r_pp_int_scalar(window_length, "window_length"),
         (int32_t)r_pp_int_scalar(polyorder, "polyorder"),
@@ -166,18 +166,18 @@ SEXP r_n4m_savgol_transform(SEXP X, SEXP window_length, SEXP polyorder,
         r_pp_double_scalar(cval, "cval"));
     if (status != N4M_OK) {
         UNPROTECT(2);
-        r_pp_throw_status("n4m_pp_savgol_create", status);
+        r_pp_throw_status("n4m_transform_savitzky_golay_create", status);
     }
 
     n4m_matrix_view_t X_view;
     n4m_matrix_view_t out_view;
     n4m_matrix_view_init_rowmajor(&X_view, REAL(X_rm), rows, cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&out_view, REAL(out_rm), rows, cols, N4M_DTYPE_F64);
-    status = n4m_pp_savgol_transform(handle, X_view, out_view);
-    n4m_pp_savgol_destroy(handle);
+    status = n4m_transform_savitzky_golay_transform(handle, X_view, out_view);
+    n4m_transform_savitzky_golay_destroy(handle);
     if (status != N4M_OK) {
         UNPROTECT(2);
-        r_pp_throw_status("n4m_pp_savgol_transform", status);
+        r_pp_throw_status("n4m_transform_savitzky_golay_transform", status);
     }
 
     SEXP out = PROTECT(r_pp_rowmajor_to_matrix(REAL(out_rm), rows, cols));
@@ -195,22 +195,22 @@ SEXP r_n4m_kennard_stone_split(SEXP X, SEXP test_size, SEXP zero_based) {
     r_pp_copy_r_to_rowmajor(X, rows, cols, REAL(X_rm));
 
     n4m_split_kennard_stone_handle_t* handle = NULL;
-    n4m_status_t status = n4m_split_kennard_stone_create(
+    n4m_status_t status = n4m_model_selection_kennard_stone_create(
         &handle, r_pp_double_scalar(test_size, "test_size"));
     if (status != N4M_OK) {
         UNPROTECT(1);
-        r_pp_throw_status("n4m_split_kennard_stone_create", status);
+        r_pp_throw_status("n4m_model_selection_kennard_stone_create", status);
     }
 
     n4m_matrix_view_t X_view;
     n4m_matrix_view_init_rowmajor(&X_view, REAL(X_rm), rows, cols, N4M_DTYPE_F64);
     n4m_split_result_t result = {0};
-    status = n4m_split_kennard_stone_split(handle, X_view, &result);
-    n4m_split_kennard_stone_destroy(handle);
+    status = n4m_model_selection_kennard_stone_split(handle, X_view, &result);
+    n4m_model_selection_kennard_stone_destroy(handle);
     if (status != N4M_OK) {
         n4m_split_result_destroy(&result);
         UNPROTECT(1);
-        r_pp_throw_status("n4m_split_kennard_stone_split", status);
+        r_pp_throw_status("n4m_model_selection_kennard_stone_split", status);
     }
     if (result.n_train > INT_MAX || result.n_test > INT_MAX) {
         n4m_split_result_destroy(&result);

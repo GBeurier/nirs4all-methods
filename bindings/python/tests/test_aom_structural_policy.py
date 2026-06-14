@@ -3,14 +3,18 @@ from __future__ import annotations
 import numpy as np
 
 import n4m
-from n4m import (
-    AOMControlSelector,
+from n4m.compose.aom_superblock import AOMOperatorPLSSpec, AOMOperatorPLSStack
+from n4m.ensemble import (
     AOMEndpointMarginStabilityGate,
     AOMFallbackBlendGate,
     AOMMidPEndpointStack,
-    AOMOperatorPLSStack,
-    AOMOperatorPLSSpec,
     AOMRidgeBlender,
+    AOMTrueBankEndpointPortfolio,
+    EndpointStabilityDecision,
+)
+from n4m.model_selection.aom_search import (
+    AOMControlSelector,
+    AOMDatasetMetadata,
     AOMRobustHPOCompact,
     AOMRobustHPORegressor,
     AOMRobustHPOWide,
@@ -18,10 +22,8 @@ from n4m import (
     AOMStructuralPolicyWithP700BlockLocalAdmission,
     AOMStructuralPolicyWithP700ProtocolUnified,
     AOMStructuralPolicyWithPgt1200Admissions,
-    AOMTrueBankEndpointPortfolio,
     build_aom_control_chain_bank,
 )
-from n4m.sklearn import AOMDatasetMetadata, EndpointStabilityDecision
 
 
 class ConstantRegressor:
@@ -151,7 +153,7 @@ def test_structural_policy_presets_are_source_free():
 
 
 def test_legacy_beer_admission_name_is_not_exported():
-    assert not hasattr(n4m, "AOMStructuralPolicyWithBlockLocalBeerAdmissions")
+    assert not hasattr(n4m.model_selection.aom_search, "AOMStructuralPolicyWithBlockLocalBeerAdmissions")
 
 
 def test_control_selector_selects_best_chain_with_train_cv_ridge():
@@ -512,7 +514,7 @@ def test_aom_ridge_blender_default_chain_ridge_pool_predicts():
     assert all(label.startswith("raw__ridge") for label in model.candidate_labels_)
     assert len(model.candidate_labels_) == 2
     assert model.predict(X).shape == (X.shape[0],)
-    assert hasattr(n4m, "AOMRidgeBlender")
+    assert hasattr(n4m.ensemble, "AOMRidgeBlender")
 
 
 def test_aom_ridge_blender_predict_requires_fit():
@@ -615,7 +617,7 @@ def test_aom_operator_pls_stack_default_operator_bank_smoke():
     assert "raw" in stack.operator_names_
     assert len(stack.operator_names_) >= 3
     assert stack.predict(X).shape == (X.shape[0],)
-    assert hasattr(n4m, "AOMOperatorPLSStack")
+    assert hasattr(n4m.compose.aom_superblock, "AOMOperatorPLSStack")
 
 
 def test_aom_operator_pls_stack_predict_requires_fit():

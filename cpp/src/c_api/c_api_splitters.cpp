@@ -129,7 +129,7 @@ N4M_API void n4m_split_result_destroy(n4m_split_result_t* r) {
 // KennardStone
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_split_kennard_stone_create(
+N4M_API n4m_status_t n4m_model_selection_kennard_stone_create(
     n4m_split_kennard_stone_handle_t** out, double test_size) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = nullptr;
@@ -150,12 +150,12 @@ N4M_API n4m_status_t n4m_split_kennard_stone_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_split_kennard_stone_destroy(n4m_split_kennard_stone_handle_t* h) {
+N4M_API void n4m_model_selection_kennard_stone_destroy(n4m_split_kennard_stone_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_split_ks_state_free(h->state); delete h; } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_split_kennard_stone_split(
+N4M_API n4m_status_t n4m_model_selection_kennard_stone_split(
     const n4m_split_kennard_stone_handle_t* h,
     n4m_matrix_view_t X,
     n4m_split_result_t* out) {
@@ -174,7 +174,7 @@ N4M_API n4m_status_t n4m_split_kennard_stone_split(
 // SPXY
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_split_spxy_create(n4m_split_spxy_handle_t** out,
+N4M_API n4m_status_t n4m_model_selection_spxy_create(n4m_split_spxy_handle_t** out,
                                             double test_size) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = nullptr;
@@ -191,12 +191,12 @@ N4M_API n4m_status_t n4m_split_spxy_create(n4m_split_spxy_handle_t** out,
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_split_spxy_destroy(n4m_split_spxy_handle_t* h) {
+N4M_API void n4m_model_selection_spxy_destroy(n4m_split_spxy_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_split_spxy_state_free(h->state); delete h; } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_split_spxy_split(const n4m_split_spxy_handle_t* h,
+N4M_API n4m_status_t n4m_model_selection_spxy_split(const n4m_split_spxy_handle_t* h,
                                            n4m_matrix_view_t X,
                                            n4m_matrix_view_t Y,
                                            n4m_split_result_t* out) {
@@ -219,7 +219,7 @@ N4M_API n4m_status_t n4m_split_spxy_split(const n4m_split_spxy_handle_t* h,
 // SPXYFold
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_split_spxy_fold_create(n4m_split_spxy_fold_handle_t** out,
+N4M_API n4m_status_t n4m_model_selection_spxy_fold_create(n4m_split_spxy_fold_handle_t** out,
                                                  int32_t n_splits,
                                                  int32_t y_metric) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
@@ -236,19 +236,19 @@ N4M_API n4m_status_t n4m_split_spxy_fold_create(n4m_split_spxy_fold_handle_t** o
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_split_spxy_fold_destroy(n4m_split_spxy_fold_handle_t* h) {
+N4M_API void n4m_model_selection_spxy_fold_destroy(n4m_split_spxy_fold_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_split_spxy_fold_state_free(h->state); delete h; } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_split_spxy_fold_n_splits(const n4m_split_spxy_fold_handle_t* h,
+N4M_API n4m_status_t n4m_model_selection_spxy_fold_n_splits(const n4m_split_spxy_fold_handle_t* h,
                                                    int32_t* out) {
     if (h == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = h->state->n_splits;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_split_spxy_fold_split_fold(
+N4M_API n4m_status_t n4m_model_selection_spxy_fold_split_fold(
     const n4m_split_spxy_fold_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t Y,
@@ -284,7 +284,7 @@ N4M_API n4m_status_t n4m_split_spxy_fold_split_fold(
 // SPXYGFold (group-aware k-fold)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_split_spxy_g_fold_create(n4m_split_spxy_g_fold_handle_t** out,
+N4M_API n4m_status_t n4m_model_selection_spxy_g_fold_create(n4m_split_spxy_g_fold_handle_t** out,
                                                     int32_t n_splits,
                                                     int32_t y_metric,
                                                     int32_t aggregation) {
@@ -304,19 +304,19 @@ N4M_API n4m_status_t n4m_split_spxy_g_fold_create(n4m_split_spxy_g_fold_handle_t
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_split_spxy_g_fold_destroy(n4m_split_spxy_g_fold_handle_t* h) {
+N4M_API void n4m_model_selection_spxy_g_fold_destroy(n4m_split_spxy_g_fold_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_split_spxy_g_fold_state_free(h->state); delete h; } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_split_spxy_g_fold_n_splits(
+N4M_API n4m_status_t n4m_model_selection_spxy_g_fold_n_splits(
     const n4m_split_spxy_g_fold_handle_t* h, int32_t* out) {
     if (h == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = h->state->n_splits;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_split_spxy_g_fold_split_fold(
+N4M_API n4m_status_t n4m_model_selection_spxy_g_fold_split_fold(
     const n4m_split_spxy_g_fold_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t Y,
@@ -357,7 +357,7 @@ N4M_API n4m_status_t n4m_split_spxy_g_fold_split_fold(
 // KMeans
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_split_kmeans_create(n4m_split_kmeans_handle_t** out,
+N4M_API n4m_status_t n4m_model_selection_kmeans_create(n4m_split_kmeans_handle_t** out,
                                                double test_size, uint64_t seed,
                                                int32_t max_iter) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
@@ -377,12 +377,12 @@ N4M_API n4m_status_t n4m_split_kmeans_create(n4m_split_kmeans_handle_t** out,
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_split_kmeans_destroy(n4m_split_kmeans_handle_t* h) {
+N4M_API void n4m_model_selection_kmeans_destroy(n4m_split_kmeans_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_split_kmeans_state_free(h->state); delete h; } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_split_kmeans_split(const n4m_split_kmeans_handle_t* h,
+N4M_API n4m_status_t n4m_model_selection_kmeans_split(const n4m_split_kmeans_handle_t* h,
                                               n4m_matrix_view_t X,
                                               n4m_split_result_t* out) {
     if (h == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
@@ -400,7 +400,7 @@ N4M_API n4m_status_t n4m_split_kmeans_split(const n4m_split_kmeans_handle_t* h,
 // KBinsStratified
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_split_kbins_stratified_create(
+N4M_API n4m_status_t n4m_model_selection_kbins_stratified_create(
     n4m_split_kbins_stratified_handle_t** out, double test_size, uint64_t seed,
     int32_t n_bins, int32_t strategy) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
@@ -423,12 +423,12 @@ N4M_API n4m_status_t n4m_split_kbins_stratified_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_split_kbins_stratified_destroy(n4m_split_kbins_stratified_handle_t* h) {
+N4M_API void n4m_model_selection_kbins_stratified_destroy(n4m_split_kbins_stratified_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_split_kbins_state_free(h->state); delete h; } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_split_kbins_stratified_split(
+N4M_API n4m_status_t n4m_model_selection_kbins_stratified_split(
     const n4m_split_kbins_stratified_handle_t* h,
     n4m_matrix_view_t Y,
     n4m_split_result_t* out) {
@@ -448,7 +448,7 @@ N4M_API n4m_status_t n4m_split_kbins_stratified_split(
 // BinnedStratifiedGroupKFold
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_split_binned_strat_group_kfold_create(
+N4M_API n4m_status_t n4m_model_selection_binned_strat_group_kfold_create(
     n4m_split_binned_strat_group_kfold_handle_t** out,
     int32_t n_splits, int32_t n_bins, int32_t strategy,
     int32_t shuffle, uint64_t seed) {
@@ -469,20 +469,20 @@ N4M_API n4m_status_t n4m_split_binned_strat_group_kfold_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_split_binned_strat_group_kfold_destroy(
+N4M_API void n4m_model_selection_binned_strat_group_kfold_destroy(
     n4m_split_binned_strat_group_kfold_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_split_bsgk_state_free(h->state); delete h; } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_split_binned_strat_group_kfold_n_splits(
+N4M_API n4m_status_t n4m_model_selection_binned_strat_group_kfold_n_splits(
     const n4m_split_binned_strat_group_kfold_handle_t* h, int32_t* out) {
     if (h == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = h->state->n_splits;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_split_binned_strat_group_kfold_split_fold(
+N4M_API n4m_status_t n4m_model_selection_binned_strat_group_kfold_split_fold(
     const n4m_split_binned_strat_group_kfold_handle_t* h,
     n4m_matrix_view_t Y,
     const int64_t* groups, int64_t groups_len,
@@ -516,7 +516,7 @@ N4M_API n4m_status_t n4m_split_binned_strat_group_kfold_split_fold(
 // SystematicCircular
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_split_systematic_circular_create(
+N4M_API n4m_status_t n4m_model_selection_systematic_circular_create(
     n4m_split_systematic_circular_handle_t** out, double test_size, uint64_t seed) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = nullptr;
@@ -535,13 +535,13 @@ N4M_API n4m_status_t n4m_split_systematic_circular_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_split_systematic_circular_destroy(
+N4M_API void n4m_model_selection_systematic_circular_destroy(
     n4m_split_systematic_circular_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_split_syscirc_state_free(h->state); delete h; } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_split_systematic_circular_split(
+N4M_API n4m_status_t n4m_model_selection_systematic_circular_split(
     const n4m_split_systematic_circular_handle_t* h,
     n4m_matrix_view_t Y,
     n4m_split_result_t* out) {
@@ -561,7 +561,7 @@ N4M_API n4m_status_t n4m_split_systematic_circular_split(
 // SPlit (data twinning)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_split_split_splitter_create(
+N4M_API n4m_status_t n4m_model_selection_data_twinning_create(
     n4m_split_split_splitter_handle_t** out, double test_size, uint64_t seed) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = nullptr;
@@ -580,12 +580,12 @@ N4M_API n4m_status_t n4m_split_split_splitter_create(
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
-N4M_API void n4m_split_split_splitter_destroy(n4m_split_split_splitter_handle_t* h) {
+N4M_API void n4m_model_selection_data_twinning_destroy(n4m_split_split_splitter_handle_t* h) {
     if (h == nullptr) return;
     try { n4m_split_splt_state_free(h->state); delete h; } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_split_split_splitter_split(
+N4M_API n4m_status_t n4m_model_selection_data_twinning_split(
     const n4m_split_split_splitter_handle_t* h,
     n4m_matrix_view_t X,
     n4m_split_result_t* out) {

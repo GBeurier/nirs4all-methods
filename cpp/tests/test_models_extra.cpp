@@ -5,10 +5,10 @@
 // n4m_method_result_t (rather than the n4m_model_fit / n4m_model_get_array
 // path used by the core solver families in test_models_pls.cpp):
 //
-//   - MB-PLS        n4m_mb_pls_fit       (block-weighted multi-block PLS)
-//   - PLS-LDA       n4m_pls_lda_fit      (LDA on PLS scores)
-//   - PLS-Logistic  n4m_pls_logistic_fit (multinomial logistic on PLS scores)
-//   - LW-PLS        n4m_lw_pls_fit       (Gaussian-weighted local PLS)
+//   - MB-PLS        n4m_estimators_mb_pls_fit       (block-weighted multi-block PLS)
+//   - PLS-LDA       n4m_estimators_pls_lda_fit      (LDA on PLS scores)
+//   - PLS-Logistic  n4m_estimators_pls_logistic_fit (multinomial logistic on PLS scores)
+//   - LW-PLS        n4m_estimators_lw_pls_fit       (Gaussian-weighted local PLS)
 //
 // Fixtures + expected arrays come from the generated headers under
 // cpp/tests/fixtures/. Per parity/tolerances.md the relevant rows
@@ -98,7 +98,7 @@ void test_mb_pls() {
         n4m_matrix_view_t X = make_view(fx.X);
         n4m_matrix_view_t Y = make_view(fx.Y);
         n4m_method_result_t* result = nullptr;
-        N4M_TEST_REQUIRE(n4m_mb_pls_fit(
+        N4M_TEST_REQUIRE(n4m_estimators_mb_pls_fit(
             ctx, cfg, &X, &Y, fx.block_sizes.values,
             static_cast<std::int64_t>(fx.block_sizes.size), &result) == N4M_OK);
         N4M_TEST_REQUIRE(result != nullptr);
@@ -133,7 +133,7 @@ void test_pls_lda() {
 
         n4m_matrix_view_t X = make_view(fx.X);
         n4m_method_result_t* result = nullptr;
-        N4M_TEST_REQUIRE(n4m_pls_lda_fit(
+        N4M_TEST_REQUIRE(n4m_estimators_pls_lda_fit(
             ctx, cfg, &X, fx.labels.values,
             static_cast<std::int64_t>(fx.labels.size), fx.n_classes, &result) == N4M_OK);
         N4M_TEST_REQUIRE(result != nullptr);
@@ -174,7 +174,7 @@ void test_pls_logistic() {
 
         n4m_matrix_view_t X = make_view(fx.X);
         n4m_method_result_t* result = nullptr;
-        N4M_TEST_REQUIRE(n4m_pls_logistic_fit(
+        N4M_TEST_REQUIRE(n4m_estimators_pls_logistic_fit(
             ctx, cfg, &X, fx.labels.values,
             static_cast<std::int64_t>(fx.labels.size), fx.n_classes, &result) == N4M_OK);
         N4M_TEST_REQUIRE(result != nullptr);
@@ -220,7 +220,7 @@ void test_lw_pls() {
         n4m_matrix_view_t X = make_view(fx.X);
         n4m_matrix_view_t Y = make_view(fx.Y);
         n4m_method_result_t* result = nullptr;
-        N4M_TEST_REQUIRE(n4m_lw_pls_fit(
+        N4M_TEST_REQUIRE(n4m_estimators_lw_pls_fit(
             ctx, cfg, &X, &Y, fx.n_neighbors, &result) == N4M_OK);
         N4M_TEST_REQUIRE(result != nullptr);
 

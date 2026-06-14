@@ -20,7 +20,7 @@ batched IKPLS is still a later optimization.
 ## ABI
 
 ```c
-n4m_sweep_run(
+n4m_model_selection_sweep_run(
     ctx, cfg, X, Y,
     cv,
     fold_ids, n_fold_ids,
@@ -194,7 +194,7 @@ y_pred = model.predict(X_test)
 
 ## Implementation Note
 
-For moment-eligible folds, `n4m_sweep_run` computes train moments as
+For moment-eligible folds, `n4m_model_selection_sweep_run` computes train moments as
 `all - heldout`, then fits Ridge from the train `CXX/CXY` moments and scores
 held-out rows. For spectral shapes where `p > n_train`, it avoids the slow
 `p x p` primal solve and instead precomputes centered/scaled train matrices and
@@ -204,7 +204,7 @@ feature-space coefficient reconstruction and prediction. In that case each
 Ridge lambda only solves the train dual system and predicts as
 `K_heldout,train @ alpha + y_mean`. Otherwise it keeps the older dual-beta
 scoring path. The C++ test suite compares both moment-eligible and wide dual
-Ridge score paths against materialized fold-by-fold `n4m_ridge_fit`
+Ridge score paths against materialized fold-by-fold `n4m_estimators_ridge_fit`
 references. The wide-dual matrix products use `linalg::gemm`: `K = X_train
 @ X_train.T`, `K_cross = X_heldout @ X_train.T`, held-out predictions, and
 `beta = X_train.T @ alpha`.

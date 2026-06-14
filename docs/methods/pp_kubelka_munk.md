@@ -1,6 +1,6 @@
 # `pp_kubelka_munk` — Kubelka Munk
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.KubelkaMunk` · _C ABI_: `n4m_pp_kubelka_munk_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.KubelkaMunk` · _C ABI_: `n4m_transform_kubelka_munk_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ KM = (1 - R)^2 / (2 R), with R guarded by epsilon.
 
 ### Implementation
 
-C ABI `n4m_pp_kubelka_munk_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KubelkaMunk`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_kubelka_munk_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KubelkaMunk`. The same numerical kernel backs every language binding.
 
 ### Usage
 

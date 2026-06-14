@@ -1,6 +1,6 @@
 # `aom_robust_hpo` - native AOM robust-HPO preprocessing screen
 
-_Group_: **Diagnostic / AOM** · _ABI_: `n4m_aom_robust_hpo_fit`
+_Group_: **Diagnostic / AOM** · _ABI_: `n4m_model_selection_robust_hpo_fit`
 
 ## Description
 
@@ -93,7 +93,7 @@ n4m_method_result_t* res = NULL;
 n4m_context_create(&ctx);
 n4m_config_create(&cfg);
 
-n4m_aom_robust_hpo_fit(ctx, cfg, &x_view, &y_view,
+n4m_model_selection_robust_hpo_fit(ctx, cfg, &x_view, &y_view,
                        /*profile=*/0, /*cv=*/5, /*heads_mask=*/3, &res);
 
 const double* scores = NULL;

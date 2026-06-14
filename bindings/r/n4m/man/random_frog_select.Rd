@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{random_frog_select}
 \alias{random_frog_select}
+\alias{n4m_feature_select_random_frog}
 \title{Random Frog (Phase 5g).}
 \usage{
 random_frog_select(

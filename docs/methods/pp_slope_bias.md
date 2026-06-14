@@ -1,6 +1,6 @@
 # `pp_slope_bias` — Slope Bias Correction
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.SlopeBiasCorrection` · _C ABI_: `n4m_pp_slope_bias_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.SlopeBiasCorrection` · _C ABI_: `n4m_domain_adaptation_slope_bias_*`
 
 ## Description
 
@@ -22,7 +22,7 @@ Linear slope/bias correction for transferred predictions.
 
 ### Implementation
 
-C ABI `n4m_pp_slope_bias_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SlopeBiasCorrection`. The same numerical kernel backs every language binding.
+C ABI `n4m_domain_adaptation_slope_bias_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SlopeBiasCorrection`. The same numerical kernel backs every language binding.
 
 ### Usage
 

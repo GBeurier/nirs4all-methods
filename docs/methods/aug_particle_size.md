@@ -1,6 +1,6 @@
 # `aug_particle_size` — Particle Size Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.ParticleSizeAugmenter` · _C ABI_: `n4m_aug_particle_size_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.ParticleSizeAugmenter` · _C ABI_: `n4m_augmentation_particle_size_*`
 
 ## Description
 
@@ -36,7 +36,7 @@ Particle-size and path-length scattering simulation.
 
 ### Implementation
 
-C ABI `n4m_aug_particle_size_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ParticleSizeAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_particle_size_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ParticleSizeAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

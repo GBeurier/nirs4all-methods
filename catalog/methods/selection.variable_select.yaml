@@ -7,11 +7,11 @@ category: "selection"
 subcategory: "ranker"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_variable_select_rank"
+  - "n4m_feature_selection_variable_select_rank"
 tu:
   - "cpp/src/core/variable_selection.cpp"
 headers:
-  - "cpp/include/n4m/selection.h"
+  - "cpp/include/n4m/feature_selection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_feature_selection_variable_select_rank"
+fq_name: "n4m.feature_selection.ranking.variable_select"
+leaf: "variable_select"
+legacy_ids:
+  - "selection.variable_select"
+namespace: "feature_selection.ranking"

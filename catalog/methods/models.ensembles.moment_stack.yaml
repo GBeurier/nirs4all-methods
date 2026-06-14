@@ -13,7 +13,7 @@ tu:
   - "cpp/src/core/model.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/ensemble.h"
 carry_along_tu:
   - "cpp/src/core/moments.cpp"
   - "cpp/src/core/common/linalg.c"
@@ -34,8 +34,14 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.ensemble"
     class: "moment_stack"
     legacy_aliases: []
 publications: []
 notes: "Python-backed train-only OOF linear stack over native moment-compatible Ridge, PLS sweep, PCR, continuum, ECR and CPPLS heads. Base predictions are fit on training folds only; the final reusable estimator fits the same base heads on all rows and applies a small Ridge meta-model over base predictions. This is a moment-model composition, not a nonlinear feature lift and not a fused CUDA grinder."
+c_surface: "none"
+fq_name: "n4m.ensemble.moment_stack"
+leaf: "moment_stack"
+legacy_ids:
+  - "models.ensembles.moment_stack"
+namespace: "ensemble"

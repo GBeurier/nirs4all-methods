@@ -84,19 +84,19 @@ void test_fck_smoke() {
     const double alphas[2] = {0.0, 1.0};
     const double scales[1] = {2.0};
     n4m_pp_fck_static_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_create(&h, /*K=*/5,
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_create(&h, /*K=*/5,
                                                 alphas, 2,
                                                 scales, 1) == N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
 
     // The output should be (1, 2 * 10) = (1, 20).
     int32_t out_cols = 0;
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_output_cols(2, 10, &out_cols) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_output_cols(2, 10, &out_cols) == N4M_OK);
     N4M_TEST_REQUIRE(out_cols == 20);
 
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 20);
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_transform(h, Xv, Yv) == N4M_OK);
 
     // Band 0 (alpha=0, pure Gaussian smoother) — interior values should be
     // close to the local moving average (input is monotonically increasing).
@@ -109,33 +109,33 @@ void test_fck_smoke() {
 
     // Invalid parameter rejection.
     n4m_pp_fck_static_handle_t* bad = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_create(&bad, /*K=*/0,
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_create(&bad, /*K=*/0,
                                                 alphas, 2, scales, 1) ==
                      N4M_ERR_INVALID_ARGUMENT);
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_create(&bad, /*K=*/5,
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_create(&bad, /*K=*/5,
                                                 alphas, 0, scales, 1) ==
                      N4M_ERR_INVALID_ARGUMENT);
     const double zero_scale[1] = {0.0};
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_create(&bad, /*K=*/5,
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_create(&bad, /*K=*/5,
                                                 alphas, 2, zero_scale, 1) ==
                      N4M_ERR_INVALID_ARGUMENT);
 
     // NULL out / pointers.
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_create(nullptr, 5, alphas, 2,
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_create(nullptr, 5, alphas, 2,
                                                 scales, 1) ==
                      N4M_ERR_NULL_POINTER);
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_create(&bad, 5, nullptr, 2,
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_create(&bad, 5, nullptr, 2,
                                                 scales, 1) ==
                      N4M_ERR_NULL_POINTER);
 
     // Shape-mismatch on transform.
     double Y_wrong[10] = {0};
     n4m_matrix_view_t Yv_bad = make_rowmajor_view(Y_wrong, 1, 10);
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_transform(h, Xv, Yv_bad) ==
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_transform(h, Xv, Yv_bad) ==
                      N4M_ERR_SHAPE_MISMATCH);
 
-    n4m_pp_fck_static_destroy(h);
-    n4m_pp_fck_static_destroy(nullptr);
+    n4m_transform_fck_static_destroy(h);
+    n4m_transform_fck_static_destroy(nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ void test_fck_smoke() {
 //
 // The kernel builder (`n4m_fck_kernel_1d`) is internal; we exercise its
 // algebraic contracts (Gaussian symmetry, antisymmetry, zero-mean for
-// alpha>0.1, L1 normalisation) through `n4m_pp_fck_static_transform`.
+// alpha>0.1, L1 normalisation) through `n4m_transform_fck_static_transform`.
 //
 // Recovery trick: feed a unit-delta row (single 1.0 at the centre, zeros
 // elsewhere). `scipy.ndimage.convolve1d` reverses the kernel before
@@ -175,13 +175,13 @@ void test_fck_kernel_properties() {
         const double alphas[1] = {alpha};
         const double scales[1] = {scale};
         n4m_pp_fck_static_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_fck_static_create(&h, K,
+        N4M_TEST_REQUIRE(n4m_transform_fck_static_create(&h, K,
                                                     alphas, 1,
                                                     scales, 1) == N4M_OK);
         n4m_matrix_view_t Xv = make_rowmajor_view(x.data(), 1, N);
         n4m_matrix_view_t Yv = make_rowmajor_view(y_out.data(), 1, N);
-        N4M_TEST_REQUIRE(n4m_pp_fck_static_transform(h, Xv, Yv) == N4M_OK);
-        n4m_pp_fck_static_destroy(h);
+        N4M_TEST_REQUIRE(n4m_transform_fck_static_transform(h, Xv, Yv) == N4M_OK);
+        n4m_transform_fck_static_destroy(h);
     };
 
     // Sign-clean helper: convert a (possibly negative) signed index into a
@@ -274,26 +274,26 @@ void test_fck_kernel_properties() {
 
 void test_fck_output_cols() {
     int32_t out = -1;
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_output_cols(4, 200, &out) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_output_cols(4, 200, &out) == N4M_OK);
     N4M_TEST_REQUIRE(out == 800);
 
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_output_cols(0, 200, &out) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_output_cols(0, 200, &out) == N4M_OK);
     N4M_TEST_REQUIRE(out == 0);
 
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_output_cols(1, 0, &out) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_output_cols(1, 0, &out) == N4M_OK);
     N4M_TEST_REQUIRE(out == 0);
 
     // Invalid arguments.
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_output_cols(-1, 10, &out) ==
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_output_cols(-1, 10, &out) ==
                      N4M_ERR_INVALID_ARGUMENT);
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_output_cols(10, -1, &out) ==
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_output_cols(10, -1, &out) ==
                      N4M_ERR_INVALID_ARGUMENT);
     // Product would overflow int32_t.
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_output_cols(65536, 65536, &out) ==
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_output_cols(65536, 65536, &out) ==
                      N4M_ERR_INVALID_ARGUMENT);
 
     // NULL output.
-    N4M_TEST_REQUIRE(n4m_pp_fck_static_output_cols(2, 10, nullptr) ==
+    N4M_TEST_REQUIRE(n4m_transform_fck_static_output_cols(2, 10, nullptr) ==
                      N4M_ERR_NULL_POINTER);
 }
 
@@ -347,7 +347,7 @@ void test_fck_parity() {
         const int32_t n_scales = static_cast<int32_t>(sigmas.size());
 
         n4m_pp_fck_static_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_fck_static_create(&h, K,
+        N4M_TEST_REQUIRE(n4m_transform_fck_static_create(&h, K,
                                                     alphas.data(), n_orders,
                                                     sigmas.data(), n_scales) ==
                          N4M_OK);
@@ -361,7 +361,7 @@ void test_fck_parity() {
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(), fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), out_rows,
                                                     out_cols);
-        N4M_TEST_REQUIRE(n4m_pp_fck_static_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_fck_static_transform(h, Xv, Yv) == N4M_OK);
 
         // Pure arithmetic (kernel build is one Gaussian + one pow + L1
         // normalisation; convolution is a small dot product), so the parity
@@ -370,7 +370,7 @@ void test_fck_parity() {
         ::n4m_testing::assert_close(out, c.expected_output,
                                      "fck_static/" + c.name,
                                      1e-12, 1e-13);
-        n4m_pp_fck_static_destroy(h);
+        n4m_transform_fck_static_destroy(h);
     }
 }
 

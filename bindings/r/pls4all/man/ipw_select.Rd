@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{ipw_select}
 \alias{ipw_select}
+\alias{n4m_feature_select_ipw}
 \title{IPW-PLS.}
 \usage{
 ipw_select(

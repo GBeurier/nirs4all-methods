@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{sipls_select}
 \alias{sipls_select}
+\alias{n4m_feature_select_sipls}
 \title{siPLS — synergistic interval PLS.}
 \usage{
 sipls_select(X, Y, n_components, interval_width = 10L, combination_size = 2L)

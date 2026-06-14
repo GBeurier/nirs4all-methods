@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{stability_select}
 \alias{stability_select}
+\alias{n4m_feature_select_stability}
 \title{Stability selector (coefficient stability, MCUVE-style).}
 \usage{
 stability_select(X, Y, n_components, top_k = 10L)

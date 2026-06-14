@@ -1,6 +1,6 @@
 # `pp_wavelet_denoise` — Wavelet Denoise
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletDenoise` · _C ABI_: `n4m_pp_wavelet_denoise_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletDenoise` · _C ABI_: `n4m_transform_wavelet_denoise_*`
 
 ## Description
 
@@ -38,7 +38,7 @@ Multi-level DWT VisuShrink denoising.
 
 ### Implementation
 
-C ABI `n4m_pp_wavelet_denoise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletDenoise`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_wavelet_denoise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletDenoise`. The same numerical kernel backs every language binding.
 
 ### Usage
 

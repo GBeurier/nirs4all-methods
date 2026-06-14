@@ -44,13 +44,13 @@ void test_mixup_smoke() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42u, &rng) == N4M_OK);
     n4m_aug_mixup_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_mixup_create(&h, rng, /*alpha=*/0.2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_create(&h, rng, /*alpha=*/0.2) == N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
     double X[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
     double Y[6] = {0};
     auto Xv = make_view(X, 2, 3);
     auto Yv = make_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_aug_mixup_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_apply(h, Xv, Yv) == N4M_OK);
     /* MixupAugmenter combines row i with X[permutation[i]] via Beta(alpha,
      * alpha). With alpha=0.2, lambda concentrates near {0, 1}, so the
      * output mostly equals one of the two source rows. Each column j
@@ -62,8 +62,8 @@ void test_mixup_smoke() {
         N4M_TEST_REQUIRE(Y[j] >= lo && Y[j] <= hi);
         N4M_TEST_REQUIRE(Y[j + 3] >= lo && Y[j + 3] <= hi);
     }
-    n4m_aug_mixup_destroy(h);
-    n4m_aug_mixup_destroy(nullptr);  /* null-safe */
+    n4m_augmentation_mixup_destroy(h);
+    n4m_augmentation_mixup_destroy(nullptr);  /* null-safe */
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -71,10 +71,10 @@ void test_mixup_invalid_args() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(1u, &rng) == N4M_OK);
     n4m_aug_mixup_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_mixup_create(&h, rng, 0.0)
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_create(&h, rng, 0.0)
                      == N4M_ERR_INVALID_ARGUMENT);
     N4M_TEST_REQUIRE(h == nullptr);
-    N4M_TEST_REQUIRE(n4m_aug_mixup_create(&h, nullptr, 0.2)
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_create(&h, nullptr, 0.2)
                      == N4M_ERR_NULL_POINTER);
     n4m_rng_pcg64_destroy(rng);
 }
@@ -83,7 +83,7 @@ void test_mixup_determinism() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(123u, &rng) == N4M_OK);
     n4m_aug_mixup_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_mixup_create(&h, rng, 0.5) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_create(&h, rng, 0.5) == N4M_OK);
 
     const int rows = 4, cols = 5;
     const size_t n = static_cast<size_t>(rows) * static_cast<size_t>(cols);
@@ -97,15 +97,15 @@ void test_mixup_determinism() {
     auto Y2v = make_view(Y2.data(), rows, cols);
 
     n4m_rng_pcg64_set_seed(rng, 99u);
-    N4M_TEST_REQUIRE(n4m_aug_mixup_apply(h, Xv, Y1v) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_apply(h, Xv, Y1v) == N4M_OK);
 
     n4m_rng_pcg64_set_seed(rng, 99u);
-    N4M_TEST_REQUIRE(n4m_aug_mixup_apply(h, Xv, Y2v) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_apply(h, Xv, Y2v) == N4M_OK);
 
     for (size_t i = 0; i < n; ++i) {
         N4M_TEST_REQUIRE(Y1[i] == Y2[i]);
     }
-    n4m_aug_mixup_destroy(h);
+    n4m_augmentation_mixup_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -114,7 +114,7 @@ void test_local_mixup_smoke() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42u, &rng) == N4M_OK);
     n4m_aug_local_mixup_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_local_mixup_create(&h, rng, 0.2, 2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_local_mixup_create(&h, rng, 0.2, 2) == N4M_OK);
     /* 4 rows, 3 cols, k=2 neighbors */
     double X[12] = {
         1.0, 2.0, 3.0,
@@ -125,14 +125,14 @@ void test_local_mixup_smoke() {
     double Y[12] = {0};
     auto Xv = make_view(X, 4, 3);
     auto Yv = make_view(Y, 4, 3);
-    N4M_TEST_REQUIRE(n4m_aug_local_mixup_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_local_mixup_apply(h, Xv, Yv) == N4M_OK);
     /* All Y values must be finite and within input bounds. */
     for (int i = 0; i < 12; ++i) {
         N4M_TEST_REQUIRE(std::isfinite(Y[i]));
         N4M_TEST_REQUIRE(Y[i] >= 1.0 - 1e-12 && Y[i] <= 12.0 + 1e-12);
     }
-    n4m_aug_local_mixup_destroy(h);
-    n4m_aug_local_mixup_destroy(nullptr);
+    n4m_augmentation_local_mixup_destroy(h);
+    n4m_augmentation_local_mixup_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -141,20 +141,20 @@ void test_scatter_sim_smoke() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42u, &rng) == N4M_OK);
     n4m_aug_scatter_sim_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_scatter_sim_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_scatter_sim_msc_create(&h, rng,
         /*a_low=*/-0.1, /*a_high=*/0.1,
         /*b_low=*/0.9, /*b_high=*/1.1) == N4M_OK);
     double X[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
     double Y[6] = {0};
     auto Xv = make_view(X, 2, 3);
     auto Yv = make_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_aug_scatter_sim_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_scatter_sim_msc_apply(h, Xv, Yv) == N4M_OK);
     /* With b > 0 and a in [-0.1, 0.1], Y should be in [0.7, 6.8] roughly. */
     for (int i = 0; i < 6; ++i) {
         N4M_TEST_REQUIRE(std::isfinite(Y[i]));
     }
-    n4m_aug_scatter_sim_destroy(h);
-    n4m_aug_scatter_sim_destroy(nullptr);
+    n4m_augmentation_scatter_sim_msc_destroy(h);
+    n4m_augmentation_scatter_sim_msc_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -164,17 +164,17 @@ void test_scatter_sim_deterministic_pointwise() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42u, &rng) == N4M_OK);
     n4m_aug_scatter_sim_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_scatter_sim_create(&h, rng, 0.5, 0.5, 1.0, 1.0)
+    N4M_TEST_REQUIRE(n4m_augmentation_scatter_sim_msc_create(&h, rng, 0.5, 0.5, 1.0, 1.0)
                      == N4M_OK);
     double X[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
     double Y[6] = {0};
     auto Xv = make_view(X, 2, 3);
     auto Yv = make_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_aug_scatter_sim_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_scatter_sim_msc_apply(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 6; ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - (X[i] + 0.5)) < 1e-12);
     }
-    n4m_aug_scatter_sim_destroy(h);
+    n4m_augmentation_scatter_sim_msc_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -185,7 +185,7 @@ void test_particle_size_smoke() {
     const int cols = 8;
     double wl[8] = {1000.0, 1100.0, 1200.0, 1300.0, 1400.0, 1500.0, 1600.0, 1700.0};
     n4m_aug_particle_size_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_particle_size_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_particle_size_create(&h, rng,
         /*mean=*/50.0, /*var=*/15.0,
         /*use_range=*/0, /*lo=*/0.0, /*hi=*/0.0,
         /*ref=*/50.0, /*wl_exp=*/1.5,
@@ -197,10 +197,10 @@ void test_particle_size_smoke() {
     for (int i = 0; i < 16; ++i) X[i] = 0.5 + 0.001 * static_cast<double>(i);
     auto Xv = make_view(X, 2, cols);
     auto Yv = make_view(Y, 2, cols);
-    N4M_TEST_REQUIRE(n4m_aug_particle_size_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_particle_size_apply(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 16; ++i) N4M_TEST_REQUIRE(std::isfinite(Y[i]));
-    n4m_aug_particle_size_destroy(h);
-    n4m_aug_particle_size_destroy(nullptr);
+    n4m_augmentation_particle_size_destroy(h);
+    n4m_augmentation_particle_size_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -211,7 +211,7 @@ void test_emsc_distort_smoke() {
     const int cols = 8;
     double wl[8] = {1000.0, 1100.0, 1200.0, 1300.0, 1400.0, 1500.0, 1600.0, 1700.0};
     n4m_aug_emsc_distort_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_emsc_distort_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_emsc_distort_create(&h, rng,
         /*mult_low=*/0.9, /*mult_high=*/1.1,
         /*add_low=*/-0.05, /*add_high=*/0.05,
         /*poly_order=*/2, /*poly_strength=*/0.02,
@@ -222,10 +222,10 @@ void test_emsc_distort_smoke() {
     for (int i = 0; i < 16; ++i) X[i] = 0.5;
     auto Xv = make_view(X, 2, cols);
     auto Yv = make_view(Y, 2, cols);
-    N4M_TEST_REQUIRE(n4m_aug_emsc_distort_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_emsc_distort_apply(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 16; ++i) N4M_TEST_REQUIRE(std::isfinite(Y[i]));
-    n4m_aug_emsc_distort_destroy(h);
-    n4m_aug_emsc_distort_destroy(nullptr);
+    n4m_augmentation_emsc_distort_destroy(h);
+    n4m_augmentation_emsc_distort_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -235,7 +235,7 @@ void test_batch_effect_smoke() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42u, &rng) == N4M_OK);
     n4m_aug_batch_effect_handle_t* h = nullptr;
     /* No wavelengths — integer x axis. */
-    N4M_TEST_REQUIRE(n4m_aug_batch_effect_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_batch_effect_create(&h, rng,
         /*offset_std=*/0.02, /*slope_std=*/0.01, /*gain_std=*/0.03,
         /*variation_scope=*/0,
         /*wavelengths=*/nullptr, /*n_wavelengths=*/0) == N4M_OK);
@@ -244,10 +244,10 @@ void test_batch_effect_smoke() {
     for (int i = 0; i < 12; ++i) X[i] = 0.5 + 0.01 * static_cast<double>(i % 6);
     auto Xv = make_view(X, 3, 4);
     auto Yv = make_view(Y, 3, 4);
-    N4M_TEST_REQUIRE(n4m_aug_batch_effect_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_batch_effect_apply(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 12; ++i) N4M_TEST_REQUIRE(std::isfinite(Y[i]));
-    n4m_aug_batch_effect_destroy(h);
-    n4m_aug_batch_effect_destroy(nullptr);
+    n4m_augmentation_batch_effect_destroy(h);
+    n4m_augmentation_batch_effect_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -256,17 +256,17 @@ void test_batch_effect_zero_variation() {
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42u, &rng) == N4M_OK);
     n4m_aug_batch_effect_handle_t* h = nullptr;
     /* zero variation — should pass X through (gain ~ N(1,0) = 1). */
-    N4M_TEST_REQUIRE(n4m_aug_batch_effect_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_batch_effect_create(&h, rng,
         0.0, 0.0, 0.0, /*scope=*/1, nullptr, 0) == N4M_OK);
     double X[6] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
     double Y[6] = {0};
     auto Xv = make_view(X, 2, 3);
     auto Yv = make_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_aug_batch_effect_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_batch_effect_apply(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 6; ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - X[i]) < 1e-12);
     }
-    n4m_aug_batch_effect_destroy(h);
+    n4m_augmentation_batch_effect_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -278,7 +278,7 @@ void test_instrument_broaden_smoke() {
     double wl[16];
     for (int j = 0; j < cols; ++j) wl[j] = 1000.0 + static_cast<double>(j) * 10.0;
     n4m_aug_instrument_broaden_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_instrument_broaden_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_instrument_broaden_create(&h, rng,
         /*fwhm=*/5.0, /*use_fwhm_range=*/0,
         /*fwhm_low=*/0.0, /*fwhm_high=*/0.0,
         /*variation_scope=*/0,
@@ -289,13 +289,13 @@ void test_instrument_broaden_smoke() {
     for (int i = cols; i < 2*cols; ++i) X[i] = 0.5;
     auto Xv = make_view(X, 2, cols);
     auto Yv = make_view(Y, 2, cols);
-    N4M_TEST_REQUIRE(n4m_aug_instrument_broaden_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_instrument_broaden_apply(h, Xv, Yv) == N4M_OK);
     /* Smoothing of a delta should spread mass; max output < 1.0 */
     double mx = 0.0;
     for (int i = 0; i < cols; ++i) if (Y[i] > mx) mx = Y[i];
     N4M_TEST_REQUIRE(mx < 1.0);
-    n4m_aug_instrument_broaden_destroy(h);
-    n4m_aug_instrument_broaden_destroy(nullptr);
+    n4m_augmentation_instrument_broaden_destroy(h);
+    n4m_augmentation_instrument_broaden_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -304,7 +304,7 @@ void test_dead_band_smoke() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42u, &rng) == N4M_OK);
     n4m_aug_dead_band_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_dead_band_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_dead_band_create(&h, rng,
         /*n_bands=*/1, /*width_lo=*/2, /*width_hi=*/3,
         /*noise_std=*/0.05, /*probability=*/1.0,
         /*variation_scope=*/0) == N4M_OK);
@@ -313,15 +313,15 @@ void test_dead_band_smoke() {
     for (int i = 0; i < 20; ++i) X[i] = 1.0;
     auto Xv = make_view(X, 2, 10);
     auto Yv = make_view(Y, 2, 10);
-    N4M_TEST_REQUIRE(n4m_aug_dead_band_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_dead_band_apply(h, Xv, Yv) == N4M_OK);
     /* Some entries should be replaced with noise around 0. */
     int replaced = 0;
     for (int i = 0; i < 20; ++i) {
         if (std::fabs(Y[i] - 1.0) > 0.3) ++replaced;
     }
     N4M_TEST_REQUIRE(replaced > 0);
-    n4m_aug_dead_band_destroy(h);
-    n4m_aug_dead_band_destroy(nullptr);
+    n4m_augmentation_dead_band_destroy(h);
+    n4m_augmentation_dead_band_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -329,17 +329,17 @@ void test_dead_band_zero_probability() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42u, &rng) == N4M_OK);
     n4m_aug_dead_band_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_dead_band_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_dead_band_create(&h, rng,
         1, 3, 5, 0.05, /*probability=*/0.0, 0) == N4M_OK);
     double X[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     double Y[10] = {0};
     auto Xv = make_view(X, 1, 10);
     auto Yv = make_view(Y, 1, 10);
-    N4M_TEST_REQUIRE(n4m_aug_dead_band_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_dead_band_apply(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 10; ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - X[i]) < 1e-12);
     }
-    n4m_aug_dead_band_destroy(h);
+    n4m_augmentation_dead_band_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -351,7 +351,7 @@ void test_temperature_smoke() {
     double wl[20];
     for (int j = 0; j < cols; ++j) wl[j] = 1400.0 + static_cast<double>(j) * 30.0;
     n4m_aug_temperature_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_temperature_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_temperature_create(&h, rng,
         /*temperature_delta=*/5.0,
         /*use_temp_range=*/0, 0.0, 0.0,
         /*enable_shift=*/1, /*enable_intensity=*/1, /*enable_broadening=*/1,
@@ -362,10 +362,10 @@ void test_temperature_smoke() {
     for (int i = 0; i < 40; ++i) X[i] = 0.5;
     auto Xv = make_view(X, 2, cols);
     auto Yv = make_view(Y, 2, cols);
-    N4M_TEST_REQUIRE(n4m_aug_temperature_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_temperature_apply(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 40; ++i) N4M_TEST_REQUIRE(std::isfinite(Y[i]));
-    n4m_aug_temperature_destroy(h);
-    n4m_aug_temperature_destroy(nullptr);
+    n4m_augmentation_temperature_destroy(h);
+    n4m_augmentation_temperature_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -376,7 +376,7 @@ void test_temperature_zero_delta_passthrough() {
     double wl[8] = {1400.0, 1450.0, 1500.0, 1550.0,
                     1600.0, 1650.0, 1700.0, 1750.0};
     n4m_aug_temperature_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_temperature_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_temperature_create(&h, rng,
         /*delta=*/0.0, 0, 0.0, 0.0,
         1, 1, 1, 1,
         wl, cols) == N4M_OK);
@@ -384,11 +384,11 @@ void test_temperature_zero_delta_passthrough() {
     double Y[8] = {0};
     auto Xv = make_view(X, 1, cols);
     auto Yv = make_view(Y, 1, cols);
-    N4M_TEST_REQUIRE(n4m_aug_temperature_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_temperature_apply(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 8; ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - X[i]) < 1e-12);
     }
-    n4m_aug_temperature_destroy(h);
+    n4m_augmentation_temperature_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -400,7 +400,7 @@ void test_moisture_smoke() {
     double wl[20];
     for (int j = 0; j < cols; ++j) wl[j] = 1400.0 + static_cast<double>(j) * 30.0;
     n4m_aug_moisture_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_moisture_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_moisture_create(&h, rng,
         /*aw_delta=*/0.1,
         /*use_aw_range=*/0, 0.0, 0.0,
         /*ref_aw=*/0.5,
@@ -413,10 +413,10 @@ void test_moisture_smoke() {
     for (int i = 0; i < 40; ++i) X[i] = 0.5;
     auto Xv = make_view(X, 2, cols);
     auto Yv = make_view(Y, 2, cols);
-    N4M_TEST_REQUIRE(n4m_aug_moisture_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_moisture_apply(h, Xv, Yv) == N4M_OK);
     for (int i = 0; i < 40; ++i) N4M_TEST_REQUIRE(std::isfinite(Y[i]));
-    n4m_aug_moisture_destroy(h);
-    n4m_aug_moisture_destroy(nullptr);
+    n4m_augmentation_moisture_destroy(h);
+    n4m_augmentation_moisture_destroy(nullptr);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -425,13 +425,13 @@ void test_apply_shape_mismatch() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(1u, &rng) == N4M_OK);
     n4m_aug_mixup_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_mixup_create(&h, rng, 0.2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_create(&h, rng, 0.2) == N4M_OK);
     double X[6] = {0};
     double Y[4] = {0};
     auto Xv = make_view(X, 2, 3);
     auto Yv = make_view(Y, 2, 2);
-    N4M_TEST_REQUIRE(n4m_aug_mixup_apply(h, Xv, Yv) == N4M_ERR_SHAPE_MISMATCH);
-    n4m_aug_mixup_destroy(h);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_apply(h, Xv, Yv) == N4M_ERR_SHAPE_MISMATCH);
+    n4m_augmentation_mixup_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -440,16 +440,16 @@ void test_apply_null_handle() {
     double Y[6] = {0};
     auto Xv = make_view(X, 2, 3);
     auto Yv = make_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_aug_mixup_apply(nullptr, Xv, Yv) == N4M_ERR_NULL_POINTER);
-    N4M_TEST_REQUIRE(n4m_aug_scatter_sim_apply(nullptr, Xv, Yv) == N4M_ERR_NULL_POINTER);
-    N4M_TEST_REQUIRE(n4m_aug_local_mixup_apply(nullptr, Xv, Yv) == N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_apply(nullptr, Xv, Yv) == N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(n4m_augmentation_scatter_sim_msc_apply(nullptr, Xv, Yv) == N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(n4m_augmentation_local_mixup_apply(nullptr, Xv, Yv) == N4M_ERR_NULL_POINTER);
 }
 
 void test_create_null_out() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(1u, &rng) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_aug_mixup_create(nullptr, rng, 0.2) == N4M_ERR_NULL_POINTER);
-    N4M_TEST_REQUIRE(n4m_aug_scatter_sim_create(nullptr, rng, 0, 1, 0, 1) == N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_create(nullptr, rng, 0.2) == N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(n4m_augmentation_scatter_sim_msc_create(nullptr, rng, 0, 1, 0, 1) == N4M_ERR_NULL_POINTER);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -457,13 +457,13 @@ void test_inplace_mixup() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42u, &rng) == N4M_OK);
     n4m_aug_mixup_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_mixup_create(&h, rng, 0.5) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_create(&h, rng, 0.5) == N4M_OK);
     double X[12] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
     auto Xv = make_view(X, 4, 3);
     /* In-place: same buffer for X and out. */
-    N4M_TEST_REQUIRE(n4m_aug_mixup_apply(h, Xv, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_apply(h, Xv, Xv) == N4M_OK);
     for (int i = 0; i < 12; ++i) N4M_TEST_REQUIRE(std::isfinite(X[i]));
-    n4m_aug_mixup_destroy(h);
+    n4m_augmentation_mixup_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -523,16 +523,16 @@ void test_parity_scatter_sim_constant() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_scatter_sim_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_scatter_sim_create(&h, rng, 0.5, 0.5, 1.0, 1.0)
+    N4M_TEST_REQUIRE(n4m_augmentation_scatter_sim_msc_create(&h, rng, 0.5, 0.5, 1.0, 1.0)
                      == N4M_OK);
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_scatter_sim_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_scatter_sim_msc_apply(h, Xv, Yv) == N4M_OK);
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
     }
-    n4m_aug_scatter_sim_destroy(h);
+    n4m_augmentation_scatter_sim_msc_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -541,16 +541,16 @@ void test_parity_batch_effect_zero() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_batch_effect_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_batch_effect_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_batch_effect_create(&h, rng,
         0.0, 0.0, 0.0, 1, nullptr, 0) == N4M_OK);
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_batch_effect_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_batch_effect_apply(h, Xv, Yv) == N4M_OK);
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
     }
-    n4m_aug_batch_effect_destroy(h);
+    n4m_augmentation_batch_effect_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -559,19 +559,19 @@ void test_parity_instrument_broaden_fixed() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_instrument_broaden_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_instrument_broaden_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_instrument_broaden_create(&h, rng,
         5.0, 0, 0.0, 0.0, 0,
         dc.wavelengths.data(),
         static_cast<int64_t>(dc.wavelengths.size())) == N4M_OK);
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_instrument_broaden_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_instrument_broaden_apply(h, Xv, Yv) == N4M_OK);
     /* Gaussian filter parity vs scipy.ndimage.gaussian_filter1d ~ 1e-9 abs. */
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-9);
     }
-    n4m_aug_instrument_broaden_destroy(h);
+    n4m_augmentation_instrument_broaden_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -580,18 +580,18 @@ void test_parity_temperature_zero_delta() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_temperature_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_temperature_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_temperature_create(&h, rng,
         0.0, 0, 0.0, 0.0, 1, 1, 1, 1,
         dc.wavelengths.data(),
         static_cast<int64_t>(dc.wavelengths.size())) == N4M_OK);
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_temperature_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_temperature_apply(h, Xv, Yv) == N4M_OK);
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
     }
-    n4m_aug_temperature_destroy(h);
+    n4m_augmentation_temperature_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -600,16 +600,16 @@ void test_parity_dead_band_zero_prob() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_dead_band_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_dead_band_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_dead_band_create(&h, rng,
         1, 5, 10, 0.05, 0.0, 0) == N4M_OK);
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_dead_band_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_dead_band_apply(h, Xv, Yv) == N4M_OK);
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
     }
-    n4m_aug_dead_band_destroy(h);
+    n4m_augmentation_dead_band_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -624,7 +624,7 @@ void test_parity_particle_size() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_particle_size_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_particle_size_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_particle_size_create(&h, rng,
         /*mean=*/50.0, /*var=*/15.0,
         /*use_range=*/0, /*lo=*/0.0, /*hi=*/0.0,
         /*ref=*/50.0, /*wl_exp=*/1.5,
@@ -635,11 +635,11 @@ void test_parity_particle_size() {
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_particle_size_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_particle_size_apply(h, Xv, Yv) == N4M_OK);
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
     }
-    n4m_aug_particle_size_destroy(h);
+    n4m_augmentation_particle_size_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -648,7 +648,7 @@ void test_parity_emsc_distort() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_emsc_distort_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_emsc_distort_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_emsc_distort_create(&h, rng,
         /*mult_low=*/0.9, /*mult_high=*/1.1,
         /*add_low=*/-0.05, /*add_high=*/0.05,
         /*poly_order=*/2, /*poly_strength=*/0.02,
@@ -658,11 +658,11 @@ void test_parity_emsc_distort() {
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_emsc_distort_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_emsc_distort_apply(h, Xv, Yv) == N4M_OK);
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
     }
-    n4m_aug_emsc_distort_destroy(h);
+    n4m_augmentation_emsc_distort_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -671,7 +671,7 @@ void test_parity_moisture() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_moisture_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_moisture_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_moisture_create(&h, rng,
         /*aw_delta=*/0.1,
         /*use_aw_range=*/0, /*aw_lo=*/0.0, /*aw_hi=*/0.0,
         /*ref_aw=*/0.5,
@@ -683,11 +683,11 @@ void test_parity_moisture() {
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_moisture_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_moisture_apply(h, Xv, Yv) == N4M_OK);
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
     }
-    n4m_aug_moisture_destroy(h);
+    n4m_augmentation_moisture_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -696,15 +696,15 @@ void test_parity_mixup() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_mixup_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_mixup_create(&h, rng, /*alpha=*/0.2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_create(&h, rng, /*alpha=*/0.2) == N4M_OK);
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_mixup_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_mixup_apply(h, Xv, Yv) == N4M_OK);
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
     }
-    n4m_aug_mixup_destroy(h);
+    n4m_augmentation_mixup_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 
@@ -713,16 +713,16 @@ void test_parity_local_mixup() {
     n4m_rng_pcg64_state_t* rng = nullptr;
     N4M_TEST_REQUIRE(n4m_rng_pcg64_create(0u, &rng) == N4M_OK);
     n4m_aug_local_mixup_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_aug_local_mixup_create(&h, rng,
+    N4M_TEST_REQUIRE(n4m_augmentation_local_mixup_create(&h, rng,
         /*alpha=*/0.2, /*k_neighbors=*/5) == N4M_OK);
     std::vector<double> Y(static_cast<size_t>(dc.rows) * static_cast<size_t>(dc.cols));
     auto Xv = make_view(dc.input.data(), dc.rows, dc.cols);
     auto Yv = make_view(Y.data(), dc.rows, dc.cols);
-    N4M_TEST_REQUIRE(n4m_aug_local_mixup_apply(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_local_mixup_apply(h, Xv, Yv) == N4M_OK);
     for (size_t i = 0; i < Y.size(); ++i) {
         N4M_TEST_REQUIRE(std::fabs(Y[i] - dc.expected[i]) < 1e-12);
     }
-    n4m_aug_local_mixup_destroy(h);
+    n4m_augmentation_local_mixup_destroy(h);
     n4m_rng_pcg64_destroy(rng);
 }
 

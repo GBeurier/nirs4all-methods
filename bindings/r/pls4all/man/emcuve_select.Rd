@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{emcuve_select}
 \alias{emcuve_select}
+\alias{n4m_feature_select_emcuve}
 \title{EMCUVE — ensemble Monte Carlo UVE.}
 \usage{
 emcuve_select(

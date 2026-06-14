@@ -12,8 +12,8 @@ tu:
   - "cpp/src/core/ridge.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
-  - "cpp/include/n4m/aom_pop.h"
+  - "cpp/include/n4m/compose.h"
+  - "cpp/include/n4m/compose.h"
 carry_along_tu:
   - "cpp/src/core/aom_operators.cpp"
   - "cpp/src/core/model.cpp"
@@ -35,8 +35,14 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.compose.aom_superblock"
     class: "aom_ridge_superblock"
     legacy_aliases: []
 publications: []
 notes: "Python-backed donor-style AOM Ridge superblock constrained to strict-linear single-operator AOM views. It builds operator outputs through native aom_preprocess, selects/fits Ridge alphas fold-locally through the native Ridge binding, applies train-fold centering and optional block RMS scaling to validation folds, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU superblock grinder."
+c_surface: "none"
+fq_name: "n4m.compose.aom_superblock.ridge_superblock"
+leaf: "ridge_superblock"
+legacy_ids:
+  - "aom_pop.ridge_superblock"
+namespace: "compose.aom_superblock"

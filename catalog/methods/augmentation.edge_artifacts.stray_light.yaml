@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "edge_artifacts"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_stray_light_apply"
-  - "n4m_aug_stray_light_create"
-  - "n4m_aug_stray_light_destroy"
+  - "n4m_augmentation_stray_light_apply"
+  - "n4m_augmentation_stray_light_create"
+  - "n4m_augmentation_stray_light_destroy"
 tu:
   - "cpp/src/core/augmentation/edge_artifacts/stray_light.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/instrument.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_stray_light_apply"
+  - "n4m_augmentation_stray_light_create"
+  - "n4m_augmentation_stray_light_destroy"
+fq_name: "n4m.augmentation.instrument.stray_light"
+leaf: "stray_light"
+legacy_ids:
+  - "augmentation.edge_artifacts.stray_light"
+namespace: "augmentation.instrument"

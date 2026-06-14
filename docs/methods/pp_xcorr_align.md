@@ -1,6 +1,6 @@
 # `pp_xcorr_align` — Cross Correlation Alignment
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.CrossCorrelationAlignment` · _C ABI_: `n4m_pp_xcorr_align_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.CrossCorrelationAlignment` · _C ABI_: `n4m_transform_xcorr_align_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Whole-spectrum integer shift chosen by maximum correlation.
 
 ### Implementation
 
-C ABI `n4m_pp_xcorr_align_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.CrossCorrelationAlignment`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_xcorr_align_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.CrossCorrelationAlignment`. The same numerical kernel backs every language binding.
 
 ### Usage
 

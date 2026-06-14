@@ -16,17 +16,19 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-import n4m
-import n4m.aom as aom
-import n4m.moment as moment
-from n4m import python as native
-from n4m import sklearn as native_sklearn
-from n4m.sklearn import (
-    NativeAOMFixedCandidateRegressor,
-    NativeAOMSavgolFocusRegressor,
-    NativeAOMStrictFamilyLiteRegressor,
-    NativeAOMStagedChainCampaignRegressor,
+import n4m._impl as native_sklearn
+from n4m._impl import aom_facade as aom
+from n4m._impl import moment_facade as moment
+from n4m._impl import native
+from n4m.model_selection.aom_campaign import (
+    AOMSavgolFocusRegressor as NativeAOMSavgolFocusRegressor,
+    AOMStagedChainCampaignRegressor as NativeAOMStagedChainCampaignRegressor,
+    AOMStrictFamilyLiteRegressor as NativeAOMStrictFamilyLiteRegressor,
 )
+from n4m.model_selection.aom_search import (
+    AOMFixedCandidateRegressor as NativeAOMFixedCandidateRegressor,
+)
+from n4m.model_selection.aom_campaign import aom_staged_chain_campaign as _aom_staged_chain_campaign
 
 
 def _dataset(seed: int = 71, n: int = 32, p: int = 16):
@@ -57,7 +59,7 @@ def _run(X, y, **overrides):
         scale_x=False,
     )
     kwargs.update(overrides)
-    return n4m.aom_staged_chain_campaign(X, y, **kwargs)
+    return _aom_staged_chain_campaign(X, y, **kwargs)
 
 
 def _screen_chains_by_stage(report):
@@ -665,7 +667,7 @@ def test_staged_campaign_selects_on_train_cv_not_identity_or_names():
     )
 
     # Stage labels are cosmetic: renaming the stages cannot change the winner.
-    base = n4m.aom_staged_chain_campaign(
+    base = _aom_staged_chain_campaign(
         X, y,
         stages=[
             {"name": "alpha", "profile": "compact"},
@@ -675,7 +677,7 @@ def test_staged_campaign_selects_on_train_cv_not_identity_or_names():
         ridge_lambdas=[0.1, 1.0], pls_components=[1, 2],
         max_chains=6, chain_chunk_size=3, top_k=5, refit_top_k=4, scale_x=False,
     )
-    relabelled = n4m.aom_staged_chain_campaign(
+    relabelled = _aom_staged_chain_campaign(
         X, y,
         stages=[
             {"name": "zzz_run", "profile": "compact"},
@@ -727,33 +729,34 @@ def test_staged_campaign_audit_is_offline_only_and_does_not_drive_selection():
 def test_staged_campaign_input_validation():
     X, y = _dataset()
     with pytest.raises(ValueError) as plan_error:
-        n4m.aom_staged_chain_campaign(X, y, plan="does_not_exist")
+        _aom_staged_chain_campaign(X, y, plan="does_not_exist")
     assert "savgol_focus" in str(plan_error.value)
     assert "strict_family_focus" in str(plan_error.value)
     with pytest.raises(ValueError):
-        n4m.aom_staged_chain_campaign(X, y, stages=[{"profile": "compact", "bogus": 1}])
+        _aom_staged_chain_campaign(X, y, stages=[{"profile": "compact", "bogus": 1}])
     with pytest.raises(ValueError):
-        n4m.aom_staged_chain_campaign(X, y, stages=[])
+        _aom_staged_chain_campaign(X, y, stages=[])
     with pytest.raises(ValueError):
-        n4m.aom_staged_chain_campaign(X, y, stages=[123])
+        _aom_staged_chain_campaign(X, y, stages=[123])
     with pytest.raises(ValueError):
-        n4m.aom_staged_chain_campaign(X, y, plan="compact", X_audit=X)
+        _aom_staged_chain_campaign(X, y, plan="compact", X_audit=X)
     with pytest.raises(ValueError):
-        n4m.aom_staged_chain_campaign(X, y, refit_top_k=0)
+        _aom_staged_chain_campaign(X, y, refit_top_k=0)
     with pytest.raises(ValueError):
-        n4m.aom_staged_chain_campaign(X, y, max_chunks_per_run=0)
+        _aom_staged_chain_campaign(X, y, max_chunks_per_run=0)
     with pytest.raises(ValueError):
-        n4m.aom_staged_chain_campaign(X, y, scale_x=True, scale_x_values=[False, True])
+        _aom_staged_chain_campaign(X, y, scale_x=True, scale_x_values=[False, True])
     with pytest.raises(ValueError):
-        n4m.aom_staged_chain_campaign(X, y, scale_x_values=[])
+        _aom_staged_chain_campaign(X, y, scale_x_values=[])
 
 
 def test_staged_campaign_facade_exports_and_inventory():
     # The single libn4m-backed callable is shared across every surface.
-    assert n4m.aom_staged_chain_campaign is native.aom_staged_chain_campaign
+    from n4m.model_selection import aom_campaign as role_campaign
+
+    assert role_campaign.aom_staged_chain_campaign is native.aom_staged_chain_campaign
     assert aom.aom_staged_chain_campaign is native.aom_staged_chain_campaign
     assert moment.aom_staged_chain_campaign is native.aom_staged_chain_campaign
-    assert not hasattr(native_sklearn, "aom_staged_chain_campaign")
     assert (
         native_sklearn.NativeAOMStagedChainCampaignRegressor
         is NativeAOMStagedChainCampaignRegressor
@@ -763,9 +766,9 @@ def test_staged_campaign_facade_exports_and_inventory():
         native_sklearn.NativeAOMStrictFamilyLiteRegressor
         is NativeAOMStrictFamilyLiteRegressor
     )
-    assert n4m.NativeAOMStagedChainCampaignRegressor is NativeAOMStagedChainCampaignRegressor
-    assert n4m.NativeAOMSavgolFocusRegressor is NativeAOMSavgolFocusRegressor
-    assert n4m.NativeAOMStrictFamilyLiteRegressor is NativeAOMStrictFamilyLiteRegressor
+    assert role_campaign.AOMStagedChainCampaignRegressor is NativeAOMStagedChainCampaignRegressor
+    assert role_campaign.AOMSavgolFocusRegressor is NativeAOMSavgolFocusRegressor
+    assert role_campaign.AOMStrictFamilyLiteRegressor is NativeAOMStrictFamilyLiteRegressor
     assert aom.NativeAOMStagedChainCampaignRegressor is NativeAOMStagedChainCampaignRegressor
     assert aom.NativeAOMSavgolFocusRegressor is NativeAOMSavgolFocusRegressor
     assert (

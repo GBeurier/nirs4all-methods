@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "random"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_rotate_translate_apply"
-  - "n4m_aug_rotate_translate_create"
-  - "n4m_aug_rotate_translate_destroy"
+  - "n4m_augmentation_rotate_translate_apply"
+  - "n4m_augmentation_rotate_translate_create"
+  - "n4m_augmentation_rotate_translate_destroy"
 tu:
   - "cpp/src/core/augmentation/random/rotate_translate.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/mixup.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_rotate_translate_apply"
+  - "n4m_augmentation_rotate_translate_create"
+  - "n4m_augmentation_rotate_translate_destroy"
+fq_name: "n4m.augmentation.mixup.rotate_translate"
+leaf: "rotate_translate"
+legacy_ids:
+  - "augmentation.random.rotate_translate"
+namespace: "augmentation.mixup"

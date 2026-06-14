@@ -42,12 +42,12 @@ _PKG_DIR = Path(__file__).resolve().parent
 # Match the N4M_ABI_VERSION_* macros in cpp/include/n4m/n4m_version.h.
 # Bumped additively with each minor ABI change; kept in sync with the header
 # (see scripts/bump_version.sh, which fails --check on drift).
-ABI_VERSION_MAJOR = 1
-ABI_VERSION_MINOR = 22
+ABI_VERSION_MAJOR = 2
+ABI_VERSION_MINOR = 0
 ABI_VERSION_PATCH = 0
 ABI_VERSION_STRING = f"{ABI_VERSION_MAJOR}.{ABI_VERSION_MINOR}.{ABI_VERSION_PATCH}"
 
-# auditwheel renames the bundled library to ``libn4m-<8hexhash>.so.1``, so we
+# auditwheel renames the bundled library to ``libn4m-<8hexhash>.so.2``, so we
 # accept ``libn4m*.so*`` in addition to the plain SONAME forms. On Windows the
 # MSVC DLL is ``n4m.dll`` (CMake OUTPUT_NAME "n4m", no lib prefix); MinGW
 # produces ``libn4m.dll``. Match both.

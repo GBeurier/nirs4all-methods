@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{vissa_select}
 \alias{vissa_select}
+\alias{n4m_feature_select_vissa}
 \title{VISSA — Variable Iterative Space Shrinkage Approach.}
 \usage{
 vissa_select(

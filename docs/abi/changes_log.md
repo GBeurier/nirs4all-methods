@@ -1,5 +1,40 @@
 # ABI — Changes Log
 
+## 2026-06-14 — ABI 2.0.0: namespace clean break (all method symbols renamed)
+
+Breaking change. Every public **method** symbol was renamed to the canonical
+role-based convention `n4m_<role>_<leaf><tail>`, where `role` is the top-level
+ML namespace (`augmentation`, `compose`, `decomposition`, `domain_adaptation`,
+`ensemble`, `estimators`, `feature_selection`, `lowlevel`, `metrics`,
+`model_selection`, `outlier_detection`, `transform`), `leaf` is the catalog
+leaf, and `<tail>` is the existing operation suffix preserved byte-for-byte
+(`_fit`, `_create`, `_destroy`, `_transform`, `_select`, `_split`,
+`_result_get_*`, …). No runtime aliases were kept — the terse legacy exports
+(`n4m_pp_*`, `n4m_aug_*`, `n4m_split_*`, `n4m_filter_*`, `n4m_aom_*`,
+`n4m_metric_*`, `n4m_util_*`, `n4m_ridge_fit`, `n4m_pls_fit_simple`, …) are gone.
+
+- **566 method symbols renamed** (deterministically, from `catalog/methods.yaml`
+  via `proposals/namespace/_build_rename_map.py` → `_rename_map.tsv`; 0
+  collisions). Examples: `n4m_ridge_fit → n4m_estimators_ridge_fit`,
+  `n4m_pp_snv_create → n4m_transform_snv_create`,
+  `n4m_pls_fit_simple → n4m_estimators_pls_fit` (drop "simple"),
+  `n4m_aom_global_result_get_best_score → n4m_model_selection_aom_pls_result_get_best_score`,
+  `n4m_util_hotelling_t2 → n4m_outlier_detection_hotelling_t2`,
+  `n4m_metric_rmse → n4m_metrics_regression_metrics_rmse`.
+- **136 infra symbols unchanged** (context, config, matrix view, RNG, model,
+  pipeline, validation plan, method-result, serialization, array, backends).
+- The 10 Python-only methods (`c_surface: "none"`) export no C symbol.
+- Exported surface total: 702 (566 method + 136 infra). Linux version node
+  bumped `N4M_1 → N4M_2`; SONAME is now `libn4m.so.2`.
+- Public headers were split into role headers + 2nd-level subheaders
+  (`transform/*.h`, `estimators/*.h`, `augmentation/*.h`, `lowlevel.h`, …);
+  the umbrella `n4m.h` keeps the shared infra and includes the role headers.
+  The flat `pls.h` and the empty category stubs (`aom_pop.h`, `preprocessing.h`,
+  `models.h`, `selection.h`, `splitters.h`, `filters.h`, `diagnostics.h`,
+  `transfer.h`, `utilities.h`, `context.h`) were deleted (no compat include).
+- ABI snapshots regenerated for all three platforms; `N4M_ABI_VERSION_*` set to
+  `2.0.0`. Numerics are unchanged — this is a surface rename only.
+
 ## 2026-06-06 — ABI 1.22.0: PLS CV reference surface
 
 One additive public symbol:

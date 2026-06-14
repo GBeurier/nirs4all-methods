@@ -65,7 +65,7 @@ void test_aom_robust_hpo_compact_smoke() {
     n4m_matrix_view_t Xv = view(X, n, p);
     n4m_matrix_view_t Yv = view(Y, n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_robust_hpo_fit(
+    N4M_TEST_REQUIRE(n4m_model_selection_robust_hpo_fit(
                          ctx, cfg, &Xv, &Yv,
                          /*profile=*/0,
                          /*cv=*/3,
@@ -161,7 +161,7 @@ void test_aom_robust_hpo_wide_includes_fck_moment_bank() {
     n4m_matrix_view_t Xv = view(X, n, p);
     n4m_matrix_view_t Yv = view(Y, n, 1);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_aom_robust_hpo_fit(
+    N4M_TEST_REQUIRE(n4m_model_selection_robust_hpo_fit(
                          ctx, cfg, &Xv, &Yv,
                          /*profile=*/1,
                          /*cv=*/3,

@@ -7,17 +7,17 @@ category: "preprocessing"
 subcategory: "orthogonalization"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_epo_create"
-  - "n4m_pp_epo_destroy"
-  - "n4m_pp_epo_fit"
-  - "n4m_pp_epo_inverse_transform"
-  - "n4m_pp_epo_is_fitted"
-  - "n4m_pp_epo_transform"
-  - "n4m_pp_epo_transform_with_d"
+  - "n4m_domain_adaptation_epo_create"
+  - "n4m_domain_adaptation_epo_destroy"
+  - "n4m_domain_adaptation_epo_fit"
+  - "n4m_domain_adaptation_epo_inverse_transform"
+  - "n4m_domain_adaptation_epo_is_fitted"
+  - "n4m_domain_adaptation_epo_transform"
+  - "n4m_domain_adaptation_epo_transform_with_d"
 tu:
   - "cpp/src/core/preprocessing/orthogonalization/epo.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/domain_adaptation.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -37,3 +37,16 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_domain_adaptation_epo_create"
+  - "n4m_domain_adaptation_epo_destroy"
+  - "n4m_domain_adaptation_epo_fit"
+  - "n4m_domain_adaptation_epo_inverse_transform"
+  - "n4m_domain_adaptation_epo_is_fitted"
+  - "n4m_domain_adaptation_epo_transform"
+  - "n4m_domain_adaptation_epo_transform_with_d"
+fq_name: "n4m.domain_adaptation.orthogonalization.epo"
+leaf: "epo"
+legacy_ids:
+  - "preprocessing.orthogonalization.epo"
+namespace: "domain_adaptation.orthogonalization"

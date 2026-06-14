@@ -59,7 +59,7 @@ export function fitPls(X: Matrix, Y: Matrix, n_components: number
         // Uses the public ABI helper (1.13+): raw double pointers
         // + ints, no matrix-view structs in the JS↔WASM boundary.
         const status = M.ccall(
-            "n4m_pls_fit_simple", "number",
+            "n4m_estimators_pls_fit", "number",
             ["number", "number", "number", "number", "number",
              "number", "number", "number", "number", "number"],
             [xBuf.ptr, yBuf.ptr, n, p, q, n_components,
@@ -271,7 +271,7 @@ export interface AomModel extends FittedModel {
  * and fits SIMPLS on the winner, returning INPUT-SPACE coefficients so the model
  * predicts on RAW X — it is therefore used WITHOUT preceding preprocessing steps
  * (the screen does the preprocessing internally). Numerics are 100% libn4m
- * (`n4m_aom_global_select`); this only builds the bank + validation plan.
+ * (`n4m_model_selection_aom_pls_select`); this only builds the bank + validation plan.
  *
  * @param X row-major (n × p) input matrix.
  * @param Y row-major (n × q) target matrix.
@@ -351,7 +351,7 @@ export interface PopModel extends FittedModel {
 /** Fit POP-PLS (per-component operator-adaptive PLS) on (X, Y).
  *
  * Like AOM-PLS but picks one strict-linear operator PER latent component
- * (`n4m_aom_per_component_select`) rather than one for the whole model, then
+ * (`n4m_model_selection_pop_pls_select`) rather than one for the whole model, then
  * returns INPUT-SPACE coefficients so it predicts on RAW X via the same affine
  * intercept path — so it is used WITHOUT preceding preprocessing steps (the
  * screen does the preprocessing internally). Numerics are 100% libn4m; this

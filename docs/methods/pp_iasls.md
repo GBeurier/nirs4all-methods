@@ -1,6 +1,6 @@
 # `pp_iasls` — I As L S
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.IAsLS` · _C ABI_: `n4m_pp_iasls_*`
+_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.IAsLS` · _C ABI_: `n4m_transform_iasls_*`
 
 ## Description
 
@@ -30,7 +30,7 @@ Improved asymmetric least-squares baseline correction.
 
 ### Implementation
 
-C ABI `n4m_pp_iasls_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IAsLS`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_iasls_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IAsLS`. The same numerical kernel backs every language binding.
 
 ### Usage
 

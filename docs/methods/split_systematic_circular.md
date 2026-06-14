@@ -1,6 +1,6 @@
 # `split_systematic_circular` — Systematic Circular Splitter
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.SystematicCircularSplitter` · _C ABI_: `n4m_split_systematic_circular_*`
+_Group_: **Splitters** · _Binding_: `n4m.sklearn.SystematicCircularSplitter` · _C ABI_: `n4m_model_selection_systematic_circular_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Systematic circular split over sorted or ordered targets.
 
 ### Implementation
 
-C ABI `n4m_split_systematic_circular_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SystematicCircularSplitter`. The same numerical kernel backs every language binding.
+C ABI `n4m_model_selection_systematic_circular_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SystematicCircularSplitter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

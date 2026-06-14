@@ -18,7 +18,7 @@
 // FlexibleSVD plus `is_fitted` and `output_cols` getters.
 //
 // All public declarations are colocated here until n4m.h is updated at
-// integration time; the library exports them under N4M_1
+// integration time; the library exports them under N4M_2
 // via the existing version-script wildcard (`n4m_*`).
 
 #include <cstddef>
@@ -126,7 +126,7 @@ extern "C" {
 // Wavelet (stateless single-level DWT)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_wavelet_create(n4m_pp_wavelet_handle_t** out,
+N4M_API n4m_status_t n4m_transform_wavelet_create(n4m_pp_wavelet_handle_t** out,
                                             n4m_pp_wavelet_family_t   family,
                                             n4m_pp_wavelet_boundary_t mode) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
@@ -151,7 +151,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_create(n4m_pp_wavelet_handle_t** out,
     }
 }
 
-N4M_API void n4m_pp_wavelet_destroy(n4m_pp_wavelet_handle_t* h) {
+N4M_API void n4m_transform_wavelet_destroy(n4m_pp_wavelet_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_wavelet_state_free(h->state);
@@ -159,7 +159,7 @@ N4M_API void n4m_pp_wavelet_destroy(n4m_pp_wavelet_handle_t* h) {
     } catch (...) { /* swallow */ }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_output_cols(
+N4M_API n4m_status_t n4m_transform_wavelet_output_cols(
     const n4m_pp_wavelet_handle_t* h,
     int64_t input_cols, int64_t* out_cols) {
     if (h == nullptr || out_cols == nullptr) return N4M_ERR_NULL_POINTER;
@@ -172,7 +172,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_output_cols(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_transform(
+N4M_API n4m_status_t n4m_transform_wavelet_transform(
     const n4m_pp_wavelet_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -195,7 +195,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_transform(
 // Haar (convenience wrapper)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_haar_create(n4m_pp_haar_handle_t** out) {
+N4M_API n4m_status_t n4m_transform_haar_create(n4m_pp_haar_handle_t** out) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = nullptr;
     try {
@@ -213,7 +213,7 @@ N4M_API n4m_status_t n4m_pp_haar_create(n4m_pp_haar_handle_t** out) {
     }
 }
 
-N4M_API void n4m_pp_haar_destroy(n4m_pp_haar_handle_t* h) {
+N4M_API void n4m_transform_haar_destroy(n4m_pp_haar_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_haar_state_free(h->state);
@@ -221,7 +221,7 @@ N4M_API void n4m_pp_haar_destroy(n4m_pp_haar_handle_t* h) {
     } catch (...) { /* swallow */ }
 }
 
-N4M_API n4m_status_t n4m_pp_haar_output_cols(int64_t input_cols,
+N4M_API n4m_status_t n4m_transform_haar_output_cols(int64_t input_cols,
                                               int64_t* out_cols) {
     if (out_cols == nullptr) return N4M_ERR_NULL_POINTER;
     if (input_cols < 1) return N4M_ERR_INVALID_ARGUMENT;
@@ -231,7 +231,7 @@ N4M_API n4m_status_t n4m_pp_haar_output_cols(int64_t input_cols,
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_pp_haar_transform(const n4m_pp_haar_handle_t* h,
+N4M_API n4m_status_t n4m_transform_haar_transform(const n4m_pp_haar_handle_t* h,
                                             n4m_matrix_view_t X,
                                             n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -254,7 +254,7 @@ N4M_API n4m_status_t n4m_pp_haar_transform(const n4m_pp_haar_handle_t* h,
 // WaveletDenoise (multi-level + thresholding + reconstruction)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_wavelet_denoise_create(
+N4M_API n4m_status_t n4m_transform_wavelet_denoise_create(
     n4m_pp_wavelet_denoise_handle_t** out,
     n4m_pp_wavelet_family_t   family,
     n4m_pp_wavelet_boundary_t mode,
@@ -294,7 +294,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_denoise_create(
     }
 }
 
-N4M_API void n4m_pp_wavelet_denoise_destroy(n4m_pp_wavelet_denoise_handle_t* h) {
+N4M_API void n4m_transform_wavelet_denoise_destroy(n4m_pp_wavelet_denoise_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_wavelet_denoise_state_free(h->state);
@@ -302,7 +302,7 @@ N4M_API void n4m_pp_wavelet_denoise_destroy(n4m_pp_wavelet_denoise_handle_t* h) 
     } catch (...) { /* swallow */ }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_denoise_transform(
+N4M_API n4m_status_t n4m_transform_wavelet_denoise_transform(
     const n4m_pp_wavelet_denoise_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -325,16 +325,16 @@ N4M_API n4m_status_t n4m_pp_wavelet_denoise_transform(
 // WaveletFeatures (multi-level + per-band statistics)
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_wavelet_features_create(
+N4M_API n4m_status_t n4m_transform_wavelet_features_create(
     n4m_pp_wavelet_features_handle_t** out,
     n4m_pp_wavelet_family_t   family,
     n4m_pp_wavelet_boundary_t mode,
     int32_t                   max_level) {
-    return n4m_pp_wavelet_features_create_ex(
+    return n4m_transform_wavelet_features_create_ex(
         out, family, mode, max_level, N4M_PP_WAVELET_FEATURES_ENTROPY_ENERGY);
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_features_create_ex(
+N4M_API n4m_status_t n4m_transform_wavelet_features_create_ex(
     n4m_pp_wavelet_features_handle_t** out,
     n4m_pp_wavelet_family_t           family,
     n4m_pp_wavelet_boundary_t         mode,
@@ -365,7 +365,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_features_create_ex(
     }
 }
 
-N4M_API void n4m_pp_wavelet_features_destroy(n4m_pp_wavelet_features_handle_t* h) {
+N4M_API void n4m_transform_wavelet_features_destroy(n4m_pp_wavelet_features_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_wavelet_features_state_free(h->state);
@@ -373,7 +373,7 @@ N4M_API void n4m_pp_wavelet_features_destroy(n4m_pp_wavelet_features_handle_t* h
     } catch (...) { /* swallow */ }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_features_output_cols(
+N4M_API n4m_status_t n4m_transform_wavelet_features_output_cols(
     const n4m_pp_wavelet_features_handle_t* h,
     int64_t input_cols, int64_t* out_cols) {
     if (h == nullptr || out_cols == nullptr) return N4M_ERR_NULL_POINTER;
@@ -382,7 +382,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_features_output_cols(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_features_transform(
+N4M_API n4m_status_t n4m_transform_wavelet_features_transform(
     const n4m_pp_wavelet_features_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -405,7 +405,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_features_transform(
 // WaveletPCA
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_wavelet_pca_create(
+N4M_API n4m_status_t n4m_transform_wavelet_pca_create(
     n4m_pp_wavelet_pca_handle_t** out,
     n4m_pp_wavelet_family_t   family,
     n4m_pp_wavelet_boundary_t mode,
@@ -435,7 +435,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_pca_create(
     }
 }
 
-N4M_API void n4m_pp_wavelet_pca_destroy(n4m_pp_wavelet_pca_handle_t* h) {
+N4M_API void n4m_transform_wavelet_pca_destroy(n4m_pp_wavelet_pca_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_wavelet_pca_state_free(h->state);
@@ -443,7 +443,7 @@ N4M_API void n4m_pp_wavelet_pca_destroy(n4m_pp_wavelet_pca_handle_t* h) {
     } catch (...) { /* swallow */ }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_pca_fit(n4m_pp_wavelet_pca_handle_t* h,
+N4M_API n4m_status_t n4m_transform_wavelet_pca_fit(n4m_pp_wavelet_pca_handle_t* h,
                                              n4m_matrix_view_t X) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
     try {
@@ -457,7 +457,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_pca_fit(n4m_pp_wavelet_pca_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_pca_transform(
+N4M_API n4m_status_t n4m_transform_wavelet_pca_transform(
     const n4m_pp_wavelet_pca_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -476,7 +476,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_pca_transform(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_pca_is_fitted(
+N4M_API n4m_status_t n4m_transform_wavelet_pca_is_fitted(
     const n4m_pp_wavelet_pca_handle_t* h, int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) return N4M_ERR_NULL_POINTER;
     try {
@@ -487,7 +487,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_pca_is_fitted(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_pca_output_cols(
+N4M_API n4m_status_t n4m_transform_wavelet_pca_output_cols(
     const n4m_pp_wavelet_pca_handle_t* h, int64_t* out_cols) {
     if (h == nullptr || out_cols == nullptr) return N4M_ERR_NULL_POINTER;
     try {
@@ -505,7 +505,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_pca_output_cols(
 // WaveletSVD
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_wavelet_svd_create(
+N4M_API n4m_status_t n4m_transform_wavelet_svd_create(
     n4m_pp_wavelet_svd_handle_t** out,
     n4m_pp_wavelet_family_t   family,
     n4m_pp_wavelet_boundary_t mode,
@@ -535,7 +535,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_svd_create(
     }
 }
 
-N4M_API void n4m_pp_wavelet_svd_destroy(n4m_pp_wavelet_svd_handle_t* h) {
+N4M_API void n4m_transform_wavelet_svd_destroy(n4m_pp_wavelet_svd_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_pp_wavelet_svd_state_free(h->state);
@@ -543,7 +543,7 @@ N4M_API void n4m_pp_wavelet_svd_destroy(n4m_pp_wavelet_svd_handle_t* h) {
     } catch (...) { /* swallow */ }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_svd_fit(n4m_pp_wavelet_svd_handle_t* h,
+N4M_API n4m_status_t n4m_transform_wavelet_svd_fit(n4m_pp_wavelet_svd_handle_t* h,
                                              n4m_matrix_view_t X) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
     try {
@@ -557,7 +557,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_svd_fit(n4m_pp_wavelet_svd_handle_t* h,
     }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_svd_transform(
+N4M_API n4m_status_t n4m_transform_wavelet_svd_transform(
     const n4m_pp_wavelet_svd_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -576,7 +576,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_svd_transform(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_svd_is_fitted(
+N4M_API n4m_status_t n4m_transform_wavelet_svd_is_fitted(
     const n4m_pp_wavelet_svd_handle_t* h, int* out_fitted) {
     if (h == nullptr || out_fitted == nullptr) return N4M_ERR_NULL_POINTER;
     try {
@@ -587,7 +587,7 @@ N4M_API n4m_status_t n4m_pp_wavelet_svd_is_fitted(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_wavelet_svd_output_cols(
+N4M_API n4m_status_t n4m_transform_wavelet_svd_output_cols(
     const n4m_pp_wavelet_svd_handle_t* h, int64_t* out_cols) {
     if (h == nullptr || out_cols == nullptr) return N4M_ERR_NULL_POINTER;
     try {

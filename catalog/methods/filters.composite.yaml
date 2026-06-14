@@ -7,15 +7,15 @@ category: "filters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_filter_composite_add_leverage"
-  - "n4m_filter_composite_add_quality"
-  - "n4m_filter_composite_apply"
-  - "n4m_filter_composite_create"
-  - "n4m_filter_composite_destroy"
+  - "n4m_outlier_detection_composite_add_leverage"
+  - "n4m_outlier_detection_composite_add_quality"
+  - "n4m_outlier_detection_composite_apply"
+  - "n4m_outlier_detection_composite_create"
+  - "n4m_outlier_detection_composite_destroy"
 tu:
   - "cpp/src/core/filters/composite.c"
 headers:
-  - "cpp/include/n4m/filters.h"
+  - "cpp/include/n4m/outlier_detection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -35,3 +35,14 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_outlier_detection_composite_add_leverage"
+  - "n4m_outlier_detection_composite_add_quality"
+  - "n4m_outlier_detection_composite_apply"
+  - "n4m_outlier_detection_composite_create"
+  - "n4m_outlier_detection_composite_destroy"
+fq_name: "n4m.outlier_detection.composite"
+leaf: "composite"
+legacy_ids:
+  - "filters.composite"
+namespace: "outlier_detection"

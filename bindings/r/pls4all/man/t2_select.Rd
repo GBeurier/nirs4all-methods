@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{t2_select}
 \alias{t2_select}
+\alias{n4m_feature_select_t2}
 \title{T2-PLS - sweep over alpha thresholds.}
 \usage{
 t2_select(X, Y, n_components, alpha_thresholds, min_selected = NULL)

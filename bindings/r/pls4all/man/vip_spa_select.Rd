@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{vip_spa_select}
 \alias{vip_spa_select}
+\alias{n4m_feature_select_vip_spa}
 \title{VIP-SPA hybrid selector.}
 \usage{
 vip_spa_select(X, Y, n_components, vip_threshold = 0.3, top_k = 10L)

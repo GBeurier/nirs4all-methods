@@ -74,100 +74,100 @@ void test_snv_smoke() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
     n4m_pp_snv_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_snv_create(&h, /*with_mean=*/1, /*with_std=*/1,
+    N4M_TEST_REQUIRE(n4m_transform_snv_create(&h, /*with_mean=*/1, /*with_std=*/1,
                                          /*ddof=*/0) == N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_pp_snv_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_snv_transform(h, Xv, Yv) == N4M_OK);
     // Row 0: mean = 2, std = sqrt(2/3); expected SNV ≈ [-1.224..., 0, 1.224...]
     N4M_TEST_REQUIRE(std::fabs(Y[1] - 0.0) < 1e-12);
     N4M_TEST_REQUIRE(Y[0] < 0.0 && Y[2] > 0.0);
-    n4m_pp_snv_destroy(h);
-    n4m_pp_snv_destroy(nullptr);  // null-safe
+    n4m_transform_snv_destroy(h);
+    n4m_transform_snv_destroy(nullptr);  // null-safe
 }
 
 void test_lsnv_smoke() {
     double X[10] = {1.0, 1.0, 2.0, 5.0, 3.0, 2.0, 4.0, 6.0, 5.0, 3.0};
     double Y[10] = {0};
     n4m_pp_lsnv_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_lsnv_create(&h, /*window=*/3, /*pad_mode=*/0,
+    N4M_TEST_REQUIRE(n4m_transform_local_snv_create(&h, /*window=*/3, /*pad_mode=*/0,
                                           /*constant_value=*/0.0) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 10);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 10);
-    N4M_TEST_REQUIRE(n4m_pp_lsnv_transform(h, Xv, Yv) == N4M_OK);
-    n4m_pp_lsnv_destroy(h);
+    N4M_TEST_REQUIRE(n4m_transform_local_snv_transform(h, Xv, Yv) == N4M_OK);
+    n4m_transform_local_snv_destroy(h);
 }
 
 void test_rnv_smoke() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
     n4m_pp_rnv_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_rnv_create(&h, /*center=*/1, /*scale=*/1,
+    N4M_TEST_REQUIRE(n4m_transform_robust_snv_create(&h, /*center=*/1, /*scale=*/1,
                                         /*k=*/1.4826) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_pp_rnv_transform(h, Xv, Yv) == N4M_OK);
-    n4m_pp_rnv_destroy(h);
+    N4M_TEST_REQUIRE(n4m_transform_robust_snv_transform(h, Xv, Yv) == N4M_OK);
+    n4m_transform_robust_snv_destroy(h);
 }
 
 void test_area_smoke() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
     n4m_pp_area_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_area_create(&h, /*sum=*/0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_area_normalization_create(&h, /*sum=*/0) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_pp_area_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_area_normalization_transform(h, Xv, Yv) == N4M_OK);
     // Row 0 area = 6 → [1/6, 2/6, 3/6]; row 1 area = 15 → [4/15, 5/15, 6/15].
     N4M_TEST_REQUIRE(std::fabs(Y[0] - 1.0 / 6.0) < 1e-15);
     N4M_TEST_REQUIRE(std::fabs(Y[5] - 6.0 / 15.0) < 1e-15);
-    n4m_pp_area_destroy(h);
+    n4m_transform_area_normalization_destroy(h);
 }
 
 void test_normalize_smoke() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
     n4m_pp_normalize_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_normalize_create(&h, /*min=*/-1.0, /*max=*/1.0)
+    N4M_TEST_REQUIRE(n4m_transform_normalize_create(&h, /*min=*/-1.0, /*max=*/1.0)
                      == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_pp_normalize_transform(h, Xv, Yv) == N4M_OK);
-    n4m_pp_normalize_destroy(h);
+    N4M_TEST_REQUIRE(n4m_transform_normalize_transform(h, Xv, Yv) == N4M_OK);
+    n4m_transform_normalize_destroy(h);
 }
 
 void test_simple_scale_smoke() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
     n4m_pp_simple_scale_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_simple_scale_create(&h) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_simple_scale_create(&h) == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
-    N4M_TEST_REQUIRE(n4m_pp_simple_scale_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_simple_scale_transform(h, Xv, Yv) == N4M_OK);
     // For axis=0 min-max: each column scales [min, max] → [0, 1].
     // Col 0: min=1, max=4 → Y[0]=(1-1)/3=0, Y[3]=(4-1)/3=1.
     N4M_TEST_REQUIRE(std::fabs(Y[0] - 0.0) < 1e-15);
     N4M_TEST_REQUIRE(std::fabs(Y[3] - 1.0) < 1e-15);
-    n4m_pp_simple_scale_destroy(h);
+    n4m_transform_simple_scale_destroy(h);
 }
 
 void test_log_smoke() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
     n4m_pp_log_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_log_create(&h, /*base=*/0.0, /*offset=*/0.0,
+    N4M_TEST_REQUIRE(n4m_transform_log_transform_create(&h, /*base=*/0.0, /*offset=*/0.0,
                                         /*auto_offset=*/1, /*min_value=*/1e-8)
                      == N4M_OK);
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 2, 3);
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 2, 3);
     // auto_offset = 1 requires _fit before _transform (Phase 5b).
-    N4M_TEST_REQUIRE(n4m_pp_log_transform(h, Xv, Yv) == N4M_ERR_NOT_FITTED);
-    N4M_TEST_REQUIRE(n4m_pp_log_fit(h, Xv) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_log_transform(h, Xv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_log_transform_transform(h, Xv, Yv) == N4M_ERR_NOT_FITTED);
+    N4M_TEST_REQUIRE(n4m_transform_log_transform_fit(h, Xv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_log_transform_transform(h, Xv, Yv) == N4M_OK);
     N4M_TEST_REQUIRE(std::fabs(Y[0] - std::log(1.0)) < 1e-15);
     N4M_TEST_REQUIRE(std::fabs(Y[5] - std::log(6.0)) < 1e-15);
-    n4m_pp_log_destroy(h);
+    n4m_transform_log_transform_destroy(h);
 }
 
 // Phase 5b — explicit lifecycle checks for the auto_offset stateful split.
@@ -177,18 +177,18 @@ void test_log_fit_transform_split() {
         double X[3] = {1.0, 2.0, 3.0};
         double Y[3] = {0};
         n4m_pp_log_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_log_create(&h, /*base=*/0.0, /*offset=*/0.0,
+        N4M_TEST_REQUIRE(n4m_transform_log_transform_create(&h, /*base=*/0.0, /*offset=*/0.0,
                                             /*auto_offset=*/0,
                                             /*min_value=*/1e-8) == N4M_OK);
         int fitted = -1;
-        N4M_TEST_REQUIRE(n4m_pp_log_is_fitted(h, &fitted) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_log_transform_is_fitted(h, &fitted) == N4M_OK);
         N4M_TEST_REQUIRE(fitted == 0);
         n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 3);
         n4m_matrix_view_t Yv = make_rowmajor_view(Y, 1, 3);
         // Stateless path — no NOT_FITTED, transform runs directly.
-        N4M_TEST_REQUIRE(n4m_pp_log_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_log_transform_transform(h, Xv, Yv) == N4M_OK);
         N4M_TEST_REQUIRE(std::fabs(Y[2] - std::log(3.0)) < 1e-15);
-        n4m_pp_log_destroy(h);
+        n4m_transform_log_transform_destroy(h);
     }
     // 2. auto_offset == 1 path: _fit caches the offset; _transform reuses it
     //    so a second matrix with a different min sees the SAME offset.
@@ -197,23 +197,23 @@ void test_log_fit_transform_split() {
         double X_call[4] = {-10.0, 0.0, 1.0, 4.0};   // probe with different min
         double Y[4] = {0};
         n4m_pp_log_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_log_create(&h, /*base=*/0.0, /*offset=*/0.0,
+        N4M_TEST_REQUIRE(n4m_transform_log_transform_create(&h, /*base=*/0.0, /*offset=*/0.0,
                                             /*auto_offset=*/1,
                                             /*min_value=*/1e-3) == N4M_OK);
         n4m_matrix_view_t XvFit  = make_rowmajor_view(X_fit, 1, 4);
-        N4M_TEST_REQUIRE(n4m_pp_log_fit(h, XvFit) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_log_transform_fit(h, XvFit) == N4M_OK);
         int fitted = -1;
-        N4M_TEST_REQUIRE(n4m_pp_log_is_fitted(h, &fitted) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_log_transform_is_fitted(h, &fitted) == N4M_OK);
         N4M_TEST_REQUIRE(fitted == 1);
         // Fitted offset := 1e-3 - (-3) = 3.001
         // X_call[0] + offset = -10 + 3.001 = -6.999 -> clamped to min_value=1e-3
         // X_call[1] + offset = 3.001
         n4m_matrix_view_t XvCall = make_rowmajor_view(X_call, 1, 4);
         n4m_matrix_view_t Yv     = make_rowmajor_view(Y, 1, 4);
-        N4M_TEST_REQUIRE(n4m_pp_log_transform(h, XvCall, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_log_transform_transform(h, XvCall, Yv) == N4M_OK);
         N4M_TEST_REQUIRE(std::fabs(Y[0] - std::log(1e-3)) < 1e-14);
         N4M_TEST_REQUIRE(std::fabs(Y[1] - std::log(3.001)) < 1e-14);
-        n4m_pp_log_destroy(h);
+        n4m_transform_log_transform_destroy(h);
     }
 }
 
@@ -229,14 +229,14 @@ void verify_snv_parity() {
         const int ddof      = static_cast<int>(params_get_int(c.params_json, "ddof", 0));
 
         n4m_pp_snv_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_snv_create(&h, with_mean, with_std, ddof) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_snv_create(&h, with_mean, with_std, ddof) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_snv_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_snv_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "snv/" + c.name);
-        n4m_pp_snv_destroy(h);
+        n4m_transform_snv_destroy(h);
     }
 }
 
@@ -253,15 +253,15 @@ void verify_lsnv_parity() {
         else throw std::runtime_error("lsnv: unknown pad_mode " + pad);
 
         n4m_pp_lsnv_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_lsnv_create(&h, window, pad_mode, cv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_local_snv_create(&h, window, pad_mode, cv) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_lsnv_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_local_snv_transform(h, Xv, Yv) == N4M_OK);
         ::n4m_testing::assert_close(out, c.expected_output, "lsnv/" + c.name,
                                     /*abs_tol=*/1e-10, /*rel_tol=*/1e-10);
-        n4m_pp_lsnv_destroy(h);
+        n4m_transform_local_snv_destroy(h);
     }
 }
 
@@ -273,14 +273,14 @@ void verify_rnv_parity() {
         const double k        = params_get_double(c.params_json, "k", 1.4826);
 
         n4m_pp_rnv_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_rnv_create(&h, with_center, with_scale, k) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_robust_snv_create(&h, with_center, with_scale, k) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_rnv_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_robust_snv_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "rnv/" + c.name);
-        n4m_pp_rnv_destroy(h);
+        n4m_transform_robust_snv_destroy(h);
     }
 }
 
@@ -295,14 +295,14 @@ void verify_area_parity() {
         else throw std::runtime_error("area: unknown method " + m);
 
         n4m_pp_area_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_area_create(&h, method) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_area_normalization_create(&h, method) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_area_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_area_normalization_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "area/" + c.name);
-        n4m_pp_area_destroy(h);
+        n4m_transform_area_normalization_destroy(h);
     }
 }
 
@@ -313,14 +313,14 @@ void verify_normalize_parity() {
         const double fmax = params_get_double(c.params_json, "feature_max",  1.0);
 
         n4m_pp_normalize_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_normalize_create(&h, fmin, fmax) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_normalize_create(&h, fmin, fmax) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_normalize_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_normalize_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "normalize/" + c.name);
-        n4m_pp_normalize_destroy(h);
+        n4m_transform_normalize_destroy(h);
     }
 }
 
@@ -328,14 +328,14 @@ void verify_simple_scale_parity() {
     ParityFixture fx = load_fixture("simple_scale_v1.json");
     for (const auto& c : fx.cases) {
         n4m_pp_simple_scale_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_simple_scale_create(&h) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_simple_scale_create(&h) == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
         n4m_matrix_view_t Xv = make_rowmajor_view(in.data(),  fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_pp_simple_scale_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_simple_scale_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "simple_scale/" + c.name);
-        n4m_pp_simple_scale_destroy(h);
+        n4m_transform_simple_scale_destroy(h);
     }
 }
 
@@ -348,7 +348,7 @@ void verify_log_parity() {
         const double min_value  = params_get_double(c.params_json, "min_value", 1e-8);
 
         n4m_pp_log_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_log_create(&h, base, offset, auto_offset, min_value)
+        N4M_TEST_REQUIRE(n4m_transform_log_transform_create(&h, base, offset, auto_offset, min_value)
                          == N4M_OK);
         std::vector<double> in = fx.input;
         std::vector<double> out(in.size(), 0.0);
@@ -359,11 +359,11 @@ void verify_log_parity() {
         // stateless (auto_offset == 0) path skips _fit and uses the offset
         // directly.
         if (auto_offset) {
-            N4M_TEST_REQUIRE(n4m_pp_log_fit(h, Xv) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_transform_log_transform_fit(h, Xv) == N4M_OK);
         }
-        N4M_TEST_REQUIRE(n4m_pp_log_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_transform_log_transform_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "log/" + c.name);
-        n4m_pp_log_destroy(h);
+        n4m_transform_log_transform_destroy(h);
     }
 }
 

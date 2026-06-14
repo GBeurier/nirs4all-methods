@@ -2,6 +2,7 @@
 % Please edit documentation in R/selectors.R
 \name{cars_select}
 \alias{cars_select}
+\alias{n4m_feature_select_cars}
 \title{CARS — Competitive Adaptive Reweighted Sampling.}
 \usage{
 cars_select(X, Y, n_components, n_iterations = 50L, min_features = 5L)

@@ -94,7 +94,7 @@ extern "C" {
 /*  AOM global selection                                              */
 /* ------------------------------------------------------------------ */
 
-N4M_API n4m_status_t n4m_aom_global_select(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_operator_bank_t* bank,
@@ -127,15 +127,15 @@ N4M_API n4m_status_t n4m_aom_global_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_aom_global_select");
+        set_error(ctx, "out of memory in n4m_model_selection_aom_pls_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_aom_global_select");
+        set_error(ctx, "internal error in n4m_model_selection_aom_pls_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API void n4m_aom_global_result_destroy(n4m_aom_global_result_t* result) {
+N4M_API void n4m_model_selection_aom_pls_result_destroy(n4m_aom_global_result_t* result) {
     try {
         delete result;
     } catch (...) {
@@ -143,42 +143,42 @@ N4M_API void n4m_aom_global_result_destroy(n4m_aom_global_result_t* result) {
     }
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_n_operators(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_n_operators(
     const n4m_aom_global_result_t* result, int32_t* out) {
     if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.n_operators;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_max_components(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_max_components(
     const n4m_aom_global_result_t* result, int32_t* out) {
     if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.max_components;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_selected_operator_index(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_selected_operator_index(
     const n4m_aom_global_result_t* result, int32_t* out) {
     if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.selected_operator_index;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_selected_n_components(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_selected_n_components(
     const n4m_aom_global_result_t* result, int32_t* out) {
     if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.selected_n_components;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_best_score(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_best_score(
     const n4m_aom_global_result_t* result, double* out) {
     if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.best_score;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_operator_kinds(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_operator_kinds(
     const n4m_aom_global_result_t* result,
     const n4m_operator_kind_t** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
@@ -190,7 +190,7 @@ N4M_API n4m_status_t n4m_aom_global_result_get_operator_kinds(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_operator_scores(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_operator_scores(
     const n4m_aom_global_result_t* result,
     const double** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
@@ -202,7 +202,7 @@ N4M_API n4m_status_t n4m_aom_global_result_get_operator_scores(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_rmse_curves(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_rmse_curves(
     const n4m_aom_global_result_t* result,
     const double** out_data, int32_t* out_rows, int32_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
@@ -216,7 +216,7 @@ N4M_API n4m_status_t n4m_aom_global_result_get_rmse_curves(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_predictions(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_predictions(
     const n4m_aom_global_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
@@ -230,7 +230,7 @@ N4M_API n4m_status_t n4m_aom_global_result_get_predictions(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_coefficients(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_coefficients(
     const n4m_aom_global_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
@@ -244,7 +244,7 @@ N4M_API n4m_status_t n4m_aom_global_result_get_coefficients(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_input_coefficients(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_input_coefficients(
     const n4m_aom_global_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
@@ -258,7 +258,7 @@ N4M_API n4m_status_t n4m_aom_global_result_get_input_coefficients(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_global_result_get_intercept(
+N4M_API n4m_status_t n4m_model_selection_aom_pls_result_get_intercept(
     const n4m_aom_global_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
@@ -276,7 +276,7 @@ N4M_API n4m_status_t n4m_aom_global_result_get_intercept(
 /*  AOM per-component (POP) selection                                 */
 /* ------------------------------------------------------------------ */
 
-N4M_API n4m_status_t n4m_aom_per_component_select(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,
     const n4m_operator_bank_t* bank,
@@ -312,15 +312,15 @@ N4M_API n4m_status_t n4m_aom_per_component_select(
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
-        set_error(ctx, "out of memory in n4m_aom_per_component_select");
+        set_error(ctx, "out of memory in n4m_model_selection_pop_pls_select");
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
-        set_error(ctx, "internal error in n4m_aom_per_component_select");
+        set_error(ctx, "internal error in n4m_model_selection_pop_pls_select");
         return N4M_ERR_INTERNAL;
     }
 }
 
-N4M_API void n4m_aom_per_component_result_destroy(
+N4M_API void n4m_model_selection_pop_pls_result_destroy(
     n4m_aom_per_component_result_t* result) {
     try {
         delete result;
@@ -328,35 +328,35 @@ N4M_API void n4m_aom_per_component_result_destroy(
     }
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_n_operators(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_n_operators(
     const n4m_aom_per_component_result_t* result, int32_t* out) {
     if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.n_operators;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_max_components(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_max_components(
     const n4m_aom_per_component_result_t* result, int32_t* out) {
     if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.max_components;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_selected_n_components(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_selected_n_components(
     const n4m_aom_per_component_result_t* result, int32_t* out) {
     if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.selected_n_components;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_best_score(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_best_score(
     const n4m_aom_per_component_result_t* result, double* out) {
     if (result == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = result->inner.best_score;
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_operator_kinds(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_operator_kinds(
     const n4m_aom_per_component_result_t* result,
     const n4m_operator_kind_t** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
@@ -368,7 +368,7 @@ N4M_API n4m_status_t n4m_aom_per_component_result_get_operator_kinds(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_selected_operator_indices(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_selected_operator_indices(
     const n4m_aom_per_component_result_t* result,
     const int32_t** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
@@ -380,7 +380,7 @@ N4M_API n4m_status_t n4m_aom_per_component_result_get_selected_operator_indices(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_component_scores(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_component_scores(
     const n4m_aom_per_component_result_t* result,
     const double** out_data, int32_t* out_rows, int32_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
@@ -394,7 +394,7 @@ N4M_API n4m_status_t n4m_aom_per_component_result_get_component_scores(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_prefix_scores(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_prefix_scores(
     const n4m_aom_per_component_result_t* result,
     const double** out_data, int32_t* out_size) {
     if (result == nullptr || out_data == nullptr || out_size == nullptr) {
@@ -406,7 +406,7 @@ N4M_API n4m_status_t n4m_aom_per_component_result_get_prefix_scores(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_predictions(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_predictions(
     const n4m_aom_per_component_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
@@ -420,7 +420,7 @@ N4M_API n4m_status_t n4m_aom_per_component_result_get_predictions(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_coefficients(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_coefficients(
     const n4m_aom_per_component_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
@@ -434,7 +434,7 @@ N4M_API n4m_status_t n4m_aom_per_component_result_get_coefficients(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_input_coefficients(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_input_coefficients(
     const n4m_aom_per_component_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||
@@ -448,7 +448,7 @@ N4M_API n4m_status_t n4m_aom_per_component_result_get_input_coefficients(
     return N4M_OK;
 }
 
-N4M_API n4m_status_t n4m_aom_per_component_result_get_intercept(
+N4M_API n4m_status_t n4m_model_selection_pop_pls_result_get_intercept(
     const n4m_aom_per_component_result_t* result,
     const double** out_data, int64_t* out_rows, int64_t* out_cols) {
     if (result == nullptr || out_data == nullptr ||

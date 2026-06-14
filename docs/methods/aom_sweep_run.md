@@ -1,11 +1,11 @@
 # `aom_sweep_run` - configurable native AOM preprocessing sweep
 
-_Group_: **Diagnostic / AOM** · _ABI_: `n4m_aom_sweep_run`
+_Group_: **Diagnostic / AOM** · _ABI_: `n4m_model_selection_aom_sweep_run`
 
 ## Description
 
 `aom_sweep_run` applies the native strict-linear AOM preprocessing chain bank,
-then delegates Ridge/PLS candidate scoring to `n4m_sweep_run`.
+then delegates Ridge/PLS candidate scoring to `n4m_model_selection_sweep_run`.
 
 It is the configurable product surface for preprocessing campaigns where the
 user wants to vary:

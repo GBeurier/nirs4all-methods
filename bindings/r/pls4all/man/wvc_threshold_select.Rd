@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{wvc_threshold_select}
 \alias{wvc_threshold_select}
+\alias{n4m_feature_select_wvc_threshold}
 \title{WVC-threshold selector.}
 \usage{
 wvc_threshold_select(

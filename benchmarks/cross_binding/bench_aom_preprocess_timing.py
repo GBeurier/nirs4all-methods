@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 
 import n4m
+from n4m.model_selection.aom_search import aom_preprocess
 
 
 OPERATOR_SPECS = (
@@ -113,7 +114,7 @@ def main() -> int:
         for mode in ("soft", "hard"):
             for spec in OPERATOR_SPECS:
                 elapsed, result = median_ms(
-                    lambda spec=spec: n4m.aom_preprocess(
+                    lambda spec=spec: aom_preprocess(
                         X,
                         y,
                         operators=[spec["operator"]],

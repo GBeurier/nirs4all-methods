@@ -1,6 +1,6 @@
 # `aug_spline_x_perturb` — Spline X Perturbation Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineXPerturbationAugmenter` · _C ABI_: `n4m_aug_spline_x_perturb_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineXPerturbationAugmenter` · _C ABI_: `n4m_augmentation_spline_x_perturbations_*`
 
 ## Description
 
@@ -29,7 +29,7 @@ Spline x-axis perturbation augmenter.
 
 ### Implementation
 
-C ABI `n4m_aug_spline_x_perturb_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SplineXPerturbationAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_spline_x_perturbations_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SplineXPerturbationAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

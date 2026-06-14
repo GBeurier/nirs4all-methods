@@ -11,7 +11,7 @@ tu:
   - "cpp/src/core/aom_sweep.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/model_selection.h"
 carry_along_tu:
   - "cpp/src/core/aom_operators.cpp"
   - "cpp/src/core/sweep.cpp"
@@ -36,8 +36,14 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.model_selection.aom_search"
     class: "aom_ridge_global"
     legacy_aliases: []
 publications: []
 notes: "Python-backed donor-style AOM Ridge global selector constrained to strict-linear single-operator AOM views. It delegates scoring and final fit to the native aom_chain_sweep_run Ridge-only path, selects one operator plus one positive Ridge alpha by train CV, and returns folded input_coefficients plus intercept for replay through NativeAOMRidgeGlobalRegressor. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU grinder."
+c_surface: "none"
+fq_name: "n4m.model_selection.aom_search.ridge_global"
+leaf: "ridge_global"
+legacy_ids:
+  - "aom_pop.ridge_global"
+namespace: "model_selection.aom_search"

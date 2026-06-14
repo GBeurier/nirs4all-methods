@@ -1,6 +1,6 @@
 # `aug_scatter_sim` — Scatter Simulation M S C
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.ScatterSimulationMSC` · _C ABI_: `n4m_aug_scatter_sim_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.ScatterSimulationMSC` · _C ABI_: `n4m_augmentation_scatter_sim_msc_*`
 
 ## Description
 
@@ -29,7 +29,7 @@ MSC-style multiplicative/additive scatter simulation.
 
 ### Implementation
 
-C ABI `n4m_aug_scatter_sim_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ScatterSimulationMSC`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_scatter_sim_msc_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ScatterSimulationMSC`. The same numerical kernel backs every language binding.
 
 ### Usage
 

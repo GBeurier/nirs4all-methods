@@ -1,6 +1,6 @@
 # `pp_fck_static` — F C K Static Transformer
 
-_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.FCKStaticTransformer` · _C ABI_: `n4m_pp_fck_static_*`
+_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.FCKStaticTransformer` · _C ABI_: `n4m_transform_fck_static_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Static fractional convolutional kernel bank transformer.
 
 ### Implementation
 
-C ABI `n4m_pp_fck_static_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FCKStaticTransformer`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_fck_static_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FCKStaticTransformer`. The same numerical kernel backs every language binding.
 
 ### Usage
 

@@ -1,6 +1,6 @@
 # `filter_quality` — Spectral Quality Filter
 
-_Group_: **Sample / feature filters** · _Binding_: `n4m.sklearn.SpectralQualityFilter` · _C ABI_: `n4m_filter_quality_*`
+_Group_: **Sample / feature filters** · _Binding_: `n4m.sklearn.SpectralQualityFilter` · _C ABI_: `n4m_outlier_detection_spectral_quality_*`
 
 ## Description
 
@@ -29,7 +29,7 @@ Stateless row-level spectrum quality filter.
 
 ### Implementation
 
-C ABI `n4m_filter_quality_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SpectralQualityFilter`. The same numerical kernel backs every language binding.
+C ABI `n4m_outlier_detection_spectral_quality_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SpectralQualityFilter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

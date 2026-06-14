@@ -44,16 +44,16 @@ void test_metric_smoke_perfect() {
     const double y_true[5] = {1.0, 2.0, 3.0, 4.0, 5.0};
     const double y_pred[5] = {1.0, 2.0, 3.0, 4.0, 5.0};
     double rmse = -1.0, mae = -1.0, bias = -1.0, sep = -1.0;
-    N4M_TEST_REQUIRE(n4m_metric_rmse(y_true, y_pred, 5, &rmse) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_metric_mae(y_true, y_pred, 5, &mae) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_metric_bias(y_true, y_pred, 5, &bias) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_metric_sep(y_true, y_pred, 5, &sep) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_rmse(y_true, y_pred, 5, &rmse) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_mae(y_true, y_pred, 5, &mae) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_bias(y_true, y_pred, 5, &bias) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_sep(y_true, y_pred, 5, &sep) == N4M_OK);
     N4M_TEST_REQUIRE(rmse == 0.0);
     N4M_TEST_REQUIRE(mae == 0.0);
     N4M_TEST_REQUIRE(bias == 0.0);
     N4M_TEST_REQUIRE(sep == 0.0);
     double r2 = -1.0;
-    N4M_TEST_REQUIRE(n4m_metric_r2(y_true, y_pred, 5, &r2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_r2(y_true, y_pred, 5, &r2) == N4M_OK);
     N4M_TEST_REQUIRE(std::fabs(r2 - 1.0) < 1e-15);
 }
 
@@ -61,34 +61,34 @@ void test_metric_smoke_constant_bias() {
     const double y_true[4] = {1.0, 2.0, 3.0, 4.0};
     const double y_pred[4] = {1.5, 2.5, 3.5, 4.5};   // y_pred = y_true + 0.5
     double bias = 0.0;
-    N4M_TEST_REQUIRE(n4m_metric_bias(y_true, y_pred, 4, &bias) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_bias(y_true, y_pred, 4, &bias) == N4M_OK);
     N4M_TEST_REQUIRE(std::fabs(bias - 0.5) < 1e-15);
     double rmse = 0.0;
-    N4M_TEST_REQUIRE(n4m_metric_rmse(y_true, y_pred, 4, &rmse) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_rmse(y_true, y_pred, 4, &rmse) == N4M_OK);
     N4M_TEST_REQUIRE(std::fabs(rmse - 0.5) < 1e-15);
     double mae = 0.0;
-    N4M_TEST_REQUIRE(n4m_metric_mae(y_true, y_pred, 4, &mae) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_mae(y_true, y_pred, 4, &mae) == N4M_OK);
     N4M_TEST_REQUIRE(std::fabs(mae - 0.5) < 1e-15);
     // SEP = std of (y_pred - y_true) = std([0.5, 0.5, 0.5, 0.5]) = 0.
     double sep = -1.0;
-    N4M_TEST_REQUIRE(n4m_metric_sep(y_true, y_pred, 4, &sep) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_sep(y_true, y_pred, 4, &sep) == N4M_OK);
     N4M_TEST_REQUIRE(sep == 0.0);
     // RPD = std(y_true) / SEP → +inf when SEP == 0.
     double rpd = 0.0;
-    N4M_TEST_REQUIRE(n4m_metric_rpd(y_true, y_pred, 4, &rpd) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_rpd(y_true, y_pred, 4, &rpd) == N4M_OK);
     N4M_TEST_REQUIRE(std::isinf(rpd));
 }
 
 void test_metric_smoke_invalid_n() {
     const double y[1] = {0.0};
     double out = 0.0;
-    N4M_TEST_REQUIRE(n4m_metric_rmse(y, y, 0, &out)
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_rmse(y, y, 0, &out)
                      == N4M_ERR_INVALID_ARGUMENT);
-    N4M_TEST_REQUIRE(n4m_metric_mae(y, y, -3, &out)
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_mae(y, y, -3, &out)
                      == N4M_ERR_INVALID_ARGUMENT);
-    N4M_TEST_REQUIRE(n4m_metric_rmse(nullptr, y, 1, &out)
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_rmse(nullptr, y, 1, &out)
                      == N4M_ERR_NULL_POINTER);
-    N4M_TEST_REQUIRE(n4m_metric_rmse(y, y, 1, nullptr)
+    N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_rmse(y, y, 1, nullptr)
                      == N4M_ERR_NULL_POINTER);
 }
 
@@ -105,7 +105,7 @@ void test_hotelling_t2_smoke() {
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 6, 3);
     double t2[6] = {0};
     double ucl = -1.0;
-    const n4m_status_t st = n4m_util_hotelling_t2(
+    const n4m_status_t st = n4m_outlier_detection_hotelling_t2(
         Xv, /*n_components=*/2, /*alpha=*/0.05, t2, 6, &ucl);
     N4M_TEST_REQUIRE(st == N4M_OK);
     for (int i = 0; i < 6; ++i) {
@@ -114,11 +114,11 @@ void test_hotelling_t2_smoke() {
     N4M_TEST_REQUIRE(ucl > 0.0);
 
     // Invalid args.
-    N4M_TEST_REQUIRE(n4m_util_hotelling_t2(Xv, 0, 0.05, t2, 6, &ucl)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(Xv, 0, 0.05, t2, 6, &ucl)
                      == N4M_ERR_INVALID_ARGUMENT);
-    N4M_TEST_REQUIRE(n4m_util_hotelling_t2(Xv, 2, 1.5, t2, 6, &ucl)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(Xv, 2, 1.5, t2, 6, &ucl)
                      == N4M_ERR_INVALID_ARGUMENT);
-    N4M_TEST_REQUIRE(n4m_util_hotelling_t2(Xv, 2, 0.05, t2, 5, &ucl)
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(Xv, 2, 0.05, t2, 5, &ucl)
                      == N4M_ERR_SHAPE_MISMATCH);
 }
 
@@ -135,7 +135,7 @@ void test_q_residuals_smoke() {
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 6, 3);
     double q[6] = {0};
     double ucl = -1.0;
-    const n4m_status_t st = n4m_util_q_residuals(
+    const n4m_status_t st = n4m_outlier_detection_q_residuals(
         Xv, /*n_components=*/2, /*alpha=*/0.05, q, 6, &ucl);
     N4M_TEST_REQUIRE(st == N4M_OK);
     for (int i = 0; i < 6; ++i) {
@@ -224,28 +224,28 @@ void verify_metrics_parity() {
     N4M_TEST_REQUIRE(!cases.empty());
     for (const auto& c : cases) {
         double v = 0.0;
-        N4M_TEST_REQUIRE(n4m_metric_rmse(c.y_true.data(), c.y_pred.data(),
+        N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_rmse(c.y_true.data(), c.y_pred.data(),
                                           c.n, &v) == N4M_OK);
         check_one(v, c.exp_rmse,  c.name + "/rmse");
-        N4M_TEST_REQUIRE(n4m_metric_mae(c.y_true.data(), c.y_pred.data(),
+        N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_mae(c.y_true.data(), c.y_pred.data(),
                                          c.n, &v) == N4M_OK);
         check_one(v, c.exp_mae,   c.name + "/mae");
-        N4M_TEST_REQUIRE(n4m_metric_bias(c.y_true.data(), c.y_pred.data(),
+        N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_bias(c.y_true.data(), c.y_pred.data(),
                                           c.n, &v) == N4M_OK);
         check_one(v, c.exp_bias,  c.name + "/bias");
-        N4M_TEST_REQUIRE(n4m_metric_sep(c.y_true.data(), c.y_pred.data(),
+        N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_sep(c.y_true.data(), c.y_pred.data(),
                                          c.n, &v) == N4M_OK);
         check_one(v, c.exp_sep,   c.name + "/sep");
-        N4M_TEST_REQUIRE(n4m_metric_rpd(c.y_true.data(), c.y_pred.data(),
+        N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_rpd(c.y_true.data(), c.y_pred.data(),
                                          c.n, &v) == N4M_OK);
         check_one(v, c.exp_rpd,   c.name + "/rpd");
-        N4M_TEST_REQUIRE(n4m_metric_rpiq(c.y_true.data(), c.y_pred.data(),
+        N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_rpiq(c.y_true.data(), c.y_pred.data(),
                                           c.n, &v) == N4M_OK);
         check_one(v, c.exp_rpiq,  c.name + "/rpiq");
-        N4M_TEST_REQUIRE(n4m_metric_r2(c.y_true.data(), c.y_pred.data(),
+        N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_r2(c.y_true.data(), c.y_pred.data(),
                                         c.n, &v) == N4M_OK);
         check_one(v, c.exp_r2,    c.name + "/r2");
-        N4M_TEST_REQUIRE(n4m_metric_nrmse(c.y_true.data(), c.y_pred.data(),
+        N4M_TEST_REQUIRE(n4m_metrics_regression_metrics_nrmse(c.y_true.data(), c.y_pred.data(),
                                            c.n, &v) == N4M_OK);
         check_one(v, c.exp_nrmse, c.name + "/nrmse");
     }
@@ -313,7 +313,7 @@ void verify_hotelling_t2_parity() {
         n4m_matrix_view_t Xv = make_rowmajor_view(X.data(), c.rows, c.cols);
         std::vector<double> t2(static_cast<std::size_t>(c.rows), 0.0);
         double ucl = -1.0;
-        N4M_TEST_REQUIRE(n4m_util_hotelling_t2(
+        N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(
             Xv, c.n_components, c.alpha, t2.data(), c.rows, &ucl)
             == N4M_OK);
         ::n4m_testing::assert_close(t2, c.stat,
@@ -341,7 +341,7 @@ void verify_q_residuals_parity() {
         n4m_matrix_view_t Xv = make_rowmajor_view(X.data(), c.rows, c.cols);
         std::vector<double> q(static_cast<std::size_t>(c.rows), 0.0);
         double ucl = -1.0;
-        N4M_TEST_REQUIRE(n4m_util_q_residuals(
+        N4M_TEST_REQUIRE(n4m_outlier_detection_q_residuals(
             Xv, c.n_components, c.alpha, q.data(), c.rows, &ucl)
             == N4M_OK);
         ::n4m_testing::assert_close(q, c.stat,

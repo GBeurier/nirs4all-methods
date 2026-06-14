@@ -163,7 +163,7 @@ void test_moments_compute_all_rows() {
     n4m_matrix_view_t Xv = make_view(kX, 4, 3);
     n4m_matrix_view_t Yv = make_view(kY, 4, 2);
     n4m_method_result_t* result = nullptr;
-    N4M_TEST_REQUIRE(n4m_moments_compute(ctx, &Xv, &Yv, &result) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_lowlevel_moments_compute(ctx, &Xv, &Yv, &result) == N4M_OK);
     N4M_TEST_REQUIRE(result != nullptr);
     check_result(result, expected_for_rows({0, 1, 2, 3}));
     n4m_method_result_destroy(result);
@@ -177,17 +177,17 @@ void test_moments_subset_and_subtract_are_fold_exact() {
     n4m_matrix_view_t Yv = make_view(kY, 4, 2);
 
     n4m_method_result_t* all = nullptr;
-    N4M_TEST_REQUIRE(n4m_moments_compute(ctx, &Xv, &Yv, &all) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_lowlevel_moments_compute(ctx, &Xv, &Yv, &all) == N4M_OK);
 
     const std::int64_t heldout_rows[2] = {0, 2};
     n4m_method_result_t* heldout = nullptr;
-    N4M_TEST_REQUIRE(n4m_moments_subset_compute(
+    N4M_TEST_REQUIRE(n4m_lowlevel_moments_subset_compute(
                          ctx, &Xv, &Yv, heldout_rows, 2, &heldout) == N4M_OK);
     check_result(heldout, expected_for_rows({0, 2}));
 
     n4m_method_result_t* train = nullptr;
     N4M_TEST_REQUIRE(
-        n4m_moments_subtract(ctx, all, heldout, &train) == N4M_OK);
+        n4m_lowlevel_moments_subtract(ctx, all, heldout, &train) == N4M_OK);
     check_result(train, expected_for_rows({1, 3}));
 
     n4m_method_result_destroy(train);

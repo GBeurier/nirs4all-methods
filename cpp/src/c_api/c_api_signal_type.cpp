@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // extern "C" wrapper for the Phase 19 SignalTypeDetector ABI entry-point
-// (n4m_signal_detect). Stateless function: no handle lifecycle. The body
+// (n4m_transform_signal_type_detector). Stateless function: no handle lifecycle. The body
 // validates the matrix view, then dispatches to the core implementation
 // under cpp/src/core/utilities/signal_type_detector.{c,h}.
 
@@ -47,7 +47,7 @@ n4m_status_t require_rowmajor_f64(const n4m_matrix_view_t& v,
 
 extern "C" {
 
-N4M_API n4m_status_t n4m_signal_detect(n4m_matrix_view_t X,
+N4M_API n4m_status_t n4m_transform_signal_type_detector(n4m_matrix_view_t X,
                                         const double* wavelengths_optional,
                                         int64_t wl_length,
                                         double confidence_threshold,

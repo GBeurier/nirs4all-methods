@@ -83,33 +83,33 @@ void test_flex_pca_smoke() {
         3.0, 6.0, 9.0, 12.0,
     };
     n4m_pp_flex_pca_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_create(&h, /*n_components=*/2.0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_create(&h, /*n_components=*/2.0) == N4M_OK);
     N4M_TEST_REQUIRE(h != nullptr);
 
     int fitted = 1;
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 0);
 
     /* output_cols before fit -> NOT_FITTED */
     int64_t kcols = -1;
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_output_cols(h, &kcols)
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_output_cols(h, &kcols)
                      == N4M_ERR_NOT_FITTED);
 
     n4m_matrix_view_t Xfv = make_rowmajor_view(Xfit, 3, 4);
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_fit(h, Xfv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_fit(h, Xfv) == N4M_OK);
 
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 1);
 
     /* With 3 samples and 4 features, k_full = min(3, 4) = 3. We requested
      * 2 components, so we should get 2. */
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_output_cols(h, &kcols) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_output_cols(h, &kcols) == N4M_OK);
     N4M_TEST_REQUIRE(kcols == 2);
 
     /* transform the fit matrix back through the operator. */
     double Y[6] = {0};
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 3, 2);
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_transform(h, Xfv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_transform(h, Xfv, Yv) == N4M_OK);
     for (int k = 0; k < 6; ++k) {
         N4M_TEST_REQUIRE(std::isfinite(Y[k]));
     }
@@ -126,26 +126,26 @@ void test_flex_pca_smoke() {
     /* shape-mismatch transform: ask for k=3 -> SHAPE_MISMATCH */
     double Ybad[9] = {0};
     n4m_matrix_view_t Ybadv = make_rowmajor_view(Ybad, 3, 3);
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_transform(h, Xfv, Ybadv)
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_transform(h, Xfv, Ybadv)
                      == N4M_ERR_SHAPE_MISMATCH);
 
     /* not-fitted transform after a fresh handle */
     n4m_pp_flex_pca_handle_t* h2 = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_create(&h2, 1.0) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_transform(h2, Xfv, Yv)
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_create(&h2, 1.0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_transform(h2, Xfv, Yv)
                      == N4M_ERR_NOT_FITTED);
-    n4m_pp_flex_pca_destroy(h2);
+    n4m_decomposition_flexible_pca_destroy(h2);
 
     /* invalid constructor (n_components <= 0) */
     n4m_pp_flex_pca_handle_t* h_bad = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_create(&h_bad, 0.0)
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_create(&h_bad, 0.0)
                      == N4M_ERR_INVALID_ARGUMENT);
     N4M_TEST_REQUIRE(h_bad == nullptr);
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_create(&h_bad, -1.0)
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_create(&h_bad, -1.0)
                      == N4M_ERR_INVALID_ARGUMENT);
 
-    n4m_pp_flex_pca_destroy(h);
-    n4m_pp_flex_pca_destroy(nullptr);  // null-safe
+    n4m_decomposition_flexible_pca_destroy(h);
+    n4m_decomposition_flexible_pca_destroy(nullptr);  // null-safe
 }
 
 void test_flex_svd_smoke() {
@@ -155,52 +155,52 @@ void test_flex_svd_smoke() {
         3.0, 5.0, 2.0, 1.0,
     };
     n4m_pp_flex_svd_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_create(&h, /*n_components=*/2.0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_create(&h, /*n_components=*/2.0) == N4M_OK);
 
     int fitted = 1;
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 0);
 
     int64_t kcols = -1;
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_output_cols(h, &kcols)
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_output_cols(h, &kcols)
                      == N4M_ERR_NOT_FITTED);
 
     n4m_matrix_view_t Xfv = make_rowmajor_view(Xfit, 3, 4);
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_fit(h, Xfv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_fit(h, Xfv) == N4M_OK);
 
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_is_fitted(h, &fitted) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_is_fitted(h, &fitted) == N4M_OK);
     N4M_TEST_REQUIRE(fitted == 1);
 
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_output_cols(h, &kcols) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_output_cols(h, &kcols) == N4M_OK);
     N4M_TEST_REQUIRE(kcols == 2);
 
     double Y[6] = {0};
     n4m_matrix_view_t Yv = make_rowmajor_view(Y, 3, 2);
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_transform(h, Xfv, Yv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_transform(h, Xfv, Yv) == N4M_OK);
     for (int k = 0; k < 6; ++k) {
         N4M_TEST_REQUIRE(std::isfinite(Y[k]));
     }
     /* shape-mismatch */
     double Ybad[9] = {0};
     n4m_matrix_view_t Ybadv = make_rowmajor_view(Ybad, 3, 3);
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_transform(h, Xfv, Ybadv)
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_transform(h, Xfv, Ybadv)
                      == N4M_ERR_SHAPE_MISMATCH);
 
     /* not-fitted */
     n4m_pp_flex_svd_handle_t* h2 = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_create(&h2, 1.0) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_transform(h2, Xfv, Yv)
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_create(&h2, 1.0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_transform(h2, Xfv, Yv)
                      == N4M_ERR_NOT_FITTED);
-    n4m_pp_flex_svd_destroy(h2);
+    n4m_decomposition_flexible_svd_destroy(h2);
 
     /* invalid constructor */
     n4m_pp_flex_svd_handle_t* h_bad = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_create(&h_bad, 0.0)
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_create(&h_bad, 0.0)
                      == N4M_ERR_INVALID_ARGUMENT);
     N4M_TEST_REQUIRE(h_bad == nullptr);
 
-    n4m_pp_flex_svd_destroy(h);
-    n4m_pp_flex_svd_destroy(nullptr);
+    n4m_decomposition_flexible_svd_destroy(h);
+    n4m_decomposition_flexible_svd_destroy(nullptr);
 }
 
 // ---------------------------------------------------------------------------
@@ -213,15 +213,15 @@ void verify_flex_pca_parity() {
         const double n_components =
             params_get_double(c.params_json, "n_components", 5.0);
         n4m_pp_flex_pca_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_flex_pca_create(&h, n_components) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_create(&h, n_components) == N4M_OK);
 
         std::vector<double> fit_in = fx.fit_input;
         n4m_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
                                                     fx.fit_rows, fx.fit_cols);
-        N4M_TEST_REQUIRE(n4m_pp_flex_pca_fit(h, Xfv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_fit(h, Xfv) == N4M_OK);
 
         int64_t k_learned = -1;
-        N4M_TEST_REQUIRE(n4m_pp_flex_pca_output_cols(h, &k_learned) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_output_cols(h, &k_learned) == N4M_OK);
         N4M_TEST_REQUIRE(k_learned == c.output_cols);
 
         std::vector<double> in = fx.input;
@@ -231,12 +231,12 @@ void verify_flex_pca_parity() {
                                                    fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                    c.output_rows, c.output_cols);
-        N4M_TEST_REQUIRE(n4m_pp_flex_pca_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_transform(h, Xv, Yv) == N4M_OK);
         /* Tolerance widened to 1e-10 abs / 1e-11 rel — the gap between
          * the n4m Jacobi SVD and NumPy's LAPACK gesdd is a few ULPs on
          * mid-to-low singular values, well within this budget. */
         assert_close(out, c.expected_output, "flex_pca/" + c.name);
-        n4m_pp_flex_pca_destroy(h);
+        n4m_decomposition_flexible_pca_destroy(h);
     }
 }
 
@@ -246,15 +246,15 @@ void verify_flex_svd_parity() {
         const double n_components =
             params_get_double(c.params_json, "n_components", 5.0);
         n4m_pp_flex_svd_handle_t* h = nullptr;
-        N4M_TEST_REQUIRE(n4m_pp_flex_svd_create(&h, n_components) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_create(&h, n_components) == N4M_OK);
 
         std::vector<double> fit_in = fx.fit_input;
         n4m_matrix_view_t Xfv = make_rowmajor_view(fit_in.data(),
                                                     fx.fit_rows, fx.fit_cols);
-        N4M_TEST_REQUIRE(n4m_pp_flex_svd_fit(h, Xfv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_fit(h, Xfv) == N4M_OK);
 
         int64_t k_learned = -1;
-        N4M_TEST_REQUIRE(n4m_pp_flex_svd_output_cols(h, &k_learned) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_output_cols(h, &k_learned) == N4M_OK);
         N4M_TEST_REQUIRE(k_learned == c.output_cols);
 
         std::vector<double> in = fx.input;
@@ -264,9 +264,9 @@ void verify_flex_svd_parity() {
                                                    fx.rows, fx.cols);
         n4m_matrix_view_t Yv = make_rowmajor_view(out.data(),
                                                    c.output_rows, c.output_cols);
-        N4M_TEST_REQUIRE(n4m_pp_flex_svd_transform(h, Xv, Yv) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_transform(h, Xv, Yv) == N4M_OK);
         assert_close(out, c.expected_output, "flex_svd/" + c.name);
-        n4m_pp_flex_svd_destroy(h);
+        n4m_decomposition_flexible_svd_destroy(h);
     }
 }
 
@@ -276,7 +276,7 @@ void verify_flex_svd_parity() {
 
 void test_flex_pca_refit_replaces_state() {
     n4m_pp_flex_pca_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_create(&h, 1.0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_create(&h, 1.0) == N4M_OK);
 
     /* X1 vs X2 produce very different principal axes; a third matrix X3
      * projected through each fit should give different outputs. */
@@ -297,22 +297,22 @@ void test_flex_pca_refit_replaces_state() {
     n4m_matrix_view_init_rowmajor(&voutA, outA, 2, 1, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&voutB, outB, 2, 1, N4M_DTYPE_F64);
 
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_fit(h, vX1) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_transform(h, vX3, voutA) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_fit(h, vX2) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_flex_pca_transform(h, vX3, voutB) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_fit(h, vX1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_transform(h, vX3, voutA) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_fit(h, vX2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_pca_transform(h, vX3, voutB) == N4M_OK);
 
     bool any_diff = false;
     for (int i = 0; i < 2; ++i) {
         if (std::fabs(outA[i] - outB[i]) > 1e-9) { any_diff = true; break; }
     }
     N4M_TEST_REQUIRE(any_diff);
-    n4m_pp_flex_pca_destroy(h);
+    n4m_decomposition_flexible_pca_destroy(h);
 }
 
 void test_flex_svd_refit_replaces_state() {
     n4m_pp_flex_svd_handle_t* h = nullptr;
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_create(&h, 1.0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_create(&h, 1.0) == N4M_OK);
 
     double X1[12] = {1.0, 0.0, 0.0, 0.0,
                      0.0, 1.0, 0.0, 0.0,
@@ -331,17 +331,17 @@ void test_flex_svd_refit_replaces_state() {
     n4m_matrix_view_init_rowmajor(&voutA, outA, 2, 1, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&voutB, outB, 2, 1, N4M_DTYPE_F64);
 
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_fit(h, vX1) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_transform(h, vX3, voutA) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_fit(h, vX2) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_pp_flex_svd_transform(h, vX3, voutB) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_fit(h, vX1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_transform(h, vX3, voutA) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_fit(h, vX2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_decomposition_flexible_svd_transform(h, vX3, voutB) == N4M_OK);
 
     bool any_diff = false;
     for (int i = 0; i < 2; ++i) {
         if (std::fabs(outA[i] - outB[i]) > 1e-9) { any_diff = true; break; }
     }
     N4M_TEST_REQUIRE(any_diff);
-    n4m_pp_flex_svd_destroy(h);
+    n4m_decomposition_flexible_svd_destroy(h);
 }
 
 }  // namespace

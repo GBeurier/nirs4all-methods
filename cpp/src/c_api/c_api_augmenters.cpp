@@ -99,70 +99,70 @@ struct n4m_aug_path_length_handle_t {
 
 extern "C" {
 
-N4M_API n4m_status_t n4m_aug_gaussian_noise_create(
+N4M_API n4m_status_t n4m_augmentation_gaussian_noise_create(
     n4m_aug_gaussian_noise_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double sigma);
-N4M_API void n4m_aug_gaussian_noise_destroy(n4m_aug_gaussian_noise_handle_t* h);
-N4M_API n4m_status_t n4m_aug_gaussian_noise_apply(
+N4M_API void n4m_augmentation_gaussian_noise_destroy(n4m_aug_gaussian_noise_handle_t* h);
+N4M_API n4m_status_t n4m_augmentation_gaussian_noise_apply(
     const n4m_aug_gaussian_noise_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-N4M_API n4m_status_t n4m_aug_multiplicative_noise_create(
+N4M_API n4m_status_t n4m_augmentation_multiplicative_noise_create(
     n4m_aug_multiplicative_noise_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double sigma_gain);
-N4M_API void n4m_aug_multiplicative_noise_destroy(
+N4M_API void n4m_augmentation_multiplicative_noise_destroy(
     n4m_aug_multiplicative_noise_handle_t* h);
-N4M_API n4m_status_t n4m_aug_multiplicative_noise_apply(
+N4M_API n4m_status_t n4m_augmentation_multiplicative_noise_apply(
     const n4m_aug_multiplicative_noise_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-N4M_API n4m_status_t n4m_aug_spike_noise_create(
+N4M_API n4m_status_t n4m_augmentation_spike_noise_create(
     n4m_aug_spike_noise_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t n_spikes_min, int32_t n_spikes_max,
     double amplitude_min, double amplitude_max);
-N4M_API void n4m_aug_spike_noise_destroy(n4m_aug_spike_noise_handle_t* h);
-N4M_API n4m_status_t n4m_aug_spike_noise_apply(
+N4M_API void n4m_augmentation_spike_noise_destroy(n4m_aug_spike_noise_handle_t* h);
+N4M_API n4m_status_t n4m_augmentation_spike_noise_apply(
     const n4m_aug_spike_noise_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-N4M_API n4m_status_t n4m_aug_hetero_noise_create(
+N4M_API n4m_status_t n4m_augmentation_hetero_noise_create(
     n4m_aug_hetero_noise_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double noise_base, double noise_signal_dep);
-N4M_API void n4m_aug_hetero_noise_destroy(n4m_aug_hetero_noise_handle_t* h);
-N4M_API n4m_status_t n4m_aug_hetero_noise_apply(
+N4M_API void n4m_augmentation_hetero_noise_destroy(n4m_aug_hetero_noise_handle_t* h);
+N4M_API n4m_status_t n4m_augmentation_hetero_noise_apply(
     const n4m_aug_hetero_noise_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-N4M_API n4m_status_t n4m_aug_linear_drift_create(
+N4M_API n4m_status_t n4m_augmentation_linear_drift_create(
     n4m_aug_linear_drift_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double offset_min, double offset_max,
     double slope_min,  double slope_max);
-N4M_API void n4m_aug_linear_drift_destroy(n4m_aug_linear_drift_handle_t* h);
-N4M_API n4m_status_t n4m_aug_linear_drift_apply(
+N4M_API void n4m_augmentation_linear_drift_destroy(n4m_aug_linear_drift_handle_t* h);
+N4M_API n4m_status_t n4m_augmentation_linear_drift_apply(
     const n4m_aug_linear_drift_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-N4M_API n4m_status_t n4m_aug_poly_drift_create(
+N4M_API n4m_status_t n4m_augmentation_poly_drift_create(
     n4m_aug_poly_drift_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t degree,
     const double* coeff_min, const double* coeff_max);
-N4M_API void n4m_aug_poly_drift_destroy(n4m_aug_poly_drift_handle_t* h);
-N4M_API n4m_status_t n4m_aug_poly_drift_apply(
+N4M_API void n4m_augmentation_poly_drift_destroy(n4m_aug_poly_drift_handle_t* h);
+N4M_API n4m_status_t n4m_augmentation_poly_drift_apply(
     const n4m_aug_poly_drift_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out);
 
-N4M_API n4m_status_t n4m_aug_path_length_create(
+N4M_API n4m_status_t n4m_augmentation_path_length_create(
     n4m_aug_path_length_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double path_length_std, double min_path_length);
-N4M_API void n4m_aug_path_length_destroy(n4m_aug_path_length_handle_t* h);
-N4M_API n4m_status_t n4m_aug_path_length_apply(
+N4M_API void n4m_augmentation_path_length_destroy(n4m_aug_path_length_handle_t* h);
+N4M_API n4m_status_t n4m_augmentation_path_length_apply(
     const n4m_aug_path_length_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out);
 
@@ -219,7 +219,7 @@ extern "C" {
 // 1. GaussianAdditiveNoise
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_gaussian_noise_create(
+N4M_API n4m_status_t n4m_augmentation_gaussian_noise_create(
     n4m_aug_gaussian_noise_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double sigma) {
@@ -244,7 +244,7 @@ N4M_API n4m_status_t n4m_aug_gaussian_noise_create(
     }
 }
 
-N4M_API void n4m_aug_gaussian_noise_destroy(
+N4M_API void n4m_augmentation_gaussian_noise_destroy(
     n4m_aug_gaussian_noise_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -253,7 +253,7 @@ N4M_API void n4m_aug_gaussian_noise_destroy(
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_gaussian_noise_apply(
+N4M_API n4m_status_t n4m_augmentation_gaussian_noise_apply(
     const n4m_aug_gaussian_noise_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -273,7 +273,7 @@ N4M_API n4m_status_t n4m_aug_gaussian_noise_apply(
 // 2. MultiplicativeNoise
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_multiplicative_noise_create(
+N4M_API n4m_status_t n4m_augmentation_multiplicative_noise_create(
     n4m_aug_multiplicative_noise_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double sigma_gain) {
@@ -298,7 +298,7 @@ N4M_API n4m_status_t n4m_aug_multiplicative_noise_create(
     }
 }
 
-N4M_API void n4m_aug_multiplicative_noise_destroy(
+N4M_API void n4m_augmentation_multiplicative_noise_destroy(
     n4m_aug_multiplicative_noise_handle_t* h) {
     if (h == nullptr) return;
     try {
@@ -307,7 +307,7 @@ N4M_API void n4m_aug_multiplicative_noise_destroy(
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_multiplicative_noise_apply(
+N4M_API n4m_status_t n4m_augmentation_multiplicative_noise_apply(
     const n4m_aug_multiplicative_noise_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -327,7 +327,7 @@ N4M_API n4m_status_t n4m_aug_multiplicative_noise_apply(
 // 3. SpikeNoise
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_spike_noise_create(
+N4M_API n4m_status_t n4m_augmentation_spike_noise_create(
     n4m_aug_spike_noise_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t n_spikes_min,
@@ -361,7 +361,7 @@ N4M_API n4m_status_t n4m_aug_spike_noise_create(
     }
 }
 
-N4M_API void n4m_aug_spike_noise_destroy(n4m_aug_spike_noise_handle_t* h) {
+N4M_API void n4m_augmentation_spike_noise_destroy(n4m_aug_spike_noise_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_spike_noise_state_free(h->state);
@@ -369,7 +369,7 @@ N4M_API void n4m_aug_spike_noise_destroy(n4m_aug_spike_noise_handle_t* h) {
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_spike_noise_apply(
+N4M_API n4m_status_t n4m_augmentation_spike_noise_apply(
     const n4m_aug_spike_noise_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -389,7 +389,7 @@ N4M_API n4m_status_t n4m_aug_spike_noise_apply(
 // 4. HeteroscedasticNoiseAugmenter
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_hetero_noise_create(
+N4M_API n4m_status_t n4m_augmentation_hetero_noise_create(
     n4m_aug_hetero_noise_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double noise_base,
@@ -416,7 +416,7 @@ N4M_API n4m_status_t n4m_aug_hetero_noise_create(
     }
 }
 
-N4M_API void n4m_aug_hetero_noise_destroy(n4m_aug_hetero_noise_handle_t* h) {
+N4M_API void n4m_augmentation_hetero_noise_destroy(n4m_aug_hetero_noise_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_hetero_noise_state_free(h->state);
@@ -424,7 +424,7 @@ N4M_API void n4m_aug_hetero_noise_destroy(n4m_aug_hetero_noise_handle_t* h) {
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_hetero_noise_apply(
+N4M_API n4m_status_t n4m_augmentation_hetero_noise_apply(
     const n4m_aug_hetero_noise_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -444,7 +444,7 @@ N4M_API n4m_status_t n4m_aug_hetero_noise_apply(
 // 5. LinearBaselineDrift
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_linear_drift_create(
+N4M_API n4m_status_t n4m_augmentation_linear_drift_create(
     n4m_aug_linear_drift_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double offset_min, double offset_max,
@@ -471,7 +471,7 @@ N4M_API n4m_status_t n4m_aug_linear_drift_create(
     }
 }
 
-N4M_API void n4m_aug_linear_drift_destroy(n4m_aug_linear_drift_handle_t* h) {
+N4M_API void n4m_augmentation_linear_drift_destroy(n4m_aug_linear_drift_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_linear_drift_state_free(h->state);
@@ -479,7 +479,7 @@ N4M_API void n4m_aug_linear_drift_destroy(n4m_aug_linear_drift_handle_t* h) {
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_linear_drift_apply(
+N4M_API n4m_status_t n4m_augmentation_linear_drift_apply(
     const n4m_aug_linear_drift_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -499,7 +499,7 @@ N4M_API n4m_status_t n4m_aug_linear_drift_apply(
 // 6. PolynomialBaselineDrift
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_poly_drift_create(
+N4M_API n4m_status_t n4m_augmentation_poly_drift_create(
     n4m_aug_poly_drift_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     int32_t degree,
@@ -530,7 +530,7 @@ N4M_API n4m_status_t n4m_aug_poly_drift_create(
     }
 }
 
-N4M_API void n4m_aug_poly_drift_destroy(n4m_aug_poly_drift_handle_t* h) {
+N4M_API void n4m_augmentation_poly_drift_destroy(n4m_aug_poly_drift_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_poly_drift_state_free(h->state);
@@ -538,7 +538,7 @@ N4M_API void n4m_aug_poly_drift_destroy(n4m_aug_poly_drift_handle_t* h) {
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_poly_drift_apply(
+N4M_API n4m_status_t n4m_augmentation_poly_drift_apply(
     const n4m_aug_poly_drift_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
@@ -558,7 +558,7 @@ N4M_API n4m_status_t n4m_aug_poly_drift_apply(
 // 7. PathLengthAugmenter
 // ===========================================================================
 
-N4M_API n4m_status_t n4m_aug_path_length_create(
+N4M_API n4m_status_t n4m_augmentation_path_length_create(
     n4m_aug_path_length_handle_t** out,
     n4m_rng_pcg64_state_t* rng,
     double path_length_std,
@@ -584,7 +584,7 @@ N4M_API n4m_status_t n4m_aug_path_length_create(
     }
 }
 
-N4M_API void n4m_aug_path_length_destroy(n4m_aug_path_length_handle_t* h) {
+N4M_API void n4m_augmentation_path_length_destroy(n4m_aug_path_length_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_aug_path_length_state_free(h->state);
@@ -592,7 +592,7 @@ N4M_API void n4m_aug_path_length_destroy(n4m_aug_path_length_handle_t* h) {
     } catch (...) {}
 }
 
-N4M_API n4m_status_t n4m_aug_path_length_apply(
+N4M_API n4m_status_t n4m_augmentation_path_length_apply(
     const n4m_aug_path_length_handle_t* h,
     n4m_matrix_view_t X, n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;

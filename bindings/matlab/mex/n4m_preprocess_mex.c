@@ -82,7 +82,7 @@ static void run_snv(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) 
     }
 
     n4m_pp_snv_handle_t* handle = NULL;
-    n4m_status_t status = n4m_pp_snv_create(
+    n4m_status_t status = n4m_transform_snv_create(
         &handle,
         mxGetScalar(prhs[2]) != 0.0 ? 1 : 0,
         mxGetScalar(prhs[3]) != 0.0 ? 1 : 0,
@@ -90,9 +90,9 @@ static void run_snv(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) 
     if (status == N4M_OK) {
         n4m_matrix_view_t xv = rowmajor_view(X, rows, cols);
         n4m_matrix_view_t ov = rowmajor_view(out, rows, cols);
-        status = n4m_pp_snv_transform(handle, xv, ov);
+        status = n4m_transform_snv_transform(handle, xv, ov);
     }
-    n4m_pp_snv_destroy(handle);
+    n4m_transform_snv_destroy(handle);
     if (status != N4M_OK) {
         free(X);
         free(out);
@@ -118,7 +118,7 @@ static void run_savgol(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[
     }
 
     n4m_pp_savgol_handle_t* handle = NULL;
-    n4m_status_t status = n4m_pp_savgol_create(
+    n4m_status_t status = n4m_transform_savitzky_golay_create(
         &handle,
         (int32_t)mxGetScalar(prhs[2]),
         (int32_t)mxGetScalar(prhs[3]),
@@ -129,9 +129,9 @@ static void run_savgol(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[
     if (status == N4M_OK) {
         n4m_matrix_view_t xv = rowmajor_view(X, rows, cols);
         n4m_matrix_view_t ov = rowmajor_view(out, rows, cols);
-        status = n4m_pp_savgol_transform(handle, xv, ov);
+        status = n4m_transform_savitzky_golay_transform(handle, xv, ov);
     }
-    n4m_pp_savgol_destroy(handle);
+    n4m_transform_savitzky_golay_destroy(handle);
     if (status != N4M_OK) {
         free(X);
         free(out);

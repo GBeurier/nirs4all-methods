@@ -1,6 +1,6 @@
 # `pp_arpls` — Ar P L S
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.ArPLS` · _C ABI_: `n4m_pp_arpls_*`
+_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.ArPLS` · _C ABI_: `n4m_transform_arpls_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Asymmetrically reweighted penalized least squares.
 
 ### Implementation
 
-C ABI `n4m_pp_arpls_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ArPLS`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_arpls_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ArPLS`. The same numerical kernel backs every language binding.
 
 ### Usage
 

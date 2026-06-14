@@ -11,7 +11,7 @@ tu:
   - "cpp/src/core/aom_sweep.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/model_selection.h"
 carry_along_tu:
   - "cpp/src/core/aom_operators.cpp"
   - "cpp/src/core/sweep.cpp"
@@ -36,8 +36,14 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.model_selection.aom_campaign"
     class: "aom_chain_screen_refit_campaign"
     legacy_aliases: []
 publications: []
-notes: "Python-backed two-pass AOM preprocessing campaign over the native n4m_aom_chain_sweep_run ABI, with final model reuse delegated to the catalogued final-only `aom_pop.aom_chain_fixed_fit` surface. The first pass runs a chunked score-only strict-linear chain screen, including optional pls_score_mode=gcv_proxy for explicit moment-only PLS proxy ranking, checkpoint/resume and global/per-head/per-route top-k aggregation from full chunk score tables. The second pass refits retained candidates by exact native CV with pls_score_mode=cv, preserving screen and refit reports for audit; `refit_per_head_top_k` can add each head's best rows to the exact-refit pool before deduplication, while score-only refit can group by chain/head, batch retained chains sharing a head/parameter signature, or explicitly union-batch retained parameters per head while keeping the same returned exact-CV scores. Union batching exposes scored and extra-scored candidate counters so its surplus cost is auditable, and aom_refit_execution_plan previews those counters for each mode without touching X/y. NativeAOMScreenRefitRegressor exposes the same workflow as a sklearn-style reusable regressor: fit runs the two-pass campaign, then fits the selected verified row through NativeAOMFixedCandidateRegressor in final_only mode so predict uses folded input-space coefficients on new X without replaying CV after exact refit. NativeAOMMomentScreenRefitRegressor, NativeAOMMomentPLSScreenRefitRegressor, NativeAOMMomentPLSExactScreenRefitRegressor and NativeAOMMomentRidgeScreenRefitRegressor are end-user presets over the same workflow for mixed Ridge/PLS GCV-proxy->exact-refit, PLS GCV-proxy->exact-refit, PLS exact-screen->exact-refit and Ridge exact-screen->exact-refit paths. This is intended for ultra-configurable preprocessing selection experiments and reusable selected models without dataset-name routing; it is not the fused CUDA/IKPLS grinder."
+notes: "Python-backed two-pass AOM preprocessing campaign over the native n4m_model_selection_aom_chain_sweep_run ABI, with final model reuse delegated to the catalogued final-only `aom_pop.aom_chain_fixed_fit` surface. The first pass runs a chunked score-only strict-linear chain screen, including optional pls_score_mode=gcv_proxy for explicit moment-only PLS proxy ranking, checkpoint/resume and global/per-head/per-route top-k aggregation from full chunk score tables. The second pass refits retained candidates by exact native CV with pls_score_mode=cv, preserving screen and refit reports for audit; `refit_per_head_top_k` can add each head's best rows to the exact-refit pool before deduplication, while score-only refit can group by chain/head, batch retained chains sharing a head/parameter signature, or explicitly union-batch retained parameters per head while keeping the same returned exact-CV scores. Union batching exposes scored and extra-scored candidate counters so its surplus cost is auditable, and aom_refit_execution_plan previews those counters for each mode without touching X/y. NativeAOMScreenRefitRegressor exposes the same workflow as a sklearn-style reusable regressor: fit runs the two-pass campaign, then fits the selected verified row through NativeAOMFixedCandidateRegressor in final_only mode so predict uses folded input-space coefficients on new X without replaying CV after exact refit. NativeAOMMomentScreenRefitRegressor, NativeAOMMomentPLSScreenRefitRegressor, NativeAOMMomentPLSExactScreenRefitRegressor and NativeAOMMomentRidgeScreenRefitRegressor are end-user presets over the same workflow for mixed Ridge/PLS GCV-proxy->exact-refit, PLS GCV-proxy->exact-refit, PLS exact-screen->exact-refit and Ridge exact-screen->exact-refit paths. This is intended for ultra-configurable preprocessing selection experiments and reusable selected models without dataset-name routing; it is not the fused CUDA/IKPLS grinder."
+c_surface: "none"
+fq_name: "n4m.model_selection.aom_campaign.aom_chain_screen_refit"
+leaf: "aom_chain_screen_refit"
+legacy_ids:
+  - "aom_pop.aom_chain_screen_refit"
+namespace: "model_selection.aom_campaign"

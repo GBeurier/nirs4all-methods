@@ -72,7 +72,7 @@ extern "C" {
 // YOutlierFilter
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_filter_y_outlier_create(
+N4M_API n4m_status_t n4m_outlier_detection_y_outlier_create(
     n4m_filter_y_outlier_handle_t** out,
     int32_t method,
     double threshold,
@@ -112,7 +112,7 @@ N4M_API n4m_status_t n4m_filter_y_outlier_create(
     }
 }
 
-N4M_API void n4m_filter_y_outlier_destroy(n4m_filter_y_outlier_handle_t* h) {
+N4M_API void n4m_outlier_detection_y_outlier_destroy(n4m_filter_y_outlier_handle_t* h) {
     if (h == nullptr) return;
     try {
         n4m_filter_y_outlier_state_free(h->state);
@@ -122,7 +122,7 @@ N4M_API void n4m_filter_y_outlier_destroy(n4m_filter_y_outlier_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_filter_y_outlier_fit(
+N4M_API n4m_status_t n4m_outlier_detection_y_outlier_fit(
     n4m_filter_y_outlier_handle_t* h,
     const double* y, std::int64_t n) {
     if (h == nullptr) {
@@ -141,7 +141,7 @@ N4M_API n4m_status_t n4m_filter_y_outlier_fit(
     }
 }
 
-N4M_API n4m_status_t n4m_filter_y_outlier_apply(
+N4M_API n4m_status_t n4m_outlier_detection_y_outlier_apply(
     const n4m_filter_y_outlier_handle_t* h,
     const double* y, std::int64_t n,
     std::uint8_t* mask_out,
@@ -164,7 +164,7 @@ N4M_API n4m_status_t n4m_filter_y_outlier_apply(
     }
 }
 
-N4M_API n4m_status_t n4m_filter_y_outlier_is_fitted(
+N4M_API n4m_status_t n4m_outlier_detection_y_outlier_is_fitted(
     const n4m_filter_y_outlier_handle_t* h, int* out) {
     if (h == nullptr || out == nullptr) {
         return N4M_ERR_NULL_POINTER;

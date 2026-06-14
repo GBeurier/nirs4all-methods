@@ -12,8 +12,8 @@ tu:
   - "cpp/src/core/extra_pls.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
-  - "cpp/include/n4m/aom_pop.h"
+  - "cpp/include/n4m/model_selection.h"
+  - "cpp/include/n4m/model_selection.h"
 carry_along_tu:
   - "cpp/src/core/aom_operators.cpp"
   - "cpp/src/core/moments.cpp"
@@ -36,8 +36,14 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.model_selection.aom_search"
     class: "aom_chain_ridge_pls"
     legacy_aliases: []
 publications: []
 notes: "Python-backed strict/raw-base subset of donor FastAOM SingleChainPLSRidge. It applies strict-linear AOM chains sequentially, selects one chain plus PLS component count and Ridge-PLS lambda by train CV, fits through the native ridge_pls binding, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not a fused many-chain GPU Ridge-PLS grinder."
+c_surface: "none"
+fq_name: "n4m.model_selection.aom_search.aom_chain_ridge_pls"
+leaf: "aom_chain_ridge_pls"
+legacy_ids:
+  - "aom_pop.aom_chain_ridge_pls"
+namespace: "model_selection.aom_search"

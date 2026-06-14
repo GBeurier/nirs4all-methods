@@ -383,11 +383,11 @@ void test_y_outlier_iqr_smoke() {
     std::uint8_t mask[10] = {0};
     n4m_filter_stats_t stats{};
     n4m_filter_y_outlier_handle_t* h = nullptr;
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
                                                  1.5, 1.0, 99.0) == N4M_OK);
     FILTER_REQUIRE(h != nullptr);
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, y, 10) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, 10, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, y, 10) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, 10, mask, &stats)
                     == N4M_OK);
     // 100 is the outlier; everyone else within bounds.
     FILTER_REQUIRE(stats.n_samples == 10);
@@ -395,8 +395,8 @@ void test_y_outlier_iqr_smoke() {
     FILTER_REQUIRE(stats.n_kept == 9);
     FILTER_REQUIRE(mask[9] == 0);
     for (int i = 0; i < 9; ++i) FILTER_REQUIRE(mask[i] == 1);
-    n4m_filter_y_outlier_destroy(h);
-    n4m_filter_y_outlier_destroy(nullptr);  // NULL-safe
+    n4m_outlier_detection_y_outlier_destroy(h);
+    n4m_outlier_detection_y_outlier_destroy(nullptr);  // NULL-safe
 }
 
 void test_y_outlier_zscore_smoke() {
@@ -405,15 +405,15 @@ void test_y_outlier_zscore_smoke() {
     std::uint8_t mask[12] = {0};
     n4m_filter_stats_t stats{};
     n4m_filter_y_outlier_handle_t* h = nullptr;
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_ZSCORE,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_ZSCORE,
                                                  3.0, 1.0, 99.0) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, y, 12) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, 12, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, y, 12) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, 12, mask, &stats)
                     == N4M_OK);
     FILTER_REQUIRE(stats.n_samples == 12);
     FILTER_REQUIRE(stats.n_excluded >= 1);
     FILTER_REQUIRE(mask[11] == 0);   // y=50 is way outside 3 sigma.
-    n4m_filter_y_outlier_destroy(h);
+    n4m_outlier_detection_y_outlier_destroy(h);
 }
 
 void test_y_outlier_percentile_smoke() {
@@ -423,17 +423,17 @@ void test_y_outlier_percentile_smoke() {
     std::uint8_t mask[100] = {0};
     n4m_filter_stats_t stats{};
     n4m_filter_y_outlier_handle_t* h = nullptr;
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_PERCENTILE,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_PERCENTILE,
                                                  1.5, 5.0, 95.0) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, y, 100) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, 100, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, y, 100) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, 100, mask, &stats)
                     == N4M_OK);
     FILTER_REQUIRE(stats.n_samples == 100);
     // 5..95 percentile excludes the tails.
     FILTER_REQUIRE(mask[0] == 0);
     FILTER_REQUIRE(mask[99] == 0);
     FILTER_REQUIRE(mask[50] == 1);
-    n4m_filter_y_outlier_destroy(h);
+    n4m_outlier_detection_y_outlier_destroy(h);
 }
 
 void test_y_outlier_mad_smoke() {
@@ -442,96 +442,96 @@ void test_y_outlier_mad_smoke() {
     std::uint8_t mask[11] = {0};
     n4m_filter_stats_t stats{};
     n4m_filter_y_outlier_handle_t* h = nullptr;
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_MAD,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_MAD,
                                                  3.5, 1.0, 99.0) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, y, 11) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, 11, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, y, 11) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, 11, mask, &stats)
                     == N4M_OK);
     FILTER_REQUIRE(stats.n_samples == 11);
     FILTER_REQUIRE(stats.n_excluded == 1);  // 1000 is the outlier
     FILTER_REQUIRE(mask[10] == 0);
-    n4m_filter_y_outlier_destroy(h);
+    n4m_outlier_detection_y_outlier_destroy(h);
 }
 
 void test_y_outlier_create_param_validation() {
     n4m_filter_y_outlier_handle_t* h = nullptr;
     // Unknown method code.
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(
         &h, 99,
         1.5, 1.0, 99.0) == N4M_ERR_INVALID_ARGUMENT);
     FILTER_REQUIRE(h == nullptr);
     // Non-positive threshold.
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
                                                  0.0, 1.0, 99.0)
                     == N4M_ERR_INVALID_ARGUMENT);
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
                                                  -1.0, 1.0, 99.0)
                     == N4M_ERR_INVALID_ARGUMENT);
     // Invalid percentile order.
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_PERCENTILE,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_PERCENTILE,
                                                  1.5, 90.0, 10.0)
                     == N4M_ERR_INVALID_ARGUMENT);
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_PERCENTILE,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_PERCENTILE,
                                                  1.5, -1.0, 99.0)
                     == N4M_ERR_INVALID_ARGUMENT);
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_PERCENTILE,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_PERCENTILE,
                                                  1.5, 1.0, 101.0)
                     == N4M_ERR_INVALID_ARGUMENT);
     // NULL out pointer.
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(nullptr, N4M_Y_OUTLIER_IQR,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(nullptr, N4M_Y_OUTLIER_IQR,
                                                  1.5, 1.0, 99.0)
                     == N4M_ERR_NULL_POINTER);
 }
 
 void test_y_outlier_fit_apply_param_validation() {
     n4m_filter_y_outlier_handle_t* h = nullptr;
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
                                                  1.5, 1.0, 99.0) == N4M_OK);
     std::uint8_t mask[3] = {0};
     n4m_filter_stats_t stats{};
     double y[3] = {1, 2, 3};
 
     // _apply before _fit returns N4M_ERR_NOT_FITTED.
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, 3, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, 3, mask, &stats)
                     == N4M_ERR_NOT_FITTED);
     int fitted = -1;
-    FILTER_REQUIRE(n4m_filter_y_outlier_is_fitted(h, &fitted) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_is_fitted(h, &fitted) == N4M_OK);
     FILTER_REQUIRE(fitted == 0);
 
     // _fit validation: NULL handle.
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(nullptr, y, 3)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(nullptr, y, 3)
                     == N4M_ERR_NULL_POINTER);
     // Negative n.
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, y, -1)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, y, -1)
                     == N4M_ERR_INVALID_ARGUMENT);
     // NULL y with n > 0.
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, nullptr, 3)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, nullptr, 3)
                     == N4M_ERR_NULL_POINTER);
     // n == 0 with NULL y is allowed (no-op fit; bounds at +/-inf).
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, nullptr, 0) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, nullptr, 0) == N4M_OK);
 
     // Do a valid fit so subsequent _apply calls succeed.
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, y, 3) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_is_fitted(h, &fitted) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, y, 3) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_is_fitted(h, &fitted) == N4M_OK);
     FILTER_REQUIRE(fitted == 1);
 
     // _apply validation: NULL handle.
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(nullptr, y, 3, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(nullptr, y, 3, mask, &stats)
                     == N4M_ERR_NULL_POINTER);
     // NULL mask.
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, 3, nullptr, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, 3, nullptr, &stats)
                     == N4M_ERR_NULL_POINTER);
     // NULL stats.
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, 3, mask, nullptr)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, 3, mask, nullptr)
                     == N4M_ERR_NULL_POINTER);
     // Negative n.
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, -1, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, -1, mask, &stats)
                     == N4M_ERR_INVALID_ARGUMENT);
     // NULL y with n > 0.
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, nullptr, 3, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, nullptr, 3, mask, &stats)
                     == N4M_ERR_NULL_POINTER);
     // n == 0 with NULL y is allowed.
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, nullptr, 0, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, nullptr, 0, mask, &stats)
                     == N4M_OK);
     FILTER_REQUIRE(stats.n_samples == 0);
     FILTER_REQUIRE(stats.n_kept == 0);
@@ -539,12 +539,12 @@ void test_y_outlier_fit_apply_param_validation() {
     FILTER_REQUIRE(stats.exclusion_rate == 0.0);
 
     // _is_fitted validation.
-    FILTER_REQUIRE(n4m_filter_y_outlier_is_fitted(nullptr, &fitted)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_is_fitted(nullptr, &fitted)
                     == N4M_ERR_NULL_POINTER);
-    FILTER_REQUIRE(n4m_filter_y_outlier_is_fitted(h, nullptr)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_is_fitted(h, nullptr)
                     == N4M_ERR_NULL_POINTER);
 
-    n4m_filter_y_outlier_destroy(h);
+    n4m_outlier_detection_y_outlier_destroy(h);
 }
 
 void test_y_outlier_nan_exclusion() {
@@ -553,10 +553,10 @@ void test_y_outlier_nan_exclusion() {
     std::uint8_t mask[5] = {0};
     n4m_filter_stats_t stats{};
     n4m_filter_y_outlier_handle_t* h = nullptr;
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_IQR,
                                                  1.5, 1.0, 99.0) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, y, 5) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, 5, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, y, 5) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, 5, mask, &stats)
                     == N4M_OK);
     FILTER_REQUIRE(stats.n_samples == 5);
     FILTER_REQUIRE(stats.n_excluded == 2);  // the two NaNs
@@ -566,7 +566,7 @@ void test_y_outlier_nan_exclusion() {
     FILTER_REQUIRE(mask[0] == 1);
     FILTER_REQUIRE(mask[2] == 1);
     FILTER_REQUIRE(mask[4] == 1);
-    n4m_filter_y_outlier_destroy(h);
+    n4m_outlier_detection_y_outlier_destroy(h);
 }
 
 void test_y_outlier_constant_input() {
@@ -575,15 +575,15 @@ void test_y_outlier_constant_input() {
     std::uint8_t mask[8] = {0};
     n4m_filter_stats_t stats{};
     n4m_filter_y_outlier_handle_t* h = nullptr;
-    FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, N4M_Y_OUTLIER_ZSCORE,
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, N4M_Y_OUTLIER_ZSCORE,
                                                  3.0, 1.0, 99.0) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, y, 8) == N4M_OK);
-    FILTER_REQUIRE(n4m_filter_y_outlier_apply(h, y, 8, mask, &stats)
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, y, 8) == N4M_OK);
+    FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(h, y, 8, mask, &stats)
                     == N4M_OK);
     // All values exactly equal the mean -> all kept.
     FILTER_REQUIRE(stats.n_kept == 8);
     for (int i = 0; i < 8; ++i) FILTER_REQUIRE(mask[i] == 1);
-    n4m_filter_y_outlier_destroy(h);
+    n4m_outlier_detection_y_outlier_destroy(h);
 }
 
 // ---------------------------------------------------------------------------
@@ -607,13 +607,13 @@ void verify_y_outlier_parity(const std::string& fixture_filename) {
                                                     "upper_percentile", 99.0);
 
         n4m_filter_y_outlier_handle_t* h = nullptr;
-        FILTER_REQUIRE(n4m_filter_y_outlier_create(&h, method, threshold,
+        FILTER_REQUIRE(n4m_outlier_detection_y_outlier_create(&h, method, threshold,
                                                      lower_pct, upper_pct)
                         == N4M_OK);
         std::vector<std::uint8_t> mask(fx.y.size(), 0);
         n4m_filter_stats_t stats{};
-        FILTER_REQUIRE(n4m_filter_y_outlier_fit(h, fx.y.data(), fx.n) == N4M_OK);
-        FILTER_REQUIRE(n4m_filter_y_outlier_apply(
+        FILTER_REQUIRE(n4m_outlier_detection_y_outlier_fit(h, fx.y.data(), fx.n) == N4M_OK);
+        FILTER_REQUIRE(n4m_outlier_detection_y_outlier_apply(
                           h, fx.y.data(), fx.n, mask.data(), &stats) == N4M_OK);
 
         const std::string tag = fixture_filename + "/" + c.name;
@@ -666,7 +666,7 @@ void verify_y_outlier_parity(const std::string& fixture_filename) {
             }
         }
 
-        n4m_filter_y_outlier_destroy(h);
+        n4m_outlier_detection_y_outlier_destroy(h);
     }
 }
 

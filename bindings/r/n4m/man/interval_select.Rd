@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{interval_select}
 \alias{interval_select}
+\alias{n4m_feature_select_interval}
 \title{Interval selector (iPLS).}
 \usage{
 interval_select(X, Y, n_components, interval_width = 10L, step = 1L)

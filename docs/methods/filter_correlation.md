@@ -1,6 +1,6 @@
 # `filter_correlation` — Correlation Filter
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.CorrelationFilter` · _C ABI_: `n4m_filter_correlation_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.CorrelationFilter` · _C ABI_: `n4m_feature_selection_correlation_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Model-agnostic feature filter by absolute correlation to ``y``.
 
 ### Implementation
 
-C ABI `n4m_filter_correlation_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.CorrelationFilter`. The same numerical kernel backs every language binding.
+C ABI `n4m_feature_selection_correlation_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.CorrelationFilter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

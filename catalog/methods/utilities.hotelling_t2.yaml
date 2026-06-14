@@ -7,11 +7,11 @@ category: "utilities"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_util_hotelling_t2"
+  - "n4m_outlier_detection_hotelling_t2"
 tu:
   - "cpp/src/core/utilities/hotelling_t2.c"
 headers:
-  - "cpp/include/n4m/utilities.h"
+  - "cpp/include/n4m/outlier_detection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_outlier_detection_hotelling_t2"
+fq_name: "n4m.outlier_detection.hotelling_t2"
+leaf: "hotelling_t2"
+legacy_ids:
+  - "utilities.hotelling_t2"
+namespace: "outlier_detection"

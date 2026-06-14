@@ -1,6 +1,6 @@
 # `split_kennard_stone` — Kennard Stone Splitter
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.KennardStoneSplitter` · _C ABI_: `n4m_split_kennard_stone_*`
+_Group_: **Splitters** · _Binding_: `n4m.sklearn.KennardStoneSplitter` · _C ABI_: `n4m_model_selection_kennard_stone_*`
 
 ## Description
 
@@ -35,7 +35,7 @@ Kennard-Stone train/test split.
 
 ### Implementation
 
-C ABI `n4m_split_kennard_stone_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KennardStoneSplitter`. The same numerical kernel backs every language binding.
+C ABI `n4m_model_selection_kennard_stone_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KennardStoneSplitter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

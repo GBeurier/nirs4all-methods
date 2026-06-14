@@ -1,7 +1,7 @@
 """Runtime contract guard: the core surface imports with NumPy alone.
 
 The ``nirs4all-methods`` / ``pls4all`` wheels declare only ``numpy`` as a runtime
-dependency; ``scikit-learn`` (and ``scipy``) are optional. ``n4m.sklearn._compat``
+dependency; ``scikit-learn`` (and ``scipy``) are optional. ``n4m._impl.compat``
 provides fallback ``BaseEstimator`` / ``TransformerMixin`` so the estimator layer
 still imports without scikit-learn, and the AOM-Ridge simplex solver falls back to
 a projected-gradient path without SciPy.
@@ -46,16 +46,16 @@ for _m in [m for m in list(sys.modules) if m.split(".")[0] in _BLOCK]:
 import numpy as np
 
 import n4m
-import n4m.aom as aom
-import n4m.moment as moment
+from n4m._impl import aom_facade as aom
+from n4m._impl import moment_facade as moment
 
 # Importing the core surface must not have pulled in the optional deps.
 assert "sklearn" not in sys.modules, sorted(m for m in sys.modules if m.startswith("sklearn"))
 assert "scipy" not in sys.modules, sorted(m for m in sys.modules if m.startswith("scipy"))
 
 # The estimator layer must be running on the dependency-light fallback base.
-from n4m.sklearn._compat import BaseEstimator
-assert BaseEstimator.__module__ == "n4m.sklearn._compat", BaseEstimator.__module__
+from n4m._impl.compat import BaseEstimator
+assert BaseEstimator.__module__ == "n4m._impl.compat", BaseEstimator.__module__
 
 assert n4m.abi_version()  # forces libn4m to load + respond
 
@@ -74,14 +74,14 @@ assert aom.available_methods() and moment.available_methods()
 
 # A sklearn-style wrapper still fits/predicts on the fallback base, matching the
 # direct native head exactly.
-from n4m.sklearn import NativeRidgeRegressor
-model = NativeRidgeRegressor(alpha=0.1, scale_x=False).fit(X, y)
+from n4m.estimators.regression.regularized import Ridge
+model = Ridge(alpha=0.1, scale_x=False).fit(X, y)
 np.testing.assert_allclose(
     model.predict(X), r["predictions"].ravel(), rtol=1e-10, atol=1e-10
 )
 
 # The AOM-Ridge blender imports and its SciPy-optional simplex QP stays usable.
-from n4m.sklearn import AOMRidgeBlender
+from n4m.ensemble import AOMRidgeBlender
 assert AOMRidgeBlender is not None
 
 print("SKLEARN_OPTIONAL_OK")

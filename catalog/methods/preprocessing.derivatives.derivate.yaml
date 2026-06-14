@@ -7,15 +7,15 @@ category: "preprocessing"
 subcategory: "derivatives"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_derivate_create"
-  - "n4m_pp_derivate_destroy"
-  - "n4m_pp_derivate_fit"
-  - "n4m_pp_derivate_output_cols"
-  - "n4m_pp_derivate_transform"
+  - "n4m_transform_derivative_create"
+  - "n4m_transform_derivative_destroy"
+  - "n4m_transform_derivative_fit"
+  - "n4m_transform_derivative_output_cols"
+  - "n4m_transform_derivative_transform"
 tu:
   - "cpp/src/core/preprocessing/derivatives/derivate.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/smoothing.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -35,3 +35,14 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_derivative_create"
+  - "n4m_transform_derivative_destroy"
+  - "n4m_transform_derivative_fit"
+  - "n4m_transform_derivative_output_cols"
+  - "n4m_transform_derivative_transform"
+fq_name: "n4m.transform.smoothing.derivative"
+leaf: "derivative"
+legacy_ids:
+  - "preprocessing.derivatives.derivate"
+namespace: "transform.smoothing"

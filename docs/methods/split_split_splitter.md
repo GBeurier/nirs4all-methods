@@ -1,6 +1,6 @@
 # `split_split_splitter` — S Plit Splitter
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.SPlitSplitter` · _C ABI_: `n4m_split_split_splitter_*`
+_Group_: **Splitters** · _Binding_: `n4m.sklearn.SPlitSplitter` · _C ABI_: `n4m_model_selection_data_twinning_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ SPlit data-twinning splitter.
 
 ### Implementation
 
-C ABI `n4m_split_split_splitter_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SPlitSplitter`. The same numerical kernel backs every language binding.
+C ABI `n4m_model_selection_data_twinning_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SPlitSplitter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

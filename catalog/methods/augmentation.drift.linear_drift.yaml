@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "drift"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_linear_drift_apply"
-  - "n4m_aug_linear_drift_create"
-  - "n4m_aug_linear_drift_destroy"
+  - "n4m_augmentation_linear_drift_apply"
+  - "n4m_augmentation_linear_drift_create"
+  - "n4m_augmentation_linear_drift_destroy"
 tu:
   - "cpp/src/core/augmentation/drift/linear_drift.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/drift.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_linear_drift_apply"
+  - "n4m_augmentation_linear_drift_create"
+  - "n4m_augmentation_linear_drift_destroy"
+fq_name: "n4m.augmentation.drift.linear_drift"
+leaf: "linear_drift"
+legacy_ids:
+  - "augmentation.drift.linear_drift"
+namespace: "augmentation.drift"

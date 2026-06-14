@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{irf_select}
 \alias{irf_select}
+\alias{n4m_feature_select_irf}
 \title{IRF — Interval Random Frog.}
 \usage{
 irf_select(

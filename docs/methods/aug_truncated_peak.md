@@ -1,6 +1,6 @@
 # `aug_truncated_peak` — Truncated Peak Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.TruncatedPeakAugmenter` · _C ABI_: `n4m_aug_truncated_peak_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.TruncatedPeakAugmenter` · _C ABI_: `n4m_augmentation_truncated_peak_*`
 
 ## Description
 
@@ -33,7 +33,7 @@ Truncated peaks near spectral edges.
 
 ### Implementation
 
-C ABI `n4m_aug_truncated_peak_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.TruncatedPeakAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_truncated_peak_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.TruncatedPeakAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

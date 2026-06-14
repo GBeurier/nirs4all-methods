@@ -1,6 +1,6 @@
 # `pp_snip` — S N I P
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.SNIP` · _C ABI_: `n4m_pp_snip_*`
+_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.SNIP` · _C ABI_: `n4m_transform_snip_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ Statistics-sensitive nonlinear iterative peak-clipping baseline.
 
 ### Implementation
 
-C ABI `n4m_pp_snip_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SNIP`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_snip_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SNIP`. The same numerical kernel backs every language binding.
 
 ### Usage
 

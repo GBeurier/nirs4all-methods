@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "scattering"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_scatter_sim_apply"
-  - "n4m_aug_scatter_sim_create"
-  - "n4m_aug_scatter_sim_destroy"
+  - "n4m_augmentation_scatter_sim_msc_apply"
+  - "n4m_augmentation_scatter_sim_msc_create"
+  - "n4m_augmentation_scatter_sim_msc_destroy"
 tu:
   - "cpp/src/core/augmentation/scattering/scatter_sim_msc.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/scattering.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_scatter_sim_msc_apply"
+  - "n4m_augmentation_scatter_sim_msc_create"
+  - "n4m_augmentation_scatter_sim_msc_destroy"
+fq_name: "n4m.augmentation.scattering.scatter_sim_msc"
+leaf: "scatter_sim_msc"
+legacy_ids:
+  - "augmentation.scattering.scatter_sim_msc"
+namespace: "augmentation.scattering"

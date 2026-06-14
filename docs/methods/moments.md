@@ -4,9 +4,9 @@ Native moment substrate for exact row-additive linear screens.
 
 ## ABI
 
-- `n4m_moments_compute(ctx, X, Y, out_result)`
-- `n4m_moments_subset_compute(ctx, X, Y, row_indices, n_indices, out_result)`
-- `n4m_moments_subtract(ctx, lhs, rhs, out_result)`
+- `n4m_lowlevel_moments_compute(ctx, X, Y, out_result)`
+- `n4m_lowlevel_moments_subset_compute(ctx, X, Y, row_indices, n_indices, out_result)`
+- `n4m_lowlevel_moments_subtract(ctx, lhs, rhs, out_result)`
 
 All outputs are returned through `n4m_method_result_t`.
 
@@ -30,11 +30,11 @@ Scalars:
 The raw buffers are additive over rows. A train fold can therefore be computed
 as:
 
-1. `all = n4m_moments_compute(X, Y)`
-2. `heldout = n4m_moments_subset_compute(X, Y, heldout_indices)`
-3. `train = n4m_moments_subtract(all, heldout)`
+1. `all = n4m_lowlevel_moments_compute(X, Y)`
+2. `heldout = n4m_lowlevel_moments_subset_compute(X, Y, heldout_indices)`
+3. `train = n4m_lowlevel_moments_subtract(all, heldout)`
 
-`n4m_moments_subtract` subtracts only raw sums/products and then recomputes
+`n4m_lowlevel_moments_subtract` subtracts only raw sums/products and then recomputes
 `x_mean`, `y_mean`, `cxx`, `cxy` and `cyy` from the remaining row count. This is
 the important train-only centering invariant for PLS/Ridge screening.
 

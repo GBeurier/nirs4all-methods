@@ -2,6 +2,7 @@
 % Please edit documentation in R/selectors.R
 \name{spa_select}
 \alias{spa_select}
+\alias{n4m_feature_select_spa}
 \title{SPA — Successive Projections Algorithm.}
 \usage{
 spa_select(X, Y, n_components, top_k)

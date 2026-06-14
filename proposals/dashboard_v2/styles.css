@@ -293,6 +293,8 @@ button.ctl[aria-pressed="true"] { background: var(--teal); color: #fff; border-c
 .mcard .m-foot { display: flex; gap: 10px; margin-top: 11px; font-size: .68rem; color: var(--text-3); }
 .mcard .m-foot span { display: inline-flex; align-items: center; gap: 4px; }
 .mcard .m-foot b { font-family: var(--mono); color: var(--text-2); font-weight: 600; }
+.mcard .m-foot a.m-doc { color: var(--accent, var(--teal-d)); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.mcard .m-foot a.m-doc:hover, .mcard .m-foot a.m-doc:focus-visible { text-decoration: underline; }
 
 /* empty state */
 .empty {

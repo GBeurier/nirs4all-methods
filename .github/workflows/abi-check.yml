@@ -47,8 +47,8 @@ jobs:
           readelf -d "$LIB" | grep -E 'SONAME|NEEDED|RPATH|RUNPATH' || true
           SONAME=$(readelf -d "$LIB" | sed -n 's/.*SONAME.*\[\(.*\)\]/\1/p')
           echo "SONAME=$SONAME"
-          if [ "$SONAME" != "libn4m.so.1" ]; then
-            echo "ERROR: unexpected SONAME '$SONAME' (expected libn4m.so.1 = ABI major)"
+          if [ "$SONAME" != "libn4m.so.2" ]; then
+            echo "ERROR: unexpected SONAME '$SONAME' (expected libn4m.so.2 = ABI major)"
             exit 1
           fi
           if readelf -d "$LIB" | grep -qE 'RPATH|RUNPATH'; then
@@ -83,7 +83,7 @@ jobs:
       - name: Diff against committed ABI snapshot (fail-closed)
         run: |
           # The macOS export set must equal the committed snapshot exactly
-          # (same n4m_* names as Linux, minus the Linux-only N4M_1 version node).
+          # (same n4m_* names as Linux, minus the Linux-only N4M_2 version node).
           LC_ALL=C sort -u cpp/abi/expected_symbols_macos.txt > /tmp/expected.txt
           echo "----- diff (expected vs exported) -----"
           diff -u /tmp/expected.txt /tmp/exported.txt

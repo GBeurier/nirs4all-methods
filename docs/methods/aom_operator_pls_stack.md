@@ -1,6 +1,6 @@
 # `aom_operator_pls_stack` - native AOM operator PLS score stack
 
-_Group_: **Diagnostic / AOM** · _ABI_: `n4m_aom_operator_pls_stack_fit`
+_Group_: **Diagnostic / AOM** · _ABI_: `n4m_ensemble_aom_operator_pls_stack_fit`
 
 `aom_operator_pls_stack` computes compact/wide strict-linear AOM operator
 views, compresses each view through a fold-local PLS1 score projector,

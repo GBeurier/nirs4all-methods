@@ -1,6 +1,6 @@
 # `aug_instrument_broaden` — Instrumental Broadening Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.InstrumentalBroadeningAugmenter` · _C ABI_: `n4m_aug_instrument_broaden_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.InstrumentalBroadeningAugmenter` · _C ABI_: `n4m_augmentation_instrument_broaden_*`
 
 ## Description
 
@@ -31,7 +31,7 @@ Instrumental spectral broadening via Gaussian convolution.
 
 ### Implementation
 
-C ABI `n4m_aug_instrument_broaden_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.InstrumentalBroadeningAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_instrument_broaden_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.InstrumentalBroadeningAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

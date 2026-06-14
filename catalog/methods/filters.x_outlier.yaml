@@ -7,15 +7,15 @@ category: "filters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_filter_x_outlier_apply"
-  - "n4m_filter_x_outlier_create"
-  - "n4m_filter_x_outlier_destroy"
-  - "n4m_filter_x_outlier_fit"
-  - "n4m_filter_x_outlier_is_fitted"
+  - "n4m_outlier_detection_x_outlier_apply"
+  - "n4m_outlier_detection_x_outlier_create"
+  - "n4m_outlier_detection_x_outlier_destroy"
+  - "n4m_outlier_detection_x_outlier_fit"
+  - "n4m_outlier_detection_x_outlier_is_fitted"
 tu:
   - "cpp/src/core/filters/x_outlier.c"
 headers:
-  - "cpp/include/n4m/filters.h"
+  - "cpp/include/n4m/outlier_detection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -35,3 +35,14 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_outlier_detection_x_outlier_apply"
+  - "n4m_outlier_detection_x_outlier_create"
+  - "n4m_outlier_detection_x_outlier_destroy"
+  - "n4m_outlier_detection_x_outlier_fit"
+  - "n4m_outlier_detection_x_outlier_is_fitted"
+fq_name: "n4m.outlier_detection.x_outlier"
+leaf: "x_outlier"
+legacy_ids:
+  - "filters.x_outlier"
+namespace: "outlier_detection"

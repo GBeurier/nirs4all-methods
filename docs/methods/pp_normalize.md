@@ -1,6 +1,6 @@
 # `pp_normalize` — Normalize
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.Normalize` · _C ABI_: `n4m_pp_normalize_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.Normalize` · _C ABI_: `n4m_transform_normalize_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Column-wise normalisation.
 
 ### Implementation
 
-C ABI `n4m_pp_normalize_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Normalize`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_normalize_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Normalize`. The same numerical kernel backs every language binding.
 
 ### Usage
 

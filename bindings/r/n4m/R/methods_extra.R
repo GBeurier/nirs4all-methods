@@ -55,6 +55,22 @@ ridge_pls_fit <- function(X, Y, n_components, ridge_lambda = 1.0) {
                    params = list(ridge_lambda = ridge_lambda))
 }
 
+#' Direct (closed-form) multi-output Ridge regression.
+#'
+#' Solves \code{beta = (Xc'Xc + lambda I)^-1 Xc'Yc} on column-centered X/Y
+#' (distinct from the ridge-augmented SIMPLS of \code{\link{ridge_pls_fit}}).
+#' \code{ridge_lambda} is the sklearn \code{alpha} (the L2 penalty).
+#' @param n_components Integer. Unused by the closed-form solver; accepted for a
+#'   uniform method signature.
+#' @param ridge_lambda Numeric >= 0. L2 penalty (sklearn \code{alpha}).
+#' @param X Numeric matrix of predictors (rows = samples, cols = features).
+#' @param Y Numeric matrix or vector of responses, with one row per sample.
+#' @export
+ridge_fit <- function(X, Y, n_components = 1L, ridge_lambda = 1.0) {
+    n4m_method("ridge", X, Y, n_components,
+                   params = list(ridge_lambda = ridge_lambda))
+}
+
 #' Continuum regression (tau in [0, 1]).
 #' @param n_components Integer. Number of latent components.
 #' @param tau Numeric in [0, 1]. Continuum regression mixing parameter.

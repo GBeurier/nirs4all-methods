@@ -22,7 +22,7 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 ## Quick links
 
 - **Architecture** — [overview](architecture/overview.md) · [memory model](architecture/memory_model.md) · [error model](architecture/error_model.md) · [threading](architecture/threading.md) · [serialization](architecture/serialization.md)
-- **ABI** — [reference](abi/reference.md) · [stability policy](abi/stability_policy.md) · [changes log](abi/changes_log.md)
+- **ABI** — [reference](abi/reference.md) · [stability policy](abi/stability_policy.md) · [changes log](abi/changes_log.md) · [ABI 2.0 migration guide](MIGRATION_ABI2.md)
 - **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB / Octave](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md)
 - **Parity** — [methodology](parity/methodology.md) · {doc}`tolerances <parity/tolerances>`
 - **Benchmarks** — [index](benchmarks/index.md) · [overview](benchmarks/overview.md) · [cross-binding parity + timing](benchmarks/cross_binding.md) · [methodology](benchmarks/methodology.md)
@@ -37,6 +37,7 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
 abi/reference
 abi/stability_policy
 abi/changes_log
+MIGRATION_ABI2
 intro/overview
 intro/getting_started
 intro/concepts

@@ -7,12 +7,12 @@ category: "aom_pop"
 subcategory: "aom"
 since_abi: "1.17.0"
 abi_symbols:
-  - "n4m_aom_ridge_blender_fit"
+  - "n4m_ensemble_aom_ridge_blender_fit"
 tu:
   - "cpp/src/core/aom_ridge_blender.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/ensemble.h"
 carry_along_tu:
   - "cpp/src/core/aom_operators.cpp"
   - "cpp/src/core/ridge.cpp"
@@ -35,8 +35,15 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.ensemble"
     class: "aom_ridge_blender"
     legacy_aliases: []
 publications: []
 notes: "Native strict-linear AOM Ridge OOF simplex blender over compact/wide chain banks and positive Ridge-lambda grids. Compact has 12 chains; wide has 31 strict-linear chains, including Gaussian, FCK and Whittaker variants. It returns candidate predictions, OOF candidate predictions, non-negative blend weights, and final input_coefficients plus intercept for replay through NativeAOMRidgeBlenderRegressor; native v1 builds in CUDA-enabled configurations but is not yet a fused batched GPU blender."
+c_surface:
+  - "n4m_ensemble_aom_ridge_blender_fit"
+fq_name: "n4m.ensemble.aom_ridge_blender"
+leaf: "aom_ridge_blender"
+legacy_ids:
+  - "aom_pop.ridge_blender"
+namespace: "ensemble"

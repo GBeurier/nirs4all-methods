@@ -13,7 +13,7 @@
  *   y_mean       — (1 × q) row vector.
  *   predictions  — (n × q) in-sample predictions.
  *
- * Calls the public C ABI helper `n4m_pls_fit_simple` (ABI 1.13+).
+ * Calls the public C ABI helper `n4m_estimators_pls_fit` (ABI 2.0+).
  * Build via build_mex.m or the bundled CMake target. The MEX uses the
  * mxGetData / mxCreateDoubleMatrix C interface so it works on both
  * MATLAB (>= R2018a) and Octave (>= 6.0).
@@ -112,14 +112,14 @@ void mexFunction(int nlhs, mxArray *plhs[],
                           "out of memory allocating outputs");
     }
 
-    n4m_status_t status = n4m_pls_fit_simple(
+    n4m_status_t status = n4m_estimators_pls_fit(
         X, Y, n, p, q, n_components,
         coefs, x_mean, y_mean, preds);
     free(X); free(Y);
     if (status != N4M_OK) {
         free(coefs); free(x_mean); free(y_mean); free(preds);
         mexErrMsgIdAndTxt("pls4all:fit",
-                          "n4m_pls_fit_simple failed with status %d",
+                          "n4m_estimators_pls_fit failed with status %d",
                           (int)status);
     }
 

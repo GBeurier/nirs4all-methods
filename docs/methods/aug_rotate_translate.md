@@ -1,6 +1,6 @@
 # `aug_rotate_translate` — Rotate Translate Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.RotateTranslateAugmenter` · _C ABI_: `n4m_aug_rotate_translate_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.RotateTranslateAugmenter` · _C ABI_: `n4m_augmentation_rotate_translate_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Random rotate/translate spectral augmentation.
 
 ### Implementation
 
-C ABI `n4m_aug_rotate_translate_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RotateTranslateAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_rotate_translate_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RotateTranslateAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

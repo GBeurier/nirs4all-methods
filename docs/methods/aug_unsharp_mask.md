@@ -1,6 +1,6 @@
 # `aug_unsharp_mask` — Unsharp Mask
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.UnsharpMask` · _C ABI_: `n4m_aug_unsharp_mask_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.UnsharpMask` · _C ABI_: `n4m_augmentation_unsharp_mask_*`
 
 ## Description
 
@@ -29,7 +29,7 @@ Random unsharp spectral mask.
 
 ### Implementation
 
-C ABI `n4m_aug_unsharp_mask_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.UnsharpMask`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_unsharp_mask_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.UnsharpMask`. The same numerical kernel backs every language binding.
 
 ### Usage
 

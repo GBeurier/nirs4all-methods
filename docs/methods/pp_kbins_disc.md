@@ -1,6 +1,6 @@
 # `pp_kbins_disc` — Integer K Bins Discretizer
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.IntegerKBinsDiscretizer` · _C ABI_: `n4m_pp_kbins_disc_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.IntegerKBinsDiscretizer` · _C ABI_: `n4m_transform_kbins_discretizer_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Per-column integer binning using uniform or quantile edges.
 
 ### Implementation
 
-C ABI `n4m_pp_kbins_disc_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IntegerKBinsDiscretizer`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_kbins_discretizer_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IntegerKBinsDiscretizer`. The same numerical kernel backs every language binding.
 
 ### Usage
 

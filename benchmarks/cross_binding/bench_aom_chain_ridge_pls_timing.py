@@ -12,7 +12,8 @@ from pathlib import Path
 import numpy as np
 
 import n4m
-from n4m.sklearn import NativeAOMChainRidgePLSRegressor
+from n4m._impl import NativeAOMChainRidgePLSRegressor
+from n4m._impl import native as _nat
 
 
 CHAINS = (
@@ -48,7 +49,7 @@ def median_ms(fn, repeats: int) -> tuple[float, object]:
 
 
 def run_function(X, y, folds, cv, components, ridge_lambdas):
-    return n4m.aom_chain_ridge_pls(
+    return _nat.aom_chain_ridge_pls(
         X,
         y,
         chains=CHAINS,

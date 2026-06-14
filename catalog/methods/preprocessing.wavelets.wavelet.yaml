@@ -7,14 +7,14 @@ category: "preprocessing"
 subcategory: "wavelets"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_wavelet_create"
-  - "n4m_pp_wavelet_destroy"
-  - "n4m_pp_wavelet_output_cols"
-  - "n4m_pp_wavelet_transform"
+  - "n4m_transform_wavelet_create"
+  - "n4m_transform_wavelet_destroy"
+  - "n4m_transform_wavelet_output_cols"
+  - "n4m_transform_wavelet_transform"
 tu:
   - "cpp/src/core/preprocessing/wavelets/wavelet.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/wavelet.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -34,3 +34,13 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_wavelet_create"
+  - "n4m_transform_wavelet_destroy"
+  - "n4m_transform_wavelet_output_cols"
+  - "n4m_transform_wavelet_transform"
+fq_name: "n4m.transform.wavelet.wavelet"
+leaf: "wavelet"
+legacy_ids:
+  - "preprocessing.wavelets.wavelet"
+namespace: "transform.wavelet"

@@ -1,6 +1,6 @@
 # `pp_flex_svd` — Flexible S V D
 
-_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.FlexibleSVD` · _C ABI_: `n4m_pp_flex_svd_*`
+_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.FlexibleSVD` · _C ABI_: `n4m_decomposition_flexible_svd_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ SVD with integer component selection.
 
 ### Implementation
 
-C ABI `n4m_pp_flex_svd_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FlexibleSVD`. The same numerical kernel backs every language binding.
+C ABI `n4m_decomposition_flexible_svd_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FlexibleSVD`. The same numerical kernel backs every language binding.
 
 ### Usage
 

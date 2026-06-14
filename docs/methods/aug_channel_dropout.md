@@ -1,6 +1,6 @@
 # `aug_channel_dropout` — Channel Dropout
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.ChannelDropout` · _C ABI_: `n4m_aug_channel_dropout_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.ChannelDropout` · _C ABI_: `n4m_augmentation_channel_dropout_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Randomly drop individual wavelength channels.
 
 ### Implementation
 
-C ABI `n4m_aug_channel_dropout_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ChannelDropout`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_channel_dropout_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ChannelDropout`. The same numerical kernel backs every language binding.
 
 ### Usage
 

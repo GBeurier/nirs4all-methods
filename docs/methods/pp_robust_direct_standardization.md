@@ -1,6 +1,6 @@
 # `pp_robust_direct_standardization` — Robust Direct Standardization
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.RobustDirectStandardization` · _C ABI_: `n4m_pp_robust_direct_standardization_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.RobustDirectStandardization` · _C ABI_: `n4m_domain_adaptation_robust_direct_standardization_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Direct standardization with iterative residual trimming.
 
 ### Implementation
 
-C ABI `n4m_pp_robust_direct_standardization_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RobustDirectStandardization`. The same numerical kernel backs every language binding.
+C ABI `n4m_domain_adaptation_robust_direct_standardization_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RobustDirectStandardization`. The same numerical kernel backs every language binding.
 
 ### Usage
 

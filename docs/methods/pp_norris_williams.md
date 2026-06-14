@@ -1,6 +1,6 @@
 # `pp_norris_williams` — Norris Williams
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.NorrisWilliams` · _C ABI_: `n4m_pp_norris_williams_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.NorrisWilliams` · _C ABI_: `n4m_transform_norris_williams_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Segment smoothing followed by gap finite differences.
 
 ### Implementation
 
-C ABI `n4m_pp_norris_williams_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.NorrisWilliams`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_norris_williams_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.NorrisWilliams`. The same numerical kernel backs every language binding.
 
 ### Usage
 

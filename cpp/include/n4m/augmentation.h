@@ -1,39 +1,22 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
-/*
- * cpp/include/n4m/augmentation.h — M6 scaffold.
- *
- * Category: augmentation
- * Source of truth (post-M5 rename): donor's n4m.h §augmentation
- * Contents: 39 noise/drift/wavelength/spectral/mixup/scattering/environmental/edge augmenters
- *
- * STATUS: scaffold only. The per-category declarations will be lifted
- * from the renamed umbrella headers in the focused M5+M6 session per
- * docs/merge/M5/STATUS.md and docs/merge/M6/STATUS.md.
- *
- * After M5+M6 lands:
- *   - cpp/include/n4m/n4m.h is the umbrella header that #includes each
- *     of these per-category headers, deduplicating common-core
- *     declarations (those live in context.h alone).
- *   - cpp/include/pls4all/p4a.h is deleted (its content was the
- *     PLS surface that moves into models.h, selection.h, diagnostics.h,
- *     aom_pop.h, transfer.h).
- *
- * Until that lands, the public ABI surface remains the existing
- * pls4all/p4a.h + n4m/n4m.h pair.
- */
-#ifndef N4M_AUGMENTATION_H_INCLUDED
-#define N4M_AUGMENTATION_H_INCLUDED
-
-#include "n4m/n4m.h"  /* TEMP: pull existing umbrella. M6 final step removes this. */
+/* cpp/include/n4m/augmentation.h — augmentation role header (ABI 2.0). */
+#ifndef N4M_AUGMENTATION_H
+#define N4M_AUGMENTATION_H
+#include "n4m/n4m.h"   /* shared infra: status, matrix view, context, N4M_API */
+#include "n4m/augmentation/drift.h"
+#include "n4m/augmentation/instrument.h"
+#include "n4m/augmentation/mixup.h"
+#include "n4m/augmentation/noise.h"
+#include "n4m/augmentation/scattering.h"
+#include "n4m/augmentation/spectral.h"
+#include "n4m/augmentation/splines.h"
+#include "n4m/augmentation/wavelength.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* TODO: lift the augmentation category declarations from the umbrella here. */
-
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
-
-#endif  /* N4M_AUGMENTATION_H_INCLUDED */
+#endif /* N4M_AUGMENTATION_H */

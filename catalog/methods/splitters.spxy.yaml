@@ -7,13 +7,13 @@ category: "splitters"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_split_spxy_create"
-  - "n4m_split_spxy_destroy"
-  - "n4m_split_spxy_split"
+  - "n4m_model_selection_spxy_create"
+  - "n4m_model_selection_spxy_destroy"
+  - "n4m_model_selection_spxy_split"
 tu:
   - "cpp/src/core/splitters/spxy.c"
 headers:
-  - "cpp/include/n4m/splitters.h"
+  - "cpp/include/n4m/model_selection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_model_selection_spxy_create"
+  - "n4m_model_selection_spxy_destroy"
+  - "n4m_model_selection_spxy_split"
+fq_name: "n4m.model_selection.splitters.spxy"
+leaf: "spxy"
+legacy_ids:
+  - "splitters.spxy"
+namespace: "model_selection.splitters"

@@ -338,6 +338,36 @@ def validate_methods(
                 fail_count += 1
             sym_owner[symbol] = method_id
 
+        # Phase-R namespace-migration invariants (Codex Phase-R gate): the five
+        # migration fields are required, fq_name must equal n4m.<namespace>.<leaf>,
+        # and c_surface must mirror abi_symbols (or be the literal "none" when the
+        # method exports no C symbol).
+        ns = method.get("namespace")
+        leaf = method.get("leaf")
+        if not (isinstance(ns, str) and ns):
+            print(f"  FAIL: {method_id}: missing namespace")
+            fail_count += 1
+        if not (isinstance(leaf, str) and leaf):
+            print(f"  FAIL: {method_id}: missing leaf")
+            fail_count += 1
+        if method.get("legacy_ids") in (None, []):
+            print(f"  FAIL: {method_id}: missing legacy_ids")
+            fail_count += 1
+        if isinstance(ns, str) and ns and isinstance(leaf, str) and leaf:
+            want_fq = f"n4m.{ns}.{leaf}"
+            if method.get("fq_name") != want_fq:
+                print(f"  FAIL: {method_id}: fq_name {method.get('fq_name')!r} != {want_fq!r}")
+                fail_count += 1
+        c_surface = method.get("c_surface")
+        abi_syms = method.get("abi_symbols") or []
+        if not abi_syms:
+            if c_surface != "none":
+                print(f"  FAIL: {method_id}: no ABI symbols but c_surface != 'none' ({c_surface!r})")
+                fail_count += 1
+        elif c_surface != abi_syms:
+            print(f"  FAIL: {method_id}: c_surface != abi_symbols ({c_surface!r} vs {abi_syms!r})")
+            fail_count += 1
+
     # Coverage gate (strict only): every REAL exported symbol must be owned by a
     # method OR listed in the explicit infra bucket. Catches API exported by
     # libn4m but missing from the catalog (the Phase-B reconciliation invariant).

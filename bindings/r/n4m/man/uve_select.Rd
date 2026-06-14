@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{uve_select}
 \alias{uve_select}
+\alias{n4m_feature_select_uve}
 \title{UVE — Uninformative Variable Elimination.}
 \usage{
 uve_select(X, Y, n_components, noise_features = NULL, noise_seed = 0L)

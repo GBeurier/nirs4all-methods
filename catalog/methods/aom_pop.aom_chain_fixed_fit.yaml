@@ -7,12 +7,12 @@ category: "aom_pop"
 subcategory: "aom"
 since_abi: "1.18.0"
 abi_symbols:
-  - "n4m_aom_chain_fixed_fit_run"
+  - "n4m_model_selection_aom_chain_fixed_fit_run"
 tu:
   - "cpp/src/core/aom_sweep.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/model_selection.h"
 carry_along_tu:
   - "cpp/src/core/aom_operators.cpp"
   - "cpp/src/core/sweep.cpp"
@@ -37,8 +37,15 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.model_selection.aom_search"
     class: "aom_chain_fixed_fit_run"
     legacy_aliases: []
 publications: []
 notes: "Native final-only reusable fit for one already-selected caller-provided strict-linear AOM chain/head/parameter. This is the individual winner reuse surface behind `NativeAOMFixedCandidateRegressor(fit_mode=\"final_only\")` and the final model-building step of `NativeAOMScreenRefitRegressor`: it fits the selected Ridge lambda or PLS component count on all training rows, folds transformed coefficients back into original input space, and returns final predictions, input_coefficients and intercept without running CV. It is not a ranking endpoint: OOF/fold outputs are empty and CV score fields are NaN unless a higher-level wrapper injects an exact-CV score that was already verified by `aom_refit_candidates`."
+c_surface:
+  - "n4m_model_selection_aom_chain_fixed_fit_run"
+fq_name: "n4m.model_selection.aom_search.aom_chain_fixed_fit"
+leaf: "aom_chain_fixed_fit"
+legacy_ids:
+  - "aom_pop.aom_chain_fixed_fit"
+namespace: "model_selection.aom_search"

@@ -1,6 +1,6 @@
 # `pp_savgol` — Savitzky–Golay smoothing / derivative
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SavitzkyGolay` · _C ABI_: `n4m_pp_savgol_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SavitzkyGolay` · _C ABI_: `n4m_transform_savitzky_golay_*`
 
 ## Description
 
@@ -29,7 +29,7 @@ Within a sliding window of odd length $w$, a polynomial of order $p$ is fit by l
 
 ### Implementation
 
-C ABI `n4m_pp_savgol_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SavitzkyGolay`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_savitzky_golay_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SavitzkyGolay`. The same numerical kernel backs every language binding.
 
 ### Usage
 

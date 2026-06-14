@@ -1,6 +1,6 @@
 # `pp_localized_msc` — Localized M S C
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.LocalizedMSC` · _C ABI_: `n4m_pp_localized_msc_*`
+_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.LocalizedMSC` · _C ABI_: `n4m_transform_localized_msc_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Feature-wise MSC using a moving local wavelength window.
 
 ### Implementation
 
-C ABI `n4m_pp_localized_msc_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LocalizedMSC`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_localized_msc_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LocalizedMSC`. The same numerical kernel backs every language binding.
 
 ### Usage
 

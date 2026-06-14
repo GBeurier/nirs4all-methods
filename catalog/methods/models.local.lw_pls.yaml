@@ -7,11 +7,11 @@ category: "models"
 subcategory: "local"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_lw_pls_fit"
+  - "n4m_estimators_lw_pls_fit"
 tu:
   - "cpp/src/core/lw_pls.cpp"
 headers:
-  - "cpp/include/n4m/models.h"
+  - "cpp/include/n4m/estimators/regression.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -38,3 +38,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_estimators_lw_pls_fit"
+fq_name: "n4m.estimators.regression.local.lw_pls"
+leaf: "lw_pls"
+legacy_ids:
+  - "models.local.lw_pls"
+namespace: "estimators.regression.local"

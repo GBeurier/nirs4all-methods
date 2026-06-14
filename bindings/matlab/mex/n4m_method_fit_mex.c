@@ -349,15 +349,15 @@ static mxArray* pack_aom_global_result(n4m_aom_global_result_t *res) {
     int32_t n_kinds = 0, n_scores = 0, curve_rows = 0, curve_cols = 0;
     int32_t selected_op = 0, selected_k = 0, n_ops = 0, max_k = 0;
     double best_score = 0.0;
-    n4m_aom_global_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
-    n4m_aom_global_result_get_operator_kinds(res, &kinds, &n_kinds);
-    n4m_aom_global_result_get_operator_scores(res, &op_scores, &n_scores);
-    n4m_aom_global_result_get_rmse_curves(res, &curves, &curve_rows, &curve_cols);
-    n4m_aom_global_result_get_selected_operator_index(res, &selected_op);
-    n4m_aom_global_result_get_selected_n_components(res, &selected_k);
-    n4m_aom_global_result_get_n_operators(res, &n_ops);
-    n4m_aom_global_result_get_max_components(res, &max_k);
-    n4m_aom_global_result_get_best_score(res, &best_score);
+    n4m_model_selection_aom_pls_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    n4m_model_selection_aom_pls_result_get_operator_kinds(res, &kinds, &n_kinds);
+    n4m_model_selection_aom_pls_result_get_operator_scores(res, &op_scores, &n_scores);
+    n4m_model_selection_aom_pls_result_get_rmse_curves(res, &curves, &curve_rows, &curve_cols);
+    n4m_model_selection_aom_pls_result_get_selected_operator_index(res, &selected_op);
+    n4m_model_selection_aom_pls_result_get_selected_n_components(res, &selected_k);
+    n4m_model_selection_aom_pls_result_get_n_operators(res, &n_ops);
+    n4m_model_selection_aom_pls_result_get_max_components(res, &max_k);
+    n4m_model_selection_aom_pls_result_get_best_score(res, &best_score);
     mxSetField(out, 0, "predictions",
                rowmajor_to_colmajor_mx(preds, (int)pred_rows, (int)pred_cols));
     mxSetField(out, 0, "operator_kinds", vector_from_op_kinds(kinds, n_kinds));
@@ -371,7 +371,7 @@ static mxArray* pack_aom_global_result(n4m_aom_global_result_t *res) {
     mxSetField(out, 0, "n_operators", mxCreateDoubleScalar((double)n_ops));
     mxSetField(out, 0, "max_components", mxCreateDoubleScalar((double)max_k));
     mxSetField(out, 0, "best_score", mxCreateDoubleScalar(best_score));
-    n4m_aom_global_result_destroy(res);
+    n4m_model_selection_aom_pls_result_destroy(res);
     return out;
 }
 
@@ -389,17 +389,17 @@ static mxArray* pack_aom_per_component_result(n4m_aom_per_component_result_t *re
     int32_t n_kinds = 0, n_selected = 0, comp_rows = 0, comp_cols = 0;
     int32_t n_prefix = 0, selected_k = 0, n_ops = 0, max_k = 0;
     double best_score = 0.0;
-    n4m_aom_per_component_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
-    n4m_aom_per_component_result_get_operator_kinds(res, &kinds, &n_kinds);
-    n4m_aom_per_component_result_get_selected_operator_indices(
+    n4m_model_selection_pop_pls_result_get_predictions(res, &preds, &pred_rows, &pred_cols);
+    n4m_model_selection_pop_pls_result_get_operator_kinds(res, &kinds, &n_kinds);
+    n4m_model_selection_pop_pls_result_get_selected_operator_indices(
         res, &selected_ops, &n_selected);
-    n4m_aom_per_component_result_get_component_scores(
+    n4m_model_selection_pop_pls_result_get_component_scores(
         res, &component_scores, &comp_rows, &comp_cols);
-    n4m_aom_per_component_result_get_prefix_scores(res, &prefix_scores, &n_prefix);
-    n4m_aom_per_component_result_get_selected_n_components(res, &selected_k);
-    n4m_aom_per_component_result_get_n_operators(res, &n_ops);
-    n4m_aom_per_component_result_get_max_components(res, &max_k);
-    n4m_aom_per_component_result_get_best_score(res, &best_score);
+    n4m_model_selection_pop_pls_result_get_prefix_scores(res, &prefix_scores, &n_prefix);
+    n4m_model_selection_pop_pls_result_get_selected_n_components(res, &selected_k);
+    n4m_model_selection_pop_pls_result_get_n_operators(res, &n_ops);
+    n4m_model_selection_pop_pls_result_get_max_components(res, &max_k);
+    n4m_model_selection_pop_pls_result_get_best_score(res, &best_score);
     mxSetField(out, 0, "predictions",
                rowmajor_to_colmajor_mx(preds, (int)pred_rows, (int)pred_cols));
     mxSetField(out, 0, "operator_kinds", vector_from_op_kinds(kinds, n_kinds));
@@ -413,7 +413,7 @@ static mxArray* pack_aom_per_component_result(n4m_aom_per_component_result_t *re
     mxSetField(out, 0, "n_operators", mxCreateDoubleScalar((double)n_ops));
     mxSetField(out, 0, "max_components", mxCreateDoubleScalar((double)max_k));
     mxSetField(out, 0, "best_score", mxCreateDoubleScalar(best_score));
-    n4m_aom_per_component_result_destroy(res);
+    n4m_model_selection_pop_pls_result_destroy(res);
     return out;
 }
 
@@ -558,7 +558,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
     if (strcmp(algo, "sparse_simpls") == 0) {
         double lambda = get_scalar_field(params, "sparsity_lambda", 0.05);
-        st = n4m_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, lambda, &mr);
+        st = n4m_estimators_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, lambda, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions", "x_mean",
                                           "y_mean", "weights_w", NULL};
@@ -566,11 +566,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     } else if (strcmp(algo, "cppls") == 0) {
         double gamma = get_scalar_field(params, "gamma", 0.5);
-        st = n4m_cppls_fit(ctx, cfg, &Xv, &Yv, gamma, &mr);
+        st = n4m_estimators_cppls_fit(ctx, cfg, &Xv, &Yv, gamma, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ecr") == 0) {
         double alpha = get_scalar_field(params, "alpha", 0.5);
-        st = n4m_ecr_fit(ctx, cfg, &Xv, &Yv, alpha, &mr);
+        st = n4m_estimators_ecr_fit(ctx, cfg, &Xv, &Yv, alpha, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean", "x_scale", "y_scale",
@@ -592,7 +592,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double di_lambda = get_scalar_field(params, "di_lambda", 1.0);
         n4m_matrix_view_t XTv;
         n4m_matrix_view_init_rowmajor(&XTv, XT, xt_rows, xt_cols, N4M_DTYPE_F64);
-        st = n4m_di_pls_fit(ctx, cfg, &Xv, &Yv, &XTv, di_lambda, &mr);
+        st = n4m_domain_adaptation_di_pls_fit(ctx, cfg, &Xv, &Yv, &XTv, di_lambda, &mr);
         free(XT);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "weighted_pls") == 0) {
@@ -601,24 +601,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         if (!w || wn != n)
             throw_status(N4M_ERR_SHAPE_MISMATCH, "weighted_pls (sample_weights)",
                           ctx, cfg, X, Y);
-        st = n4m_weighted_pls_fit(ctx, cfg, &Xv, &Yv, w, wn, &mr);
+        st = n4m_estimators_weighted_pls_fit(ctx, cfg, &Xv, &Yv, w, wn, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "robust_pls") == 0) {
         double k = get_scalar_field(params, "huber_k", 1.345);
         int it = get_int_field(params, "max_irls_iter", 20);
-        st = n4m_robust_pls_fit(ctx, cfg, &Xv, &Yv, k, it, &mr);
+        st = n4m_estimators_robust_pls_fit(ctx, cfg, &Xv, &Yv, k, it, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ridge_pls") == 0) {
         double l = get_scalar_field(params, "ridge_lambda", 1.0);
-        st = n4m_ridge_pls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
+        st = n4m_estimators_ridge_pls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "continuum_regression") == 0) {
         double t = get_scalar_field(params, "tau", 0.5);
-        st = n4m_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
+        st = n4m_estimators_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "recursive_pls") == 0) {
         int w = get_int_field(params, "window_size", 50);
-        st = n4m_recursive_pls_run(ctx, cfg, &Xv, &Yv, w, &mr);
+        st = n4m_estimators_recursive_pls_run(ctx, cfg, &Xv, &Yv, w, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"predictions", NULL};
             static const char *iv[] = {"in_window", NULL};
@@ -632,14 +632,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "n_pls (mode_j*mode_k must equal size(X,2))",
                           ctx, cfg, X, Y);
-        st = n4m_n_pls_fit(ctx, cfg, &Xv, mj, mk, &Yv, &mr);
+        st = n4m_estimators_n_pls_fit(ctx, cfg, &Xv, mj, mk, &Yv, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "kernel_pls") == 0) {
         int kt = get_int_field(params, "kernel_type", 1);
         double gamma = get_scalar_field(params, "gamma", 0.0);
         double coef0 = get_scalar_field(params, "coef0", 1.0);
         int degree = get_int_field(params, "degree", 3);
-        st = n4m_kernel_pls_fit(ctx, cfg, kt, gamma, coef0, degree,
+        st = n4m_estimators_kernel_pls_fit(ctx, cfg, kt, gamma, coef0, degree,
                                  &Xv, &Yv, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"predictions", "alpha", "y_mean", NULL};
@@ -650,7 +650,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int np = get_int_field(params, "n_predictive", 2);
         int nx = get_int_field(params, "n_x_orthogonal", 1);
         int ny2 = get_int_field(params, "n_y_orthogonal", 1);
-        st = n4m_o2pls_fit(ctx, cfg, &Xv, &Yv, np, nx, ny2, &mr);
+        st = n4m_estimators_o2pls_fit(ctx, cfg, &Xv, &Yv, np, nx, ny2, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions",
                                           "x_mean", "y_mean",
@@ -666,7 +666,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "sparse_pls_da (y_labels length)",
                           ctx, cfg, X, Y);
-        st = n4m_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
+        st = n4m_estimators_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
         mxFree(labels);
         if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions",
@@ -682,7 +682,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                           "group_sparse_pls (group_assignment length)",
                           ctx, cfg, X, Y);
         double gl = get_scalar_field(params, "group_lambda", 0.05);
-        st = n4m_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
+        st = n4m_estimators_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
         mxFree(groups);
         if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "n_groups", NULL};
@@ -691,7 +691,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "fused_sparse_pls") == 0) {
         double l1 = get_scalar_field(params, "l1_lambda", 0.05);
         double fl = get_scalar_field(params, "fusion_lambda", 0.05);
-        st = n4m_fused_sparse_pls_fit(ctx, cfg, &Xv, &Yv, l1, fl, &mr);
+        st = n4m_estimators_fused_sparse_pls_fit(ctx, cfg, &Xv, &Yv, l1, fl, &mr);
         if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "l1_lambda", "fusion_lambda", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
@@ -741,10 +741,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                               "so_pls requires n_components_per_block of length n_blocks",
                               ctx, cfg, X, Y);
             }
-            st = n4m_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
+            st = n4m_estimators_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
             mxFree(ncpb);
         } else if (strcmp(algo, "rosa") == 0) {
-            st = n4m_rosa_fit(ctx, cfg, blocks, bsn, &Yv, n_components, &mr);
+            st = n4m_estimators_rosa_fit(ctx, cfg, blocks, bsn, &Yv, n_components, &mr);
         } else {
             int njoint = get_int_field(params, "n_joint", 1);
             int upbn = 0;
@@ -757,7 +757,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                               "on_pls requires n_unique_per_block of length n_blocks",
                               ctx, cfg, X, Y);
             }
-            st = n4m_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
+            st = n4m_estimators_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
             mxFree(upb);
         }
         for (int b = 0; b < bsn; ++b) mxFree(block_bufs[b]);
@@ -776,7 +776,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "bagging_pls") == 0) {
         int ne = get_int_field(params, "n_estimators", 50);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        st = n4m_bagging_pls_fit(ctx, cfg, &Xv, &Yv, ne, seed, &mr);
+        st = n4m_ensemble_bagging_pls_fit(ctx, cfg, &Xv, &Yv, ne, seed, &mr);
         if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "n_estimators", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
@@ -784,7 +784,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "boosting_pls") == 0) {
         int ne = get_int_field(params, "n_estimators", 50);
         double lr = get_scalar_field(params, "learning_rate", 0.1);
-        st = n4m_boosting_pls_fit(ctx, cfg, &Xv, &Yv, ne, lr, &mr);
+        st = n4m_ensemble_boosting_pls_fit(ctx, cfg, &Xv, &Yv, ne, lr, &mr);
         if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "n_estimators", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
@@ -793,7 +793,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ne = get_int_field(params, "n_estimators", 50);
         int fps = get_int_field(params, "features_per_subspace", 10);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        st = n4m_random_subspace_pls_fit(ctx, cfg, &Xv, &Yv, ne, fps, seed, &mr);
+        st = n4m_ensemble_random_subspace_pls_fit(ctx, cfg, &Xv, &Yv, ne, fps, seed, &mr);
         if (st == N4M_OK) {
             static const char *sc[] = {"rmse", "n_estimators", "features_per_subspace", NULL};
             out = pack_result(mr, REG_DMAT, NULL, NULL, sc);
@@ -802,7 +802,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double ls = get_scalar_field(params, "length_scale", 1.0);
         double nl = get_scalar_field(params, "noise_level", 1e-4);
         uint64_t seed = get_u64_field(params, "seed", 0);
-        st = n4m_gpr_pls_fit(ctx, cfg, &Xv, &Yv, ls, nl, seed, &mr);
+        st = n4m_estimators_gpr_pls_fit(ctx, cfg, &Xv, &Yv, ls, nl, seed, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"rotation_r", "x_mean", "alpha", "L_lower",
                                           "training_scores", "predictions",
@@ -813,7 +813,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     } else if (strcmp(algo, "pls_glm") == 0) {
         int poisson = get_int_field(params, "poisson", 0);
-        st = n4m_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
+        st = n4m_estimators_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "intercept",
                                           "predictions", "x_mean", NULL};
@@ -826,7 +826,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         if (!labels || nl != n)
             throw_status(N4M_ERR_SHAPE_MISMATCH,
                           "pls_qda (y_labels length)", ctx, cfg, X, Y);
-        st = n4m_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
+        st = n4m_estimators_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
         mxFree(labels);
         if (st == N4M_OK) {
             static const char *dm[] = {"class_means", "class_covariances",
@@ -844,7 +844,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                           "pls_cox (survival_times / event_indicators length)",
                           ctx, cfg, X, Y);
         }
-        st = n4m_pls_cox_fit(ctx, cfg, &Xv, sts, sn, ev, en, &mr);
+        st = n4m_estimators_pls_cox_fit(ctx, cfg, &Xv, sts, sn, ev, en, &mr);
         mxFree(ev);
         if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "baseline_hazard",
@@ -863,7 +863,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         n4m_matrix_view_t XTv;
         n4m_matrix_view_init_rowmajor(&XTv, XT, xtr, xtc, N4M_DTYPE_F64);
         /* PDS: X = source, XTv = target */
-        st = n4m_pds_fit(ctx, &Xv, &XTv, hw, &mr);
+        st = n4m_domain_adaptation_pds_fit(ctx, &Xv, &XTv, hw, &mr);
         free(XT);
         if (st == N4M_OK) {
             static const char *dm[] = {"transformation", "predictions", NULL};
@@ -879,7 +879,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double *XT = colmajor_to_rowmajor_alloc(xt, &xtr, &xtc);
         n4m_matrix_view_t XTv;
         n4m_matrix_view_init_rowmajor(&XTv, XT, xtr, xtc, N4M_DTYPE_F64);
-        st = n4m_ds_fit(ctx, &Xv, &XTv, &mr);
+        st = n4m_domain_adaptation_ds_fit(ctx, &Xv, &XTv, &mr);
         free(XT);
         if (st == N4M_OK) {
             static const char *dm[] = {"transformation", "bias",
@@ -887,10 +887,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             out = pack_result(mr, dm, NULL, NULL, REG_SCALAR);
         }
     } else if (strcmp(algo, "mir_pls") == 0) {
-        st = n4m_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
+        st = n4m_estimators_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "missing_aware_nipals") == 0) {
-        st = n4m_missing_aware_nipals_fit(ctx, cfg, &Xv, &Yv, &mr);
+        st = n4m_estimators_missing_aware_nipals_fit(ctx, cfg, &Xv, &Yv, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "mb_pls") == 0) {
         int bsn = 0;
@@ -908,7 +908,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                           ctx, cfg, X, Y);
         }
         n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
-        st = n4m_mb_pls_fit(ctx, cfg, &Xv, &Yv, bs, bsn, &mr);
+        st = n4m_estimators_mb_pls_fit(ctx, cfg, &Xv, &Yv, bs, bsn, &mr);
         mxFree(bs);
         if (st == N4M_OK) {
             static const char *dm[] = {"coefficients", "predictions",
@@ -919,7 +919,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     } else if (strcmp(algo, "lw_pls") == 0) {
         int nn = get_int_field(params, "n_neighbors", 30);
-        st = n4m_lw_pls_fit(ctx, cfg, &Xv, &Yv, nn, &mr);
+        st = n4m_estimators_lw_pls_fit(ctx, cfg, &Xv, &Yv, nn, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"predictions", "neighbor_indices", NULL};
             static const char *i64[] = {"neighbor_indices_i64", NULL};
@@ -936,7 +936,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;
         }
-        st = n4m_pls_lda_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
+        st = n4m_estimators_pls_lda_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
         mxFree(labels);
         if (st == N4M_OK) {
             static const char *dm[] = {"decision_scores", NULL};
@@ -954,7 +954,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;
         }
-        st = n4m_pls_logistic_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
+        st = n4m_estimators_pls_logistic_fit(ctx, cfg, &Xv, labels, nl, nc, &mr);
         mxFree(labels);
         if (st == N4M_OK) {
             static const char *dm[] = {"decision_scores", "probabilities",
@@ -986,7 +986,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
                 &gate, (n4m_gating_mode_t)mode);
         }
         if (st == N4M_OK) {
-            st = n4m_aom_preprocess_fit(ctx, bank, gate, &Xv, &Yv, &mr);
+            st = n4m_model_selection_aom_preprocessing_fit(ctx, bank, gate, &Xv, &Yv, &mr);
         }
         if (gate) n4m_gating_strategy_destroy(gate);
         if (bank) n4m_operator_bank_destroy(bank);
@@ -1015,12 +1015,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
         if (st == N4M_OK && strcmp(algo, "aom_pls") == 0) {
             n4m_aom_global_result_t *aom = NULL;
-            st = n4m_aom_global_select(ctx, cfg, bank, &Xv, &Yv, plan,
+            st = n4m_model_selection_aom_pls_select(ctx, cfg, bank, &Xv, &Yv, plan,
                                         max_components, &aom);
             if (st == N4M_OK) out = pack_aom_global_result(aom);
         } else if (st == N4M_OK) {
             n4m_aom_per_component_result_t *pop = NULL;
-            st = n4m_aom_per_component_select(ctx, cfg, bank, &Xv, &Yv, plan,
+            st = n4m_model_selection_pop_pls_select(ctx, cfg, bank, &Xv, &Yv, plan,
                                                max_components, &pop);
             if (st == N4M_OK) out = pack_aom_per_component_result(pop);
         }
@@ -1033,7 +1033,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
      * ============================================================ */
     else if (strcmp(algo, "variable_select_rank") == 0) {
         /* Convenience branch: fit an internal SIMPLS model on the given
-         * X/Y with store_scores=1, then call n4m_variable_select_rank
+         * X/Y with store_scores=1, then call n4m_feature_selection_variable_select_rank
          * with the requested method (0=VIP, 1=coef magnitude, 2=SR) and
          * top_k. The model is destroyed before returning. */
         int method = get_int_field(params, "method", 0);
@@ -1042,7 +1042,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         n4m_model_t *model = NULL;
         st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
         if (st == N4M_OK) {
-            st = n4m_variable_select_rank(ctx, model, &Xv,
+            st = n4m_feature_selection_variable_select_rank(ctx, model, &Xv,
                                             (int32_t)method,
                                             (int32_t)top_k, &mr);
         }
@@ -1055,7 +1055,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         }
     } else if (strcmp(algo, "spa_select") == 0) {
         int top_k = get_int_field(params, "top_k", 10);
-        st = n4m_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
+        st = n4m_feature_selection_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
         if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
@@ -1066,7 +1066,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int mf = get_int_field(params, "min_features", 5);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "cars_select", ctx, cfg, X, Y);
-            st = n4m_cars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, &mr);
+            st = n4m_feature_selection_cars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1079,7 +1079,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int step = get_int_field(params, "step", 1);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "interval_select", ctx, cfg, X, Y);
-            st = n4m_interval_select(ctx, cfg, &Xv, &Yv, _plan, iw, step, &mr);
+            st = n4m_feature_selection_interval_select(ctx, cfg, &Xv, &Yv, _plan, iw, step, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1091,7 +1091,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int k = get_int_field(params, "top_k", 10);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "stability_select", ctx, cfg, X, Y);
-            st = n4m_stability_select(ctx, cfg, &Xv, &Yv, _plan, k, &mr);
+            st = n4m_feature_selection_stability_select(ctx, cfg, &Xv, &Yv, _plan, k, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1104,7 +1104,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "noise_seed", 0);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "uve_select", ctx, cfg, X, Y);
-            st = n4m_uve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, &mr);
+            st = n4m_feature_selection_uve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1121,7 +1121,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "seed", 0);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "random_frog_select", ctx, cfg, X, Y);
-            st = n4m_random_frog_select(ctx, cfg, &Xv, &Yv, _plan, it, isz, minz, maxz, tk, seed, &mr);
+            st = n4m_feature_selection_random_frog_select(ctx, cfg, &Xv, &Yv, _plan, it, isz, minz, maxz, tk, seed, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1136,7 +1136,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "seed", 0);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "scars_select", ctx, cfg, X, Y);
-            st = n4m_scars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, sf, seed, &mr);
+            st = n4m_feature_selection_scars_select(ctx, cfg, &Xv, &Yv, _plan, it, mf, sf, seed, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1153,7 +1153,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "seed", 0);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "ga_select", ctx, cfg, X, Y);
-            st = n4m_ga_select(ctx, cfg, &Xv, &Yv, _plan, g, psz, minf, maxf,
+            st = n4m_feature_selection_ga_select(ctx, cfg, &Xv, &Yv, _plan, g, psz, minf, maxf,
                             mr_rate, seed, &mr);
             n4m_validation_plan_destroy(_plan);
         }
@@ -1172,7 +1172,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "seed", 0);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "pso_select", ctx, cfg, X, Y);
-            st = n4m_pso_select(ctx, cfg, &Xv, &Yv, _plan, sw, it, w, c1, c2, vmax, seed, &mr);
+            st = n4m_feature_selection_pso_select(ctx, cfg, &Xv, &Yv, _plan, sw, it, w, c1, c2, vmax, seed, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1192,7 +1192,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "seed", 0);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "vissa_select", ctx, cfg, X, Y);
-            st = n4m_vissa_select(ctx, cfg, &Xv, &Yv, _plan, it, sub, rk, th, fp, seed, &mr);
+            st = n4m_feature_selection_vissa_select(ctx, cfg, &Xv, &Yv, _plan, it, sub, rk, th, fp, seed, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1211,7 +1211,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double sf = get_scalar_field(params, "shave_fraction", 0.1);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "shaving_select", ctx, cfg, X, Y);
-            st = n4m_shaving_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, sf, &mr);
+            st = n4m_feature_selection_shaving_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, sf, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1224,7 +1224,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int mf = get_int_field(params, "min_features", 5);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "bve_select", ctx, cfg, X, Y);
-            st = n4m_bve_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, &mr);
+            st = n4m_feature_selection_bve_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1242,7 +1242,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ms = get_int_field(params, "min_selected", 1);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "t2_select", ctx, cfg, X, Y);
-            st = n4m_t2_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
+            st = n4m_feature_selection_t2_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1253,7 +1253,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "wvc_select") == 0) {
         int tk = get_int_field(params, "top_k", 10);
         int norm = get_int_field(params, "normalize", 1);
-        st = n4m_wvc_select(ctx, &Xv, &Yv, n_components, tk, norm, &mr);
+        st = n4m_feature_selection_wvc_select(ctx, &Xv, &Yv, n_components, tk, norm, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"scores", NULL};
             static const char *i64[] = {"selected_indices", NULL};
@@ -1264,7 +1264,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double thr = get_scalar_field(params, "threshold", 0.0);
         double tf = get_scalar_field(params, "threshold_factor", 1.0);
         int ms = get_int_field(params, "min_selected", 1);
-        st = n4m_wvc_threshold_select(ctx, &Xv, &Yv, n_components, norm,
+        st = n4m_feature_selection_wvc_threshold_select(ctx, &Xv, &Yv, n_components, norm,
                                         thr, tf, ms, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"scores", NULL};
@@ -1278,7 +1278,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double vt = get_scalar_field(params, "vote_threshold", 0.5);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "emcuve_select", ctx, cfg, X, Y);
-            st = n4m_emcuve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, ne, vt, &mr);
+            st = n4m_feature_selection_emcuve_select(ctx, cfg, &Xv, &Yv, _plan, nf, seed, ne, vt, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1290,7 +1290,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int np = get_int_field(params, "n_permutations", 100);
         uint64_t seed = get_u64_field(params, "randomization_seed", 0);
         double a = get_scalar_field(params, "alpha", 0.05);
-        st = n4m_randomization_select(ctx, cfg, &Xv, &Yv, np, seed, a, &mr);
+        st = n4m_feature_selection_randomization_select(ctx, cfg, &Xv, &Yv, np, seed, a, &mr);
         if (st == N4M_OK) {
             static const char *i64[] = {"selected_indices", NULL};
             static const char *sc[] = {"best_rmse", NULL};
@@ -1301,7 +1301,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int mi = get_int_field(params, "min_intervals", 1);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "bipls_select", ctx, cfg, X, Y);
-            st = n4m_bipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, mi, &mr);
+            st = n4m_feature_selection_bipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, mi, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1314,7 +1314,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int cs = get_int_field(params, "combination_size", 2);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "sipls_select", ctx, cfg, X, Y);
-            st = n4m_sipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, cs, &mr);
+            st = n4m_feature_selection_sipls_select(ctx, cfg, &Xv, &Yv, _plan, iw, cs, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1328,7 +1328,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int rc = get_int_field(params, "remove_count", 1);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "rep_select", ctx, cfg, X, Y);
-            st = n4m_rep_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, rc, &mr);
+            st = n4m_feature_selection_rep_select(ctx, cfg, &Xv, &Yv, _plan, ns, mf, rc, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1343,7 +1343,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         double wf = get_scalar_field(params, "weight_floor", 1e-6);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "ipw_select", ctx, cfg, X, Y);
-            st = n4m_ipw_select(ctx, cfg, &Xv, &Yv, _plan, it, tk, damp, wf, &mr);
+            st = n4m_feature_selection_ipw_select(ctx, cfg, &Xv, &Yv, _plan, it, tk, damp, wf, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1361,7 +1361,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         int ms = get_int_field(params, "min_selected", 1);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "st_select", ctx, cfg, X, Y);
-            st = n4m_st_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
+            st = n4m_feature_selection_st_select(ctx, cfg, &Xv, &Yv, _plan, thr, nt, ms, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1374,7 +1374,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "seed", 0);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "iriv_select", ctx, cfg, X, Y);
-            st = n4m_iriv_select(ctx, cfg, &Xv, &Yv, _plan, mr_rounds, seed, &mr);
+            st = n4m_feature_selection_iriv_select(ctx, cfg, &Xv, &Yv, _plan, mr_rounds, seed, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1392,7 +1392,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         uint64_t seed = get_u64_field(params, "seed", 0);
         { n4m_validation_plan_t *_plan = make_default_plan(n, 3);
             if (!_plan) throw_status(N4M_ERR_OUT_OF_MEMORY, "irf_select", ctx, cfg, X, Y);
-            st = n4m_irf_select(ctx, cfg, &Xv, &Yv, _plan, it, ws, ii, tk, seed, &mr);
+            st = n4m_feature_selection_irf_select(ctx, cfg, &Xv, &Yv, _plan, it, ws, ii, tk, seed, &mr);
             n4m_validation_plan_destroy(_plan);
         }
         if (st == N4M_OK) {
@@ -1405,7 +1405,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     } else if (strcmp(algo, "vip_spa_select") == 0) {
         double vt = get_scalar_field(params, "vip_threshold", 0.3);
         int tk = get_int_field(params, "top_k", 10);
-        st = n4m_vip_spa_select(ctx, cfg, &Xv, &Yv, vt, tk, &mr);
+        st = n4m_feature_selection_vip_spa_select(ctx, cfg, &Xv, &Yv, vt, tk, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"vip_scores", "vip_mask",
                                           "selection_scores", NULL};
@@ -1420,7 +1420,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
      * ============================================================ */
     else if (strcmp(algo, "pls_diagnostics_compute") == 0) {
         /* Fit SIMPLS model on X/Y (store_scores=1) and call
-         * n4m_pls_diagnostics_compute. params.X_reference (optional)
+         * n4m_metrics_pls_diagnostics_compute. params.X_reference (optional)
          * overrides the reference distribution; when absent we pass
          * NULL and the core falls back to the stored training scores. */
         const mxArray *xr = get_array_field(params, "X_reference");
@@ -1447,7 +1447,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         n4m_model_t *model = NULL;
         st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
         if (st == N4M_OK) {
-            st = n4m_pls_diagnostics_compute(ctx, model, &Xv, xr_ptr, &mr);
+            st = n4m_metrics_pls_diagnostics_compute(ctx, model, &Xv, xr_ptr, &mr);
         }
         if (model) n4m_model_destroy(model);
         free(XR);
@@ -1482,7 +1482,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         n4m_model_t *model = NULL;
         st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
         if (st == N4M_OK) {
-            st = n4m_pls_monitoring_run(ctx, model, &Xv, &XMv, alpha, &mr);
+            st = n4m_metrics_pls_monitoring_run(ctx, model, &Xv, &XMv, alpha, &mr);
         }
         if (model) n4m_model_destroy(model);
         free(XM);
@@ -1496,7 +1496,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             out = pack_result(mr, dm, iv, NULL, sc);
         }
     } else if (strcmp(algo, "approximate_press_compute") == 0) {
-        st = n4m_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
+        st = n4m_metrics_approximate_press_compute(ctx, cfg, &Xv, &Yv, n_components, &mr);
         if (st == N4M_OK) {
             static const char *dm[] = {"press_per_component",
                                           "rmse_per_component", NULL};
@@ -1514,7 +1514,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         /* Convert to row-major. */
         int rmr, rmc;
         double *fr_rm = colmajor_to_rowmajor_alloc(fold_rmse, &rmr, &rmc);
-        st = n4m_one_se_rule_compute(ctx, fr_rm, max_k, n_folds, &mr);
+        st = n4m_metrics_one_se_rule_compute(ctx, fr_rm, max_k, n_folds, &mr);
         free(fr_rm);
         if (st == N4M_OK) {
             static const char *dm[] = {"mean_rmse_per_component", NULL};

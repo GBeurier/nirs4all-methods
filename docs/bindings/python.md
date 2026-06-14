@@ -1,38 +1,42 @@
 # Python binding
 
-The current package ships a ctypes-only wrapper that exposes ABI introspection and the
-context / config lifecycles. See `bindings/python/README.md` for installation and loader rules.
+The `n4m` package is a ctypes wrapper over **libn4m (ABI 2.0)**. It exposes ABI
+introspection, the context / config lifecycles, and the full method surface
+through role subpackages that mirror the `n4m.<role>` namespace. See
+`bindings/python/README.md` for installation and loader rules, and the
+[ABI 2.0 migration guide](../MIGRATION_ABI2.md) for the old→new mapping.
 
 ## Hello-version
 
 ```python
-import pls4all
+import n4m
 
-print(pls4all.version())          # "0.58.0+abi.1.0.0"
-print(pls4all.abi_version())      # (1, 0, 0)
-print(pls4all.build_info())       # ""
+print(n4m.abi_version())          # (2, 0, 0)
 
-with pls4all.Context() as ctx:
+with n4m.Context() as ctx:
     ctx.seed = 42
     assert ctx.seed == 42
-    try:
-        ctx.backend = pls4all.Backend.CUDA
-    except pls4all.Pls4allError as exc:
-        print(exc.status_name)    # "backend unavailable"
-        print(exc.last_error)     # "backend 5 is not compiled into this build of libn4m"
-
-with pls4all.Config() as cfg:
-    cfg.algorithm = pls4all.Algorithm.PCR
-    cfg.solver = pls4all.Solver.SVD
-    cfg.deflation = pls4all.Deflation.REGRESSION
-    assert cfg.algorithm == pls4all.Algorithm.PCR
-    assert cfg.solver == pls4all.Solver.SVD
-    assert cfg.deflation == pls4all.Deflation.REGRESSION
-    cfg.algorithm = pls4all.Algorithm.PLS_SVD
-    cfg.deflation = pls4all.Deflation.CANONICAL
-    assert cfg.algorithm == pls4all.Algorithm.PLS_SVD
-    assert cfg.deflation == pls4all.Deflation.CANONICAL
 ```
 
-Phase 2 expands the surface to a full sklearn-compatible estimator with
-zero-copy NumPy `n4m_matrix_view_t` round-trips.
+## Role packages (ABI 2.0)
+
+`n4m.__init__` exposes only metadata/helpers and the role subpackages. Public
+classes use plain role names (not `Native*`):
+
+```python
+from n4m.estimators.regression.regularized import Ridge, RidgePLS
+from n4m.estimators.regression.latent import PLS, PCR
+from n4m.transform.scatter import SNV, MSC
+from n4m.transform.smoothing import SavitzkyGolay
+from n4m.feature_selection.wrapper import CARS
+from n4m.model_selection.splitters import KennardStone
+from n4m.domain_adaptation.orthogonalization import EPO
+from n4m.augmentation.noise import GaussianAdditiveNoise
+from n4m.ensemble import AOMRidgeBlender
+from n4m.compose.aom_superblock import AOMRidgePLSSuperblock
+from n4m.decomposition import FlexiblePCA
+```
+
+The estimators/transformers are sklearn-compatible with zero-copy NumPy
+`n4m_matrix_view_t` round-trips. The slim `pls4all` package keeps its name (the
+subset contract) but calls the same ABI-2 symbols under the hood.

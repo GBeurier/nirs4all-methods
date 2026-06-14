@@ -1,6 +1,6 @@
 # `pp_log` — Log Transform
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.LogTransform` · _C ABI_: `n4m_pp_log_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.LogTransform` · _C ABI_: `n4m_transform_log_transform_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Element-wise logarithm with optional fit-time auto-offset.
 
 ### Implementation
 
-C ABI `n4m_pp_log_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LogTransform`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_log_transform_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LogTransform`. The same numerical kernel backs every language binding.
 
 ### Usage
 

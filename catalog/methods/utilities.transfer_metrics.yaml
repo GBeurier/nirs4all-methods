@@ -7,11 +7,11 @@ category: "utilities"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_transfer_metrics_compute"
+  - "n4m_domain_adaptation_transfer_metrics_compute"
 tu:
   - "cpp/src/core/utilities/transfer_metrics.c"
 headers:
-  - "cpp/include/n4m/utilities.h"
+  - "cpp/include/n4m/domain_adaptation.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_domain_adaptation_transfer_metrics_compute"
+fq_name: "n4m.domain_adaptation.metrics.transfer_metrics"
+leaf: "transfer_metrics"
+legacy_ids:
+  - "utilities.transfer_metrics"
+namespace: "domain_adaptation.metrics"

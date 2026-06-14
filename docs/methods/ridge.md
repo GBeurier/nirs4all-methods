@@ -1,6 +1,6 @@
 # `ridge` - direct closed-form Ridge regression
 
-_Group_: **Regularised** · _ABI_: `n4m_ridge_fit`
+_Group_: **Regularised** · _ABI_: `n4m_estimators_ridge_fit`
 
 ## Description
 
@@ -41,6 +41,6 @@ y_hat = model.predict(X_test)
 ## C ABI
 
 ```c
-n4m_ridge_fit(ctx, cfg, &x_view, &y_view,
+n4m_estimators_ridge_fit(ctx, cfg, &x_view, &y_view,
               &alpha, 1, &result);
 ```

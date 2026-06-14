@@ -11,7 +11,9 @@ import numpy as np
 import pytest
 
 import n4m
-from n4m.sklearn import (
+from n4m._impl import native
+import n4m._impl as native_sklearn
+from n4m._impl import (
     NativeAOMChainRidgePLSRegressor,
     NativeAOMChainSweepRegressor,
     NativeAOMFixedCandidateRegressor,
@@ -78,14 +80,14 @@ def test_pls_cross_validate_reference_matches_pls_sweep():
     folds = np.arange(X.shape[0], dtype=np.int32) % 3
     components = np.asarray([1, 2, 3], dtype=np.int32)
 
-    got = n4m.pls_cross_validate(
+    got = native.pls_cross_validate(
         X,
         y,
         cv=3,
         fold_ids=folds,
         component_grid=components,
     )
-    expected = n4m.sweep_run(
+    expected = native.sweep_run(
         X,
         y,
         cv=3,
@@ -129,7 +131,7 @@ def test_pls_moment_fallback_builds_fold_designs_on_demand():
     components = np.asarray([1, 2], dtype=np.int32)
 
     for score_only in (True, False):
-        got = n4m.sweep_run(
+        got = native.sweep_run(
             X,
             y,
             cv=2,
@@ -145,7 +147,7 @@ def test_pls_moment_fallback_builds_fold_designs_on_demand():
         assert got["n_pls_moment_cv_fits"] > 0
         assert got["n_pls_materialized_cv_fits"] == 0
 
-    ref = n4m.pls_cross_validate(
+    ref = native.pls_cross_validate(
         X,
         y,
         cv=2,
@@ -171,7 +173,7 @@ def test_aom_pls_moment_batch_degenerate_components_do_not_abort_screen():
     folds = np.arange(n, dtype=np.int32) % 2
     chains = [["identity"], ["identity"]]
 
-    got = n4m.aom_chain_sweep_run(
+    got = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -203,7 +205,7 @@ def test_aom_pls_force_moments_bypasses_cpu_wide_materialization_heuristic():
     y = 0.7 * X[:, 0] - 0.2 * X[:, 11] + 0.03 * rng.standard_normal(X.shape[0])
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
 
-    got = n4m.aom_chain_sweep_run(
+    got = native.aom_chain_sweep_run(
         X,
         y,
         [[("identity", ())]],
@@ -235,7 +237,7 @@ def test_aom_ridge_force_moments_bypasses_cpu_wide_materialization_heuristic():
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
     lambdas = [0.1, 1.0]
 
-    forced = n4m.aom_chain_sweep_run(
+    forced = native.aom_chain_sweep_run(
         X,
         y,
         [[("identity", ())]],
@@ -248,7 +250,7 @@ def test_aom_ridge_force_moments_bypasses_cpu_wide_materialization_heuristic():
         moment_policy="force_moments",
         score_only=True,
     )
-    materialized = n4m.aom_chain_sweep_run(
+    materialized = native.aom_chain_sweep_run(
         X,
         y,
         [[("identity", ())]],
@@ -270,7 +272,7 @@ def test_aom_ridge_force_moments_bypasses_cpu_wide_materialization_heuristic():
     assert forced["n_ridge_moment_final_fits"] == 0.0
     assert np.all(np.isfinite(forced["candidate_scores"][:, 4]))
     assert "materialized" not in {
-        row["score_route"] for row in n4m.aom_candidate_table(forced)
+        row["score_route"] for row in native.aom_candidate_table(forced)
     }
     np.testing.assert_allclose(
         forced["candidate_scores"][:, 4],
@@ -289,7 +291,7 @@ def test_aom_ridge_force_moments_extends_wide_banded_cap():
     chain = [[("finite_difference", (1,))]]
     lambdas = [0.1, 1.0]
 
-    forced = n4m.aom_chain_sweep_run(
+    forced = native.aom_chain_sweep_run(
         X,
         y,
         chain,
@@ -302,7 +304,7 @@ def test_aom_ridge_force_moments_extends_wide_banded_cap():
         moment_policy="force_moments",
         score_only=True,
     )
-    materialized = n4m.aom_chain_sweep_run(
+    materialized = native.aom_chain_sweep_run(
         X,
         y,
         chain,
@@ -315,7 +317,7 @@ def test_aom_ridge_force_moments_extends_wide_banded_cap():
         moment_policy="materialized",
         score_only=True,
     )
-    auto = n4m.aom_chain_sweep_run(
+    auto = native.aom_chain_sweep_run(
         X,
         y,
         chain,
@@ -328,7 +330,7 @@ def test_aom_ridge_force_moments_extends_wide_banded_cap():
         moment_policy="auto",
         score_only=True,
     )
-    full = n4m.aom_chain_sweep_run(
+    full = native.aom_chain_sweep_run(
         X,
         y,
         chain,
@@ -398,9 +400,9 @@ def _assert_aom_route_partitions(res):
 
 
 def test_moment_screen_backend_recommendation_live_crossover_policy():
-    assert hasattr(n4m, "moment_screen_backend_recommendation")
+    assert hasattr(native, "moment_screen_backend_recommendation")
 
-    small = n4m.moment_screen_backend_recommendation(
+    small = native.moment_screen_backend_recommendation(
         260,
         48,
         head="pls",
@@ -411,7 +413,7 @@ def test_moment_screen_backend_recommendation_live_crossover_policy():
     assert "dataset" not in small["policy_inputs"]
     assert "min_cuda_product" in small["policy_inputs"]
 
-    medium_ridge = n4m.moment_screen_backend_recommendation(
+    medium_ridge = native.moment_screen_backend_recommendation(
         260,
         256,
         head="ridge",
@@ -421,7 +423,7 @@ def test_moment_screen_backend_recommendation_live_crossover_policy():
     assert medium_ridge["reason"] == "below_live_crossover"
     assert medium_ridge["work_product"] == 260 * 256
 
-    wide_ridge = n4m.moment_screen_backend_recommendation(
+    wide_ridge = native.moment_screen_backend_recommendation(
         512,
         512,
         head="ridge",
@@ -432,7 +434,7 @@ def test_moment_screen_backend_recommendation_live_crossover_policy():
     assert wide_ridge["work_product"] == 512 * 512
     assert wide_ridge["uses_cuda_pls_device_component_loop"] is False
 
-    wide_pls = n4m.moment_screen_backend_recommendation(
+    wide_pls = native.moment_screen_backend_recommendation(
         256,
         1024,
         head="pls",
@@ -446,7 +448,7 @@ def test_moment_screen_backend_recommendation_live_crossover_policy():
     assert wide_pls["uses_cuda_pls_many_batched"] is False
     assert wide_pls["cuda_pls_many_batched"] is None
 
-    medium_pls_forced = n4m.moment_screen_backend_recommendation(
+    medium_pls_forced = native.moment_screen_backend_recommendation(
         260,
         256,
         head="pls",
@@ -461,7 +463,7 @@ def test_moment_screen_backend_recommendation_live_crossover_policy():
     assert medium_pls_forced["uses_cuda_pls_many_batched"] is True
     assert medium_pls_forced["cuda_pls_many_batched"] is True
 
-    unavailable = n4m.moment_screen_backend_recommendation(
+    unavailable = native.moment_screen_backend_recommendation(
         512,
         512,
         head=1,
@@ -474,56 +476,56 @@ def test_moment_screen_backend_recommendation_live_crossover_policy():
 
 
 def test_moment_facade_aliases_native_surface_without_shadowing_moments():
-    import n4m.moment as moment
+    from n4m._impl import moment_facade as moment
 
-    assert n4m.moment is moment
-    assert callable(n4m.moments)
-    assert moment.moments is n4m.moments
-    assert moment.sweep_run is n4m.sweep_run
-    assert moment.pls_cross_validate is n4m.pls_cross_validate
-    assert moment.aom_preprocess is n4m.aom_preprocess
-    assert moment.aom_global_select is n4m.aom_global_select
-    assert moment.aom_per_component_select is n4m.aom_per_component_select
-    assert moment.aom_sweep_run is n4m.aom_sweep_run
-    assert moment.aom_chain_sweep_run is n4m.aom_chain_sweep_run
+    assert n4m._impl.moment_facade is moment
+    assert callable(native.moments)
+    assert moment.moments is native.moments
+    assert moment.sweep_run is native.sweep_run
+    assert moment.pls_cross_validate is native.pls_cross_validate
+    assert moment.aom_preprocess is native.aom_preprocess
+    assert moment.aom_global_select is native.aom_global_select
+    assert moment.aom_per_component_select is native.aom_per_component_select
+    assert moment.aom_sweep_run is native.aom_sweep_run
+    assert moment.aom_chain_sweep_run is native.aom_chain_sweep_run
     assert (
         moment.aom_moment_screen_refit_campaign
-        is n4m.aom_moment_screen_refit_campaign
+        is native.aom_moment_screen_refit_campaign
     )
-    assert moment.aom_screen_refit_candidate_pool is n4m.aom_screen_refit_candidate_pool
-    assert moment.aom_refit_execution_plan is n4m.aom_refit_execution_plan
-    assert moment.aom_refit_candidates is n4m.aom_refit_candidates
-    assert moment.aom_chain_fixed_fit_run is n4m.aom_chain_fixed_fit_run
-    assert moment.aom_robust_hpo is n4m.aom_robust_hpo
-    assert moment.aom_ridge_blender is n4m.aom_ridge_blender
-    assert moment.aom_operator_pls_stack is n4m.aom_operator_pls_stack
-    assert moment.build_aom_strict_chain_grid is n4m.build_aom_strict_chain_grid
-    assert moment.iter_aom_strict_chain_grid is n4m.iter_aom_strict_chain_grid
-    assert moment.decode_aom_chains is n4m.decode_aom_chains
-    assert moment.aom_candidate_table is n4m.aom_candidate_table
-    assert moment.aom_evaluate_candidates is n4m.aom_evaluate_candidates
-    assert moment.aom_candidate_operator_summary is n4m.aom_candidate_operator_summary
+    assert moment.aom_screen_refit_candidate_pool is native.aom_screen_refit_candidate_pool
+    assert moment.aom_refit_execution_plan is native.aom_refit_execution_plan
+    assert moment.aom_refit_candidates is native.aom_refit_candidates
+    assert moment.aom_chain_fixed_fit_run is native.aom_chain_fixed_fit_run
+    assert moment.aom_robust_hpo is native.aom_robust_hpo
+    assert moment.aom_ridge_blender is native.aom_ridge_blender
+    assert moment.aom_operator_pls_stack is native.aom_operator_pls_stack
+    assert moment.build_aom_strict_chain_grid is native.build_aom_strict_chain_grid
+    assert moment.iter_aom_strict_chain_grid is native.iter_aom_strict_chain_grid
+    assert moment.decode_aom_chains is native.decode_aom_chains
+    assert moment.aom_candidate_table is native.aom_candidate_table
+    assert moment.aom_evaluate_candidates is native.aom_evaluate_candidates
+    assert moment.aom_candidate_operator_summary is native.aom_candidate_operator_summary
     assert (
         moment.aom_candidate_preprocessing_impact
-        is n4m.aom_candidate_preprocessing_impact
+        is native.aom_candidate_preprocessing_impact
     )
-    assert moment.aom_candidate_route_summary is n4m.aom_candidate_route_summary
-    assert moment.aom_candidate_rank_diagnostics is n4m.aom_candidate_rank_diagnostics
-    assert moment.aom_candidate_report_records is n4m.aom_candidate_report_records
-    assert moment.aom_save_candidate_report is n4m.aom_save_candidate_report
-    assert moment.aom_load_candidate_report is n4m.aom_load_candidate_report
-    assert moment.ridge is n4m.ridge
-    assert moment.pls is n4m.pls
-    assert moment.pcr is n4m.pcr
-    assert moment.cppls is n4m.cppls
-    assert moment.weighted_pls is n4m.weighted_pls
-    assert moment.robust_pls is n4m.robust_pls
-    assert moment.ridge_pls is n4m.ridge_pls
-    assert moment.continuum_regression is n4m.continuum_regression
-    assert moment.ecr is n4m.ecr
+    assert moment.aom_candidate_route_summary is native.aom_candidate_route_summary
+    assert moment.aom_candidate_rank_diagnostics is native.aom_candidate_rank_diagnostics
+    assert moment.aom_candidate_report_records is native.aom_candidate_report_records
+    assert moment.aom_save_candidate_report is native.aom_save_candidate_report
+    assert moment.aom_load_candidate_report is native.aom_load_candidate_report
+    assert moment.ridge is native.ridge
+    assert moment.pls is native.pls
+    assert moment.pcr is native.pcr
+    assert moment.cppls is native.cppls
+    assert moment.weighted_pls is native.weighted_pls
+    assert moment.robust_pls is native.robust_pls
+    assert moment.ridge_pls is native.ridge_pls
+    assert moment.continuum_regression is native.continuum_regression
+    assert moment.ecr is native.ecr
     assert (
         moment.moment_screen_backend_recommendation
-        is n4m.moment_screen_backend_recommendation
+        is native.moment_screen_backend_recommendation
     )
     assert moment.NativeMomentSweepRegressor is NativeMomentSweepRegressor
     assert moment.NativeAOMChainSweepRegressor is NativeAOMChainSweepRegressor
@@ -567,13 +569,13 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
     )
     assert moment.NativeECRRegressor is NativeECRRegressor
     assert moment.NativeMomentStackRegressor is NativeMomentStackRegressor
-    assert n4m.NativeRidgeRegressor is NativeRidgeRegressor
-    assert n4m.NativePCRRegressor is NativePCRRegressor
-    assert n4m.NativeWeightedPLSRegressor is NativeWeightedPLSRegressor
-    assert n4m.NativeRobustPLSRegressor is NativeRobustPLSRegressor
-    assert n4m.NativeRidgePLSRegressor is NativeRidgePLSRegressor
-    assert n4m.NativeMomentStackRegressor is NativeMomentStackRegressor
-    assert moment.moment_stack is n4m.moment_stack
+    assert native_sklearn.NativeRidgeRegressor is NativeRidgeRegressor
+    assert native_sklearn.NativePCRRegressor is NativePCRRegressor
+    assert native_sklearn.NativeWeightedPLSRegressor is NativeWeightedPLSRegressor
+    assert native_sklearn.NativeRobustPLSRegressor is NativeRobustPLSRegressor
+    assert native_sklearn.NativeRidgePLSRegressor is NativeRidgePLSRegressor
+    assert native_sklearn.NativeMomentStackRegressor is NativeMomentStackRegressor
+    assert moment.moment_stack is native.moment_stack
     inventory = moment.available_methods()
     inventory_names = {row["name"] for row in inventory}
     assert {
@@ -890,26 +892,26 @@ def test_moment_facade_aliases_native_surface_without_shadowing_moments():
 
 def test_moment_screen_backend_recommendation_rejects_bad_inputs():
     with pytest.raises(ValueError, match="head"):
-        n4m.moment_screen_backend_recommendation(260, 256, head="elastic")
+        native.moment_screen_backend_recommendation(260, 256, head="elastic")
     with pytest.raises(ValueError, match="n_samples"):
-        n4m.moment_screen_backend_recommendation(1, 256)
+        native.moment_screen_backend_recommendation(1, 256)
     with pytest.raises(ValueError, match="n_features"):
-        n4m.moment_screen_backend_recommendation(260, 0)
+        native.moment_screen_backend_recommendation(260, 0)
 
 
 def test_native_moment_model_wrappers_smoke():
     X, y = _dataset()
 
-    _assert_method_result(n4m.ridge(X, y, alpha=0.1), X.shape[0])
-    pls = n4m.pls(X, y, n_components=3, cv=4, scale_x=False)
+    _assert_method_result(native.ridge(X, y, alpha=0.1), X.shape[0])
+    pls = native.pls(X, y, n_components=3, cv=4, scale_x=False)
     _assert_method_result(pls, X.shape[0])
     assert int(pls["selected_head_id"]) == 1
     assert pls["selected_param"] == pytest.approx(3.0)
     assert int(pls["n_pls_moment_cv_fits"]) > 0
-    _assert_method_result(n4m.pcr(X, y, n_components=3), X.shape[0])
-    _assert_method_result(n4m.cppls(X, y, gamma=0.4, n_components=3), X.shape[0])
+    _assert_method_result(native.pcr(X, y, n_components=3), X.shape[0])
+    _assert_method_result(native.cppls(X, y, gamma=0.4, n_components=3), X.shape[0])
     weights = np.linspace(0.5, 1.5, X.shape[0], dtype=np.float64)
-    weighted = n4m.weighted_pls(
+    weighted = native.weighted_pls(
         X,
         y,
         sample_weights=weights,
@@ -918,7 +920,7 @@ def test_native_moment_model_wrappers_smoke():
     )
     _assert_method_result(weighted, X.shape[0])
     assert "final_weights" not in weighted
-    robust = n4m.robust_pls(
+    robust = native.robust_pls(
         X,
         y,
         huber_k=1.345,
@@ -929,7 +931,7 @@ def test_native_moment_model_wrappers_smoke():
     _assert_method_result(robust, X.shape[0])
     assert robust["huber_k"] == pytest.approx(1.345)
     assert "final_weights" not in robust
-    ridge_pls = n4m.ridge_pls(
+    ridge_pls = native.ridge_pls(
         X,
         y,
         ridge_lambda=0.1,
@@ -939,22 +941,22 @@ def test_native_moment_model_wrappers_smoke():
     _assert_method_result(ridge_pls, X.shape[0])
     assert ridge_pls["ridge_lambda"] == pytest.approx(0.1)
     _assert_method_result(
-        n4m.continuum_regression(X, y, tau=0.25, n_components=3),
+        native.continuum_regression(X, y, tau=0.25, n_components=3),
         X.shape[0],
     )
-    _assert_method_result(n4m.ecr(X, y, alpha=0.6, n_components=3), X.shape[0])
+    _assert_method_result(native.ecr(X, y, alpha=0.6, n_components=3), X.shape[0])
 
 
 def test_direct_weighted_robust_and_ridge_pls_validate_inputs():
     X, y = _dataset()
     with pytest.raises(ValueError, match="sample_weights length"):
-        n4m.weighted_pls(X, y, sample_weights=np.ones(X.shape[0] - 1))
+        native.weighted_pls(X, y, sample_weights=np.ones(X.shape[0] - 1))
     with pytest.raises(ValueError, match="strictly positive"):
-        n4m.weighted_pls(X, y, sample_weights=np.zeros(X.shape[0]))
+        native.weighted_pls(X, y, sample_weights=np.zeros(X.shape[0]))
     with pytest.raises(ValueError, match="huber_k"):
-        n4m.robust_pls(X, y, huber_k=0.0)
+        native.robust_pls(X, y, huber_k=0.0)
     with pytest.raises(ValueError, match="ridge_lambda"):
-        n4m.ridge_pls(X, y, ridge_lambda=-1.0)
+        native.ridge_pls(X, y, ridge_lambda=-1.0)
 
 
 @pytest.mark.parametrize(
@@ -962,31 +964,31 @@ def test_direct_weighted_robust_and_ridge_pls_validate_inputs():
     [
         (
             NativeRidgeRegressor,
-            n4m.ridge,
+            native.ridge,
             {"alpha": 0.1, "scale_x": False},
             "ridge",
         ),
         (
             NativePLSRegressor,
-            n4m.pls,
+            native.pls,
             {"n_components": 3, "cv": 4, "scale_x": False},
             "pls",
         ),
         (
             NativePCRRegressor,
-            n4m.pcr,
+            native.pcr,
             {"n_components": 3, "scale_x": False},
             "pcr",
         ),
         (
             NativeCPPLSRegressor,
-            n4m.cppls,
+            native.cppls,
             {"gamma": 0.4, "n_components": 3},
             "cppls",
         ),
         (
             NativeWeightedPLSRegressor,
-            n4m.weighted_pls,
+            native.weighted_pls,
             {
                 "sample_weights": np.linspace(0.5, 1.5, 28),
                 "n_components": 3,
@@ -996,7 +998,7 @@ def test_direct_weighted_robust_and_ridge_pls_validate_inputs():
         ),
         (
             NativeRobustPLSRegressor,
-            n4m.robust_pls,
+            native.robust_pls,
             {
                 "huber_k": 1.345,
                 "max_irls_iter": 5,
@@ -1007,19 +1009,19 @@ def test_direct_weighted_robust_and_ridge_pls_validate_inputs():
         ),
         (
             NativeRidgePLSRegressor,
-            n4m.ridge_pls,
+            native.ridge_pls,
             {"ridge_lambda": 0.1, "n_components": 3, "scale_x": False},
             "ridge_pls",
         ),
         (
             NativeContinuumRegressionRegressor,
-            n4m.continuum_regression,
+            native.continuum_regression,
             {"tau": 0.25, "n_components": 3},
             "continuum_regression",
         ),
         (
             NativeECRRegressor,
-            n4m.ecr,
+            native.ecr,
             {"alpha": 0.6, "n_components": 3},
             "ecr",
         ),
@@ -1141,7 +1143,7 @@ def test_native_moment_stack_regressor_smoke():
     assert diagnostics["n_base_oof_pls_moment_cv_fits"] >= 0
     assert diagnostics["n_base_final_pls_moment_cv_fits"] >= 0
 
-    factory_model = n4m.moment_stack(
+    factory_model = native.moment_stack(
         X,
         y,
         base_models=("ridge", "pcr"),
@@ -1162,7 +1164,7 @@ def test_native_aom_pls_and_pop_pls_selector_wrappers_smoke():
         ("finite_difference", [1]),
     ]
 
-    aom = n4m.aom_pls(
+    aom = native.aom_pls(
         X,
         y,
         max_components=2,
@@ -1190,7 +1192,7 @@ def test_native_aom_pls_and_pop_pls_selector_wrappers_smoke():
         atol=1e-10,
     )
 
-    pop = n4m.aom_per_component_select(
+    pop = native.aom_per_component_select(
         X,
         y,
         max_components=2,
@@ -1218,7 +1220,7 @@ def test_native_aom_pls_and_pop_pls_selector_wrappers_smoke():
         atol=1e-10,
     )
 
-    alias = n4m.pop_pls(
+    alias = native.pop_pls(
         X,
         y,
         max_components=1,
@@ -1231,12 +1233,12 @@ def test_native_aom_pls_and_pop_pls_selector_wrappers_smoke():
 
 
 def test_native_aom_preprocess_identity_smoke():
-    import n4m.aom as aom
+    from n4m._impl import aom_facade as aom
 
     X, y = _aom_dataset()
-    res = n4m.aom_preprocess(X, y, operators=["identity"], gating_mode="soft")
+    res = native.aom_preprocess(X, y, operators=["identity"], gating_mode="soft")
 
-    assert aom.aom_preprocess is n4m.aom_preprocess
+    assert aom.aom_preprocess is native.aom_preprocess
     assert res["transformed"].shape == X.shape
     assert res["operator_outputs"].shape == (1, X.size)
     assert res["weights"].shape == (1, 1)
@@ -1250,7 +1252,7 @@ def test_native_aom_preprocess_identity_smoke():
     np.testing.assert_allclose(res["operator_outputs"].reshape(X.shape), X)
     np.testing.assert_allclose(res["weights"], [[1.0]])
 
-    hard = n4m.aom_preprocess(X, operators=["identity"], gating_mode="hard")
+    hard = native.aom_preprocess(X, operators=["identity"], gating_mode="hard")
     np.testing.assert_allclose(hard["transformed"], X)
     assert hard["mode"] == 0.0
 
@@ -1270,7 +1272,7 @@ def test_native_aom_preprocess_direct_strict_linear_bank():
     ]
     expected_kinds = [0, 7, 8, 9, 10, 15, 18, 16, 17]
 
-    soft = n4m.aom_preprocess(X, y, operators=operators, gating_mode="soft")
+    soft = native.aom_preprocess(X, y, operators=operators, gating_mode="soft")
     outputs = np.asarray(soft["operator_outputs"]).reshape(len(operators), *X.shape)
 
     assert soft["transformed"].shape == X.shape
@@ -1285,7 +1287,7 @@ def test_native_aom_preprocess_direct_strict_linear_bank():
         soft["transformed"], np.mean(outputs, axis=0), rtol=1e-12, atol=1e-12
     )
 
-    hard = n4m.aom_preprocess(X, y, operators=operators, gating_mode="hard")
+    hard = native.aom_preprocess(X, y, operators=operators, gating_mode="hard")
     hard_outputs = np.asarray(hard["operator_outputs"]).reshape(len(operators), *X.shape)
     np.testing.assert_allclose(
         hard["weights"], [[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]
@@ -1299,8 +1301,8 @@ def test_native_moment_model_wrappers_support_multi_output_y():
     X, y = _dataset()
     Y = np.column_stack([y, 0.5 * y + 0.1])
 
-    ridge_res = n4m.ridge(X, Y, alpha=0.1)
-    continuum_res = n4m.continuum_regression(X, Y, tau=0.25, n_components=3)
+    ridge_res = native.ridge(X, Y, alpha=0.1)
+    continuum_res = native.continuum_regression(X, Y, tau=0.25, n_components=3)
 
     _assert_method_result(ridge_res, X.shape[0], n_targets=2)
     _assert_method_result(continuum_res, X.shape[0], n_targets=2)
@@ -1341,8 +1343,8 @@ def test_native_moments_compute_and_subset():
     Y = np.column_stack([y, 0.5 * y + 0.1])
     idx = np.array([0, 3, 4, 9, 10], dtype=np.int64)
 
-    all_moments = n4m.moments(X, Y)
-    subset_moments = n4m.moments(X, Y, row_indices=idx)
+    all_moments = native.moments(X, Y)
+    subset_moments = native.moments(X, Y, row_indices=idx)
 
     _assert_moments_close(all_moments, _expected_moments(X, Y), X.shape[0], X.shape[1], 2)
     _assert_moments_close(
@@ -1360,7 +1362,7 @@ def test_native_moments_train_from_heldout_recenters_after_subtract():
     keep = np.ones(X.shape[0], dtype=bool)
     keep[heldout] = False
 
-    train_moments = n4m.moments_train_from_heldout(X, y, heldout)
+    train_moments = native.moments_train_from_heldout(X, y, heldout)
 
     _assert_moments_close(
         train_moments,
@@ -1373,7 +1375,7 @@ def test_native_moments_train_from_heldout_recenters_after_subtract():
 
 def test_native_sweep_run_ridge_smoke_and_oof_score():
     X, y = _dataset()
-    res = n4m.sweep_run(
+    res = native.sweep_run(
         X,
         y,
         cv=4,
@@ -1421,7 +1423,7 @@ def test_native_sweep_run_ridge_moment_scores_match_numpy_path():
             count += int(Y[test].size)
         expected.append(np.sqrt(sse / count))
 
-    res = n4m.sweep_run(
+    res = native.sweep_run(
         X,
         y,
         cv=4,
@@ -1440,7 +1442,7 @@ def test_native_sweep_run_ridge_moment_scores_match_numpy_path():
         rtol=1e-8,
         atol=1e-10,
     )
-    single = n4m.sweep_run(
+    single = native.sweep_run(
         X,
         y,
         cv=4,
@@ -1478,7 +1480,7 @@ def test_native_sweep_run_blas_sse_scores_match_scalar_build():
     code = r"""
 import json
 import numpy as np
-import n4m
+from n4m._impl import native as n4m
 
 rng = np.random.default_rng(20260606)
 X = rng.standard_normal((200, 80))
@@ -1551,7 +1553,7 @@ def test_native_aom_pls_moment_batch_omp_scores_match_scalar_build():
     code = r"""
 import json
 import numpy as np
-import n4m
+from n4m._impl import native as n4m
 
 rng = np.random.default_rng(20260607)
 X = rng.standard_normal((96, 16))
@@ -1638,7 +1640,7 @@ def test_native_sweep_run_accepts_explicit_folds_multi_output_y():
     Y = np.column_stack([y, 0.5 * y + 0.1])
     folds = np.arange(X.shape[0], dtype=np.int32) % 5
 
-    res = n4m.sweep_run(
+    res = native.sweep_run(
         X,
         Y,
         cv=5,
@@ -1654,7 +1656,7 @@ def test_native_sweep_run_accepts_explicit_folds_multi_output_y():
 
 def test_native_sweep_run_pls_head_smoke():
     X, y = _dataset()
-    res = n4m.sweep_run(
+    res = native.sweep_run(
         X,
         y,
         cv=4,
@@ -1684,7 +1686,7 @@ def test_native_sweep_run_pls_head_smoke():
 
 def test_native_sweep_run_score_only_keeps_scores_and_skips_outputs():
     X, y = _dataset()
-    res = n4m.sweep_run(
+    res = native.sweep_run(
         X,
         y,
         cv=4,
@@ -1719,7 +1721,7 @@ def test_native_sweep_run_wide_ridge_score_only_matches_full_scores():
     folds = np.arange(X.shape[0], dtype=np.int32) % 3
     lambdas = [0.01, 0.4]
 
-    full = n4m.sweep_run(
+    full = native.sweep_run(
         X,
         y,
         cv=3,
@@ -1728,7 +1730,7 @@ def test_native_sweep_run_wide_ridge_score_only_matches_full_scores():
         heads=("ridge",),
         scale_x=True,
     )
-    score_only = n4m.sweep_run(
+    score_only = native.sweep_run(
         X,
         y,
         cv=3,
@@ -1768,7 +1770,7 @@ def test_native_sweep_run_ridge_moment_score_only_matches_full_scores():
     folds = np.arange(X.shape[0], dtype=np.int32) % 3
     lambdas = [0.01, 0.4, 2.0]
 
-    full = n4m.sweep_run(
+    full = native.sweep_run(
         X,
         y,
         cv=3,
@@ -1777,7 +1779,7 @@ def test_native_sweep_run_ridge_moment_score_only_matches_full_scores():
         heads=("ridge",),
         scale_x=True,
     )
-    score_only = n4m.sweep_run(
+    score_only = native.sweep_run(
         X,
         y,
         cv=3,
@@ -1819,7 +1821,7 @@ def test_native_aom_sweep_run_compact_smoke_and_pls_only():
     X, y = _aom_dataset()
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
 
-    res = n4m.aom_sweep_run(
+    res = native.aom_sweep_run(
         X,
         y,
         profile="compact",
@@ -1839,12 +1841,12 @@ def test_native_aom_sweep_run_compact_smoke_and_pls_only():
     assert res["param_offsets"].shape == (res["op_kinds"].size + 1,)
     assert res["param_offsets"][0] == 0
     assert res["param_offsets"][-1] == res["chain_params"].size
-    decoded = n4m.decode_aom_chains(res)
+    decoded = native.decode_aom_chains(res)
     assert len(decoded) == 12
     assert decoded[0] == [("identity", ())]
     assert decoded[3] == [("savgol_smooth", (5.0, 2.0))]
     selected_id = int(res["selected_candidate_id"])
-    table = n4m.aom_candidate_table(res, sort=True)
+    table = native.aom_candidate_table(res, sort=True)
     assert table[0]["candidate_id"] == selected_id
     assert table[0]["cv_rmse"] <= table[-1]["cv_rmse"]
     assert table[0]["chain"] == decoded[table[0]["chain_id"]]
@@ -1878,7 +1880,7 @@ def test_native_aom_sweep_run_compact_smoke_and_pls_only():
     oof_rmse = np.sqrt(np.mean((res["oof_predictions"][:, 0] - y) ** 2))
     np.testing.assert_allclose(oof_rmse, res["selected_cv_rmse"], rtol=1e-12, atol=1e-12)
 
-    pls_only = n4m.aom_sweep_run(
+    pls_only = native.aom_sweep_run(
         X,
         y,
         profile="compact",
@@ -1905,7 +1907,7 @@ def test_native_aom_chain_sweep_run_custom_chains_smoke():
         [("savgol_smooth", [5, 2]), ("finite_difference", [1])],
     ]
 
-    res = n4m.aom_chain_sweep_run(
+    res = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -1924,13 +1926,13 @@ def test_native_aom_chain_sweep_run_custom_chains_smoke():
     np.testing.assert_array_equal(res["op_kinds"], np.array([0, 7, 8, 15], dtype=np.int32))
     np.testing.assert_array_equal(res["param_offsets"], np.array([0, 0, 1, 3, 4], dtype=np.int32))
     np.testing.assert_allclose(res["chain_params"], np.array([[1.0, 5.0, 2.0, 1.0]]))
-    decoded = n4m.decode_aom_chains(res)
+    decoded = native.decode_aom_chains(res)
     assert decoded == [
         [("identity", ())],
         [("detrend_poly", (1.0,))],
         [("savgol_smooth", (5.0, 2.0)), ("finite_difference", (1.0,))],
     ]
-    assert n4m.decode_aom_chains(
+    assert native.decode_aom_chains(
         res["chain_offsets"],
         res["op_kinds"],
         res["param_offsets"],
@@ -1964,7 +1966,7 @@ def test_native_aom_chain_sweep_run_custom_chains_smoke():
     oof_rmse = np.sqrt(np.mean((res["oof_predictions"][:, 0] - y) ** 2))
     np.testing.assert_allclose(oof_rmse, res["selected_cv_rmse"], rtol=1e-12, atol=1e-12)
 
-    pls_only = n4m.aom_chain_sweep_run(
+    pls_only = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -1988,7 +1990,7 @@ def test_native_aom_chain_fixed_fit_run_matches_single_candidate_final_fit():
     chain = [("savgol_smooth", [5, 2])]
 
     for head, param in (("ridge", 0.1), ("pls", 1.0)):
-        full = n4m.aom_chain_sweep_run(
+        full = native.aom_chain_sweep_run(
             X,
             y,
             [chain],
@@ -2008,7 +2010,7 @@ def test_native_aom_chain_fixed_fit_run_matches_single_candidate_final_fit():
             if head == "pls"
             else {}
         )
-        fixed = n4m.aom_chain_fixed_fit_run(
+        fixed = native.aom_chain_fixed_fit_run(
             X,
             y,
             chain,
@@ -2063,8 +2065,8 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
     X, y = _aom_dataset()
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
 
-    compact = n4m.build_aom_strict_chain_grid("compact")
-    wide = n4m.build_aom_strict_chain_grid("wide")
+    compact = native.build_aom_strict_chain_grid("compact")
+    wide = native.build_aom_strict_chain_grid("wide")
     assert len(compact) == 12
     assert len(wide) == 31
     assert compact[0] == [("identity", ())]
@@ -2081,7 +2083,7 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
         "savgol_derivative": [("savgol_derivative", [7, 2, 1])],
         "finite_difference": [("finite_difference", [1])],
     }
-    chains = n4m.build_aom_strict_chain_grid(
+    chains = native.build_aom_strict_chain_grid(
         "lab",
         families=families,
         templates=[
@@ -2095,10 +2097,10 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
         [("detrend_poly", (1.0,)), ("savgol_derivative", (7.0, 2.0, 1.0))],
         [("savgol_smooth", (5.0, 2.0)), ("finite_difference", (1.0,))],
     ]
-    assert list(n4m.iter_aom_strict_chain_grid("compact")) == compact
-    assert list(n4m.iter_aom_strict_chain_grid("wide")) == wide
+    assert list(native.iter_aom_strict_chain_grid("compact")) == compact
+    assert list(native.iter_aom_strict_chain_grid("wide")) == wide
     assert list(
-        n4m.iter_aom_strict_chain_grid(
+        native.iter_aom_strict_chain_grid(
             "lab",
             families=families,
             templates=[
@@ -2109,7 +2111,7 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
         )
     ) == chains
     assert list(
-        n4m.iter_aom_strict_chain_grid(
+        native.iter_aom_strict_chain_grid(
             "lab",
             families=families,
             templates=[
@@ -2123,7 +2125,7 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
         )
     ) == [(1, chains[1]), (2, chains[2])]
     assert list(
-        n4m.iter_aom_strict_chain_grid(
+        native.iter_aom_strict_chain_grid(
             "lab",
             families=families,
             templates=[
@@ -2136,12 +2138,12 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
         )
     ) == [[(0, chains[0]), (1, chains[1])], [(2, chains[2])]]
     assert list(
-        n4m.iter_aom_strict_chain_grid("compact", include_identity=False, max_chains=3)
-    ) == n4m.build_aom_strict_chain_grid(
+        native.iter_aom_strict_chain_grid("compact", include_identity=False, max_chains=3)
+    ) == native.build_aom_strict_chain_grid(
         "compact", include_identity=False, max_chains=3
     )
 
-    campaign = n4m.aom_chain_score_campaign(
+    campaign = native.aom_chain_score_campaign(
         X,
         y,
         chains=chains,
@@ -2248,7 +2250,7 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
         assert row["chunk_index"] in {0, 1}
         assert row["head"] in {"ridge", "pls"}
 
-    forced_backend = n4m.aom_chain_score_campaign(
+    forced_backend = native.aom_chain_score_campaign(
         X,
         y,
         chains=chains,
@@ -2271,7 +2273,7 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
         assert recommendation["recommended_backend"] == "cuda"
         assert recommendation["cuda_available_source"] == "caller_override"
 
-    summary = n4m.aom_candidate_operator_summary(campaign)
+    summary = native.aom_candidate_operator_summary(campaign)
     assert summary["score_key"] == "cv_rmse"
     assert summary["n_candidates"] == len(campaign["top_candidates"])
     assert summary["best"]["chain"] == campaign["best"]["chain"]
@@ -2284,7 +2286,7 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
     assert "identity" in {row["group"] for row in summary["by_operator"]}
     assert all(row["n_candidates"] > 0 for row in summary["by_operator_head"])
 
-    route_summary = n4m.aom_candidate_route_summary(campaign)
+    route_summary = native.aom_candidate_route_summary(campaign)
     assert route_summary["report_schema"] == "n4m.aom_candidate_route_summary.v1"
     assert route_summary["row_scope"] == "top_candidates"
     assert route_summary["n_candidates"] == len(campaign["top_candidates"])
@@ -2322,7 +2324,7 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
         fold_ids=folds,
         scale_x=False,
     ).fit(X, y)
-    assert hasattr(n4m, "NativeAOMFixedCandidateRegressor")
+    assert hasattr(native_sklearn, "NativeAOMFixedCandidateRegressor")
     assert model.result_["candidate_scores"].shape == (1, 5)
     assert model.selected_candidate_id_ == 0
     assert model.result_["selected_chain_id"] == 0.0
@@ -2336,7 +2338,7 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
     fck_X = np.tile(X, (6, 1)) + 0.01 * np.arange(6).repeat(X.shape[0])[:, None]
     fck_y = 0.6 * fck_X[:, 0] - 0.35 * fck_X[:, 3] + 0.2 * fck_X[:, 7]
     fck_folds = np.arange(fck_X.shape[0], dtype=np.int32) % 4
-    fck_campaign = n4m.aom_chain_score_campaign(
+    fck_campaign = native.aom_chain_score_campaign(
         fck_X,
         fck_y,
         chains=[[("fck", (0.0,))]],
@@ -2355,7 +2357,7 @@ def test_native_aom_strict_chain_grid_and_score_campaign():
     assert fck_campaign["n_materialized_candidates"] == 0
     assert fck_campaign["n_banded_operator_moment_candidates"] == 2
 
-    gaussian_campaign = n4m.aom_chain_score_campaign(
+    gaussian_campaign = native.aom_chain_score_campaign(
         fck_X,
         fck_y,
         chains=[[("gaussian", (1.0,))]],
@@ -2458,10 +2460,10 @@ def test_native_aom_score_campaign_prefix_ordering_preserves_scores_and_cache():
         top_k=4,
     )
 
-    input_report = n4m.aom_chain_score_campaign(
+    input_report = native.aom_chain_score_campaign(
         X, y, chain_ordering="input", **common
     )
-    prefix_report = n4m.aom_chain_score_campaign(
+    prefix_report = native.aom_chain_score_campaign(
         X, y, chain_ordering="prefix", **common
     )
 
@@ -2501,7 +2503,7 @@ def test_native_aom_score_campaign_prefix_ordering_preserves_scores_and_cache():
 def test_native_aom_score_campaign_checkpoint_resume(tmp_path):
     X, y = _aom_dataset()
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
-    chains = n4m.build_aom_strict_chain_grid("compact", max_chains=6)
+    chains = native.build_aom_strict_chain_grid("compact", max_chains=6)
 
     kwargs = dict(
         chains=chains,
@@ -2514,10 +2516,10 @@ def test_native_aom_score_campaign_checkpoint_resume(tmp_path):
         chain_chunk_size=2,
         top_k=4,
     )
-    expected = n4m.aom_chain_score_campaign(X, y, **kwargs)
+    expected = native.aom_chain_score_campaign(X, y, **kwargs)
 
     checkpoint = tmp_path / "aom_campaign_checkpoint.json"
-    partial = n4m.aom_chain_score_campaign(
+    partial = native.aom_chain_score_campaign(
         X,
         y,
         checkpoint_path=checkpoint,
@@ -2532,7 +2534,7 @@ def test_native_aom_score_campaign_checkpoint_resume(tmp_path):
     assert partial["processed_chunks_this_run"] == 1
     assert partial["resumed_from_checkpoint"] is False
 
-    saved = n4m.aom_chain_score_campaign(
+    saved = native.aom_chain_score_campaign(
         X,
         y,
         checkpoint_path=checkpoint,
@@ -2564,7 +2566,7 @@ def test_native_aom_score_campaign_checkpoint_resume(tmp_path):
     payload["n_chunks"] = 1
     checkpoint.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
-    resumed = n4m.aom_chain_score_campaign(
+    resumed = native.aom_chain_score_campaign(
         X,
         y,
         checkpoint_path=checkpoint,
@@ -2628,7 +2630,7 @@ def test_native_aom_score_campaign_checkpoint_resume(tmp_path):
     assert by_route_signature(resumed) == by_route_signature(expected)
 
     with pytest.raises(ValueError, match="checkpoint does not match"):
-        n4m.aom_chain_score_campaign(
+        native.aom_chain_score_campaign(
             X,
             y,
             checkpoint_path=checkpoint,
@@ -2644,9 +2646,9 @@ def test_native_aom_candidate_holdout_evaluation_report():
     X_eval = X[16:]
     y_eval = y[16:]
     folds = np.arange(X_train.shape[0], dtype=np.int32) % 4
-    chains = n4m.build_aom_strict_chain_grid("compact", max_chains=5)
+    chains = native.build_aom_strict_chain_grid("compact", max_chains=5)
 
-    campaign = n4m.aom_chain_score_campaign(
+    campaign = native.aom_chain_score_campaign(
         X_train,
         y_train,
         chains=chains,
@@ -2659,7 +2661,7 @@ def test_native_aom_candidate_holdout_evaluation_report():
         chain_chunk_size=3,
         top_k=5,
     )
-    report = n4m.aom_evaluate_candidates(
+    report = native.aom_evaluate_candidates(
         X_train,
         y_train,
         X_eval,
@@ -2692,7 +2694,7 @@ def test_native_aom_candidate_holdout_evaluation_report():
         assert row["eval_predictions"].shape == (X_eval.shape[0], 1)
         assert np.isfinite(row["eval_rmse"])
         assert np.isfinite(row["eval_r2"])
-    summary = n4m.aom_candidate_operator_summary(report)
+    summary = native.aom_candidate_operator_summary(report)
     assert summary["score_key"] == "eval_rmse"
     assert summary["best"]["chain"] == report["best_eval"]["chain"]
     assert summary["best"]["head"] == report["best_eval"]["head"]
@@ -2701,7 +2703,7 @@ def test_native_aom_candidate_holdout_evaluation_report():
         report["best_eval"]["eval_rmse"],
     )
     assert summary["by_operator"][0]["best_score"] <= summary["by_operator"][-1]["best_score"]
-    rank_diag = n4m.aom_candidate_rank_diagnostics(report, cutoffs=(1, 2, 4, 10))
+    rank_diag = native.aom_candidate_rank_diagnostics(report, cutoffs=(1, 2, 4, 10))
     assert rank_diag["screen_score_key"] == "screen_cv_rmse"
     assert rank_diag["eval_score_key"] == "eval_rmse"
     assert rank_diag["n_candidates"] == 4
@@ -2736,7 +2738,7 @@ def test_aom_candidate_preprocessing_impact_groups_options_and_baseline():
         },
     ]
 
-    impact = n4m.aom_candidate_preprocessing_impact(rows)
+    impact = native.aom_candidate_preprocessing_impact(rows)
 
     assert impact["score_key"] == "cv_rmse"
     assert impact["n_candidates"] == 4
@@ -2769,9 +2771,9 @@ def test_native_aom_candidate_report_export_helpers(tmp_path):
     X_eval = X[16:]
     y_eval = y[16:]
     folds = np.arange(X_train.shape[0], dtype=np.int32) % 4
-    chains = n4m.build_aom_strict_chain_grid("compact", max_chains=4)
+    chains = native.build_aom_strict_chain_grid("compact", max_chains=4)
 
-    campaign = n4m.aom_chain_score_campaign(
+    campaign = native.aom_chain_score_campaign(
         X_train,
         y_train,
         chains=chains,
@@ -2784,7 +2786,7 @@ def test_native_aom_candidate_report_export_helpers(tmp_path):
         chain_chunk_size=2,
         top_k=4,
     )
-    report = n4m.aom_evaluate_candidates(
+    report = native.aom_evaluate_candidates(
         X_train,
         y_train,
         X_eval,
@@ -2796,7 +2798,7 @@ def test_native_aom_candidate_report_export_helpers(tmp_path):
         scale_x=False,
         return_predictions=True,
     )
-    records = n4m.aom_candidate_report_records(report)
+    records = native.aom_candidate_report_records(report)
     assert len(records) == 3
     assert "eval_predictions" not in records[0]
     assert "chain_json" in records[0]
@@ -2804,9 +2806,9 @@ def test_native_aom_candidate_report_export_helpers(tmp_path):
     json_path = tmp_path / "aom_report.json"
     csv_path = tmp_path / "aom_report.csv"
     jsonl_path = tmp_path / "aom_report.jsonl"
-    assert n4m.aom_save_candidate_report(json_path, report) == str(json_path)
-    assert n4m.aom_save_candidate_report(csv_path, report) == str(csv_path)
-    assert n4m.aom_save_candidate_report(jsonl_path, report) == str(jsonl_path)
+    assert native.aom_save_candidate_report(json_path, report) == str(json_path)
+    assert native.aom_save_candidate_report(csv_path, report) == str(csv_path)
+    assert native.aom_save_candidate_report(jsonl_path, report) == str(jsonl_path)
 
     payload = json.loads(json_path.read_text())
     assert payload["metadata"]["n_candidates"] == 3
@@ -2824,19 +2826,19 @@ def test_native_aom_candidate_report_export_helpers(tmp_path):
     assert len(jsonl_rows) == 3
     assert jsonl_rows[0]["eval_rank"] == records[0]["eval_rank"]
 
-    loaded_json = n4m.aom_load_candidate_report(json_path)
-    loaded_csv = n4m.aom_load_candidate_report(csv_path)
-    loaded_jsonl = n4m.aom_load_candidate_report(jsonl_path)
+    loaded_json = native.aom_load_candidate_report(json_path)
+    loaded_csv = native.aom_load_candidate_report(csv_path)
+    loaded_jsonl = native.aom_load_candidate_report(jsonl_path)
     assert loaded_json[0]["chain"] == loaded_csv[0]["chain"]
     assert loaded_jsonl[0]["chain"] == loaded_csv[0]["chain"]
     assert json.loads(loaded_csv[0]["chain_json"]) == records[0]["chain"]
     assert loaded_csv[0]["head"] in {"ridge", "pls"}
     assert isinstance(loaded_csv[0]["param"], float)
-    loaded_summary = n4m.aom_candidate_operator_summary(loaded_csv)
+    loaded_summary = native.aom_candidate_operator_summary(loaded_csv)
     assert loaded_summary["score_key"] == "eval_rmse"
     assert loaded_summary["n_candidates"] == len(loaded_csv)
     assert loaded_summary["best"]["chain"] == loaded_csv[0]["chain"]
-    loaded_rank_diag = n4m.aom_candidate_rank_diagnostics(loaded_csv, cutoffs=(1, 3))
+    loaded_rank_diag = native.aom_candidate_rank_diagnostics(loaded_csv, cutoffs=(1, 3))
     assert loaded_rank_diag["n_candidates"] == len(loaded_csv)
     assert loaded_rank_diag["topk"][1]["effective_k"] == 3
     assert loaded_rank_diag["best_eval"]["chain"] == loaded_csv[0]["chain"]
@@ -2860,7 +2862,7 @@ def test_native_aom_sweep_materialized_policy_forces_legacy_route():
         [("detrend", [1]), ("finite_difference", [1])],
     ]
 
-    auto = n4m.aom_chain_sweep_run(
+    auto = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -2872,7 +2874,7 @@ def test_native_aom_sweep_materialized_policy_forces_legacy_route():
         scale_x=False,
         moment_policy="auto",
     )
-    materialized = n4m.aom_chain_sweep_run(
+    materialized = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -2906,7 +2908,7 @@ def test_native_aom_sweep_materialized_policy_forces_legacy_route():
     )
 
     try:
-        n4m.aom_chain_sweep_run(X, y, chains, moment_policy="bad-policy")
+        native.aom_chain_sweep_run(X, y, chains, moment_policy="bad-policy")
     except ValueError as exc:
         assert "moment_policy" in str(exc)
     else:
@@ -2924,7 +2926,7 @@ def test_native_aom_sweep_force_moments_policy_is_strict():
         [("finite_difference", [1])],
     ]
 
-    strict = n4m.aom_chain_sweep_run(
+    strict = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -2943,7 +2945,7 @@ def test_native_aom_sweep_force_moments_policy_is_strict():
     assert strict["n_ridge_operator_moment_candidates"] == 2.0
     assert strict["n_pls_operator_moment_candidates"] == 2.0
 
-    score_only = n4m.aom_chain_sweep_run(
+    score_only = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -2972,7 +2974,7 @@ def test_native_aom_sweep_force_moments_policy_is_strict():
 
     Y = np.column_stack([y, 0.5 * y + 0.1 * X[:, 0]])
     try:
-        n4m.aom_chain_sweep_run(
+        native.aom_chain_sweep_run(
             X,
             Y,
             [["identity"]],
@@ -3001,7 +3003,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         [("detrend", [1]), ("finite_difference", [1])],
     ]
 
-    exact = n4m.aom_chain_sweep_run(
+    exact = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -3014,7 +3016,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         moment_policy="force_moments",
         score_only=True,
     )
-    proxy = n4m.aom_chain_sweep_run(
+    proxy = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -3053,14 +3055,14 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
     assert exact["n_pls_moment_cv_fits"] > 0.0
     assert np.all(np.isfinite(proxy["candidate_scores"][:, 4]))
     assert "materialized" not in {
-        row["score_route"] for row in n4m.aom_candidate_table(proxy)
+        row["score_route"] for row in native.aom_candidate_table(proxy)
     }
     assert {
-        row["score_metric"] for row in n4m.aom_candidate_table(proxy)
+        row["score_metric"] for row in native.aom_candidate_table(proxy)
     } == {"pls_gcv_proxy_rmse"}
 
     with pytest.raises(ValueError, match="pls_score_mode"):
-        n4m.aom_chain_sweep_run(
+        native.aom_chain_sweep_run(
             X,
             y,
             chains,
@@ -3075,7 +3077,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         )
 
     with pytest.raises(n4m.N4MError) as excinfo:
-        n4m.aom_chain_sweep_run(
+        native.aom_chain_sweep_run(
             X,
             y,
             chains,
@@ -3091,7 +3093,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         )
     assert excinfo.value.status_name == "INVALID_ARGUMENT"
 
-    campaign = n4m.aom_chain_score_campaign(
+    campaign = native.aom_chain_score_campaign(
         X,
         y,
         chains=chains,
@@ -3124,7 +3126,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         row["score_metric"] for row in campaign["top_candidates"]
     } == {"pls_gcv_proxy_rmse"}
 
-    verified = n4m.aom_refit_candidates(
+    verified = native.aom_refit_candidates(
         X,
         y,
         campaign,
@@ -3147,11 +3149,11 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
     )
 
     same_chain_rows = [
-        row for row in n4m.aom_candidate_table(proxy)
+        row for row in native.aom_candidate_table(proxy)
         if row["chain_id"] == 0
     ]
     assert {row["param"] for row in same_chain_rows} == {1.0, 2.0}
-    individual_refit = n4m.aom_refit_candidates(
+    individual_refit = native.aom_refit_candidates(
         X,
         y,
         same_chain_rows,
@@ -3161,7 +3163,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         moment_policy="force_moments",
         execution_mode="individual",
     )
-    grouped_refit = n4m.aom_refit_candidates(
+    grouped_refit = native.aom_refit_candidates(
         X,
         y,
         same_chain_rows,
@@ -3197,8 +3199,8 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         for row in grouped_refit["rows"]
     )
 
-    all_pls_rows = n4m.aom_candidate_table(proxy)
-    grouped_all_refit = n4m.aom_refit_candidates(
+    all_pls_rows = native.aom_candidate_table(proxy)
+    grouped_all_refit = native.aom_refit_candidates(
         X,
         y,
         all_pls_rows,
@@ -3208,7 +3210,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         moment_policy="force_moments",
         execution_mode="grouped_score",
     )
-    batched_refit = n4m.aom_refit_candidates(
+    batched_refit = native.aom_refit_candidates(
         X,
         y,
         all_pls_rows,
@@ -3250,9 +3252,9 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         }
     ]
     assert len(mixed_pls_rows) == 3
-    plan = n4m.aom_refit_execution_plan(mixed_pls_rows)
+    plan = native.aom_refit_execution_plan(mixed_pls_rows)
     assert plan["report_schema"] == "n4m.aom_refit_execution_plan.v1"
-    assert hasattr(n4m, "aom_refit_execution_plan")
+    assert hasattr(native, "aom_refit_execution_plan")
     assert plan["by_mode"]["individual"]["n_refit_groups"] == 3
     assert plan["by_mode"]["grouped_score"]["n_refit_groups"] == 3
     assert plan["by_mode"]["batched_score"]["n_refit_groups"] == 2
@@ -3263,7 +3265,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
     assert plan["recommendation_reason"] == (
         "union_reduces_native_groups_within_extra_budget"
     )
-    conservative_plan = n4m.aom_refit_execution_plan(
+    conservative_plan = native.aom_refit_execution_plan(
         mixed_pls_rows,
         auto_max_extra_fraction=0.0,
     )
@@ -3271,7 +3273,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
     assert conservative_plan["recommendation_reason"] == (
         "batched_preserves_parameter_signatures"
     )
-    grouped_mixed_refit = n4m.aom_refit_candidates(
+    grouped_mixed_refit = native.aom_refit_candidates(
         X,
         y,
         mixed_pls_rows,
@@ -3281,7 +3283,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         moment_policy="force_moments",
         execution_mode="grouped_score",
     )
-    batched_mixed_refit = n4m.aom_refit_candidates(
+    batched_mixed_refit = native.aom_refit_candidates(
         X,
         y,
         mixed_pls_rows,
@@ -3291,7 +3293,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         moment_policy="force_moments",
         execution_mode="batched_score",
     )
-    union_mixed_refit = n4m.aom_refit_candidates(
+    union_mixed_refit = native.aom_refit_candidates(
         X,
         y,
         mixed_pls_rows,
@@ -3301,7 +3303,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         moment_policy="force_moments",
         execution_mode="union_batched_score",
     )
-    auto_mixed_refit = n4m.aom_refit_candidates(
+    auto_mixed_refit = native.aom_refit_candidates(
         X,
         y,
         mixed_pls_rows,
@@ -3311,7 +3313,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         moment_policy="force_moments",
         execution_mode="auto",
     )
-    conservative_auto_mixed_refit = n4m.aom_refit_candidates(
+    conservative_auto_mixed_refit = native.aom_refit_candidates(
         X,
         y,
         mixed_pls_rows,
@@ -3370,7 +3372,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
             atol=1e-12,
         )
 
-    two_pass = n4m.aom_chain_screen_refit_campaign(
+    two_pass = native.aom_chain_screen_refit_campaign(
         X,
         y,
         chains=chains,
@@ -3402,7 +3404,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
     assert two_pass["screen"]["moment_backend_recommendations"] == two_pass[
         "moment_backend_recommendations"
     ]
-    two_pass_plan = n4m.aom_refit_execution_plan(two_pass["screen"], top_k=2)
+    two_pass_plan = native.aom_refit_execution_plan(two_pass["screen"], top_k=2)
     two_pass_expected_mode = two_pass_plan["recommended_mode"]
     two_pass_expected = two_pass_plan["by_mode"][two_pass_expected_mode]
     assert two_pass["refit_execution_requested"] == "auto"
@@ -3475,7 +3477,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         top_k=3,
         refit_top_k=2,
     ).fit(X, y)
-    assert hasattr(n4m, "NativeAOMScreenRefitRegressor")
+    assert hasattr(native_sklearn, "NativeAOMScreenRefitRegressor")
     assert screen_refit_model.campaign_report_["report_schema"] == (
         "n4m.aom_chain_screen_refit_campaign.v1"
     )
@@ -3500,7 +3502,7 @@ def test_native_aom_pls_gcv_proxy_score_only_is_explicit_and_moment_only():
         "cuda_available_source"
     ] == "caller_override"
     assert screen_refit_diag["backend_min_cuda_product"] == 1
-    model_refit_plan = n4m.aom_refit_execution_plan(
+    model_refit_plan = native.aom_refit_execution_plan(
         screen_refit_model.screen_report_,
         top_k=2,
     )
@@ -3544,7 +3546,7 @@ def test_native_aom_ridge_score_only_uses_batch_moment_path():
     ]
     lambdas = [0.01, 0.1]
 
-    res = n4m.aom_chain_sweep_run(
+    res = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -3573,10 +3575,10 @@ def test_native_aom_ridge_score_only_uses_batch_moment_path():
     assert res["n_ridge_moment_final_fits"] == 0.0
     assert np.all(np.isfinite(res["candidate_scores"][:, 4]))
     assert "materialized" not in {
-        row["score_route"] for row in n4m.aom_candidate_table(res)
+        row["score_route"] for row in native.aom_candidate_table(res)
     }
 
-    campaign = n4m.aom_chain_score_campaign(
+    campaign = native.aom_chain_score_campaign(
         X,
         y,
         chains=chains,
@@ -3606,7 +3608,7 @@ def test_native_aom_ridge_score_only_uses_batch_moment_path():
 
 
 def test_native_aom_moment_screen_refit_presets_are_reusable():
-    import n4m.aom as aom
+    from n4m._impl import aom_facade as aom
 
     rng = np.random.default_rng(61)
     X = rng.standard_normal((72, 12))
@@ -3634,22 +3636,22 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
         cuda_pls_min_device_features=256,
         cuda_pls_many_batched=True,
     ).fit(X, y)
-    assert n4m.aom is aom
-    assert aom.aom_screen_refit_candidate_pool is n4m.aom_screen_refit_candidate_pool
-    assert aom.aom_refit_candidates is n4m.aom_refit_candidates
-    assert aom.aom_chain_fixed_fit_run is n4m.aom_chain_fixed_fit_run
-    assert aom.build_aom_strict_chain_grid is n4m.build_aom_strict_chain_grid
-    assert aom.iter_aom_strict_chain_grid is n4m.iter_aom_strict_chain_grid
-    assert aom.decode_aom_chains is n4m.decode_aom_chains
-    assert aom.aom_candidate_table is n4m.aom_candidate_table
-    assert aom.aom_evaluate_candidates is n4m.aom_evaluate_candidates
-    assert aom.aom_candidate_operator_summary is n4m.aom_candidate_operator_summary
-    assert aom.aom_candidate_preprocessing_impact is n4m.aom_candidate_preprocessing_impact
-    assert aom.aom_candidate_route_summary is n4m.aom_candidate_route_summary
-    assert aom.aom_candidate_rank_diagnostics is n4m.aom_candidate_rank_diagnostics
-    assert aom.aom_candidate_report_records is n4m.aom_candidate_report_records
-    assert aom.aom_save_candidate_report is n4m.aom_save_candidate_report
-    assert aom.aom_load_candidate_report is n4m.aom_load_candidate_report
+    assert n4m._impl.aom_facade is aom
+    assert aom.aom_screen_refit_candidate_pool is native.aom_screen_refit_candidate_pool
+    assert aom.aom_refit_candidates is native.aom_refit_candidates
+    assert aom.aom_chain_fixed_fit_run is native.aom_chain_fixed_fit_run
+    assert aom.build_aom_strict_chain_grid is native.build_aom_strict_chain_grid
+    assert aom.iter_aom_strict_chain_grid is native.iter_aom_strict_chain_grid
+    assert aom.decode_aom_chains is native.decode_aom_chains
+    assert aom.aom_candidate_table is native.aom_candidate_table
+    assert aom.aom_evaluate_candidates is native.aom_evaluate_candidates
+    assert aom.aom_candidate_operator_summary is native.aom_candidate_operator_summary
+    assert aom.aom_candidate_preprocessing_impact is native.aom_candidate_preprocessing_impact
+    assert aom.aom_candidate_route_summary is native.aom_candidate_route_summary
+    assert aom.aom_candidate_rank_diagnostics is native.aom_candidate_rank_diagnostics
+    assert aom.aom_candidate_report_records is native.aom_candidate_report_records
+    assert aom.aom_save_candidate_report is native.aom_save_candidate_report
+    assert aom.aom_load_candidate_report is native.aom_load_candidate_report
     assert (
         aom.NativeAOMMomentScreenRefitRegressor
         is NativeAOMMomentScreenRefitRegressor
@@ -3791,8 +3793,8 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
     ]
     inventory[0]["name"] = "mutated"
     assert aom.available_methods()[0]["name"] != "mutated"
-    assert hasattr(n4m, "NativeAOMMomentScreenRefitRegressor")
-    assert n4m.aom.aom_moment_screen_refit_campaign is n4m.aom_moment_screen_refit_campaign
+    assert hasattr(native_sklearn, "NativeAOMMomentScreenRefitRegressor")
+    assert aom.aom_moment_screen_refit_campaign is native.aom_moment_screen_refit_campaign
     assert mixed_model.heads == ("ridge", "pls")
     assert mixed_model.pls_score_mode == "gcv_proxy"
     assert mixed_model.split_head_scoring == "auto"
@@ -3817,7 +3819,7 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
         "ridge",
         "pls",
     }
-    mixed_pool = n4m.aom_screen_refit_candidate_pool(
+    mixed_pool = native.aom_screen_refit_candidate_pool(
         mixed_model.screen_report_,
         refit_top_k=1,
         refit_per_head_top_k=1,
@@ -3838,7 +3840,7 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
         refit_top_k=2,
         scale_x=False,
     ).fit(X, y)
-    assert hasattr(n4m, "NativeAOMMomentPLSScreenRefitRegressor")
+    assert hasattr(native_sklearn, "NativeAOMMomentPLSScreenRefitRegressor")
     assert pls_model.heads == ("pls",)
     assert pls_model.ridge_lambdas == ()
     assert pls_model.pls_score_mode == "gcv_proxy"
@@ -3860,7 +3862,7 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
         refit_top_k=1,
         scale_x=False,
     ).fit(X, y)
-    assert hasattr(n4m, "NativeAOMMomentPLSExactScreenRefitRegressor")
+    assert hasattr(native_sklearn, "NativeAOMMomentPLSExactScreenRefitRegressor")
     assert pls_exact_model.heads == ("pls",)
     assert pls_exact_model.ridge_lambdas == ()
     assert pls_exact_model.pls_score_mode == "cv"
@@ -3883,7 +3885,7 @@ def test_native_aom_moment_screen_refit_presets_are_reusable():
         refit_top_k=2,
         scale_x=False,
     ).fit(X, y)
-    assert hasattr(n4m, "NativeAOMMomentRidgeScreenRefitRegressor")
+    assert hasattr(native_sklearn, "NativeAOMMomentRidgeScreenRefitRegressor")
     assert ridge_model.heads == ("ridge",)
     assert ridge_model.pls_components == ()
     assert ridge_model.pls_score_mode == "cv"
@@ -3920,8 +3922,8 @@ def test_aom_moment_screen_refit_campaign_fast_defaults_match_explicit_campaign(
         scale_x=False,
     )
 
-    fast = n4m.aom_moment_screen_refit_campaign(X, y, **common)
-    explicit = n4m.aom_chain_screen_refit_campaign(
+    fast = native.aom_moment_screen_refit_campaign(X, y, **common)
+    explicit = native.aom_chain_screen_refit_campaign(
         X,
         y,
         moment_policy="force_moments",
@@ -3958,7 +3960,7 @@ def test_aom_moment_screen_refit_campaign_fast_defaults_match_explicit_campaign(
     ]
     assert fast_rows == explicit_rows
 
-    import n4m.moment as moment
+    from n4m._impl import moment_facade as moment
 
     fixed = moment.NativeAOMFixedCandidateRegressor.from_refit_report(
         fast["refit"],
@@ -4007,7 +4009,7 @@ def test_aom_campaign_split_head_scoring_preserves_scores_and_enables_split():
     ]
     ridge_lambdas = (0.01, 0.1)
 
-    base = n4m.aom_chain_score_campaign(
+    base = native.aom_chain_score_campaign(
         X,
         y,
         chains=chains,
@@ -4023,7 +4025,7 @@ def test_aom_campaign_split_head_scoring_preserves_scores_and_enables_split():
         pls_score_mode="gcv_proxy",
         split_head_scoring="off",
     )
-    split = n4m.aom_chain_score_campaign(
+    split = native.aom_chain_score_campaign(
         X,
         y,
         chains=chains,
@@ -4085,7 +4087,7 @@ def test_aom_campaign_split_head_exact_cv_enables_pls_moment_batch():
     pls_components = (1, 2)
 
     def run(split):
-        return n4m.aom_chain_score_campaign(
+        return native.aom_chain_score_campaign(
             X,
             y,
             chains=chains,
@@ -4222,7 +4224,7 @@ def test_cuda_pls_parallel_folds_option_is_score_preserving_on_cpu_path():
     y = 0.5 * X[:, 0] - 0.2 * X[:, 3] + 0.05 * rng.standard_normal(X.shape[0])
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
 
-    base = n4m.sweep_run(
+    base = native.sweep_run(
         X,
         y,
         cv=4,
@@ -4236,7 +4238,7 @@ def test_cuda_pls_parallel_folds_option_is_score_preserving_on_cpu_path():
         cuda_pls_min_device_features=256,
         cuda_pls_many_batched=False,
     )
-    requested = n4m.sweep_run(
+    requested = native.sweep_run(
         X,
         y,
         cv=4,
@@ -4263,7 +4265,7 @@ def test_cuda_pls_parallel_folds_option_is_score_preserving_on_cpu_path():
     assert requested["n_pls_moment_cuda_many_batched_jobs"] == 0.0
 
     chains = [[("identity", ())], [("savgol_smooth", (5, 2))]]
-    campaign = n4m.aom_chain_score_campaign(
+    campaign = native.aom_chain_score_campaign(
         X,
         y,
         chains=chains,
@@ -4304,7 +4306,7 @@ def test_cuda_pls_many_batched_precedes_parallel_and_legacy_overrides():
 import json
 import os
 import numpy as np
-import n4m
+from n4m._impl import native as n4m
 
 plan = n4m.moment_screen_backend_recommendation(
     96,
@@ -4763,7 +4765,7 @@ def test_native_aom_chain_sweep_moment_prefix_cache_counters():
         [("savgol_smooth", [5, 2]), ("finite_difference", [1])],
     ]
 
-    res = n4m.aom_chain_sweep_run(
+    res = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -4781,7 +4783,7 @@ def test_native_aom_chain_sweep_moment_prefix_cache_counters():
     assert res["n_materialized_candidates"] == 0.0
     assert res["n_moment_prefix_cache_hits"] >= 3.0
     assert res["n_moment_prefix_cache_misses"] >= 5.0
-    campaign = n4m.aom_chain_score_campaign(
+    campaign = native.aom_chain_score_campaign(
         X,
         y,
         chains=chains,
@@ -4805,7 +4807,7 @@ def test_native_aom_chain_sweep_moment_prefix_cache_counters():
         "structured_operator_moment",
         "dense_operator_moment",
     }
-    summary = n4m.aom_candidate_operator_summary(campaign)
+    summary = native.aom_candidate_operator_summary(campaign)
     assert summary["by_score_route"]
 
 
@@ -4820,7 +4822,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
         [("savgol_smooth", [5, 2])],
     ]
 
-    screen = n4m.aom_chain_sweep_run(
+    screen = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -4833,11 +4835,11 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
         moment_policy="force_moments",
         score_only=True,
     )
-    rows = n4m.aom_candidate_table(screen)
+    rows = native.aom_candidate_table(screen)
     assert {row["param"] for row in rows} == {0.01, 0.1, 1.0}
     assert {row["chain_id"] for row in rows} == {0, 1}
 
-    individual = n4m.aom_refit_candidates(
+    individual = native.aom_refit_candidates(
         X,
         y,
         rows,
@@ -4847,7 +4849,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
         moment_policy="force_moments",
         execution_mode="individual",
     )
-    grouped = n4m.aom_refit_candidates(
+    grouped = native.aom_refit_candidates(
         X,
         y,
         rows,
@@ -4857,7 +4859,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
         moment_policy="force_moments",
         execution_mode="grouped_score",
     )
-    batched = n4m.aom_refit_candidates(
+    batched = native.aom_refit_candidates(
         X,
         y,
         rows,
@@ -4917,7 +4919,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
         }
     ]
     assert len(mixed_rows) == 2
-    plan = n4m.aom_refit_execution_plan(mixed_rows)
+    plan = native.aom_refit_execution_plan(mixed_rows)
     assert plan["by_mode"]["individual"]["n_refit_groups"] == 2
     assert plan["by_mode"]["batched_score"]["n_refit_groups"] == 2
     assert plan["by_mode"]["union_batched_score"]["n_refit_groups"] == 1
@@ -4927,7 +4929,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
     assert plan["recommendation_reason"] == (
         "union_reduces_native_groups_within_extra_budget"
     )
-    conservative_plan = n4m.aom_refit_execution_plan(
+    conservative_plan = native.aom_refit_execution_plan(
         mixed_rows,
         auto_max_extra_fraction=0.0,
     )
@@ -4935,7 +4937,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
     assert conservative_plan["recommendation_reason"] == (
         "batched_preserves_parameter_signatures"
     )
-    individual_mixed = n4m.aom_refit_candidates(
+    individual_mixed = native.aom_refit_candidates(
         X,
         y,
         mixed_rows,
@@ -4945,7 +4947,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
         moment_policy="force_moments",
         execution_mode="individual",
     )
-    batched_mixed = n4m.aom_refit_candidates(
+    batched_mixed = native.aom_refit_candidates(
         X,
         y,
         mixed_rows,
@@ -4955,7 +4957,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
         moment_policy="force_moments",
         execution_mode="batched_score",
     )
-    union_mixed = n4m.aom_refit_candidates(
+    union_mixed = native.aom_refit_candidates(
         X,
         y,
         mixed_rows,
@@ -4965,7 +4967,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
         moment_policy="force_moments",
         execution_mode="union_batched_score",
     )
-    auto_mixed = n4m.aom_refit_candidates(
+    auto_mixed = native.aom_refit_candidates(
         X,
         y,
         mixed_rows,
@@ -4975,7 +4977,7 @@ def test_native_aom_refit_batched_score_handles_ridge_lambdas_exactly():
         moment_policy="force_moments",
         execution_mode="auto",
     )
-    conservative_auto_mixed = n4m.aom_refit_candidates(
+    conservative_auto_mixed = native.aom_refit_candidates(
         X,
         y,
         mixed_rows,
@@ -5046,7 +5048,7 @@ def test_native_aom_sweep_whittaker_uses_structured_moment_route():
         [("whittaker", [1000.0]), ("savgol_smooth", [5, 2])],
     ]
 
-    auto = n4m.aom_chain_sweep_run(
+    auto = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -5058,7 +5060,7 @@ def test_native_aom_sweep_whittaker_uses_structured_moment_route():
         scale_x=False,
         moment_policy="auto",
     )
-    materialized = n4m.aom_chain_sweep_run(
+    materialized = native.aom_chain_sweep_run(
         X,
         y,
         chains,
@@ -5098,7 +5100,7 @@ def test_native_aom_ridge_blender_compact_contract():
     X, y = _aom_dataset()
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
 
-    res = n4m.aom_ridge_blender(
+    res = native.aom_ridge_blender(
         X,
         y,
         profile="compact",
@@ -5145,7 +5147,7 @@ def test_native_aom_ridge_blender_compact_contract():
     )
 
     assert int(res["selected_candidate_id"]) == int(np.argmax(weights))
-    assert hasattr(n4m, "NativeAOMRidgeBlenderRegressor")
+    assert hasattr(native_sklearn, "NativeAOMRidgeBlenderRegressor")
     model = NativeAOMRidgeBlenderRegressor(
         profile="compact",
         cv=4,
@@ -5177,7 +5179,7 @@ def test_native_aom_ridge_blender_compact_contract():
 def test_native_aom_ridge_blender_rejects_non_positive_lambda():
     X, y = _aom_dataset()
     try:
-        n4m.aom_ridge_blender(X, y, ridge_lambdas=[0.0])
+        native.aom_ridge_blender(X, y, ridge_lambdas=[0.0])
     except ValueError as exc:
         assert "strictly positive" in str(exc)
     else:
@@ -5189,7 +5191,7 @@ def test_native_aom_ridge_global_selects_operator_and_replays_coefficients():
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
     operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
 
-    res = n4m.aom_ridge_global(
+    res = native.aom_ridge_global(
         X,
         y,
         operators=operators,
@@ -5228,8 +5230,8 @@ def test_native_aom_ridge_global_wrapper_replays_and_reports_selection():
         scale_x=False,
     ).fit(X, y)
 
-    assert hasattr(n4m, "aom_ridge_global")
-    assert hasattr(n4m, "NativeAOMRidgeGlobalRegressor")
+    assert hasattr(native, "aom_ridge_global")
+    assert hasattr(native_sklearn, "NativeAOMRidgeGlobalRegressor")
     np.testing.assert_allclose(
         model.predict(X),
         model.result_["predictions"].ravel(),
@@ -5247,7 +5249,7 @@ def test_native_aom_ridge_superblock_function_replays_input_coefficients():
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
     operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
 
-    res = n4m.aom_ridge_superblock(
+    res = native.aom_ridge_superblock(
         X,
         y,
         operators=operators,
@@ -5281,7 +5283,7 @@ def test_native_aom_ridge_superblock_cv_and_wrapper_replay():
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
     operators = ["identity", ("finite_difference", [1])]
 
-    res = n4m.aom_ridge_superblock(
+    res = native.aom_ridge_superblock(
         X,
         y,
         operators=operators,
@@ -5295,7 +5297,7 @@ def test_native_aom_ridge_superblock_cv_and_wrapper_replay():
         np.min(res["candidate_scores"][:, 2])
     )
 
-    assert hasattr(n4m, "NativeAOMRidgeSuperblockRegressor")
+    assert hasattr(native_sklearn, "NativeAOMRidgeSuperblockRegressor")
     model = NativeAOMRidgeSuperblockRegressor(
         operators=operators,
         alphas=[0.01, 0.1, 1.0],
@@ -5325,7 +5327,7 @@ def test_native_aom_ridge_mkl_superblock_learns_weights_and_replays():
         ("savgol_derivative", [5, 2, 1]),
     ]
 
-    res = n4m.aom_ridge_mkl_superblock(
+    res = native.aom_ridge_mkl_superblock(
         X,
         y,
         operators=operators,
@@ -5371,8 +5373,8 @@ def test_native_aom_ridge_mkl_superblock_wrapper_reports_weights():
         block_scaling="none",
     ).fit(X, y)
 
-    assert hasattr(n4m, "aom_ridge_mkl_superblock")
-    assert hasattr(n4m, "NativeAOMRidgeMKLSuperblockRegressor")
+    assert hasattr(native, "aom_ridge_mkl_superblock")
+    assert hasattr(native_sklearn, "NativeAOMRidgeMKLSuperblockRegressor")
     np.testing.assert_allclose(
         model.predict(X),
         model.result_["predictions"].ravel(),
@@ -5393,7 +5395,7 @@ def test_native_aom_ridge_active_superblock_screens_fold_local_and_replays():
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
     operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
 
-    res = n4m.aom_ridge_active_superblock(
+    res = native.aom_ridge_active_superblock(
         X,
         y,
         operators=operators,
@@ -5444,8 +5446,8 @@ def test_native_aom_ridge_active_superblock_wrapper_replays_and_reports_active_s
         block_scaling="none",
     ).fit(X, y)
 
-    assert hasattr(n4m, "aom_ridge_active_superblock")
-    assert hasattr(n4m, "NativeAOMRidgeActiveSuperblockRegressor")
+    assert hasattr(native, "aom_ridge_active_superblock")
+    assert hasattr(native_sklearn, "NativeAOMRidgeActiveSuperblockRegressor")
     np.testing.assert_allclose(
         model.predict(X),
         model.result_["predictions"].ravel(),
@@ -5466,7 +5468,7 @@ def test_native_aom_pls_superblock_function_replays_input_coefficients():
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
     operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
 
-    res = n4m.aom_pls_superblock(
+    res = native.aom_pls_superblock(
         X,
         y,
         operators=operators,
@@ -5515,8 +5517,8 @@ def test_native_aom_pls_superblock_wrapper_replays_and_reports_components():
         block_scaling="none",
     ).fit(X, y)
 
-    assert hasattr(n4m, "aom_pls_superblock")
-    assert hasattr(n4m, "NativeAOMPLSSuperblockRegressor")
+    assert hasattr(native, "aom_pls_superblock")
+    assert hasattr(native_sklearn, "NativeAOMPLSSuperblockRegressor")
     np.testing.assert_allclose(
         model.predict(X),
         model.result_["predictions"].ravel(),
@@ -5538,7 +5540,7 @@ def test_native_aom_ridge_pls_superblock_function_replays_input_coefficients():
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
     operators = ["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])]
 
-    res = n4m.aom_ridge_pls_superblock(
+    res = native.aom_ridge_pls_superblock(
         X,
         y,
         operators=operators,
@@ -5588,8 +5590,8 @@ def test_native_aom_ridge_pls_superblock_wrapper_replays_and_reports_grid():
         block_scaling="none",
     ).fit(X, y)
 
-    assert hasattr(n4m, "aom_ridge_pls_superblock")
-    assert hasattr(n4m, "NativeAOMRidgePLSSuperblockRegressor")
+    assert hasattr(native, "aom_ridge_pls_superblock")
+    assert hasattr(native_sklearn, "NativeAOMRidgePLSSuperblockRegressor")
     np.testing.assert_allclose(
         model.predict(X),
         model.result_["predictions"].ravel(),
@@ -5614,7 +5616,7 @@ def test_native_aom_chain_ridge_pls_function_replays_input_coefficients():
         [("savgol_smooth", (5, 2)), ("finite_difference", (1,))],
     ]
 
-    res = n4m.aom_chain_ridge_pls(
+    res = native.aom_chain_ridge_pls(
         X,
         y,
         chains=chains,
@@ -5649,7 +5651,7 @@ def test_native_aom_chain_ridge_pls_function_replays_input_coefficients():
         atol=1e-8,
     )
 
-    transformed_only = n4m.aom_chain_ridge_pls(
+    transformed_only = native.aom_chain_ridge_pls(
         X,
         y,
         chains=[chains[1]],
@@ -5687,8 +5689,8 @@ def test_native_aom_chain_ridge_pls_wrapper_replays_and_reports_grid():
         fold_ids=folds,
     ).fit(X, y)
 
-    assert hasattr(n4m, "aom_chain_ridge_pls")
-    assert hasattr(n4m, "NativeAOMChainRidgePLSRegressor")
+    assert hasattr(native, "aom_chain_ridge_pls")
+    assert hasattr(native_sklearn, "NativeAOMChainRidgePLSRegressor")
     np.testing.assert_allclose(
         model.predict(X),
         model.result_["predictions"].ravel(),
@@ -5709,7 +5711,7 @@ def test_native_aom_operator_pls_stack_compact_contract():
     X, y = _aom_dataset()
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
 
-    res = n4m.aom_operator_pls_stack(
+    res = native.aom_operator_pls_stack(
         X,
         y,
         profile="compact",
@@ -5752,7 +5754,7 @@ def test_native_aom_operator_pls_stack_compact_contract():
     )
     assert res["operator_feature_offsets"][0] == 0
     assert res["operator_feature_offsets"][-1] == features.shape[1]
-    assert hasattr(n4m, "NativeAOMOperatorPLSStackRegressor")
+    assert hasattr(native_sklearn, "NativeAOMOperatorPLSStackRegressor")
     model = NativeAOMOperatorPLSStackRegressor(
         profile="compact",
         cv=4,
@@ -5793,7 +5795,7 @@ def test_native_aom_operator_pls_stack_rejects_multi_output_y():
     X, y = _aom_dataset()
     Y = np.column_stack([y, y])
     try:
-        n4m.aom_operator_pls_stack(X, Y, components=[1], alphas=[0.1])
+        native.aom_operator_pls_stack(X, Y, components=[1], alphas=[0.1])
     except ValueError as exc:
         assert "one Y target" in str(exc)
     else:
@@ -5804,7 +5806,7 @@ def test_native_aom_wide_preconfigured_banks_include_fck_variants():
     X, y = _aom_dataset()
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
 
-    hpo = n4m.aom_robust_hpo(
+    hpo = native.aom_robust_hpo(
         X,
         y,
         profile="wide",
@@ -5815,7 +5817,7 @@ def test_native_aom_wide_preconfigured_banks_include_fck_variants():
     assert hpo["n_candidates"] == 31.0 * 4.0
     assert hpo["candidate_scores"].shape == (124, 4)
 
-    blender = n4m.aom_ridge_blender(
+    blender = native.aom_ridge_blender(
         X,
         y,
         profile="wide",
@@ -5841,7 +5843,7 @@ def test_native_aom_wide_preconfigured_banks_include_fck_variants():
     assert blender_diag["expected_bank_size"] == 31
     assert blender_diag["n_chains"] == 31
 
-    stack = n4m.aom_operator_pls_stack(
+    stack = native.aom_operator_pls_stack(
         X,
         y,
         profile="wide",
@@ -5861,7 +5863,7 @@ def test_native_aom_wide_preconfigured_banks_include_fck_variants():
 
 def test_native_aom_robust_hpo_reusable_input_coefficients():
     X, y = _aom_dataset()
-    res = n4m.aom_robust_hpo(
+    res = native.aom_robust_hpo(
         X,
         y,
         profile="compact",
@@ -5901,7 +5903,7 @@ def _assert_native_regressor_replays_training_predictions(model, X, y):
 def test_native_sweep_sklearn_regressor_replays_native_result():
     X, y = _aom_dataset()
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
-    assert hasattr(n4m, "NativeMomentSweepRegressor")
+    assert hasattr(native_sklearn, "NativeMomentSweepRegressor")
 
     fitted = _assert_native_regressor_replays_training_predictions(
         NativeMomentSweepRegressor(
@@ -5929,9 +5931,9 @@ def test_native_aom_sklearn_regressors_replay_input_space_coefficients():
     y = 0.6 * X[:, 0] - 0.35 * X[:, 3] + 0.2 * X[:, 7]
     y += 0.03 * rng.standard_normal(X.shape[0])
     folds = np.arange(X.shape[0], dtype=np.int32) % 4
-    assert hasattr(n4m, "NativeAOMSweepRegressor")
-    assert hasattr(n4m, "NativeAOMChainSweepRegressor")
-    assert hasattr(n4m, "NativeAOMRobustHPORegressor")
+    assert hasattr(native_sklearn, "NativeAOMSweepRegressor")
+    assert hasattr(native_sklearn, "NativeAOMChainSweepRegressor")
+    assert hasattr(native_sklearn, "NativeAOMRobustHPORegressor")
 
     profile_model = NativeAOMSweepRegressor(
         profile="compact",

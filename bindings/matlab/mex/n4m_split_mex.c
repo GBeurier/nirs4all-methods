@@ -64,7 +64,7 @@ static void run_kennard_stone(int nlhs, mxArray* plhs[], int nrhs, const mxArray
     }
 
     n4m_split_kennard_stone_handle_t* handle = NULL;
-    n4m_status_t status = n4m_split_kennard_stone_create(&handle, mxGetScalar(prhs[2]));
+    n4m_status_t status = n4m_model_selection_kennard_stone_create(&handle, mxGetScalar(prhs[2]));
     n4m_split_result_t result;
     result.train_idx = NULL;
     result.n_train = 0;
@@ -73,9 +73,9 @@ static void run_kennard_stone(int nlhs, mxArray* plhs[], int nrhs, const mxArray
     result._owner = NULL;
     if (status == N4M_OK) {
         n4m_matrix_view_t xv = rowmajor_view(X, rows, cols);
-        status = n4m_split_kennard_stone_split(handle, xv, &result);
+        status = n4m_model_selection_kennard_stone_split(handle, xv, &result);
     }
-    n4m_split_kennard_stone_destroy(handle);
+    n4m_model_selection_kennard_stone_destroy(handle);
     free(X);
     if (status != N4M_OK) {
         n4m_split_result_destroy(&result);

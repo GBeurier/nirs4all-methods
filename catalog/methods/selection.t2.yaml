@@ -7,11 +7,11 @@ category: "selection"
 subcategory: "wrapper"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_t2_select"
+  - "n4m_feature_selection_t2_select"
 tu:
   - "cpp/src/core/t2_selection.cpp"
 headers:
-  - "cpp/include/n4m/selection.h"
+  - "cpp/include/n4m/feature_selection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_feature_selection_t2_select"
+fq_name: "n4m.feature_selection.wrapper.t2"
+leaf: "t2"
+legacy_ids:
+  - "selection.t2"
+namespace: "feature_selection.wrapper"

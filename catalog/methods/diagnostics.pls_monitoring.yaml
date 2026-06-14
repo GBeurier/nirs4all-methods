@@ -7,11 +7,11 @@ category: "diagnostics"
 subcategory: "pls"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pls_monitoring_run"
+  - "n4m_metrics_pls_monitoring_run"
 tu:
   - "cpp/src/core/pls_monitoring.cpp"
 headers:
-  - "cpp/include/n4m/diagnostics.h"
+  - "cpp/include/n4m/metrics.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_metrics_pls_monitoring_run"
+fq_name: "n4m.metrics.diagnostics.pls_monitoring"
+leaf: "pls_monitoring"
+legacy_ids:
+  - "diagnostics.pls_monitoring"
+namespace: "metrics.diagnostics"

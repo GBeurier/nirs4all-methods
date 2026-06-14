@@ -7,15 +7,15 @@ category: "preprocessing"
 subcategory: "scatter"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_emsc_create"
-  - "n4m_pp_emsc_destroy"
-  - "n4m_pp_emsc_fit"
-  - "n4m_pp_emsc_is_fitted"
-  - "n4m_pp_emsc_transform"
+  - "n4m_transform_emsc_create"
+  - "n4m_transform_emsc_destroy"
+  - "n4m_transform_emsc_fit"
+  - "n4m_transform_emsc_is_fitted"
+  - "n4m_transform_emsc_transform"
 tu:
   - "cpp/src/core/preprocessing/scatter/emsc.c"
 headers:
-  - "cpp/include/n4m/preprocessing.h"
+  - "cpp/include/n4m/transform/scatter.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -35,3 +35,14 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_transform_emsc_create"
+  - "n4m_transform_emsc_destroy"
+  - "n4m_transform_emsc_fit"
+  - "n4m_transform_emsc_is_fitted"
+  - "n4m_transform_emsc_transform"
+fq_name: "n4m.transform.scatter.emsc"
+leaf: "emsc"
+legacy_ids:
+  - "preprocessing.scatter.emsc"
+namespace: "transform.scatter"

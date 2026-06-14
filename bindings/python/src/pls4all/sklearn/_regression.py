@@ -341,7 +341,7 @@ class Ridge(BaseEstimator, RegressorMixin):
     """Direct (closed-form) L2-penalized linear regression.
 
     Drop-in replacement for ``sklearn.linear_model.Ridge`` backed by the
-    ``n4m_ridge_fit`` C entry-point, which solves the genuine closed form
+    ``n4m_estimators_ridge_fit`` C entry-point, which solves the genuine closed form
 
         beta = (Xc'Xc + alpha I)^-1 Xc'Yc
 

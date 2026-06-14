@@ -241,11 +241,11 @@ SEXP r_n4m_sparse_simpls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, lambda, &mr);
+    st = n4m_estimators_sparse_simpls_fit(ctx, cfg, &Xv, &Yv, lambda, &mr);
     n4m_config_destroy(cfg);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_sparse_simpls_fit", st, ctx);
+        r_throw("n4m_estimators_sparse_simpls_fit", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);
@@ -268,11 +268,11 @@ SEXP r_n4m_cppls_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP gamma_sexp) {
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_cppls_fit(ctx, cfg, &Xv, &Yv, gamma, &mr);
+    st = n4m_estimators_cppls_fit(ctx, cfg, &Xv, &Yv, gamma, &mr);
     n4m_config_destroy(cfg);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_cppls_fit", st, ctx);
+        r_throw("n4m_estimators_cppls_fit", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);
@@ -301,13 +301,13 @@ SEXP r_n4m_weighted_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_weighted_pls_fit(ctx, cfg, &Xv, &Yv,
+    st = n4m_estimators_weighted_pls_fit(ctx, cfg, &Xv, &Yv,
                                REAL(sample_weights_sexp),
                                (int64_t)Rf_length(sample_weights_sexp), &mr);
     n4m_config_destroy(cfg);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_weighted_pls_fit", st, ctx);
+        r_throw("n4m_estimators_weighted_pls_fit", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);
@@ -347,11 +347,11 @@ SEXP r_n4m_mb_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_mb_pls_fit(ctx, cfg, &Xv, &Yv, bs, n_blocks, &mr);
+    st = n4m_estimators_mb_pls_fit(ctx, cfg, &Xv, &Yv, bs, n_blocks, &mr);
     n4m_config_destroy(cfg);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_mb_pls_fit", st, ctx);
+        r_throw("n4m_estimators_mb_pls_fit", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);
@@ -374,11 +374,11 @@ SEXP r_n4m_pls_glm_fit(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP poisson_sexp
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
+    st = n4m_estimators_pls_glm_fit(ctx, cfg, &Xv, &Yv, poisson, &mr);
     n4m_config_destroy(cfg);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_pls_glm_fit", st, ctx);
+        r_throw("n4m_estimators_pls_glm_fit", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);
@@ -400,11 +400,11 @@ SEXP r_n4m_mir_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp) {
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
+    st = n4m_estimators_mir_pls_fit(ctx, cfg, &Xv, &Yv, &mr);
     n4m_config_destroy(cfg);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_mir_pls_fit", st, ctx);
+        r_throw("n4m_estimators_mir_pls_fit", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);
@@ -438,10 +438,10 @@ SEXP r_n4m_variable_select_rank(SEXP model_ptr, SEXP X, SEXP method_sexp,
     n4m_matrix_view_t Xv;
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_variable_select_rank(ctx, model, &Xv, method, top_k, &mr);
+    st = n4m_feature_selection_variable_select_rank(ctx, model, &Xv, method, top_k, &mr);
     if (st != N4M_OK) {
         UNPROTECT(1);
-        r_throw("n4m_variable_select_rank", st, ctx);
+        r_throw("n4m_feature_selection_variable_select_rank", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(1);
@@ -463,11 +463,11 @@ SEXP r_n4m_spa_select(SEXP X, SEXP Y, SEXP n_components_sexp, SEXP top_k_sexp) {
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
+    st = n4m_feature_selection_spa_select(ctx, cfg, &Xv, &Yv, top_k, &mr);
     n4m_config_destroy(cfg);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_spa_select", st, ctx);
+        r_throw("n4m_feature_selection_spa_select", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);
@@ -493,11 +493,11 @@ SEXP r_n4m_cars_select(SEXP X, SEXP Y, SEXP n_components_sexp,
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_cars_select(ctx, cfg, &Xv, &Yv, NULL, n_iter, min_f, &mr);
+    st = n4m_feature_selection_cars_select(ctx, cfg, &Xv, &Yv, NULL, n_iter, min_f, &mr);
     n4m_config_destroy(cfg);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_cars_select", st, ctx);
+        r_throw("n4m_feature_selection_cars_select", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);
@@ -528,10 +528,10 @@ SEXP r_n4m_pls_diagnostics_compute(SEXP model_ptr, SEXP X) {
     n4m_matrix_view_t Xv;
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_pls_diagnostics_compute(ctx, model, &Xv, NULL, &mr);
+    st = n4m_metrics_pls_diagnostics_compute(ctx, model, &Xv, NULL, &mr);
     if (st != N4M_OK) {
         UNPROTECT(1);
-        r_throw("n4m_pls_diagnostics_compute", st, ctx);
+        r_throw("n4m_metrics_pls_diagnostics_compute", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(1);
@@ -552,11 +552,11 @@ SEXP r_n4m_approximate_press_compute(SEXP X, SEXP Y, SEXP max_components_sexp) {
     n4m_matrix_view_init_rowmajor(&Xv, REAL(X_rm), n_rows, n_cols, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Yv, REAL(Y_rm), n_rows, y_cols, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_approximate_press_compute(ctx, cfg, &Xv, &Yv, max_k, &mr);
+    st = n4m_metrics_approximate_press_compute(ctx, cfg, &Xv, &Yv, max_k, &mr);
     n4m_config_destroy(cfg);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_approximate_press_compute", st, ctx);
+        r_throw("n4m_metrics_approximate_press_compute", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);
@@ -590,10 +590,10 @@ SEXP r_n4m_pls_monitoring_run(SEXP model_ptr, SEXP X_ref, SEXP X_mon,
     n4m_matrix_view_init_rowmajor(&Rv, REAL(R_rm), rr, rc, N4M_DTYPE_F64);
     n4m_matrix_view_init_rowmajor(&Mv, REAL(M_rm), mrr, mc, N4M_DTYPE_F64);
     n4m_method_result_t* mr = NULL;
-    st = n4m_pls_monitoring_run(ctx, model, &Rv, &Mv, alpha, &mr);
+    st = n4m_metrics_pls_monitoring_run(ctx, model, &Rv, &Mv, alpha, &mr);
     if (st != N4M_OK) {
         UNPROTECT(2);
-        r_throw("n4m_pls_monitoring_run", st, ctx);
+        r_throw("n4m_metrics_pls_monitoring_run", st, ctx);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(2);

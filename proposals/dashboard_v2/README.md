@@ -47,7 +47,7 @@ semantics in `docs/dashboard_contract.md` / `docs/dashboard.schema.json`).
 Nothing is mocked. Stable keys consumed: `columns[]`, `rows[]` (one per
 `algo,n,p,threads` with `cells` keyed by column id), `method_scores{}`,
 `stats{}`, `host`, `versions`, `algo_groups`, `algo_to_group`, `algo_origin`,
-`algo_has_doc`.
+`algo_has_doc`, `algo_display`, `algo_fq`.
 
 ## Design rationale
 
@@ -88,6 +88,12 @@ Nothing is mocked. Stable keys consumed: `columns[]`, `rows[]` (one per
    This adds **fuzzy search** (name **and** ABI/doc handle **and** category),
    category grouping with per-category accents and summaries, origin/parity
    filters, and four sort modes (incl. "needs attention" and "slowest").
+   Categories are the 12 top-level `n4m.<role>` namespace roles (ABI 2.0):
+   `transform`, `augmentation`, `estimators`, `feature_selection`,
+   `model_selection`, `domain_adaptation`, `outlier_detection`, `ensemble`,
+   `compose`, `metrics`, `decomposition`, `lowlevel`. The grouping is fully
+   data-driven from the payload's `algo_groups` / `algo_to_group`, so it stays
+   in lockstep with the catalog namespace.
 4. **Timing was a number in a cell, not a trend.** The drawer renders
    **timing-vs-size curves** (hand-rolled SVG) with a linear/log toggle and
    hover tooltips, so the scaling behaviour of each implementation is legible.
@@ -98,6 +104,22 @@ Nothing is mocked. Stable keys consumed: `columns[]`, `rows[]` (one per
 7. **Accessibility.** Full keyboard nav (`/` to search, `Esc` to close, Tab
    focus-trap in the drawer), ARIA roles/labels, visible focus rings, and
    sufficient contrast.
+8. **Methods still wore their legacy registry prefixes** (`pp_`, `aug_`,
+   `split_`, `filter_`, `*_select`). Now every card shows the **ABI-2 namespace
+   identity**: the catalog leaf as the label (`pp_savgol` → `savitzky_golay`,
+   `cars_select` → `cars`, `split_kennard_stone` → `kennard_stone`) and the
+   fully-qualified `n4m.<role>…<leaf>` path as the handle
+   (`n4m.transform.smoothing.savitzky_golay`). The mapping is **catalog-driven**
+   (legacy symbol → `_rename_map.tsv` → ABI-2 symbol → catalog `c_surface`), not
+   a string-strip, so abbreviations resolve correctly (179/183 carry a full
+   `fq_name`; the rest display cleanly without one). Search still matches the
+   legacy id. *(The underlying benchmark IDs / doc-page filenames intentionally
+   keep their legacy names for parity-data lineage — nothing user-facing shows them.)*
+9. **No links to the documentation.** Every card now has a **📄 docs ↗** link and
+   the drawer an **Open documentation ↗** link to the published page
+   (`https://methods.nirs4all.org/methods/<page>.html`, set via the `DOCS_BASE`
+   constant in `app.js`). These are navigational links — the page still loads
+   fully offline. The page content itself renders ABI-2 symbols (Phase-4 docs).
 
 ## Known gaps / future polish
 

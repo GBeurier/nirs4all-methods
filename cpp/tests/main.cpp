@@ -106,7 +106,7 @@ void register_c_abi_memory_tests(n4m_testing::Runner& r);
 // Multi-context threading tests live in test_threading.cpp.
 void register_threading_tests(n4m_testing::Runner& r);
 
-// Direct closed-form Ridge regression parity tests (public n4m_ridge_fit)
+// Direct closed-form Ridge regression parity tests (public n4m_estimators_ridge_fit)
 // live in test_ridge.cpp.
 void register_ridge_tests(n4m_testing::Runner& r);
 
@@ -114,7 +114,7 @@ void register_ridge_tests(n4m_testing::Runner& r);
 // test_moments.cpp.
 void register_moments_tests(n4m_testing::Runner& r);
 
-// Native moment sweep tests (public n4m_sweep_run) live in test_sweep.cpp.
+// Native moment sweep tests (public n4m_model_selection_sweep_run) live in test_sweep.cpp.
 void register_sweep_tests(n4m_testing::Runner& r);
 
 // Native AOM robust-HPO screening smoke tests live in

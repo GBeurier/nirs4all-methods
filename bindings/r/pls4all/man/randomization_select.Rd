@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{randomization_select}
 \alias{randomization_select}
+\alias{n4m_feature_select_randomization}
 \title{Randomization test selector.}
 \usage{
 randomization_select(

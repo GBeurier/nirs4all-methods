@@ -125,25 +125,24 @@ def generate(name: str) -> Path:
     import numpy as np
 
     import n4m
-    import n4m.aom as aom
-    import n4m.moment as moment
-    from n4m.sklearn import NativeAOMMomentScreenRefitRegressor
-    from n4m.sklearn import NativeRidgeRegressor
+    from n4m._impl import aom_facade as aom
+    from n4m._impl import moment_facade as moment
+    from n4m._impl import native
+    from n4m.estimators.regression.regularized import Ridge
+    from n4m.model_selection.aom_campaign import AOMMomentScreenRefitRegressor
+    from n4m.model_selection.aom_search import aom_screen_refit_candidate_pool
 
     assert n4m.__version__
     assert n4m.abi_version()  # loads + queries the embedded libn4m
-    assert n4m.aom is aom
-    assert n4m.moment is moment
-    assert callable(n4m.moments)
-    assert hasattr(n4m, "aom_screen_refit_candidate_pool")
-    assert aom.aom_screen_refit_candidate_pool is n4m.aom_screen_refit_candidate_pool
-    assert moment.moments is n4m.moments
-    assert moment.ridge is n4m.ridge
+    assert callable(native.moments)
+    assert aom.aom_screen_refit_candidate_pool is native.aom_screen_refit_candidate_pool
+    assert moment.moments is native.moments
+    assert moment.ridge is native.ridge
     aom_inventory = {row["name"]: row for row in aom.available_methods()}
     moment_inventory = {row["name"]: row for row in moment.available_methods()}
     # Every advertised inventory entry must resolve as a facade attribute, so the
     # generated wheel can never ship a facade that names a wrapper it does not
-    # actually export (regression guard for the n4m.aom pop_pls wrapper gap).
+    # actually export (regression guard for the aom pop_pls wrapper gap).
     for facade in (aom, moment):
         for row in facade.available_methods():
             assert hasattr(facade, row["entry"]), (facade.__name__, row["name"], row["entry"])
@@ -159,10 +158,6 @@ def generate(name: str) -> Path:
     assert "cuda_pls_min_device_features" in moment_inventory["sweep_run"][
         "config_options"
     ]
-    assert hasattr(n4m, "NativeAOMMomentScreenRefitRegressor")
-    assert aom.NativeAOMMomentScreenRefitRegressor is NativeAOMMomentScreenRefitRegressor
-    assert hasattr(n4m, "NativeRidgeRegressor")
-    assert moment.NativeRidgeRegressor is NativeRidgeRegressor
 
     rng = np.random.default_rng(731)
     X = rng.standard_normal((48, 6))
@@ -177,12 +172,12 @@ def generate(name: str) -> Path:
     assert pre["operator_kinds"].tolist() == [0]
     ridge = moment.ridge(X, y, alpha=0.1, scale_x=False)
     assert ridge["predictions"].shape[0] == X.shape[0]
-    ridge_model = NativeRidgeRegressor(alpha=0.1, scale_x=False).fit(X, y)
+    ridge_model = Ridge(alpha=0.1, scale_x=False).fit(X, y)
     np.testing.assert_allclose(
         ridge_model.predict(X), ridge["predictions"].ravel(), rtol=1e-10, atol=1e-10
     )
 
-    model = NativeAOMMomentScreenRefitRegressor(
+    model = AOMMomentScreenRefitRegressor(
         chains=chains,
         cv=4,
         fold_ids=folds,
@@ -200,7 +195,7 @@ def generate(name: str) -> Path:
     assert diag["n_split_head_chunks"] >= 1
     assert diag["n_refit_candidates"] >= 2
     assert {row["head"] for row in model.refit_report_["rows"]} == {"ridge", "pls"}
-    pool = n4m.aom_screen_refit_candidate_pool(
+    pool = aom_screen_refit_candidate_pool(
         model.screen_report_,
         refit_top_k=1,
         refit_per_head_top_k=1,
@@ -211,11 +206,11 @@ def generate(name: str) -> Path:
 def test_core_import_without_sklearn():
     # The wheel declares only numpy as a runtime dependency and advertises
     # scikit-learn (and scipy) as optional. Prove the SHIPPED package honors that:
-    # importing n4m + the aom/moment facades + the direct function surface must
-    # work in a child interpreter where sklearn and scipy are blocked, falling
-    # back to n4m.sklearn._compat for the estimator base classes. The cibuildwheel
-    # test stage installs scikit-learn for the sklearn-wrapper smoke above, so
-    # only this explicit block exercises the optional-dependency contract.
+    # importing n4m + the role packages + the direct function surface must work in
+    # a child interpreter where sklearn and scipy are blocked, falling back to
+    # n4m._impl.compat for the estimator base classes. The cibuildwheel test stage
+    # installs scikit-learn for the sklearn-wrapper smoke above, so only this
+    # explicit block exercises the optional-dependency contract.
     import os
     import subprocess
     import sys
@@ -232,13 +227,13 @@ sys.meta_path.insert(0, _Block())
 
 import numpy as np
 import n4m
-import n4m.aom as aom
-import n4m.moment as moment
+from n4m._impl import aom_facade as aom
+from n4m._impl import moment_facade as moment
 
 assert "sklearn" not in sys.modules
 assert "scipy" not in sys.modules
-from n4m.sklearn._compat import BaseEstimator
-assert BaseEstimator.__module__ == "n4m.sklearn._compat"
+from n4m._impl.compat import BaseEstimator
+assert BaseEstimator.__module__ == "n4m._impl.compat"
 assert n4m.abi_version()
 
 rng = np.random.default_rng(0)
@@ -251,8 +246,8 @@ r = moment.ridge(X, y, alpha=0.1, scale_x=False)
 assert r["predictions"].shape[0] == 32
 assert aom.available_methods() and moment.available_methods()
 
-from n4m.sklearn import NativeRidgeRegressor
-m = NativeRidgeRegressor(alpha=0.1, scale_x=False).fit(X, y)
+from n4m.estimators.regression.regularized import Ridge
+m = Ridge(alpha=0.1, scale_x=False).fit(X, y)
 np.testing.assert_allclose(m.predict(X), r["predictions"].ravel(), rtol=1e-10, atol=1e-10)
 print("SKLEARN_OPTIONAL_OK")
 """

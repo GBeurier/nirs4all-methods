@@ -1,6 +1,6 @@
 # `aug_local_clip` — Local Clip
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.LocalClip` · _C ABI_: `n4m_aug_local_clip_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.LocalClip` · _C ABI_: `n4m_augmentation_local_clip_*`
 
 ## Description
 
@@ -28,7 +28,7 @@ Clip random local spectral regions.
 
 ### Implementation
 
-C ABI `n4m_aug_local_clip_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LocalClip`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_local_clip_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LocalClip`. The same numerical kernel backs every language binding.
 
 ### Usage
 

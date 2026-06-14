@@ -201,7 +201,7 @@ extern "C" {
 // ToAbsorbance
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_to_absorbance_create(
+N4M_API n4m_status_t n4m_transform_to_absorbance_create(
     n4m_pp_to_absorbance_handle_t** out,
     int is_percent, double epsilon, int clip_negative) {
     if (out == nullptr) {
@@ -238,7 +238,7 @@ N4M_API n4m_status_t n4m_pp_to_absorbance_create(
     }
 }
 
-N4M_API void n4m_pp_to_absorbance_destroy(n4m_pp_to_absorbance_handle_t* h) {
+N4M_API void n4m_transform_to_absorbance_destroy(n4m_pp_to_absorbance_handle_t* h) {
     if (h == nullptr) return;
     if (h->static_storage) return;
     try {
@@ -249,7 +249,7 @@ N4M_API void n4m_pp_to_absorbance_destroy(n4m_pp_to_absorbance_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_to_absorbance_transform(
+N4M_API n4m_status_t n4m_transform_to_absorbance_transform(
     const n4m_pp_to_absorbance_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -277,7 +277,7 @@ N4M_API n4m_status_t n4m_pp_to_absorbance_transform(
 // FromAbsorbance
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_from_absorbance_create(
+N4M_API n4m_status_t n4m_transform_from_absorbance_create(
     n4m_pp_from_absorbance_handle_t** out, int is_percent) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -311,7 +311,7 @@ N4M_API n4m_status_t n4m_pp_from_absorbance_create(
     }
 }
 
-N4M_API void n4m_pp_from_absorbance_destroy(
+N4M_API void n4m_transform_from_absorbance_destroy(
     n4m_pp_from_absorbance_handle_t* h) {
     if (h == nullptr) return;
     if (h->static_storage) return;
@@ -323,7 +323,7 @@ N4M_API void n4m_pp_from_absorbance_destroy(
     }
 }
 
-N4M_API n4m_status_t n4m_pp_from_absorbance_transform(
+N4M_API n4m_status_t n4m_transform_from_absorbance_transform(
     const n4m_pp_from_absorbance_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -351,7 +351,7 @@ N4M_API n4m_status_t n4m_pp_from_absorbance_transform(
 // PercentToFraction
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_pct_to_frac_create(
+N4M_API n4m_status_t n4m_transform_percent_to_fraction_create(
     n4m_pp_pct_to_frac_handle_t** out) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -364,11 +364,11 @@ N4M_API n4m_status_t n4m_pp_pct_to_frac_create(
     return N4M_OK;
 }
 
-N4M_API void n4m_pp_pct_to_frac_destroy(n4m_pp_pct_to_frac_handle_t* h) {
+N4M_API void n4m_transform_percent_to_fraction_destroy(n4m_pp_pct_to_frac_handle_t* h) {
     (void)h;
 }
 
-N4M_API n4m_status_t n4m_pp_pct_to_frac_transform(
+N4M_API n4m_status_t n4m_transform_percent_to_fraction_transform(
     const n4m_pp_pct_to_frac_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -410,7 +410,7 @@ N4M_API n4m_status_t n4m_pp_pct_to_frac_transform(
 // FractionToPercent
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_frac_to_pct_create(
+N4M_API n4m_status_t n4m_transform_fraction_to_percent_create(
     n4m_pp_frac_to_pct_handle_t** out) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -423,11 +423,11 @@ N4M_API n4m_status_t n4m_pp_frac_to_pct_create(
     return N4M_OK;
 }
 
-N4M_API void n4m_pp_frac_to_pct_destroy(n4m_pp_frac_to_pct_handle_t* h) {
+N4M_API void n4m_transform_fraction_to_percent_destroy(n4m_pp_frac_to_pct_handle_t* h) {
     (void)h;
 }
 
-N4M_API n4m_status_t n4m_pp_frac_to_pct_transform(
+N4M_API n4m_status_t n4m_transform_fraction_to_percent_transform(
     const n4m_pp_frac_to_pct_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {
@@ -467,7 +467,7 @@ N4M_API n4m_status_t n4m_pp_frac_to_pct_transform(
 // KubelkaMunk
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_pp_kubelka_munk_create(
+N4M_API n4m_status_t n4m_transform_kubelka_munk_create(
     n4m_pp_kubelka_munk_handle_t** out, int is_percent, double epsilon) {
     if (out == nullptr) {
         return N4M_ERR_NULL_POINTER;
@@ -503,7 +503,7 @@ N4M_API n4m_status_t n4m_pp_kubelka_munk_create(
     }
 }
 
-N4M_API void n4m_pp_kubelka_munk_destroy(n4m_pp_kubelka_munk_handle_t* h) {
+N4M_API void n4m_transform_kubelka_munk_destroy(n4m_pp_kubelka_munk_handle_t* h) {
     if (h == nullptr) return;
     if (h->static_storage) return;
     try {
@@ -514,7 +514,7 @@ N4M_API void n4m_pp_kubelka_munk_destroy(n4m_pp_kubelka_munk_handle_t* h) {
     }
 }
 
-N4M_API n4m_status_t n4m_pp_kubelka_munk_transform(
+N4M_API n4m_status_t n4m_transform_kubelka_munk_transform(
     const n4m_pp_kubelka_munk_handle_t* h,
     n4m_matrix_view_t X,
     n4m_matrix_view_t out) {

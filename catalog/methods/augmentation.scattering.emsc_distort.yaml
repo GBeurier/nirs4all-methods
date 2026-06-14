@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "scattering"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_emsc_distort_apply"
-  - "n4m_aug_emsc_distort_create"
-  - "n4m_aug_emsc_distort_destroy"
+  - "n4m_augmentation_emsc_distort_apply"
+  - "n4m_augmentation_emsc_distort_create"
+  - "n4m_augmentation_emsc_distort_destroy"
 tu:
   - "cpp/src/core/augmentation/scattering/emsc_distort.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/scattering.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_emsc_distort_apply"
+  - "n4m_augmentation_emsc_distort_create"
+  - "n4m_augmentation_emsc_distort_destroy"
+fq_name: "n4m.augmentation.scattering.emsc_distort"
+leaf: "emsc_distort"
+legacy_ids:
+  - "augmentation.scattering.emsc_distort"
+namespace: "augmentation.scattering"

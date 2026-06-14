@@ -1,6 +1,6 @@
 # `pp_osc` — O S C
 
-_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.OSC` · _C ABI_: `n4m_pp_osc_*`
+_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.OSC` · _C ABI_: `n4m_transform_osc_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Orthogonal Signal Correction.
 
 ### Implementation
 
-C ABI `n4m_pp_osc_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.OSC`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_osc_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.OSC`. The same numerical kernel backs every language binding.
 
 ### Usage
 

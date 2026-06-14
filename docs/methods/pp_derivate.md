@@ -1,6 +1,6 @@
 # `pp_derivate` — Derivate
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.Derivate` · _C ABI_: `n4m_pp_derivate_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.Derivate` · _C ABI_: `n4m_transform_derivative_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Finite-difference derivative along the wavelength axis.
 
 ### Implementation
 
-C ABI `n4m_pp_derivate_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Derivate`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_derivative_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Derivate`. The same numerical kernel backs every language binding.
 
 ### Usage
 

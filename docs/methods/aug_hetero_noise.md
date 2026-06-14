@@ -1,6 +1,6 @@
 # `aug_hetero_noise` — Heteroscedastic Noise Augmenter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.HeteroscedasticNoiseAugmenter` · _C ABI_: `n4m_aug_hetero_noise_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.HeteroscedasticNoiseAugmenter` · _C ABI_: `n4m_augmentation_hetero_noise_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ Noise whose standard deviation depends on signal magnitude.
 
 ### Implementation
 
-C ABI `n4m_aug_hetero_noise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.HeteroscedasticNoiseAugmenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_hetero_noise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.HeteroscedasticNoiseAugmenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

@@ -1,6 +1,6 @@
 # `pp_resample` — Resample Transformer
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.ResampleTransformer` · _C ABI_: `n4m_pp_resample_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.ResampleTransformer` · _C ABI_: `n4m_transform_resample_transformer_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ Resize spectra to a fixed column count.
 
 ### Implementation
 
-C ABI `n4m_pp_resample_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ResampleTransformer`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_resample_transformer_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ResampleTransformer`. The same numerical kernel backs every language binding.
 
 ### Usage
 

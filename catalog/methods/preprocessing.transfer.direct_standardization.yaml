@@ -7,15 +7,15 @@ category: "preprocessing"
 subcategory: "transfer"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_pp_direct_standardization_create"
-  - "n4m_pp_direct_standardization_destroy"
-  - "n4m_pp_direct_standardization_fit"
-  - "n4m_pp_direct_standardization_is_fitted"
-  - "n4m_pp_direct_standardization_transform"
+  - "n4m_domain_adaptation_direct_standardization_create"
+  - "n4m_domain_adaptation_direct_standardization_destroy"
+  - "n4m_domain_adaptation_direct_standardization_fit"
+  - "n4m_domain_adaptation_direct_standardization_is_fitted"
+  - "n4m_domain_adaptation_direct_standardization_transform"
 tu:
   - "cpp/src/c_api/c_api_advanced.cpp"
 headers:
-  - "cpp/include/n4m/n4m.h"
+  - "cpp/include/n4m/domain_adaptation.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -35,3 +35,14 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+c_surface:
+  - "n4m_domain_adaptation_direct_standardization_create"
+  - "n4m_domain_adaptation_direct_standardization_destroy"
+  - "n4m_domain_adaptation_direct_standardization_fit"
+  - "n4m_domain_adaptation_direct_standardization_is_fitted"
+  - "n4m_domain_adaptation_direct_standardization_transform"
+fq_name: "n4m.domain_adaptation.standardization.direct_standardization"
+leaf: "direct_standardization"
+legacy_ids:
+  - "preprocessing.transfer.direct_standardization"
+namespace: "domain_adaptation.standardization"

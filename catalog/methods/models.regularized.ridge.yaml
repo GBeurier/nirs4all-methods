@@ -7,12 +7,12 @@ category: "models"
 subcategory: "regularized"
 since_abi: "1.16.0"
 abi_symbols:
-  - "n4m_ridge_fit"
+  - "n4m_estimators_ridge_fit"
 tu:
   - "cpp/src/core/ridge.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/pls.h"
+  - "cpp/include/n4m/estimators/regression.h"
 carry_along_tu:
   - "cpp/src/core/model.cpp"
   - "cpp/src/core/common/linalg.c"
@@ -33,8 +33,15 @@ feature_flags: []
 vendored_licenses: []
 bindings:
   python:
-    module: "n4m.python"
+    module: "n4m.estimators.regression.regularized"
     class: "ridge"
     legacy_aliases: []
 publications: []
 notes: "Direct closed-form Ridge regression head with primal/dual handling in the native core. This is the reusable linear head used by the moment and AOM Ridge screens."
+c_surface:
+  - "n4m_estimators_ridge_fit"
+fq_name: "n4m.estimators.regression.regularized.ridge"
+leaf: "ridge"
+legacy_ids:
+  - "models.regularized.ridge"
+namespace: "estimators.regression.regularized"

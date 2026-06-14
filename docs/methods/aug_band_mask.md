@@ -1,6 +1,6 @@
 # `aug_band_mask` — Band Masking
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.BandMasking` · _C ABI_: `n4m_aug_band_mask_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.BandMasking` · _C ABI_: `n4m_augmentation_band_mask_*`
 
 ## Description
 
@@ -30,7 +30,7 @@ Mask random spectral bands with zero-fill or interpolation.
 
 ### Implementation
 
-C ABI `n4m_aug_band_mask_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BandMasking`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_band_mask_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BandMasking`. The same numerical kernel backs every language binding.
 
 ### Usage
 

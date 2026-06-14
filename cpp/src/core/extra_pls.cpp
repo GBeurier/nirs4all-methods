@@ -676,7 +676,7 @@ void simple_simpls(std::vector<double> xk,
 
 // Default (cfg.sparse_simpls_legacy == 0): dummy-encode the class labels
 // into Y, then run the Chun & Keles 2010 sparse SIMPLS (the same kernel
-// used by `n4m_sparse_simpls_fit`) with `scale_x=1, scale_y=0`. This
+// used by `n4m_estimators_sparse_simpls_fit`) with `scale_x=1, scale_y=0`. This
 // matches the R `spls::splsda` pipeline (modulo the LDA classifier head;
 // the registry uses argmax of regression scores).
 //

@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{st_select}
 \alias{st_select}
+\alias{n4m_feature_select_st}
 \title{ST-PLS — score-threshold selector.}
 \usage{
 st_select(X, Y, n_components, thresholds, min_selected = NULL)

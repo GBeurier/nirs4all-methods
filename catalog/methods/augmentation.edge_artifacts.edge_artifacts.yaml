@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "edge_artifacts"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_edge_artifacts_apply"
-  - "n4m_aug_edge_artifacts_create"
-  - "n4m_aug_edge_artifacts_destroy"
+  - "n4m_augmentation_edge_artifacts_apply"
+  - "n4m_augmentation_edge_artifacts_create"
+  - "n4m_augmentation_edge_artifacts_destroy"
 tu:
   - "cpp/src/c_api/c_api_augmenters_edge_splines_random.cpp"
 headers:
-  - "cpp/include/n4m/n4m.h"
+  - "cpp/include/n4m/augmentation/instrument.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+c_surface:
+  - "n4m_augmentation_edge_artifacts_apply"
+  - "n4m_augmentation_edge_artifacts_create"
+  - "n4m_augmentation_edge_artifacts_destroy"
+fq_name: "n4m.augmentation.instrument.edge_artifacts"
+leaf: "edge_artifacts"
+legacy_ids:
+  - "augmentation.edge_artifacts.edge_artifacts"
+namespace: "augmentation.instrument"

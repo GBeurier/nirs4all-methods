@@ -71,7 +71,7 @@ BIBLIOGRAPHY: dict[str, dict] = {
         ),
         "implementation": (
             "Dispatched through `Algorithm.PLS_REGRESSION` + "
-            "`Solver.SIMPLS` in libn4m (the `n4m_pls_fit` C entry "
+            "`Solver.SIMPLS` in libn4m (the `n4m_model_fit` C entry "
             "point). The same `Model.fit` / `Model.predict` surface is "
             "used by every binding. NIPALS, SVD, power-iteration, "
             "randomised-SVD, orthogonal-scores, kernel and wide-kernel "

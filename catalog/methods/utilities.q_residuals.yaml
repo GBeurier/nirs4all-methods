@@ -7,11 +7,11 @@ category: "utilities"
 subcategory: "general"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_util_q_residuals"
+  - "n4m_outlier_detection_q_residuals"
 tu:
   - "cpp/src/core/utilities/q_residuals.c"
 headers:
-  - "cpp/include/n4m/utilities.h"
+  - "cpp/include/n4m/outlier_detection.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_outlier_detection_q_residuals"
+fq_name: "n4m.outlier_detection.q_residuals"
+leaf: "q_residuals"
+legacy_ids:
+  - "utilities.q_residuals"
+namespace: "outlier_detection"

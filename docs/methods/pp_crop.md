@@ -1,6 +1,6 @@
 # `pp_crop` — Crop Transformer
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.CropTransformer` · _C ABI_: `n4m_pp_crop_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.CropTransformer` · _C ABI_: `n4m_transform_crop_*`
 
 ## Description
 
@@ -25,7 +25,7 @@ Slice wavelength columns in the half-open interval ``[start, end)``.
 
 ### Implementation
 
-C ABI `n4m_pp_crop_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.CropTransformer`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_crop_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.CropTransformer`. The same numerical kernel backs every language binding.
 
 ### Usage
 

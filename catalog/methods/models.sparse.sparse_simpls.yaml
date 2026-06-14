@@ -7,11 +7,11 @@ category: "models"
 subcategory: "sparse"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_sparse_simpls_fit"
+  - "n4m_estimators_sparse_simpls_fit"
 tu:
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
-  - "cpp/include/n4m/n4m.h"
+  - "cpp/include/n4m/estimators/regression.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -31,3 +31,10 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+c_surface:
+  - "n4m_estimators_sparse_simpls_fit"
+fq_name: "n4m.estimators.regression.sparse.sparse_simpls"
+leaf: "sparse_simpls"
+legacy_ids:
+  - "models.sparse.sparse_simpls"
+namespace: "estimators.regression.sparse"

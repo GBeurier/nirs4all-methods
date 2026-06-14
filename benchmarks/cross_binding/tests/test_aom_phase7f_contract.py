@@ -57,14 +57,16 @@ def test_phase7f_dashboard_covers_pre_abi_python_references():
 
 
 def test_phase7f_python_references_are_exported():
-    n4m = importlib.import_module("n4m")
-    sklearn_surface = importlib.import_module("n4m.sklearn")
+    # The flat top-level / n4m.sklearn surface was removed in the ABI-2 namespace
+    # migration; the AOM portfolio reference classes now live in the n4m._impl
+    # substrate (re-exported by the n4m.model_selection.aom_search / n4m.ensemble
+    # role packages).
+    impl_surface = importlib.import_module("n4m._impl")
     for row in _csv_rows(CATALOG_READY):
         if row["current_status"] != "python_reference":
             continue
         class_name = row["python_class"]
-        assert hasattr(n4m, class_name), class_name
-        assert hasattr(sklearn_surface, class_name), class_name
+        assert hasattr(impl_surface, class_name), class_name
 
 
 def test_pre_abi_methods_are_not_in_canonical_catalog():

@@ -1,6 +1,6 @@
 # `pp_baseline` — Baseline Center
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.BaselineCenter` · _C ABI_: `n4m_pp_baseline_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.BaselineCenter` · _C ABI_: `n4m_transform_baseline_center_*`
 
 ## Description
 
@@ -22,7 +22,7 @@ Column-mean baseline centering.
 
 ### Implementation
 
-C ABI `n4m_pp_baseline_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BaselineCenter`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_baseline_center_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BaselineCenter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

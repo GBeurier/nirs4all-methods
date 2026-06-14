@@ -11,14 +11,14 @@
 # CI only once the residual is zero.
 method_prefix:
   # ---- aom_pop ----
-  aom_pop.aom_pls: n4m_aom_global
-  aom_pop.aom_preprocessing: n4m_aom_preprocess
-  aom_pop.aom_sweep: n4m_aom_sweep_run
-  aom_pop.aom_chain_sweep: n4m_aom_chain_sweep_run
-  aom_pop.aom_chain_fixed_fit: n4m_aom_chain_fixed_fit_run
-  aom_pop.robust_hpo: n4m_aom_robust_hpo
-  aom_pop.ridge_blender: n4m_aom_ridge_blender
-  aom_pop.operator_pls_stack: n4m_aom_operator_pls_stack
+  aom_pop.aom_pls: n4m_model_selection_aom_pls
+  aom_pop.aom_preprocessing: n4m_model_selection_aom_preprocessing
+  aom_pop.aom_sweep: n4m_model_selection_aom_sweep
+  aom_pop.aom_chain_sweep: n4m_model_selection_aom_chain_sweep
+  aom_pop.aom_chain_fixed_fit: n4m_model_selection_aom_chain_fixed_fit
+  aom_pop.robust_hpo: n4m_model_selection_robust_hpo
+  aom_pop.ridge_blender: n4m_ensemble_aom_ridge_blender
+  aom_pop.operator_pls_stack: n4m_ensemble_aom_operator_pls_stack
   aom_pop.aom_operators: null
   aom_pop.gating_strategy: null
   aom_pop.operator_bank: null
@@ -27,175 +27,176 @@ method_prefix:
   augmentation.aug_rng_utils: null
   augmentation.environmental.aug_interp: null
   augmentation.spectral.spectral_common: null
-  augmentation.drift.linear_drift: n4m_aug_linear_drift
-  augmentation.drift.path_length: n4m_aug_path_length
-  augmentation.drift.poly_drift: n4m_aug_poly_drift
-  augmentation.edge_artifacts.detector_rolloff: n4m_aug_detector_rolloff
-  augmentation.edge_artifacts.edge_curvature: n4m_aug_edge_curve
-  augmentation.edge_artifacts.stray_light: n4m_aug_stray_light
-  augmentation.edge_artifacts.truncated_peak: n4m_aug_truncated_peak
-  augmentation.environmental.moisture: n4m_aug_moisture
-  augmentation.environmental.temperature: n4m_aug_temperature
-  augmentation.mixup.local_mixup: n4m_aug_local_mixup
-  augmentation.mixup.mixup: n4m_aug_mixup
-  augmentation.noise.gaussian_noise: n4m_aug_gaussian_noise
-  augmentation.noise.hetero_noise: n4m_aug_hetero_noise
-  augmentation.noise.multiplicative_noise: n4m_aug_multiplicative_noise
-  augmentation.noise.spike_noise: n4m_aug_spike_noise
-  augmentation.random.random_x_op: n4m_aug_random_x_op
-  augmentation.random.rotate_translate: n4m_aug_rotate_translate
-  augmentation.scattering.batch_effect: n4m_aug_batch_effect
-  augmentation.scattering.dead_band: n4m_aug_dead_band
-  augmentation.scattering.emsc_distort: n4m_aug_emsc_distort
-  augmentation.scattering.instrument_broaden: n4m_aug_instrument_broaden
-  augmentation.scattering.particle_size: n4m_aug_particle_size
-  augmentation.scattering.scatter_sim_msc: n4m_aug_scatter_sim
-  augmentation.spectral.band_mask: n4m_aug_band_mask
-  augmentation.spectral.band_perturb: n4m_aug_band_perturb
-  augmentation.spectral.channel_dropout: n4m_aug_channel_dropout
-  augmentation.spectral.gauss_jitter: n4m_aug_gauss_jitter
-  augmentation.spectral.local_clip: n4m_aug_local_clip
-  augmentation.spectral.magnitude_warp: n4m_aug_magnitude_warp
-  augmentation.spectral.unsharp_mask: n4m_aug_unsharp_mask
-  augmentation.splines.spline_curve_simplification: n4m_aug_spline_curve_simplify
-  augmentation.splines.spline_smoothing: n4m_aug_spline_smooth
-  augmentation.splines.spline_x_perturbations: n4m_aug_spline_x_perturb
-  augmentation.splines.spline_x_simplification: n4m_aug_spline_x_simplify
-  augmentation.splines.spline_y_perturbations: n4m_aug_spline_y_perturb
-  augmentation.wavelength.local_warp: n4m_aug_local_warp
-  augmentation.wavelength.wavelength_shift: n4m_aug_wavelength_shift
-  augmentation.wavelength.wavelength_stretch: n4m_aug_wavelength_stretch
+  augmentation.drift.linear_drift: n4m_augmentation_linear_drift
+  augmentation.drift.path_length: n4m_augmentation_path_length
+  augmentation.drift.poly_drift: n4m_augmentation_poly_drift
+  augmentation.edge_artifacts.detector_rolloff: n4m_augmentation_detector_rolloff
+  augmentation.edge_artifacts.edge_curvature: n4m_augmentation_edge_curvature
+  augmentation.edge_artifacts.stray_light: n4m_augmentation_stray_light
+  augmentation.edge_artifacts.truncated_peak: n4m_augmentation_truncated_peak
+  augmentation.environmental.moisture: n4m_augmentation_moisture
+  augmentation.environmental.temperature: n4m_augmentation_temperature
+  augmentation.mixup.local_mixup: n4m_augmentation_local_mixup
+  augmentation.mixup.mixup: n4m_augmentation_mixup
+  augmentation.noise.gaussian_noise: n4m_augmentation_gaussian_noise
+  augmentation.noise.hetero_noise: n4m_augmentation_hetero_noise
+  augmentation.noise.multiplicative_noise: n4m_augmentation_multiplicative_noise
+  augmentation.noise.spike_noise: n4m_augmentation_spike_noise
+  augmentation.random.random_x_op: n4m_augmentation_random_x_op
+  augmentation.random.rotate_translate: n4m_augmentation_rotate_translate
+  augmentation.scattering.batch_effect: n4m_augmentation_batch_effect
+  augmentation.scattering.dead_band: n4m_augmentation_dead_band
+  augmentation.scattering.emsc_distort: n4m_augmentation_emsc_distort
+  augmentation.scattering.instrument_broaden: n4m_augmentation_instrument_broaden
+  augmentation.scattering.particle_size: n4m_augmentation_particle_size
+  augmentation.scattering.scatter_sim_msc: n4m_augmentation_scatter_sim_msc
+  augmentation.spectral.band_mask: n4m_augmentation_band_mask
+  augmentation.spectral.band_perturb: n4m_augmentation_band_perturb
+  augmentation.spectral.channel_dropout: n4m_augmentation_channel_dropout
+  augmentation.spectral.gauss_jitter: n4m_augmentation_gauss_jitter
+  augmentation.spectral.local_clip: n4m_augmentation_local_clip
+  augmentation.spectral.magnitude_warp: n4m_augmentation_magnitude_warp
+  augmentation.spectral.unsharp_mask: n4m_augmentation_unsharp_mask
+  augmentation.splines.spline_curve_simplification: n4m_augmentation_spline_curve_simplification
+  augmentation.splines.spline_smoothing: n4m_augmentation_spline_smoothing
+  augmentation.splines.spline_x_perturbations: n4m_augmentation_spline_x_perturbations
+  augmentation.splines.spline_x_simplification: n4m_augmentation_spline_x_simplification
+  augmentation.splines.spline_y_perturbations: n4m_augmentation_spline_y_perturbations
+  augmentation.wavelength.local_warp: n4m_augmentation_local_warp
+  augmentation.wavelength.wavelength_shift: n4m_augmentation_wavelength_shift
+  augmentation.wavelength.wavelength_stretch: n4m_augmentation_wavelength_stretch
 
   # ---- diagnostics ----
   diagnostics.classification_metrics: null
   diagnostics.component_coefficients: null
   diagnostics.cross_validation: null
-  diagnostics.model_selection: n4m_one_se_rule
-  diagnostics.pls_diagnostics: n4m_pls_diagnostics
-  diagnostics.pls_monitoring: n4m_pls_monitoring
-  diagnostics.regression_metrics: n4m_metric
+  diagnostics.model_selection: n4m_metrics_one_se_rule
+  diagnostics.pls_diagnostics: n4m_metrics_pls_diagnostics
+  diagnostics.pls_monitoring: n4m_metrics_pls_monitoring
+  diagnostics.regression_metrics: n4m_metrics_regression_metrics
   diagnostics.validation: null
   diagnostics.variable_importance: null
 
   # ---- filters ----
-  filters.composite: n4m_filter_composite
-  filters.high_leverage: n4m_filter_leverage
-  filters.spectral_quality: n4m_filter_quality
-  filters.x_outlier: n4m_filter_x_outlier
-  filters.y_outlier: n4m_filter_y_outlier
+  filters.composite: n4m_outlier_detection_composite
+  filters.high_leverage: n4m_outlier_detection_high_leverage
+  filters.spectral_quality: n4m_outlier_detection_spectral_quality
+  filters.x_outlier: n4m_outlier_detection_x_outlier
+  filters.y_outlier: n4m_outlier_detection_y_outlier
 
   # ---- models ----
-  models.classification.pls_lda: n4m_pls_lda
-  models.classification.pls_logistic: n4m_pls_logistic
-  models.local.lw_pls: n4m_lw_pls
+  models.classification.pls_lda: n4m_estimators_pls_lda
+  models.classification.pls_logistic: n4m_estimators_pls_logistic
+  models.local.lw_pls: n4m_estimators_lw_pls
   models.multiblock.extensions: null
-  models.multiblock.mb_pls: n4m_mb_pls
+  models.multiblock.mb_pls: n4m_estimators_mb_pls
   models.pls._aggregate_v097: null
   models.pls._extra_aggregate_v097: null
-  models.pls.kernel: n4m_kernel_pls
-  models.pls.pcr: n4m_pcr_fit
-  models.regularized.ridge: n4m_ridge_fit
-  models.specialized.ecr: n4m_ecr
-  models.specialized.gpr_pls: n4m_gpr_pls
-  models.specialized.recursive: n4m_recursive_pls
-  models.specialized.tensor_pls: n4m_n_pls
+  models.pls.kernel: n4m_estimators_kernel_pls
+  models.pls.pcr: n4m_estimators_pcr
+  models.regularized.ridge: n4m_estimators_ridge
+  models.specialized.ecr: n4m_estimators_ecr
+  models.specialized.gpr_pls: n4m_estimators_gpr_pls
+  models.specialized.recursive: n4m_estimators_recursive_pls
+  models.specialized.tensor_pls: n4m_estimators_n_pls
 
   # ---- pipeline ----
   pipeline._aggregate_v097: null
 
   # ---- preprocessing ----
-  preprocessing.baselines.airpls: n4m_pp_airpls
-  preprocessing.baselines.arpls: n4m_pp_arpls
-  preprocessing.baselines.asls: n4m_pp_asls
-  preprocessing.baselines.beads: n4m_pp_beads
-  preprocessing.baselines.detrend: n4m_pp_detrend
-  preprocessing.baselines.iasls: n4m_pp_iasls
-  preprocessing.baselines.imodpoly: n4m_pp_imodpoly
-  preprocessing.baselines.modpoly: n4m_pp_modpoly
-  preprocessing.baselines.rolling_ball: n4m_pp_rolling_ball
-  preprocessing.baselines.snip: n4m_pp_snip
-  preprocessing.derivatives.derivate: n4m_pp_derivate
-  preprocessing.derivatives.first_derivative: n4m_pp_first_derivative
-  preprocessing.derivatives.norris_williams: n4m_pp_norris_williams
-  preprocessing.derivatives.savitzky_golay: n4m_pp_savgol
-  preprocessing.derivatives.second_derivative: n4m_pp_second_derivative
-  preprocessing.feature_selection.flexible_pca: n4m_pp_flex_pca
-  preprocessing.feature_selection.flexible_svd: n4m_pp_flex_svd
-  preprocessing.orthogonalization.epo: n4m_pp_epo
-  preprocessing.orthogonalization.osc: n4m_pp_osc
-  preprocessing.resampling.crop: n4m_pp_crop
-  preprocessing.resampling.kbins_discretizer: n4m_pp_kbins_disc
-  preprocessing.resampling.range_discretizer: n4m_pp_range_disc
-  preprocessing.resampling.resample_transformer: n4m_pp_resample
-  preprocessing.resampling.resampler: n4m_pp_resampler
-  preprocessing.scaling.baseline: n4m_pp_baseline
-  preprocessing.scaling.log_transform: n4m_pp_log
-  preprocessing.scaling.normalize: n4m_pp_normalize
-  preprocessing.scaling.simple_scale: n4m_pp_simple_scale
-  preprocessing.scatter.area_normalization: n4m_pp_area
-  preprocessing.scatter.emsc: n4m_pp_emsc
-  preprocessing.scatter.local_snv: n4m_pp_lsnv
-  preprocessing.scatter.msc: n4m_pp_msc
-  preprocessing.scatter.robust_snv: n4m_pp_rnv
-  preprocessing.scatter.snv: n4m_pp_snv
-  preprocessing.signal_conversion.fraction_to_percent: n4m_pp_frac_to_pct
-  preprocessing.signal_conversion.from_absorbance: n4m_pp_from_absorbance
-  preprocessing.signal_conversion.kubelka_munk: n4m_pp_kubelka_munk
-  preprocessing.signal_conversion.percent_to_fraction: n4m_pp_pct_to_frac
-  preprocessing.signal_conversion.to_absorbance: n4m_pp_to_absorbance
-  preprocessing.smoothing.gaussian: n4m_pp_gaussian
-  preprocessing.specialized.fck_static: n4m_pp_fck_static
-  preprocessing.wavelets.haar: n4m_pp_haar
-  preprocessing.wavelets.wavelet: n4m_pp_wavelet
-  preprocessing.wavelets.wavelet_denoise: n4m_pp_wavelet_denoise
-  preprocessing.wavelets.wavelet_features: n4m_pp_wavelet_features
-  preprocessing.wavelets.wavelet_pca: n4m_pp_wavelet_pca
-  preprocessing.wavelets.wavelet_svd: n4m_pp_wavelet_svd
+  preprocessing.baselines.airpls: n4m_transform_airpls
+  preprocessing.baselines.arpls: n4m_transform_arpls
+  preprocessing.baselines.asls: n4m_transform_asls
+  preprocessing.baselines.beads: n4m_transform_beads
+  preprocessing.baselines.detrend: n4m_transform_detrend
+  preprocessing.baselines.iasls: n4m_transform_iasls
+  preprocessing.baselines.imodpoly: n4m_transform_imodpoly
+  preprocessing.baselines.modpoly: n4m_transform_modpoly
+  preprocessing.baselines.rolling_ball: n4m_transform_rolling_ball
+  preprocessing.baselines.snip: n4m_transform_snip
+  preprocessing.derivatives.derivate: n4m_transform_derivative
+  preprocessing.derivatives.first_derivative: n4m_transform_first_derivative
+  preprocessing.derivatives.norris_williams: n4m_transform_norris_williams
+  preprocessing.derivatives.savitzky_golay: n4m_transform_savitzky_golay
+  preprocessing.derivatives.second_derivative: n4m_transform_second_derivative
+  preprocessing.feature_selection.flexible_pca: n4m_decomposition_flexible_pca
+  preprocessing.feature_selection.flexible_svd: n4m_decomposition_flexible_svd
+  preprocessing.orthogonalization.epo: n4m_domain_adaptation_epo
+  preprocessing.orthogonalization.osc: n4m_transform_osc
+  preprocessing.resampling.crop: n4m_transform_crop
+  preprocessing.resampling.kbins_discretizer: n4m_transform_kbins_discretizer
+  preprocessing.resampling.range_discretizer: n4m_transform_range_discretizer
+  preprocessing.resampling.resample_transformer: n4m_transform_resample_transformer
+  preprocessing.resampling.resampler: n4m_transform_resampler
+  preprocessing.scaling.baseline: n4m_transform_baseline_center
+  preprocessing.scaling.log_transform: n4m_transform_log_transform
+  preprocessing.scaling.normalize: n4m_transform_normalize
+  preprocessing.scaling.simple_scale: n4m_transform_simple_scale
+  preprocessing.scatter.area_normalization: n4m_transform_area_normalization
+  preprocessing.scatter.emsc: n4m_transform_emsc
+  preprocessing.scatter.local_snv: n4m_transform_local_snv
+  preprocessing.scatter.msc: n4m_transform_msc
+  preprocessing.scatter.robust_snv: n4m_transform_robust_snv
+  preprocessing.scatter.snv: n4m_transform_snv
+  preprocessing.signal_conversion.fraction_to_percent: n4m_transform_fraction_to_percent
+  preprocessing.signal_conversion.from_absorbance: n4m_transform_from_absorbance
+  preprocessing.signal_conversion.kubelka_munk: n4m_transform_kubelka_munk
+  preprocessing.signal_conversion.percent_to_fraction: n4m_transform_percent_to_fraction
+  preprocessing.signal_conversion.to_absorbance: n4m_transform_to_absorbance
+  preprocessing.smoothing.gaussian: n4m_transform_gaussian
+  preprocessing.specialized.fck_static: n4m_transform_fck_static
+  preprocessing.wavelets.haar: n4m_transform_haar
+  preprocessing.wavelets.wavelet: n4m_transform_wavelet
+  preprocessing.wavelets.wavelet_denoise: n4m_transform_wavelet_denoise
+  preprocessing.wavelets.wavelet_features: n4m_transform_wavelet_features
+  preprocessing.wavelets.wavelet_pca: n4m_transform_wavelet_pca
+  preprocessing.wavelets.wavelet_svd: n4m_transform_wavelet_svd
 
   # ---- selection ----
-  selection.bipls: n4m_bipls
-  selection.bve: n4m_bve
-  selection.cars: n4m_cars
-  selection.emcuve: n4m_emcuve
-  selection.ga: n4m_ga
-  selection.interval: n4m_interval
-  selection.ipw: n4m_ipw
-  selection.irf: n4m_irf
-  selection.iriv: n4m_iriv
-  selection.pso: n4m_pso
-  selection.random_frog: n4m_random_frog
-  selection.randomization: n4m_randomization
-  selection.rep: n4m_rep
-  selection.scars: n4m_scars
-  selection.shaving: n4m_shaving
-  selection.sipls: n4m_sipls
-  selection.spa: n4m_spa
-  selection.st: n4m_st
-  selection.stability: n4m_stability
-  selection.t2: n4m_t2
-  selection.uve: n4m_uve
-  selection.variable_select: n4m_variable_select
-  selection.vip_spa: n4m_vip_spa
-  selection.vissa: n4m_vissa
-  selection.wvc: n4m_wvc
+  selection.bipls: n4m_feature_selection_bipls
+  selection.bve: n4m_feature_selection_bve
+  selection.cars: n4m_feature_selection_cars
+  selection.emcuve: n4m_feature_selection_emcuve
+  selection.ga: n4m_feature_selection_ga
+  selection.interval: n4m_feature_selection_interval
+  selection.ipw: n4m_feature_selection_ipw
+  selection.irf: n4m_feature_selection_irf
+  selection.iriv: n4m_feature_selection_iriv
+  selection.pso: n4m_feature_selection_pso
+  selection.random_frog: n4m_feature_selection_random_frog
+  selection.randomization: n4m_feature_selection_randomization
+  selection.rep: n4m_feature_selection_rep
+  selection.scars: n4m_feature_selection_scars
+  selection.shaving: n4m_feature_selection_shaving
+  selection.sipls: n4m_feature_selection_sipls
+  selection.spa: n4m_feature_selection_spa
+  selection.st: n4m_feature_selection_st
+  selection.stability: n4m_feature_selection_stability
+  selection.t2: n4m_feature_selection_t2
+  selection.uve: n4m_feature_selection_uve
+  selection.variable_select: n4m_feature_selection_variable_select
+  selection.vip_spa: n4m_feature_selection_vip_spa
+  selection.vissa: n4m_feature_selection_vissa
+  selection.wvc: n4m_feature_selection_wvc
+  selection.wvc_threshold: n4m_feature_selection_wvc_threshold
 
   # ---- splitters ----
-  splitters.binned_strat_group_kfold: n4m_split_binned_strat_group_kfold
-  splitters.kbins_stratified: n4m_split_kbins_stratified
-  splitters.kennard_stone: n4m_split_kennard_stone
-  splitters.kmeans: n4m_split_kmeans
+  splitters.binned_strat_group_kfold: n4m_model_selection_binned_strat_group_kfold
+  splitters.kbins_stratified: n4m_model_selection_kbins_stratified
+  splitters.kennard_stone: n4m_model_selection_kennard_stone
+  splitters.kmeans: n4m_model_selection_kmeans
   splitters.split_common: null
-  splitters.split_splitter: n4m_split_split_splitter
-  splitters.spxy: n4m_split_spxy
-  splitters.spxy_fold: n4m_split_spxy_fold
-  splitters.spxy_g_fold: n4m_split_spxy_g_fold
-  splitters.systematic_circular: n4m_split_systematic_circular
+  splitters.split_splitter: n4m_model_selection_data_twinning
+  splitters.spxy: n4m_model_selection_spxy
+  splitters.spxy_fold: n4m_model_selection_spxy_fold
+  splitters.spxy_g_fold: n4m_model_selection_spxy_g_fold
+  splitters.systematic_circular: n4m_model_selection_systematic_circular
 
   # ---- utilities ----
-  utilities.hotelling_t2: n4m_util_hotelling_t2
-  utilities.moments: n4m_moments
+  utilities.hotelling_t2: n4m_outlier_detection_hotelling_t2
+  utilities.moments: n4m_lowlevel_moments
   utilities.nirs_metrics: null
-  utilities.q_residuals: n4m_util_q_residuals
-  utilities.signal_type_detector: n4m_signal_detect
-  utilities.sweep: n4m_sweep_run
-  utilities.transfer_metrics: n4m_transfer_metrics
+  utilities.q_residuals: n4m_outlier_detection_q_residuals
+  utilities.signal_type_detector: n4m_transform_signal_type_detector
+  utilities.sweep: n4m_model_selection_sweep
+  utilities.transfer_metrics: n4m_domain_adaptation_transfer_metrics

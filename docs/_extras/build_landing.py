@@ -320,7 +320,7 @@ DONOR_ALGO_PREFIX_GROUP = [
 
 
 def _algo_group_for(algo: str) -> str:
-    """Resolve the group for an algorithm, falling back to donor prefix
+    """Resolve the fine group for an algorithm, falling back to donor prefix
     matching for the n4m donor methods that aren't in ALGO_GROUP."""
     if algo in ALGO_GROUP:
         return ALGO_GROUP[algo]
@@ -328,6 +328,125 @@ def _algo_group_for(algo: str) -> str:
         if algo.startswith(prefix):
             return group
     return "other"
+
+
+# ---------------------------------------------------------------------------
+# Namespace roles (ABI 2.0) — the dashboard's category filter is organised by
+# the 12 top-level `n4m.<role>` namespace roles. Each present benchmark algo
+# is mapped to its catalog namespace role; the legacy fine-group taxonomy
+# above is kept only as the fallback for algos that don't resolve to a catalog
+# method, so the dashboard category dropdown reflects the new namespace tree.
+# ---------------------------------------------------------------------------
+
+ROLE_ORDER = [
+    "transform", "augmentation", "estimators", "feature_selection",
+    "model_selection", "domain_adaptation", "outlier_detection", "ensemble",
+    "compose", "metrics", "decomposition", "lowlevel",
+]
+ROLE_LABELS = {
+    "transform":          "transform",
+    "augmentation":       "augmentation",
+    "estimators":         "estimators",
+    "feature_selection":  "feature_selection",
+    "model_selection":    "model_selection",
+    "domain_adaptation":  "domain_adaptation",
+    "outlier_detection":  "outlier_detection",
+    "ensemble":           "ensemble",
+    "compose":            "compose",
+    "metrics":            "metrics",
+    "decomposition":      "decomposition",
+    "lowlevel":           "lowlevel",
+}
+
+# Legacy fine-group key -> top-level namespace role. Complete over
+# ALGO_GROUPS_ORDER; used as the fallback when an algo cannot be matched to a
+# catalog method directly.
+_GROUP_TO_ROLE = {
+    "core": "estimators", "ensemble": "ensemble", "sparse": "estimators",
+    "robust": "estimators", "nonlinear": "estimators",
+    "multi-block": "estimators", "calibration-transfer": "domain_adaptation",
+    "classification": "estimators", "missing": "estimators",
+    "regularized": "estimators", "adaptive": "model_selection",
+    "selection": "feature_selection", "diagnostics": "metrics",
+    "preprocessing": "transform", "baseline": "transform",
+    "signal": "transform", "wavelet": "transform", "transform": "transform",
+    "augmentation": "augmentation", "filter": "outlier_detection",
+    "splitter": "model_selection", "metric": "metrics", "rng": "lowlevel",
+    "other": "estimators",
+}
+
+# Explicit algo -> role for the benchmark IDs whose name does not match a
+# catalog leaf (abbreviations, combined variants, sub-typed outlier filters).
+# The feature filters live in feature_selection.filter; every other filter_*
+# (x/y outliers, leverage, quality, composite) is outlier_detection.
+_ALGO_ROLE_OVERRIDES = {
+    "filter_correlation": "feature_selection",
+    "filter_variance": "feature_selection",
+}
+_ALGO_ROLE_PREFIX = (
+    ("filter_x_outlier", "outlier_detection"),
+    ("filter_y_outlier", "outlier_detection"),
+    ("filter_leverage", "outlier_detection"),
+    ("filter_quality", "outlier_detection"),
+    ("filter_composite", "outlier_detection"),
+)
+
+_CATALOG_LEAF_TO_ROLE: dict[str, str] | None = None
+
+
+def _catalog_leaf_to_role() -> dict[str, str]:
+    """Lazily build {leaf / method_id-tail / legacy-tail -> top-level role}
+    from catalog/methods.yaml. Empty (graceful) if PyYAML/catalog missing."""
+    global _CATALOG_LEAF_TO_ROLE
+    if _CATALOG_LEAF_TO_ROLE is not None:
+        return _CATALOG_LEAF_TO_ROLE
+    out: dict[str, str] = {}
+    catalog = Path(__file__).resolve().parents[2] / "catalog" / "methods.yaml"
+    try:
+        import yaml  # type: ignore
+
+        doc = yaml.safe_load(catalog.read_text(encoding="utf-8")) or {}
+    except Exception:
+        _CATALOG_LEAF_TO_ROLE = out
+        return out
+    for m in doc.get("methods", []):
+        if not isinstance(m, dict):
+            continue
+        ns = m.get("namespace", "")
+        if not ns:
+            continue
+        role = ns.split(".")[0]
+        keys = [m.get("leaf", ""), m.get("method_id", "").split(".")[-1]]
+        keys += [str(x).split(".")[-1] for x in (m.get("legacy_ids") or [])]
+        for k in keys:
+            out.setdefault(k, role)
+    _CATALOG_LEAF_TO_ROLE = out
+    return out
+
+
+def _algo_role_for(algo: str) -> str:
+    """Resolve a benchmark algo to its top-level `n4m.<role>` namespace role.
+
+    Tries explicit overrides, then prefix overrides, then the catalog leaf
+    map (stripping the common donor/operation affixes), then falls back to the
+    legacy fine-group -> role table.
+    """
+    if algo in _ALGO_ROLE_OVERRIDES:
+        return _ALGO_ROLE_OVERRIDES[algo]
+    for prefix, role in _ALGO_ROLE_PREFIX:
+        if algo.startswith(prefix):
+            return role
+    leaf_to_role = _catalog_leaf_to_role()
+    candidates = [algo]
+    if algo.endswith("_select"):
+        candidates.append(algo[: -len("_select")])
+    for affix in ("pp_", "aug_", "filter_", "split_"):
+        if algo.startswith(affix):
+            candidates.append(algo[len(affix):])
+    for cand in candidates:
+        if cand in leaf_to_role:
+            return leaf_to_role[cand]
+    return _GROUP_TO_ROLE.get(_algo_group_for(algo), "estimators")
 
 SELECTOR_ALGOS = {
     "vip_select", "coefficient_select", "selectivity_ratio_select",
@@ -918,6 +1037,113 @@ def _resolve_doc_page(algo: str, pages: set[str]) -> str | None:
         if cand in pages:
             return cand
     return None
+
+
+# --- ABI-2 display name + fully-qualified namespace for a benchmark algo ------
+# Benchmark/registry algo IDs keep the LEGACY prefixes (`pp_`, `aug_`, `split_`,
+# `filter_`, `*_select`). The dashboard shows the NEW namespace identity instead:
+# the catalog leaf as the label and the `fq_name` (`n4m.<role>...<leaf>`) as the
+# handle. The bridge is the C symbol — algo -> legacy symbol token ->
+# `_rename_map.tsv` -> ABI-2 symbol -> catalog method (`c_surface`) ->
+# (leaf, fq_name) — because the registry IDs do not string-match catalog leaves
+# (e.g. `pp_savgol` -> `savitzky_golay`).
+_CATALOG_NS_OPS = sorted(
+    ("_create", "_destroy", "_free", "_fit", "_predict", "_transform",
+     "_inverse_transform", "_is_fitted", "_select", "_split_fold",
+     "_n_splits", "_split", "_apply", "_run", "_compute"),
+    key=len, reverse=True,
+)
+# Registry IDs whose legacy symbol token does not equal the benchmark ID.
+_ALGO_CATALOG_ALIAS = {
+    "pls": "pls_fit_simple", "aom_pls": "aom_global",
+    "pop_pls": "aom_per_component", "kernel_pls_rbf": "kernel_pls",
+}
+_CATEGORY_PREFIXES = ("pp_", "aug_", "split_", "filter_")
+_CATALOG_NS_INDEX: tuple[dict, dict] | None = None
+
+
+def _catalog_ns_index() -> tuple[dict, dict]:
+    """({legacy-symbol-token -> (leaf, fq_name)}, {leaf -> fq_name}) built from
+    catalog/methods.yaml + proposals/namespace/_rename_map.tsv. Empty (graceful)
+    if PyYAML / the catalog / the rename map are missing."""
+    global _CATALOG_NS_INDEX
+    if _CATALOG_NS_INDEX is not None:
+        return _CATALOG_NS_INDEX
+    tok: dict[str, tuple[str, str]] = {}
+    leaf2fq: dict[str, str] = {}
+    root = Path(__file__).resolve().parents[2]
+    try:
+        import yaml  # type: ignore
+
+        cat = yaml.safe_load(
+            (root / "catalog" / "methods.yaml").read_text(encoding="utf-8")) or {}
+        rename = (root / "proposals" / "namespace"
+                  / "_rename_map.tsv").read_text(encoding="utf-8")
+    except Exception:
+        _CATALOG_NS_INDEX = (tok, leaf2fq)
+        return _CATALOG_NS_INDEX
+    new2info: dict[str, tuple[str, str]] = {}
+    for m in cat.get("methods", []):
+        if not isinstance(m, dict) or not m.get("namespace"):
+            continue
+        leaf, fq = m.get("leaf", ""), m.get("fq_name", "")
+        if leaf and fq:
+            leaf2fq.setdefault(leaf, fq)
+        for s in (m.get("c_surface") or []):
+            if isinstance(s, str):
+                new2info.setdefault(s, (leaf, fq))
+    for line in rename.splitlines()[1:]:
+        cols = line.split("\t")
+        if len(cols) < 2 or not cols[0]:
+            continue
+        info = new2info.get(cols[1])
+        if not info:
+            continue
+        base = cols[0][4:] if cols[0].startswith("n4m_") else cols[0]
+        tok.setdefault(base, info)            # full token (matches *_select IDs)
+        stripped = base
+        for op in _CATALOG_NS_OPS:
+            if stripped.endswith(op):
+                stripped = stripped[: -len(op)]
+                break
+        tok.setdefault(stripped, info)        # verb-stripped (transform/estimator)
+    _CATALOG_NS_INDEX = (tok, leaf2fq)
+    return _CATALOG_NS_INDEX
+
+
+def _clean_algo(algo: str) -> str:
+    """Drop a leading legacy category prefix (`pp_`/`aug_`/`split_`/`filter_`)."""
+    for p in _CATEGORY_PREFIXES:
+        if algo.startswith(p):
+            return algo[len(p):]
+    return algo
+
+
+def _algo_display_fq(algo: str) -> tuple[str, str | None]:
+    """Resolve a benchmark algo to (display, fq_name|None) in the ABI-2 namespace.
+    The display never carries a legacy `pp_`/`aug_`/`split_`/`filter_` prefix;
+    fq_name is the `n4m.<role>...<leaf>` path when the algo maps to a catalog
+    method, else None."""
+    tok, leaf2fq = _catalog_ns_index()
+    # exact: explicit alias, the id itself, a doc alias, the `aug_`-prefixed form.
+    for cand in (_ALGO_CATALOG_ALIAS.get(algo), algo,
+                 _DOC_ALIAS.get(algo), "aug_" + algo):
+        if cand and cand in tok:
+            return tok[cand]  # (leaf, fq)
+    # parameter-variant parent walk (filter_x_outlier_lof -> filter_x_outlier):
+    # keep the prefix-stripped variant as the label, take the parent's fq.
+    parts = algo.split("_")
+    for i in range(len(parts) - 1, 1, -1):
+        cand = "_".join(parts[:i])
+        if cand in tok:
+            return _clean_algo(algo), tok[cand][1]
+        if cand in leaf2fq:
+            return _clean_algo(algo), leaf2fq[cand]
+    cleaned = _clean_algo(algo)
+    for cand in (algo, cleaned):
+        if cand in leaf2fq:
+            return cleaned, leaf2fq[cand]
+    return cleaned, None
 
 
 def _row_is_dense(row: dict) -> bool:
@@ -1585,16 +1811,21 @@ def build_payload(results_dir: Path) -> dict:
     # Drop presets that would resolve to zero columns in the current data.
     presets = {k: v for k, v in raw_presets.items() if v["cols"]}
 
-    # Algo → group mapping (only for algos actually present in the data).
+    # Algo → namespace-role mapping (only for algos actually present in the
+    # data). The dashboard's category filter is organised by the 12 top-level
+    # `n4m.<role>` namespace roles (ABI 2.0), so `algo_to_group` / `algo_groups`
+    # are keyed by role. The legacy fine-group is retained separately to derive
+    # the pls4all-vs-donor origin chip.
     present_algos = sorted({r["algo"] for r in rows_out})
-    algo_to_group = {a: _algo_group_for(a) for a in present_algos}
-    # Groups actually present, in canonical order.
-    present_group_keys = [g for g in ALGO_GROUPS_ORDER
-                            if any(algo_to_group[a] == g for a in present_algos)]
+    algo_to_fine_group = {a: _algo_group_for(a) for a in present_algos}
+    algo_to_group = {a: _algo_role_for(a) for a in present_algos}
+    # Roles actually present, in canonical namespace order.
+    present_role_keys = [r for r in ROLE_ORDER
+                         if any(algo_to_group[a] == r for a in present_algos)]
     algo_groups = [
-        {"key": g, "label": ALGO_GROUP_LABELS[g],
-         "algos": [a for a in present_algos if algo_to_group[a] == g]}
-        for g in present_group_keys
+        {"key": r, "label": ROLE_LABELS[r],
+         "algos": [a for a in present_algos if algo_to_group[a] == r]}
+        for r in present_role_keys
     ]
     # Origin: distinguish the original pls4all PLS-style cross_binding
     # registry methods from the donor-merged n4m methods (augmentation,
@@ -1605,7 +1836,7 @@ def build_payload(results_dir: Path) -> dict:
                       "missing", "regularized", "adaptive",
                       "selection", "diagnostics"}
     algo_origin = {
-        a: "pls4all" if algo_to_group[a] in PLS4ALL_GROUPS else "n4m_donor"
+        a: "pls4all" if algo_to_fine_group[a] in PLS4ALL_GROUPS else "n4m_donor"
         for a in present_algos
     }
     # Which algos have a committed per-method doc page (docs/methods/<algo>.md).
@@ -1622,6 +1853,16 @@ def build_payload(results_dir: Path) -> dict:
         page = _resolve_doc_page(a, _doc_pages)
         if page:
             algo_has_doc[a] = page
+    # ABI-2 display name + fully-qualified namespace per algo, so the dashboard
+    # shows the new `n4m.<role>` identity instead of the legacy `pp_`/`aug_`/…
+    # registry IDs. `algo_display` is the clean label; `algo_fq` the ns path.
+    algo_display: dict[str, str] = {}
+    algo_fq: dict[str, str] = {}
+    for a in present_algos:
+        disp, fq = _algo_display_fq(a)
+        algo_display[a] = disp
+        if fq:
+            algo_fq[a] = fq
     # Languages actually present in the columns.
     present_langs = []
     seen_lang = set()
@@ -1733,6 +1974,8 @@ def build_payload(results_dir: Path) -> dict:
         "algo_groups":  algo_groups,
         "algo_origin":  algo_origin,
         "algo_has_doc": algo_has_doc,
+        "algo_display": algo_display,
+        "algo_fq":      algo_fq,
         "languages":    present_langs,
         "stats": {
             "algos":    len(present_algos),

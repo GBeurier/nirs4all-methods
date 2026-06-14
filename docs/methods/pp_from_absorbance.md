@@ -1,6 +1,6 @@
 # `pp_from_absorbance` — From Absorbance
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.FromAbsorbance` · _C ABI_: `n4m_pp_from_absorbance_*`
+_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.FromAbsorbance` · _C ABI_: `n4m_transform_from_absorbance_*`
 
 ## Description
 
@@ -24,7 +24,7 @@ R = 10**(-A), optionally returned as percent.
 
 ### Implementation
 
-C ABI `n4m_pp_from_absorbance_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FromAbsorbance`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_from_absorbance_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FromAbsorbance`. The same numerical kernel backs every language binding.
 
 ### Usage
 

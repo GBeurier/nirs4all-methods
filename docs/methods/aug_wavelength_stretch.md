@@ -1,6 +1,6 @@
 # `aug_wavelength_stretch` — Wavelength Stretch
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WavelengthStretch` · _C ABI_: `n4m_aug_wavelength_stretch_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WavelengthStretch` · _C ABI_: `n4m_augmentation_wavelength_stretch_*`
 
 ## Description
 
@@ -28,7 +28,7 @@ Random wavelength-axis stretching.
 
 ### Implementation
 
-C ABI `n4m_aug_wavelength_stretch_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WavelengthStretch`. The same numerical kernel backs every language binding.
+C ABI `n4m_augmentation_wavelength_stretch_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WavelengthStretch`. The same numerical kernel backs every language binding.
 
 ### Usage
 

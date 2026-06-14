@@ -2,7 +2,7 @@
 //
 // C ABI surface for PLS-only cross-validation.
 //
-// This currently delegates to the exact PLS branch of n4m_sweep_run. That gives
+// This currently delegates to the exact PLS branch of n4m_model_selection_sweep_run. That gives
 // downstream code a stable, score-equivalent reference implementation while the
 // future fused/grouped PLS grinder can replace the internals without changing
 // the ABI.
@@ -65,7 +65,7 @@ N4M_API n4m_status_t n4m_pls_cross_validate(
         return N4M_ERR_INVALID_ARGUMENT;
     }
 
-    return n4m_sweep_run(ctx, cfg, X, Y, n_folds, fold_ids, n_fold_ids,
+    return n4m_model_selection_sweep_run(ctx, cfg, X, Y, n_folds, fold_ids, n_fold_ids,
                          nullptr, 0, component_grid, n_component_grid,
                          2, out_result);
 }

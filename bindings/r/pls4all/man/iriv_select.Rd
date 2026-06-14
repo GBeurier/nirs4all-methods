@@ -2,6 +2,7 @@
 % Please edit documentation in R/methods_extra.R
 \name{iriv_select}
 \alias{iriv_select}
+\alias{n4m_feature_select_iriv}
 \title{IRIV — Iteratively Retains Informative Variables.}
 \usage{
 iriv_select(X, Y, n_components, max_rounds = 20L, seed = 0L)

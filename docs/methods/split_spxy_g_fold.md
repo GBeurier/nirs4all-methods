@@ -1,6 +1,6 @@
 # `split_spxy_g_fold` — S P X Y Group Fold Splitter
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.SPXYGroupFoldSplitter` · _C ABI_: `n4m_split_spxy_g_fold_*`
+_Group_: **Splitters** · _Binding_: `n4m.sklearn.SPXYGroupFoldSplitter` · _C ABI_: `n4m_model_selection_spxy_g_fold_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ Group-aware SPXY k-fold splitter.
 
 ### Implementation
 
-C ABI `n4m_split_spxy_g_fold_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SPXYGroupFoldSplitter`. The same numerical kernel backs every language binding.
+C ABI `n4m_model_selection_spxy_g_fold_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SPXYGroupFoldSplitter`. The same numerical kernel backs every language binding.
 
 ### Usage
 

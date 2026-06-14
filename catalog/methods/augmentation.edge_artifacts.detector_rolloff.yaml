@@ -7,13 +7,13 @@ category: "augmentation"
 subcategory: "edge_artifacts"
 since_abi: "1.0.0"
 abi_symbols:
-  - "n4m_aug_detector_rolloff_apply"
-  - "n4m_aug_detector_rolloff_create"
-  - "n4m_aug_detector_rolloff_destroy"
+  - "n4m_augmentation_detector_rolloff_apply"
+  - "n4m_augmentation_detector_rolloff_create"
+  - "n4m_augmentation_detector_rolloff_destroy"
 tu:
   - "cpp/src/core/augmentation/edge_artifacts/detector_rolloff.c"
 headers:
-  - "cpp/include/n4m/augmentation.h"
+  - "cpp/include/n4m/augmentation/instrument.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -33,3 +33,12 @@ vendored_licenses: []
 bindings: {}
 publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+c_surface:
+  - "n4m_augmentation_detector_rolloff_apply"
+  - "n4m_augmentation_detector_rolloff_create"
+  - "n4m_augmentation_detector_rolloff_destroy"
+fq_name: "n4m.augmentation.instrument.detector_rolloff"
+leaf: "detector_rolloff"
+legacy_ids:
+  - "augmentation.edge_artifacts.detector_rolloff"
+namespace: "augmentation.instrument"

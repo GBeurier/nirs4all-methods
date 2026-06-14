@@ -50,7 +50,7 @@ void test_signal_detect_smoke_reflectance() {
     n4m_signal_type_t type_out = N4M_SIGNAL_UNKNOWN;
     double confidence = -1.0;
     char reason_buf[256] = {0};
-    const n4m_status_t st = n4m_signal_detect(
+    const n4m_status_t st = n4m_transform_signal_type_detector(
         Xv, nullptr, 0, /*threshold=*/0.3, &type_out, &confidence, reason_buf);
     N4M_TEST_REQUIRE(st == N4M_OK);
     N4M_TEST_REQUIRE(type_out == N4M_SIGNAL_REFLECTANCE);
@@ -70,7 +70,7 @@ void test_signal_detect_smoke_empty() {
     n4m_signal_type_t type_out = N4M_SIGNAL_ABSORBANCE;
     double confidence = -1.0;
     char reason_buf[256] = {0};
-    const n4m_status_t st = n4m_signal_detect(
+    const n4m_status_t st = n4m_transform_signal_type_detector(
         Xv, nullptr, 0, /*threshold=*/0.7, &type_out, &confidence, reason_buf);
     N4M_TEST_REQUIRE(st == N4M_OK);
     N4M_TEST_REQUIRE(type_out == N4M_SIGNAL_UNKNOWN);
@@ -82,11 +82,11 @@ void test_signal_detect_smoke_nullptr_out() {
     n4m_matrix_view_t Xv = make_rowmajor_view(X, 1, 2);
     double conf = 0.0;
     char reason[256] = {0};
-    const n4m_status_t st1 = n4m_signal_detect(
+    const n4m_status_t st1 = n4m_transform_signal_type_detector(
         Xv, nullptr, 0, 0.5, nullptr, &conf, reason);
     N4M_TEST_REQUIRE(st1 == N4M_ERR_NULL_POINTER);
     n4m_signal_type_t t = N4M_SIGNAL_UNKNOWN;
-    const n4m_status_t st2 = n4m_signal_detect(
+    const n4m_status_t st2 = n4m_transform_signal_type_detector(
         Xv, nullptr, 0, 0.5, &t, nullptr, reason);
     N4M_TEST_REQUIRE(st2 == N4M_ERR_NULL_POINTER);
 }
@@ -172,7 +172,7 @@ void verify_signal_detect_parity() {
         double confidence = 0.0;
         char reason_buf[256] = {0};
         const double*  wl_ptr = (c.wl_length > 0) ? c.wavelengths.data() : nullptr;
-        const n4m_status_t st = n4m_signal_detect(
+        const n4m_status_t st = n4m_transform_signal_type_detector(
             Xv, wl_ptr, c.wl_length, c.confidence_threshold,
             &type_out, &confidence, reason_buf);
         N4M_TEST_REQUIRE(st == N4M_OK);

@@ -1,6 +1,6 @@
 # `pp_wavelet_svd` — Wavelet S V D
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletSVD` · _C ABI_: `n4m_pp_wavelet_svd_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletSVD` · _C ABI_: `n4m_transform_wavelet_svd_*`
 
 ## Description
 
@@ -27,7 +27,7 @@ DWT coefficient projection through SVD scores.
 
 ### Implementation
 
-C ABI `n4m_pp_wavelet_svd_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletSVD`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_wavelet_svd_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletSVD`. The same numerical kernel backs every language binding.
 
 ### Usage
 

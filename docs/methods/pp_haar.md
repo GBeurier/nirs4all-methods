@@ -1,6 +1,6 @@
 # `pp_haar` — Haar
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.Haar` · _C ABI_: `n4m_pp_haar_*`
+_Group_: **Augmentation** · _Binding_: `n4m.sklearn.Haar` · _C ABI_: `n4m_transform_haar_*`
 
 ## Description
 
@@ -22,7 +22,7 @@ Single-level Haar DWT coefficient transform.
 
 ### Implementation
 
-C ABI `n4m_pp_haar_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Haar`. The same numerical kernel backs every language binding.
+C ABI `n4m_transform_haar_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Haar`. The same numerical kernel backs every language binding.
 
 ### Usage
 

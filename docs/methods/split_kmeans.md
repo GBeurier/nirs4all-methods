@@ -1,6 +1,6 @@
 # `split_kmeans` — K Means Splitter
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.KMeansSplitter` · _C ABI_: `n4m_split_kmeans_*`
+_Group_: **Splitters** · _Binding_: `n4m.sklearn.KMeansSplitter` · _C ABI_: `n4m_model_selection_kmeans_*`
 
 ## Description
 
@@ -26,7 +26,7 @@ K-means++ diversity splitter.
 
 ### Implementation
 
-C ABI `n4m_split_kmeans_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KMeansSplitter`. The same numerical kernel backs every language binding.
+C ABI `n4m_model_selection_kmeans_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KMeansSplitter`. The same numerical kernel backs every language binding.
 
 ### Usage
 
