@@ -15,7 +15,7 @@ import { getModule } from "./ffi.js";
 export { loadModule, getModule, makeMatrixView, readArrayView } from "./ffi.js";
 export { Context } from "./context.js";
 export { Config } from "./config.js";
-export { Model, fitPls, predictPls, fitModel, predictModel, fitAom, fitPop, computeSplit, computeSplitIndices, type PlsModel, type FittedModel, type AomModel, type PopModel, type SplitKind, type SplitOptions, type SplitIndices } from "./model.js";
+export { Model, fitPls, predictPls, fitModel, predictModel, fitAom, fitPop, fitAomRidge, fitAomStack, computeSplit, computeSplitIndices, type PlsModel, type FittedModel, type AomModel, type PopModel, type AomRidgeOptions, type AomStackOptions, type SplitKind, type SplitOptions, type SplitIndices } from "./model.js";
 export {
     ppCreate,
     ppFit,

@@ -177,7 +177,9 @@ enum n4m_wasm_model_kind {
     MK_SPARSE_SIMPLS, MK_GROUP_SPARSE_PLS, MK_FUSED_SPARSE_PLS,
     MK_BAGGING_PLS, MK_BOOSTING_PLS, MK_RANDOM_SUBSPACE_PLS,
     /* Tier B extension — additional coeff-triple fits */
-    MK_MIR_PLS, MK_MB_PLS, MK_MISSING_NIPALS
+    MK_MIR_PLS, MK_MB_PLS, MK_MISSING_NIPALS,
+    /* Tier B extension 2 — ECR (alpha PCR↔PLS) + O2PLS (orthogonal PLS) */
+    MK_ECR, MK_O2PLS
 };
 
 static int model_kind_for(const char* model) {
@@ -202,6 +204,8 @@ static int model_kind_for(const char* model) {
     if (strcmp(model, "MIRPLS") == 0) return MK_MIR_PLS;
     if (strcmp(model, "MBPLS") == 0) return MK_MB_PLS;
     if (strcmp(model, "MissingAwareNIPALS") == 0) return MK_MISSING_NIPALS;
+    if (strcmp(model, "ECR") == 0) return MK_ECR;
+    if (strcmp(model, "O2PLS") == 0) return MK_O2PLS;
     return MK_NONE;
 }
 
@@ -454,6 +458,26 @@ static int n4m_wasm_model_fit_tier_b(
             /* Missing-aware NIPALS PLS: same centred coefficient triple as a
              * regular SIMPLS PLS but tolerant of NaN entries in X. */
             s = n4m_estimators_missing_aware_nipals_fit(ctx, cfg, &xv, &yv, &res);
+            break;
+        }
+        case MK_ECR: {
+            /* Elastic Component Regression: alpha interpolates PCR (0) ↔ PLS (1).
+             * Emits the centred coefficient triple (coefficients/x_mean/y_mean). */
+            double alpha = n_params >= 1 ? params[0] : 0.5;
+            s = n4m_estimators_ecr_fit(ctx, cfg, &xv, &yv, alpha, &res);
+            break;
+        }
+        case MK_O2PLS: {
+            /* Bidirectional orthogonal PLS (Trygg & Wold). Takes its own
+             * component counts (NOT cfg.n_components); emits the centred
+             * coefficient triple. params = [n_predictive, n_x_orth, n_y_orth]. */
+            int32_t n_pred = n_params >= 1 ? (int32_t)params[0] : 2;
+            int32_t n_xo = n_params >= 2 ? (int32_t)params[1] : 1;
+            int32_t n_yo = n_params >= 3 ? (int32_t)params[2] : 1;
+            if (n_pred < 1) n_pred = 1;
+            if (n_xo < 0) n_xo = 0;
+            if (n_yo < 0) n_yo = 0;
+            s = n4m_estimators_o2pls_fit(ctx, cfg, &xv, &yv, n_pred, n_xo, n_yo, &res);
             break;
         }
         default:
@@ -938,6 +962,154 @@ int n4m_wasm_pop_fit(const double* x, const double* y,
     n4m_config_destroy(cfg);
     n4m_context_destroy(ctx);
     return s;
+}
+
+/* ============================================================================
+ * AOM-family ensembles (raw-double-pointer surface for JS)
+ * ----------------------------------------------------------------------------
+ * Two more members of the AOM family beyond AOM-PLS / POP-PLS. Both build their
+ * own strict-linear operator/chain bank internally (selected by `profile`:
+ * 0 = compact, 1 = wide), run an internal CV over `cv` contiguous balanced folds
+ * (we hand them an explicit per-sample fold_ids vector = (i*cv)/n, matching the
+ * AOM/POP partition), and return INPUT-SPACE coefficients + a genuine affine
+ * intercept — so JS predicts on RAW X via the explicit-intercept path (like
+ * AOM-PLS / Ridge). Numerics stay 100% in libn4m.
+ * ==========================================================================*/
+
+/* Build the contiguous balanced per-sample fold-id vector (i*k)/n. Caller frees.
+ * Returns NULL on OOM. */
+static int32_t* n4m_wasm_make_fold_ids(int n, int k) {
+    int32_t* ids = (int32_t*)malloc((size_t)(n > 0 ? n : 1) * sizeof(int32_t));
+    if (ids == NULL) return NULL;
+    for (int i = 0; i < n; ++i) ids[i] = (int32_t)(((int64_t)i * (int64_t)k) / (int64_t)n);
+    return ids;
+}
+
+/* AOM Ridge simplex blender (n4m_ensemble_aom_ridge_blender_fit). OOF-blends a
+ * set of (strict-linear chain, ridge-λ) candidates and returns the weighted
+ * final input-space coefficients (p*q) + intercept (q). `ridge_lambdas` may be
+ * NULL to use a default log grid. */
+__attribute__((used))
+int n4m_wasm_aom_ridge_fit(const double* x, const double* y,
+                           int n, int p, int q,
+                           int profile, int cv,
+                           const double* ridge_lambdas, int n_lambdas,
+                           double regularizer,
+                           double* coefficients_out, double* intercept_out) {
+    if (x == NULL || y == NULL || coefficients_out == NULL || intercept_out == NULL)
+        return N4M_ERR_NULL_POINTER;
+    if (n < 2 || p < 1 || q < 1) return N4M_ERR_INVALID_ARGUMENT;
+    int k = cv; if (k < 2) k = 2; if (k > n) k = n;
+
+    n4m_matrix_view_t xv, yv;
+    n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q, N4M_DTYPE_F64);
+
+    n4m_context_t* ctx = NULL;
+    n4m_status_t s = n4m_context_create(&ctx);
+    if (s != N4M_OK) return s;
+    n4m_config_t* cfg = NULL;
+    s = n4m_config_create(&cfg);
+    if (s != N4M_OK) { n4m_context_destroy(ctx); return s; }
+
+    int32_t* fold_ids = n4m_wasm_make_fold_ids(n, k);
+    if (fold_ids == NULL) {
+        n4m_config_destroy(cfg); n4m_context_destroy(ctx);
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+    static const double kDefaultLambdas[] = {0.01, 0.1, 1.0, 10.0, 100.0};
+    const double* lambdas = (ridge_lambdas != NULL && n_lambdas > 0) ? ridge_lambdas : kDefaultLambdas;
+    int64_t nl = (ridge_lambdas != NULL && n_lambdas > 0)
+                     ? (int64_t)n_lambdas
+                     : (int64_t)(sizeof(kDefaultLambdas) / sizeof(kDefaultLambdas[0]));
+
+    n4m_method_result_t* res = NULL;
+    s = n4m_ensemble_aom_ridge_blender_fit(ctx, cfg, &xv, &yv,
+                                           (int32_t)profile, (int32_t)k,
+                                           fold_ids, (int64_t)n,
+                                           lambdas, nl, regularizer, &res);
+    free(fold_ids);
+    n4m_config_destroy(cfg);
+    if (s != N4M_OK || res == NULL) {
+        if (res != NULL) n4m_method_result_destroy(res);
+        n4m_context_destroy(ctx);
+        return s != N4M_OK ? s : N4M_ERR_INVALID_ARGUMENT;
+    }
+    int ok_c = copy_result_matrix(res, "input_coefficients",
+                                  coefficients_out, (size_t)p * (size_t)q);
+    int ok_i = copy_result_matrix(res, "intercept", intercept_out, (size_t)q);
+    n4m_method_result_destroy(res);
+    n4m_context_destroy(ctx);
+    return (ok_c && ok_i) ? N4M_OK : N4M_ERR_INVALID_ARGUMENT;
+}
+
+/* AOM operator PLS score stack with Ridge head
+ * (n4m_ensemble_aom_operator_pls_stack_fit). CV-selects (n_components, alpha)
+ * over the component grid [1..max_components] and `alphas`, refits the Ridge
+ * head, and folds the stack into input-space coefficients (p*1) + intercept (1).
+ * SINGLE-TARGET only (q must be 1). `alphas` may be NULL for a default grid. */
+__attribute__((used))
+int n4m_wasm_aom_stack_fit(const double* x, const double* y,
+                           int n, int p, int q,
+                           int profile, int cv, int max_components,
+                           const double* alphas, int n_alphas,
+                           double std_penalty, double gap_penalty,
+                           double* coefficients_out, double* intercept_out) {
+    if (x == NULL || y == NULL || coefficients_out == NULL || intercept_out == NULL)
+        return N4M_ERR_NULL_POINTER;
+    if (n < 2 || p < 1 || q != 1) return N4M_ERR_INVALID_ARGUMENT; /* single-target */
+    int k = cv; if (k < 2) k = 2; if (k > n) k = n;
+    int mc = max_components;
+    if (mc < 1) mc = 1;
+    if (mc > p) mc = p;
+    if (mc >= n) mc = n - 1;
+    if (mc < 1) mc = 1;
+
+    n4m_matrix_view_t xv, yv;
+    n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q, N4M_DTYPE_F64);
+
+    n4m_context_t* ctx = NULL;
+    n4m_status_t s = n4m_context_create(&ctx);
+    if (s != N4M_OK) return s;
+    n4m_config_t* cfg = NULL;
+    s = n4m_config_create(&cfg);
+    if (s != N4M_OK) { n4m_context_destroy(ctx); return s; }
+
+    int32_t* fold_ids = n4m_wasm_make_fold_ids(n, k);
+    int32_t* comps = (int32_t*)malloc((size_t)mc * sizeof(int32_t));
+    if (fold_ids == NULL || comps == NULL) {
+        free(fold_ids); free(comps);
+        n4m_config_destroy(cfg); n4m_context_destroy(ctx);
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+    for (int i = 0; i < mc; ++i) comps[i] = (int32_t)(i + 1);
+    static const double kDefaultAlphas[] = {0.01, 0.1, 1.0, 10.0, 100.0};
+    const double* al = (alphas != NULL && n_alphas > 0) ? alphas : kDefaultAlphas;
+    int64_t na = (alphas != NULL && n_alphas > 0)
+                     ? (int64_t)n_alphas
+                     : (int64_t)(sizeof(kDefaultAlphas) / sizeof(kDefaultAlphas[0]));
+
+    n4m_method_result_t* res = NULL;
+    s = n4m_ensemble_aom_operator_pls_stack_fit(ctx, cfg, &xv, &yv,
+                                                (int32_t)profile, (int32_t)k,
+                                                fold_ids, (int64_t)n,
+                                                comps, (int64_t)mc, al, na,
+                                                std_penalty, gap_penalty, &res);
+    free(fold_ids);
+    free(comps);
+    n4m_config_destroy(cfg);
+    if (s != N4M_OK || res == NULL) {
+        if (res != NULL) n4m_method_result_destroy(res);
+        n4m_context_destroy(ctx);
+        return s != N4M_OK ? s : N4M_ERR_INVALID_ARGUMENT;
+    }
+    int ok_c = copy_result_matrix(res, "input_coefficients",
+                                  coefficients_out, (size_t)p);
+    int ok_i = copy_result_matrix(res, "input_intercept", intercept_out, 1);
+    n4m_method_result_destroy(res);
+    n4m_context_destroy(ctx);
+    return (ok_c && ok_i) ? N4M_OK : N4M_ERR_INVALID_ARGUMENT;
 }
 
 /* ============================================================================
@@ -1450,8 +1622,9 @@ static n4m_status_t n4m_wasm_run_split_result(int kind, double test_size, unsign
                                               int n, int p, int q,
                                               n4m_split_result_t* out_res) {
     if (out_res == NULL) return N4M_ERR_NULL_POINTER;
-    if (x == NULL && kind != 3) return N4M_ERR_NULL_POINTER; /* KBins needs only Y */
-    if ((kind == 1 || kind == 3) && y == NULL) return N4M_ERR_NULL_POINTER;
+    /* KBins (3) and SystematicCircular (5) split on Y only — they need no X. */
+    if (x == NULL && kind != 3 && kind != 5) return N4M_ERR_NULL_POINTER;
+    if ((kind == 1 || kind == 3 || kind == 5) && y == NULL) return N4M_ERR_NULL_POINTER;
     if (n < 2 || (x != NULL && p < 1)) return N4M_ERR_INVALID_ARGUMENT;
     if (!(test_size > 0.0 && test_size < 1.0)) return N4M_ERR_INVALID_ARGUMENT;
 
@@ -1492,6 +1665,20 @@ static n4m_status_t n4m_wasm_run_split_result(int kind, double test_size, unsign
                                                   n_bins, strategy);
             if (s == N4M_OK) s = n4m_model_selection_kbins_stratified_split(h, yv, out_res);
             n4m_model_selection_kbins_stratified_destroy(h);
+            break;
+        }
+        case 4: { /* SPlit / data twinning (X-based, deterministic) */
+            n4m_split_split_splitter_handle_t* h = NULL;
+            s = n4m_model_selection_data_twinning_create(&h, test_size, (uint64_t)seed);
+            if (s == N4M_OK) s = n4m_model_selection_data_twinning_split(h, xv, out_res);
+            n4m_model_selection_data_twinning_destroy(h);
+            break;
+        }
+        case 5: { /* SystematicCircular (Y-based) */
+            n4m_split_systematic_circular_handle_t* h = NULL;
+            s = n4m_model_selection_systematic_circular_create(&h, test_size, (uint64_t)seed);
+            if (s == N4M_OK) s = n4m_model_selection_systematic_circular_split(h, yv, out_res);
+            n4m_model_selection_systematic_circular_destroy(h);
             break;
         }
         default:

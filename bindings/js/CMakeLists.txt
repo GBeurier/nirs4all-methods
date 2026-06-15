@@ -41,7 +41,10 @@ list(APPEND _js_export_list
     "_n4m_wasm_aom_fit"
     # POP-PLS — per-component AOM (one operator per latent component)
     "_n4m_wasm_pop_fit"
-    # Splitters (Kennard-Stone / SPXY / KMeans / KBinsStratified → test mask)
+    # AOM Ridge simplex blender + AOM operator-PLS stack (input-space coeffs)
+    "_n4m_wasm_aom_ridge_fit"
+    "_n4m_wasm_aom_stack_fit"
+    # Splitters (KennardStone/SPXY/KMeans/KBinsStratified/SPlit/SystematicCircular)
     "_n4m_wasm_split"
     "_n4m_wasm_split_indices"
     # Generic preprocessing dispatcher (raw-pointer surface; numerics in libn4m)

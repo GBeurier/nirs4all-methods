@@ -429,8 +429,136 @@ export function fitPop(X: Matrix, Y: Matrix, maxComponents: number,
     }
 }
 
+/** Options for the AOM Ridge simplex blender. */
+export interface AomRidgeOptions {
+    /** operator/chain bank profile: 0 = compact, 1 = wide (default 0). */
+    profile?: number;
+    /** internal CV folds for OOF Ridge scoring (default 5). */
+    cv?: number;
+    /** Ridge λ candidate grid; omit for a default log grid. */
+    ridgeLambdas?: number[];
+    /** non-negative shrinkage of the simplex blend toward uniform (default 0.01). */
+    regularizer?: number;
+}
+
+/** Fit the AOM Ridge simplex blender (n4m_ensemble_aom_ridge_blender_fit): builds
+ *  a strict-linear chain bank internally, OOF-blends (chain, λ) Ridge candidates
+ *  over `cv` contiguous folds, and returns the weighted final INPUT-SPACE
+ *  coefficients + intercept — so it predicts on RAW X via the affine form
+ *  y = intercept + X.B (used WITHOUT preceding preprocessing). */
+export function fitAomRidge(X: Matrix, Y: Matrix, opts: AomRidgeOptions = {}): FittedModel {
+    if (X.rows !== Y.rows) throw new Error(`X.rows (${X.rows}) must equal Y.rows (${Y.rows})`);
+    const M = getModule();
+    const n = X.rows, p = X.cols, q = Y.cols;
+    const profile = opts.profile ?? 0;
+    const cv = opts.cv ?? 5;
+    const regularizer = opts.regularizer ?? 0.01;
+    const lambdas = opts.ridgeLambdas ?? [];
+    const xBuf = _malloc_f64(M, n * p);
+    const yBuf = _malloc_f64(M, n * q);
+    const coefsBuf = _malloc_f64(M, p * q);
+    const interBuf = _malloc_f64(M, q);
+    const lamBuf = lambdas.length > 0 ? _malloc_f64(M, lambdas.length) : { ptr: 0 };
+    try {
+        _copy_in(M, X.data, xBuf.ptr);
+        _copy_in(M, Y.data, yBuf.ptr);
+        if (lamBuf.ptr !== 0) _copy_in(M, Float64Array.from(lambdas), lamBuf.ptr);
+        const status = M.ccall(
+            "n4m_wasm_aom_ridge_fit", "number",
+            ["number", "number", "number", "number", "number",
+             "number", "number", "number", "number", "number",
+             "number", "number"],
+            [xBuf.ptr, yBuf.ptr, n, p, q,
+             profile, cv, lamBuf.ptr, lambdas.length, regularizer,
+             coefsBuf.ptr, interBuf.ptr]) as number;
+        checkStatus(status);
+        return {
+            coefficients: _read_out(M, coefsBuf.ptr, p * q),
+            xMean: new Float64Array(p),
+            yMean: new Float64Array(q),
+            intercept: _read_out(M, interBuf.ptr, q),
+            n_features: p,
+            n_targets: q,
+        };
+    } finally {
+        M._free(xBuf.ptr);
+        M._free(yBuf.ptr);
+        M._free(coefsBuf.ptr);
+        M._free(interBuf.ptr);
+        if (lamBuf.ptr !== 0) M._free(lamBuf.ptr);
+    }
+}
+
+/** Options for the AOM operator-PLS score stack (Ridge head). */
+export interface AomStackOptions {
+    /** operator bank profile: 0 = compact, 1 = wide (default 0). */
+    profile?: number;
+    /** internal CV folds for the (n_components, alpha) screen (default 5). */
+    cv?: number;
+    /** component grid endpoint — screens [1..maxComponents] (default 15). */
+    maxComponents?: number;
+    /** Ridge-head α grid; omit for a default log grid. */
+    alphas?: number[];
+    /** non-negative penalty on OOF-RMSE std in the selection criterion (default 0). */
+    stdPenalty?: number;
+    /** non-negative penalty on (mean_oof_rmse - mean_train_rmse) (default 0). */
+    gapPenalty?: number;
+}
+
+/** Fit the AOM operator-PLS score stack with Ridge head
+ *  (n4m_ensemble_aom_operator_pls_stack_fit). SINGLE-TARGET only (Y must be
+ *  n × 1). Returns the stack folded into INPUT-SPACE coefficients + intercept,
+ *  so it predicts on RAW X via the affine form (used WITHOUT preprocessing). */
+export function fitAomStack(X: Matrix, Y: Matrix, opts: AomStackOptions = {}): FittedModel {
+    if (X.rows !== Y.rows) throw new Error(`X.rows (${X.rows}) must equal Y.rows (${Y.rows})`);
+    if (Y.cols !== 1) throw new Error("fitAomStack is single-target: Y must have exactly 1 column");
+    const M = getModule();
+    const n = X.rows, p = X.cols, q = 1;
+    const profile = opts.profile ?? 0;
+    const cv = opts.cv ?? 5;
+    const maxComponents = opts.maxComponents ?? 15;
+    const stdPenalty = opts.stdPenalty ?? 0;
+    const gapPenalty = opts.gapPenalty ?? 0;
+    const alphas = opts.alphas ?? [];
+    const xBuf = _malloc_f64(M, n * p);
+    const yBuf = _malloc_f64(M, n * q);
+    const coefsBuf = _malloc_f64(M, p * q);
+    const interBuf = _malloc_f64(M, q);
+    const alphaBuf = alphas.length > 0 ? _malloc_f64(M, alphas.length) : { ptr: 0 };
+    try {
+        _copy_in(M, X.data, xBuf.ptr);
+        _copy_in(M, Y.data, yBuf.ptr);
+        if (alphaBuf.ptr !== 0) _copy_in(M, Float64Array.from(alphas), alphaBuf.ptr);
+        const status = M.ccall(
+            "n4m_wasm_aom_stack_fit", "number",
+            ["number", "number", "number", "number", "number",
+             "number", "number", "number", "number", "number",
+             "number", "number", "number", "number"],
+            [xBuf.ptr, yBuf.ptr, n, p, q,
+             profile, cv, maxComponents, alphaBuf.ptr, alphas.length,
+             stdPenalty, gapPenalty, coefsBuf.ptr, interBuf.ptr]) as number;
+        checkStatus(status);
+        return {
+            coefficients: _read_out(M, coefsBuf.ptr, p * q),
+            xMean: new Float64Array(p),
+            yMean: new Float64Array(q),
+            intercept: _read_out(M, interBuf.ptr, q),
+            n_features: p,
+            n_targets: q,
+        };
+    } finally {
+        M._free(xBuf.ptr);
+        M._free(yBuf.ptr);
+        M._free(coefsBuf.ptr);
+        M._free(interBuf.ptr);
+        if (alphaBuf.ptr !== 0) M._free(alphaBuf.ptr);
+    }
+}
+
 /** A train/test splitter kind for {@link computeSplit}. */
-export type SplitKind = "KennardStone" | "SPXY" | "KMeans" | "KBinsStratified";
+export type SplitKind =
+    | "KennardStone" | "SPXY" | "KMeans" | "KBinsStratified"
+    | "DataTwinning" | "SystematicCircular";
 
 /** Options for {@link computeSplit}. `testSize` is a fraction in (0, 1). */
 export interface SplitOptions {
@@ -457,6 +585,8 @@ const SPLIT_KIND_CODE: Record<SplitKind, number> = {
     SPXY: 1,
     KMeans: 2,
     KBinsStratified: 3,
+    DataTwinning: 4,
+    SystematicCircular: 5,
 };
 
 /** Compute a single train/test split over the rows of X (and Y) via libn4m's
