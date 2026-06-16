@@ -145,209 +145,209 @@ const DonorOp kOps[] = {
     {"aug_gaussian_noise",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_gaussian_noise_handle_t* h = nullptr;
-         return n4m_aug_gaussian_noise_create(&h, r, 0.01) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_gaussian_noise_apply, n4m_aug_gaussian_noise_handle_t),
-     DESTROY(n4m_aug_gaussian_noise_destroy, n4m_aug_gaussian_noise_handle_t)},
+         return n4m_augmentation_gaussian_noise_create(&h, r, 0.01) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_gaussian_noise_apply, n4m_aug_gaussian_noise_handle_t),
+     DESTROY(n4m_augmentation_gaussian_noise_destroy, n4m_aug_gaussian_noise_handle_t)},
 
     {"aug_multiplicative_noise",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_multiplicative_noise_handle_t* h = nullptr;
-         return n4m_aug_multiplicative_noise_create(&h, r, 0.05) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_multiplicative_noise_apply, n4m_aug_multiplicative_noise_handle_t),
-     DESTROY(n4m_aug_multiplicative_noise_destroy, n4m_aug_multiplicative_noise_handle_t)},
+         return n4m_augmentation_multiplicative_noise_create(&h, r, 0.05) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_multiplicative_noise_apply, n4m_aug_multiplicative_noise_handle_t),
+     DESTROY(n4m_augmentation_multiplicative_noise_destroy, n4m_aug_multiplicative_noise_handle_t)},
 
     {"aug_spike_noise",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_spike_noise_handle_t* h = nullptr;
-         return n4m_aug_spike_noise_create(&h, r, 1, 3, -0.5, 0.5) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_spike_noise_apply, n4m_aug_spike_noise_handle_t),
-     DESTROY(n4m_aug_spike_noise_destroy, n4m_aug_spike_noise_handle_t)},
+         return n4m_augmentation_spike_noise_create(&h, r, 1, 3, -0.5, 0.5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_spike_noise_apply, n4m_aug_spike_noise_handle_t),
+     DESTROY(n4m_augmentation_spike_noise_destroy, n4m_aug_spike_noise_handle_t)},
 
     {"aug_hetero_noise",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_hetero_noise_handle_t* h = nullptr;
-         return n4m_aug_hetero_noise_create(&h, r, 1e-3, 5e-3) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_hetero_noise_apply, n4m_aug_hetero_noise_handle_t),
-     DESTROY(n4m_aug_hetero_noise_destroy, n4m_aug_hetero_noise_handle_t)},
+         return n4m_augmentation_hetero_noise_create(&h, r, 1e-3, 5e-3) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_hetero_noise_apply, n4m_aug_hetero_noise_handle_t),
+     DESTROY(n4m_augmentation_hetero_noise_destroy, n4m_aug_hetero_noise_handle_t)},
 
     {"aug_linear_drift",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_linear_drift_handle_t* h = nullptr;
-         return n4m_aug_linear_drift_create(&h, r, -0.1, 0.1, -0.001, 0.001) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_linear_drift_apply, n4m_aug_linear_drift_handle_t),
-     DESTROY(n4m_aug_linear_drift_destroy, n4m_aug_linear_drift_handle_t)},
+         return n4m_augmentation_linear_drift_create(&h, r, -0.1, 0.1, -0.001, 0.001) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_linear_drift_apply, n4m_aug_linear_drift_handle_t),
+     DESTROY(n4m_augmentation_linear_drift_destroy, n4m_aug_linear_drift_handle_t)},
 
     {"aug_poly_drift",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          static const double lo[3] = {-0.1, -0.05, -0.033};
          static const double hi[3] = {0.1, 0.05, 0.033};
          n4m_aug_poly_drift_handle_t* h = nullptr;
-         return n4m_aug_poly_drift_create(&h, r, 2, lo, hi) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_poly_drift_apply, n4m_aug_poly_drift_handle_t),
-     DESTROY(n4m_aug_poly_drift_destroy, n4m_aug_poly_drift_handle_t)},
+         return n4m_augmentation_poly_drift_create(&h, r, 2, lo, hi) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_poly_drift_apply, n4m_aug_poly_drift_handle_t),
+     DESTROY(n4m_augmentation_poly_drift_destroy, n4m_aug_poly_drift_handle_t)},
 
     {"aug_path_length",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_path_length_handle_t* h = nullptr;
-         return n4m_aug_path_length_create(&h, r, 0.05, 0.5) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_path_length_apply, n4m_aug_path_length_handle_t),
-     DESTROY(n4m_aug_path_length_destroy, n4m_aug_path_length_handle_t)},
+         return n4m_augmentation_path_length_create(&h, r, 0.05, 0.5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_path_length_apply, n4m_aug_path_length_handle_t),
+     DESTROY(n4m_augmentation_path_length_destroy, n4m_aug_path_length_handle_t)},
 
     /* ---- wavelength / spectral (Phase 16) ------------------------------ */
     {"aug_wavelength_shift",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_wavelength_shift_handle_t* h = nullptr;
-         return n4m_aug_wavelength_shift_create(&h, r, -2.0, 2.0, wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_wavelength_shift_apply, n4m_aug_wavelength_shift_handle_t),
-     DESTROY(n4m_aug_wavelength_shift_destroy, n4m_aug_wavelength_shift_handle_t)},
+         return n4m_augmentation_wavelength_shift_create(&h, r, -2.0, 2.0, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_wavelength_shift_apply, n4m_aug_wavelength_shift_handle_t),
+     DESTROY(n4m_augmentation_wavelength_shift_destroy, n4m_aug_wavelength_shift_handle_t)},
 
     {"aug_wavelength_stretch",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_wavelength_stretch_handle_t* h = nullptr;
-         return n4m_aug_wavelength_stretch_create(&h, r, 0.98, 1.02, wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_wavelength_stretch_apply, n4m_aug_wavelength_stretch_handle_t),
-     DESTROY(n4m_aug_wavelength_stretch_destroy, n4m_aug_wavelength_stretch_handle_t)},
+         return n4m_augmentation_wavelength_stretch_create(&h, r, 0.98, 1.02, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_wavelength_stretch_apply, n4m_aug_wavelength_stretch_handle_t),
+     DESTROY(n4m_augmentation_wavelength_stretch_destroy, n4m_aug_wavelength_stretch_handle_t)},
 
     {"aug_local_warp",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_local_warp_handle_t* h = nullptr;
-         return n4m_aug_local_warp_create(&h, r, 5, 2.0, wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_local_warp_apply, n4m_aug_local_warp_handle_t),
-     DESTROY(n4m_aug_local_warp_destroy, n4m_aug_local_warp_handle_t)},
+         return n4m_augmentation_local_warp_create(&h, r, 5, 2.0, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_local_warp_apply, n4m_aug_local_warp_handle_t),
+     DESTROY(n4m_augmentation_local_warp_destroy, n4m_aug_local_warp_handle_t)},
 
     {"aug_band_perturb",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_band_perturb_handle_t* h = nullptr;
-         return n4m_aug_band_perturb_create(&h, r, 3, 5, 15, 0.9, 1.1, -0.05, 0.05) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_band_perturb_apply, n4m_aug_band_perturb_handle_t),
-     DESTROY(n4m_aug_band_perturb_destroy, n4m_aug_band_perturb_handle_t)},
+         return n4m_augmentation_band_perturb_create(&h, r, 3, 5, 15, 0.9, 1.1, -0.05, 0.05) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_band_perturb_apply, n4m_aug_band_perturb_handle_t),
+     DESTROY(n4m_augmentation_band_perturb_destroy, n4m_aug_band_perturb_handle_t)},
 
     {"aug_band_mask",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_band_mask_handle_t* h = nullptr;
-         return n4m_aug_band_mask_create(&h, r, 1, 3, 5, 15, 0) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_band_mask_apply, n4m_aug_band_mask_handle_t),
-     DESTROY(n4m_aug_band_mask_destroy, n4m_aug_band_mask_handle_t)},
+         return n4m_augmentation_band_mask_create(&h, r, 1, 3, 5, 15, 0) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_band_mask_apply, n4m_aug_band_mask_handle_t),
+     DESTROY(n4m_augmentation_band_mask_destroy, n4m_aug_band_mask_handle_t)},
 
     {"aug_channel_dropout",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_channel_dropout_handle_t* h = nullptr;
-         return n4m_aug_channel_dropout_create(&h, r, 0.1, 0) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_channel_dropout_apply, n4m_aug_channel_dropout_handle_t),
-     DESTROY(n4m_aug_channel_dropout_destroy, n4m_aug_channel_dropout_handle_t)},
+         return n4m_augmentation_channel_dropout_create(&h, r, 0.1, 0) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_channel_dropout_apply, n4m_aug_channel_dropout_handle_t),
+     DESTROY(n4m_augmentation_channel_dropout_destroy, n4m_aug_channel_dropout_handle_t)},
 
     {"aug_gauss_jitter",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_gauss_jitter_handle_t* h = nullptr;
-         return n4m_aug_gauss_jitter_create(&h, r, 0.5, 2.0, 5) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_gauss_jitter_apply, n4m_aug_gauss_jitter_handle_t),
-     DESTROY(n4m_aug_gauss_jitter_destroy, n4m_aug_gauss_jitter_handle_t)},
+         return n4m_augmentation_gauss_jitter_create(&h, r, 0.5, 2.0, 5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_gauss_jitter_apply, n4m_aug_gauss_jitter_handle_t),
+     DESTROY(n4m_augmentation_gauss_jitter_destroy, n4m_aug_gauss_jitter_handle_t)},
 
     {"aug_unsharp_mask",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_unsharp_mask_handle_t* h = nullptr;
-         return n4m_aug_unsharp_mask_create(&h, r, 0.5, 1.5, 1.0, 5) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_unsharp_mask_apply, n4m_aug_unsharp_mask_handle_t),
-     DESTROY(n4m_aug_unsharp_mask_destroy, n4m_aug_unsharp_mask_handle_t)},
+         return n4m_augmentation_unsharp_mask_create(&h, r, 0.5, 1.5, 1.0, 5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_unsharp_mask_apply, n4m_aug_unsharp_mask_handle_t),
+     DESTROY(n4m_augmentation_unsharp_mask_destroy, n4m_aug_unsharp_mask_handle_t)},
 
     {"aug_magnitude_warp",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_magnitude_warp_handle_t* h = nullptr;
-         return n4m_aug_magnitude_warp_create(&h, r, 5, 0.9, 1.1, wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_magnitude_warp_apply, n4m_aug_magnitude_warp_handle_t),
-     DESTROY(n4m_aug_magnitude_warp_destroy, n4m_aug_magnitude_warp_handle_t)},
+         return n4m_augmentation_magnitude_warp_create(&h, r, 5, 0.9, 1.1, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_magnitude_warp_apply, n4m_aug_magnitude_warp_handle_t),
+     DESTROY(n4m_augmentation_magnitude_warp_destroy, n4m_aug_magnitude_warp_handle_t)},
 
     {"aug_local_clip",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_local_clip_handle_t* h = nullptr;
-         return n4m_aug_local_clip_create(&h, r, 2, 3, 10) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_local_clip_apply, n4m_aug_local_clip_handle_t),
-     DESTROY(n4m_aug_local_clip_destroy, n4m_aug_local_clip_handle_t)},
+         return n4m_augmentation_local_clip_create(&h, r, 2, 3, 10) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_local_clip_apply, n4m_aug_local_clip_handle_t),
+     DESTROY(n4m_augmentation_local_clip_destroy, n4m_aug_local_clip_handle_t)},
 
     /* ---- mixup / physical / environmental (Phase 17) ------------------- */
     {"aug_mixup",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_mixup_handle_t* h = nullptr;
-         return n4m_aug_mixup_create(&h, r, 0.4) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_mixup_apply, n4m_aug_mixup_handle_t),
-     DESTROY(n4m_aug_mixup_destroy, n4m_aug_mixup_handle_t)},
+         return n4m_augmentation_mixup_create(&h, r, 0.4) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_mixup_apply, n4m_aug_mixup_handle_t),
+     DESTROY(n4m_augmentation_mixup_destroy, n4m_aug_mixup_handle_t)},
 
     {"aug_local_mixup",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_local_mixup_handle_t* h = nullptr;
-         return n4m_aug_local_mixup_create(&h, r, 0.4, 5) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_local_mixup_apply, n4m_aug_local_mixup_handle_t),
-     DESTROY(n4m_aug_local_mixup_destroy, n4m_aug_local_mixup_handle_t)},
+         return n4m_augmentation_local_mixup_create(&h, r, 0.4, 5) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_local_mixup_apply, n4m_aug_local_mixup_handle_t),
+     DESTROY(n4m_augmentation_local_mixup_destroy, n4m_aug_local_mixup_handle_t)},
 
     {"aug_scatter_sim",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_scatter_sim_handle_t* h = nullptr;
-         return n4m_aug_scatter_sim_create(&h, r, 0.8, 1.2, -0.05, 0.05) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_scatter_sim_apply, n4m_aug_scatter_sim_handle_t),
-     DESTROY(n4m_aug_scatter_sim_destroy, n4m_aug_scatter_sim_handle_t)},
+         return n4m_augmentation_scatter_sim_msc_create(&h, r, 0.8, 1.2, -0.05, 0.05) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_scatter_sim_msc_apply, n4m_aug_scatter_sim_handle_t),
+     DESTROY(n4m_augmentation_scatter_sim_msc_destroy, n4m_aug_scatter_sim_handle_t)},
 
     {"aug_particle_size",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_particle_size_handle_t* h = nullptr;
-         return n4m_aug_particle_size_create(&h, r, 50.0, 15.0, 0, 5.0, 500.0, 50.0,
+         return n4m_augmentation_particle_size_create(&h, r, 50.0, 15.0, 0, 5.0, 500.0, 50.0,
                                               1.5, 0.1, 1, 0.5, wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_particle_size_apply, n4m_aug_particle_size_handle_t),
-     DESTROY(n4m_aug_particle_size_destroy, n4m_aug_particle_size_handle_t)},
+     RUN_APPLY(n4m_augmentation_particle_size_apply, n4m_aug_particle_size_handle_t),
+     DESTROY(n4m_augmentation_particle_size_destroy, n4m_aug_particle_size_handle_t)},
 
     {"aug_emsc_distort",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_emsc_distort_handle_t* h = nullptr;
-         return n4m_aug_emsc_distort_create(&h, r, 0.9, 1.1, -0.05, 0.05, 2, 0.02, 0.3,
+         return n4m_augmentation_emsc_distort_create(&h, r, 0.9, 1.1, -0.05, 0.05, 2, 0.02, 0.3,
                                             wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_emsc_distort_apply, n4m_aug_emsc_distort_handle_t),
-     DESTROY(n4m_aug_emsc_distort_destroy, n4m_aug_emsc_distort_handle_t)},
+     RUN_APPLY(n4m_augmentation_emsc_distort_apply, n4m_aug_emsc_distort_handle_t),
+     DESTROY(n4m_augmentation_emsc_distort_destroy, n4m_aug_emsc_distort_handle_t)},
 
     {"aug_batch_effect",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_batch_effect_handle_t* h = nullptr;
-         return n4m_aug_batch_effect_create(&h, r, 0.02, 0.01, 0.03, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_batch_effect_apply, n4m_aug_batch_effect_handle_t),
-     DESTROY(n4m_aug_batch_effect_destroy, n4m_aug_batch_effect_handle_t)},
+         return n4m_augmentation_batch_effect_create(&h, r, 0.02, 0.01, 0.03, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_batch_effect_apply, n4m_aug_batch_effect_handle_t),
+     DESTROY(n4m_augmentation_batch_effect_destroy, n4m_aug_batch_effect_handle_t)},
 
     {"aug_instrument_broaden",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_instrument_broaden_handle_t* h = nullptr;
-         return n4m_aug_instrument_broaden_create(&h, r, 3.0, 0, 3.0, 8.0, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_instrument_broaden_apply, n4m_aug_instrument_broaden_handle_t),
-     DESTROY(n4m_aug_instrument_broaden_destroy, n4m_aug_instrument_broaden_handle_t)},
+         return n4m_augmentation_instrument_broaden_create(&h, r, 3.0, 0, 3.0, 8.0, 0, wl.data(), p) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_instrument_broaden_apply, n4m_aug_instrument_broaden_handle_t),
+     DESTROY(n4m_augmentation_instrument_broaden_destroy, n4m_aug_instrument_broaden_handle_t)},
 
     {"aug_dead_band",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_dead_band_handle_t* h = nullptr;
-         return n4m_aug_dead_band_create(&h, r, 1, 5, 10, 0.05, 1.0, 0) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_dead_band_apply, n4m_aug_dead_band_handle_t),
-     DESTROY(n4m_aug_dead_band_destroy, n4m_aug_dead_band_handle_t)},
+         return n4m_augmentation_dead_band_create(&h, r, 1, 5, 10, 0.05, 1.0, 0) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_dead_band_apply, n4m_aug_dead_band_handle_t),
+     DESTROY(n4m_augmentation_dead_band_destroy, n4m_aug_dead_band_handle_t)},
 
     {"aug_temperature",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_temperature_handle_t* h = nullptr;
-         return n4m_aug_temperature_create(&h, r, 5.0, 0, -5.0, 5.0, 1, 1, 1, 1,
+         return n4m_augmentation_temperature_create(&h, r, 5.0, 0, -5.0, 5.0, 1, 1, 1, 1,
                                            wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_temperature_apply, n4m_aug_temperature_handle_t),
-     DESTROY(n4m_aug_temperature_destroy, n4m_aug_temperature_handle_t)},
+     RUN_APPLY(n4m_augmentation_temperature_apply, n4m_aug_temperature_handle_t),
+     DESTROY(n4m_augmentation_temperature_destroy, n4m_aug_temperature_handle_t)},
 
     {"aug_moisture",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_aug_moisture_handle_t* h = nullptr;
-         return n4m_aug_moisture_create(&h, r, 0.1, 0, 0.0, 1.0, 0.5, 0.3, 25.0, 0.10, 1, 1,
+         return n4m_augmentation_moisture_create(&h, r, 0.1, 0, 0.0, 1.0, 0.5, 0.3, 25.0, 0.10, 1, 1,
                                         wl.data(), p) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_moisture_apply, n4m_aug_moisture_handle_t),
-     DESTROY(n4m_aug_moisture_destroy, n4m_aug_moisture_handle_t)},
+     RUN_APPLY(n4m_augmentation_moisture_apply, n4m_aug_moisture_handle_t),
+     DESTROY(n4m_augmentation_moisture_destroy, n4m_aug_moisture_handle_t)},
 
     /* ---- edge / spline / random (Phase 18). Edge ops take the wavelength
      *      axis as an explicit apply() argument. The two simplification
@@ -355,72 +355,72 @@ const DonorOp kOps[] = {
     {"aug_detector_rolloff",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_detector_rolloff_handle_t* h = nullptr;
-         return n4m_aug_detector_rolloff_create(&h, r, 4, 1.0, 0.02, 1) == N4M_OK ? h : nullptr; },
-     RUN_APPLY_WL(n4m_aug_detector_rolloff_apply, n4m_aug_detector_rolloff_handle_t),
-     DESTROY(n4m_aug_detector_rolloff_destroy, n4m_aug_detector_rolloff_handle_t)},
+         return n4m_augmentation_detector_rolloff_create(&h, r, 4, 1.0, 0.02, 1) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_augmentation_detector_rolloff_apply, n4m_aug_detector_rolloff_handle_t),
+     DESTROY(n4m_augmentation_detector_rolloff_destroy, n4m_aug_detector_rolloff_handle_t)},
 
     {"aug_stray_light",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_stray_light_handle_t* h = nullptr;
-         return n4m_aug_stray_light_create(&h, r, 0.001, 2.0, 0.1, 1) == N4M_OK ? h : nullptr; },
-     RUN_APPLY_WL(n4m_aug_stray_light_apply, n4m_aug_stray_light_handle_t),
-     DESTROY(n4m_aug_stray_light_destroy, n4m_aug_stray_light_handle_t)},
+         return n4m_augmentation_stray_light_create(&h, r, 0.001, 2.0, 0.1, 1) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_augmentation_stray_light_apply, n4m_aug_stray_light_handle_t),
+     DESTROY(n4m_augmentation_stray_light_destroy, n4m_aug_stray_light_handle_t)},
 
     {"aug_edge_curve",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_edge_curve_handle_t* h = nullptr;
-         return n4m_aug_edge_curve_create(&h, r, 0.02, 0, 0.0, 0.7) == N4M_OK ? h : nullptr; },
-     RUN_APPLY_WL(n4m_aug_edge_curve_apply, n4m_aug_edge_curve_handle_t),
-     DESTROY(n4m_aug_edge_curve_destroy, n4m_aug_edge_curve_handle_t)},
+         return n4m_augmentation_edge_curvature_create(&h, r, 0.02, 0, 0.0, 0.7) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_augmentation_edge_curvature_apply, n4m_aug_edge_curve_handle_t),
+     DESTROY(n4m_augmentation_edge_curvature_destroy, n4m_aug_edge_curve_handle_t)},
 
     {"aug_truncated_peak",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_truncated_peak_handle_t* h = nullptr;
-         return n4m_aug_truncated_peak_create(&h, r, 0.5, 0.01, 0.1, 50.0, 200.0, 1, 1) == N4M_OK ? h : nullptr; },
-     RUN_APPLY_WL(n4m_aug_truncated_peak_apply, n4m_aug_truncated_peak_handle_t),
-     DESTROY(n4m_aug_truncated_peak_destroy, n4m_aug_truncated_peak_handle_t)},
+         return n4m_augmentation_truncated_peak_create(&h, r, 0.5, 0.01, 0.1, 50.0, 200.0, 1, 1) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_augmentation_truncated_peak_apply, n4m_aug_truncated_peak_handle_t),
+     DESTROY(n4m_augmentation_truncated_peak_destroy, n4m_aug_truncated_peak_handle_t)},
 
     {"aug_edge_artifacts",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_edge_artifacts_handle_t* h = nullptr;
-         return n4m_aug_edge_artifacts_create(&h, r, 0xF, 1.0, 4) == N4M_OK ? h : nullptr; },
-     RUN_APPLY_WL(n4m_aug_edge_artifacts_apply, n4m_aug_edge_artifacts_handle_t),
-     DESTROY(n4m_aug_edge_artifacts_destroy, n4m_aug_edge_artifacts_handle_t)},
+         return n4m_augmentation_edge_artifacts_create(&h, r, 0xF, 1.0, 4) == N4M_OK ? h : nullptr; },
+     RUN_APPLY_WL(n4m_augmentation_edge_artifacts_apply, n4m_aug_edge_artifacts_handle_t),
+     DESTROY(n4m_augmentation_edge_artifacts_destroy, n4m_aug_edge_artifacts_handle_t)},
 
     {"aug_spline_smooth",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_spline_smooth_handle_t* h = nullptr;
-         return n4m_aug_spline_smooth_create(&h, r) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_spline_smooth_apply, n4m_aug_spline_smooth_handle_t),
-     DESTROY(n4m_aug_spline_smooth_destroy, n4m_aug_spline_smooth_handle_t)},
+         return n4m_augmentation_spline_smoothing_create(&h, r) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_spline_smoothing_apply, n4m_aug_spline_smooth_handle_t),
+     DESTROY(n4m_augmentation_spline_smoothing_destroy, n4m_aug_spline_smooth_handle_t)},
 
     {"aug_spline_x_perturb",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_spline_x_perturb_handle_t* h = nullptr;
-         return n4m_aug_spline_x_perturb_create(&h, r, 3, 0.05, -0.1, 0.1) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_spline_x_perturb_apply, n4m_aug_spline_x_perturb_handle_t),
-     DESTROY(n4m_aug_spline_x_perturb_destroy, n4m_aug_spline_x_perturb_handle_t)},
+         return n4m_augmentation_spline_x_perturbations_create(&h, r, 3, 0.05, -0.1, 0.1) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_spline_x_perturbations_apply, n4m_aug_spline_x_perturb_handle_t),
+     DESTROY(n4m_augmentation_spline_x_perturbations_destroy, n4m_aug_spline_x_perturb_handle_t)},
 
     {"aug_spline_y_perturb",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_spline_y_perturb_handle_t* h = nullptr;
-         return n4m_aug_spline_y_perturb_create(&h, r, -1, 0.005) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_spline_y_perturb_apply, n4m_aug_spline_y_perturb_handle_t),
-     DESTROY(n4m_aug_spline_y_perturb_destroy, n4m_aug_spline_y_perturb_handle_t)},
+         return n4m_augmentation_spline_y_perturbations_create(&h, r, -1, 0.005) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_spline_y_perturbations_apply, n4m_aug_spline_y_perturb_handle_t),
+     DESTROY(n4m_augmentation_spline_y_perturbations_destroy, n4m_aug_spline_y_perturb_handle_t)},
 
     {"aug_rotate_translate",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_rotate_translate_handle_t* h = nullptr;
-         return n4m_aug_rotate_translate_create(&h, r, 2.0, 3.0) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_rotate_translate_apply, n4m_aug_rotate_translate_handle_t),
-     DESTROY(n4m_aug_rotate_translate_destroy, n4m_aug_rotate_translate_handle_t)},
+         return n4m_augmentation_rotate_translate_create(&h, r, 2.0, 3.0) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_rotate_translate_apply, n4m_aug_rotate_translate_handle_t),
+     DESTROY(n4m_augmentation_rotate_translate_destroy, n4m_aug_rotate_translate_handle_t)},
 
     {"aug_random_x_op",
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_random_x_op_handle_t* h = nullptr;
-         return n4m_aug_random_x_op_create(&h, r, 0, 0.97, 1.03) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_aug_random_x_op_apply, n4m_aug_random_x_op_handle_t),
-     DESTROY(n4m_aug_random_x_op_destroy, n4m_aug_random_x_op_handle_t)},
+         return n4m_augmentation_random_x_op_create(&h, r, 0, 0.97, 1.03) == N4M_OK ? h : nullptr; },
+     RUN_APPLY(n4m_augmentation_random_x_op_apply, n4m_aug_random_x_op_handle_t),
+     DESTROY(n4m_augmentation_random_x_op_destroy, n4m_aug_random_x_op_handle_t)},
 
     /* ---- filters (Phase 12-14). Timed operation is fit + apply (the full
      *      cost of learning the bounds then producing the keep-mask). The
@@ -432,14 +432,14 @@ const DonorOp kOps[] = {
     {name,                                                                        \
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {                      \
          n4m_filter_x_outlier_handle_t* h = nullptr;                              \
-         return n4m_filter_x_outlier_create(&h, method, 0, 0.0, ncomp, 0.1,       \
+         return n4m_outlier_detection_x_outlier_create(&h, method, 0, 0.0, ncomp, 0.1,       \
                                             42u, 100, 256) == N4M_OK ? h : nullptr; }, \
      [](void* h, BenchCtx& c) {                                                   \
          auto* H = static_cast<n4m_filter_x_outlier_handle_t*>(h);                \
          n4m_filter_stats_t st{};                                                 \
-         n4m_status_t s = n4m_filter_x_outlier_fit(H, c.X);                        \
-         return s == N4M_OK ? n4m_filter_x_outlier_apply(H, c.X, c.mask, &st) : s; }, \
-     DESTROY(n4m_filter_x_outlier_destroy, n4m_filter_x_outlier_handle_t)}
+         n4m_status_t s = n4m_outlier_detection_x_outlier_fit(H, c.X);                        \
+         return s == N4M_OK ? n4m_outlier_detection_x_outlier_apply(H, c.X, c.mask, &st) : s; }, \
+     DESTROY(n4m_outlier_detection_x_outlier_destroy, n4m_filter_x_outlier_handle_t)}
     X_OUTLIER("filter_x_outlier_mahalanobis", N4M_X_OUTLIER_MAHALANOBIS, 0),
     X_OUTLIER("filter_x_outlier_robust_mahalanobis", N4M_X_OUTLIER_ROBUST_MAHALANOBIS, 0),
     X_OUTLIER("filter_x_outlier_pca_residual", N4M_X_OUTLIER_PCA_RESIDUAL, 5),
@@ -452,14 +452,14 @@ const DonorOp kOps[] = {
     {name,                                                                        \
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {                      \
          n4m_filter_y_outlier_handle_t* h = nullptr;                              \
-         return n4m_filter_y_outlier_create(&h, method, 3.0, 5.0, 95.0)           \
+         return n4m_outlier_detection_y_outlier_create(&h, method, 3.0, 5.0, 95.0)           \
                 == N4M_OK ? h : nullptr; },                                       \
      [](void* h, BenchCtx& c) {                                                   \
          auto* H = static_cast<n4m_filter_y_outlier_handle_t*>(h);                \
          n4m_filter_stats_t st{};                                                 \
-         n4m_status_t s = n4m_filter_y_outlier_fit(H, c.y, c.n);                   \
-         return s == N4M_OK ? n4m_filter_y_outlier_apply(H, c.y, c.n, c.mask, &st) : s; }, \
-     DESTROY(n4m_filter_y_outlier_destroy, n4m_filter_y_outlier_handle_t)}
+         n4m_status_t s = n4m_outlier_detection_y_outlier_fit(H, c.y, c.n);                   \
+         return s == N4M_OK ? n4m_outlier_detection_y_outlier_apply(H, c.y, c.n, c.mask, &st) : s; }, \
+     DESTROY(n4m_outlier_detection_y_outlier_destroy, n4m_filter_y_outlier_handle_t)}
     Y_OUTLIER("filter_y_outlier_iqr", N4M_Y_OUTLIER_IQR),
     Y_OUTLIER("filter_y_outlier_zscore", N4M_Y_OUTLIER_ZSCORE),
     Y_OUTLIER("filter_y_outlier_percentile", N4M_Y_OUTLIER_PERCENTILE),
@@ -469,23 +469,23 @@ const DonorOp kOps[] = {
     {"filter_leverage",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_filter_leverage_handle_t* h = nullptr;
-         return n4m_filter_leverage_create(&h, 0, 3.0, 0, 0.0, 0, 1) == N4M_OK ? h : nullptr; },
+         return n4m_outlier_detection_high_leverage_create(&h, 0, 3.0, 0, 0.0, 0, 1) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_filter_leverage_handle_t*>(h);
          n4m_filter_stats_t st{};
-         n4m_status_t s = n4m_filter_leverage_fit(H, c.X);
-         return s == N4M_OK ? n4m_filter_leverage_apply(H, c.X, c.mask, &st) : s; },
-     DESTROY(n4m_filter_leverage_destroy, n4m_filter_leverage_handle_t)},
+         n4m_status_t s = n4m_outlier_detection_high_leverage_fit(H, c.X);
+         return s == N4M_OK ? n4m_outlier_detection_high_leverage_apply(H, c.X, c.mask, &st) : s; },
+     DESTROY(n4m_outlier_detection_high_leverage_destroy, n4m_filter_leverage_handle_t)},
 
     {"filter_quality",  /* stateless: apply only, no fit */
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_filter_quality_handle_t* h = nullptr;
-         return n4m_filter_quality_create(&h, 0.1, 0.5, 1e-6, 0, 0.0, 0, 0.0, 1) == N4M_OK ? h : nullptr; },
+         return n4m_outlier_detection_spectral_quality_create(&h, 0.1, 0.5, 1e-6, 0, 0.0, 0, 0.0, 1) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_filter_stats_t st{};
-         return n4m_filter_quality_apply(static_cast<n4m_filter_quality_handle_t*>(h),
+         return n4m_outlier_detection_spectral_quality_apply(static_cast<n4m_filter_quality_handle_t*>(h),
                                          c.X, c.mask, &st); },
-     DESTROY(n4m_filter_quality_destroy, n4m_filter_quality_handle_t)},
+     DESTROY(n4m_outlier_detection_spectral_quality_destroy, n4m_filter_quality_handle_t)},
 
     /* ---- splitters (Phase 11). Timed operation is one split() (or
      *      split_fold(0) for the k-fold variants), including the heap
@@ -494,137 +494,159 @@ const DonorOp kOps[] = {
     {"split_kennard_stone",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_split_kennard_stone_handle_t* h = nullptr;
-         return n4m_split_kennard_stone_create(&h, 0.25) == N4M_OK ? h : nullptr; },
+         return n4m_model_selection_kennard_stone_create(&h, 0.25) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_split_result_t res{};
-         n4m_status_t s = n4m_split_kennard_stone_split(
+         n4m_status_t s = n4m_model_selection_kennard_stone_split(
              static_cast<n4m_split_kennard_stone_handle_t*>(h), c.X, &res);
          n4m_split_result_destroy(&res); return s; },
-     DESTROY(n4m_split_kennard_stone_destroy, n4m_split_kennard_stone_handle_t)},
+     DESTROY(n4m_model_selection_kennard_stone_destroy, n4m_split_kennard_stone_handle_t)},
 
     {"split_spxy",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_split_spxy_handle_t* h = nullptr;
-         return n4m_split_spxy_create(&h, 0.25) == N4M_OK ? h : nullptr; },
+         return n4m_model_selection_spxy_create(&h, 0.25) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_split_result_t res{};
-         n4m_status_t s = n4m_split_spxy_split(
+         n4m_status_t s = n4m_model_selection_spxy_split(
              static_cast<n4m_split_spxy_handle_t*>(h), c.X, c.Y, &res);
          n4m_split_result_destroy(&res); return s; },
-     DESTROY(n4m_split_spxy_destroy, n4m_split_spxy_handle_t)},
+     DESTROY(n4m_model_selection_spxy_destroy, n4m_split_spxy_handle_t)},
 
     {"split_spxy_fold",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_split_spxy_fold_handle_t* h = nullptr;
-         return n4m_split_spxy_fold_create(&h, 5, N4M_SPLIT_Y_METRIC_EUCLIDEAN) == N4M_OK ? h : nullptr; },
+         return n4m_model_selection_spxy_fold_create(&h, 5, N4M_SPLIT_Y_METRIC_EUCLIDEAN) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_split_result_t res{};
-         n4m_status_t s = n4m_split_spxy_fold_split_fold(
+         n4m_status_t s = n4m_model_selection_spxy_fold_split_fold(
              static_cast<n4m_split_spxy_fold_handle_t*>(h), c.X, c.Y, 0, &res);
          n4m_split_result_destroy(&res); return s; },
-     DESTROY(n4m_split_spxy_fold_destroy, n4m_split_spxy_fold_handle_t)},
+     DESTROY(n4m_model_selection_spxy_fold_destroy, n4m_split_spxy_fold_handle_t)},
 
     {"split_spxy_g_fold",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_split_spxy_g_fold_handle_t* h = nullptr;
-         return n4m_split_spxy_g_fold_create(&h, 5, N4M_SPLIT_Y_METRIC_EUCLIDEAN,
+         return n4m_model_selection_spxy_g_fold_create(&h, 5, N4M_SPLIT_Y_METRIC_EUCLIDEAN,
                                              N4M_SPLIT_AGGREGATION_MEAN) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_split_result_t res{};
-         n4m_status_t s = n4m_split_spxy_g_fold_split_fold(
+         n4m_status_t s = n4m_model_selection_spxy_g_fold_split_fold(
              static_cast<n4m_split_spxy_g_fold_handle_t*>(h), c.X, c.Y,
              c.groups, c.n, 0, &res);
          n4m_split_result_destroy(&res); return s; },
-     DESTROY(n4m_split_spxy_g_fold_destroy, n4m_split_spxy_g_fold_handle_t)},
+     DESTROY(n4m_model_selection_spxy_g_fold_destroy, n4m_split_spxy_g_fold_handle_t)},
 
     {"split_kmeans",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_split_kmeans_handle_t* h = nullptr;
-         return n4m_split_kmeans_create(&h, 0.25, 42u, 100) == N4M_OK ? h : nullptr; },
+         return n4m_model_selection_kmeans_create(&h, 0.25, 42u, 100) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_split_result_t res{};
-         n4m_status_t s = n4m_split_kmeans_split(
+         n4m_status_t s = n4m_model_selection_kmeans_split(
              static_cast<n4m_split_kmeans_handle_t*>(h), c.X, &res);
          n4m_split_result_destroy(&res); return s; },
-     DESTROY(n4m_split_kmeans_destroy, n4m_split_kmeans_handle_t)},
+     DESTROY(n4m_model_selection_kmeans_destroy, n4m_split_kmeans_handle_t)},
 
     {"split_kbins_stratified",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_split_kbins_stratified_handle_t* h = nullptr;
-         return n4m_split_kbins_stratified_create(&h, 0.25, 42u, 5, N4M_SPLIT_KBINS_UNIFORM) == N4M_OK ? h : nullptr; },
+         return n4m_model_selection_kbins_stratified_create(&h, 0.25, 42u, 5, N4M_SPLIT_KBINS_UNIFORM) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_split_result_t res{};
-         n4m_status_t s = n4m_split_kbins_stratified_split(
+         n4m_status_t s = n4m_model_selection_kbins_stratified_split(
              static_cast<n4m_split_kbins_stratified_handle_t*>(h), c.Y, &res);
          n4m_split_result_destroy(&res); return s; },
-     DESTROY(n4m_split_kbins_stratified_destroy, n4m_split_kbins_stratified_handle_t)},
+     DESTROY(n4m_model_selection_kbins_stratified_destroy, n4m_split_kbins_stratified_handle_t)},
 
     {"split_bsgk",  /* BinnedStratifiedGroupKFold */
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_split_binned_strat_group_kfold_handle_t* h = nullptr;
-         return n4m_split_binned_strat_group_kfold_create(&h, 5, 5, N4M_SPLIT_KBINS_UNIFORM, 1, 42u) == N4M_OK ? h : nullptr; },
+         return n4m_model_selection_binned_strat_group_kfold_create(&h, 5, 5, N4M_SPLIT_KBINS_UNIFORM, 1, 42u) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_split_result_t res{};
-         n4m_status_t s = n4m_split_binned_strat_group_kfold_split_fold(
+         n4m_status_t s = n4m_model_selection_binned_strat_group_kfold_split_fold(
              static_cast<n4m_split_binned_strat_group_kfold_handle_t*>(h),
              c.Y, c.groups, c.n, 0, &res);
          n4m_split_result_destroy(&res); return s; },
-     DESTROY(n4m_split_binned_strat_group_kfold_destroy, n4m_split_binned_strat_group_kfold_handle_t)},
+     DESTROY(n4m_model_selection_binned_strat_group_kfold_destroy, n4m_split_binned_strat_group_kfold_handle_t)},
 
     {"split_systematic_circular",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_split_systematic_circular_handle_t* h = nullptr;
-         return n4m_split_systematic_circular_create(&h, 0.25, 42u) == N4M_OK ? h : nullptr; },
+         return n4m_model_selection_systematic_circular_create(&h, 0.25, 42u) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_split_result_t res{};
-         n4m_status_t s = n4m_split_systematic_circular_split(
+         n4m_status_t s = n4m_model_selection_systematic_circular_split(
              static_cast<n4m_split_systematic_circular_handle_t*>(h), c.Y, &res);
          n4m_split_result_destroy(&res); return s; },
-     DESTROY(n4m_split_systematic_circular_destroy, n4m_split_systematic_circular_handle_t)},
+     DESTROY(n4m_model_selection_systematic_circular_destroy, n4m_split_systematic_circular_handle_t)},
 
     {"split_split_splitter",  /* SPlit (data twinning) */
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_split_split_splitter_handle_t* h = nullptr;
-         return n4m_split_split_splitter_create(&h, 0.25, 42u) == N4M_OK ? h : nullptr; },
+         return n4m_model_selection_data_twinning_create(&h, 0.25, 42u) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          n4m_split_result_t res{};
-         n4m_status_t s = n4m_split_split_splitter_split(
+         n4m_status_t s = n4m_model_selection_data_twinning_split(
              static_cast<n4m_split_split_splitter_handle_t*>(h), c.X, &res);
          n4m_split_result_destroy(&res); return s; },
-     DESTROY(n4m_split_split_splitter_destroy, n4m_split_split_splitter_handle_t)},
+     DESTROY(n4m_model_selection_data_twinning_destroy, n4m_split_split_splitter_handle_t)},
 
     /* ---- preprocessing, dim-preserving (output is n x p, so it reuses the
      *      n x p out buffer). Timed op = transform, or fit + transform for
      *      stateful ops. The dim-changing pp ops (crop/derivate/wavelet/PCA/
      *      resample/...) are handled with output_cols-aware runs below. */
 #define PP_T(base)  [](void* h, BenchCtx& c) {                                    \
-        return n4m_pp_##base##_transform(static_cast<n4m_pp_##base##_handle_t*>(h), c.X, c.out); }
+        return n4m_transform_##base##_transform(static_cast<n4m_pp_##base##_handle_t*>(h), c.X, c.out); }
 #define PP_FT(base) [](void* h, BenchCtx& c) {                                    \
         auto* H = static_cast<n4m_pp_##base##_handle_t*>(h);                      \
-        n4m_status_t s = n4m_pp_##base##_fit(H, c.X);                             \
-        return s == N4M_OK ? n4m_pp_##base##_transform(H, c.X, c.out) : s; }
-#define PP_D(base) DESTROY(n4m_pp_##base##_destroy, n4m_pp_##base##_handle_t)
+        n4m_status_t s = n4m_transform_##base##_fit(H, c.X);                             \
+        return s == N4M_OK ? n4m_transform_##base##_transform(H, c.X, c.out) : s; }
+#define PP_D(base) DESTROY(n4m_transform_##base##_destroy, n4m_pp_##base##_handle_t)
 #define PP_MAKE(base, ...) [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* { \
         n4m_pp_##base##_handle_t* h = nullptr;                                    \
-        return n4m_pp_##base##_create(&h, ##__VA_ARGS__) == N4M_OK ? h : nullptr; }
+        return n4m_transform_##base##_create(&h, ##__VA_ARGS__) == N4M_OK ? h : nullptr; }
 #define PP_MAKE0(base) [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {     \
         n4m_pp_##base##_handle_t* h = nullptr;                                    \
-        return n4m_pp_##base##_create(&h) == N4M_OK ? h : nullptr; }
+        return n4m_transform_##base##_create(&h) == N4M_OK ? h : nullptr; }
+
+/* ABI-2.0 divergent-name variants. ABI 2.0 renamed many transform functions but
+ * kept the historical n4m_pp_<old>_handle_t typedef, so the function op-name (fb)
+ * and the handle op-name (hb) diverge and can no longer share one macro `base`. */
+#define PP_T_X(fb, hb)  [](void* h, BenchCtx& c) {                                  \
+        return n4m_transform_##fb##_transform(static_cast<n4m_pp_##hb##_handle_t*>(h), c.X, c.out); }
+#define PP_FT_X(fb, hb) [](void* h, BenchCtx& c) {                                  \
+        auto* H = static_cast<n4m_pp_##hb##_handle_t*>(h);                          \
+        n4m_status_t s = n4m_transform_##fb##_fit(H, c.X);                          \
+        return s == N4M_OK ? n4m_transform_##fb##_transform(H, c.X, c.out) : s; }
+#define PP_MAKE_X(fb, hb, ...) [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* { \
+        n4m_pp_##hb##_handle_t* h = nullptr;                                        \
+        return n4m_transform_##fb##_create(&h, ##__VA_ARGS__) == N4M_OK ? h : nullptr; }
+#define PP_MAKE0_X(fb, hb) [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {   \
+        n4m_pp_##hb##_handle_t* h = nullptr;                                        \
+        return n4m_transform_##fb##_create(&h) == N4M_OK ? h : nullptr; }
+#define PP_D_X(fb, hb) DESTROY(n4m_transform_##fb##_destroy, n4m_pp_##hb##_handle_t)
+/* flex PCA/SVD moved transform -> decomposition (handle typedef unchanged). */
+#define DECOMP_MAKE_X(fb, hb, ...) [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* { \
+        n4m_pp_##hb##_handle_t* h = nullptr;                                        \
+        return n4m_decomposition_##fb##_create(&h, ##__VA_ARGS__) == N4M_OK ? h : nullptr; }
+#define DECOMP_D_X(fb, hb) DESTROY(n4m_decomposition_##fb##_destroy, n4m_pp_##hb##_handle_t)
 
     {"pp_snv",  PP_MAKE(snv, 1, 1, 0), PP_T(snv), PP_D(snv)},
-    {"pp_rnv",  PP_MAKE(rnv, 1, 1, 0.25), PP_T(rnv), PP_D(rnv)},
-    {"pp_lsnv", PP_MAKE(lsnv, 11, 0, 0.0), PP_T(lsnv), PP_D(lsnv)},
-    {"pp_area", PP_MAKE(area, 0), PP_T(area), PP_D(area)},
+    {"pp_rnv",  PP_MAKE_X(robust_snv, rnv, 1, 1, 0.25), PP_T_X(robust_snv, rnv), PP_D_X(robust_snv, rnv)},
+    {"pp_lsnv", PP_MAKE_X(local_snv, lsnv, 11, 0, 0.0), PP_T_X(local_snv, lsnv), PP_D_X(local_snv, lsnv)},
+    {"pp_area", PP_MAKE_X(area_normalization, area, 0), PP_T_X(area_normalization, area), PP_D_X(area_normalization, area)},
     {"pp_normalize", PP_MAKE(normalize, 0.0, 1.0), PP_T(normalize), PP_D(normalize)},
     {"pp_simple_scale", PP_MAKE0(simple_scale), PP_T(simple_scale), PP_D(simple_scale)},
     {"pp_detrend", PP_MAKE(detrend, 1), PP_T(detrend), PP_D(detrend)},
     {"pp_gaussian", PP_MAKE(gaussian, 2.0, 0, N4M_PP_GAUSSIAN_REFLECT, 0.0, 4.0), PP_T(gaussian), PP_D(gaussian)},
-    {"pp_savgol", PP_MAKE(savgol, 11, 2, 0, 1.0, N4M_PP_SAVGOL_MIRROR, 0.0), PP_T(savgol), PP_D(savgol)},
+    {"pp_savgol", PP_MAKE_X(savitzky_golay, savgol, 11, 2, 0, 1.0, N4M_PP_SAVGOL_MIRROR, 0.0), PP_T_X(savitzky_golay, savgol), PP_D_X(savitzky_golay, savgol)},
     {"pp_first_derivative", PP_MAKE(first_derivative, 1.0, 2), PP_T(first_derivative), PP_D(first_derivative)},
     {"pp_second_derivative", PP_MAKE(second_derivative, 1.0, 2), PP_T(second_derivative), PP_D(second_derivative)},
     {"pp_norris_williams", PP_MAKE(norris_williams, 5, 3, 1, 1.0), PP_T(norris_williams), PP_D(norris_williams)},
-    {"pp_frac_to_pct", PP_MAKE0(frac_to_pct), PP_T(frac_to_pct), PP_D(frac_to_pct)},
-    {"pp_pct_to_frac", PP_MAKE0(pct_to_frac), PP_T(pct_to_frac), PP_D(pct_to_frac)},
+    {"pp_frac_to_pct", PP_MAKE0_X(fraction_to_percent, frac_to_pct), PP_T_X(fraction_to_percent, frac_to_pct), PP_D_X(fraction_to_percent, frac_to_pct)},
+    {"pp_pct_to_frac", PP_MAKE0_X(percent_to_fraction, pct_to_frac), PP_T_X(percent_to_fraction, pct_to_frac), PP_D_X(percent_to_fraction, pct_to_frac)},
     {"pp_from_absorbance", PP_MAKE(from_absorbance, 0), PP_T(from_absorbance), PP_D(from_absorbance)},
     {"pp_to_absorbance", PP_MAKE(to_absorbance, 0, 1e-6, 1), PP_T(to_absorbance), PP_D(to_absorbance)},
     {"pp_kubelka_munk", PP_MAKE(kubelka_munk, 0, 1e-6), PP_T(kubelka_munk), PP_D(kubelka_munk)},
@@ -632,10 +654,10 @@ const DonorOp kOps[] = {
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          static const double bins[3] = {0.4, 0.6, 0.8};
          n4m_pp_range_disc_handle_t* h = nullptr;
-         return n4m_pp_range_disc_create(&h, bins, 3) == N4M_OK ? h : nullptr; },
+         return n4m_transform_range_discretizer_create(&h, bins, 3) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
-         return n4m_pp_range_disc_transform(static_cast<n4m_pp_range_disc_handle_t*>(h), c.X, c.out_i32); },
-     PP_D(range_disc)},
+         return n4m_transform_range_discretizer_transform(static_cast<n4m_pp_range_disc_handle_t*>(h), c.X, c.out_i32); },
+     PP_D_X(range_discretizer, range_disc)},
     /* baseline-correction family (iterative) */
     {"pp_airpls", PP_MAKE(airpls, 1e5, 15, 1e-3), PP_T(airpls), PP_D(airpls)},
     {"pp_arpls",  PP_MAKE(arpls, 1e5, 50, 1e-3), PP_T(arpls), PP_D(arpls)},
@@ -653,20 +675,20 @@ const DonorOp kOps[] = {
     /* stateful, X-only fit */
     {"pp_msc", PP_MAKE0(msc), PP_FT(msc), PP_D(msc)},
     {"pp_emsc", PP_MAKE(emsc, 2), PP_FT(emsc), PP_D(emsc)},
-    {"pp_baseline", PP_MAKE0(baseline), PP_FT(baseline), PP_D(baseline)},
-    {"pp_kbins_disc", PP_MAKE(kbins_disc, 5, 0),  /* discretizer → int32 bins */
+    {"pp_baseline", PP_MAKE0_X(baseline_center, baseline), PP_FT_X(baseline_center, baseline), PP_D_X(baseline_center, baseline)},
+    {"pp_kbins_disc", PP_MAKE_X(kbins_discretizer, kbins_disc, 5, 0),  /* discretizer → int32 bins */
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_kbins_disc_handle_t*>(h);
-         n4m_status_t s = n4m_pp_kbins_disc_fit(H, c.X);
-         return s == N4M_OK ? n4m_pp_kbins_disc_transform(H, c.X, c.out_i32) : s; },
-     PP_D(kbins_disc)},
-    {"pp_log", PP_MAKE(log, 10.0, 0.0, 1, 1e-6), PP_FT(log), PP_D(log)},
+         n4m_status_t s = n4m_transform_kbins_discretizer_fit(H, c.X);
+         return s == N4M_OK ? n4m_transform_kbins_discretizer_transform(H, c.X, c.out_i32) : s; },
+     PP_D_X(kbins_discretizer, kbins_disc)},
+    {"pp_log", PP_MAKE_X(log_transform, log, 10.0, 0.0, 1, 1e-6), PP_FT_X(log_transform, log), PP_D_X(log_transform, log)},
     /* stateful, fit needs an extra vector */
     {"pp_osc",  PP_MAKE(osc, 2, 1),
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_osc_handle_t*>(h);
-         n4m_status_t s = n4m_pp_osc_fit(H, c.X, c.y, c.n);
-         return s == N4M_OK ? n4m_pp_osc_transform(H, c.X, c.out) : s; },
+         n4m_status_t s = n4m_transform_osc_fit(H, c.X, c.y, c.n);
+         return s == N4M_OK ? n4m_transform_osc_transform(H, c.X, c.out) : s; },
      PP_D(osc)},
     /* pp_epo: EPO needs a calibrated difference/clutter direction set for
      * fit(); a synthetic spectrum yields a degenerate projection, so it is
@@ -680,75 +702,75 @@ const DonorOp kOps[] = {
     {"pp_crop",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t p) -> void* {
          n4m_pp_crop_handle_t* h = nullptr;
-         return n4m_pp_crop_create(&h, 1, p - 1) == N4M_OK ? h : nullptr; },
+         return n4m_transform_crop_create(&h, 1, p - 1) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_crop_handle_t*>(h);
-         int64_t oc = n4m_pp_crop_output_cols(H, c.p);
+         int64_t oc = n4m_transform_crop_output_cols(H, c.p);
          if (oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_crop_transform(H, c.X, ov); },
+         return n4m_transform_crop_transform(H, c.X, ov); },
      PP_D(crop)},
 
     {"pp_derivate",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_pp_derivate_handle_t* h = nullptr;
-         return n4m_pp_derivate_create(&h, 1, 1.0) == N4M_OK ? h : nullptr; },
+         return n4m_transform_derivative_create(&h, 1, 1.0) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_derivate_handle_t*>(h);
-         n4m_status_t fs = n4m_pp_derivate_fit(H, c.X);
+         n4m_status_t fs = n4m_transform_derivative_fit(H, c.X);
          if (fs != N4M_OK) return fs;
-         int64_t oc = n4m_pp_derivate_output_cols(1, c.p);
+         int64_t oc = n4m_transform_derivative_output_cols(1, c.p);
          if (oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_derivate_transform(H, c.X, ov); },
-     PP_D(derivate)},
+         return n4m_transform_derivative_transform(H, c.X, ov); },
+     PP_D_X(derivative, derivate)},
 
     {"pp_haar",
      PP_MAKE0(haar),
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_haar_handle_t*>(h);
          int64_t oc = 0;
-         if (n4m_pp_haar_output_cols(c.p, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         if (n4m_transform_haar_output_cols(c.p, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_haar_transform(H, c.X, ov); },
+         return n4m_transform_haar_transform(H, c.X, ov); },
      PP_D(haar)},
 
     {"pp_resample",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          n4m_pp_resample_handle_t* h = nullptr;
-         return n4m_pp_resample_create(&h, 128) == N4M_OK ? h : nullptr; },
+         return n4m_transform_resample_transformer_create(&h, 128) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_resample_handle_t*>(h);
-         int64_t oc = n4m_pp_resample_output_cols(H, c.p);
+         int64_t oc = n4m_transform_resample_transformer_output_cols(H, c.p);
          if (oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_resample_transform(H, c.X, ov); },
-     PP_D(resample)},
+         return n4m_transform_resample_transformer_transform(H, c.X, ov); },
+     PP_D_X(resample_transformer, resample)},
 
     {"pp_resampler",
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t p) -> void* {
          auto wl = wavelength_axis(p);
          n4m_pp_resampler_handle_t* h = nullptr;
-         return n4m_pp_resampler_create(&h, wl.data(), p, 0, 0.0, 0.0, 0, 0.0, 0, 1) == N4M_OK ? h : nullptr; },
+         return n4m_transform_resampler_create(&h, wl.data(), p, 0, 0.0, 0.0, 0, 0.0, 0, 1) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_resampler_handle_t*>(h);
          /* resampler fits the source→target wavelength map from the source axis */
-         n4m_status_t s = n4m_pp_resampler_fit(H, static_cast<const double*>(c.wl.data), c.p);
+         n4m_status_t s = n4m_transform_resampler_fit(H, static_cast<const double*>(c.wl.data), c.p);
          if (s != N4M_OK) return s;
-         int64_t oc = n4m_pp_resampler_output_cols(H);
+         int64_t oc = n4m_transform_resampler_output_cols(H);
          if (oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_resampler_transform(H, c.X, ov); },
+         return n4m_transform_resampler_transform(H, c.X, ov); },
      PP_D(resampler)},
 
     {"pp_wavelet",
@@ -756,11 +778,11 @@ const DonorOp kOps[] = {
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_wavelet_handle_t*>(h);
          int64_t oc = 0;
-         if (n4m_pp_wavelet_output_cols(H, c.p, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         if (n4m_transform_wavelet_output_cols(H, c.p, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_wavelet_transform(H, c.X, ov); },
+         return n4m_transform_wavelet_transform(H, c.X, ov); },
      PP_D(wavelet)},
 
     {"pp_wavelet_features",
@@ -768,84 +790,84 @@ const DonorOp kOps[] = {
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_wavelet_features_handle_t*>(h);
          int64_t oc = 0;
-         if (n4m_pp_wavelet_features_output_cols(H, c.p, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         if (n4m_transform_wavelet_features_output_cols(H, c.p, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_wavelet_features_transform(H, c.X, ov); },
+         return n4m_transform_wavelet_features_transform(H, c.X, ov); },
      PP_D(wavelet_features)},
 
     {"pp_wavelet_pca",
      PP_MAKE(wavelet_pca, N4M_PP_WAVELET_HAAR, N4M_PP_WAVELET_BOUNDARY_PERIODIZATION, 3, 5.0),
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_wavelet_pca_handle_t*>(h);
-         n4m_status_t s = n4m_pp_wavelet_pca_fit(H, c.X);
+         n4m_status_t s = n4m_transform_wavelet_pca_fit(H, c.X);
          if (s != N4M_OK) return s;
          int64_t oc = 0;
-         if (n4m_pp_wavelet_pca_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         if (n4m_transform_wavelet_pca_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_wavelet_pca_transform(H, c.X, ov); },
+         return n4m_transform_wavelet_pca_transform(H, c.X, ov); },
      PP_D(wavelet_pca)},
 
     {"pp_wavelet_svd",
      PP_MAKE(wavelet_svd, N4M_PP_WAVELET_HAAR, N4M_PP_WAVELET_BOUNDARY_PERIODIZATION, 3, 5.0),
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_wavelet_svd_handle_t*>(h);
-         n4m_status_t s = n4m_pp_wavelet_svd_fit(H, c.X);
+         n4m_status_t s = n4m_transform_wavelet_svd_fit(H, c.X);
          if (s != N4M_OK) return s;
          int64_t oc = 0;
-         if (n4m_pp_wavelet_svd_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         if (n4m_transform_wavelet_svd_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_wavelet_svd_transform(H, c.X, ov); },
+         return n4m_transform_wavelet_svd_transform(H, c.X, ov); },
      PP_D(wavelet_svd)},
 
     {"pp_flex_pca",
-     PP_MAKE(flex_pca, 5.0),
+     DECOMP_MAKE_X(flexible_pca, flex_pca, 5.0),
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_flex_pca_handle_t*>(h);
-         n4m_status_t s = n4m_pp_flex_pca_fit(H, c.X);
+         n4m_status_t s = n4m_decomposition_flexible_pca_fit(H, c.X);
          if (s != N4M_OK) return s;
          int64_t oc = 0;
-         if (n4m_pp_flex_pca_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         if (n4m_decomposition_flexible_pca_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_flex_pca_transform(H, c.X, ov); },
-     PP_D(flex_pca)},
+         return n4m_decomposition_flexible_pca_transform(H, c.X, ov); },
+     DECOMP_D_X(flexible_pca, flex_pca)},
 
     {"pp_flex_svd",
-     PP_MAKE(flex_svd, 5.0),
+     DECOMP_MAKE_X(flexible_svd, flex_svd, 5.0),
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_flex_svd_handle_t*>(h);
-         n4m_status_t s = n4m_pp_flex_svd_fit(H, c.X);
+         n4m_status_t s = n4m_decomposition_flexible_svd_fit(H, c.X);
          if (s != N4M_OK) return s;
          int64_t oc = 0;
-         if (n4m_pp_flex_svd_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
+         if (n4m_decomposition_flexible_svd_output_cols(H, &oc) != N4M_OK || oc <= 0) return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_flex_svd_transform(H, c.X, ov); },
-     PP_D(flex_svd)},
+         return n4m_decomposition_flexible_svd_transform(H, c.X, ov); },
+     DECOMP_D_X(flexible_svd, flex_svd)},
 
     {"pp_fck_static",  /* FCK static transformer (n_kernels = n_orders × n_scales) */
      [](n4m_rng_pcg64_state_t*, int64_t, int64_t) -> void* {
          static const double orders[3] = {0.0, 1.0, 2.0};
          static const double scales[2] = {1.0, 2.0};
          n4m_pp_fck_static_handle_t* h = nullptr;
-         return n4m_pp_fck_static_create(&h, 5, orders, 3, scales, 2) == N4M_OK ? h : nullptr; },
+         return n4m_transform_fck_static_create(&h, 5, orders, 3, scales, 2) == N4M_OK ? h : nullptr; },
      [](void* h, BenchCtx& c) {
          auto* H = static_cast<n4m_pp_fck_static_handle_t*>(h);
          int32_t oc = 0;  /* 6 kernels (3 orders × 2 scales) */
-         if (n4m_pp_fck_static_output_cols(6, static_cast<int32_t>(c.p), &oc) != N4M_OK || oc <= 0)
+         if (n4m_transform_fck_static_output_cols(6, static_cast<int32_t>(c.p), &oc) != N4M_OK || oc <= 0)
              return N4M_ERR_INVALID_ARGUMENT;
          std::vector<double> ob(static_cast<size_t>(c.n) * static_cast<size_t>(oc));
          n4m_matrix_view_t ov;
          n4m_matrix_view_init_rowmajor(&ov, ob.data(), c.n, oc, N4M_DTYPE_F64);
-         return n4m_pp_fck_static_transform(H, c.X, ov); },
+         return n4m_transform_fck_static_transform(H, c.X, ov); },
      PP_D(fck_static)},
 };
 
