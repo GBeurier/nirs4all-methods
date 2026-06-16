@@ -3,9 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0d9488">
+<meta name="theme-color" content="#00A5D2">
 <title>nirs4all-methods · parity &amp; benchmark explorer</title>
 <meta name="description" content="Browse the libn4m parity and benchmark matrix: per-method binding vs reference parity, timing-vs-size curves, and divergence — fully offline, no CDN.">
+<link rel="icon" href="{{ pathto('_static/brand/favicon.ico', 1) }}" sizes="any">
+<meta property="og:type" content="website">
+<meta property="og:title" content="nirs4all-methods · parity &amp; benchmark explorer">
+<meta property="og:description" content="Browse the libn4m parity and benchmark matrix: per-method binding vs reference parity, timing-vs-size curves, and divergence — fully offline, no CDN.">
+<meta property="og:image" content="{{ pathto('_static/brand/og.png', 1) }}">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="{{ pathto('_static/dashboard.css', 1) }}">
 </head>
 <body class="dash-landing">
@@ -14,8 +20,10 @@
 <nav class="topbar" aria-label="Primary">
   <div class="nav-inner">
     <a class="nav-logo" href="{{ pathto('index') }}" aria-label="nirs4all-methods home">
-      <span class="mark" aria-hidden="true"></span>
-      <span><b>nirs4all</b>-methods</span>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="{{ pathto('_static/brand/horizontal-dark.svg', 1) }}">
+        <img class="brand-logo" src="{{ pathto('_static/brand/horizontal.svg', 1) }}" alt="nirs4all-methods" height="28">
+      </picture>
       <span class="ver" id="navVersion">libn4m</span>
     </a>
     <div class="nav-spacer"></div>
