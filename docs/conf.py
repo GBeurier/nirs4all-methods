@@ -45,8 +45,13 @@ extensions = [
 
 # ---- Open Graph (social cards) --------------------------------------
 
-ogp_site_url = "https://nirs4all-methods.readthedocs.io/en/latest/"
-ogp_image = "https://nirs4all-methods.readthedocs.io/en/latest/_static/brand/og.png"
+ogp_site_url = "https://methods.nirs4all.org/"
+ogp_image = "https://methods.nirs4all.org/_static/brand/og.png"
+ogp_custom_meta_tags = [
+    '<meta property="og:image:width" content="1200" />',
+    '<meta property="og:image:height" content="630" />',
+    '<meta name="twitter:card" content="summary_large_image" />',
+]
 
 # myst-parser: enable the optional features we actually use.
 myst_enable_extensions = [
