@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/horizontal-dark.svg">
+    <img alt="nirs4all-methods" src="assets/brand/horizontal.svg" width="440">
+  </picture>
+</p>
+
 # nirs4all-methods (n4m)
 
 > A portable PLS / NIRS engine in **C++17** with a stable **C ABI**

@@ -40,7 +40,13 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
+    "sphinxext.opengraph",
 ]
+
+# ---- Open Graph (social cards) --------------------------------------
+
+ogp_site_url = "https://nirs4all-methods.readthedocs.io/en/latest/"
+ogp_image = "https://nirs4all-methods.readthedocs.io/en/latest/_static/brand/og.png"
 
 # myst-parser: enable the optional features we actually use.
 myst_enable_extensions = [
@@ -94,6 +100,8 @@ html_theme = "alabaster"  # ships with sphinx, no extra dep
 html_title = "nirs4all-methods"
 html_short_title = "nirs4all-methods"
 html_show_sourcelink = True
+html_logo = "_static/brand/stacked.png"
+html_favicon = "_static/brand/favicon.ico"
 
 html_theme_options = {
     "description": "Portable PLS / NIRS engine in C++17 with a stable C ABI "
