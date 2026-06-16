@@ -271,7 +271,7 @@ jobs:
           assert v.startswith(expected + '+abi.'), v
           assert pls4all.__version__ == expected, (pls4all.__version__, expected)
           _abi = pls4all.abi_version()
-          assert isinstance(_abi, tuple) and len(_abi) == 3 and all(isinstance(x, int) for x in _abi) and _abi[0] == 1, _abi
+          assert isinstance(_abi, tuple) and len(_abi) == 3 and all(isinstance(x, int) for x in _abi) and _abi[0] == 2, _abi
           print('SMOKE OK')
           "
 
@@ -422,7 +422,7 @@ jobs:
           assert v.startswith('${{ steps.ver.outputs.version }}+abi.'), v
           assert pls4all.__version__ == '${{ steps.ver.outputs.version }}', pls4all.__version__
           _abi = pls4all.abi_version()
-          assert isinstance(_abi, tuple) and len(_abi) == 3 and all(isinstance(x, int) for x in _abi) and _abi[0] == 1, _abi
+          assert isinstance(_abi, tuple) and len(_abi) == 3 and all(isinstance(x, int) for x in _abi) and _abi[0] == 2, _abi
           print('POST-PUBLISH OK')
           "
 
