@@ -52,9 +52,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e bindings/python
-          # Python reference layer only (no R/Octave/nirs4all). This mirrors
-          # the Python branch of scripts/setup_parity_references.sh.
-          pip install "scikit-learn" numpy scipy "auswahl" "pyswarms" \
+          # Python reference layer only (no R/Octave/nirs4all). Mirrors the
+          # Python branch of scripts/setup_parity_references.sh, minus `auswahl`:
+          # that package was withdrawn from PyPI and its upstream repo deleted, so
+          # it is no longer installable on any Python. Listing it in the same
+          # atomic `pip install` aborted the whole resolve and skipped the sweep.
+          # The four auswahl-backed selectors (vissa_select, random_frog_select,
+          # vip_spa_select, irf_select) import it lazily, so they now surface as
+          # honest not_available rows in the matrix — see
+          # benchmarks/cross_binding/reclassify_composites.py.
+          pip install "scikit-learn" numpy scipy "pyswarms" \
                       "tensorly" "ikpls" "diPLSlib==2.5.0"
 
       - name: Full registry parity sweep (every method, registry cells)
