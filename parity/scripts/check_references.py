@@ -43,12 +43,19 @@ NIRS4ALL_SRC = REPO.parent / "nirs4all"
 # --- Python reference packages actually imported by benchmarks/parity_timing/registry.py
 PY_REQUIRED = [
     "sklearn", "numpy", "scipy",          # core references + NumPy ports
-    "auswahl",                            # RandomFrog / IntervalRandomFrog / VIP_SPA / VISSA
     "pyswarms",                           # BinaryPSO selector
     "tensorly",                           # N-PLS PARAFAC reference
     "ikpls",                              # Improved-Kernel PLS cross-check for `pls`
     "diPLSlib",                           # canonical reference for `di_pls`
 ]
+# auswahl (RandomFrog / IntervalRandomFrog / VIP_SPA / VISSA reference) was
+# WITHDRAWN from PyPI and its upstream repo deleted — no longer installable on any
+# Python. registry imports it lazily, so its four selectors (vissa_select /
+# random_frog_select / vip_spa_select / irf_select) surface as not_available cells
+# (benchmarks/cross_binding/reclassify_composites.py). A missing auswahl is thus an
+# upstream hole, not a "forgot to install" one: it is never required and must not
+# fail --strict. (A cached 0.9.0 may still be importable in a long-lived venv.)
+PY_UNAVAILABLE = ["auswahl"]
 # oct2py: no longer required — the ecr/cars libPLS bridge now uses a one-shot
 # `octave-cli --eval` (a persistent oct2py session stalls on conda Octave-10).
 # rpy2: unused (the registry shells out to Rscript).
@@ -185,7 +192,7 @@ def main() -> int:
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     args = ap.parse_args()
 
-    py = probe_python(PY_REQUIRED + PY_OPTIONAL)
+    py = probe_python(PY_REQUIRED + PY_OPTIONAL + PY_UNAVAILABLE)
     r = probe_r(R_REQUIRED + R_OPTIONAL)
     oc = probe_octave()
     n4 = probe_nirs4all()
@@ -211,6 +218,9 @@ def main() -> int:
             print(_fmt(p, py[p], optional=False))
         for p in PY_OPTIONAL:
             print(_fmt(p, py[p], optional=True))
+        for p in PY_UNAVAILABLE:
+            print(_fmt(p, py[p], optional=True)
+                  + "  — withdrawn from PyPI; dependent selectors not_available")
         print("\nR reference packages:")
         for p in R_REQUIRED:
             print(_fmt(p, r[p], optional=False))

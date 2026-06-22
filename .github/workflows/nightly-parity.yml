@@ -53,10 +53,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e bindings/python
           # Python reference layer only (no R/Octave/nirs4all). Mirrors the
-          # Python branch of scripts/setup_parity_references.sh, minus `auswahl`:
-          # that package was withdrawn from PyPI and its upstream repo deleted, so
-          # it is no longer installable on any Python. Listing it in the same
-          # atomic `pip install` aborted the whole resolve and skipped the sweep.
+          # Python branch of scripts/setup_parity_references.sh (both omit
+          # `auswahl`): that package was withdrawn from PyPI and its upstream repo
+          # deleted, so it is no longer installable on any Python. Listing it in
+          # the same atomic `pip install` aborted the whole resolve and skipped
+          # the sweep.
           # The four auswahl-backed selectors (vissa_select, random_frog_select,
           # vip_spa_select, irf_select) import it lazily, so they now surface as
           # honest not_available rows in the matrix — see

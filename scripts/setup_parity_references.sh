@@ -34,9 +34,16 @@ if [ ! -x "$VENV_PY" ]; then
 fi
 # Reference libraries imported by benchmarks/parity_timing/registry.py.
 # diPLSlib is pinned to 2.5.0 — the registry carries shims for that exact API.
+# `auswahl` is intentionally absent: it was withdrawn from PyPI (and its upstream
+# repo deleted), so it can no longer be installed — listing it here would abort
+# the whole atomic resolve under `set -e`. registry imports it lazily, so its four
+# selectors (vissa_select / random_frog_select / vip_spa_select / irf_select)
+# surface as not_available cells — see
+# benchmarks/cross_binding/reclassify_composites.py. Any cached auswahl 0.9.0
+# already present in this venv is left untouched.
 "$VENV_PY" -m pip install --no-input \
   "scikit-learn" "numpy" "scipy" \
-  "auswahl" "pyswarms" "tensorly" \
+  "pyswarms" "tensorly" \
   "ikpls" "diPLSlib==2.5.0" "oct2py>=5.6"
 
 echo "==> [2/3] R reference packages"
