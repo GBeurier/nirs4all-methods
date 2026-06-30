@@ -59,10 +59,10 @@
 
   <div class="legend" role="note" aria-label="Verdict legend">
     <strong>Verdicts</strong>
-    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>exact</span>
-    <span class="badge cross"><span class="gly" aria-hidden="true">⇄</span>cross-check</span>
-    <span class="badge cross"><span class="gly" aria-hidden="true">≈</span>drift</span>
-    <span class="badge diverg"><span class="gly" aria-hidden="true">✗</span>divergent</span>
+    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>exact match</span>
+    <span class="badge cross"><span class="gly" aria-hidden="true">⇄</span>validated cross-check</span>
+    <span class="badge diverg"><span class="gly" aria-hidden="true">≈</span>drift</span>
+    <span class="badge diverg"><span class="gly" aria-hidden="true">✗</span>failure</span>
     <span class="badge na"><span class="gly" aria-hidden="true">–</span>not&nbsp;available</span>
     <span class="badge nr"><span class="gly" aria-hidden="true">NR</span>not&nbsp;run</span>
     <span class="badge error"><span class="gly" aria-hidden="true">!</span>error</span>
@@ -84,8 +84,8 @@
     <div class="mx-group"><span class="ctl-label">parity</span>
       <select class="ctl" id="mxParity" aria-label="Filter by parity status">
         <option value="">any status</option>
-        <option value="exact">has exact</option>
-        <option value="attention">has divergence / cross-check</option>
+        <option value="exact">has exact match</option>
+        <option value="attention">has failures</option>
         <option value="divergent">has divergent</option>
         <option value="cross_check">has cross-check</option>
         <option value="error">has error</option>
