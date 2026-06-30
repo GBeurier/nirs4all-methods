@@ -1895,13 +1895,16 @@ def build_payload(results_dir: Path) -> dict:
                 "divergence_metric": "rmse",
             }
 
-    def _cell_effective_parity(cid: str, cell: dict) -> str | None:
-        if cid == REF_COL_ID:
-            return None
+    def _cell_uses_reference_gate(cid: str) -> bool:
         column = columns_by_id.get(cid, {})
         kind = (column.get("kind") or "").lower()
         column_id = column.get("id") or cid
-        if kind in {"external", "reference"} or column_id.startswith("pls4all.cpp."):
+        return kind in {"external", "reference"} or column_id.startswith("pls4all.cpp.")
+
+    def _cell_effective_parity(cid: str, cell: dict) -> str | None:
+        if cid == REF_COL_ID:
+            return None
+        if _cell_uses_reference_gate(cid):
             return cell.get("reference_parity") or cell.get("parity")
         return cell.get("binding_parity") or cell.get("parity")
 
@@ -1935,14 +1938,15 @@ def build_payload(results_dir: Path) -> dict:
         for cid, c in r["cells"].items():
             if cid == REF_COL_ID or cid in DASHBOARD_INTERNAL_COL_IDS:
                 continue
-            if c.get("reference_parity"):
-                sc["reference"][c["reference_parity"]] += 1
-            if c.get("binding_parity"):
+            uses_reference_gate = _cell_uses_reference_gate(cid)
+            if uses_reference_gate:
+                if c.get("reference_parity"):
+                    sc["reference"][c["reference_parity"]] += 1
+            elif c.get("binding_parity"):
                 sc["binding"][c["binding_parity"]] += 1
             d = c.get("divergence")
             if isinstance(d, (int, float)) and d == d:
-                (sc["_rd"] if c.get("divergence_basis") == "reference"
-                 else sc["_bd"]).append(abs(float(d)))
+                (sc["_rd"] if uses_reference_gate else sc["_bd"]).append(abs(float(d)))
             ms = c.get("ms")
             if c.get("ok") and isinstance(ms, (int, float)) and ms == ms:
                 sc["_tm"].append(float(ms))

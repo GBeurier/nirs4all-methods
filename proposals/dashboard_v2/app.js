@@ -49,6 +49,71 @@ function originClass(o) { return ORIGIN_CLASS[o] || 'external'; }
 /* ---------- column lookup ---------- */
 const COLS = DATA.columns;
 const COL_BY_ID = Object.fromEntries(COLS.map(c => [c.id, c]));
+const REF_COL_ID = '__reference';
+const ATTENTION_KEYS = ['divergent', 'drift', 'cross_check', 'error'];
+
+function usesReferenceGate(col) {
+  if (!col) return false;
+  const kind = (col.kind || '').toLowerCase();
+  const id = col.id || '';
+  return kind === 'external' || kind === 'reference' || id.startsWith('pls4all.cpp.');
+}
+function effectiveParity(cell, col) {
+  if (!cell) return 'not_available';
+  if (usesReferenceGate(col)) return cell.reference_parity || cell.parity || 'not_available';
+  return cell.binding_parity || cell.parity || 'not_available';
+}
+function bumpHist(h, key) {
+  if (key) h[key] = (h[key] || 0) + 1;
+}
+function median(values) {
+  const v = values.slice().sort((a, b) => a - b);
+  const n = v.length;
+  if (!n) return null;
+  return n % 2 ? v[(n - 1) / 2] : 0.5 * (v[n / 2 - 1] + v[n / 2]);
+}
+function stat(values) {
+  if (!values.length) return null;
+  return { max: Math.max(...values), median: median(values), n: values.length };
+}
+function methodGateStats(rows, score) {
+  if (!rows.length) {
+    return {
+      refHist: score.reference || {},
+      bindHist: score.binding || {},
+      divRef: (score.divergence && score.divergence.reference) || null,
+      divBind: (score.divergence && score.divergence.binding) || null,
+      timing: score.timing || null,
+    };
+  }
+  const refHist = {}, bindHist = {}, divRef = [], divBind = [], timing = [];
+  for (const r of rows) {
+    for (const cid of Object.keys(r.cells)) {
+      if (cid === REF_COL_ID) continue;
+      const cell = r.cells[cid];
+      const col = COL_BY_ID[cid];
+      if (!cell || !col) continue;
+      const isRefGate = usesReferenceGate(col);
+      bumpHist(isRefGate ? refHist : bindHist, effectiveParity(cell, col));
+      if (Number.isFinite(cell.divergence)) {
+        (isRefGate ? divRef : divBind).push(Math.abs(cell.divergence));
+      }
+      if (cell.ok && Number.isFinite(cell.ms)) timing.push(cell.ms);
+    }
+  }
+  return {
+    refHist,
+    bindHist,
+    divRef: stat(divRef),
+    divBind: stat(divBind),
+    timing: timing.length ? {
+      min_ms: Math.min(...timing),
+      median_ms: median(timing),
+      max_ms: Math.max(...timing),
+      n: timing.length,
+    } : null,
+  };
+}
 
 /* ---------- category metadata ---------- */
 const GROUP_LABEL = Object.fromEntries(DATA.algo_groups.map(g => [g.key, g.label]));
@@ -102,14 +167,15 @@ function buildMethods() {
       }
     }
 
-    const refHist = score.reference || {};
-    const bindHist = score.binding || {};
-    const timing = score.timing || null;
-    const divRef = (score.divergence && score.divergence.reference) || null;
-    const divBind = (score.divergence && score.divergence.binding) || null;
+    const gateStats = methodGateStats(rows, score);
+    const refHist = gateStats.refHist;
+    const bindHist = gateStats.bindHist;
+    const timing = gateStats.timing;
+    const divRef = gateStats.divRef;
+    const divBind = gateStats.divBind;
 
-    // an "attention" flag: any divergent / cross-check / error in either gate
-    const attention = ['divergent', 'drift', 'cross_check', 'error']
+    // an "attention" flag: any divergent / cross-check / error in either gate.
+    const attention = ATTENTION_KEYS
       .reduce((s, k) => s + (refHist[k] || 0) + (bindHist[k] || 0), 0);
 
     methods.push({
@@ -844,7 +910,7 @@ function renderChrome() {
   for (const r of DATA.rows) {
     for (const cid of Object.keys(r.cells)) {
       const c = r.cells[cid]; if (!c) continue;
-      switch (c.parity) {
+      switch (effectiveParity(c, COL_BY_ID[cid])) {
         case 'exact': exact++; break;
         case 'cross_check': cross++; break;
         case 'divergent': case 'drift': diverg++; break;

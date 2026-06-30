@@ -49,10 +49,18 @@ def test_method_scores_cover_exactly_the_rows(payload):
     assert set(payload["method_scores"]) == row_algos
 
 
+def _uses_reference_gate(cid: str, columns_by_id: dict[str, dict]) -> bool:
+    col = columns_by_id.get(cid, {})
+    kind = (col.get("kind") or "").lower()
+    column_id = col.get("id") or cid
+    return kind in {"external", "reference"} or column_id.startswith("pls4all.cpp.")
+
+
 def test_method_scores_are_self_consistent(payload):
     """Recompute the score cards from the row cells and assert they match
     what build_landing emitted — so the scores can never silently drift from
     the underlying verdicts."""
+    columns_by_id = {c["id"]: c for c in payload["columns"]}
     expect: dict = {}
     for r in payload["rows"]:
         e = expect.setdefault(r["algo"], {"reference": Counter(), "binding": Counter(),
@@ -60,13 +68,15 @@ def test_method_scores_are_self_consistent(payload):
         for cid, c in r["cells"].items():
             if cid == REF_COL_ID or cid in DASHBOARD_INTERNAL_COL_IDS:
                 continue
-            if c.get("reference_parity"):
-                e["reference"][c["reference_parity"]] += 1
-            if c.get("binding_parity"):
+            uses_reference_gate = _uses_reference_gate(cid, columns_by_id)
+            if uses_reference_gate:
+                if c.get("reference_parity"):
+                    e["reference"][c["reference_parity"]] += 1
+            elif c.get("binding_parity"):
                 e["binding"][c["binding_parity"]] += 1
             d = c.get("divergence")
             if isinstance(d, (int, float)):
-                if c.get("divergence_basis") == "reference":
+                if uses_reference_gate:
                     e["rd"] += 1
                 else:
                     e["bd"] += 1
@@ -79,6 +89,16 @@ def test_method_scores_are_self_consistent(payload):
         assert sc["divergence"]["reference"]["n"] == expect[algo]["rd"], f"{algo} ref div n"
         assert sc["divergence"]["binding"]["n"] == expect[algo]["bd"], f"{algo} bind div n"
         assert sc["timing"]["n"] == expect[algo]["tm"], f"{algo} timing n"
+
+
+def test_selector_binding_cross_checks_do_not_pollute_reference_scores(payload):
+    """These selector rows carry reference-context notes on binding cells, but
+    they do not have an executable reference gate in the shipped matrix."""
+    for algo in ("irf_select", "random_frog_select", "vip_spa_select", "vissa_select"):
+        ref = payload["method_scores"][algo]["reference"]
+        bind = payload["method_scores"][algo]["binding"]
+        assert "cross_check" not in ref, algo
+        assert bind.get("exact") == 15, algo
 
 
 def test_divergence_stats_shape(payload):
