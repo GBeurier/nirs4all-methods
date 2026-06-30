@@ -54,9 +54,9 @@
 
   <div class="legend" role="note" aria-label="Verdict legend">
     <strong>Verdicts</strong>
-    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>exact</span>
-    <span class="badge cross"><span class="gly" aria-hidden="true">◐</span>cross-check</span>
-    <span class="badge diverg"><span class="gly" aria-hidden="true">▲</span>divergent</span>
+    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>exact match</span>
+    <span class="badge cross"><span class="gly" aria-hidden="true">◐</span>validated cross-check</span>
+    <span class="badge diverg"><span class="gly" aria-hidden="true">▲</span>failure</span>
     <span class="badge na"><span class="gly" aria-hidden="true">∅</span>not&nbsp;available</span>
     <span class="badge nr"><span class="gly" aria-hidden="true">·</span>not&nbsp;run&nbsp;(NR)</span>
     <span class="badge error"><span class="gly" aria-hidden="true">✕</span>error</span>
@@ -79,8 +79,9 @@
     <span class="ctl-label">parity</span>
     <select class="ctl" id="filterParity" aria-label="Filter by parity status">
       <option value="">any status</option>
-      <option value="clean">all-exact (clean)</option>
-      <option value="attention">has divergence / cross-check</option>
+      <option value="clean">validated / no failures</option>
+      <option value="attention">has failures</option>
+      <option value="cross">has cross-checks</option>
       <option value="hasref">has reference gate</option>
       <option value="hasdoc">documented</option>
     </select>
@@ -89,7 +90,7 @@
       <button type="button" data-sort="category" aria-pressed="true">by category</button>
       <button type="button" data-sort="name">A–Z</button>
       <button type="button" data-sort="slowest">slowest</button>
-      <button type="button" data-sort="attention">needs attention</button>
+      <button type="button" data-sort="attention">failures first</button>
     </div>
 
     <span class="result-count" id="resultCount" aria-live="polite"></span>
