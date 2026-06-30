@@ -49,6 +49,71 @@ function originClass(o) { return ORIGIN_CLASS[o] || 'external'; }
 /* ---------- column lookup ---------- */
 const COLS = DATA.columns;
 const COL_BY_ID = Object.fromEntries(COLS.map(c => [c.id, c]));
+const REF_COL_ID = '__reference';
+const FAILURE_KEYS = ['divergent', 'drift', 'error'];
+
+function usesReferenceGate(col) {
+  if (!col) return false;
+  const kind = (col.kind || '').toLowerCase();
+  const id = col.id || '';
+  return kind === 'external' || kind === 'reference' || id.startsWith('pls4all.cpp.');
+}
+function effectiveParity(cell, col) {
+  if (!cell) return 'not_available';
+  if (usesReferenceGate(col)) return cell.reference_parity || cell.parity || 'not_available';
+  return cell.binding_parity || cell.parity || 'not_available';
+}
+function bumpHist(h, key) {
+  if (key) h[key] = (h[key] || 0) + 1;
+}
+function median(values) {
+  const v = values.slice().sort((a, b) => a - b);
+  const n = v.length;
+  if (!n) return null;
+  return n % 2 ? v[(n - 1) / 2] : 0.5 * (v[n / 2 - 1] + v[n / 2]);
+}
+function stat(values) {
+  if (!values.length) return null;
+  return { max: Math.max(...values), median: median(values), n: values.length };
+}
+function methodGateStats(rows, score) {
+  if (!rows.length) {
+    return {
+      refHist: score.reference || {},
+      bindHist: score.binding || {},
+      divRef: (score.divergence && score.divergence.reference) || null,
+      divBind: (score.divergence && score.divergence.binding) || null,
+      timing: score.timing || null,
+    };
+  }
+  const refHist = {}, bindHist = {}, divRef = [], divBind = [], timing = [];
+  for (const r of rows) {
+    for (const cid of Object.keys(r.cells)) {
+      if (cid === REF_COL_ID) continue;
+      const cell = r.cells[cid];
+      const col = COL_BY_ID[cid];
+      if (!cell || !col) continue;
+      const isRefGate = usesReferenceGate(col);
+      bumpHist(isRefGate ? refHist : bindHist, effectiveParity(cell, col));
+      if (Number.isFinite(cell.divergence)) {
+        (isRefGate ? divRef : divBind).push(Math.abs(cell.divergence));
+      }
+      if (cell.ok && Number.isFinite(cell.ms)) timing.push(cell.ms);
+    }
+  }
+  return {
+    refHist,
+    bindHist,
+    divRef: stat(divRef),
+    divBind: stat(divBind),
+    timing: timing.length ? {
+      min_ms: Math.min(...timing),
+      median_ms: median(timing),
+      max_ms: Math.max(...timing),
+      n: timing.length,
+    } : null,
+  };
+}
 
 /* ---------- category metadata ---------- */
 const GROUP_LABEL = Object.fromEntries(DATA.algo_groups.map(g => [g.key, g.label]));
@@ -104,14 +169,16 @@ function buildMethods() {
       }
     }
 
-    const refHist = score.reference || {};
-    const bindHist = score.binding || {};
-    const timing = score.timing || null;
-    const divRef = (score.divergence && score.divergence.reference) || null;
-    const divBind = (score.divergence && score.divergence.binding) || null;
+    const gateStats = methodGateStats(rows, score);
+    const refHist = gateStats.refHist;
+    const bindHist = gateStats.bindHist;
+    const timing = gateStats.timing;
+    const divRef = gateStats.divRef;
+    const divBind = gateStats.divBind;
 
-    // an "attention" flag: any divergent / cross-check / error in either gate
-    const attention = ['divergent', 'drift', 'cross_check', 'error']
+    // an "attention" flag means real failures only; cross-checks are validated
+    // informational comparisons and should not make a method look broken.
+    const attention = FAILURE_KEYS
       .reduce((s, k) => s + (refHist[k] || 0) + (bindHist[k] || 0), 0);
 
     methods.push({
@@ -129,6 +196,12 @@ function buildMethods() {
 // "real" verdict total = excludes not_run/not_available so percentages mean something
 function histTotalReal(h) {
   return (h.exact || 0) + (h.cross_check || 0) + (h.divergent || 0) + (h.drift || 0) + (h.error || 0);
+}
+function histTotalValidated(h) {
+  return (h.exact || 0) + (h.cross_check || 0);
+}
+function histTotalFailed(h) {
+  return (h.divergent || 0) + (h.drift || 0) + (h.error || 0);
 }
 function histTotalAll(h) {
   return Object.values(h).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0);
@@ -184,8 +257,9 @@ function filtered() {
 
   if (state.category) list = list.filter(m => m.group === state.category);
   if (state.origin)   list = list.filter(m => m.origin === state.origin);
-  if (state.parity === 'clean')     list = list.filter(m => m.attention === 0 && (m.refHist.exact || m.bindHist.exact));
+  if (state.parity === 'clean')     list = list.filter(m => m.attention === 0 && (histTotalValidated(m.refHist) || histTotalValidated(m.bindHist)));
   if (state.parity === 'attention') list = list.filter(m => m.attention > 0);
+  if (state.parity === 'cross')     list = list.filter(m => (m.refHist.cross_check || 0) + (m.bindHist.cross_check || 0) > 0);
   if (state.parity === 'hasref')    list = list.filter(m => m.hasRef);
   if (state.parity === 'hasdoc')    list = list.filter(m => m.hasDoc);
 
@@ -253,6 +327,9 @@ function meterSegments(h) {
 function meterMeta(h) {
   const real = histTotalReal(h);
   const exact = h.exact || 0;
+  const cross = h.cross_check || 0;
+  const validated = histTotalValidated(h);
+  const failed = histTotalFailed(h);
   const nr = h.not_run || 0;
   const na = h.not_available || 0;
   if (real === 0) {
@@ -262,7 +339,12 @@ function meterMeta(h) {
     if (na) bits.push(`${na} n/a`);
     return bits.length ? `<span style="color:var(--v-nr)">${bits.join(' · ')}</span>` : '<span style="color:var(--v-nr)">no gate</span>';
   }
-  let s = `<b>${fmtPct(exact, real)}%</b> exact <span style="color:var(--text-3)">(${exact}/${real})</span>`;
+  let s = `<b>${fmtPct(validated, real)}%</b> validated <span style="color:var(--text-3)">(${validated}/${real})</span>`;
+  const bits = [];
+  if (exact) bits.push(`${exact} exact`);
+  if (cross) bits.push(`${cross} cross-check`);
+  if (bits.length) s += ` <span style="color:var(--text-3)">· ${bits.join(' · ')}</span>`;
+  if (failed) s += ` <span style="color:var(--v-diverg)">· ${failed} failed</span>`;
   if (nr) s += ` <span style="color:var(--v-nr)">· ${nr} NR</span>`;
   return s;
 }
@@ -287,12 +369,17 @@ function parityMeter(label, glyph, h) {
 }
 
 function topVerdictBadge(h) {
-  // pick the most "interesting" non-clean verdict to surface, else exact
-  for (const k of ['error', 'divergent', 'drift', 'cross_check']) {
+  // Surface failures first. Cross-checks are validated, not attention states.
+  for (const k of ['error', 'divergent', 'drift']) {
     if (h[k]) { const v = verdict(k); return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>${v.label} ×${h[k]}</span>`; }
   }
-  if (h.exact) { const v = verdict('exact'); return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>all exact</span>`; }
-  if (h.not_available) { const v = verdict('not_available'); return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>${v.label}</span>`; }
+  if (histTotalValidated(h)) {
+    const cross = h.cross_check || 0;
+    if (cross) return `<span class="badge cross sm"><span class="gly" aria-hidden="true">✓</span>validated · ${cross} cross-check</span>`;
+    const v = verdict('exact');
+    return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>validated</span>`;
+  }
+  if (h.not_available) { const v = verdict('not_available'); return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>not covered</span>`; }
   const v = verdict('not_run'); return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>not run</span>`;
 }
 
@@ -370,10 +457,10 @@ function render() {
       const ms = byGroup[gk];
       if (!ms || !ms.length) continue;
       const accent = GROUP_ACCENT[gk];
-      // category mini-summary: aggregate exact ratio
-      let exact = 0, real = 0;
-      for (const m of ms) { exact += histTotalReal(m.refHist) ? (m.refHist.exact || 0) : 0; real += histTotalReal(m.refHist); }
-      const miniRef = real ? `${fmtPct(exact, real)}% ref-exact` : '';
+      // category mini-summary: aggregate validated ratio (exact + cross-check).
+      let validated = 0, real = 0;
+      for (const m of ms) { validated += histTotalValidated(m.refHist); real += histTotalReal(m.refHist); }
+      const miniRef = real ? `${fmtPct(validated, real)}% ref validated` : '';
       html += `
         <section class="cat-section">
           <div class="cat-head">
@@ -464,16 +551,33 @@ function scoreTile(label, value, sub) {
   return `<div class="tile"><div class="t-l">${label}</div><div class="t-v">${value}</div><div class="t-s">${sub || ''}</div></div>`;
 }
 
+function gateScoreTile(label, h, target) {
+  const real = histTotalReal(h);
+  const validated = histTotalValidated(h);
+  const failed = histTotalFailed(h);
+  const nr = h.not_run || 0;
+  const na = h.not_available || 0;
+  if (!real) {
+    const bits = [];
+    if (nr) bits.push(`${nr} NR`);
+    if (na) bits.push(`${na} n/a`);
+    return scoreTile(label, '—', bits.length ? bits.join(' · ') : 'no gate');
+  }
+  const bits = [`${validated}/${real} validated`];
+  if (h.exact) bits.push(`${h.exact} exact`);
+  if (h.cross_check) bits.push(`${h.cross_check} cross-check`);
+  if (failed) bits.push(`${failed} failed`);
+  if (nr || na) bits.push(`${nr + na} not covered`);
+  return scoreTile(label, `${fmtPct(validated, real)}%`, `${bits.join(' · ')} ${target}`);
+}
+
 function drawerBodyHtml(m) {
   let html = '';
 
   /* --- 1. score summary --- */
-  const refReal = histTotalReal(m.refHist), bindReal = histTotalReal(m.bindHist);
   html += `<div class="dsection"><h3>Score card</h3><div class="dscore">`;
-  html += scoreTile('Reference parity', refReal ? `${fmtPct(m.refHist.exact || 0, refReal)}%` : '—',
-    refReal ? `${m.refHist.exact || 0}/${refReal} exact vs canonical lib` : `${m.refHist.not_run || 0} NR · ${m.refHist.not_available || 0} n/a`);
-  html += scoreTile('Binding parity', bindReal ? `${fmtPct(m.bindHist.exact || 0, bindReal)}%` : '—',
-    bindReal ? `${m.bindHist.exact || 0}/${bindReal} exact vs C++ core` : `${m.bindHist.not_run || 0} NR · ${m.bindHist.not_available || 0} n/a`);
+  html += gateScoreTile('Reference gate', m.refHist, 'vs canonical lib');
+  html += gateScoreTile('Binding gate', m.bindHist, 'vs C++ core');
   // selector methods report divergence as Jaccard set-overlap on BOTH gates; numeric
   // methods report relative-RMSE Δ. Label + format must follow the method's metric.
   const divMetric = m.anyJaccard ? 'jaccard' : 'rmse';
@@ -846,7 +950,7 @@ function renderChrome() {
   for (const r of DATA.rows) {
     for (const cid of Object.keys(r.cells)) {
       const c = r.cells[cid]; if (!c) continue;
-      switch (c.parity) {
+      switch (effectiveParity(c, COL_BY_ID[cid])) {
         case 'exact': exact++; break;
         case 'cross_check': cross++; break;
         case 'divergent': case 'drift': diverg++; break;
@@ -858,11 +962,13 @@ function renderChrome() {
     }
   }
   const real = exact + cross + diverg + err;
+  const validated = exact + cross;
+  const failed = diverg + err;
   const kpis = [
     { v: METHODS.length, l: 'methods', sub: `${DATA.algo_groups.length} categories`, accent: '#0d9488' },
-    { v: `${fmtPct(exact, real)}%`, l: 'cells exact', sub: `${exact.toLocaleString()} of ${real.toLocaleString()} comparable`, accent: '#0f766e' },
-    { v: diverg, l: 'divergent', sub: 'flagged for attention', accent: diverg ? '#b3261e' : '#10b981' },
-    { v: cross, l: 'cross-checks', sub: 'informational, not failures', accent: '#b45309' },
+    { v: `${fmtPct(validated, real)}%`, l: 'validated cells', sub: `${validated.toLocaleString()} of ${real.toLocaleString()} comparable · ${exact.toLocaleString()} exact + ${cross.toLocaleString()} cross-check`, accent: '#0f766e' },
+    { v: failed, l: 'failures', sub: 'divergent, drift, or error', accent: failed ? '#b3261e' : '#10b981' },
+    { v: cross, l: 'cross-check cells', sub: 'validated, not failures', accent: '#b45309' },
     { v: nr.toLocaleString(), l: 'not run', sub: 'kept honest, never faked', accent: '#7c7f86' },
     { v: timed.toLocaleString(), l: 'timed cells', sub: `${COLS.length} implementations`, accent: '#4f46e5' },
   ];
