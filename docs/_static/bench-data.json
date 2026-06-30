@@ -83393,12 +83393,11 @@
   "method_scores": {
     "aom_pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -83421,12 +83420,11 @@
     },
     "aom_preprocess": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -83449,12 +83447,11 @@
     },
     "approximate_press": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -83477,12 +83474,11 @@
     },
     "aug_batch_effect": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83505,12 +83501,11 @@
     },
     "aug_dead_band": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83534,12 +83529,11 @@
     "aug_detector_rolloff": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83563,12 +83557,11 @@
     "aug_edge_artifacts_combined": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83592,12 +83585,11 @@
     "aug_edge_curvature": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83620,12 +83612,11 @@
     },
     "aug_emsc_distort": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83649,12 +83640,11 @@
     "aug_gaussian_noise": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83678,12 +83668,11 @@
     "aug_hetero_noise": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83706,12 +83695,11 @@
     },
     "aug_instrument_broaden": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83735,12 +83723,11 @@
     "aug_linear_drift": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83763,12 +83750,11 @@
     },
     "aug_local_mixup": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83791,12 +83777,11 @@
     },
     "aug_mixup": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83819,12 +83804,11 @@
     },
     "aug_moisture": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83848,12 +83832,11 @@
     "aug_multiplicative_noise": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83876,12 +83859,11 @@
     },
     "aug_particle_size": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83905,12 +83887,11 @@
     "aug_path_length": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83934,12 +83915,11 @@
     "aug_poly_drift": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83963,12 +83943,11 @@
     "aug_random_x_operation": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -83992,12 +83971,11 @@
     "aug_rotate_translate": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84020,12 +83998,11 @@
     },
     "aug_scatter_sim": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84049,12 +84026,11 @@
     "aug_spike_noise": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84078,12 +84054,11 @@
     "aug_spline_smoothing": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84107,12 +84082,11 @@
     "aug_spline_x_perturbations": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84136,12 +84110,11 @@
     "aug_spline_y_perturbations": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84165,12 +84138,11 @@
     "aug_stray_light": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84193,12 +84165,11 @@
     },
     "aug_temperature": {
       "reference": {
-        "not_available": 14,
-        "not_run": 4
+        "not_available": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84222,12 +84193,11 @@
     "aug_truncated_peak": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84250,14 +84220,12 @@
     },
     "bagging_pls": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -84281,12 +84249,11 @@
     "band_mask": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84310,12 +84277,11 @@
     "band_perturb": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84338,12 +84304,11 @@
     },
     "bipls_select": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -84366,14 +84331,12 @@
     },
     "boosting_pls": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -84396,14 +84359,12 @@
     },
     "bve_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -84426,16 +84387,13 @@
     },
     "cars_select": {
       "reference": {
-        "exact": 9,
+        "exact": 6
+      },
+      "binding": {
+        "exact": 3,
         "not_available": 3,
         "cross_check": 12,
         "not_run": 6
-      },
-      "binding": {
-        "exact": 6,
-        "not_available": 3,
-        "cross_check": 12,
-        "not_run": 9
       },
       "divergence": {
         "reference": {
@@ -84459,12 +84417,11 @@
     "channel_dropout": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84487,24 +84444,23 @@
     },
     "continuum_regression": {
       "reference": {
-        "exact": 24,
-        "cross_check": 3,
-        "not_run": 6
+        "exact": 6,
+        "cross_check": 3
       },
       "binding": {
-        "exact": 21,
-        "not_run": 12
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
-          "max": 1.077617933124643e-14,
-          "median": 1.077617933124643e-14,
-          "n": 3
+          "max": 0.007749268880705053,
+          "median": 0.0038746344403576627,
+          "n": 6
         },
         "binding": {
-          "max": 0.007749268880705053,
+          "max": 0.0,
           "median": 0.0,
-          "n": 21
+          "n": 18
         }
       },
       "timing": {
@@ -84516,14 +84472,12 @@
     },
     "cppls": {
       "reference": {
-        "exact": 18,
-        "cross_check": 6,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 15,
+        "exact": 12,
         "cross_check": 6,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -84546,12 +84500,11 @@
     },
     "di_pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -84574,12 +84527,11 @@
     },
     "ds": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -84602,12 +84554,11 @@
     },
     "ecr": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -84630,12 +84581,11 @@
     },
     "emcuve_select": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -84659,12 +84609,11 @@
     "fck": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84687,11 +84636,9 @@
     },
     "filter_composite": {
       "reference": {
-        "exact": 4,
-        "not_run": 4
+        "exact": 4
       },
       "binding": {
-        "exact": 4,
         "not_run": 4
       },
       "divergence": {
@@ -84715,13 +84662,11 @@
     },
     "filter_leverage": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84744,13 +84689,11 @@
     },
     "filter_quality": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84774,12 +84717,11 @@
     "filter_x_outlier_isolation_forest": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84803,12 +84745,11 @@
     "filter_x_outlier_lof": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84831,13 +84772,11 @@
     },
     "filter_x_outlier_mahalanobis": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84860,13 +84799,11 @@
     },
     "filter_x_outlier_pca_leverage": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84889,13 +84826,11 @@
     },
     "filter_x_outlier_pca_residual": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -84918,24 +84853,22 @@
     },
     "filter_x_outlier_robust_mahalanobis": {
       "reference": {
-        "cross_check": 10,
-        "not_available": 4,
-        "not_run": 4
+        "cross_check": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
-        },
-        "binding": {
           "max": 1.0,
           "median": 1.0,
-          "n": 12
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -84947,11 +84880,9 @@
     },
     "filter_y_outlier_constant_input": {
       "reference": {
-        "exact": 4,
-        "not_run": 4
+        "exact": 4
       },
       "binding": {
-        "exact": 4,
         "not_run": 4
       },
       "divergence": {
@@ -84975,13 +84906,11 @@
     },
     "filter_y_outlier_iqr": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -85004,13 +84933,11 @@
     },
     "filter_y_outlier_mad": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -85033,11 +84960,9 @@
     },
     "filter_y_outlier_nan_exclusion": {
       "reference": {
-        "exact": 4,
-        "not_run": 4
+        "exact": 4
       },
       "binding": {
-        "exact": 4,
         "not_run": 4
       },
       "divergence": {
@@ -85061,13 +84986,11 @@
     },
     "filter_y_outlier_percentile": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -85090,13 +85013,11 @@
     },
     "filter_y_outlier_zscore": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -85119,11 +85040,10 @@
     },
     "fused_sparse_pls": {
       "reference": {
-        "not_available": 21,
-        "not_run": 6
+        "not_available": 3
       },
       "binding": {
-        "exact": 21,
+        "exact": 18,
         "not_run": 6
       },
       "divergence": {
@@ -85147,14 +85067,12 @@
     },
     "ga_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85178,12 +85096,11 @@
     "gauss_jitter": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -85206,12 +85123,11 @@
     },
     "gpr_pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85234,25 +85150,24 @@
     },
     "group_sparse_pls": {
       "reference": {
-        "exact": 9,
-        "cross_check": 18,
-        "not_run": 6
+        "exact": 6,
+        "cross_check": 3
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 12
+        "not_run": 6
       },
       "divergence": {
         "reference": {
-          "max": 0.0,
-          "median": 0.0,
-          "n": 3
+          "max": 1.197558944840329e-15,
+          "median": 5.987794724201645e-16,
+          "n": 6
         },
         "binding": {
           "max": 0.1399983119237953,
           "median": 0.1399983119237953,
-          "n": 21
+          "n": 18
         }
       },
       "timing": {
@@ -85264,11 +85179,9 @@
     },
     "hotelling_t2": {
       "reference": {
-        "exact": 4,
-        "not_run": 4
+        "exact": 4
       },
       "binding": {
-        "exact": 4,
         "not_run": 4
       },
       "divergence": {
@@ -85292,14 +85205,12 @@
     },
     "interval_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85322,14 +85233,12 @@
     },
     "ipw_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85352,12 +85261,10 @@
     },
     "irf_select": {
       "reference": {
-        "not_available": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "not_available": 6
       },
       "binding": {
-        "not_available": 9,
+        "not_available": 3,
         "exact": 15,
         "not_run": 6
       },
@@ -85382,14 +85289,12 @@
     },
     "iriv_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85412,12 +85317,11 @@
     },
     "kernel_pls_rbf": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85441,12 +85345,11 @@
     "local_clip": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -85470,12 +85373,11 @@
     "local_warp": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -85498,14 +85400,12 @@
     },
     "lw_pls": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85529,12 +85429,11 @@
     "magnitude_warp": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -85557,12 +85456,11 @@
     },
     "mb_pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85585,11 +85483,10 @@
     },
     "mir_pls": {
       "reference": {
-        "not_available": 21,
-        "not_run": 6
+        "not_available": 3
       },
       "binding": {
-        "exact": 21,
+        "exact": 18,
         "not_run": 6
       },
       "divergence": {
@@ -85613,12 +85510,11 @@
     },
     "missing_aware_nipals": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85641,14 +85537,12 @@
     },
     "n_pls": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85671,12 +85565,11 @@
     },
     "o2pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85699,14 +85592,12 @@
     },
     "on_pls": {
       "reference": {
-        "exact": 12,
-        "not_available": 12,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 9,
+        "exact": 6,
         "not_available": 12,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85729,14 +85620,12 @@
     },
     "one_se_rule": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85759,12 +85648,11 @@
     },
     "opls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85787,24 +85675,23 @@
     },
     "pcr": {
       "reference": {
-        "exact": 24,
-        "cross_check": 3,
-        "not_run": 6
+        "exact": 6,
+        "cross_check": 3
       },
       "binding": {
-        "exact": 21,
-        "not_run": 12
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
           "max": 2.989750721407406e-12,
-          "median": 2.989750721407406e-12,
-          "n": 3
+          "median": 1.5048617462488273e-12,
+          "n": 6
         },
         "binding": {
-          "max": 1.997277109024862e-14,
+          "max": 1.6237011735142914e-15,
           "median": 1.6237011735142914e-15,
-          "n": 21
+          "n": 18
         }
       },
       "timing": {
@@ -85816,12 +85703,11 @@
     },
     "pds": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85844,24 +85730,23 @@
     },
     "pls": {
       "reference": {
-        "exact": 24,
-        "cross_check": 9,
-        "not_run": 6
+        "exact": 6,
+        "cross_check": 9
       },
       "binding": {
-        "exact": 21,
-        "not_run": 18
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
-          "max": 6.238841697721173e-16,
-          "median": 6.238841697721173e-16,
-          "n": 3
+          "max": 0.008650094032579719,
+          "median": 6.360254729394757e-15,
+          "n": 12
         },
         "binding": {
-          "max": 0.008650094032579719,
+          "max": 7.105427357601002e-15,
           "median": 6.661338147750939e-15,
-          "n": 27
+          "n": 18
         }
       },
       "timing": {
@@ -85873,14 +85758,12 @@
     },
     "pls_cox": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85903,12 +85786,11 @@
     },
     "pls_diagnostic_dmodx": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85931,12 +85813,11 @@
     },
     "pls_diagnostic_q": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85959,12 +85840,11 @@
     },
     "pls_diagnostic_t2": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -85987,14 +85867,12 @@
     },
     "pls_glm": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -86017,14 +85895,12 @@
     },
     "pls_lda": {
       "reference": {
-        "exact": 9,
-        "not_available": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "not_available": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -86047,14 +85923,12 @@
     },
     "pls_logistic": {
       "reference": {
-        "exact": 9,
-        "not_available": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "not_available": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -86077,12 +85951,11 @@
     },
     "pls_monitoring": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -86105,14 +85978,12 @@
     },
     "pls_qda": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -86135,12 +86006,11 @@
     },
     "pop_pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -86164,24 +86034,22 @@
     "pp_airpls": {
       "reference": {
         "cross_check": 5,
-        "exact": 7,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 7
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": 3.615158782544944e-11,
-          "median": 3.615158782544944e-11,
-          "n": 4
+          "max": 0.007419331056867298,
+          "median": 0.0037096655465094427,
+          "n": 8
         },
         "binding": {
-          "max": 0.007419331056867298,
-          "median": 0.003709665528433649,
-          "n": 8
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -86193,13 +86061,11 @@
     },
     "pp_area": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86222,13 +86088,11 @@
     },
     "pp_arpls": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86251,13 +86115,11 @@
     },
     "pp_asls": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86280,13 +86142,11 @@
     },
     "pp_baseline": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86309,13 +86169,11 @@
     },
     "pp_beads": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86339,12 +86197,11 @@
     "pp_crop": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86368,12 +86225,11 @@
     "pp_derivate": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86396,13 +86252,11 @@
     },
     "pp_detrend": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86426,24 +86280,22 @@
     "pp_emsc": {
       "reference": {
         "cross_check": 10,
-        "exact": 2,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
-        },
-        "binding": {
           "max": 1.0,
           "median": 1.0,
-          "n": 12
+          "n": 8
+        },
+        "binding": {
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -86455,11 +86307,9 @@
     },
     "pp_epo": {
       "reference": {
-        "exact": 4,
-        "not_run": 4
+        "exact": 4
       },
       "binding": {
-        "exact": 4,
         "not_run": 4
       },
       "divergence": {
@@ -86483,13 +86333,11 @@
     },
     "pp_first_derivative": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86512,13 +86360,11 @@
     },
     "pp_flex_pca": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86542,24 +86388,22 @@
     "pp_flex_svd": {
       "reference": {
         "cross_check": 10,
-        "exact": 2,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
+          "max": 0.2546840939623079,
+          "median": 0.22867271487147345,
+          "n": 8
         },
         "binding": {
-          "max": 0.2546840939623079,
-          "median": 0.202661335780639,
-          "n": 12
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -86571,13 +86415,11 @@
     },
     "pp_frac_to_pct": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86600,13 +86442,11 @@
     },
     "pp_from_absorbance": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86629,13 +86469,11 @@
     },
     "pp_gaussian": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86658,13 +86496,11 @@
     },
     "pp_haar": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86687,13 +86523,11 @@
     },
     "pp_iasls": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86717,24 +86551,22 @@
     "pp_imodpoly": {
       "reference": {
         "cross_check": 10,
-        "exact": 2,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
+          "max": 0.4170153647422748,
+          "median": 0.37037959883751076,
+          "n": 8
         },
         "binding": {
-          "max": 0.4170153647422748,
-          "median": 0.3237438329327467,
-          "n": 12
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -86746,13 +86578,11 @@
     },
     "pp_kbins_disc": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86775,13 +86605,11 @@
     },
     "pp_kubelka_munk": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86804,13 +86632,11 @@
     },
     "pp_log": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86833,13 +86659,11 @@
     },
     "pp_lsnv": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86863,24 +86687,22 @@
     "pp_modpoly": {
       "reference": {
         "cross_check": 10,
-        "exact": 2,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
+          "max": 0.19501660780520882,
+          "median": 0.11889842177105969,
+          "n": 8
         },
         "binding": {
-          "max": 0.19501660780520882,
-          "median": 0.042780235736910574,
-          "n": 12
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -86892,13 +86714,11 @@
     },
     "pp_msc": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86922,12 +86742,11 @@
     "pp_normalize": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86950,13 +86769,11 @@
     },
     "pp_norris_williams": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -86979,13 +86796,11 @@
     },
     "pp_osc": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87008,13 +86823,11 @@
     },
     "pp_pct_to_frac": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87038,12 +86851,11 @@
     "pp_range_disc": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87066,13 +86878,11 @@
     },
     "pp_resample": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87095,13 +86905,11 @@
     },
     "pp_resampler": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87124,13 +86932,11 @@
     },
     "pp_rnv": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87154,24 +86960,22 @@
     "pp_rolling_ball": {
       "reference": {
         "cross_check": 10,
-        "exact": 2,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
+          "max": 0.008355252770838966,
+          "median": 0.0058586793140580915,
+          "n": 8
         },
         "binding": {
-          "max": 0.008355252770838966,
-          "median": 0.003362105857277217,
-          "n": 12
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -87184,24 +86988,22 @@
     "pp_savgol": {
       "reference": {
         "cross_check": 10,
-        "exact": 2,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
+          "max": 0.04833964166101889,
+          "median": 0.03492071745291699,
+          "n": 8
         },
         "binding": {
-          "max": 0.04833964166101889,
-          "median": 0.021501793244815093,
-          "n": 12
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -87213,13 +87015,11 @@
     },
     "pp_second_derivative": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87242,13 +87042,11 @@
     },
     "pp_simple_scale": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87272,24 +87070,22 @@
     "pp_snip": {
       "reference": {
         "cross_check": 10,
-        "exact": 2,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
+          "max": 0.08929326975345761,
+          "median": 0.06597921316916239,
+          "n": 8
         },
         "binding": {
-          "max": 0.08929326975345761,
-          "median": 0.04266515658486718,
-          "n": 12
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -87301,13 +87097,11 @@
     },
     "pp_snv": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87330,13 +87124,11 @@
     },
     "pp_to_absorbance": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87359,13 +87151,11 @@
     },
     "pp_wavelet": {
       "reference": {
-        "exact": 12,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 12
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87389,24 +87179,22 @@
     "pp_wavelet_denoise": {
       "reference": {
         "cross_check": 10,
-        "exact": 2,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
+          "max": 0.10451867583849626,
+          "median": 0.0930624934220716,
+          "n": 8
         },
         "binding": {
-          "max": 0.10451867583849626,
-          "median": 0.08160631100564693,
-          "n": 12
+          "max": 0.0,
+          "median": 0.0,
+          "n": 4
         }
       },
       "timing": {
@@ -87419,12 +87207,11 @@
     "pp_wavelet_features": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87448,12 +87235,11 @@
     "pp_wavelet_pca": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87477,12 +87263,11 @@
     "pp_wavelet_svd": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 14,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -87505,14 +87290,12 @@
     },
     "pso_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87535,11 +87318,9 @@
     },
     "q_residuals": {
       "reference": {
-        "exact": 4,
-        "not_run": 4
+        "exact": 4
       },
       "binding": {
-        "exact": 4,
         "not_run": 4
       },
       "divergence": {
@@ -87563,12 +87344,10 @@
     },
     "random_frog_select": {
       "reference": {
-        "not_available": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "not_available": 6
       },
       "binding": {
-        "not_available": 9,
+        "not_available": 3,
         "exact": 15,
         "not_run": 6
       },
@@ -87593,14 +87372,12 @@
     },
     "random_subspace_pls": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87623,12 +87400,11 @@
     },
     "randomization_select": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87651,24 +87427,23 @@
     },
     "recursive_pls": {
       "reference": {
-        "exact": 24,
-        "cross_check": 3,
-        "not_run": 6
+        "exact": 6,
+        "cross_check": 3
       },
       "binding": {
-        "exact": 21,
-        "not_run": 12
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
-          "max": 9.088121241764823e-16,
-          "median": 9.088121241764823e-16,
-          "n": 3
+          "max": 3.712896016544565e-15,
+          "median": 2.3108540703605238e-15,
+          "n": 6
         },
         "binding": {
           "max": 3.774758283725532e-15,
           "median": 3.774758283725532e-15,
-          "n": 21
+          "n": 18
         }
       },
       "timing": {
@@ -87680,14 +87455,12 @@
     },
     "rep_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87710,12 +87483,11 @@
     },
     "ridge_pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87738,12 +87510,11 @@
     },
     "robust_pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87766,24 +87537,23 @@
     },
     "rosa": {
       "reference": {
-        "exact": 24,
-        "cross_check": 3,
-        "not_run": 6
+        "exact": 6,
+        "cross_check": 3
       },
       "binding": {
-        "exact": 21,
-        "not_run": 12
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
-          "max": 2.4705331476230017e-16,
-          "median": 2.4705331476230017e-16,
-          "n": 3
+          "max": 1.4537928460898811e-15,
+          "median": 8.504230804260907e-16,
+          "n": 6
         },
         "binding": {
-          "max": 1.4537928460898811e-15,
+          "max": 0.0,
           "median": 0.0,
-          "n": 21
+          "n": 18
         }
       },
       "timing": {
@@ -87795,14 +87565,12 @@
     },
     "scars_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87825,14 +87593,12 @@
     },
     "shaving_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87855,11 +87621,10 @@
     },
     "sipls_select": {
       "reference": {
-        "not_available": 21,
-        "not_run": 6
+        "not_available": 3
       },
       "binding": {
-        "exact": 21,
+        "exact": 18,
         "not_run": 6
       },
       "divergence": {
@@ -87883,12 +87648,11 @@
     },
     "so_pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87911,14 +87675,12 @@
     },
     "spa_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -87941,25 +87703,24 @@
     },
     "sparse_pls_da": {
       "reference": {
-        "exact": 21,
-        "cross_check": 6,
-        "not_run": 6
+        "exact": 6,
+        "cross_check": 3
       },
       "binding": {
-        "exact": 18,
+        "exact": 15,
         "cross_check": 3,
-        "not_run": 12
+        "not_run": 6
       },
       "divergence": {
         "reference": {
-          "max": 0.0,
-          "median": 0.0,
-          "n": 3
+          "max": 1.282575533838066,
+          "median": 0.641287766919033,
+          "n": 6
         },
         "binding": {
-          "max": 1.282575533838066,
+          "max": 0.6938545735750375,
           "median": 0.0,
-          "n": 21
+          "n": 18
         }
       },
       "timing": {
@@ -87971,24 +87732,23 @@
     },
     "sparse_simpls": {
       "reference": {
-        "exact": 24,
-        "cross_check": 3,
-        "not_run": 6
+        "exact": 6,
+        "cross_check": 3
       },
       "binding": {
-        "exact": 21,
-        "not_run": 12
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
-          "max": 7.358653292890977e-16,
-          "median": 7.358653292890977e-16,
-          "n": 3
+          "max": 5.501634329819065e-15,
+          "median": 3.118749829554081e-15,
+          "n": 6
         },
         "binding": {
-          "max": 5.501634329819065e-15,
+          "max": 5.329070518200751e-15,
           "median": 5.329070518200751e-15,
-          "n": 21
+          "n": 18
         }
       },
       "timing": {
@@ -88001,13 +87761,11 @@
     "split_bsgk": {
       "reference": {
         "exact": 10,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 10,
         "not_available": 2,
-        "not_run": 8
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88031,12 +87789,11 @@
     "split_kbins_stratified": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -88059,13 +87816,11 @@
     },
     "split_kennard_stone": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -88089,13 +87844,11 @@
     "split_kmeans": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 8,
-        "not_run": 8,
-        "not_available": 2
+        "not_available": 2,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88119,13 +87872,11 @@
     "split_split_splitter": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 8,
-        "not_run": 8,
-        "not_available": 2
+        "not_available": 2,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88148,13 +87899,11 @@
     },
     "split_spxy": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -88177,14 +87926,11 @@
     },
     "split_spxy_fold": {
       "reference": {
-        "exact": 10,
-        "not_available": 4,
-        "not_run": 4
+        "exact": 10
       },
       "binding": {
-        "exact": 8,
-        "not_run": 8,
-        "not_available": 2
+        "not_available": 2,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88207,25 +87953,22 @@
     },
     "split_spxy_g_fold": {
       "reference": {
-        "cross_check": 10,
-        "not_available": 4,
-        "not_run": 4
+        "cross_check": 10
       },
       "binding": {
-        "exact": 8,
-        "not_run": 8,
-        "not_available": 2
+        "not_available": 2,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
-          "max": null,
-          "median": null,
-          "n": 0
-        },
-        "binding": {
           "max": 1.0,
           "median": 1.0,
           "n": 8
+        },
+        "binding": {
+          "max": null,
+          "median": null,
+          "n": 0
         }
       },
       "timing": {
@@ -88238,13 +87981,11 @@
     "split_systematic_circular": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 8,
-        "not_run": 8,
-        "not_available": 2
+        "not_available": 2,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88267,14 +88008,12 @@
     },
     "st_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88297,14 +88036,12 @@
     },
     "stability_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88327,13 +88064,12 @@
     },
     "t2_select": {
       "reference": {
-        "cross_check": 21,
-        "exact": 3,
-        "not_run": 6
+        "cross_check": 3,
+        "exact": 3
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88357,12 +88093,11 @@
     "unsharp_mask": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -88385,14 +88120,12 @@
     },
     "uve_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88415,12 +88148,11 @@
     },
     "variable_select_coef": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88443,14 +88175,12 @@
     },
     "variable_select_sr": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88473,12 +88203,11 @@
     },
     "variable_select_vip": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88501,12 +88230,10 @@
     },
     "vip_spa_select": {
       "reference": {
-        "not_available": 9,
-        "exact": 15,
-        "not_run": 6
+        "not_available": 6
       },
       "binding": {
-        "not_available": 9,
+        "not_available": 3,
         "exact": 15,
         "not_run": 6
       },
@@ -88531,12 +88258,10 @@
     },
     "vissa_select": {
       "reference": {
-        "not_available": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "not_available": 6
       },
       "binding": {
-        "not_available": 9,
+        "not_available": 3,
         "exact": 15,
         "not_run": 6
       },
@@ -88562,12 +88287,11 @@
     "wavelength_shift": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -88591,12 +88315,11 @@
     "wavelength_stretch": {
       "reference": {
         "exact": 8,
-        "not_available": 6,
-        "not_run": 4
+        "not_available": 2
       },
       "binding": {
-        "exact": 12,
-        "not_run": 6
+        "exact": 4,
+        "not_run": 4
       },
       "divergence": {
         "reference": {
@@ -88619,12 +88342,11 @@
     },
     "weighted_pls": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88647,12 +88369,11 @@
     },
     "wvc_select": {
       "reference": {
-        "exact": 24,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 21,
-        "not_run": 9
+        "exact": 18,
+        "not_run": 6
       },
       "divergence": {
         "reference": {
@@ -88675,14 +88396,12 @@
     },
     "wvc_threshold_select": {
       "reference": {
-        "exact": 9,
-        "cross_check": 15,
-        "not_run": 6
+        "exact": 6
       },
       "binding": {
-        "exact": 6,
+        "exact": 3,
         "cross_check": 15,
-        "not_run": 9
+        "not_run": 6
       },
       "divergence": {
         "reference": {
