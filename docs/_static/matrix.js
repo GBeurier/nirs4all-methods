@@ -142,7 +142,7 @@ function filteredRows() {
       for (const cid of Object.keys(r.cells)) {
         if (cid === REF_COL) continue;
         const v = effectiveParity(r.cells[cid], COL_BY_ID[cid]);
-        if (want === 'attention' ? (v === 'divergent' || v === 'drift' || v === 'cross_check' || v === 'error')
+        if (want === 'attention' ? (v === 'divergent' || v === 'drift' || v === 'error')
                                  : v === want) { hit = true; break; }
       }
       if (!hit) return false;
@@ -375,6 +375,9 @@ function render() {
 function histTotalReal(h) {
   return (h.exact || 0) + (h.cross_check || 0) + (h.divergent || 0) + (h.drift || 0) + (h.error || 0);
 }
+function histTotalValidated(h) {
+  return (h.exact || 0) + (h.cross_check || 0);
+}
 function scoreBar(h) {
   const order = [['exact', 'exact'], ['cross_check', 'cross'], ['divergent', 'diverg'], ['drift', 'diverg'], ['error', 'diverg'], ['not_available', 'na'], ['not_run', 'nr']];
   const total = Object.values(h).reduce((s, v) => s + (typeof v === 'number' ? v : 0), 0) || 1;
@@ -382,8 +385,10 @@ function scoreBar(h) {
 }
 function scoreRow(k, h) {
   const real = histTotalReal(h);
-  const pct = real ? fmtPct(h.exact || 0, real) + '%' : '—';
-  return `<div class="sc-row"><span class="sc-k">${k}</span><span class="sc-bar" role="img" aria-label="${k} parity">${scoreBar(h)}</span><span class="sc-pct">${pct}</span></div>`;
+  const validated = histTotalValidated(h);
+  const pct = real ? fmtPct(validated, real) + '%' : '—';
+  const detail = real ? `${validated}/${real} validated` : 'no comparable gate';
+  return `<div class="sc-row"><span class="sc-k">${k}</span><span class="sc-bar" role="img" aria-label="${k} parity">${scoreBar(h)}</span><span class="sc-pct" title="${detail}">${pct}</span></div>`;
 }
 function renderScores() {
   const wrap = document.getElementById('mxScores');
