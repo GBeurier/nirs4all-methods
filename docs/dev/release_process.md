@@ -121,9 +121,9 @@ npm run build           # tsc -p .  → dist/index.js + dist/index.d.ts (TS only
 npm run stage:wasm      # → dist/n4m.js + dist/n4m.wasm
 
 # 3. Verify the tarball actually contains index.js + n4m.wasm + n4m.js BEFORE
-#    publishing, and run the smoke test:
+#    publishing, and run the JS/WASM smoke suite:
 npm pack --dry-run      # inspect the file list
-npm test                # node test/run_smoke.mjs — must pass
+npm test                # PLS parity + API/generic/AOM/new-pack smokes — must pass
 
 # 4. Publish (scoped public package; needs npm login + 2FA OTP).
 npm publish --access public
