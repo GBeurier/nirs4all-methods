@@ -2,8 +2,9 @@
 """Optional scikit-learn base classes.
 
 The Python wheel only requires NumPy, but when scikit-learn is installed the
-``n4m.sklearn`` surface should be recognisable by sklearn tools.
+``n4m.<role>`` estimator surface should be recognisable by sklearn tools.
 """
+
 from __future__ import annotations
 
 try:  # pragma: no cover - exercised only when scikit-learn is installed

@@ -58,19 +58,16 @@ pip install -e bindings/python
 ```
 
 ```python
-# Full surface (will become the canonical import after Phase F-bootstrap)
-from n4m.sklearn import PLSRegression
-# Slim PLS-only re-export (the long-standing subset package)
-from pls4all.sklearn import PLSRegression
 import numpy as np
+from n4m.estimators.regression.latent import PLS
+from pls4all.sklearn import PLSRegression
 
 X = np.random.randn(500, 200)
 y = 2 * X[:, 3] - X[:, 6] + 0.5 * np.random.randn(500)
 
-m = PLSRegression(n_components=5).fit(X, y)
-print(m.score(X, y))            # sklearn-compatible
-# 68 sklearn-style classes available: SparseSIMPLS, CPPLS, ECRegression,
-# RidgePLS, BaggingPLS, GPRPLSRegression, …
+full = PLS(n_components=5).fit(X, y)              # nirs4all-methods -> import n4m
+slim = PLSRegression(n_components=5).fit(X, y)    # slim PLS-only pls4all package
+print(full.score(X, y), slim.score(X, y))         # sklearn-style estimators
 ```
 
 ### R
@@ -124,7 +121,7 @@ predict(mdl, Xnew)
 
 | Binding | Tier 1 surface | Tier 2 idiomatic form |
 |---|---|---|
-| **Python** (`n4m.sklearn`) | Registry-driven tier-1 API + AOM/POP low-level ABI | **68 sklearn classes + 8 fns** (`BaseEstimator` mixins, `.n4a` pickling, GridSearchCV-ready) |
+| **Python** (`n4m.<role>`, `pls4all.sklearn`) | Registry-driven tier-1 API + AOM/POP low-level ABI | sklearn-style estimators under role packages plus the mature slim PLS `pls4all.sklearn` subset |
 | **R** (`n4m` package) | **COMPLETE** — 73 registry methods via `n4m_method()` and wrappers | NIRS-first idioms — base R formula+S3 (16 wrappers) · `pls`-compatible `plsr()` / `pcr()` · `mdatools`-compatible matrix `pls(x, y, ...)` |
 | **MATLAB / Octave** (`+n4m`) | **COMPLETE** — 73 registry methods via the single MEX dispatcher | **18 classdefs** + unified `n4m.fit(algo, X, y, ...)` factory |
 | Julia, JS, Go, Rust, Ruby, .NET, Lua, Nim | SIMPLS via native FFI | 1 idiomatic class per language (PoC) |

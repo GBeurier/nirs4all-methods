@@ -5,7 +5,7 @@ binding over the portable `libn4m` C ABI (a C++17 PLS / NIRS engine). The wheel
 bundles the `libn4m` shared library, so `pip install pls4all` is self-contained;
 no separate native build is required. For the full method surface (preprocessing,
 selectors, diagnostics, augmenters, …) install the `nirs4all-methods` package
-instead — both load the same `libn4m`.
+instead and import it as `n4m` — both load the same `libn4m`.
 
 The binding loads `libn4m` with `ctypes.CDLL` (so the GIL is released during
 native calls) and exposes:
@@ -53,10 +53,11 @@ core `import pls4all` works with NumPy alone.
 The bundled wheel ships `libn4m` inside `pls4all/lib/`, found automatically. For
 development against a local build the loader searches, in order:
 
-1. `$PLS4ALL_LIB_PATH` — explicit path to `libn4m` (most direct),
-2. `pls4all/lib/libn4m*` next to the installed package (wheel layout),
-3. `<repo-root>/build/dev-release/cpp/src/libn4m*` (developer convenience),
-4. the standard system search path (`LD_LIBRARY_PATH`, macOS rpath, Windows `PATH`).
+1. `$PLS4ALL_LIB_PATH` — explicit path to `libn4m` for this package,
+2. `$N4M_LIB_PATH` — shared `libn4m` override honoured by both `pls4all` and `n4m`,
+3. `pls4all/lib/libn4m*` next to the installed package (wheel layout),
+4. `<repo-root>/build/dev-release/cpp/src/libn4m*` (developer convenience),
+5. the standard system search path (`LD_LIBRARY_PATH`, macOS rpath, Windows `PATH`).
 
 ## Building `libn4m` from source (developers)
 
