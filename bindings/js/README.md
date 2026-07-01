@@ -31,13 +31,17 @@ cd bindings/js && npm run build && npm run stage:wasm
 ## Smoke test (Node)
 
 ```bash
-node bindings/js/test/run_smoke.mjs   # fits PLS, checks parity vs native Python
-node bindings/js/examples/consume.mjs # the downstream-consumption example
+cd bindings/js
+npm test                 # PLS parity + API/generic/AOM/new-pack smokes
+node examples/consume.mjs # the downstream-consumption example
 ```
 
-The smoke test fits a SIMPLS PLS regression through the raw-pointer entrypoint,
-predicts in-sample, and compares coefficients + predictions to a frozen native
-fixture (`test/parity_fixture.json`) at a 1e-9 isolated band (achieved ~1e-16).
+The smoke suite fits a SIMPLS PLS regression through the raw-pointer entrypoint,
+checks the public API and generic method path, exercises POP/AOM helpers, and
+gates the broad-model-pack additions (`ECR`, `O2PLS`, AOM Ridge/Stack,
+DataTwinning, SystematicCircular). The PLS smoke compares coefficients +
+predictions to a frozen native fixture (`test/parity_fixture.json`) at a 1e-9
+isolated band (achieved ~1e-16).
 
 ## API surface
 
@@ -123,5 +127,9 @@ bindings/js/
 ├── examples/
 │   └── consume.mjs       # downstream-consumption example
 └── test/
-    └── run_smoke.mjs     # Node smoke + parity vs native Python
+    ├── run_smoke.mjs     # Node PLS smoke + parity vs native Python
+    ├── run_api.mjs
+    ├── run_generic_method.mjs
+    ├── run_pop_aom.mjs
+    └── run_new_pack.mjs  # broad-model-pack smoke
 ```
