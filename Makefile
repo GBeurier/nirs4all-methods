@@ -23,6 +23,7 @@ help:
 	@printf "  \033[1mBuild / test\033[0m\n"
 	@printf "    \033[36mmake build PRESET=<p>\033[0m Configure + build via cmake preset (default: dev-debug)\n"
 	@printf "    \033[36mmake test PRESET=<p>\033[0m  ctest under the given preset\n\n"
+	@printf "    \033[36mmake test-python-install\033[0m Build/install smoke for the nirs4all-methods wheel\n\n"
 	@printf "  \033[1mParity\033[0m\n"
 	@printf "    \033[36mmake parity METHOD=<id>\033[0m   Run parity for one method (or METHOD=all)\n"
 	@printf "    \033[36mmake snapshot METHOD=<id> REF=<r>\033[0m\n"
@@ -58,7 +59,7 @@ doctor:
 # ---------------------------------------------------------------------------
 # Build / test (thin wrappers over CMake presets)
 # ---------------------------------------------------------------------------
-.PHONY: build test
+.PHONY: build test test-python-install
 
 PRESET ?= dev-debug
 
@@ -68,6 +69,9 @@ build:
 
 test:
 	ctest --preset $(PRESET) --output-on-failure
+
+test-python-install:
+	python3 bindings/python/scripts/smoke_installed_nirs4all_methods.py
 
 # ---------------------------------------------------------------------------
 # Parity (Phase C-min pilot — see parity/SCENARIOS_MIN.md). Full Phase C
