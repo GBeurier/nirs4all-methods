@@ -15,23 +15,27 @@ Rscript/Octave resolution, param marshalling) + the `_comparator` rmse
 primitives. It introduces **no** parallel runner and **no** new data.
 
 WHAT THIS PROVES DEPENDS ON WHICH LANGUAGES RAN:
-  - The cross-*language* guarantee (R / Octave / JS reproduce the core) is the
-    real value, and needs those toolchains + bindings present. Proven locally /
-    pre-release at rmse_rel <= 2.5e-15.
+  - The cross-*language* guarantee (R / Octave reproduce the core) is the real
+    value for this Python-driven harness, and needs those toolchains + bindings
+    present. Proven locally / pre-release at rmse_rel <= 2.5e-15.
+  - JS/WASM is a first-class binding, but it is not driven by this harness yet:
+    cross-binding-parity.yml covers it in the separate `js-wasm` job via the npm
+    smoke/parity suite.
   - The `cpp` baseline and `python_tier1` both route through the SAME
     `MethodSpec.pls4all_fn` ctypes path (see bench_python_tier1.py header), so a
     *Python-only* run is NOT a cross-binding proof — it is a harness +
     Python-self-consistency smoke. CI runs exactly that in the harness job via
-    `--languages python --require python`; R/Octave/JS are covered by their own
-    build-and-smoke jobs in cross-binding-parity.yml.
+    `--languages python --require python`; R/Octave and JS/WASM coverage live in
+    separate jobs in cross-binding-parity.yml.
 
 Degradation is explicit: a binding whose driver or toolchain is absent is
 reported `SKIP` (visible), never silently `PASS`. A `--require`d language must
 run and every one of its cells must PASS, else the gate fails.
 
-JS is not yet wired: it has neither a `scripts/bench_js.*` driver nor a
-`BINDINGS` entry (the binding is WASM/Emscripten). Wiring it needs both. It is
-surfaced as `unwired` so the gap stays honest.
+JS/WASM is not wired into this harness: it has neither a `scripts/bench_js.*`
+driver nor a `BINDINGS` entry. The binding is nevertheless covered by the
+workflow's `js-wasm` job, and this harness surfaces the remaining integration
+gap as `unwired` so the boundary stays honest.
 
 Exit code: 0 iff no binding that ran diverged AND every `--require`d language
 ran with all-PASS cells; 1 otherwise.
@@ -62,9 +66,14 @@ BINDINGS = [
     ("matlab_tier1", "bench_matlab_tier1.m", "Octave", "raw"),
 ]
 
-# Bindings that exist but have no parity driver yet — reported, not gated.
-# Wiring JS needs BOTH a scripts/bench_js.* driver AND a BINDINGS entry below.
-UNWIRED = {"js": "needs a scripts/bench_js.* driver + a BINDINGS entry (WASM/Emscripten)"}
+# Bindings that exist but have no parity driver in this harness yet. They are
+# reported, not gated here, and must point to their real external coverage.
+UNWIRED = {
+    "js-wasm": (
+        "covered by cross-binding-parity.yml::js-wasm; this harness still needs "
+        "a scripts/bench_js.* driver + a BINDINGS entry"
+    )
+}
 
 # Tiny, cross-language-safe cell set. `pls` and `pcr` are the two methods the
 # R `r_pls` reference path also covers, need no x_target/labels sidecars, and

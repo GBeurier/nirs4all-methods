@@ -171,9 +171,9 @@ jobs:
         run: |
           npm install
           npm run build          # tsc — must compile clean
-          npm run stage:wasm     # copy p4a.{js,wasm} into dist/
+          npm run stage:wasm     # copy n4m.{js,wasm} into dist/
           npm test               # WASM smoke + parity vs native (rmse_rel ~1e-16)
-          npm pack --dry-run     # confirm dist/p4a.{js,wasm} ship
+          npm pack --dry-run     # confirm dist/n4m.{js,wasm} ship
 
   octave-mex:
     # Octave binding: build libn4m, compile the +pls4all MEX shims (build_mex.m),
