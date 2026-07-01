@@ -36,6 +36,18 @@ def test_select_bindings_filters_languages():
     ]
 
 
+def test_js_wasm_boundary_is_explicitly_outside_this_harness():
+    wired_languages = {binding[2].lower() for binding in gate.BINDINGS}
+    assert "js" not in wired_languages
+    assert "js-wasm" in gate.UNWIRED
+    assert "cross-binding-parity.yml::js-wasm" in gate.UNWIRED["js-wasm"]
+    assert "scripts/bench_js.* driver" in gate.UNWIRED["js-wasm"]
+
+    rendered = gate.render([], required_langs=[], code=0)
+    assert "UNWIRED js-wasm" in rendered
+    assert "cross-binding-parity.yml::js-wasm" in rendered
+
+
 def test_diverging_binding_fails(tmp_path):
     cpp = np.array([1.0, 2.0, 3.0])
     rec = _rec_ok(tmp_path, "r_tier1", cpp + 1e-3)
