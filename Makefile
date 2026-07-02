@@ -24,6 +24,11 @@ help:
 	@printf "    \033[36mmake build PRESET=<p>\033[0m Configure + build via cmake preset (default: dev-debug)\n"
 	@printf "    \033[36mmake test PRESET=<p>\033[0m  ctest under the given preset\n\n"
 	@printf "    \033[36mmake test-python-install\033[0m Build/install smoke for the nirs4all-methods wheel\n\n"
+	@printf "    \033[36mmake test-abi-freshness\033[0m Native ABI snapshot/loadability/linkage gate\n"
+	@printf "    \033[36mmake test-js-wasm\033[0m       Build/stage/test the JS/WASM package\n"
+	@printf "    \033[36mmake test-r-binding\033[0m     Install and smoke the R binding\n"
+	@printf "    \033[36mmake test-octave-mex\033[0m    Build and smoke the Octave MEX binding\n"
+	@printf "    \033[36mmake test-matlab-binding\033[0m Build and smoke the MATLAB binding (manual licensed runtime)\n\n"
 	@printf "  \033[1mParity\033[0m\n"
 	@printf "    \033[36mmake parity METHOD=<id>\033[0m   Run parity for one method (or METHOD=all)\n"
 	@printf "    \033[36mmake snapshot METHOD=<id> REF=<r>\033[0m\n"
@@ -59,7 +64,7 @@ doctor:
 # ---------------------------------------------------------------------------
 # Build / test (thin wrappers over CMake presets)
 # ---------------------------------------------------------------------------
-.PHONY: build test test-python-install
+.PHONY: build test test-python-install test-abi-freshness test-js-wasm test-r-binding test-octave-mex test-matlab-binding
 
 PRESET ?= dev-debug
 
@@ -72,6 +77,48 @@ test:
 
 test-python-install:
 	python3 bindings/python/scripts/smoke_installed_nirs4all_methods.py
+
+test-abi-freshness:
+	cmake --preset $(PRESET)
+	cmake --build --preset $(PRESET) --target n4m_c --parallel
+	scripts/check_native_abi_freshness.sh --preset $(PRESET)
+
+test-js-wasm:
+	cmake --preset emscripten
+	cmake --build --preset emscripten --target pls4all_wasm --parallel
+	cd bindings/js && npm install && npm run build && npm run stage:wasm && npm test && npm pack --dry-run
+
+test-r-binding:
+	cmake --preset $(PRESET)
+	cmake --build --preset $(PRESET) --target n4m_c --parallel
+	PLS4ALL_LIB_DIR="$(CURDIR)/build/$(PRESET)/cpp/src" \
+	PLS4ALL_GENERATED_DIR="$(CURDIR)/build/$(PRESET)/generated" \
+	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
+		R CMD INSTALL --no-multiarch --no-staged-install bindings/r/n4m
+	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
+		Rscript bindings/r/test_parity.R
+
+test-octave-mex:
+	cmake --preset $(PRESET)
+	cmake --build --preset $(PRESET) --target n4m_c --parallel
+	PLS4ALL_INCLUDE_DIR="$(CURDIR)/cpp/include" \
+	PLS4ALL_GENERATED_DIR="$(CURDIR)/build/$(PRESET)/generated" \
+	PLS4ALL_LIB_DIR="$(CURDIR)/build/$(PRESET)/cpp/src" \
+	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
+		octave --no-gui --no-history --eval "cd bindings/matlab; build_mex"
+	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
+		octave --no-gui --no-history --eval "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_parity"
+
+test-matlab-binding:
+	cmake --preset $(PRESET)
+	cmake --build --preset $(PRESET) --target n4m_c --parallel
+	PLS4ALL_INCLUDE_DIR="$(CURDIR)/cpp/include" \
+	PLS4ALL_GENERATED_DIR="$(CURDIR)/build/$(PRESET)/generated" \
+	PLS4ALL_LIB_DIR="$(CURDIR)/build/$(PRESET)/cpp/src" \
+	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
+		matlab -batch "cd bindings/matlab; build_mex"
+	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
+		matlab -batch "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_parity"
 
 # ---------------------------------------------------------------------------
 # Parity (Phase C-min pilot — see parity/SCENARIOS_MIN.md). Full Phase C
