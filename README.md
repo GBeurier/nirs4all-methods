@@ -8,15 +8,17 @@
 # nirs4all-methods (n4m)
 
 > A portable PLS / NIRS engine in **C++17** with a stable **C ABI**
-> (`libn4m`) and thin first-class bindings for **Python, R, MATLAB /
-> Octave**, plus JS / WebAssembly, Julia, JNI / Android. PoC bindings
-> for Go, Rust, .NET, Ruby, Lua, Nim live under `bindings/_archive/`
-> and can be revived on demand.
+> (`libn4m`) and thin first-class bindings for the **current target
+> languages**: **Python, R, MATLAB / Octave**, and **JS / WebAssembly**.
+> Archived PoC bindings (Julia, JNI / Android, Go, Rust, .NET, Ruby,
+> Lua, Nim) live under `bindings/_archive/` and are revived only by an
+> explicit binding request.
 
-The same numerical core powers every binding: a model trained in Python,
-R, MATLAB, a browser, or Android is checked against the same C++ parity
-contract and tolerance policy. Cross-checked against scikit-learn, R
-`pls`, `ropls`, `mixOmics`, `ikpls`, Octave `plsregress`.
+The same numerical core powers every active binding: a model trained in
+Python, R, MATLAB / Octave, or the browser is checked against the same
+C++ parity contract and tolerance policy. Cross-checked against
+scikit-learn, R `pls`, `ropls`, `mixOmics`, `ikpls`, and Octave
+`plsregress`.
 
 Part of the [open-source NIRS tools](https://nirs4all.org/open-source-nirs-tools.html)
 ecosystem: file readers, datasets, methods, browser modelling, reproducible pipelines,
@@ -112,11 +114,11 @@ predict(fit, x = Xnew)
 
 ```matlab
 addpath(genpath('bindings/matlab'))
-mdl = n4m.fit("sparse_simpls", X, y, "NumComponents", 5, "Lambda", 0.05);
+mdl = pls4all.fit("sparse_simpls", X, y, "NumComponents", 5, "Lambda", 0.05);
 predict(mdl, Xnew)
-% 18 classdefs available: Regression, SparsePlsRegression, EcrRegression,
-% MbPlsRegression, GlmRegression, MirRegression, …
-% (CI runs Octave; MATLAB-only divergences declared in bindings/matlab/COMPAT.md)
+% Shared +pls4all package for both runtimes; CI runs Octave, while MATLAB
+% release/runtime checks stay manual because GitHub-hosted runners have no license.
+% Runtime divergences must be declared in bindings/matlab/COMPAT.md.
 ```
 
 ---
@@ -127,9 +129,9 @@ predict(mdl, Xnew)
 |---|---|---|
 | **Python** (`n4m.<role>`, `pls4all.sklearn`) | Registry-driven tier-1 API + AOM/POP low-level ABI | sklearn-style estimators under role packages plus the mature slim PLS `pls4all.sklearn` subset |
 | **R** (`n4m` package) | **COMPLETE** — 73 registry methods via `n4m_method()` and wrappers | NIRS-first idioms — base R formula+S3 (16 wrappers) · `pls`-compatible `plsr()` / `pcr()` · `mdatools`-compatible matrix `pls(x, y, ...)` |
-| **MATLAB / Octave** (`+n4m`) | **COMPLETE** — 73 registry methods via the single MEX dispatcher | **18 classdefs** + unified `n4m.fit(algo, X, y, ...)` factory |
-| Julia, JS, Go, Rust, Ruby, .NET, Lua, Nim | SIMPLS via native FFI | 1 idiomatic class per language (PoC) |
-| JNI / JVM | SIMPLS via JNI | (deferred) |
+| **MATLAB / Octave** (`+pls4all`) | Shared MEX/dispatcher surface over `libn4m`; CI-gated in Octave | **18 classdefs** + unified `pls4all.fit(algo, X, y, ...)` factory; MATLAB release/runtime checked manually |
+| **JS / WebAssembly** | Current target binding; packaged separately from the desktop-language surfaces | Browser / npm-facing wrappers over the same C ABI / WASM core |
+| Archived PoCs (`bindings/_archive/`) | Julia, JNI / Android, Go, Rust, Ruby, .NET, Lua, Nim are on hold | Revived only through an explicit binding request |
 
 Cross-binding parity: every binding's SIMPLS predictions match the
 shared fixture within `rmse_rel < 1e-12` for the committed smoke matrix. See
@@ -233,7 +235,8 @@ implementation.
 - 🔬 **[Methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, threading, hardware
 - 🏗️ **[Architecture](docs/architecture/overview.md)** — memory model · error model · threading · serialization
 - 📜 **[ABI reference](docs/abi/reference.md)** — `n4m_*` C ABI surface, stability policy, changes log
-- 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md) · [Android](docs/bindings/android.md)
+- 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB / Octave](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md)
+- 🗃️ **Archived bindings** — [Android / JNI status](docs/bindings/android.md) and frozen PoCs under `bindings/_archive/`
 - ✅ **[Parity methodology](docs/parity/methodology.md)** — every algorithm cross-checked against an external library
 - 🛠️ **[Dev workflow](docs/dev/workflow.md)** · [build](docs/dev/build.md) · [testing](docs/dev/testing.md)
 - 📦 **[Releases & downloads](https://github.com/GBeurier/nirs4all-methods/releases/latest)** — every version's Python wheels, R/CRAN source tarballs, source archive + SBOM, all attached to one GitHub Release
@@ -350,17 +353,17 @@ A machine-readable [`CITATION.cff`](CITATION.cff) is provided.
 ## Roadmap
 
 `n4m` keeps the detailed historical phase log in
-[`ROADMAP.md`](ROADMAP.md). The active roadmap is now focused on making the
-same C ABI catalog available through more language bindings.
+[`ROADMAP.md`](ROADMAP.md). The active roadmap is now focused on the current
+target bindings and their shared parity surface.
 
-| Target binding | Goal |
+| Target surface | Goal |
 |---|---|
+| Python / R | keep the full-catalog raw + idiomatic surfaces parity-gated and releaseable |
+| MATLAB / Octave | keep the shared `+pls4all` package precise: Octave in CI, MATLAB manual runtime/release checks |
 | JS / WebAssembly | npm + browser package over the full method catalog |
-| Julia | native package wrapper over the stable C ABI |
-| JVM / Android | JNI / AAR binding beyond the current SIMPLS smoke |
-| Rust / Go | typed bindings promoted from SIMPLS PoC to broader catalog coverage |
-| .NET / Ruby / Lua / Nim | secondary bindings once the tier-2 catalog is stable |
-| Swift | future mobile / desktop binding target |
+
+Archived/on-hold bindings remain under `bindings/_archive/`: Julia, JNI /
+Android, Go, Rust, .NET, Ruby, Lua, and Nim are not current release targets.
 
 ### Method requests
 

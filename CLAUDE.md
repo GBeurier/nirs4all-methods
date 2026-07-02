@@ -4,11 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-`nirs4all-methods` (`n4m`) is a portable PLS/NIRS engine written in **C++17** with a **stable C ABI** (`libn4m`) and **thin first-class bindings** for many languages. The same numerical core powers every binding: every binding only translates native objects into `n4m_matrix_view_t` / `n4m_*` calls — it never owns numerical logic.
+`nirs4all-methods` (`n4m`) is a portable PLS/NIRS engine written in **C++17** with a **stable C ABI** (`libn4m`) and **thin first-class bindings** for the current target languages: **Python, R, MATLAB / Octave, and JS / WebAssembly**. The same numerical core powers every binding: every binding only translates native objects into `n4m_matrix_view_t` / `n4m_*` calls — it never owns numerical logic.
 
 The founding refactor document is [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md). The canonical architecture spec is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); when present, it overrides this file.
 
 **Note on naming**: the project completed its `p4a`/`pls4all` → `n4m`/`nirs4all-methods` token-level rename in Phase A. `pls4all` remains as a **packaging subset name** (the slim PLS-only re-export shipped on PyPI/CRAN) — the underlying binary is always `libn4m`. The historical project URL `github.com/GBeurier/pls4all` is preserved until the GitHub repo itself is renamed.
+
+Archived PoC bindings (Julia, JNI / Android, Go, Rust, .NET, Ruby, Lua, Nim) live under `bindings/_archive/` and are not current release targets.
 
 ## Build commands
 
@@ -185,12 +187,13 @@ bindings/
                                   # wheel (full surface); its src/n4m mirrors the dev tree
   python_pls4all/                 # PyPI packaging project for the slim `pls4all` wheel
   r/n4m/                          # CRAN n4m package (post-A10 rename from bindings/r/pls4all/)
-  matlab/                         # +pls4all classdef package + MEX dispatcher
-                                  # (n4m_*_mex entry points). COMPAT.md documents
-                                  # MATLAB-vs-Octave divergences (CI runs Octave only)
+  matlab/                         # Shared MATLAB / Octave package (`+pls4all`)
+                                  # + MEX dispatcher (CI runs Octave only;
+                                  # MATLAB release/runtime checks stay manual)
+  octave/                         # Octave support assets / third-party reference material
   js/                             # JS / WASM binding (Emscripten)
-  julia/, jni/, android/, octave/ # Active bindings
-  _archive/                       # Frozen PoC bindings (go, rust, dotnet, lua, nim, ruby)
+  _archive/                       # Frozen PoC bindings (julia, jni, android,
+                                  # go, rust, dotnet, lua, nim, ruby)
 
 benchmarks/
   parity_timing/registry.py       # Legacy canonical method catalog (~10k LOC).
@@ -222,7 +225,7 @@ docs/                             # Sphinx site source
 | ----------------- | ------ | ---------------------------------------------------------- |
 | `n4m_core`        | OBJECT | Internal C++17 implementation. Never installed.            |
 | `n4m_c`           | SHARED | Public C ABI — `libn4m.{so,dll,dylib}`.                    |
-| `n4m_c_static`    | STATIC | Same surface, statically linked (Android predict-only AAR).|
+| `n4m_c_static`    | STATIC | Same surface, statically linked for mobile / embedded experiments. |
 | `n4m_tests`       | EXE    | doctest binary, links core + c_api.                        |
 | `n4m_cli`         | EXE    | `--version`, `--abi-info`, `--selfcheck`.                  |
 
