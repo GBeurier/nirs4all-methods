@@ -9,7 +9,7 @@ on:
       - "parity/REFERENCES.md"
       - ".github/workflows/catalog-validate.yml"
   push:
-    branches: [main]
+    branches: [main, 'rc/**']
     paths:
       - "catalog/**"
       - "cpp/abi/**"

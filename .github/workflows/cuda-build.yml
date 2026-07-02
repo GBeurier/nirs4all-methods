@@ -11,10 +11,10 @@ name: CUDA build
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'rc/**']
     paths: ["cpp/**", "CMakeLists.txt", "cmake/**", "CMakePresets.json", ".github/workflows/cuda-build.yml"]
   pull_request:
-    branches: [main]
+    branches: [main, 'rc/**']
     paths: ["cpp/**", "CMakeLists.txt", "cmake/**", "CMakePresets.json", ".github/workflows/cuda-build.yml"]
   workflow_dispatch: {}
 
