@@ -18,6 +18,10 @@ R, MATLAB, a browser, or Android is checked against the same C++ parity
 contract and tolerance policy. Cross-checked against scikit-learn, R
 `pls`, `ropls`, `mixOmics`, `ikpls`, Octave `plsregress`.
 
+Part of the [open-source NIRS tools](https://nirs4all.org/open-source-nirs-tools.html)
+ecosystem: file readers, datasets, methods, browser modelling, reproducible pipelines,
+papers, benchmarks, and release dashboards for near-infrared spectroscopy.
+
 > **Status**: post-merge refactor in progress. See
 > [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md) for the founding
 > document and `roadmap/` for phase-by-phase tracking. `pls4all` is now
