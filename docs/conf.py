@@ -17,6 +17,7 @@ gh-pages on every push to main.
 from __future__ import annotations
 
 import datetime as _dt
+import html as _html
 import sys as _sys
 from pathlib import Path as _Path
 
@@ -47,6 +48,7 @@ extensions = [
 
 ogp_site_url = "https://methods.nirs4all.org/"
 ogp_image = "https://methods.nirs4all.org/_static/brand/og.png"
+html_baseurl = "https://methods.nirs4all.org/"
 ogp_custom_meta_tags = [
     '<meta property="og:image:width" content="1200" />',
     '<meta property="og:image:height" content="630" />',
@@ -164,6 +166,40 @@ templates_path = ["_templates"]
 html_additional_pages = {"index": "landing.html", "matrix": "matrix.html"}
 
 
+def _canonical_url_for_pagename(pagename: str) -> str:
+    base = html_baseurl.rstrip("/")
+    return f"{base}/" if pagename == "index" else f"{base}/{pagename}.html"
+
+
+def _seo_page_context(app, pagename, templatename, context, doctree):
+    context["n4a_canonical_url"] = _canonical_url_for_pagename(pagename)
+    context["n4a_sitemap_url"] = html_baseurl.rstrip("/") + "/sitemap.xml"
+
+
+def _write_seo_files(app, exception):
+    if exception:
+        return
+    outdir = _Path(app.outdir)
+    base = html_baseurl.rstrip("/")
+    urls: list[str] = []
+    for html_file in sorted(outdir.rglob("*.html")):
+        rel = html_file.relative_to(outdir).as_posix()
+        urls.append(f"{base}/" if rel == "index.html" else f"{base}/{rel}")
+    body = "".join(f"  <url><loc>{_html.escape(url)}</loc></url>\n" for url in urls)
+    (outdir / "sitemap.xml").write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{body}</urlset>\n",
+        encoding="utf-8",
+    )
+    (outdir / "robots.txt").write_text(
+        f"User-agent: *\nAllow: /\n\nSitemap: {base}/sitemap.xml\n",
+        encoding="utf-8",
+    )
+    (outdir / "CNAME").write_text("methods.nirs4all.org\n", encoding="utf-8")
+    (outdir / ".nojekyll").write_text("", encoding="utf-8")
+
+
 def setup(app):
     """Inject benchmark data into the build.
 
@@ -228,3 +264,5 @@ def setup(app):
         _docs_log.info("method benchmark blocks: %d from %s",
                         len(method_blocks), method_blocks_source)
     install_sphinx_hook(app, method_blocks)
+    app.connect("html-page-context", _seo_page_context)
+    app.connect("build-finished", _write_seo_files)
