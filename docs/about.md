@@ -1,6 +1,6 @@
 # nirs4all-methods documentation
 
-A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
+A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings for the current target languages: Python, R, MATLAB / Octave, and JS / WebAssembly.
 
 → **<a href="./">Interactive cross-binding benchmark dashboard</a>** — landing page generated from the canonical benchmark registry, filterable / sortable / column-toggleable.
 
@@ -10,9 +10,13 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings.
   MethodResult fits + 24 selectors + 4 diagnostics ; 16 formula+S3
   tier-2 wrappers ; parsnip + mlr3 meta-models that dispatch to all
   16 algorithms via the `algorithm` arg.
-- **MATLAB / Octave binding COMPLETE** — single dispatcher MEX exposes
-  the same surface ; 18 idiomatic `classdef` tier-2 wrappers + unified
-  `pls4all.fit(algo, X, y, …)` factory.
+- **MATLAB / Octave binding** — shared `+pls4all` package over one MEX
+  dispatcher; Octave is CI-gated, while MATLAB uses the same package but
+  remains a manual runtime/release check because GitHub-hosted runners do
+  not provide a MATLAB license.
+- **Archived PoCs stay archived** — Julia, JNI / Android, Go, Rust,
+  .NET, Ruby, Lua, and Nim live under `bindings/_archive/` and are not
+  current release targets.
 - **Cross-binding benchmark** — generated from the canonical
   `benchmarks.parity_timing.registry` method catalog, with registry-driven
   external reference columns in addition to the language bindings.

@@ -3,9 +3,9 @@
 **pls4all** is a portable PLS / NIRS engine written in C++17, exposed
 through a stable C ABI, and packaged behind thin first-class bindings
 for the current target languages — Python, R, MATLAB / Octave, and
-JavaScript / WebAssembly. Additional language bindings (Go, Rust, Julia,
-Ruby, .NET, Lua, Nim, JNI, Android) exist as frozen proofs-of-concept
-under `bindings/_archive/` and are revived on request.
+JavaScript / WebAssembly. Archived language PoCs (Go, Rust, Julia,
+Ruby, .NET, Lua, Nim, JNI, Android) live under `bindings/_archive/`
+and are not current release targets.
 
 It is built around a single claim: **the same numerical PLS result,
 in every language**, with timings that match or beat each language's
