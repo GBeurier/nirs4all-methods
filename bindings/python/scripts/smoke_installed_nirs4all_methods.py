@@ -18,6 +18,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import textwrap
 from pathlib import Path
@@ -147,30 +148,74 @@ def _stage_lib(package_dir: Path, lib_path: Path) -> Path:
     return staged
 
 
-def _build_wheel(
-    python: str, package_dir: Path, wheel_dir: Path, *, no_build_isolation: bool
+def _build_distribution(
+    python: str,
+    package_dir: Path,
+    dist_dir: Path,
+    *,
+    artifact: str,
+    no_build_isolation: bool,
 ) -> Path:
-    wheel_dir.mkdir(parents=True, exist_ok=True)
-    cmd = [python, "-m", "build", "--wheel", "--outdir", str(wheel_dir)]
+    dist_dir.mkdir(parents=True, exist_ok=True)
+    cmd = [python, "-m", "build", f"--{artifact}", "--outdir", str(dist_dir)]
     if no_build_isolation:
         cmd.append("--no-isolation")
     cmd.append(str(package_dir))
     proc = _run(cmd)
-    wheels = sorted(wheel_dir.glob("*.whl"))
-    if len(wheels) != 1:
+    pattern = "*.whl" if artifact == "wheel" else "*.tar.gz"
+    artifacts = sorted(dist_dir.glob(pattern))
+    if len(artifacts) != 1:
         raise SmokeError(
-            f"expected exactly one wheel in {wheel_dir}, found {wheels}\n"
+            f"expected exactly one {artifact} in {dist_dir}, found {artifacts}\n"
             f"build stdout:\n{proc.stdout}\n"
             f"build stderr:\n{proc.stderr}"
         )
-    wheel_name = wheels[0].name
-    if not wheel_name.startswith("nirs4all_methods-"):
+    artifact_name = artifacts[0].name
+    if not artifact_name.startswith("nirs4all_methods-"):
         raise SmokeError(
-            f"built unexpected wheel {wheel_name}; expected nirs4all_methods-*.whl\n"
+            f"built unexpected {artifact} {artifact_name}; expected nirs4all_methods-*"
+            f"{'.whl' if artifact == 'wheel' else '.tar.gz'}\n"
             f"build stdout:\n{proc.stdout}\n"
             f"build stderr:\n{proc.stderr}"
         )
-    return wheels[0]
+    return artifacts[0]
+
+
+def _inspect_sdist(sdist: Path, staged_lib_name: str) -> dict[str, object]:
+    with tarfile.open(sdist, "r:gz") as archive:
+        members = sorted(member.name for member in archive.getmembers() if member.name)
+
+    if not members:
+        raise SmokeError(f"sdist {sdist} is empty")
+
+    top_level = members[0].split("/", 1)[0]
+    expected = (
+        f"{top_level}/LICENSE",
+        f"{top_level}/pyproject.toml",
+        f"{top_level}/setup.py",
+        f"{top_level}/src/n4m/__init__.py",
+        f"{top_level}/src/n4m/_ffi.py",
+        f"{top_level}/src/n4m/lib/{staged_lib_name}",
+        f"{top_level}/tests/test_import.py",
+    )
+    missing = [member for member in expected if member not in members]
+    if missing:
+        raise SmokeError(
+            f"sdist {sdist.name} is missing expected members:\n"
+            + "\n".join(f"  - {member}" for member in missing)
+        )
+
+    bundled_libs = [
+        member
+        for member in members
+        if member.startswith(f"{top_level}/src/n4m/lib/")
+        and not member.endswith("/")
+    ]
+    return {
+        "member_count": len(members),
+        "top_level": top_level,
+        "bundled_libs": bundled_libs,
+    }
 
 
 def _venv_python(venv_dir: Path) -> Path:
@@ -253,12 +298,20 @@ def _child_program() -> str:
     )
 
 
-def _install_and_run(wheel: Path, tmp: Path, python: str) -> dict[str, object]:
+def _install_and_run(artifact: Path, tmp: Path, python: str) -> dict[str, object]:
     venv_dir = tmp / "venv"
     _run([python, "-m", "venv", "--system-site-packages", str(venv_dir)])
     vpy = _venv_python(venv_dir)
     _run(
-        [str(vpy), "-m", "pip", "install", "--no-deps", "--force-reinstall", str(wheel)]
+        [
+            str(vpy),
+            "-m",
+            "pip",
+            "install",
+            "--no-deps",
+            "--force-reinstall",
+            str(artifact),
+        ]
     )
     env = {
         key: value
@@ -283,6 +336,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--python",
         default=sys.executable,
         help="Python interpreter used for wheel build and smoke venv creation.",
+    )
+    parser.add_argument(
+        "--artifact",
+        choices=("wheel", "sdist"),
+        default="wheel",
+        help="Release artifact to build and smoke-install. `sdist` also inspects the tarball contents.",
     )
     parser.add_argument(
         "--no-build-isolation",
@@ -313,21 +372,27 @@ def main(argv: list[str] | None = None) -> int:
 
         package_dir = _generate_package(tmp)
         staged = _stage_lib(package_dir, lib_path)
-        wheel = _build_wheel(
+        artifact = _build_distribution(
             args.python,
             package_dir,
-            tmp / "wheelhouse",
+            tmp / "dist",
+            artifact=args.artifact,
             no_build_isolation=args.no_build_isolation,
         )
-        result = _install_and_run(wheel, tmp, args.python)
+        inspection = (
+            _inspect_sdist(artifact, staged.name) if args.artifact == "sdist" else None
+        )
+        result = _install_and_run(artifact, tmp, args.python)
 
         print(
             json.dumps(
                 {
                     "status": "OK",
+                    "artifact_kind": args.artifact,
+                    "artifact_inspection": inspection,
                     "input_lib": str(lib_path),
                     "staged_lib": str(staged),
-                    "wheel": str(wheel),
+                    "artifact": str(artifact),
                     "installed": result,
                 },
                 indent=2,

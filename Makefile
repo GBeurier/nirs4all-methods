@@ -23,7 +23,8 @@ help:
 	@printf "  \033[1mBuild / test\033[0m\n"
 	@printf "    \033[36mmake build PRESET=<p>\033[0m Configure + build via cmake preset (default: dev-debug)\n"
 	@printf "    \033[36mmake test PRESET=<p>\033[0m  ctest under the given preset\n\n"
-	@printf "    \033[36mmake test-python-install\033[0m Build/install smoke for the nirs4all-methods wheel\n\n"
+	@printf "    \033[36mmake test-python-install\033[0m Build/install smoke for the nirs4all-methods wheel\n"
+	@printf "    \033[36mmake test-python-sdist-install\033[0m Build/inspect/install smoke for the nirs4all-methods sdist\n\n"
 	@printf "    \033[36mmake test-abi-freshness\033[0m Native ABI snapshot/loadability/linkage gate\n"
 	@printf "    \033[36mmake test-js-wasm\033[0m       Build/stage/test the JS/WASM package\n"
 	@printf "    \033[36mmake test-r-binding\033[0m     Install and smoke the R binding\n"
@@ -64,7 +65,7 @@ doctor:
 # ---------------------------------------------------------------------------
 # Build / test (thin wrappers over CMake presets)
 # ---------------------------------------------------------------------------
-.PHONY: build test test-python-install test-abi-freshness test-js-wasm test-r-binding test-octave-mex test-matlab-binding
+.PHONY: build test test-python-install test-python-sdist-install test-abi-freshness test-js-wasm test-r-binding test-octave-mex test-matlab-binding
 
 PRESET ?= dev-debug
 
@@ -77,6 +78,9 @@ test:
 
 test-python-install:
 	python3 bindings/python/scripts/smoke_installed_nirs4all_methods.py
+
+test-python-sdist-install:
+	python3 bindings/python/scripts/smoke_installed_nirs4all_methods.py --artifact sdist
 
 test-abi-freshness:
 	cmake --preset $(PRESET)
