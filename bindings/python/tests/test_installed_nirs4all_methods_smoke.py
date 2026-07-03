@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import io
 import importlib.util
 import json
 import subprocess
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -13,6 +15,16 @@ REPO = Path(__file__).resolve().parents[3]
 def _load_smoke_module():
     script = REPO / "bindings/python/scripts/smoke_installed_nirs4all_methods.py"
     spec = importlib.util.spec_from_file_location("n4m_install_smoke_under_test", script)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_make_python_package_module():
+    script = REPO / "bindings/python/scripts/make_python_package.py"
+    spec = importlib.util.spec_from_file_location("n4m_make_python_package_under_test", script)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -135,3 +147,74 @@ def test_install_and_run_scrubs_host_python_and_lib_overrides(
         "PLS4ALL_LIB_PATH",
     ):
         assert forbidden not in child_env
+
+
+def test_inspect_sdist_reports_expected_members(tmp_path: Path) -> None:
+    smoke = _load_smoke_module()
+    sdist = tmp_path / "dist" / "nirs4all_methods-1.0.1.tar.gz"
+    sdist.parent.mkdir(parents=True, exist_ok=True)
+    root = "nirs4all_methods-1.0.1"
+    required = [
+        f"{root}/LICENSE",
+        f"{root}/pyproject.toml",
+        f"{root}/setup.py",
+        f"{root}/src/n4m/__init__.py",
+        f"{root}/src/n4m/_ffi.py",
+        f"{root}/src/n4m/lib/libn4m.so.2.0.0",
+        f"{root}/tests/test_import.py",
+    ]
+
+    with tarfile.open(sdist, "w:gz") as archive:
+        for name in required:
+            info = tarfile.TarInfo(name)
+            payload = b"x"
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+
+    inspection = smoke._inspect_sdist(sdist, "libn4m.so.2.0.0")
+
+    assert inspection["top_level"] == root
+    assert inspection["bundled_libs"] == [f"{root}/src/n4m/lib/libn4m.so.2.0.0"]
+    assert inspection["member_count"] == len(required)
+
+
+def test_inspect_sdist_fails_when_staged_lib_is_missing(tmp_path: Path) -> None:
+    smoke = _load_smoke_module()
+    sdist = tmp_path / "dist" / "nirs4all_methods-1.0.1.tar.gz"
+    sdist.parent.mkdir(parents=True, exist_ok=True)
+    root = "nirs4all_methods-1.0.1"
+    present = [
+        f"{root}/LICENSE",
+        f"{root}/pyproject.toml",
+        f"{root}/setup.py",
+        f"{root}/src/n4m/__init__.py",
+        f"{root}/src/n4m/_ffi.py",
+        f"{root}/tests/test_import.py",
+    ]
+
+    with tarfile.open(sdist, "w:gz") as archive:
+        for name in present:
+            info = tarfile.TarInfo(name)
+            payload = b"x"
+            info.size = len(payload)
+            archive.addfile(info, io.BytesIO(payload))
+
+    with pytest.raises(smoke.SmokeError) as excinfo:
+        smoke._inspect_sdist(sdist, "libn4m.so.2.0.0")
+
+    assert "src/n4m/lib/libn4m.so.2.0.0" in str(excinfo.value)
+
+
+def test_generated_package_writes_legacy_setup_cfg(tmp_path: Path) -> None:
+    generator = _load_make_python_package_module()
+    generator.REPO = tmp_path
+    generator.SRC_PKG = REPO / "bindings" / "python"
+    expected_version = generator._version()
+
+    out = generator.generate("nirs4all-methods")
+    setup_cfg = (out / "setup.cfg").read_text(encoding="utf-8")
+
+    assert "name = nirs4all-methods" in setup_cfg
+    assert f"version = {expected_version}" in setup_cfg
+    assert "packages = find:" in setup_cfg
+    assert "n4m" in setup_cfg

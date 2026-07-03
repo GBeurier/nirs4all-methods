@@ -156,3 +156,34 @@ jobs:
           N4M_LIB_PATH="$PWD/$(ls build/fitpack/cpp/src/libn4m.so.*.*.* | head -1)" \
           PYTHONPATH=bindings/python/src \
             /tmp/fitpack-venv/bin/python parity/scripts/regen_aug_fixtures.py --check
+
+  python-package-smoke:
+    name: python package smoke / nirs4all-methods
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build toolchain and Python test deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
+          python3 -m pip install --upgrade pip
+          python3 -m pip install build numpy pytest
+
+      - name: Build libn4m for package smoke
+        run: |
+          cmake --preset ci-linux-gcc12-release
+          cmake --build --preset ci-linux-gcc12-release --target n4m_c --parallel
+
+      - name: Unit-test package smoke helpers
+        run: python3 -m pytest bindings/python/tests/test_installed_nirs4all_methods_smoke.py -q
+
+      - name: Installed wheel smoke
+        run: make test-python-install
+
+      - name: Installed sdist smoke
+        run: make test-python-sdist-install
