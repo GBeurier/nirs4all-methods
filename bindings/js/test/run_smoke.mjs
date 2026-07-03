@@ -86,13 +86,11 @@ if (rmseInSample > 1e-3) {
 // ----- Parity vs native Python -----
 const fixturePath = resolve(here, "parity_fixture.json");
 if (!existsSync(fixturePath)) {
-    console.warn(
-        `[WARN] parity fixture missing at ${fixturePath}.\n` +
-        `      Regenerate via:\n` +
-        `      PYTHONPATH=bindings/python/src parity/python_generator/.venv/bin/python \\\n` +
-        `        bindings/js/test/generate_parity_fixture.py`);
-    console.log("WASM smoke OK (parity skipped)");
-    process.exit(0);
+    throw new Error(
+        `Required parity fixture missing at ${fixturePath}.\n` +
+        `Regenerate via:\n` +
+        `PYTHONPATH=bindings/python/src parity/python_generator/.venv/bin/python \\\n` +
+        `  bindings/js/test/generate_parity_fixture.py`);
 }
 const ref = JSON.parse(readFileSync(fixturePath, "utf-8"));
 
