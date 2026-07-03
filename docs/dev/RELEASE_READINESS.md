@@ -5,8 +5,9 @@
 > **G4** WASM/WebGL browser lib for a web page · **G5** GPU acceleration (CUDA / WebGPU / other) ·
 > **G6** a new **direct Ridge** regression.
 >
-> **Engine state (verified 2026-06-03):** project **0.98.0**, ABI **1.10.0** (`cpp/include/n4m/n4m_version.h`),
-> 188 catalog methods, ABI surface reconciled 669/669, P0 parity closed (`PRODUCTION_AUDIT.md`).
+> **Engine state (historical baseline, verified 2026-06-03):** project **0.98.0**, ABI **1.10.0**
+> (`cpp/include/n4m/n4m_version.h`), 188 catalog methods, ABI surface reconciled 669/669, P0 parity closed
+> (`PRODUCTION_AUDIT.md`).
 > Branch `main` is **strictly ahead** of `origin/cuda-spline-packaging` (all 7 of its commits are already in
 > `main` — verified by `git cherry`/`patch-id`), so there is **no merge work** and `PRODUCTION_AUDIT.md` is safe.
 >
@@ -16,6 +17,25 @@
 > inspections. Severities below are the **post-verification** values. Of 9 raw "blockers", **2 survived**
 > verification as true blockers, 2 were **refuted entirely**, and the rest were re-graded. Task IDs are kept so
 > findings are traceable.
+
+---
+
+## Current RC status (verified 2026-07-03)
+
+This document keeps the June multi-agent audit below as provenance, but the status
+has moved since then. The current RC head is project **1.0.1**, ABI **2.0.0**
+(`cpp/include/n4m/n4m_version.h`). The hardcoded Python ABI smoke asserts and the
+`nirs4all-methods` wheel loader repair path have been closed; `release-npm.yml`
+exists; `npm test` now includes the generic method-result smoke; and the compiled
+C++ tests now cover a representative model-fixture slice through
+`test_models_pls.cpp`, `test_models_extra.cpp`, `test_internal_cv.cpp`,
+`test_sweep.cpp` and `test_ridge.cpp`.
+
+The remaining RC risks are no longer the two June blockers in section 0. They are:
+external distribution proof for CRAN/npm/sdist/post-publish paths, wider
+representative binding parity beyond the existing R/Octave/JS smoke families, and
+an explicit full-registry/multi-shape parity dashboard rather than treating the
+compiled model fixture slice as exhaustive coverage.
 
 ---
 
@@ -271,10 +291,10 @@ determinism is a hard 1e-12 CI gate). But the **model solvers have essentially n
   **one** `(n,p)` shape per method; the only multi-size tool (`per_method_parity.py`, 3 shapes) is wired into **no**
   CI. *(Verifier nuance: the `pls_lda/sparse_simpls/cppls` cases were harness-config artifacts, not engine bugs that
   escaped — but ≥3-shape per-method parity is still worthwhile hardening.)*
-- **[Medium · S] `refresh-stale-js-parity-fixture`** — `bindings/js/test/parity_fixture.json` pins `0.95.0+abi.1.13.0`
-  vs engine `0.98.0`/ABI 1.10.0. Regenerate; assert the live version.
-- **[Medium · S] `fix-parity-gate-overstated-claim`** — fix the false `parity-gate.yml` + `parity/README.md` model-
-  coverage claims (until `wire-cpp-model-parity-tests` lands).
+- **[Closed in RC · S] `refresh-stale-js-parity-fixture`** — `bindings/js/test/parity_fixture.json` now records the
+  current `1.0.1+abi.2.0.0` provenance; `npm test` still gates the fixture numerics.
+- **[Partially closed in RC · S] `fix-parity-gate-overstated-claim`** — `parity-gate.yml` + `parity/README.md` now state
+  the compiled model-fixture slice and the remaining full-registry coverage gap explicitly.
 - **[Medium · M] `make-fullsweep-status-visible`** — `nightly-parity.yml` always `exit 0` and uploads a CSV only; a
   pass→fail regression sits unnoticed in an artifact. Emit a compared baseline pass-rate / open an issue; exclude
   Python-only rows from the denominator.
