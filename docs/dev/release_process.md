@@ -1,8 +1,8 @@
 # Development — Release Process
 
-How each binding of `libn4m` is versioned, gated, and published. Some paths are
-automated (PyPI, CRAN-tarball build); the JS / MATLAB / Octave bindings are
-**published manually** and are documented in full below.
+How each binding of `libn4m` is versioned, gated, and published. PyPI, npm,
+CRAN-tarball build, source archives and the MATLAB/Octave GitHub Release archive
+are automated; CRAN submission and optional registry/listing pages remain manual.
 
 ## Binding → registry → automation
 
@@ -12,7 +12,7 @@ automated (PyPI, CRAN-tarball build); the JS / MATLAB / Octave bindings are
 | Python (slim) | `pls4all` | PyPI | **Automated** — `release-python.yml` (its own Trusted Publisher) publishes the `pls4all` project: sdist + cibuildwheel + retag-to-py3 + TestPyPI/PyPI + post-publish smoke. The two Python workflows are split one-per-PyPI-project (no collision), each with its own one-to-one Trusted Publisher. | push tag `v*` (non-`-rc`) → PyPI; `workflow_dispatch` + `publish=true` |
 | R | `n4m` | CRAN | **Semi-automated** — `release-r.yml` vendors libn4m into `src/vendor/`, runs `R CMD check --as-cran` on the Linux/macOS/Windows + release/devel matrix, and (on tag push) attaches the tarball to the GitHub Release. **Submission is the irreducible manual web form.** | `workflow_dispatch`; tag push attaches the tarball |
 | R | `pls4all` (slim) | CRAN | **Semi-automated** — same `release-r.yml`, the matrix has a `pkg: [n4m, pls4all]` leg. | `workflow_dispatch`; tag push attaches the tarball |
-| JS / WASM | `@nirs4all/methods-wasm` | npm | **Build CI-automated** in `cross-binding-parity.yml` (emsdk pinned, `npm test` parity); **publish manual** (this doc) | — |
+| JS / WASM | `@nirs4all/methods-wasm` | npm | **Automated** — `release-npm.yml` builds the pinned emsdk package, runs `npm test`, stages `dist/`, and publishes with npm provenance once `NPM_TOKEN`/scope are configured | tag push or `workflow_dispatch` with `publish=true` |
 | MATLAB / Octave | `+pls4all` | GitHub Release | **Automated** — `release-matlab.yml` attaches `nirs4all-methods-matlab-octave-<version>.zip` to the Release. ONE binding serves both: users build the MEX with `build_mex.m` (MATLAB) or `mkoctfile` via `build_mex.m` (Octave); see `bindings/matlab/COMPAT.md`. A File Exchange / Octave Forge listing is optional + manual. | tag push attaches the zip |
 
 ## Exact release artifacts — what each binding ships, and where to upload it
@@ -89,7 +89,7 @@ on the `pls4all` name is structurally impossible:
 
 ---
 
-## Manual binding publication
+## Publication prerequisites and manual channels
 
 The **MATLAB/Octave** package is attached to the GitHub Release automatically by
 `release-matlab.yml` (`nirs4all-methods-matlab-octave-<version>.zip`); the optional
@@ -125,7 +125,8 @@ npm run stage:wasm      # → dist/n4m.js + dist/n4m.wasm
 npm pack --dry-run      # inspect the file list
 npm test                # PLS parity + API/generic/AOM/new-pack smokes — must pass
 
-# 4. Publish (scoped public package; needs npm login + 2FA OTP).
+# 4. Publish manually only for an emergency/local dry-run path.
+#    The release path is release-npm.yml with NPM_TOKEN + provenance.
 npm publish --access public
 ```
 
@@ -191,16 +192,15 @@ against the released libn4m.
 
 ---
 
-## Why JS / MATLAB / Octave are manual today
+## What still needs manual action
 
-Their **builds** are CI-automated in `cross-binding-parity.yml` (JS via
-emsdk + `npm test`, Octave via apt octave + `build_mex.m` + `test_parity`).
-What is still manual is **publication**: an `npm publish` job, a `.mltbx`
-build job, or an Octave Forge submission. None of those are required for the
-cross-binding promise (one libn4m → identical numbers in every binding) — they
-are distribution-channel ergonomics, tracked but not blocking. MATLAB itself
-stays out of CI entirely (no licensed runner); the Octave job validates the
-MATLAB ∩ Octave intersection per `bindings/matlab/COMPAT.md`.
+The remaining manual work is external-channel administration: CRAN web-form
+submission for the generated R tarballs, owning/configuring the npm `@nirs4all`
+scope and `NPM_TOKEN`, and optional MATLAB File Exchange / Octave Forge listings
+or `.mltbx` packaging. The build/test/publish workflows for JS and the GitHub
+Release archive for MATLAB/Octave are automated. MATLAB itself stays out of CI
+entirely (no licensed runner); the Octave job validates the MATLAB/Octave
+intersection per `bindings/matlab/COMPAT.md`.
 
 ---
 
