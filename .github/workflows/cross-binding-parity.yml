@@ -17,9 +17,9 @@ name: Cross-binding parity
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'rc/**']
   pull_request:
-    branches: [main]
+    branches: [main, 'rc/**']
   workflow_dispatch: {}
 
 jobs:
