@@ -2,7 +2,7 @@
 
 The WASM binding is a **non-idiomatic function library**: it accepts raw typed
 arrays and returns typed arrays. Aggregation / estimator ergonomics live in the
-separate `nirs4all-lite` repo, not here.
+separate `nirs4all-core` repo, not here.
 
 ## Matrix input (`Matrix`)
 
