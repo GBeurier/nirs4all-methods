@@ -3,7 +3,7 @@
 Browser + Node.js binding for **libn4m** (the `nirs4all-methods` portable
 PLS/NIRS engine), compiled via Emscripten. It is a **non-idiomatic function
 library**: raw typed arrays in, typed arrays out. Estimator ergonomics and the
-multi-component aggregation live in the separate `nirs4all-lite` repo — not
+multi-component aggregation live in the separate `nirs4all-core` repo — not
 here. See [`INPUT_CONTRACT.md`](INPUT_CONTRACT.md) and
 [`examples/consume.mjs`](examples/consume.mjs).
 
