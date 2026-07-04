@@ -55,7 +55,7 @@ native ABI freshness.
 - `make test-abi-freshness PRESET=dev-release`
   - PASS after the `dev-release` reconfigure above.
 - `make test-python-install`
-  - PASS; built `nirs4all_methods-1.0.1-...whl`, installed into a clean venv,
+  - PASS; built `nirs4all_methods-1.0.2-...whl`, installed into a clean venv,
     imported `n4m`, loaded bundled `libn4m.so.2.0.0`, ABI `(2, 0, 0)`.
 - `python3 -m pytest bindings/python/tests/test_installed_nirs4all_methods_smoke.py -q`
   - PASS, `3 passed`.

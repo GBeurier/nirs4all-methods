@@ -151,9 +151,9 @@ def test_install_and_run_scrubs_host_python_and_lib_overrides(
 
 def test_inspect_sdist_reports_expected_members(tmp_path: Path) -> None:
     smoke = _load_smoke_module()
-    sdist = tmp_path / "dist" / "nirs4all_methods-1.0.1.tar.gz"
+    sdist = tmp_path / "dist" / "nirs4all_methods-1.0.2.tar.gz"
     sdist.parent.mkdir(parents=True, exist_ok=True)
-    root = "nirs4all_methods-1.0.1"
+    root = "nirs4all_methods-1.0.2"
     required = [
         f"{root}/LICENSE",
         f"{root}/pyproject.toml",
@@ -180,9 +180,9 @@ def test_inspect_sdist_reports_expected_members(tmp_path: Path) -> None:
 
 def test_inspect_sdist_fails_when_staged_lib_is_missing(tmp_path: Path) -> None:
     smoke = _load_smoke_module()
-    sdist = tmp_path / "dist" / "nirs4all_methods-1.0.1.tar.gz"
+    sdist = tmp_path / "dist" / "nirs4all_methods-1.0.2.tar.gz"
     sdist.parent.mkdir(parents=True, exist_ok=True)
-    root = "nirs4all_methods-1.0.1"
+    root = "nirs4all_methods-1.0.2"
     present = [
         f"{root}/LICENSE",
         f"{root}/pyproject.toml",
