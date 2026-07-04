@@ -88,7 +88,16 @@ def _ensure_dev_release_build(timeout: int) -> dict[str, Any]:
     return {"build_invoked": True, "lib": str(lib), "cli": str(cli)}
 
 
-def _base_env() -> dict[str, str]:
+def _prepend_env_paths(env: dict[str, str], name: str, paths: list[Path]) -> None:
+    existing = env.get(name, "")
+    parts = [str(path) for path in paths if path.exists()]
+    if existing:
+        parts.append(existing)
+    if parts:
+        env[name] = os.pathsep.join(parts)
+
+
+def _base_env(r_lib: Path | None = None) -> dict[str, str]:
     env = os.environ.copy()
     env["PYTHONPATH"] = ":".join(
         part
@@ -101,10 +110,120 @@ def _base_env() -> dict[str, str]:
     )
     if "N4M_R_ENV" not in env and DEFAULT_R_ENV.exists():
         env["N4M_R_ENV"] = str(DEFAULT_R_ENV)
+    r_env = Path(env["N4M_R_ENV"]) if env.get("N4M_R_ENV") else None
+    if r_env is not None and r_env.exists():
+        _prepend_env_paths(env, "PATH", [r_env / "bin"])
+        _prepend_env_paths(
+            env,
+            "LD_LIBRARY_PATH",
+            [
+                REPO / "build/dev-release/cpp/src",
+                r_env / "lib",
+                r_env / "lib/octave/10.3.0",
+            ],
+        )
+    if r_lib is not None:
+        r_lib.mkdir(parents=True, exist_ok=True)
+        env["N4M_R_GATE_LIB"] = str(r_lib)
+        env["R_LIBS"] = str(r_lib)
+        env["R_LIBS_USER"] = str(r_lib)
     return env
 
 
-def _run_orchestrator(artifacts_dir: Path, timeout: int) -> tuple[Path, str]:
+def _resolve_rscript(env: dict[str, str]) -> Path:
+    override = env.get("N4M_RSCRIPT")
+    if override:
+        path = Path(override)
+        if path.exists():
+            return path
+        raise RuntimeError(f"N4M_RSCRIPT points to a missing executable: {path}")
+    found = shutil.which("Rscript", path=env.get("PATH"))
+    if found:
+        return Path(found)
+    r_env = Path(env["N4M_R_ENV"]) if env.get("N4M_R_ENV") else None
+    if r_env is not None:
+        candidate = r_env / "bin/Rscript"
+        if candidate.exists():
+            return candidate
+    raise RuntimeError("Rscript not found; set N4M_R_ENV or N4M_RSCRIPT")
+
+
+def _r_binary_from_rscript(rscript: Path) -> Path:
+    r_binary = rscript.with_name("R")
+    if r_binary.exists():
+        return r_binary
+    found = shutil.which("R")
+    if found:
+        return Path(found)
+    raise RuntimeError(f"R binary not found next to {rscript}")
+
+
+def _prepare_r_gate_library(artifacts_dir: Path, timeout: int) -> dict[str, Any]:
+    r_lib = artifacts_dir / "_r-lib"
+    if r_lib.exists():
+        shutil.rmtree(r_lib)
+    r_lib.mkdir(parents=True, exist_ok=True)
+
+    env = _base_env(r_lib)
+    env["N4M_R_LINK_PREBUILT"] = "1"
+    env["PLS4ALL_LIB_DIR"] = str(REPO / "build/dev-release/cpp/src")
+    env["PLS4ALL_GENERATED_DIR"] = str(REPO / "build/dev-release/generated")
+    env["PLS4ALL_INCLUDE_DIR"] = str(REPO / "cpp/include")
+
+    makevars = artifacts_dir / "r-gate-Makevars"
+    makevars.write_text(
+        "CC=gcc\n"
+        "CXX=g++\n"
+        "CXX11=g++\n"
+        "CXX14=g++\n"
+        "CXX17=g++\n"
+        "CXX17STD=-std=gnu++17\n",
+        encoding="utf-8",
+    )
+    env["R_MAKEVARS_USER"] = str(makevars)
+
+    rscript = _resolve_rscript(env)
+    r_binary = _r_binary_from_rscript(rscript)
+    package_dir = REPO / "bindings/r/pls4all"
+    install = _run(
+        [str(r_binary), "CMD", "INSTALL", "--preclean", "--library", str(r_lib), str(package_dir)],
+        env=env,
+        timeout=timeout,
+    )
+    install_transcript = install.stdout + ("\n" + install.stderr if install.stderr else "")
+    if install.returncode != 0:
+        raise RuntimeError("R CMD INSTALL bindings/r/pls4all failed:\n" + "\n".join(_tail(install_transcript)))
+
+    probe_expr = (
+        ".libPaths(c(Sys.getenv('N4M_R_GATE_LIB'), .libPaths())); "
+        "suppressPackageStartupMessages(library(pls4all)); "
+        "abi <- paste(n4m_abi_version(), collapse='.'); "
+        "cat('N4A_R_GATE', as.character(packageVersion('pls4all')), abi, "
+        "find.package('pls4all'), sep='\\t'); cat('\\n'); "
+        "if (strsplit(abi, '.', fixed=TRUE)[[1]][1] != '2') "
+        "stop(sprintf('pls4all ABI %s is not ABI major 2', abi))"
+    )
+    probe = _run([str(rscript), "-e", probe_expr], env=env, timeout=60)
+    probe_transcript = probe.stdout + ("\n" + probe.stderr if probe.stderr else "")
+    if probe.returncode != 0:
+        raise RuntimeError("R pls4all ABI preflight failed:\n" + "\n".join(_tail(probe_transcript)))
+    marker = next((line for line in probe.stdout.splitlines() if line.startswith("N4A_R_GATE\t")), "")
+    if not marker:
+        raise RuntimeError("R pls4all ABI preflight did not emit N4A_R_GATE marker")
+    _, version, abi, package_path = marker.split("\t", 3)
+    return {
+        "package": "pls4all",
+        "version": version,
+        "abi": abi,
+        "rscript": str(rscript),
+        "library": str(r_lib),
+        "package_path": package_path,
+        "makevars": str(makevars),
+        "link_mode": "prebuilt-dev-release",
+    }
+
+
+def _run_orchestrator(artifacts_dir: Path, timeout: int, *, r_lib: Path | None = None) -> tuple[Path, str]:
     csv_path = artifacts_dir / "methods-cross-binding-matrix.csv"
     cmd = [
         sys.executable,
@@ -133,7 +252,7 @@ def _run_orchestrator(artifacts_dir: Path, timeout: int) -> tuple[Path, str]:
         "--workers",
         "1",
     ]
-    proc = _run(cmd, env=_base_env(), timeout=timeout + 60)
+    proc = _run(cmd, env=_base_env(r_lib), timeout=timeout + 60)
     transcript = proc.stdout + ("\n" + proc.stderr if proc.stderr else "")
     if proc.returncode != 0:
         raise RuntimeError("cross-binding orchestrator failed:\n" + "\n".join(_tail(transcript)))
@@ -369,7 +488,12 @@ def main(argv: list[str] | None = None) -> int:
     if not args.skip_build:
         build = _ensure_dev_release_build(args.timeout)
 
-    csv_path, orchestrator_transcript = _run_orchestrator(artifacts_dir, args.timeout)
+    r_gate = _prepare_r_gate_library(artifacts_dir, args.timeout)
+    csv_path, orchestrator_transcript = _run_orchestrator(
+        artifacts_dir,
+        args.timeout,
+        r_lib=Path(r_gate["library"]),
+    )
     rows = _read_rows(csv_path)
     parity_rows, prediction_rows = _validate_orchestrator_rows(rows)
     wasm = _run_wasm_smoke(args.timeout)
@@ -379,6 +503,7 @@ def main(argv: list[str] | None = None) -> int:
         "schema": "n4a.methods.cross_binding_parity.v1",
         "status": "pass",
         "build": build,
+        "r_gate": r_gate,
         "orchestrator_csv": str(csv_path),
         "required_backends": list(REQUIRED_BACKENDS),
         "parity_rows": parity_rows,
