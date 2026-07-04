@@ -76,3 +76,14 @@ def test_validate_orchestrator_rows_fails_on_false_parity(tmp_path: Path) -> Non
 
     with pytest.raises(RuntimeError, match="reference_parity_ok=False"):
         gate._validate_orchestrator_rows(rows)
+
+
+def test_base_env_isolates_r_gate_library(tmp_path: Path) -> None:
+    r_lib = tmp_path / "r-lib"
+
+    env = gate._base_env(r_lib)
+
+    assert env["N4M_R_GATE_LIB"] == str(r_lib)
+    assert env["R_LIBS"] == str(r_lib)
+    assert env["R_LIBS_USER"] == str(r_lib)
+    assert str(gate.REPO / "build/dev-release/cpp/src") in env.get("LD_LIBRARY_PATH", "")

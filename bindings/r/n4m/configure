@@ -12,6 +12,10 @@
 #   (default)       -> standalone dev/CI build: link a prebuilt libn4m located
 #                      from PLS4ALL_LIB_DIR or the in-repo build. Fast inner loop
 #                      + the R leg of the cross-binding parity gate.
+#
+#   N4M_R_LINK_PREBUILT=1 forces the standalone dev/CI build even when a
+#                      src/vendor/ tree exists in the checkout from a previous
+#                      CRAN package build.
 set -e
 
 PKG_ROOT=$(cd "$(dirname "$0")" && pwd)
@@ -29,8 +33,9 @@ REPO=$(cd "$PKG_ROOT/../../.." && pwd)
 VENDOR="$PKG_ROOT/src/vendor"
 VENDORED_PRESENT=0
 [ -d "$VENDOR/cpp/src/core" ] && VENDORED_PRESENT=1
+FORCE_PREBUILT="${N4M_R_LINK_PREBUILT:-0}"
 
-if [ "${N4M_R_VENDOR:-0}" = "1" ] || [ "$VENDORED_PRESENT" = "1" ]; then
+if [ "$FORCE_PREBUILT" != "1" ] && { [ "${N4M_R_VENDOR:-0}" = "1" ] || [ "$VENDORED_PRESENT" = "1" ]; }; then
     if [ "${N4M_R_VENDOR:-0}" = "1" ]; then
         # In-repo vendoring (forced): (re)copy the C/C++/Fortran core + headers +
         # the export header from the checkout into src/vendor/ (always fresh).
