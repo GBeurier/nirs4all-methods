@@ -15,7 +15,7 @@ points and exported C symbols use the `n4m_*` prefix.
   `n4m_model_fit_mex`
 
 The preprocessing and splitter wrappers are the upstream execution surface used
-by `nirs4all-lite` MATLAB/Octave parity tests for the portable
+by `nirs4all-core` MATLAB/Octave parity tests for the portable
 Kennard-Stone/SNV/Savitzky-Golay/PLS subset.
 
 ## Layout
