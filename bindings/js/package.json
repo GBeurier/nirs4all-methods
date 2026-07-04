@@ -1,6 +1,6 @@
 {
   "name": "@nirs4all/methods-wasm",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "WebAssembly build of libn4m (nirs4all-methods) — portable PLS/NIRS engine, full 188-method surface.",
   "type": "module",
   "main": "dist/index.js",
