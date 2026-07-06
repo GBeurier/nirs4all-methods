@@ -16,7 +16,7 @@ authors:
 repository-code: "https://github.com/GBeurier/nirs4all-methods"
 url: "https://github.com/GBeurier/nirs4all-methods"
 license: "CECILL-2.1"
-version: 1.0.5
+version: 1.0.6
 date-released: "2026-07-06"
 keywords:
   - partial-least-squares

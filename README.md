@@ -343,7 +343,7 @@ choice; CeCILL-2.1 is recognised by French law and GPL-family-compatible) — wi
   title   = {nirs4all-methods: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/nirs4all-methods},
-  version = {1.0.5}
+  version = {1.0.6}
 }
 ```
 
