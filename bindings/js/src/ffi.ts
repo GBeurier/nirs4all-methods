@@ -2,7 +2,7 @@
 //
 // Thin ccall/cwrap wrappers around the Emscripten module.
 
-import { Status, Pls4allError } from "./types.js";
+import { Status, N4mError } from "./types.js";
 
 /** Loose typing of the Emscripten module factory's runtime instance. */
 export interface EmModule {
@@ -40,7 +40,7 @@ export async function loadModule(): Promise<EmModule> {
 export function getModule(): EmModule {
     if (_module === null) {
         throw new Error(
-            "@nirs4all/methods-wasm not loaded — call await loadModule() first."
+            "@nirs4all/methods not loaded — call await loadModule() first."
         );
     }
     return _module;
@@ -61,7 +61,7 @@ export function checkStatus(status: number, ctxPtr: number = 0): void {
                               ["number"], [status]) as number;
         if (cstr !== 0) msg = m.UTF8ToString(cstr);
     }
-    throw new Pls4allError(status, msg);
+    throw new N4mError(status, msg);
 }
 
 // ---- n4m_matrix_view_t layout (mirrors cpp/include/n4m/n4m.h) -----------

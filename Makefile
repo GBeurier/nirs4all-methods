@@ -89,7 +89,7 @@ test-abi-freshness:
 
 test-js-wasm:
 	cmake --preset emscripten
-	cmake --build --preset emscripten --target pls4all_wasm --parallel
+	cmake --build --preset emscripten --target n4m_wasm --parallel
 	cd bindings/js && npm install && npm run build && npm run stage:wasm && npm test && npm pack --dry-run
 
 test-r-binding:
@@ -112,6 +112,8 @@ test-octave-mex:
 		octave --no-gui --no-history --eval "cd bindings/matlab; build_mex"
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
 		octave --no-gui --no-history --eval "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_parity"
+	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
+		octave --no-gui --no-history --eval "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_n4m_alias"
 
 test-matlab-binding:
 	cmake --preset $(PRESET)
@@ -123,6 +125,8 @@ test-matlab-binding:
 		matlab -batch "cd bindings/matlab; build_mex"
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
 		matlab -batch "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_parity"
+	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
+		matlab -batch "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_n4m_alias"
 
 # ---------------------------------------------------------------------------
 # Parity (Phase C-min pilot — see parity/SCENARIOS_MIN.md). Full Phase C

@@ -114,9 +114,10 @@ predict(fit, x = Xnew)
 
 ```matlab
 addpath(genpath('bindings/matlab'))
-mdl = pls4all.fit("sparse_simpls", X, y, "NumComponents", 5, "Lambda", 0.05);
+mdl = n4m.fit("sparse_simpls", X, y, "NumComponents", 5, "Lambda", 0.05);
 predict(mdl, Xnew)
-% Shared +pls4all package for both runtimes; CI runs Octave, while MATLAB
+% Shared +n4m package for both runtimes; +pls4all remains as a compatibility alias.
+% CI runs Octave, while MATLAB
 % release/runtime checks stay manual because GitHub-hosted runners have no license.
 % Runtime divergences must be declared in bindings/matlab/COMPAT.md.
 ```
@@ -129,7 +130,7 @@ predict(mdl, Xnew)
 |---|---|---|
 | **Python** (`n4m.<role>`, `pls4all.sklearn`) | Registry-driven tier-1 API + AOM/POP low-level ABI | sklearn-style estimators under role packages plus the mature slim PLS `pls4all.sklearn` subset |
 | **R** (`n4m` package) | **COMPLETE** — 73 registry methods via `n4m_method()` and wrappers | NIRS-first idioms — base R formula+S3 (16 wrappers) · `pls`-compatible `plsr()` / `pcr()` · `mdatools`-compatible matrix `pls(x, y, ...)` |
-| **MATLAB / Octave** (`+pls4all`) | Shared MEX/dispatcher surface over `libn4m`; CI-gated in Octave | **18 classdefs** + unified `pls4all.fit(algo, X, y, ...)` factory; MATLAB release/runtime checked manually |
+| **MATLAB / Octave** (`+n4m`, `+pls4all` compat) | Shared MEX/dispatcher surface over `libn4m`; CI-gated in Octave | **18 classdefs** + unified `n4m.fit(algo, X, y, ...)` factory; MATLAB release/runtime checked manually |
 | **JS / WebAssembly** | Current target binding; packaged separately from the desktop-language surfaces | Browser / npm-facing wrappers over the same C ABI / WASM core |
 | Archived PoCs (`bindings/_archive/`) | Julia, JNI / Android, Go, Rust, Ruby, .NET, Lua, Nim are on hold | Revived only through an explicit binding request |
 
@@ -359,7 +360,7 @@ target bindings and their shared parity surface.
 | Target surface | Goal |
 |---|---|
 | Python / R | keep the full-catalog raw + idiomatic surfaces parity-gated and releaseable |
-| MATLAB / Octave | keep the shared `+pls4all` package precise: Octave in CI, MATLAB manual runtime/release checks |
+| MATLAB / Octave | keep the shared `+n4m` package precise with `+pls4all` compatibility: Octave in CI, MATLAB manual runtime/release checks |
 | JS / WebAssembly | npm + browser package over the full method catalog |
 
 Archived/on-hold bindings remain under `bindings/_archive/`: Julia, JNI /

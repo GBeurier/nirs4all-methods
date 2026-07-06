@@ -37,10 +37,10 @@ function pushF64(m: ReturnType<typeof getModule>, data: Float64Array): number {
 /** Validate matrix dims + that the buffer length matches n*p before crossing into C. */
 function checkDims(X: Float64Array, n: number, p: number): void {
     if (!Number.isSafeInteger(n) || !Number.isSafeInteger(p) || n < 0 || p < 0) {
-        throw new Error(`@nirs4all/methods-wasm: invalid matrix dims ${n}×${p}`);
+        throw new Error(`@nirs4all/methods: invalid matrix dims ${n}×${p}`);
     }
     if (X.length !== n * p) {
-        throw new Error(`@nirs4all/methods-wasm: data length ${X.length} != n*p (${n * p})`);
+        throw new Error(`@nirs4all/methods: data length ${X.length} != n*p (${n * p})`);
     }
 }
 
@@ -63,7 +63,7 @@ export function ppCreate(op: string, params: number[] = []): PpOperator {
         if (pPtr !== 0) m._free(pPtr);
     }
     if (ptr === 0) {
-        throw new Error(`@nirs4all/methods-wasm: unknown/unconstructable preprocessing operator "${op}"`);
+        throw new Error(`@nirs4all/methods: unknown/unconstructable preprocessing operator "${op}"`);
     }
     return { _ptr: ptr };
 }

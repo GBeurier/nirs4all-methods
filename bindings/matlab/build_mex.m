@@ -1,5 +1,5 @@
 function build_mex()
-% build_mex  Compile the pls4all MEX shims against libn4m.
+% build_mex  Compile the shared n4m/pls4all MEX shims against libn4m.
 %
 % Set the env vars PLS4ALL_INCLUDE_DIR, PLS4ALL_LIB_DIR before
 % running, or pass them as setenv calls before invoking this script.

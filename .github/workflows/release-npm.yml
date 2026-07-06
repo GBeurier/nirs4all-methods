@@ -1,4 +1,4 @@
-# Build, smoke-test, and publish the @nirs4all/methods-wasm npm package.
+# Build, smoke-test, and publish the @nirs4all/methods npm package.
 #
 # This is the JS/WASM leg of the release. It mirrors the build steps of the
 # js-wasm job in cross-binding-parity.yml (pinned emsdk 3.1.74) and the
@@ -58,7 +58,7 @@ jobs:
       - name: Build the WASM module (emscripten preset)
         run: |
           cmake --preset emscripten
-          cmake --build --preset emscripten --target pls4all_wasm
+          cmake --build --preset emscripten --target n4m_wasm
 
       - name: Build + stage + smoke-test the JS binding
         working-directory: bindings/js

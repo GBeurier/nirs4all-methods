@@ -39,7 +39,7 @@ The library does not parse JSON / YAML in the core, does not open network connec
 
 ## WebAssembly / untrusted input
 
-The `@nirs4all/methods-wasm` build runs inside the browser's WebAssembly sandbox: it can only touch the linear memory of the tab that loaded it, and cannot reach the filesystem, the network, or other tabs. Two boundaries are worth calling out for embedders that feed untrusted input to the WASM build:
+The `@nirs4all/methods` build runs inside the browser's WebAssembly sandbox: it can only touch the linear memory of the tab that loaded it, and cannot reach the filesystem, the network, or other tabs. Two boundaries are worth calling out for embedders that feed untrusted input to the WASM build:
 
 - **Memory growth is a tab-level DoS surface.** The module is built with `ALLOW_MEMORY_GROWTH=1` and `MAXIMUM_MEMORY=2GB`, so an oversized input can grow the WASM heap until the tab runs out of memory. This is contained to the embedding page (it cannot escape the sandbox), but the embedder is responsible for bounding input sizes so a hostile or malformed payload cannot exhaust the tab.
 - **The caller owns the buffer length.** An `n4m_matrix_view_t` carries explicit dimensions and strides but **no total length** — the core trusts that the backing buffer is large enough for the declared `rows × cols` and stride layout. The binding or embedder that constructs the view must guarantee that invariant; passing dimensions or strides that exceed the real allocation is an out-of-bounds read/write, not something the core can detect.
