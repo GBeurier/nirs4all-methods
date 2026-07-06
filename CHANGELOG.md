@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-07-06
+
+### Fixed
+- Constrain the `pls4all` cibuildwheel smoke-test NumPy dependency to a
+  wheel-backed range on manylinux2014, avoiding a NumPy 2.5 source build with
+  GCC 10.2 during Linux wheel validation.
+
+### Changed
+- Synchronized patch-release metadata across C/CMake, Python, R,
+  MATLAB/Octave, JavaScript/WASM, citation, documentation, and parity fixtures.
+
 ## [1.0.3] - 2026-07-06
 
 ### Changed

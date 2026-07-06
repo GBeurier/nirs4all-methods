@@ -188,7 +188,10 @@ jobs:
       # cibuildwheel to resolve build deps freely from PyPI so both can land.
       CIBW_DEPENDENCY_VERSIONS: latest
       # Run a clean-venv smoke test against the freshly built wheel, BEFORE
-      # we accept it.
+      # we accept it. manylinux2014 still ships GCC 10.2; NumPy 2.5+ requires
+      # GCC >= 10.3 when pip falls back to sdist, so keep the test dependency
+      # on a wheel-backed runtime range for this Linux image family.
+      CIBW_TEST_REQUIRES: "numpy>=1.21,<2.5"
       CIBW_TEST_COMMAND: "python -c \"import importlib.metadata as md, pls4all; expected = md.version('pls4all'); v = pls4all.version(); print('OK', v); assert pls4all.__version__ == expected, (pls4all.__version__, expected); assert v.startswith(expected + '+abi.'), v\""
       CIBW_BUILD_FRONTEND: "build"
 
