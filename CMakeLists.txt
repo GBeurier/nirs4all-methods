@@ -16,12 +16,12 @@ cmake_minimum_required(VERSION 3.21)
 # manifest. The version-sync.yml workflow fails any PR where a manifest has
 # drifted from the header.
 
-set(_p4a_version_h "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/n4m/n4m_version.h")
-if(NOT EXISTS "${_p4a_version_h}")
+set(_n4m_version_h "${CMAKE_CURRENT_SOURCE_DIR}/cpp/include/n4m/n4m_version.h")
+if(NOT EXISTS "${_n4m_version_h}")
     message(FATAL_ERROR
-        "n4m: canonical version header not found at ${_p4a_version_h}")
+        "n4m: canonical version header not found at ${_n4m_version_h}")
 endif()
-file(READ "${_p4a_version_h}" _p4a_version_h_content)
+file(READ "${_n4m_version_h}" _n4m_version_h_content)
 
 foreach(_macro IN ITEMS
         N4M_ABI_VERSION_MAJOR     N4M_ABI_VERSION_MINOR     N4M_ABI_VERSION_PATCH
@@ -29,7 +29,7 @@ foreach(_macro IN ITEMS
     # Anchor to a real preprocessor directive (allowing optional whitespace
     # between '#' and 'define') so commented-out lines like '// #define FOO'
     # are not matched.
-    if(NOT _p4a_version_h_content MATCHES
+    if(NOT _n4m_version_h_content MATCHES
             "(^|\n)[ \t]*#[ \t]*define[ \t]+${_macro}[ \t]+([0-9]+)")
         message(FATAL_ERROR
             "n4m: ${_macro} not found in n4m_version.h — header drift?")
@@ -44,7 +44,7 @@ set(N4M_PROJECT_VERSION
 
 # Cross-check the N4M_PROJECT_VERSION_STRING literal matches the numeric macros.
 # Same line-anchored pattern as above (allows '# define' but rejects comments).
-if(NOT _p4a_version_h_content MATCHES
+if(NOT _n4m_version_h_content MATCHES
         "(^|\n)[ \t]*#[ \t]*define[ \t]+N4M_PROJECT_VERSION_STRING[ \t]+\"([^\"]+)\"")
     message(FATAL_ERROR
         "n4m: N4M_PROJECT_VERSION_STRING not found in n4m_version.h")
@@ -59,7 +59,7 @@ endif()
 project(n4m
     VERSION ${N4M_PROJECT_VERSION}
     DESCRIPTION "Portable PLS/NIRS engine with stable C ABI"
-    HOMEPAGE_URL "https://github.com/GBeurier/pls4all"
+    HOMEPAGE_URL "https://github.com/GBeurier/nirs4all-methods"
     LANGUAGES C CXX)
 
 # ============================================================================

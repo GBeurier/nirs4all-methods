@@ -1,5 +1,5 @@
 """Python wrappers for the universal method-result handle and the
-per-method fit entry points exposed in p4a.h §16.
+per-method fit entry points exposed in n4m.h.
 
 Each fit function returns a `MethodResult` object whose `.matrix(name)`,
 `.vector(name)` and `.scalar(name)` accessors yield NumPy arrays /

@@ -244,7 +244,7 @@ lib.n4m_validation_plan_get_n_folds.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
 
-# ---- n4m_matrix_view_t layout (must mirror cpp/include/pls4all/p4a.h) ----
+# ---- n4m_matrix_view_t layout (must mirror cpp/include/n4m/n4m.h) ----
 
 
 class MatrixView(ctypes.Structure):

@@ -1,4 +1,4 @@
-"""Enums mirroring the p4a.h values exposed by the current ctypes binding."""
+"""Enums mirroring n4m.h values exposed by the current ctypes binding."""
 
 from __future__ import annotations
 

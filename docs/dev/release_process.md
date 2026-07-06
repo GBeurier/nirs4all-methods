@@ -17,20 +17,19 @@ are automated; CRAN submission and optional registry/listing pages remain manual
 
 ## Exact release artifacts — what each binding ships, and where to upload it
 
-Every artifact below is also attached to the **GitHub Release** for the tag —
-<https://github.com/GBeurier/nirs4all-methods/releases/tag/v0.99.0> — so all of
-them are downloadable from one place.
+Every artifact below is also attached to the **GitHub Release** for the release
+tag (`v<version>`) — so all of them are downloadable from one place.
 
 | Binding | Registry | Exact file(s) | Upload |
 |---|---|---|---|
-| Python `nirs4all-methods` | PyPI | `nirs4all_methods-0.99.0-*.whl` (cibuildwheel matrix: Linux x86_64/aarch64, macOS x86_64/arm64, Windows x86_64) | **Automated** — Trusted Publishing, *no manual upload* |
-| Python `pls4all` | PyPI | `pls4all-0.99.0-py3-none-*.whl` + `pls4all-0.99.0.tar.gz` (sdist) | **Automated** — Trusted Publishing, *no manual upload* |
-| R `n4m` | CRAN | **`n4m_0.99.0.tar.gz`** (source tarball) | **Manual** — web form (see *R → CRAN* below) |
-| R `pls4all` | CRAN | **`pls4all_0.99.0.tar.gz`** (source tarball) | **Manual** — web form |
+| Python `nirs4all-methods` | PyPI | `nirs4all_methods-<version>-*.whl` (cibuildwheel matrix: Linux x86_64/aarch64, macOS x86_64/arm64, Windows x86_64) | **Automated** — Trusted Publishing, *no manual upload* |
+| Python `pls4all` | PyPI | `pls4all-<version>-py3-none-*.whl` + `pls4all-<version>.tar.gz` (sdist) | **Automated** — Trusted Publishing, *no manual upload* |
+| R `n4m` | CRAN | **`n4m_<version>.tar.gz`** (source tarball) | **Manual** — web form (see *R → CRAN* below) |
+| R `pls4all` | CRAN | **`pls4all_<version>.tar.gz`** (source tarball) | **Manual** — web form |
 | R `n4m` + `pls4all` | R-universe | — (built from Git, no upload) | **Automated** — registry repo + app (see *R → R-universe*) |
 | JS / WASM `@nirs4all/methods-wasm` | npm | the staged `dist/` package (via `npm publish`) | **Automated** — `release-npm.yml` (needs `NPM_TOKEN` — see *JS → npm*) |
 | MATLAB / Octave `+pls4all` | GitHub Release | **`nirs4all-methods-matlab-octave-<version>.zip`** — the `bindings/matlab/` source (`+pls4all` package + `build_mex.m` + MEX sources + tests). ONE package for both; download + run `build_mex.m`. | **Automated** — `release-matlab.yml` attaches it (File Exchange / Octave Forge optional + manual) |
-| Source + provenance | GitHub Release | `nirs4all-methods-0.99.0-src.tar.gz` · `…-src.zip` · `nirs4all-methods-0.99.0.cdx.json` (SBOM) · `SHA256SUMS` | **Automated** — `release-source.yml` |
+| Source + provenance | GitHub Release | `nirs4all-methods-<version>-src.tar.gz` · `...-src.zip` · `nirs4all-methods-<version>.cdx.json` (SBOM) · `SHA256SUMS` | **Automated** — `release-source.yml` |
 
 **For R/CRAN, upload the source `.tar.gz` only** — never a binary, the GitHub repo
 zip, or the Python artifacts. The PyPI and npm files publish from CI (no manual
@@ -44,10 +43,14 @@ anything (see `CLAUDE.md` → "Release / ABI gates"):
 1. **Version sync** — `scripts/bump_version.sh --check`. The canonical version
    lives in `cpp/include/n4m/n4m_version.h`; the script syncs it into every
    active downstream manifest (`bindings/python/pyproject.toml`,
-   `parity/python_generator/pyproject.toml`, `bindings/r/n4m/DESCRIPTION`,
-   `bindings/js/package.json` + `package-lock.json`). MATLAB/Octave read the
-   version from libn4m at runtime, so they have no manifest to sync; archived
-   bindings under `bindings/_archive/` are frozen and excluded. **Bump with**
+   `parity/python_generator/pyproject.toml`,
+   `bindings/r/{n4m,pls4all}/DESCRIPTION`,
+   `bindings/r/{n4m,pls4all}/cran-comments.md`, `bindings/js/package.json`,
+   `bindings/js/package-lock.json`, `CITATION.cff`, `docs/conf.py`, and the
+   README citation block). It also verifies the Python loader ABI constants.
+   MATLAB/Octave read the version from libn4m at runtime, so they have no
+   manifest to sync; archived bindings under `bindings/_archive/` are frozen
+   and excluded. **Bump with**
    `bump_version.sh --bump X.Y.Z`.
 2. **ABI symbol surface** — the exported `n4m_*` set must match
    `cpp/abi/expected_symbols_{linux,macos,windows}.txt` exactly.
@@ -151,8 +154,9 @@ independent and still succeed). To enable it:
    on the `@nirs4all` scope / `@nirs4all/methods-wasm` package. Copy it.
 3. **Add it as a GitHub Actions secret** — repo *Settings → Secrets and variables
    → Actions → New repository secret*, name **`NPM_TOKEN`**, value = the token.
-4. **Publish** — either re-run `release-npm.yml` (*Run workflow* → `publish=true`)
-   for the already-cut `v0.99.0`, or it publishes automatically on the next tag.
+4. **Publish** — either dispatch `release-npm.yml` (*Run workflow* →
+   `publish=true`) for the current release tag, or let it publish automatically
+   on the next non-`-rc` tag.
 
 `release-npm.yml` requests `id-token: write`, so once the scope + token exist the
 package publishes with a verified npm provenance attestation. The WASM staging is
@@ -243,7 +247,7 @@ submission is a **manual web form** with human review.
 `release-r.yml` (tag push, or `workflow_dispatch`) runs `R CMD check --as-cran`
 for both packages across `{n4m, pls4all} × {linux-release, linux-devel,
 macos-arm64-release, windows-release}`, re-vendors fresh via `.prepare`, and — on
-a non-`-rc` `v*` tag — attaches `n4m_0.99.0.tar.gz` + `pls4all_0.99.0.tar.gz` to
+a non-`-rc` `v*` tag — attaches `n4m_<version>.tar.gz` + `pls4all_<version>.tar.gz` to
 the GitHub Release. Build/attach are **gated on `--as-cran` passing**. Verified
 locally: both packages **0 ERROR / 0 WARNING** (4 expected NOTEs).
 
@@ -256,14 +260,13 @@ rhub::rhub_check("bindings/r/n4m")
 
 ### Exactly what to upload
 The **R source tarball only** — one submission per package:
-- **`n4m_0.99.0.tar.gz`**
-- **`pls4all_0.99.0.tar.gz`**
+- **`n4m_<version>.tar.gz`**
+- **`pls4all_<version>.tar.gz`**
 
-Get them from the
-**[v0.99.0 Release assets](https://github.com/GBeurier/nirs4all-methods/releases/tag/v0.99.0)**:
+Get them from the GitHub Release assets for `v<version>`:
 the files are named exactly **`n4m_<version>.tar.gz`** and **`pls4all_<version>.tar.gz`**
 (attached by `release-r.yml`). There is **no `-cran-tarball` suffix on the Release** —
-download `n4m_0.99.0.tar.gz` and `pls4all_0.99.0.tar.gz` directly and upload those.
+download `n4m_<version>.tar.gz` and `pls4all_<version>.tar.gz` directly and upload those.
 
 > `<pkg>-cran-tarball` is only the GitHub **Actions artifact** name that wraps the
 > *same* `<pkg>_<version>.tar.gz` on a `release-r.yml` *Run workflow* run — relevant
@@ -289,7 +292,7 @@ where these notes go:
 ```text
 New submission.
 
-n4m 0.99.0 — a portable Partial Least Squares (PLS) and Near-Infrared
+n4m <version> — a portable Partial Least Squares (PLS) and Near-Infrared
 Spectroscopy (NIRS) engine. The C++17/C/Fortran numerical core (233 vendored
 translation units under src/vendor/) is compiled from source at install time;
 no external system library is required. License: CeCILL-2.1 (a GPL-compatible
@@ -321,7 +324,7 @@ Maintainer: Gregory Beurier <gregory.beurier@cirad.fr> (CIRAD).
 ```text
 New submission.
 
-pls4all 0.99.0 — a portable Partial Least Squares engine for chemometrics: the
+pls4all <version> — a portable Partial Least Squares engine for chemometrics: the
 slim, PLS-focused distribution carved from the nirs4all-methods library. The
 C++17/C/Fortran numerical core (233 vendored translation units under src/vendor/)
 is compiled from source at install time; no external system library is required.

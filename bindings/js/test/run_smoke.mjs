@@ -23,7 +23,7 @@ const M = await factory({locateFile: (p) => resolve(wasmDir, p)});
 // ----- Version + ABI -----
 const versionPtr = M._n4m_get_version_string();
 const version = M.UTF8ToString(versionPtr);
-console.log("pls4all version:", version);
+console.log("libn4m version:", version);
 const abi = [
     M._n4m_get_abi_version_major(),
     M._n4m_get_abi_version_minor(),
