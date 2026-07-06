@@ -64,7 +64,7 @@ export function checkStatus(status: number, ctxPtr: number = 0): void {
     throw new Pls4allError(status, msg);
 }
 
-// ---- n4m_matrix_view_t layout (mirrors cpp/include/pls4all/p4a.h) -------
+// ---- n4m_matrix_view_t layout (mirrors cpp/include/n4m/n4m.h) -----------
 //
 // struct {
 //     void*    data;       // 4 bytes (WASM is 32-bit; offset 0)

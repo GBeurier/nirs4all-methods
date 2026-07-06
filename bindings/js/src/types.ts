@@ -39,7 +39,7 @@ export enum Dtype {
     I64 = 4,
 }
 
-/** Mirror of n4m_algorithm_t. Values must match cpp/include/pls4all/p4a.h. */
+/** Mirror of n4m_algorithm_t. Values must match cpp/include/n4m/n4m.h. */
 export enum Algorithm {
     PLS_REGRESSION = 0,
     PLS_CANONICAL = 1,

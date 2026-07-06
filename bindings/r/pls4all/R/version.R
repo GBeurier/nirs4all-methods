@@ -1,6 +1,6 @@
 #' Runtime version string of the loaded libn4m.
 #'
-#' @return A character scalar like "0.98.0+abi.2.0.0".
+#' @return A character scalar like "1.0.2+abi.2.0.0".
 #' @export
 n4m_version <- function() {
   .Call("r_n4m_version", PACKAGE = "pls4all")

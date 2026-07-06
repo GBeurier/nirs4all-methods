@@ -34,10 +34,10 @@ on the system path or export `LD_LIBRARY_PATH` (Linux) /
 library(n4m)
 
 n4m_version()
-# "0.96.0+abi.1.13.0"
+# "1.0.2+abi.2.0.0"
 
 n4m_abi_version()
-# c(1, 13, 0)
+# c(2, 0, 0)
 
 set.seed(42)
 X <- matrix(rnorm(2000), nrow = 200)
