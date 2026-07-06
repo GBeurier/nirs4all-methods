@@ -107,7 +107,7 @@ The WebAssembly binding ships the same surface; see
 module:
 
 ```javascript
-import * as n4m from '@nirs4all/methods-wasm';
+import * as n4m from '@nirs4all/methods';
 
 await n4m.loadModule();   // loads n4m.wasm
 // Raw row-major Float64Array matrices in, typed arrays out (see

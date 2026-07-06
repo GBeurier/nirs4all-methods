@@ -1,4 +1,4 @@
-# @nirs4all/methods-wasm — input contract
+# @nirs4all/methods — input contract
 
 The WASM binding is a **non-idiomatic function library**: it accepts raw typed
 arrays and returns typed arrays. Aggregation / estimator ergonomics live in the

@@ -57,14 +57,14 @@ list(APPEND _js_export_list
     "_n4m_wasm_pp_destroy")
 string(REPLACE ";" "," _js_export_flag "${_js_export_list}")
 
-add_executable(pls4all_wasm
+add_executable(n4m_wasm
     "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_entry.c")
-target_link_libraries(pls4all_wasm PRIVATE n4m_c_static)
-set_target_properties(pls4all_wasm PROPERTIES
+target_link_libraries(n4m_wasm PRIVATE n4m_c_static)
+set_target_properties(n4m_wasm PROPERTIES
     OUTPUT_NAME "n4m"
     SUFFIX ".js")
 
-target_link_options(pls4all_wasm PRIVATE
+target_link_options(n4m_wasm PRIVATE
     "SHELL:-s MODULARIZE=1"
     "SHELL:-s EXPORT_ES6=1"
     "SHELL:-s ENVIRONMENT=web,worker,node"
@@ -82,5 +82,5 @@ target_link_options(pls4all_wasm PRIVATE
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/n4m.js"
     "${CMAKE_CURRENT_BINARY_DIR}/n4m.wasm"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/nirs4all-methods-wasm"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/nirs4all-methods-js"
     OPTIONAL)

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
-// Minimal consumption example for @nirs4all/methods-wasm.
+// Minimal consumption example for @nirs4all/methods.
 // A downstream repo (nirs4all-lite) would do:
-//   import * as n4m from "@nirs4all/methods-wasm";
+//   import * as n4m from "@nirs4all/methods";
 // From inside this repo, import the built dist barrel instead:
 import * as n4m from "../dist/index.js";
 

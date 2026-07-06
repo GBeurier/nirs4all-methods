@@ -47,7 +47,7 @@ Three classes of artifact go out per release tag. Read this table as
 > `CLAUDE.md`, the **active** release targets are: **Python** (PyPI
 > `nirs4all-methods` full binding + the slim `pls4all` subset),
 > **R** (CRAN `n4m` full binding + the slim `pls4all` subset),
-> **JS / WASM** (npm `@nirs4all/methods-wasm`), **MATLAB**, and
+> **JS / WASM** (npm `@nirs4all/methods`), **MATLAB**, and
 > **Octave**. The **Go / Rust / .NET / Ruby / Lua / Nim** bindings are
 > **frozen proof-of-concept** bindings under `bindings/_archive/` —
 > **they are not current release targets.** The Go/Rust/.NET/Ruby/Lua/
@@ -101,8 +101,8 @@ and are **not** current release targets — reserve them defensively only.
 | CRAN | `n4m` (full binding) + `pls4all` (slim PLS-only subset) | submission post-stabilisation; pre-flight via R-universe |
 | R-universe | `gbeurier.r-universe.dev/n4m` (+ slim `pls4all`) | pre-CRAN rolling build (free, mandatory before CRAN) |
 | crates.io | `nirs4all-methods` *(frozen PoC)* | reserve via initial 0.0.0 publish |
-| npm | `@nirs4all/methods-wasm` | scope `@nirs4all` — claim org |
-| JSR (`jsr.io`) | `@nirs4all/methods-wasm` | mirror of npm — new since 2024, free |
+| npm | `@nirs4all/methods` | scope `@nirs4all` — claim org |
+| JSR (`jsr.io`) | `@nirs4all/methods` | mirror of npm — new since 2024, free |
 | pkg.go.dev | `github.com/GBeurier/nirs4all-methods/bindings/_archive/go` *(frozen PoC)* | indexed automatically on first `GOPROXY` hit |
 | NuGet | `Nirs4allMethods` (managed) + `Nirs4allMethods.Native` (multi-RID native runtime) *(frozen PoC)* | reserve via Microsoft account |
 | RubyGems | `nirs4all-methods` *(frozen PoC)* | reserve via `gem push` of 0.0.0 placeholder |
@@ -110,8 +110,8 @@ and are **not** current release targets — reserve them defensively only.
 | LuaRocks | `nirs4all-methods` *(frozen PoC)* | rockspec + `luarocks upload` |
 | Nimble | `nirs4all-methods` *(frozen PoC)* | PR to `nim-lang/packages` |
 | Maven Central | groupId `io.github.gbeurier`, artifactId `nirs4all-methods-jni` (desktop), `nirs4all-methods-android` (AAR) | via Sonatype Central Portal; needs domain ownership proof |
-| MATLAB File Exchange | `pls4all` page on `mathworks.com/matlabcentral/fileexchange` (slim `+pls4all` package) | needs MathWorks account; `.mltbx` from GitHub Release auto-pulled |
-| Octave Packages | `pls4all` on `gnu-octave/packages` index (slim `+pls4all` package) | PR to `gnu-octave/packages/index.yaml` |
+| MATLAB File Exchange | `n4m` page on `mathworks.com/matlabcentral/fileexchange` (`+n4m` package, `+pls4all` compatibility namespace) | needs MathWorks account; `.mltbx` from GitHub Release auto-pulled |
+| Octave Packages | `n4m` on `gnu-octave/packages` index (`+n4m` package, `+pls4all` compatibility namespace) | PR to `gnu-octave/packages/index.yaml` |
 | MSYS2 / MinGW-packages | `mingw-w64-nirs4all-methods` PKGBUILD in `msys2/MINGW-packages` | PR review by MSYS2 maintainers |
 | MacPorts | `science/nirs4all-methods` Portfile in `macports/macports-ports` | PR review |
 | FreeBSD Ports | `math/nirs4all-methods` or `science/nirs4all-methods` | PR to `freebsd/freebsd-ports` |
@@ -247,8 +247,8 @@ The package files themselves are uploaded to the registry, but a
 | Python (slim subset) | `pls4all-${VER}-*.whl`, `pls4all-${VER}.tar.gz` (sdist) |
 | R (full) | `n4m_${VER}.tar.gz` (CRAN source), `n4m_${VER}.tgz` (macOS), `n4m_${VER}.zip` (Windows) |
 | R (slim subset) | `pls4all_${VER}.tar.gz` / `.tgz` / `.zip` |
-| MATLAB | `pls4all-${VER}.mltbx` (FileExchange-ready toolbox; the MATLAB binding ships the slim `+pls4all` package) |
-| JS | `nirs4all-methods-wasm-${VER}.tgz` (`npm pack` output) |
+| MATLAB | `n4m-${VER}.mltbx` (FileExchange-ready toolbox; the MATLAB binding ships `+n4m` with `+pls4all` compatibility) |
+| JS | `nirs4all-methods-js-${VER}.tgz` (`npm pack` output) |
 | Julia *(frozen PoC)* | n/a — registered by Project.toml SHA; tag-only |
 | Go *(frozen PoC)* | n/a — go modules resolve from git tag directly |
 | Rust *(frozen PoC)* | `nirs4all-methods-${VER}.crate` (output of `cargo package`) |
@@ -434,18 +434,18 @@ fit <- pls(y ~ ., data = iris[,-5], ncomp = 2)
 predict(fit, newdata = iris[1:5, -5])
 ```
 
-### 3.3 MATLAB — `+pls4all` package on File Exchange + Add-On Explorer
+### 3.3 MATLAB — `+n4m` package on File Exchange + Add-On Explorer
 
 | Field | Value |
 |-------|-------|
 | Registry | https://www.mathworks.com/matlabcentral/fileexchange/ |
-| Identity | submission name `pls4all`, package format: `.mltbx` Toolbox |
+| Identity | submission name `n4m`, package format: `.mltbx` Toolbox |
 | Tier 1 | single MEX dispatcher (`n4m_method_fit_mex`) — live |
 | Tier 2 | 18 classdefs + factory — live |
 
 **Required assets:**
-- `pls4all-${VER}.mltbx` (MATLAB Toolbox installable file).
-- The same toolbox files for **Octave**, packaged as `pls4all-octave-${VER}.zip` (Octave Forge sees this).
+- `n4m-${VER}.mltbx` (MATLAB Toolbox installable file).
+- The same toolbox files for **Octave**, packaged as `n4m-octave-${VER}.zip` (Octave Forge sees this).
 - Per-OS-per-MATLAB-version prebuilt MEX files baked into the `.mltbx`:
   | MEX file | OS × MATLAB |
   |---|---|
@@ -456,9 +456,9 @@ predict(fit, newdata = iris[1:5, -5])
   | `n4m_method_fit_mex.oct` | Octave 9.x (all platforms) |
 
 The MEX must dynamically link `libn4m` shipped *inside* the toolbox:
-the `.mltbx` archive contains `+pls4all/private/libn4m/` and the
-MATLAB code prepends that directory to the dynamic-library search
-path before any MEX call.
+the `.mltbx` archive contains the shared `+n4m` / `+pls4all` package tree and
+the bundled `libn4m`; MATLAB code prepends that library directory to the
+dynamic-library search path before any MEX call.
 
 **Prereqs:**
 1. MathWorks account = `gregory.beurier@cirad.fr` (matlabcentral profile).
@@ -495,17 +495,17 @@ assert(size(yhat, 1) == 50);
 > [Octave Packages](https://gnu-octave.github.io/packages/) via the
 > `index.yaml` PR pattern. Naming is `pls4all` (no Octave suffix).
 
-### 3.4 JavaScript / TypeScript — `@nirs4all/methods-wasm` on npm + JSR
+### 3.4 JavaScript / TypeScript — `@nirs4all/methods` on npm + JSR
 
 | Field | Value |
 |-------|-------|
 | Registry | https://www.npmjs.com/org/nirs4all + https://jsr.io/@nirs4all |
-| Identity | `@nirs4all/methods-wasm` (current), planned: `@nirs4all/methods-node`, `@nirs4all/methods-types` |
+| Identity | `@nirs4all/methods` (current), planned: `@nirs4all/methods-node`, `@nirs4all/methods-types` |
 | Tier 1 | `n4m.wasm` + thin TS API — live |
 | Tier 2 | `@nirs4all/methods-sklearn-like` (idiomatic class) — live |
 
 **Required assets:**
-- `@nirs4all/methods-wasm` (browser + Deno + Bun + Node universal ESM):
+- `@nirs4all/methods` (browser + Deno + Bun + Node universal ESM):
   - `dist/index.js` (ESM)
   - `dist/index.d.ts`
   - `dist/n4m.js` (Emscripten JS glue)
@@ -523,7 +523,7 @@ assert(size(yhat, 1) == 50);
   package keeps the type surface single-source.
 
 The `npm pack` output for the wasm package is
-`nirs4all-methods-wasm-${VER}.tgz`.
+`nirs4all-methods-js-${VER}.tgz`.
 
 **Prereqs:**
 1. npm org `@nirs4all` claimed; CI scope tokens stored as `NPM_TOKEN`.
@@ -543,8 +543,8 @@ npx jsr publish
 
 **Smoke test:**
 ```bash
-deno run --allow-all -r https://jsr.io/@nirs4all/methods-wasm/${VER}/smoke.ts
-node -e "import('@nirs4all/methods-wasm').then(m => console.log(m.version()))"
+deno run --allow-all -r https://jsr.io/@nirs4all/methods/${VER}/smoke.ts
+node -e "import('@nirs4all/methods').then(m => console.log(m.version()))"
 ```
 
 ### 3.5 Go — `github.com/GBeurier/nirs4all-methods/bindings/_archive/go` on pkg.go.dev
@@ -911,9 +911,9 @@ assertTrue(v.startsWith("${VER}"))
 In addition to the npm publication in §3.4, we expose the WASM blob
 to CDNs for zero-tooling browser use:
 
-- `https://cdn.jsdelivr.net/npm/@nirs4all/methods-wasm@${VER}/dist/n4m.wasm` (auto on npm publish)
-- `https://unpkg.com/@nirs4all/methods-wasm@${VER}/dist/n4m.wasm` (auto on npm publish)
-- `https://esm.sh/@nirs4all/methods-wasm@${VER}` (Deno-friendly imports)
+- `https://cdn.jsdelivr.net/npm/@nirs4all/methods@${VER}/dist/n4m.wasm` (auto on npm publish)
+- `https://unpkg.com/@nirs4all/methods@${VER}/dist/n4m.wasm` (auto on npm publish)
+- `https://esm.sh/@nirs4all/methods@${VER}` (Deno-friendly imports)
 
 Nothing to do beyond §3.4 — CDNs mirror npm automatically.
 
@@ -1225,8 +1225,9 @@ extend nirs4all-methods' reach with disproportionate ROI:
   This is where Windows C/C++ users actually get MinGW/UCRT libraries —
   the doc already ships `x86_64-pc-windows-mingw` triple archives but
   MSYS2 is the natural distribution surface for those.
-- **Octave Packages** — package name `pls4all` (slim `+pls4all` package), archive
-  `pls4all-octave-${VER}.tar.gz`, PR to `gnu-octave/packages/index.yaml`.
+- **Octave Packages** — package name `n4m` (`+n4m` package with `+pls4all`
+  compatibility namespace), archive `n4m-octave-${VER}.tar.gz`, PR to
+  `gnu-octave/packages/index.yaml`.
   Treated as its own channel, not as a MATLAB sub-item. The Octave
   code paths and MEX `.oct` files live next to the MATLAB ones in
   `bindings/matlab/` but the distribution surface is independent.
@@ -1239,7 +1240,7 @@ extend nirs4all-methods' reach with disproportionate ROI:
 - **GitHub Packages** (fallback / RC channel) — Maven
   `maven.pkg.github.com/GBeurier/nirs4all-methods`, NuGet
   `https://nuget.pkg.github.com/GBeurier/index.json`, npm
-  `npm.pkg.github.com` under `@nirs4all/methods-wasm`. Not a public-primary
+  `npm.pkg.github.com` under `@nirs4all/methods`. Not a public-primary
   channel, but useful for release candidates, private downstream
   consumers, and testing immutable package layouts before Central /
   NuGet / npm.
@@ -1341,7 +1342,7 @@ Software Heritage  → no manifest; passive
 | CRAN | ⬜ never submitted | needs zero-warning `R CMD check --as-cran`, vendored-core sync, and first R-universe run |
 | R-universe | ⬜ universe not created | needs `gbeurier/universe` repo + packages.json |
 | MATLAB File Exchange | ⬜ no FX submission | needs `.mltbx` packager job + FX account |
-| npm `@nirs4all/methods-wasm` | 🟡 package.json present, never published | needs npm scope + first publish |
+| npm `@nirs4all/methods` | 🟡 package.json present, never published | needs npm scope + first publish |
 | JSR | ⬜ not configured | mirror of npm — add after first npm publish |
 | pkg.go.dev *(frozen PoC)* | 🟡 module exists, not tagged in subdir convention | frozen in `bindings/_archive/`; not a release target |
 | crates.io *(frozen PoC)* | ⬜ never published | frozen in `bindings/_archive/`; not a release target |
@@ -1438,8 +1439,8 @@ Legend: 🤖 = Claude can do it alone · 👤 = you only · 🤖👤 = joint.
 | Channel | Code | Account / tokens | Recurring |
 |---------|------|------------------|-----------|
 | **conda-forge** (two feedstocks: `libn4m` + `pls4all`) | 🤖 both `meta.yaml` recipes + PR to `conda-forge/staged-recipes` | 👤 conda-forge-admin GitHub app authorisation on your account (1 click during PR) | 🤖👤 reviewer comments, you forward to me |
-| **npm `@nirs4all/methods-wasm`** | 🤖 `release-js.yml`; **provenance is automatic** under npm Trusted Publishing (no need to pass `--provenance`) | 👤 (1) create npm org `@nirs4all` (free, 5 min), (2) configure npm Trusted Publishing OIDC → repo `GBeurier/nirs4all-methods`. Requires **npm >= 11.5.1**, **Node >= 22.14.0**, and GitHub-hosted runners. | none |
-| **JSR `@nirs4all/methods-wasm`** | 🤖 `jsr.json` mirror of npm manifest + workflow | 👤 create JSR scope `@nirs4all` at `https://jsr.io/new`; bind to GitHub repo via OIDC (1 click) | none |
+| **npm `@nirs4all/methods`** | 🤖 `release-js.yml`; **provenance is automatic** under npm Trusted Publishing (no need to pass `--provenance`) | 👤 (1) create npm org `@nirs4all` (free, 5 min), (2) configure npm Trusted Publishing OIDC → repo `GBeurier/nirs4all-methods`. Requires **npm >= 11.5.1**, **Node >= 22.14.0**, and GitHub-hosted runners. | none |
+| **JSR `@nirs4all/methods`** | 🤖 `jsr.json` mirror of npm manifest + workflow | 👤 create JSR scope `@nirs4all` at `https://jsr.io/new`; bind to GitHub repo via OIDC (1 click) | none |
 | **crates.io `nirs4all-methods`** *(frozen PoC)* | 🤖 `Cargo.toml` cleanup + `release-rust.yml` | 👤 crates.io login (GitHub OAuth, 30 sec) + paste API token in repo secret `CARGO_REGISTRY_TOKEN`. crates.io has no public OIDC yet. | none |
 
 #### Tier C — JVM, .NET, niche-scientific (later wave)

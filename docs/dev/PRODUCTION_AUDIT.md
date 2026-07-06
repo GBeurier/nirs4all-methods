@@ -476,7 +476,7 @@ _Original finding (now resolved — see **Status** below)._ The JS/WASM binding 
 DONE:
 - **Rebuilt** against the post-rename ABI → `n4m.js` + `n4m.wasm` (full engine, 669 `_n4m_*` symbols); `run_smoke.mjs` +
   the parity fixture verified green (coeffs 1.37e-16, preds 2.12e-16).
-- **Renamed** the npm scope `@pls4all/wasm` → `@nirs4all/methods-wasm`; artifact `p4a.{js,wasm}` → `n4m.{js,wasm}`
+- **Renamed** the npm scope `@pls4all/wasm` → `@nirs4all/methods`; artifact `p4a.{js,wasm}` → `n4m.{js,wasm}`
   (CMake OUTPUT_NAME + install + package.json + ffi.ts loader + run_smoke.mjs + p4a.d.ts→n4m.d.ts); updated the live docs
   (getting_started, release_process) and the binding README.
 - **Dropped** the idiomatic `sklearn.ts` layer (maintainer: idiomatic not required); `tsc` compiles clean.

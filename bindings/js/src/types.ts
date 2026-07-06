@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 
-/** Float row-major or column-major matrix view passed to pls4all. */
+/** Float row-major matrix view passed to nirs4all-methods. */
 export interface Matrix {
     /** Row-major data buffer. Length must be `rows * cols`. */
     data: Float64Array;
@@ -75,10 +75,11 @@ export enum Deflation {
     ORTHOGONAL = 4,
 }
 
-export class Pls4allError extends Error {
+export class N4mError extends Error {
     readonly status: number;
     constructor(status: number, message: string) {
-        super(`pls4all error ${status}: ${message}`);
+        super(`n4m error ${status}: ${message}`);
+        this.name = "N4mError";
         this.status = status;
     }
 }

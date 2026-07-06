@@ -490,11 +490,11 @@ there is **no publish workflow**.
   a real deployment constraint to document if pursued).
 - **[Medium · S] `version-sync-js-package`** — confirm `bump_version.sh --check` covers `package.json` (a prior
   artifact shipped with 3 divergent version triples).
-- **[Medium · S] `reconcile-cuda-spline-branch-js`** — ensure the BigInt fix + `@nirs4all/methods-wasm` rename +
+- **[Medium · S] `reconcile-cuda-spline-branch-js`** — ensure the BigInt fix + `@nirs4all/methods` rename +
   js-wasm CI survive any branch reconciliation; fix stale `p4a`-era roadmap notes. *(Largely moot now that the branch
   is subsumed — still verify the JS leg is in the release matrix.)*
 - **[Medium · M] `distribution-md-js-section-rewrite`** *(verifier high→medium)* — DISTRIBUTION.md §3.4 still says
-  `@pls4all/wasm` / `p4a.wasm` / "~120 KB"; reality is `@nirs4all/methods-wasm` / `n4m.wasm` / 1.5 MB.
+  `@pls4all/wasm` / `p4a.wasm` / "~120 KB"; reality is `@nirs4all/methods` / `n4m.wasm` / 1.5 MB.
 - **[Low · S] `fix-i64-pair-read-methodresult`** *(verifier high→low)* — `methodResult.ts:79` carries a misleading
   "use HEAP32 instead" comment + an `as unknown as number` cast; the code is actually correct (every BigInt is
   `Number()`-wrapped). Cosmetic; optionally add a multi-output shape assertion.

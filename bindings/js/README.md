@@ -1,4 +1,4 @@
-# @nirs4all/methods-wasm — WebAssembly binding
+# @nirs4all/methods — WebAssembly binding
 
 Browser + Node.js binding for **libn4m** (the `nirs4all-methods` portable
 PLS/NIRS engine), compiled via Emscripten. It is a **non-idiomatic function
@@ -21,7 +21,7 @@ The package ships:
 source /path/to/emsdk/emsdk_env.sh
 # 2. Configure + build the WASM preset (zero deps beyond Emscripten).
 cmake --preset emscripten
-cmake --build --preset emscripten --target pls4all_wasm
+cmake --build --preset emscripten --target n4m_wasm
 # Artifacts land in build/emscripten/bindings/js/{n4m.js,n4m.wasm}.
 
 # 3. Build the TypeScript wrapper for distribution:
@@ -46,7 +46,7 @@ isolated band (achieved ~1e-16).
 ## API surface
 
 ```typescript
-import * as n4m from "@nirs4all/methods-wasm";
+import * as n4m from "@nirs4all/methods";
 
 await n4m.loadModule();
 console.log(n4m.version());     // "1.0.3+abi.2.0.0"
@@ -98,7 +98,7 @@ dims as `BigInt` under `WASM_BIGINT` (`ffi.ts` / `makeMatrixView`) made the deep
 view-pointer path byte-correct — see the note at the top of `src/wasm_entry.c`.
 
 ```js
-import { loadModule, Context, Config, MethodResult } from "@nirs4all/methods-wasm";
+import { loadModule, Context, Config, MethodResult } from "@nirs4all/methods";
 await loadModule();
 const ctx = new Context(), cfg = new Config();
 const X = makeMatrixView(rows, cols, dataF64);   // row-major Float64Array
@@ -112,7 +112,7 @@ res.destroy(); cfg.destroy(); ctx.destroy();
 ```
 bindings/js/
 ├── CMakeLists.txt        # Emscripten target wired into the project preset
-├── package.json          # @nirs4all/methods-wasm
+├── package.json          # @nirs4all/methods
 ├── tsconfig.json
 ├── INPUT_CONTRACT.md      # the raw-array input contract (copied by nirs4all-lite)
 ├── src/

@@ -418,7 +418,7 @@ def _run_wasm_smoke(timeout: int) -> dict[str, Any]:
     if not wasm_js.exists() or not wasm_bin.exists():
         raise RuntimeError(
             "WASM artifacts missing; run cmake --preset emscripten && "
-            "cmake --build --preset emscripten --target pls4all_wasm"
+            "cmake --build --preset emscripten --target n4m_wasm"
         )
     proc = _run(
         [str(node), "--experimental-vm-modules", str(script)],

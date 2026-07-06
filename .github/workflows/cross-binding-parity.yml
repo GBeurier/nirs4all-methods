@@ -164,7 +164,7 @@ jobs:
       - name: Build the WASM module (emscripten preset)
         run: |
           cmake --preset emscripten
-          cmake --build --preset emscripten --target pls4all_wasm
+          cmake --build --preset emscripten --target n4m_wasm
 
       - name: Build + stage + smoke the JS binding
         working-directory: bindings/js
@@ -204,6 +204,7 @@ jobs:
         run: |
           octave --no-gui --no-history --eval "cd bindings/matlab; build_mex"
           octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_parity"
+          octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_n4m_alias"
 
   r-binding:
     # R binding: build libn4m, install the package standalone (configure +

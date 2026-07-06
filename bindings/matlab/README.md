@@ -1,16 +1,17 @@
-# pls4all MATLAB / Octave binding
+# n4m MATLAB / Octave binding
 
 MEX shims that expose the public `libn4m` C ABI to MATLAB and GNU Octave. The
-binding keeps the user-facing namespace as `+pls4all`, while compiled entry
-points and exported C symbols use the `n4m_*` prefix.
+binding exposes the V1 user-facing namespace as `+n4m`. The existing
+`+pls4all` package remains as a compatibility namespace and the compiled entry
+points/exported C symbols continue to use the `n4m_*` prefix.
 
 ## Surface
 
-- `pls4all.version()`
-- `pls4all.pls_fit(X, Y, n_components)`
-- `pls4all.snv_transform(X, ...)`
-- `pls4all.savgol_transform(X, ...)`
-- `pls4all.kennard_stone_split(X, ...)`
+- `n4m.version()` (`pls4all.version()` remains available)
+- `n4m.pls_fit(X, Y, n_components)`
+- `n4m.snv_transform(X, ...)`
+- `n4m.savgol_transform(X, ...)`
+- `n4m.kennard_stone_split(X, ...)`
 - generated method/model wrappers backed by `n4m_method_fit_mex` and
   `n4m_model_fit_mex`
 
@@ -23,7 +24,8 @@ Kennard-Stone/SNV/Savitzky-Golay/PLS subset.
 ```text
 bindings/matlab/
 ├── mex/                      C sources for MEX shims
-├── +pls4all/                 MATLAB / Octave package functions and MEX artifacts
+├── +n4m/                     V1 namespace aliases and class wrappers
+├── +pls4all/                 Compatibility package functions and MEX artifacts
 ├── build_mex.m               Build script for Octave and MATLAB
 └── test/test_parity.m        Cross-binding parity gate
 ```
@@ -52,7 +54,8 @@ cd bindings/matlab
 build_mex
 ```
 
-`build_mex.m` installs these compiled shims into `bindings/matlab/+pls4all`:
+`build_mex.m` installs these compiled shims into `bindings/matlab/+pls4all`;
+the `+n4m` package exposes matching wrapper functions that delegate there:
 
 - `n4m_preprocess_mex`
 - `n4m_split_mex`
@@ -66,17 +69,17 @@ build_mex
 ```matlab
 addpath('bindings/matlab')
 
-v = pls4all.version();
+v = n4m.version();
 
 X = randn(50, 20);
 Y = X(:, 1) + 0.5 * X(:, 2);
 
-Xsnv = pls4all.snv_transform(X);
-Xsavgol = pls4all.savgol_transform(Xsnv, ...
+Xsnv = n4m.snv_transform(X);
+Xsavgol = n4m.savgol_transform(Xsnv, ...
     'window_length', 11, 'polyorder', 3, 'deriv', 0, 'mode', 'interp');
-split = pls4all.kennard_stone_split(Xsavgol, 'test_size', 0.25, 'zero_based', true);
+split = n4m.kennard_stone_split(Xsavgol, 'test_size', 0.25, 'zero_based', true);
 
-[coefs, x_mean, y_mean, preds] = pls4all.pls_fit(Xsavgol, Y, 3);
+[coefs, x_mean, y_mean, preds] = n4m.pls_fit(Xsavgol, Y, 3);
 ```
 
 ## Parity gate
