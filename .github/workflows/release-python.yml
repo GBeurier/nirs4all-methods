@@ -187,11 +187,13 @@ jobs:
       # Our build-system needs packaging>=24.2 (setuptools 77 PEP 639). Tell
       # cibuildwheel to resolve build deps freely from PyPI so both can land.
       CIBW_DEPENDENCY_VERSIONS: latest
-      # Run a clean-venv smoke test against the freshly built wheel, BEFORE
-      # we accept it. manylinux2014 still ships GCC 10.2; NumPy 2.5+ requires
-      # GCC >= 10.3 when pip falls back to sdist, so keep the test dependency
-      # on a wheel-backed runtime range for this Linux image family.
-      CIBW_TEST_REQUIRES: "numpy>=1.21,<2.5"
+      # Align the slim pls4all wheel with the full nirs4all-methods wheel
+      # policy. manylinux2014 images still ship GCC 10.2, while NumPy 2.5+
+      # can fall back to an sdist that requires GCC >= 10.3 during smoke
+      # installs. manylinux_2_28 keeps the runtime dependency unconstrained
+      # and avoids a Linux-only CI pin.
+      CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+      CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
       CIBW_TEST_COMMAND: "python -c \"import importlib.metadata as md, pls4all; expected = md.version('pls4all'); v = pls4all.version(); print('OK', v); assert pls4all.__version__ == expected, (pls4all.__version__, expected); assert v.startswith(expected + '+abi.'), v\""
       CIBW_BUILD_FRONTEND: "build"
 

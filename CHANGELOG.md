@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-07-06
+
+### Fixed
+- Align the slim `pls4all` Linux wheel builder with the full
+  `nirs4all-methods` wheel policy by using `manylinux_2_28` images. This keeps
+  the runtime `numpy>=1.21` dependency unconstrained while avoiding NumPy 2.5
+  source builds on manylinux2014 during cibuildwheel smoke installs.
+
 ## [1.0.4] - 2026-07-06
 
 ### Fixed
