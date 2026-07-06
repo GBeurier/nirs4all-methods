@@ -7,7 +7,7 @@
 n4m_version()
 }
 \value{
-A character scalar like "1.0.2+abi.2.0.0".
+A character scalar like "1.0.3+abi.2.0.0".
 }
 \description{
 Runtime version string of the loaded libn4m.
