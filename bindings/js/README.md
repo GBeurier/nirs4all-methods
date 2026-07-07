@@ -114,7 +114,7 @@ bindings/js/
 ├── CMakeLists.txt        # Emscripten target wired into the project preset
 ├── package.json          # @nirs4all/methods
 ├── tsconfig.json
-├── INPUT_CONTRACT.md      # the raw-array input contract (copied by nirs4all-lite)
+├── INPUT_CONTRACT.md      # the raw-array input contract (consumed by nirs4all-core)
 ├── src/
 │   ├── wasm_entry.c      # ABI header pull-in + raw-pointer PLS shims
 │   ├── ffi.ts            # Module loader + matrix-view helpers
