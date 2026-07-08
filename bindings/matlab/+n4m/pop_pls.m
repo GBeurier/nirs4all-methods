@@ -1,4 +1,11 @@
-function varargout = pop_pls(varargin)
-% n4m.pop_pls  Namespace alias for pls4all.pop_pls.
-    [varargout{1:nargout}] = pls4all.pop_pls(varargin{:});
+function res = pop_pls(X, Y, max_components, n_operators, cv)
+% n4m.pop_pls  POP-PLS per-component operator selection.
+if nargin < 3 || isempty(max_components), max_components = 3; end
+if nargin < 4 || isempty(n_operators), n_operators = 9; end
+if nargin < 5 || isempty(cv), cv = 3; end
+params = struct("max_components", int32(max_components), ...
+                "n_operators", int32(n_operators), ...
+                "cv", int32(cv));
+res = n4m.n4m_method_fit_mex("pop_pls", double(X), double(Y), ...
+                                  int32(max_components), params);
 end

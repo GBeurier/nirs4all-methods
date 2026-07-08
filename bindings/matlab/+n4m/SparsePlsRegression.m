@@ -1,8 +1,31 @@
-classdef SparsePlsRegression < pls4all.SparsePlsRegression
-% n4m.SparsePlsRegression  Namespace alias for pls4all.SparsePlsRegression.
+classdef SparsePlsRegression < n4m.MethodResultRegression
+% n4m.SparsePlsRegression — Sparse SIMPLS (Chun & Keles 2010)
+% as a tier-2 classdef. Construct via the factory:
+%
+%   mdl = n4m.fitrsparsepls(X, y, "NumComponents", 5, "Lambda", 0.05)
+%
+% or directly:
+%
+%   mdl = n4m.SparsePlsRegression(X, y, n_components, sparsity_lambda)
+
+    properties (SetAccess = private)
+        SparsityLambda = 0.05
+    end
+
     methods
-        function obj = SparsePlsRegression(varargin)
-            obj@pls4all.SparsePlsRegression(varargin{:});
+        function obj = SparsePlsRegression(X, y, n_components, sparsity_lambda)
+            if nargin < 4 || isempty(sparsity_lambda)
+                sparsity_lambda = 0.05;
+            end
+            if isvector(y), y = y(:); end
+            if size(X, 1) ~= size(y, 1)
+                error("n4m:shape", "X and y must have the same number of rows");
+            end
+            res = n4m.sparse_simpls(X, y, n_components, sparsity_lambda);
+            obj = obj.absorb_result(res, n_components, size(X, 2));
+            obj.SparsityLambda = double(sparsity_lambda);
+            obj.Method = "sparse_simpls";
+            obj.Extra = struct("sparsity_lambda", obj.SparsityLambda);
         end
     end
 end

@@ -1,4 +1,10 @@
-function varargout = o2pls(varargin)
-% n4m.o2pls  Namespace alias for pls4all.o2pls.
-    [varargout{1:nargout}] = pls4all.o2pls(varargin{:});
+function res = o2pls(X, Y, n_predictive, n_x_orthogonal, n_y_orthogonal)
+% n4m.o2pls  O2-PLS (bi-directional OPLS, Trygg & Wold 2003).
+if nargin < 4 || isempty(n_x_orthogonal), n_x_orthogonal = 1; end
+if nargin < 5 || isempty(n_y_orthogonal), n_y_orthogonal = 1; end
+params = struct("n_predictive",   int32(n_predictive), ...
+                "n_x_orthogonal", int32(n_x_orthogonal), ...
+                "n_y_orthogonal", int32(n_y_orthogonal));
+res = n4m.n4m_method_fit_mex("o2pls", double(X), double(Y), ...
+                                  int32(n_predictive), params);
 end

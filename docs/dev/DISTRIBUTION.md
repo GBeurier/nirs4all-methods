@@ -110,8 +110,8 @@ and are **not** current release targets — reserve them defensively only.
 | LuaRocks | `nirs4all-methods` *(frozen PoC)* | rockspec + `luarocks upload` |
 | Nimble | `nirs4all-methods` *(frozen PoC)* | PR to `nim-lang/packages` |
 | Maven Central | groupId `io.github.gbeurier`, artifactId `nirs4all-methods-jni` (desktop), `nirs4all-methods-android` (AAR) | via Sonatype Central Portal; needs domain ownership proof |
-| MATLAB File Exchange | `n4m` page on `mathworks.com/matlabcentral/fileexchange` (`+n4m` package, `+pls4all` compatibility namespace) | needs MathWorks account; `.mltbx` from GitHub Release auto-pulled |
-| Octave Packages | `n4m` on `gnu-octave/packages` index (`+n4m` package, `+pls4all` compatibility namespace) | PR to `gnu-octave/packages/index.yaml` |
+| MATLAB File Exchange | `n4m` page on `mathworks.com/matlabcentral/fileexchange` (`+n4m` package) | needs MathWorks account; `.mltbx` from GitHub Release auto-pulled |
+| Octave Packages | `n4m` on `gnu-octave/packages` index (`+n4m` package) | PR to `gnu-octave/packages/index.yaml` |
 | MSYS2 / MinGW-packages | `mingw-w64-nirs4all-methods` PKGBUILD in `msys2/MINGW-packages` | PR review by MSYS2 maintainers |
 | MacPorts | `science/nirs4all-methods` Portfile in `macports/macports-ports` | PR review |
 | FreeBSD Ports | `math/nirs4all-methods` or `science/nirs4all-methods` | PR to `freebsd/freebsd-ports` |
@@ -247,7 +247,7 @@ The package files themselves are uploaded to the registry, but a
 | Python (slim subset) | `pls4all-${VER}-*.whl`, `pls4all-${VER}.tar.gz` (sdist) |
 | R (full) | `n4m_${VER}.tar.gz` (CRAN source), `n4m_${VER}.tgz` (macOS), `n4m_${VER}.zip` (Windows) |
 | R (slim subset) | `pls4all_${VER}.tar.gz` / `.tgz` / `.zip` |
-| MATLAB | `n4m-${VER}.mltbx` (FileExchange-ready toolbox; the MATLAB binding ships `+n4m` with `+pls4all` compatibility) |
+| MATLAB | `n4m-${VER}.mltbx` (FileExchange-ready toolbox; the MATLAB binding ships `+n4m`) |
 | JS | `nirs4all-methods-js-${VER}.tgz` (`npm pack` output) |
 | Julia *(frozen PoC)* | n/a — registered by Project.toml SHA; tag-only |
 | Go *(frozen PoC)* | n/a — go modules resolve from git tag directly |
@@ -456,7 +456,7 @@ predict(fit, newdata = iris[1:5, -5])
   | `n4m_method_fit_mex.oct` | Octave 9.x (all platforms) |
 
 The MEX must dynamically link `libn4m` shipped *inside* the toolbox:
-the `.mltbx` archive contains the shared `+n4m` / `+pls4all` package tree and
+the `.mltbx` archive contains the shared `+n4m` package tree and
 the bundled `libn4m`; MATLAB code prepends that library directory to the
 dynamic-library search path before any MEX call.
 
@@ -471,7 +471,7 @@ dynamic-library search path before any MEX call.
 - MATLAB GitHub Action: `matlab-actions/run-build@v2` invokes
   `bindings/matlab/release.m`, which calls
   `matlab.addons.toolbox.packageToolbox('bindings/matlab/toolbox.prj',
-  'pls4all-${VER}.mltbx')`.
+  'n4m-${VER}.mltbx')`.
 - The resulting `.mltbx` is attached to the GitHub Release.
 - File Exchange has a **GitHub integration**: bind the FX submission
   to `GBeurier/nirs4all-methods`. When a new release lands, FX picks up the
@@ -482,10 +482,11 @@ dynamic-library search path before any MEX call.
 
 **Smoke test (MATLAB CI):**
 ```matlab
-matlab.addons.install("pls4all-${VER}.mltbx");
-assert(strncmp(pls4all.version(), "${VER}", strlength("${VER}")));
-[X, y] = pls4all.synthetic(50, 5, 1);
-mdl = pls4all.fit("simpls", X, y, "NumComponents", 3);
+matlab.addons.install("n4m-${VER}.mltbx");
+assert(strncmp(n4m.version(), "${VER}", strlength("${VER}")));
+X = randn(50, 5);
+y = X(:, 1) - 0.25 * X(:, 3) + 0.01 * randn(50, 1);
+mdl = n4m.fit("simpls", X, y, "NumComponents", 3);
 yhat = predict(mdl, X);
 assert(size(yhat, 1) == 50);
 ```
@@ -1225,8 +1226,8 @@ extend nirs4all-methods' reach with disproportionate ROI:
   This is where Windows C/C++ users actually get MinGW/UCRT libraries —
   the doc already ships `x86_64-pc-windows-mingw` triple archives but
   MSYS2 is the natural distribution surface for those.
-- **Octave Packages** — package name `n4m` (`+n4m` package with `+pls4all`
-  compatibility namespace), archive `n4m-octave-${VER}.tar.gz`, PR to
+- **Octave Packages** — package name `n4m` (`+n4m` package),
+  archive `n4m-octave-${VER}.tar.gz`, PR to
   `gnu-octave/packages/index.yaml`.
   Treated as its own channel, not as a MATLAB sub-item. The Octave
   code paths and MEX `.oct` files live next to the MATLAB ones in

@@ -1,4 +1,11 @@
-function varargout = cppls(varargin)
-% n4m.cppls  Namespace alias for pls4all.cppls.
-    [varargout{1:nargout}] = pls4all.cppls(varargin{:});
+function res = cppls(X, Y, n_components, gamma)
+% n4m.cppls  Canonical Powered PLS (Indahl 2005).
+%
+%   res = n4m.cppls(X, Y, K, gamma)
+%
+% gamma ∈ [0, 1] (default 0.5). 0 → SIMPLS, 1 → fully power-rescaled.
+if nargin < 4 || isempty(gamma), gamma = 0.5; end
+params = struct("gamma", double(gamma));
+res = n4m.n4m_method_fit_mex("cppls", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

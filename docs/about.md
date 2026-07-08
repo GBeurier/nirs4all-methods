@@ -10,7 +10,7 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings for 
   MethodResult fits + 24 selectors + 4 diagnostics ; 16 formula+S3
   tier-2 wrappers ; parsnip + mlr3 meta-models that dispatch to all
   16 algorithms via the `algorithm` arg.
-- **MATLAB / Octave binding** — shared `+pls4all` package over one MEX
+- **MATLAB / Octave binding** — shared `+n4m` package over one MEX
   dispatcher; Octave is CI-gated, while MATLAB uses the same package but
   remains a manual runtime/release check because GitHub-hosted runners do
   not provide a MATLAB license.

@@ -1,7 +1,7 @@
 # Generated from Makevars.in by ./configure.
 #
 # Standalone build path: compile the thin R glue (r_*.c + n4m_cxx.cpp) and LINK
-# against an existing libn4m (located by ./configure from PLS4ALL_LIB_DIR or the
+# against an existing libn4m (located by ./configure from N4M_LIB_DIR or the
 # in-repo build). R compiles every src/*.c and src/*.cpp by default, which is
 # exactly the glue set (there is no vendored libn4m/ tree on this path).
 #

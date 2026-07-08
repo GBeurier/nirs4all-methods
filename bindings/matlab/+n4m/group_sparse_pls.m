@@ -1,4 +1,8 @@
-function varargout = group_sparse_pls(varargin)
-% n4m.group_sparse_pls  Namespace alias for pls4all.group_sparse_pls.
-    [varargout{1:nargout}] = pls4all.group_sparse_pls(varargin{:});
+function res = group_sparse_pls(X, Y, n_components, group_assignment, group_lambda)
+% n4m.group_sparse_pls  Group-sparse PLS (group L1 over feature groups).
+if nargin < 5 || isempty(group_lambda), group_lambda = 0.05; end
+params = struct("group_assignment", int32(group_assignment(:)), ...
+                "group_lambda",     double(group_lambda));
+res = n4m.n4m_method_fit_mex("group_sparse_pls", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

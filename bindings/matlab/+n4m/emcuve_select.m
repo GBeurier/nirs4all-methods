@@ -1,4 +1,13 @@
-function varargout = emcuve_select(varargin)
-% n4m.emcuve_select  Namespace alias for pls4all.emcuve_select.
-    [varargout{1:nargout}] = pls4all.emcuve_select(varargin{:});
+function res = emcuve_select(X, Y, n_components, noise_features, noise_seed, ...
+                               n_ensembles, vote_threshold)
+if nargin < 4 || isempty(noise_features), noise_features = size(X, 2); end
+if nargin < 5 || isempty(noise_seed),     noise_seed = 0;              end
+if nargin < 6 || isempty(n_ensembles),    n_ensembles = 5;             end
+if nargin < 7 || isempty(vote_threshold), vote_threshold = 0.5;        end
+params = struct("noise_features", int32(noise_features), ...
+                "noise_seed",     uint64(noise_seed), ...
+                "n_ensembles",    int32(n_ensembles), ...
+                "vote_threshold", double(vote_threshold));
+res = n4m.n4m_method_fit_mex("emcuve_select", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

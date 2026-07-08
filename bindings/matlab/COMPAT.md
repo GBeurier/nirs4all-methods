@@ -1,11 +1,10 @@
 # MATLAB / Octave compatibility table
 
 `bindings/matlab/` targets the **intersection of MATLAB and Octave** so one
-source binding ships to both ecosystems. The V1 namespace is `+n4m`; `+pls4all`
-ships as a compatibility namespace. The Octave path is CI-runnable:
+source binding ships to both ecosystems. The V1 namespace is `+n4m`. The Octave path is CI-runnable:
 `.github/workflows/cross-binding-parity.yml` builds `libn4m`, compiles the MEX
 shims with `build_mex.m`, and runs `bindings/matlab/test/test_parity.m` plus
-`bindings/matlab/test/test_n4m_alias.m`.
+`bindings/matlab/test/test_n4m_namespace.m`.
 
 MATLAB uses the same source package but remains a manual release/runtime check
 because GitHub-hosted runners do not provide a MATLAB license.
@@ -26,7 +25,7 @@ MATLAB versus Octave. The columns are:
 
 | Field | Meaning |
 |-------|---------|
-| **Symbol** | Public name in the `+n4m` namespace (and `+pls4all` compatibility namespace) |
+| **Symbol** | Public name in the `+n4m` namespace |
 | **MATLAB**  | Behaviour on MATLAB R2024a+ (the minimum we target) |
 | **Octave**  | Behaviour on Octave 9.x (the version pinned in `.devcontainer/Dockerfile`) |
 | **Resolution** | What the binding does at runtime to keep the contract observable |

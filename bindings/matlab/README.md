@@ -1,13 +1,12 @@
 # n4m MATLAB / Octave binding
 
 MEX shims that expose the public `libn4m` C ABI to MATLAB and GNU Octave. The
-binding exposes the V1 user-facing namespace as `+n4m`. The existing
-`+pls4all` package remains as a compatibility namespace and the compiled entry
-points/exported C symbols continue to use the `n4m_*` prefix.
+binding exposes the V1 user-facing namespace as `+n4m`; compiled entry
+points and exported C symbols use the `n4m_*` prefix.
 
 ## Surface
 
-- `n4m.version()` (`pls4all.version()` remains available)
+- `n4m.version()`
 - `n4m.pls_fit(X, Y, n_components)`
 - `n4m.snv_transform(X, ...)`
 - `n4m.savgol_transform(X, ...)`
@@ -24,8 +23,7 @@ Kennard-Stone/SNV/Savitzky-Golay/PLS subset.
 ```text
 bindings/matlab/
 ├── mex/                      C sources for MEX shims
-├── +n4m/                     V1 namespace aliases and class wrappers
-├── +pls4all/                 Compatibility package functions and MEX artifacts
+├── +n4m/                     V1 namespace functions, classes, and MEX artifacts
 ├── build_mex.m               Build script for Octave and MATLAB
 └── test/test_parity.m        Cross-binding parity gate
 ```
@@ -40,8 +38,8 @@ cmake --build --preset dev-release --target n4m_c --parallel
 ```
 
 Then compile the MEX shims. The script uses the repo's `dev-release` build by
-default and honors `PLS4ALL_INCLUDE_DIR`, `PLS4ALL_GENERATED_DIR`, and
-`PLS4ALL_LIB_DIR` when the library lives elsewhere.
+default and honors `N4M_INCLUDE_DIR`, `N4M_GENERATED_DIR`, and
+`N4M_LIB_DIR` when the library lives elsewhere.
 
 ```bash
 octave --no-gui --no-history --eval "cd bindings/matlab; build_mex"
@@ -54,8 +52,7 @@ cd bindings/matlab
 build_mex
 ```
 
-`build_mex.m` installs these compiled shims into `bindings/matlab/+pls4all`;
-the `+n4m` package exposes matching wrapper functions that delegate there:
+`build_mex.m` installs these compiled shims into `bindings/matlab/+n4m`:
 
 - `n4m_preprocess_mex`
 - `n4m_split_mex`

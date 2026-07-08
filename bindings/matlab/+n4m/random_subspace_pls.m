@@ -1,4 +1,12 @@
-function varargout = random_subspace_pls(varargin)
-% n4m.random_subspace_pls  Namespace alias for pls4all.random_subspace_pls.
-    [varargout{1:nargout}] = pls4all.random_subspace_pls(varargin{:});
+function res = random_subspace_pls(X, Y, n_components, n_estimators, ...
+                                     features_per_subspace, seed)
+% n4m.random_subspace_pls  Random-subspace PLS (Ho 1998).
+if nargin < 4 || isempty(n_estimators),          n_estimators = 50;          end
+if nargin < 5 || isempty(features_per_subspace), features_per_subspace = 10; end
+if nargin < 6 || isempty(seed),                  seed = 0;                   end
+params = struct("n_estimators",          int32(n_estimators), ...
+                "features_per_subspace", int32(features_per_subspace), ...
+                "seed",                  uint64(seed));
+res = n4m.n4m_method_fit_mex("random_subspace_pls", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

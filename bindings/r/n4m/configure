@@ -10,7 +10,7 @@
 #                      itself is a manual web step (release-r.yml).
 #
 #   (default)       -> standalone dev/CI build: link a prebuilt libn4m located
-#                      from PLS4ALL_LIB_DIR or the in-repo build. Fast inner loop
+#                      from N4M_LIB_DIR or the in-repo build. Fast inner loop
 #                      + the R leg of the cross-binding parity gate.
 #
 #   N4M_R_LINK_PREBUILT=1 forces the standalone dev/CI build even when a
@@ -43,7 +43,7 @@ if [ "$FORCE_PREBUILT" != "1" ] && { [ "${N4M_R_VENDOR:-0}" = "1" ] || [ "$VENDO
         # static template (cpp/include/n4m/n4m_export.h.in has no @-substitutions),
         # so vendoring needs NO cmake — just the source tree.
         EXPORT_HDR=""
-        GEN="${PLS4ALL_GENERATED_DIR:-$REPO/build/dev-release/generated}"
+        GEN="${N4M_GENERATED_DIR:-$REPO/build/dev-release/generated}"
         if [ -f "$GEN/n4m/n4m_export.h" ]; then
             EXPORT_HDR="$GEN/n4m/n4m_export.h"
         else
@@ -104,9 +104,9 @@ fi
 # ---------------------------------------------------------------------------
 # Standalone prebuilt-link build (default)
 # ---------------------------------------------------------------------------
-INC="${PLS4ALL_INCLUDE_DIR:-$REPO/cpp/include}"
-GEN="${PLS4ALL_GENERATED_DIR:-$REPO/build/dev-release/generated}"
-LIB="${PLS4ALL_LIB_DIR:-$REPO/build/dev-release/cpp/src}"
+INC="${N4M_INCLUDE_DIR:-$REPO/cpp/include}"
+GEN="${N4M_GENERATED_DIR:-$REPO/build/dev-release/generated}"
+LIB="${N4M_LIB_DIR:-$REPO/build/dev-release/cpp/src}"
 
 if [ ! -e "$LIB/libn4m.so" ] && [ ! -e "$LIB/libn4m.dylib" ]; then
     for d in "$REPO"/build/*/cpp/src; do
@@ -121,7 +121,7 @@ fi
 if [ ! -e "$LIB/libn4m.so" ] && [ ! -e "$LIB/libn4m.dylib" ]; then
     echo "n4m configure: ERROR — no libn4m found (looked in '$LIB' and build/*/cpp/src)." >&2
     echo "  Build it (cmake --preset dev-release && cmake --build --preset dev-release)," >&2
-    echo "  set PLS4ALL_LIB_DIR, or use N4M_R_VENDOR=1 for the CRAN self-contained build." >&2
+    echo "  set N4M_LIB_DIR, or use N4M_R_VENDOR=1 for the CRAN self-contained build." >&2
     exit 1
 fi
 

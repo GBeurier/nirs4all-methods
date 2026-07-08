@@ -53,7 +53,7 @@ The benefits stack:
 │  Tier-2 idiomatic API                                       │
 │    pls4all.sklearn.PLSRegression(...)      (Python)         │
 │    pls(y ~ ., data, ncomp=)                (R)              │
-│    pls4all.fitrpls(X, y, "NumComponents", k)  (MATLAB)      │
+│    n4m.fitrpls(X, y, "NumComponents", k)  (MATLAB)      │
 │    new pls4all.PLS({nComponents: k})       (JS)             │
 └────────────────────────┬─────────────────────────────────────┘
                          │
@@ -61,7 +61,7 @@ The benefits stack:
 │  Tier-1 raw / canonical API                                  │
 │    pls4all._methods.pls_fit(ctx, cfg, X, y, k)  (Python)    │
 │    pls4all_method("pls", X, y, n_components=k)  (R)         │
-│    pls4all.pls_fit(X, y, k)                     (MATLAB)    │
+│    n4m.pls_fit(X, y, k)                     (MATLAB)    │
 └────────────────────────┬─────────────────────────────────────┘
                          │
 ┌────────────────────────▼─────────────────────────────────────┐
