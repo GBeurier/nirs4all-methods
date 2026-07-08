@@ -199,7 +199,7 @@ surfaces are documented where relevant.
 | [`aom_preprocessing`](aom_preprocess.md) | `n4m.model_selection.aom_search.aom_preprocessing` | `n4m.model_selection.aom_search` | C, Py |
 | [`aom_sweep`](aom_sweep_run.md) | `n4m.model_selection.aom_search.aom_sweep` | `n4m.model_selection.aom_search` | C, Py |
 | [`pop_pls`](pop_pls.md) | `n4m.model_selection.aom_search.pop_pls` | `n4m.model_selection.aom_search` | C, Py |
-| [`ridge_global`](aom_pop_ridge_global.md) | `n4m.model_selection.aom_search.ridge_global` | `n4m.model_selection.aom_search` | C, Py |
+| [`ridge_global`](aom_ridge_global.md) | `n4m.model_selection.aom_search.ridge_global` | `n4m.model_selection.aom_search` | C, Py |
 | [`robust_hpo`](aom_robust_hpo.md) | `n4m.model_selection.aom_search.robust_hpo` | `n4m.model_selection.aom_search` | C, Py |
 | [`binned_strat_group_kfold`](split_binned_strat_group_kfold.md) | `n4m.model_selection.splitters.binned_strat_group_kfold` | `n4m.model_selection.splitters` | C |
 | [`data_twinning`](split_split_splitter.md) | `n4m.model_selection.splitters.data_twinning` | `n4m.model_selection.splitters` | C |
@@ -255,9 +255,9 @@ surfaces are documented where relevant.
 |--------|----------------------|-----------|------|
 | [`aom_pls_superblock`](aom_pls_superblock.md) | `n4m.compose.aom_superblock.aom_pls_superblock` | `n4m.compose.aom_superblock` | C, Py |
 | [`aom_ridge_pls_superblock`](aom_ridge_pls_superblock.md) | `n4m.compose.aom_superblock.aom_ridge_pls_superblock` | `n4m.compose.aom_superblock` | C, Py |
-| [`ridge_active_superblock`](aom_pop_ridge_active_superblock.md) | `n4m.compose.aom_superblock.ridge_active_superblock` | `n4m.compose.aom_superblock` | C, Py |
-| [`ridge_mkl_superblock`](aom_pop_ridge_mkl_superblock.md) | `n4m.compose.aom_superblock.ridge_mkl_superblock` | `n4m.compose.aom_superblock` | C, Py |
-| [`ridge_superblock`](aom_pop_ridge_superblock.md) | `n4m.compose.aom_superblock.ridge_superblock` | `n4m.compose.aom_superblock` | C, Py |
+| [`ridge_active_superblock`](aom_ridge_active_superblock.md) | `n4m.compose.aom_superblock.ridge_active_superblock` | `n4m.compose.aom_superblock` | C, Py |
+| [`ridge_mkl_superblock`](aom_ridge_mkl_superblock.md) | `n4m.compose.aom_superblock.ridge_mkl_superblock` | `n4m.compose.aom_superblock` | C, Py |
+| [`ridge_superblock`](aom_ridge_superblock.md) | `n4m.compose.aom_superblock.ridge_superblock` | `n4m.compose.aom_superblock` | C, Py |
 
 ## metrics — scoring + diagnostics
 

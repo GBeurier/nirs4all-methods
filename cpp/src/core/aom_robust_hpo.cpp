@@ -599,7 +599,7 @@ n4m_status_t fit_aom_robust_hpo(Context& ctx,
     if (fold_status != N4M_OK) {
         return fold_status;
     }
-    out.intercept = {final_fit.intercept};
+    out.intercept.assign(1U, final_fit.intercept);
     ctx.clear_error();
     return N4M_OK;
 }

@@ -542,7 +542,7 @@ n4m_status_t fit_aom_ridge_blender(Context& ctx,
     out.n_chains = static_cast<std::int64_t>(chains.size());
     out.n_candidates = n_candidates;
     out.regularizer = regularizer;
-    out.fold_ids = ids;
+    out.fold_ids.swap(ids);
     out.oof_candidate_predictions.assign(
         static_cast<std::size_t>(n_flat * n_candidates), 0.0);
     out.candidate_predictions.assign(
