@@ -1,4 +1,6 @@
-function varargout = rosa(varargin)
-% n4m.rosa  Namespace alias for pls4all.rosa.
-    [varargout{1:nargout}] = pls4all.rosa(varargin{:});
+function res = rosa(X, Y, n_components, block_sizes)
+% n4m.rosa  Response-Oriented Sequential Alternation (Liland & Næs 2016).
+params = struct("block_sizes", int64(block_sizes(:)));
+res = n4m.n4m_method_fit_mex("rosa", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

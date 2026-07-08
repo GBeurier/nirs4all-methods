@@ -1,4 +1,7 @@
-function varargout = continuum_regression(varargin)
-% n4m.continuum_regression  Namespace alias for pls4all.continuum_regression.
-    [varargout{1:nargout}] = pls4all.continuum_regression(varargin{:});
+function res = continuum_regression(X, Y, n_components, tau)
+% n4m.continuum_regression  Continuum regression (tau=0 → OLS, tau=1 → PLS).
+if nargin < 4 || isempty(tau), tau = 0.5; end
+params = struct("tau", double(tau));
+res = n4m.n4m_method_fit_mex("continuum_regression", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

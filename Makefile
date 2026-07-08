@@ -95,38 +95,39 @@ test-js-wasm:
 test-r-binding:
 	cmake --preset $(PRESET)
 	cmake --build --preset $(PRESET) --target n4m_c --parallel
-	PLS4ALL_LIB_DIR="$(CURDIR)/build/$(PRESET)/cpp/src" \
-	PLS4ALL_GENERATED_DIR="$(CURDIR)/build/$(PRESET)/generated" \
+	N4M_R_LINK_PREBUILT=1 \
+	N4M_LIB_DIR="$(CURDIR)/build/$(PRESET)/cpp/src" \
+	N4M_GENERATED_DIR="$(CURDIR)/build/$(PRESET)/generated" \
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
-		R CMD INSTALL --no-multiarch --no-staged-install bindings/r/n4m
+		R CMD INSTALL --preclean --no-multiarch --no-staged-install bindings/r/n4m
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
 		Rscript bindings/r/test_parity.R
 
 test-octave-mex:
 	cmake --preset $(PRESET)
 	cmake --build --preset $(PRESET) --target n4m_c --parallel
-	PLS4ALL_INCLUDE_DIR="$(CURDIR)/cpp/include" \
-	PLS4ALL_GENERATED_DIR="$(CURDIR)/build/$(PRESET)/generated" \
-	PLS4ALL_LIB_DIR="$(CURDIR)/build/$(PRESET)/cpp/src" \
+	N4M_INCLUDE_DIR="$(CURDIR)/cpp/include" \
+	N4M_GENERATED_DIR="$(CURDIR)/build/$(PRESET)/generated" \
+	N4M_LIB_DIR="$(CURDIR)/build/$(PRESET)/cpp/src" \
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
 		octave --no-gui --no-history --eval "cd bindings/matlab; build_mex"
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
 		octave --no-gui --no-history --eval "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_parity"
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
-		octave --no-gui --no-history --eval "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_n4m_alias"
+		octave --no-gui --no-history --eval "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_n4m_namespace"
 
 test-matlab-binding:
 	cmake --preset $(PRESET)
 	cmake --build --preset $(PRESET) --target n4m_c --parallel
-	PLS4ALL_INCLUDE_DIR="$(CURDIR)/cpp/include" \
-	PLS4ALL_GENERATED_DIR="$(CURDIR)/build/$(PRESET)/generated" \
-	PLS4ALL_LIB_DIR="$(CURDIR)/build/$(PRESET)/cpp/src" \
+	N4M_INCLUDE_DIR="$(CURDIR)/cpp/include" \
+	N4M_GENERATED_DIR="$(CURDIR)/build/$(PRESET)/generated" \
+	N4M_LIB_DIR="$(CURDIR)/build/$(PRESET)/cpp/src" \
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
 		matlab -batch "cd bindings/matlab; build_mex"
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
 		matlab -batch "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_parity"
 	LD_LIBRARY_PATH="$(CURDIR)/build/$(PRESET)/cpp/src:$${LD_LIBRARY_PATH:-}" \
-		matlab -batch "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_n4m_alias"
+		matlab -batch "addpath('$(CURDIR)/bindings/matlab'); cd bindings/matlab/test; test_n4m_namespace"
 
 # ---------------------------------------------------------------------------
 # Parity (Phase C-min pilot — see parity/SCENARIOS_MIN.md). Full Phase C

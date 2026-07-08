@@ -1,4 +1,8 @@
-function varargout = pls_lda(varargin)
-% n4m.pls_lda  Namespace alias for pls4all.pls_lda.
-    [varargout{1:nargout}] = pls4all.pls_lda(varargin{:});
+function res = pls_lda(X, y_labels, n_components, n_classes)
+% n4m.pls_lda  Linear Discriminant Analysis on PLS scores.
+if nargin < 4 || isempty(n_classes), n_classes = max(int32(y_labels(:))) + 1; end
+params = struct("y_labels",  int32(y_labels(:)), ...
+                "n_classes", int32(n_classes));
+res = n4m.n4m_method_fit_mex("pls_lda", double(X), zeros(size(X,1), 1), ...
+                                  int32(n_components), params);
 end

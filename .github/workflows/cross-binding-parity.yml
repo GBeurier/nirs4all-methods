@@ -6,7 +6,7 @@
 #       MethodSpec.pls4all_fn ctypes path, so this leg is a harness/determinism
 #       check, not a cross-LANGUAGE proof — that's what the other jobs provide).
 #   - js-wasm     : Emscripten WASM build + npm smoke/parity (rmse_rel ~1e-16).
-#   - octave-mex  : +pls4all MEX build + test_parity (rmse_rel ~4e-16).
+#   - octave-mex  : +n4m MEX build + test_parity (rmse_rel ~4e-16).
 #   - r-binding   : standalone R CMD INSTALL (configure + prebuilt-link) +
 #                   test_parity.R (rmse_rel ~9.4e-18).
 # All four legs were verified locally before wiring. MATLAB stays manual (no
@@ -176,7 +176,7 @@ jobs:
           npm pack --dry-run     # confirm dist/n4m.{js,wasm} ship
 
   octave-mex:
-    # Octave binding: build libn4m, compile the +pls4all MEX shims (build_mex.m),
+    # Octave binding: build libn4m, compile the +n4m MEX shims (build_mex.m),
     # run the parity test. Verified locally (MEX compiles, test_parity PASS at
     # rmse_rel ~4e-16); CI uses apt Octave (clean mkoctfile + system gcc, none of
     # the conda-octave quirks). MATLAB stays manual (no licensed runner — COMPAT.md).
@@ -197,14 +197,14 @@ jobs:
 
       - name: Build the Octave MEX + run the parity test
         env:
-          PLS4ALL_INCLUDE_DIR: ${{ github.workspace }}/cpp/include
-          PLS4ALL_GENERATED_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/generated
-          PLS4ALL_LIB_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
+          N4M_INCLUDE_DIR: ${{ github.workspace }}/cpp/include
+          N4M_GENERATED_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/generated
+          N4M_LIB_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
           LD_LIBRARY_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
         run: |
           octave --no-gui --no-history --eval "cd bindings/matlab; build_mex"
           octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_parity"
-          octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_n4m_alias"
+          octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_n4m_namespace"
 
   r-binding:
     # R binding: build libn4m, install the package standalone (configure +
@@ -236,9 +236,10 @@ jobs:
 
       - name: R CMD INSTALL (standalone, prebuilt-link) + parity
         env:
-          PLS4ALL_LIB_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
-          PLS4ALL_GENERATED_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/generated
+          N4M_R_LINK_PREBUILT: "1"
+          N4M_LIB_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
+          N4M_GENERATED_DIR: ${{ github.workspace }}/build/ci-linux-gcc12-release/generated
           LD_LIBRARY_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
         run: |
-          R CMD INSTALL --no-multiarch --no-staged-install bindings/r/n4m
+          R CMD INSTALL --preclean --no-multiarch --no-staged-install bindings/r/n4m
           Rscript bindings/r/test_parity.R

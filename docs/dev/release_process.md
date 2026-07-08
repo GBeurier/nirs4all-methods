@@ -13,7 +13,7 @@ are automated; CRAN submission and optional registry/listing pages remain manual
 | R | `n4m` | CRAN | **Semi-automated** — `release-r.yml` vendors libn4m into `src/vendor/`, runs `R CMD check --as-cran` on the Linux/macOS/Windows + release/devel matrix, and (on tag push) attaches the tarball to the GitHub Release. **Submission is the irreducible manual web form.** | `workflow_dispatch`; tag push attaches the tarball |
 | R | `pls4all` (slim) | CRAN | **Semi-automated** — same `release-r.yml`, the matrix has a `pkg: [n4m, pls4all]` leg. | `workflow_dispatch`; tag push attaches the tarball |
 | JS / WASM | `@nirs4all/methods` | npm | **Automated** — `release-npm.yml` builds the pinned emsdk package, runs `npm test`, stages `dist/`, and publishes with npm provenance once `NPM_TOKEN`/scope are configured | tag push or `workflow_dispatch` with `publish=true` |
-| MATLAB / Octave | `+n4m` (`+pls4all` compat) | GitHub Release | **Automated** — `release-matlab.yml` attaches `nirs4all-methods-matlab-octave-<version>.zip` to the Release. ONE binding serves both: users build the MEX with `build_mex.m` (MATLAB) or `mkoctfile` via `build_mex.m` (Octave); see `bindings/matlab/COMPAT.md`. A File Exchange / Octave Forge listing is optional + manual. | tag push attaches the zip |
+| MATLAB / Octave | `+n4m` | GitHub Release | **Automated** — `release-matlab.yml` attaches `nirs4all-methods-matlab-octave-<version>.zip` to the Release. ONE binding serves both: users build the MEX with `build_mex.m` (MATLAB) or `mkoctfile` via `build_mex.m` (Octave); see `bindings/matlab/COMPAT.md`. A File Exchange / Octave Forge listing is optional + manual. | tag push attaches the zip |
 
 ## Exact release artifacts — what each binding ships, and where to upload it
 
@@ -28,7 +28,7 @@ tag (`v<version>`) — so all of them are downloadable from one place.
 | R `pls4all` | CRAN | **`pls4all_<version>.tar.gz`** (source tarball) | **Manual** — web form |
 | R `n4m` + `pls4all` | R-universe | — (built from Git, no upload) | **Automated** — registry repo + app (see *R → R-universe*) |
 | JS / WASM `@nirs4all/methods` | npm | the staged `dist/` package (via `npm publish`) | **Automated** — `release-npm.yml` (needs `NPM_TOKEN` — see *JS → npm*) |
-| MATLAB / Octave `+n4m` (`+pls4all` compat) | GitHub Release | **`nirs4all-methods-matlab-octave-<version>.zip`** — the `bindings/matlab/` source (`+n4m` package + `+pls4all` compatibility package + `build_mex.m` + MEX sources + tests). ONE package for both; download + run `build_mex.m`. | **Automated** — `release-matlab.yml` attaches it (File Exchange / Octave Forge optional + manual) |
+| MATLAB / Octave `+n4m` | GitHub Release | **`nirs4all-methods-matlab-octave-<version>.zip`** — the `bindings/matlab/` source (`+n4m` package + `build_mex.m` + MEX sources + tests). ONE package for both; download + run `build_mex.m`. | **Automated** — `release-matlab.yml` attaches it (File Exchange / Octave Forge optional + manual) |
 | Source + provenance | GitHub Release | `nirs4all-methods-<version>-src.tar.gz` · `...-src.zip` · `nirs4all-methods-<version>.cdx.json` (SBOM) · `SHA256SUMS` | **Automated** — `release-source.yml` |
 
 **For R/CRAN, upload the source `.tar.gz` only** — never a binary, the GitHub repo
@@ -162,7 +162,7 @@ independent and still succeed). To enable it:
 package publishes with a verified npm provenance attestation. The WASM staging is
 handled by the package's `prepack` script in CI — no manual step.
 
-### MATLAB → File Exchange (`+n4m`, `+pls4all` compatibility)
+### MATLAB → File Exchange (`+n4m`)
 
 MATLAB has no package registry with a CLI publish; distribution is a **MATLAB
 File Exchange** listing (typically linked to the GitHub repo) and/or a packaged
@@ -180,7 +180,7 @@ build a `.mltbx` you first create one (MATLAB **Add-Ons → Package Toolbox**,
 which writes a `.prj`), then `matlab.addons.toolbox.packageToolbox('<that>.prj',
 'n4m.mltbx')`. CI does **not** run MATLAB (no licensed runner); confirm
 MATLAB-specific behaviour against `bindings/matlab/COMPAT.md` before publishing.
-The `+n4m` and `+pls4all` packages read their version from libn4m at runtime.
+The `+n4m` package reads its version from libn4m at runtime.
 
 ### Octave (`n4m`)
 
@@ -189,7 +189,7 @@ MATLAB ∩ Octave intersection); Octave builds the MEX via `build_mex.m` /
 `mkoctfile` — there is **no** dedicated CMake Octave target. The build is
 **CI-tested on every push** (the `octave-mex` job in
 `cross-binding-parity.yml` installs apt Octave, runs `build_mex.m`, and gates
-on `test_parity` and `test_n4m_alias`; locally observed `test_parity`
+on `test_parity` and `test_n4m_namespace`; locally observed `test_parity`
 `rmse_rel <= 1e-12`. What is
 still manual is **publication** (no Octave Forge submission is wired): ship
 the built binding with the GitHub Release, or have users build it locally

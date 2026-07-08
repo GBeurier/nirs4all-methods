@@ -1,2 +1,2 @@
-% +n4m namespace aliases the full MATLAB/Octave binding in +pls4all.
-% The implementation remains in +pls4all for backwards compatibility.
+% +n4m owns the MATLAB/Octave binding over libn4m.
+% Build MEX entry points with bindings/matlab/build_mex.m.

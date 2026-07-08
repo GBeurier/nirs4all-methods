@@ -41,7 +41,7 @@ y_hat <- predict(fit, newdata = df_new)
 In **MATLAB / Octave**:
 
 ```matlab
-mdl  = pls4all.fitrpls(X, y, "NumComponents", 5);
+mdl  = n4m.fitrpls(X, y, "NumComponents", 5);
 yhat = predict(mdl, Xnew);
 ```
 
@@ -124,7 +124,7 @@ are:
 
 - Python: `model.export("file.n4a")`
 - R:      `pls4all_export(model, "file.n4a")`
-- MATLAB: `pls4all.export(mdl, "file.n4a")`
+- MATLAB: `n4m.export(mdl, "file.n4a")`
 
 ## 6. The algorithm taxonomy
 

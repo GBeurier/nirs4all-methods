@@ -1,4 +1,8 @@
-function varargout = pls_logistic(varargin)
-% n4m.pls_logistic  Namespace alias for pls4all.pls_logistic.
-    [varargout{1:nargout}] = pls4all.pls_logistic(varargin{:});
+function res = pls_logistic(X, y_labels, n_components, n_classes)
+% n4m.pls_logistic  Multinomial logistic regression on PLS scores.
+if nargin < 4 || isempty(n_classes), n_classes = max(int32(y_labels(:))) + 1; end
+params = struct("y_labels",  int32(y_labels(:)), ...
+                "n_classes", int32(n_classes));
+res = n4m.n4m_method_fit_mex("pls_logistic", double(X), zeros(size(X,1), 1), ...
+                                  int32(n_components), params);
 end

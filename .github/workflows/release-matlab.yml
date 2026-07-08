@@ -1,6 +1,6 @@
 # MATLAB / Octave binding package for every release tag.
 #
-# The bindings/matlab tree (the +n4m package, +pls4all compatibility package,
+# The bindings/matlab tree (the +n4m package,
 # build_mex.m, the MEX sources and the test suite) is a SOURCE distribution: users download the zip,
 # run build_mex.m to compile the MEX entry points against their own MATLAB or
 # Octave, then use the +n4m package. The same archive serves MATLAB and
@@ -34,7 +34,7 @@ jobs:
         run: |
           VER=$(sed -nE 's/.*N4M_PROJECT_VERSION_STRING[[:space:]]+"([^"]+)".*/\1/p' cpp/include/n4m/n4m_version.h)
           echo "ver=$VER" >> "$GITHUB_OUTPUT"
-          # matlab-octave: the same +n4m/+pls4all package + build_mex.m serve BOTH
+          # matlab-octave: the same +n4m package + build_mex.m serve BOTH
           # MATLAB and Octave (build_mex.m uses mkoctfile under Octave). The name
           # makes the package discoverable to both audiences (see COMPAT.md).
           echo "prefix=nirs4all-methods-matlab-octave-$VER" >> "$GITHUB_OUTPUT"

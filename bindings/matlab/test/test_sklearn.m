@@ -1,5 +1,5 @@
 function test_sklearn()
-% Smoke + bit-exact parity test for the pls4all tier-2 MATLAB/Octave
+% Smoke + bit-exact parity test for the n4m tier-2 MATLAB/Octave
 % wrapper (Regression class + fitrpls factory).
 
     addpath(fullfile(fileparts(mfilename("fullpath")), ".."));
@@ -18,7 +18,7 @@ function test_sklearn()
     y = X * beta + 0.1 * randn(n, 1);
 
     fprintf("=== fitrpls + predict + score ===\n");
-    mdl = pls4all.fitrpls(X, y, "NumComponents", 5);
+    mdl = n4m.fitrpls(X, y, "NumComponents", 5);
     yhat = predict(mdl, X);
     r2 = mdl.score(X, y);
     fprintf("  in-sample R² = %.4f\n", r2);
@@ -31,7 +31,7 @@ function test_sklearn()
 
     fprintf("=== bit-exact tier1 vs tier2 ===\n");
     [coefs, x_mean, y_mean, preds_t1] = ...
-        pls4all.pls_fit(X, y, int32(5));
+        n4m.pls_fit(X, y, int32(5));
     preds_t2 = predict(mdl, X);
     max_diff = max(abs(preds_t1(:, 1) - preds_t2(:)));
     fprintf("  max abs diff (tier1 vs tier2): %.2e\n", max_diff);

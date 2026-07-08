@@ -1,4 +1,8 @@
-function varargout = bagging_pls(varargin)
-% n4m.bagging_pls  Namespace alias for pls4all.bagging_pls.
-    [varargout{1:nargout}] = pls4all.bagging_pls(varargin{:});
+function res = bagging_pls(X, Y, n_components, n_estimators, seed)
+% n4m.bagging_pls  Bootstrap aggregation of n_estimators PLS regressors.
+if nargin < 4 || isempty(n_estimators), n_estimators = 50; end
+if nargin < 5 || isempty(seed),         seed = 0;          end
+params = struct("n_estimators", int32(n_estimators), "seed", uint64(seed));
+res = n4m.n4m_method_fit_mex("bagging_pls", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

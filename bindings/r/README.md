@@ -19,8 +19,8 @@ checkout:
 ```bash
 cd bindings/r
 R CMD INSTALL \
-    --configure-vars="PLS4ALL_INCLUDE_DIR=$PWD/../../cpp/include \
-                      PLS4ALL_LIB_DIR=$PWD/../../build/dev-release/cpp/src" \
+    --configure-vars="N4M_INCLUDE_DIR=$PWD/../../cpp/include \
+                      N4M_LIB_DIR=$PWD/../../build/dev-release/cpp/src" \
     n4m
 ```
 

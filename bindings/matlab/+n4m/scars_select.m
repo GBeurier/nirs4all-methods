@@ -1,4 +1,13 @@
-function varargout = scars_select(varargin)
-% n4m.scars_select  Namespace alias for pls4all.scars_select.
-    [varargout{1:nargout}] = pls4all.scars_select(varargin{:});
+function res = scars_select(X, Y, n_components, n_iterations, min_features, ...
+                              sample_fraction, seed)
+if nargin < 4 || isempty(n_iterations),    n_iterations = 50;    end
+if nargin < 5 || isempty(min_features),    min_features = 5;     end
+if nargin < 6 || isempty(sample_fraction), sample_fraction = 0.8; end
+if nargin < 7 || isempty(seed),            seed = 0;             end
+params = struct("n_iterations",    int32(n_iterations), ...
+                "min_features",    int32(min_features), ...
+                "sample_fraction", double(sample_fraction), ...
+                "seed",            uint64(seed));
+res = n4m.n4m_method_fit_mex("scars_select", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

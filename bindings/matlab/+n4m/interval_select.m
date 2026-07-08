@@ -1,4 +1,7 @@
-function varargout = interval_select(varargin)
-% n4m.interval_select  Namespace alias for pls4all.interval_select.
-    [varargout{1:nargout}] = pls4all.interval_select(varargin{:});
+function res = interval_select(X, Y, n_components, interval_width, step)
+if nargin < 4 || isempty(interval_width), interval_width = 10; end
+if nargin < 5 || isempty(step),           step = 1;            end
+params = struct("interval_width", int32(interval_width), "step", int32(step));
+res = n4m.n4m_method_fit_mex("interval_select", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

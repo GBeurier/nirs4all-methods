@@ -1,4 +1,12 @@
-function varargout = wvc_threshold_select(varargin)
-% n4m.wvc_threshold_select  Namespace alias for pls4all.wvc_threshold_select.
-    [varargout{1:nargout}] = pls4all.wvc_threshold_select(varargin{:});
+function res = wvc_threshold_select(X, Y, n_components, normalize, threshold, ...
+                                      threshold_factor, min_selected)
+if nargin < 4 || isempty(normalize),        normalize = 1;        end
+if nargin < 5 || isempty(threshold),        threshold = 0.0;      end
+if nargin < 6 || isempty(threshold_factor), threshold_factor = 1.0; end
+if nargin < 7 || isempty(min_selected),     min_selected = 1;     end
+params = struct("normalize", int32(normalize), "threshold", double(threshold), ...
+                "threshold_factor", double(threshold_factor), ...
+                "min_selected", int32(min_selected));
+res = n4m.n4m_method_fit_mex("wvc_threshold_select", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

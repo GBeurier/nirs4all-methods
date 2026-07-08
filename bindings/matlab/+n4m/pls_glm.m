@@ -1,4 +1,12 @@
-function varargout = pls_glm(varargin)
-% n4m.pls_glm  Namespace alias for pls4all.pls_glm.
-    [varargout{1:nargout}] = pls4all.pls_glm(varargin{:});
+function res = pls_glm(X, Y, n_components, family)
+% n4m.pls_glm  PLS + Generalised Linear Model head (Gaussian / Poisson).
+%
+%   res = n4m.pls_glm(X, Y, K)              % gaussian (default)
+%   res = n4m.pls_glm(X, Y, K, "poisson")   % poisson IRLS
+if nargin < 4 || isempty(family), family = "gaussian"; end
+if isstring(family), family = char(family); end
+poisson = strcmpi(family, "poisson");
+params = struct("poisson", int32(poisson));
+res = n4m.n4m_method_fit_mex("pls_glm", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

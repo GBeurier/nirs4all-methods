@@ -1,4 +1,7 @@
-function varargout = pls_qda(varargin)
-% n4m.pls_qda  Namespace alias for pls4all.pls_qda.
-    [varargout{1:nargout}] = pls4all.pls_qda(varargin{:});
+function res = pls_qda(X, y_labels, n_components)
+% n4m.pls_qda  Quadratic Discriminant Analysis on PLS scores.
+% y_labels: integer class IDs in {0, …, n_classes-1}.
+params = struct("y_labels", int32(y_labels(:)));
+res = n4m.n4m_method_fit_mex("pls_qda", double(X), zeros(size(X, 1), 1), ...
+                                  int32(n_components), params);
 end

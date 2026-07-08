@@ -1,21 +1,21 @@
 function build_mex()
-% build_mex  Compile the shared n4m/pls4all MEX shims against libn4m.
+% build_mex  Compile the n4m MEX shims against libn4m.
 %
-% Set the env vars PLS4ALL_INCLUDE_DIR, PLS4ALL_LIB_DIR before
+% Set the env vars N4M_INCLUDE_DIR, N4M_LIB_DIR before
 % running, or pass them as setenv calls before invoking this script.
 % Falls back to the dev-release CMake build inside the repo.
 
 matlab_root = fileparts(mfilename('fullpath'));
 repo_root = fileparts(fileparts(matlab_root));
-inc_dir = getenv("PLS4ALL_INCLUDE_DIR");
+inc_dir = getenv("N4M_INCLUDE_DIR");
 if isempty(inc_dir)
     inc_dir = fullfile(repo_root, "cpp", "include");
 end
-gen_dir = getenv("PLS4ALL_GENERATED_DIR");
+gen_dir = getenv("N4M_GENERATED_DIR");
 if isempty(gen_dir)
     gen_dir = fullfile(repo_root, "build", "dev-release", "generated");
 end
-lib_dir = getenv("PLS4ALL_LIB_DIR");
+lib_dir = getenv("N4M_LIB_DIR");
 if isempty(lib_dir)
     lib_dir = fullfile(repo_root, "build", "dev-release", "cpp", "src");
 end
@@ -29,7 +29,7 @@ src_files = {
     fullfile(matlab_root, "mex", "n4m_version_mex.c") ...
 };
 
-out_dir = fullfile(matlab_root, "+pls4all");
+out_dir = fullfile(matlab_root, "+n4m");
 
 cflags = sprintf("-I%s -I%s", inc_dir, gen_dir);
 ldflags = sprintf("-L%s -ln4m -Wl,-rpath,%s", lib_dir, lib_dir);

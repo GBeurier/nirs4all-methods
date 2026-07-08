@@ -1,4 +1,11 @@
-function varargout = randomization_select(varargin)
-% n4m.randomization_select  Namespace alias for pls4all.randomization_select.
-    [varargout{1:nargout}] = pls4all.randomization_select(varargin{:});
+function res = randomization_select(X, Y, n_components, n_permutations, ...
+                                      randomization_seed, alpha)
+if nargin < 4 || isempty(n_permutations),     n_permutations = 100; end
+if nargin < 5 || isempty(randomization_seed), randomization_seed = 0; end
+if nargin < 6 || isempty(alpha),              alpha = 0.05;         end
+params = struct("n_permutations",     int32(n_permutations), ...
+                "randomization_seed", uint64(randomization_seed), ...
+                "alpha",              double(alpha));
+res = n4m.n4m_method_fit_mex("randomization_select", double(X), double(Y), ...
+                                  int32(n_components), params);
 end

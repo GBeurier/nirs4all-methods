@@ -81,14 +81,14 @@ arg (e.g. `"sparse_simpls"`, `"cppls"`, `"opls"`, `"cars_select"`).
 
 ```matlab
 % from bindings/matlab/
-build_mex                          % produces +pls4all/n4m_*_mex.mex
-addpath(pwd);                      % make +pls4all visible
+build_mex                          % produces +n4m/n4m_*_mex.mex
+addpath(pwd);                      % make +n4m visible
 ```
 
 ### Fit a model — Statistics-toolbox style
 
 ```matlab
-mdl  = pls4all.fitrpls(X, y, "NumComponents", 5);
+mdl  = n4m.fitrpls(X, y, "NumComponents", 5);
 yhat = predict(mdl, Xtest);
 mse  = loss (mdl, Xtest, ytest);
 ```
@@ -96,7 +96,7 @@ mse  = loss (mdl, Xtest, ytest);
 ### Fit a model — MATLAB raw dispatcher
 
 ```matlab
-res = pls4all.fit("pls", X, y, "NumComponents", 5);
+res = n4m.fit("pls", X, y, "NumComponents", 5);
 yhat = predict(res, Xtest);
 ```
 
