@@ -289,6 +289,135 @@ def _prediction_digest(path: Path) -> dict[str, Any]:
     }
 
 
+def _rmse_rel(actual: np.ndarray, expected: np.ndarray) -> float:
+    actual_arr = np.asarray(actual, dtype=np.float64).ravel()
+    expected_arr = np.asarray(expected, dtype=np.float64).ravel()
+    if actual_arr.shape != expected_arr.shape:
+        raise RuntimeError(f"shape mismatch: {actual_arr.shape} != {expected_arr.shape}")
+    diff = actual_arr - expected_arr
+    denom = max(1e-12, float(np.sqrt(np.mean(expected_arr * expected_arr))))
+    return float(np.sqrt(np.mean(diff * diff)) / denom)
+
+
+def _load_orchestrator_dataset(row: dict[str, str]) -> tuple[Path, np.ndarray, np.ndarray]:
+    n = int(row["n"])
+    p = int(row["p"])
+    seed = int(row.get("prediction_seed") or row.get("seed_base") or 0)
+    csv_path = REPO / "benchmarks/cross_binding/data" / f"data_{n}x{p}_seed{seed}.csv"
+    if not csv_path.exists():
+        raise RuntimeError(f"orchestrator dataset CSV missing for WASM ledger fixture: {csv_path}")
+    arr = np.loadtxt(csv_path, delimiter=",", skiprows=1, dtype=np.float64)
+    X = np.ascontiguousarray(arr[:, :-1], dtype=np.float64)
+    y = np.ascontiguousarray(arr[:, -1].reshape(-1, 1), dtype=np.float64)
+    if X.shape != (n, p):
+        raise RuntimeError(f"unexpected orchestrator dataset shape {X.shape}; expected {(n, p)}")
+    return csv_path, X, y
+
+
+def _native_pls_fixture_arrays(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, np.ndarray | str]:
+    python_src = REPO / "bindings/python/src"
+    if str(python_src) not in sys.path:
+        sys.path.insert(0, str(python_src))
+    import pls4all
+
+    with pls4all.Context() as ctx, pls4all.Config() as cfg:
+        cfg.algorithm = pls4all.Algorithm.PLS_REGRESSION
+        cfg.solver = pls4all.Solver.SIMPLS
+        cfg.deflation = pls4all.Deflation.REGRESSION
+        cfg.n_components = int(n_components)
+        cfg.center_x = True
+        cfg.scale_x = False
+        cfg.center_y = True
+        cfg.scale_y = False
+        model = pls4all.Model.fit(ctx, cfg, X, Y)
+        try:
+            return {
+                "version": pls4all.version(),
+                "coefficients": np.asarray(
+                    model.get_array(ctx, pls4all.ModelArrayKind.COEFFICIENTS),
+                    dtype=np.float64,
+                ),
+                "x_mean": np.asarray(
+                    model.get_array(ctx, pls4all.ModelArrayKind.X_MEAN),
+                    dtype=np.float64,
+                ),
+                "y_mean": np.asarray(
+                    model.get_array(ctx, pls4all.ModelArrayKind.Y_MEAN),
+                    dtype=np.float64,
+                ),
+                "predictions": np.asarray(model.predict(ctx, X), dtype=np.float64),
+            }
+        finally:
+            model.close()
+
+
+def _array_sha256(array: np.ndarray) -> str:
+    return hashlib.sha256(np.ascontiguousarray(array, dtype=np.float64).tobytes()).hexdigest()
+
+
+def _build_wasm_orchestrator_fixture(
+    rows: list[dict[str, str]],
+    prediction_rows: list[dict[str, Any]],
+    artifacts_dir: Path,
+    *,
+    n_components: int,
+) -> Path:
+    by_backend = {row["backend"]: row for row in rows}
+    cpp_row = by_backend["cpp"]
+    csv_path, X, Y = _load_orchestrator_dataset(cpp_row)
+    cpp_predictions = np.asarray(np.load(Path(cpp_row["predictions_path"])), dtype=np.float64).reshape(-1, 1)
+    native = _native_pls_fixture_arrays(X, Y, n_components)
+    native_predictions = np.asarray(native["predictions"], dtype=np.float64).reshape(-1, 1)
+    cpp_native_rmse_rel = _rmse_rel(cpp_predictions, native_predictions)
+    if cpp_native_rmse_rel > STRICT_TOLERANCES["binding_parity_max_diff"]:
+        raise RuntimeError(
+            "native Python fixture predictions do not match orchestrator cpp ledger: "
+            f"{cpp_native_rmse_rel}"
+        )
+
+    prediction_digests = {
+        row["backend"]: {
+            "path": row["path"],
+            "sha256": row["sha256"],
+            "shape": row["shape"],
+        }
+        for row in prediction_rows
+        if row["backend"] in {"cpp", "python_tier1", "r_tier1"}
+    }
+    fixture = {
+        "schema": "n4a.methods.wasm_orchestrator_fixture.v1",
+        "status": "pass",
+        "algorithm": "pls",
+        "source": "benchmarks/cross_binding/orchestrator.py",
+        "n": int(cpp_row["n"]),
+        "p": int(cpp_row["p"]),
+        "q": 1,
+        "n_components": int(n_components),
+        "tolerances": dict(STRICT_TOLERANCES),
+        "seed_base": int(cpp_row.get("seed_base") or 0),
+        "prediction_seed": int(cpp_row.get("prediction_seed") or cpp_row.get("seed_base") or 0),
+        "dataset_csv": str(csv_path),
+        "dataset_csv_sha256": _sha256_file(csv_path),
+        "X": [float(value) for value in X.ravel()],
+        "Y": [float(value) for value in Y.ravel()],
+        "X_sha256": _array_sha256(X),
+        "Y_sha256": _array_sha256(Y),
+        "reference_backend": "cpp",
+        "reference_predictions_path": str(cpp_row["predictions_path"]),
+        "reference_predictions_sha256": _array_sha256(cpp_predictions),
+        "prediction_digests": prediction_digests,
+        "native_python_version": native["version"],
+        "cpp_native_predictions_rmse_rel": cpp_native_rmse_rel,
+        "coefficients": [float(value) for value in np.asarray(native["coefficients"], dtype=np.float64).ravel()],
+        "x_mean": [float(value) for value in np.asarray(native["x_mean"], dtype=np.float64).ravel()],
+        "y_mean": [float(value) for value in np.asarray(native["y_mean"], dtype=np.float64).ravel()],
+        "predictions": [float(value) for value in cpp_predictions.ravel()],
+    }
+    fixture_path = artifacts_dir / "wasm-orchestrator-fixture.json"
+    _json_write(fixture_path, fixture)
+    return fixture_path
+
+
 def _validate_orchestrator_rows(rows: list[dict[str, str]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     by_backend = {row["backend"]: row for row in rows}
     missing = [name for name in REQUIRED_BACKENDS if name not in by_backend]
@@ -464,7 +593,7 @@ def _wasm_artifact_metadata(wasm_js: Path, wasm_bin: Path) -> dict[str, Any]:
     }
 
 
-def _run_wasm_smoke(timeout: int) -> dict[str, Any]:
+def _run_wasm_smoke(timeout: int, *, fixture_path: Path | None = None) -> dict[str, Any]:
     node = _find_node()
     if node is None:
         raise RuntimeError("Linux node executable not found for WASM parity smoke")
@@ -476,9 +605,12 @@ def _run_wasm_smoke(timeout: int) -> dict[str, Any]:
             "WASM artifacts missing; run cmake --preset emscripten && "
             "cmake --build --preset emscripten --target n4m_wasm"
         )
+    env = _base_env()
+    if fixture_path is not None:
+        env["N4M_WASM_PARITY_FIXTURE"] = str(fixture_path)
     proc = _run(
         [str(node), "--experimental-vm-modules", str(script)],
-        env=_base_env(),
+        env=env,
         timeout=timeout,
     )
     transcript = proc.stdout + ("\n" + proc.stderr if proc.stderr else "")
@@ -489,8 +621,14 @@ def _run_wasm_smoke(timeout: int) -> dict[str, Any]:
         match = re.search(r"^\s*(coefficients|x_mean|y_mean|predictions)\s+rmse_rel:\s+([0-9.eE+-]+)", line)
         if match:
             metrics[f"{match.group(1)}_rmse_rel"] = float(match.group(2))
-    if len(metrics) != 4:
-        raise RuntimeError("WASM smoke did not emit all expected rmse_rel metrics")
+    if "predictions_rmse_rel" not in metrics:
+        raise RuntimeError("WASM smoke did not emit the expected predictions rmse_rel metric")
+    metrics_max = max(metrics.values(), default=0.0)
+    if metrics_max > STRICT_TOLERANCES["wasm_rmse_rel"]:
+        raise RuntimeError(
+            "WASM parity exceeded strict tolerance: "
+            f"{metrics_max} > {STRICT_TOLERANCES['wasm_rmse_rel']}"
+        )
     return {
         "backend": "js_wasm",
         "language": "WASM",
@@ -499,8 +637,9 @@ def _run_wasm_smoke(timeout: int) -> dict[str, Any]:
         "node": str(node),
         "wasm_js": str(wasm_js),
         "wasm": str(wasm_bin),
+        "fixture": str(fixture_path or (REPO / "bindings/js/test/parity_fixture.json")),
         "metrics": metrics,
-        "metrics_max_rmse_rel": max(metrics.values(), default=0.0),
+        "metrics_max_rmse_rel": metrics_max,
         "tolerance": STRICT_TOLERANCES["wasm_rmse_rel"],
         "artifact_metadata": _wasm_artifact_metadata(wasm_js, wasm_bin),
     }
@@ -554,7 +693,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     rows = _read_rows(csv_path)
     parity_rows, prediction_rows = _validate_orchestrator_rows(rows)
-    wasm = _run_wasm_smoke(args.timeout)
+    wasm_fixture = _build_wasm_orchestrator_fixture(
+        rows,
+        prediction_rows,
+        artifacts_dir,
+        n_components=3,
+    )
+    wasm = _run_wasm_smoke(args.timeout, fixture_path=wasm_fixture)
     rust_archive = _rust_archive_status()
     binding_summary = _summarize_parity_rows(parity_rows)
     prediction_summary = _summarize_prediction_rows(prediction_rows)
@@ -581,10 +726,10 @@ def main(argv: list[str] | None = None) -> int:
         "wasm": {
             "backend": wasm["backend"],
             "language": wasm["language"],
+            "fixture": wasm["fixture"],
             "metrics": wasm["metrics"],
             "metrics_max_rmse_rel": wasm["metrics_max_rmse_rel"],
             "tolerance": wasm["tolerance"],
-            "fixture": str(REPO / "bindings/js/test/parity_fixture.json"),
         },
         "rust_archive": rust_archive,
     }
