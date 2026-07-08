@@ -11,6 +11,7 @@ import argparse
 import csv
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -25,6 +26,11 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_R_ENV = Path("/home/delete/miniconda3/envs/pls4all_r")
 REQUIRED_BACKENDS = ("cpp", "python_tier1", "r_tier1", "ref_python_scikit_learn")
+STRICT_TOLERANCES = {
+    "binding_parity_max_diff": 1e-12,
+    "reference_parity_rmse_rel": 1e-12,
+    "wasm_rmse_rel": 1e-12,
+}
 
 
 def _run(cmd: list[str], *, env: dict[str, str] | None = None, cwd: Path = REPO,
@@ -47,7 +53,7 @@ def _tail(text: str, lines: int = 20) -> list[str]:
 def _json_write(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f"{path.name}.tmp.{os.getpid()}")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    tmp.write_text(json.dumps(payload, allow_nan=False, indent=2, sort_keys=True) + "\n")
     os.replace(tmp, path)
 
 
@@ -346,9 +352,59 @@ def _float_or_none(value: str | None) -> float | None:
     if value in (None, ""):
         return None
     try:
-        return float(value)
+        numeric = float(value)
     except ValueError:
         return None
+    if not math.isfinite(numeric):
+        return None
+    return numeric
+
+
+def _finite_values(rows: list[dict[str, Any]], key: str) -> list[float]:
+    values: list[float] = []
+    for row in rows:
+        value = row.get(key)
+        if isinstance(value, (int, float)) and math.isfinite(float(value)):
+            values.append(float(value))
+    return values
+
+
+def _summarize_parity_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    non_external = [row for row in rows if row.get("kind") != "external"]
+    binding_diffs = _finite_values(non_external, "binding_parity_max_diff")
+    reference_diffs = _finite_values(rows, "reference_parity_rmse_rel")
+    backends = {str(row["backend"]) for row in rows}
+    return {
+        "all_required_backends_present": set(REQUIRED_BACKENDS).issubset(backends),
+        "backend_count": len(rows),
+        "binding_backend_count": len(non_external),
+        "binding_parity_all_ok": all(row.get("binding_parity_ok") is True for row in non_external),
+        "binding_parity_max_diff": max(binding_diffs, default=0.0),
+        "reference_parity_all_ok": all(row.get("reference_parity_ok") is True for row in rows),
+        "reference_parity_rmse_rel_max": max(reference_diffs, default=0.0),
+    }
+
+
+def _summarize_prediction_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    by_backend = {row["backend"]: row for row in rows}
+    row_counts = [
+        int(row["shape"][0])
+        for row in rows
+        if isinstance(row.get("shape"), list) and row["shape"]
+    ]
+    core_backends = ("cpp", "python_tier1", "r_tier1")
+    core_hashes = [
+        str(by_backend[backend]["sha256"])
+        for backend in core_backends
+        if backend in by_backend and by_backend[backend].get("sha256")
+    ]
+    return {
+        "backend_count": len(rows),
+        "prediction_rows_min": min(row_counts, default=0),
+        "prediction_rows_max": max(row_counts, default=0),
+        "shared_cpp_python_r_sha256": len(core_hashes) == len(core_backends) and len(set(core_hashes)) == 1,
+        "cpp_python_r_sha256": core_hashes[0] if core_hashes and len(set(core_hashes)) == 1 else None,
+    }
 
 
 def _find_node() -> Path | None:
@@ -444,6 +500,8 @@ def _run_wasm_smoke(timeout: int) -> dict[str, Any]:
         "wasm_js": str(wasm_js),
         "wasm": str(wasm_bin),
         "metrics": metrics,
+        "metrics_max_rmse_rel": max(metrics.values(), default=0.0),
+        "tolerance": STRICT_TOLERANCES["wasm_rmse_rel"],
         "artifact_metadata": _wasm_artifact_metadata(wasm_js, wasm_bin),
     }
 
@@ -498,26 +556,34 @@ def main(argv: list[str] | None = None) -> int:
     parity_rows, prediction_rows = _validate_orchestrator_rows(rows)
     wasm = _run_wasm_smoke(args.timeout)
     rust_archive = _rust_archive_status()
+    binding_summary = _summarize_parity_rows(parity_rows)
+    prediction_summary = _summarize_prediction_rows(prediction_rows)
 
     binding_payload = {
         "schema": "n4a.methods.cross_binding_parity.v1",
         "status": "pass",
         "build": build,
+        "tolerances": STRICT_TOLERANCES,
         "r_gate": r_gate,
         "orchestrator_csv": str(csv_path),
         "required_backends": list(REQUIRED_BACKENDS),
         "parity_rows": parity_rows,
+        "binding_summary": binding_summary,
         "wasm": wasm,
         "rust_archive": rust_archive,
     }
     predictions_payload = {
         "schema": "n4a.methods.predictions_by_language.v1",
         "status": "pass",
+        "tolerances": STRICT_TOLERANCES,
         "predictions": prediction_rows,
+        "prediction_summary": prediction_summary,
         "wasm": {
             "backend": wasm["backend"],
             "language": wasm["language"],
             "metrics": wasm["metrics"],
+            "metrics_max_rmse_rel": wasm["metrics_max_rmse_rel"],
+            "tolerance": wasm["tolerance"],
             "fixture": str(REPO / "bindings/js/test/parity_fixture.json"),
         },
         "rust_archive": rust_archive,
