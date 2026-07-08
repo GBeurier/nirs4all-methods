@@ -572,7 +572,11 @@ n4m_status_t read_moment_matrix(n4m_context_t* ctx,
         set_error(ctx, "moment result matrix has inconsistent storage size");
         return N4M_ERR_INVALID_ARGUMENT;
     }
-    out = array_iter->second;
+    out.clear();
+    out.reserve(array_iter->second.size());
+    for (const double value : array_iter->second) {
+        out.push_back(value);
+    }
     return N4M_OK;
 }
 
