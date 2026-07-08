@@ -110,7 +110,8 @@ and are **not** current release targets — reserve them defensively only.
 | LuaRocks | `nirs4all-methods` *(frozen PoC)* | rockspec + `luarocks upload` |
 | Nimble | `nirs4all-methods` *(frozen PoC)* | PR to `nim-lang/packages` |
 | Maven Central | groupId `io.github.gbeurier`, artifactId `nirs4all-methods-jni` (desktop), `nirs4all-methods-android` (AAR) | via Sonatype Central Portal; needs domain ownership proof |
-| MATLAB File Exchange | `n4m` page on `mathworks.com/matlabcentral/fileexchange` (`+n4m` package) | needs MathWorks account; `.mltbx` from GitHub Release auto-pulled |
+| MATLAB / Octave GitHub Release | `nirs4all-methods-matlab-octave-${VER}.zip` (`+n4m` source package) | automated by `release-matlab.yml`; users run `build_mex.m` locally |
+| MATLAB File Exchange | optional `n4m` page on `mathworks.com/matlabcentral/fileexchange` (`+n4m` package) | manual listing; `.mltbx` packaging is not wired in CI |
 | Octave Packages | `n4m` on `gnu-octave/packages` index (`+n4m` package) | PR to `gnu-octave/packages/index.yaml` |
 | MSYS2 / MinGW-packages | `mingw-w64-nirs4all-methods` PKGBUILD in `msys2/MINGW-packages` | PR review by MSYS2 maintainers |
 | MacPorts | `science/nirs4all-methods` Portfile in `macports/macports-ports` | PR review |
@@ -247,7 +248,7 @@ The package files themselves are uploaded to the registry, but a
 | Python (slim subset) | `pls4all-${VER}-*.whl`, `pls4all-${VER}.tar.gz` (sdist) |
 | R (full) | `n4m_${VER}.tar.gz` (CRAN source), `n4m_${VER}.tgz` (macOS), `n4m_${VER}.zip` (Windows) |
 | R (slim subset) | `pls4all_${VER}.tar.gz` / `.tgz` / `.zip` |
-| MATLAB | `n4m-${VER}.mltbx` (FileExchange-ready toolbox; the MATLAB binding ships `+n4m`) |
+| MATLAB / Octave | `nirs4all-methods-matlab-octave-${VER}.zip` (source package with `+n4m`, `build_mex.m`, MEX sources, and tests) |
 | JS | `nirs4all-methods-js-${VER}.tgz` (`npm pack` output) |
 | Julia *(frozen PoC)* | n/a — registered by Project.toml SHA; tag-only |
 | Go *(frozen PoC)* | n/a — go modules resolve from git tag directly |
@@ -434,55 +435,41 @@ fit <- pls(y ~ ., data = iris[,-5], ncomp = 2)
 predict(fit, newdata = iris[1:5, -5])
 ```
 
-### 3.3 MATLAB — `+n4m` package on File Exchange + Add-On Explorer
+### 3.3 MATLAB / Octave — `+n4m` source package on GitHub Releases
 
 | Field | Value |
 |-------|-------|
-| Registry | https://www.mathworks.com/matlabcentral/fileexchange/ |
-| Identity | submission name `n4m`, package format: `.mltbx` Toolbox |
+| Registry | GitHub Releases (automated); MATLAB File Exchange / Octave Packages optional manual mirrors |
+| Identity | `+n4m`, artifact `nirs4all-methods-matlab-octave-${VER}.zip` |
 | Tier 1 | single MEX dispatcher (`n4m_method_fit_mex`) — live |
 | Tier 2 | 18 classdefs + factory — live |
 
 **Required assets:**
-- `n4m-${VER}.mltbx` (MATLAB Toolbox installable file).
-- The same toolbox files for **Octave**, packaged as `n4m-octave-${VER}.zip` (Octave Forge sees this).
-- Per-OS-per-MATLAB-version prebuilt MEX files baked into the `.mltbx`:
-  | MEX file | OS × MATLAB |
-  |---|---|
-  | `n4m_method_fit_mex.mexa64` | Linux x86_64, R2023b+ |
-  | `n4m_method_fit_mex.mexmaci64` | macOS x86_64, R2023b+ |
-  | `n4m_method_fit_mex.mexmaca64` | macOS arm64, R2024a+ |
-  | `n4m_method_fit_mex.mexw64` | Windows x86_64, R2023b+ |
-  | `n4m_method_fit_mex.oct` | Octave 9.x (all platforms) |
-
-The MEX must dynamically link `libn4m` shipped *inside* the toolbox:
-the `.mltbx` archive contains the shared `+n4m` package tree and
-the bundled `libn4m`; MATLAB code prepends that library directory to the
-dynamic-library search path before any MEX call.
+- `nirs4all-methods-matlab-octave-${VER}.zip` containing the `bindings/matlab/`
+  source tree under a versioned top-level directory.
+- The zip includes `+n4m`, `build_mex.m`, MEX C++ sources, docs, and tests.
+- Users build the MEX files locally against the released or local `libn4m`.
+  `build_mex.m` honors `N4M_INCLUDE_DIR`, `N4M_GENERATED_DIR`, and `N4M_LIB_DIR`.
 
 **Prereqs:**
-1. MathWorks account = `gregory.beurier@cirad.fr` (matlabcentral profile).
-2. MATLAB R2024b on at least one CI runner to package the `.mltbx`
-   (use `matlab.addons.toolbox.packageToolbox(...)`).
-3. `bindings/matlab/build_mex.m` produces the per-OS MEX files;
-   the `release.yml` workflow runs that on a matrix of OS runners.
+1. `release-matlab.yml` enabled on tags.
+2. `bindings/matlab/build_mex.m` remains compatible with MATLAB and Octave.
+3. Optional mirrors: MathWorks account for File Exchange, and/or Octave Packages
+   index PR for a source package listing.
 
-**Publish step (semi-automated):**
-- MATLAB GitHub Action: `matlab-actions/run-build@v2` invokes
-  `bindings/matlab/release.m`, which calls
-  `matlab.addons.toolbox.packageToolbox('bindings/matlab/toolbox.prj',
-  'n4m-${VER}.mltbx')`.
-- The resulting `.mltbx` is attached to the GitHub Release.
-- File Exchange has a **GitHub integration**: bind the FX submission
-  to `GBeurier/nirs4all-methods`. When a new release lands, FX picks up the
-  `.mltbx` automatically from the Release asset and updates the FX
-  page. (FX itself does not gate on test-runs; our own MATLAB CI
-  runs the smoke test below before the GitHub Release is promoted
-  out of draft.)
+**Publish step (automated for GitHub Release):**
+- `release-matlab.yml` reads `N4M_PROJECT_VERSION_STRING` from
+  `cpp/include/n4m/n4m_version.h`.
+- It archives `HEAD:bindings/matlab` as
+  `nirs4all-methods-matlab-octave-${VER}.zip`.
+- On non-RC release tags, the zip is attached to the matching GitHub Release.
+- `.mltbx`, MATLAB File Exchange, and Octave Packages are manual optional
+  mirrors until a licensed MATLAB packaging workflow is intentionally added.
 
-**Smoke test (MATLAB CI):**
+**Smoke test after local build:**
 ```matlab
-matlab.addons.install("n4m-${VER}.mltbx");
+cd bindings/matlab
+build_mex
 assert(strncmp(n4m.version(), "${VER}", strlength("${VER}")));
 X = randn(50, 5);
 y = X(:, 1) - 0.25 * X(:, 3) + 0.01 * randn(50, 1);
@@ -491,10 +478,9 @@ yhat = predict(mdl, X);
 assert(size(yhat, 1) == 50);
 ```
 
-> **Forge mirror.** Octave Forge accepts source-only packages
-> (`pls4all-octave-${VER}.tar.gz`). After v1.0 we also upload to
-> [Octave Packages](https://gnu-octave.github.io/packages/) via the
-> `index.yaml` PR pattern. Naming is `pls4all` (no Octave suffix).
+> **Octave mirror.** Octave Packages can list the same source distribution via
+> the `index.yaml` PR pattern. Naming is `n4m`; there is no Octave-specific
+> legacy package name.
 
 ### 3.4 JavaScript / TypeScript — `@nirs4all/methods` on npm + JSR
 
@@ -1069,7 +1055,7 @@ graph LR
   BLD --> REL
   REL --> PY[4a. cibuildwheel → PyPI + TestPyPI]
   REL --> RP[4b. R-universe push + CRAN tarball attached]
-  REL --> ML[4c. .mltbx packager (matlab-actions)]
+  REL --> ML[4c. MATLAB/Octave source zip]
   REL --> NPM[4d. npm publish + JSR mirror]
   REL --> CR[4e. cargo publish]
   REL --> NUG[4f. dotnet pack + nuget push]
@@ -1170,7 +1156,7 @@ gap list):
 | `release-binaries.yml` | the 14-triple cross-build matrix | called from `release.yml` |
 | `release-python.yml` | `cibuildwheel` × PyPI + TestPyPI | called from `release.yml` |
 | `release-r.yml` | `R CMD build` + R-universe push + CRAN tarball | called from `release.yml` |
-| `release-matlab.yml` | `matlab-actions` → `.mltbx` | called from `release.yml` |
+| `release-matlab.yml` | deterministic `bindings/matlab/` zip for MATLAB/Octave | tag push / workflow dispatch |
 | `release-js.yml` | npm + JSR + CDN | called from `release.yml` |
 | `release-rust.yml` | `cargo publish` | called from `release.yml` |
 | `release-dotnet.yml` | `dotnet pack` + NuGet push (managed + 6 native RIDs) | called from `release.yml` |
@@ -1227,7 +1213,7 @@ extend nirs4all-methods' reach with disproportionate ROI:
   the doc already ships `x86_64-pc-windows-mingw` triple archives but
   MSYS2 is the natural distribution surface for those.
 - **Octave Packages** — package name `n4m` (`+n4m` package),
-  archive `n4m-octave-${VER}.tar.gz`, PR to
+  source archive derived from `nirs4all-methods-matlab-octave-${VER}.zip`, PR to
   `gnu-octave/packages/index.yaml`.
   Treated as its own channel, not as a MATLAB sub-item. The Octave
   code paths and MEX `.oct` files live next to the MATLAB ones in
@@ -1312,7 +1298,8 @@ PyPI               → bindings/python/pyproject.toml
 conda-forge        → external feedstock: conda-forge/pls4all-feedstock + libn4m-feedstock
 CRAN               → bindings/r/n4m/DESCRIPTION
 R-universe         → external repo: gbeurier/universe → packages.json
-MATLAB File Ex.    → bindings/matlab/toolbox.prj (.mltbx generator)
+MATLAB / Octave    → release-matlab.yml → nirs4all-methods-matlab-octave-${VER}.zip
+MATLAB File Ex.    → optional manual .mltbx project, not wired in CI
 npm                → bindings/js/package.json
 JSR                → bindings/js/jsr.json (mirror of package.json)
 crates.io          → bindings/_archive/rust/nirs4all-methods/Cargo.toml      (frozen PoC)
@@ -1342,7 +1329,7 @@ Software Heritage  → no manifest; passive
 | PyPI | ⬜ name not reserved | needs first 0.0.0 placeholder upload |
 | CRAN | ⬜ never submitted | needs zero-warning `R CMD check --as-cran`, vendored-core sync, and first R-universe run |
 | R-universe | ⬜ universe not created | needs `gbeurier/universe` repo + packages.json |
-| MATLAB File Exchange | ⬜ no FX submission | needs `.mltbx` packager job + FX account |
+| MATLAB / Octave GitHub Release | ✅ source zip wired | optional File Exchange / Octave Packages mirrors remain manual |
 | npm `@nirs4all/methods` | 🟡 package.json present, never published | needs npm scope + first publish |
 | JSR | ⬜ not configured | mirror of npm — add after first npm publish |
 | pkg.go.dev *(frozen PoC)* | 🟡 module exists, not tagged in subdir convention | frozen in `bindings/_archive/`; not a release target |
@@ -1456,7 +1443,7 @@ Legend: 🤖 = Claude can do it alone · 👤 = you only · 🤖👤 = joint.
 | **RubyGems `nirs4all-methods`** *(frozen PoC)* | 🤖 `bindings/_archive/ruby/nirs4all-methods.gemspec` + `release-ruby.yml` | 👤 RubyGems account + Trusted Publishing OIDC (RubyGems supports it since 2024) | none |
 | **LuaRocks `nirs4all-methods`** *(frozen PoC)* | 🤖 `nirs4all-methods-${VER}-1.rockspec` + `release-lua.yml` | 👤 LuaRocks account + API key in secret `LUAROCKS_API_KEY` (no OIDC) | none |
 | **Nimble `nirs4all-methods`** *(frozen PoC)* | 🤖 `bindings/_archive/nim/nirs4all-methods.nimble` + PR to `nim-lang/packages` | 👤 nothing — PR from your GH fork | 🤖👤 nim-lang reviewer |
-| **MATLAB File Exchange** | 🤖 `bindings/matlab/toolbox.prj` + `release.m` + `release-matlab.yml` using `matlab-actions/setup-matlab@v3` + `matlab-actions/run-build@v3` | 👤 (1) MathWorks account (covered by your CIRAD address), (2) bind FX submission to `GBeurier/nirs4all-methods` via MatlabCentral UI (one-time), (3) licensing: `matlab-actions/setup-matlab` **automatically licenses supported products on public GitHub projects** — no secret needed for the typical case. For private repos *or* transformation products (Coder/Compiler), use a **batch licensing token** in secret `MLM_LICENSE_TOKEN`. External language interfaces (calling MEX) sometimes need a self-hosted normally-licensed runner. | none (FX auto-pulls `.mltbx` from new GH Release) |
+| **MATLAB / Octave source zip** | 🤖 `release-matlab.yml` archives `bindings/matlab/` as `nirs4all-methods-matlab-octave-${VER}.zip` | 👤 none for GitHub Release; optional File Exchange / `.mltbx` requires MathWorks account and a manually created Toolbox project | users build MEX locally with `build_mex.m` |
 | **Octave Packages** | 🤖 PR to `gnu-octave/packages/index.yaml` | 👤 nothing | 🤖👤 Octave Packages reviewer |
 
 #### Tier D — C/C++ ecosystem surfaces
