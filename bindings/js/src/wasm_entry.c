@@ -85,6 +85,8 @@ int n4m_wasm_pls_fit_legacy(const double *x, const double *y,
     n4m_config_set_n_components(cfg, n_components);
     n4m_config_set_center_x(cfg, 1);
     n4m_config_set_center_y(cfg, 1);
+    n4m_config_set_scale_x(cfg, 0);
+    n4m_config_set_scale_y(cfg, 0);
 
     n4m_model_t *m = NULL;
     s = n4m_model_fit(ctx, cfg, &xv, &yv, &m);
@@ -269,6 +271,8 @@ static int n4m_wasm_model_fit_tier_a(
     n4m_config_set_n_components(cfg, n_components);
     n4m_config_set_center_x(cfg, 1);
     n4m_config_set_center_y(cfg, 1);
+    n4m_config_set_scale_x(cfg, 0);
+    n4m_config_set_scale_y(cfg, 0);
 
     n4m_model_t* m = NULL;
     s = n4m_model_fit(ctx, cfg, &xv, &yv, &m);
