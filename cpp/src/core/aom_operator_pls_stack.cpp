@@ -1000,7 +1000,7 @@ n4m_status_t fit_aom_operator_pls_stack(
     out.n_specs = n_specs;
     out.std_penalty = std_penalty;
     out.gap_penalty = gap_penalty;
-    out.fold_ids = ids;
+    out.fold_ids.swap(ids);
     out.candidate_scores.assign(static_cast<std::size_t>(n_specs * 7), 0.0);
     out.fold_scores.assign(static_cast<std::size_t>(n_specs * actual_cv), 0.0);
 
