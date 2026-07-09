@@ -31,6 +31,7 @@ STRICT_TOLERANCES = {
     "reference_parity_rmse_rel": 1e-12,
     "wasm_rmse_rel": 1e-12,
 }
+DEV_RELEASE_LIB_DIR = REPO / "build/dev-release/cpp/src"
 
 
 def _run(cmd: list[str], *, env: dict[str, str] | None = None, cwd: Path = REPO,
@@ -58,7 +59,7 @@ def _json_write(path: Path, payload: dict[str, Any]) -> None:
 
 
 def _ensure_dev_release_build(timeout: int) -> dict[str, Any]:
-    lib = REPO / "build/dev-release/cpp/src/libn4m.so"
+    lib = DEV_RELEASE_LIB_DIR / "libn4m.so"
     cli = REPO / "build/dev-release/cpp/cli/n4m_cli"
 
     env = os.environ.copy()
@@ -103,6 +104,17 @@ def _prepend_env_paths(env: dict[str, str], name: str, paths: list[Path]) -> Non
         env[name] = os.pathsep.join(parts)
 
 
+def _configure_libn4m_env(env: dict[str, str]) -> None:
+    if not DEV_RELEASE_LIB_DIR.exists():
+        return
+    # The Python binding resolves libn4m at import time. Use explicit binding
+    # loader knobs so in-process imports see the same dev-release library as
+    # subprocess parity runners.
+    env["PLS4ALL_LIB_PATH"] = str(DEV_RELEASE_LIB_DIR)
+    env["N4M_LIB_PATH"] = str(DEV_RELEASE_LIB_DIR)
+    _prepend_env_paths(env, "LD_LIBRARY_PATH", [DEV_RELEASE_LIB_DIR])
+
+
 def _prepend_r_library_env(env: dict[str, str], r_lib: Path) -> None:
     _prepend_env_paths(env, "R_LIBS", [r_lib])
     if env.get("R_LIBS_USER"):
@@ -111,6 +123,7 @@ def _prepend_r_library_env(env: dict[str, str], r_lib: Path) -> None:
 
 def _base_env(r_lib: Path | None = None) -> dict[str, str]:
     env = os.environ.copy()
+    _configure_libn4m_env(env)
     env["PYTHONPATH"] = ":".join(
         part
         for part in (
@@ -129,7 +142,7 @@ def _base_env(r_lib: Path | None = None) -> dict[str, str]:
             env,
             "LD_LIBRARY_PATH",
             [
-                REPO / "build/dev-release/cpp/src",
+                DEV_RELEASE_LIB_DIR,
                 r_env / "lib",
                 r_env / "lib/octave/10.3.0",
             ],
@@ -320,6 +333,7 @@ def _load_orchestrator_dataset(row: dict[str, str]) -> tuple[Path, np.ndarray, n
 
 
 def _native_pls_fixture_arrays(X: np.ndarray, Y: np.ndarray, n_components: int) -> dict[str, np.ndarray | str]:
+    _configure_libn4m_env(os.environ)
     python_src = REPO / "bindings/python/src"
     if str(python_src) not in sys.path:
         sys.path.insert(0, str(python_src))
