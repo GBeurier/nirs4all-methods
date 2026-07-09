@@ -27,7 +27,7 @@ jobs:
   matlab-package:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
       - name: Resolve version
         id: meta
@@ -57,7 +57,7 @@ jobs:
           fail_on_unmatched_files: true
 
       - name: Upload artifact (always, for dry runs / inspection)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: ${{ steps.meta.outputs.prefix }}
           path: dist/

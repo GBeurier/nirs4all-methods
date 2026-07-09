@@ -23,7 +23,7 @@ jobs:
       matrix:
         san: [asan, ubsan, tsan, asan_ubsan]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
       - name: Install LLVM apt repository
         run: |
           curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/llvm.gpg

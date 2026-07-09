@@ -31,7 +31,7 @@ jobs:
           - { label: windows-msvc-debug,    runs_on: windows-2022, preset: ci-windows-msvc-debug,    apt_install: "" }
           - { label: windows-mingw-release, runs_on: windows-2022, preset: ci-windows-mingw-release, apt_install: "" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
       - name: Install LLVM apt repository (Linux clang)
         if: runner.os == 'Linux' && contains(matrix.cfg.label, 'clang')
@@ -98,7 +98,7 @@ jobs:
       - name: Upload Release artefacts
         if: contains(matrix.cfg.label, 'release')
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: libn4m-${{ matrix.cfg.label }}
           path: |
@@ -111,7 +111,7 @@ jobs:
     name: fitpack / linux-gcc-release
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
       - name: Install toolchain (incl. gfortran)
         run: |
@@ -161,9 +161,9 @@ jobs:
     name: python package smoke / nirs4all-methods
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.12"
 

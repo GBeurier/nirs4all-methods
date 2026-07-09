@@ -95,11 +95,11 @@ jobs:
     name: sdist
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.12"
 
@@ -110,7 +110,7 @@ jobs:
         working-directory: bindings/python
         run: python -m build --sdist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: dist-sdist
           path: bindings/python/dist/*.tar.gz
@@ -198,11 +198,11 @@ jobs:
       CIBW_BUILD_FRONTEND: "build"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.12"
 
@@ -280,7 +280,7 @@ jobs:
           print('SMOKE OK')
           "
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: dist-${{ matrix.cfg.label }}
           path: wheelhouse/*.whl
@@ -300,7 +300,7 @@ jobs:
       id-token: write
     steps:
       - name: Download all dist artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           path: dist
           pattern: dist-*
@@ -337,7 +337,7 @@ jobs:
       id-token: write
     steps:
       - name: Download all dist artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           path: dist
           pattern: dist-*
@@ -381,10 +381,10 @@ jobs:
     if: needs.publish-testpypi.result == 'success'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.12"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
       - name: Extract package version from pyproject
         id: ver
         run: |
@@ -437,7 +437,7 @@ jobs:
     if: needs.publish-pypi.result == 'success'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.12"
       - name: Extract version from ref

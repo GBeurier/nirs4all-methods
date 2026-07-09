@@ -31,7 +31,7 @@ jobs:
   source-release:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
         with:
           fetch-depth: 0   # need the tag object for git archive
 
@@ -79,7 +79,7 @@ jobs:
           cat SHA256SUMS
 
       - name: Attest build provenance for the artifacts
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4.1.1
         with:
           subject-path: |
             dist/${{ steps.meta.outputs.prefix }}-src.tar.gz
@@ -98,7 +98,7 @@ jobs:
           fail_on_unmatched_files: true
 
       - name: Upload artifacts (always, for dry runs / inspection)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: source-release-${{ steps.meta.outputs.ver }}
           path: dist/

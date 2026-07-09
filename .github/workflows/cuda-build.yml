@@ -22,7 +22,7 @@ jobs:
   cuda-compile:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
       - name: Install build toolchain
         run: |

@@ -18,9 +18,9 @@ jobs:
     # drift on every push/PR. Python-only — no libn4m build needed.
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.11"
       - name: Install contract-test deps
@@ -44,10 +44,10 @@ jobs:
       MKL_NUM_THREADS: "1"
       PYTHONHASHSEED: "0"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.11"
 
