@@ -1,11 +1,11 @@
-# nirs4all-methods — gaps for the in-browser studio-lite (WASM)
+# nirs4all-methods - gaps for the in-browser Web/WASM app
 
-`nirs4all-lite/studio-lite` is a full-WASM browser app that drives **libn4m** through the
+`nirs4all-web/studio-lite` is a full-WASM browser app that drives **libn4m** through the
 emscripten convenience surface (`bindings/js/src/wasm_entry.c`, the `_n4m_wasm_*` helpers)
-plus a curated catalog (`nirs4all-lite/studio-lite/src/catalog/nodes.ts`, CI-gated against
+plus a curated catalog (`nirs4all-web/studio-lite/src/catalog/nodes.ts`, CI-gated against
 `cpp/abi/expected_symbols_*.txt`). The items below are operators/capabilities that **exist
-in libn4m but are not yet usable from the browser**, so studio-lite either omits them or
-falls back. None require changing the public ABI snapshot — the wasm helpers are
+in libn4m but are not yet usable from the browser**, so the Web app either omits them or
+falls back. None require changing the public ABI snapshot - the wasm helpers are
 emscripten-only `_n4m_wasm_*` exports appended in `bindings/js/CMakeLists.txt`.
 
 This is a forward-development backlog, not a bug list.
@@ -63,5 +63,5 @@ only matter if the in-browser "moment engine" tiers become a goal (cf. the gpu-m
 plan).
 
 ---
-*Source: the studio-lite build (2026-06). The browser/WASM binding is the layer to grow;
+*Source: the nirs4all-web/studio-lite build (2026-06). The browser/WASM binding is the layer to grow;
 the C++ core already implements the numerics.*
