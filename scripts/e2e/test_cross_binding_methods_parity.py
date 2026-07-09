@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -83,14 +84,19 @@ def test_validate_orchestrator_rows_fails_on_false_parity(tmp_path: Path) -> Non
         gate._validate_orchestrator_rows(rows)
 
 
-def test_base_env_isolates_r_gate_library(tmp_path: Path) -> None:
+def test_base_env_prepends_r_gate_library_without_hiding_imports(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     r_lib = tmp_path / "r-lib"
+    monkeypatch.setenv("R_LIBS", "/opt/site-r-lib")
+    monkeypatch.setenv("R_LIBS_USER", "/home/runner/R/library")
 
     env = gate._base_env(r_lib)
 
     assert env["N4M_R_GATE_LIB"] == str(r_lib)
-    assert env["R_LIBS"] == str(r_lib)
-    assert env["R_LIBS_USER"] == str(r_lib)
+    assert env["R_LIBS"].split(os.pathsep)[:2] == [str(r_lib), "/opt/site-r-lib"]
+    assert env["R_LIBS_USER"].split(os.pathsep)[:2] == [str(r_lib), "/home/runner/R/library"]
     assert str(gate.REPO / "build/dev-release/cpp/src") in env.get("LD_LIBRARY_PATH", "")
 
 
