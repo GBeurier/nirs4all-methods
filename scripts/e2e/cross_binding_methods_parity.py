@@ -103,6 +103,12 @@ def _prepend_env_paths(env: dict[str, str], name: str, paths: list[Path]) -> Non
         env[name] = os.pathsep.join(parts)
 
 
+def _prepend_r_library_env(env: dict[str, str], r_lib: Path) -> None:
+    _prepend_env_paths(env, "R_LIBS", [r_lib])
+    if env.get("R_LIBS_USER"):
+        _prepend_env_paths(env, "R_LIBS_USER", [r_lib])
+
+
 def _base_env(r_lib: Path | None = None) -> dict[str, str]:
     env = os.environ.copy()
     env["PYTHONPATH"] = ":".join(
@@ -131,8 +137,7 @@ def _base_env(r_lib: Path | None = None) -> dict[str, str]:
     if r_lib is not None:
         r_lib.mkdir(parents=True, exist_ok=True)
         env["N4M_R_GATE_LIB"] = str(r_lib)
-        env["R_LIBS"] = str(r_lib)
-        env["R_LIBS_USER"] = str(r_lib)
+        _prepend_r_library_env(env, r_lib)
     return env
 
 
