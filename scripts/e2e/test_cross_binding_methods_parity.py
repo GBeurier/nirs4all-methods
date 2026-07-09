@@ -88,16 +88,43 @@ def test_base_env_prepends_r_gate_library_without_hiding_imports(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    repo = tmp_path / "repo"
+    lib_dir = repo / "build/dev-release/cpp/src"
+    lib_dir.mkdir(parents=True)
     r_lib = tmp_path / "r-lib"
+    monkeypatch.setattr(gate, "REPO", repo)
+    monkeypatch.setattr(gate, "DEV_RELEASE_LIB_DIR", lib_dir)
     monkeypatch.setenv("R_LIBS", "/opt/site-r-lib")
     monkeypatch.setenv("R_LIBS_USER", "/home/runner/R/library")
 
     env = gate._base_env(r_lib)
 
+    assert env["PLS4ALL_LIB_PATH"] == str(lib_dir)
+    assert env["N4M_LIB_PATH"] == str(lib_dir)
     assert env["N4M_R_GATE_LIB"] == str(r_lib)
     assert env["R_LIBS"].split(os.pathsep)[:2] == [str(r_lib), "/opt/site-r-lib"]
     assert env["R_LIBS_USER"].split(os.pathsep)[:2] == [str(r_lib), "/home/runner/R/library"]
-    assert str(gate.REPO / "build/dev-release/cpp/src") in env.get("LD_LIBRARY_PATH", "")
+    assert env["LD_LIBRARY_PATH"].split(os.pathsep)[0] == str(lib_dir)
+
+
+def test_configure_libn4m_env_overrides_stale_loader_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lib_dir = tmp_path / "repo/build/dev-release/cpp/src"
+    lib_dir.mkdir(parents=True)
+    monkeypatch.setattr(gate, "DEV_RELEASE_LIB_DIR", lib_dir)
+    env = {
+        "PLS4ALL_LIB_PATH": "/tmp/stale-pls4all",
+        "N4M_LIB_PATH": "/tmp/stale-n4m",
+        "LD_LIBRARY_PATH": "/opt/native",
+    }
+
+    gate._configure_libn4m_env(env)
+
+    assert env["PLS4ALL_LIB_PATH"] == str(lib_dir)
+    assert env["N4M_LIB_PATH"] == str(lib_dir)
+    assert env["LD_LIBRARY_PATH"].split(os.pathsep)[:2] == [str(lib_dir), "/opt/native"]
 
 
 def test_build_wasm_orchestrator_fixture_uses_cross_binding_dataset(
