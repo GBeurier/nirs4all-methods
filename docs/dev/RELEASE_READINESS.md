@@ -479,10 +479,10 @@ there is **no publish workflow**.
   consumers the generic path is "not yet enabled" / blame an "Emscripten codegen bug"; `wasm_entry.c` is already
   corrected. Pure docs fix.
 - **[Medium · M] `wasm-size-trim-brotli`** — drop `ASSERTIONS=1` in release, scope `EXPORTED_FUNCTIONS` to what
-  nirs4all-lite calls, enable `-Os`/closure, document brotli precompression (target <1 MB raw).
+  `nirs4all-core` and `nirs4all-web` call, enable `-Os`/closure, document brotli precompression (target <1 MB raw).
 - **[Medium · M] `browser-html-example`** — every example is Node `.mjs`; add a self-contained `index.html`
-  (`<script type=module>`) fitting PLS on a `Float64Array` — the literal "embed in a web page" deliverable and the
-  nirs4all-lite seed.
+  (`<script type=module>`) fitting PLS on a `Float64Array` — the literal "embed in a web page" deliverable and a
+  seed for `nirs4all-web` smoke coverage.
 - **[Medium · M] `memory-growth-untrusted-input`** — document the max input size implied by `MAXIMUM_MEMORY=2GB`,
   surface OOM as a catchable error, document the manual-`destroy()` contract (+ optional `FinalizationRegistry`).
 - **[Medium · M] `decide-threads-coop-coep`** — record the SIMD/threads decision (`-msimd128` is cheap, broadly
