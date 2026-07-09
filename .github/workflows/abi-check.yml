@@ -11,7 +11,7 @@ jobs:
   linux:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
@@ -70,7 +70,7 @@ jobs:
   macos:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
       - run: brew install ninja cmake
       - run: cmake --preset ci-macos-clang-release
       - run: cmake --build --preset ci-macos-clang-release --target n4m_c --parallel
@@ -106,7 +106,7 @@ jobs:
   windows:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
       - uses: microsoft/setup-msbuild@v2
       - run: cmake --preset ci-windows-msvc-release
       - run: cmake --build --preset ci-windows-msvc-release --target n4m_c --parallel --config Release

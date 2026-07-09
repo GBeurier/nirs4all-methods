@@ -31,10 +31,10 @@ jobs:
       PYTHONHASHSEED: "0"
       N4M_R_ENV_NOWARN: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.0
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.11"
 
@@ -102,7 +102,7 @@ jobs:
 
       - name: Upload nightly parity matrix
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: nightly-parity-matrix
           path: |
