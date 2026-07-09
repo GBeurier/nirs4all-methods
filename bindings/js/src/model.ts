@@ -140,7 +140,7 @@ export interface FittedModel {
  * Tier A (PLS / PLSRegression / PCR / PLSCanonical / PLSSVD / PLSDA) routes
  * through the algorithm-enum model API; Tier B (Ridge, RidgePLS, CPPLS, ...)
  * through the matching standalone fit. The `params` vector is the documented
- * positional contract per model (see the studio-lite catalog). Unknown or
+ * positional contract per model (see the nirs4all-web browser catalog). Unknown or
  * non-coefficient tokens throw (the C side returns N4M_ERR_NOT_IMPLEMENTED).
  *
  * @param model catalog `type` token, e.g. `'Ridge'`.
