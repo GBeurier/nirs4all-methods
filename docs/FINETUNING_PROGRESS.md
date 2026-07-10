@@ -10,7 +10,7 @@
 |---|---|---|---|
 | Setup (worktree, baseline build) | ✅ done | — | isolated worktree; docs committed; toolchain OK |
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
-| **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | ⬜ | `ternary` ✅ (366 tests); sobol/lhs next |
+| **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | ⬜ | `ternary` ✅ + `lhs` ✅ (367 tests); `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | ⬜ todo | ⬜ | Track P |
 | **F3** — RNG consolidation → ga, pso | ⬜ todo | ⬜ | Track G |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
@@ -21,6 +21,10 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F1: lhs sampler
+- Added `N4M_SAMPLER_LHS` (`cpp/src/core/optimization/lhs.cpp`): Latin Hypercube over the numeric axes for the first `n_startup_trials` asks (one independent permutation per dimension + per-cell jitter), random beyond the batch and for categoricals. Refactored the unit→value mapping into `Optimizer::numeric_from_unit()` so `random`/`lhs`/(future) `sobol` share it. Test asserts each decile is hit exactly once across the startup batch. **367 passed, 0 failed.** ABI unchanged. Doc `docs/methods/lhs.md`.
+- **`sobol` is intentionally deferred:** a *useful* Tier-A Sobol must bit-match `scipy.stats.qmc.Sobol(scramble=False)`, which requires the exact Joe–Kuo `new-joe-kuo-6.21201` direction-number table. Rather than ship an approximate/incorrect sequence, it will be done deliberately with the real table (fetch + embed a modest dimension subset) as a dedicated block.
 
 ### 2026-07-10 — F1: ternary sampler
 - Added `N4M_SAMPLER_TERNARY` (`cpp/src/core/optimization/ternary.cpp`): unimodal-integer ternary search porting the nirs4all `BinarySearchSampler` (triplet anchor low/high/mid → bisect the larger gap toward the current best). Introduced a small base-class hook `override_numeric()` so adaptive samplers reuse the constraint/loop/conditions machinery without duplicating `sample()`. Proposal is a pure function of the completed history (idempotent within an ask). Tunes the first integer axis; others stay random.
