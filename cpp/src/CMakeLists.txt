@@ -54,6 +54,7 @@ add_library(n4m_core OBJECT
     core/model_selection.cpp
     core/moments.cpp
     core/optimization/optimizer.cpp
+    core/optimization/sobol.cpp
     core/optimization/ternary.cpp
     core/optimization/lhs.cpp
     core/optimization/ga.cpp
