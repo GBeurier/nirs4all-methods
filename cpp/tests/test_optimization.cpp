@@ -414,6 +414,39 @@ void test_ternary_converges() {
     n4m_context_destroy(ctx);
 }
 
+void test_lhs_stratifies() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_float(sp, "x", 0.0, 1.0, 0.0, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.sampler = N4M_SAMPLER_LHS;
+    o.n_startup_trials = 10;
+    o.seed = 4;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    bool bins[10] = {false, false, false, false, false, false, false, false, false, false};
+    for (int i = 0; i < 10; ++i) {
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        double x = 0.0;
+        n4m_trial_get_float(t, "x", &x);
+        int b = static_cast<int>(x * 10.0);
+        if (b < 0) b = 0;
+        if (b > 9) b = 9;
+        N4M_TEST_REQUIRE(!bins[b]);  // Latin-hypercube: each decile hit exactly once
+        bins[b] = true;
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        n4m_optimizer_tell(opt, id, x);
+    }
+    for (int b = 0; b < 10; ++b) N4M_TEST_REQUIRE(bins[b]);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 }  // namespace
 
 void register_optimization_tests(n4m_testing::Runner& r) {
@@ -431,4 +464,5 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: finetune rejects unsupported param", test_finetune_rejects_unsupported_param);
     r.run("optimization: auto direction maximizes R2", test_auto_direction_maximizes_r2);
     r.run("optimization: ternary converges (unimodal int)", test_ternary_converges);
+    r.run("optimization: lhs stratifies startup batch", test_lhs_stratifies);
 }

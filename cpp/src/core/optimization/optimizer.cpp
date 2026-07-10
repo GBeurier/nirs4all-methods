@@ -64,7 +64,12 @@ bool Optimizer::better(double candidate, double incumbent) const {
 }
 
 double Optimizer::sample_numeric(const ParamSpec& p) {
-    const double u = n4m_rng_next_double(&rng_);  // [0, 1)
+    return numeric_from_unit(p, n4m_rng_next_double(&rng_));
+}
+
+double Optimizer::numeric_from_unit(const ParamSpec& p, double u) const {
+    if (u < 0.0) u = 0.0;
+    if (u >= 1.0) u = std::nextafter(1.0, 0.0);
     double v;
     if (p.is_log && p.low > 0.0 && p.high > 0.0) {
         const double lo = std::log(p.low);
@@ -345,7 +350,10 @@ std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
         case N4M_SAMPLER_TERNARY:
             if (status != nullptr) *status = N4M_OK;
             return std::make_unique<TernarySampler>(space, opts);
-        default:  // sobol/lhs/ga/pso/cmaes/tpe/gp_ei reserved for F1–F4
+        case N4M_SAMPLER_LHS:
+            if (status != nullptr) *status = N4M_OK;
+            return std::make_unique<LhsSampler>(space, opts);
+        default:  // sobol/ga/pso/cmaes/tpe/gp_ei reserved for F1–F4
             if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;
             return nullptr;
     }

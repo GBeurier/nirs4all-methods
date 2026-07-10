@@ -20,7 +20,8 @@ Selected via `n4m_optimizer_options_t.sampler` / `.pruner`. Algorithms sit behin
 |---|---|---|---|
 | sampler `random` | ✅ implemented | F0 | [random.md](random.md) |
 | sampler `ternary` | ✅ implemented | F1 | [ternary.md](ternary.md) |
-| sampler `sobol`, `lhs` | reserved | F1 | — |
+| sampler `lhs` | ✅ implemented | F1 | [lhs.md](lhs.md) |
+| sampler `sobol` | reserved | F1 | — |
 | sampler `ga`, `pso` | reserved | F3 | — |
 | sampler `cmaes`, `tpe`, `gp_ei` | reserved | F4 | — |
 | pruner `none` | ✅ implemented | F0 | — |

@@ -124,6 +124,10 @@ class Optimizer {
                         const std::vector<std::pair<std::string, double>>* forced);
 
     double sample_numeric(const ParamSpec& p);
+    // Deterministic map of a unit-cube coordinate u∈[0,1) to a numeric param
+    // value (shared by random / lhs / sobol; the only stochastic part is who
+    // supplies u).
+    double numeric_from_unit(const ParamSpec& p, double u) const;
     void   apply_conditions(::n4m_trial_s& t) const;
     bool   constraints_ok(const ::n4m_trial_s& t) const;
     bool   better(double candidate, double incumbent) const;
@@ -172,6 +176,22 @@ class TernarySampler : public Optimizer {
     std::string  target_;   // name of the tuned int axis ("" ⇒ pure random)
     std::int64_t low_{0};
     std::int64_t high_{0};
+};
+
+// Latin Hypercube sampling over the numeric axes for the first `n_startup_trials`
+// asks (stratified + jittered per dimension), falling back to uniform random
+// beyond the startup batch and for categorical axes. F1.
+class LhsSampler : public Optimizer {
+  public:
+    LhsSampler(const SearchSpace& space, const n4m_optimizer_options_t& opts);
+
+  protected:
+    bool override_numeric(const ParamSpec& p, double* out) override;
+
+  private:
+    std::vector<std::string>         numeric_names_;  // numeric axes, in space order
+    std::vector<std::vector<double>> unit_;           // unit_[axis][i] ∈ [0,1), i<n_startup
+    std::int32_t                     n_startup_{0};
 };
 
 // Resolve MINIMIZE/MAXIMIZE from a metric (used when direction == AUTO).
