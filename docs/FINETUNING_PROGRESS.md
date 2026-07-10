@@ -11,7 +11,7 @@
 | Setup (worktree, baseline build) | ✅ done | — | isolated worktree; docs committed; toolchain OK |
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
-| **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | ⬜ | pruner architecture + `median` ✅ (370 tests); asha/hyperband/racing + fidelity engine next |
+| **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | ⬜ | pruner arch + `median` + `asha` ✅ (371 tests); hyperband/racing + fidelity engine next |
 | **F3** — RNG consolidation → ga, pso | ⬜ todo | ⬜ | Track G |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F2: ASHA pruner
+- Added `N4M_PRUNER_ASHA` (asynchronous successive halving) into the same factory: at each rung a trial survives only if in the top 1/reduction_factor (=3) of the peers at that rung, decided asynchronously (sound for a per-`tell` verdict). Decision-level test on a canned history. **371 passed, 0 failed.** ABI unchanged. Doc `docs/methods/asha.md`. (Hyperband bracket-scheduler + racing + the `n_components` fidelity engine remain in F2.)
 
 ### 2026-07-10 — F2 opener: pruner architecture + median pruner
 - Added the `Pruner` abstraction (`cpp/src/core/optimization/pruners.cpp`): `Optimizer` holds a `unique_ptr<Pruner>` set by a `make_pruner()` factory from `opts.pruner`; `tell_intermediate()` delegates the keep/prune verdict and marks pruned trials `N4M_TRIAL_PRUNED`. This makes pruners **orthogonal to samplers** (composed via the options struct), matching the roadmap's sampler ⟂ pruner split. `make_optimizer` now accepts `NONE`+`MEDIAN`; `asha`/`hyperband`/`racing` slot into the same factory later.
