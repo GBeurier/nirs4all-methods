@@ -350,7 +350,16 @@ n4m_status_t Optimizer::ask(::n4m_trial_s** out) {
     return N4M_OK;
 }
 
+std::int32_t Optimizer::resolved_in_range(std::int64_t base, std::int32_t size) const {
+    std::int32_t resolved = 0;
+    for (const auto& up : trials_) {
+        if (up->id >= base && up->id < base + size && up->status != N4M_TRIAL_RUNNING) ++resolved;
+    }
+    return resolved;
+}
+
 n4m_status_t Optimizer::enqueue(std::vector<std::pair<std::string, double>> params) {
+    if (!allow_enqueue()) return N4M_ERR_UNSUPPORTED;  // e.g. population samplers
     for (const auto& kv : params) {
         const ParamSpec* p = space_.find(kv.first);
         if (p == nullptr) return N4M_ERR_INVALID_ARGUMENT;  // unknown param

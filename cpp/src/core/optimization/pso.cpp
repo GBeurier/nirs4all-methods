@@ -87,9 +87,13 @@ void PsoSampler::ensure_iteration(std::int64_t member_base) {
         for (std::size_t j = 0; j < P; ++j) {
             const double r1 = n4m_rng_next_double(&rng_);
             const double r2 = n4m_rng_next_double(&rng_);
-            vel_[k][j] = w_ * vel_[k][j] + c1_ * r1 * (pbest_pos_[k][j] - pos_[k][j]) +
-                         c2_ * r2 * (gbest_pos_[j] - pos_[k][j]);
-            pos_[k][j] = clamp01(pos_[k][j] + vel_[k][j]);
+            double v = w_ * vel_[k][j] + c1_ * r1 * (pbest_pos_[k][j] - pos_[k][j]) +
+                       c2_ * r2 * (gbest_pos_[j] - pos_[k][j]);
+            constexpr double kVmax = 0.5;  // cap velocity to half the unit range
+            if (v > kVmax) v = kVmax;
+            else if (v < -kVmax) v = -kVmax;
+            vel_[k][j] = v;
+            pos_[k][j] = clamp01(pos_[k][j] + v);
         }
     }
     iter_base_id_ = member_base;
@@ -97,6 +101,13 @@ void PsoSampler::ensure_iteration(std::int64_t member_base) {
 
 bool PsoSampler::sample(::n4m_trial_s& t,
                         const std::vector<std::pair<std::string, double>>* forced) {
+    // Synchronous update (LIAR_NONE): refuse to cross a swarm-iteration boundary
+    // until the current iteration is fully resolved (partial ask_batch instead of
+    // updating on unscored particles).
+    if (iter_base_id_ >= 0 && t.id >= iter_base_id_ + swarm_size_ &&
+        resolved_in_range(iter_base_id_, swarm_size_) < swarm_size_) {
+        return false;
+    }
     ensure_iteration(t.id);
     std::size_t k = static_cast<std::size_t>(t.id - iter_base_id_);
     if (k >= static_cast<std::size_t>(swarm_size_)) k = static_cast<std::size_t>(swarm_size_) - 1;

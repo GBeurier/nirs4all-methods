@@ -100,6 +100,13 @@ void GaSampler::ensure_generation(std::int64_t member_base) {
 }
 
 bool GaSampler::sample(::n4m_trial_s& t, const std::vector<std::pair<std::string, double>>* forced) {
+    // Synchronous evolution (LIAR_NONE): refuse to cross a generation boundary
+    // until the current generation is fully resolved — so ask_batch() returns a
+    // partial batch at the boundary rather than evolving on unscored members.
+    if (gen_base_id_ >= 0 && t.id >= gen_base_id_ + pop_size_ &&
+        resolved_in_range(gen_base_id_, pop_size_) < pop_size_) {
+        return false;  // complete the current generation before asking further
+    }
     ensure_generation(t.id);
     std::size_t k = static_cast<std::size_t>(t.id - gen_base_id_);
     if (k >= static_cast<std::size_t>(pop_size_)) k = static_cast<std::size_t>(pop_size_) - 1;
