@@ -467,7 +467,10 @@ std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
         case N4M_SAMPLER_PSO:
             if (status != nullptr) *status = N4M_OK;
             return std::make_unique<PsoSampler>(space, opts);
-        default:  // sobol/cmaes/tpe/gp_ei reserved for F1/F4
+        case N4M_SAMPLER_CMAES:
+            if (status != nullptr) *status = N4M_OK;
+            return std::make_unique<CmaEsSampler>(space, opts);
+        default:  // sobol/tpe/gp_ei reserved for F1/F4
             if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;
             return nullptr;
     }

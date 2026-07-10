@@ -333,6 +333,46 @@ class PsoSampler : public Optimizer {
     std::int64_t                     iter_base_id_{-1};
 };
 
+// Separable CMA-ES (Hansen & Ostermeier; Ros & Hansen 2008 diagonal variant) over
+// the unit hypercube (F4). Samples a generation of λ points from N(m, σ²·diag(C)),
+// clamped to [0,1); once scored, the μ best update the mean, the (diagonal)
+// covariance, the step-size and the evolution paths. The diagonal covariance
+// avoids an eigendecomposition, so it scales to modest continuous dimensionality
+// (Ridge alpha, learning rates, continuous preprocessing params). Non-continuous
+// axes are handled by the shared decode (bucketed), giving Optuna's
+// independent-fallback behaviour for mixed spaces. F4.
+class CmaEsSampler : public Optimizer {
+  public:
+    CmaEsSampler(const SearchSpace& space, const n4m_optimizer_options_t& opts);
+
+  protected:
+    bool sample(::n4m_trial_s& t,
+                const std::vector<std::pair<std::string, double>>* forced) override;
+    bool allow_enqueue() const override { return false; }
+
+  private:
+    void ensure_generation(std::int64_t member_base);
+    void sample_population();
+
+    std::size_t P_{0};
+    std::int32_t lambda_{0};
+    std::int32_t mu_{0};
+    std::vector<double> weights_;
+    double mu_eff_{1.0};
+    double c_sigma_{0.0}, d_sigma_{1.0}, c_c_{0.0}, c_1_{0.0}, c_mu_{0.0}, chi_n_{1.0};
+
+    std::vector<double> m_;       // distribution mean (unit space)
+    double              sigma_{0.2};
+    std::vector<double> C_;       // diagonal covariance
+    std::vector<double> ps_;      // step-size evolution path
+    std::vector<double> pc_;      // covariance evolution path
+    std::int64_t        gen_count_{0};
+
+    std::vector<std::vector<double>> pop_x_;  // clamped candidate positions
+    std::vector<std::vector<double>> pop_z_;  // raw standard-normal draws
+    std::int64_t                     gen_base_id_{-1};
+};
+
 // Resolve MINIMIZE/MAXIMIZE from a metric (used when direction == AUTO).
 n4m_opt_direction_t direction_for_metric(n4m_metric_t metric);
 

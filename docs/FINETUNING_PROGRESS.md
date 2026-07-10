@@ -13,7 +13,7 @@
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | `median`+`asha`+`racing` ✅ (374 tests; median/asha Codex-reviewed); `hyperband` (needs bracket scheduler → F5) + `n_components` fidelity engine remain |
 | **F3** — RNG consolidation → ga, pso | ✅ done (samplers) | 🟢 Codex | `ga` + `pso` samplers ✅ (376 tests, shared `decode_candidate`); RNG-consolidation of the *feature-selection* loops deferred (HPO samplers are clean fresh impls) |
-| **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
+| **F4** — cmaes, tpe, (gp_ei?) | 🟡 in progress | ⬜ | `cmaes` ✅ (378 tests, converges tight); `tpe` next; `gp_ei` optional |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
 | **B** — bindings python→R/MATLAB/WASM + cross-binding gate | ⬜ todo | ⬜ | Track B |
 | **Phase 1 done → WAIT for green light** | ⬜ | — | do NOT touch dag-ml/core |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F4: CMA-ES sampler
+- Added `N4M_SAMPLER_CMAES` (`cpp/src/core/optimization/cma.cpp`): **separable (diagonal) CMA-ES** (Ros & Hansen 2008) over the unit hypercube — the canonical mean/covariance/step-size/evolution-path update with a diagonal covariance (no eigendecomposition). Reuses the async-population lifecycle + boundary guard + shared decode (non-continuous axes bucketed = Optuna's independent fallback). Convergence test asserts `best < 0.1` on a smooth 2D objective (a broken CMA-ES would not converge tightly). **378 passed, 0 failed.** ABI unchanged. Doc `docs/methods/cmaes.md`.
 
 ### 2026-07-10 — F3 samplers Codex review applied
 - Codex review of ga+pso: **1 Blocker, 2 Major, 2 Minor — all applied** (`docs/reviews/finetuning-roadmap/codex-review-05-F3-samplers.md`). **Blocker:** population samplers refuse to cross a generation/iteration boundary until it is fully resolved (synchronous LIAR_NONE evolution) — `ask_batch` returns a *partial* batch at the boundary instead of evolving on unscored members (added `resolved_in_range`). **Major:** `enqueue`/warm-start rejected for population samplers (`N4M_ERR_UNSUPPORTED` via an `allow_enqueue()` hook) — a forced candidate can't be inverse-encoded into the population; constraint handling documented as fitness-only. **Minor:** PSO velocity clamp (vmax=0.5). +1 regression test (batch boundary + enqueue reject). **377 passed, 0 failed.**

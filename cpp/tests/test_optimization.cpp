@@ -576,6 +576,40 @@ void test_ga_converges() {
     n4m_context_destroy(ctx);
 }
 
+void test_cmaes_converges() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_float(sp, "x", -5.0, 5.0, 0.0, 0);
+    n4m_search_space_add_float(sp, "y", -5.0, 5.0, 0.0, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.sampler = N4M_SAMPLER_CMAES;
+    o.direction = N4M_OPT_MINIMIZE;
+    o.seed = 5;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    for (int i = 0; i < 300; ++i) {
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        double x = 0.0;
+        double y = 0.0;
+        n4m_trial_get_float(t, "x", &x);
+        n4m_trial_get_float(t, "y", &y);
+        const double score = (x - 2.0) * (x - 2.0) + (y + 3.0) * (y + 3.0);
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        n4m_optimizer_tell(opt, id, score);
+    }
+    n4m_trial_t* best = nullptr;
+    double bs = 1e9;
+    N4M_TEST_REQUIRE(n4m_optimizer_best(opt, &best, &bs) == N4M_OK);
+    N4M_TEST_REQUIRE(bs < 0.1);  // CMA-ES converges tightly on a smooth objective
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_population_batch_and_enqueue() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -802,6 +836,7 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: ga converges (2D continuous)", test_ga_converges);
     r.run("optimization: population batch boundary + enqueue reject", test_population_batch_and_enqueue);
     r.run("optimization: pso converges (2D continuous)", test_pso_converges);
+    r.run("optimization: cmaes converges (2D continuous)", test_cmaes_converges);
     r.run("optimization: enqueue out-of-range rejected", test_enqueue_out_of_range_rejected);
     r.run("optimization: median pruner decisions", test_median_pruner);
     r.run("optimization: asha pruner decisions", test_asha_pruner);
