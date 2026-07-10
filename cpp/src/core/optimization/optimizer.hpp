@@ -192,6 +192,10 @@ class Optimizer {
     // value (shared by random / lhs / sobol; the only stochastic part is who
     // supplies u).
     double numeric_from_unit(const ParamSpec& p, double u) const;
+    // Inverse of numeric_from_unit (approximate; ignores step): map a param value
+    // back to its unit coordinate ∈ [0,1]. Used by TPE to model history in a
+    // uniform space.
+    double unit_from_numeric(const ParamSpec& p, double value) const;
     // Decode a full unit vector u∈[0,1)^P into a trial (numeric via
     // numeric_from_unit, categorical/ordinal bucketed, sorted-tuple sampled),
     // honouring forced values and applying conditional activation. Shared by the
@@ -209,6 +213,14 @@ class Optimizer {
     virtual bool override_numeric(const ParamSpec& p, double* out) {
         (void)p;
         (void)out;
+        return false;
+    }
+    // Hook for adaptive samplers to override a categorical/ordinal choice index;
+    // the base returns false so a uniform choice is drawn. Return true and set
+    // *out_index to override.
+    virtual bool override_categorical(const ParamSpec& p, std::int32_t* out_index) {
+        (void)p;
+        (void)out_index;
         return false;
     }
     // Whether enqueue()/warm-start is supported. Population samplers (ga/pso)
@@ -371,6 +383,26 @@ class CmaEsSampler : public Optimizer {
     std::vector<std::vector<double>> pop_x_;  // clamped candidate positions
     std::vector<std::vector<double>> pop_z_;  // raw standard-normal draws
     std::int64_t                     gen_base_id_{-1};
+};
+
+// Univariate Tree-structured Parzen Estimator (F4). After `n_startup_trials`
+// random trials, each parameter is modelled independently: the completed history
+// is split into a "good" set (top γ by score) and the rest; l(x) and g(x) are
+// Parzen (KDE) densities over good/bad numeric values (or category frequencies).
+// A batch of n_ei candidates is drawn from l and the one maximising l(x)/g(x) is
+// returned — the Optuna-default sampler for mixed / conditional spaces. F4.
+class TpeSampler : public Optimizer {
+  public:
+    TpeSampler(const SearchSpace& space, const n4m_optimizer_options_t& opts);
+
+  protected:
+    bool override_numeric(const ParamSpec& p, double* out) override;
+    bool override_categorical(const ParamSpec& p, std::int32_t* out_index) override;
+
+  private:
+    std::int32_t n_startup_{10};
+    double       gamma_{0.25};
+    std::int32_t n_ei_{24};
 };
 
 // Resolve MINIMIZE/MAXIMIZE from a metric (used when direction == AUTO).

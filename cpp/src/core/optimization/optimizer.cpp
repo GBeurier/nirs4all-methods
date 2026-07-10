@@ -92,6 +92,19 @@ double Optimizer::numeric_from_unit(const ParamSpec& p, double u) const {
     return v;
 }
 
+double Optimizer::unit_from_numeric(const ParamSpec& p, double value) const {
+    if (p.high <= p.low) return 0.0;
+    double u;
+    if (p.is_log && p.low > 0.0 && p.high > 0.0 && value > 0.0) {
+        u = (std::log(value) - std::log(p.low)) / (std::log(p.high) - std::log(p.low));
+    } else {
+        u = (value - p.low) / (p.high - p.low);
+    }
+    if (u < 0.0) u = 0.0;
+    if (u > 1.0) u = 1.0;
+    return u;
+}
+
 void Optimizer::set_trial_value(::n4m_trial_s& t, const ParamSpec& p, double forced) const {
     TrialParam tp;
     if (p.kind == N4M_PARAM_CATEGORICAL || p.kind == N4M_PARAM_ORDINAL) {
@@ -213,7 +226,10 @@ bool Optimizer::sample(::n4m_trial_s& t,
             switch (p.kind) {
                 case N4M_PARAM_CATEGORICAL: {
                     const int n = static_cast<int>(p.labels.size());
-                    int idx = n > 0 ? static_cast<int>(n4m_rng_next_double(&rng_) * n) : 0;
+                    std::int32_t ov = 0;
+                    int idx = override_categorical(p, &ov)
+                                  ? static_cast<int>(ov)
+                                  : (n > 0 ? static_cast<int>(n4m_rng_next_double(&rng_) * n) : 0);
                     if (idx >= n) idx = n - 1;
                     if (idx < 0) idx = 0;
                     tp.cat_index = idx;
@@ -225,7 +241,10 @@ bool Optimizer::sample(::n4m_trial_s& t,
                 }
                 case N4M_PARAM_ORDINAL: {
                     const int n = static_cast<int>(p.num_values.size());
-                    int idx = n > 0 ? static_cast<int>(n4m_rng_next_double(&rng_) * n) : 0;
+                    std::int32_t ov = 0;
+                    int idx = override_categorical(p, &ov)
+                                  ? static_cast<int>(ov)
+                                  : (n > 0 ? static_cast<int>(n4m_rng_next_double(&rng_) * n) : 0);
                     if (idx >= n) idx = n - 1;
                     if (idx < 0) idx = 0;
                     tp.cat_index = idx;
@@ -470,7 +489,10 @@ std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
         case N4M_SAMPLER_CMAES:
             if (status != nullptr) *status = N4M_OK;
             return std::make_unique<CmaEsSampler>(space, opts);
-        default:  // sobol/tpe/gp_ei reserved for F1/F4
+        case N4M_SAMPLER_TPE:
+            if (status != nullptr) *status = N4M_OK;
+            return std::make_unique<TpeSampler>(space, opts);
+        default:  // sobol/gp_ei reserved for F1/F4
             if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;
             return nullptr;
     }
