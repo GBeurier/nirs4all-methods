@@ -13,7 +13,7 @@
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | `median`+`asha`+`racing` ✅ (374 tests; median/asha Codex-reviewed); `hyperband` (needs bracket scheduler → F5) + `n_components` fidelity engine remain |
 | **F3** — RNG consolidation → ga, pso | ✅ done (samplers) | 🟢 Codex | `ga` + `pso` samplers ✅ (376 tests, shared `decode_candidate`); RNG-consolidation of the *feature-selection* loops deferred (HPO samplers are clean fresh impls) |
-| **F4** — cmaes, tpe, (gp_ei?) | ✅ done (cmaes+tpe) | ⬜ | `cmaes` + `tpe` ✅ (379 tests); `gp_ei` optional/cuttable (roadmap) |
+| **F4** — cmaes, tpe, (gp_ei?) | ✅ done (cmaes+tpe) | 🟢 Codex | `cmaes` + `tpe` ✅ (379 tests); `gp_ei` optional/cuttable (roadmap) |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
 | **B** — bindings python→R/MATLAB/WASM + cross-binding gate | ⬜ todo | ⬜ | Track B |
 | **Phase 1 done → WAIT for green light** | ⬜ | — | do NOT touch dag-ml/core |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F4 samplers Codex review applied
+- Codex review of cmaes+tpe: **3 Blocker, 3 Major, 1 Minor — all applied** (`docs/reviews/finetuning-roadmap/codex-review-06-F4-samplers.md`). **Blockers:** TPE now requires n≥2 + a non-degenerate split before activating (was an OOB read at `n_startup_trials=1`); CMA-ES updates from **completed+scored trials only** (weights renormalised over the scored count; skips the update when none scored) so pruned/failed members never corrupt the mean/covariance. **Major:** CMA-ES step-size path computed from the *repaired* step `yw/√C` (not the raw `z`) — consistent after box-clipping; CMA-ES restricted to the **continuous axes** (`cont_axes_` map) with non-continuous axes sampled independently (Optuna-style fallback) instead of polluting the covariance; TPE categorical proposal **sampled proportional to l/g** (not argmax) so the constraint-retry loop can't livelock. **Documented** (consistent with ga/pso): hard mutex/requires/exclude handled via fitness for population/CMA samplers; TPE stepped-axis snap at decode. **CMA-ES and TPE still converge after the restructure. 379 passed, 0 failed.**
 
 ### 2026-07-10 — F4: TPE sampler
 - Added `N4M_SAMPLER_TPE` (`cpp/src/core/optimization/tpe.cpp`): univariate Tree-structured Parzen Estimator (Optuna default). Per param: split the completed history into good (top γ=0.25) / bad, build Parzen `l(x)`/`g(x)` (KDE in unit space for numeric via a new `unit_from_numeric` inverse; Laplace-smoothed category frequencies for categorical), draw n_ei=24 candidates from `l` and keep argmax `l/g`. Added a base `override_categorical()` hook (parallel to `override_numeric`) so TPE plugs into the base sampler's constraint/condition/forced machinery. Handles **mixed/conditional** spaces. Convergence test on a continuous+categorical objective (finds x≈3, category 'a'). Also fixed a stale test (`reserved sampler` now uses `sobol`, since TPE is implemented). **379 passed, 0 failed.** ABI unchanged. Doc `docs/methods/tpe.md`.

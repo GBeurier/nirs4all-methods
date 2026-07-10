@@ -7,7 +7,9 @@ Tree-structured Parzen Estimator — the Optuna-default sampler — in its **uni
 - **numeric axes:** history is mapped to unit space (`unit_from_numeric`, log-aware), KDE with a `1/√n`-scaled Gaussian bandwidth; `n_ei = 24` candidates are drawn from `l` and the best `l/g` is decoded back.
 - **categorical / ordinal axes:** Laplace-smoothed category frequencies in the good vs bad sets; the category maximising `l/g` is chosen.
 
-TPE handles **mixed and conditional** spaces naturally (each active parameter is modelled on the trials in which it was active), which is where it beats CMA-ES (continuous-only) and the population samplers. It plugs into the base sampler's per-parameter hooks, so constraints, conditions, forced values, sorted tuples, `ask_batch`, and warm-start all work as for the base sampler.
+TPE handles **mixed and conditional** spaces naturally (each active parameter is modelled on the trials in which it was active), which is where it beats CMA-ES (continuous-only) and the population samplers. It plugs into the base sampler's per-parameter hooks, so constraints, conditions, forced values, sorted tuples, `ask_batch`, and warm-start all work as for the base sampler. The categorical proposal is *sampled* proportional to `l/g` (not argmax), so the base constraint-retry loop escapes an infeasible categorical combination. TPE activates only once ≥ `max(n_startup_trials, 2)` trials exist for an axis, and falls back to a uniform draw before that.
+
+> Stepped / integer axes are modelled in continuous unit space and snapped by `numeric_from_unit` at decode time (a minor `l/g` approximation on the grid); the decoded value is always on-grid.
 
 ## Usage (C ABI)
 
