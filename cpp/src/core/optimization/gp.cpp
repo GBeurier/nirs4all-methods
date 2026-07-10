@@ -34,8 +34,9 @@ double sq_dist(const std::vector<double>& a, const std::vector<double>& b) {
     }
     return s;
 }
-// Standard normal pdf / cdf.
-double norm_pdf(double z) { return std::exp(-0.5 * z * z) / std::sqrt(2.0 * M_PI); }
+// Standard normal pdf / cdf. (M_PI is not standard C++17 — use a local constant.)
+constexpr double kPi = 3.141592653589793238462643383279502884;
+double norm_pdf(double z) { return std::exp(-0.5 * z * z) / std::sqrt(2.0 * kPi); }
 double norm_cdf(double z) { return 0.5 * std::erfc(-z / std::sqrt(2.0)); }
 
 // Cholesky K = L Lᵀ (K symmetric PD, lower L). Returns false on non-PD.
@@ -186,9 +187,17 @@ bool GpEiSampler::sample(::n4m_trial_s& t,
     }
 
     decode_candidate(full_u, t, forced);
-    // Record the continuous-axis coords so this trial can seed future GP fits.
+    // Record the DECODED continuous-axis coords (snapped for int / stepped axes),
+    // not the raw pre-snap proposal: two asks that decode to the same integer must
+    // share one GP coordinate, so the surrogate models real observations rather
+    // than fake-distinct ones (Codex F4 sobol/gp review). For plain float axes the
+    // decode round-trips, so this is identical to the raw coordinate there.
     std::vector<double> cont(P_);
-    for (std::size_t a = 0; a < P_; ++a) cont[a] = full_u[cont_axes_[a]];
+    for (std::size_t a = 0; a < P_; ++a) {
+        const ParamSpec& p = space_.params[cont_axes_[a]];
+        const TrialParam* tp = t.find(p.name);
+        cont[a] = tp ? clamp01(unit_from_numeric(p, tp->value)) : full_u[cont_axes_[a]];
+    }
     proposals_[t.id] = std::move(cont);
     return true;
 }

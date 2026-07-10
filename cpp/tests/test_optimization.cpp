@@ -584,6 +584,45 @@ void test_asha_pruner() {
     n4m_context_destroy(ctx);
 }
 
+void test_hyperband_brackets() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 10, 1, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.pruner = N4M_PRUNER_HYPERBAND;
+    o.max_resource = 9;       // rungs at resource 1,3,9 → steps 0,2,8
+    o.reduction_factor = 3;   // eta → 3 brackets (0,1,2), assigned by ask order
+    o.direction = N4M_OPT_MINIMIZE;
+    o.seed = 1;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    n4m_trial_t* t[7] = {nullptr};
+    int64_t id[7];
+    for (int i = 0; i < 7; ++i) {  // brackets 0,1,2,0,1,2,0
+        n4m_optimizer_ask(opt, &t[i]);
+        n4m_trial_get_id(t[i], &id[i]);
+    }
+    int32_t prune = -1;
+    // Successive halving within bracket 0 (trials idx 0,3,6) at rung 0.
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[0], 0, 1.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);  // <eta peers yet
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[3], 0, 2.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[6], 0, 9.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 1);  // worst of the 3 in bracket 0 → pruned
+    // Grace period: a bracket-1 trial is exempt at rung 0 even with a terrible score.
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[1], 0, 100.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);  // rung 0 < bracket 1's grace rung → survives
+    // A non-rung step (resource 2 is not a power of eta) never prunes.
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[4], 1, 100.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_ga_converges() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -726,6 +765,103 @@ void test_gp_ei_converges() {
     N4M_TEST_REQUIRE(bs < 0.5);  // GP-EI locates the basin in ~60 evals
     n4m_optimizer_destroy(opt);
     n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_gp_ei_maximize() {
+    // Exercises the MAXIMIZE branch of the EI sign: the optimum is a peak.
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_float(sp, "x", -5.0, 5.0, 0.0, 0);
+    n4m_search_space_add_float(sp, "y", -5.0, 5.0, 0.0, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.sampler = N4M_SAMPLER_GP_EI;
+    o.direction = N4M_OPT_MAXIMIZE;
+    o.n_startup_trials = 8;
+    o.seed = 3;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    for (int i = 0; i < 60; ++i) {
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        double x = 0.0;
+        double y = 0.0;
+        n4m_trial_get_float(t, "x", &x);
+        n4m_trial_get_float(t, "y", &y);
+        const double score = -((x - 2.0) * (x - 2.0) + (y + 3.0) * (y + 3.0));  // peak 0
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        n4m_optimizer_tell(opt, id, score);
+    }
+    n4m_trial_t* best = nullptr;
+    double bs = -1e9;
+    N4M_TEST_REQUIRE(n4m_optimizer_best(opt, &best, &bs) == N4M_OK);
+    N4M_TEST_REQUIRE(bs > -0.5);  // climbs the peak → near 0 (wrong EI sign would flee it)
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_gp_ei_edge_cases() {
+    // (a) No continuous axis (pure categorical) → GP degrades to random; must not
+    //     crash and must return a best. (b) A constant objective → all-equal y and
+    //     duplicate decoded coords; the jittered Cholesky must stay stable.
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    {  // (a) pure-categorical
+        n4m_search_space_t* sp = nullptr;
+        n4m_search_space_create(&sp);
+        const char* labels[3] = {"a", "b", "c"};
+        n4m_search_space_add_categorical(sp, "c", N4M_CAT_STR, labels, 3);
+        n4m_optimizer_options_t o = default_opts();
+        o.sampler = N4M_SAMPLER_GP_EI;
+        o.direction = N4M_OPT_MINIMIZE;
+        o.seed = 1;
+        n4m_optimizer_t* opt = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+        for (int i = 0; i < 30; ++i) {
+            n4m_trial_t* t = nullptr;
+            n4m_optimizer_ask(opt, &t);
+            int32_t idx = 0;
+            const char* lab = nullptr;
+            n4m_trial_get_category(t, "c", &idx, &lab);
+            int64_t id = 0;
+            n4m_trial_get_id(t, &id);
+            n4m_optimizer_tell(opt, id, static_cast<double>(idx));  // prefers "a"
+        }
+        n4m_trial_t* best = nullptr;
+        double bs = 1e9;
+        N4M_TEST_REQUIRE(n4m_optimizer_best(opt, &best, &bs) == N4M_OK);
+        N4M_TEST_REQUIRE(bs == 0.0);  // "a" (index 0) is reachable by random fallback
+        n4m_optimizer_destroy(opt);
+        n4m_search_space_destroy(sp);
+    }
+    {  // (b) constant objective → all-equal y, single continuous axis, duplicate coords
+        n4m_search_space_t* sp = nullptr;
+        n4m_search_space_create(&sp);
+        n4m_search_space_add_int(sp, "k", 1, 3, 1, 0);  // small int → repeated decoded coords
+        n4m_optimizer_options_t o = default_opts();
+        o.sampler = N4M_SAMPLER_GP_EI;
+        o.n_startup_trials = 4;
+        o.seed = 2;
+        n4m_optimizer_t* opt = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+        for (int i = 0; i < 30; ++i) {
+            n4m_trial_t* t = nullptr;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &t) == N4M_OK);  // must not throw across the ABI
+            int64_t id = 0;
+            n4m_trial_get_id(t, &id);
+            n4m_optimizer_tell(opt, id, 7.0);  // constant
+        }
+        n4m_trial_t* best = nullptr;
+        double bs = 0.0;
+        N4M_TEST_REQUIRE(n4m_optimizer_best(opt, &best, &bs) == N4M_OK);
+        N4M_TEST_REQUIRE(bs == 7.0);
+        n4m_optimizer_destroy(opt);
+        n4m_search_space_destroy(sp);
+    }
     n4m_context_destroy(ctx);
 }
 
@@ -883,7 +1019,7 @@ void test_invalid_pruner_and_nan() {
     n4m_search_space_create(&sp);
     n4m_search_space_add_int(sp, "k", 1, 10, 1, 0);
     n4m_optimizer_options_t o = default_opts();
-    o.pruner = N4M_PRUNER_HYPERBAND;  // reserved, not yet implemented
+    o.pruner = static_cast<n4m_pruner_kind_t>(99);  // out-of-range → NOT_IMPLEMENTED
     n4m_optimizer_t* opt = nullptr;
     N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_ERR_NOT_IMPLEMENTED);
     N4M_TEST_REQUIRE(opt == nullptr);
@@ -959,10 +1095,13 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: cmaes converges (2D continuous)", test_cmaes_converges);
     r.run("optimization: tpe converges (mixed space)", test_tpe_converges_mixed);
     r.run("optimization: gp_ei converges (2D continuous)", test_gp_ei_converges);
+    r.run("optimization: gp_ei maximize (EI sign)", test_gp_ei_maximize);
+    r.run("optimization: gp_ei edge cases (no-cont / all-equal)", test_gp_ei_edge_cases);
     r.run("optimization: enqueue out-of-range rejected", test_enqueue_out_of_range_rejected);
     r.run("optimization: median pruner decisions", test_median_pruner);
     r.run("optimization: asha pruner decisions", test_asha_pruner);
     r.run("optimization: racing pruner decisions", test_racing_pruner);
+    r.run("optimization: hyperband bracket decisions", test_hyperband_brackets);
     r.run("optimization: pruned trial is terminal", test_pruner_lifecycle);
     r.run("optimization: invalid pruner + NaN rejected", test_invalid_pruner_and_nan);
     r.run("optimization: lhs stratifies startup batch", test_lhs_stratifies);

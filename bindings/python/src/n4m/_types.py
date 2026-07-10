@@ -154,7 +154,9 @@ class OptimizerOptions(Structure):
         ("n_startup_trials", c_int32),
         ("seed", c_uint64),
         ("timeout_seconds", c_double),
-        ("reserved", c_uint8 * 64),
+        ("max_resource", c_int32),
+        ("reduction_factor", c_int32),
+        ("reserved", c_uint8 * 56),
     ]
 
 
