@@ -72,6 +72,16 @@ jobs:
       - name: Run C++ numerical parity tests
         run: ctest --preset ci-linux-gcc12-release --output-on-failure
 
+      - name: Run HPO cross-binding parity gate (Track Q)
+        # Runs every HpoSpec through the native optimizer and checks: golden-trace
+        # stability (the cross-binding contract), Sobol Tier-A vs scipy, and native
+        # pruner verdicts vs an independent pure-Python reimplementation.
+        env:
+          N4M_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libn4m.so
+        run: |
+          pip install scipy numpy
+          python parity/hpo/run.py
+
       - name: Run pls4all Python binding smoke test
         env:
           PLS4ALL_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libn4m.so

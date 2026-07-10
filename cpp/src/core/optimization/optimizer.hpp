@@ -165,9 +165,10 @@ class RacingPruner : public Pruner {
 // is assigned a bracket s (round-robin over its stable index) whose grace period
 // exempts it from pruning below rung s. At each rung, a trial survives only if it
 // ranks in the top 1/eta of the SAME-bracket peers that reached that rung
-// (ASHA-style asynchronous promotion). `max_resource` (0 = derive from the
-// largest reported step) sets the top rung; `reduction_factor` is eta (default 3).
-// The bracket hedge is Hyperband's advantage over plain ASHA when the optimal
+// (ASHA-style asynchronous promotion). `max_resource` (R, REQUIRED > 0 — make_pruner
+// rejects 0) sets the top rung and fixes the bracket count for the optimizer's
+// lifetime; `reduction_factor` is eta (default 3). Rungs above R never prune. The
+// bracket hedge is Hyperband's advantage over plain ASHA when the optimal
 // early-stopping rate is unknown. F5.
 class HyperbandPruner : public Pruner {
   public:
