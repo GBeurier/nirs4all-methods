@@ -49,6 +49,8 @@ add_executable(n4m_tests
     test_signal_type.cpp
     test_splitters.cpp
     test_optimization.cpp
+    include_check_optimization.cpp
+    include_check_optimization.c
     test_transfer_metrics.cpp)
 target_link_libraries(n4m_tests PRIVATE n4m_c)
 target_include_directories(n4m_tests PRIVATE

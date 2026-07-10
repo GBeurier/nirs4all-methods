@@ -228,6 +228,158 @@ void test_finetune_estimator() {
     n4m_context_destroy(ctx);
 }
 
+void test_invalid_ranges() {
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    const double nan_v = std::nan("");
+    N4M_TEST_REQUIRE(n4m_search_space_add_float(sp, "a", nan_v, 1.0, 0.0, 0) == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_search_space_add_float(sp, "b", -1.0, 1.0, 0.0, 1) == N4M_ERR_INVALID_ARGUMENT);  // log, low<=0
+    N4M_TEST_REQUIRE(n4m_search_space_add_int(sp, "c", 0, 10, 1, 1) == N4M_ERR_INVALID_ARGUMENT);          // log int, low<=0
+    N4M_TEST_REQUIRE(n4m_search_space_add_float(sp, "d", 1.0, 0.0, 0.0, 0) == N4M_ERR_INVALID_ARGUMENT);   // high<low
+    n4m_search_space_destroy(sp);
+}
+
+void test_struct_size_guard() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_float(sp, "x", 0.0, 1.0, 0.0, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.struct_size = 0;  // caller forgot to init
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_ERR_INVALID_ARGUMENT);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_enqueue_warm_start() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_float(sp, "x", -5.0, 5.0, 0.0, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.seed = 9;
+    n4m_optimizer_t* opt = nullptr;
+    n4m_optimizer_create(ctx, sp, &o, &opt);
+    // unknown param rejected
+    const char* bad[1] = {"nope"};
+    const double bv[1] = {1.0};
+    N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt, bad, bv, 1) == N4M_ERR_INVALID_ARGUMENT);
+    // valid warm-start forces the next ask
+    const char* names[1] = {"x"};
+    const double vals[1] = {3.14};
+    N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt, names, vals, 1) == N4M_OK);
+    n4m_trial_t* t = nullptr;
+    n4m_optimizer_ask(opt, &t);
+    double x = 0.0;
+    n4m_trial_get_float(t, "x", &x);
+    N4M_TEST_REQUIRE(x == 3.14);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_conditional_activation() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    const char* kernels[2] = {"linear", "rbf"};
+    n4m_search_space_add_categorical(sp, "kernel", N4M_CAT_STR, kernels, 2);
+    n4m_search_space_add_float(sp, "gamma", 1e-3, 1e0, 0.0, 1);
+    // gamma active only when kernel == "rbf"
+    const char* refs[2] = {"gamma", "kernel"};
+    const char* labs[2] = {"", "rbf"};
+    N4M_TEST_REQUIRE(
+        n4m_search_space_add_constraint(sp, N4M_CONSTRAINT_CONDITION_IN, refs, labs, 2) == N4M_OK);
+    n4m_optimizer_options_t o = default_opts();
+    o.seed = 3;
+    n4m_optimizer_t* opt = nullptr;
+    n4m_optimizer_create(ctx, sp, &o, &opt);
+    for (int i = 0; i < 20; ++i) {
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        int32_t kidx = -1;
+        const char* klabel = nullptr;
+        n4m_trial_get_category(t, "kernel", &kidx, &klabel);
+        int32_t gamma_active = -1;
+        n4m_trial_is_active(t, "gamma", &gamma_active);
+        const bool is_rbf = (klabel != nullptr && std::string(klabel) == "rbf");
+        N4M_TEST_REQUIRE(gamma_active == (is_rbf ? 1 : 0));
+    }
+    // a second condition with a different parent for the same child is rejected
+    n4m_search_space_add_float(sp, "other", 0.0, 1.0, 0.0, 0);
+    const char* refs2[2] = {"gamma", "other"};
+    const char* labs2[2] = {"", "x"};
+    N4M_TEST_REQUIRE(
+        n4m_search_space_add_constraint(sp, N4M_CONSTRAINT_CONDITION_IN, refs2, labs2, 2)
+        == N4M_ERR_UNSUPPORTED);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_finetune_rejects_unsupported_param() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "n_components", 1, 4, 1, 0);
+    n4m_search_space_add_float(sp, "unsupported", 0.0, 1.0, 0.0, 0);
+    n4m_optimizer_options_t o = default_opts();
+    // tiny valid X/Y/plan (loop rejects before CV, so contents are irrelevant)
+    double xd[4] = {1.0, 2.0, 3.0, 4.0};
+    double yd[2] = {1.0, 2.0};
+    n4m_matrix_view_t Xv{};
+    Xv.data = xd; Xv.rows = 2; Xv.cols = 2; Xv.row_stride = 2; Xv.col_stride = 1; Xv.dtype = N4M_DTYPE_F64;
+    n4m_matrix_view_t Yv{};
+    Yv.data = yd; Yv.rows = 2; Yv.cols = 1; Yv.row_stride = 1; Yv.col_stride = 1; Yv.dtype = N4M_DTYPE_F64;
+    n4m_validation_plan_t* plan = nullptr;
+    n4m_validation_plan_create(&plan);
+    n4m_validation_plan_set_n_samples(plan, 2);
+    int64_t tr[1] = {0}, te[1] = {1};
+    n4m_validation_plan_add_fold(plan, tr, 1, te, 1);
+    n4m_method_result_t* res = nullptr;
+    N4M_TEST_REQUIRE(
+        n4m_finetune_estimator(ctx, N4M_ALGO_PLS_REGRESSION, &Xv, &Yv, plan, sp, &o, 4, &res)
+        == N4M_ERR_UNSUPPORTED);
+    N4M_TEST_REQUIRE(res == nullptr);
+    n4m_validation_plan_destroy(plan);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_auto_direction_maximizes_r2() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 100, 1, 0);
+    n4m_optimizer_options_t o = default_opts();  // direction == AUTO
+    o.metric = N4M_METRIC_R2;                     // higher is better
+    o.seed = 11;
+    n4m_optimizer_t* opt = nullptr;
+    n4m_optimizer_create(ctx, sp, &o, &opt);
+    // tell three scores; best under AUTO+R2 must be the largest
+    for (int i = 0; i < 3; ++i) {
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        const double score = (i == 1) ? 0.9 : 0.2;  // trial 1 is best
+        n4m_optimizer_tell(opt, id, score);
+    }
+    n4m_trial_t* best = nullptr;
+    double bs = -1.0;
+    n4m_optimizer_best(opt, &best, &bs);
+    N4M_TEST_REQUIRE(bs == 0.9);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 }  // namespace
 
 void register_optimization_tests(n4m_testing::Runner& r) {
@@ -238,4 +390,10 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: determinism given seed", test_determinism);
     r.run("optimization: ask_batch distinct trials", test_ask_batch);
     r.run("optimization: finetune_estimator PLS CV", test_finetune_estimator);
+    r.run("optimization: invalid ranges rejected", test_invalid_ranges);
+    r.run("optimization: struct_size guard", test_struct_size_guard);
+    r.run("optimization: enqueue warm-start", test_enqueue_warm_start);
+    r.run("optimization: conditional activation", test_conditional_activation);
+    r.run("optimization: finetune rejects unsupported param", test_finetune_rejects_unsupported_param);
+    r.run("optimization: auto direction maximizes R2", test_auto_direction_maximizes_r2);
 }

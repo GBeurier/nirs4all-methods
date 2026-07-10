@@ -9,7 +9,7 @@
 | Block | State | Codex review | Notes |
 |---|---|---|---|
 | Setup (worktree, baseline build) | ✅ done | — | isolated worktree; docs committed; toolchain OK |
-| **F0** — ABI surface + `random`/`none` slice + scaffolding | ✅ done | 🟡 pending | builds clean; 359/359 tests pass; ABI 2.1 + snapshots + changelog + docs. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
+| **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
 | **F1** — samplers: sobol, lhs, ternary | ⬜ todo | ⬜ | Track S |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | ⬜ todo | ⬜ | Track P |
 | **F3** — RNG consolidation → ga, pso | ⬜ todo | ⬜ | Track G |
@@ -21,6 +21,10 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F0 Codex review applied
+- Codex read-only review of F0: **14 findings (4 Blocker, 9 Major, 1 Minor), all applied** (transcript `docs/reviews/finetuning-roadmap/codex-review-02-F0.md`). Highlights: made `optimization.h` independently includable (moved the `N4M_STATIC_ASSERT` macro above the role-header includes and relocated the HPO enum asserts into `optimization.h`) + added C/C++ compile-only include guards; hardened the ABI boundary (try/catch on every name-based trial accessor, `std::string_view` lookups, `struct_size` default-preserving copy with a `< 8` guard); made constraints authoritative (condition constraints reject unsupported shapes with `N4M_ERR_UNSUPPORTED`, enqueue validates param names, sampling skips RNG for forced dims and re-checks constraints, `ask` returns an error on constraint-exhaustion instead of a silent invalid trial); validated numeric ranges (reject NaN/Inf, log needs positive bounds); default `direction = AUTO` (derive from metric); `n4m_finetune_estimator` now rejects unsupported params, returns the full trial trace, and returns `NOT_FITTED` when nothing completes; implemented `timeout`/`duration` via `steady_clock`; documented MUTEX_GROUP (nirs4all `_mutex_` issubset) semantics.
+- 6 new regression tests lock the fixes (invalid ranges, struct_size guard, enqueue warm-start, conditional activation + conflicting-parent rejection, finetune unsupported-param rejection, AUTO+R2 maximization). **365 passed, 0 failed.** ABI snapshot unchanged (internal fixes), version-sync green.
 
 ### 2026-07-10 — F0 green
 - **Build clean, all tests pass: 359 passed, 0 failed** (7 new optimization tests incl. a real `n4m_finetune_estimator` PLS-CV run; `abi_version_compatible_with_header` green after the bump).

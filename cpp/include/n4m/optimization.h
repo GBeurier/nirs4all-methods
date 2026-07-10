@@ -30,12 +30,22 @@ typedef enum n4m_cat_type_t {
 } n4m_cat_type_t;
 
 /* Generic declarative constraints (D8) — covers the dag-ml generation
- * vocabulary (mutex/requires/exclude + conditional activation). */
+ * vocabulary (mutex/requires/exclude + conditional activation). A "(param,label)
+ * ref is PRESENT in a trial" iff the param is active and — when the ref carries a
+ * label — the param's chosen categorical label equals it. */
 typedef enum n4m_constraint_kind_t {
-    N4M_CONSTRAINT_MUTEX_GROUP = 0,   /* the whole (param,label) group may not co-occur */
-    N4M_CONSTRAINT_REQUIRES = 1,      /* ref[0] present ⇒ ref[1] present            */
-    N4M_CONSTRAINT_EXCLUDE = 2,       /* ref[0] and ref[1] may not both be present  */
-    N4M_CONSTRAINT_CONDITION_IN = 3,  /* child active iff parent label ∈ {refs[1..]}*/
+    /* Only the all-present combination is forbidden (matches the nirs4all `_mutex_`
+     * issubset rule); every proper subset is allowed. For pairwise mutual
+     * exclusion (at most one) use N4M_CONSTRAINT_EXCLUDE. */
+    N4M_CONSTRAINT_MUTEX_GROUP = 0,
+    N4M_CONSTRAINT_REQUIRES = 1,      /* ref[0] present ⇒ ref[1] present           */
+    N4M_CONSTRAINT_EXCLUDE = 2,       /* ref[0] and ref[1] may not both be present */
+    /* param_refs = {child, parent} (exactly 2); child is active iff the parent's
+     * chosen label == label_refs[1]. Repeat the constraint (same child + parent)
+     * to activate on a SET of parent labels. Other shapes (n_refs != 2, or a
+     * second constraint with a different parent for the same child) are rejected
+     * with N4M_ERR_UNSUPPORTED. */
+    N4M_CONSTRAINT_CONDITION_IN = 3,
     N4M_CONSTRAINT_CONDITION_NOT_IN = 4
 } n4m_constraint_kind_t;
 
@@ -75,6 +85,19 @@ typedef enum n4m_trial_status_t {   /* D4 */
     N4M_TRIAL_RUNNING = 0, N4M_TRIAL_COMPLETED = 1,
     N4M_TRIAL_PRUNED = 2, N4M_TRIAL_FAILED = 3
 } n4m_trial_status_t;
+
+/* ABI guard rails — every HPO enum is 4-byte. Kept in this header (not n4m.h)
+ * so it stays independently includable. */
+N4M_STATIC_ASSERT(sizeof(n4m_param_kind_t)      == 4, "n4m_param_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_cat_type_t)        == 4, "n4m_cat_type_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_constraint_kind_t) == 4, "n4m_constraint_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_sampler_kind_t)    == 4, "n4m_sampler_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_pruner_kind_t)     == 4, "n4m_pruner_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_opt_direction_t)   == 4, "n4m_opt_direction_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_eval_mode_t)       == 4, "n4m_eval_mode_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_metric_t)          == 4, "n4m_metric_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_liar_kind_t)       == 4, "n4m_liar_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_trial_status_t)    == 4, "n4m_trial_status_t must be 4 bytes");
 
 /* ==== forward-compatible options struct (D9) ============================= */
 

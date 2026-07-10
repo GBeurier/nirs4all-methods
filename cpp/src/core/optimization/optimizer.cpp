@@ -6,29 +6,31 @@
 #include "core/optimization/optimizer.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <string>
+#include <string_view>
 
 namespace n4m::core::opt {
 
 // ---- SearchSpace / Trial lookups ----------------------------------------
 
-ParamSpec* SearchSpace::find(const std::string& name) {
+ParamSpec* SearchSpace::find(std::string_view name) {
     for (auto& p : params) {
-        if (p.name == name) return &p;
+        if (std::string_view(p.name) == name) return &p;
     }
     return nullptr;
 }
-const ParamSpec* SearchSpace::find(const std::string& name) const {
+const ParamSpec* SearchSpace::find(std::string_view name) const {
     for (const auto& p : params) {
-        if (p.name == name) return &p;
+        if (std::string_view(p.name) == name) return &p;
     }
     return nullptr;
 }
 
-const TrialParam* Trial::find(const std::string& name) const {
+const TrialParam* Trial::find(std::string_view name) const {
     for (const auto& kv : params) {
-        if (kv.first == name) return &kv.second;
+        if (std::string_view(kv.first) == name) return &kv.second;
     }
     return nullptr;
 }
@@ -54,6 +56,7 @@ Optimizer::Optimizer(const SearchSpace& space, const n4m_optimizer_options_t& op
     dir_ = (opts.direction == N4M_OPT_AUTO) ? direction_for_metric(opts.metric)
                                             : opts.direction;
     n4m_rng_seed(&rng_, N4M_RNGK_SPLITMIX64, opts.seed);
+    start_time_ = std::chrono::steady_clock::now();
 }
 
 bool Optimizer::better(double candidate, double incumbent) const {
@@ -83,12 +86,40 @@ double Optimizer::sample_numeric(const ParamSpec& p) {
     return v;
 }
 
-void Optimizer::sample(::n4m_trial_s& t) {
+void Optimizer::set_trial_value(::n4m_trial_s& t, const ParamSpec& p, double forced) const {
+    TrialParam tp;
+    if (p.kind == N4M_PARAM_CATEGORICAL || p.kind == N4M_PARAM_ORDINAL) {
+        int idx = static_cast<int>(std::llround(forced));
+        const int n = static_cast<int>(std::max(p.labels.size(), p.num_values.size()));
+        if (idx < 0) idx = 0;
+        if (n > 0 && idx >= n) idx = n - 1;
+        tp.cat_index = idx;
+        tp.cat_label = (idx < static_cast<int>(p.labels.size()))
+                           ? p.labels[static_cast<std::size_t>(idx)]
+                           : "";
+        tp.value = (idx < static_cast<int>(p.num_values.size()))
+                       ? p.num_values[static_cast<std::size_t>(idx)]
+                       : static_cast<double>(idx);
+    } else {
+        tp.value = forced;
+    }
+    t.params.emplace_back(p.name, tp);
+}
+
+bool Optimizer::sample(::n4m_trial_s& t,
+                       const std::vector<std::pair<std::string, double>>* forced) {
+    auto forced_of = [&](const std::string& name, double* out) -> bool {
+        if (forced == nullptr) return false;
+        for (const auto& f : *forced) {
+            if (f.first == name) { *out = f.second; return true; }
+        }
+        return false;
+    };
     constexpr int kMaxTries = 200;
     for (int attempt = 0; attempt < kMaxTries; ++attempt) {
         t.params.clear();
         for (const auto& p : space_.params) {
-            if (p.kind == N4M_PARAM_SORTED_TUPLE) {
+            if (p.kind == N4M_PARAM_SORTED_TUPLE) {  // not forceable in F0
                 std::vector<double> vals;
                 vals.reserve(static_cast<std::size_t>(p.tuple_length));
                 for (std::int32_t i = 0; i < p.tuple_length; ++i) {
@@ -105,6 +136,12 @@ void Optimizer::sample(::n4m_trial_s& t) {
                     sub.value = vals[static_cast<std::size_t>(i)];
                     t.params.emplace_back(p.name + "#" + std::to_string(i), sub);
                 }
+                continue;
+            }
+
+            double fv = 0.0;
+            if (forced_of(p.name, &fv)) {
+                set_trial_value(t, p, fv);
                 continue;
             }
 
@@ -141,9 +178,9 @@ void Optimizer::sample(::n4m_trial_s& t) {
             t.params.emplace_back(p.name, tp);
         }
         apply_conditions(t);
-        if (constraints_ok(t)) return;
+        if (constraints_ok(t)) return true;
     }
-    // best-effort: constraints unsatisfiable within the retry budget; keep last.
+    return false;  // constraints unsatisfiable within the retry budget
 }
 
 void Optimizer::apply_conditions(::n4m_trial_s& t) const {
@@ -181,6 +218,8 @@ bool Optimizer::constraints_ok(const ::n4m_trial_s& t) const {
     for (const auto& c : space_.constraints) {
         switch (c.kind) {
             case N4M_CONSTRAINT_MUTEX_GROUP: {
+                // Only the all-present combination is forbidden (nirs4all `_mutex_`
+                // issubset rule); proper subsets are allowed.
                 if (c.param_refs.empty()) break;
                 bool all = true;
                 for (std::size_t i = 0; i < c.param_refs.size(); ++i) {
@@ -219,41 +258,36 @@ bool Optimizer::constraints_ok(const ::n4m_trial_s& t) const {
 
 n4m_status_t Optimizer::ask(::n4m_trial_s** out) {
     if (out == nullptr) return N4M_ERR_NULL_POINTER;
-    auto t = std::make_unique<::n4m_trial_s>();
-    t->id = next_id_++;
-    sample(*t);
-    if (!enqueued_.empty()) {
-        const auto forced = std::move(enqueued_.front());
-        enqueued_.pop_front();
-        for (const auto& fv : forced) {
-            for (auto& kv : t->params) {
-                if (kv.first != fv.first) continue;
-                kv.second.value = fv.second;
-                const ParamSpec* p = space_.find(fv.first);
-                if (p != nullptr &&
-                    (p->kind == N4M_PARAM_CATEGORICAL || p->kind == N4M_PARAM_ORDINAL)) {
-                    int idx = static_cast<int>(std::llround(fv.second));
-                    const int n = static_cast<int>(std::max(p->labels.size(), p->num_values.size()));
-                    if (idx < 0) idx = 0;
-                    if (n > 0 && idx >= n) idx = n - 1;
-                    kv.second.cat_index = idx;
-                    if (idx < static_cast<int>(p->labels.size())) {
-                        kv.second.cat_label = p->labels[static_cast<std::size_t>(idx)];
-                    }
-                    if (idx < static_cast<int>(p->num_values.size())) {
-                        kv.second.value = p->num_values[static_cast<std::size_t>(idx)];
-                    }
-                }
-            }
-        }
-        apply_conditions(*t);
+    if (opts_.timeout_seconds > 0.0) {
+        const double elapsed =
+            std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time_).count();
+        if (elapsed > opts_.timeout_seconds) return N4M_ERR_CANCELLED;
     }
+
+    std::vector<std::pair<std::string, double>> forced_storage;
+    const std::vector<std::pair<std::string, double>>* forced = nullptr;
+    if (!enqueued_.empty()) {
+        forced_storage = std::move(enqueued_.front());
+        enqueued_.pop_front();
+        forced = &forced_storage;
+    }
+
+    auto t = std::make_unique<::n4m_trial_s>();
+    t->id = next_id_;
+    t->ask_time = std::chrono::steady_clock::now();
+    if (!sample(*t, forced)) {
+        return N4M_ERR_INVALID_ARGUMENT;  // constraints unsatisfiable (incl. an invalid warm-start)
+    }
+    ++next_id_;
     *out = t.get();
     trials_.push_back(std::move(t));
     return N4M_OK;
 }
 
 n4m_status_t Optimizer::enqueue(std::vector<std::pair<std::string, double>> params) {
+    for (const auto& p : params) {
+        if (space_.find(p.first) == nullptr) return N4M_ERR_INVALID_ARGUMENT;  // unknown param
+    }
     enqueued_.push_back(std::move(params));
     return N4M_OK;
 }
@@ -266,6 +300,8 @@ n4m_status_t Optimizer::tell_result(std::int64_t id, n4m_trial_status_t status, 
         t->score = score;
         t->has_score = true;
     }
+    t->duration_seconds =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - t->ask_time).count();
     return N4M_OK;
 }
 
