@@ -462,6 +462,47 @@ void test_enqueue_out_of_range_rejected() {
     n4m_context_destroy(ctx);
 }
 
+void test_median_pruner() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 10, 1, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.pruner = N4M_PRUNER_MEDIAN;
+    o.direction = N4M_OPT_MINIMIZE;
+    o.n_startup_trials = 2;  // min peers before pruning
+    o.seed = 1;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    n4m_trial_t* t[3] = {nullptr, nullptr, nullptr};
+    int64_t id[3];
+    for (int i = 0; i < 3; ++i) {
+        n4m_optimizer_ask(opt, &t[i]);
+        n4m_trial_get_id(t[i], &id[i]);
+    }
+    int32_t prune = -1;
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[0], 0, 1.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);  // no peers yet
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[1], 0, 2.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);  // 1 peer < min_peers=2
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[2], 0, 5.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 1);  // worse than median(1,2)=2.0
+    n4m_trial_status_t st;
+    n4m_trial_get_status(t[2], &st);
+    N4M_TEST_REQUIRE(st == N4M_TRIAL_PRUNED);
+    // a strong trial is not pruned
+    n4m_trial_t* t3 = nullptr;
+    int64_t id3 = 0;
+    n4m_optimizer_ask(opt, &t3);
+    n4m_trial_get_id(t3, &id3);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id3, 0, 0.5, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);  // better than the median
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_lhs_stratifies() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -514,5 +555,6 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: ternary converges (unimodal int)", test_ternary_converges);
     r.run("optimization: ternary respects step + batch reservations", test_ternary_respects_step_and_batch);
     r.run("optimization: enqueue out-of-range rejected", test_enqueue_out_of_range_rejected);
+    r.run("optimization: median pruner decisions", test_median_pruner);
     r.run("optimization: lhs stratifies startup batch", test_lhs_stratifies);
 }

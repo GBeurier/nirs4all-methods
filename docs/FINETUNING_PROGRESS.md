@@ -11,7 +11,7 @@
 | Setup (worktree, baseline build) | ✅ done | — | isolated worktree; docs committed; toolchain OK |
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
-| **F2** — pruners: fidelity engine → median, asha, hyperband, racing | ⬜ todo | ⬜ | Track P |
+| **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | ⬜ | pruner architecture + `median` ✅ (370 tests); asha/hyperband/racing + fidelity engine next |
 | **F3** — RNG consolidation → ga, pso | ⬜ todo | ⬜ | Track G |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
@@ -21,6 +21,10 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F2 opener: pruner architecture + median pruner
+- Added the `Pruner` abstraction (`cpp/src/core/optimization/pruners.cpp`): `Optimizer` holds a `unique_ptr<Pruner>` set by a `make_pruner()` factory from `opts.pruner`; `tell_intermediate()` delegates the keep/prune verdict and marks pruned trials `N4M_TRIAL_PRUNED`. This makes pruners **orthogonal to samplers** (composed via the options struct), matching the roadmap's sampler ⟂ pruner split. `make_optimizer` now accepts `NONE`+`MEDIAN`; `asha`/`hyperband`/`racing` slot into the same factory later.
+- Implemented `N4M_PRUNER_MEDIAN` (Vizier median stopping rule): prune when a trial's intermediate score is worse than the median of peer scores at the same step; never before `min_peers` (= `n_startup_trials`) peers. Decision-level test on a canned history. **370 passed, 0 failed.** ABI unchanged. Doc `docs/methods/median_pruner.md`.
 
 ### 2026-07-10 — F1 samplers Codex review applied
 - Codex review of ternary+lhs: **0 Blocker, 5 Major, 2 Minor — all applied** (`docs/reviews/finetuning-roadmap/codex-review-03-F1-samplers.md`). Ternary reworked into **grid-index space**: honours `step` (proposes only on-grid values), **reserves RUNNING trials** so batched asks don't collide, skips inactive/off-domain history, and keeps arithmetic bounded (index space, guard against absurdly wide ranges). Base `enqueue()` now **validates numeric ranges + categorical indices** (rejects out-of-range warm-starts). LHS: seed **domain-separated** from the base RNG; `size_t` index comparison; clearer Fisher-Yates. +2 regression tests (stepped ternary + batch reservation distinctness, enqueue out-of-range rejection). **369 passed, 0 failed.**

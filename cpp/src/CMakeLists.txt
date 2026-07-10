@@ -56,6 +56,7 @@ add_library(n4m_core OBJECT
     core/optimization/optimizer.cpp
     core/optimization/ternary.cpp
     core/optimization/lhs.cpp
+    core/optimization/pruners.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp
     core/extra_pls.cpp

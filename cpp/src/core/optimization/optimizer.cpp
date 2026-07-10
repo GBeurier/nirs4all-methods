@@ -57,6 +57,7 @@ Optimizer::Optimizer(const SearchSpace& space, const n4m_optimizer_options_t& op
                                             : opts.direction;
     n4m_rng_seed(&rng_, N4M_RNGK_SPLITMIX64, opts.seed);
     start_time_ = std::chrono::steady_clock::now();
+    pruner_ = make_pruner(opts, nullptr);  // make_optimizer has already validated the kind
 }
 
 bool Optimizer::better(double candidate, double incumbent) const {
@@ -336,7 +337,10 @@ n4m_status_t Optimizer::tell_intermediate(std::int64_t id, std::int32_t step, do
     if (t == nullptr) return N4M_ERR_INVALID_ARGUMENT;
     t->intermediates.emplace_back(step, score);
     t->rung = step;
-    if (out_should_prune != nullptr) *out_should_prune = 0;  // `none` pruner never prunes
+    bool prune = false;
+    if (pruner_ != nullptr) prune = pruner_->should_prune(*t, step, score, trials_, dir_);
+    if (prune) t->status = N4M_TRIAL_PRUNED;
+    if (out_should_prune != nullptr) *out_should_prune = prune ? 1 : 0;
     return N4M_OK;
 }
 
@@ -357,8 +361,8 @@ n4m_status_t Optimizer::tell_intermediate(std::int64_t id, std::int32_t step, do
 std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
                                           const n4m_optimizer_options_t& opts,
                                           n4m_status_t* status) {
-    if (opts.pruner != N4M_PRUNER_NONE) {
-        if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;  // pruners land in F2
+    if (opts.pruner != N4M_PRUNER_NONE && opts.pruner != N4M_PRUNER_MEDIAN) {
+        if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;  // asha/hyperband/racing land later in F2
         return nullptr;
     }
     switch (opts.sampler) {
