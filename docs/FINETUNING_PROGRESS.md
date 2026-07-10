@@ -15,12 +15,16 @@
 | **F3** — RNG consolidation → ga, pso | ✅ done (samplers) | 🟢 Codex | `ga` + `pso` samplers ✅ (376 tests, shared `decode_candidate`); RNG-consolidation of the *feature-selection* loops deferred (HPO samplers are clean fresh impls) |
 | **F4** — cmaes, tpe, (gp_ei?) | ✅ done (cmaes+tpe) | 🟢 Codex | `cmaes` + `tpe` ✅ (379 tests); `gp_ei` optional/cuttable (roadmap) |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
-| **B** — bindings python→R/MATLAB/WASM + cross-binding gate | ⬜ todo | ⬜ | Track B |
+| **B** — bindings python→R/MATLAB/WASM + cross-binding gate | 🟡 in progress | ⬜ | **Python binding ✅** (ask/tell wrapper, 4 smoke tests pass vs dev .so); R/MATLAB/WASM + cross-binding gate next |
 | **Phase 1 done → WAIT for green light** | ⬜ | — | do NOT touch dag-ml/core |
 
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F6: Python binding
+- Added the Python binding for the native optimizer: ctypes decls for all 31 `n4m_optimizer_*`/`n4m_search_space_*`/`n4m_trial_*`/`n4m_finetune_estimator` symbols (`_ffi_decls.py`), an `OptimizerOptions` ctypes struct mirroring `n4m_optimizer_options_t` (native alignment; `_types.py`), and an idiomatic wrapper `n4m/model_selection/optimizer.py` (`SearchSpace`, `Trial`, `Optimizer` + `Sampler`/`Pruner`/`Direction`/`Metric` enums). Exported from `n4m.model_selection`.
+- Smoke test (`bindings/python/tests/test_optimizer_smoke.py`): random converges on a quadratic, **TPE converges on a mixed continuous+categorical space and picks the right category**, median pruner decisions, seed determinism — **all pass against the dev `.so`** (`N4M_LIB_PATH=…/libn4m.so.2.1.0`). Proves the ABI is usable from a consumer (struct layout, ask/tell, result round-trip). (Env note: two `.so` versions coexisted in the dev build — the stale pre-bump `2.0.0` and current `2.1.0`; point N4M_LIB_PATH at 2.1.0.)
 
 ### 2026-07-10 — F4 samplers Codex review applied
 - Codex review of cmaes+tpe: **3 Blocker, 3 Major, 1 Minor — all applied** (`docs/reviews/finetuning-roadmap/codex-review-06-F4-samplers.md`). **Blockers:** TPE now requires n≥2 + a non-degenerate split before activating (was an OOB read at `n_startup_trials=1`); CMA-ES updates from **completed+scored trials only** (weights renormalised over the scored count; skips the update when none scored) so pruned/failed members never corrupt the mean/covariance. **Major:** CMA-ES step-size path computed from the *repaired* step `yw/√C` (not the raw `z`) — consistent after box-clipping; CMA-ES restricted to the **continuous axes** (`cont_axes_` map) with non-continuous axes sampled independently (Optuna-style fallback) instead of polluting the covariance; TPE categorical proposal **sampled proportional to l/g** (not argmax) so the constraint-retry loop can't livelock. **Documented** (consistent with ga/pso): hard mutex/requires/exclude handled via fitness for population/CMA samplers; TPE stepped-axis snap at decode. **CMA-ES and TPE still converge after the restructure. 379 passed, 0 failed.**
