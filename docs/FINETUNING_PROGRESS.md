@@ -11,7 +11,7 @@
 | Setup (worktree, baseline build) | ✅ done | — | isolated worktree; docs committed; toolchain OK |
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
-| **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | ⬜ | pruner arch + `median` + `asha` ✅ (371 tests); hyperband/racing + fidelity engine next |
+| **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | pruner arch + `median` + `asha` ✅ **Codex-reviewed (7 findings applied)**, 373 tests; hyperband/racing + fidelity engine next |
 | **F3** — RNG consolidation → ga, pso | ⬜ todo | ⬜ | Track G |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F2 pruners Codex review applied
+- Codex review of the pruner block: **1 Blocker, 3 Major, 3 Minor — all applied** (`docs/reviews/finetuning-roadmap/codex-review-04-F2-pruners.md`). **Blocker:** terminal state is now terminal — `tell_intermediate`/`tell_result` reject reports on a non-RUNNING trial (only an idempotent same-status re-report is accepted), so an auto-pruned trial can no longer be overwritten to COMPLETED and win `best()`. **Major:** true 50th-percentile median (mean of the two middle values for even n) — direction-symmetric; **finite-score validation** on both tell paths (rejects NaN/Inf before it corrupts `std::sort`); **centralized pruner-kind validation** in `make_optimizer` (out-of-range/unimplemented pruner is rejected, not silently degraded to none). **Minor:** one value per `(trial, step)` (update-in-place); ASHA `reduction_factor` documented as fixed-at-3 for F2 + ties-survive semantics. +2 regression tests (pruned-is-terminal, invalid-pruner + NaN). **373 passed, 0 failed.**
 
 ### 2026-07-10 — F2: ASHA pruner
 - Added `N4M_PRUNER_ASHA` (asynchronous successive halving) into the same factory: at each rung a trial survives only if in the top 1/reduction_factor (=3) of the peers at that rung, decided asynchronously (sound for a per-`tell` verdict). Decision-level test on a canned history. **371 passed, 0 failed.** ABI unchanged. Doc `docs/methods/asha.md`. (Hyperband bracket-scheduler + racing + the `n_components` fidelity engine remain in F2.)

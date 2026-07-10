@@ -321,6 +321,12 @@ n4m_status_t Optimizer::enqueue(std::vector<std::pair<std::string, double>> para
 n4m_status_t Optimizer::tell_result(std::int64_t id, n4m_trial_status_t status, double score) {
     ::n4m_trial_s* t = find(id);
     if (t == nullptr) return N4M_ERR_INVALID_ARGUMENT;
+    if (status == N4M_TRIAL_COMPLETED && !std::isfinite(score)) return N4M_ERR_INVALID_ARGUMENT;
+    if (t->status != N4M_TRIAL_RUNNING) {
+        // Terminal state is terminal: only an idempotent re-report of the SAME
+        // status is accepted (e.g. tell_result(PRUNED) after an auto-prune).
+        return t->status == status ? N4M_OK : N4M_ERR_INVALID_ARGUMENT;
+    }
     t->status = status;
     if (status == N4M_TRIAL_COMPLETED) {
         t->score = score;
@@ -335,7 +341,14 @@ n4m_status_t Optimizer::tell_intermediate(std::int64_t id, std::int32_t step, do
                                           std::int32_t* out_should_prune) {
     ::n4m_trial_s* t = find(id);
     if (t == nullptr) return N4M_ERR_INVALID_ARGUMENT;
-    t->intermediates.emplace_back(step, score);
+    if (t->status != N4M_TRIAL_RUNNING) return N4M_ERR_INVALID_ARGUMENT;  // terminal ⇒ no more rungs
+    if (!std::isfinite(score)) return N4M_ERR_INVALID_ARGUMENT;
+    // One value per step (a re-report of the same step updates, not duplicates).
+    bool updated = false;
+    for (auto& im : t->intermediates) {
+        if (im.first == step) { im.second = score; updated = true; break; }
+    }
+    if (!updated) t->intermediates.emplace_back(step, score);
     t->rung = step;
     bool prune = false;
     if (pruner_ != nullptr) prune = pruner_->should_prune(*t, step, score, trials_, dir_);
@@ -361,9 +374,15 @@ n4m_status_t Optimizer::tell_intermediate(std::int64_t id, std::int32_t step, do
 std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
                                           const n4m_optimizer_options_t& opts,
                                           n4m_status_t* status) {
-    if (opts.pruner == N4M_PRUNER_HYPERBAND || opts.pruner == N4M_PRUNER_RACING) {
-        if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;  // hyperband/racing land later in F2
-        return nullptr;
+    {
+        // Single authority for which pruner kinds are supported (rejects
+        // hyperband/racing and any out-of-range enum value).
+        n4m_status_t pruner_status = N4M_OK;
+        (void)make_pruner(opts, &pruner_status);
+        if (pruner_status != N4M_OK) {
+            if (status != nullptr) *status = pruner_status;
+            return nullptr;
+        }
     }
     switch (opts.sampler) {
         case N4M_SAMPLER_RANDOM:

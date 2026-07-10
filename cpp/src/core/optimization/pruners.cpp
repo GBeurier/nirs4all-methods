@@ -32,8 +32,10 @@ bool MedianPruner::should_prune(const ::n4m_trial_s& trial, std::int32_t step, d
     if (static_cast<std::int32_t>(peers.size()) < min_peers_) return false;
 
     std::sort(peers.begin(), peers.end());
-    const double median = peers[peers.size() / 2];
-    // Prune when this trial is worse than the median at this step.
+    const std::size_t n = peers.size();
+    const double median =
+        (n % 2 == 1) ? peers[n / 2] : 0.5 * (peers[n / 2 - 1] + peers[n / 2]);  // true 50th pct
+    // Prune when this trial is strictly worse than the peer median at this step.
     return dir == N4M_OPT_MAXIMIZE ? (score < median) : (score > median);
 }
 
