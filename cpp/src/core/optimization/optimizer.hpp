@@ -7,10 +7,12 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -59,8 +61,8 @@ class SearchSpace {
     std::vector<ParamSpec>  params;
     std::vector<Constraint> constraints;
 
-    ParamSpec*       find(const std::string& name);
-    const ParamSpec* find(const std::string& name) const;
+    ParamSpec*       find(std::string_view name);
+    const ParamSpec* find(std::string_view name) const;
 };
 
 // A single sampled value inside a trial.
@@ -81,8 +83,9 @@ struct Trial {
     double                                             duration_seconds{0.0};
     std::int32_t                                       rung{0};
     std::vector<std::pair<std::int32_t, double>>       intermediates;
+    std::chrono::steady_clock::time_point              ask_time{};
 
-    const TrialParam* find(const std::string& name) const;
+    const TrialParam* find(std::string_view name) const;
 };
 
 }  // namespace n4m::core::opt
@@ -114,18 +117,23 @@ class Optimizer {
     n4m_opt_direction_t direction() const { return dir_; }
 
   protected:
-    // `random` sampling of one trial; a subclass overrides for adaptive samplers.
-    virtual void sample(::n4m_trial_s& t);
+    // Sample one trial, honouring `forced` values (unforced dimensions are
+    // sampled). Returns false when constraints cannot be satisfied within the
+    // retry budget. A subclass overrides for adaptive samplers.
+    virtual bool sample(::n4m_trial_s& t,
+                        const std::vector<std::pair<std::string, double>>* forced);
 
     double sample_numeric(const ParamSpec& p);
     void   apply_conditions(::n4m_trial_s& t) const;
     bool   constraints_ok(const ::n4m_trial_s& t) const;
     bool   better(double candidate, double incumbent) const;
+    void   set_trial_value(::n4m_trial_s& t, const ParamSpec& p, double forced) const;
 
     SearchSpace              space_;
     n4m_optimizer_options_t  opts_;
     n4m_opt_direction_t      dir_{N4M_OPT_MINIMIZE};
     n4m_rng                  rng_{};
+    std::chrono::steady_clock::time_point start_time_{};
 
   private:
     ::n4m_trial_s* find(std::int64_t id) const;

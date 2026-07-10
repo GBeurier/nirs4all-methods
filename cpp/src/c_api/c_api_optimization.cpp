@@ -66,6 +66,29 @@ bool regression_metric_value(n4m_metric_t metric,
     }
 }
 
+// Pack the per-trial trace (ids, scores, status, rung, duration) into a result
+// bag. Shared by n4m_optimizer_get_trials and n4m_finetune_estimator so both
+// expose the documented trace consistently.
+void pack_trial_trace(const std::vector<std::unique_ptr<n4m_trial_s>>& trials, int64_t since_id,
+                      ::n4m::core::MethodResult& out) {
+    std::vector<double> ids, scores, statuses, rungs, durations;
+    for (const auto& up : trials) {
+        if (up->id < since_id) continue;
+        ids.push_back(static_cast<double>(up->id));
+        scores.push_back(up->has_score ? up->score : std::nan(""));
+        statuses.push_back(static_cast<double>(up->status));
+        rungs.push_back(static_cast<double>(up->rung));
+        durations.push_back(up->duration_seconds);
+    }
+    const std::int64_t n = static_cast<std::int64_t>(ids.size());
+    out.set_double_matrix("trial_ids", std::move(ids), 1, n);
+    out.set_double_matrix("trial_scores", std::move(scores), 1, n);
+    out.set_double_matrix("trial_status", std::move(statuses), 1, n);
+    out.set_double_matrix("trial_rung", std::move(rungs), 1, n);
+    out.set_double_matrix("trial_duration", std::move(durations), 1, n);
+    out.set_scalar("n_trials", static_cast<double>(n));
+}
+
 }  // namespace
 
 extern "C" {
@@ -78,7 +101,7 @@ N4M_API void n4m_optimizer_options_init(n4m_optimizer_options_t* opts) {
     opts->struct_size      = sizeof(n4m_optimizer_options_t);
     opts->sampler          = N4M_SAMPLER_RANDOM;
     opts->pruner           = N4M_PRUNER_NONE;
-    opts->direction        = N4M_OPT_MINIMIZE;
+    opts->direction        = N4M_OPT_AUTO;  // derive from metric unless overridden
     opts->eval_mode        = N4M_EVAL_MEAN;
     opts->metric           = N4M_METRIC_RMSE;
     opts->liar             = N4M_LIAR_NONE;
@@ -103,14 +126,18 @@ N4M_API n4m_status_t n4m_search_space_create(n4m_search_space_t** out) {
 }
 
 N4M_API void n4m_search_space_destroy(n4m_search_space_t* space) {
-    delete space;
+    try {
+        delete space;
+    } catch (...) {
+    }
 }
 
 N4M_API n4m_status_t n4m_search_space_add_int(n4m_search_space_t* space, const char* name,
                                               int64_t low, int64_t high, int64_t step,
                                               int32_t log) {
     if (space == nullptr || name == nullptr) return N4M_ERR_NULL_POINTER;
-    if (high < low) return N4M_ERR_INVALID_ARGUMENT;
+    if (high < low || step < 0) return N4M_ERR_INVALID_ARGUMENT;
+    if (log && low <= 0) return N4M_ERR_INVALID_ARGUMENT;  // log needs positive bounds
     try {
         opt::ParamSpec p;
         p.name = name;
@@ -131,7 +158,11 @@ N4M_API n4m_status_t n4m_search_space_add_float(n4m_search_space_t* space, const
                                                 double low, double high, double step,
                                                 int32_t log) {
     if (space == nullptr || name == nullptr) return N4M_ERR_NULL_POINTER;
+    if (!std::isfinite(low) || !std::isfinite(high) || !std::isfinite(step)) {
+        return N4M_ERR_INVALID_ARGUMENT;  // reject NaN / Inf bounds
+    }
     if (high < low) return N4M_ERR_INVALID_ARGUMENT;
+    if (log && (low <= 0.0 || high <= 0.0)) return N4M_ERR_INVALID_ARGUMENT;  // log needs positive bounds
     try {
         opt::ParamSpec p;
         p.name = name;
@@ -219,6 +250,7 @@ N4M_API n4m_status_t n4m_search_space_add_sorted_tuple(n4m_search_space_t* space
                                                        int32_t element_is_int) {
     if (space == nullptr || name == nullptr) return N4M_ERR_NULL_POINTER;
     if (length <= 0 || high < low) return N4M_ERR_INVALID_ARGUMENT;
+    if (!std::isfinite(low) || !std::isfinite(high)) return N4M_ERR_INVALID_ARGUMENT;
     try {
         opt::ParamSpec p;
         p.name = name;
@@ -249,21 +281,24 @@ N4M_API n4m_status_t n4m_search_space_add_constraint(n4m_search_space_t* space,
             c.label_refs.emplace_back(
                 (label_refs != nullptr && label_refs[i] != nullptr) ? label_refs[i] : "");
         }
-        // Conditional activation is applied per child ParamSpec (not by rejection).
-        if ((kind == N4M_CONSTRAINT_CONDITION_IN || kind == N4M_CONSTRAINT_CONDITION_NOT_IN) &&
-            n_refs >= 2) {
+
+        if (kind == N4M_CONSTRAINT_CONDITION_IN || kind == N4M_CONSTRAINT_CONDITION_NOT_IN) {
+            // F0: exactly {child, parent}; activation applied per child ParamSpec.
+            if (n_refs != 2) return N4M_ERR_UNSUPPORTED;
             opt::ParamSpec* child = space->find(c.param_refs[0]);
-            if (child != nullptr) {
-                const bool is_in = (kind == N4M_CONSTRAINT_CONDITION_IN);
-                const std::string parent = c.param_refs[1];
-                const std::string label = c.label_refs.size() > 1 ? c.label_refs[1] : std::string();
-                if (child->cond_parent.empty() || child->cond_parent == parent) {
-                    child->cond_parent = parent;
-                    child->cond_is_in = is_in;
-                    if (!label.empty()) child->cond_labels.push_back(label);
-                }
+            if (child == nullptr) return N4M_ERR_INVALID_ARGUMENT;  // unknown child param
+            const bool is_in = (kind == N4M_CONSTRAINT_CONDITION_IN);
+            const std::string& parent = c.param_refs[1];
+            const std::string& label = c.label_refs[1];
+            if (!child->cond_parent.empty() &&
+                (child->cond_parent != parent || child->cond_is_in != is_in)) {
+                return N4M_ERR_UNSUPPORTED;  // conflicting condition on the same child
             }
+            child->cond_parent = parent;
+            child->cond_is_in = is_in;
+            if (!label.empty()) child->cond_labels.push_back(label);
         }
+
         space->constraints.push_back(std::move(c));
         return N4M_OK;
     } catch (...) {
@@ -289,10 +324,14 @@ N4M_API n4m_status_t n4m_optimizer_create(n4m_context_t* ctx, const n4m_search_s
         return N4M_ERR_NULL_POINTER;
     }
     try {
+        if (opts->struct_size < sizeof(uint64_t)) {
+            set_error(ctx, "n4m_optimizer_options_t.struct_size unset (call n4m_optimizer_options_init)");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
         n4m_optimizer_options_t o;
-        std::memset(&o, 0, sizeof(o));
+        n4m_optimizer_options_init(&o);  // fill defaults, then overlay the caller's bytes
         const std::size_t copy = std::min(static_cast<std::size_t>(opts->struct_size), sizeof(o));
-        std::memcpy(&o, opts, copy > 0 ? copy : sizeof(o));
+        std::memcpy(&o, opts, copy);
         o.struct_size = sizeof(o);
 
         n4m_status_t st = N4M_OK;
@@ -315,7 +354,10 @@ N4M_API n4m_status_t n4m_optimizer_create(n4m_context_t* ctx, const n4m_search_s
 }
 
 N4M_API void n4m_optimizer_destroy(n4m_optimizer_t* opt) {
-    delete opt;
+    try {
+        delete opt;
+    } catch (...) {
+    }
 }
 
 N4M_API n4m_status_t n4m_optimizer_enqueue(n4m_optimizer_t* opt, const char* const* names,
@@ -424,24 +466,8 @@ N4M_API n4m_status_t n4m_optimizer_get_trials(const n4m_optimizer_t* opt, int64_
     if (opt == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = nullptr;
     try {
-        const auto& trials = opt->impl->trials();
-        std::vector<double> ids, scores, statuses, rungs, durations;
-        for (const auto& up : trials) {
-            if (up->id < since_id) continue;
-            ids.push_back(static_cast<double>(up->id));
-            scores.push_back(up->has_score ? up->score : std::nan(""));
-            statuses.push_back(static_cast<double>(up->status));
-            rungs.push_back(static_cast<double>(up->rung));
-            durations.push_back(up->duration_seconds);
-        }
-        const std::int64_t n = static_cast<std::int64_t>(ids.size());
         auto handle = std::make_unique<n4m_method_result_s>();
-        handle->set_double_matrix("trial_ids", std::move(ids), 1, n);
-        handle->set_double_matrix("trial_scores", std::move(scores), 1, n);
-        handle->set_double_matrix("trial_status", std::move(statuses), 1, n);
-        handle->set_double_matrix("trial_rung", std::move(rungs), 1, n);
-        handle->set_double_matrix("trial_duration", std::move(durations), 1, n);
-        handle->set_scalar("n_trials", static_cast<double>(n));
+        pack_trial_trace(opt->impl->trials(), since_id, *handle);
         *out = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
@@ -476,36 +502,52 @@ N4M_API n4m_status_t n4m_trial_get_id(const n4m_trial_t* trial, int64_t* out) {
 
 N4M_API n4m_status_t n4m_trial_get_int(const n4m_trial_t* trial, const char* name, int64_t* out) {
     if (trial == nullptr || name == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
-    const opt::TrialParam* tp = as_trial(trial)->find(name);
-    if (tp == nullptr) return N4M_ERR_INVALID_ARGUMENT;
-    *out = static_cast<int64_t>(std::llround(tp->value));
-    return N4M_OK;
+    try {
+        const opt::TrialParam* tp = as_trial(trial)->find(name);
+        if (tp == nullptr) return N4M_ERR_INVALID_ARGUMENT;
+        *out = static_cast<int64_t>(std::llround(tp->value));
+        return N4M_OK;
+    } catch (...) {
+        return N4M_ERR_INTERNAL;
+    }
 }
 
 N4M_API n4m_status_t n4m_trial_get_float(const n4m_trial_t* trial, const char* name, double* out) {
     if (trial == nullptr || name == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
-    const opt::TrialParam* tp = as_trial(trial)->find(name);
-    if (tp == nullptr) return N4M_ERR_INVALID_ARGUMENT;
-    *out = tp->value;
-    return N4M_OK;
+    try {
+        const opt::TrialParam* tp = as_trial(trial)->find(name);
+        if (tp == nullptr) return N4M_ERR_INVALID_ARGUMENT;
+        *out = tp->value;
+        return N4M_OK;
+    } catch (...) {
+        return N4M_ERR_INTERNAL;
+    }
 }
 
 N4M_API n4m_status_t n4m_trial_get_category(const n4m_trial_t* trial, const char* name,
                                             int32_t* out_index, const char** out_label) {
     if (trial == nullptr || name == nullptr) return N4M_ERR_NULL_POINTER;
-    const opt::TrialParam* tp = as_trial(trial)->find(name);
-    if (tp == nullptr) return N4M_ERR_INVALID_ARGUMENT;
-    if (out_index != nullptr) *out_index = tp->cat_index;
-    if (out_label != nullptr) *out_label = tp->cat_label.c_str();  // core-owned
-    return N4M_OK;
+    try {
+        const opt::TrialParam* tp = as_trial(trial)->find(name);
+        if (tp == nullptr) return N4M_ERR_INVALID_ARGUMENT;
+        if (out_index != nullptr) *out_index = tp->cat_index;
+        if (out_label != nullptr) *out_label = tp->cat_label.c_str();  // core-owned
+        return N4M_OK;
+    } catch (...) {
+        return N4M_ERR_INTERNAL;
+    }
 }
 
 N4M_API n4m_status_t n4m_trial_is_active(const n4m_trial_t* trial, const char* name, int32_t* out) {
     if (trial == nullptr || name == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
-    const opt::TrialParam* tp = as_trial(trial)->find(name);
-    if (tp == nullptr) return N4M_ERR_INVALID_ARGUMENT;
-    *out = tp->active ? 1 : 0;
-    return N4M_OK;
+    try {
+        const opt::TrialParam* tp = as_trial(trial)->find(name);
+        if (tp == nullptr) return N4M_ERR_INVALID_ARGUMENT;
+        *out = tp->active ? 1 : 0;
+        return N4M_OK;
+    } catch (...) {
+        return N4M_ERR_INTERNAL;
+    }
 }
 
 N4M_API n4m_status_t n4m_trial_get_rung(const n4m_trial_t* trial, int32_t* out) {
@@ -543,10 +585,14 @@ N4M_API n4m_status_t n4m_finetune_estimator(n4m_context_t* ctx, n4m_algorithm_t 
     }
     if (n_trials <= 0) return N4M_ERR_INVALID_ARGUMENT;
     try {
+        if (opts->struct_size < sizeof(uint64_t)) {
+            set_error(ctx, "n4m_optimizer_options_t.struct_size unset (call n4m_optimizer_options_init)");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
         n4m_optimizer_options_t o;
-        std::memset(&o, 0, sizeof(o));
+        n4m_optimizer_options_init(&o);  // fill defaults, then overlay the caller's bytes
         const std::size_t copy = std::min(static_cast<std::size_t>(opts->struct_size), sizeof(o));
-        std::memcpy(&o, opts, copy > 0 ? copy : sizeof(o));
+        std::memcpy(&o, opts, copy);
         o.struct_size = sizeof(o);
 
         n4m_status_t st = N4M_OK;
@@ -554,6 +600,15 @@ N4M_API n4m_status_t n4m_finetune_estimator(n4m_context_t* ctx, n4m_algorithm_t 
         if (optimizer == nullptr) {
             set_error(ctx, "unsupported sampler/pruner in n4m_finetune_estimator");
             return st;
+        }
+
+        // F0 tunes only the estimator's n_components; reject any other declared
+        // hyperparameter rather than silently ignoring it (later phases widen this).
+        for (const auto& p : space->params) {
+            if (p.name != "n_components") {
+                set_error(ctx, "n4m_finetune_estimator (F0) only tunes 'n_components'");
+                return N4M_ERR_UNSUPPORTED;
+            }
         }
 
         ::n4m::core::Context& core_ctx = *as_core(ctx);
@@ -590,23 +645,17 @@ N4M_API n4m_status_t n4m_finetune_estimator(n4m_context_t* ctx, n4m_algorithm_t 
 
         double best_score = 0.0;
         n4m_trial_s* best = optimizer->best(&best_score);
+        if (best == nullptr) {
+            set_error(ctx, "no trial completed successfully in n4m_finetune_estimator");
+            return N4M_ERR_NOT_FITTED;
+        }
 
         auto handle = std::make_unique<n4m_method_result_s>();
-        if (best != nullptr) {
-            for (const auto& kv : best->params) {
-                handle->set_scalar(std::string("best.") + kv.first, kv.second.value);
-            }
-            handle->set_scalar("best_score", best_score);
+        for (const auto& kv : best->params) {
+            handle->set_scalar(std::string("best.") + kv.first, kv.second.value);
         }
-        const auto& trials = optimizer->trials();
-        std::vector<double> scores;
-        scores.reserve(trials.size());
-        for (const auto& up : trials) {
-            scores.push_back(up->has_score ? up->score : std::nan(""));
-        }
-        const std::int64_t nt = static_cast<std::int64_t>(scores.size());
-        handle->set_double_matrix("trial_scores", std::move(scores), 1, nt);
-        handle->set_scalar("n_trials", static_cast<double>(nt));
+        handle->set_scalar("best_score", best_score);
+        pack_trial_trace(optimizer->trials(), 0, *handle);  // ids/scores/status/rung/duration + n_trials
         handle->set_scalar("metric", static_cast<double>(o.metric));
         *out_result = handle.release();
         return N4M_OK;
