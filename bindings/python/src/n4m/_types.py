@@ -10,7 +10,9 @@ same hand-mirroring approach.
 from __future__ import annotations
 
 import ctypes
-from ctypes import POINTER, Structure, c_double, c_int, c_int32, c_int64, c_void_p
+from ctypes import (
+    POINTER, Structure, c_double, c_int, c_int32, c_int64, c_uint8, c_uint64, c_void_p,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +135,29 @@ class TransferMetrics(Structure):
     ]
 
 
+class OptimizerOptions(Structure):
+    """Mirror of :c:struct:`n4m_optimizer_options_t` (native HPO optimizer).
+
+    Field order and native alignment match the C struct exactly. Call
+    :func:`init` (which invokes ``n4m_optimizer_options_init``) to populate
+    ``struct_size`` and the defaults before use.
+    """
+
+    _fields_ = [
+        ("struct_size", c_uint64),
+        ("sampler", c_int),
+        ("pruner", c_int),
+        ("direction", c_int),
+        ("eval_mode", c_int),
+        ("metric", c_int),
+        ("liar", c_int),
+        ("n_startup_trials", c_int32),
+        ("seed", c_uint64),
+        ("timeout_seconds", c_double),
+        ("reserved", c_uint8 * 64),
+    ]
+
+
 # Sanity check at import time: layout sizes must match the ABI banner.
 assert ctypes.sizeof(MatrixView) == 48, (
     f"MatrixView layout mismatch: {ctypes.sizeof(MatrixView)} != 48"
@@ -143,6 +168,7 @@ __all__ = [
     "Dtype",
     "FilterStats",
     "MatrixView",
+    "OptimizerOptions",
     "SplitResult",
     "Status",
     "TransferMetrics",
