@@ -53,6 +53,7 @@ add_library(n4m_core OBJECT
     core/model.cpp
     core/model_selection.cpp
     core/moments.cpp
+    core/optimization/optimizer.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp
     core/extra_pls.cpp

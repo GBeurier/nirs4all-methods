@@ -48,6 +48,7 @@ add_executable(n4m_tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/common/ziggurat.c
     test_signal_type.cpp
     test_splitters.cpp
+    test_optimization.cpp
     test_transfer_metrics.cpp)
 target_link_libraries(n4m_tests PRIVATE n4m_c)
 target_include_directories(n4m_tests PRIVATE
