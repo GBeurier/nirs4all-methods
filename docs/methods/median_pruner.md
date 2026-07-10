@@ -25,7 +25,7 @@ if (prune) { /* stop early; report tell_result(..., N4M_TRIAL_PRUNED, ...) */ }
 
 ## Parity
 
-- **Tier B (decision-level):** given a fixed `(step, score)` history the keep/prune verdict is RNG-free and matches the Optuna `MedianPruner` semantics; verified against canned histories in the C++ tests (a dedicated cross-reference fixture lands with the Track-Q parity machinery).
+- **Tier B (decision-level):** given a fixed `(step, score)` history the keep/prune verdict is RNG-free — a trial is pruned when it is *strictly worse* than the **true peer median** (50th percentile; the mean of the two middle values for an even peer count). This is the Vizier median stopping rule; a decision-level cross-reference fixture vs Optuna's `MedianPruner` lands with the Track-Q parity machinery. Verified against canned histories in the C++ tests.
 
 ## References
 

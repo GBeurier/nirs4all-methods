@@ -487,7 +487,7 @@ void test_median_pruner() {
     N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[1], 0, 2.0, &prune) == N4M_OK);
     N4M_TEST_REQUIRE(prune == 0);  // 1 peer < min_peers=2
     N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[2], 0, 5.0, &prune) == N4M_OK);
-    N4M_TEST_REQUIRE(prune == 1);  // worse than median(1,2)=2.0
+    N4M_TEST_REQUIRE(prune == 1);  // worse than the peer median of {1,2} (= 1.5)
     n4m_trial_status_t st;
     n4m_trial_get_status(t[2], &st);
     N4M_TEST_REQUIRE(st == N4M_TRIAL_PRUNED);
@@ -537,6 +537,70 @@ void test_asha_pruner() {
     n4m_trial_get_id(t3, &id3);
     N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id3, 0, 0.5, &prune) == N4M_OK);
     N4M_TEST_REQUIRE(prune == 0);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_pruner_lifecycle() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 10, 1, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.pruner = N4M_PRUNER_MEDIAN;
+    o.direction = N4M_OPT_MINIMIZE;
+    o.n_startup_trials = 2;
+    o.seed = 1;
+    n4m_optimizer_t* opt = nullptr;
+    n4m_optimizer_create(ctx, sp, &o, &opt);
+    n4m_trial_t* t[3] = {nullptr, nullptr, nullptr};
+    int64_t id[3];
+    for (int i = 0; i < 3; ++i) {
+        n4m_optimizer_ask(opt, &t[i]);
+        n4m_trial_get_id(t[i], &id[i]);
+    }
+    int32_t pr = 0;
+    n4m_optimizer_tell_intermediate(opt, id[0], 0, 1.0, &pr);
+    n4m_optimizer_tell_intermediate(opt, id[1], 0, 2.0, &pr);
+    n4m_optimizer_tell_intermediate(opt, id[2], 0, 9.0, &pr);  // t2 pruned
+    N4M_TEST_REQUIRE(pr == 1);
+    // a pruned trial is terminal: it cannot be completed, and further rungs are rejected
+    N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, id[2], 0.0) == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[2], 1, 0.0, &pr) == N4M_ERR_INVALID_ARGUMENT);
+    // best() ignores the pruned trial even though its (rejected) score 0.0 would have won
+    n4m_optimizer_tell(opt, id[0], 1.0);
+    n4m_optimizer_tell(opt, id[1], 2.0);
+    n4m_trial_t* best = nullptr;
+    double bs = 1e9;
+    n4m_optimizer_best(opt, &best, &bs);
+    N4M_TEST_REQUIRE(bs == 1.0);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_invalid_pruner_and_nan() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 10, 1, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.pruner = N4M_PRUNER_HYPERBAND;  // reserved, not yet implemented
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_ERR_NOT_IMPLEMENTED);
+    N4M_TEST_REQUIRE(opt == nullptr);
+    o.pruner = N4M_PRUNER_MEDIAN;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    n4m_trial_t* t = nullptr;
+    int64_t id = 0;
+    n4m_optimizer_ask(opt, &t);
+    n4m_trial_get_id(t, &id);
+    int32_t pr = 0;
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id, 0, std::nan(""), &pr) == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, id, std::nan("")) == N4M_ERR_INVALID_ARGUMENT);
     n4m_optimizer_destroy(opt);
     n4m_search_space_destroy(sp);
     n4m_context_destroy(ctx);
@@ -596,5 +660,7 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: enqueue out-of-range rejected", test_enqueue_out_of_range_rejected);
     r.run("optimization: median pruner decisions", test_median_pruner);
     r.run("optimization: asha pruner decisions", test_asha_pruner);
+    r.run("optimization: pruned trial is terminal", test_pruner_lifecycle);
+    r.run("optimization: invalid pruner + NaN rejected", test_invalid_pruner_and_nan);
     r.run("optimization: lhs stratifies startup batch", test_lhs_stratifies);
 }
