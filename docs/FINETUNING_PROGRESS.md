@@ -13,7 +13,7 @@
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | `median`+`asha`+`racing` ✅ (374 tests; median/asha Codex-reviewed); `hyperband` (needs bracket scheduler → F5) + `n_components` fidelity engine remain |
 | **F3** — RNG consolidation → ga, pso | ✅ done (samplers) | 🟢 Codex | `ga` + `pso` samplers ✅ (376 tests, shared `decode_candidate`); RNG-consolidation of the *feature-selection* loops deferred (HPO samplers are clean fresh impls) |
-| **F4** — cmaes, tpe, (gp_ei?) | 🟡 in progress | ⬜ | `cmaes` ✅ (378 tests, converges tight); `tpe` next; `gp_ei` optional |
+| **F4** — cmaes, tpe, (gp_ei?) | ✅ done (cmaes+tpe) | ⬜ | `cmaes` + `tpe` ✅ (379 tests); `gp_ei` optional/cuttable (roadmap) |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
 | **B** — bindings python→R/MATLAB/WASM + cross-binding gate | ⬜ todo | ⬜ | Track B |
 | **Phase 1 done → WAIT for green light** | ⬜ | — | do NOT touch dag-ml/core |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F4: TPE sampler
+- Added `N4M_SAMPLER_TPE` (`cpp/src/core/optimization/tpe.cpp`): univariate Tree-structured Parzen Estimator (Optuna default). Per param: split the completed history into good (top γ=0.25) / bad, build Parzen `l(x)`/`g(x)` (KDE in unit space for numeric via a new `unit_from_numeric` inverse; Laplace-smoothed category frequencies for categorical), draw n_ei=24 candidates from `l` and keep argmax `l/g`. Added a base `override_categorical()` hook (parallel to `override_numeric`) so TPE plugs into the base sampler's constraint/condition/forced machinery. Handles **mixed/conditional** spaces. Convergence test on a continuous+categorical objective (finds x≈3, category 'a'). Also fixed a stale test (`reserved sampler` now uses `sobol`, since TPE is implemented). **379 passed, 0 failed.** ABI unchanged. Doc `docs/methods/tpe.md`.
 
 ### 2026-07-10 — F4: CMA-ES sampler
 - Added `N4M_SAMPLER_CMAES` (`cpp/src/core/optimization/cma.cpp`): **separable (diagonal) CMA-ES** (Ros & Hansen 2008) over the unit hypercube — the canonical mean/covariance/step-size/evolution-path update with a diagonal covariance (no eigendecomposition). Reuses the async-population lifecycle + boundary guard + shared decode (non-continuous axes bucketed = Optuna's independent fallback). Convergence test asserts `best < 0.1` on a smooth 2D objective (a broken CMA-ES would not converge tightly). **378 passed, 0 failed.** ABI unchanged. Doc `docs/methods/cmaes.md`.
