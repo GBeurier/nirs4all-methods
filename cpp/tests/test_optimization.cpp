@@ -542,6 +542,47 @@ void test_asha_pruner() {
     n4m_context_destroy(ctx);
 }
 
+void test_racing_pruner() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 10, 1, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.pruner = N4M_PRUNER_RACING;
+    o.direction = N4M_OPT_MINIMIZE;
+    o.seed = 1;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    n4m_trial_t* t[3] = {nullptr, nullptr, nullptr};
+    int64_t id[3];
+    for (int i = 0; i < 3; ++i) {
+        n4m_optimizer_ask(opt, &t[i]);
+        n4m_trial_get_id(t[i], &id[i]);
+    }
+    int32_t pr = 0;
+    for (int s = 0; s < 10; ++s) {  // two good trials: 10 observations each at 1.0
+        n4m_optimizer_tell_intermediate(opt, id[0], s, 1.0, &pr);
+        n4m_optimizer_tell_intermediate(opt, id[1], s, 1.0, &pr);
+    }
+    // a clearly-worse trial: not pruned on the first observation, pruned once the
+    // confidence interval tightens with more observations
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[2], 0, 10.0, &pr) == N4M_OK);
+    N4M_TEST_REQUIRE(pr == 0);  // n=1 < 2
+    bool pruned = false;
+    for (int s = 1; s < 10 && !pruned; ++s) {
+        n4m_optimizer_tell_intermediate(opt, id[2], s, 10.0, &pr);
+        if (pr == 1) pruned = true;
+    }
+    N4M_TEST_REQUIRE(pruned);
+    n4m_trial_status_t st;
+    n4m_trial_get_status(t[2], &st);
+    N4M_TEST_REQUIRE(st == N4M_TRIAL_PRUNED);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_pruner_lifecycle() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -660,6 +701,7 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: enqueue out-of-range rejected", test_enqueue_out_of_range_rejected);
     r.run("optimization: median pruner decisions", test_median_pruner);
     r.run("optimization: asha pruner decisions", test_asha_pruner);
+    r.run("optimization: racing pruner decisions", test_racing_pruner);
     r.run("optimization: pruned trial is terminal", test_pruner_lifecycle);
     r.run("optimization: invalid pruner + NaN rejected", test_invalid_pruner_and_nan);
     r.run("optimization: lhs stratifies startup batch", test_lhs_stratifies);

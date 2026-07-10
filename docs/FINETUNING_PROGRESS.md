@@ -11,7 +11,7 @@
 | Setup (worktree, baseline build) | ✅ done | — | isolated worktree; docs committed; toolchain OK |
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
-| **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | pruner arch + `median` + `asha` ✅ **Codex-reviewed (7 findings applied)**, 373 tests; hyperband/racing + fidelity engine next |
+| **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | `median`+`asha`+`racing` ✅ (374 tests; median/asha Codex-reviewed); `hyperband` (needs bracket scheduler → F5) + `n_components` fidelity engine remain |
 | **F3** — RNG consolidation → ga, pso | ⬜ todo | ⬜ | Track G |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F2: racing pruner
+- Added `N4M_PRUNER_RACING` (Hoeffding racing) into the reviewed pruner architecture: each trial's intermediate scores are repeated observations; a trial is pruned once its Hoeffding confidence interval (δ=0.05) no longer overlaps the best trial's. This is the **fold-safe** early-stop (roadmap §2c) — correct for exchangeable CV folds where successive-halving's rank-preservation assumption fails. Decision-level test (clearly-worse trial pruned once enough observations accumulate). **374 passed, 0 failed.** ABI unchanged. Doc `docs/methods/racing.md`. Only `hyperband` remains reserved (needs the bracket scheduler / total budget → F5).
 
 ### 2026-07-10 — F2 pruners Codex review applied
 - Codex review of the pruner block: **1 Blocker, 3 Major, 3 Minor — all applied** (`docs/reviews/finetuning-roadmap/codex-review-04-F2-pruners.md`). **Blocker:** terminal state is now terminal — `tell_intermediate`/`tell_result` reject reports on a non-RUNNING trial (only an idempotent same-status re-report is accepted), so an auto-pruned trial can no longer be overwritten to COMPLETED and win `best()`. **Major:** true 50th-percentile median (mean of the two middle values for even n) — direction-symmetric; **finite-score validation** on both tell paths (rejects NaN/Inf before it corrupts `std::sort`); **centralized pruner-kind validation** in `make_optimizer` (out-of-range/unimplemented pruner is rejected, not silently degraded to none). **Minor:** one value per `(trial, step)` (update-in-place); ASHA `reduction_factor` documented as fixed-at-3 for F2 + ties-survive semantics. +2 regression tests (pruned-is-terminal, invalid-pruner + NaN). **373 passed, 0 failed.**

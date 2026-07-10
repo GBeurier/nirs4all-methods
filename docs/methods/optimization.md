@@ -27,7 +27,8 @@ Selected via `n4m_optimizer_options_t.sampler` / `.pruner`. Algorithms sit behin
 | pruner `none` | ✅ implemented | F0 | — |
 | pruner `median` | ✅ implemented | F2 | [median_pruner.md](median_pruner.md) |
 | pruner `asha` | ✅ implemented | F2 | [asha.md](asha.md) |
-| pruner `hyperband`, `racing` | reserved | F2 | — |
+| pruner `racing` | ✅ implemented | F2 | [racing.md](racing.md) |
+| pruner `hyperband` | reserved | F2/F5 | — |
 
 ## Reproducibility
 
