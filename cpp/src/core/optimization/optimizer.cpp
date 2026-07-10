@@ -292,8 +292,26 @@ n4m_status_t Optimizer::ask(::n4m_trial_s** out) {
 }
 
 n4m_status_t Optimizer::enqueue(std::vector<std::pair<std::string, double>> params) {
-    for (const auto& p : params) {
-        if (space_.find(p.first) == nullptr) return N4M_ERR_INVALID_ARGUMENT;  // unknown param
+    for (const auto& kv : params) {
+        const ParamSpec* p = space_.find(kv.first);
+        if (p == nullptr) return N4M_ERR_INVALID_ARGUMENT;  // unknown param
+        switch (p->kind) {
+            case N4M_PARAM_INT:
+            case N4M_PARAM_FLOAT:
+            case N4M_PARAM_LOG_INT:
+            case N4M_PARAM_LOG_FLOAT:
+                if (kv.second < p->low || kv.second > p->high) return N4M_ERR_INVALID_ARGUMENT;
+                break;
+            case N4M_PARAM_CATEGORICAL:
+            case N4M_PARAM_ORDINAL: {
+                const int n = static_cast<int>(std::max(p->labels.size(), p->num_values.size()));
+                const int idx = static_cast<int>(std::llround(kv.second));
+                if (idx < 0 || (n > 0 && idx >= n)) return N4M_ERR_INVALID_ARGUMENT;
+                break;
+            }
+            default:  // SORTED_TUPLE not warm-startable via a single value
+                return N4M_ERR_INVALID_ARGUMENT;
+        }
     }
     enqueued_.push_back(std::move(params));
     return N4M_OK;

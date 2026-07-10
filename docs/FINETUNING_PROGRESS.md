@@ -10,7 +10,7 @@
 |---|---|---|---|
 | Setup (worktree, baseline build) | ✅ done | — | isolated worktree; docs committed; toolchain OK |
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
-| **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | ⬜ | `ternary` ✅ + `lhs` ✅ (367 tests); `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
+| **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | ⬜ todo | ⬜ | Track P |
 | **F3** — RNG consolidation → ga, pso | ⬜ todo | ⬜ | Track G |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F1 samplers Codex review applied
+- Codex review of ternary+lhs: **0 Blocker, 5 Major, 2 Minor — all applied** (`docs/reviews/finetuning-roadmap/codex-review-03-F1-samplers.md`). Ternary reworked into **grid-index space**: honours `step` (proposes only on-grid values), **reserves RUNNING trials** so batched asks don't collide, skips inactive/off-domain history, and keeps arithmetic bounded (index space, guard against absurdly wide ranges). Base `enqueue()` now **validates numeric ranges + categorical indices** (rejects out-of-range warm-starts). LHS: seed **domain-separated** from the base RNG; `size_t` index comparison; clearer Fisher-Yates. +2 regression tests (stepped ternary + batch reservation distinctness, enqueue out-of-range rejection). **369 passed, 0 failed.**
 
 ### 2026-07-10 — F1: lhs sampler
 - Added `N4M_SAMPLER_LHS` (`cpp/src/core/optimization/lhs.cpp`): Latin Hypercube over the numeric axes for the first `n_startup_trials` asks (one independent permutation per dimension + per-cell jitter), random beyond the batch and for categoricals. Refactored the unit→value mapping into `Optimizer::numeric_from_unit()` so `random`/`lhs`/(future) `sobol` share it. Test asserts each decile is hit exactly once across the startup batch. **367 passed, 0 failed.** ABI unchanged. Doc `docs/methods/lhs.md`.

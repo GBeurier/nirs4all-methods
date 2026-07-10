@@ -414,6 +414,54 @@ void test_ternary_converges() {
     n4m_context_destroy(ctx);
 }
 
+void test_ternary_respects_step_and_batch() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 2, 20, 2, 0);  // even values only
+    n4m_optimizer_options_t o = default_opts();
+    o.sampler = N4M_SAMPLER_TERNARY;
+    o.direction = N4M_OPT_MINIMIZE;
+    o.seed = 2;
+    n4m_optimizer_t* opt = nullptr;
+    n4m_optimizer_create(ctx, sp, &o, &opt);
+    // batch ask before any tell: reservations must yield distinct on-grid values
+    n4m_trial_t* trials[3] = {nullptr, nullptr, nullptr};
+    int32_t count = 0;
+    N4M_TEST_REQUIRE(n4m_optimizer_ask_batch(opt, 3, trials, &count) == N4M_OK);
+    N4M_TEST_REQUIRE(count == 3);
+    int64_t vals[3];
+    for (int i = 0; i < 3; ++i) {
+        n4m_trial_get_int(trials[i], "k", &vals[i]);
+        N4M_TEST_REQUIRE(vals[i] % 2 == 0);              // honours step=2
+        N4M_TEST_REQUIRE(vals[i] >= 2 && vals[i] <= 20);
+    }
+    N4M_TEST_REQUIRE(vals[0] != vals[1] && vals[1] != vals[2] && vals[0] != vals[2]);  // reserved distinct
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_enqueue_out_of_range_rejected() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 10, 1, 0);
+    n4m_optimizer_options_t o = default_opts();
+    n4m_optimizer_t* opt = nullptr;
+    n4m_optimizer_create(ctx, sp, &o, &opt);
+    const char* names[1] = {"k"};
+    const double bad[1] = {99.0};  // out of [1,10]
+    N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt, names, bad, 1) == N4M_ERR_INVALID_ARGUMENT);
+    const double ok[1] = {5.0};
+    N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt, names, ok, 1) == N4M_OK);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_lhs_stratifies() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -464,5 +512,7 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: finetune rejects unsupported param", test_finetune_rejects_unsupported_param);
     r.run("optimization: auto direction maximizes R2", test_auto_direction_maximizes_r2);
     r.run("optimization: ternary converges (unimodal int)", test_ternary_converges);
+    r.run("optimization: ternary respects step + batch reservations", test_ternary_respects_step_and_batch);
+    r.run("optimization: enqueue out-of-range rejected", test_enqueue_out_of_range_rejected);
     r.run("optimization: lhs stratifies startup batch", test_lhs_stratifies);
 }

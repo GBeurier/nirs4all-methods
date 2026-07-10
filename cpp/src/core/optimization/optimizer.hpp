@@ -176,6 +176,8 @@ class TernarySampler : public Optimizer {
     std::string  target_;   // name of the tuned int axis ("" ⇒ pure random)
     std::int64_t low_{0};
     std::int64_t high_{0};
+    std::int64_t step_{1};
+    std::int64_t grid_{0};  // number of grid points; ternary searches index space
 };
 
 // Latin Hypercube sampling over the numeric axes for the first `n_startup_trials`
