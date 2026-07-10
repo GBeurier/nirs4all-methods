@@ -33,16 +33,19 @@ LhsSampler::LhsSampler(const SearchSpace& space, const n4m_optimizer_options_t& 
     if (n_startup_ <= 0 || numeric_names_.empty()) return;
 
     n4m_rng lrng;
-    n4m_rng_seed(&lrng, N4M_RNGK_SPLITMIX64, opts.seed);
+    // Domain-separate the LHS stream from the base RNG (both derive from
+    // opts.seed) so the design does not correlate with the categorical /
+    // beyond-startup random draws.
+    n4m_rng_seed(&lrng, N4M_RNGK_SPLITMIX64, opts.seed ^ 0x4C48530000000001ULL);
     const int N = n_startup_;
     unit_.assign(numeric_names_.size(), std::vector<double>(static_cast<std::size_t>(N), 0.0));
     for (auto& axis : unit_) {
         std::vector<int> perm(static_cast<std::size_t>(N));
         for (int i = 0; i < N; ++i) perm[static_cast<std::size_t>(i)] = i;
-        for (int i = N - 1; i >= 1; --i) {  // Fisher-Yates
-            const int j = static_cast<int>(n4m_rng_next_double(&lrng) * (i + 1));
-            std::swap(perm[static_cast<std::size_t>(i)],
-                      perm[static_cast<std::size_t>(j < i ? j : i)]);
+        for (int i = N - 1; i >= 1; --i) {  // Fisher-Yates; j in [0, i]
+            int j = static_cast<int>(n4m_rng_next_double(&lrng) * (i + 1));
+            if (j > i) j = i;  // guard the (impossible) u==1 boundary
+            std::swap(perm[static_cast<std::size_t>(i)], perm[static_cast<std::size_t>(j)]);
         }
         for (int i = 0; i < N; ++i) {
             const double jitter = n4m_rng_next_double(&lrng);
@@ -55,7 +58,7 @@ LhsSampler::LhsSampler(const SearchSpace& space, const n4m_optimizer_options_t& 
 bool LhsSampler::override_numeric(const ParamSpec& p, double* out) {
     if (unit_.empty()) return false;
     const std::size_t i = trials().size();  // this ask's index (current trial not yet stored)
-    if (static_cast<std::int32_t>(i) >= n_startup_) return false;
+    if (i >= static_cast<std::size_t>(n_startup_)) return false;
     std::size_t axis = 0;
     bool found = false;
     for (std::size_t a = 0; a < numeric_names_.size(); ++a) {
