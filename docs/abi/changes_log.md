@@ -29,6 +29,16 @@ New 4-byte enums (guard-railed in `n4m.h`): `n4m_param_kind_t`,
 `n4m_liar_kind_t`, `n4m_trial_status_t`. New value struct
 `n4m_optimizer_options_t` (forward-compatible via a `struct_size` prologue).
 
+**Later within 2.1.0 (still additive, no symbol/size change):** the reserved tail
+of `n4m_optimizer_options_t` was narrowed from `reserved[64]` to two named
+`int32_t` fields — `max_resource`, `reduction_factor` (for `hyperband`/`asha`) —
+plus `reserved[56]`. `sizeof(n4m_optimizer_options_t)` is unchanged (verified
+C == Python == 120 bytes) and no exported symbol changed, so this is
+ABI-compatible: callers that zero-initialise via `n4m_optimizer_options_init`
+get `0` (= auto/default) for both. All eight `n4m_sampler_kind_t` values and all
+five `n4m_pruner_kind_t` values are now implemented (reserved-value dispatch now
+only fires for out-of-range enums).
+
 ## 2026-06-14 — ABI 2.0.0: namespace clean break (all method symbols renamed)
 
 Breaking change. Every public **method** symbol was renamed to the canonical

@@ -159,6 +159,30 @@ class RacingPruner : public Pruner {
     double delta_;
 };
 
+// Hyperband (Li et al. 2018) as an early-stopping pruner: successive halving run
+// across several brackets that trade off aggressive early-stopping vs. more
+// resource per config. Rungs sit at geometric resource levels eta^k; each trial
+// is assigned a bracket s (round-robin over its stable index) whose grace period
+// exempts it from pruning below rung s. At each rung, a trial survives only if it
+// ranks in the top 1/eta of the SAME-bracket peers that reached that rung
+// (ASHA-style asynchronous promotion). `max_resource` (0 = derive from the
+// largest reported step) sets the top rung; `reduction_factor` is eta (default 3).
+// The bracket hedge is Hyperband's advantage over plain ASHA when the optimal
+// early-stopping rate is unknown. F5.
+class HyperbandPruner : public Pruner {
+  public:
+    HyperbandPruner(std::int32_t reduction_factor, std::int32_t max_resource)
+        : reduction_factor_(reduction_factor < 2 ? 3 : reduction_factor),
+          max_resource_(max_resource) {}
+    bool should_prune(const ::n4m_trial_s& trial, std::int32_t step, double score,
+                      const std::vector<std::unique_ptr<::n4m_trial_s>>& trials,
+                      n4m_opt_direction_t dir) const override;
+
+  private:
+    std::int32_t reduction_factor_;
+    std::int32_t max_resource_;
+};
+
 // Build the pruner for opts.pruner; nullptr + N4M_ERR_NOT_IMPLEMENTED for
 // reserved-but-unimplemented kinds. NONE maps to a null pruner (never prunes).
 std::unique_ptr<Pruner> make_pruner(const n4m_optimizer_options_t& opts, n4m_status_t* status);
@@ -408,6 +432,7 @@ class SobolSampler : public Optimizer {
     std::vector<double>         cached_point_; // unit coords cached for the current ask
     std::int64_t                cached_ask_index_{-1};
     std::int64_t                next_index_{0};
+    bool                        exhausted_{false};  // >2^30 asks → fall back to random
 };
 
 // Univariate Tree-structured Parzen Estimator (F4). After `n_startup_trials`

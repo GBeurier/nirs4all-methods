@@ -228,6 +228,7 @@ class Optimizer:
                  pruner: Pruner = Pruner.NONE, direction: Direction = Direction.AUTO,
                  metric: Metric = Metric.RMSE, eval_mode: EvalMode = EvalMode.MEAN,
                  n_startup_trials: int = 10, seed: int = 0, timeout_seconds: float = 0.0,
+                 max_resource: int = 0, reduction_factor: int = 0,
                  context: Context | None = None) -> None:
         self._ctx = context or Context()
         self._space = space  # keep a reference alive
@@ -241,6 +242,8 @@ class Optimizer:
         opts.n_startup_trials = int(n_startup_trials)
         opts.seed = int(seed)
         opts.timeout_seconds = float(timeout_seconds)
+        opts.max_resource = int(max_resource)          # hyperband top rung (0 = derive)
+        opts.reduction_factor = int(reduction_factor)  # asha/hyperband eta (0 = default 3)
         self._opts = opts
         handle = c_void_p()
         check(lib.n4m_optimizer_create(self._ctx._handle, space._handle, byref(opts), byref(handle)),

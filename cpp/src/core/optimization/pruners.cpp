@@ -123,6 +123,79 @@ bool RacingPruner::should_prune(const ::n4m_trial_s& trial, std::int32_t /*step*
                                    : ((mu_self - eps_self) > (mu_best + eps_best));
 }
 
+namespace {
+// Rung index k of a resource r (== step+1) when r is an exact power of eta;
+// -1 otherwise. Hyperband only makes promotion decisions on rung boundaries.
+int rung_index(std::int32_t resource, std::int32_t eta) {
+    if (resource < 1) return -1;
+    int k = 0;
+    std::int32_t v = resource;
+    while (v > 1) {
+        if (v % eta != 0) return -1;  // not a clean power of eta
+        v /= eta;
+        ++k;
+    }
+    return k;
+}
+// Stable index of `trial` in the append-only trials vector (its ask order).
+int index_of(const ::n4m_trial_s& trial,
+             const std::vector<std::unique_ptr<::n4m_trial_s>>& trials) {
+    for (std::size_t i = 0; i < trials.size(); ++i)
+        if (trials[i].get() == &trial) return static_cast<int>(i);
+    return -1;
+}
+}  // namespace
+
+bool HyperbandPruner::should_prune(const ::n4m_trial_s& trial, std::int32_t step, double score,
+                                   const std::vector<std::unique_ptr<::n4m_trial_s>>& trials,
+                                   n4m_opt_direction_t dir) const {
+    const std::int32_t eta = reduction_factor_;
+    const std::int32_t resource = step + 1;
+    const int k = rung_index(resource, eta);
+    if (k < 0) return false;  // not a rung boundary → never prune here
+
+    // Top rung index: from max_resource if set, else the largest step reported.
+    std::int32_t R = max_resource_;
+    if (R <= 0) {
+        std::int32_t maxstep = 0;
+        for (const auto& up : trials)
+            for (const auto& im : up->intermediates) maxstep = std::max(maxstep, im.first);
+        R = maxstep + 1;
+    }
+    int k_max = 0;
+    {
+        std::int32_t v = R;
+        while (v >= eta) { v /= eta; ++k_max; }  // floor(log_eta(R))
+    }
+    const int n_brackets = k_max + 1;
+
+    const int my_idx = index_of(trial, trials);
+    if (my_idx < 0) return false;
+    const int s = my_idx % n_brackets;      // this trial's bracket
+    if (k < s) return false;                // grace: bracket s is exempt below rung s
+
+    // Same-bracket peers that reached this rung (excluding self).
+    std::vector<double> peers;
+    for (std::size_t i = 0; i < trials.size(); ++i) {
+        const auto& up = trials[i];
+        if (up.get() == &trial) continue;
+        if (static_cast<int>(i) % n_brackets != s) continue;  // different bracket
+        for (const auto& im : up->intermediates) {
+            if (im.first == step) {
+                peers.push_back(im.second);
+                break;
+            }
+        }
+    }
+    const std::int32_t n = static_cast<std::int32_t>(peers.size()) + 1;  // include self
+    if (n < eta) return false;  // too few in this bracket/rung to halve yet
+    const std::int32_t n_promote = std::max(1, n / eta);
+    std::int32_t better = 0;
+    for (const double p : peers)
+        if (dir == N4M_OPT_MAXIMIZE ? (p > score) : (p < score)) ++better;
+    return better >= n_promote;  // ranked outside the surviving top → prune
+}
+
 std::unique_ptr<Pruner> make_pruner(const n4m_optimizer_options_t& opts, n4m_status_t* status) {
     if (status != nullptr) *status = N4M_OK;
     switch (opts.pruner) {
@@ -132,11 +205,15 @@ std::unique_ptr<Pruner> make_pruner(const n4m_optimizer_options_t& opts, n4m_sta
             const std::int32_t min_peers = opts.n_startup_trials > 0 ? opts.n_startup_trials : 1;
             return std::make_unique<MedianPruner>(min_peers, /*warmup_steps=*/0);
         }
-        case N4M_PRUNER_ASHA:
-            return std::make_unique<AshaPruner>(/*reduction_factor=*/3);
+        case N4M_PRUNER_ASHA: {
+            const std::int32_t eta = opts.reduction_factor > 1 ? opts.reduction_factor : 3;
+            return std::make_unique<AshaPruner>(eta);
+        }
         case N4M_PRUNER_RACING:
             return std::make_unique<RacingPruner>(/*delta=*/0.05);
-        default:  // Hyperband reserved (needs the bracket scheduler / total budget)
+        case N4M_PRUNER_HYPERBAND:
+            return std::make_unique<HyperbandPruner>(opts.reduction_factor, opts.max_resource);
+        default:  // unknown/out-of-range pruner kind
             if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;
             return nullptr;
     }

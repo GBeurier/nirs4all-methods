@@ -34,12 +34,16 @@ int SobolSampler::dim_of(const ParamSpec& p) const {
 
 void SobolSampler::ensure_point() {
     const std::int64_t i = static_cast<std::int64_t>(trials().size());
-    if (i == cached_ask_index_) return;
+    if (exhausted_ || i == cached_ask_index_) return;
     // Advance the Gray-code state from next_index_ up to i.
     while (next_index_ < i) {
         std::uint64_t v = static_cast<std::uint64_t>(next_index_);
         int c = 0;
         while ((v >> c) & 1u) ++c;  // rightmost zero bit of next_index_
+        if (c >= kSobolBits) {  // 2^30 points exhausted → fall back to base random
+            exhausted_ = true;
+            return;
+        }
         for (int d = 0; d < sobol_dims_; ++d) x_[static_cast<std::size_t>(d)] ^= kSobolSv[d][c];
         ++next_index_;
     }
@@ -55,6 +59,7 @@ bool SobolSampler::override_numeric(const ParamSpec& p, double* out) {
     const int d = dim_of(p);
     if (d < 0) return false;  // beyond the direction table → base random
     ensure_point();
+    if (exhausted_) return false;  // sequence resolution exhausted → base random
     *out = numeric_from_unit(p, cached_point_[static_cast<std::size_t>(d)]);
     return true;
 }
@@ -65,6 +70,7 @@ bool SobolSampler::override_categorical(const ParamSpec& p, std::int32_t* out_in
     const int n = static_cast<int>(std::max(p.labels.size(), p.num_values.size()));
     if (n <= 0) return false;
     ensure_point();
+    if (exhausted_) return false;
     int idx = static_cast<int>(cached_point_[static_cast<std::size_t>(d)] * n);
     if (idx >= n) idx = n - 1;
     if (idx < 0) idx = 0;

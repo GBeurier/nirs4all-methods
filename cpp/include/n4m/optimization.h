@@ -112,7 +112,9 @@ typedef struct n4m_optimizer_options_t {
     int32_t             n_startup_trials; /* random seeding before adaptive kicks in */
     uint64_t            seed;
     double              timeout_seconds;  /* 0 = none; on expiry ask returns N4M_ERR_CANCELLED */
-    uint8_t             reserved[64];     /* forward-compat; must be zeroed */
+    int32_t             max_resource;     /* hyperband: max fidelity rung (0 = derive from reports) */
+    int32_t             reduction_factor; /* successive-halving eta for asha/hyperband (0 = default 3) */
+    uint8_t             reserved[56];     /* forward-compat; must be zeroed */
 } n4m_optimizer_options_t;
 
 /* Fill struct_size + defaults (sampler=RANDOM, pruner=NONE, direction=MINIMIZE,
