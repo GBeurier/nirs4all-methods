@@ -366,7 +366,8 @@ class CmaEsSampler : public Optimizer {
     void ensure_generation(std::int64_t member_base);
     void sample_population();
 
-    std::size_t P_{0};
+    std::vector<std::size_t> cont_axes_;  // param indices CMA-ES optimizes (numeric axes only)
+    std::size_t P_{0};                    // == cont_axes_.size()
     std::int32_t lambda_{0};
     std::int32_t mu_{0};
     std::vector<double> weights_;
@@ -380,8 +381,7 @@ class CmaEsSampler : public Optimizer {
     std::vector<double> pc_;      // covariance evolution path
     std::int64_t        gen_count_{0};
 
-    std::vector<std::vector<double>> pop_x_;  // clamped candidate positions
-    std::vector<std::vector<double>> pop_z_;  // raw standard-normal draws
+    std::vector<std::vector<double>> pop_x_;  // clamped candidate positions (continuous axes)
     std::int64_t                     gen_base_id_{-1};
 };
 

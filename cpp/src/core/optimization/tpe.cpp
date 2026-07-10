@@ -47,7 +47,7 @@ bool TpeSampler::override_numeric(const ParamSpec& p, double* out) {
         hist.emplace_back(unit_from_numeric(p, tp->value), up->score);
     }
     const int n = static_cast<int>(hist.size());
-    if (n < n_startup_) return false;  // random until enough history
+    if (n < n_startup_ || n < 2) return false;  // random until a splittable history exists
 
     const bool maximize = direction() == N4M_OPT_MAXIMIZE;
     std::sort(hist.begin(), hist.end(), [maximize](const auto& a, const auto& b) {
@@ -56,6 +56,7 @@ bool TpeSampler::override_numeric(const ParamSpec& p, double* out) {
     int n_good = static_cast<int>(std::ceil(gamma_ * n));
     if (n_good < 1) n_good = 1;
     if (n_good > n - 1) n_good = n - 1;
+    if (n_good < 1 || n_good >= n) return false;  // degenerate split
 
     std::vector<double> good, bad;
     good.reserve(static_cast<std::size_t>(n_good));
@@ -97,7 +98,7 @@ bool TpeSampler::override_categorical(const ParamSpec& p, std::int32_t* out_inde
         hist.emplace_back(tp->cat_index, up->score);
     }
     const int n = static_cast<int>(hist.size());
-    if (n < n_startup_) return false;
+    if (n < n_startup_ || n < 2) return false;
 
     const bool maximize = direction() == N4M_OPT_MAXIMIZE;
     std::sort(hist.begin(), hist.end(), [maximize](const auto& a, const auto& b) {
@@ -116,18 +117,26 @@ bool TpeSampler::override_categorical(const ParamSpec& p, std::int32_t* out_inde
     }
     const double good_tot = static_cast<double>(n_good) + K;
     const double bad_tot = static_cast<double>(n - n_good) + K;
-    int best = 0;
-    double best_ratio = -1.0;
+    // Sample a category proportional to l/g (rather than argmax) — TPE-faithful
+    // and, crucially, stochastic so the base constraint-retry loop can escape an
+    // infeasible categorical combination instead of livelocking on one choice.
+    std::vector<double> ratios(static_cast<std::size_t>(K), 0.0);
+    double total = 0.0;
     for (int c = 0; c < K; ++c) {
         const double l = good_ct[static_cast<std::size_t>(c)] / good_tot;
         const double g = bad_ct[static_cast<std::size_t>(c)] / bad_tot;
-        const double ratio = l / g;
-        if (ratio > best_ratio) {
-            best_ratio = ratio;
-            best = c;
-        }
+        ratios[static_cast<std::size_t>(c)] = l / g;
+        total += ratios[static_cast<std::size_t>(c)];
     }
-    *out_index = best;
+    int chosen = 0;
+    double r = n4m_rng_next_double(&rng_) * total;
+    double cum = 0.0;
+    for (int c = 0; c < K; ++c) {
+        cum += ratios[static_cast<std::size_t>(c)];
+        chosen = c;
+        if (r <= cum) break;
+    }
+    *out_index = chosen;
     return true;
 }
 
