@@ -10,7 +10,7 @@
 |---|---|---|---|
 | Setup (worktree, baseline build) | ✅ done | — | isolated worktree; docs committed; toolchain OK |
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
-| **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
+| **F1** — samplers: sobol, lhs, ternary | ✅ done | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**; `sobol` ✅ **Tier-A bit-exact vs scipy** (embedded Joe–Kuo table), 380 tests + Python parity |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | `median`+`asha`+`racing` ✅ (374 tests; median/asha Codex-reviewed); `hyperband` (needs bracket scheduler → F5) + `n_components` fidelity engine remain |
 | **F3** — RNG consolidation → ga, pso | ✅ done (samplers) | 🟢 Codex | `ga` + `pso` samplers ✅ (376 tests, shared `decode_candidate`); RNG-consolidation of the *feature-selection* loops deferred (HPO samplers are clean fresh impls) |
 | **F4** — cmaes, tpe, (gp_ei?) | ✅ done (cmaes+tpe) | 🟢 Codex | `cmaes` + `tpe` ✅ (379 tests); `gp_ei` optional/cuttable (roadmap) |
@@ -21,6 +21,11 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F1: sobol sampler (Tier-A, completes F1)
+- Added `N4M_SAMPLER_SOBOL` (`cpp/src/core/optimization/sobol.cpp` + `sobol_direction.hpp`): Sobol low-discrepancy sequence, one Sobol dimension per parameter, unscrambled Gray-code recursion over the embedded **Joe–Kuo `new-joe-kuo-6.21201` direction numbers** (52 dims × 30 bits, extracted from `scipy.stats.qmc.Sobol._sv`). Numeric axes map the unit coord through `numeric_from_unit` (log/step/int aware); categoricals bucket it; params beyond dim 52 and conditional/sorted-tuple axes fall back to base random. Plugs into the base per-parameter hooks (`override_numeric`/`override_categorical`), so constraints/conditions/forced are handled by the base sampler.
+- **Tier-A bit-exact parity verified two ways.** Nailed the Gray-code algorithm in Python first (`np.array_equal` vs scipy, diff 0.0). C++ test `test_sobol_sequence_parity` asserts the first 5 points of a 3-D space equal the known dyadic reference *exactly* (`==`, not approx). Python `test_sobol_parity.py` drives the sampler through the binding and asserts `np.array_equal` vs `scipy.stats.qmc.Sobol(scramble=False)` for `d ∈ {1,3,6,10}`, `N` up to 32 — **all exact**. **380 passed, 0 failed** (C++); Python smoke + parity green. ABI unchanged (enum-value-only). Doc `docs/methods/sobol.md`. Scrambled (Owen) variant is a later Tier-B addition. **F1 complete.**
+- Fixed the stale `reserved sampler NOT_IMPLEMENTED` test to use `gp_ei` (sobol is now implemented; only the F4 GP surrogate stays reserved).
 
 ### 2026-07-10 — F6: Python binding
 - Added the Python binding for the native optimizer: ctypes decls for all 31 `n4m_optimizer_*`/`n4m_search_space_*`/`n4m_trial_*`/`n4m_finetune_estimator` symbols (`_ffi_decls.py`), an `OptimizerOptions` ctypes struct mirroring `n4m_optimizer_options_t` (native alignment; `_types.py`), and an idiomatic wrapper `n4m/model_selection/optimizer.py` (`SearchSpace`, `Trial`, `Optimizer` + `Sampler`/`Pruner`/`Direction`/`Metric` enums). Exported from `n4m.model_selection`.

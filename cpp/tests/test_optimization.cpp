@@ -57,7 +57,7 @@ void test_reserved_sampler_not_implemented() {
     n4m_search_space_create(&sp);
     n4m_search_space_add_float(sp, "x", -1.0, 1.0, 0.0, 0);
     n4m_optimizer_options_t o = default_opts();
-    o.sampler = N4M_SAMPLER_SOBOL;  // still reserved (needs the Joe–Kuo table)
+    o.sampler = N4M_SAMPLER_GP_EI;  // still reserved (F4 GP surrogate)
     n4m_optimizer_t* opt = nullptr;
     N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_ERR_NOT_IMPLEMENTED);
     N4M_TEST_REQUIRE(opt == nullptr);
@@ -93,6 +93,48 @@ void test_quadratic_converges() {
     n4m_trial_status_t st;
     n4m_trial_get_status(best, &st);
     N4M_TEST_REQUIRE(st == N4M_TRIAL_COMPLETED);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+// Tier-A parity: the unscrambled Sobol sequence must be bit-identical to
+// scipy.stats.qmc.Sobol(d=3, scramble=False). Three floats over [0,1) map the
+// unit coordinate straight through, so trial values ARE the Sobol coordinates.
+// Reference points (exact binary fractions) generated in the Python parity test.
+void test_sobol_sequence_parity() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_float(sp, "a", 0.0, 1.0, 0.0, 0);
+    n4m_search_space_add_float(sp, "b", 0.0, 1.0, 0.0, 0);
+    n4m_search_space_add_float(sp, "c", 0.0, 1.0, 0.0, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.sampler = N4M_SAMPLER_SOBOL;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    const double expected[5][3] = {
+        {0.0, 0.0, 0.0},
+        {0.5, 0.5, 0.5},
+        {0.75, 0.25, 0.25},
+        {0.25, 0.75, 0.75},
+        {0.375, 0.375, 0.625},
+    };
+    for (int i = 0; i < 5; ++i) {
+        n4m_trial_t* t = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &t) == N4M_OK);
+        double a = 0.0, b = 0.0, c = 0.0;
+        n4m_trial_get_float(t, "a", &a);
+        n4m_trial_get_float(t, "b", &b);
+        n4m_trial_get_float(t, "c", &c);
+        N4M_TEST_REQUIRE(a == expected[i][0]);  // exact: Sobol coords are dyadic
+        N4M_TEST_REQUIRE(b == expected[i][1]);
+        N4M_TEST_REQUIRE(c == expected[i][2]);
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        n4m_optimizer_tell(opt, id, a);
+    }
     n4m_optimizer_destroy(opt);
     n4m_search_space_destroy(sp);
     n4m_context_destroy(ctx);
@@ -864,6 +906,7 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: search space build", test_space_build);
     r.run("optimization: reserved sampler NOT_IMPLEMENTED", test_reserved_sampler_not_implemented);
     r.run("optimization: random quadratic converges", test_quadratic_converges);
+    r.run("optimization: sobol sequence parity (vs scipy)", test_sobol_sequence_parity);
     r.run("optimization: determinism given seed", test_determinism);
     r.run("optimization: ask_batch distinct trials", test_ask_batch);
     r.run("optimization: finetune_estimator PLS CV", test_finetune_estimator);

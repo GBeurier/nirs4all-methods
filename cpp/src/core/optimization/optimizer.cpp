@@ -474,6 +474,9 @@ std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
         case N4M_SAMPLER_RANDOM:
             if (status != nullptr) *status = N4M_OK;
             return std::make_unique<Optimizer>(space, opts);
+        case N4M_SAMPLER_SOBOL:
+            if (status != nullptr) *status = N4M_OK;
+            return std::make_unique<SobolSampler>(space, opts);
         case N4M_SAMPLER_TERNARY:
             if (status != nullptr) *status = N4M_OK;
             return std::make_unique<TernarySampler>(space, opts);
@@ -492,7 +495,7 @@ std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
         case N4M_SAMPLER_TPE:
             if (status != nullptr) *status = N4M_OK;
             return std::make_unique<TpeSampler>(space, opts);
-        default:  // sobol/gp_ei reserved for F1/F4
+        default:  // gp_ei reserved for F4
             if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;
             return nullptr;
     }

@@ -385,6 +385,30 @@ class CmaEsSampler : public Optimizer {
     std::int64_t                     gen_base_id_{-1};
 };
 
+// Sobol low-discrepancy sequence (Joe-Kuo direction numbers, unscrambled) over
+// the search space, one Sobol dimension per parameter. Bit-identical to
+// scipy.stats.qmc.Sobol(scramble=False) for the numeric axes (verified in the
+// Python parity test). Better space-filling than i.i.d. random at small budgets.
+// F1. (Scrambled Sobol — the Tier-B randomised variant — is a later addition.)
+class SobolSampler : public Optimizer {
+  public:
+    SobolSampler(const SearchSpace& space, const n4m_optimizer_options_t& opts);
+
+  protected:
+    bool override_numeric(const ParamSpec& p, double* out) override;
+    bool override_categorical(const ParamSpec& p, std::int32_t* out_index) override;
+
+  private:
+    void ensure_point();               // advance/cache the Sobol point for the current ask
+    int  dim_of(const ParamSpec& p) const;  // Sobol dimension for p, or -1 if beyond the table
+
+    int                         sobol_dims_{0};
+    std::vector<std::uint32_t>  x_;            // Gray-code state per dimension
+    std::vector<double>         cached_point_; // unit coords cached for the current ask
+    std::int64_t                cached_ask_index_{-1};
+    std::int64_t                next_index_{0};
+};
+
 // Univariate Tree-structured Parzen Estimator (F4). After `n_startup_trials`
 // random trials, each parameter is modelled independently: the completed history
 // is split into a "good" set (top γ by score) and the rest; l(x) and g(x) are
