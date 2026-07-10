@@ -12,7 +12,7 @@
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | `median`+`asha`+`racing` ✅ (374 tests; median/asha Codex-reviewed); `hyperband` (needs bracket scheduler → F5) + `n_components` fidelity engine remain |
-| **F3** — RNG consolidation → ga, pso | ⬜ todo | ⬜ | Track G |
+| **F3** — RNG consolidation → ga, pso | 🟡 in progress | ⬜ | `ga` sampler ✅ (375 tests); `pso` next; RNG-consolidation of the feature-selection loops deferred (GA sampler is a clean fresh impl) |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
 | **B** — bindings python→R/MATLAB/WASM + cross-binding gate | ⬜ todo | ⬜ | Track B |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F3: GA sampler
+- Added `N4M_SAMPLER_GA` (`cpp/src/core/optimization/ga.cpp`): real-coded genetic algorithm over the unit hypercube `[0,1)^P`, decoded per parameter (numeric via `numeric_from_unit`, categorical/ordinal bucketed) — handles mixed spaces uniformly. Generational: a population of 16 is asked out, then tournament selection + uniform crossover + Gaussian mutation + elitism produce the next generation once scores arrive (keyed on trial-id ranges; the async-population lifecycle will be reused by `pso`/`cmaes`). Convergence test on a 2D continuous quadratic. **375 passed, 0 failed.** ABI unchanged. Doc `docs/methods/ga_search.md`. (This is the HPO-sampler GA over the typed space — distinct from the feature-selection `ga_select`; sharing the RNG-consolidated loops is a later refinement.)
 
 ### 2026-07-10 — F2: racing pruner
 - Added `N4M_PRUNER_RACING` (Hoeffding racing) into the reviewed pruner architecture: each trial's intermediate scores are repeated observations; a trial is pruned once its Hoeffding confidence interval (δ=0.05) no longer overlaps the best trial's. This is the **fold-safe** early-stop (roadmap §2c) — correct for exchangeable CV folds where successive-halving's rank-preservation assumption fails. Decision-level test (clearly-worse trial pruned once enough observations accumulate). **374 passed, 0 failed.** ABI unchanged. Doc `docs/methods/racing.md`. Only `hyperband` remains reserved (needs the bracket scheduler / total budget → F5).

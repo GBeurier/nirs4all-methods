@@ -261,6 +261,33 @@ class LhsSampler : public Optimizer {
     std::int32_t                     n_startup_{0};
 };
 
+// Real-coded genetic algorithm over the unit hypercube (F3). Each candidate is a
+// unit vector u∈[0,1)^P decoded per parameter (numeric_from_unit for numeric,
+// bucketed for categorical/ordinal). A generation of `pop_size` candidates is
+// handed out via ask(); once the generation's trials complete, tournament
+// selection + uniform crossover + Gaussian mutation produce the next one.
+// Handles mixed spaces uniformly; sorted-tuple axes fall back to the base
+// sampler. (A later F3 refinement may share the RNG-consolidated loops with the
+// feature-selection GA — see FINETUNING_ROADMAP.md.)
+class GaSampler : public Optimizer {
+  public:
+    GaSampler(const SearchSpace& space, const n4m_optimizer_options_t& opts);
+
+  protected:
+    bool sample(::n4m_trial_s& t,
+                const std::vector<std::pair<std::string, double>>* forced) override;
+
+  private:
+    void        ensure_generation(std::int64_t member_base);
+    std::size_t genome_length() const { return space_.params.size(); }
+
+    std::int32_t                     pop_size_{16};
+    double                           mutation_rate_{0.15};
+    double                           mutation_sigma_{0.15};
+    std::vector<std::vector<double>> gen_;          // current generation unit vectors
+    std::int64_t                     gen_base_id_{-1};  // trial id of gen_[0]
+};
+
 // Resolve MINIMIZE/MAXIMIZE from a metric (used when direction == AUTO).
 n4m_opt_direction_t direction_for_metric(n4m_metric_t metric);
 

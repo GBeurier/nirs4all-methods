@@ -21,8 +21,9 @@ Selected via `n4m_optimizer_options_t.sampler` / `.pruner`. Algorithms sit behin
 | sampler `random` | ✅ implemented | F0 | [random.md](random.md) |
 | sampler `ternary` | ✅ implemented | F1 | [ternary.md](ternary.md) |
 | sampler `lhs` | ✅ implemented | F1 | [lhs.md](lhs.md) |
+| sampler `ga` | ✅ implemented | F3 | [ga_search.md](ga_search.md) |
 | sampler `sobol` | reserved | F1 | — |
-| sampler `ga`, `pso` | reserved | F3 | — |
+| sampler `pso` | reserved | F3 | — |
 | sampler `cmaes`, `tpe`, `gp_ei` | reserved | F4 | — |
 | pruner `none` | ✅ implemented | F0 | — |
 | pruner `median` | ✅ implemented | F2 | [median_pruner.md](median_pruner.md) |
