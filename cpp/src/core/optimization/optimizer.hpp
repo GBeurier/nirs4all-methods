@@ -98,6 +98,38 @@ struct n4m_search_space_s : public ::n4m::core::opt::SearchSpace {};
 
 namespace n4m::core::opt {
 
+// Early-stopping policy over the tell_intermediate() score stream. Composed with
+// (and orthogonal to) the sampler. The decision is a pure function of the
+// recorded intermediate histories, so it is decision-level testable against a
+// canned history.
+class Pruner {
+  public:
+    virtual ~Pruner() = default;
+    virtual bool should_prune(const ::n4m_trial_s& trial, std::int32_t step, double score,
+                              const std::vector<std::unique_ptr<::n4m_trial_s>>& trials,
+                              n4m_opt_direction_t dir) const = 0;
+};
+
+// Median stopping rule (Vizier): prune a trial when its latest intermediate
+// score is worse than the median of the peer trials' scores at the same step.
+// Never prunes before `min_peers` peers exist or during the warm-up steps.
+class MedianPruner : public Pruner {
+  public:
+    MedianPruner(std::int32_t min_peers, std::int32_t warmup_steps)
+        : min_peers_(min_peers), warmup_steps_(warmup_steps) {}
+    bool should_prune(const ::n4m_trial_s& trial, std::int32_t step, double score,
+                      const std::vector<std::unique_ptr<::n4m_trial_s>>& trials,
+                      n4m_opt_direction_t dir) const override;
+
+  private:
+    std::int32_t min_peers_;
+    std::int32_t warmup_steps_;
+};
+
+// Build the pruner for opts.pruner; nullptr + N4M_ERR_NOT_IMPLEMENTED for
+// reserved-but-unimplemented kinds. NONE maps to a null pruner (never prunes).
+std::unique_ptr<Pruner> make_pruner(const n4m_optimizer_options_t& opts, n4m_status_t* status);
+
 class Optimizer {
   public:
     Optimizer(const SearchSpace& space, const n4m_optimizer_options_t& opts);
@@ -147,6 +179,7 @@ class Optimizer {
     n4m_opt_direction_t      dir_{N4M_OPT_MINIMIZE};
     n4m_rng                  rng_{};
     std::chrono::steady_clock::time_point start_time_{};
+    std::unique_ptr<Pruner>  pruner_;
 
   private:
     ::n4m_trial_s* find(std::int64_t id) const;
