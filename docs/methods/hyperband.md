@@ -14,14 +14,16 @@ guess the right stopping rate up front (Hyperband's advantage over plain ASHA).
   to a smaller resource while `s = 0` behaves like near-pure random search.
 - At each rung a trial survives only if it ranks in the **top 1/eta** of the
   **same-bracket** peers that reached that rung (ASHA-style asynchronous promotion;
-  ties survive — only strictly-better peers count).
+  ties survive — only strictly-better peers count). Rungs **above** `R` never prune.
 
 Configured entirely from the options struct (no new ABI symbols):
 
 - `opts.reduction_factor` — `eta` (default 3 when left 0).
-- `opts.max_resource` — the top rung `R`. When left 0 it is **derived** from the
-  largest `step` reported so far, so callers that don't know the budget up front
-  still get sensible brackets.
+- `opts.max_resource` — the top rung `R`, **required (> 0)**; `n4m_optimizer_create`
+  returns `N4M_ERR_INVALID_ARGUMENT` for a hyperband pruner with `max_resource == 0`.
+  A fixed `R` is what makes the bracket count stable for the study's lifetime
+  (deriving it from a moving high-water mark would let a trial's bracket change
+  under it).
 
 Like all pruners, `hyperband` is **orthogonal to the sampler** and consumes
 whatever intermediate-score axis the caller supplies.
@@ -39,7 +41,7 @@ n4m_optimizer_options_t opts;
 n4m_optimizer_options_init(&opts);
 opts.pruner           = N4M_PRUNER_HYPERBAND;
 opts.reduction_factor = 3;   /* eta */
-opts.max_resource     = 27;  /* top rung; 0 = derive from reports */
+opts.max_resource     = 27;  /* top rung R — REQUIRED (> 0) */
 /* per trial, per rung: */
 int32_t prune = 0;
 n4m_optimizer_tell_intermediate(opt, trial_id, rung, rung_score, &prune);

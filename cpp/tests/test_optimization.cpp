@@ -623,6 +623,53 @@ void test_hyperband_brackets() {
     n4m_context_destroy(ctx);
 }
 
+void test_hyperband_edges() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 10, 1, 0);
+    // (a) max_resource == 0 is rejected: R must be known upfront for stable brackets.
+    {
+        n4m_optimizer_options_t o = default_opts();
+        o.pruner = N4M_PRUNER_HYPERBAND;
+        o.max_resource = 0;
+        o.reduction_factor = 3;
+        n4m_optimizer_t* bad = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &bad) == N4M_ERR_INVALID_ARGUMENT);
+        N4M_TEST_REQUIRE(bad == nullptr);
+    }
+    // (b) rungs above max_resource never prune (k > k_max guard).
+    {
+        n4m_optimizer_options_t o = default_opts();
+        o.pruner = N4M_PRUNER_HYPERBAND;
+        o.max_resource = 3;      // k_max = 1 → rungs 0,1; resource 9 (step 8) is rung 2, above R
+        o.reduction_factor = 3;  // n_brackets = 2; bracket-0 = idx 0,2,4
+        o.direction = N4M_OPT_MINIMIZE;
+        o.seed = 1;
+        n4m_optimizer_t* opt = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+        n4m_trial_t* t[5] = {nullptr};
+        int64_t id[5];
+        for (int i = 0; i < 5; ++i) {
+            n4m_optimizer_ask(opt, &t[i]);
+            n4m_trial_get_id(t[i], &id[i]);
+        }
+        int32_t prune = -1;
+        // Three same-bracket trials at rung 2 (above R): without the guard the worst
+        // would be halved out; with it, all survive.
+        N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[0], 8, 1.0, &prune) == N4M_OK);
+        N4M_TEST_REQUIRE(prune == 0);
+        N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[2], 8, 2.0, &prune) == N4M_OK);
+        N4M_TEST_REQUIRE(prune == 0);
+        N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[4], 8, 9.0, &prune) == N4M_OK);
+        N4M_TEST_REQUIRE(prune == 0);  // rung 2 > k_max=1 → never prune
+        n4m_optimizer_destroy(opt);
+    }
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_ga_converges() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -1102,6 +1149,7 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: asha pruner decisions", test_asha_pruner);
     r.run("optimization: racing pruner decisions", test_racing_pruner);
     r.run("optimization: hyperband bracket decisions", test_hyperband_brackets);
+    r.run("optimization: hyperband edges (require R, no prune above R)", test_hyperband_edges);
     r.run("optimization: pruned trial is terminal", test_pruner_lifecycle);
     r.run("optimization: invalid pruner + NaN rejected", test_invalid_pruner_and_nan);
     r.run("optimization: lhs stratifies startup batch", test_lhs_stratifies);

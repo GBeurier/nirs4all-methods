@@ -126,10 +126,11 @@ bool RacingPruner::should_prune(const ::n4m_trial_s& trial, std::int32_t /*step*
 namespace {
 // Rung index k of a resource r (== step+1) when r is an exact power of eta;
 // -1 otherwise. Hyperband only makes promotion decisions on rung boundaries.
-int rung_index(std::int32_t resource, std::int32_t eta) {
+// int64 resource so step+1 near INT32_MAX cannot signed-overflow.
+int rung_index(std::int64_t resource, std::int32_t eta) {
     if (resource < 1) return -1;
     int k = 0;
-    std::int32_t v = resource;
+    std::int64_t v = resource;
     while (v > 1) {
         if (v % eta != 0) return -1;  // not a clean power of eta
         v /= eta;
@@ -149,24 +150,22 @@ int index_of(const ::n4m_trial_s& trial,
 bool HyperbandPruner::should_prune(const ::n4m_trial_s& trial, std::int32_t step, double score,
                                    const std::vector<std::unique_ptr<::n4m_trial_s>>& trials,
                                    n4m_opt_direction_t dir) const {
+    if (step < 0) return false;
     const std::int32_t eta = reduction_factor_;
-    const std::int32_t resource = step + 1;
+    const std::int64_t resource = static_cast<std::int64_t>(step) + 1;  // no int32 overflow
     const int k = rung_index(resource, eta);
     if (k < 0) return false;  // not a rung boundary → never prune here
 
-    // Top rung index: from max_resource if set, else the largest step reported.
-    std::int32_t R = max_resource_;
-    if (R <= 0) {
-        std::int32_t maxstep = 0;
-        for (const auto& up : trials)
-            for (const auto& im : up->intermediates) maxstep = std::max(maxstep, im.first);
-        R = maxstep + 1;
-    }
+    // Top rung index from the fixed budget R (make_pruner guarantees R > 0, so the
+    // bracket count is STABLE for the optimizer's whole lifetime — deriving R from a
+    // moving high-water mark would let a trial's bracket change under it).
+    const std::int64_t R = max_resource_;
     int k_max = 0;
     {
-        std::int32_t v = R;
+        std::int64_t v = R;
         while (v >= eta) { v /= eta; ++k_max; }  // floor(log_eta(R))
     }
+    if (k > k_max) return false;  // above the top rung → never prune
     const int n_brackets = k_max + 1;
 
     const int my_idx = index_of(trial, trials);
@@ -212,6 +211,10 @@ std::unique_ptr<Pruner> make_pruner(const n4m_optimizer_options_t& opts, n4m_sta
         case N4M_PRUNER_RACING:
             return std::make_unique<RacingPruner>(/*delta=*/0.05);
         case N4M_PRUNER_HYPERBAND:
+            if (opts.max_resource <= 0) {  // R must be known upfront for stable brackets
+                if (status != nullptr) *status = N4M_ERR_INVALID_ARGUMENT;
+                return nullptr;
+            }
             return std::make_unique<HyperbandPruner>(opts.reduction_factor, opts.max_resource);
         default:  // unknown/out-of-range pruner kind
             if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;
