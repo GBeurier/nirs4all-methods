@@ -10,7 +10,7 @@
 |---|---|---|---|
 | Setup (worktree, baseline build) | ✅ done | — | isolated worktree; docs committed; toolchain OK |
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
-| **F1** — samplers: sobol, lhs, ternary | ⬜ todo | ⬜ | Track S |
+| **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | ⬜ | `ternary` ✅ (366 tests); sobol/lhs next |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | ⬜ todo | ⬜ | Track P |
 | **F3** — RNG consolidation → ga, pso | ⬜ todo | ⬜ | Track G |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
@@ -21,6 +21,10 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F1: ternary sampler
+- Added `N4M_SAMPLER_TERNARY` (`cpp/src/core/optimization/ternary.cpp`): unimodal-integer ternary search porting the nirs4all `BinarySearchSampler` (triplet anchor low/high/mid → bisect the larger gap toward the current best). Introduced a small base-class hook `override_numeric()` so adaptive samplers reuse the constraint/loop/conditions machinery without duplicating `sample()`. Proposal is a pure function of the completed history (idempotent within an ask). Tunes the first integer axis; others stay random.
+- Test: converges to k∈{6,7,8} on a unimodal objective in ≤25 trials. **366 passed, 0 failed.** ABI snapshot unchanged (enum-value-only, no new symbol) — confirms the "later samplers add no ABI symbol" design. Doc `docs/methods/ternary.md`.
 
 ### 2026-07-10 — F0 Codex review applied
 - Codex read-only review of F0: **14 findings (4 Blocker, 9 Major, 1 Minor), all applied** (transcript `docs/reviews/finetuning-roadmap/codex-review-02-F0.md`). Highlights: made `optimization.h` independently includable (moved the `N4M_STATIC_ASSERT` macro above the role-header includes and relocated the HPO enum asserts into `optimization.h`) + added C/C++ compile-only include guards; hardened the ABI boundary (try/catch on every name-based trial accessor, `std::string_view` lookups, `struct_size` default-preserving copy with a `< 8` guard); made constraints authoritative (condition constraints reject unsupported shapes with `N4M_ERR_UNSUPPORTED`, enqueue validates param names, sampling skips RNG for forced dims and re-checks constraints, `ask` returns an error on constraint-exhaustion instead of a silent invalid trial); validated numeric ranges (reject NaN/Inf, log needs positive bounds); default `direction = AUTO` (derive from metric); `n4m_finetune_estimator` now rejects unsupported params, returns the full trial trace, and returns `NOT_FITTED` when nothing completes; implemented `timeout`/`duration` via `steady_clock`; documented MUTEX_GROUP (nirs4all `_mutex_` issubset) semantics.

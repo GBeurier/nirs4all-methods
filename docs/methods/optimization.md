@@ -19,7 +19,8 @@ Selected via `n4m_optimizer_options_t.sampler` / `.pruner`. Algorithms sit behin
 | Kind | Status | Phase | Page |
 |---|---|---|---|
 | sampler `random` | ✅ implemented | F0 | [random.md](random.md) |
-| sampler `sobol`, `lhs`, `ternary` | reserved | F1 | — |
+| sampler `ternary` | ✅ implemented | F1 | [ternary.md](ternary.md) |
+| sampler `sobol`, `lhs` | reserved | F1 | — |
 | sampler `ga`, `pso` | reserved | F3 | — |
 | sampler `cmaes`, `tpe`, `gp_ei` | reserved | F4 | — |
 | pruner `none` | ✅ implemented | F0 | — |
