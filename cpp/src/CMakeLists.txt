@@ -61,6 +61,7 @@ add_library(n4m_core OBJECT
     core/optimization/pso.cpp
     core/optimization/cma.cpp
     core/optimization/tpe.cpp
+    core/optimization/gp.cpp
     core/optimization/pruners.cpp
     core/operator_bank.cpp
     core/gating_strategy.cpp

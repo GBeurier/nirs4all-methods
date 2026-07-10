@@ -57,7 +57,7 @@ void test_reserved_sampler_not_implemented() {
     n4m_search_space_create(&sp);
     n4m_search_space_add_float(sp, "x", -1.0, 1.0, 0.0, 0);
     n4m_optimizer_options_t o = default_opts();
-    o.sampler = N4M_SAMPLER_GP_EI;  // still reserved (F4 GP surrogate)
+    o.sampler = static_cast<n4m_sampler_kind_t>(99);  // out-of-range → NOT_IMPLEMENTED
     n4m_optimizer_t* opt = nullptr;
     N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_ERR_NOT_IMPLEMENTED);
     N4M_TEST_REQUIRE(opt == nullptr);
@@ -694,6 +694,41 @@ void test_cmaes_converges() {
     n4m_context_destroy(ctx);
 }
 
+void test_gp_ei_converges() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_float(sp, "x", -5.0, 5.0, 0.0, 0);
+    n4m_search_space_add_float(sp, "y", -5.0, 5.0, 0.0, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.sampler = N4M_SAMPLER_GP_EI;
+    o.direction = N4M_OPT_MINIMIZE;
+    o.n_startup_trials = 8;
+    o.seed = 7;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    for (int i = 0; i < 60; ++i) {  // sample-efficient: far fewer trials than random/CMA
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        double x = 0.0;
+        double y = 0.0;
+        n4m_trial_get_float(t, "x", &x);
+        n4m_trial_get_float(t, "y", &y);
+        const double score = (x - 2.0) * (x - 2.0) + (y + 3.0) * (y + 3.0);
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        n4m_optimizer_tell(opt, id, score);
+    }
+    n4m_trial_t* best = nullptr;
+    double bs = 1e9;
+    N4M_TEST_REQUIRE(n4m_optimizer_best(opt, &best, &bs) == N4M_OK);
+    N4M_TEST_REQUIRE(bs < 0.5);  // GP-EI locates the basin in ~60 evals
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_population_batch_and_enqueue() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -923,6 +958,7 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: pso converges (2D continuous)", test_pso_converges);
     r.run("optimization: cmaes converges (2D continuous)", test_cmaes_converges);
     r.run("optimization: tpe converges (mixed space)", test_tpe_converges_mixed);
+    r.run("optimization: gp_ei converges (2D continuous)", test_gp_ei_converges);
     r.run("optimization: enqueue out-of-range rejected", test_enqueue_out_of_range_rejected);
     r.run("optimization: median pruner decisions", test_median_pruner);
     r.run("optimization: asha pruner decisions", test_asha_pruner);

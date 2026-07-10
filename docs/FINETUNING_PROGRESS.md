@@ -13,7 +13,7 @@
 | **F1** — samplers: sobol, lhs, ternary | ✅ done | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**; `sobol` ✅ **Tier-A bit-exact vs scipy** (embedded Joe–Kuo table), 380 tests + Python parity |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | `median`+`asha`+`racing` ✅ (374 tests; median/asha Codex-reviewed); `hyperband` (needs bracket scheduler → F5) + `n_components` fidelity engine remain |
 | **F3** — RNG consolidation → ga, pso | ✅ done (samplers) | 🟢 Codex | `ga` + `pso` samplers ✅ (376 tests, shared `decode_candidate`); RNG-consolidation of the *feature-selection* loops deferred (HPO samplers are clean fresh impls) |
-| **F4** — cmaes, tpe, (gp_ei?) | ✅ done (cmaes+tpe) | 🟢 Codex | `cmaes` + `tpe` ✅ (379 tests); `gp_ei` optional/cuttable (roadmap) |
+| **F4** — cmaes, tpe, gp_ei | ✅ done | 🟢 cmaes+tpe | `cmaes` + `tpe` ✅ **Codex-reviewed**; `gp_ei` ✅ (GP+EI, from-scratch Cholesky, 381 tests, converges <0.03 across 10 seeds). **All 8 sampler kinds implemented.** |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
 | **B** — bindings python→R/MATLAB/WASM + cross-binding gate | 🟡 in progress | ⬜ | **Python binding ✅** (ask/tell wrapper, 4 smoke tests pass vs dev .so); R/MATLAB/WASM + cross-binding gate next |
 | **Phase 1 done → WAIT for green light** | ⬜ | — | do NOT touch dag-ml/core |
@@ -21,6 +21,10 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F4: gp_ei sampler (completes F4 + all 8 samplers)
+- Added `N4M_SAMPLER_GP_EI` (`cpp/src/core/optimization/gp.cpp`): Bayesian optimization with a Gaussian-process surrogate + Expected Improvement. After `n_startup_trials` random trials, each ask fits an RBF GP on the completed+scored history over the **continuous axes** (unit space) and returns the max-EI candidate over a 64-point random acquisition batch. Dependency-free: RBF kernel with a **median-distance lengthscale heuristic** (no marginal-likelihood inner loop), `K+1e-6·I` solved by a **from-scratch dense Cholesky** (forward/back substitution) — fine at NIRS trial counts. Direction-symmetric EI (MAXIMIZE negates the posterior mean), `ξ=0.01`. Non-continuous axes drawn by the shared decode (independent fallback); `enqueue` unsupported; pure-categorical spaces degrade to random. Stores its own per-trial proposals (id → cont-axis coords) so future fits read exact coordinates.
+- Convergence test on a smooth 2-D objective in **60 evals** (`best < 0.5`); measured `best < 0.03` across seeds 1–10 — much more sample-efficient than random/CMA (300 evals). **381 passed, 0 failed.** Reserved-sampler test now uses an out-of-range enum (all 8 kinds are implemented). ABI unchanged (enum-value-only). Doc `docs/methods/gp_ei.md` + `rasmussen2006gp` bib. **F4 complete; the full sampler library — random, sobol, lhs, ternary, ga, pso, cmaes, tpe, gp_ei — is done.**
 
 ### 2026-07-10 — F1: sobol sampler (Tier-A, completes F1)
 - Added `N4M_SAMPLER_SOBOL` (`cpp/src/core/optimization/sobol.cpp` + `sobol_direction.hpp`): Sobol low-discrepancy sequence, one Sobol dimension per parameter, unscrambled Gray-code recursion over the embedded **Joe–Kuo `new-joe-kuo-6.21201` direction numbers** (52 dims × 30 bits, extracted from `scipy.stats.qmc.Sobol._sv`). Numeric axes map the unit coord through `numeric_from_unit` (log/step/int aware); categoricals bucket it; params beyond dim 52 and conditional/sorted-tuple axes fall back to base random. Plugs into the base per-parameter hooks (`override_numeric`/`override_categorical`), so constraints/conditions/forced are handled by the base sampler.
