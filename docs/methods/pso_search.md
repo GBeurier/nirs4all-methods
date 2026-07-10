@@ -10,6 +10,8 @@ v ← w·v + c1·r1·(pbest − x) + c2·r2·(gbest − x)      x ← clamp01(x 
 
 with the Clerc & Kennedy (2002) convergence constants `w = 0.729`, `c1 = c2 = 1.494`. Candidates are decoded with the shared `Optimizer::decode_candidate`, so mixed continuous / discrete / categorical spaces work (sorted-tuple axes fall back to the base sampler; hard constraints are handled via fitness).
 
+**Synchronous update (F3):** the swarm advances only once its whole iteration is scored (`liar = none`), so `ask_batch` returns a *partial* batch at an iteration boundary. Velocities are capped at `vmax = 0.5` of the unit range. Warm-start (`n4m_optimizer_enqueue`) is **not supported** for population samplers (returns `N4M_ERR_UNSUPPORTED`).
+
 PSO is a good default for smooth-ish continuous and mixed surfaces; it complements the more disruptive `ga`. It reuses the same async-population lifecycle as `ga` (keyed on trial-id ranges).
 
 > HPO-sampler PSO over the typed space — distinct from the feature-selection `n4m_feature_selection_pso_select` (binary PSO over feature masks).

@@ -12,7 +12,7 @@
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | `median`+`asha`+`racing` ✅ (374 tests; median/asha Codex-reviewed); `hyperband` (needs bracket scheduler → F5) + `n_components` fidelity engine remain |
-| **F3** — RNG consolidation → ga, pso | ✅ done (samplers) | ⬜ | `ga` + `pso` samplers ✅ (376 tests, shared `decode_candidate`); RNG-consolidation of the *feature-selection* loops deferred (HPO samplers are clean fresh impls) |
+| **F3** — RNG consolidation → ga, pso | ✅ done (samplers) | 🟢 Codex | `ga` + `pso` samplers ✅ (376 tests, shared `decode_candidate`); RNG-consolidation of the *feature-selection* loops deferred (HPO samplers are clean fresh impls) |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
 | **B** — bindings python→R/MATLAB/WASM + cross-binding gate | ⬜ todo | ⬜ | Track B |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F3 samplers Codex review applied
+- Codex review of ga+pso: **1 Blocker, 2 Major, 2 Minor — all applied** (`docs/reviews/finetuning-roadmap/codex-review-05-F3-samplers.md`). **Blocker:** population samplers refuse to cross a generation/iteration boundary until it is fully resolved (synchronous LIAR_NONE evolution) — `ask_batch` returns a *partial* batch at the boundary instead of evolving on unscored members (added `resolved_in_range`). **Major:** `enqueue`/warm-start rejected for population samplers (`N4M_ERR_UNSUPPORTED` via an `allow_enqueue()` hook) — a forced candidate can't be inverse-encoded into the population; constraint handling documented as fitness-only. **Minor:** PSO velocity clamp (vmax=0.5). +1 regression test (batch boundary + enqueue reject). **377 passed, 0 failed.**
 
 ### 2026-07-10 — F3: PSO sampler + shared decode
 - Added `N4M_SAMPLER_PSO` (`cpp/src/core/optimization/pso.cpp`): particle-swarm optimization over the unit hypercube (Clerc–Kennedy w=0.729, c1=c2=1.494) — swarm of 16 particles with position/velocity/personal-best, global best = best personal best, positions clamped to [0,1). Factored the unit-vector→trial decode into `Optimizer::decode_candidate()` (shared by `ga` + `pso`; GA simplified to use it, still green). Convergence test on a 2D continuous quadratic. **376 passed, 0 failed.** ABI unchanged. Doc `docs/methods/pso_search.md`.

@@ -211,6 +211,13 @@ class Optimizer {
         (void)out;
         return false;
     }
+    // Whether enqueue()/warm-start is supported. Population samplers (ga/pso)
+    // return false because a forced candidate cannot be inverse-encoded into
+    // their population state.
+    virtual bool allow_enqueue() const { return true; }
+    // Number of trials in the id range [base, base+size) that have reached a
+    // terminal state (used by the population samplers' generation guard).
+    std::int32_t resolved_in_range(std::int64_t base, std::int32_t size) const;
 
     SearchSpace              space_;
     n4m_optimizer_options_t  opts_;
@@ -282,6 +289,7 @@ class GaSampler : public Optimizer {
   protected:
     bool sample(::n4m_trial_s& t,
                 const std::vector<std::pair<std::string, double>>* forced) override;
+    bool allow_enqueue() const override { return false; }
 
   private:
     void        ensure_generation(std::int64_t member_base);
@@ -306,6 +314,7 @@ class PsoSampler : public Optimizer {
   protected:
     bool sample(::n4m_trial_s& t,
                 const std::vector<std::pair<std::string, double>>* forced) override;
+    bool allow_enqueue() const override { return false; }
 
   private:
     void ensure_iteration(std::int64_t member_base);

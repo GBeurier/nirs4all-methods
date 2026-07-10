@@ -576,6 +576,39 @@ void test_ga_converges() {
     n4m_context_destroy(ctx);
 }
 
+void test_population_batch_and_enqueue() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_float(sp, "x", 0.0, 1.0, 0.0, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.sampler = N4M_SAMPLER_GA;
+    o.seed = 1;
+    n4m_optimizer_t* opt = nullptr;
+    n4m_optimizer_create(ctx, sp, &o, &opt);
+    // ask_batch beyond the population (16) returns a partial batch at the boundary
+    n4m_trial_t* buf[20] = {nullptr};
+    int32_t count = 0;
+    const n4m_status_t st = n4m_optimizer_ask_batch(opt, 20, buf, &count);
+    N4M_TEST_REQUIRE(count == 16);   // stops at the generation boundary
+    N4M_TEST_REQUIRE(st != N4M_OK);  // the 17th ask cannot advance without scores
+    for (int i = 0; i < 16; ++i) {
+        int64_t id = 0;
+        n4m_trial_get_id(buf[i], &id);
+        n4m_optimizer_tell(opt, id, 0.5);
+    }
+    n4m_trial_t* t = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &t) == N4M_OK);  // next generation now available
+    // enqueue/warm-start is unsupported for population samplers
+    const char* names[1] = {"x"};
+    const double v[1] = {0.3};
+    N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt, names, v, 1) == N4M_ERR_UNSUPPORTED);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_pso_converges() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -767,6 +800,7 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: ternary converges (unimodal int)", test_ternary_converges);
     r.run("optimization: ternary respects step + batch reservations", test_ternary_respects_step_and_batch);
     r.run("optimization: ga converges (2D continuous)", test_ga_converges);
+    r.run("optimization: population batch boundary + enqueue reject", test_population_batch_and_enqueue);
     r.run("optimization: pso converges (2D continuous)", test_pso_converges);
     r.run("optimization: enqueue out-of-range rejected", test_enqueue_out_of_range_rejected);
     r.run("optimization: median pruner decisions", test_median_pruner);
