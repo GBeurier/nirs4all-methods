@@ -495,7 +495,10 @@ std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
         case N4M_SAMPLER_TPE:
             if (status != nullptr) *status = N4M_OK;
             return std::make_unique<TpeSampler>(space, opts);
-        default:  // gp_ei reserved for F4
+        case N4M_SAMPLER_GP_EI:
+            if (status != nullptr) *status = N4M_OK;
+            return std::make_unique<GpEiSampler>(space, opts);
+        default:  // all sampler kinds implemented
             if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;
             return nullptr;
     }

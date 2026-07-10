@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -427,6 +428,38 @@ class TpeSampler : public Optimizer {
     std::int32_t n_startup_{10};
     double       gamma_{0.25};
     std::int32_t n_ei_{24};
+};
+
+// Bayesian optimization with a Gaussian-process surrogate + Expected Improvement
+// acquisition (F4). After `n_startup_trials` random trials, each ask fits an RBF
+// GP on the completed, scored history (over the CONTINUOUS axes, in unit space;
+// non-continuous axes handled by the shared decode) and returns the candidate
+// maximising EI over a random acquisition batch. The GP hyperparameters use a
+// median-distance lengthscale heuristic (no marginal-likelihood inner loop), and
+// the small dense Cholesky is fine for the trial counts NIRS finetuning uses.
+// Tier-C parity (self-consistency + convergence), since GP fitting details differ
+// across libraries. F4.
+class GpEiSampler : public Optimizer {
+  public:
+    GpEiSampler(const SearchSpace& space, const n4m_optimizer_options_t& opts);
+
+  protected:
+    bool sample(::n4m_trial_s& t,
+                const std::vector<std::pair<std::string, double>>* forced) override;
+    bool allow_enqueue() const override { return false; }
+
+  private:
+    // Gather completed+scored trials' continuous-axis coords (from proposals_) and
+    // scores; returns false if too few to fit a GP.
+    bool gather(std::vector<std::vector<double>>& X, std::vector<double>& y) const;
+    // Expected improvement of a candidate given a fitted GP (posterior mu/sigma).
+    double expected_improvement(double mu, double sigma, double y_best) const;
+
+    std::vector<std::size_t> cont_axes_;  // continuous param indices modelled by the GP
+    std::size_t              P_{0};
+    std::int32_t             n_startup_{10};
+    std::int32_t             n_candidates_{64};
+    std::map<std::int64_t, std::vector<double>> proposals_;  // trial id -> cont-axis unit coords
 };
 
 // Resolve MINIMIZE/MAXIMIZE from a metric (used when direction == AUTO).
