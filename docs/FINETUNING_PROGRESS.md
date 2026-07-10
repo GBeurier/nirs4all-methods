@@ -12,7 +12,7 @@
 | **F0** — ABI surface + `random`/`none` slice + scaffolding | 🟢 done+reviewed | ✅ Codex | 365/365 tests; ABI 2.1; **Codex-reviewed (14 findings all applied)**. Catalog `--strict-abi` reconcile + HPO parity CI (Track Q) deferred. |
 | **F1** — samplers: sobol, lhs, ternary | 🟡 in progress | 🟢 ternary+lhs | `ternary` + `lhs` ✅ **Codex-reviewed (7 findings applied)**, 369 tests; `sobol` needs the Joe–Kuo direction-number table (deliberate follow-up) |
 | **F2** — pruners: fidelity engine → median, asha, hyperband, racing | 🟡 in progress | 🟢 median+asha | `median`+`asha`+`racing` ✅ (374 tests; median/asha Codex-reviewed); `hyperband` (needs bracket scheduler → F5) + `n_components` fidelity engine remain |
-| **F3** — RNG consolidation → ga, pso | 🟡 in progress | ⬜ | `ga` sampler ✅ (375 tests); `pso` next; RNG-consolidation of the feature-selection loops deferred (GA sampler is a clean fresh impl) |
+| **F3** — RNG consolidation → ga, pso | ✅ done (samplers) | ⬜ | `ga` + `pso` samplers ✅ (376 tests, shared `decode_candidate`); RNG-consolidation of the *feature-selection* loops deferred (HPO samplers are clean fresh impls) |
 | **F4** — cmaes, tpe, (gp_ei?) | ⬜ todo | ⬜ | Track M |
 | **Q** — HpoSpec + comparators + parity CI | ⬜ todo | ⬜ | Track Q (start early) |
 | **B** — bindings python→R/MATLAB/WASM + cross-binding gate | ⬜ todo | ⬜ | Track B |
@@ -21,6 +21,9 @@
 Legend: ⬜ todo · 🟡 in progress · ✅ done · 🟢 done+reviewed
 
 ## Log
+
+### 2026-07-10 — F3: PSO sampler + shared decode
+- Added `N4M_SAMPLER_PSO` (`cpp/src/core/optimization/pso.cpp`): particle-swarm optimization over the unit hypercube (Clerc–Kennedy w=0.729, c1=c2=1.494) — swarm of 16 particles with position/velocity/personal-best, global best = best personal best, positions clamped to [0,1). Factored the unit-vector→trial decode into `Optimizer::decode_candidate()` (shared by `ga` + `pso`; GA simplified to use it, still green). Convergence test on a 2D continuous quadratic. **376 passed, 0 failed.** ABI unchanged. Doc `docs/methods/pso_search.md`.
 
 ### 2026-07-10 — F3: GA sampler
 - Added `N4M_SAMPLER_GA` (`cpp/src/core/optimization/ga.cpp`): real-coded genetic algorithm over the unit hypercube `[0,1)^P`, decoded per parameter (numeric via `numeric_from_unit`, categorical/ordinal bucketed) — handles mixed spaces uniformly. Generational: a population of 16 is asked out, then tournament selection + uniform crossover + Gaussian mutation + elitism produce the next generation once scores arrive (keyed on trial-id ranges; the async-population lifecycle will be reused by `pso`/`cmaes`). Convergence test on a 2D continuous quadratic. **375 passed, 0 failed.** ABI unchanged. Doc `docs/methods/ga_search.md`. (This is the HPO-sampler GA over the typed space — distinct from the feature-selection `ga_select`; sharing the RNG-consolidated loops is a later refinement.)

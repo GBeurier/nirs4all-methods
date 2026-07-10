@@ -192,6 +192,12 @@ class Optimizer {
     // value (shared by random / lhs / sobol; the only stochastic part is who
     // supplies u).
     double numeric_from_unit(const ParamSpec& p, double u) const;
+    // Decode a full unit vector u∈[0,1)^P into a trial (numeric via
+    // numeric_from_unit, categorical/ordinal bucketed, sorted-tuple sampled),
+    // honouring forced values and applying conditional activation. Shared by the
+    // population samplers (ga / pso). u must have space_.params.size() entries.
+    void   decode_candidate(const std::vector<double>& u, ::n4m_trial_s& t,
+                            const std::vector<std::pair<std::string, double>>* forced);
     void   apply_conditions(::n4m_trial_s& t) const;
     bool   constraints_ok(const ::n4m_trial_s& t) const;
     bool   better(double candidate, double incumbent) const;
@@ -286,6 +292,36 @@ class GaSampler : public Optimizer {
     double                           mutation_sigma_{0.15};
     std::vector<std::vector<double>> gen_;          // current generation unit vectors
     std::int64_t                     gen_base_id_{-1};  // trial id of gen_[0]
+};
+
+// Particle Swarm Optimization over the unit hypercube (F3). A swarm of
+// `swarm_size` particles (position + velocity + personal best) is asked out per
+// iteration; once scored, each velocity updates toward the particle's personal
+// best and the global best (Clerc-Kennedy constants), then positions advance.
+// Reuses the async-population lifecycle and the shared candidate decode. F3.
+class PsoSampler : public Optimizer {
+  public:
+    PsoSampler(const SearchSpace& space, const n4m_optimizer_options_t& opts);
+
+  protected:
+    bool sample(::n4m_trial_s& t,
+                const std::vector<std::pair<std::string, double>>* forced) override;
+
+  private:
+    void ensure_iteration(std::int64_t member_base);
+
+    std::int32_t                     swarm_size_{16};
+    double                           w_{0.729};
+    double                           c1_{1.494};
+    double                           c2_{1.494};
+    std::vector<std::vector<double>> pos_;
+    std::vector<std::vector<double>> vel_;
+    std::vector<std::vector<double>> pbest_pos_;
+    std::vector<double>              pbest_score_;
+    std::vector<double>              gbest_pos_;
+    double                           gbest_score_{0.0};
+    bool                             have_gbest_{false};
+    std::int64_t                     iter_base_id_{-1};
 };
 
 // Resolve MINIMIZE/MAXIMIZE from a metric (used when direction == AUTO).

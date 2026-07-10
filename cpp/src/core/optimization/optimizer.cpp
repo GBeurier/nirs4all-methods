@@ -112,6 +112,64 @@ void Optimizer::set_trial_value(::n4m_trial_s& t, const ParamSpec& p, double for
     t.params.emplace_back(p.name, tp);
 }
 
+void Optimizer::decode_candidate(const std::vector<double>& u, ::n4m_trial_s& t,
+                                 const std::vector<std::pair<std::string, double>>* forced) {
+    auto forced_of = [&](const std::string& name, double* out) -> bool {
+        if (forced == nullptr) return false;
+        for (const auto& f : *forced) {
+            if (f.first == name) { *out = f.second; return true; }
+        }
+        return false;
+    };
+    t.params.clear();
+    for (std::size_t j = 0; j < space_.params.size(); ++j) {
+        const ParamSpec& p = space_.params[j];
+        double fv = 0.0;
+        if (forced_of(p.name, &fv)) {
+            set_trial_value(t, p, fv);
+            continue;
+        }
+        if (p.kind == N4M_PARAM_SORTED_TUPLE) {  // not encoded in the candidate vector
+            std::vector<double> vals;
+            vals.reserve(static_cast<std::size_t>(p.tuple_length));
+            for (std::int32_t i = 0; i < p.tuple_length; ++i) {
+                const double uu = n4m_rng_next_double(&rng_);
+                double v = p.low + uu * (p.high - p.low);
+                if (p.tuple_element_is_int) v = std::floor(p.low + uu * (p.high - p.low + 1.0));
+                vals.push_back(v);
+            }
+            std::sort(vals.begin(), vals.end());
+            for (std::int32_t i = 0; i < p.tuple_length; ++i) {
+                TrialParam sub;
+                sub.value = vals[static_cast<std::size_t>(i)];
+                t.params.emplace_back(p.name + "#" + std::to_string(i), sub);
+            }
+            continue;
+        }
+        double uj = j < u.size() ? u[j] : 0.5;
+        if (uj < 0.0) uj = 0.0;
+        else if (uj >= 1.0) uj = std::nextafter(1.0, 0.0);
+        TrialParam tp;
+        if (p.kind == N4M_PARAM_CATEGORICAL || p.kind == N4M_PARAM_ORDINAL) {
+            const int n = static_cast<int>(std::max(p.labels.size(), p.num_values.size()));
+            int idx = n > 0 ? static_cast<int>(uj * n) : 0;
+            if (idx >= n) idx = n - 1;
+            if (idx < 0) idx = 0;
+            tp.cat_index = idx;
+            tp.cat_label = (idx < static_cast<int>(p.labels.size()))
+                               ? p.labels[static_cast<std::size_t>(idx)]
+                               : "";
+            tp.value = (idx < static_cast<int>(p.num_values.size()))
+                           ? p.num_values[static_cast<std::size_t>(idx)]
+                           : static_cast<double>(idx);
+        } else {
+            tp.value = numeric_from_unit(p, uj);
+        }
+        t.params.emplace_back(p.name, tp);
+    }
+    apply_conditions(t);
+}
+
 bool Optimizer::sample(::n4m_trial_s& t,
                        const std::vector<std::pair<std::string, double>>* forced) {
     auto forced_of = [&](const std::string& name, double* out) -> bool {
@@ -397,7 +455,10 @@ std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
         case N4M_SAMPLER_GA:
             if (status != nullptr) *status = N4M_OK;
             return std::make_unique<GaSampler>(space, opts);
-        default:  // sobol/pso/cmaes/tpe/gp_ei reserved for F1–F4
+        case N4M_SAMPLER_PSO:
+            if (status != nullptr) *status = N4M_OK;
+            return std::make_unique<PsoSampler>(space, opts);
+        default:  // sobol/cmaes/tpe/gp_ei reserved for F1/F4
             if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;
             return nullptr;
     }
