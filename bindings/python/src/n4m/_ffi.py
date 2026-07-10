@@ -43,7 +43,7 @@ _PKG_DIR = Path(__file__).resolve().parent
 # Bumped additively with each minor ABI change; kept in sync with the header
 # (see scripts/bump_version.sh, which fails --check on drift).
 ABI_VERSION_MAJOR = 2
-ABI_VERSION_MINOR = 0
+ABI_VERSION_MINOR = 1
 ABI_VERSION_PATCH = 0
 ABI_VERSION_STRING = f"{ABI_VERSION_MAJOR}.{ABI_VERSION_MINOR}.{ABI_VERSION_PATCH}"
 

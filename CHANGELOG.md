@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+- **Native HPO optimizer (`optimization` role, ABI 2.1.0) — Phase 1 / F0.** A
+  handle-based ask/tell hyperparameter optimizer with a typed search space
+  (`n4m_search_space_*`), the optimizer handle (`n4m_optimizer_*`: ask/tell,
+  batch ask, warm-start enqueue, intermediate reporting, trial streaming), trial
+  accessors (`n4m_trial_*`), and a pure-native single-level driver
+  `n4m_finetune_estimator` (objective = internal PLS cross-validation over one
+  validation plan). All sampler/pruner algorithms sit behind reserved enum
+  values; F0 ships `random` + `none`, with reserved kinds returning
+  `N4M_ERR_NOT_IMPLEMENTED`. Search space supports int/float/log/categorical
+  (typed values)/ordinal/sorted-tuple params plus generic constraints
+  (mutex/requires/exclude + conditional activation). See
+  `docs/FINETUNING_ROADMAP.md`, `docs/FINETUNING_F0_PR.md`,
+  `docs/methods/optimization.md`.
+
 ## [1.0.5] - 2026-07-06
 
 ### Fixed

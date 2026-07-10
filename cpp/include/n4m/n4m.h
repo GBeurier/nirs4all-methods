@@ -950,6 +950,7 @@ N4M_API n4m_status_t n4m_pls_cross_validate(
 #include "n4m/metrics.h"
 #include "n4m/decomposition.h"
 #include "n4m/lowlevel.h"
+#include "n4m/optimization.h"
 
 /* ============================================================================
  * 10. ABI guard rails — fixed-size assertions on the C ABI shape
@@ -1011,5 +1012,17 @@ N4M_STATIC_ASSERT(sizeof(n4m_deflation_t)     == 4, "n4m_deflation_t must be 4 b
 N4M_STATIC_ASSERT(sizeof(n4m_operator_kind_t) == 4, "n4m_operator_kind_t must be 4 bytes");
 N4M_STATIC_ASSERT(sizeof(n4m_gating_mode_t)   == 4, "n4m_gating_mode_t must be 4 bytes");
 N4M_STATIC_ASSERT(sizeof(n4m_model_array_t)   == 4, "n4m_model_array_t must be 4 bytes");
+
+/* optimization role (ABI 2.1) — every HPO enum is 4-byte. */
+N4M_STATIC_ASSERT(sizeof(n4m_param_kind_t)      == 4, "n4m_param_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_cat_type_t)        == 4, "n4m_cat_type_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_constraint_kind_t) == 4, "n4m_constraint_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_sampler_kind_t)    == 4, "n4m_sampler_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_pruner_kind_t)     == 4, "n4m_pruner_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_opt_direction_t)   == 4, "n4m_opt_direction_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_eval_mode_t)       == 4, "n4m_eval_mode_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_metric_t)          == 4, "n4m_metric_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_liar_kind_t)       == 4, "n4m_liar_kind_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_trial_status_t)    == 4, "n4m_trial_status_t must be 4 bytes");
 
 #endif /* N4M_N4M_H */
