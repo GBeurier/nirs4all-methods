@@ -129,6 +129,15 @@ class Optimizer {
     bool   better(double candidate, double incumbent) const;
     void   set_trial_value(::n4m_trial_s& t, const ParamSpec& p, double forced) const;
 
+    // Hook for adaptive samplers to override one numeric param's value; the base
+    // random sampler returns false so sample_numeric() is used. Return true and
+    // set *out to override the draw for `p`.
+    virtual bool override_numeric(const ParamSpec& p, double* out) {
+        (void)p;
+        (void)out;
+        return false;
+    }
+
     SearchSpace              space_;
     n4m_optimizer_options_t  opts_;
     n4m_opt_direction_t      dir_{N4M_OPT_MINIMIZE};
@@ -143,6 +152,26 @@ class Optimizer {
     std::vector<std::unique_ptr<::n4m_trial_s>>              trials_;
     std::deque<std::vector<std::pair<std::string, double>>>  enqueued_;
     std::int64_t                                             next_id_{0};
+};
+
+// Ternary search over a single unimodal integer axis (ports the nirs4all
+// BinarySearchSampler); every other parameter is sampled uniformly. Converges
+// in O(log n) evaluations for a unimodal objective (e.g. PLS n_components). F1.
+class TernarySampler : public Optimizer {
+  public:
+    TernarySampler(const SearchSpace& space, const n4m_optimizer_options_t& opts);
+
+  protected:
+    // Recomputed from the completed-trial history each call, so it is idempotent
+    // within one ask() (safe under constraint-retries) and needs no mutable state.
+    bool override_numeric(const ParamSpec& p, double* out) override;
+
+  private:
+    std::int64_t next_ternary_value() const;
+
+    std::string  target_;   // name of the tuned int axis ("" ⇒ pure random)
+    std::int64_t low_{0};
+    std::int64_t high_{0};
 };
 
 // Resolve MINIMIZE/MAXIMIZE from a metric (used when direction == AUTO).

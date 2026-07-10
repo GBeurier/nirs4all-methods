@@ -380,6 +380,40 @@ void test_auto_direction_maximizes_r2() {
     n4m_context_destroy(ctx);
 }
 
+void test_ternary_converges() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 30, 1, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.sampler = N4M_SAMPLER_TERNARY;
+    o.direction = N4M_OPT_MINIMIZE;
+    o.seed = 1;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    for (int i = 0; i < 25; ++i) {  // unimodal objective, optimum at k = 7
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        int64_t k = 0;
+        n4m_trial_get_int(t, "k", &k);
+        const double score = static_cast<double>((k - 7) * (k - 7));
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        n4m_optimizer_tell(opt, id, score);
+    }
+    n4m_trial_t* best = nullptr;
+    double bs = 1e9;
+    N4M_TEST_REQUIRE(n4m_optimizer_best(opt, &best, &bs) == N4M_OK);
+    N4M_TEST_REQUIRE(bs <= 1.0);  // converged to k in {6, 7, 8}
+    int64_t bk = 0;
+    n4m_trial_get_int(best, "k", &bk);
+    N4M_TEST_REQUIRE(bk >= 6 && bk <= 8);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 }  // namespace
 
 void register_optimization_tests(n4m_testing::Runner& r) {
@@ -396,4 +430,5 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: conditional activation", test_conditional_activation);
     r.run("optimization: finetune rejects unsupported param", test_finetune_rejects_unsupported_param);
     r.run("optimization: auto direction maximizes R2", test_auto_direction_maximizes_r2);
+    r.run("optimization: ternary converges (unimodal int)", test_ternary_converges);
 }

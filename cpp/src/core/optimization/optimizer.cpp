@@ -171,9 +171,11 @@ bool Optimizer::sample(::n4m_trial_s& t,
                                        : "";
                     break;
                 }
-                default:  // INT / FLOAT / LOG_INT / LOG_FLOAT
-                    tp.value = sample_numeric(p);
+                default: {  // INT / FLOAT / LOG_INT / LOG_FLOAT
+                    double ov = 0.0;
+                    tp.value = override_numeric(p, &ov) ? ov : sample_numeric(p);
                     break;
+                }
             }
             t.params.emplace_back(p.name, tp);
         }
@@ -340,7 +342,10 @@ std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
         case N4M_SAMPLER_RANDOM:
             if (status != nullptr) *status = N4M_OK;
             return std::make_unique<Optimizer>(space, opts);
-        default:  // sobol/lhs/ternary/ga/pso/cmaes/tpe/gp_ei reserved for F1–F4
+        case N4M_SAMPLER_TERNARY:
+            if (status != nullptr) *status = N4M_OK;
+            return std::make_unique<TernarySampler>(space, opts);
+        default:  // sobol/lhs/ga/pso/cmaes/tpe/gp_ei reserved for F1–F4
             if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;
             return nullptr;
     }
