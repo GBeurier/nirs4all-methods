@@ -142,6 +142,22 @@ class AshaPruner : public Pruner {
     std::int32_t reduction_factor_;
 };
 
+// Hoeffding racing — the fold-safe early-stop. Each trial's intermediate scores
+// are treated as repeated observations of its performance; a trial is pruned
+// when its confidence interval no longer overlaps the best trial's (i.e. we are
+// statistically confident it is worse). Correct for exchangeable-fold CV, where
+// successive-halving's rank-preservation assumption fails (roadmap §2c). F2.
+class RacingPruner : public Pruner {
+  public:
+    explicit RacingPruner(double delta) : delta_(delta > 0.0 && delta < 1.0 ? delta : 0.05) {}
+    bool should_prune(const ::n4m_trial_s& trial, std::int32_t step, double score,
+                      const std::vector<std::unique_ptr<::n4m_trial_s>>& trials,
+                      n4m_opt_direction_t dir) const override;
+
+  private:
+    double delta_;
+};
+
 // Build the pruner for opts.pruner; nullptr + N4M_ERR_NOT_IMPLEMENTED for
 // reserved-but-unimplemented kinds. NONE maps to a null pruner (never prunes).
 std::unique_ptr<Pruner> make_pruner(const n4m_optimizer_options_t& opts, n4m_status_t* status);
