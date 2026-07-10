@@ -503,6 +503,45 @@ void test_median_pruner() {
     n4m_context_destroy(ctx);
 }
 
+void test_asha_pruner() {
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "k", 1, 10, 1, 0);
+    n4m_optimizer_options_t o = default_opts();
+    o.pruner = N4M_PRUNER_ASHA;  // reduction_factor = 3
+    o.direction = N4M_OPT_MINIMIZE;
+    o.seed = 1;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    n4m_trial_t* t[3] = {nullptr, nullptr, nullptr};
+    int64_t id[3];
+    for (int i = 0; i < 3; ++i) {
+        n4m_optimizer_ask(opt, &t[i]);
+        n4m_trial_get_id(t[i], &id[i]);
+    }
+    int32_t prune = -1;
+    // fewer than reduction_factor peers at the rung → survive
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[0], 0, 1.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[1], 0, 2.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);
+    // 3 at the rung, top 1/3 = 1 survives; worst is pruned
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id[2], 0, 9.0, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 1);
+    // the best-scoring newcomer survives
+    n4m_trial_t* t3 = nullptr;
+    int64_t id3 = 0;
+    n4m_optimizer_ask(opt, &t3);
+    n4m_trial_get_id(t3, &id3);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell_intermediate(opt, id3, 0, 0.5, &prune) == N4M_OK);
+    N4M_TEST_REQUIRE(prune == 0);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_lhs_stratifies() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -556,5 +595,6 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: ternary respects step + batch reservations", test_ternary_respects_step_and_batch);
     r.run("optimization: enqueue out-of-range rejected", test_enqueue_out_of_range_rejected);
     r.run("optimization: median pruner decisions", test_median_pruner);
+    r.run("optimization: asha pruner decisions", test_asha_pruner);
     r.run("optimization: lhs stratifies startup batch", test_lhs_stratifies);
 }

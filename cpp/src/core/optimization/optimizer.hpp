@@ -126,6 +126,22 @@ class MedianPruner : public Pruner {
     std::int32_t warmup_steps_;
 };
 
+// Asynchronous Successive Halving (ASHA): at each rung (step), a trial survives
+// only if its score is in the top 1/reduction_factor of the peers that have
+// reached the same rung; otherwise it is pruned. Asynchronous — decided on the
+// fly against whoever has reported at that rung. F2.
+class AshaPruner : public Pruner {
+  public:
+    explicit AshaPruner(std::int32_t reduction_factor)
+        : reduction_factor_(reduction_factor < 2 ? 2 : reduction_factor) {}
+    bool should_prune(const ::n4m_trial_s& trial, std::int32_t step, double score,
+                      const std::vector<std::unique_ptr<::n4m_trial_s>>& trials,
+                      n4m_opt_direction_t dir) const override;
+
+  private:
+    std::int32_t reduction_factor_;
+};
+
 // Build the pruner for opts.pruner; nullptr + N4M_ERR_NOT_IMPLEMENTED for
 // reserved-but-unimplemented kinds. NONE maps to a null pruner (never prunes).
 std::unique_ptr<Pruner> make_pruner(const n4m_optimizer_options_t& opts, n4m_status_t* status);

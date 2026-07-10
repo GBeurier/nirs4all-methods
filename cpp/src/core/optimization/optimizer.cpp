@@ -361,8 +361,8 @@ n4m_status_t Optimizer::tell_intermediate(std::int64_t id, std::int32_t step, do
 std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
                                           const n4m_optimizer_options_t& opts,
                                           n4m_status_t* status) {
-    if (opts.pruner != N4M_PRUNER_NONE && opts.pruner != N4M_PRUNER_MEDIAN) {
-        if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;  // asha/hyperband/racing land later in F2
+    if (opts.pruner == N4M_PRUNER_HYPERBAND || opts.pruner == N4M_PRUNER_RACING) {
+        if (status != nullptr) *status = N4M_ERR_NOT_IMPLEMENTED;  // hyperband/racing land later in F2
         return nullptr;
     }
     switch (opts.sampler) {
