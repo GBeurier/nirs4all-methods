@@ -1,5 +1,44 @@
 # ABI — Changes Log
 
+## 2026-07-10 — ABI 2.1.0: native HPO optimizer surface (`optimization` role)
+
+Additive change (MINOR). New role header `cpp/include/n4m/optimization.h` — a
+handle-based ask/tell hyperparameter optimizer + typed search space. All
+sampler/pruner algorithms sit behind reserved enum values
+(`n4m_sampler_kind_t`, `n4m_pruner_kind_t`); F0 implements only `random` +
+`none`, and reserved values return `N4M_ERR_NOT_IMPLEMENTED`, so Phase-1
+samplers/pruners (F1–F4) add no further public symbols. See
+`docs/FINETUNING_F0_PR.md`.
+
+31 new `N4M_API` symbols:
+
+- search space (9): `n4m_search_space_create`, `_destroy`, `_add_int`,
+  `_add_float`, `_add_categorical`, `_add_ordinal`, `_add_sorted_tuple`,
+  `_add_constraint`, `_num_params`.
+- optimizer (13): `n4m_optimizer_options_init`, `n4m_optimizer_create`,
+  `_destroy`, `_enqueue`, `_ask`, `_ask_batch`, `_tell`, `_tell_result`,
+  `_tell_intermediate`, `_best`, `_get_trials`, `_save`, `_load`
+  (`_save`/`_load` reserved → `N4M_ERR_NOT_IMPLEMENTED` until F7).
+- trial accessors (8): `n4m_trial_get_id`, `_get_int`, `_get_float`,
+  `_get_category`, `_is_active`, `_get_rung`, `_get_status`, `_get_duration`.
+- pure-native driver (1): `n4m_finetune_estimator`.
+
+New 4-byte enums (guard-railed in `n4m.h`): `n4m_param_kind_t`,
+`n4m_cat_type_t`, `n4m_constraint_kind_t`, `n4m_sampler_kind_t`,
+`n4m_pruner_kind_t`, `n4m_opt_direction_t`, `n4m_eval_mode_t`, `n4m_metric_t`,
+`n4m_liar_kind_t`, `n4m_trial_status_t`. New value struct
+`n4m_optimizer_options_t` (forward-compatible via a `struct_size` prologue).
+
+**Later within 2.1.0 (still additive, no symbol/size change):** the reserved tail
+of `n4m_optimizer_options_t` was narrowed from `reserved[64]` to two named
+`int32_t` fields — `max_resource`, `reduction_factor` (for `hyperband`/`asha`) —
+plus `reserved[56]`. `sizeof(n4m_optimizer_options_t)` is unchanged (verified
+C == Python == 120 bytes) and no exported symbol changed, so this is
+ABI-compatible: callers that zero-initialise via `n4m_optimizer_options_init`
+get `0` (= auto/default) for both. All eight `n4m_sampler_kind_t` values and all
+five `n4m_pruner_kind_t` values are now implemented (reserved-value dispatch now
+only fires for out-of-range enums).
+
 ## 2026-06-14 — ABI 2.0.0: namespace clean break (all method symbols renamed)
 
 Breaking change. Every public **method** symbol was renamed to the canonical

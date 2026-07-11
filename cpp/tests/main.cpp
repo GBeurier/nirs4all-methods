@@ -189,6 +189,10 @@ void test_backend_reference_cpu_available() {
 
 }  // namespace
 
+// F0 — native ask/tell hyperparameter optimizer tests live in
+// test_optimization.cpp.
+void register_optimization_tests(n4m_testing::Runner& r);
+
 int main() {
     n4m_testing::Runner r("nirs4all-methods");
     r.run("version_string_nonempty",            test_version_string_nonempty);
@@ -233,5 +237,6 @@ int main() {
     register_aom_robust_hpo_tests(r);
     register_aom_selection_tests(r);
     register_aom_sweep_tests(r);
+    register_optimization_tests(r);
     return r.finalize();
 }
