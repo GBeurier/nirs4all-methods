@@ -41,10 +41,13 @@ typedef enum n4m_constraint_kind_t {
     N4M_CONSTRAINT_REQUIRES = 1,      /* ref[0] present ⇒ ref[1] present           */
     N4M_CONSTRAINT_EXCLUDE = 2,       /* ref[0] and ref[1] may not both be present */
     /* param_refs = {child, parent} (exactly 2); child is active iff the parent's
-     * chosen label == label_refs[1]. Repeat the constraint (same child + parent)
-     * to activate on a SET of parent labels. Other shapes (n_refs != 2, or a
-     * second constraint with a different parent for the same child) are rejected
-     * with N4M_ERR_UNSUPPORTED. */
+     * chosen label == label_refs[1] AND the parent is itself active. Repeat the
+     * constraint (same child + parent) to activate on a SET of parent labels.
+     * Conditions NEST: a child may in turn be another param's parent, and a
+     * grandchild is active only when its whole ancestor chain is — so operator
+     * attributes vanish when an outer pipeline slot does not select that operator.
+     * Other shapes (n_refs != 2, or a second constraint with a different parent
+     * for the same child) are rejected with N4M_ERR_UNSUPPORTED. */
     N4M_CONSTRAINT_CONDITION_IN = 3,
     N4M_CONSTRAINT_CONDITION_NOT_IN = 4
 } n4m_constraint_kind_t;

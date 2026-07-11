@@ -363,6 +363,109 @@ void test_conditional_activation() {
     n4m_context_destroy(ctx);
 }
 
+void test_conditional_deep_nesting() {
+    // Three-level chain (E2): a∈{p,q}; b active iff a=="p"; c active iff b=="x".
+    // The grandchild c must be INACTIVE whenever a!="p", even when b's stale
+    // sampled label is "x" — the case a single label-only pass gets wrong. This
+    // is the correctness the nested sub-pipeline search space depends on.
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    const char* aa[2] = {"p", "q"};
+    const char* bb[2] = {"x", "y"};
+    n4m_search_space_add_categorical(sp, "a", N4M_CAT_STR, aa, 2);
+    n4m_search_space_add_categorical(sp, "b", N4M_CAT_STR, bb, 2);
+    n4m_search_space_add_float(sp, "c", 0.0, 1.0, 0.0, 0);
+    const char* rb[2] = {"b", "a"};
+    const char* lb[2] = {"", "p"};  // b active iff a == "p"
+    N4M_TEST_REQUIRE(n4m_search_space_add_constraint(sp, N4M_CONSTRAINT_CONDITION_IN, rb, lb, 2) == N4M_OK);
+    const char* rc[2] = {"c", "b"};
+    const char* lc[2] = {"", "x"};  // c active iff b == "x"
+    N4M_TEST_REQUIRE(n4m_search_space_add_constraint(sp, N4M_CONSTRAINT_CONDITION_IN, rc, lc, 2) == N4M_OK);
+    n4m_optimizer_options_t o = default_opts();
+    o.seed = 4;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    bool saw_q_with_b_x = false, saw_active_c = false;
+    for (int i = 0; i < 200; ++i) {
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        int32_t ai = 0, bi = 0, bact = 0, cact = 0;
+        const char* al = nullptr;
+        const char* bl = nullptr;
+        n4m_trial_get_category(t, "a", &ai, &al);
+        n4m_trial_get_category(t, "b", &bi, &bl);
+        n4m_trial_is_active(t, "b", &bact);
+        n4m_trial_is_active(t, "c", &cact);
+        const bool a_p = (al != nullptr && std::string(al) == "p");
+        const bool b_x = (bl != nullptr && std::string(bl) == "x");
+        if (!a_p) {
+            N4M_TEST_REQUIRE(bact == 0);
+            N4M_TEST_REQUIRE(cact == 0);  // grandchild dead when branch is dead
+            if (b_x) saw_q_with_b_x = true;  // the exact path the old code broke
+        } else {
+            N4M_TEST_REQUIRE(bact == 1);
+            N4M_TEST_REQUIRE(cact == (b_x ? 1 : 0));
+            if (b_x) saw_active_c = true;
+        }
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        n4m_optimizer_tell(opt, id, 0.0);
+    }
+    N4M_TEST_REQUIRE(saw_q_with_b_x);  // the bug path was actually exercised
+    N4M_TEST_REQUIRE(saw_active_c);    // c does activate on the live branch
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
+void test_conditional_cascade_order() {
+    // The conditional child is declared BEFORE its parent AND shares the parent's
+    // '#' name prefix (model#pls#nc under model). With order-dependent application
+    // the parent's active '#' cascade would overwrite the child back to active when
+    // model=="ridge"; the deactivate-only rule keeps it inactive.
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "model#pls#nc", 1, 20, 1, 0);  // child declared FIRST
+    const char* models[2] = {"pls", "ridge"};
+    n4m_search_space_add_categorical(sp, "model", N4M_CAT_STR, models, 2);  // parent AFTER
+    const char* refs[2] = {"model#pls#nc", "model"};
+    const char* labs[2] = {"", "pls"};
+    N4M_TEST_REQUIRE(
+        n4m_search_space_add_constraint(sp, N4M_CONSTRAINT_CONDITION_IN, refs, labs, 2) == N4M_OK);
+    n4m_optimizer_options_t o = default_opts();
+    o.seed = 2;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    bool saw_pls = false, saw_ridge = false;
+    for (int i = 0; i < 100; ++i) {
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        int32_t mi = 0, act = -1;
+        const char* ml = nullptr;
+        n4m_trial_get_category(t, "model", &mi, &ml);
+        n4m_trial_is_active(t, "model#pls#nc", &act);
+        if (ml != nullptr && std::string(ml) == "ridge") {
+            N4M_TEST_REQUIRE(act == 0);  // must NOT be reactivated by the '#' cascade
+            saw_ridge = true;
+        } else {
+            N4M_TEST_REQUIRE(act == 1);
+            saw_pls = true;
+        }
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        n4m_optimizer_tell(opt, id, 0.0);
+    }
+    N4M_TEST_REQUIRE(saw_pls);
+    N4M_TEST_REQUIRE(saw_ridge);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_finetune_rejects_unsupported_param() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -1132,6 +1235,8 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: struct_size guard", test_struct_size_guard);
     r.run("optimization: enqueue warm-start", test_enqueue_warm_start);
     r.run("optimization: conditional activation", test_conditional_activation);
+    r.run("optimization: conditional deep nesting (E2)", test_conditional_deep_nesting);
+    r.run("optimization: conditional cascade order (E2)", test_conditional_cascade_order);
     r.run("optimization: finetune rejects unsupported param", test_finetune_rejects_unsupported_param);
     r.run("optimization: auto direction maximizes R2", test_auto_direction_maximizes_r2);
     r.run("optimization: ternary converges (unimodal int)", test_ternary_converges);
