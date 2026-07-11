@@ -130,12 +130,21 @@ Only needed for **deep/branchy** spaces; one-level pipelines work without them.
 Recommended order (each is a small, Codex-reviewed, parity-gated block like the
 Phase-1 samplers):
 
-| ID | Enabler | ABI impact | Why |
+| ID | Enabler | ABI impact | Status |
 |---|---|---|---|
-| **E2** | Topological, active-state-aware conditional cascade in `apply_conditions` — a child is active iff parent is active **and** label matches, resolved in dependency order. | Behavioural only (no symbol) | Makes deep nesting correct without relying on `#`-naming discipline. Do this regardless. |
-| **E1** | Multi-parent conditions (`CONDITION_ALL_IN`, or allow repeated parents with AND semantics). | Enum value (ABI minor, reserved slot) | Enables multi-gate attributes (op==sg AND mode==derivative). |
-| **E3** | First-class choice/branch node: `n4m_search_space_add_choice(slot, branch_labels…)` + branch-scoped param helpers. | New symbols (ABI minor) | Removes host boilerplate; lets samplers see branch structure. |
-| **E4** | Bounded variable-length convention (K slots each "operator-or-none") documented + a helper. | Convention (no ABI) or one helper | "Pipeline of length ≤ K" without dynamic structure. |
+| **E2** | Topological, active-state-aware conditional cascade in `apply_conditions` — a child is active iff parent is active **and** label matches, deactivate-only so declaration order is irrelevant. | Behavioural only (no symbol) | ✅ **done + Codex-reviewed** (merged to main). |
+| **E1** | Multi-parent conditions (`CONDITION_ALL_IN`, or allow repeated parents with AND semantics). | Enum value (ABI minor, reserved slot) | ⬜ deferred — not needed by the current nirs4all integration (single-parent `when` covers it). |
+| **E3** | First-class choice/branch node: `n4m_search_space_add_choice(slot, branch_labels…)` + branch-scoped param helpers. | New symbols (ABI minor) | ⬜ deferred — the host/controller compiles choices→conditions today (belongs in the orchestrator per the North Star). |
+| **E4** | Bounded variable-length convention (K slots each "operator-or-none") documented + a helper. | Convention (no ABI) or one helper | ⬜ deferred. |
+
+**Delivered on top of E2 (Phase 2, nirs4all Python):** the `finetune_params`
+**`when`/`when_not` clause** — an attribute active only when a sibling categorical
+matches a value — compiled into native conditional-activation constraints. This is
+`object__attribute` conditional finetuning for a single model (e.g. SVR `gamma`
+active only for `kernel ∈ {rbf, poly}`). See
+`nirs4all/optimization/n4m_engine.py` and example `U08_native_finetuning.py`. Full
+operator/sub-pipeline *materialisation* (choosing preprocessing operators, whole
+sub-pipelines) remains the dag-ml compiler work (P1–P6 below).
 
 Each ships with: C++ core + test, a `parity/hpo/` spec exercising the conditional
 structure (extend `HpoSpec` with a `structural` cell + golden trace), doc + bib,
