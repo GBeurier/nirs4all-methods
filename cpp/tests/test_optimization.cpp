@@ -420,6 +420,52 @@ void test_conditional_deep_nesting() {
     n4m_context_destroy(ctx);
 }
 
+void test_conditional_cascade_order() {
+    // The conditional child is declared BEFORE its parent AND shares the parent's
+    // '#' name prefix (model#pls#nc under model). With order-dependent application
+    // the parent's active '#' cascade would overwrite the child back to active when
+    // model=="ridge"; the deactivate-only rule keeps it inactive.
+    n4m_context_t* ctx = nullptr;
+    n4m_context_create(&ctx);
+    n4m_search_space_t* sp = nullptr;
+    n4m_search_space_create(&sp);
+    n4m_search_space_add_int(sp, "model#pls#nc", 1, 20, 1, 0);  // child declared FIRST
+    const char* models[2] = {"pls", "ridge"};
+    n4m_search_space_add_categorical(sp, "model", N4M_CAT_STR, models, 2);  // parent AFTER
+    const char* refs[2] = {"model#pls#nc", "model"};
+    const char* labs[2] = {"", "pls"};
+    N4M_TEST_REQUIRE(
+        n4m_search_space_add_constraint(sp, N4M_CONSTRAINT_CONDITION_IN, refs, labs, 2) == N4M_OK);
+    n4m_optimizer_options_t o = default_opts();
+    o.seed = 2;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, sp, &o, &opt) == N4M_OK);
+    bool saw_pls = false, saw_ridge = false;
+    for (int i = 0; i < 100; ++i) {
+        n4m_trial_t* t = nullptr;
+        n4m_optimizer_ask(opt, &t);
+        int32_t mi = 0, act = -1;
+        const char* ml = nullptr;
+        n4m_trial_get_category(t, "model", &mi, &ml);
+        n4m_trial_is_active(t, "model#pls#nc", &act);
+        if (ml != nullptr && std::string(ml) == "ridge") {
+            N4M_TEST_REQUIRE(act == 0);  // must NOT be reactivated by the '#' cascade
+            saw_ridge = true;
+        } else {
+            N4M_TEST_REQUIRE(act == 1);
+            saw_pls = true;
+        }
+        int64_t id = 0;
+        n4m_trial_get_id(t, &id);
+        n4m_optimizer_tell(opt, id, 0.0);
+    }
+    N4M_TEST_REQUIRE(saw_pls);
+    N4M_TEST_REQUIRE(saw_ridge);
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(sp);
+    n4m_context_destroy(ctx);
+}
+
 void test_finetune_rejects_unsupported_param() {
     n4m_context_t* ctx = nullptr;
     n4m_context_create(&ctx);
@@ -1190,6 +1236,7 @@ void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: enqueue warm-start", test_enqueue_warm_start);
     r.run("optimization: conditional activation", test_conditional_activation);
     r.run("optimization: conditional deep nesting (E2)", test_conditional_deep_nesting);
+    r.run("optimization: conditional cascade order (E2)", test_conditional_cascade_order);
     r.run("optimization: finetune rejects unsupported param", test_finetune_rejects_unsupported_param);
     r.run("optimization: auto direction maximizes R2", test_auto_direction_maximizes_r2);
     r.run("optimization: ternary converges (unimodal int)", test_ternary_converges);
