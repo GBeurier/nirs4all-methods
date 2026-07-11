@@ -294,18 +294,24 @@ void Optimizer::apply_conditions(::n4m_trial_s& t) const {
             }
             const bool cond_ok = p.cond_is_in ? label_in : !label_in;
             const ParamSpec* parent_spec = space_.find(p.cond_parent);
-            const bool parent_active = (parent_spec != nullptr) ? resolve(*parent_spec) : true;
+            // A missing parent cannot be active, so its child cannot be either.
+            const bool parent_active = parent_spec != nullptr && resolve(*parent_spec);
             active = cond_ok && parent_active;
         }
         memo[p.name] = active ? 1 : 0;
         return active;
     };
+    // Params start active; conditions only ever DEACTIVATE (never re-activate), so
+    // the '#' cascade of a structural ancestor can no longer overwrite a
+    // deactivated child back to active regardless of declaration order. Skipping
+    // unconditional/active params also keeps flat spaces allocation-cheap.
     for (const auto& p : space_.params) {
-        const bool active = resolve(p);
-        const std::string prefix = p.name + "#";  // structural sub-params cascade too
+        if (p.cond_parent.empty()) continue;  // unconditional → active; no-op
+        if (resolve(p)) continue;             // active → nothing to deactivate
+        const std::string prefix = p.name + "#";  // deactivate the param + its structural sub-params
         for (auto& kv : t.params) {
             if (kv.first == p.name || kv.first.rfind(prefix, 0) == 0) {
-                kv.second.active = active;
+                kv.second.active = false;
             }
         }
     }
