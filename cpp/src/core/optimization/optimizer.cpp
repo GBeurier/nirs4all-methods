@@ -8,8 +8,10 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace n4m::core::opt {
 
@@ -269,17 +271,38 @@ bool Optimizer::sample(::n4m_trial_s& t,
 }
 
 void Optimizer::apply_conditions(::n4m_trial_s& t) const {
-    for (const auto& p : space_.params) {
-        if (p.cond_parent.empty()) continue;
-        const TrialParam* parent = t.find(p.cond_parent);
-        bool in = false;
-        if (parent != nullptr) {
-            for (const auto& l : p.cond_labels) {
-                if (l == parent->cat_label) { in = true; break; }
+    // A parameter is active iff its own condition holds AND its conditional parent
+    // is itself active — resolved recursively up the conditional forest (E2). A
+    // single label-only pass wrongly reactivates a grandchild whose branch is dead
+    // (the parent's stale label still matches) — that breaks nested sub-pipeline
+    // search, where an operator's attributes must vanish when an ancestor slot
+    // does not select that operator. Memoised; the forest is acyclic (each child
+    // has ≤ 1 parent, enforced at add_constraint time).
+    std::unordered_map<std::string, int> memo;  // name -> 0 inactive / 1 active
+    std::function<bool(const ParamSpec&)> resolve = [&](const ParamSpec& p) -> bool {
+        auto it = memo.find(p.name);
+        if (it != memo.end()) return it->second == 1;
+        memo[p.name] = 0;  // cycle guard (defensive; the forest is acyclic)
+        bool active = true;
+        if (!p.cond_parent.empty()) {
+            const TrialParam* parent_val = t.find(p.cond_parent);
+            bool label_in = false;
+            if (parent_val != nullptr) {
+                for (const auto& l : p.cond_labels) {
+                    if (l == parent_val->cat_label) { label_in = true; break; }
+                }
             }
+            const bool cond_ok = p.cond_is_in ? label_in : !label_in;
+            const ParamSpec* parent_spec = space_.find(p.cond_parent);
+            const bool parent_active = (parent_spec != nullptr) ? resolve(*parent_spec) : true;
+            active = cond_ok && parent_active;
         }
-        const bool active = p.cond_is_in ? in : !in;
-        const std::string prefix = p.name + "#";
+        memo[p.name] = active ? 1 : 0;
+        return active;
+    };
+    for (const auto& p : space_.params) {
+        const bool active = resolve(p);
+        const std::string prefix = p.name + "#";  // structural sub-params cascade too
         for (auto& kv : t.params) {
             if (kv.first == p.name || kv.first.rfind(prefix, 0) == 0) {
                 kv.second.active = active;
