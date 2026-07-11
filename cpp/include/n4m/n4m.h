@@ -938,6 +938,17 @@ N4M_API n4m_status_t n4m_pls_cross_validate(
  *    #include "n4m/n4m.h".
  * ============================================================================ */
 
+/* N4M_STATIC_ASSERT is defined here — before the role headers — so each role
+ * header can static-assert its own enum sizes and remain independently
+ * includable. */
+#ifdef __cplusplus
+#  define N4M_STATIC_ASSERT(cond, msg) static_assert((cond), msg)
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#  define N4M_STATIC_ASSERT(cond, msg) _Static_assert((cond), msg)
+#else
+#  define N4M_STATIC_ASSERT(cond, msg) typedef char n4m_sa_##__LINE__[(cond) ? 1 : -1]
+#endif
+
 #include "n4m/transform.h"
 #include "n4m/augmentation.h"
 #include "n4m/estimators.h"
@@ -950,18 +961,11 @@ N4M_API n4m_status_t n4m_pls_cross_validate(
 #include "n4m/metrics.h"
 #include "n4m/decomposition.h"
 #include "n4m/lowlevel.h"
+#include "n4m/optimization.h"
 
 /* ============================================================================
  * 10. ABI guard rails — fixed-size assertions on the C ABI shape
  * ============================================================================ */
-
-#ifdef __cplusplus
-#  define N4M_STATIC_ASSERT(cond, msg) static_assert((cond), msg)
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-#  define N4M_STATIC_ASSERT(cond, msg) _Static_assert((cond), msg)
-#else
-#  define N4M_STATIC_ASSERT(cond, msg) typedef char n4m_sa_##__LINE__[(cond) ? 1 : -1]
-#endif
 
 N4M_STATIC_ASSERT(sizeof(n4m_status_t)         == 4, "n4m_status_t must be 4 bytes");
 N4M_STATIC_ASSERT(sizeof(n4m_backend_t)        == 4, "n4m_backend_t must be 4 bytes");
@@ -1011,5 +1015,7 @@ N4M_STATIC_ASSERT(sizeof(n4m_deflation_t)     == 4, "n4m_deflation_t must be 4 b
 N4M_STATIC_ASSERT(sizeof(n4m_operator_kind_t) == 4, "n4m_operator_kind_t must be 4 bytes");
 N4M_STATIC_ASSERT(sizeof(n4m_gating_mode_t)   == 4, "n4m_gating_mode_t must be 4 bytes");
 N4M_STATIC_ASSERT(sizeof(n4m_model_array_t)   == 4, "n4m_model_array_t must be 4 bytes");
+/* HPO enum guard rails live in n4m/optimization.h so that header is
+ * independently includable. */
 
 #endif /* N4M_N4M_H */

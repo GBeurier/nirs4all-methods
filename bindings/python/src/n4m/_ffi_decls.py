@@ -12,7 +12,7 @@ from ctypes import (
     c_int64, c_size_t, c_uint8, c_uint32, c_uint64, c_void_p,
 )
 
-from ._types import MatrixView, FilterStats, SplitResult, TransferMetrics
+from ._types import MatrixView, FilterStats, OptimizerOptions, SplitResult, TransferMetrics
 
 # Symbols: tuple of (symbol_name, argtypes_tuple, restype).
 # restype = None for void; argtypes = () for parameter-less.
@@ -719,6 +719,40 @@ SYMBOLS = (
     ("n4m_validation_plan_get_n_folds", (c_void_p, POINTER(c_int32)), c_int),
     ("n4m_validation_plan_get_n_samples", (c_void_p, POINTER(c_int64)), c_int),
     ("n4m_validation_plan_set_n_samples", (c_void_p, c_int64), c_int),
+    # -- optimization role (native HPO, ABI 2.1) ---------------------------
+    ("n4m_optimizer_options_init", (POINTER(OptimizerOptions),), None),
+    ("n4m_search_space_create", (POINTER(c_void_p),), c_int),
+    ("n4m_search_space_destroy", (c_void_p,), None),
+    ("n4m_search_space_add_int", (c_void_p, c_char_p, c_int64, c_int64, c_int64, c_int32), c_int),
+    ("n4m_search_space_add_float", (c_void_p, c_char_p, c_double, c_double, c_double, c_int32), c_int),
+    ("n4m_search_space_add_categorical", (c_void_p, c_char_p, c_int, c_void_p, c_int32), c_int),
+    ("n4m_search_space_add_ordinal", (c_void_p, c_char_p, POINTER(c_double), c_int32), c_int),
+    ("n4m_search_space_add_sorted_tuple", (c_void_p, c_char_p, c_int32, c_double, c_double, c_int32), c_int),
+    ("n4m_search_space_add_constraint", (c_void_p, c_int, POINTER(c_char_p), POINTER(c_char_p), c_int32), c_int),
+    ("n4m_search_space_num_params", (c_void_p, POINTER(c_int32)), c_int),
+    ("n4m_optimizer_create", (c_void_p, c_void_p, POINTER(OptimizerOptions), POINTER(c_void_p)), c_int),
+    ("n4m_optimizer_destroy", (c_void_p,), None),
+    ("n4m_optimizer_enqueue", (c_void_p, POINTER(c_char_p), POINTER(c_double), c_int32), c_int),
+    ("n4m_optimizer_ask", (c_void_p, POINTER(c_void_p)), c_int),
+    ("n4m_optimizer_ask_batch", (c_void_p, c_int32, POINTER(c_void_p), POINTER(c_int32)), c_int),
+    ("n4m_optimizer_tell", (c_void_p, c_int64, c_double), c_int),
+    ("n4m_optimizer_tell_result", (c_void_p, c_int64, c_int, c_double, c_char_p), c_int),
+    ("n4m_optimizer_tell_intermediate", (c_void_p, c_int64, c_int32, c_double, POINTER(c_int32)), c_int),
+    ("n4m_optimizer_best", (c_void_p, POINTER(c_void_p), POINTER(c_double)), c_int),
+    ("n4m_optimizer_get_trials", (c_void_p, c_int64, POINTER(c_void_p)), c_int),
+    ("n4m_optimizer_save", (c_void_p, POINTER(c_void_p)), c_int),
+    ("n4m_optimizer_load", (c_void_p, POINTER(c_uint8), c_uint64, POINTER(c_void_p)), c_int),
+    ("n4m_trial_get_id", (c_void_p, POINTER(c_int64)), c_int),
+    ("n4m_trial_get_int", (c_void_p, c_char_p, POINTER(c_int64)), c_int),
+    ("n4m_trial_get_float", (c_void_p, c_char_p, POINTER(c_double)), c_int),
+    ("n4m_trial_get_category", (c_void_p, c_char_p, POINTER(c_int32), POINTER(c_char_p)), c_int),
+    ("n4m_trial_is_active", (c_void_p, c_char_p, POINTER(c_int32)), c_int),
+    ("n4m_trial_get_rung", (c_void_p, POINTER(c_int32)), c_int),
+    ("n4m_trial_get_status", (c_void_p, POINTER(c_int)), c_int),
+    ("n4m_trial_get_duration", (c_void_p, POINTER(c_double)), c_int),
+    ("n4m_finetune_estimator",
+     (c_void_p, c_int, POINTER(MatrixView), POINTER(MatrixView), c_void_p, c_void_p,
+      POINTER(OptimizerOptions), c_int32, POINTER(c_void_p)), c_int),
 )
 
 
