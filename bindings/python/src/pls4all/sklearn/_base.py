@@ -9,7 +9,7 @@ from sklearn.utils.validation import check_array, check_X_y
 
 from .._config import Config
 from .._context import Context
-from .._model import Model, ModelArrayKind
+from .._model import Model
 from .._types import Algorithm, Deflation, Solver
 
 
@@ -33,8 +33,7 @@ def _resolve_solver(value: str | Solver) -> Solver:
         return _SOLVER_ALIASES[key]
     except KeyError as exc:
         raise ValueError(
-            f"unknown solver {value!r}; expected one of "
-            f"{sorted(_SOLVER_ALIASES)}"
+            f"unknown solver {value!r}; expected one of {sorted(_SOLVER_ALIASES)}"
         ) from exc
 
 
@@ -50,14 +49,13 @@ def _as_2d_float64(arr: Any, *, name: str) -> np.ndarray:
     if out.ndim == 1:
         out = out.reshape(-1, 1)
     elif out.ndim != 2:
-        raise ValueError(
-            f"{name} must be 1-D or 2-D; got ndim={out.ndim}"
-        )
+        raise ValueError(f"{name} must be 1-D or 2-D; got ndim={out.ndim}")
     return out
 
 
-def _check_X_y_p4a(estimator: Any, X: Any, y: Any
-                    ) -> tuple[np.ndarray, np.ndarray, int]:
+def _check_X_y_p4a(
+    estimator: Any, X: Any, y: Any
+) -> tuple[np.ndarray, np.ndarray, int]:
     """sklearn-style X/y validation for fit().
 
     Returns ``(X_2d_f64, y_2d_f64, y_ndim_original)``. ``y_ndim_original``
@@ -68,7 +66,8 @@ def _check_X_y_p4a(estimator: Any, X: Any, y: Any
     """
     y_ndim = int(np.asarray(y).ndim) if y is not None else 0
     X_chk, y_chk = check_X_y(
-        X, y,
+        X,
+        y,
         dtype=np.float64,
         ensure_2d=True,
         allow_nd=False,
@@ -106,8 +105,7 @@ def _check_X_p4a(estimator: Any, X: Any) -> np.ndarray:
     return X_arr
 
 
-def _validate_X_y_no_mutate(X: Any, y: Any
-                              ) -> tuple[np.ndarray, np.ndarray, int]:
+def _validate_X_y_no_mutate(X: Any, y: Any) -> tuple[np.ndarray, np.ndarray, int]:
     """sklearn-style X/y validation that does NOT mutate the caller's
     fitted state. Returns ``(X_2d_f64, y_2d_f64, y_ndim_original)``.
 
@@ -117,7 +115,8 @@ def _validate_X_y_no_mutate(X: Any, y: Any
     """
     y_ndim = int(np.asarray(y).ndim) if y is not None else 0
     X_chk, y_chk = check_X_y(
-        X, y,
+        X,
+        y,
         dtype=np.float64,
         ensure_2d=True,
         allow_nd=False,
@@ -132,18 +131,20 @@ def _validate_X_y_no_mutate(X: Any, y: Any
     return X_arr, y_arr, y_ndim
 
 
-def _config_from_params(*,
-                          n_components: int,
-                          algorithm: Algorithm,
-                          solver: Solver,
-                          deflation: Deflation = Deflation.REGRESSION,
-                          center_x: bool = True,
-                          scale_x: bool = True,
-                          center_y: bool = True,
-                          scale_y: bool = False,
-                          tol: float = 1e-6,
-                          max_iter: int = 500,
-                          store_scores: bool = False) -> Config:
+def _config_from_params(
+    *,
+    n_components: int,
+    algorithm: Algorithm,
+    solver: Solver,
+    deflation: Deflation = Deflation.REGRESSION,
+    center_x: bool = True,
+    scale_x: bool = True,
+    center_y: bool = True,
+    scale_y: bool = False,
+    tol: float = 1e-6,
+    max_iter: int = 500,
+    store_scores: bool = False,
+) -> Config:
     cfg = Config()
     cfg.algorithm = algorithm
     cfg.solver = solver
@@ -164,8 +165,10 @@ class _Pls4allModelEstimator:
 
     Fitted state lives in two places:
 
-    * ``self._bundle_`` — the C ABI `.n4a` byte buffer, the only state
-      that survives ``pickle.dumps`` / ``copy.deepcopy``.
+    * ``self._bundle_`` — the raw C ABI N4MM byte payload, the only state
+      that survives ``pickle.dumps`` / ``copy.deepcopy``. The private
+      ``_bundle_`` name is retained for pickle compatibility; these bytes are
+      not a nirs4all ``.n4a`` pipeline bundle.
     * ``self._model_handle_`` / ``self._model_ctx_`` — lazily rebuilt
       C handles for ``predict`` / ``transform`` hot paths.
 
@@ -185,16 +188,14 @@ class _Pls4allModelEstimator:
     _bundle_: bytes | None = None
 
     def _store_fitted_model(self, ctx: Context, model: Model) -> None:
-        """Persist the fitted model bundle and cache the active handle."""
+        """Persist the fitted-model N4MM payload and cache the active handle."""
         self._bundle_ = model.to_bytes()
         self._model_ctx_ = ctx
         self._model_handle_ = model
 
     def _ensure_model_handle(self) -> tuple[Context, Model]:
         if not getattr(self, "_bundle_", None):
-            raise RuntimeError(
-                f"{type(self).__name__}: estimator is not fitted yet"
-            )
+            raise RuntimeError(f"{type(self).__name__}: estimator is not fitted yet")
         cached_ctx = getattr(self, "_model_ctx_", None)
         cached_handle = getattr(self, "_model_handle_", None)
         if cached_ctx is not None and cached_handle is not None:

@@ -195,4 +195,11 @@ bool CmaEsSampler::sample(::n4m_trial_s& t,
     return true;
 }
 
+bool CmaEsSampler::at_generation_boundary(std::int64_t prospective_id) const {
+    // Mirror the sample() guard: the current CMA generation is fully dispensed
+    // but not yet fully scored, so the next ask cannot advance.
+    return gen_base_id_ >= 0 && prospective_id >= gen_base_id_ + lambda_ &&
+           resolved_in_range(gen_base_id_, lambda_) < lambda_;
+}
+
 }  // namespace n4m::core::opt

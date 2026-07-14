@@ -1124,7 +1124,7 @@ int n4m_wasm_aom_stack_fit(const double* x, const double* y,
  * operator by id without a hand-written wrapper per operator. All operators in
  * this set are shape-preserving (out is n*p), which keeps the JS side trivial.
  * Stateful operators (MSC) expose their fitted state as plain doubles via
- * get/set_state so it round-trips into a saved model (.n4a) for predict-later.
+ * get/set_state so a host-owned predict-later artifact can persist it.
  * ==========================================================================*/
 enum n4m_wasm_pp_kind {
     PPK_SNV = 1, PPK_MSC, PPK_SAVGOL, PPK_DERIV1, PPK_DERIV2,

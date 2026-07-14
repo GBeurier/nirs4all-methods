@@ -112,8 +112,7 @@ class _Array:
         # numpy.ctypeslib.as_array borrows the buffer; we re-cast to float64.
         buf_type = ctypes.c_double * (mv.rows * mv.cols)
         buffer = buf_type.from_address(int(mv.data))
-        arr = np.frombuffer(buffer, dtype=np.float64,
-                            count=mv.rows * mv.cols)
+        arr = np.frombuffer(buffer, dtype=np.float64, count=mv.rows * mv.cols)
         return arr.reshape(int(mv.rows), int(mv.cols))
 
     def copy(self) -> np.ndarray:
@@ -131,22 +130,24 @@ class Model:
         self._h = handle
 
     @classmethod
-    def fit(cls, ctx: Context, cfg: Config,
-            X: Any, Y: Any) -> "Model":
+    def fit(cls, ctx: Context, cfg: Config, X: Any, Y: Any) -> "Model":
         X_arr = _as_float64_contiguous(X)
         Y_arr = _as_float64_contiguous(Y)
         x_view = _matrix_view(X_arr)
         y_view = _matrix_view(Y_arr)
         out = ctypes.c_void_p(0)
         status = lib.n4m_model_fit(
-            ctx.handle, cfg.handle,
-            ctypes.byref(x_view), ctypes.byref(y_view),
+            ctx.handle,
+            cfg.handle,
+            ctypes.byref(x_view),
+            ctypes.byref(y_view),
             ctypes.byref(out),
         )
         _check(status, ctx)
         if not out:
-            raise Pls4allError(int(Status.ERR_INTERNAL),
-                               "n4m_model_fit returned NULL handle")
+            raise Pls4allError(
+                int(Status.ERR_INTERNAL), "n4m_model_fit returned NULL handle"
+            )
         try:
             return cls(out)
         except BaseException:
@@ -204,8 +205,10 @@ class Model:
         out_handle = ctypes.c_void_p(0)
         _check(
             lib.n4m_model_predict_alloc(
-                ctx.handle, self._h,
-                ctypes.byref(x_view), ctypes.byref(out_handle),
+                ctx.handle,
+                self._h,
+                ctypes.byref(x_view),
+                ctypes.byref(out_handle),
             ),
             ctx,
         )
@@ -221,8 +224,10 @@ class Model:
         out_handle = ctypes.c_void_p(0)
         _check(
             lib.n4m_model_transform_alloc(
-                ctx.handle, self._h,
-                ctypes.byref(x_view), ctypes.byref(out_handle),
+                ctx.handle,
+                self._h,
+                ctypes.byref(x_view),
+                ctypes.byref(out_handle),
             ),
             ctx,
         )
@@ -236,7 +241,9 @@ class Model:
         out_handle = ctypes.c_void_p(0)
         _check(
             lib.n4m_model_get_array(
-                ctx.handle, self._h, int(kind),
+                ctx.handle,
+                self._h,
+                int(kind),
                 ctypes.byref(out_handle),
             ),
             ctx,
@@ -253,37 +260,49 @@ class Model:
             return self.get_array(ctx, ModelArrayKind.COEFFICIENTS)
 
     def to_bytes(self) -> bytes:
-        """Serialize the fitted model to a portable byte buffer (.n4a wire
-        format, N4M_SERIALIZATION_FORMAT_VERSION = 1). The buffer is
-        forward-compatible across pls4all minor versions; round-trip is
-        bit-exact for all model arrays."""
+        """Serialize the fitted model to an N4MM format-version-1 buffer.
+
+        This is a raw fitted-model payload, not a nirs4all ``.n4a`` pipeline
+        bundle. The raw payload does not currently have a canonical filename
+        extension.
+        """
         size = ctypes.c_size_t(0)
         _check(lib.n4m_model_export_size(self._h, ctypes.byref(size)))
         if size.value == 0:
-            raise Pls4allError(int(Status.ERR_INTERNAL),
-                                "n4m_model_export_size returned 0")
+            raise Pls4allError(
+                int(Status.ERR_INTERNAL), "n4m_model_export_size returned 0"
+            )
         buf = (ctypes.c_uint8 * int(size.value))()
         written = ctypes.c_size_t(0)
-        _check(lib.n4m_model_export_to_buffer(
-            self._h, buf, size, ctypes.byref(written)))
+        _check(
+            lib.n4m_model_export_to_buffer(self._h, buf, size, ctypes.byref(written))
+        )
         return bytes(bytearray(buf)[: int(written.value)])
 
     @classmethod
     def from_bytes(cls, ctx: Context, payload: bytes) -> "Model":
-        """Deserialize a model from a `.n4a` wire-format buffer produced
-        by `to_bytes()`. Raises Pls4allError on ABI MAJOR mismatch or
-        when the writer ABI MINOR exceeds the reader's."""
+        """Deserialize an N4MM buffer produced by :meth:`to_bytes`.
+
+        Corrupt buffers and unsupported wire-format versions fail. The current
+        format-version-1 importer accepts writer ABI differences and records a
+        compatibility warning on ``ctx`` instead of rejecting the payload.
+        """
         if not payload:
-            raise Pls4allError(int(Status.ERR_INVALID_ARGUMENT),
-                                "from_bytes: empty payload")
+            raise Pls4allError(
+                int(Status.ERR_INVALID_ARGUMENT), "from_bytes: empty payload"
+            )
         buf = (ctypes.c_uint8 * len(payload)).from_buffer_copy(payload)
         out = ctypes.c_void_p(0)
-        _check(lib.n4m_model_import_from_buffer(
-            ctx.handle, buf, ctypes.c_size_t(len(payload)),
-            ctypes.byref(out)), ctx)
+        _check(
+            lib.n4m_model_import_from_buffer(
+                ctx.handle, buf, ctypes.c_size_t(len(payload)), ctypes.byref(out)
+            ),
+            ctx,
+        )
         if not out:
-            raise Pls4allError(int(Status.ERR_INTERNAL),
-                                "n4m_model_import_from_buffer returned NULL")
+            raise Pls4allError(
+                int(Status.ERR_INTERNAL), "n4m_model_import_from_buffer returned NULL"
+            )
         try:
             return cls(out)
         except BaseException:

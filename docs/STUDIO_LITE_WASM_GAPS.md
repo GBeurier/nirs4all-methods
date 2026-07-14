@@ -46,8 +46,10 @@ transforms, and only stateless ops + MSC (which got internal `*_get_state`/`*_se
   excludes them today.
 - **Stateful** ops beyond MSC (EMSC, EPO, OSC, direct standardization,
   baseline-with-fitted-reference, COW/DTW alignment) need MSC-style internal state
-  accessors (`*_state_n` / `*_get_state` / `*_set_state`) so the fitted state round-trips
-  for predict-later (.n4a). Without them they can't be exposed safely.
+  accessors (`*_state_n` / `*_get_state` / `*_set_state`) so a host-owned
+  predict-later artifact can persist the fitted state. These plain state vectors
+  are not standalone N4MM fitted-model payloads. Without them the operators can't
+  be exposed safely.
 
 ## 3. AOM / POP — richer inputs
 - The operator-bank is exposed, but `WeightedPLS` (needs a length-n weights vector) and

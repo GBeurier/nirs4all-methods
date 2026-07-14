@@ -111,7 +111,16 @@ bool GaSampler::sample(::n4m_trial_s& t, const std::vector<std::pair<std::string
     std::size_t k = static_cast<std::size_t>(t.id - gen_base_id_);
     if (k >= static_cast<std::size_t>(pop_size_)) k = static_cast<std::size_t>(pop_size_) - 1;
     decode_candidate(gen_[k], t, forced);
-    return true;  // GA proposes a fixed candidate; hard-constraint handling is via fitness
+    // Hard-constraint spaces are rejected at optimizer creation for GA; no
+    // repair or fitness penalty is applied here.
+    return true;
+}
+
+bool GaSampler::at_generation_boundary(std::int64_t prospective_id) const {
+    // Mirror the sample() guard: the current generation is fully dispensed but
+    // not yet fully scored, so the next ask cannot advance.
+    return gen_base_id_ >= 0 && prospective_id >= gen_base_id_ + pop_size_ &&
+           resolved_in_range(gen_base_id_, pop_size_) < pop_size_;
 }
 
 }  // namespace n4m::core::opt

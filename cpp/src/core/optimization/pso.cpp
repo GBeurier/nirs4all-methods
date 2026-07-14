@@ -115,4 +115,11 @@ bool PsoSampler::sample(::n4m_trial_s& t,
     return true;
 }
 
+bool PsoSampler::at_generation_boundary(std::int64_t prospective_id) const {
+    // Mirror the sample() guard: the current swarm iteration is fully dispensed
+    // but not yet fully scored, so the next ask cannot advance.
+    return iter_base_id_ >= 0 && prospective_id >= iter_base_id_ + swarm_size_ &&
+           resolved_in_range(iter_base_id_, swarm_size_) < swarm_size_;
+}
+
 }  // namespace n4m::core::opt

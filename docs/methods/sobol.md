@@ -8,16 +8,23 @@ Joe–Kuo `new-joe-kuo-6.21201` direction numbers (embedded in
 `sobol_direction.hpp`, extracted from `scipy.stats.qmc.Sobol._sv`). Numeric axes
 map the unit coordinate through `numeric_from_unit` (log / step / int aware);
 categorical axes bucket the coordinate. Like all quasi-random sequences, Sobol
-fills the unit cube far more evenly than i.i.d. random at small budgets — which is
-where NIRS finetuning usually lives — so it is a strong space-filling startup
-sampler and the default seed for the `auto` policy.
+fills the unit cube more evenly than i.i.d. random at many small budgets, making
+it useful for explicit space-filling studies. It is selected only with
+`opts.sampler = N4M_SAMPLER_SOBOL`: the C ABI has no implicit `auto` sampler
+policy, and `n4m_optimizer_options_init()` defaults to `random`.
 
-The direction table covers the first `kSobolMaxDim = 52` parameters; any parameter
-beyond that (and every conditional / sorted-tuple axis, which the base sampler
-draws) falls back to the base uniform sampler. Because the sequence is
-deterministic per ask, Sobol is intended for unconstrained or lightly-constrained
-numeric spaces; hard MUTEX/EXCLUDE constraints that reject the proposed point
-cannot be escaped by resampling the same point — use `random`/`tpe` there.
+The direction table covers the first `kSobolMaxDim = 52` parameters. Numeric,
+categorical and ordinal axes in that prefix consume their ordered Sobol
+coordinate, including axes that are later deactivated by a condition. Axes after
+the 52nd use the base uniform RNG. A `sorted_tuple` occupies its ordered axis
+position but its components are generated independently by the base RNG; they
+are not Sobol coordinates. After `2^30` Sobol points, all axes use the base RNG.
+
+Conditional activation is supported. Search spaces containing a hard
+`mutex_group`, `requires` or `exclude` constraint are rejected at
+`n4m_optimizer_create` with `N4M_ERR_UNSUPPORTED`; there is no deterministic
+retry or fitness fallback. A hard constraint that references a `sorted_tuple`
+root is rejected for every sampler.
 
 This is the **unscrambled** variant. The scrambled (Owen / digital-shift) variant
 is a Tier-B randomised sequence and a later addition.
@@ -37,8 +44,9 @@ opts.sampler = N4M_SAMPLER_SOBOL;
   (`test_sobol_sequence_parity`, the first five points of a 3-D space against the
   known dyadic reference) and end-to-end through the Python binding
   (`test_sobol_parity.py`, `d ∈ {1,3,6,10}`, `N` up to 32, `np.array_equal`).
-  Cross-binding identical by construction — the direction table and Gray-code
-  recursion are shared native code.
+  Track-Q also compares its 3-D/32-point native cell with SciPy and commits the
+  resulting trace. That fixture is the acceptance target for future bindings;
+  the R, MATLAB-Octave and WASM optimizer wrappers are not yet covered.
 
 ## References
 

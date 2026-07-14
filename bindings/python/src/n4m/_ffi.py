@@ -27,6 +27,7 @@ The library is matched by glob (``libn4m*.so*`` / ``libn4m*.dylib`` /
 ``libn4m.so.1.10.0``) or an auditwheel-hashed name (``libn4m-7c4d2a1f.so.1``)
 is picked up without hard-coding a version string.
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -43,7 +44,7 @@ _PKG_DIR = Path(__file__).resolve().parent
 # Bumped additively with each minor ABI change; kept in sync with the header
 # (see scripts/bump_version.sh, which fails --check on drift).
 ABI_VERSION_MAJOR = 2
-ABI_VERSION_MINOR = 1
+ABI_VERSION_MINOR = 2
 ABI_VERSION_PATCH = 0
 ABI_VERSION_STRING = f"{ABI_VERSION_MAJOR}.{ABI_VERSION_MINOR}.{ABI_VERSION_PATCH}"
 
@@ -107,7 +108,12 @@ def _candidate_paths() -> list[Path]:
         here = here.parent
         if not here or here == here.parent:
             break
-        for preset in ("dev-release", "dev-debug", "blas-omp", "ci-linux-gcc12-release"):
+        for preset in (
+            "dev-release",
+            "dev-debug",
+            "blas-omp",
+            "ci-linux-gcc12-release",
+        ):
             paths.extend(_glob_libs(here / "build" / preset / "cpp" / "src"))
 
     # (5) System search path.
@@ -140,19 +146,28 @@ def _load() -> ctypes.CDLL:
             # ours and MINOR >= ours. ``n4m_check_abi_compatibility`` returns
             # N4M_OK (0) on success. A too-old library is skipped so a stale dev
             # build cannot shadow a compatible one later in the list.
-            status = lib.n4m_check_abi_compatibility(ABI_VERSION_MAJOR, ABI_VERSION_MINOR)
+            status = lib.n4m_check_abi_compatibility(
+                ABI_VERSION_MAJOR, ABI_VERSION_MINOR
+            )
         except (AttributeError, OSError) as exc:
             errors.append((path, OSError(f"not a usable libn4m ({exc})")))
             continue
         if status != 0:
             errors.append(
-                (path, OSError(f"ABI mismatch: library rejected header v{ABI_VERSION_STRING} (status {status})"))
+                (
+                    path,
+                    OSError(
+                        f"ABI mismatch: library rejected header v{ABI_VERSION_STRING} (status {status})"
+                    ),
+                )
             )
             continue
         _loaded_path = path
         return lib
 
-    searched = "\n".join(f"  - {p}: {e}" for p, e in errors) or "  (no candidates found)"
+    searched = (
+        "\n".join(f"  - {p}: {e}" for p, e in errors) or "  (no candidates found)"
+    )
     raise FileNotFoundError(
         f"libn4m (ABI {ABI_VERSION_MAJOR}.x, >= {ABI_VERSION_STRING}) could not be loaded.\n"
         f"Tried:\n{searched}\n"

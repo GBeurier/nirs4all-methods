@@ -7,17 +7,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ## [Unreleased]
 
 ### Added
+- **Owning HPO lifecycle trace (ABI 2.2.0).** Added terminal
+  `N4M_TRIAL_CANCELLED`, structured and versioned trial errors, immutable
+  terminal/intermediate replay semantics, optimizer-global event sequences,
+  and a rich owning `n4m_optimizer_get_trials` snapshot containing exact ids,
+  typed ordered parameters, activation/category metadata, intermediates, and
+  errors. Text persisted into the trace is now validated as UTF-8; failed pruner
+  evaluation rolls back its staged intermediate, and failed asks do not consume
+  queued warm-start payloads. Python exposes decoded `TrialRecord` snapshots through
+  `Optimizer.get_trials(since_id=...)`.
+- **Portable optimizer checkpoint/resume (N4MOPT v1).** Activated the existing
+  `n4m_optimizer_save/load` ABI reservations with a versioned little-endian,
+  checksummed, 64 MiB-bounded format covering the ordered space/options, complete
+  lifecycle and enqueue state, RNG, and all nine samplers/five pruners. Python
+  exposes `Optimizer.save() -> bytes` and transactional `Optimizer.load(bytes)`;
+  random and TPE continuation tapes plus the full native sampler matrix freeze
+  bit-exact sequential resume behavior.
+- **Exhaustive HPO sampler-pruner conformance.** Added a versioned,
+  machine-readable 9 × 5 compatibility matrix and a fail-closed Track-Q gate.
+  Every native/Python cell now terminalizes a non-trivial intermediate tape,
+  crosses its adaptive or population boundary, replays exactly, and resumes
+  exactly from a terminal-prefix checkpoint. Stable transverse refusals are
+  checked by C ABI status code. The contract explicitly excludes wall-clock
+  durations, independent-algorithm claims, and unimplemented cross-binding
+  45/45 parity.
 - **Native HPO optimizer (`optimization` role, ABI 2.1.0) — Phase 1 / F0.** A
   handle-based ask/tell hyperparameter optimizer with a typed search space
   (`n4m_search_space_*`), the optimizer handle (`n4m_optimizer_*`: ask/tell,
   batch ask, warm-start enqueue, intermediate reporting, trial streaming), trial
   accessors (`n4m_trial_*`), and a pure-native single-level driver
-  `n4m_finetune_estimator` (objective = internal PLS cross-validation over one
-  validation plan). All sampler/pruner algorithms sit behind reserved enum
-  values; F0 ships `random` + `none`, with reserved kinds returning
-  `N4M_ERR_NOT_IMPLEMENTED`. Search space supports int/float/log/categorical
-  (typed values)/ordinal/sorted-tuple params plus generic constraints
-  (mutex/requires/exclude + conditional activation). See
+  `n4m_finetune_estimator` (closed registry for PLS regression/canonical/SVD,
+  OPLS, sparse PLS and PCR over one native regression-validation plan). The
+  Python binding exposes the same selection-only route through owning
+  `ValidationPlan` / `FinetuneResult` objects, including active best parameters,
+  the full trial trace and explicit partial-timeout state. All sampler/pruner
+  algorithms sit behind reserved enum values; F0 ships `random` + `none`, with
+  reserved kinds returning `N4M_ERR_NOT_IMPLEMENTED`. Search space supports
+  int/float/log/categorical (typed values)/ordinal/sorted-tuple params plus
+  generic constraints (mutex/requires/exclude + conditional activation). See
   `docs/FINETUNING_ROADMAP.md`, `docs/FINETUNING_F0_PR.md`,
   `docs/methods/optimization.md`.
 
@@ -195,7 +222,7 @@ entries, 6 diagnostics).
 - 8 Model-based estimators (`PLSRegression`, `OPLSRegression`, `PCR`,
   `SparsePLSRegression`, `PLSCanonical`, `PLSSVD`, `PLSDAClassifier`,
   `OPLSDAClassifier`) backed by `Algorithm` enum + `Model.fit`, with
-  bit-exact `.n4a` bundle round-trip pickling via the new
+  bit-exact raw N4MM fitted-model payload round-trip pickling via the new
   `Model.to_bytes()` / `Model.from_bytes()` ABI shim.
 - 6 MethodResult regressors (`SparseSimplsRegression`, `CPPLSRegression`,
   `ECRegression`, `DIPLSRegression`, `MIRPLSRegression`,
@@ -224,7 +251,7 @@ entries, 6 diagnostics).
   p4a_serialization_inspect`.
 - `bindings/python/src/pls4all/_model.py`: new `Model.to_bytes()`
   method and `Model.from_bytes(ctx, payload)` classmethod (bit-exact
-  round-trip on a 3128-byte bundle for a 50×20 PLS-5 model).
+  round-trip on a 3128-byte payload for a 50×20 PLS-5 model).
 - ABI unchanged (no new symbols).
 
 ## [parity-audit-may-2026] — 2026-05-16

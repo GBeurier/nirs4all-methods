@@ -43,7 +43,10 @@ with pls4all.Context() as ctx, pls4all.Config() as cfg:
     cfg.n_components = 5
     model = pls4all.Model.fit(ctx, cfg, X, y)
     yhat  = model.predict(ctx, X_test)
-    model.export("my_model.n4a")
+    payload = model.to_bytes()  # raw N4MM bytes; no canonical file extension
+    restored = pls4all.Model.from_bytes(ctx, payload)
+    yhat_restored = restored.predict(ctx, X_test)
+    restored.close()
     model.close()
 ```
 
@@ -116,28 +119,24 @@ const model = n4m.fitPls({ data: X, rows, cols }, { data: y, rows, cols: 1 }, 5)
 const yhat = n4m.predictPls(model, { data: Xtest, rows: rowsTest, cols });
 ```
 
-## Save / load across languages
+## Serialize raw fitted state
 
 ```python
-# Python
-mdl.export("model.n4a")
+# Python slim binding
+payload = mdl.to_bytes()
+loaded = pls4all.Model.from_bytes(ctx, payload)
+assert payload[:4] == b"N4MM"
+loaded.close()
 ```
 
-```r
-# R loads the same file
-loaded <- pls4all_load("model.n4a")
-yhat   <- n4m_predict(loaded, X_test)
-```
+N4MM is a raw fitted-model payload behind the C ABI, not a full pipeline
+bundle. It has no canonical filename extension. Corruption and unsupported
+N4MM format versions fail; the writer ABI triple is provenance and an ABI
+difference currently produces a context warning rather than a load failure.
 
-```matlab
-% MATLAB loads the same file
-loaded = pls4all.load("model.n4a");
-yhat   = predict(loaded, Xtest);
-```
-
-The bundle carries pls4all version + ABI version so a stale file fails
-loudly rather than producing wrong predictions; numerical parity is
-checked by the benchmark gates.
+R, MATLAB and JS do not yet expose N4MM model import/export wrappers. The
+`.n4a` extension remains reserved for the nirs4all full-pipeline bundle, which
+has a separate lifecycle and contract.
 
 ## Next steps
 

@@ -61,7 +61,8 @@ target_include_directories(n4m_tests PRIVATE
 # without relying on a working directory. Quote-wrapping survives the CMake
 # generator and ends up as a stringised C++ token at compile time.
 target_compile_definitions(n4m_tests PRIVATE
-    N4M_PARITY_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/parity/fixtures")
+    N4M_PARITY_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/parity/fixtures"
+    $<$<BOOL:${N4M_ENABLE_UBSAN}>:N4M_UBSAN_BUILD=1>)
 n4m_add_warnings(n4m_tests)
 
 if(WIN32)
@@ -87,6 +88,7 @@ if(TARGET n4m_c_static)
         test_internal_rng_choice.cpp
         test_uve_r_exact.cpp
         test_internal_cv.cpp
+        test_internal_optimization.cpp
         test_internal_sweep.cpp
         test_internal_linalg.cpp)
     target_link_libraries(n4m_internal_tests PRIVATE n4m_c_static)

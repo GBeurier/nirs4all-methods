@@ -31,6 +31,16 @@ struct CrossValidationResult {
     RegressionMetrics metrics;
 };
 
+// Validate the data/plan contract shared by every regression-CV candidate,
+// without fitting a model. Drivers call this once before creating/asking an
+// optimizer so malformed matrices or folds are never recorded as failed
+// hyperparameter trials.
+[[nodiscard]] n4m_status_t validate_regression_cv_inputs(
+    Context& ctx,
+    const n4m_matrix_view_t& X,
+    const n4m_matrix_view_t& Y,
+    const ValidationPlan& plan);
+
 [[nodiscard]] n4m_status_t cross_validate_regression(
     Context& ctx,
     const Config& cfg,

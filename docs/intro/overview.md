@@ -38,9 +38,10 @@ The benefits stack:
   claiming byte-identical outputs.
 - **Performance** — BLAS / OpenMP / CUDA accelerated tiers, with a
   scalar reference tier kept around as the parity anchor.
-- **Reproducibility** — every binding ships a `.n4a` bundle format
-  that round-trips through the C ABI; a model trained in Python can be
-  loaded and parity-checked in R or MATLAB.
+- **Reproducibility** — the C ABI provides the versioned N4MM format for raw
+  fitted-model state, and the Python `pls4all.Model` wrapper exposes it through
+  `to_bytes()` / `from_bytes()`. N4MM has no canonical filename extension and
+  is distinct from the nirs4all `.n4a` full-pipeline bundle.
 - **Auditability** — the parity gate compares pls4all predictions to
   the external reference library that "owns" each algorithm
   (sklearn for PLS, ropls for OPLS, spls for sparse PLS, …) and
@@ -86,8 +87,8 @@ Python or R.
   [interactive dashboard](../landing/dashboard.md).
 - **A stable C ABI** — frozen at 1.x; semantic versioning enforced by
   a per-PR ABI symbol gate. See [abi/reference](../abi/reference.md).
-- **A `.n4a` bundle format** — content-addressed serialisation of a
-  fitted model, portable across languages.
+- **A raw fitted-model format** — versioned N4MM serialisation behind the C
+  ABI, with an integrity checksum and no canonical filename extension.
 - **Acceleration matrix** — five libn4m builds (`ref`, `blas`, `omp`,
   `blas+omp`, `cuda`) so every cell can also serve as a benchmark of
   the acceleration stack itself.

@@ -14,7 +14,9 @@ REPO = Path(__file__).resolve().parents[3]
 
 def _load_smoke_module():
     script = REPO / "bindings/python/scripts/smoke_installed_nirs4all_methods.py"
-    spec = importlib.util.spec_from_file_location("n4m_install_smoke_under_test", script)
+    spec = importlib.util.spec_from_file_location(
+        "n4m_install_smoke_under_test", script
+    )
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -24,7 +26,9 @@ def _load_smoke_module():
 
 def _load_make_python_package_module():
     script = REPO / "bindings/python/scripts/make_python_package.py"
-    spec = importlib.util.spec_from_file_location("n4m_make_python_package_under_test", script)
+    spec = importlib.util.spec_from_file_location(
+        "n4m_make_python_package_under_test", script
+    )
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -82,7 +86,10 @@ def test_discover_lib_reports_why_candidates_were_rejected(
     monkeypatch.setattr(
         smoke,
         "_is_abi_compatible",
-        lambda path, major, minor: (False, "ABI check rejected header 2.1.x with status 7"),
+        lambda path, major, minor: (
+            False,
+            "ABI check rejected header 2.1.x with status 7",
+        ),
     )
 
     with pytest.raises(smoke.SmokeError) as excinfo:
@@ -110,7 +117,9 @@ def test_install_and_run_scrubs_host_python_and_lib_overrides(
     monkeypatch.setenv("PYTHONNOUSERSITE", "1")
     monkeypatch.setenv("N4M_LIB_PATH", "/host/libn4m.so")
     monkeypatch.setenv("PLS4ALL_LIB_PATH", "/host/pls4all/libn4m.so")
-    monkeypatch.setattr(smoke, "_venv_python", lambda venv_dir: venv_dir / "bin" / "python")
+    monkeypatch.setattr(
+        smoke, "_venv_python", lambda venv_dir: venv_dir / "bin" / "python"
+    )
 
     calls: list[tuple[list[str], Path | None, dict[str, str] | None]] = []
 
@@ -122,10 +131,32 @@ def test_install_and_run_scrubs_host_python_and_lib_overrides(
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
         payload = {
             "status": "INSTALLED_N4M_OK",
-            "module": str(tmp_path / "venv" / "lib" / "python3.11" / "site-packages" / "n4m" / "__init__.py"),
-            "library": str(tmp_path / "venv" / "lib" / "python3.11" / "site-packages" / "n4m" / "lib" / "libn4m.so"),
+            "module": str(
+                tmp_path
+                / "venv"
+                / "lib"
+                / "python3.11"
+                / "site-packages"
+                / "n4m"
+                / "__init__.py"
+            ),
+            "library": str(
+                tmp_path
+                / "venv"
+                / "lib"
+                / "python3.11"
+                / "site-packages"
+                / "n4m"
+                / "lib"
+                / "libn4m.so"
+            ),
             "abi": [2, 0, 0],
             "prediction_checksum": 1.25,
+            "optimizer_best_n_components": 2,
+            "optimizer_best_score": 0.0,
+            "finetune_estimator": "PCR",
+            "finetune_best_n_components": 2,
+            "finetune_best_score": 0.125,
         }
         return subprocess.CompletedProcess(
             cmd,
@@ -139,6 +170,11 @@ def test_install_and_run_scrubs_host_python_and_lib_overrides(
     result = smoke._install_and_run(wheel, tmp_path, "python3")
 
     assert result["status"] == "INSTALLED_N4M_OK"
+    assert result["optimizer_best_n_components"] == 2
+    assert result["optimizer_best_score"] == 0.0
+    assert result["finetune_estimator"] == "PCR"
+    assert result["finetune_best_n_components"] == 2
+    assert result["finetune_best_score"] == 0.125
     assert [call[0][:3] for call in calls[:2]] == [
         ["python3", "-m", "venv"],
         [str(tmp_path / "venv" / "bin" / "python"), "-m", "pip"],

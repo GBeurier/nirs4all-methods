@@ -4,4 +4,5 @@
 
 #include "n4m/optimization.h"
 
+void n4m_include_check_optimization_c(void);
 void n4m_include_check_optimization_c(void) {}

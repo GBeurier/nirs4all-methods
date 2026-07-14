@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: CECILL-2.1
 """n4m.model_selection role package."""
 
+from .._errors import PartialBatchError
 from . import (
     aom_campaign,
     aom_search,
@@ -8,7 +9,28 @@ from . import (
     splitters,
     sweep,
 )
-from .optimizer import Direction, Metric, Optimizer, Pruner, Sampler, SearchSpace, Trial
+from .optimizer import (
+    Algorithm,
+    CategoryType,
+    ConstraintKind,
+    Direction,
+    EvalMode,
+    FinetuneResult,
+    IntermediateValue,
+    Metric,
+    Optimizer,
+    ParameterKind,
+    Pruner,
+    Sampler,
+    SearchSpace,
+    Trial,
+    TrialError,
+    TrialParameter,
+    TrialRecord,
+    TrialStatus,
+    ValidationPlan,
+    finetune_estimator,
+)
 
 __all__ = [
     "aom_campaign",
@@ -17,10 +39,24 @@ __all__ = [
     "splitters",
     "sweep",
     "Optimizer",
+    "PartialBatchError",
     "SearchSpace",
     "Trial",
+    "TrialRecord",
+    "TrialParameter",
+    "TrialError",
+    "FinetuneResult",
+    "ValidationPlan",
+    "IntermediateValue",
+    "ParameterKind",
+    "CategoryType",
+    "Algorithm",
     "Sampler",
     "Pruner",
     "Direction",
+    "EvalMode",
     "Metric",
+    "TrialStatus",
+    "ConstraintKind",
+    "finetune_estimator",
 ]

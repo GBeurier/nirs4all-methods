@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/GBeurier/nirs4all-methods/schemas/ordered_search_space.v1.schema.json",
+  "title": "n4m OrderedSearchSpaceSpec v1",
+  "description": "Ordered, fingerprinted host search space. Semantic validation additionally enforces homogeneous choices, exact current-C-ABI integer bounds, domain-kind matching, unique targets, valid activations, acyclicity and constraint references.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "axes", "constraints"],
+  "properties": {
+    "schema": { "const": "nirs4all.ordered-search-space" },
+    "schema_version": { "type": "integer", "const": 1 },
+    "axes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/axis" }
+    },
+    "constraints": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/constraint" }
+    }
+  },
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]+$"
+    },
+    "i64": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["i64"],
+      "properties": {
+        "i64": {
+          "type": "string",
+          "pattern": "^(0|-?[1-9][0-9]*)$"
+        }
+      }
+    },
+    "f64_bits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["f64_bits"],
+      "properties": {
+        "f64_bits": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        }
+      }
+    },
+    "string_scalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["string"],
+      "properties": {
+        "string": { "type": "string", "minLength": 1 }
+      }
+    },
+    "bool_scalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bool"],
+      "properties": {
+        "bool": { "type": "boolean" }
+      }
+    },
+    "typed_scalar": {
+      "oneOf": [
+        { "$ref": "#/$defs/i64" },
+        { "$ref": "#/$defs/f64_bits" },
+        { "$ref": "#/$defs/string_scalar" },
+        { "$ref": "#/$defs/bool_scalar" }
+      ]
+    },
+    "parameter_patch_target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_id", "namespace", "path"],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/identifier" },
+        "namespace": {
+          "enum": ["operator", "fit", "control", "structural"]
+        },
+        "path": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/non_empty_string" }
+        }
+      }
+    },
+    "activation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": { "mode": { "const": "always" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "parent", "choice_index"],
+          "properties": {
+            "mode": { "enum": ["when", "when_not"] },
+            "parent": { "$ref": "#/$defs/non_empty_string" },
+            "choice_index": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          }
+        }
+      ]
+    },
+    "numeric_domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["low", "high", "step", "log"],
+      "properties": {
+        "low": { "$ref": "#/$defs/typed_scalar" },
+        "high": { "$ref": "#/$defs/typed_scalar" },
+        "step": { "$ref": "#/$defs/typed_scalar" },
+        "log": { "type": "boolean" }
+      }
+    },
+    "choice_domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["choices"],
+      "description": "Choice order is semantic. All choices use one homogeneous typed-scalar kind; semantic validation rejects duplicates.",
+      "properties": {
+        "choices": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/typed_scalar" }
+        }
+      }
+    },
+    "tuple_domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["length", "element_kind", "low", "high"],
+      "properties": {
+        "length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "element_kind": { "enum": ["int", "float"] },
+        "low": { "$ref": "#/$defs/typed_scalar" },
+        "high": { "$ref": "#/$defs/typed_scalar" }
+      }
+    },
+    "axis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind",
+        "target",
+        "domain",
+        "activation",
+        "inactive_policy"
+      ],
+      "properties": {
+        "name": { "$ref": "#/$defs/non_empty_string" },
+        "kind": {
+          "enum": ["int", "float", "categorical", "ordinal", "sorted_tuple"]
+        },
+        "target": { "$ref": "#/$defs/parameter_patch_target" },
+        "domain": {
+          "oneOf": [
+            { "$ref": "#/$defs/numeric_domain" },
+            { "$ref": "#/$defs/choice_domain" },
+            { "$ref": "#/$defs/tuple_domain" }
+          ]
+        },
+        "activation": { "$ref": "#/$defs/activation" },
+        "inactive_policy": { "const": "sample_then_omit" }
+      }
+    },
+    "constraint_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["axis"],
+      "properties": {
+        "axis": { "$ref": "#/$defs/non_empty_string" },
+        "choice_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "refs"],
+      "properties": {
+        "kind": { "enum": ["mutex_group", "requires", "exclude"] },
+        "refs": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/constraint_ref" }
+        }
+      }
+    }
+  }
+}

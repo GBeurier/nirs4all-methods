@@ -2,10 +2,11 @@
 """Tier-A parity test: the native Sobol sampler must be bit-identical to
 scipy.stats.qmc.Sobol(scramble=False).
 
-Run:  N4M_LIB_PATH=/path/to/libn4m.so.2.1.0 PYTHONPATH=bindings/python/src \
+Run:  N4M_LIB_PATH=/path/to/libn4m.so.2.2.0 PYTHONPATH=bindings/python/src \
       python -m pytest bindings/python/tests/test_sobol_parity.py -q
 Skipped if scipy is not installed.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -13,7 +14,7 @@ import pytest
 np = pytest.importorskip("numpy")
 qmc = pytest.importorskip("scipy.stats").qmc
 
-from n4m.model_selection.optimizer import Optimizer, Sampler, SearchSpace
+from n4m.model_selection.optimizer import Optimizer, Sampler, SearchSpace  # noqa: E402
 
 
 def _native_sobol(dim: int, n: int) -> "np.ndarray":

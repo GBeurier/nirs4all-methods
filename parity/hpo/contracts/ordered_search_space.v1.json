@@ -1,0 +1,234 @@
+{
+  "contract": {
+    "schema": "nirs4all.ordered-search-space",
+    "schema_version": 1,
+    "axes": [
+      {
+        "name": "model_family",
+        "kind": "categorical",
+        "target": {
+          "node_id": "model:regressor",
+          "namespace": "operator",
+          "path": ["family"]
+        },
+        "domain": {
+          "choices": [
+            { "string": "pls" },
+            { "string": "ridge" }
+          ]
+        },
+        "activation": { "mode": "always" },
+        "inactive_policy": "sample_then_omit"
+      },
+      {
+        "name": "n_components",
+        "kind": "int",
+        "target": {
+          "node_id": "model:regressor",
+          "namespace": "operator",
+          "path": ["n_components"]
+        },
+        "domain": {
+          "low": { "i64": "1" },
+          "high": { "i64": "30" },
+          "step": { "i64": "1" },
+          "log": false
+        },
+        "activation": {
+          "mode": "when",
+          "parent": "model_family",
+          "choice_index": 0
+        },
+        "inactive_policy": "sample_then_omit"
+      },
+      {
+        "name": "alpha",
+        "kind": "float",
+        "target": {
+          "node_id": "model:regressor",
+          "namespace": "operator",
+          "path": ["alpha"]
+        },
+        "domain": {
+          "low": { "f64_bits": "3f1a36e2eb1c432d" },
+          "high": { "f64_bits": "3ff0000000000000" },
+          "step": { "f64_bits": "0000000000000000" },
+          "log": true
+        },
+        "activation": {
+          "mode": "when",
+          "parent": "model_family",
+          "choice_index": 1
+        },
+        "inactive_policy": "sample_then_omit"
+      }
+    ],
+    "constraints": []
+  },
+  "expected_fingerprint": "sha256:b6b412d2702a62df4b9c684dcc5d88dfd320d8d54c6fd832263caeec813ae9d0",
+  "invalid_contract_vectors": [
+    {
+      "id": "empty_axes",
+      "replacements": [
+        { "path": "/axes", "value": [] }
+      ],
+      "expected_error": "axes must be a non-empty ordered list"
+    },
+    {
+      "id": "nonportable_patch_node_id",
+      "replacements": [
+        { "path": "/axes/0/target/node_id", "value": "model/regressor" }
+      ],
+      "expected_error": "node_id must be a portable DAG-ML identifier"
+    },
+    {
+      "id": "negative_zero_i64",
+      "replacements": [
+        { "path": "/axes/1/domain/low", "value": { "i64": "-0" } }
+      ],
+      "expected_error": "not canonical"
+    },
+    {
+      "id": "empty_string_choice",
+      "replacements": [
+        { "path": "/axes/0/domain/choices/0/string", "value": "" }
+      ],
+      "expected_error": "string must be non-empty"
+    },
+    {
+      "id": "boolean_schema_version",
+      "replacements": [
+        { "path": "/schema_version", "value": true }
+      ],
+      "expected_error": "schema_version must be integer 1"
+    },
+    {
+      "id": "boolean_tuple_length",
+      "replacements": [
+        { "path": "/axes/2/kind", "value": "sorted_tuple" },
+        {
+          "path": "/axes/2/domain",
+          "value": {
+            "length": true,
+            "element_kind": "float",
+            "low": { "f64_bits": "0000000000000000" },
+            "high": { "f64_bits": "3ff0000000000000" }
+          }
+        },
+        { "path": "/axes/2/activation", "value": { "mode": "always" } }
+      ],
+      "expected_error": "tuple length must be an integer"
+    },
+    {
+      "id": "tuple_length_int32_overflow",
+      "replacements": [
+        { "path": "/axes/2/kind", "value": "sorted_tuple" },
+        {
+          "path": "/axes/2/domain",
+          "value": {
+            "length": 2147483648,
+            "element_kind": "float",
+            "low": { "f64_bits": "0000000000000000" },
+            "high": { "f64_bits": "3ff0000000000000" }
+          }
+        },
+        { "path": "/axes/2/activation", "value": { "mode": "always" } }
+      ],
+      "expected_error": "tuple length is outside its portable range"
+    },
+    {
+      "id": "boolean_activation_choice_index",
+      "replacements": [
+        { "path": "/axes/1/activation/choice_index", "value": true }
+      ],
+      "expected_error": "activation choice_index must be an integer"
+    },
+    {
+      "id": "unsafe_activation_choice_index",
+      "replacements": [
+        { "path": "/axes/1/activation/choice_index", "value": 9007199254740992 }
+      ],
+      "expected_error": "activation choice_index is outside its portable range"
+    },
+    {
+      "id": "boolean_constraint_choice_index",
+      "replacements": [
+        {
+          "path": "/constraints",
+          "value": [
+            {
+              "kind": "exclude",
+              "refs": [
+                { "axis": "model_family", "choice_index": true },
+                { "axis": "alpha" }
+              ]
+            }
+          ]
+        }
+      ],
+      "expected_error": "constraint.*choice_index must be an integer"
+    },
+    {
+      "id": "unsafe_constraint_choice_index",
+      "replacements": [
+        {
+          "path": "/constraints",
+          "value": [
+            {
+              "kind": "exclude",
+              "refs": [
+                {
+                  "axis": "model_family",
+                  "choice_index": 9007199254740992
+                },
+                { "axis": "alpha" }
+              ]
+            }
+          ]
+        }
+      ],
+      "expected_error": "constraint.*choice_index is outside its portable range"
+    }
+  ],
+  "expected_c_abi_projection": {
+    "params": [
+      {
+        "call": "n4m_search_space_add_categorical",
+        "name": "model_family",
+        "cat_type": "string",
+        "values": [
+          { "string": "pls" },
+          { "string": "ridge" }
+        ]
+      },
+      {
+        "call": "n4m_search_space_add_int",
+        "name": "n_components",
+        "low": 1,
+        "high": 30,
+        "step": 1,
+        "log": false
+      },
+      {
+        "call": "n4m_search_space_add_float",
+        "name": "alpha",
+        "low_f64_bits": "3f1a36e2eb1c432d",
+        "high_f64_bits": "3ff0000000000000",
+        "step_f64_bits": "0000000000000000",
+        "log": true
+      }
+    ],
+    "constraints": [
+      {
+        "kind": "N4M_CONSTRAINT_CONDITION_IN",
+        "param_refs": ["n_components", "model_family"],
+        "label_refs": [null, "pls"]
+      },
+      {
+        "kind": "N4M_CONSTRAINT_CONDITION_IN",
+        "param_refs": ["alpha", "model_family"],
+        "label_refs": [null, "ridge"]
+      }
+    ]
+  }
+}

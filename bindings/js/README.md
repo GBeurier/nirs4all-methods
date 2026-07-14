@@ -49,8 +49,8 @@ isolated band (achieved ~1e-16).
 import * as n4m from "@nirs4all/methods";
 
 await n4m.loadModule();
-console.log(n4m.version());     // "1.0.3+abi.2.0.0"
-console.log(n4m.abiVersion());  // [2, 0, 0]
+console.log(n4m.version());     // "1.0.3+abi.2.2.0"
+console.log(n4m.abiVersion());  // [2, 2, 0]
 
 const rows = 40, cols = 6;
 const X = new Float64Array(rows * cols);   // row-major

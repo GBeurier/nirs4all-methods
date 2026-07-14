@@ -162,6 +162,9 @@ int run_internal_linalg_tests();
 // Moment-sweep internal accelerators live in test_internal_sweep.cpp.
 int run_internal_sweep_tests();
 
+// HPO exception/retry transaction safety lives in test_internal_optimization.cpp.
+int run_internal_optimization_tests();
+
 int main() {
     test_bounded();
     test_integers();
@@ -171,6 +174,7 @@ int main() {
     g_failures += run_uve_r_exact_tests();
     g_failures += run_internal_cv_tests();
     g_failures += run_internal_sweep_tests();
+    g_failures += run_internal_optimization_tests();
     g_failures += run_internal_linalg_tests();
     if (g_failures == 0) {
         std::printf("=== n4m_internal_tests: all RNG choice/bounded parity OK ===\n");

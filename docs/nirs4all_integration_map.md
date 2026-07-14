@@ -20,7 +20,7 @@ they do **not** overlap in what they expose:
 
 | dist (PyPI) | import package | what it exposes | model fits? |
 |---|---|---|---|
-| `pls4all` (slim subset) | `pls4all`, `pls4all.sklearn` | the PLS models, classifiers, selectors, AOM/POP selection, calibration transfer, diagnostics | **YES** — all PLS `*_fit` + `MethodResult` + `Model`/`.n4a` plumbing |
+| `pls4all` (slim subset) | `pls4all`, `pls4all.sklearn` | the PLS models, classifiers, selectors, AOM/POP selection, calibration transfer, diagnostics | **YES** — all PLS `*_fit` + `MethodResult` + `Model`/N4MM payload plumbing |
 | `nirs4all-methods` (full) | `n4m`, `n4m.sklearn` | preprocessing, filters, augmenters, splitters, interval generators, transfer (DS/PDS) | **NO model fits** |
 
 - All the model estimators (`PLSRegression`, `OPLSRegression`, `PCR`,
@@ -57,6 +57,30 @@ hits are the unrelated internal `pls4all_core` token). So the swap is
 config/instance-level (nirs4all resolves models by class-path string or
 instance), not a rewrite — matching RELEASE_READINESS.md G3 line 397-398.
 
+### Native tuning / conformal / robustness capability boundary
+
+This repository supplies the portable numerical engine and bindings. It does
+not own the higher-level statistical orchestration that `nirs4all` Python and
+Studio expose around tuning, conformal calibration, robustness reports and
+workspace artifacts.
+
+| Capability | `nirs4all-methods` / `n4m` / `pls4all` responsibility | `nirs4all` Python / Studio responsibility |
+|---|---|---|
+| PLS/PCR/SIMPLS model kernels | Native C++ kernels behind the stable C ABI; Python `pls4all.sklearn` wrappers for model fit/predict where the method-result FFI is present. | Pipeline orchestration, model class compatibility, workspace storage, `.n4a` packaging and user-facing run/predict APIs. |
+| Pure-native estimator selection | `n4m.model_selection.finetune_estimator(...)` selects one native estimator configuration from an explicit validation plan and search space, returning an owning trial trace. | `nirs4all.run(tuning=...)` composes optimizer selection with dataset/cohort handling, terminal winner projection, optional conformal calibration, workspace persistence and Studio forms. |
+| Full-DAG tuning | Out of scope for this repo; no DAG graph, branch/merge or host pipeline callback runner is exposed by `libn4m`. | Owned by `nirs4all`/DAG-ML. Current public subset remains fail-closed outside single-estimator or linear-chain shapes. |
+| Conformal calibration | No native conformal guarantee or calibration artifact is emitted by `libn4m` or the bindings. | `nirs4all.calibrate()`, `predict_calibrated()`, `CalibratedRunResult`, conformal workspace/bundle storage and Studio interval views. |
+| Robustness/generalization reports | No `RobustnessReport` type, workspace table, report export or Studio summary exists in `n4m`/`pls4all`. Native predictors can be used as frozen predictors by higher layers. | `nirs4all.robustness()`, `PredictResult.robustness()`, `RobustnessReport` JSON/Markdown/HTML/Parquet/artifact exports, workspace persistence and Studio robustness cards/preflight. |
+| Bindings | Thin translation layers over the C ABI. Bindings must not reimplement tuning/conformal/robustness math or infer guarantees. | Bindings and Studio consume the public Python artifacts/registries or future portable contracts; any guarantee status and invalidation reasons must come from `nirs4all`, not binding-local heuristics. |
+
+Load-bearing implication for downstream work: use `n4m` for native kernels and
+single-estimator selection traces; use `nirs4all` for
+`run(tuning=...) → calibrate/predict_calibrated() → robustness()` workflows,
+workspace artifacts, keyword/effect registry, and Studio presentation. A
+binding that wants to display conformal intervals or robustness summaries should
+consume the `nirs4all` artifact/schema surfaces rather than synthesizing them
+from raw native predictions.
+
 ## 2. Reproducibility caveat (stochastic methods are NOT bit-reproducible)
 
 n4m's stochastic kernels (bagging, boosting, random-subspace, GPR, and the
@@ -79,7 +103,7 @@ drop-in / adapter-needed rows.
 **(A) Delegating shim (recommended).** Keep each nirs4all model class at its
 existing import path (`nirs4all.operators.models.sklearn.<Name>`) and have its
 `fit`/`predict` delegate to the `pls4all.sklearn` estimator. The shim must:
-- **preserve the import path** (controllers and `.n4a`/webapp configs resolve
+- **preserve the import path** (controllers and nirs4all `.n4a`/webapp configs resolve
   models by class-path string);
 - **preserve `get_params` arg names** — nirs4all uses `n_components`,
   `scale`/`center`, `backend`, `solver`-free constructors, while `pls4all`

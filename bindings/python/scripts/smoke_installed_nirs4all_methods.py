@@ -5,7 +5,8 @@
 This is a release/loadability smoke, not a numerical parity suite. It proves the
 full Python distribution installs as ``nirs4all-methods``, imports as ``n4m``,
 loads the bundled ``libn4m`` from the installed wheel, and exposes the exact
-SNV/PLS imports consumed by the opt-in ``nirs4all.operators.methods`` route.
+SNV/PLS imports consumed by the opt-in ``nirs4all.operators.methods`` route,
+plus the public owning native-finetune path from an isolated installed venv.
 """
 
 from __future__ import annotations
@@ -208,8 +209,7 @@ def _inspect_sdist(sdist: Path, staged_lib_name: str) -> dict[str, object]:
     bundled_libs = [
         member
         for member in members
-        if member.startswith(f"{top_level}/src/n4m/lib/")
-        and not member.endswith("/")
+        if member.startswith(f"{top_level}/src/n4m/lib/") and not member.endswith("/")
     ]
     return {
         "member_count": len(members),
@@ -235,6 +235,16 @@ def _child_program() -> str:
 
         import n4m
         from n4m.estimators.regression.latent import PLS
+        from n4m.model_selection import (
+            Algorithm,
+            Direction,
+            Metric,
+            Optimizer,
+            Sampler,
+            SearchSpace,
+            ValidationPlan,
+            finetune_estimator,
+        )
         from n4m.transform.scatter import SNV
 
         module_path = Path(n4m.__file__).resolve()
@@ -253,6 +263,7 @@ def _child_program() -> str:
 
         abi = tuple(int(v) for v in n4m.abi_version())
         assert abi[0] == 2, abi
+        assert issubclass(n4m.PartialBatchError, n4m.N4MError)
 
         ctx = n4m.Context()
         try:
@@ -287,12 +298,69 @@ def _child_program() -> str:
         diagnostics = model.get_diagnostics()
         assert diagnostics["method"] == "pls"
 
+        fold_ids = np.arange(X.shape[0], dtype=np.int32) % 2
+        with ValidationPlan.from_fold_ids(fold_ids) as plan:
+            with SearchSpace() as finetune_space:
+                finetune_space.add_int("n_components", 1, 2)
+                finetune = finetune_estimator(
+                    Algorithm.PCR,
+                    Xs,
+                    y,
+                    plan,
+                    finetune_space,
+                    n_trials=4,
+                    sampler=Sampler.RANDOM,
+                    metric=Metric.RMSE,
+                    seed=19,
+                )
+        assert finetune.estimator is Algorithm.PCR
+        assert finetune.requested_trials == 4
+        assert finetune.timed_out is False
+        assert len(finetune.trials) == 4
+        assert finetune.best_params["n_components"] in (1, 2)
+        assert np.isfinite(finetune.best_score)
+
+        search_space = SearchSpace().add_int("n_components", 1, 3)
+        optimizer = Optimizer(
+            search_space,
+            sampler=Sampler.RANDOM,
+            direction=Direction.MINIMIZE,
+            seed=17,
+        )
+        initial_trials = optimizer.ask_batch(4)
+        assert [trial.id for trial in initial_trials] == [0, 1, 2, 3]
+        for trial in initial_trials:
+            n_components = trial.get_int("n_components")
+            optimizer.tell(trial.id, float((n_components - 2) ** 2))
+        checkpoint = optimizer.save()
+        assert checkpoint.startswith(b"N4MOPT\r\n")
+        restored_optimizer = Optimizer.load(checkpoint)
+        original_next = optimizer.ask()
+        restored_next = restored_optimizer.ask()
+        assert original_next.id == restored_next.id
+        assert original_next.get_int("n_components") == restored_next.get_int("n_components")
+        resumed_score = float((original_next.get_int("n_components") - 2) ** 2)
+        optimizer.tell(original_next.id, resumed_score)
+        restored_optimizer.tell(restored_next.id, resumed_score)
+        restored_optimizer.close()
+        best = optimizer.best()
+        assert best is not None
+        best_trial, best_score = best
+        best_n_components = best_trial.get_int("n_components")
+        assert 1 <= best_n_components <= 3
+        assert np.isfinite(best_score)
+
         print(json.dumps({
             "status": "INSTALLED_N4M_OK",
             "module": str(module_path),
             "library": str(lib_path),
             "abi": abi,
             "prediction_checksum": float(np.sum(pred)),
+            "optimizer_best_n_components": best_n_components,
+            "optimizer_best_score": best_score,
+            "finetune_estimator": finetune.estimator.name,
+            "finetune_best_n_components": finetune.best_params["n_components"],
+            "finetune_best_score": finetune.best_score,
         }, sort_keys=True))
         """
     )

@@ -2,8 +2,8 @@
 
 Selectors are MethodResult-based on the C side: the C ABI returns a
 scoring + selection report, not a re-fittable ``n4m_model_t``. Persistence
-therefore uses plain NumPy state (mask + scores) rather than the `.n4a`
-bundle path used by Model-based regressors.
+therefore uses plain NumPy state (mask + scores) rather than the raw N4MM
+payload path used by Model-based regressors.
 
 Hybrid contract for every class:
     * ``support_`` (bool[n_features_in_]) — sklearn SelectorMixin mask
@@ -35,8 +35,7 @@ from .._types import Algorithm, Deflation
 from ._base import _check_X_y_p4a, _config_from_params, _resolve_solver
 
 
-def _default_plan(n_samples: int, *, n_folds: int = 3,
-                    seed: int = 0) -> ValidationPlan:
+def _default_plan(n_samples: int, *, n_folds: int = 3, seed: int = 0) -> ValidationPlan:
     """Deterministic k-fold ValidationPlan with **contiguous** folds.
 
     Contiguous (non-shuffled) so the plan matches what the R + MATLAB
@@ -95,8 +94,9 @@ class _BasePls4allSelector(SelectorMixin, BaseEstimator):
         check_is_fitted(self)
         return self.support_
 
-    def _commit_fit(self, *, indices: np.ndarray,
-                     scores: np.ndarray | None = None) -> None:
+    def _commit_fit(
+        self, *, indices: np.ndarray, scores: np.ndarray | None = None
+    ) -> None:
         indices = np.asarray(indices, dtype=np.int64)
         mask = np.zeros(self.n_features_in_, dtype=bool)
         mask[indices] = True
@@ -111,6 +111,7 @@ class _BasePls4allSelector(SelectorMixin, BaseEstimator):
 # ----------------------------------------------------------------------
 # Scoring-then-top-k selectors (variable_select_rank)
 # ----------------------------------------------------------------------
+
 
 class _RankerSelector(_BasePls4allSelector):
     """Common machinery for VIP / |coef| / SR top-k selectors."""
@@ -133,10 +134,10 @@ class _RankerSelector(_BasePls4allSelector):
             cfg.close()
         try:
             res = _methods.variable_select_rank(
-                ctx, model, X_arr, method=self._rank_method, top_k=top_k)
+                ctx, model, X_arr, method=self._rank_method, top_k=top_k
+            )
             scores = res.matrix("scores").ravel()
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             model.close()
         self._commit_fit(indices=indices, scores=scores)
@@ -158,12 +159,20 @@ class VIPSelector(_RankerSelector):
     Exposes ``vip_scores_`` as an alias for the generic ``scores_``
     attribute, for callers used to the chemometrics naming convention.
     """
+
     _rank_method = 0
 
-    def __init__(self, top_k: int, *, n_components: int = 2,
-                  solver: str = "simpls",
-                  center_x: bool = True, scale_x: bool = True,
-                  tol: float = 1e-6, max_iter: int = 500) -> None:
+    def __init__(
+        self,
+        top_k: int,
+        *,
+        n_components: int = 2,
+        solver: str = "simpls",
+        center_x: bool = True,
+        scale_x: bool = True,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+    ) -> None:
         self.top_k = top_k
         self.n_components = n_components
         self.solver = solver
@@ -182,12 +191,20 @@ class VIPSelector(_RankerSelector):
 class CoefficientSelector(_RankerSelector):
     """|coef| top-k selector. Ranks features by the magnitude of their
     PLS regression coefficient on Y."""
+
     _rank_method = 1
 
-    def __init__(self, top_k: int, *, n_components: int = 2,
-                  solver: str = "simpls",
-                  center_x: bool = True, scale_x: bool = True,
-                  tol: float = 1e-6, max_iter: int = 500) -> None:
+    def __init__(
+        self,
+        top_k: int,
+        *,
+        n_components: int = 2,
+        solver: str = "simpls",
+        center_x: bool = True,
+        scale_x: bool = True,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+    ) -> None:
         self.top_k = top_k
         self.n_components = n_components
         self.solver = solver
@@ -199,12 +216,20 @@ class CoefficientSelector(_RankerSelector):
 
 class SelectivityRatioSelector(_RankerSelector):
     """Selectivity Ratio top-k selector (Rajalahti 2009)."""
+
     _rank_method = 2
 
-    def __init__(self, top_k: int, *, n_components: int = 2,
-                  solver: str = "simpls",
-                  center_x: bool = True, scale_x: bool = True,
-                  tol: float = 1e-6, max_iter: int = 500) -> None:
+    def __init__(
+        self,
+        top_k: int,
+        *,
+        n_components: int = 2,
+        solver: str = "simpls",
+        center_x: bool = True,
+        scale_x: bool = True,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+    ) -> None:
         self.top_k = top_k
         self.n_components = n_components
         self.solver = solver
@@ -217,6 +242,7 @@ class SelectivityRatioSelector(_RankerSelector):
 # ----------------------------------------------------------------------
 # Plan-based selectors (need a ValidationPlan)
 # ----------------------------------------------------------------------
+
 
 def _open_plan(n_samples: int, n_folds: int, seed: int) -> ValidationPlan:
     return _default_plan(n_samples, n_folds=n_folds, seed=seed)
@@ -234,11 +260,9 @@ class SPASelector(_BasePls4allSelector):
         ctx = Context()
         cfg = self._make_config()
         try:
-            res = _methods.spa_select(ctx, cfg, X_arr, y_arr,
-                                        top_k=int(self.top_k))
+            res = _methods.spa_select(ctx, cfg, X_arr, y_arr, top_k=int(self.top_k))
             scores = res.matrix("coefficient_scores").ravel()
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
         self._commit_fit(indices=indices, scores=scores)
@@ -248,9 +272,15 @@ class SPASelector(_BasePls4allSelector):
 class StabilitySelector(_BasePls4allSelector):
     """MCUVE-style stability selector via Monte-Carlo subsampling."""
 
-    def __init__(self, top_k: int, *, n_components: int = 2,
-                  n_iterations: int = 50, seed: int = 0,
-                  n_folds: int = 3) -> None:
+    def __init__(
+        self,
+        top_k: int,
+        *,
+        n_components: int = 2,
+        n_iterations: int = 50,
+        seed: int = 0,
+        n_folds: int = 3,
+    ) -> None:
         self.top_k = top_k
         self.n_components = n_components
         self.n_iterations = n_iterations
@@ -263,11 +293,11 @@ class StabilitySelector(_BasePls4allSelector):
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.seed))
         try:
-            res = _methods.stability_select(ctx, cfg, X_arr, y_arr, plan,
-                                              top_k=int(self.top_k))
+            res = _methods.stability_select(
+                ctx, cfg, X_arr, y_arr, plan, top_k=int(self.top_k)
+            )
             scores = res.matrix("stability_scores").ravel()
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -279,9 +309,14 @@ class UVESelector(_BasePls4allSelector):
     """Uninformative Variable Elimination (Centner 1996) with artificial
     noise variables for the threshold."""
 
-    def __init__(self, *, n_components: int = 2,
-                  noise_features: int = 50, noise_seed: int = 0,
-                  min_features: int | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        noise_features: int = 50,
+        noise_seed: int = 0,
+        min_features: int | None = None,
+    ) -> None:
         self.n_components = n_components
         self.noise_features = noise_features
         self.noise_seed = noise_seed
@@ -289,8 +324,9 @@ class UVESelector(_BasePls4allSelector):
 
     def fit(self, X, y):
         X_arr, y_arr, _ = _check_X_y_p4a(self, X, y)
-        min_features = int(self.min_features if self.min_features is not None
-                            else self.n_components)
+        min_features = int(
+            self.min_features if self.min_features is not None else self.n_components
+        )
         if min_features < 0 or min_features > self.n_features_in_:
             raise ValueError(
                 "min_features must be in "
@@ -302,11 +338,15 @@ class UVESelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], 3, int(self.noise_seed))
         try:
             res = _methods.uve_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 noise_features=int(self.noise_features),
-                noise_seed=int(self.noise_seed))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                noise_seed=int(self.noise_seed),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
             try:
                 scores = res.matrix("real_stability_scores").ravel()
             except Exception:
@@ -330,9 +370,7 @@ class UVESelector(_BasePls4allSelector):
             existing = set(int(i) for i in indices)
             needed = min_features - indices.size
             additions = [i for i in order if i not in existing][:needed]
-            indices = np.concatenate(
-                [indices, np.asarray(additions, dtype=np.int64)]
-            )
+            indices = np.concatenate([indices, np.asarray(additions, dtype=np.int64)])
             warnings.warn(
                 "UVESelector selected fewer than min_features; added the "
                 "highest real_stability_scores deterministically. Set "
@@ -347,9 +385,15 @@ class UVESelector(_BasePls4allSelector):
 class CARSSelector(_BasePls4allSelector):
     """Competitive Adaptive Reweighted Sampling (Li 2009)."""
 
-    def __init__(self, *, n_components: int = 2,
-                  n_iterations: int = 50, min_features: int | None = None,
-                  n_folds: int = 3, seed: int = 0) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        n_iterations: int = 50,
+        min_features: int | None = None,
+        n_folds: int = 3,
+        seed: int = 0,
+    ) -> None:
         self.n_components = n_components
         self.n_iterations = n_iterations
         self.min_features = min_features
@@ -362,15 +406,20 @@ class CARSSelector(_BasePls4allSelector):
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.seed))
         # C-side requires min_features >= n_components; default to that.
-        min_features = int(self.min_features if self.min_features is not None
-                            else self.n_components)
+        min_features = int(
+            self.min_features if self.min_features is not None else self.n_components
+        )
         try:
             res = _methods.cars_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_iterations=int(self.n_iterations),
-                min_features=min_features)
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                min_features=min_features,
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -381,10 +430,18 @@ class CARSSelector(_BasePls4allSelector):
 class RandomFrogSelector(_BasePls4allSelector):
     """Random Frog feature selection (Li 2012)."""
 
-    def __init__(self, top_k: int, *, n_components: int = 2,
-                  n_iterations: int = 100, initial_size: int = 20,
-                  min_size: int | None = None, max_size: int | None = None,
-                  n_folds: int = 3, seed: int = 0) -> None:
+    def __init__(
+        self,
+        top_k: int,
+        *,
+        n_components: int = 2,
+        n_iterations: int = 100,
+        initial_size: int = 20,
+        min_size: int | None = None,
+        max_size: int | None = None,
+        n_folds: int = 3,
+        seed: int = 0,
+    ) -> None:
         self.top_k = top_k
         self.n_components = n_components
         self.n_iterations = n_iterations
@@ -399,22 +456,28 @@ class RandomFrogSelector(_BasePls4allSelector):
         ctx = Context()
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.seed))
-        max_size = int(self.max_size if self.max_size is not None
-                        else self.n_features_in_)
-        min_size = int(self.min_size if self.min_size is not None
-                        else self.n_components)
+        max_size = int(
+            self.max_size if self.max_size is not None else self.n_features_in_
+        )
+        min_size = int(
+            self.min_size if self.min_size is not None else self.n_components
+        )
         try:
             res = _methods.random_frog_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_iterations=int(self.n_iterations),
                 initial_size=int(self.initial_size),
                 min_size=min_size,
                 max_size=max_size,
                 top_k=int(self.top_k),
-                seed=int(self.seed))
+                seed=int(self.seed),
+            )
             scores = res.matrix("global_scores").ravel()
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -425,10 +488,16 @@ class RandomFrogSelector(_BasePls4allSelector):
 class SCARSSelector(_BasePls4allSelector):
     """Stability-CARS hybrid (Zheng 2014)."""
 
-    def __init__(self, *, n_components: int = 2,
-                  n_iterations: int = 50, min_features: int | None = None,
-                  sample_fraction: float = 0.8,
-                  n_folds: int = 3, seed: int = 0) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        n_iterations: int = 50,
+        min_features: int | None = None,
+        sample_fraction: float = 0.8,
+        n_folds: int = 3,
+        seed: int = 0,
+    ) -> None:
         self.n_components = n_components
         self.n_iterations = n_iterations
         self.min_features = min_features
@@ -441,17 +510,22 @@ class SCARSSelector(_BasePls4allSelector):
         ctx = Context()
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.seed))
-        min_features = int(self.min_features if self.min_features is not None
-                            else self.n_components)
+        min_features = int(
+            self.min_features if self.min_features is not None else self.n_components
+        )
         try:
             res = _methods.scars_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_iterations=int(self.n_iterations),
                 min_features=min_features,
                 sample_fraction=float(self.sample_fraction),
-                seed=int(self.seed))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                seed=int(self.seed),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
             try:
                 scores = res.matrix("coefficient_scores")[-1].ravel()
             except Exception:
@@ -466,12 +540,18 @@ class SCARSSelector(_BasePls4allSelector):
 class GASelector(_BasePls4allSelector):
     """Genetic Algorithm feature selection."""
 
-    def __init__(self, *, n_components: int = 2,
-                  n_generations: int = 30, population_size: int = 40,
-                  min_features: int | None = None,
-                  max_features: int | None = None,
-                  mutation_rate: float = 0.05,
-                  n_folds: int = 3, seed: int = 0) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        n_generations: int = 30,
+        population_size: int = 40,
+        min_features: int | None = None,
+        max_features: int | None = None,
+        mutation_rate: float = 0.05,
+        n_folds: int = 3,
+        seed: int = 0,
+    ) -> None:
         self.n_components = n_components
         self.n_generations = n_generations
         self.population_size = population_size
@@ -486,22 +566,28 @@ class GASelector(_BasePls4allSelector):
         ctx = Context()
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.seed))
-        max_features = int(self.max_features if self.max_features is not None
-                            else self.n_features_in_)
-        min_features = int(self.min_features if self.min_features is not None
-                            else self.n_components)
+        max_features = int(
+            self.max_features if self.max_features is not None else self.n_features_in_
+        )
+        min_features = int(
+            self.min_features if self.min_features is not None else self.n_components
+        )
         try:
             res = _methods.ga_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_generations=int(self.n_generations),
                 population_size=int(self.population_size),
                 min_features=min_features,
                 max_features=max_features,
                 mutation_rate=float(self.mutation_rate),
-                seed=int(self.seed))
+                seed=int(self.seed),
+            )
             scores = res.matrix("global_scores").ravel()
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -512,11 +598,19 @@ class GASelector(_BasePls4allSelector):
 class PSOSelector(_BasePls4allSelector):
     """Binary Particle Swarm Optimization selector."""
 
-    def __init__(self, *, n_components: int = 2,
-                  n_swarm: int = 30, n_iterations: int = 50,
-                  w: float = 0.729, c1: float = 1.494, c2: float = 1.494,
-                  v_max: float = 4.0,
-                  n_folds: int = 3, seed: int = 0) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        n_swarm: int = 30,
+        n_iterations: int = 50,
+        w: float = 0.729,
+        c1: float = 1.494,
+        c2: float = 1.494,
+        v_max: float = 4.0,
+        n_folds: int = 3,
+        seed: int = 0,
+    ) -> None:
         self.n_components = n_components
         self.n_swarm = n_swarm
         self.n_iterations = n_iterations
@@ -534,13 +628,20 @@ class PSOSelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.seed))
         try:
             res = _methods.pso_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_swarm=int(self.n_swarm),
                 n_iterations=int(self.n_iterations),
-                w=float(self.w), c1=float(self.c1), c2=float(self.c2),
-                v_max=float(self.v_max), seed=int(self.seed))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                w=float(self.w),
+                c1=float(self.c1),
+                c2=float(self.c2),
+                v_max=float(self.v_max),
+                seed=int(self.seed),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
             try:
                 scores = res.matrix("inclusion_frequencies").ravel()
             except Exception:
@@ -555,12 +656,18 @@ class PSOSelector(_BasePls4allSelector):
 class VISSASelector(_BasePls4allSelector):
     """Variable Iterative Subspace Shrinkage Approach (Deng 2014)."""
 
-    def __init__(self, *, n_components: int = 2,
-                  n_iterations: int = 10, n_submodels: int = 60,
-                  ratio_kept: float = 0.1,
-                  threshold: float = 0.5,
-                  floor_probability: float = 0.05,
-                  n_folds: int = 3, seed: int = 0) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        n_iterations: int = 10,
+        n_submodels: int = 60,
+        ratio_kept: float = 0.1,
+        threshold: float = 0.5,
+        floor_probability: float = 0.05,
+        n_folds: int = 3,
+        seed: int = 0,
+    ) -> None:
         self.n_components = n_components
         self.n_iterations = n_iterations
         self.n_submodels = n_submodels
@@ -577,15 +684,19 @@ class VISSASelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.seed))
         try:
             res = _methods.vissa_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_iterations=int(self.n_iterations),
                 n_submodels=int(self.n_submodels),
                 ratio_kept=float(self.ratio_kept),
                 threshold=float(self.threshold),
                 floor_probability=float(self.floor_probability),
-                seed=int(self.seed))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                seed=int(self.seed),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
             try:
                 scores = res.matrix("final_probabilities").ravel()
             except Exception:
@@ -600,10 +711,15 @@ class VISSASelector(_BasePls4allSelector):
 class ShavingSelector(_BasePls4allSelector):
     """Iterative SR-shaving variable elimination."""
 
-    def __init__(self, *, n_components: int = 2, n_steps: int = 10,
-                  min_features: int | None = None,
-                  shave_fraction: float = 0.2,
-                  n_folds: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        n_steps: int = 10,
+        min_features: int | None = None,
+        shave_fraction: float = 0.2,
+        n_folds: int = 3,
+    ) -> None:
         self.n_components = n_components
         self.n_steps = n_steps
         self.min_features = min_features
@@ -615,16 +731,21 @@ class ShavingSelector(_BasePls4allSelector):
         ctx = Context()
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), 0)
-        min_features = int(self.min_features if self.min_features is not None
-                            else self.n_components)
+        min_features = int(
+            self.min_features if self.min_features is not None else self.n_components
+        )
         try:
             res = _methods.shaving_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_steps=int(self.n_steps),
                 min_features=min_features,
-                shave_fraction=float(self.shave_fraction))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                shave_fraction=float(self.shave_fraction),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -635,9 +756,14 @@ class ShavingSelector(_BasePls4allSelector):
 class BVESelector(_BasePls4allSelector):
     """Backward Variable Elimination with VIP filter."""
 
-    def __init__(self, *, n_components: int = 2,
-                  n_steps: int = 10, min_features: int | None = None,
-                  n_folds: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        n_steps: int = 10,
+        min_features: int | None = None,
+        n_folds: int = 3,
+    ) -> None:
         self.n_components = n_components
         self.n_steps = n_steps
         self.min_features = min_features
@@ -648,15 +774,20 @@ class BVESelector(_BasePls4allSelector):
         ctx = Context()
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), 0)
-        min_features = int(self.min_features if self.min_features is not None
-                            else self.n_components)
+        min_features = int(
+            self.min_features if self.min_features is not None else self.n_components
+        )
         try:
             res = _methods.bve_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_steps=int(self.n_steps),
-                min_features=min_features)
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                min_features=min_features,
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -667,9 +798,15 @@ class BVESelector(_BasePls4allSelector):
 class REPSelector(_BasePls4allSelector):
     """REP-PLS — repeated VIP-thresholded variable selection."""
 
-    def __init__(self, *, n_components: int = 2,
-                  n_steps: int = 10, min_features: int | None = None,
-                  remove_count: int = 1, n_folds: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        n_steps: int = 10,
+        min_features: int | None = None,
+        remove_count: int = 1,
+        n_folds: int = 3,
+    ) -> None:
         self.n_components = n_components
         self.n_steps = n_steps
         self.min_features = min_features
@@ -681,16 +818,21 @@ class REPSelector(_BasePls4allSelector):
         ctx = Context()
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), 0)
-        min_features = int(self.min_features if self.min_features is not None
-                            else self.n_components)
+        min_features = int(
+            self.min_features if self.min_features is not None else self.n_components
+        )
         try:
             res = _methods.rep_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_steps=int(self.n_steps),
                 min_features=min_features,
-                remove_count=int(self.remove_count))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                remove_count=int(self.remove_count),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -701,10 +843,17 @@ class REPSelector(_BasePls4allSelector):
 class IPWSelector(_BasePls4allSelector):
     """Iterative Predictor Weighting PLS selector."""
 
-    def __init__(self, top_k: int, *, n_components: int = 2,
-                  n_iterations: int = 20, damping: float = 0.5,
-                  weight_floor: float = 1e-6,
-                  n_folds: int = 3, seed: int = 0) -> None:
+    def __init__(
+        self,
+        top_k: int,
+        *,
+        n_components: int = 2,
+        n_iterations: int = 20,
+        damping: float = 0.5,
+        weight_floor: float = 1e-6,
+        n_folds: int = 3,
+        seed: int = 0,
+    ) -> None:
         self.top_k = top_k
         self.n_components = n_components
         self.n_iterations = n_iterations
@@ -720,13 +869,17 @@ class IPWSelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.seed))
         try:
             res = _methods.ipw_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_iterations=int(self.n_iterations),
                 top_k=int(self.top_k),
                 damping=float(self.damping),
-                weight_floor=float(self.weight_floor))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                weight_floor=float(self.weight_floor),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
             try:
                 # score_path is per-iteration; take the last (final scores)
                 scores = res.matrix("score_path")[-1].ravel()
@@ -747,8 +900,9 @@ class STSelector(_BasePls4allSelector):
     retains ``>= min_selected`` features.
     """
 
-    def __init__(self, thresholds, *, n_components: int = 2,
-                  min_selected: int | None = None) -> None:
+    def __init__(
+        self, thresholds, *, n_components: int = 2, min_selected: int | None = None
+    ) -> None:
         self.thresholds = thresholds
         self.n_components = n_components
         self.min_selected = min_selected
@@ -759,15 +913,20 @@ class STSelector(_BasePls4allSelector):
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], 3, 0)
         thresholds = np.asarray(self.thresholds, dtype=np.float64).ravel()
-        min_selected = int(self.min_selected if self.min_selected is not None
-                            else self.n_components)
+        min_selected = int(
+            self.min_selected if self.min_selected is not None else self.n_components
+        )
         try:
             res = _methods.st_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 thresholds=thresholds,
-                min_selected=min_selected)
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                min_selected=min_selected,
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -779,12 +938,18 @@ class STSelector(_BasePls4allSelector):
 # Interval-family selectors
 # ----------------------------------------------------------------------
 
+
 class IntervalSelector(_BasePls4allSelector):
     """Forward interval PLS (iPLS, Nørgaard 2000)."""
 
-    def __init__(self, *, n_components: int = 2,
-                  interval_width: int = 10, step: int = 5,
-                  n_folds: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        interval_width: int = 10,
+        step: int = 5,
+        n_folds: int = 3,
+    ) -> None:
         self.n_components = n_components
         self.interval_width = interval_width
         self.step = step
@@ -797,11 +962,15 @@ class IntervalSelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), 0)
         try:
             res = _methods.interval_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 interval_width=int(self.interval_width),
-                step=int(self.step))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                step=int(self.step),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -812,9 +981,14 @@ class IntervalSelector(_BasePls4allSelector):
 class BiPLSSelector(_BasePls4allSelector):
     """biPLS — backward interval elimination (Nørgaard 2000)."""
 
-    def __init__(self, *, n_components: int = 2,
-                  interval_width: int = 10, min_intervals: int = 2,
-                  n_folds: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        interval_width: int = 10,
+        min_intervals: int = 2,
+        n_folds: int = 3,
+    ) -> None:
         self.n_components = n_components
         self.interval_width = interval_width
         self.min_intervals = min_intervals
@@ -827,11 +1001,15 @@ class BiPLSSelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), 0)
         try:
             res = _methods.bipls_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 interval_width=int(self.interval_width),
-                min_intervals=int(self.min_intervals))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                min_intervals=int(self.min_intervals),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -842,9 +1020,14 @@ class BiPLSSelector(_BasePls4allSelector):
 class SiPLSSelector(_BasePls4allSelector):
     """siPLS — synergistic interval combinations (Nørgaard 2000)."""
 
-    def __init__(self, *, n_components: int = 2,
-                  interval_width: int = 10, combination_size: int = 2,
-                  n_folds: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        interval_width: int = 10,
+        combination_size: int = 2,
+        n_folds: int = 3,
+    ) -> None:
         self.n_components = n_components
         self.interval_width = interval_width
         self.combination_size = combination_size
@@ -857,11 +1040,15 @@ class SiPLSSelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), 0)
         try:
             res = _methods.sipls_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 interval_width=int(self.interval_width),
-                combination_size=int(self.combination_size))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                combination_size=int(self.combination_size),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -873,11 +1060,17 @@ class SiPLSSelector(_BasePls4allSelector):
 # T² / WVC / threshold-based selectors
 # ----------------------------------------------------------------------
 
+
 class T2Selector(_BasePls4allSelector):
     """T²-PLS loading-weight selection (plsVarSel::T2_pls style)."""
 
-    def __init__(self, alpha_thresholds, *, n_components: int = 2,
-                  min_selected: int | None = None) -> None:
+    def __init__(
+        self,
+        alpha_thresholds,
+        *,
+        n_components: int = 2,
+        min_selected: int | None = None,
+    ) -> None:
         self.alpha_thresholds = alpha_thresholds
         self.n_components = n_components
         self.min_selected = min_selected
@@ -888,15 +1081,20 @@ class T2Selector(_BasePls4allSelector):
         cfg = self._make_config()
         plan = _open_plan(X_arr.shape[0], 3, 0)
         alpha = np.asarray(self.alpha_thresholds, dtype=np.float64).ravel()
-        min_selected = int(self.min_selected if self.min_selected is not None
-                            else self.n_components)
+        min_selected = int(
+            self.min_selected if self.min_selected is not None else self.n_components
+        )
         try:
             res = _methods.t2_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 alpha_thresholds=alpha,
-                min_selected=min_selected)
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                min_selected=min_selected,
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
             try:
                 scores = res.matrix("t2_scores").ravel()
             except Exception:
@@ -911,8 +1109,9 @@ class T2Selector(_BasePls4allSelector):
 class WVCSelector(_BasePls4allSelector):
     """WVC-PLS — weighted variable contribution top-k selector."""
 
-    def __init__(self, top_k: int, *, n_components: int = 2,
-                  normalize: bool = True) -> None:
+    def __init__(
+        self, top_k: int, *, n_components: int = 2, normalize: bool = True
+    ) -> None:
         self.top_k = top_k
         self.n_components = n_components
         self.normalize = normalize
@@ -921,13 +1120,15 @@ class WVCSelector(_BasePls4allSelector):
         X_arr, y_arr, _ = _check_X_y_p4a(self, X, y)
         ctx = Context()
         res = _methods.wvc_select(
-            ctx, X_arr, y_arr,
+            ctx,
+            X_arr,
+            y_arr,
             n_components=int(self.n_components),
             top_k=int(self.top_k),
-            normalize=bool(self.normalize))
+            normalize=bool(self.normalize),
+        )
         scores = res.matrix("final_scores").ravel()
-        indices = np.asarray(res.vector_int64("selected_indices"),
-                              dtype=np.int64)
+        indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         self._commit_fit(indices=indices, scores=scores)
         return self
 
@@ -935,10 +1136,15 @@ class WVCSelector(_BasePls4allSelector):
 class WVCThresholdSelector(_BasePls4allSelector):
     """Threshold-/factor-based WVC-PLS selector."""
 
-    def __init__(self, *, n_components: int = 2, normalize: bool = True,
-                  score_threshold: float = 0.0,
-                  threshold_factor: float = 1.0,
-                  min_selected: int | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        normalize: bool = True,
+        score_threshold: float = 0.0,
+        threshold_factor: float = 1.0,
+        min_selected: int | None = None,
+    ) -> None:
         self.n_components = n_components
         self.normalize = normalize
         self.score_threshold = score_threshold
@@ -948,18 +1154,21 @@ class WVCThresholdSelector(_BasePls4allSelector):
     def fit(self, X, y):
         X_arr, y_arr, _ = _check_X_y_p4a(self, X, y)
         ctx = Context()
-        min_selected = int(self.min_selected if self.min_selected is not None
-                            else self.n_components)
+        min_selected = int(
+            self.min_selected if self.min_selected is not None else self.n_components
+        )
         res = _methods.wvc_threshold_select(
-            ctx, X_arr, y_arr,
+            ctx,
+            X_arr,
+            y_arr,
             n_components=int(self.n_components),
             normalize=bool(self.normalize),
             score_threshold=float(self.score_threshold),
             threshold_factor=float(self.threshold_factor),
-            min_selected=min_selected)
+            min_selected=min_selected,
+        )
         scores = res.matrix("final_scores").ravel()
-        indices = np.asarray(res.vector_int64("selected_indices"),
-                              dtype=np.int64)
+        indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         self._commit_fit(indices=indices, scores=scores)
         return self
 
@@ -967,10 +1176,16 @@ class WVCThresholdSelector(_BasePls4allSelector):
 class EMCUVESelector(_BasePls4allSelector):
     """Ensemble Monte-Carlo UVE selector."""
 
-    def __init__(self, *, n_components: int = 2,
-                  noise_features: int = 50, noise_seed: int = 0,
-                  n_ensembles: int = 10, vote_threshold: float = 0.5,
-                  n_folds: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        noise_features: int = 50,
+        noise_seed: int = 0,
+        n_ensembles: int = 10,
+        vote_threshold: float = 0.5,
+        n_folds: int = 3,
+    ) -> None:
         self.n_components = n_components
         self.noise_features = noise_features
         self.noise_seed = noise_seed
@@ -985,13 +1200,17 @@ class EMCUVESelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.noise_seed))
         try:
             res = _methods.emcuve_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 noise_features=int(self.noise_features),
                 noise_seed=int(self.noise_seed),
                 n_ensembles=int(self.n_ensembles),
-                vote_threshold=float(self.vote_threshold))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                vote_threshold=float(self.vote_threshold),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -1002,10 +1221,14 @@ class EMCUVESelector(_BasePls4allSelector):
 class RandomizationSelector(_BasePls4allSelector):
     """Randomization-test PLS selector (Y-permutation p-values)."""
 
-    def __init__(self, *, n_components: int = 2,
-                  n_permutations: int = 200,
-                  randomization_seed: int = 0,
-                  alpha: float = 0.05) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        n_permutations: int = 200,
+        randomization_seed: int = 0,
+        alpha: float = 0.05,
+    ) -> None:
         self.n_components = n_components
         self.n_permutations = n_permutations
         self.randomization_seed = randomization_seed
@@ -1017,12 +1240,15 @@ class RandomizationSelector(_BasePls4allSelector):
         cfg = self._make_config()
         try:
             res = _methods.randomization_select(
-                ctx, cfg, X_arr, y_arr,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
                 n_permutations=int(self.n_permutations),
                 randomization_seed=int(self.randomization_seed),
-                alpha=float(self.alpha))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                alpha=float(self.alpha),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
             try:
                 scores = res.matrix("p_values").ravel()
             except Exception:
@@ -1037,12 +1263,18 @@ class RandomizationSelector(_BasePls4allSelector):
 # Phase 50+ selectors (IRIV, IRF, VIPSPA)
 # ----------------------------------------------------------------------
 
+
 class IRIVSelector(_BasePls4allSelector):
     """IRIV — Iteratively Retains Informative Variables (Yun 2014)."""
 
-    def __init__(self, *, n_components: int = 2,
-                  max_rounds: int = 5, n_folds: int = 5,
-                  seed: int = 0) -> None:
+    def __init__(
+        self,
+        *,
+        n_components: int = 2,
+        max_rounds: int = 5,
+        n_folds: int = 5,
+        seed: int = 0,
+    ) -> None:
         self.n_components = n_components
         self.max_rounds = max_rounds
         self.n_folds = n_folds
@@ -1055,11 +1287,15 @@ class IRIVSelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], int(self.n_folds), int(self.seed))
         try:
             res = _methods.iriv_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 max_rounds=int(self.max_rounds),
-                seed=int(self.seed))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                seed=int(self.seed),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
             plan.close()
@@ -1070,10 +1306,16 @@ class IRIVSelector(_BasePls4allSelector):
 class IRFSelector(_BasePls4allSelector):
     """IRF — Interval Random Frog (Yun 2013)."""
 
-    def __init__(self, top_k: int, *, n_components: int = 2,
-                  n_iterations: int = 100, window_size: int = 5,
-                  initial_intervals: int = 5,
-                  seed: int = 0) -> None:
+    def __init__(
+        self,
+        top_k: int,
+        *,
+        n_components: int = 2,
+        n_iterations: int = 100,
+        window_size: int = 5,
+        initial_intervals: int = 5,
+        seed: int = 0,
+    ) -> None:
         self.top_k = top_k
         self.n_components = n_components
         self.n_iterations = n_iterations
@@ -1088,14 +1330,18 @@ class IRFSelector(_BasePls4allSelector):
         plan = _open_plan(X_arr.shape[0], 3, int(self.seed))
         try:
             res = _methods.irf_select(
-                ctx, cfg, X_arr, y_arr, plan,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
+                plan,
                 n_iterations=int(self.n_iterations),
                 window_size=int(self.window_size),
                 initial_intervals=int(self.initial_intervals),
                 top_k=int(self.top_k),
-                seed=int(self.seed))
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+                seed=int(self.seed),
+            )
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
             try:
                 scores = res.matrix("probability").ravel()
             except Exception:
@@ -1114,8 +1360,9 @@ class IRFSelector(_BasePls4allSelector):
 class VIPSPASelector(_BasePls4allSelector):
     """VIP_SPA — VIP-mask + SPA greedy (Phase 53)."""
 
-    def __init__(self, top_k: int, *, n_components: int = 2,
-                  vip_threshold: float = 0.3) -> None:
+    def __init__(
+        self, top_k: int, *, n_components: int = 2, vip_threshold: float = 0.3
+    ) -> None:
         self.top_k = top_k
         self.n_components = n_components
         self.vip_threshold = vip_threshold
@@ -1126,12 +1373,15 @@ class VIPSPASelector(_BasePls4allSelector):
         cfg = self._make_config()
         try:
             res = _methods.vip_spa_select(
-                ctx, cfg, X_arr, y_arr,
+                ctx,
+                cfg,
+                X_arr,
+                y_arr,
                 vip_threshold=float(self.vip_threshold),
-                top_k=int(self.top_k))
+                top_k=int(self.top_k),
+            )
             scores = res.matrix("vip_scores").ravel()
-            indices = np.asarray(res.vector_int64("selected_indices"),
-                                  dtype=np.int64)
+            indices = np.asarray(res.vector_int64("selected_indices"), dtype=np.int64)
         finally:
             cfg.close()
         self._commit_fit(indices=indices, scores=scores)

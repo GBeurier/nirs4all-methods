@@ -1,0 +1,17 @@
+{
+  "artifacts": {
+    "consumers/validate_study_trace.mjs": "968d8353aff0357521c3ed06844f61668f940901c2ecc4a27dfd2d0f650ccec2",
+    "consumers/validate_study_trace.rb": "66de6eda0b29f192987ea133e50581eb6ba1af4727e25c35a88ad8326ef3b8c4",
+    "contracts/study_trace.v1.schema.json": "a433e42978b59286dc8fb3b80e89e875d7a909b554bf012148fffe0f98ab6a14",
+    "golden/asha_prune.json": "3bb39db44a589d815f5063b23406af4a5c08e246a0fca888d77ea7ded1944a71",
+    "golden/hyperband_prune.json": "33fb6f04fc543b5051ff649538f839415a32524cef06ebe973edfa5404d00dc3",
+    "golden/lifecycle_states.v1.json": "8a8bcdf2e3854e38075dc7cc49e9f1811dcf33206089ea3494418fedf978e2cf",
+    "golden/median_prune.json": "541fcdc56a45cf12230bc88279fd15d8228cdf81bcf6a2ea5e5a96202c5e43ba",
+    "golden/racing_parallel.json": "965d5f8cd5be5d6311b306d6c5b82f20572f3f579c76d94efc58b2da1ed784c8",
+    "golden/random_failed_trials.json": "0db1cd33dc9313390ea6cc2611c521c80fd7706c8c868f04aa2693bf6f4d3218",
+    "references.py": "4d31fa304dab0af2273c33c24fe698c277a191c7110984d1d7c1284de3ac008f",
+    "trace_contract.py": "b0669c728509d85efe1754e91f8e9388c1c36946c941f866adca82f4ec2ca80b"
+  },
+  "format": "n4m.hpo.conformance_pack",
+  "schema_version": 1
+}

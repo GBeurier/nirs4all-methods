@@ -1,0 +1,108 @@
+[
+  {
+    "asked_at": 0,
+    "id": 0,
+    "params": {
+      "x": 4.095436334855602,
+      "y": 0.9851174830277953
+    },
+    "score": 5.361309888800098,
+    "status": 1,
+    "terminal_at": 1
+  },
+  {
+    "asked_at": 2,
+    "id": 1,
+    "params": {
+      "x": -4.8330223179319995,
+      "y": 4.236902604175821
+    },
+    "score": 64.64153767462865,
+    "status": 1,
+    "terminal_at": 3
+  },
+  {
+    "asked_at": 4,
+    "error": {
+      "category": "objective",
+      "code": "OBJECTIVE_EVALUATION_FAILED",
+      "details": {
+        "phase": "evaluate",
+        "trial_id": 2
+      },
+      "message": "deterministic objective failure fixture",
+      "retryable": false
+    },
+    "id": 2,
+    "params": {
+      "x": 2.5962107737053977,
+      "y": 0.3129325559497156
+    },
+    "status": 3,
+    "terminal_at": 5
+  },
+  {
+    "asked_at": 6,
+    "id": 3,
+    "params": {
+      "x": 3.8691621842844235,
+      "y": -3.0842867232057447
+    },
+    "score": 13.006591862102148,
+    "status": 1,
+    "terminal_at": 7
+  },
+  {
+    "asked_at": 8,
+    "id": 4,
+    "params": {
+      "x": 0.22248349337230877,
+      "y": -1.8935171892247773
+    },
+    "score": 6.744972277223612,
+    "status": 1,
+    "terminal_at": 9
+  },
+  {
+    "asked_at": 10,
+    "error": {
+      "category": "objective",
+      "code": "OBJECTIVE_EVALUATION_FAILED",
+      "details": {
+        "phase": "evaluate",
+        "trial_id": 5
+      },
+      "message": "deterministic objective failure fixture",
+      "retryable": false
+    },
+    "id": 5,
+    "params": {
+      "x": 0.6107359793826213,
+      "y": 1.623667197492641
+    },
+    "status": 3,
+    "terminal_at": 11
+  },
+  {
+    "asked_at": 12,
+    "id": 6,
+    "params": {
+      "x": 4.128030281953407,
+      "y": 3.020690012141525
+    },
+    "score": 13.653081030362266,
+    "status": 1,
+    "terminal_at": 13
+  },
+  {
+    "asked_at": 14,
+    "id": 7,
+    "params": {
+      "x": -0.6217484617301654,
+      "y": 4.5812463935416545
+    },
+    "score": 27.861383514922903,
+    "status": 1,
+    "terminal_at": 15
+  }
+]

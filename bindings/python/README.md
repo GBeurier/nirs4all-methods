@@ -24,8 +24,8 @@ import numpy as np
 import pls4all
 from pls4all.sklearn import PLSRegression
 
-print(pls4all.version())      # e.g. "1.0.3+abi.2.0.0"
-print(pls4all.abi_version())  # (2, 0, 0)
+print(pls4all.version())      # e.g. "1.0.3+abi.2.2.0"
+print(pls4all.abi_version())  # (2, 2, 0)
 
 rng = np.random.default_rng(0)
 X = rng.standard_normal((40, 12))
@@ -47,6 +47,85 @@ with pls4all.Context() as ctx, pls4all.Config() as cfg:
 
 `scikit-learn` is an optional dependency (only `pls4all.sklearn` needs it); the
 core `import pls4all` works with NumPy alone.
+
+## Pure-native estimator selection in the full package
+
+The full `nirs4all-methods` distribution (imported as `n4m`) exposes the native
+single-level finetuning driver. It is not part of the slim `pls4all` namespace.
+Build the validation plan and search space through public owning objects:
+
+```python
+import numpy as np
+
+from n4m.model_selection import (
+    Algorithm,
+    Metric,
+    Sampler,
+    SearchSpace,
+    ValidationPlan,
+    finetune_estimator,
+)
+
+rng = np.random.default_rng(42)
+X = rng.normal(size=(60, 12))
+y = X @ rng.normal(size=12) + rng.normal(scale=0.02, size=60)
+fold_ids = np.arange(X.shape[0], dtype=np.int32) % 5
+
+with ValidationPlan.from_fold_ids(fold_ids) as plan:
+    with SearchSpace() as space:
+        space.add_int("n_components", 1, 10)
+        result = finetune_estimator(
+            Algorithm.PLS_REGRESSION,
+            X,
+            y,
+            plan,
+            space,
+            n_trials=30,
+            sampler=Sampler.TPE,
+            metric=Metric.RMSE,
+            seed=42,
+            timeout_seconds=20.0,
+        )
+
+print(result.best_params)       # for example: {"n_components": 6}
+print(result.best_score)
+print(result.timed_out)         # True only for a successful partial timeout
+print(len(result.trials))       # owning completed/failed trial snapshots
+```
+
+The eligible algorithms are `PLS_REGRESSION`, `PLS_CANONICAL`, `PLS_SVD`,
+`OPLS`, `SPARSE_PLS` and `PCR`. The five non-sparse routes require the exact
+keyword `n_components`, a non-log integer axis. `SPARSE_PLS` accepts any
+non-empty subset of `n_components` and `sparsity_lambda`; omitted axes retain
+the native defaults `2` and `0.0`. `sparsity_lambda` must stay in `[0, 1)` and
+may be declared with `space.add_float(..., log=True)` when `low > 0`.
+
+This call selects a configuration and returns an owning trace; it does **not**
+fit a final estimator on all rows. A timeout before any completion raises
+`N4MError` with `CANCELLED`. A later timeout returns the best partial result
+with `result.timed_out is True` and fewer trials than
+`result.requested_trials`. See
+[`docs/methods/optimization.md`](../../docs/methods/optimization.md#pure-native-estimator-selection)
+for the exact schema, status and validation-plan contracts.
+
+## Relation to nirs4all conformal learning and robustness
+
+The Python bindings are thin translation layers over the `libn4m` C ABI. They
+expose native kernels, scikit-learn-compatible PLS estimators and the
+single-estimator `finetune_estimator(...)` selection trace, but they do not own
+the higher-level `nirs4all` statistical lifecycle.
+
+Use `nirs4all.run(tuning=...)` when the workflow needs final winner projection,
+workspace persistence, `.n4a` packaging, optional `nirs4all.calibrate()` /
+`predict_calibrated()` semantics, `CalibratedRunResult`, or
+`nirs4all.robustness()` / `RobustnessReport` artifacts. Those guarantees and
+invalidation reasons are produced by `nirs4all`, not by `n4m` or `pls4all`.
+
+Binding consumers must not reimplement tuning/conformal/robustness guarantees
+from raw native predictions. A UI, Studio panel or alternate language binding
+that wants to display conformal intervals or robustness summaries should consume
+the public `nirs4all` artifact/schema surfaces instead of inferring guarantees
+locally from `finetune_estimator(...)` or `PLSRegression.predict(...)`.
 
 ## Loading `libn4m`
 

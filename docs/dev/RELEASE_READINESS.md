@@ -414,7 +414,7 @@ and carries **both blockers**.
 ## G3 — Drop-in integration into nirs4all — *partial*
 
 n4m's Python surface is genuinely sklearn-shaped (estimators subclass `BaseEstimator`+mixins, `fit/predict/transform/
-get_params/set_params`, multi-output, pickle bit-exact via the `.n4a` C-ABI wire format). nirs4all today has **zero**
+get_params/set_params`, multi-output, pickle bit-exact via the raw N4MM C-ABI payload). nirs4all today has **zero**
 n4m references (greenfield) and resolves models by class-path string/instance, so the swap is config/instance-level,
 not a rewrite. **This is a downstream feature for the user's G3 goal — it does NOT gate the engine's own 1.0 release.**
 
@@ -455,10 +455,9 @@ not a rewrite. **This is a downstream feature for the user's G3 goal — it does
 - **[Low · S] `fit-val-kwarg-support`** — note per mapped class whether the n4m target consumes `X_val/y_val`
   (AOMPLS uses it; n4m base `fit(X,y)` silently drops it).
 - **[Low · S] `version-pin-contract`** *(verifier high→low)* — when G3 lands, pin nirs4all→n4m version range + document
-  ABI/`.n4a` compatibility. *Verifier corrections:* the `.n4a` "refuses on ABI mismatch" claim is **false** (the C
-  importer only hard-rejects on serialization-format-version mismatch; ABI skew → warning + `N4M_OK`), and nirs4all's
-  own `.n4a` is an unrelated cloudpickle namesake. Also fix the stale `_model.py` docstring that claims a rejection
-  the code doesn't perform.
+  N4MM compatibility. Format version 1 rejects unsupported serialization-format versions; ABI skew is provenance and
+  produces a context warning with `N4M_OK`. The raw N4MM fitted-model payload has no canonical filename extension and
+  is distinct from the nirs4all `.n4a` full-pipeline bundle.
 
 ## G4 — WASM / WebGL browser lib — *partial*
 
@@ -635,9 +634,10 @@ batched-RidgeCV (M).
    smoke breaks. The hardcoded `(1,9,0)` assert is the live proof this fan-out is currently mishandled.
 2. **Cross-platform ABI gate is Linux-only.** macOS/Windows — the platforms that ship CRAN/PyPI binaries — have no
    snapshot diff and wrong snapshot files. Fix before any 1.0 freeze.
-3. **Model-blob cross-version policy** *(critic gap, High)*. The serializer writes the ABI triple but the **reader
-   checks only the serialization-format version** — a model saved by a newer n4m silently loads into an older runtime.
-   Define + enforce a load policy with boundary tests (and fix the stale `_model.py` docstring that claims otherwise).
+3. **Model-payload cross-version policy — resolved for format 1.** The serializer records the writer ABI triple as
+   provenance, while the reader gates compatibility on the N4MM serialization-format version. ABI skew loads with
+   `N4M_OK` and a context warning. Boundary tests freeze that behaviour; a stricter policy requires a new explicit
+   format contract rather than reinterpreting format version 1.
 4. **Documentation truth.** Three "single sources of truth" (DISTRIBUTION.md, ARCHITECTURE.md, CI gate messages,
    parity/README) currently **assert things that are false** (wrong artifact names, non-existent coverage). For a
    release these mislead the maintainer and reviewers as much as a code bug.
@@ -663,7 +663,7 @@ batched-RidgeCV (M).
   cibuildwheel run. (Working-tree hygiene only — folded into `clean-stale-generated-dirs-and-debris`.)
 - Partially-refuted sub-claims (the parent task survives, the detail was wrong): CARS "no n_iterations cap"
   (it's int32-bounded); README "ABI 1.9 string" (none exists); WASM "oversized-stride attack" (unreachable — rowmajor-
-  only init + length guard); `.n4a` "refuses on ABI mismatch" (it warns + returns OK); fix-i64-read "1e32 garbage"
+  only init + length guard); N4MM "refuses on ABI mismatch" (it warns + returns OK); fix-i64-read "1e32 garbage"
   (every BigInt is `Number()`-wrapped).
 
 # §11. Sequenced roadmap

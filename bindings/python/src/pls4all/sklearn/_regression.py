@@ -15,7 +15,6 @@ from .._model import Model, ModelArrayKind
 from .._types import Algorithm, Deflation
 from ._base import (
     _Pls4allModelEstimator,
-    _as_2d_float64,
     _check_X_p4a,
     _check_X_y_p4a,
     _config_from_params,
@@ -63,21 +62,16 @@ class _PlsRegressorBase(_Pls4allModelEstimator, BaseEstimator, RegressorMixin):
             cfg.close()
         # sklearn-compatible fitted attributes (trailing underscore).
         self.coef_ = model.get_array(ctx, ModelArrayKind.COEFFICIENTS).T
-        self.x_mean_ = model.get_array(
-            ctx, ModelArrayKind.X_MEAN).ravel()
-        self.y_mean_ = model.get_array(
-            ctx, ModelArrayKind.Y_MEAN).ravel()
+        self.x_mean_ = model.get_array(ctx, ModelArrayKind.X_MEAN).ravel()
+        self.y_mean_ = model.get_array(ctx, ModelArrayKind.Y_MEAN).ravel()
         if self.scale_x:
-            self.x_std_ = model.get_array(
-                ctx, ModelArrayKind.X_SCALE).ravel()
+            self.x_std_ = model.get_array(ctx, ModelArrayKind.X_SCALE).ravel()
         if self.scale_y:
-            self.y_std_ = model.get_array(
-                ctx, ModelArrayKind.Y_SCALE).ravel()
+            self.y_std_ = model.get_array(ctx, ModelArrayKind.Y_SCALE).ravel()
         # sklearn naming: intercept_ is (n_targets,)
         self.intercept_ = self.y_mean_ - self.x_mean_ @ self.coef_.T
         if self.store_scores:
-            self.x_scores_ = model.get_array(
-                ctx, ModelArrayKind.SCORES_T)
+            self.x_scores_ = model.get_array(ctx, ModelArrayKind.SCORES_T)
         self._store_fitted_model(ctx, model)
         return self
 
@@ -106,8 +100,8 @@ class PLSRegression(_PlsRegressorBase):
 
     * `solver` selects the inner algorithm (NIPALS, SIMPLS, SVD, …)
       directly — sklearn only exposes 'nipals' / 'svd'.
-    * Round-trip via `pickle.dumps` is bit-exact, backed by the C ABI
-      `.n4a` bundle (`n4m_model_export_to_buffer`).
+    * Round-trip via `pickle.dumps` is bit-exact, backed by the raw C ABI
+      N4MM fitted-model payload (`n4m_model_export_to_buffer`).
 
     Parameters
     ----------
@@ -133,17 +127,19 @@ class PLSRegression(_PlsRegressorBase):
     _algorithm = Algorithm.PLS_REGRESSION
     _default_solver = "simpls"
 
-    def __init__(self,
-                  n_components: int = 2,
-                  *,
-                  solver: str = "simpls",
-                  center_x: bool = True,
-                  scale_x: bool = True,
-                  center_y: bool = True,
-                  scale_y: bool = False,
-                  tol: float = 1e-6,
-                  max_iter: int = 500,
-                  store_scores: bool = False) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        solver: str = "simpls",
+        center_x: bool = True,
+        scale_x: bool = True,
+        center_y: bool = True,
+        scale_y: bool = False,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+        store_scores: bool = False,
+    ) -> None:
         self.n_components = n_components
         self.solver = solver
         self.center_x = center_x
@@ -168,17 +164,19 @@ class OPLSRegression(_PlsRegressorBase):
     _default_solver = "nipals"
     _deflation = Deflation.ORTHOGONAL
 
-    def __init__(self,
-                  n_components: int = 2,
-                  *,
-                  solver: str = "nipals",
-                  center_x: bool = True,
-                  scale_x: bool = True,
-                  center_y: bool = True,
-                  scale_y: bool = False,
-                  tol: float = 1e-6,
-                  max_iter: int = 500,
-                  store_scores: bool = False) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        solver: str = "nipals",
+        center_x: bool = True,
+        scale_x: bool = True,
+        center_y: bool = True,
+        scale_y: bool = False,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+        store_scores: bool = False,
+    ) -> None:
         self.n_components = n_components
         self.solver = solver
         self.center_x = center_x
@@ -204,16 +202,18 @@ class PCR(_PlsRegressorBase):
     _algorithm = Algorithm.PCR
     _default_solver = "svd"
 
-    def __init__(self,
-                  n_components: int = 2,
-                  *,
-                  center_x: bool = True,
-                  scale_x: bool = True,
-                  center_y: bool = True,
-                  scale_y: bool = False,
-                  tol: float = 1e-6,
-                  max_iter: int = 500,
-                  store_scores: bool = False) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        center_x: bool = True,
+        scale_x: bool = True,
+        center_y: bool = True,
+        scale_y: bool = False,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+        store_scores: bool = False,
+    ) -> None:
         self.n_components = n_components
         # PCR is always SVD-solved — no other solver makes sense; we keep
         # the attribute so the base class can pass it through unchanged.
@@ -239,18 +239,20 @@ class SparsePLSRegression(_PlsRegressorBase):
     _algorithm = Algorithm.SPARSE_PLS
     _default_solver = "simpls"
 
-    def __init__(self,
-                  n_components: int = 2,
-                  *,
-                  sparsity_lambda: float = 0.05,
-                  solver: str = "simpls",
-                  center_x: bool = True,
-                  scale_x: bool = True,
-                  center_y: bool = True,
-                  scale_y: bool = False,
-                  tol: float = 1e-6,
-                  max_iter: int = 500,
-                  store_scores: bool = False) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        sparsity_lambda: float = 0.05,
+        solver: str = "simpls",
+        center_x: bool = True,
+        scale_x: bool = True,
+        center_y: bool = True,
+        scale_y: bool = False,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+        store_scores: bool = False,
+    ) -> None:
         self.n_components = n_components
         self.sparsity_lambda = sparsity_lambda
         self.solver = solver
@@ -281,17 +283,19 @@ class PLSCanonical(_PlsRegressorBase):
     _default_solver = "nipals"
     _deflation = Deflation.CANONICAL
 
-    def __init__(self,
-                  n_components: int = 2,
-                  *,
-                  solver: str = "nipals",
-                  center_x: bool = True,
-                  scale_x: bool = True,
-                  center_y: bool = True,
-                  scale_y: bool = True,
-                  tol: float = 1e-6,
-                  max_iter: int = 500,
-                  store_scores: bool = False) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        solver: str = "nipals",
+        center_x: bool = True,
+        scale_x: bool = True,
+        center_y: bool = True,
+        scale_y: bool = True,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+        store_scores: bool = False,
+    ) -> None:
         self.n_components = n_components
         self.solver = solver
         self.center_x = center_x
@@ -316,16 +320,18 @@ class PLSSVD(_PlsRegressorBase):
     _default_solver = "svd"
     _deflation = Deflation.CANONICAL
 
-    def __init__(self,
-                  n_components: int = 2,
-                  *,
-                  center_x: bool = True,
-                  scale_x: bool = True,
-                  center_y: bool = True,
-                  scale_y: bool = True,
-                  tol: float = 1e-6,
-                  max_iter: int = 500,
-                  store_scores: bool = False) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        center_x: bool = True,
+        scale_x: bool = True,
+        center_y: bool = True,
+        scale_y: bool = True,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+        store_scores: bool = False,
+    ) -> None:
         self.n_components = n_components
         self.solver = "svd"
         self.center_x = center_x
@@ -367,11 +373,9 @@ class Ridge(BaseEstimator, RegressorMixin):
         convention). Coefficients are reported on the original X scale.
     """
 
-    def __init__(self,
-                  alpha: float = 1.0,
-                  *,
-                  fit_intercept: bool = True,
-                  scale_x: bool = False) -> None:
+    def __init__(
+        self, alpha: float = 1.0, *, fit_intercept: bool = True, scale_x: bool = False
+    ) -> None:
         self.alpha = alpha
         self.fit_intercept = fit_intercept
         self.scale_x = scale_x
@@ -396,7 +400,8 @@ class Ridge(BaseEstimator, RegressorMixin):
         cfg = self._make_config()
         try:
             result = _methods.ridge_fit(
-                ctx, cfg, X_arr, y_arr, ridge_lambda=float(self.alpha))
+                ctx, cfg, X_arr, y_arr, ridge_lambda=float(self.alpha)
+            )
         finally:
             cfg.close()
         # Read everything before committing fitted state so a partial
@@ -407,13 +412,11 @@ class Ridge(BaseEstimator, RegressorMixin):
         coef_T = coef.T.copy()
         if coef_T.shape[0] == 1:
             coef_T = coef_T.reshape(coef_T.shape[1])
-        intercept_arr = np.asarray(
-            result.matrix("intercept"), dtype=np.float64).ravel()
+        intercept_arr = np.asarray(result.matrix("intercept"), dtype=np.float64).ravel()
         # Commit.
         self.coef_ = coef_T
         self.intercept_ = (
-            float(intercept_arr[0]) if intercept_arr.size == 1
-            else intercept_arr
+            float(intercept_arr[0]) if intercept_arr.size == 1 else intercept_arr
         )
         self.n_features_in_ = int(X_arr.shape[1])
         if hasattr(X, "columns"):
@@ -429,7 +432,10 @@ class Ridge(BaseEstimator, RegressorMixin):
         else:
             preds = X_arr @ self.coef_.T + self.intercept_
         # sklearn convention: 1-D y in -> 1-D predictions out.
-        if (getattr(self, "_y_ndim_", 2) == 1 and preds.ndim == 2
-                and preds.shape[1] == 1):
+        if (
+            getattr(self, "_y_ndim_", 2) == 1
+            and preds.ndim == 2
+            and preds.shape[1] == 1
+        ):
             preds = preds.ravel()
         return preds

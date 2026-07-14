@@ -1,0 +1,93 @@
+{
+  "$schema": "../contracts/study_trace.v1.schema.json",
+  "events": [
+    { "kind": "ASK", "sequence": 0, "trial_id": 0 },
+    { "kind": "ASK", "sequence": 1, "trial_id": 1 },
+    { "kind": "ASK", "sequence": 2, "trial_id": 2 },
+    { "kind": "INTERMEDIATE", "score": 2.75, "sequence": 3, "should_prune": false, "step": 0, "trial_id": 0 },
+    { "kind": "INTERMEDIATE", "score": 8.5, "sequence": 4, "should_prune": false, "step": 0, "trial_id": 2 },
+    { "kind": "INTERMEDIATE", "score": 1.25, "sequence": 5, "should_prune": false, "step": 1, "trial_id": 0 },
+    { "kind": "INTERMEDIATE", "score": 8.0, "sequence": 6, "should_prune": true, "step": 1, "trial_id": 2 },
+    { "kind": "TERMINAL", "sequence": 7, "status": "PRUNED", "trial_id": 2 },
+    { "error_code": "OBJECTIVE_EXCEPTION", "kind": "TERMINAL", "sequence": 8, "status": "FAILED", "trial_id": 1 },
+    { "kind": "ASK", "sequence": 9, "trial_id": 3 },
+    { "kind": "INTERMEDIATE", "score": 4.0, "sequence": 10, "should_prune": false, "step": 0, "trial_id": 3 },
+    { "error_code": "BUDGET_CANCELLED", "kind": "TERMINAL", "sequence": 11, "status": "CANCELLED", "trial_id": 3 },
+    { "kind": "TERMINAL", "sequence": 12, "status": "COMPLETED", "trial_id": 0 }
+  ],
+  "format": "n4m.hpo.study_trace",
+  "schema_version": 1,
+  "study": {
+    "direction": "minimize",
+    "execution": {
+      "max_in_flight": 3,
+      "mode": "ordered_events",
+      "tell_order": "event_sequence"
+    },
+    "id": "lifecycle_states",
+    "pruner": "median",
+    "sampler": "contract_fixture",
+    "seed": 20260711
+  },
+  "summary": {
+    "max_observed_in_flight": 3,
+    "n_intermediates": 5,
+    "n_trials": 4,
+    "status_counts": {
+      "CANCELLED": 1,
+      "COMPLETED": 1,
+      "FAILED": 1,
+      "PRUNED": 1
+    }
+  },
+  "trials": [
+    {
+      "id": 0,
+      "intermediates": [
+        { "score": 2.75, "sequence": 3, "should_prune": false, "step": 0 },
+        { "score": 1.25, "sequence": 5, "should_prune": false, "step": 1 }
+      ],
+      "params": { "x": 1.5 },
+      "score": 0.25,
+      "status": "COMPLETED"
+    },
+    {
+      "error": {
+        "category": "objective",
+        "code": "OBJECTIVE_EXCEPTION",
+        "details": { "exception_type": "FixtureError", "phase": "objective" },
+        "message": "deterministic objective failure fixture",
+        "retryable": false
+      },
+      "id": 1,
+      "intermediates": [],
+      "params": { "x": 3.0 },
+      "status": "FAILED"
+    },
+    {
+      "id": 2,
+      "intermediates": [
+        { "score": 8.5, "sequence": 4, "should_prune": false, "step": 0 },
+        { "score": 8.0, "sequence": 6, "should_prune": true, "step": 1 }
+      ],
+      "params": { "x": 4.0 },
+      "pruned_at": 1,
+      "status": "PRUNED"
+    },
+    {
+      "error": {
+        "category": "scheduler",
+        "code": "BUDGET_CANCELLED",
+        "details": { "reason": "study_timeout" },
+        "message": "trial cancelled before terminal evaluation",
+        "retryable": true
+      },
+      "id": 3,
+      "intermediates": [
+        { "score": 4.0, "sequence": 10, "should_prune": false, "step": 0 }
+      ],
+      "params": { "x": 2.0 },
+      "status": "CANCELLED"
+    }
+  ]
+}

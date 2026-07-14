@@ -5381,6 +5381,43 @@ n4m_status_t fit_pls_sparse_simpls(Context& ctx,
     return fit_pls_sparse_simpls_chun_keles(ctx, cfg, X, Y, out_model);
 }
 
+bool canonical_regression_routing(n4m_algorithm_t algorithm,
+                                  n4m_solver_t& solver,
+                                  n4m_deflation_t& deflation) noexcept {
+    // The canonical (solver, deflation) pair for each generic regression route.
+    // These are exactly the combinations validate_fit_request() whitelists and
+    // fit_model() dispatches on; this switch is the sole place that *picks* one,
+    // keeping solver/deflation choices out of any higher-level registry.
+    switch (algorithm) {
+        case N4M_ALGO_PLS_REGRESSION:
+            solver = N4M_SOLVER_NIPALS;
+            deflation = N4M_DEFLATION_REGRESSION;
+            return true;
+        case N4M_ALGO_PLS_CANONICAL:
+            solver = N4M_SOLVER_NIPALS;
+            deflation = N4M_DEFLATION_CANONICAL;
+            return true;
+        case N4M_ALGO_PLS_SVD:
+            solver = N4M_SOLVER_SVD;
+            deflation = N4M_DEFLATION_CANONICAL;
+            return true;
+        case N4M_ALGO_OPLS:
+            solver = N4M_SOLVER_NIPALS;
+            deflation = N4M_DEFLATION_ORTHOGONAL;
+            return true;
+        case N4M_ALGO_PCR:
+            solver = N4M_SOLVER_SVD;
+            deflation = N4M_DEFLATION_REGRESSION;
+            return true;
+        case N4M_ALGO_SPARSE_PLS:
+            solver = N4M_SOLVER_SIMPLS;
+            deflation = N4M_DEFLATION_REGRESSION;
+            return true;
+        default:
+            return false;
+    }
+}
+
 n4m_status_t fit_model(Context& ctx,
                        const Config& cfg,
                        const n4m_matrix_view_t& X,

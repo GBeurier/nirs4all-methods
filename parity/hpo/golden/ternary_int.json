@@ -1,202 +1,252 @@
 [
   {
+    "asked_at": 0,
     "id": 0,
     "params": {
       "k": 1
     },
     "score": 1.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 1
   },
   {
+    "asked_at": 2,
     "id": 1,
     "params": {
       "k": 30
     },
     "score": 900.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 3
   },
   {
+    "asked_at": 4,
     "id": 2,
     "params": {
       "k": 16
     },
     "score": 256.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 5
   },
   {
+    "asked_at": 6,
     "id": 3,
     "params": {
       "k": 8
     },
     "score": 64.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 7
   },
   {
+    "asked_at": 8,
     "id": 4,
     "params": {
       "k": 4
     },
     "score": 16.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 9
   },
   {
+    "asked_at": 10,
     "id": 5,
     "params": {
       "k": 2
     },
     "score": 4.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 11
   },
   {
+    "asked_at": 12,
     "id": 6,
     "params": {
       "k": 3
     },
     "score": 9.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 13
   },
   {
+    "asked_at": 14,
     "id": 7,
     "params": {
       "k": 5
     },
     "score": 25.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 15
   },
   {
+    "asked_at": 16,
     "id": 8,
     "params": {
       "k": 6
     },
     "score": 36.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 17
   },
   {
+    "asked_at": 18,
     "id": 9,
     "params": {
       "k": 7
     },
     "score": 49.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 19
   },
   {
+    "asked_at": 20,
     "id": 10,
     "params": {
       "k": 9
     },
     "score": 81.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 21
   },
   {
+    "asked_at": 22,
     "id": 11,
     "params": {
       "k": 10
     },
     "score": 100.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 23
   },
   {
+    "asked_at": 24,
     "id": 12,
     "params": {
       "k": 11
     },
     "score": 121.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 25
   },
   {
+    "asked_at": 26,
     "id": 13,
     "params": {
       "k": 12
     },
     "score": 144.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 27
   },
   {
+    "asked_at": 28,
     "id": 14,
     "params": {
       "k": 13
     },
     "score": 169.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 29
   },
   {
+    "asked_at": 30,
     "id": 15,
     "params": {
       "k": 14
     },
     "score": 196.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 31
   },
   {
+    "asked_at": 32,
     "id": 16,
     "params": {
       "k": 15
     },
     "score": 225.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 33
   },
   {
+    "asked_at": 34,
     "id": 17,
     "params": {
       "k": 17
     },
     "score": 289.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 35
   },
   {
+    "asked_at": 36,
     "id": 18,
     "params": {
       "k": 18
     },
     "score": 324.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 37
   },
   {
+    "asked_at": 38,
     "id": 19,
     "params": {
       "k": 19
     },
     "score": 361.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 39
   },
   {
+    "asked_at": 40,
     "id": 20,
     "params": {
       "k": 20
     },
     "score": 400.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 41
   },
   {
+    "asked_at": 42,
     "id": 21,
     "params": {
       "k": 21
     },
     "score": 441.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 43
   },
   {
+    "asked_at": 44,
     "id": 22,
     "params": {
       "k": 22
     },
     "score": 484.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 45
   },
   {
+    "asked_at": 46,
     "id": 23,
     "params": {
       "k": 23
     },
     "score": 529.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 47
   },
   {
+    "asked_at": 48,
     "id": 24,
     "params": {
       "k": 24
     },
     "score": 576.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 49
   }
 ]

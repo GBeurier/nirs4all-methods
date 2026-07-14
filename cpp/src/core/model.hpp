@@ -168,6 +168,19 @@ class Model {
     const n4m_matrix_view_t& Y,
     std::unique_ptr<Model>& out_model);
 
+// Fill `solver` / `deflation` with the canonical routing recipe for a generic
+// native regression algorithm, so a caller that only knows the algorithm (e.g.
+// the finetune registry) never has to re-encode solver/deflation choices. This
+// is the single authority for that mapping and stays co-located with fit_model /
+// validate_fit_request: it returns exactly the (solver, deflation) pair those
+// accept for the algorithm, and never invents a combination they would reject.
+// Returns false (leaving both outputs untouched) for any algorithm that has no
+// generic fit_model regression route (classification chassis, multiblock/local
+// weighting, unregistered enums).
+[[nodiscard]] bool canonical_regression_routing(n4m_algorithm_t algorithm,
+                                                n4m_solver_t& solver,
+                                                n4m_deflation_t& deflation) noexcept;
+
 [[nodiscard]] n4m_status_t predict_into(
     Context& ctx,
     const Model& model,
