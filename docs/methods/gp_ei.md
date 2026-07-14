@@ -3,12 +3,12 @@
 **Role:** `optimization` · **kind:** `n4m_sampler_kind_t = N4M_SAMPLER_GP_EI` · **since:** ABI 2.1 (F4)
 
 Bayesian optimization with a Gaussian-process surrogate and the Expected
-Improvement acquisition. After `n_startup_trials` random trials, every ask fits an
-RBF GP on the completed, scored history over the **continuous axes** (int / float /
-log-int / log-float, in unit space), then returns the candidate that maximises EI
-over a random acquisition batch. This is the sample-efficient sampler for
-smooth, low-dimensional, expensive objectives — the regime where a single PLS/DL
-fit dominates the trial cost, so spending compute to pick the *next* point pays off.
+Improvement acquisition. Once at least `max(n_startup_trials, 2)` completed,
+scored trials are available, every ask fits an RBF GP over the numeric axes (int /
+float / log-int / log-float, in unit space), then returns the candidate that
+maximises EI over a random acquisition batch. It is intended for smooth,
+low-dimensional, expensive objectives where spending compute to pick the next
+point can be worthwhile.
 
 The surrogate is deliberately simple and dependency-free:
 
@@ -21,11 +21,20 @@ The surrogate is deliberately simple and dependency-free:
   random search over 64 candidates per ask (direction-symmetric — MAXIMIZE is
   handled by negating the posterior mean).
 
-Non-continuous axes (categorical / ordinal / sorted-tuple / conditionally
-inactive) are drawn independently by the shared decode — the GP models only the
-continuous subspace (Optuna's independent-fallback convention). Warm-start
-(`enqueue`) is unsupported (`N4M_ERR_UNSUPPORTED`): a forced candidate is not a
-model proposal. Purely-categorical spaces degrade to random (use `tpe` there).
+The GP models every numeric axis (`int`, `float`, `log_int`, `log_float`) in unit
+space; stepped and integer observations are recorded after snapping. Categorical
+and ordinal axes are drawn independently from the native RNG. A `sorted_tuple`
+is also generated independently and is not represented in the surrogate.
+Conditional activation is applied to the decoded trial. In a purely categorical
+space there is no GP subspace, so all proposals are uniform native draws (use
+`tpe` when categories should be learned).
+
+Warm-start (`enqueue`) is unsupported (`N4M_ERR_UNSUPPORTED`): a forced candidate
+is not a model proposal. Search spaces containing hard `mutex_group`, `requires`
+or `exclude` constraints are rejected at `n4m_optimizer_create` with
+`N4M_ERR_UNSUPPORTED`; there is no fitness fallback. Hard constraints that
+reference a tuple root are rejected for every sampler. A non-`none` liar is also
+rejected (`N4M_ERR_NOT_IMPLEMENTED`), so batch asks do not model pending trials.
 
 ## Usage (C ABI)
 
@@ -33,17 +42,17 @@ model proposal. Purely-categorical spaces degrade to random (use `tpe` there).
 n4m_optimizer_options_t opts;
 n4m_optimizer_options_init(&opts);
 opts.sampler = N4M_SAMPLER_GP_EI;
-opts.n_startup_trials = 8;   // random exploration before the GP takes over
+opts.n_startup_trials = 8;   // explicit override; options_init() defaults to 10
 ```
 
 ## Parity
 
 - **Tier C** (self-consistency + convergence): GP-fitting details (lengthscale
-  policy, acquisition optimiser) differ across libraries, so there is no bit-exact
-  external reference. The C++ test asserts convergence on a smooth 2-D objective
-  in ~60 evaluations (`best < 0.5`; empirically `< 0.03` across ten seeds — far
-  more sample-efficient than random/CMA-ES on the same objective). Cross-binding
-  identical at a fixed seed via the shared `n4m_rng` and native kernel/Cholesky.
+  policy, acquisition optimizer) differ across libraries, so there is no
+  bit-exact external reference. The C++ tests check minimization, maximization,
+  categorical-only and degenerate-history behavior. Track-Q commits the native
+  `gp_ei_sphere2` trace as an acceptance target for future bindings; it does not
+  yet cover every pruner or mixed-space combination.
 
 ## References
 

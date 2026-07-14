@@ -7,11 +7,20 @@ Layout matters: the C ABI fixes :class:`n4m_matrix_view_t` at 48 bytes on LP64
 :class:`n4m_split_result_t` and :class:`n4m_transfer_metrics_t` follow the
 same hand-mirroring approach.
 """
+
 from __future__ import annotations
 
 import ctypes
 from ctypes import (
-    POINTER, Structure, c_double, c_int, c_int32, c_int64, c_uint8, c_uint64, c_void_p,
+    POINTER,
+    Structure,
+    c_double,
+    c_int,
+    c_int32,
+    c_int64,
+    c_uint8,
+    c_uint64,
+    c_void_p,
 )
 
 
@@ -164,6 +173,24 @@ class OptimizerOptions(Structure):
 assert ctypes.sizeof(MatrixView) == 48, (
     f"MatrixView layout mismatch: {ctypes.sizeof(MatrixView)} != 48"
 )
+if ctypes.sizeof(c_void_p) == 8:
+    assert ctypes.sizeof(OptimizerOptions) == 120, (
+        f"OptimizerOptions layout mismatch: {ctypes.sizeof(OptimizerOptions)} != 120"
+    )
+    _OPTIMIZER_OPTION_OFFSETS = {
+        "struct_size": 0,
+        "sampler": 8,
+        "n_startup_trials": 32,
+        "seed": 40,
+        "timeout_seconds": 48,
+        "reserved": 64,
+    }
+    for _field, _expected_offset in _OPTIMIZER_OPTION_OFFSETS.items():
+        _actual_offset = getattr(OptimizerOptions, _field).offset
+        assert _actual_offset == _expected_offset, (
+            f"OptimizerOptions.{_field} offset mismatch: "
+            f"{_actual_offset} != {_expected_offset}"
+        )
 
 
 __all__ = [

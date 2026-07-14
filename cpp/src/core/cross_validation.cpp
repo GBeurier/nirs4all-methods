@@ -3,6 +3,7 @@
 #include "core/cross_validation.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -26,13 +27,18 @@ namespace {
     if (rows < 0 || cols < 0) {
         return false;
     }
-    const auto urows = static_cast<std::size_t>(rows);
-    const auto ucols = static_cast<std::size_t>(cols);
-    if (ucols != 0U &&
-        urows > std::numeric_limits<std::size_t>::max() / ucols) {
+    const auto urows = static_cast<std::uint64_t>(rows);
+    const auto ucols = static_cast<std::uint64_t>(cols);
+    const auto size_max =
+        static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max());
+    if (urows > size_max || ucols > size_max) {
         return false;
     }
-    out = urows * ucols;
+    if (ucols != 0U &&
+        urows > size_max / ucols) {
+        return false;
+    }
+    out = static_cast<std::size_t>(urows * ucols);
     return true;
 }
 
@@ -77,6 +83,22 @@ namespace {
     if (view.dtype != N4M_DTYPE_F64 && view.dtype != N4M_DTYPE_F32) {
         ctx.set_errorf("%s dtype must be f64 or f32", name);
         return N4M_ERR_DTYPE_MISMATCH;
+    }
+    return N4M_OK;
+}
+
+[[nodiscard]] n4m_status_t validate_finite_values(::n4m::core::Context& ctx,
+                                                  const n4m_matrix_view_t& view,
+                                                  const char* name) noexcept {
+    const auto rows = static_cast<std::size_t>(view.rows);
+    const auto cols = static_cast<std::size_t>(view.cols);
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            if (!std::isfinite(read_value(view, row, col))) {
+                ctx.set_errorf("%s contains NaN or Inf", name);
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+        }
     }
     return N4M_OK;
 }
@@ -174,23 +196,15 @@ namespace {
 
 namespace n4m::core {
 
-n4m_status_t cross_validate_regression(Context& ctx,
-                                       const Config& cfg,
-                                       const n4m_matrix_view_t& X,
-                                       const n4m_matrix_view_t& Y,
-                                       const ValidationPlan& plan,
-                                       CrossValidationResult& out) {
+n4m_status_t validate_regression_cv_inputs(Context& ctx,
+                                            const n4m_matrix_view_t& X,
+                                            const n4m_matrix_view_t& Y,
+                                            const ValidationPlan& plan) {
     try {
-        out = CrossValidationResult{};
-
         n4m_status_t status = validate_float_view(ctx, X, "X");
-        if (status != N4M_OK) {
-            return status;
-        }
+        if (status != N4M_OK) return status;
         status = validate_float_view(ctx, Y, "Y");
-        if (status != N4M_OK) {
-            return status;
-        }
+        if (status != N4M_OK) return status;
         if (X.rows == 0 || X.cols == 0 || Y.cols == 0) {
             ctx.set_error("cross-validation matrices must be non-empty");
             return N4M_ERR_INVALID_ARGUMENT;
@@ -211,8 +225,65 @@ n4m_status_t cross_validate_regression(Context& ctx,
             ctx.set_error("validation plan must contain at least one fold");
             return N4M_ERR_INVALID_ARGUMENT;
         }
+        if (X.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max()) ||
+            Y.cols > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
+            ctx.set_error("matrix column count exceeds the ABI limits");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
 
+        std::size_t matrix_values = 0;
+        if (!checked_matrix_size(X.rows, X.cols, matrix_values) ||
+            !checked_matrix_size(Y.rows, Y.cols, matrix_values)) {
+            ctx.set_error("cross-validation matrix shape is too large");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        status = validate_finite_values(ctx, X, "X");
+        if (status != N4M_OK) return status;
+        status = validate_finite_values(ctx, Y, "Y");
+        if (status != N4M_OK) return status;
+
+        std::size_t prediction_values = 0;
+        if (!checked_matrix_size(X.rows, Y.cols, prediction_values)) {
+            ctx.set_error("cross-validation prediction matrix is too large");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
         const auto n = static_cast<std::size_t>(X.rows);
+        std::vector<std::int32_t> prediction_counts(n, 0);
+        for (std::size_t fold_idx = 0; fold_idx < plan.folds.size(); ++fold_idx) {
+            status = validate_plan_fold(ctx, plan.folds[fold_idx], n, fold_idx,
+                                        prediction_counts);
+            if (status != N4M_OK) return status;
+        }
+        for (std::size_t sample = 0; sample < n; ++sample) {
+            if (prediction_counts[sample] != 1) {
+                ctx.set_errorf("sample %llu is not covered by exactly one CV test fold",
+                               ull(sample));
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+        }
+        ctx.clear_error();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        ctx.set_error("out of memory while validating cross-validation inputs");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        ctx.set_error("unexpected exception while validating cross-validation inputs");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+n4m_status_t cross_validate_regression(Context& ctx,
+                                       const Config& cfg,
+                                       const n4m_matrix_view_t& X,
+                                       const n4m_matrix_view_t& Y,
+                                       const ValidationPlan& plan,
+                                       CrossValidationResult& out) {
+    try {
+        out = CrossValidationResult{};
+
+        n4m_status_t status = validate_regression_cv_inputs(ctx, X, Y, plan);
+        if (status != N4M_OK) return status;
+
         const auto p = static_cast<std::size_t>(X.cols);
         const auto q = static_cast<std::size_t>(Y.cols);
         std::size_t prediction_values = 0;
@@ -229,16 +300,10 @@ n4m_status_t cross_validate_regression(Context& ctx,
         out.test_offsets.reserve(plan.folds.size() + 1U);
         out.test_offsets.push_back(0);
 
-        std::vector<std::int32_t> prediction_counts(n, 0);
         std::size_t max_train = 0;
         std::size_t max_test = 0;
         for (std::size_t fold_idx = 0; fold_idx < plan.folds.size(); ++fold_idx) {
             const ValidationFold& fold = plan.folds[fold_idx];
-            status = validate_plan_fold(ctx, fold, n, fold_idx, prediction_counts);
-            if (status != N4M_OK) {
-                out = CrossValidationResult{};
-                return status;
-            }
             max_train = std::max(max_train, fold.train_indices.size());
             max_test = std::max(max_test, fold.test_indices.size());
         }
@@ -332,15 +397,6 @@ n4m_status_t cross_validate_regression(Context& ctx,
                 out.test_indices.push_back(fold.test_indices[i]);
             }
             out.test_offsets.push_back(static_cast<std::int64_t>(out.test_indices.size()));
-        }
-
-        for (std::size_t sample = 0; sample < n; ++sample) {
-            if (prediction_counts[sample] != 1) {
-                ctx.set_errorf("sample %llu is not covered by exactly one CV test fold",
-                               ull(sample));
-                out = CrossValidationResult{};
-                return N4M_ERR_INVALID_ARGUMENT;
-            }
         }
 
         n4m_matrix_view_t all_predictions =

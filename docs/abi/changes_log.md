@@ -1,5 +1,32 @@
 # ABI — Changes Log
 
+## 2026-07-11 — ABI 2.2.0: HPO terminal lifecycle and owning rich trace
+
+Additive MINOR change: `n4m_trial_status_t` adds the public terminal value
+`N4M_TRIAL_CANCELLED=4`. No function symbol or public struct layout changed.
+The existing `n4m_optimizer_tell_result` now persists a structured
+`{code, message, retryable}` error for `FAILED` and `CANCELLED`; explicit fields
+use the fail-closed versioned text wire
+`n4m.error.v1|CODE|0-or-1|message`.
+Invalid UTF-8 is rejected before lifecycle mutation; search-space names and
+string categorical labels are checked at their builder boundaries as well.
+
+The existing `n4m_optimizer_get_trials` method-result payload retains its five
+compatibility matrices and adds trace-v1 keys for exact int64 ids, ordered
+parameters and activation/category metadata, optimizer-global event order,
+intermediate values, and structured errors. Its result is an owning snapshot
+whose buffers survive optimizer destruction. Python exposes the payload as
+owning `TrialRecord`, `TrialParameter`, `IntermediateValue`, and `TrialError`
+objects through `Optimizer.get_trials(since_id=...)`.
+
+The already-exported `n4m_optimizer_save` and `n4m_optimizer_load` reservations
+are now activated without a symbol, signature, enum, struct-layout, ABI-version,
+or SONAME change. They read/write the portable little-endian N4MOPT v1 study
+checkpoint. Load is transactional and fail-closed for corruption, future
+versions, excessive sizes/counts, and inconsistent option/search-space/sampler
+state. Exported-symbol snapshots remain 733/733, and SONAME remains
+`libn4m.so.2`.
+
 ## 2026-07-10 — ABI 2.1.0: native HPO optimizer surface (`optimization` role)
 
 Additive change (MINOR). New role header `cpp/include/n4m/optimization.h` — a
@@ -18,12 +45,13 @@ samplers/pruners (F1–F4) add no further public symbols. See
 - optimizer (13): `n4m_optimizer_options_init`, `n4m_optimizer_create`,
   `_destroy`, `_enqueue`, `_ask`, `_ask_batch`, `_tell`, `_tell_result`,
   `_tell_intermediate`, `_best`, `_get_trials`, `_save`, `_load`
-  (`_save`/`_load` reserved → `N4M_ERR_NOT_IMPLEMENTED` until F7).
+  (`_save`/`_load` were reserved in 2.1 and activated by N4MOPT v1 in 2.2 without
+  changing their signatures).
 - trial accessors (8): `n4m_trial_get_id`, `_get_int`, `_get_float`,
   `_get_category`, `_is_active`, `_get_rung`, `_get_status`, `_get_duration`.
 - pure-native driver (1): `n4m_finetune_estimator`.
 
-New 4-byte enums (guard-railed in `n4m.h`): `n4m_param_kind_t`,
+New 4-byte enums (guard-railed in `optimization.h`): `n4m_param_kind_t`,
 `n4m_cat_type_t`, `n4m_constraint_kind_t`, `n4m_sampler_kind_t`,
 `n4m_pruner_kind_t`, `n4m_opt_direction_t`, `n4m_eval_mode_t`, `n4m_metric_t`,
 `n4m_liar_kind_t`, `n4m_trial_status_t`. New value struct
@@ -35,7 +63,7 @@ of `n4m_optimizer_options_t` was narrowed from `reserved[64]` to two named
 plus `reserved[56]`. `sizeof(n4m_optimizer_options_t)` is unchanged (verified
 C == Python == 120 bytes) and no exported symbol changed, so this is
 ABI-compatible: callers that zero-initialise via `n4m_optimizer_options_init`
-get `0` (= auto/default) for both. All eight `n4m_sampler_kind_t` values and all
+get `0` (= auto/default) for both. All nine `n4m_sampler_kind_t` values and all
 five `n4m_pruner_kind_t` values are now implemented (reserved-value dispatch now
 only fires for out-of-range enums).
 

@@ -6,4 +6,5 @@
 
 #include "n4m/optimization.h"
 
+extern "C" void n4m_include_check_optimization_cpp(void);
 extern "C" void n4m_include_check_optimization_cpp(void) {}

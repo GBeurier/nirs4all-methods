@@ -12,8 +12,10 @@ Two kinds of check, matching the tiers used across the rest of the project:
   intentionally NOT used as a hard gate: its pruners share the intent but not the
   exact peer-set/percentile conventions, so agreement is only approximate.)
 """
+
 from __future__ import annotations
 
+import math
 from statistics import median as _median
 
 
@@ -26,9 +28,15 @@ def sobol_reference(dim: int, n: int):
 
 # ---- pure-Python pruner rules (mirror cpp/src/core/optimization/pruners.cpp) ----
 
-def median_should_prune(history: dict[int, list[tuple[int, float]]], trial_id: int,
-                        step: int, score: float, min_peers: int,
-                        maximize: bool = False) -> bool:
+
+def median_should_prune(
+    history: dict[int, list[tuple[int, float]]],
+    trial_id: int,
+    step: int,
+    score: float,
+    min_peers: int,
+    maximize: bool = False,
+) -> bool:
     """Vizier median stopping rule. ``history`` maps trial_id -> [(step, score)]."""
     peers = []
     for tid, rungs in history.items():
@@ -44,8 +52,14 @@ def median_should_prune(history: dict[int, list[tuple[int, float]]], trial_id: i
     return score < med if maximize else score > med
 
 
-def asha_should_prune(history: dict[int, list[tuple[int, float]]], trial_id: int,
-                      step: int, score: float, eta: int, maximize: bool = False) -> bool:
+def asha_should_prune(
+    history: dict[int, list[tuple[int, float]]],
+    trial_id: int,
+    step: int,
+    score: float,
+    eta: int,
+    maximize: bool = False,
+) -> bool:
     """Asynchronous successive halving: survive iff in the top 1/eta at the rung."""
     peers = []
     for tid, rungs in history.items():
@@ -63,6 +77,54 @@ def asha_should_prune(history: dict[int, list[tuple[int, float]]], trial_id: int
     return better >= n_promote
 
 
+def racing_should_prune(
+    history: dict[int, list[tuple[int, float]]],
+    trial_id: int,
+    *,
+    order: list[int] | None = None,
+    delta: float = 0.05,
+    maximize: bool = False,
+) -> bool:
+    """Hoeffding racing over repeated observations, independently specified.
+
+    A candidate is pruned only when its optimistic confidence bound is strictly
+    worse than the best eligible peer's pessimistic bound.  Peers and the
+    candidate need at least two observations.
+    """
+    own = [score for _step, score in history.get(trial_id, ())]
+    if len(own) < 2:
+        return False
+
+    observed = [score for rungs in history.values() for _step, score in rungs]
+    lo, hi = min(observed), max(observed)
+    score_range = hi - lo if hi > lo else 1.0
+
+    best_mean = 0.0
+    best_n = 0
+    have_best = False
+    peer_order = order if order is not None else list(history)
+    for tid in peer_order:
+        if tid == trial_id:
+            continue
+        scores = [score for _step, score in history.get(tid, ())]
+        if len(scores) < 2:
+            continue
+        candidate_mean = sum(scores) / len(scores)
+        better = candidate_mean > best_mean if maximize else candidate_mean < best_mean
+        if not have_best or better:
+            best_mean = candidate_mean
+            best_n = len(scores)
+            have_best = True
+    if not have_best:
+        return False
+    own_mean = sum(own) / len(own)
+    own_eps = score_range * math.sqrt(math.log(2.0 / delta) / (2.0 * len(own)))
+    best_eps = score_range * math.sqrt(math.log(2.0 / delta) / (2.0 * best_n))
+    if maximize:
+        return own_mean + own_eps < best_mean - best_eps
+    return own_mean - own_eps > best_mean + best_eps
+
+
 def _rung_index(resource: int, eta: int) -> int:
     if resource < 1:
         return -1
@@ -75,9 +137,16 @@ def _rung_index(resource: int, eta: int) -> int:
     return k
 
 
-def hyperband_should_prune(order: list[int], history: dict[int, list[tuple[int, float]]],
-                           trial_id: int, step: int, score: float, eta: int,
-                           max_resource: int, maximize: bool = False) -> bool:
+def hyperband_should_prune(
+    order: list[int],
+    history: dict[int, list[tuple[int, float]]],
+    trial_id: int,
+    step: int,
+    score: float,
+    eta: int,
+    max_resource: int,
+    maximize: bool = False,
+) -> bool:
     """Bracketed successive halving. ``order`` is the ask order of trial ids
     (defines the stable index → bracket assignment); ``max_resource`` 0 = derive.
     """

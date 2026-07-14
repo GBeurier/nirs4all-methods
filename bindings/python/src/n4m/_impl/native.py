@@ -6,6 +6,7 @@ matching C handle, run the requested fit/transform/apply call, return NumPy
 arrays, and destroy the handle. The scikit-learn compatible estimators live in
 ``n4m.sklearn``.
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -24,18 +25,57 @@ from .._ffi import lib, library_path
 from .._matrix import as_f64_2d, empty_like_f64, empty_like_i32, numpy_to_view
 from .._rng import PCG64
 from .._types import FilterStats, SplitResult, TransferMetrics
+from .._validation import (
+    _create_validation_plan_from_fold_ids,
+    _selector_fold_ids,
+)
 
 _LSNV_PAD_MODES = {"reflect": 0, "edge": 1, "constant": 2, 0: 0, 1: 1, 2: 2}
 _AREA_METHODS = {"sum": 0, "abs_sum": 1, "trapz": 2, 0: 0, 1: 1, 2: 2}
-_SAVGOL_MODES = {"mirror": 0, "constant": 1, "nearest": 2, "wrap": 3, "interp": 4, 0: 0, 1: 1, 2: 2, 3: 3, 4: 4}
-_GAUSSIAN_MODES = {"reflect": 0, "constant": 1, "nearest": 2, "mirror": 3, "wrap": 4, 0: 0, 1: 1, 2: 2, 3: 3, 4: 4}
+_SAVGOL_MODES = {
+    "mirror": 0,
+    "constant": 1,
+    "nearest": 2,
+    "wrap": 3,
+    "interp": 4,
+    0: 0,
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+}
+_GAUSSIAN_MODES = {
+    "reflect": 0,
+    "constant": 1,
+    "nearest": 2,
+    "mirror": 3,
+    "wrap": 4,
+    0: 0,
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+}
 _WAVELET_FAMILIES = {"haar": 0, "db4": 1, "sym4": 2, "coif1": 3, 0: 0, 1: 1, 2: 2, 3: 3}
 _WAVELET_BOUNDARIES = {"periodization": 0, "symmetric": 1, "zero": 2, 0: 0, 1: 1, 2: 2}
 _WAVELET_THRESHOLDS = {"soft": 0, "hard": 1, 0: 0, 1: 1}
 _WAVELET_NOISE = {"median": 0, "std": 1, 0: 0, 1: 1}
 _WAVELET_FEATURE_ENTROPY = {"energy": 0, "histogram": 1, 0: 0, 1: 1}
 _Y_METHODS = {"iqr": 0, "zscore": 1, "percentile": 2, "mad": 3, 0: 0, 1: 1, 2: 2, 3: 3}
-_X_METHODS = {"mahalanobis": 0, "robust_mahalanobis": 1, "pca_residual": 2, "pca_leverage": 3, "isolation_forest": 4, "lof": 5, 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
+_X_METHODS = {
+    "mahalanobis": 0,
+    "robust_mahalanobis": 1,
+    "pca_residual": 2,
+    "pca_leverage": 3,
+    "isolation_forest": 4,
+    "lof": 5,
+    0: 0,
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 4,
+    5: 5,
+}
 _LEVERAGE_METHODS = {"hat": 0, "pca": 1, 0: 0, 1: 1}
 _COMPOSITE_MODES = {"any": 0, "all": 1, 0: 0, 1: 1}
 _RANDOM_X_OPS = {"multiply": 0, "add": 1, "subtract": 2, 0: 0, 1: 1, 2: 2}
@@ -356,13 +396,19 @@ def _enum(table: dict, value, name: str) -> int:
 
 def _create(prefix: str, *args) -> ctypes.c_void_p:
     handle = ctypes.c_void_p()
-    check(getattr(lib, f"{prefix}_create")(ctypes.byref(handle), *args), f"{prefix}_create")
+    check(
+        getattr(lib, f"{prefix}_create")(ctypes.byref(handle), *args),
+        f"{prefix}_create",
+    )
     return handle
 
 
 def _create_ex(prefix: str, *args) -> ctypes.c_void_p:
     handle = ctypes.c_void_p()
-    check(getattr(lib, f"{prefix}_create_ex")(ctypes.byref(handle), *args), f"{prefix}_create_ex")
+    check(
+        getattr(lib, f"{prefix}_create_ex")(ctypes.byref(handle), *args),
+        f"{prefix}_create_ex",
+    )
     return handle
 
 
@@ -529,9 +575,7 @@ def _aom_pls_score_mode_id(pls_score_mode) -> int:
     try:
         return int(_AOM_PLS_SCORE_MODES[pls_score_mode])
     except KeyError as exc:
-        raise ValueError(
-            f"unknown AOM pls_score_mode: {pls_score_mode!r}"
-        ) from exc
+        raise ValueError(f"unknown AOM pls_score_mode: {pls_score_mode!r}") from exc
 
 
 def _aom_pls_score_mode_name(pls_score_mode) -> str:
@@ -1107,9 +1151,8 @@ def moment_screen_backend_recommendation(
         and head_name == "pls"
         and n_features_i >= cuda_pls_min_device_features_i
     )
-    uses_cuda_pls_many_batched = (
-        uses_cuda_pls_device_component_loop
-        and bool(cuda_pls_many_batched)
+    uses_cuda_pls_many_batched = uses_cuda_pls_device_component_loop and bool(
+        cuda_pls_many_batched
     )
     return {
         "recommended_backend": recommended_backend,
@@ -1125,18 +1168,12 @@ def moment_screen_backend_recommendation(
         "loaded_backend_matches_recommendation": loaded_backend_matches,
         "requires_fresh_process": not loaded_backend_matches,
         "uses_cuda_pls_device_component_loop": uses_cuda_pls_device_component_loop,
-        "cuda_pls_device_component_min_features": (
-            cuda_pls_min_device_features_i
-        ),
+        "cuda_pls_device_component_min_features": (cuda_pls_min_device_features_i),
         "uses_cuda_pls_fold_workspace": uses_cuda_pls_fold_workspace,
-        "cuda_pls_fold_workspace_min_features": (
-            cuda_pls_min_device_features_i
-        ),
+        "cuda_pls_fold_workspace_min_features": (cuda_pls_min_device_features_i),
         "uses_cuda_pls_many_batched": uses_cuda_pls_many_batched,
         "cuda_pls_many_batched": (
-            None
-            if cuda_pls_many_batched is None
-            else bool(cuda_pls_many_batched)
+            None if cuda_pls_many_batched is None else bool(cuda_pls_many_batched)
         ),
         "policy_source": _MOMENT_SCREEN_GPU_CROSSOVER_POLICY,
         "policy_inputs": (
@@ -1319,12 +1356,8 @@ def _aom_campaign_performance_metrics(
             else 0.0
         ),
         "ms_per_chain": elapsed / float(chains) if chains > 0 else 0.0,
-        "ms_per_candidate": (
-            elapsed / float(candidates) if candidates > 0 else 0.0
-        ),
-        "operator_moment_candidate_fraction": fraction(
-            "n_operator_moment_candidates"
-        ),
+        "ms_per_candidate": (elapsed / float(candidates) if candidates > 0 else 0.0),
+        "operator_moment_candidate_fraction": fraction("n_operator_moment_candidates"),
         "materialized_candidate_fraction": fraction("n_materialized_candidates"),
         "ridge_operator_moment_candidate_fraction": fraction(
             "n_ridge_operator_moment_candidates"
@@ -1350,7 +1383,8 @@ def _aom_campaign_performance_metrics(
             if (
                 counters.get("n_moment_prefix_cache_hits", 0)
                 + counters.get("n_moment_prefix_cache_misses", 0)
-            ) > 0
+            )
+            > 0
             else 0.0
         ),
         "ridge_cv_fits_per_chain": (
@@ -1555,13 +1589,15 @@ def _aom_candidate_analysis_rows(report_or_rows, score_key: str | None):
             if "head" in row
             else _normalize_sweep_head_name(row["head_id"])
         )
-        parsed.append({
-            "source_index": int(source_index),
-            "row": row,
-            "score": score,
-            "chain": chain,
-            "head": head,
-        })
+        parsed.append(
+            {
+                "source_index": int(source_index),
+                "row": row,
+                "score": score,
+                "chain": chain,
+                "head": head,
+            }
+        )
     if not parsed:
         raise ValueError(f"no finite candidate scores found for {key!r}")
     parsed.sort(key=lambda item: item["score"])
@@ -1758,7 +1794,9 @@ def _iter_aom_strict_chain_grid_entries(
 
     def emit(chain):
         nonlocal emitted
-        key = tuple((str(name), tuple(float(v) for v in params)) for name, params in chain)
+        key = tuple(
+            (str(name), tuple(float(v) for v in params)) for name, params in chain
+        )
         if key in seen:
             return None
         seen.add(key)
@@ -1792,13 +1830,17 @@ def _iter_aom_strict_chain_grid_entries(
         for name, specs in families.items():
             values = [_canonical_aom_op_spec(spec) for spec in specs]
             if not values:
-                raise ValueError(f"AOM family {name!r} must contain at least one operator")
+                raise ValueError(
+                    f"AOM family {name!r} must contain at least one operator"
+                )
             family_map[str(name)] = values
 
     if templates is None:
         template_list = _AOM_LAB_TEMPLATES
     else:
-        template_list = tuple(tuple(str(name) for name in template) for template in templates)
+        template_list = tuple(
+            tuple(str(name) for name in template) for template in templates
+        )
     if not template_list:
         raise ValueError("templates must contain at least one template")
 
@@ -1808,7 +1850,9 @@ def _iter_aom_strict_chain_grid_entries(
         try:
             choices = [family_map[name] for name in template]
         except KeyError as exc:
-            raise ValueError(f"unknown AOM family in template: {exc.args[0]!r}") from exc
+            raise ValueError(
+                f"unknown AOM family in template: {exc.args[0]!r}"
+            ) from exc
         for ops in product(*choices):
             if max_count is not None and emitted >= max_count:
                 return
@@ -1968,7 +2012,9 @@ def aom_candidate_table(result: dict, *, sort: bool = False) -> list[dict[str, o
     scores = np.asarray(result["candidate_scores"], dtype=np.float64)
     if scores.ndim != 2 or scores.shape[1] != 5:
         raise ValueError("AOM candidate_scores must have shape (n_candidates, 5)")
-    route_ids = np.asarray(result.get("candidate_routes", ()), dtype=np.int32).reshape(-1)
+    route_ids = np.asarray(result.get("candidate_routes", ()), dtype=np.int32).reshape(
+        -1
+    )
     if route_ids.size == 0:
         route_ids = np.full(scores.shape[0], -1, dtype=np.int32)
     elif route_ids.size != scores.shape[0]:
@@ -1989,18 +2035,20 @@ def aom_candidate_table(result: dict, *, sort: bool = False) -> list[dict[str, o
             if head_id == 1 and result_pls_score_mode == "gcv_proxy"
             else "cv_rmse"
         )
-        rows.append({
-            "candidate_id": int(score[0]),
-            "chain_id": chain_id,
-            "chain": chains[chain_id],
-            "head_id": head_id,
-            "head": _sweep_head_name(head_id),
-            "score_route_id": route_id,
-            "score_route": _aom_score_route_name(route_id),
-            "score_metric": score_metric,
-            "param": float(score[3]),
-            "cv_rmse": float(score[4]),
-        })
+        rows.append(
+            {
+                "candidate_id": int(score[0]),
+                "chain_id": chain_id,
+                "chain": chains[chain_id],
+                "head_id": head_id,
+                "head": _sweep_head_name(head_id),
+                "score_route_id": route_id,
+                "score_route": _aom_score_route_name(route_id),
+                "score_metric": score_metric,
+                "param": float(score[3]),
+                "cv_rmse": float(score[4]),
+            }
+        )
     if sort:
         rows.sort(key=lambda row: row["cv_rmse"])
     return rows
@@ -2098,9 +2146,7 @@ def aom_chain_score_campaign(
         raise ValueError(
             "split_head_scoring='force' requires heads containing both ridge and pls"
         )
-    ordered_chain_records = _ordered_aom_chain_records(
-        chain_list, chain_ordering_name
-    )
+    ordered_chain_records = _ordered_aom_chain_records(chain_list, chain_ordering_name)
     backend_recommendations = _aom_campaign_backend_recommendations(
         n_samples=X_arr.shape[0],
         n_features=X_arr.shape[1],
@@ -2188,17 +2234,21 @@ def aom_chain_score_campaign(
     completed_chunks = {int(summary["chunk_index"]) for summary in chunk_summaries}
     if len(completed_chunks) != len(chunk_summaries):
         raise ValueError("AOM campaign checkpoint contains duplicate chunks")
-    unknown_chunks = [idx for idx in completed_chunks if idx < 0 or idx >= n_total_chunks]
+    unknown_chunks = [
+        idx for idx in completed_chunks if idx < 0 or idx >= n_total_chunks
+    ]
     if unknown_chunks:
         raise ValueError("AOM campaign checkpoint contains out-of-range chunks")
     if completed_chunks:
         top_rows = [
-            row for row in top_rows
+            row
+            for row in top_rows
             if int(row.get("chunk_index", -1)) in completed_chunks
         ]
         top_rows_by_head = {
             head: [
-                row for row in rows
+                row
+                for row in rows
                 if int(row.get("chunk_index", -1)) in completed_chunks
             ]
             for head, rows in top_rows_by_head.items()
@@ -2212,7 +2262,8 @@ def aom_chain_score_campaign(
                     top_rows_by_head.setdefault(str(row["head"]), []).append(row)
         top_rows_by_score_route = {
             route: [
-                row for row in rows
+                row
+                for row in rows
                 if int(row.get("chunk_index", -1)) in completed_chunks
             ]
             for route, rows in top_rows_by_score_route.items()
@@ -2264,22 +2315,17 @@ def aom_chain_score_campaign(
         )
         best = top_rows[0] if top_rows else None
         best_by_head = {
-            head: rows[0]
-            for head, rows in top_rows_by_head.items()
-            if rows
+            head: rows[0] for head, rows in top_rows_by_head.items() if rows
         }
         best_by_score_route = {
-            route: rows[0]
-            for route, rows in top_rows_by_score_route.items()
-            if rows
+            route: rows[0] for route, rows in top_rows_by_score_route.items() if rows
         }
         n_split_head_chunks = sum(
             int(summary.get("split_head_scoring_used", 0))
             for summary in chunk_summaries
         )
         n_chunk_score_calls = sum(
-            int(summary.get("chunk_score_calls", 1))
-            for summary in chunk_summaries
+            int(summary.get("chunk_score_calls", 1)) for summary in chunk_summaries
         )
         return {
             "checkpoint_schema": "n4m.aom_chain_score_campaign.v1",
@@ -2317,9 +2363,7 @@ def aom_chain_score_campaign(
             ),
             "cuda_pls_min_device_features": cuda_pls_min_device_features_i,
             "cuda_pls_many_batched": (
-                None
-                if cuda_pls_many_batched is None
-                else bool(cuda_pls_many_batched)
+                None if cuda_pls_many_batched is None else bool(cuda_pls_many_batched)
             ),
             "split_head_scoring_policy": (
                 "single native call per chunk"
@@ -2350,19 +2394,20 @@ def aom_chain_score_campaign(
                 else int(backend_min_cuda_product)
             ),
             "library_path": library_path(),
-            "abi": ".".join(str(int(fn())) for fn in (
-                lib.n4m_get_abi_version_major,
-                lib.n4m_get_abi_version_minor,
-                lib.n4m_get_abi_version_patch,
-            )),
+            "abi": ".".join(
+                str(int(fn()))
+                for fn in (
+                    lib.n4m_get_abi_version_major,
+                    lib.n4m_get_abi_version_minor,
+                    lib.n4m_get_abi_version_patch,
+                )
+            ),
             **aggregate,
             **performance,
         }
 
     def score_chunk(chunk) -> tuple[dict[str, object], int, int]:
-        split_requested = (
-            split_head_scoring_name != "off" and can_split_head_scoring
-        )
+        split_requested = split_head_scoring_name != "off" and can_split_head_scoring
         if not split_requested:
             return (
                 aom_chain_sweep_run(
@@ -2470,7 +2515,7 @@ def aom_chain_score_campaign(
             continue
         if max_new_chunks is not None and processed_this_run >= max_new_chunks:
             break
-        chunk_records = ordered_chain_records[start:start + chunk_size]
+        chunk_records = ordered_chain_records[start : start + chunk_size]
         chunk = [chain for _, chain in chunk_records]
         original_chain_ids = [int(index) for index, _ in chunk_records]
         t0 = time.perf_counter()
@@ -2495,7 +2540,9 @@ def aom_chain_score_campaign(
                 "AOM candidate_routes length must match candidate_scores rows"
             )
         result_pls_score_mode = _aom_pls_score_mode_name(
-            int(result.get("aom_pls_score_mode", _aom_pls_score_mode_id(pls_score_mode)))
+            int(
+                result.get("aom_pls_score_mode", _aom_pls_score_mode_id(pls_score_mode))
+            )
         )
         if scores.size:
             built_rows: dict[int, dict[str, object]] = {}
@@ -2567,31 +2614,35 @@ def aom_chain_score_campaign(
             trim_top_rows_by_score_route()
 
         chunk_counters = {key: int(result[key]) for key in _AOM_ROUTE_COUNTER_KEYS}
-        chunk_summaries.append({
-            "chunk_index": int(chunk_index),
-            "chain_start": int(start),
-            "chain_order_start": int(start),
-            "chain_order_end": int(start + len(chunk)),
-            "n_chains": int(len(chunk)),
-            "n_candidates": n_candidates,
-            "split_head_scoring_used": int(split_used),
-            "chunk_score_calls": int(chunk_score_calls),
-            "selected_ordered_chain_id": int(start + int(result["selected_chain_id"])),
-            "selected_chain_id": int(
-                original_chain_ids[int(result["selected_chain_id"])]
-            ),
-            "selected_head_id": int(result["selected_head_id"]),
-            "selected_param": float(result["selected_param"]),
-            "selected_cv_rmse": float(result["selected_cv_rmse"]),
-            "elapsed_ms": float(elapsed_ms),
-            **chunk_counters,
-            **_aom_campaign_performance_metrics(
-                n_chains=len(chunk),
-                n_candidates=n_candidates,
-                elapsed_ms=elapsed_ms,
-                counters=chunk_counters,
-            ),
-        })
+        chunk_summaries.append(
+            {
+                "chunk_index": int(chunk_index),
+                "chain_start": int(start),
+                "chain_order_start": int(start),
+                "chain_order_end": int(start + len(chunk)),
+                "n_chains": int(len(chunk)),
+                "n_candidates": n_candidates,
+                "split_head_scoring_used": int(split_used),
+                "chunk_score_calls": int(chunk_score_calls),
+                "selected_ordered_chain_id": int(
+                    start + int(result["selected_chain_id"])
+                ),
+                "selected_chain_id": int(
+                    original_chain_ids[int(result["selected_chain_id"])]
+                ),
+                "selected_head_id": int(result["selected_head_id"]),
+                "selected_param": float(result["selected_param"]),
+                "selected_cv_rmse": float(result["selected_cv_rmse"]),
+                "elapsed_ms": float(elapsed_ms),
+                **chunk_counters,
+                **_aom_campaign_performance_metrics(
+                    n_chains=len(chunk),
+                    n_candidates=n_candidates,
+                    elapsed_ms=elapsed_ms,
+                    counters=chunk_counters,
+                ),
+            }
+        )
         completed_chunks.add(chunk_index)
         processed_this_run += 1
         if checkpoint is not None:
@@ -2627,8 +2678,7 @@ def _finalize_aom_refit_report(
     ):
         row["cv_rank"] = int(rank)
     finite_screen = [
-        row for row in rows
-        if np.isfinite(float(row.get("screen_score", np.nan)))
+        row for row in rows if np.isfinite(float(row.get("screen_score", np.nan)))
     ]
     for rank, row in enumerate(
         sorted(finite_screen, key=lambda item: item["screen_score"]), start=1
@@ -2651,9 +2701,7 @@ def _finalize_aom_refit_report(
         "moment_policy": moment_policy,
         "cuda_pls_min_device_features": cuda_pls_min_device_features,
         "cuda_pls_many_batched": (
-            None
-            if cuda_pls_many_batched is None
-            else bool(cuda_pls_many_batched)
+            None if cuda_pls_many_batched is None else bool(cuda_pls_many_batched)
         ),
         "execution_mode": execution_mode,
         "execution_mode_requested": execution_mode_requested,
@@ -2661,11 +2709,11 @@ def _finalize_aom_refit_report(
         "execution_mode_auto_plan": execution_mode_auto_plan,
         "auto_max_extra_fraction": float(auto_max_extra_fraction),
         "n_refit_groups": int(n_refit_groups),
-        "n_operator_moment_candidates": int(aggregate.get("n_operator_moment_candidates", 0)),
-        "n_materialized_candidates": int(aggregate.get("n_materialized_candidates", 0)),
-        "n_ridge_moment_cv_fits": int(
-            aggregate.get("n_ridge_moment_cv_fits", 0)
+        "n_operator_moment_candidates": int(
+            aggregate.get("n_operator_moment_candidates", 0)
         ),
+        "n_materialized_candidates": int(aggregate.get("n_materialized_candidates", 0)),
+        "n_ridge_moment_cv_fits": int(aggregate.get("n_ridge_moment_cv_fits", 0)),
         "n_ridge_moment_eigen_path_preparations": int(
             aggregate.get("n_ridge_moment_eigen_path_preparations", 0)
         ),
@@ -2687,16 +2735,12 @@ def _finalize_aom_refit_report(
         "n_ridge_moment_score_batch_jobs": int(
             aggregate.get("n_ridge_moment_score_batch_jobs", 0)
         ),
-        "n_ridge_moment_final_fits": int(
-            aggregate.get("n_ridge_moment_final_fits", 0)
-        ),
+        "n_ridge_moment_final_fits": int(aggregate.get("n_ridge_moment_final_fits", 0)),
         "n_ridge_dual_materialized_final_fits": int(
             aggregate.get("n_ridge_dual_materialized_final_fits", 0)
         ),
         "n_pls_moment_cv_fits": int(aggregate.get("n_pls_moment_cv_fits", 0)),
-        "n_pls_moment_host_cv_fits": int(
-            aggregate.get("n_pls_moment_host_cv_fits", 0)
-        ),
+        "n_pls_moment_host_cv_fits": int(aggregate.get("n_pls_moment_host_cv_fits", 0)),
         "n_pls_moment_cuda_device_cv_fits": int(
             aggregate.get("n_pls_moment_cuda_device_cv_fits", 0)
         ),
@@ -2720,14 +2764,20 @@ def _finalize_aom_refit_report(
             aggregate.get("n_refit_scored_candidates", len(rows))
         ),
         "n_refit_extra_scored_candidates": int(
-            max(0, int(aggregate.get("n_refit_scored_candidates", len(rows))) - len(rows))
+            max(
+                0,
+                int(aggregate.get("n_refit_scored_candidates", len(rows))) - len(rows),
+            )
         ),
         "library_path": library_path(),
-        "abi": ".".join(str(int(fn())) for fn in (
-            lib.n4m_get_abi_version_major,
-            lib.n4m_get_abi_version_minor,
-            lib.n4m_get_abi_version_patch,
-        )),
+        "abi": ".".join(
+            str(int(fn()))
+            for fn in (
+                lib.n4m_get_abi_version_major,
+                lib.n4m_get_abi_version_minor,
+                lib.n4m_get_abi_version_patch,
+            )
+        ),
     }
 
 
@@ -2883,12 +2933,14 @@ def _aom_refit_chain_groups(
             if param_key not in seen_params:
                 seen_params.add(param_key)
                 param_keys.append(param_key)
-        chain_groups.append({
-            "chain": group["chain"],
-            "head": head,
-            "items": items,
-            "param_keys": tuple(sorted(param_keys)),
-        })
+        chain_groups.append(
+            {
+                "chain": group["chain"],
+                "head": head,
+                "items": items,
+                "param_keys": tuple(sorted(param_keys)),
+            }
+        )
     return chain_groups
 
 
@@ -2941,11 +2993,13 @@ def _aom_refit_batches(
             params: set[object] = set()
             for group in head_batches[head]:
                 params.update(group["param_keys"])
-            batches.append({
-                "head": head,
-                "param_keys": tuple(sorted(params)),
-                "groups": head_batches[head],
-            })
+            batches.append(
+                {
+                    "head": head,
+                    "param_keys": tuple(sorted(params)),
+                    "groups": head_batches[head],
+                }
+            )
         return batches
 
     raise ValueError("unknown AOM refit score batch mode")
@@ -2977,7 +3031,11 @@ def _aom_refit_batch_plan(
             "by_head": by_head,
         }
 
-    groups = list(chain_groups) if chain_groups is not None else _aom_refit_chain_groups(candidate_list)
+    groups = (
+        list(chain_groups)
+        if chain_groups is not None
+        else _aom_refit_chain_groups(candidate_list)
+    )
     batches = _aom_refit_batches(groups, mode)
     scored = 0
     by_head: dict[str, dict[str, int]] = {}
@@ -3025,10 +3083,7 @@ def _aom_refit_plans_by_mode(
         "batched_score",
         "union_batched_score",
     )
-    return {
-        mode: _aom_refit_batch_plan(candidate_list, mode, groups)
-        for mode in modes
-    }
+    return {mode: _aom_refit_batch_plan(candidate_list, mode, groups) for mode in modes}
 
 
 def _validate_refit_auto_max_extra_fraction(value) -> float:
@@ -3229,9 +3284,7 @@ def aom_refit_candidates(
             )
             for counter in aggregate:
                 aggregate[counter] += int(result.get(counter, 0))
-            aggregate["n_refit_scored_candidates"] += int(
-                result.get("n_candidates", 0)
-            )
+            aggregate["n_refit_scored_candidates"] += int(result.get("n_candidates", 0))
 
             scores = np.asarray(result["candidate_scores"], dtype=np.float64)
             if scores.ndim != 2 or scores.shape[1] < 5:
@@ -3310,17 +3363,21 @@ def aom_refit_candidates(
                     param_key = int(round(param)) if head == "pls" else float(param)
                     score_key = (chain_index, param_key)
                     if score_key not in score_by_chain_param:
-                        raise ValueError("AOM grouped refit did not return a candidate score")
+                        raise ValueError(
+                            "AOM grouped refit did not return a candidate score"
+                        )
                     refit_score = score_by_chain_param[score_key]
                     screen_score = float(candidate.get("cv_rmse", np.nan))
                     screen_metric = str(candidate.get("score_metric", "cv_rmse"))
                     row = {
                         "source_index": int(index),
                         "candidate_id": int(candidate.get("candidate_id", index)),
-                        "global_candidate_id": int(candidate.get(
-                            "global_candidate_id",
-                            candidate.get("candidate_id", index),
-                        )),
+                        "global_candidate_id": int(
+                            candidate.get(
+                                "global_candidate_id",
+                                candidate.get("candidate_id", index),
+                            )
+                        ),
                         "chain_id": int(candidate.get("chain_id", index)),
                         "chain": chain,
                         "head": head,
@@ -3404,9 +3461,7 @@ def aom_refit_candidates(
             cuda_pls_min_device_features=cuda_pls_min_device_features_i,
             cuda_pls_many_batched=cuda_pls_many_batched,
         )
-        aggregate["n_refit_scored_candidates"] += int(
-            result.get("n_candidates", 1)
-        )
+        aggregate["n_refit_scored_candidates"] += int(result.get("n_candidates", 1))
         train_predictions = np.asarray(result["predictions"], dtype=np.float64)
         oof_predictions = np.asarray(result["oof_predictions"], dtype=np.float64)
         screen_score = float(candidate.get("cv_rmse", np.nan))
@@ -3414,10 +3469,12 @@ def aom_refit_candidates(
         row = {
             "source_index": int(index),
             "candidate_id": int(candidate.get("candidate_id", index)),
-            "global_candidate_id": int(candidate.get(
-                "global_candidate_id",
-                candidate.get("candidate_id", index),
-            )),
+            "global_candidate_id": int(
+                candidate.get(
+                    "global_candidate_id",
+                    candidate.get("candidate_id", index),
+                )
+            ),
             "chain_id": int(candidate.get("chain_id", index)),
             "chain": chain,
             "head": head,
@@ -3473,7 +3530,9 @@ def aom_refit_candidates(
             "n_pls_moment_cuda_many_batched_jobs": int(
                 result.get("n_pls_moment_cuda_many_batched_jobs", 0)
             ),
-            "n_pls_materialized_cv_fits": int(result.get("n_pls_materialized_cv_fits", 0)),
+            "n_pls_materialized_cv_fits": int(
+                result.get("n_pls_materialized_cv_fits", 0)
+            ),
             "n_pls_gcv_proxy_fits": int(result.get("n_pls_gcv_proxy_fits", 0)),
         }
         for counter in aggregate:
@@ -3652,7 +3711,9 @@ def aom_chain_screen_refit_campaign(
         "moment_policy": moment_policy,
         "refit_moment_policy": exact_policy,
         "refit_execution": str(refit["execution_mode"]),
-        "refit_execution_requested": str(refit.get("execution_mode_requested", refit_execution)),
+        "refit_execution_requested": str(
+            refit.get("execution_mode_requested", refit_execution)
+        ),
         "refit_execution_auto_reason": refit.get("execution_mode_auto_reason"),
         "refit_auto_max_extra_fraction": float(
             refit.get("auto_max_extra_fraction", refit_auto_max_extra_fraction)
@@ -3664,9 +3725,7 @@ def aom_chain_screen_refit_campaign(
         "chain_ordering": screen.get("chain_ordering", "input"),
         "split_head_scoring": screen.get("split_head_scoring", "off"),
         "cuda_pls_parallel_folds": screen.get("cuda_pls_parallel_folds"),
-        "cuda_pls_min_device_features": screen.get(
-            "cuda_pls_min_device_features"
-        ),
+        "cuda_pls_min_device_features": screen.get("cuda_pls_min_device_features"),
         "cuda_pls_many_batched": screen.get("cuda_pls_many_batched"),
         "n_split_head_chunks": int(screen.get("n_split_head_chunks", 0)),
         "n_chunk_score_calls": int(screen.get("n_chunk_score_calls", 0)),
@@ -3689,11 +3748,14 @@ def aom_chain_screen_refit_campaign(
         "backend_min_cuda_product": screen.get("backend_min_cuda_product"),
         "checkpoint_path": screen.get("checkpoint_path"),
         "library_path": library_path(),
-        "abi": ".".join(str(int(fn())) for fn in (
-            lib.n4m_get_abi_version_major,
-            lib.n4m_get_abi_version_minor,
-            lib.n4m_get_abi_version_patch,
-        )),
+        "abi": ".".join(
+            str(int(fn()))
+            for fn in (
+                lib.n4m_get_abi_version_major,
+                lib.n4m_get_abi_version_minor,
+                lib.n4m_get_abi_version_patch,
+            )
+        ),
     }
     return report
 
@@ -3883,21 +3945,23 @@ _AOM_STAGED_PLANS = {
     ),
 }
 
-_AOM_STAGE_OVERRIDE_KEYS = frozenset({
-    "name",
-    "profile",
-    "families",
-    "templates",
-    "heads",
-    "ridge_lambdas",
-    "pls_components",
-    "top_k",
-    "max_chains",
-    "pls_score_mode",
-    "moment_policy",
-    "chain_ordering",
-    "split_head_scoring",
-})
+_AOM_STAGE_OVERRIDE_KEYS = frozenset(
+    {
+        "name",
+        "profile",
+        "families",
+        "templates",
+        "heads",
+        "ridge_lambdas",
+        "pls_components",
+        "top_k",
+        "max_chains",
+        "pls_score_mode",
+        "moment_policy",
+        "chain_ordering",
+        "split_head_scoring",
+    }
+)
 
 
 def _staged_normalized_heads(heads):
@@ -3911,10 +3975,7 @@ def _aom_staged_checkpoint_path(checkpoint_dir, stage) -> Path | None:
     def safe_token(value) -> str:
         text = str(value)
         chars = [
-            char
-            if char.isalnum() or char in {"-", "_", "."}
-            else "_"
-            for char in text
+            char if char.isalnum() or char in {"-", "_", "."} else "_" for char in text
         ]
         safe = "".join(chars).strip("._")
         return safe or "stage"
@@ -3942,7 +4003,8 @@ def _normalize_staged_chain_stages(stages, *, plan, defaults):
                 + " when stages is None"
             )
         stage_specs = [
-            dict(stage) if isinstance(stage, dict)
+            dict(stage)
+            if isinstance(stage, dict)
             else {"name": stage, "profile": stage}
             for stage in _AOM_STAGED_PLANS[plan_key]
         ]
@@ -3970,24 +4032,32 @@ def _normalize_staged_chain_stages(stages, *, plan, defaults):
     for index, spec in enumerate(stage_specs):
         profile = str(spec.get("profile", "compact"))
         name = str(spec.get("name", profile))
-        normalized.append({
-            "name": name,
-            "stage_index": int(index),
-            "profile": profile,
-            "families": spec.get("families", defaults["families"]),
-            "templates": spec.get("templates", defaults["templates"]),
-            "max_chains": spec.get("max_chains", defaults["max_chains"]),
-            "heads": tuple(spec.get("heads", defaults["heads"])),
-            "ridge_lambdas": spec.get("ridge_lambdas", defaults["ridge_lambdas"]),
-            "pls_components": spec.get("pls_components", defaults["pls_components"]),
-            "top_k": int(spec.get("top_k", defaults["top_k"])),
-            "pls_score_mode": spec.get("pls_score_mode", defaults["pls_score_mode"]),
-            "moment_policy": spec.get("moment_policy", defaults["moment_policy"]),
-            "chain_ordering": spec.get("chain_ordering", defaults["chain_ordering"]),
-            "split_head_scoring": spec.get(
-                "split_head_scoring", defaults["split_head_scoring"]
-            ),
-        })
+        normalized.append(
+            {
+                "name": name,
+                "stage_index": int(index),
+                "profile": profile,
+                "families": spec.get("families", defaults["families"]),
+                "templates": spec.get("templates", defaults["templates"]),
+                "max_chains": spec.get("max_chains", defaults["max_chains"]),
+                "heads": tuple(spec.get("heads", defaults["heads"])),
+                "ridge_lambdas": spec.get("ridge_lambdas", defaults["ridge_lambdas"]),
+                "pls_components": spec.get(
+                    "pls_components", defaults["pls_components"]
+                ),
+                "top_k": int(spec.get("top_k", defaults["top_k"])),
+                "pls_score_mode": spec.get(
+                    "pls_score_mode", defaults["pls_score_mode"]
+                ),
+                "moment_policy": spec.get("moment_policy", defaults["moment_policy"]),
+                "chain_ordering": spec.get(
+                    "chain_ordering", defaults["chain_ordering"]
+                ),
+                "split_head_scoring": spec.get(
+                    "split_head_scoring", defaults["split_head_scoring"]
+                ),
+            }
+        )
     return normalized
 
 
@@ -4258,21 +4328,23 @@ def aom_staged_chain_campaign(
                 stage_summary["model_config_id"] = int(config_id)
                 stage_summary["scale_x"] = scale_value
             config_reports.append(subreport)
-            config_summaries.append({
-                **model_config,
-                "best_refit_cv_rmse": float(subreport["best"]["refit_cv_rmse"]),
-                "best_head": str(subreport["best"]["head"]),
-                "best_param": float(subreport["best"]["param"]),
-                "screen_complete": bool(subreport.get("screen_complete", True)),
-                "n_stages": int(subreport.get("n_stages", 0)),
-                "n_screen_candidates_total": int(
-                    subreport.get("n_screen_candidates_total", 0)
-                ),
-                "n_refit_candidates": int(subreport.get("n_refit_candidates", 0)),
-                "n_remaining_stage_chunks_total": int(
-                    subreport.get("n_remaining_stage_chunks_total", 0)
-                ),
-            })
+            config_summaries.append(
+                {
+                    **model_config,
+                    "best_refit_cv_rmse": float(subreport["best"]["refit_cv_rmse"]),
+                    "best_head": str(subreport["best"]["head"]),
+                    "best_param": float(subreport["best"]["param"]),
+                    "screen_complete": bool(subreport.get("screen_complete", True)),
+                    "n_stages": int(subreport.get("n_stages", 0)),
+                    "n_screen_candidates_total": int(
+                        subreport.get("n_screen_candidates_total", 0)
+                    ),
+                    "n_refit_candidates": int(subreport.get("n_refit_candidates", 0)),
+                    "n_remaining_stage_chunks_total": int(
+                        subreport.get("n_remaining_stage_chunks_total", 0)
+                    ),
+                }
+            )
 
         selected_index = min(
             range(len(config_reports)),
@@ -4297,10 +4369,12 @@ def aom_staged_chain_campaign(
         selected["screen_complete"] = all(
             bool(report.get("screen_complete", True)) for report in config_reports
         )
-        selected["n_remaining_stage_chunks_total"] = int(sum(
-            int(report.get("n_remaining_stage_chunks_total", 0))
-            for report in config_reports
-        ))
+        selected["n_remaining_stage_chunks_total"] = int(
+            sum(
+                int(report.get("n_remaining_stage_chunks_total", 0))
+                for report in config_reports
+            )
+        )
         for key in (
             "n_screen_candidates_total",
             "n_screen_split_head_chunks",
@@ -4330,7 +4404,9 @@ def aom_staged_chain_campaign(
             "n_refit_pls_moment_score_batch_calls",
             "n_refit_pls_moment_score_batch_jobs",
         ):
-            selected[key] = int(sum(int(report.get(key, 0)) for report in config_reports))
+            selected[key] = int(
+                sum(int(report.get(key, 0)) for report in config_reports)
+            )
         return selected
 
     stage_defaults = {
@@ -4390,97 +4466,103 @@ def aom_staged_chain_campaign(
         stage_pairs.append((stage, screen))
         if return_stage_screens:
             stage_screens.append(screen)
-        stage_summaries.append({
-            "name": stage["name"],
-            "stage_index": stage["stage_index"],
-            "profile": stage["profile"],
-            "heads": _staged_normalized_heads(stage["heads"]),
-            "pls_score_mode": str(screen.get("pls_score_mode", "")),
-            "moment_policy": stage["moment_policy"],
-            "chain_ordering": str(
-                screen.get("chain_ordering", stage["chain_ordering"])
-            ),
-            "split_head_scoring": str(
-                screen.get("split_head_scoring", stage["split_head_scoring"])
-            ),
-            "n_chains": int(screen.get("n_chains", 0)),
-            "n_screen_candidates": int(screen.get("n_candidates", 0)),
-            "n_top_candidates": int(len(screen.get("top_candidates", ()))),
-            "screen_complete": bool(screen.get("complete", True)),
-            "checkpoint_path": screen.get("checkpoint_path"),
-            "resumed_from_checkpoint": bool(
-                screen.get("resumed_from_checkpoint", False)
-            ),
-            "n_chunks": int(screen.get("n_chunks", 0)),
-            "n_total_chunks": int(screen.get("n_total_chunks", 0)),
-            "n_remaining_chunks": int(screen.get("n_remaining_chunks", 0)),
-            "n_split_head_chunks": int(screen.get("n_split_head_chunks", 0)),
-            "n_chunk_score_calls": int(screen.get("n_chunk_score_calls", 0)),
-            "n_ridge_moment_cv_fits": int(
-                screen.get("n_ridge_moment_cv_fits", 0)
-            ),
-            "n_ridge_moment_eigen_path_preparations": int(
-                screen.get("n_ridge_moment_eigen_path_preparations", 0)
-            ),
-            "n_ridge_moment_eigen_path_cv_fits": int(
-                screen.get("n_ridge_moment_eigen_path_cv_fits", 0)
-            ),
-            "n_ridge_moment_direct_cv_fits": int(
-                screen.get("n_ridge_moment_direct_cv_fits", 0)
-            ),
-            "n_ridge_moment_score_batch_calls": int(
-                screen.get("n_ridge_moment_score_batch_calls", 0)
-            ),
-            "n_ridge_moment_score_batch_jobs": int(
-                screen.get("n_ridge_moment_score_batch_jobs", 0)
-            ),
-            "n_pls_moment_cv_fits": int(screen.get("n_pls_moment_cv_fits", 0)),
-            "n_pls_moment_host_cv_fits": int(
-                screen.get("n_pls_moment_host_cv_fits", 0)
-            ),
-            "n_pls_moment_cuda_device_cv_fits": int(
-                screen.get("n_pls_moment_cuda_device_cv_fits", 0)
-            ),
-            "n_pls_moment_cuda_parallel_fold_batches": int(
-                screen.get("n_pls_moment_cuda_parallel_fold_batches", 0)
-            ),
-            "n_pls_moment_cuda_parallel_fold_jobs": int(
-                screen.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
-            ),
-            "n_pls_moment_cuda_many_batched_batches": int(
-                screen.get("n_pls_moment_cuda_many_batched_batches", 0)
-            ),
-            "n_pls_moment_cuda_many_batched_jobs": int(
-                screen.get("n_pls_moment_cuda_many_batched_jobs", 0)
-            ),
-            "n_pls_moment_score_batch_calls": int(
-                screen.get("n_pls_moment_score_batch_calls", 0)
-            ),
-            "n_pls_moment_score_batch_jobs": int(
-                screen.get("n_pls_moment_score_batch_jobs", 0)
-            ),
-            "processed_chunks_this_run": int(
-                screen.get("processed_chunks_this_run", 0)
-            ),
-            "screen_best": screen.get("best"),
-        })
+        stage_summaries.append(
+            {
+                "name": stage["name"],
+                "stage_index": stage["stage_index"],
+                "profile": stage["profile"],
+                "heads": _staged_normalized_heads(stage["heads"]),
+                "pls_score_mode": str(screen.get("pls_score_mode", "")),
+                "moment_policy": stage["moment_policy"],
+                "chain_ordering": str(
+                    screen.get("chain_ordering", stage["chain_ordering"])
+                ),
+                "split_head_scoring": str(
+                    screen.get("split_head_scoring", stage["split_head_scoring"])
+                ),
+                "n_chains": int(screen.get("n_chains", 0)),
+                "n_screen_candidates": int(screen.get("n_candidates", 0)),
+                "n_top_candidates": int(len(screen.get("top_candidates", ()))),
+                "screen_complete": bool(screen.get("complete", True)),
+                "checkpoint_path": screen.get("checkpoint_path"),
+                "resumed_from_checkpoint": bool(
+                    screen.get("resumed_from_checkpoint", False)
+                ),
+                "n_chunks": int(screen.get("n_chunks", 0)),
+                "n_total_chunks": int(screen.get("n_total_chunks", 0)),
+                "n_remaining_chunks": int(screen.get("n_remaining_chunks", 0)),
+                "n_split_head_chunks": int(screen.get("n_split_head_chunks", 0)),
+                "n_chunk_score_calls": int(screen.get("n_chunk_score_calls", 0)),
+                "n_ridge_moment_cv_fits": int(screen.get("n_ridge_moment_cv_fits", 0)),
+                "n_ridge_moment_eigen_path_preparations": int(
+                    screen.get("n_ridge_moment_eigen_path_preparations", 0)
+                ),
+                "n_ridge_moment_eigen_path_cv_fits": int(
+                    screen.get("n_ridge_moment_eigen_path_cv_fits", 0)
+                ),
+                "n_ridge_moment_direct_cv_fits": int(
+                    screen.get("n_ridge_moment_direct_cv_fits", 0)
+                ),
+                "n_ridge_moment_score_batch_calls": int(
+                    screen.get("n_ridge_moment_score_batch_calls", 0)
+                ),
+                "n_ridge_moment_score_batch_jobs": int(
+                    screen.get("n_ridge_moment_score_batch_jobs", 0)
+                ),
+                "n_pls_moment_cv_fits": int(screen.get("n_pls_moment_cv_fits", 0)),
+                "n_pls_moment_host_cv_fits": int(
+                    screen.get("n_pls_moment_host_cv_fits", 0)
+                ),
+                "n_pls_moment_cuda_device_cv_fits": int(
+                    screen.get("n_pls_moment_cuda_device_cv_fits", 0)
+                ),
+                "n_pls_moment_cuda_parallel_fold_batches": int(
+                    screen.get("n_pls_moment_cuda_parallel_fold_batches", 0)
+                ),
+                "n_pls_moment_cuda_parallel_fold_jobs": int(
+                    screen.get("n_pls_moment_cuda_parallel_fold_jobs", 0)
+                ),
+                "n_pls_moment_cuda_many_batched_batches": int(
+                    screen.get("n_pls_moment_cuda_many_batched_batches", 0)
+                ),
+                "n_pls_moment_cuda_many_batched_jobs": int(
+                    screen.get("n_pls_moment_cuda_many_batched_jobs", 0)
+                ),
+                "n_pls_moment_score_batch_calls": int(
+                    screen.get("n_pls_moment_score_batch_calls", 0)
+                ),
+                "n_pls_moment_score_batch_jobs": int(
+                    screen.get("n_pls_moment_score_batch_jobs", 0)
+                ),
+                "processed_chunks_this_run": int(
+                    screen.get("processed_chunks_this_run", 0)
+                ),
+                "screen_best": screen.get("best"),
+            }
+        )
 
-    merged_global = _aom_merge_staged_candidates([
-        (stage["name"], screen.get("top_candidates", ()))
-        for stage, screen in stage_pairs
-    ])
+    merged_global = _aom_merge_staged_candidates(
+        [
+            (stage["name"], screen.get("top_candidates", ()))
+            for stage, screen in stage_pairs
+        ]
+    )
     if not merged_global:
         raise ValueError("staged campaign produced no screen candidates to refit")
-    heads_seen = sorted({
-        head
-        for _, screen in stage_pairs
-        for head in screen.get("top_candidates_by_head", {})
-    })
+    heads_seen = sorted(
+        {
+            head
+            for _, screen in stage_pairs
+            for head in screen.get("top_candidates_by_head", {})
+        }
+    )
     merged_by_head = {
-        head: _aom_merge_staged_candidates([
-            (stage["name"], screen.get("top_candidates_by_head", {}).get(head, ()))
-            for stage, screen in stage_pairs
-        ])
+        head: _aom_merge_staged_candidates(
+            [
+                (stage["name"], screen.get("top_candidates_by_head", {}).get(head, ()))
+                for stage, screen in stage_pairs
+            ]
+        )
         for head in heads_seen
     }
 
@@ -4669,9 +4751,7 @@ def aom_staged_chain_campaign(
             "n_ridge_moment_score_batch_jobs"
         ),
         "n_screen_pls_moment_cv_fits": screen_counter("n_pls_moment_cv_fits"),
-        "n_screen_pls_moment_host_cv_fits": screen_counter(
-            "n_pls_moment_host_cv_fits"
-        ),
+        "n_screen_pls_moment_host_cv_fits": screen_counter("n_pls_moment_host_cv_fits"),
         "n_screen_pls_moment_cuda_device_cv_fits": screen_counter(
             "n_pls_moment_cuda_device_cv_fits"
         ),
@@ -4726,11 +4806,14 @@ def aom_staged_chain_campaign(
         "refit_moment_policy": exact_policy,
         "refit_execution": str(refit["execution_mode"]),
         "library_path": library_path(),
-        "abi": ".".join(str(int(fn())) for fn in (
-            lib.n4m_get_abi_version_major,
-            lib.n4m_get_abi_version_minor,
-            lib.n4m_get_abi_version_patch,
-        )),
+        "abi": ".".join(
+            str(int(fn()))
+            for fn in (
+                lib.n4m_get_abi_version_major,
+                lib.n4m_get_abi_version_minor,
+                lib.n4m_get_abi_version_patch,
+            )
+        ),
     }
     if return_stage_screens:
         report["stage_screens"] = stage_screens
@@ -4817,10 +4900,12 @@ def aom_evaluate_candidates(
         row = {
             "source_index": int(index),
             "candidate_id": int(candidate.get("candidate_id", index)),
-            "global_candidate_id": int(candidate.get(
-                "global_candidate_id",
-                candidate.get("candidate_id", index),
-            )),
+            "global_candidate_id": int(
+                candidate.get(
+                    "global_candidate_id",
+                    candidate.get("candidate_id", index),
+                )
+            ),
             "chain_id": int(candidate.get("chain_id", index)),
             "chain": chain,
             "head": head,
@@ -4853,7 +4938,9 @@ def aom_evaluate_candidates(
 
     if sort_by is not None:
         if sort_by not in {"eval_rmse", "refit_cv_rmse", "screen_cv_rmse"}:
-            raise ValueError("sort_by must be eval_rmse, refit_cv_rmse, screen_cv_rmse, or None")
+            raise ValueError(
+                "sort_by must be eval_rmse, refit_cv_rmse, screen_cv_rmse, or None"
+            )
         rows.sort(key=lambda item: item[sort_by])
     best_eval = min(rows, key=lambda item: item["eval_rmse"])
     best_cv = min(rows, key=lambda item: item["refit_cv_rmse"])
@@ -4865,11 +4952,14 @@ def aom_evaluate_candidates(
         "cv": int(cv),
         "moment_policy": moment_policy,
         "library_path": library_path(),
-        "abi": ".".join(str(int(fn())) for fn in (
-            lib.n4m_get_abi_version_major,
-            lib.n4m_get_abi_version_minor,
-            lib.n4m_get_abi_version_patch,
-        )),
+        "abi": ".".join(
+            str(int(fn()))
+            for fn in (
+                lib.n4m_get_abi_version_major,
+                lib.n4m_get_abi_version_minor,
+                lib.n4m_get_abi_version_patch,
+            )
+        ),
     }
 
 
@@ -4981,13 +5071,15 @@ def aom_candidate_preprocessing_impact(
             if "head" in row
             else _normalize_sweep_head_name(row["head_id"])
         )
-        parsed.append({
-            "source_index": int(source_index),
-            "row": row,
-            "score": score,
-            "chain": chain,
-            "head": head,
-        })
+        parsed.append(
+            {
+                "source_index": int(source_index),
+                "row": row,
+                "score": score,
+                "chain": chain,
+                "head": head,
+            }
+        )
     if not parsed:
         raise ValueError(f"no finite candidate scores found for {key!r}")
     parsed.sort(
@@ -5025,8 +5117,10 @@ def aom_candidate_preprocessing_impact(
 
     baseline_item = None
     if baseline_all:
-        baseline_item = max(baseline_all, key=lambda item: item["score"]) if higher_is_better else min(
-            baseline_all, key=lambda item: item["score"]
+        baseline_item = (
+            max(baseline_all, key=lambda item: item["score"])
+            if higher_is_better
+            else min(baseline_all, key=lambda item: item["score"])
         )
 
     def improvement_vs_baseline(score: float, head: str | None = None):
@@ -5038,10 +5132,16 @@ def aom_candidate_preprocessing_impact(
         if ref is None:
             return None
         baseline_score = float(ref["score"])
-        return float(score - baseline_score) if higher_is_better else float(baseline_score - score)
+        return (
+            float(score - baseline_score)
+            if higher_is_better
+            else float(baseline_score - score)
+        )
 
     def loss_vs_global(score: float) -> float:
-        return float(best_score - score) if higher_is_better else float(score - best_score)
+        return (
+            float(best_score - score) if higher_is_better else float(score - best_score)
+        )
 
     def add(grouped: dict[str, list[dict[str, object]]], key_name: str, item):
         grouped.setdefault(key_name, []).append(item)
@@ -5093,25 +5193,29 @@ def aom_candidate_preprocessing_impact(
         for name, items in groups.items():
             scores = np.asarray([item["score"] for item in items], dtype=np.float64)
             ranks = np.asarray([item["rank"] for item in items], dtype=np.float64)
-            best_item = max(items, key=lambda item: item["score"]) if higher_is_better else min(
-                items, key=lambda item: item["score"]
+            best_item = (
+                max(items, key=lambda item: item["score"])
+                if higher_is_better
+                else min(items, key=lambda item: item["score"])
             )
             group_best = float(best_item["score"])
-            out.append({
-                "group": name,
-                "n_candidates": int(len(items)),
-                "candidate_fraction": float(len(items) / total) if total else 0.0,
-                "best_score": group_best,
-                "mean_score": float(np.mean(scores)),
-                "median_score": float(np.median(scores)),
-                "best_rank": int(best_item["rank"]),
-                "mean_rank": float(np.mean(ranks)),
-                "best_loss_vs_global_best": loss_vs_global(group_best),
-                "best_improvement_vs_identity": improvement_vs_baseline(
-                    group_best, str(best_item["head"])
-                ),
-                "best_candidate": best_item["row"],
-            })
+            out.append(
+                {
+                    "group": name,
+                    "n_candidates": int(len(items)),
+                    "candidate_fraction": float(len(items) / total) if total else 0.0,
+                    "best_score": group_best,
+                    "mean_score": float(np.mean(scores)),
+                    "median_score": float(np.median(scores)),
+                    "best_rank": int(best_item["rank"]),
+                    "mean_rank": float(np.mean(ranks)),
+                    "best_loss_vs_global_best": loss_vs_global(group_best),
+                    "best_improvement_vs_identity": improvement_vs_baseline(
+                        group_best, str(best_item["head"])
+                    ),
+                    "best_candidate": best_item["row"],
+                }
+            )
         out.sort(
             key=lambda row: (
                 row["best_loss_vs_global_best"],
@@ -5127,7 +5231,9 @@ def aom_candidate_preprocessing_impact(
         "n_candidates": int(len(parsed)),
         "best": parsed[0]["row"],
         "best_score": best_score,
-        "identity_baseline": None if baseline_item is None else {
+        "identity_baseline": None
+        if baseline_item is None
+        else {
             "score": float(baseline_item["score"]),
             "rank": int(baseline_item["rank"]),
             "candidate": baseline_item["row"],
@@ -5213,7 +5319,9 @@ def aom_candidate_route_summary(report_or_rows) -> dict[str, object]:
             head: {
                 **counts,
                 "operator_moment_candidate_fraction": (
-                    float(counts["n_operator_moment_candidates"] / counts["n_candidates"])
+                    float(
+                        counts["n_operator_moment_candidates"] / counts["n_candidates"]
+                    )
                     if counts["n_candidates"]
                     else 0.0
                 ),
@@ -5325,7 +5433,9 @@ def aom_candidate_route_summary(report_or_rows) -> dict[str, object]:
         entry = by_chain.setdefault(
             chain_key,
             {
-                "chain_id": int(chain_id) if isinstance(chain_id, (int, np.integer)) else chain_id,
+                "chain_id": int(chain_id)
+                if isinstance(chain_id, (int, np.integer))
+                else chain_id,
                 "chain": chain,
                 "heads": set(),
                 "score_routes": set(),
@@ -5350,15 +5460,11 @@ def aom_candidate_route_summary(report_or_rows) -> dict[str, object]:
             "n_operator_moment_candidates": operator_n,
             "n_materialized_candidates": materialized_n,
             "n_unknown_route_candidates": unknown_n,
-            "operator_moment_candidate_fraction": (
-                float(operator_n / n) if n else 0.0
-            ),
+            "operator_moment_candidate_fraction": (float(operator_n / n) if n else 0.0),
             "materialized_candidate_fraction": (
                 float(materialized_n / n) if n else 0.0
             ),
-            "unknown_route_candidate_fraction": (
-                float(unknown_n / n) if n else 0.0
-            ),
+            "unknown_route_candidate_fraction": (float(unknown_n / n) if n else 0.0),
             "all_operator_moment": bool(n > 0 and operator_n == n),
             "has_materialized": bool(materialized_n > 0),
             "has_unknown_route": bool(unknown_n > 0),
@@ -5368,19 +5474,20 @@ def aom_candidate_route_summary(report_or_rows) -> dict[str, object]:
     chain_rows = []
     for key, entry in by_chain.items():
         counts = finalize_counts(entry)
-        chain_rows.append({
-            "chain_key": key,
-            "chain_id": entry["chain_id"],
-            "chain": entry["chain"],
-            "heads": sorted(entry["heads"]),
-            "score_routes": sorted(entry["score_routes"]),
-            **counts,
-        })
+        chain_rows.append(
+            {
+                "chain_key": key,
+                "chain_id": entry["chain_id"],
+                "chain": entry["chain"],
+                "heads": sorted(entry["heads"]),
+                "score_routes": sorted(entry["score_routes"]),
+                **counts,
+            }
+        )
     chain_rows.sort(key=lambda row: (str(row["chain_id"]), row["chain_key"]))
 
     materialized_chains = [
-        row for row in chain_rows
-        if row["has_materialized"] or row["has_unknown_route"]
+        row for row in chain_rows if row["has_materialized"] or row["has_unknown_route"]
     ]
     row_scope = "rows"
     if isinstance(report_or_rows, dict):
@@ -5398,16 +5505,15 @@ def aom_candidate_route_summary(report_or_rows) -> dict[str, object]:
         ),
         "n_materialized_or_unknown_chains": int(len(materialized_chains)),
         "by_head": {
-            head: finalize_counts(counts)
-            for head, counts in sorted(by_head.items())
+            head: finalize_counts(counts) for head, counts in sorted(by_head.items())
         },
         "by_chain": chain_rows,
         "materialized_or_unknown_chains": materialized_chains,
     }
     if report_total is not None:
         out["reported_total"] = report_total
-        out["rows_match_report_total"] = (
-            int(out["n_candidates"]) == int(report_total["n_candidates"])
+        out["rows_match_report_total"] = int(out["n_candidates"]) == int(
+            report_total["n_candidates"]
         )
     return out
 
@@ -5444,13 +5550,15 @@ def aom_candidate_rank_diagnostics(
             "source_index",
             row.get("global_candidate_id", row.get("candidate_id", index)),
         )
-        parsed.append({
-            "index": int(index),
-            "identity": str(identity),
-            "screen_score": screen_score,
-            "eval_score": eval_score,
-            "row": row,
-        })
+        parsed.append(
+            {
+                "index": int(index),
+                "identity": str(identity),
+                "screen_score": screen_score,
+                "eval_score": eval_score,
+                "row": row,
+            }
+        )
     if not parsed:
         raise ValueError("no candidates contain finite screen and eval scores")
 
@@ -5471,14 +5579,16 @@ def aom_candidate_rank_diagnostics(
         screen_ids = {item["identity"] for item in by_screen[:k]}
         eval_ids = {item["identity"] for item in by_eval[:k]}
         overlap = len(screen_ids & eval_ids)
-        overlap_rows.append({
-            "k": int(cutoff),
-            "effective_k": int(k),
-            "overlap_count": int(overlap),
-            "overlap_fraction": float(overlap / k) if k > 0 else 0.0,
-            "eval_top_k_recall": float(overlap / k) if k > 0 else 0.0,
-            "screen_top_k_precision": float(overlap / k) if k > 0 else 0.0,
-        })
+        overlap_rows.append(
+            {
+                "k": int(cutoff),
+                "effective_k": int(k),
+                "overlap_count": int(overlap),
+                "overlap_fraction": float(overlap / k) if k > 0 else 0.0,
+                "eval_top_k_recall": float(overlap / k) if k > 0 else 0.0,
+                "screen_top_k_precision": float(overlap / k) if k > 0 else 0.0,
+            }
+        )
 
     deltas = np.asarray([item["rank_delta"] for item in parsed], dtype=np.float64)
     abs_deltas = np.abs(deltas)
@@ -5556,16 +5666,20 @@ def aom_save_candidate_report(
             writer = csv.DictWriter(handle, fieldnames=fieldnames)
             writer.writeheader()
             for record in records:
-                writer.writerow({
-                    key: json.dumps(value, separators=(",", ":"))
-                    if isinstance(value, (list, dict))
-                    else value
-                    for key, value in record.items()
-                })
+                writer.writerow(
+                    {
+                        key: json.dumps(value, separators=(",", ":"))
+                        if isinstance(value, (list, dict))
+                        else value
+                        for key, value in record.items()
+                    }
+                )
     return str(out_path)
 
 
-def aom_load_candidate_report(path, *, format: str | None = None) -> list[dict[str, object]]:
+def aom_load_candidate_report(
+    path, *, format: str | None = None
+) -> list[dict[str, object]]:
     """Read JSON, JSONL or CSV AOM candidate rows as refittable dictionaries."""
     in_path = Path(path)
     fmt = (format or in_path.suffix.lstrip(".") or "json").lower()
@@ -5601,7 +5715,9 @@ def _create_aom_operator_bank(operators) -> ctypes.c_void_p:
         raise ValueError("operators must contain at least one AOM operator")
     bank = ctypes.c_void_p()
     try:
-        check(lib.n4m_operator_bank_create(ctypes.byref(bank)), "n4m_operator_bank_create")
+        check(
+            lib.n4m_operator_bank_create(ctypes.byref(bank)), "n4m_operator_bank_create"
+        )
         for op in ops:
             kind_id, param_arr = _aom_op_kind_params(op)
             params_ptr = (
@@ -5684,61 +5800,9 @@ def aom_preprocess(
             lib.n4m_context_destroy(ctx)
 
 
-def _selector_fold_ids(n_samples: int, cv: int, fold_ids) -> np.ndarray:
-    if fold_ids is None:
-        if cv < 2 or cv > n_samples:
-            raise ValueError("cv must be in [2, n_samples] when fold_ids are not provided")
-        return np.ascontiguousarray(
-            [(i * int(cv)) // int(n_samples) for i in range(n_samples)],
-            dtype=np.int32,
-        )
-    folds = np.ascontiguousarray(fold_ids, dtype=np.int32).reshape(-1)
-    if folds.size != n_samples:
-        raise ValueError("fold_ids length must match X.shape[0]")
-    if np.any(folds < 0):
-        raise ValueError("fold_ids must be non-negative")
-    inferred_cv = int(folds.max()) + 1 if folds.size else 0
-    actual_cv = int(cv) if cv and int(cv) > 0 else inferred_cv
-    if actual_cv < 2 or actual_cv > n_samples:
-        raise ValueError("inferred/provided cv must be in [2, n_samples]")
-    if np.any(folds >= actual_cv):
-        raise ValueError("fold_ids contain id >= cv")
-    return folds
-
-
-def _create_validation_plan_from_fold_ids(fold_ids: np.ndarray, cv: int) -> ctypes.c_void_p:
-    n_samples = int(fold_ids.size)
-    plan = ctypes.c_void_p()
-    try:
-        check(lib.n4m_validation_plan_create(ctypes.byref(plan)), "n4m_validation_plan_create")
-        check(
-            lib.n4m_validation_plan_set_n_samples(plan, ctypes.c_int64(n_samples)),
-            "n4m_validation_plan_set_n_samples",
-        )
-        all_idx = np.arange(n_samples, dtype=np.int64)
-        for fold in range(int(cv)):
-            test = np.ascontiguousarray(all_idx[fold_ids == fold], dtype=np.int64)
-            train = np.ascontiguousarray(all_idx[fold_ids != fold], dtype=np.int64)
-            if test.size == 0 or train.size == 0:
-                raise ValueError("every fold must contain test rows and leave train rows")
-            check(
-                lib.n4m_validation_plan_add_fold(
-                    plan,
-                    train.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-                    ctypes.c_int64(train.size),
-                    test.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-                    ctypes.c_int64(test.size),
-                ),
-                "n4m_validation_plan_add_fold",
-            )
-    except Exception:
-        if plan.value:
-            lib.n4m_validation_plan_destroy(plan)
-        raise
-    return plan
-
-
-def _copy_double_vector_from_getter(result: ctypes.c_void_p, getter_name: str) -> np.ndarray:
+def _copy_double_vector_from_getter(
+    result: ctypes.c_void_p, getter_name: str
+) -> np.ndarray:
     data = ctypes.POINTER(ctypes.c_double)()
     size = ctypes.c_int32()
     check(
@@ -5751,7 +5815,9 @@ def _copy_double_vector_from_getter(result: ctypes.c_void_p, getter_name: str) -
     return np.ctypeslib.as_array(data, shape=(n,)).copy()
 
 
-def _copy_i32_vector_from_getter(result: ctypes.c_void_p, getter_name: str) -> np.ndarray:
+def _copy_i32_vector_from_getter(
+    result: ctypes.c_void_p, getter_name: str
+) -> np.ndarray:
     data = ctypes.POINTER(ctypes.c_int32)()
     size = ctypes.c_int32()
     check(
@@ -5815,13 +5881,21 @@ def _aom_global_result_dict(result: ctypes.c_void_p) -> dict[str, np.ndarray | f
     for key, getter in (
         ("n_operators", lib.n4m_model_selection_aom_pls_result_get_n_operators),
         ("max_components", lib.n4m_model_selection_aom_pls_result_get_max_components),
-        ("selected_operator_index", lib.n4m_model_selection_aom_pls_result_get_selected_operator_index),
-        ("selected_n_components", lib.n4m_model_selection_aom_pls_result_get_selected_n_components),
+        (
+            "selected_operator_index",
+            lib.n4m_model_selection_aom_pls_result_get_selected_operator_index,
+        ),
+        (
+            "selected_n_components",
+            lib.n4m_model_selection_aom_pls_result_get_selected_n_components,
+        ),
     ):
         check(getter(result, ctypes.byref(scalar_i32)), key)
         out[key] = float(scalar_i32.value)
     check(
-        lib.n4m_model_selection_aom_pls_result_get_best_score(result, ctypes.byref(scalar_f64)),
+        lib.n4m_model_selection_aom_pls_result_get_best_score(
+            result, ctypes.byref(scalar_f64)
+        ),
         "n4m_model_selection_aom_pls_result_get_best_score",
     )
     out["best_score"] = float(scalar_f64.value)
@@ -5856,19 +5930,26 @@ def _aom_global_result_dict(result: ctypes.c_void_p) -> dict[str, np.ndarray | f
     return out
 
 
-def _aom_per_component_result_dict(result: ctypes.c_void_p) -> dict[str, np.ndarray | float]:
+def _aom_per_component_result_dict(
+    result: ctypes.c_void_p,
+) -> dict[str, np.ndarray | float]:
     scalar_i32 = ctypes.c_int32()
     scalar_f64 = ctypes.c_double()
     out: dict[str, np.ndarray | float] = {}
     for key, getter in (
         ("n_operators", lib.n4m_model_selection_pop_pls_result_get_n_operators),
         ("max_components", lib.n4m_model_selection_pop_pls_result_get_max_components),
-        ("selected_n_components", lib.n4m_model_selection_pop_pls_result_get_selected_n_components),
+        (
+            "selected_n_components",
+            lib.n4m_model_selection_pop_pls_result_get_selected_n_components,
+        ),
     ):
         check(getter(result, ctypes.byref(scalar_i32)), key)
         out[key] = float(scalar_i32.value)
     check(
-        lib.n4m_model_selection_pop_pls_result_get_best_score(result, ctypes.byref(scalar_f64)),
+        lib.n4m_model_selection_pop_pls_result_get_best_score(
+            result, ctypes.byref(scalar_f64)
+        ),
         "n4m_model_selection_pop_pls_result_get_best_score",
     )
     out["best_score"] = float(scalar_f64.value)
@@ -5947,9 +6028,15 @@ def _run_aom_selector(
     try:
         check(lib.n4m_context_create(ctypes.byref(ctx)), "n4m_context_create")
         check(lib.n4m_config_create(ctypes.byref(cfg)), "n4m_config_create")
-        check(lib.n4m_config_set_algorithm(cfg, ctypes.c_int(0)), "n4m_config_set_algorithm")
+        check(
+            lib.n4m_config_set_algorithm(cfg, ctypes.c_int(0)),
+            "n4m_config_set_algorithm",
+        )
         check(lib.n4m_config_set_solver(cfg, ctypes.c_int(1)), "n4m_config_set_solver")
-        check(lib.n4m_config_set_deflation(cfg, ctypes.c_int(0)), "n4m_config_set_deflation")
+        check(
+            lib.n4m_config_set_deflation(cfg, ctypes.c_int(0)),
+            "n4m_config_set_deflation",
+        )
         _set_model_config(
             cfg,
             center_x=center_x,
@@ -6101,7 +6188,9 @@ def sweep_run(
     if pls_components is not None:
         pls_arr = np.ascontiguousarray(pls_components, dtype=np.int32).reshape(-1)
     if head_mask & _SWEEP_HEAD_BITS["pls"] and (pls_arr is None or pls_arr.size == 0):
-        raise ValueError("pls_components must not be empty when the pls head is enabled")
+        raise ValueError(
+            "pls_components must not be empty when the pls head is enabled"
+        )
 
     ctx = ctypes.c_void_p()
     cfg = ctypes.c_void_p()
@@ -6117,9 +6206,7 @@ def sweep_run(
             scale_y=scale_y,
         )
         _set_config_bool(cfg, "aom_score_only", score_only)
-        _set_config_bool(
-            cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds
-        )
+        _set_config_bool(cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds)
         _set_config_bool(cfg, "cuda_pls_many_batched", cuda_pls_many_batched)
         _set_config_positive_int(
             cfg, "cuda_pls_min_device_features", cuda_pls_min_device_features
@@ -6224,9 +6311,7 @@ def pls_cross_validate(
             scale_y=scale_y,
         )
         _set_config_bool(cfg, "aom_score_only", score_only)
-        _set_config_bool(
-            cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds
-        )
+        _set_config_bool(cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds)
         _set_config_bool(cfg, "cuda_pls_many_batched", cuda_pls_many_batched)
         _set_config_positive_int(
             cfg, "cuda_pls_min_device_features", cuda_pls_min_device_features
@@ -6312,7 +6397,9 @@ def aom_sweep_run(
     if pls_components is not None:
         pls_arr = np.ascontiguousarray(pls_components, dtype=np.int32).reshape(-1)
     if head_mask & _SWEEP_HEAD_BITS["pls"] and (pls_arr is None or pls_arr.size == 0):
-        raise ValueError("pls_components must not be empty when the pls head is enabled")
+        raise ValueError(
+            "pls_components must not be empty when the pls head is enabled"
+        )
 
     ctx = ctypes.c_void_p()
     cfg = ctypes.c_void_p()
@@ -6330,9 +6417,7 @@ def aom_sweep_run(
         _set_aom_moment_policy(cfg, moment_policy)
         _set_aom_pls_score_mode(cfg, pls_score_mode)
         _set_config_bool(cfg, "aom_score_only", score_only)
-        _set_config_bool(
-            cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds
-        )
+        _set_config_bool(cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds)
         _set_config_bool(cfg, "cuda_pls_many_batched", cuda_pls_many_batched)
         _set_config_positive_int(
             cfg, "cuda_pls_min_device_features", cuda_pls_min_device_features
@@ -6436,7 +6521,9 @@ def aom_chain_sweep_run(
     if pls_components is not None:
         pls_arr = np.ascontiguousarray(pls_components, dtype=np.int32).reshape(-1)
     if head_mask & _SWEEP_HEAD_BITS["pls"] and (pls_arr is None or pls_arr.size == 0):
-        raise ValueError("pls_components must not be empty when the pls head is enabled")
+        raise ValueError(
+            "pls_components must not be empty when the pls head is enabled"
+        )
 
     ctx = ctypes.c_void_p()
     cfg = ctypes.c_void_p()
@@ -6454,9 +6541,7 @@ def aom_chain_sweep_run(
         _set_aom_moment_policy(cfg, moment_policy)
         _set_aom_pls_score_mode(cfg, pls_score_mode)
         _set_config_bool(cfg, "aom_score_only", score_only)
-        _set_config_bool(
-            cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds
-        )
+        _set_config_bool(cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds)
         _set_config_bool(cfg, "cuda_pls_many_batched", cuda_pls_many_batched)
         _set_config_positive_int(
             cfg, "cuda_pls_min_device_features", cuda_pls_min_device_features
@@ -6580,9 +6665,7 @@ def aom_chain_fixed_fit_run(
             scale_y=scale_y,
         )
         _set_aom_moment_policy(cfg, moment_policy)
-        _set_config_bool(
-            cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds
-        )
+        _set_config_bool(cfg, "cuda_pls_parallel_folds", cuda_pls_parallel_folds)
         _set_config_bool(cfg, "cuda_pls_many_batched", cuda_pls_many_batched)
         _set_config_positive_int(
             cfg, "cuda_pls_min_device_features", cuda_pls_min_device_features
@@ -6781,7 +6864,9 @@ def aom_ridge_blender(
             lib.n4m_context_destroy(ctx)
 
 
-def _aom_operator_outputs(X_arr: np.ndarray, operators) -> tuple[np.ndarray, np.ndarray]:
+def _aom_operator_outputs(
+    X_arr: np.ndarray, operators
+) -> tuple[np.ndarray, np.ndarray]:
     result = aom_preprocess(X_arr, operators=operators, gating_mode="soft")
     n_ops = int(result["n_operators"])
     if n_ops <= 0:
@@ -6797,7 +6882,9 @@ def _aom_operator_outputs(X_arr: np.ndarray, operators) -> tuple[np.ndarray, np.
 
 def _aom_superblock_from_outputs(outputs: np.ndarray) -> np.ndarray:
     n_ops, n_samples, n_features = outputs.shape
-    return np.ascontiguousarray(outputs.transpose(1, 0, 2).reshape(n_samples, n_ops * n_features))
+    return np.ascontiguousarray(
+        outputs.transpose(1, 0, 2).reshape(n_samples, n_ops * n_features)
+    )
 
 
 def _aom_ridge_superblock_design(
@@ -6816,7 +6903,9 @@ def _aom_superblock_center_scale(
     center_x: bool,
     block_scaling: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    z_mean = np.mean(Z, axis=0, keepdims=True) if center_x else np.zeros((1, Z.shape[1]))
+    z_mean = (
+        np.mean(Z, axis=0, keepdims=True) if center_x else np.zeros((1, Z.shape[1]))
+    )
     Z_work = Z - z_mean
     scales = np.ones(n_ops, dtype=np.float64)
     if block_scaling == "rms":
@@ -6923,7 +7012,6 @@ def _aom_fold_superblock_coefficients(
 ) -> tuple[np.ndarray, np.ndarray]:
     eye = np.ascontiguousarray(np.eye(n_features, dtype=np.float64))
     op_mats, _ = _aom_operator_outputs(eye, operators)
-    n_ops = op_mats.shape[0]
     input_coef = np.zeros((n_features, beta.shape[1]), dtype=np.float64)
     scaled_beta = beta.copy()
     for op_idx, scale in enumerate(block_scales):
@@ -7030,6 +7118,7 @@ def _aom_active_screen_from_outputs(
     elif method == "kta":
         scores = kta_scores
     else:
+
         def _to_01(arr: np.ndarray) -> np.ndarray:
             lo = float(np.min(arr))
             hi = float(np.max(arr))
@@ -7177,7 +7266,9 @@ def aom_ridge_superblock(
     fold_arr = _selector_fold_ids(X_arr.shape[0], int(cv), fold_ids)
     n_folds = int(fold_arr.max()) + 1
     candidate_scores = np.empty((alpha_values.size, 3), dtype=np.float64)
-    oof_by_alpha = np.empty((alpha_values.size, X_arr.shape[0], y_arr.shape[1]), dtype=np.float64)
+    oof_by_alpha = np.empty(
+        (alpha_values.size, X_arr.shape[0], y_arr.shape[1]), dtype=np.float64
+    )
 
     for alpha_idx, alpha_value in enumerate(alpha_values):
         oof = np.empty_like(y_arr)
@@ -7186,7 +7277,9 @@ def aom_ridge_superblock(
             valid_mask = ~train_mask
             if not np.any(valid_mask) or not np.any(train_mask):
                 raise ValueError("every fold must contain train and validation rows")
-            Z_train, train_outputs, _ = _aom_ridge_superblock_design(X_arr[train_mask], op_spec)
+            Z_train, train_outputs, _ = _aom_ridge_superblock_design(
+                X_arr[train_mask], op_spec
+            )
             Z_valid, _, _ = _aom_ridge_superblock_design(X_arr[valid_mask], op_spec)
             n_ops = train_outputs.shape[0]
             Z_train_scaled, z_mean, block_scales = _aom_superblock_center_scale(
@@ -7206,7 +7299,9 @@ def aom_ridge_superblock(
                 if center_y
                 else np.zeros((1, y_arr.shape[1]), dtype=np.float64)
             )
-            beta = _ridge_solve_design(Z_train_scaled, y_arr[train_mask] - y_mean, float(alpha_value))
+            beta = _ridge_solve_design(
+                Z_train_scaled, y_arr[train_mask] - y_mean, float(alpha_value)
+            )
             oof[valid_mask] = Z_valid_scaled @ beta + y_mean
         residual = y_arr - oof
         rmse = float(np.sqrt(np.mean(residual * residual)))
@@ -7250,7 +7345,9 @@ def aom_ridge_superblock(
         "input_coefficients": np.ascontiguousarray(input_coef),
         "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
         "candidate_scores": candidate_scores,
-        "operator_outputs": np.ascontiguousarray(outputs_full.reshape(n_ops, X_arr.size)),
+        "operator_outputs": np.ascontiguousarray(
+            outputs_full.reshape(n_ops, X_arr.size)
+        ),
         "operator_kinds": operator_kinds,
         "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
         "block_scales": np.ascontiguousarray(block_scales.reshape(n_ops, 1)),
@@ -7435,7 +7532,9 @@ def aom_ridge_mkl_superblock(
         "input_coefficients": np.ascontiguousarray(input_coef),
         "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
         "candidate_scores": candidate_scores,
-        "operator_outputs": np.ascontiguousarray(outputs_full.reshape(n_ops, X_arr.size)),
+        "operator_outputs": np.ascontiguousarray(
+            outputs_full.reshape(n_ops, X_arr.size)
+        ),
         "operator_kinds": operator_kinds,
         "selected_operator_indices": selected_operator_indices,
         "selected_operator_kinds": np.ascontiguousarray(
@@ -7443,11 +7542,15 @@ def aom_ridge_mkl_superblock(
             dtype=np.int64,
         ),
         "mkl_weights": np.ascontiguousarray(weights_full.reshape(n_ops, 1)),
-        "mkl_alignment_scores": np.ascontiguousarray(alignment_scores.reshape(n_ops, 1)),
+        "mkl_alignment_scores": np.ascontiguousarray(
+            alignment_scores.reshape(n_ops, 1)
+        ),
         "fold_mkl_weights": np.ascontiguousarray(fold_mkl_weights),
         "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
         "block_scales": np.ascontiguousarray(block_scales.reshape(n_ops, 1)),
-        "effective_block_scales": np.ascontiguousarray(effective_scales.reshape(n_ops, 1)),
+        "effective_block_scales": np.ascontiguousarray(
+            effective_scales.reshape(n_ops, 1)
+        ),
         "superblock_mean": np.ascontiguousarray(z_mean.reshape(1, -1)),
         "selected_candidate_id": float(selected_idx),
         "selected_alpha": selected_alpha,
@@ -7523,7 +7626,9 @@ def aom_ridge_active_superblock(
     fold_arr = _selector_fold_ids(X_arr.shape[0], int(cv), fold_ids)
     n_folds = int(fold_arr.max()) + 1
     candidate_scores = np.empty((alpha_values.size, 3), dtype=np.float64)
-    oof_by_alpha = np.empty((alpha_values.size, X_arr.shape[0], y_arr.shape[1]), dtype=np.float64)
+    oof_by_alpha = np.empty(
+        (alpha_values.size, X_arr.shape[0], y_arr.shape[1]), dtype=np.float64
+    )
     fold_active_indices = np.full(
         (alpha_values.size, n_folds, active_limit),
         -1,
@@ -7574,7 +7679,9 @@ def aom_ridge_active_superblock(
                 if center_y
                 else np.zeros((1, y_arr.shape[1]), dtype=np.float64)
             )
-            beta = _ridge_solve_design(Z_train_scaled, y_arr[train_mask] - y_mean, float(alpha_value))
+            beta = _ridge_solve_design(
+                Z_train_scaled, y_arr[train_mask] - y_mean, float(alpha_value)
+            )
             oof[valid_mask] = Z_valid_scaled @ beta + y_mean
             count = min(active_idx.size, active_limit)
             fold_active_indices[alpha_idx, fold, :count] = active_idx[:count]
@@ -7637,17 +7744,27 @@ def aom_ridge_active_superblock(
         "input_coefficients": np.ascontiguousarray(input_coef),
         "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
         "candidate_scores": candidate_scores,
-        "operator_outputs": np.ascontiguousarray(selected_outputs_full.reshape(final_active_idx.size, X_arr.size)),
+        "operator_outputs": np.ascontiguousarray(
+            selected_outputs_full.reshape(final_active_idx.size, X_arr.size)
+        ),
         "operator_kinds": operator_kinds,
-        "selected_operator_indices": np.ascontiguousarray(final_active_idx, dtype=np.int32),
-        "selected_operator_kinds": np.ascontiguousarray(operator_kinds[final_active_idx], dtype=np.int64),
+        "selected_operator_indices": np.ascontiguousarray(
+            final_active_idx, dtype=np.int32
+        ),
+        "selected_operator_kinds": np.ascontiguousarray(
+            operator_kinds[final_active_idx], dtype=np.int64
+        ),
         "active_scores": np.ascontiguousarray(active_scores.reshape(-1, 1)),
-        "selected_active_scores": np.ascontiguousarray(active_scores[final_active_idx].reshape(-1, 1)),
+        "selected_active_scores": np.ascontiguousarray(
+            active_scores[final_active_idx].reshape(-1, 1)
+        ),
         "fold_active_operator_indices": np.ascontiguousarray(fold_active_indices),
         "fold_active_operator_counts": np.ascontiguousarray(fold_active_counts),
         "fold_active_pruned": np.ascontiguousarray(fold_active_pruned),
         "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
-        "block_scales": np.ascontiguousarray(block_scales.reshape(final_active_idx.size, 1)),
+        "block_scales": np.ascontiguousarray(
+            block_scales.reshape(final_active_idx.size, 1)
+        ),
         "superblock_mean": np.ascontiguousarray(z_mean.reshape(1, -1)),
         "selected_candidate_id": float(selected_idx),
         "selected_alpha": selected_alpha,
@@ -7658,7 +7775,9 @@ def aom_ridge_active_superblock(
         "n_active_pruned": float(final_pruned),
         "active_top_m": float(active_top),
         "active_diversity_threshold": float(active_diversity_threshold),
-        "active_max_per_family": float(active_max_per_family if active_max_per_family is not None else -1),
+        "active_max_per_family": float(
+            active_max_per_family if active_max_per_family is not None else -1
+        ),
         "n_samples": float(X_arr.shape[0]),
         "n_features": float(X_arr.shape[1]),
         "n_features_superblock": float(Z_full.shape[1]),
@@ -7752,7 +7871,9 @@ def aom_pls_superblock(
             valid_mask = ~train_mask
             if not np.any(valid_mask) or not np.any(train_mask):
                 raise ValueError("every fold must contain train and validation rows")
-            Z_train, train_outputs, _ = _aom_ridge_superblock_design(X_arr[train_mask], op_spec)
+            Z_train, train_outputs, _ = _aom_ridge_superblock_design(
+                X_arr[train_mask], op_spec
+            )
             Z_valid, _, _ = _aom_ridge_superblock_design(X_arr[valid_mask], op_spec)
             n_ops = train_outputs.shape[0]
             Z_train_scaled, z_mean, block_scales = _aom_superblock_center_scale(
@@ -7828,7 +7949,9 @@ def aom_pls_superblock(
         "input_coefficients": np.ascontiguousarray(input_coef),
         "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
         "candidate_scores": candidate_scores,
-        "operator_outputs": np.ascontiguousarray(outputs_full.reshape(n_ops, X_arr.size)),
+        "operator_outputs": np.ascontiguousarray(
+            outputs_full.reshape(n_ops, X_arr.size)
+        ),
         "operator_kinds": operator_kinds,
         "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
         "block_scales": np.ascontiguousarray(block_scales.reshape(n_ops, 1)),
@@ -7924,7 +8047,9 @@ def aom_ridge_pls_superblock(
                 train_mask = fold_arr != fold
                 valid_mask = ~train_mask
                 if not np.any(valid_mask) or not np.any(train_mask):
-                    raise ValueError("every fold must contain train and validation rows")
+                    raise ValueError(
+                        "every fold must contain train and validation rows"
+                    )
                 Z_train, train_outputs, _ = _aom_ridge_superblock_design(
                     X_arr[train_mask],
                     op_spec,
@@ -7950,8 +8075,8 @@ def aom_ridge_pls_superblock(
                     int(component_count),
                 )
                 n_ridge_pls_fit_calls += 1
-                oof[valid_mask] = (
-                    Z_valid_scaled @ beta + intercept_design.reshape(1, -1)
+                oof[valid_mask] = Z_valid_scaled @ beta + intercept_design.reshape(
+                    1, -1
                 )
             residual = y_arr - oof
             rmse = float(np.sqrt(np.mean(residual * residual)))
@@ -8003,7 +8128,9 @@ def aom_ridge_pls_superblock(
         "input_coefficients": np.ascontiguousarray(input_coef),
         "intercept": np.ascontiguousarray(intercept.reshape(1, -1)),
         "candidate_scores": candidate_scores,
-        "operator_outputs": np.ascontiguousarray(outputs_full.reshape(n_ops, X_arr.size)),
+        "operator_outputs": np.ascontiguousarray(
+            outputs_full.reshape(n_ops, X_arr.size)
+        ),
         "operator_kinds": operator_kinds,
         "fold_ids": np.ascontiguousarray(fold_arr, dtype=np.int32),
         "block_scales": np.ascontiguousarray(block_scales.reshape(n_ops, 1)),
@@ -8113,7 +8240,9 @@ def aom_chain_ridge_pls(
     n_folds = int(fold_arr.max()) + 1
     min_train = min(int(np.count_nonzero(fold_arr != fold)) for fold in range(n_folds))
     if min_train < 2:
-        raise ValueError("every AOM chain Ridge-PLS train fold must contain at least 2 rows")
+        raise ValueError(
+            "every AOM chain Ridge-PLS train fold must contain at least 2 rows"
+        )
     max_components = min(min_train - 1, X_arr.shape[1])
     if np.any(component_values > max_components):
         raise ValueError("PLS components must be <= min(train_rows - 1, n_features)")
@@ -8138,7 +8267,9 @@ def aom_chain_ridge_pls(
                     train_mask = fold_arr != fold
                     valid_mask = ~train_mask
                     if not np.any(valid_mask) or not np.any(train_mask):
-                        raise ValueError("every fold must contain train and validation rows")
+                        raise ValueError(
+                            "every fold must contain train and validation rows"
+                        )
                     Z_train, canonical_chain = _aom_apply_strict_chain_to_matrix(
                         X_arr[train_mask],
                         chain,
@@ -8156,9 +8287,7 @@ def aom_chain_ridge_pls(
                         center_y=bool(center_y),
                     )
                     n_ridge_pls_fit_calls += 1
-                    oof[valid_mask] = (
-                        Z_valid @ beta + intercept_design.reshape(1, -1)
-                    )
+                    oof[valid_mask] = Z_valid @ beta + intercept_design.reshape(1, -1)
                 residual = y_arr - oof
                 rmse = float(np.sqrt(np.mean(residual * residual)))
                 candidate_scores[candidate_idx] = (
@@ -8197,9 +8326,7 @@ def aom_chain_ridge_pls(
     transform_matrix, _ = _aom_apply_strict_chain_to_matrix(identity, selected_chain)
     input_coef = np.ascontiguousarray(transform_matrix @ beta)
     intercept = np.ascontiguousarray(intercept_design.reshape(1, -1))
-    predictions = np.ascontiguousarray(
-        X_arr @ input_coef + intercept.reshape(1, -1)
-    )
+    predictions = np.ascontiguousarray(X_arr @ input_coef + intercept.reshape(1, -1))
 
     return {
         "predictions": predictions,
@@ -8262,13 +8389,19 @@ def aom_operator_pls_stack(
     try:
         profile_id = _AOM_ROBUST_HPO_PROFILES[profile]
     except KeyError as exc:
-        raise ValueError(f"unknown AOM operator PLS stack profile: {profile!r}") from exc
+        raise ValueError(
+            f"unknown AOM operator PLS stack profile: {profile!r}"
+        ) from exc
 
     component_arr = np.ascontiguousarray(components, dtype=np.int32).reshape(-1)
     if component_arr.size == 0 or np.any(component_arr < 1):
         raise ValueError("components must contain positive integers")
     alpha_arr = np.ascontiguousarray(alphas, dtype=np.float64).reshape(-1)
-    if alpha_arr.size == 0 or np.any(~np.isfinite(alpha_arr)) or np.any(alpha_arr < 0.0):
+    if (
+        alpha_arr.size == 0
+        or np.any(~np.isfinite(alpha_arr))
+        or np.any(alpha_arr < 0.0)
+    ):
         raise ValueError("alphas must be finite and non-negative")
     std_penalty_value = float(std_penalty)
     gap_penalty_value = float(gap_penalty)
@@ -8376,7 +8509,14 @@ def ridge(
         y,
         _f64_ptr(lambda_arr),
         ctypes.c_int64(1),
-        matrices=("coefficients", "intercept", "x_mean", "x_scale", "y_mean", "predictions"),
+        matrices=(
+            "coefficients",
+            "intercept",
+            "x_mean",
+            "x_scale",
+            "y_mean",
+            "predictions",
+        ),
         scalars=("rmse", "lambda"),
         center_x=center_x,
         scale_x=scale_x,
@@ -8634,7 +8774,14 @@ def ecr(
             "r2x",
             "r2y",
         ),
-        scalars=("n_samples", "n_features", "n_targets", "n_components", "alpha", "rmse"),
+        scalars=(
+            "n_samples",
+            "n_features",
+            "n_targets",
+            "n_components",
+            "alpha",
+            "rmse",
+        ),
         n_components=n_components,
     )
 
@@ -8692,9 +8839,7 @@ def _aug_apply(
         )
         out = empty_like_f64(X_arr.shape)
         if apply_wavelengths:
-            _, _, wl_arr = _wavelength_ptr(
-                wavelengths, X_arr.shape[1], required=True
-            )
+            _, _, wl_arr = _wavelength_ptr(wavelengths, X_arr.shape[1], required=True)
             check(
                 getattr(lib, f"{prefix}_apply")(
                     handle,
@@ -8732,10 +8877,18 @@ def transform(
     handle = _create(prefix, *create_args)
     try:
         if fit_arr is not None:
-            check(getattr(lib, f"{prefix}_fit")(handle, numpy_to_view(fit_arr)), f"{prefix}_fit")
+            check(
+                getattr(lib, f"{prefix}_fit")(handle, numpy_to_view(fit_arr)),
+                f"{prefix}_fit",
+            )
         shape = out_shape or X_arr.shape
         out = empty_like_i32(shape) if out_dtype == "i32" else empty_like_f64(shape)
-        check(getattr(lib, f"{prefix}_transform")(handle, numpy_to_view(X_arr), numpy_to_view(out)), f"{prefix}_transform")
+        check(
+            getattr(lib, f"{prefix}_transform")(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            f"{prefix}_transform",
+        )
         return out
     finally:
         _destroy(prefix, handle)
@@ -8840,12 +8993,20 @@ def _fit_y_transform(prefix: str, X, y, *create_args):
     try:
         check(
             getattr(lib, f"{prefix}_fit")(
-                handle, numpy_to_view(X_arr), _f64_ptr(y_arr), ctypes.c_int64(y_arr.size)
+                handle,
+                numpy_to_view(X_arr),
+                _f64_ptr(y_arr),
+                ctypes.c_int64(y_arr.size),
             ),
             f"{prefix}_fit",
         )
         out = empty_like_f64(X_arr.shape)
-        check(getattr(lib, f"{prefix}_transform")(handle, numpy_to_view(X_arr), numpy_to_view(out)), f"{prefix}_transform")
+        check(
+            getattr(lib, f"{prefix}_transform")(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            f"{prefix}_transform",
+        )
         return out
     finally:
         _destroy(prefix, handle)
@@ -8860,11 +9021,18 @@ def _paired_transfer(prefix: str, X_source, X_target, X, *create_args):
     handle = _create(prefix, *create_args)
     try:
         check(
-            getattr(lib, f"{prefix}_fit")(handle, numpy_to_view(source), numpy_to_view(target)),
+            getattr(lib, f"{prefix}_fit")(
+                handle, numpy_to_view(source), numpy_to_view(target)
+            ),
             f"{prefix}_fit",
         )
         out = empty_like_f64(X_arr.shape)
-        check(getattr(lib, f"{prefix}_transform")(handle, numpy_to_view(X_arr), numpy_to_view(out)), f"{prefix}_transform")
+        check(
+            getattr(lib, f"{prefix}_transform")(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            f"{prefix}_transform",
+        )
         return out
     finally:
         _destroy(prefix, handle)
@@ -8878,26 +9046,55 @@ def _split_result_to_arrays(result: SplitResult) -> tuple[np.ndarray, np.ndarray
 
 
 def snv(X, with_mean: bool = True, with_std: bool = True, ddof: int = 0):
-    return transform("n4m_transform_snv", X, ctypes.c_int(with_mean), ctypes.c_int(with_std), ctypes.c_int(ddof))
+    return transform(
+        "n4m_transform_snv",
+        X,
+        ctypes.c_int(with_mean),
+        ctypes.c_int(with_std),
+        ctypes.c_int(ddof),
+    )
 
 
-def lsnv(X, window: int = 11, pad_mode: str | int = "reflect", constant_value: float = 0.0):
-    return transform("n4m_transform_local_snv", X, ctypes.c_int32(window), ctypes.c_int32(_enum(_LSNV_PAD_MODES, pad_mode, "pad_mode")), ctypes.c_double(constant_value))
+def lsnv(
+    X, window: int = 11, pad_mode: str | int = "reflect", constant_value: float = 0.0
+):
+    return transform(
+        "n4m_transform_local_snv",
+        X,
+        ctypes.c_int32(window),
+        ctypes.c_int32(_enum(_LSNV_PAD_MODES, pad_mode, "pad_mode")),
+        ctypes.c_double(constant_value),
+    )
 
 
 def rnv(X, with_center: bool = True, with_scale: bool = True, k: float = 1.4826):
-    return transform("n4m_transform_robust_snv", X, ctypes.c_int(with_center), ctypes.c_int(with_scale), ctypes.c_double(k))
+    return transform(
+        "n4m_transform_robust_snv",
+        X,
+        ctypes.c_int(with_center),
+        ctypes.c_int(with_scale),
+        ctypes.c_double(k),
+    )
 
 
 def area_norm(X, method: str | int = "sum"):
-    return transform("n4m_transform_area_normalization", X, ctypes.c_int32(_enum(_AREA_METHODS, method, "method")))
+    return transform(
+        "n4m_transform_area_normalization",
+        X,
+        ctypes.c_int32(_enum(_AREA_METHODS, method, "method")),
+    )
 
 
 area_normalization = area_norm
 
 
 def normalize(X, feature_min: float = -1.0, feature_max: float = 1.0):
-    return transform("n4m_transform_normalize", X, ctypes.c_double(feature_min), ctypes.c_double(feature_max))
+    return transform(
+        "n4m_transform_normalize",
+        X,
+        ctypes.c_double(feature_min),
+        ctypes.c_double(feature_max),
+    )
 
 
 def simple_scale(X):
@@ -8975,23 +9172,65 @@ def savitzky_golay(
 
 
 def first_derivative(X, delta: float = 1.0, edge_order: int = 2):
-    return transform("n4m_transform_first_derivative", X, ctypes.c_double(delta), ctypes.c_int32(edge_order))
+    return transform(
+        "n4m_transform_first_derivative",
+        X,
+        ctypes.c_double(delta),
+        ctypes.c_int32(edge_order),
+    )
 
 
 def second_derivative(X, delta: float = 1.0, edge_order: int = 2):
-    return transform("n4m_transform_second_derivative", X, ctypes.c_double(delta), ctypes.c_int32(edge_order))
+    return transform(
+        "n4m_transform_second_derivative",
+        X,
+        ctypes.c_double(delta),
+        ctypes.c_int32(edge_order),
+    )
 
 
-def norris_williams(X, segment: int = 5, gap: int = 5, derivative_order: int = 1, delta: float = 1.0):
-    return transform("n4m_transform_norris_williams", X, ctypes.c_int32(segment), ctypes.c_int32(gap), ctypes.c_int32(derivative_order), ctypes.c_double(delta))
+def norris_williams(
+    X, segment: int = 5, gap: int = 5, derivative_order: int = 1, delta: float = 1.0
+):
+    return transform(
+        "n4m_transform_norris_williams",
+        X,
+        ctypes.c_int32(segment),
+        ctypes.c_int32(gap),
+        ctypes.c_int32(derivative_order),
+        ctypes.c_double(delta),
+    )
 
 
-def gaussian(X, sigma: float = 1.0, order: int = 0, mode: str | int = "reflect", cval: float = 0.0, truncate: float = 4.0):
-    return transform("n4m_transform_gaussian", X, ctypes.c_double(sigma), ctypes.c_int32(order), ctypes.c_int(_enum(_GAUSSIAN_MODES, mode, "mode")), ctypes.c_double(cval), ctypes.c_double(truncate))
+def gaussian(
+    X,
+    sigma: float = 1.0,
+    order: int = 0,
+    mode: str | int = "reflect",
+    cval: float = 0.0,
+    truncate: float = 4.0,
+):
+    return transform(
+        "n4m_transform_gaussian",
+        X,
+        ctypes.c_double(sigma),
+        ctypes.c_int32(order),
+        ctypes.c_int(_enum(_GAUSSIAN_MODES, mode, "mode")),
+        ctypes.c_double(cval),
+        ctypes.c_double(truncate),
+    )
 
 
-def to_absorbance(X, source_type: int = 0, epsilon: float = 1e-10, clip_negative: bool = True):
-    return transform("n4m_transform_to_absorbance", X, ctypes.c_int(source_type), ctypes.c_double(epsilon), ctypes.c_int(clip_negative))
+def to_absorbance(
+    X, source_type: int = 0, epsilon: float = 1e-10, clip_negative: bool = True
+):
+    return transform(
+        "n4m_transform_to_absorbance",
+        X,
+        ctypes.c_int(source_type),
+        ctypes.c_double(epsilon),
+        ctypes.c_int(clip_negative),
+    )
 
 
 def from_absorbance(X, target_type: int = 0):
@@ -9013,7 +9252,12 @@ fraction_to_percent = frac_to_pct
 
 
 def kubelka_munk(X, source_type: int = 0, epsilon: float = 1e-10):
-    return transform("n4m_transform_kubelka_munk", X, ctypes.c_int(source_type), ctypes.c_double(epsilon))
+    return transform(
+        "n4m_transform_kubelka_munk",
+        X,
+        ctypes.c_int(source_type),
+        ctypes.c_double(epsilon),
+    )
 
 
 def detrend(X, polyorder: int = 1):
@@ -9021,23 +9265,54 @@ def detrend(X, polyorder: int = 1):
 
 
 def asls(X, lam: float = 1e6, p: float = 1e-2, max_iter: int = 50, tol: float = 1e-3):
-    return transform("n4m_transform_asls", X, ctypes.c_double(lam), ctypes.c_double(p), ctypes.c_int32(max_iter), ctypes.c_double(tol))
+    return transform(
+        "n4m_transform_asls",
+        X,
+        ctypes.c_double(lam),
+        ctypes.c_double(p),
+        ctypes.c_int32(max_iter),
+        ctypes.c_double(tol),
+    )
 
 
 def airpls(X, lam: float = 1e6, max_iter: int = 50, tol: float = 1e-3):
-    return transform("n4m_transform_airpls", X, ctypes.c_double(lam), ctypes.c_int32(max_iter), ctypes.c_double(tol))
+    return transform(
+        "n4m_transform_airpls",
+        X,
+        ctypes.c_double(lam),
+        ctypes.c_int32(max_iter),
+        ctypes.c_double(tol),
+    )
 
 
 def arpls(X, lam: float = 1e5, max_iter: int = 50, tol: float = 1e-3):
-    return transform("n4m_transform_arpls", X, ctypes.c_double(lam), ctypes.c_int32(max_iter), ctypes.c_double(tol))
+    return transform(
+        "n4m_transform_arpls",
+        X,
+        ctypes.c_double(lam),
+        ctypes.c_int32(max_iter),
+        ctypes.c_double(tol),
+    )
 
 
 def modpoly(X, polyorder: int = 2, max_iter: int = 250, tol: float = 1e-3):
-    return transform("n4m_transform_modpoly", X, ctypes.c_int32(polyorder), ctypes.c_int32(max_iter), ctypes.c_double(tol))
+    return transform(
+        "n4m_transform_modpoly",
+        X,
+        ctypes.c_int32(polyorder),
+        ctypes.c_int32(max_iter),
+        ctypes.c_double(tol),
+    )
 
 
 def imodpoly(X, polyorder: int = 2, max_iter: int = 250, tol: float = 1e-3):
-    return transform("n4m_transform_imodpoly", X, ctypes.c_int32(polyorder), ctypes.c_int32(max_iter), ctypes.c_double(tol))
+    return transform(
+        "n4m_transform_imodpoly",
+        X,
+        ctypes.c_int32(polyorder),
+        ctypes.c_int32(max_iter),
+        ctypes.c_double(tol),
+    )
 
 
 def snip(X, max_half_window: int = 20):
@@ -9045,32 +9320,89 @@ def snip(X, max_half_window: int = 20):
 
 
 def rolling_ball(X, half_window: int = 20, smooth_half_window: int = 0):
-    return transform("n4m_transform_rolling_ball", X, ctypes.c_int32(half_window), ctypes.c_int32(smooth_half_window))
+    return transform(
+        "n4m_transform_rolling_ball",
+        X,
+        ctypes.c_int32(half_window),
+        ctypes.c_int32(smooth_half_window),
+    )
 
 
-def iasls(X, lam: float = 1e6, p: float = 1e-2, lam_1: float = 1e-4, polyorder: int = 2, diff_order: int = 2, max_iter: int = 50, tol: float = 1e-3):
+def iasls(
+    X,
+    lam: float = 1e6,
+    p: float = 1e-2,
+    lam_1: float = 1e-4,
+    polyorder: int = 2,
+    diff_order: int = 2,
+    max_iter: int = 50,
+    tol: float = 1e-3,
+):
     X_arr = as_f64_2d(X)
-    handle = _create_ex("n4m_transform_iasls", ctypes.c_double(lam), ctypes.c_double(p), ctypes.c_double(lam_1), ctypes.c_int32(polyorder), ctypes.c_int32(diff_order), ctypes.c_int32(max_iter), ctypes.c_double(tol))
+    handle = _create_ex(
+        "n4m_transform_iasls",
+        ctypes.c_double(lam),
+        ctypes.c_double(p),
+        ctypes.c_double(lam_1),
+        ctypes.c_int32(polyorder),
+        ctypes.c_int32(diff_order),
+        ctypes.c_int32(max_iter),
+        ctypes.c_double(tol),
+    )
     try:
         out = empty_like_f64(X_arr.shape)
-        check(lib.n4m_transform_iasls_transform(handle, numpy_to_view(X_arr), numpy_to_view(out)), "n4m_transform_iasls_transform")
+        check(
+            lib.n4m_transform_iasls_transform(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            "n4m_transform_iasls_transform",
+        )
         return out
     finally:
         _destroy("n4m_transform_iasls", handle)
 
 
-def beads(X, lam_0: float = 100.0, lam_1: float = 0.5, lam_2: float = 0.5, max_iter: int = 50, tol: float = 1e-3):
-    return transform("n4m_transform_beads", X, ctypes.c_double(lam_0), ctypes.c_double(lam_1), ctypes.c_double(lam_2), ctypes.c_int32(max_iter), ctypes.c_double(tol))
+def beads(
+    X,
+    lam_0: float = 100.0,
+    lam_1: float = 0.5,
+    lam_2: float = 0.5,
+    max_iter: int = 50,
+    tol: float = 1e-3,
+):
+    return transform(
+        "n4m_transform_beads",
+        X,
+        ctypes.c_double(lam_0),
+        ctypes.c_double(lam_1),
+        ctypes.c_double(lam_2),
+        ctypes.c_int32(max_iter),
+        ctypes.c_double(tol),
+    )
 
 
 def wavelet(X, family: str | int = "haar", mode: str | int = "periodization"):
     X_arr = as_f64_2d(X)
-    handle = _create("n4m_transform_wavelet", ctypes.c_int(_enum(_WAVELET_FAMILIES, family, "family")), ctypes.c_int(_enum(_WAVELET_BOUNDARIES, mode, "mode")))
+    handle = _create(
+        "n4m_transform_wavelet",
+        ctypes.c_int(_enum(_WAVELET_FAMILIES, family, "family")),
+        ctypes.c_int(_enum(_WAVELET_BOUNDARIES, mode, "mode")),
+    )
     try:
         out_cols = ctypes.c_int64()
-        check(lib.n4m_transform_wavelet_output_cols(handle, ctypes.c_int64(X_arr.shape[1]), ctypes.byref(out_cols)), "n4m_transform_wavelet_output_cols")
+        check(
+            lib.n4m_transform_wavelet_output_cols(
+                handle, ctypes.c_int64(X_arr.shape[1]), ctypes.byref(out_cols)
+            ),
+            "n4m_transform_wavelet_output_cols",
+        )
         out = empty_like_f64((X_arr.shape[0], int(out_cols.value)))
-        check(lib.n4m_transform_wavelet_transform(handle, numpy_to_view(X_arr), numpy_to_view(out)), "n4m_transform_wavelet_transform")
+        check(
+            lib.n4m_transform_wavelet_transform(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            "n4m_transform_wavelet_transform",
+        )
         return out
     finally:
         _destroy("n4m_transform_wavelet", handle)
@@ -9081,33 +9413,86 @@ def haar(X):
     handle = _create("n4m_transform_haar")
     try:
         out_cols = ctypes.c_int64()
-        check(lib.n4m_transform_haar_output_cols(ctypes.c_int64(X_arr.shape[1]), ctypes.byref(out_cols)), "n4m_transform_haar_output_cols")
+        check(
+            lib.n4m_transform_haar_output_cols(
+                ctypes.c_int64(X_arr.shape[1]), ctypes.byref(out_cols)
+            ),
+            "n4m_transform_haar_output_cols",
+        )
         out = empty_like_f64((X_arr.shape[0], int(out_cols.value)))
-        check(lib.n4m_transform_haar_transform(handle, numpy_to_view(X_arr), numpy_to_view(out)), "n4m_transform_haar_transform")
+        check(
+            lib.n4m_transform_haar_transform(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            "n4m_transform_haar_transform",
+        )
         return out
     finally:
         _destroy("n4m_transform_haar", handle)
 
 
-def wavelet_denoise(X, family: str | int = "db4", mode: str | int = "periodization", level: int = 3, threshold_mode: str | int = "soft", noise_estimator: str | int = "median"):
-    return transform("n4m_transform_wavelet_denoise", X, ctypes.c_int(_enum(_WAVELET_FAMILIES, family, "family")), ctypes.c_int(_enum(_WAVELET_BOUNDARIES, mode, "mode")), ctypes.c_int32(level), ctypes.c_int(_enum(_WAVELET_THRESHOLDS, threshold_mode, "threshold_mode")), ctypes.c_int(_enum(_WAVELET_NOISE, noise_estimator, "noise_estimator")))
+def wavelet_denoise(
+    X,
+    family: str | int = "db4",
+    mode: str | int = "periodization",
+    level: int = 3,
+    threshold_mode: str | int = "soft",
+    noise_estimator: str | int = "median",
+):
+    return transform(
+        "n4m_transform_wavelet_denoise",
+        X,
+        ctypes.c_int(_enum(_WAVELET_FAMILIES, family, "family")),
+        ctypes.c_int(_enum(_WAVELET_BOUNDARIES, mode, "mode")),
+        ctypes.c_int32(level),
+        ctypes.c_int(_enum(_WAVELET_THRESHOLDS, threshold_mode, "threshold_mode")),
+        ctypes.c_int(_enum(_WAVELET_NOISE, noise_estimator, "noise_estimator")),
+    )
 
 
-def wavelet_features(X, family: str | int = "haar", mode: str | int = "periodization", max_level: int = 3, entropy: str | int = "energy"):
+def wavelet_features(
+    X,
+    family: str | int = "haar",
+    mode: str | int = "periodization",
+    max_level: int = 3,
+    entropy: str | int = "energy",
+):
     X_arr = as_f64_2d(X)
-    handle = _create_ex("n4m_transform_wavelet_features", ctypes.c_int(_enum(_WAVELET_FAMILIES, family, "family")), ctypes.c_int(_enum(_WAVELET_BOUNDARIES, mode, "mode")), ctypes.c_int32(max_level), ctypes.c_int(_enum(_WAVELET_FEATURE_ENTROPY, entropy, "entropy")))
+    handle = _create_ex(
+        "n4m_transform_wavelet_features",
+        ctypes.c_int(_enum(_WAVELET_FAMILIES, family, "family")),
+        ctypes.c_int(_enum(_WAVELET_BOUNDARIES, mode, "mode")),
+        ctypes.c_int32(max_level),
+        ctypes.c_int(_enum(_WAVELET_FEATURE_ENTROPY, entropy, "entropy")),
+    )
     try:
         out_cols = ctypes.c_int64()
-        check(lib.n4m_transform_wavelet_features_output_cols(handle, ctypes.c_int64(X_arr.shape[1]), ctypes.byref(out_cols)), "n4m_transform_wavelet_features_output_cols")
+        check(
+            lib.n4m_transform_wavelet_features_output_cols(
+                handle, ctypes.c_int64(X_arr.shape[1]), ctypes.byref(out_cols)
+            ),
+            "n4m_transform_wavelet_features_output_cols",
+        )
         out = empty_like_f64((X_arr.shape[0], int(out_cols.value)))
-        check(lib.n4m_transform_wavelet_features_transform(handle, numpy_to_view(X_arr), numpy_to_view(out)), "n4m_transform_wavelet_features_transform")
+        check(
+            lib.n4m_transform_wavelet_features_transform(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            "n4m_transform_wavelet_features_transform",
+        )
         return out
     finally:
         _destroy("n4m_transform_wavelet_features", handle)
 
 
-def _wavelet_projection(prefix: str, X, family: str | int, mode: str | int,
-                        max_level: int, n_components: float):
+def _wavelet_projection(
+    prefix: str,
+    X,
+    family: str | int,
+    mode: str | int,
+    max_level: int,
+    n_components: float,
+):
     X_arr = as_f64_2d(X)
     handle = _create(
         prefix,
@@ -9117,14 +9502,21 @@ def _wavelet_projection(prefix: str, X, family: str | int, mode: str | int,
         ctypes.c_double(n_components),
     )
     try:
-        check(getattr(lib, f"{prefix}_fit")(handle, numpy_to_view(X_arr)),
-              f"{prefix}_fit")
+        check(
+            getattr(lib, f"{prefix}_fit")(handle, numpy_to_view(X_arr)), f"{prefix}_fit"
+        )
         out_cols = ctypes.c_int64()
-        check(getattr(lib, f"{prefix}_output_cols")(handle, ctypes.byref(out_cols)),
-              f"{prefix}_output_cols")
+        check(
+            getattr(lib, f"{prefix}_output_cols")(handle, ctypes.byref(out_cols)),
+            f"{prefix}_output_cols",
+        )
         out = empty_like_f64((X_arr.shape[0], int(out_cols.value)))
-        check(getattr(lib, f"{prefix}_transform")(handle, numpy_to_view(X_arr), numpy_to_view(out)),
-              f"{prefix}_transform")
+        check(
+            getattr(lib, f"{prefix}_transform")(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            f"{prefix}_transform",
+        )
         return out
     finally:
         _destroy(prefix, handle)
@@ -9155,7 +9547,9 @@ def wavelet_svd(
 
 
 def osc(X, y, n_components: int = 1, scale: bool = True):
-    return _fit_y_transform("n4m_transform_osc", X, y, ctypes.c_int32(n_components), ctypes.c_int(scale))
+    return _fit_y_transform(
+        "n4m_transform_osc", X, y, ctypes.c_int32(n_components), ctypes.c_int(scale)
+    )
 
 
 def epo(X, d, scale: bool = True):
@@ -9163,9 +9557,26 @@ def epo(X, d, scale: bool = True):
     d_arr = _as_f64_1d(d, "d")
     handle = _create("n4m_domain_adaptation_epo", ctypes.c_int(scale))
     try:
-        check(lib.n4m_domain_adaptation_epo_fit(handle, numpy_to_view(X_arr), _f64_ptr(d_arr), ctypes.c_int64(d_arr.size)), "n4m_domain_adaptation_epo_fit")
+        check(
+            lib.n4m_domain_adaptation_epo_fit(
+                handle,
+                numpy_to_view(X_arr),
+                _f64_ptr(d_arr),
+                ctypes.c_int64(d_arr.size),
+            ),
+            "n4m_domain_adaptation_epo_fit",
+        )
         out = empty_like_f64(X_arr.shape)
-        check(lib.n4m_domain_adaptation_epo_transform_with_d(handle, numpy_to_view(X_arr), _f64_ptr(d_arr), ctypes.c_int64(d_arr.size), numpy_to_view(out)), "n4m_domain_adaptation_epo_transform_with_d")
+        check(
+            lib.n4m_domain_adaptation_epo_transform_with_d(
+                handle,
+                numpy_to_view(X_arr),
+                _f64_ptr(d_arr),
+                ctypes.c_int64(d_arr.size),
+                numpy_to_view(out),
+            ),
+            "n4m_domain_adaptation_epo_transform_with_d",
+        )
         return out
     finally:
         _destroy("n4m_domain_adaptation_epo", handle)
@@ -9183,11 +9594,21 @@ def _flexible(prefix: str, X, n_components: float):
     X_arr = as_f64_2d(X)
     handle = _create(prefix, ctypes.c_double(n_components))
     try:
-        check(getattr(lib, f"{prefix}_fit")(handle, numpy_to_view(X_arr)), f"{prefix}_fit")
+        check(
+            getattr(lib, f"{prefix}_fit")(handle, numpy_to_view(X_arr)), f"{prefix}_fit"
+        )
         out_cols = ctypes.c_int64()
-        check(getattr(lib, f"{prefix}_output_cols")(handle, ctypes.byref(out_cols)), f"{prefix}_output_cols")
+        check(
+            getattr(lib, f"{prefix}_output_cols")(handle, ctypes.byref(out_cols)),
+            f"{prefix}_output_cols",
+        )
         out = empty_like_f64((X_arr.shape[0], int(out_cols.value)))
-        check(getattr(lib, f"{prefix}_transform")(handle, numpy_to_view(X_arr), numpy_to_view(out)), f"{prefix}_transform")
+        check(
+            getattr(lib, f"{prefix}_transform")(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            f"{prefix}_transform",
+        )
         return out
     finally:
         _destroy(prefix, handle)
@@ -9197,31 +9618,108 @@ def fck_static(X, kernel_size: int, alphas: Sequence[float], sigmas: Sequence[fl
     X_arr = as_f64_2d(X)
     alpha_arr = _as_f64_1d(alphas, "alphas")
     sigma_arr = _as_f64_1d(sigmas, "sigmas")
-    handle = _create("n4m_transform_fck_static", ctypes.c_int32(kernel_size), _f64_ptr(alpha_arr), ctypes.c_int32(alpha_arr.size), _f64_ptr(sigma_arr), ctypes.c_int32(sigma_arr.size))
+    handle = _create(
+        "n4m_transform_fck_static",
+        ctypes.c_int32(kernel_size),
+        _f64_ptr(alpha_arr),
+        ctypes.c_int32(alpha_arr.size),
+        _f64_ptr(sigma_arr),
+        ctypes.c_int32(sigma_arr.size),
+    )
     try:
         out_cols = ctypes.c_int32()
-        check(lib.n4m_transform_fck_static_output_cols(ctypes.c_int32(alpha_arr.size * sigma_arr.size), ctypes.c_int32(X_arr.shape[1]), ctypes.byref(out_cols)), "n4m_transform_fck_static_output_cols")
+        check(
+            lib.n4m_transform_fck_static_output_cols(
+                ctypes.c_int32(alpha_arr.size * sigma_arr.size),
+                ctypes.c_int32(X_arr.shape[1]),
+                ctypes.byref(out_cols),
+            ),
+            "n4m_transform_fck_static_output_cols",
+        )
         out = empty_like_f64((X_arr.shape[0], int(out_cols.value)))
-        check(lib.n4m_transform_fck_static_transform(handle, numpy_to_view(X_arr), numpy_to_view(out)), "n4m_transform_fck_static_transform")
+        check(
+            lib.n4m_transform_fck_static_transform(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            "n4m_transform_fck_static_transform",
+        )
         return out
     finally:
         _destroy("n4m_transform_fck_static", handle)
 
 
-def direct_standardization(X_source, X_target, X=None, fit_intercept: bool = True, ridge: float = 0.0):
-    return _paired_transfer("n4m_domain_adaptation_direct_standardization", X_source, X_target, X_source if X is None else X, ctypes.c_int(fit_intercept), ctypes.c_double(ridge))
+def direct_standardization(
+    X_source, X_target, X=None, fit_intercept: bool = True, ridge: float = 0.0
+):
+    return _paired_transfer(
+        "n4m_domain_adaptation_direct_standardization",
+        X_source,
+        X_target,
+        X_source if X is None else X,
+        ctypes.c_int(fit_intercept),
+        ctypes.c_double(ridge),
+    )
 
 
-def robust_direct_standardization(X_source, X_target, X=None, fit_intercept: bool = True, ridge: float = 0.0, trim_quantile: float = 0.9, max_iter: int = 3):
-    return _paired_transfer("n4m_domain_adaptation_robust_direct_standardization", X_source, X_target, X_source if X is None else X, ctypes.c_int(fit_intercept), ctypes.c_double(ridge), ctypes.c_double(trim_quantile), ctypes.c_int32(max_iter))
+def robust_direct_standardization(
+    X_source,
+    X_target,
+    X=None,
+    fit_intercept: bool = True,
+    ridge: float = 0.0,
+    trim_quantile: float = 0.9,
+    max_iter: int = 3,
+):
+    return _paired_transfer(
+        "n4m_domain_adaptation_robust_direct_standardization",
+        X_source,
+        X_target,
+        X_source if X is None else X,
+        ctypes.c_int(fit_intercept),
+        ctypes.c_double(ridge),
+        ctypes.c_double(trim_quantile),
+        ctypes.c_int32(max_iter),
+    )
 
 
-def piecewise_direct_standardization(X_source, X_target, X=None, window_size: int = 5, fit_intercept: bool = True, ridge: float = 0.0):
-    return _paired_transfer("n4m_domain_adaptation_piecewise_direct_standardization", X_source, X_target, X_source if X is None else X, ctypes.c_int32(window_size), ctypes.c_int(fit_intercept), ctypes.c_double(ridge))
+def piecewise_direct_standardization(
+    X_source,
+    X_target,
+    X=None,
+    window_size: int = 5,
+    fit_intercept: bool = True,
+    ridge: float = 0.0,
+):
+    return _paired_transfer(
+        "n4m_domain_adaptation_piecewise_direct_standardization",
+        X_source,
+        X_target,
+        X_source if X is None else X,
+        ctypes.c_int32(window_size),
+        ctypes.c_int(fit_intercept),
+        ctypes.c_double(ridge),
+    )
 
 
-def score_augmented_projection_standardization(X_source, X_target, X=None, n_components: int = 5, score_weight: float = 1.0, fit_intercept: bool = True, ridge: float = 0.0):
-    return _paired_transfer("n4m_transform_saps", X_source, X_target, X_source if X is None else X, ctypes.c_int32(n_components), ctypes.c_double(score_weight), ctypes.c_int(fit_intercept), ctypes.c_double(ridge))
+def score_augmented_projection_standardization(
+    X_source,
+    X_target,
+    X=None,
+    n_components: int = 5,
+    score_weight: float = 1.0,
+    fit_intercept: bool = True,
+    ridge: float = 0.0,
+):
+    return _paired_transfer(
+        "n4m_transform_saps",
+        X_source,
+        X_target,
+        X_source if X is None else X,
+        ctypes.c_int32(n_components),
+        ctypes.c_double(score_weight),
+        ctypes.c_int(fit_intercept),
+        ctypes.c_double(ridge),
+    )
 
 
 def slope_bias_correction(y_source, y_target, y=None):
@@ -9233,22 +9731,45 @@ def slope_bias_correction(y_source, y_target, y=None):
     out = np.empty_like(values)
     handle = _create("n4m_domain_adaptation_slope_bias")
     try:
-        check(lib.n4m_domain_adaptation_slope_bias_fit(handle, _f64_ptr(source), _f64_ptr(target), ctypes.c_int64(source.size)), "n4m_domain_adaptation_slope_bias_fit")
-        check(lib.n4m_domain_adaptation_slope_bias_transform(handle, _f64_ptr(values), ctypes.c_int64(values.size), _f64_ptr(out)), "n4m_domain_adaptation_slope_bias_transform")
+        check(
+            lib.n4m_domain_adaptation_slope_bias_fit(
+                handle, _f64_ptr(source), _f64_ptr(target), ctypes.c_int64(source.size)
+            ),
+            "n4m_domain_adaptation_slope_bias_fit",
+        )
+        check(
+            lib.n4m_domain_adaptation_slope_bias_transform(
+                handle, _f64_ptr(values), ctypes.c_int64(values.size), _f64_ptr(out)
+            ),
+            "n4m_domain_adaptation_slope_bias_transform",
+        )
         return out
     finally:
         _destroy("n4m_domain_adaptation_slope_bias", handle)
 
 
 def local_centering(X_source, X_target, X=None):
-    return _paired_transfer("n4m_transform_local_centering", X_source, X_target, X_source if X is None else X)
+    return _paired_transfer(
+        "n4m_transform_local_centering",
+        X_source,
+        X_target,
+        X_source if X is None else X,
+    )
 
 
 def weighted_snv(X, weights=None, ddof: int = 0, eps: float = 1e-12):
     weight_arr = None if weights is None else _as_f64_1d(weights, "weights")
     ptr = _null_f64_ptr() if weight_arr is None else _f64_ptr(weight_arr)
     n_weights = 0 if weight_arr is None else weight_arr.size
-    return transform("n4m_transform_weighted_snv", X, ptr, ctypes.c_int64(n_weights), ctypes.c_int32(ddof), ctypes.c_double(eps), fit_X=X)
+    return transform(
+        "n4m_transform_weighted_snv",
+        X,
+        ptr,
+        ctypes.c_int64(n_weights),
+        ctypes.c_int32(ddof),
+        ctypes.c_double(eps),
+        fit_X=X,
+    )
 
 
 def variable_sorting_normalization(X, eps: float = 1e-12):
@@ -9256,25 +9777,56 @@ def variable_sorting_normalization(X, eps: float = 1e-12):
 
 
 def piecewise_snv(X, window_size: int = 32, ddof: int = 0, eps: float = 1e-12):
-    return transform("n4m_transform_piecewise_snv", X, ctypes.c_int32(window_size), ctypes.c_int32(ddof), ctypes.c_double(eps), fit_X=X)
+    return transform(
+        "n4m_transform_piecewise_snv",
+        X,
+        ctypes.c_int32(window_size),
+        ctypes.c_int32(ddof),
+        ctypes.c_double(eps),
+        fit_X=X,
+    )
 
 
 def piecewise_msc(X, reference=None, window_size: int = 32, eps: float = 1e-12):
     ref = None if reference is None else _as_f64_1d(reference, "reference")
     ptr = _null_f64_ptr() if ref is None else _f64_ptr(ref)
-    return transform("n4m_transform_piecewise_msc", X, ptr, ctypes.c_int64(0 if ref is None else ref.size), ctypes.c_int32(window_size), ctypes.c_double(eps), fit_X=X)
+    return transform(
+        "n4m_transform_piecewise_msc",
+        X,
+        ptr,
+        ctypes.c_int64(0 if ref is None else ref.size),
+        ctypes.c_int32(window_size),
+        ctypes.c_double(eps),
+        fit_X=X,
+    )
 
 
 def localized_msc(X, reference=None, window_size: int = 32, eps: float = 1e-12):
     ref = None if reference is None else _as_f64_1d(reference, "reference")
     ptr = _null_f64_ptr() if ref is None else _f64_ptr(ref)
-    return transform("n4m_transform_localized_msc", X, ptr, ctypes.c_int64(0 if ref is None else ref.size), ctypes.c_int32(window_size), ctypes.c_double(eps), fit_X=X)
+    return transform(
+        "n4m_transform_localized_msc",
+        X,
+        ptr,
+        ctypes.c_int64(0 if ref is None else ref.size),
+        ctypes.c_int32(window_size),
+        ctypes.c_double(eps),
+        fit_X=X,
+    )
 
 
 def _align(prefix: str, X, reference=None, interval_size: int = 0, max_shift: int = 0):
     ref = None if reference is None else _as_f64_1d(reference, "reference")
     ptr = _null_f64_ptr() if ref is None else _f64_ptr(ref)
-    return transform(prefix, X, ptr, ctypes.c_int64(0 if ref is None else ref.size), ctypes.c_int32(interval_size), ctypes.c_int32(max_shift), fit_X=X)
+    return transform(
+        prefix,
+        X,
+        ptr,
+        ctypes.c_int64(0 if ref is None else ref.size),
+        ctypes.c_int32(interval_size),
+        ctypes.c_int32(max_shift),
+        fit_X=X,
+    )
 
 
 def cross_correlation_alignment(X, reference=None, max_shift: int = 5):
@@ -9282,38 +9834,71 @@ def cross_correlation_alignment(X, reference=None, max_shift: int = 5):
 
 
 def icoshift_alignment(X, reference=None, interval_size: int = 32, max_shift: int = 5):
-    return _align("n4m_transform_icoshift_align", X, reference, interval_size, max_shift)
+    return _align(
+        "n4m_transform_icoshift_align", X, reference, interval_size, max_shift
+    )
 
 
 def dynamic_time_warping_alignment(X, reference=None):
     return _align("n4m_transform_dtw_align", X, reference, 0, 0)
 
 
-def correlation_optimized_warping(X, reference=None, interval_size: int = 32, max_shift: int = 5):
+def correlation_optimized_warping(
+    X, reference=None, interval_size: int = 32, max_shift: int = 5
+):
     return _align("n4m_transform_cow_align", X, reference, interval_size, max_shift)
 
 
 def variance_filter(X, threshold: float = 0.0, top_k: int | None = None):
-    return _selector("n4m_feature_selection_variance", X, None, threshold=threshold, top_k=top_k)
+    return _selector(
+        "n4m_feature_selection_variance", X, None, threshold=threshold, top_k=top_k
+    )
 
 
 def correlation_filter(X, y, threshold: float = 0.0, top_k: int | None = None):
-    return _selector("n4m_feature_selection_correlation", X, y, threshold=threshold, top_k=top_k)
+    return _selector(
+        "n4m_feature_selection_correlation", X, y, threshold=threshold, top_k=top_k
+    )
 
 
-def _selector(prefix: str, X, y=None, *, threshold: float = 0.0, top_k: int | None = None):
+def _selector(
+    prefix: str, X, y=None, *, threshold: float = 0.0, top_k: int | None = None
+):
     X_arr = as_f64_2d(X)
-    handle = _create(prefix, ctypes.c_double(threshold), ctypes.c_int32(-1 if top_k is None else int(top_k)))
+    handle = _create(
+        prefix,
+        ctypes.c_double(threshold),
+        ctypes.c_int32(-1 if top_k is None else int(top_k)),
+    )
     try:
         if prefix == "n4m_feature_selection_correlation":
             y_arr = _as_f64_1d(y, "y")
-            check(lib.n4m_feature_selection_correlation_fit(handle, numpy_to_view(X_arr), _f64_ptr(y_arr), ctypes.c_int64(y_arr.size)), "n4m_feature_selection_correlation_fit")
+            check(
+                lib.n4m_feature_selection_correlation_fit(
+                    handle,
+                    numpy_to_view(X_arr),
+                    _f64_ptr(y_arr),
+                    ctypes.c_int64(y_arr.size),
+                ),
+                "n4m_feature_selection_correlation_fit",
+            )
         else:
-            check(lib.n4m_feature_selection_variance_fit(handle, numpy_to_view(X_arr)), "n4m_feature_selection_variance_fit")
+            check(
+                lib.n4m_feature_selection_variance_fit(handle, numpy_to_view(X_arr)),
+                "n4m_feature_selection_variance_fit",
+            )
         out_cols = ctypes.c_int64()
-        check(getattr(lib, f"{prefix}_output_cols")(handle, ctypes.byref(out_cols)), f"{prefix}_output_cols")
+        check(
+            getattr(lib, f"{prefix}_output_cols")(handle, ctypes.byref(out_cols)),
+            f"{prefix}_output_cols",
+        )
         out = empty_like_f64((X_arr.shape[0], int(out_cols.value)))
-        check(getattr(lib, f"{prefix}_transform")(handle, numpy_to_view(X_arr), numpy_to_view(out)), f"{prefix}_transform")
+        check(
+            getattr(lib, f"{prefix}_transform")(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            f"{prefix}_transform",
+        )
         return out
     finally:
         _destroy(prefix, handle)
@@ -9323,19 +9908,38 @@ def interval_generator(X, interval_size: int = 32, step: int | None = None):
     X_arr = as_f64_2d(X)
     width = max(1, int(interval_size))
     stride = width if step is None else max(1, int(step))
-    handle = _create("n4m_feature_selection_interval_generator", ctypes.c_int32(width), ctypes.c_int32(0 if step is None else stride))
+    handle = _create(
+        "n4m_feature_selection_interval_generator",
+        ctypes.c_int32(width),
+        ctypes.c_int32(0 if step is None else stride),
+    )
     try:
-        check(lib.n4m_feature_selection_interval_generator_fit(handle, numpy_to_view(X_arr)), "n4m_feature_selection_interval_generator_fit")
+        check(
+            lib.n4m_feature_selection_interval_generator_fit(
+                handle, numpy_to_view(X_arr)
+            ),
+            "n4m_feature_selection_interval_generator_fit",
+        )
         out_cols = ctypes.c_int64()
-        check(lib.n4m_feature_selection_interval_generator_output_cols(handle, ctypes.byref(out_cols)), "n4m_feature_selection_interval_generator_output_cols")
+        check(
+            lib.n4m_feature_selection_interval_generator_output_cols(
+                handle, ctypes.byref(out_cols)
+            ),
+            "n4m_feature_selection_interval_generator_output_cols",
+        )
         out = empty_like_f64((X_arr.shape[0], int(out_cols.value)))
-        check(lib.n4m_feature_selection_interval_generator_transform(handle, numpy_to_view(X_arr), numpy_to_view(out)), "n4m_feature_selection_interval_generator_transform")
+        check(
+            lib.n4m_feature_selection_interval_generator_transform(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            "n4m_feature_selection_interval_generator_transform",
+        )
         blocks = []
         offset = 0
         for lo in range(0, X_arr.shape[1], stride):
             hi = min(X_arr.shape[1], lo + width)
             cols = hi - lo
-            blocks.append(out[:, offset:offset + cols])
+            blocks.append(out[:, offset : offset + cols])
             offset += cols
         return blocks
     finally:
@@ -9352,9 +9956,9 @@ def interval_generator(X, interval_size: int = 32, step: int | None = None):
 # so the caller can pull the published matrices / index vectors out of it.
 # ----------------------------------------------------------------------
 
-_SELECTOR_ALGORITHM = 0      # Algorithm::PLS_REGRESSION
-_SELECTOR_SOLVER = 1         # Solver::SIMPLS
-_SELECTOR_DEFLATION = 0      # Deflation::REGRESSION
+_SELECTOR_ALGORITHM = 0  # Algorithm::PLS_REGRESSION
+_SELECTOR_SOLVER = 1  # Solver::SIMPLS
+_SELECTOR_DEFLATION = 0  # Deflation::REGRESSION
 
 
 def _make_selector_config(
@@ -9367,13 +9971,37 @@ def _make_selector_config(
     max_iter: int = 500,
     store_scores: bool = False,
 ) -> None:
-    check(lib.n4m_config_set_algorithm(cfg, ctypes.c_int(_SELECTOR_ALGORITHM)), "n4m_config_set_algorithm")
-    check(lib.n4m_config_set_solver(cfg, ctypes.c_int(_SELECTOR_SOLVER)), "n4m_config_set_solver")
-    check(lib.n4m_config_set_deflation(cfg, ctypes.c_int(_SELECTOR_DEFLATION)), "n4m_config_set_deflation")
-    _set_model_config(cfg, n_components=int(n_components), center_x=center_x, scale_x=scale_x, center_y=True, scale_y=False)
-    check(lib.n4m_config_set_tol(cfg, ctypes.c_double(float(tol))), "n4m_config_set_tol")
-    check(lib.n4m_config_set_max_iter(cfg, ctypes.c_int32(int(max_iter))), "n4m_config_set_max_iter")
-    check(lib.n4m_config_set_store_scores(cfg, ctypes.c_int32(1 if store_scores else 0)), "n4m_config_set_store_scores")
+    check(
+        lib.n4m_config_set_algorithm(cfg, ctypes.c_int(_SELECTOR_ALGORITHM)),
+        "n4m_config_set_algorithm",
+    )
+    check(
+        lib.n4m_config_set_solver(cfg, ctypes.c_int(_SELECTOR_SOLVER)),
+        "n4m_config_set_solver",
+    )
+    check(
+        lib.n4m_config_set_deflation(cfg, ctypes.c_int(_SELECTOR_DEFLATION)),
+        "n4m_config_set_deflation",
+    )
+    _set_model_config(
+        cfg,
+        n_components=int(n_components),
+        center_x=center_x,
+        scale_x=scale_x,
+        center_y=True,
+        scale_y=False,
+    )
+    check(
+        lib.n4m_config_set_tol(cfg, ctypes.c_double(float(tol))), "n4m_config_set_tol"
+    )
+    check(
+        lib.n4m_config_set_max_iter(cfg, ctypes.c_int32(int(max_iter))),
+        "n4m_config_set_max_iter",
+    )
+    check(
+        lib.n4m_config_set_store_scores(cfg, ctypes.c_int32(1 if store_scores else 0)),
+        "n4m_config_set_store_scores",
+    )
 
 
 def _fold_plan(n_samples: int, n_folds: int, seed: int) -> ctypes.c_void_p:
@@ -9386,7 +10014,9 @@ def _fold_plan(n_samples: int, n_folds: int, seed: int) -> ctypes.c_void_p:
     n = int(n_samples)
     nf = int(n_folds) if int(n_folds) > 0 else 3
     fold_size = max(1, n // nf)
-    fold_arr = np.minimum(np.arange(n, dtype=np.int32) // fold_size, nf - 1).astype(np.int32)
+    fold_arr = np.minimum(np.arange(n, dtype=np.int32) // fold_size, nf - 1).astype(
+        np.int32
+    )
     return _create_validation_plan_from_fold_ids(fold_arr, nf)
 
 
@@ -9420,7 +10050,13 @@ def _run_select(
         args: list = [ctx]
         if with_config:
             check(lib.n4m_config_create(ctypes.byref(cfg)), "n4m_config_create")
-            _make_selector_config(cfg, n_components=n_components, center_x=center_x, scale_x=scale_x, store_scores=store_scores)
+            _make_selector_config(
+                cfg,
+                n_components=n_components,
+                center_x=center_x,
+                scale_x=scale_x,
+                store_scores=store_scores,
+            )
             args.append(cfg)
         Xv = numpy_to_view(X_arr)
         Yv = numpy_to_view(y_arr)
@@ -9461,10 +10097,20 @@ def _method_result_all(result: ctypes.c_void_p) -> dict[str, np.ndarray]:
     indices = _method_result_int64_vector(result, "selected_indices")
     out["selected_indices"] = np.asarray(indices, dtype=np.int64)
     for name in (
-        "scores", "global_scores", "final_scores", "vip_scores", "t2_scores",
-        "coefficient_scores", "stability_scores", "real_stability_scores",
-        "inclusion_frequencies", "final_probabilities", "score_path", "p_values",
-        "probability", "interval_probability",
+        "scores",
+        "global_scores",
+        "final_scores",
+        "vip_scores",
+        "t2_scores",
+        "coefficient_scores",
+        "stability_scores",
+        "real_stability_scores",
+        "inclusion_frequencies",
+        "final_probabilities",
+        "score_path",
+        "p_values",
+        "probability",
+        "interval_probability",
     ):
         field = _method_result_field(result, name)
         if field is not None and field.size:
@@ -9490,10 +10136,20 @@ def variable_select_rank(X, y, *, method: int, top_k: int, n_components: int = 2
         _make_selector_config(cfg, n_components=int(n_components), store_scores=True)
         Xv = numpy_to_view(X_arr)
         Yv = numpy_to_view(y_arr)
-        check(lib.n4m_model_fit(ctx, cfg, ctypes.byref(Xv), ctypes.byref(Yv), ctypes.byref(model)), "n4m_model_fit")
+        check(
+            lib.n4m_model_fit(
+                ctx, cfg, ctypes.byref(Xv), ctypes.byref(Yv), ctypes.byref(model)
+            ),
+            "n4m_model_fit",
+        )
         check(
             lib.n4m_feature_selection_variable_select_rank(
-                ctx, model, ctypes.byref(Xv), ctypes.c_int32(int(method)), ctypes.c_int32(int(top_k)), ctypes.byref(result)
+                ctx,
+                model,
+                ctypes.byref(Xv),
+                ctypes.c_int32(int(method)),
+                ctypes.c_int32(int(top_k)),
+                ctypes.byref(result),
             ),
             "n4m_feature_selection_variable_select_rank",
         )
@@ -9514,9 +10170,16 @@ def crop(X, start: int, end: int):
     X_arr = as_f64_2d(X)
     handle = _create("n4m_transform_crop", ctypes.c_int64(start), ctypes.c_int64(end))
     try:
-        out_cols = int(lib.n4m_transform_crop_output_cols(handle, ctypes.c_int64(X_arr.shape[1])))
+        out_cols = int(
+            lib.n4m_transform_crop_output_cols(handle, ctypes.c_int64(X_arr.shape[1]))
+        )
         out = empty_like_f64((X_arr.shape[0], out_cols))
-        check(lib.n4m_transform_crop_transform(handle, numpy_to_view(X_arr), numpy_to_view(out)), "n4m_transform_crop_transform")
+        check(
+            lib.n4m_transform_crop_transform(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            "n4m_transform_crop_transform",
+        )
         return out
     finally:
         _destroy("n4m_transform_crop", handle)
@@ -9526,24 +10189,65 @@ def resample(X, num_samples: int):
     X_arr = as_f64_2d(X)
     handle = _create("n4m_transform_resample_transformer", ctypes.c_int64(num_samples))
     try:
-        out_cols = int(lib.n4m_transform_resample_transformer_output_cols(handle, ctypes.c_int64(X_arr.shape[1])))
+        out_cols = int(
+            lib.n4m_transform_resample_transformer_output_cols(
+                handle, ctypes.c_int64(X_arr.shape[1])
+            )
+        )
         out = empty_like_f64((X_arr.shape[0], out_cols))
-        check(lib.n4m_transform_resample_transformer_transform(handle, numpy_to_view(X_arr), numpy_to_view(out)), "n4m_transform_resample_transformer_transform")
+        check(
+            lib.n4m_transform_resample_transformer_transform(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            "n4m_transform_resample_transformer_transform",
+        )
         return out
     finally:
         _destroy("n4m_transform_resample_transformer", handle)
 
 
-def resampler(X, source_wavelengths, target_wavelengths, method: int = 0, crop_min: float = 0.0, crop_max: float = 0.0, use_crop: bool = False, fill_value: float = 0.0, bounds_error: bool = False, extrapolate: bool = False):
+def resampler(
+    X,
+    source_wavelengths,
+    target_wavelengths,
+    method: int = 0,
+    crop_min: float = 0.0,
+    crop_max: float = 0.0,
+    use_crop: bool = False,
+    fill_value: float = 0.0,
+    bounds_error: bool = False,
+    extrapolate: bool = False,
+):
     X_arr = as_f64_2d(X)
     source = _as_f64_1d(source_wavelengths, "source_wavelengths")
     target = _as_f64_1d(target_wavelengths, "target_wavelengths")
-    handle = _create("n4m_transform_resampler", _f64_ptr(target), ctypes.c_int64(target.size), ctypes.c_int32(method), ctypes.c_double(crop_min), ctypes.c_double(crop_max), ctypes.c_int(use_crop), ctypes.c_double(fill_value), ctypes.c_int(bounds_error), ctypes.c_int(extrapolate))
+    handle = _create(
+        "n4m_transform_resampler",
+        _f64_ptr(target),
+        ctypes.c_int64(target.size),
+        ctypes.c_int32(method),
+        ctypes.c_double(crop_min),
+        ctypes.c_double(crop_max),
+        ctypes.c_int(use_crop),
+        ctypes.c_double(fill_value),
+        ctypes.c_int(bounds_error),
+        ctypes.c_int(extrapolate),
+    )
     try:
-        check(lib.n4m_transform_resampler_fit(handle, _f64_ptr(source), ctypes.c_int64(source.size)), "n4m_transform_resampler_fit")
+        check(
+            lib.n4m_transform_resampler_fit(
+                handle, _f64_ptr(source), ctypes.c_int64(source.size)
+            ),
+            "n4m_transform_resampler_fit",
+        )
         out_cols = int(lib.n4m_transform_resampler_output_cols(handle))
         out = empty_like_f64((X_arr.shape[0], out_cols))
-        check(lib.n4m_transform_resampler_transform(handle, numpy_to_view(X_arr), numpy_to_view(out)), "n4m_transform_resampler_transform")
+        check(
+            lib.n4m_transform_resampler_transform(
+                handle, numpy_to_view(X_arr), numpy_to_view(out)
+            ),
+            "n4m_transform_resampler_transform",
+        )
         return out
     finally:
         _destroy("n4m_transform_resampler", handle)
@@ -9551,13 +10255,26 @@ def resampler(X, source_wavelengths, target_wavelengths, method: int = 0, crop_m
 
 def range_discretizer(X, edges: Sequence[float]):
     edge_arr = _as_f64_1d(edges, "edges")
-    return transform("n4m_transform_range_discretizer", X, _f64_ptr(edge_arr), ctypes.c_int64(edge_arr.size), out_dtype="i32")
+    return transform(
+        "n4m_transform_range_discretizer",
+        X,
+        _f64_ptr(edge_arr),
+        ctypes.c_int64(edge_arr.size),
+        out_dtype="i32",
+    )
 
 
 def kbins_discretizer(X, n_bins: int = 5, strategy: str | int = "uniform"):
     if isinstance(strategy, str):
         strategy = {"uniform": 0, "quantile": 1}[strategy]
-    return transform("n4m_transform_kbins_discretizer", X, ctypes.c_int32(n_bins), ctypes.c_int32(strategy), fit_X=X, out_dtype="i32")
+    return transform(
+        "n4m_transform_kbins_discretizer",
+        X,
+        ctypes.c_int32(n_bins),
+        ctypes.c_int32(strategy),
+        fit_X=X,
+        out_dtype="i32",
+    )
 
 
 def kennard_stone(X, test_size: float = 0.25):
@@ -9565,7 +10282,12 @@ def kennard_stone(X, test_size: float = 0.25):
     handle = _create("n4m_model_selection_kennard_stone", ctypes.c_double(test_size))
     try:
         result = SplitResult()
-        check(lib.n4m_model_selection_kennard_stone_split(handle, numpy_to_view(X_arr), ctypes.byref(result)), "n4m_model_selection_kennard_stone_split")
+        check(
+            lib.n4m_model_selection_kennard_stone_split(
+                handle, numpy_to_view(X_arr), ctypes.byref(result)
+            ),
+            "n4m_model_selection_kennard_stone_split",
+        )
         return _split_result_to_arrays(result)
     finally:
         _destroy("n4m_model_selection_kennard_stone", handle)
@@ -9577,54 +10299,146 @@ def spxy(X, y, test_size: float = 0.25):
     handle = _create("n4m_model_selection_spxy", ctypes.c_double(test_size))
     try:
         result = SplitResult()
-        check(lib.n4m_model_selection_spxy_split(handle, numpy_to_view(X_arr), numpy_to_view(y_arr), ctypes.byref(result)), "n4m_model_selection_spxy_split")
+        check(
+            lib.n4m_model_selection_spxy_split(
+                handle, numpy_to_view(X_arr), numpy_to_view(y_arr), ctypes.byref(result)
+            ),
+            "n4m_model_selection_spxy_split",
+        )
         return _split_result_to_arrays(result)
     finally:
         _destroy("n4m_model_selection_spxy", handle)
 
 
-def kbins_stratified(y, test_size: float = 0.25, seed: int = 17, n_bins: int = 5, strategy: str | int = "uniform"):
+def kbins_stratified(
+    y,
+    test_size: float = 0.25,
+    seed: int = 17,
+    n_bins: int = 5,
+    strategy: str | int = "uniform",
+):
     if isinstance(strategy, str):
         strategy = {"uniform": 0, "quantile": 1}[strategy]
     y_arr = as_f64_2d(y)
-    handle = _create("n4m_model_selection_kbins_stratified", ctypes.c_double(test_size), ctypes.c_uint64(seed), ctypes.c_int32(n_bins), ctypes.c_int32(strategy))
+    handle = _create(
+        "n4m_model_selection_kbins_stratified",
+        ctypes.c_double(test_size),
+        ctypes.c_uint64(seed),
+        ctypes.c_int32(n_bins),
+        ctypes.c_int32(strategy),
+    )
     try:
         result = SplitResult()
-        check(lib.n4m_model_selection_kbins_stratified_split(handle, numpy_to_view(y_arr), ctypes.byref(result)), "n4m_model_selection_kbins_stratified_split")
+        check(
+            lib.n4m_model_selection_kbins_stratified_split(
+                handle, numpy_to_view(y_arr), ctypes.byref(result)
+            ),
+            "n4m_model_selection_kbins_stratified_split",
+        )
         return _split_result_to_arrays(result)
     finally:
         _destroy("n4m_model_selection_kbins_stratified", handle)
 
 
-def y_outlier_iqr(y, threshold: float = 1.5, lower_percentile: float = 1.0, upper_percentile: float = 99.0):
-    return y_outlier_filter(y, method="iqr", threshold=threshold, lower_percentile=lower_percentile, upper_percentile=upper_percentile)[0]
+def y_outlier_iqr(
+    y,
+    threshold: float = 1.5,
+    lower_percentile: float = 1.0,
+    upper_percentile: float = 99.0,
+):
+    return y_outlier_filter(
+        y,
+        method="iqr",
+        threshold=threshold,
+        lower_percentile=lower_percentile,
+        upper_percentile=upper_percentile,
+    )[0]
 
 
-def y_outlier_filter(y, method: str | int = "iqr", threshold: float = 1.5, lower_percentile: float = 1.0, upper_percentile: float = 99.0):
+def y_outlier_filter(
+    y,
+    method: str | int = "iqr",
+    threshold: float = 1.5,
+    lower_percentile: float = 1.0,
+    upper_percentile: float = 99.0,
+):
     y_arr = _as_f64_1d(y, "y")
-    handle = _create("n4m_outlier_detection_y_outlier", ctypes.c_int(_enum(_Y_METHODS, method, "method")), ctypes.c_double(threshold), ctypes.c_double(lower_percentile), ctypes.c_double(upper_percentile))
+    handle = _create(
+        "n4m_outlier_detection_y_outlier",
+        ctypes.c_int(_enum(_Y_METHODS, method, "method")),
+        ctypes.c_double(threshold),
+        ctypes.c_double(lower_percentile),
+        ctypes.c_double(upper_percentile),
+    )
     try:
-        check(lib.n4m_outlier_detection_y_outlier_fit(handle, _f64_ptr(y_arr), ctypes.c_int64(y_arr.size)), "n4m_outlier_detection_y_outlier_fit")
+        check(
+            lib.n4m_outlier_detection_y_outlier_fit(
+                handle, _f64_ptr(y_arr), ctypes.c_int64(y_arr.size)
+            ),
+            "n4m_outlier_detection_y_outlier_fit",
+        )
         mask = np.empty(y_arr.size, dtype=np.uint8)
         stats = FilterStats()
-        check(lib.n4m_outlier_detection_y_outlier_apply(handle, _f64_ptr(y_arr), ctypes.c_int64(y_arr.size), mask.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)), ctypes.byref(stats)), "n4m_outlier_detection_y_outlier_apply")
+        check(
+            lib.n4m_outlier_detection_y_outlier_apply(
+                handle,
+                _f64_ptr(y_arr),
+                ctypes.c_int64(y_arr.size),
+                mask.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
+                ctypes.byref(stats),
+            ),
+            "n4m_outlier_detection_y_outlier_apply",
+        )
         return mask, stats
     finally:
         _destroy("n4m_outlier_detection_y_outlier", handle)
 
 
 def x_outlier_mahalanobis(X, n_components: int = 0, contamination: float = 0.1):
-    return x_outlier_filter(X, method="mahalanobis", n_components=n_components, contamination=contamination)[0]
+    return x_outlier_filter(
+        X, method="mahalanobis", n_components=n_components, contamination=contamination
+    )[0]
 
 
-def x_outlier_filter(X, method: str | int = "mahalanobis", use_threshold: bool = False, threshold: float = 0.0, n_components: int = 0, contamination: float = 0.1, seed: int = 0, n_estimators: int = 100, max_samples: int = 256):
+def x_outlier_filter(
+    X,
+    method: str | int = "mahalanobis",
+    use_threshold: bool = False,
+    threshold: float = 0.0,
+    n_components: int = 0,
+    contamination: float = 0.1,
+    seed: int = 0,
+    n_estimators: int = 100,
+    max_samples: int = 256,
+):
     X_arr = as_f64_2d(X)
-    handle = _create("n4m_outlier_detection_x_outlier", ctypes.c_int32(_enum(_X_METHODS, method, "method")), ctypes.c_int(use_threshold), ctypes.c_double(threshold), ctypes.c_int32(n_components), ctypes.c_double(contamination), ctypes.c_uint64(seed), ctypes.c_int32(n_estimators), ctypes.c_int64(max_samples))
+    handle = _create(
+        "n4m_outlier_detection_x_outlier",
+        ctypes.c_int32(_enum(_X_METHODS, method, "method")),
+        ctypes.c_int(use_threshold),
+        ctypes.c_double(threshold),
+        ctypes.c_int32(n_components),
+        ctypes.c_double(contamination),
+        ctypes.c_uint64(seed),
+        ctypes.c_int32(n_estimators),
+        ctypes.c_int64(max_samples),
+    )
     try:
-        check(lib.n4m_outlier_detection_x_outlier_fit(handle, numpy_to_view(X_arr)), "n4m_outlier_detection_x_outlier_fit")
+        check(
+            lib.n4m_outlier_detection_x_outlier_fit(handle, numpy_to_view(X_arr)),
+            "n4m_outlier_detection_x_outlier_fit",
+        )
         mask = np.empty(X_arr.shape[0], dtype=np.uint8)
         stats = FilterStats()
-        check(lib.n4m_outlier_detection_x_outlier_apply(handle, numpy_to_view(X_arr), mask.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)), ctypes.byref(stats)), "n4m_outlier_detection_x_outlier_apply")
+        check(
+            lib.n4m_outlier_detection_x_outlier_apply(
+                handle,
+                numpy_to_view(X_arr),
+                mask.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
+                ctypes.byref(stats),
+            ),
+            "n4m_outlier_detection_x_outlier_apply",
+        )
         return mask, stats
     finally:
         _destroy("n4m_outlier_detection_x_outlier", handle)
@@ -9650,8 +10464,10 @@ def high_leverage_filter(
         ctypes.c_int(1 if center else 0),
     )
     try:
-        check(lib.n4m_outlier_detection_high_leverage_fit(handle, numpy_to_view(X_arr)),
-              "n4m_outlier_detection_high_leverage_fit")
+        check(
+            lib.n4m_outlier_detection_high_leverage_fit(handle, numpy_to_view(X_arr)),
+            "n4m_outlier_detection_high_leverage_fit",
+        )
         mask = np.empty(X_arr.shape[0], dtype=np.uint8)
         stats = FilterStats()
         check(
@@ -9733,12 +10549,18 @@ def composite_filter(X, mode: str | int = "any"):
         ctypes.c_int(_enum(_COMPOSITE_MODES, mode, "mode")),
     )
     try:
-        check(lib.n4m_outlier_detection_high_leverage_fit(leverage, numpy_to_view(X_arr)),
-              "n4m_outlier_detection_high_leverage_fit")
-        check(lib.n4m_outlier_detection_composite_add_leverage(composite, leverage),
-              "n4m_outlier_detection_composite_add_leverage")
-        check(lib.n4m_outlier_detection_composite_add_quality(composite, quality),
-              "n4m_outlier_detection_composite_add_quality")
+        check(
+            lib.n4m_outlier_detection_high_leverage_fit(leverage, numpy_to_view(X_arr)),
+            "n4m_outlier_detection_high_leverage_fit",
+        )
+        check(
+            lib.n4m_outlier_detection_composite_add_leverage(composite, leverage),
+            "n4m_outlier_detection_composite_add_leverage",
+        )
+        check(
+            lib.n4m_outlier_detection_composite_add_quality(composite, quality),
+            "n4m_outlier_detection_composite_add_quality",
+        )
         mask = np.empty(X_arr.shape[0], dtype=np.uint8)
         stats = FilterStats()
         check(
@@ -9811,8 +10633,9 @@ def _metric_scalar(name: str, y_true, y_pred) -> float:
 
 def nirs_metrics(y_true, y_pred):
     names = ("rmse", "mae", "bias", "sep", "rpd", "rpiq", "r2", "nrmse")
-    return np.asarray([_metric_scalar(name, y_true, y_pred) for name in names],
-                      dtype=np.float64)
+    return np.asarray(
+        [_metric_scalar(name, y_true, y_pred) for name in names], dtype=np.float64
+    )
 
 
 def signal_type_detector(
@@ -9837,7 +10660,9 @@ def signal_type_detector(
         ),
         "n4m_transform_signal_type_detector",
     )
-    return np.asarray([float(type_out.value), float(confidence.value)], dtype=np.float64)
+    return np.asarray(
+        [float(type_out.value), float(confidence.value)], dtype=np.float64
+    )
 
 
 def transfer_metrics(
@@ -9861,8 +10686,9 @@ def transfer_metrics(
         ),
         "n4m_domain_adaptation_transfer_metrics_compute",
     )
-    return np.asarray([float(getattr(out, name)) for name, _ctype in out._fields_],
-                      dtype=np.float64)
+    return np.asarray(
+        [float(getattr(out, name)) for name, _ctype in out._fields_], dtype=np.float64
+    )
 
 
 def rng_pcg64(seed: int = 0, n: int = 1024):
@@ -9883,12 +10709,17 @@ def rng_pcg64(seed: int = 0, n: int = 1024):
 
 
 def aug_gaussian_noise(X, sigma: float = 0.01, seed: int = 0):
-    return _aug_apply("n4m_augmentation_gaussian_noise", X, ctypes.c_double(sigma), seed=seed)
+    return _aug_apply(
+        "n4m_augmentation_gaussian_noise", X, ctypes.c_double(sigma), seed=seed
+    )
 
 
 def aug_multiplicative_noise(X, sigma_gain: float = 0.01, seed: int = 0):
     return _aug_apply(
-        "n4m_augmentation_multiplicative_noise", X, ctypes.c_double(sigma_gain), seed=seed
+        "n4m_augmentation_multiplicative_noise",
+        X,
+        ctypes.c_double(sigma_gain),
+        seed=seed,
     )
 
 

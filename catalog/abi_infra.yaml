@@ -75,6 +75,7 @@ infra_abi_symbols:
   - n4m_context_set_user_data
   - n4m_dtype_size
   - n4m_dtype_to_string
+  - n4m_finetune_estimator
   - n4m_gating_strategy_create
   - n4m_gating_strategy_destroy
   - n4m_get_abi_version_int
@@ -110,6 +111,22 @@ infra_abi_symbols:
   - n4m_operator_bank_create
   - n4m_operator_bank_destroy
   - n4m_operator_bank_size
+  # Generic ask/tell, search-space, and trial lifecycle symbols are catalog
+  # infrastructure. Individual numerical estimators remain the catalog methods
+  # evaluated by this orchestration surface.
+  - n4m_optimizer_ask
+  - n4m_optimizer_ask_batch
+  - n4m_optimizer_best
+  - n4m_optimizer_create
+  - n4m_optimizer_destroy
+  - n4m_optimizer_enqueue
+  - n4m_optimizer_get_trials
+  - n4m_optimizer_load
+  - n4m_optimizer_options_init
+  - n4m_optimizer_save
+  - n4m_optimizer_tell
+  - n4m_optimizer_tell_intermediate
+  - n4m_optimizer_tell_result
   - n4m_pipeline_add_operator
   - n4m_pipeline_clone
   - n4m_pipeline_create
@@ -126,9 +143,26 @@ infra_abi_symbols:
   - n4m_rng_pcg64_standard_normal_fill
   - n4m_rng_pcg64_uint64
   - n4m_rng_pcg64_uint64_fill
+  - n4m_search_space_add_categorical
+  - n4m_search_space_add_constraint
+  - n4m_search_space_add_float
+  - n4m_search_space_add_int
+  - n4m_search_space_add_ordinal
+  - n4m_search_space_add_sorted_tuple
+  - n4m_search_space_create
+  - n4m_search_space_destroy
+  - n4m_search_space_num_params
   - n4m_serialization_inspect
   - n4m_split_result_destroy
   - n4m_status_to_string
+  - n4m_trial_get_category
+  - n4m_trial_get_duration
+  - n4m_trial_get_float
+  - n4m_trial_get_id
+  - n4m_trial_get_int
+  - n4m_trial_get_rung
+  - n4m_trial_get_status
+  - n4m_trial_is_active
   - n4m_validation_plan_add_fold
   - n4m_validation_plan_create
   - n4m_validation_plan_destroy

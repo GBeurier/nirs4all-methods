@@ -174,13 +174,46 @@ The handle owns a seeded `n4m_rng` and the full trial table (it is **stateful** 
 
 ```c
 N4M_API n4m_status_t n4m_finetune_estimator(
-    n4m_context_t*, n4m_algorithm_t estimator,
+    n4m_context_t* ctx, n4m_algorithm_t estimator,
     const n4m_matrix_view_t* X, const n4m_matrix_view_t* Y,
     const n4m_validation_plan_t* plan, const n4m_search_space_t* space,
-    n4m_sampler_kind_t, n4m_opt_direction_t, int32_t metric,
-    int32_t n_trials, uint64_t seed, n4m_method_result_t** out_result);
+    const n4m_optimizer_options_t* opts, int32_t n_trials,
+    n4m_method_result_t** out_result);
 ```
-Internally: the ask/tell loop, feeding the sampled config into `n4m_config_set_*` then `cross_validate_regression` over `plan`, reading `cv.metrics.rmse` back into `tell`. This one entry point gives R/MATLAB/Octave/WASM adaptive finetuning of a native model with a single synchronous call.
+
+The implemented ABI 2.2 driver is a closed registry over six genuine generic
+regression routes: `PLS_REGRESSION`, `PLS_CANONICAL`, `PLS_SVD`, `OPLS`,
+`SPARSE_PLS` and `PCR`. The five dense routes require exactly one non-log
+integer keyword, `n_components`. Sparse PLS accepts any non-empty subset of
+`n_components` and `sparsity_lambda`; an omitted axis keeps the native
+`Config` default (`2` and `0.0`, respectively). All classification,
+multiblock, locally weighted, AOM and unknown routes return
+`N4M_ERR_UNSUPPORTED` rather than being remapped.
+
+The axis names, kinds, flags, bounds and steps are validated before the study:
+`n_components` is integral in `[1, INT32_MAX]` with `step >= 1`;
+`sparsity_lambda` is linear or logarithmic in `[0, 1)`, with a representable
+non-negative linear step, or `low > 0` and `step = 0` for log sampling.
+Unknown/duplicate/missing axes and conditional activation are refused with
+`N4M_ERR_UNSUPPORTED`. The driver accepts only regression `RMSE`, `MSE`, `MAE`
+and `R2`, and only `pruner = NONE` because it emits no intermediate values.
+
+Before the first `ask()`, the complete `X`/`Y`/validation-plan contract is
+checked globally, including finite matrix values, ABI-representable column
+counts and exactly-once test-fold coverage. `X` and `Y` may independently use
+float32 or float64. Candidate-specific fit failures are retained as `FAILED`
+trace rows; a later valid candidate may still win. Internally the driver reuses
+the same optimizer ask/tell primitives, the canonical `fit_model` regression
+route and the owning trace — it has no host callback and no second control loop.
+
+The result contains the finite `best_score`, `metric`, `estimator`, active
+`best.*` axes, the rich trial trace, `requested_trials`, and `timed_out`. A
+deadline reached before the first completion returns `N4M_ERR_CANCELLED` with
+no result; after at least one completion it returns the best partial result with
+`timed_out = 1`. This is **selection only**: there is no final all-row fit,
+nested-CV leakage enforcement, outer candidate selection or pipeline refit.
+The exact C/Python syntax and keyword effects are specified in
+[`docs/methods/optimization.md`](methods/optimization.md#pure-native-estimator-selection).
 
 ### 4.4 Algorithm set + priorities
 
@@ -256,7 +289,10 @@ These come out of adversarial review; the design is sound but underspecified her
 
 1. **Pruning semantics must be asynchronous.** A per-`tell` verdict (`tell_intermediate → out_should_prune`) is only sound for **ASHA / median / percentile** pruners, *not* classic synchronous successive-halving (which compares a whole rung cohort). Commit explicitly to ASHA/median semantics, or `N4M_SAMPLER_HALVING` silently implements a different algorithm than the Hyperband literature it cites. Add trial `budget`/`rung` accessors and — for **epoch-fidelity** DL — an `ask`-side "resume a suspended trial" path plus host-side partial-model caching keyed by trial id. Fold-fidelity is survivable without this; epoch-fidelity is not.
 2. **Batch-ask, determinism and concurrency.** "identical seed → identical ask sequence" holds only for **sequential tell-order**. Under parallel evaluation, completion order is nondeterministic and adaptive samplers (TPE, CMA-ES mid-generation) diverge. Decide: either scope reproducibility to sequential mode, or make within-batch tells order-invariant (generation-synchronous samplers buffer tells and update per batch). State handle thread-safety (Python GIL serializes cheaply; R/WASM have no threads). Acknowledge the **structural limit**: an in-process handle confines parallelism to one process, unlike Optuna's storage-mediated multi-process studies — fine for Studio's single backend, a gap for HPC scale-out.
-3. **Persistence/resume is new ABI surface.** There is *no* handle-serialization precedent in `libn4m`. Choose now: a versioned little-endian `n4m_optimizer_save/load` blob, or **replay-based resume** (`create(seed)` + replay the recorded ask/tell log — matches dag-ml's lineage philosophy, but requires the deterministic tell-order from decision 2). Studio streaming itself is fine via `n4m_optimizer_get_trials` (add a `since_id` incremental form).
+3. **Persistence/resume — resolved by MT6.** The reserved
+   `n4m_optimizer_save/load` surface now carries portable, versioned,
+   little-endian N4MOPT v1. `get_trials(since_id)` remains the Studio streaming
+   surface; host storage and graphical resume are separate integration work.
 4. **Parity gate for stochastic samplers ≠ the PLS gate.** Do **not** chase bit-parity with Optuna's TPE (its behavior is dominated by undocumented, version-drifting constants — `prior_weight`, `n_ei_candidates`, bandwidth clips, multivariate mode — plus NumPy RNG order). Use a **statistical/behavioral** gate: match sampling distributions and regret curves within tolerance on fixed benchmark spaces, and assert **decision-level** parity on canned `(params, score)` histories (isolates deterministic logic from RNG). Keep the existing 1e-12/1e-8 numeric gates for the deterministic PLS objective. Cross-binding parity (Python≡R≡WASM≡MATLAB at the same seed) *is* the tight ~1e-12 gate, via the `benchmarks/cross_binding` harness.
 5. **TPE yes, GP-EI maybe never.** TPE-lite from scratch is a few hundred dependency-free lines and genuinely feasible. GP-EI needs marginal-likelihood hyperparameter optimization, PSD-jitter robustness and mixed/conditional kernels — demote to "optional, possibly cut". **TPE + CMA-ES + ASHA covers the practical Optuna-replacement surface.**
 
@@ -275,7 +311,7 @@ The optimizer owns **SEARCH**; the host owns **EVALUATION**. Explicitly *not* in
 
 ## 9. Phased roadmap
 
-- **Phase 1 — native optimizer skeleton + pure-native objective.** Ship the *complete* `n4m_optimizer_t` + search-space builders + `ask`/`tell`/`tell_intermediate` + enums, with samplers `random`, `sobol/lhs`, `ASHA-halving`, `ternary`; objective = internal CV-RMSE over native PLS (`n4m_finetune_estimator`). No host callback. Minor ABI bump; regenerate all three symbol snapshots. Settle decisions 1–4 here.
+- **Phase 1 — native optimizer skeleton + pure-native objective.** Ship the *complete* `n4m_optimizer_t` + search-space builders + `ask`/`tell`/`tell_intermediate` + enums, with samplers `random`, `sobol/lhs`, `ASHA-halving`, `ternary`; the closed `n4m_finetune_estimator` registry evaluates `PLS_REGRESSION`, `PLS_CANONICAL`, `PLS_SVD`, `OPLS`, `SPARSE_PLS` and `PCR` through one native regression-CV plan. No host callback and no final refit. Minor ABI bump; regenerate all three symbol snapshots. Settle decisions 1–4 here.
 - **Phase 2 — dag-ml Tuner drives it cross-language + host-objective loop.** `SearchSpace` contract in dag-ml-data; `Tuner` node runs `ask → controller.fit → tell` inside nested CV; flavor B fully native, flavor C via the existing vtable. Extend `parity-gate.yml` + the cross-binding orchestrator with the ask/tell loop.
 - **Phase 3 — CMA-ES / TPE (+ optional GP) + idiomatic wrappers.** Samplers as enum values; per-language wrappers (Python `SearchCV`, R `tune`/`mlr3`, MATLAB struct, WASM promise). Optuna demoted to a selectable sampler.
 

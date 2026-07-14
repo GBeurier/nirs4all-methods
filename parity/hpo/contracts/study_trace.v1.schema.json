@@ -1,0 +1,188 @@
+{
+  "$id": "https://nirs4all.org/contracts/n4m/hpo/study_trace.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Binding-neutral terminal HPO trace with complete lifecycle, errors, intermediates and ordered concurrency events.",
+  "properties": {
+    "$schema": { "type": "string" },
+    "events": {
+      "items": { "$ref": "#/$defs/event" },
+      "type": "array"
+    },
+    "format": { "const": "n4m.hpo.study_trace" },
+    "schema_version": { "const": 1 },
+    "study": { "$ref": "#/$defs/study" },
+    "summary": { "$ref": "#/$defs/summary" },
+    "trials": {
+      "items": { "$ref": "#/$defs/trial" },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": ["$schema", "events", "format", "schema_version", "study", "summary", "trials"],
+  "title": "n4m HPO StudyTrace v1",
+  "type": "object",
+  "$defs": {
+    "error": {
+      "additionalProperties": false,
+      "properties": {
+        "category": { "minLength": 1, "type": "string" },
+        "code": { "pattern": "^[A-Z][A-Z0-9_]{1,63}$", "type": "string" },
+        "details": { "type": "object" },
+        "message": { "minLength": 1, "type": "string" },
+        "retryable": { "type": "boolean" }
+      },
+      "required": ["category", "code", "details", "message", "retryable"],
+      "type": "object"
+    },
+    "event": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "ASK" },
+            "sequence": { "minimum": 0, "type": "integer" },
+            "trial_id": { "minimum": 0, "type": "integer" }
+          },
+          "required": ["kind", "sequence", "trial_id"],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "INTERMEDIATE" },
+            "score": { "type": "number" },
+            "sequence": { "minimum": 0, "type": "integer" },
+            "should_prune": { "type": "boolean" },
+            "step": { "minimum": 0, "type": "integer" },
+            "trial_id": { "minimum": 0, "type": "integer" }
+          },
+          "required": ["kind", "score", "sequence", "should_prune", "step", "trial_id"],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "TERMINAL" },
+            "sequence": { "minimum": 0, "type": "integer" },
+            "status": { "enum": ["COMPLETED", "PRUNED"] },
+            "trial_id": { "minimum": 0, "type": "integer" }
+          },
+          "required": ["kind", "sequence", "status", "trial_id"],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "error_code": { "pattern": "^[A-Z][A-Z0-9_]{1,63}$", "type": "string" },
+            "kind": { "const": "TERMINAL" },
+            "sequence": { "minimum": 0, "type": "integer" },
+            "status": { "enum": ["FAILED", "CANCELLED"] },
+            "trial_id": { "minimum": 0, "type": "integer" }
+          },
+          "required": ["error_code", "kind", "sequence", "status", "trial_id"],
+          "type": "object"
+        }
+      ]
+    },
+    "intermediate": {
+      "additionalProperties": false,
+      "properties": {
+        "score": { "type": "number" },
+        "sequence": { "minimum": 0, "type": "integer" },
+        "should_prune": { "type": "boolean" },
+        "step": { "minimum": 0, "type": "integer" }
+      },
+      "required": ["score", "sequence", "should_prune", "step"],
+      "type": "object"
+    },
+    "study": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "enum": ["minimize", "maximize"] },
+        "execution": {
+          "additionalProperties": false,
+          "properties": {
+            "max_in_flight": { "minimum": 1, "type": "integer" },
+            "mode": { "const": "ordered_events" },
+            "tell_order": { "const": "event_sequence" }
+          },
+          "required": ["max_in_flight", "mode", "tell_order"],
+          "type": "object"
+        },
+        "id": { "minLength": 1, "type": "string" },
+        "pruner": { "minLength": 1, "type": "string" },
+        "sampler": { "minLength": 1, "type": "string" },
+        "seed": { "minimum": 0, "type": "integer" }
+      },
+      "required": ["direction", "execution", "id", "pruner", "sampler", "seed"],
+      "type": "object"
+    },
+    "summary": {
+      "additionalProperties": false,
+      "properties": {
+        "max_observed_in_flight": { "minimum": 1, "type": "integer" },
+        "n_intermediates": { "minimum": 0, "type": "integer" },
+        "n_trials": { "minimum": 1, "type": "integer" },
+        "status_counts": {
+          "additionalProperties": { "minimum": 0, "type": "integer" },
+          "type": "object"
+        }
+      },
+      "required": ["max_observed_in_flight", "n_intermediates", "n_trials", "status_counts"],
+      "type": "object"
+    },
+    "trial": {
+      "additionalProperties": false,
+      "properties": {
+        "error": { "$ref": "#/$defs/error" },
+        "id": { "minimum": 0, "type": "integer" },
+        "intermediates": {
+          "items": { "$ref": "#/$defs/intermediate" },
+          "type": "array"
+        },
+        "params": {
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "boolean" },
+              { "type": "number" },
+              { "type": "string" }
+            ]
+          },
+          "type": "object"
+        },
+        "pruned_at": { "minimum": 0, "type": "integer" },
+        "score": { "type": "number" },
+        "status": { "enum": ["COMPLETED", "PRUNED", "FAILED", "CANCELLED"] }
+      },
+      "required": ["id", "intermediates", "params", "status"],
+      "type": "object",
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "COMPLETED" } }, "required": ["status"] },
+          "then": {
+            "required": ["score"],
+            "not": { "anyOf": [{ "required": ["error"] }, { "required": ["pruned_at"] }] }
+          }
+        },
+        {
+          "if": { "properties": { "status": { "const": "PRUNED" } }, "required": ["status"] },
+          "then": {
+            "required": ["pruned_at"],
+            "not": { "anyOf": [{ "required": ["error"] }, { "required": ["score"] }] }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "enum": ["FAILED", "CANCELLED"] } },
+            "required": ["status"]
+          },
+          "then": {
+            "required": ["error"],
+            "not": { "anyOf": [{ "required": ["pruned_at"] }, { "required": ["score"] }] }
+          }
+        }
+      ]
+    }
+  }
+}

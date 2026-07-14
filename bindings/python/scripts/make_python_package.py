@@ -43,8 +43,8 @@ the same ABI family.
 import n4m
 from n4m.estimators.regression.latent import PLS
 
-print(n4m.version())      # project version + ABI, e.g. "{version}+abi.2.0.0"
-print(n4m.abi_version())  # ABI triple, e.g. (2, 0, 0)
+print(n4m.version())      # project version + ABI, e.g. "{version}+abi.{abi_version}"
+print(n4m.abi_version())  # ABI triple, e.g. ({abi_tuple})
 
 model = PLS(n_components=2).fit(X, y)
 pred = model.predict(X)
@@ -55,6 +55,10 @@ pred = model.predict(X)
 `n4m.feature_selection`, `n4m.model_selection`, and `n4m.augmentation`.
 Estimator-style wrappers live under those role packages; there is no flat
 `n4m.sklearn` package in the ABI 2 surface.
+
+Native hyperparameter studies can be checkpointed without Python pickles:
+`checkpoint = optimizer.save()` returns portable N4MOPT bytes and
+`Optimizer.load(checkpoint)` resumes the exact sequential ask/tell trajectory.
 
 Set `N4M_LIB_PATH` to point at a development `libn4m` build when overriding the
 bundled wheel library.
@@ -81,8 +85,8 @@ selection, diagnostics, and model-selection surface.
 import pls4all
 from pls4all.sklearn import PLSRegression
 
-print(pls4all.version())      # project version + ABI, e.g. "{version}+abi.2.0.0"
-print(pls4all.abi_version())  # ABI triple, e.g. (2, 0, 0)
+print(pls4all.version())      # project version + ABI, e.g. "{version}+abi.{abi_version}"
+print(pls4all.abi_version())  # ABI triple, e.g. ({abi_tuple})
 
 model = PLSRegression(n_components=2).fit(X, y)
 pred = model.predict(X)
@@ -183,6 +187,24 @@ def _version() -> str:
     return m.group(1) if m else "0.0.0"
 
 
+def _abi_version() -> tuple[str, str]:
+    # SRC_PKG always identifies the source checkout; REPO may be redirected by
+    # release tests or tooling to choose an output root.
+    source_repo = SRC_PKG.parents[1]
+    header = (source_repo / "cpp" / "include" / "n4m" / "n4m_version.h").read_text(
+        encoding="utf-8"
+    )
+    values = []
+    for field in ("MAJOR", "MINOR", "PATCH"):
+        match = re.search(rf"^#define N4M_ABI_VERSION_{field}\s+(\d+)$", header, re.M)
+        if match is None:
+            raise RuntimeError(
+                f"cannot read N4M_ABI_VERSION_{field} from n4m_version.h"
+            )
+        values.append(match.group(1))
+    return ".".join(values), ", ".join(values)
+
+
 def generate(name: str) -> Path:
     spec = PACKAGES[name]
     module = spec["module"]
@@ -204,8 +226,14 @@ def generate(name: str) -> Path:
     # writing the generated pyproject.toml as cp1252 makes cibuildwheel's UTF-8
     # `tomllib.load` crash with UnicodeDecodeError (byte 0x97).
     version = _version()
+    abi_version, abi_tuple = _abi_version()
     (out / "README.md").write_text(
-        spec["readme"].format(version=version), encoding="utf-8"
+        spec["readme"].format(
+            version=version,
+            abi_version=abi_version,
+            abi_tuple=abi_tuple,
+        ),
+        encoding="utf-8",
     )
     (out / "pyproject.toml").write_text(
         _PYPROJECT.format(

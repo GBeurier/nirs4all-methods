@@ -12,13 +12,14 @@ scikit-learn / DL pipeline conventions::
 
 The top-level package only exposes metadata and a handful of shared helpers
 (:func:`version`, :func:`abi_version`, :class:`Context`, :class:`N4MError`,
-:class:`MatrixView`, :class:`PCG64`) plus the role subpackages. There are no
-top-level class/function re-exports.
+:class:`PartialBatchError`, :class:`MatrixView`, :class:`PCG64`) plus the role
+subpackages. There are no top-level class/function re-exports.
 """
+
 import ctypes
 
 from ._context import Context
-from ._errors import N4MError
+from ._errors import N4MError, PartialBatchError
 from ._ffi import (
     ABI_VERSION_MAJOR,
     ABI_VERSION_MINOR,
@@ -72,6 +73,7 @@ __all__ = [
     "Context",
     "MatrixView",
     "N4MError",
+    "PartialBatchError",
     "PCG64",
     "abi_version",
     "augmentation",
