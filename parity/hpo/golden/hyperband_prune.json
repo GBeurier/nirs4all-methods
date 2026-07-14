@@ -1,170 +1,1111 @@
 [
   {
+    "asked_at": 0,
     "id": 0,
+    "intermediates": [
+      {
+        "score": 41.0,
+        "sequence": 1,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 38.5,
+        "sequence": 2,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 37.666666666666664,
+        "sequence": 3,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 37.25,
+        "sequence": 4,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 37.0,
+        "sequence": 5,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 36.833333333333336,
+        "sequence": 6,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 36.714285714285715,
+        "sequence": 7,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 36.625,
+        "sequence": 8,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 36.55555555555556,
+        "sequence": 9,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 6
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 36.0,
+    "status": 1,
+    "terminal_at": 10
   },
   {
+    "asked_at": 11,
     "id": 1,
+    "intermediates": [
+      {
+        "score": 69.0,
+        "sequence": 12,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 66.5,
+        "sequence": 13,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 65.66666666666667,
+        "sequence": 14,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 65.25,
+        "sequence": 15,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 65.0,
+        "sequence": 16,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 64.83333333333333,
+        "sequence": 17,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 64.71428571428571,
+        "sequence": 18,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 64.625,
+        "sequence": 19,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 64.55555555555556,
+        "sequence": 20,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 8
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 64.0,
+    "status": 1,
+    "terminal_at": 21
   },
   {
+    "asked_at": 22,
     "id": 2,
+    "intermediates": [
+      {
+        "score": 105.0,
+        "sequence": 23,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 102.5,
+        "sequence": 24,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 101.66666666666667,
+        "sequence": 25,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 101.25,
+        "sequence": 26,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 101.0,
+        "sequence": 27,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 100.83333333333333,
+        "sequence": 28,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 100.71428571428571,
+        "sequence": 29,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 100.625,
+        "sequence": 30,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 100.55555555555556,
+        "sequence": 31,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 10
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 100.0,
+    "status": 1,
+    "terminal_at": 32
   },
   {
+    "asked_at": 33,
     "id": 3,
+    "intermediates": [
+      {
+        "score": 30.0,
+        "sequence": 34,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 27.5,
+        "sequence": 35,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 26.666666666666668,
+        "sequence": 36,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 26.25,
+        "sequence": 37,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 26.0,
+        "sequence": 38,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 25.833333333333332,
+        "sequence": 39,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 25.714285714285715,
+        "sequence": 40,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 25.625,
+        "sequence": 41,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 25.555555555555557,
+        "sequence": 42,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 5
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 25.0,
+    "status": 1,
+    "terminal_at": 43
   },
   {
+    "asked_at": 44,
     "id": 4,
+    "intermediates": [
+      {
+        "score": 30.0,
+        "sequence": 45,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 27.5,
+        "sequence": 46,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 26.666666666666668,
+        "sequence": 47,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 26.25,
+        "sequence": 48,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 26.0,
+        "sequence": 49,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 25.833333333333332,
+        "sequence": 50,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 25.714285714285715,
+        "sequence": 51,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 25.625,
+        "sequence": 52,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 25.555555555555557,
+        "sequence": 53,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 5
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 25.0,
+    "status": 1,
+    "terminal_at": 54
   },
   {
+    "asked_at": 55,
     "id": 5,
+    "intermediates": [
+      {
+        "score": 69.0,
+        "sequence": 56,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 66.5,
+        "sequence": 57,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 65.66666666666667,
+        "sequence": 58,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 65.25,
+        "sequence": 59,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 65.0,
+        "sequence": 60,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 64.83333333333333,
+        "sequence": 61,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 64.71428571428571,
+        "sequence": 62,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 64.625,
+        "sequence": 63,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 64.55555555555556,
+        "sequence": 64,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 8
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 64.0,
+    "status": 1,
+    "terminal_at": 65
   },
   {
+    "asked_at": 66,
     "id": 6,
+    "intermediates": [
+      {
+        "score": 86.0,
+        "sequence": 67,
+        "should_prune": true,
+        "step": 0
+      }
+    ],
     "params": {
       "k": 9
     },
     "pruned_at": 0,
-    "status": 2
+    "status": 2,
+    "terminal_at": 68
   },
   {
+    "asked_at": 69,
     "id": 7,
+    "intermediates": [
+      {
+        "score": 41.0,
+        "sequence": 70,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 38.5,
+        "sequence": 71,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 37.666666666666664,
+        "sequence": 72,
+        "should_prune": true,
+        "step": 2
+      }
+    ],
     "params": {
       "k": 6
     },
     "pruned_at": 2,
-    "status": 2
+    "status": 2,
+    "terminal_at": 73
   },
   {
+    "asked_at": 74,
     "id": 8,
+    "intermediates": [
+      {
+        "score": 14.0,
+        "sequence": 75,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 11.5,
+        "sequence": 76,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 10.666666666666666,
+        "sequence": 77,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 10.25,
+        "sequence": 78,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 10.0,
+        "sequence": 79,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 9.833333333333334,
+        "sequence": 80,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 9.714285714285714,
+        "sequence": 81,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 9.625,
+        "sequence": 82,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 9.555555555555555,
+        "sequence": 83,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 3
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 9.0,
+    "status": 1,
+    "terminal_at": 84
   },
   {
+    "asked_at": 85,
     "id": 9,
+    "intermediates": [
+      {
+        "score": 69.0,
+        "sequence": 86,
+        "should_prune": true,
+        "step": 0
+      }
+    ],
     "params": {
       "k": 8
     },
     "pruned_at": 0,
-    "status": 2
+    "status": 2,
+    "terminal_at": 87
   },
   {
+    "asked_at": 88,
     "id": 10,
+    "intermediates": [
+      {
+        "score": 30.0,
+        "sequence": 89,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 27.5,
+        "sequence": 90,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 26.666666666666668,
+        "sequence": 91,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 26.25,
+        "sequence": 92,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 26.0,
+        "sequence": 93,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 25.833333333333332,
+        "sequence": 94,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 25.714285714285715,
+        "sequence": 95,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 25.625,
+        "sequence": 96,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 25.555555555555557,
+        "sequence": 97,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 5
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 25.0,
+    "status": 1,
+    "terminal_at": 98
   },
   {
+    "asked_at": 99,
     "id": 11,
+    "intermediates": [
+      {
+        "score": 54.0,
+        "sequence": 100,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 51.5,
+        "sequence": 101,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 50.666666666666664,
+        "sequence": 102,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 50.25,
+        "sequence": 103,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 50.0,
+        "sequence": 104,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 49.833333333333336,
+        "sequence": 105,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 49.714285714285715,
+        "sequence": 106,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 49.625,
+        "sequence": 107,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 49.55555555555556,
+        "sequence": 108,
+        "should_prune": true,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 7
     },
     "pruned_at": 8,
-    "status": 2
+    "status": 2,
+    "terminal_at": 109
   },
   {
+    "asked_at": 110,
     "id": 12,
+    "intermediates": [
+      {
+        "score": 30.0,
+        "sequence": 111,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 27.5,
+        "sequence": 112,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 26.666666666666668,
+        "sequence": 113,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 26.25,
+        "sequence": 114,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 26.0,
+        "sequence": 115,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 25.833333333333332,
+        "sequence": 116,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 25.714285714285715,
+        "sequence": 117,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 25.625,
+        "sequence": 118,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 25.555555555555557,
+        "sequence": 119,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 5
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 25.0,
+    "status": 1,
+    "terminal_at": 120
   },
   {
+    "asked_at": 121,
     "id": 13,
+    "intermediates": [
+      {
+        "score": 41.0,
+        "sequence": 122,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 38.5,
+        "sequence": 123,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 37.666666666666664,
+        "sequence": 124,
+        "should_prune": true,
+        "step": 2
+      }
+    ],
     "params": {
       "k": 6
     },
     "pruned_at": 2,
-    "status": 2
+    "status": 2,
+    "terminal_at": 125
   },
   {
+    "asked_at": 126,
     "id": 14,
+    "intermediates": [
+      {
+        "score": 30.0,
+        "sequence": 127,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 27.5,
+        "sequence": 128,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 26.666666666666668,
+        "sequence": 129,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 26.25,
+        "sequence": 130,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 26.0,
+        "sequence": 131,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 25.833333333333332,
+        "sequence": 132,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 25.714285714285715,
+        "sequence": 133,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 25.625,
+        "sequence": 134,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 25.555555555555557,
+        "sequence": 135,
+        "should_prune": true,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 5
     },
     "pruned_at": 8,
-    "status": 2
+    "status": 2,
+    "terminal_at": 136
   },
   {
+    "asked_at": 137,
     "id": 15,
+    "intermediates": [
+      {
+        "score": 9.0,
+        "sequence": 138,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 6.5,
+        "sequence": 139,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 5.666666666666667,
+        "sequence": 140,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 5.25,
+        "sequence": 141,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 5.0,
+        "sequence": 142,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 4.833333333333333,
+        "sequence": 143,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 4.714285714285714,
+        "sequence": 144,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 4.625,
+        "sequence": 145,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 4.555555555555555,
+        "sequence": 146,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 2
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 4.0,
+    "status": 1,
+    "terminal_at": 147
   },
   {
+    "asked_at": 148,
     "id": 16,
+    "intermediates": [
+      {
+        "score": 54.0,
+        "sequence": 149,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 51.5,
+        "sequence": 150,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 50.666666666666664,
+        "sequence": 151,
+        "should_prune": true,
+        "step": 2
+      }
+    ],
     "params": {
       "k": 7
     },
     "pruned_at": 2,
-    "status": 2
+    "status": 2,
+    "terminal_at": 152
   },
   {
+    "asked_at": 153,
     "id": 17,
+    "intermediates": [
+      {
+        "score": 86.0,
+        "sequence": 154,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 83.5,
+        "sequence": 155,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 82.66666666666667,
+        "sequence": 156,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 82.25,
+        "sequence": 157,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 82.0,
+        "sequence": 158,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 81.83333333333333,
+        "sequence": 159,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 81.71428571428571,
+        "sequence": 160,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 81.625,
+        "sequence": 161,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 81.55555555555556,
+        "sequence": 162,
+        "should_prune": true,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 9
     },
     "pruned_at": 8,
-    "status": 2
+    "status": 2,
+    "terminal_at": 163
   },
   {
+    "asked_at": 164,
     "id": 18,
+    "intermediates": [
+      {
+        "score": 54.0,
+        "sequence": 165,
+        "should_prune": true,
+        "step": 0
+      }
+    ],
     "params": {
       "k": 7
     },
     "pruned_at": 0,
-    "status": 2
+    "status": 2,
+    "terminal_at": 166
   },
   {
+    "asked_at": 167,
     "id": 19,
+    "intermediates": [
+      {
+        "score": 86.0,
+        "sequence": 168,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 83.5,
+        "sequence": 169,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 82.66666666666667,
+        "sequence": 170,
+        "should_prune": true,
+        "step": 2
+      }
+    ],
     "params": {
       "k": 9
     },
     "pruned_at": 2,
-    "status": 2
+    "status": 2,
+    "terminal_at": 171
   },
   {
+    "asked_at": 172,
     "id": 20,
+    "intermediates": [
+      {
+        "score": 6.0,
+        "sequence": 173,
+        "should_prune": false,
+        "step": 0
+      },
+      {
+        "score": 3.5,
+        "sequence": 174,
+        "should_prune": false,
+        "step": 1
+      },
+      {
+        "score": 2.666666666666667,
+        "sequence": 175,
+        "should_prune": false,
+        "step": 2
+      },
+      {
+        "score": 2.25,
+        "sequence": 176,
+        "should_prune": false,
+        "step": 3
+      },
+      {
+        "score": 2.0,
+        "sequence": 177,
+        "should_prune": false,
+        "step": 4
+      },
+      {
+        "score": 1.8333333333333335,
+        "sequence": 178,
+        "should_prune": false,
+        "step": 5
+      },
+      {
+        "score": 1.7142857142857144,
+        "sequence": 179,
+        "should_prune": false,
+        "step": 6
+      },
+      {
+        "score": 1.625,
+        "sequence": 180,
+        "should_prune": false,
+        "step": 7
+      },
+      {
+        "score": 1.5555555555555556,
+        "sequence": 181,
+        "should_prune": false,
+        "step": 8
+      }
+    ],
     "params": {
       "k": 1
     },
     "pruned_at": -1,
-    "status": 1
+    "score": 1.0,
+    "status": 1,
+    "terminal_at": 182
   }
 ]

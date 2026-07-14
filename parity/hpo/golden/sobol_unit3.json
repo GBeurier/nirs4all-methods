@@ -1,5 +1,6 @@
 [
   {
+    "asked_at": 0,
     "id": 0,
     "params": {
       "a": 0.0,
@@ -7,9 +8,11 @@
       "c": 0.0
     },
     "score": 0.0,
-    "status": 1
+    "status": 1,
+    "terminal_at": 1
   },
   {
+    "asked_at": 2,
     "id": 1,
     "params": {
       "a": 0.5,
@@ -17,9 +20,11 @@
       "c": 0.5
     },
     "score": 0.75,
-    "status": 1
+    "status": 1,
+    "terminal_at": 3
   },
   {
+    "asked_at": 4,
     "id": 2,
     "params": {
       "a": 0.75,
@@ -27,9 +32,11 @@
       "c": 0.25
     },
     "score": 0.6875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 5
   },
   {
+    "asked_at": 6,
     "id": 3,
     "params": {
       "a": 0.25,
@@ -37,9 +44,11 @@
       "c": 0.75
     },
     "score": 1.1875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 7
   },
   {
+    "asked_at": 8,
     "id": 4,
     "params": {
       "a": 0.375,
@@ -47,9 +56,11 @@
       "c": 0.625
     },
     "score": 0.671875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 9
   },
   {
+    "asked_at": 10,
     "id": 5,
     "params": {
       "a": 0.875,
@@ -57,9 +68,11 @@
       "c": 0.125
     },
     "score": 1.546875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 11
   },
   {
+    "asked_at": 12,
     "id": 6,
     "params": {
       "a": 0.625,
@@ -67,9 +80,11 @@
       "c": 0.875
     },
     "score": 1.171875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 13
   },
   {
+    "asked_at": 14,
     "id": 7,
     "params": {
       "a": 0.125,
@@ -77,9 +92,11 @@
       "c": 0.375
     },
     "score": 0.546875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 15
   },
   {
+    "asked_at": 16,
     "id": 8,
     "params": {
       "a": 0.1875,
@@ -87,9 +104,11 @@
       "c": 0.9375
     },
     "score": 1.01171875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 17
   },
   {
+    "asked_at": 18,
     "id": 9,
     "params": {
       "a": 0.6875,
@@ -97,9 +116,11 @@
       "c": 0.4375
     },
     "score": 1.32421875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 19
   },
   {
+    "asked_at": 20,
     "id": 10,
     "params": {
       "a": 0.9375,
@@ -107,9 +128,11 @@
       "c": 0.6875
     },
     "score": 1.35546875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 21
   },
   {
+    "asked_at": 22,
     "id": 11,
     "params": {
       "a": 0.4375,
@@ -117,9 +140,11 @@
       "c": 0.1875
     },
     "score": 0.54296875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 23
   },
   {
+    "asked_at": 24,
     "id": 12,
     "params": {
       "a": 0.3125,
@@ -127,9 +152,11 @@
       "c": 0.3125
     },
     "score": 0.23046875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 25
   },
   {
+    "asked_at": 26,
     "id": 13,
     "params": {
       "a": 0.8125,
@@ -137,9 +164,11 @@
       "c": 0.8125
     },
     "score": 1.79296875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 27
   },
   {
+    "asked_at": 28,
     "id": 14,
     "params": {
       "a": 0.5625,
@@ -147,9 +176,11 @@
       "c": 0.0625
     },
     "score": 0.51171875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 29
   },
   {
+    "asked_at": 30,
     "id": 15,
     "params": {
       "a": 0.0625,
@@ -157,9 +188,11 @@
       "c": 0.5625
     },
     "score": 1.19921875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 31
   },
   {
+    "asked_at": 32,
     "id": 16,
     "params": {
       "a": 0.09375,
@@ -167,9 +200,11 @@
       "c": 0.46875
     },
     "score": 0.4482421875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 33
   },
   {
+    "asked_at": 34,
     "id": 17,
     "params": {
       "a": 0.59375,
@@ -177,9 +212,11 @@
       "c": 0.96875
     },
     "score": 2.2294921875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 35
   },
   {
+    "asked_at": 36,
     "id": 18,
     "params": {
       "a": 0.84375,
@@ -187,9 +224,11 @@
       "c": 0.21875
     },
     "score": 0.8076171875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 37
   },
   {
+    "asked_at": 38,
     "id": 19,
     "params": {
       "a": 0.34375,
@@ -197,9 +236,11 @@
       "c": 0.71875
     },
     "score": 1.1513671875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 39
   },
   {
+    "asked_at": 40,
     "id": 20,
     "params": {
       "a": 0.46875,
@@ -207,9 +248,11 @@
       "c": 0.84375
     },
     "score": 0.9404296875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 41
   },
   {
+    "asked_at": 42,
     "id": 21,
     "params": {
       "a": 0.96875,
@@ -217,9 +260,11 @@
       "c": 0.34375
     },
     "score": 1.4091796875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 43
   },
   {
+    "asked_at": 44,
     "id": 22,
     "params": {
       "a": 0.71875,
@@ -227,9 +272,11 @@
       "c": 0.59375
     },
     "score": 0.9873046875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 45
   },
   {
+    "asked_at": 46,
     "id": 23,
     "params": {
       "a": 0.21875,
@@ -237,9 +284,11 @@
       "c": 0.09375
     },
     "score": 0.7685546875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 47
   },
   {
+    "asked_at": 48,
     "id": 24,
     "params": {
       "a": 0.15625,
@@ -247,9 +296,11 @@
       "c": 0.53125
     },
     "score": 0.3310546875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 49
   },
   {
+    "asked_at": 50,
     "id": 25,
     "params": {
       "a": 0.65625,
@@ -257,9 +308,11 @@
       "c": 0.03125
     },
     "score": 0.8623046875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 51
   },
   {
+    "asked_at": 52,
     "id": 26,
     "params": {
       "a": 0.90625,
@@ -267,9 +320,11 @@
       "c": 0.78125
     },
     "score": 1.5966796875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 53
   },
   {
+    "asked_at": 54,
     "id": 27,
     "params": {
       "a": 0.40625,
@@ -277,9 +332,11 @@
       "c": 0.28125
     },
     "score": 1.0654296875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 55
   },
   {
+    "asked_at": 56,
     "id": 28,
     "params": {
       "a": 0.28125,
@@ -287,9 +344,11 @@
       "c": 0.15625
     },
     "score": 0.1826171875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 57
   },
   {
+    "asked_at": 58,
     "id": 29,
     "params": {
       "a": 0.78125,
@@ -297,9 +356,11 @@
       "c": 0.65625
     },
     "score": 1.6513671875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 59
   },
   {
+    "asked_at": 60,
     "id": 30,
     "params": {
       "a": 0.53125,
@@ -307,9 +368,11 @@
       "c": 0.40625
     },
     "score": 0.4482421875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 61
   },
   {
+    "asked_at": 62,
     "id": 31,
     "params": {
       "a": 0.03125,
@@ -317,6 +380,7 @@
       "c": 0.90625
     },
     "score": 1.1044921875,
-    "status": 1
+    "status": 1,
+    "terminal_at": 63
   }
 ]

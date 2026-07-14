@@ -75,7 +75,9 @@ jobs:
       - name: Run HPO cross-binding parity gate (Track Q)
         # Runs every HpoSpec through the native optimizer and checks: golden-trace
         # stability (the cross-binding contract), Sobol Tier-A vs scipy, and native
-        # pruner verdicts vs an independent pure-Python reimplementation.
+        # pruner verdicts vs an independent pure-Python reimplementation. It also
+        # runs all 45 native sampler-pruner cells and the typed refusal catalogue;
+        # that exhaustive composition gate is not itself cross-binding evidence.
         env:
           N4M_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libn4m.so
         run: |

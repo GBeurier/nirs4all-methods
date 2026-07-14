@@ -21,8 +21,8 @@ with two distinguishing knobs:
 
 * `solver` selects the inner algorithm (NIPALS, SIMPLS, SVD, …)
   directly — sklearn only exposes 'nipals' / 'svd'.
-* Round-trip via `pickle.dumps` is bit-exact, backed by the C ABI
-  `.n4a` bundle (`n4m_model_export_to_buffer`).
+* Round-trip via `pickle.dumps` is bit-exact, backed by the raw C ABI
+  N4MM fitted-model payload (`n4m_model_export_to_buffer`).
 
 Parameters
 ----------

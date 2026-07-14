@@ -30,7 +30,7 @@
 | D7 | DSL subset | `sorted_tuple` + typed categoricals implemented; the binding rejects any `finetune_params` key the native space can't hold (enforced Phase-1-bridge, but the ABI is complete). |
 | D8 | constraint richness | Generic `n4m_search_space_add_constraint(kind, refs…)` covering `mutex_group/requires/exclude/condition_in/condition_not_in`. **Designed against the already-implemented, parity-locked dag-ml generation vocabulary** (`dag-ml/crates/dag-ml-core/src/generation.rs`, `nirs4all/pipeline/dagml/detect.py:263`) — so F0 freezes it unilaterally, no coordination with the dag-ml agent. `pick/arrange/count` are dag-ml **variant-generation** operators (they expand the space, they are not per-sample constraints) → they stay dag-ml-side and are out of the native constraint ABI by design. |
 | D9 | options struct | `n4m_optimizer_options_t { size_t struct_size; …; uint8_t reserved[64]; }` + `n4m_optimizer_options_init()`; forward-compatible via the `struct_size` prologue. |
-| D10 | resume | `n4m_optimizer_save/load` **declared and reserved** (return `N4M_ERR_NOT_IMPLEMENTED` until F7); implementation (replay-log or blob) is F7. Reserving the symbols now keeps F0 the only ABI PR. |
+| D10 | resume | `n4m_optimizer_save/load` were **declared and reserved** by F0. MT6/F7 has now activated them with portable N4MOPT v1 without changing the reserved signatures, ABI version or SONAME. |
 | D11 | `n4m_finetune_estimator` | A **thin single-level driver** over the same ask/tell primitives + the identical result schema; one `validation_plan`, **no nested CV / selection / leakage** (those are dag-ml's). |
 
 ---
@@ -156,9 +156,9 @@ N4M_API n4m_status_t n4m_optimizer_best(const n4m_optimizer_t*, n4m_trial_t** ou
 N4M_API n4m_status_t n4m_optimizer_get_trials(const n4m_optimizer_t*, int64_t since_id,
                         n4m_method_result_t** out);                             /* streaming, D-stream */
 
-/* reserved persistence (D10) — return N4M_ERR_NOT_IMPLEMENTED until F7 */
+/* F0 reserved persistence (D10); activated by N4MOPT v1 in MT6/F7 */
 N4M_API n4m_status_t n4m_optimizer_save(const n4m_optimizer_t*, n4m_array_t** out_blob);
-N4M_API n4m_status_t n4m_optimizer_load(n4m_context_t*, const uint8_t* blob, size_t n,
+N4M_API n4m_status_t n4m_optimizer_load(n4m_context_t*, const uint8_t* blob, uint64_t n,
                         n4m_optimizer_t** out);
 
 /* ---- trial accessors ----------------------------------------------------- */

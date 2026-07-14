@@ -60,8 +60,9 @@ Each binding exposes the same surface in two flavours:
   `predict()` / `summary()` / `coef()`, MATLAB classdef with
   `predict` / `loss` / `score`).
 
-You can mix the two. Save a tier-2 estimator, reload it in tier-1, or
-the reverse — the `.n4a` bundle is the lingua franca.
+Model-based Python estimators persist their fitted native state through the
+same C ABI used by tier 1. Their pickle state embeds a raw N4MM payload; this is
+not a general tier-2 interchange format or a nirs4all `.n4a` pipeline bundle.
 
 ## 3. Five C++ acceleration builds
 
@@ -107,24 +108,35 @@ not introduce cross-language drift.
 Tolerances are per-algorithm; see
 [benchmark methodology](../benchmarks/methodology.md#parity-tolerance).
 
-## 5. The `.n4a` bundle
+## 5. The N4MM fitted-model payload
 
-`.n4a` is a small, content-addressed binary that captures everything
-needed to reproduce a fit:
+N4MM format version 1 stores the state needed to predict or transform with a
+fitted native model:
 
-- Algorithm + config (algorithm enum, solver, deflation, all
-  hyperparameters)
-- Centring / scaling means + stds
-- Coefficients and (where applicable) loadings / scores
-- pls4all version + ABI version
-- A SHA256 of the training X used for fit
+- algorithm, solver, deflation and fitted-model configuration fields;
+- centring and scaling statistics;
+- coefficients, latent matrices and optional training scores;
+- the writer ABI triple as provenance;
+- a trailing FNV-1a integrity checksum.
 
-Any binding can read any other binding's `.n4a`. The export functions
-are:
+It does **not** contain the project version, a training-data fingerprint or a
+content address. A different writer ABI is currently accepted with a warning
+on the context; corrupt bytes and unsupported N4MM format versions fail.
 
-- Python: `model.export("file.n4a")`
-- R:      `pls4all_export(model, "file.n4a")`
-- MATLAB: `n4m.export(mdl, "file.n4a")`
+The format is exposed by the C ABI functions
+`n4m_model_export_to_buffer` / `n4m_model_import_from_buffer`. The Python slim
+binding wraps them as:
+
+```python
+payload = model.to_bytes()
+restored = pls4all.Model.from_bytes(ctx, payload)
+restored.close()
+```
+
+R, MATLAB and JS do not currently expose fitted-model N4MM import/export
+wrappers. The raw payload has no canonical filename extension. The `.n4a`
+extension remains the nirs4all full-pipeline bundle namespace; a possible
+`.n4am` envelope is deferred and is not part of N4MM format version 1.
 
 ## 6. The algorithm taxonomy
 

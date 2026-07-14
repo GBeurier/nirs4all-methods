@@ -24,6 +24,8 @@
 
 namespace n4m::core::opt {
 
+struct OptimizerCheckpointAccess;
+
 // One tunable parameter in the search space.
 struct ParamSpec {
     std::string      name;
@@ -32,7 +34,7 @@ struct ParamSpec {
     // numeric (int / float / log_int / log_float)
     double low{0.0};
     double high{0.0};
-    double step{0.0};   // <= 0 => continuous / unit
+    double step{0.0};   // 0 => continuous linear float; positive otherwise
     bool   is_int{false};
     bool   is_log{false};
 
@@ -64,6 +66,13 @@ class SearchSpace {
 
     ParamSpec*       find(std::string_view name);
     const ParamSpec* find(std::string_view name) const;
+
+    // Single authority for all final, cross-axis validation. Builders may reject
+    // local pointer/range errors early, but an optimizer is never constructed
+    // unless this validates the complete ordered space. INVALID_ARGUMENT means
+    // malformed input; UNSUPPORTED means a well-formed sampler/constraint pair
+    // that the current implementation cannot honour without violating it.
+    n4m_status_t validate(n4m_sampler_kind_t sampler, std::string* error = nullptr) const;
 };
 
 // A single sampled value inside a trial.
@@ -72,6 +81,20 @@ struct TrialParam {
     std::int32_t cat_index{-1};   // categorical/ordinal choice index (-1 for pure numeric)
     std::string  cat_label;       // categorical label (or stringified value)
     bool         active{true};
+};
+
+// Stable terminal diagnostic retained by the optimizer. The C surface accepts
+// either a legacy message (mapped to a default code) or the versioned
+// `n4m.error.v1` wire form; bindings expose these fields directly.
+struct TrialError {
+    std::string code;
+    std::string message;
+    bool        retryable{false};
+
+    bool operator==(const TrialError& other) const {
+        return code == other.code && message == other.message &&
+               retryable == other.retryable;
+    }
 };
 
 // A trial: ordered (name -> value) plus lifecycle state.
@@ -84,6 +107,12 @@ struct Trial {
     double                                             duration_seconds{0.0};
     std::int32_t                                       rung{0};
     std::vector<std::pair<std::int32_t, double>>       intermediates;
+    TrialError                                         error;
+    bool                                               has_error{false};
+    bool                                               pruned_by_policy{false};
+    std::int64_t                                       ask_sequence{-1};
+    std::vector<std::int64_t>                          intermediate_sequences;
+    std::int64_t                                       terminal_sequence{-1};
     std::chrono::steady_clock::time_point              ask_time{};
 
     const TrialParam* find(std::string_view name) const;
@@ -195,15 +224,25 @@ class Optimizer {
 
     // Draw the next trial (owned by the optimizer, valid until destroy).
     n4m_status_t ask(::n4m_trial_s** out);
+    // Best-effort batch of up to `n` asks. `out` must hold n slots (the C
+    // wrapper pre-nulls them) and *out_count starts at 0. Commits each trial
+    // exactly like ask(). A benign stop (population generation boundary or
+    // timeout) after >=1 commit returns N4M_OK with 0<*out_count<n; the same
+    // condition at zero progress surfaces its stable status
+    // (INVALID_ARGUMENT / CANCELLED). Any other failure returns its exact
+    // status with [0,*out_count) committed (never rolled back).
+    n4m_status_t ask_batch(std::int32_t n, ::n4m_trial_s** out, std::int32_t* out_count);
     // Force the next ask to return these numeric params.
     n4m_status_t enqueue(std::vector<std::pair<std::string, double>> params);
     // Report a terminal outcome for a trial.
-    n4m_status_t tell_result(std::int64_t id, n4m_trial_status_t status, double score);
+    n4m_status_t tell_result(std::int64_t id, n4m_trial_status_t status, double score,
+                             const TrialError* error = nullptr);
     // Report an intermediate (fidelity-rung) score; `none` pruner never prunes.
     n4m_status_t tell_intermediate(std::int64_t id, std::int32_t step, double score,
                                    std::int32_t* out_should_prune);
     ::n4m_trial_s*      best(double* out_score) const;
     const std::vector<std::unique_ptr<::n4m_trial_s>>& trials() const { return trials_; }
+    const SearchSpace& search_space() const { return space_; }
     n4m_opt_direction_t direction() const { return dir_; }
 
   protected:
@@ -253,6 +292,23 @@ class Optimizer {
     // return false because a forced candidate cannot be inverse-encoded into
     // their population state.
     virtual bool allow_enqueue() const { return true; }
+    // Whether the NEXT ask (which would take id `prospective_id`) is refused
+    // solely by a synchronous population-generation boundary — the current
+    // generation is fully dispensed but not yet fully scored. This is the ONLY
+    // way a population sampler's ask() returns N4M_ERR_INVALID_ARGUMENT, so
+    // ask_batch() uses it to tell a benign batch boundary apart from a genuine
+    // unsatisfiable-constraint / invalid-warm-start rejection. The base
+    // optimizer never hits a generation boundary.
+    virtual bool at_generation_boundary(std::int64_t prospective_id) const {
+        (void)prospective_id;
+        return false;
+    }
+    // Steady-clock reading used for the ask() deadline. A test seam only:
+    // internal tests override it to drive timeout behaviour deterministically.
+    // No public ABI depends on it.
+    virtual std::chrono::steady_clock::time_point now() const {
+        return std::chrono::steady_clock::now();
+    }
     // Number of trials in the id range [base, base+size) that have reached a
     // terminal state (used by the population samplers' generation guard).
     std::int32_t resolved_in_range(std::int64_t base, std::int32_t size) const;
@@ -265,6 +321,8 @@ class Optimizer {
     std::unique_ptr<Pruner>  pruner_;
 
   private:
+    friend struct OptimizerCheckpointAccess;
+
     ::n4m_trial_s* find(std::int64_t id) const;
     bool ref_present(const ::n4m_trial_s& t, const std::string& param,
                      const std::string& label) const;
@@ -272,11 +330,12 @@ class Optimizer {
     std::vector<std::unique_ptr<::n4m_trial_s>>              trials_;
     std::deque<std::vector<std::pair<std::string, double>>>  enqueued_;
     std::int64_t                                             next_id_{0};
+    std::int64_t                                             next_event_sequence_{0};
 };
 
 // Ternary search over a single unimodal integer axis (ports the nirs4all
 // BinarySearchSampler); every other parameter is sampled uniformly. Converges
-// in O(log n) evaluations for a unimodal objective (e.g. PLS n_components). F1.
+// in O(log n) evaluations for a unimodal objective (e.g. PLS n_components).
 class TernarySampler : public Optimizer {
   public:
     TernarySampler(const SearchSpace& space, const n4m_optimizer_options_t& opts);
@@ -287,6 +346,8 @@ class TernarySampler : public Optimizer {
     bool override_numeric(const ParamSpec& p, double* out) override;
 
   private:
+    friend struct OptimizerCheckpointAccess;
+
     std::int64_t next_ternary_value() const;
 
     std::string  target_;   // name of the tuned int axis ("" ⇒ pure random)
@@ -307,6 +368,8 @@ class LhsSampler : public Optimizer {
     bool override_numeric(const ParamSpec& p, double* out) override;
 
   private:
+    friend struct OptimizerCheckpointAccess;
+
     std::vector<std::string>         numeric_names_;  // numeric axes, in space order
     std::vector<std::vector<double>> unit_;           // unit_[axis][i] ∈ [0,1), i<n_startup
     std::int32_t                     n_startup_{0};
@@ -328,8 +391,11 @@ class GaSampler : public Optimizer {
     bool sample(::n4m_trial_s& t,
                 const std::vector<std::pair<std::string, double>>* forced) override;
     bool allow_enqueue() const override { return false; }
+    bool at_generation_boundary(std::int64_t prospective_id) const override;
 
   private:
+    friend struct OptimizerCheckpointAccess;
+
     void        ensure_generation(std::int64_t member_base);
     std::size_t genome_length() const { return space_.params.size(); }
 
@@ -353,8 +419,11 @@ class PsoSampler : public Optimizer {
     bool sample(::n4m_trial_s& t,
                 const std::vector<std::pair<std::string, double>>* forced) override;
     bool allow_enqueue() const override { return false; }
+    bool at_generation_boundary(std::int64_t prospective_id) const override;
 
   private:
+    friend struct OptimizerCheckpointAccess;
+
     void ensure_iteration(std::int64_t member_base);
 
     std::int32_t                     swarm_size_{16};
@@ -387,8 +456,11 @@ class CmaEsSampler : public Optimizer {
     bool sample(::n4m_trial_s& t,
                 const std::vector<std::pair<std::string, double>>* forced) override;
     bool allow_enqueue() const override { return false; }
+    bool at_generation_boundary(std::int64_t prospective_id) const override;
 
   private:
+    friend struct OptimizerCheckpointAccess;
+
     void ensure_generation(std::int64_t member_base);
     void sample_population();
 
@@ -425,6 +497,8 @@ class SobolSampler : public Optimizer {
     bool override_categorical(const ParamSpec& p, std::int32_t* out_index) override;
 
   private:
+    friend struct OptimizerCheckpointAccess;
+
     void ensure_point();               // advance/cache the Sobol point for the current ask
     int  dim_of(const ParamSpec& p) const;  // Sobol dimension for p, or -1 if beyond the table
 
@@ -451,6 +525,8 @@ class TpeSampler : public Optimizer {
     bool override_categorical(const ParamSpec& p, std::int32_t* out_index) override;
 
   private:
+    friend struct OptimizerCheckpointAccess;
+
     std::int32_t n_startup_{10};
     double       gamma_{0.25};
     std::int32_t n_ei_{24};
@@ -475,6 +551,8 @@ class GpEiSampler : public Optimizer {
     bool allow_enqueue() const override { return false; }
 
   private:
+    friend struct OptimizerCheckpointAccess;
+
     // Gather completed+scored trials' continuous-axis coords (from proposals_) and
     // scores; returns false if too few to fit a GP.
     bool gather(std::vector<std::vector<double>>& X, std::vector<double>& y) const;
@@ -491,11 +569,30 @@ class GpEiSampler : public Optimizer {
 // Resolve MINIMIZE/MAXIMIZE from a metric (used when direction == AUTO).
 n4m_opt_direction_t direction_for_metric(n4m_metric_t metric);
 
+// Validate every currently-defined optimizer option before a sampler or pruner
+// is constructed. Malformed values are INVALID_ARGUMENT, valid-but-reserved
+// behaviour is NOT_IMPLEMENTED, and unsupported option combinations are
+// UNSUPPORTED. `error` receives a stable diagnostic when non-null.
+n4m_status_t validate_optimizer_options(const n4m_optimizer_options_t& opts,
+                                        std::string* error = nullptr);
+
 // Create the sampler for `opts.sampler`; returns nullptr (and sets *status to
 // N4M_ERR_NOT_IMPLEMENTED) for reserved-but-unimplemented kinds.
 std::unique_ptr<Optimizer> make_optimizer(const SearchSpace& space,
                                           const n4m_optimizer_options_t& opts,
-                                          n4m_status_t* status);
+                                          n4m_status_t* status,
+                                          std::string* error = nullptr);
+
+// Portable optimizer checkpoint (N4MOPT v1). The encoder owns no ABI memory;
+// the C wrapper places the returned byte stream in an n4m_array_t. Decoding is
+// transactional and leaves `out` null on every failure.
+n4m_status_t save_optimizer_checkpoint(const Optimizer& optimizer,
+                                       std::vector<std::uint8_t>& out,
+                                       std::string* error = nullptr);
+n4m_status_t load_optimizer_checkpoint(const std::uint8_t* data,
+                                       std::size_t size,
+                                       std::unique_ptr<Optimizer>& out,
+                                       std::string* error = nullptr);
 
 }  // namespace n4m::core::opt
 

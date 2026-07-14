@@ -1,0 +1,190 @@
+{
+  "$id": "https://nirs4all.org/contracts/n4m/hpo/sampler_pruner_compatibility.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Native/Python deterministic conformance contract for every n4m sampler-pruner composition.",
+  "properties": {
+    "$schema": { "type": "string" },
+    "canonical_tape": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_after_trials": { "minimum": 1, "type": "integer" },
+        "checkpoint_state": { "const": "terminal_prefix_batch_boundary" },
+        "event_order": { "const": "ASK_INTERMEDIATE_TERMINAL" },
+        "n_startup_trials": { "minimum": 1, "type": "integer" },
+        "n_trials": { "minimum": 1, "type": "integer" },
+        "objective": { "const": "sphere" },
+        "seed": { "minimum": 0, "type": "integer" },
+        "space": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "args": { "items": { "type": "number" }, "minItems": 2, "type": "array" },
+              "kind": { "enum": ["int", "float"] },
+              "name": { "minLength": 1, "type": "string" }
+            },
+            "required": ["args", "kind", "name"],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "checkpoint_after_trials",
+        "checkpoint_state",
+        "event_order",
+        "n_startup_trials",
+        "n_trials",
+        "objective",
+        "seed",
+        "space"
+      ],
+      "type": "object"
+    },
+    "cells": {
+      "items": { "$ref": "#/$defs/cell" },
+      "minItems": 45,
+      "type": "array"
+    },
+    "evidence_scope": {
+      "additionalProperties": false,
+      "properties": {
+        "does_not_prove": {
+          "items": { "minLength": 1, "type": "string" },
+          "minItems": 1,
+          "type": "array"
+        },
+        "level": { "const": "native_python_deterministic_conformance" },
+        "proves": {
+          "items": { "minLength": 1, "type": "string" },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": ["does_not_prove", "level", "proves"],
+      "type": "object"
+    },
+    "format": { "const": "n4m.hpo.sampler_pruner_compatibility" },
+    "pruners": {
+      "items": { "$ref": "#/$defs/pruner" },
+      "minItems": 5,
+      "type": "array"
+    },
+    "refusal_vectors": {
+      "items": { "$ref": "#/$defs/refusal" },
+      "minItems": 1,
+      "type": "array"
+    },
+    "samplers": {
+      "items": { "$ref": "#/$defs/sampler" },
+      "minItems": 9,
+      "type": "array"
+    },
+    "schema_version": { "const": 1 }
+  },
+  "required": [
+    "$schema",
+    "canonical_tape",
+    "cells",
+    "evidence_scope",
+    "format",
+    "pruners",
+    "refusal_vectors",
+    "samplers",
+    "schema_version"
+  ],
+  "title": "n4m sampler-pruner compatibility v1",
+  "type": "object",
+  "$defs": {
+    "cell": {
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint": { "const": "save_restore_exact" },
+        "creation_status": { "const": "N4M_OK" },
+        "evidence": { "const": "native_python_deterministic_conformance" },
+        "pruner": { "enum": ["none", "median", "asha", "hyperband", "racing"] },
+        "reason_code": { "const": "NATIVE_COMPOSITION_SUPPORTED" },
+        "reproducibility": { "const": "same_ordered_event_stream" },
+        "sampler": {
+          "enum": ["random", "sobol", "lhs", "ternary", "ga", "pso", "cmaes", "tpe", "gp_ei"]
+        },
+        "schedule": { "enum": ["sequential_history", "generation_synchronous"] },
+        "status": { "const": "supported" }
+      },
+      "required": [
+        "checkpoint",
+        "creation_status",
+        "evidence",
+        "pruner",
+        "reason_code",
+        "reproducibility",
+        "sampler",
+        "schedule",
+        "status"
+      ],
+      "type": "object"
+    },
+    "pruner": {
+      "additionalProperties": false,
+      "properties": {
+        "id": { "enum": ["none", "median", "asha", "hyperband", "racing"] },
+        "intermediate": { "enum": ["compatibility_curve", "racing_observation"] },
+        "intermediate_steps": { "minimum": 1, "type": "integer" },
+        "max_in_flight": { "minimum": 1, "type": "integer" },
+        "max_resource": { "minimum": 0, "type": "integer" },
+        "reduction_factor": { "minimum": 0, "type": "integer" },
+        "tell_order": { "items": { "minimum": 0, "type": "integer" }, "minItems": 1, "type": "array" }
+      },
+      "required": [
+        "id",
+        "intermediate",
+        "intermediate_steps",
+        "max_in_flight",
+        "max_resource",
+        "reduction_factor",
+        "tell_order"
+      ],
+      "type": "object"
+    },
+    "refusal": {
+      "additionalProperties": false,
+      "properties": {
+        "applies_to": {
+          "items": { "minLength": 1, "type": "string" },
+          "minItems": 1,
+          "type": "array"
+        },
+        "expected_status": {
+          "enum": ["N4M_ERR_INVALID_ARGUMENT", "N4M_ERR_UNSUPPORTED", "N4M_ERR_NOT_IMPLEMENTED"]
+        },
+        "fixture": { "minLength": 1, "type": "string" },
+        "id": { "pattern": "^[a-z][a-z0-9_]+$", "type": "string" },
+        "reason_code": { "pattern": "^[A-Z][A-Z0-9_]+$", "type": "string" }
+      },
+      "required": ["applies_to", "expected_status", "fixture", "id", "reason_code"],
+      "type": "object"
+    },
+    "sampler": {
+      "additionalProperties": false,
+      "properties": {
+        "adaptive_transition": {
+          "additionalProperties": false,
+          "properties": {
+            "after_trials": { "minimum": 0, "type": "integer" },
+            "kind": { "enum": ["none", "startup_history", "generation"] },
+            "minimum_completed": { "minimum": 0, "type": "integer" }
+          },
+          "required": ["after_trials", "kind", "minimum_completed"],
+          "type": "object"
+        },
+        "id": {
+          "enum": ["random", "sobol", "lhs", "ternary", "ga", "pso", "cmaes", "tpe", "gp_ei"]
+        },
+        "schedule": { "enum": ["sequential_history", "generation_synchronous"] }
+      },
+      "required": ["adaptive_transition", "id", "schedule"],
+      "type": "object"
+    }
+  }
+}

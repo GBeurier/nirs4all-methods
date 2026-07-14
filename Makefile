@@ -85,6 +85,7 @@ test-python-sdist-install:
 test-abi-freshness:
 	cmake --preset $(PRESET)
 	cmake --build --preset $(PRESET) --target n4m_c --parallel
+	scripts/check_native_abi_freshness.sh --self-test-selection
 	scripts/check_native_abi_freshness.sh --preset $(PRESET)
 
 test-js-wasm:

@@ -27,7 +27,7 @@ class PLSDAClassifier(_Pls4allModelEstimator, BaseEstimator, ClassifierMixin):
     Fits PLS regression on one-hot-encoded class indicators (sklearn
     convention) and decodes the highest column as the predicted class.
     Backed by `Algorithm.PLS_DA` in the C ABI, so the fitted state
-    survives `pickle.dumps` bit-exactly via the `.n4a` bundle.
+    survives `pickle.dumps` bit-exactly via the raw N4MM payload.
 
     Currently single-output multiclass only. Multi-label classification
     is not supported.
@@ -43,14 +43,16 @@ class PLSDAClassifier(_Pls4allModelEstimator, BaseEstimator, ClassifierMixin):
 
     _algorithm = Algorithm.PLS_DA
 
-    def __init__(self,
-                  n_components: int = 2,
-                  *,
-                  solver: str = "simpls",
-                  center_x: bool = True,
-                  scale_x: bool = True,
-                  tol: float = 1e-6,
-                  max_iter: int = 500) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        solver: str = "simpls",
+        center_x: bool = True,
+        scale_x: bool = True,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+    ) -> None:
         self.n_components = n_components
         self.solver = solver
         self.center_x = center_x
@@ -84,9 +86,13 @@ class PLSDAClassifier(_Pls4allModelEstimator, BaseEstimator, ClassifierMixin):
         # Validate inputs WITHOUT mutating fitted state, so a failed
         # fit leaves the estimator in its prior (or unfitted) state.
         X_chk, y_chk = check_X_y(
-            X, y,
-            dtype=np.float64, ensure_2d=True,
-            ensure_all_finite=True, multi_output=False, y_numeric=False,
+            X,
+            y,
+            dtype=np.float64,
+            ensure_2d=True,
+            ensure_all_finite=True,
+            multi_output=False,
+            y_numeric=False,
         )
         y_arr = np.asarray(y_chk).ravel()
         encoder = LabelEncoder()
@@ -94,8 +100,7 @@ class PLSDAClassifier(_Pls4allModelEstimator, BaseEstimator, ClassifierMixin):
         classes = np.asarray(encoder.classes_)
         if classes.size < 2:
             raise ValueError(
-                f"PLSDAClassifier requires at least 2 classes; got "
-                f"{classes.size}"
+                f"PLSDAClassifier requires at least 2 classes; got {classes.size}"
             )
         X_arr = np.ascontiguousarray(X_chk, dtype=np.float64)
         Y_dummy = self._one_hot(y_int, classes.size)
@@ -143,14 +148,16 @@ class OPLSDAClassifier(PLSDAClassifier):
 
     _algorithm = Algorithm.OPLS_DA
 
-    def __init__(self,
-                  n_components: int = 2,
-                  *,
-                  solver: str = "nipals",
-                  center_x: bool = True,
-                  scale_x: bool = True,
-                  tol: float = 1e-6,
-                  max_iter: int = 500) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        solver: str = "nipals",
+        center_x: bool = True,
+        scale_x: bool = True,
+        tol: float = 1e-6,
+        max_iter: int = 500,
+    ) -> None:
         super().__init__(
             n_components=n_components,
             solver=solver,

@@ -9,10 +9,13 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIB=""
 PRESET=""
+SELF_TEST_SELECTION=0
+SELF_TEST_ROOT=""
 
 usage() {
   cat <<'EOF'
 Usage: scripts/check_native_abi_freshness.sh [--lib PATH] [--preset PRESET]
+       scripts/check_native_abi_freshness.sh --self-test-selection
 
 Checks that the built native libn4m matches the committed ABI snapshot and is
 redistributable:
@@ -21,6 +24,9 @@ redistributable:
   - n4m_check_abi_compatibility accepts the current headers
   - Linux SONAME equals libn4m.so.<ABI major>
   - no RPATH/RUNPATH and no forbidden runtime dependencies
+
+Without --lib, discovery selects the full ABI version declared by the current
+headers and refuses ambiguous matches. Use --preset to constrain the build root.
 EOF
 }
 
@@ -28,6 +34,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --lib) LIB="$2"; shift 2 ;;
     --preset) PRESET="$2"; shift 2 ;;
+    --self-test-selection) SELF_TEST_SELECTION=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown arg: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -41,26 +48,112 @@ abi_minor="$(
   awk '/^#define N4M_ABI_VERSION_MINOR / {print $3}' \
     "$REPO_ROOT/cpp/include/n4m/n4m_version.h"
 )"
+abi_patch="$(
+  awk '/^#define N4M_ABI_VERSION_PATCH / {print $3}' \
+    "$REPO_ROOT/cpp/include/n4m/n4m_version.h"
+)"
 
-if [[ -z "$abi_major" || -z "$abi_minor" ]]; then
+if [[ -z "$abi_major" || -z "$abi_minor" || -z "$abi_patch" ]]; then
   echo "ERROR: could not parse ABI version from n4m_version.h" >&2
   exit 1
 fi
 
-find_lib() {
+find_current_lib() {
   local root="$1"
+  local matches=""
+  local match_count="0"
+  local expected=""
+
+  [[ -d "$root" ]] || return 0
+
   case "$(uname -s)" in
-    Linux)  find "$root" -name 'libn4m.so.*' ! -name '*.a' 2>/dev/null | sort | head -n 1 ;;
-    Darwin) find "$root" -name 'libn4m*.dylib' 2>/dev/null | sort | head -n 1 ;;
-    *)      find "$root" \( -name 'n4m.dll' -o -name 'libn4m*.dll' \) 2>/dev/null | sort | head -n 1 ;;
+    Linux)
+      expected="libn4m.so.$abi_major.$abi_minor.$abi_patch"
+      matches="$(find "$root" -type f -name "$expected" 2>/dev/null | LC_ALL=C sort)"
+      ;;
+    Darwin)
+      expected="libn4m.$abi_major.$abi_minor.$abi_patch.dylib"
+      matches="$(find "$root" -type f -name "$expected" 2>/dev/null | LC_ALL=C sort)"
+      ;;
+    *)
+      expected="n4m.dll or libn4m.dll"
+      matches="$(
+        find "$root" -type f \( -name 'n4m.dll' -o -name 'libn4m.dll' \) \
+          2>/dev/null | LC_ALL=C sort
+      )"
+      ;;
   esac
+
+  match_count="$(printf '%s\n' "$matches" | sed '/^$/d' | wc -l | tr -d '[:space:]')"
+  if [[ "$match_count" -gt 1 ]]; then
+    echo "ERROR: multiple current libn4m candidates found under $root:" >&2
+    printf '%s\n' "$matches" | sed 's/^/  /' >&2
+    echo "Pass --preset or --lib to select one explicitly." >&2
+    return 3
+  fi
+  if [[ "$match_count" -eq 1 ]]; then
+    printf '%s\n' "$matches"
+    return 0
+  fi
+
+  echo "ERROR: expected current ABI library '$expected' under $root, but none was found." >&2
+  return 2
 }
+
+test_current_library_selection() {
+  local current_name=""
+  local stale_name=""
+  local selected=""
+
+  case "$(uname -s)" in
+    Linux)
+      current_name="libn4m.so.$abi_major.$abi_minor.$abi_patch"
+      stale_name="libn4m.so.0.0.0"
+      ;;
+    Darwin)
+      current_name="libn4m.$abi_major.$abi_minor.$abi_patch.dylib"
+      stale_name="libn4m.0.0.0.dylib"
+      ;;
+    *)
+      echo "Selection self-test skipped: native freshness gate supports Linux/macOS."
+      return 0
+      ;;
+  esac
+
+  SELF_TEST_ROOT="$(mktemp -d)"
+  trap 'rm -rf -- "$SELF_TEST_ROOT"' EXIT
+  mkdir -p "$SELF_TEST_ROOT/primary" "$SELF_TEST_ROOT/duplicate"
+  : > "$SELF_TEST_ROOT/primary/$stale_name"
+  : > "$SELF_TEST_ROOT/primary/$current_name"
+
+  selected="$(find_current_lib "$SELF_TEST_ROOT/primary")"
+  if [[ "$selected" != "$SELF_TEST_ROOT/primary/$current_name" ]]; then
+    echo "ERROR: selection self-test chose '$selected' instead of the current ABI." >&2
+    return 1
+  fi
+
+  : > "$SELF_TEST_ROOT/duplicate/$current_name"
+  if find_current_lib "$SELF_TEST_ROOT" >/dev/null 2>&1; then
+    echo "ERROR: selection self-test accepted ambiguous current libraries." >&2
+    return 1
+  fi
+
+  rm -rf -- "$SELF_TEST_ROOT"
+  SELF_TEST_ROOT=""
+  trap - EXIT
+  echo "Native ABI library selection self-test OK."
+}
+
+if [[ "$SELF_TEST_SELECTION" -eq 1 ]]; then
+  test_current_library_selection
+  exit 0
+fi
 
 if [[ -z "$LIB" ]]; then
   if [[ -n "$PRESET" ]]; then
-    LIB="$(find_lib "$REPO_ROOT/build/$PRESET/cpp/src")"
+    LIB="$(find_current_lib "$REPO_ROOT/build/$PRESET/cpp/src")"
   else
-    LIB="$(find_lib "$REPO_ROOT/build")"
+    LIB="$(find_current_lib "$REPO_ROOT/build")"
   fi
 fi
 

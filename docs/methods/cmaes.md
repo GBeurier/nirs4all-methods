@@ -2,11 +2,13 @@
 
 **Role:** `optimization` · **kind:** `n4m_sampler_kind_t = N4M_SAMPLER_CMAES` · **since:** ABI 2.1 (F4)
 
-Covariance Matrix Adaptation Evolution Strategy, **separable (diagonal) variant** (Ros & Hansen 2008), over the unit hypercube. A generation of `λ = 4 + ⌊3·ln P⌋` candidates is sampled from `N(m, σ²·diag(C))` and clamped to `[0,1)`; once scored, the `μ = λ/2` best update the mean `m`, the diagonal covariance `C`, the global step-size `σ`, and the two evolution paths, following the canonical CMA-ES equations. The diagonal covariance drops the eigendecomposition of full CMA-ES, so the sampler stays cheap and robust for the modest continuous dimensionality typical of NIRS finetuning (Ridge `alpha`, learning rates, continuous preprocessing parameters).
+Covariance Matrix Adaptation Evolution Strategy, **separable (diagonal) variant** (Ros & Hansen 2008), over the unit hypercube. A generation of `λ = 4 + ⌊3·ln P⌋` candidates is sampled from `N(m, σ²·diag(C))` and clamped to `[0,1)`; once resolved, the best completed and scored members (up to `μ = λ/2`) update the mean `m`, diagonal covariance `C`, global step-size `σ`, and two evolution paths. The diagonal covariance drops the eigendecomposition of full CMA-ES, so the sampler stays cheap for modest numeric dimensionality.
 
-CMA-ES is the most **sample-efficient** sampler here for smooth continuous objectives. Non-continuous axes (int / categorical / ordinal) are handled by the shared `decode_candidate` (bucketed) — the independent-fallback behaviour Optuna's `CmaEsSampler` also uses for mixed spaces; for heavily categorical spaces prefer `tpe` or `ga`.
+CMA-ES adapts every numeric axis (`int`, `float`, `log_int`, `log_float`) in unit space; stepped and integer proposals are snapped during decoding. Categorical and ordinal axes are drawn independently from the native RNG and do not update the CMA distribution. A `sorted_tuple` axis is likewise generated independently and is not modelled. This is a native mixed-space behavior, not an external-library compatibility guarantee; for heavily categorical spaces prefer `tpe` or `ga`.
 
-**Synchronous update (F4):** the distribution advances only once its whole generation is scored (`liar = none`), so `ask_batch` returns a partial batch at a generation boundary, and warm-start (`n4m_optimizer_enqueue`) is unsupported (`N4M_ERR_UNSUPPORTED`). The distribution updates from **completed, scored** members only — pruned / failed trials never enter the mean/covariance. Conditional activation is honoured by the decode; **hard `mutex`/`requires`/`exclude` constraints are handled through fitness** (an infeasible candidate is scored poorly by the host), not by rejection — for spaces with hard constraints prefer the per-parameter samplers (`tpe`, `random`, `ternary`) which resample until feasible.
+**Synchronous update (F4):** the distribution advances only once its whole generation is terminal (`liar = none`), so `ask_batch` returns a partial batch at a generation boundary, and warm-start (`n4m_optimizer_enqueue`) is unsupported (`N4M_ERR_UNSUPPORTED`). The distribution updates from **completed, scored** members only — pruned and failed trials never enter the mean/covariance. Any non-`none` liar value is rejected at optimizer creation with `N4M_ERR_NOT_IMPLEMENTED`.
+
+Conditional activation is honored by the decode. Search spaces containing hard `mutex_group`, `requires` or `exclude` constraints are rejected by `n4m_optimizer_create` with `N4M_ERR_UNSUPPORTED`; CMA-ES never treats an infeasible configuration as a host-supplied poor fitness. Hard constraints that reference a `sorted_tuple` root are rejected for every sampler.
 
 ## Usage (C ABI)
 
@@ -19,7 +21,7 @@ opts.seed = 42;
 
 ## Parity
 
-- **Tier B-state:** the distribution state (mean, diagonal covariance, step-size, evolution paths) after N ranked tells is a deterministic function of the seed + the tells — the RNG-free surface to compare against `pycma`'s diagonal mode (a state-level fixture lands with Track-Q). Convergence on a smooth objective is verified in the C++ tests.
+- **Tier B-state target:** the distribution state after ranked tells is deterministic for a fixed seed, ask/tell order and score tape. Track-Q currently commits the native `cmaes_sphere2` proposal trace; it has no state-level `pycma` fixture and does not cover every pruner or mixed-space combination. Convergence on a smooth objective is verified in the C++ tests.
 
 ## References
 

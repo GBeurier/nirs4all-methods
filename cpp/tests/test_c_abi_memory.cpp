@@ -64,6 +64,35 @@ void destroy(Fitted& f) {
     n4m_context_destroy(f.ctx);
 }
 
+std::uint64_t fnv1a64_prefix(const std::vector<unsigned char>& bytes,
+                             std::size_t size) {
+    N4M_TEST_REQUIRE(size <= bytes.size());
+    std::uint64_t hash = 14695981039346656037ULL;
+    for (std::size_t i = 0; i < size; ++i) {
+        hash ^= static_cast<std::uint64_t>(bytes[i]);
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
+void write_u32_le(std::vector<unsigned char>& bytes, std::size_t offset,
+                  std::uint32_t value) {
+    N4M_TEST_REQUIRE(offset <= bytes.size());
+    N4M_TEST_REQUIRE(bytes.size() - offset >= sizeof(value));
+    for (std::size_t i = 0; i < sizeof(value); ++i) {
+        bytes[offset + i] = static_cast<unsigned char>((value >> (8U * i)) & 0xffU);
+    }
+}
+
+void write_u64_le(std::vector<unsigned char>& bytes, std::size_t offset,
+                  std::uint64_t value) {
+    N4M_TEST_REQUIRE(offset <= bytes.size());
+    N4M_TEST_REQUIRE(bytes.size() - offset >= sizeof(value));
+    for (std::size_t i = 0; i < sizeof(value); ++i) {
+        bytes[offset + i] = static_cast<unsigned char>((value >> (8U * i)) & 0xffU);
+    }
+}
+
 // --- NULL-pointer contracts on the fit/predict/array surface -----------------
 
 void test_null_pointer_contracts() {
@@ -329,6 +358,74 @@ void test_error_buffer_lifecycle() {
     n4m_context_destroy(ctx);
 }
 
+// --- N4MM fitted-model serialization contract -------------------------------
+
+void test_model_serialization_contract() {
+    Fitted f;
+    fit_small(f);
+
+    std::size_t payload_size = 0;
+    N4M_TEST_REQUIRE(n4m_model_export_size(f.model, &payload_size) == N4M_OK);
+    N4M_TEST_REQUIRE(payload_size > 28U);  // 20-byte header plus checksum.
+
+    std::vector<unsigned char> payload(payload_size, 0U);
+    std::size_t written = 0;
+    N4M_TEST_REQUIRE(n4m_model_export_to_buffer(
+                         f.model, payload.data(), payload.size(), &written) == N4M_OK);
+    N4M_TEST_REQUIRE(written == payload.size());
+    N4M_TEST_REQUIRE(std::memcmp(payload.data(), N4M_SERIALIZATION_MAGIC, 4U) == 0);
+    N4M_TEST_REQUIRE(std::memcmp(payload.data(), "N4MM", 4U) == 0);
+
+    std::uint32_t format = 0;
+    std::uint32_t writer_major = 0;
+    std::uint32_t writer_minor = 0;
+    std::uint32_t writer_patch = 0;
+    N4M_TEST_REQUIRE(n4m_serialization_inspect(
+                         payload.data(), payload.size(), &format, &writer_major,
+                         &writer_minor, &writer_patch) == N4M_OK);
+    N4M_TEST_REQUIRE(format == N4M_SERIALIZATION_FORMAT_VERSION);
+    N4M_TEST_REQUIRE(writer_major == n4m_get_abi_version_major());
+    N4M_TEST_REQUIRE(writer_minor == n4m_get_abi_version_minor());
+    N4M_TEST_REQUIRE(writer_patch == n4m_get_abi_version_patch());
+
+    // Magic corruption is rejected before any model allocation.
+    std::vector<unsigned char> corrupt_magic = payload;
+    corrupt_magic[0] = static_cast<unsigned char>(corrupt_magic[0] ^ 0xffU);
+    n4m_model_t* imported = nullptr;
+    N4M_TEST_REQUIRE(n4m_model_import_from_buffer(
+                         f.ctx, corrupt_magic.data(), corrupt_magic.size(),
+                         &imported) == N4M_ERR_CORRUPT_BUFFER);
+    N4M_TEST_REQUIRE(imported == nullptr);
+
+    // A future wire-format version is rejected independently of its checksum.
+    std::vector<unsigned char> future_format = payload;
+    write_u32_le(future_format, 4U, N4M_SERIALIZATION_FORMAT_VERSION + 1U);
+    N4M_TEST_REQUIRE(n4m_model_import_from_buffer(
+                         f.ctx, future_format.data(), future_format.size(),
+                         &imported) == N4M_ERR_VERSION_INCOMPATIBLE);
+    N4M_TEST_REQUIRE(imported == nullptr);
+
+    // In format 1 the writer ABI triple is provenance, not a strict load gate.
+    // Mutating it requires a fresh FNV trailer so payload integrity still holds.
+    std::vector<unsigned char> abi_skew = payload;
+    const std::uint32_t different_major = writer_major ^ 1U;
+    write_u32_le(abi_skew, 8U, different_major);
+    const std::size_t checksum_offset = abi_skew.size() - sizeof(std::uint64_t);
+    write_u64_le(abi_skew, checksum_offset,
+                 fnv1a64_prefix(abi_skew, checksum_offset));
+
+    n4m_context_clear_error(f.ctx);
+    N4M_TEST_REQUIRE(n4m_model_import_from_buffer(
+                         f.ctx, abi_skew.data(), abi_skew.size(),
+                         &imported) == N4M_OK);
+    N4M_TEST_REQUIRE(imported != nullptr);
+    const std::string warning = n4m_context_last_error(f.ctx);
+    N4M_TEST_REQUIRE(warning.find("model writer ABI was") != std::string::npos);
+
+    n4m_model_destroy(imported);
+    destroy(f);
+}
+
 }  // namespace
 
 void register_c_abi_memory_tests(n4m_testing::Runner& r) {
@@ -340,4 +437,5 @@ void register_c_abi_memory_tests(n4m_testing::Runner& r) {
     r.run("c_abi_memory/zero_dims",                     test_zero_dims);
     r.run("c_abi_memory/double_free_is_safe",           test_double_free_is_safe);
     r.run("c_abi_memory/error_buffer_lifecycle",        test_error_buffer_lifecycle);
+    r.run("c_abi_memory/model_serialization_contract",  test_model_serialization_contract);
 }

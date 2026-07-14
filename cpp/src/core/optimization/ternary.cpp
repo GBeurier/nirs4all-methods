@@ -33,7 +33,6 @@ TernarySampler::TernarySampler(const SearchSpace& space, const n4m_optimizer_opt
         const std::int64_t st = (p.step >= 1.0) ? static_cast<std::int64_t>(std::llround(p.step)) : 1;
         const std::uint64_t span = static_cast<std::uint64_t>(hi - lo);
         const std::uint64_t grid = span / static_cast<std::uint64_t>(st) + 1;
-        if (grid > 100000000ULL) continue;  // too wide for ternary → leave this axis to random
         target_ = p.name;
         low_ = lo;
         high_ = hi;
