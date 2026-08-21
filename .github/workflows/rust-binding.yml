@@ -132,7 +132,10 @@ jobs:
         env:
           N4M_LIB_DIR: ${{ github.workspace }}/build/dev-debug/cpp/src
           N4M_RUNTIME_RPATH: ${{ github.workspace }}/build/dev-debug/cpp/src
-        run: cargo test --locked --workspace
+        run: |
+          cargo test --locked --workspace
+          export N4M_LIBRARY_PATH="$N4M_LIB_DIR/libn4m.so"
+          cargo test --locked -p n4m --no-default-features --features dynamic
 
   rust-sanitized-libn4m:
     runs-on: ubuntu-22.04
