@@ -23,11 +23,22 @@ include = [
 [lib]
 crate-type = ["rlib"]
 
+[features]
+default = ["linked"]
+# Development and CI retain the existing link-time ABI verification path.
+linked = []
+# Distribution consumers load an explicitly selected libn4m at runtime.  This
+# keeps the public safe API while removing N4M_LIB_DIR from their build path.
+dynamic = ["dep:libloading"]
+
 [lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
 
 [build-dependencies]
 cc = "1.1"
+
+[dependencies]
+libloading = { version = "0.8", optional = true }
 
 [dev-dependencies]
 static_assertions = "1.1"

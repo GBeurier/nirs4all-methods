@@ -14,6 +14,9 @@ use std::{
     slice,
 };
 
+#[cfg(not(any(feature = "linked", feature = "dynamic")))]
+compile_error!("n4m requires exactly one runtime feature: `linked` or `dynamic`");
+
 const ABI_MAJOR: u32 = 2;
 const ABI_MINOR: u32 = 2;
 const OK: i32 = 0;
@@ -106,6 +109,7 @@ const _: () = assert!(mem::align_of::<MatrixView>() == 8);
 const _: () = assert!(mem::size_of::<OptimizerOptionsRaw>() == 120);
 const _: () = assert!(mem::offset_of!(OptimizerOptionsRaw, seed) == 40);
 
+#[cfg(all(feature = "linked", not(feature = "dynamic")))]
 #[link(name = "n4m")]
 extern "C" {
     fn n4m_check_abi_compatibility(major: u32, minor: u32) -> i32;
@@ -335,6 +339,13 @@ extern "C" {
         out_result: *mut *mut MethodResultRaw,
     ) -> i32;
 }
+
+#[cfg(feature = "dynamic")]
+mod dynamic;
+#[cfg(feature = "dynamic")]
+pub use dynamic::configure_library;
+#[cfg(feature = "dynamic")]
+use dynamic::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ErrorKind {
@@ -590,6 +601,8 @@ pub struct Context {
 }
 impl Context {
     pub fn new() -> Result<Self, Error> {
+        #[cfg(feature = "dynamic")]
+        dynamic::ensure_runtime()?;
         check(
             unsafe { n4m_check_abi_compatibility(ABI_MAJOR, ABI_MINOR) },
             None,
