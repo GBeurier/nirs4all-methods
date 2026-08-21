@@ -1,0 +1,152 @@
+name: Rust binding
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/rust-binding.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "bindings/rust/n4m/**"
+      - "cpp/include/n4m/**"
+      - "cpp/src/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/rust-binding.yml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "bindings/rust/n4m/**"
+      - "cpp/include/n4m/**"
+      - "cpp/src/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+
+permissions:
+  contents: read
+
+jobs:
+  rust-windows-ci-contract:
+    # This static guard still verifies the Windows requirements when a Windows
+    # runner is unavailable or its matrix leg cannot start.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify the Windows MSVC workflow contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow = Path(".github/workflows/rust-binding.yml").read_text(encoding="utf-8")
+          probe = Path("bindings/rust/n4m/build.rs").read_text(encoding="utf-8")
+          required_workflow = (
+              "windows-2022",
+              "ilammy/msvc-dev-cmd@v1",
+              "arch: x64",
+              'Test-Path "$env:N4M_LIB_DIR\\n4m.lib"',
+          )
+          missing = [item for item in required_workflow if item not in workflow]
+          if missing:
+              raise SystemExit(f"Windows CI contract is missing: {', '.join(missing)}")
+          if 'probe.flag("/std:c11");' not in probe:
+              raise SystemExit("MSVC ABI probe must explicitly select C11")
+          if '"windows" => &["n4m.lib"]' not in probe:
+              raise SystemExit("Windows builds must require MSVC n4m.lib, not a MinGW import library")
+          PY
+
+  rust-c-abi:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Windows MSVC developer shell
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Build the target libn4m ABI
+        run: |
+          cmake --preset dev-debug
+          cmake --build --preset dev-debug --parallel
+      - name: Verify Unix linker artifact and run Rust binding gates
+        if: runner.os != 'Windows'
+        env:
+          N4M_LIB_DIR: ${{ github.workspace }}/build/dev-debug/cpp/src
+          N4M_RUNTIME_RPATH: ${{ github.workspace }}/build/dev-debug/cpp/src
+        run: |
+          test -f "$N4M_LIB_DIR/libn4m.so" || test -f "$N4M_LIB_DIR/libn4m.dylib"
+          cargo fmt --all --check
+          cargo clippy --locked --workspace --all-targets -- -D warnings
+          cargo test --locked --workspace
+          cargo package -p n4m --list
+      - name: Verify Windows C11 ABI probe, linker artifact, and Rust binding gates
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          N4M_LIB_DIR: ${{ github.workspace }}\build\dev-debug\cpp\src
+        run: |
+          if (-not (Select-String -Path bindings/rust/n4m/build.rs -SimpleMatch 'probe.flag("/std:c11");' -Quiet)) {
+            throw "The MSVC ABI probe must explicitly select C11"
+          }
+          if (-not (Test-Path "$env:N4M_LIB_DIR\n4m.lib")) {
+            throw "N4M_LIB_DIR has no MSVC n4m.lib import library for -ln4m"
+          }
+          $env:PATH = "$env:N4M_LIB_DIR;$env:PATH"
+          cargo fmt --all --check
+          cargo clippy --locked --workspace --all-targets -- -D warnings
+          cargo test --locked --workspace
+          cargo package -p n4m --list
+
+  rust-msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.77.0
+      - name: Build the target libn4m ABI
+        run: |
+          cmake --preset dev-debug
+          cmake --build --preset dev-debug --parallel
+      - name: Test the declared Rust MSRV against the native ABI
+        env:
+          N4M_LIB_DIR: ${{ github.workspace }}/build/dev-debug/cpp/src
+          N4M_RUNTIME_RPATH: ${{ github.workspace }}/build/dev-debug/cpp/src
+        run: cargo test --locked --workspace
+
+  rust-sanitized-libn4m:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        san: [asan, ubsan, asan_ubsan]
+    env:
+      ASAN_OPTIONS: "detect_leaks=1:halt_on_error=1:abort_on_error=1"
+      UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install the compiler required by native sanitizer presets
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/llvm.gpg
+          codename=$(lsb_release -sc)
+          echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/$codename/ llvm-toolchain-$codename-16 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-16.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-16 libclang-rt-16-dev ninja-build cmake
+      - name: Build libn4m with its existing sanitizer preset
+        run: |
+          cmake --preset ci-${{ matrix.san }}
+          cmake --build --preset ci-${{ matrix.san }} --parallel
+      - name: Run Rust binding tests against the sanitized shared library
+        env:
+          N4M_LIB_DIR: ${{ github.workspace }}/build/ci-${{ matrix.san }}/cpp/src
+          N4M_RUNTIME_RPATH: ${{ github.workspace }}/build/ci-${{ matrix.san }}/cpp/src
+        run: bash bindings/rust/n4m/scripts/run_sanitized_tests.sh "${{ matrix.san }}"
