@@ -26,8 +26,9 @@ rejects unsupported estimators, pruners, metrics, conditional axes, and search
 space schemas rather than broadening this binding's scope.
 
 This crate is binding work only: it does not claim a Rust package release or
-extend the public C++ ABI. It requires a prebuilt `libn4m` and validates every
-Rust extern declaration against the installed public headers at build time.
+extend the public C++ ABI. It requires a prebuilt `libn4m`. The default
+`linked` feature validates every Rust extern declaration against the installed
+public headers at build time; it is the development and CI mode.
 
 ## License
 
@@ -65,3 +66,22 @@ clang sanitizer runtime, and verifies that runtime before tests run. Locally
 those presets require `clang-16` and its sanitizer runtime; when that compiler
 is unavailable, use the normal `dev-debug` command above rather than claiming a
 sanitizer run.
+
+## Packaged runtime loading
+
+For a distributed host that already owns the exact native artifact, compile
+without the default feature and enable `dynamic` instead. This mode does not
+consult `N4M_LIB_DIR`, does not add an rpath, and never searches the current
+directory. Before creating a `Context`, select the exact shared-library file:
+
+```rust
+n4m::configure_library("/absolute/path/to/libn4m.so.2")?;
+let context = n4m::Context::new()?;
+```
+
+Alternatively set `N4M_LIBRARY_PATH` to that exact file before the first
+`Context::new()`. The choice is process-wide and one-shot: reconfiguring to a
+different library is rejected before any native handle can be mixed. A missing
+or malformed runtime fails closed with an ABI error. This dynamic mode exposes
+the same model and optimizer/HPO API; it is not a Python callback or a reduced
+prediction-only binding.

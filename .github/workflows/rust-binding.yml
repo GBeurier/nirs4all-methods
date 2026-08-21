@@ -85,6 +85,13 @@ jobs:
           cargo fmt --all --check
           cargo clippy --locked --workspace --all-targets -- -D warnings
           cargo test --locked --workspace
+          if [ -f "$N4M_LIB_DIR/libn4m.so" ]; then
+            export N4M_LIBRARY_PATH="$N4M_LIB_DIR/libn4m.so"
+          else
+            export N4M_LIBRARY_PATH="$N4M_LIB_DIR/libn4m.dylib"
+          fi
+          cargo clippy --locked -p n4m --no-default-features --features dynamic --all-targets -- -D warnings
+          cargo test --locked -p n4m --no-default-features --features dynamic
           cargo package -p n4m --list
       - name: Verify Windows C11 ABI probe, linker artifact, and Rust binding gates
         if: runner.os == 'Windows'
@@ -102,6 +109,12 @@ jobs:
           cargo fmt --all --check
           cargo clippy --locked --workspace --all-targets -- -D warnings
           cargo test --locked --workspace
+          $env:N4M_LIBRARY_PATH = Join-Path $env:N4M_LIB_DIR "n4m.dll"
+          if (-not (Test-Path $env:N4M_LIBRARY_PATH)) {
+            throw "N4M_LIBRARY_PATH has no n4m.dll runtime artifact"
+          }
+          cargo clippy --locked -p n4m --no-default-features --features dynamic --all-targets -- -D warnings
+          cargo test --locked -p n4m --no-default-features --features dynamic
           cargo package -p n4m --list
 
   rust-msrv:

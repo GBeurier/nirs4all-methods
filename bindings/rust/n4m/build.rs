@@ -24,6 +24,15 @@ fn main() {
         );
     }
 
+    // The dynamic feature deliberately does not require a build-tree library
+    // or generated headers.  It validates the ABI only after opening the
+    // explicitly selected runtime at execution time.
+    if env::var_os("CARGO_FEATURE_LINKED").is_none()
+        || env::var_os("CARGO_FEATURE_DYNAMIC").is_some()
+    {
+        return;
+    }
+
     let target_os = env::var("CARGO_CFG_TARGET_OS").expect("Cargo did not set CARGO_CFG_TARGET_OS");
     let lib_dir = required_dir("N4M_LIB_DIR");
     validate_library_dir(&lib_dir, &target_os);
