@@ -55,11 +55,11 @@ set(_N4M_FITPACK_ENABLED OFF)
 # NOT EMSCRIPTEN: emscripten/WASM has no Fortran compiler, but check_language()
 # would still find a HOST gfortran on the runner and wrongly enable FITPACK —
 # the host Fortran objects aren't WASM, so the WASM link fails with undefined
-# curfit_/splev_. The same problem occurs when an MSVC C/C++ toolchain sees a
-# MinGW gfortran on PATH: CMake passes MSVC linker flags to gfortran.  Keep the
-# portable C fallback in both cases; FITPACK remains enabled for native
-# GCC/Clang and dedicated MinGW builds.
-if(_N4M_FITPACK_FORTRAN AND NOT EMSCRIPTEN AND NOT (WIN32 AND MSVC))
+# curfit_/splev_. The same problem occurs on Windows when an MSVC or UCRT
+# MinGW C/C++ toolchain sees a gfortran from a different MinGW root on PATH:
+# CMake mixes CRT/linker libraries. Keep the portable C fallback for every
+# Windows build; FITPACK remains enabled for native Unix GCC/Clang builds.
+if(_N4M_FITPACK_FORTRAN AND NOT EMSCRIPTEN AND NOT WIN32)
     include(CheckLanguage)
     check_language(Fortran)
     if(CMAKE_Fortran_COMPILER)
