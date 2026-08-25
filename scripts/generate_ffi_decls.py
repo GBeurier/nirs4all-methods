@@ -37,7 +37,9 @@ OUTPUT = REPO_ROOT / "bindings" / "python" / "src" / "n4m" / "_ffi_decls.py"
 # named ``n4m_*_t`` is an opaque/forward-declared handle -> c_void_p.
 VALUE_STRUCTS = {
     "n4m_matrix_view_t": "MatrixView",
+    "n4m_linear_predictor_spec_t": "LinearPredictorSpec",
     "n4m_filter_stats_t": "FilterStats",
+    "n4m_optimizer_options_t": "OptimizerOptions",
     "n4m_split_result_t": "SplitResult",
     "n4m_transfer_metrics_t": "TransferMetrics",
 }
@@ -81,7 +83,7 @@ from ctypes import (
     c_int64, c_size_t, c_uint8, c_uint32, c_uint64, c_void_p,
 )
 
-from ._types import MatrixView, FilterStats, SplitResult, TransferMetrics
+from ._types import MatrixView, LinearPredictorSpec, FilterStats, OptimizerOptions, SplitResult, TransferMetrics
 
 # Symbols: tuple of (symbol_name, argtypes_tuple, restype).
 # restype = None for void; argtypes = () for parameter-less.

@@ -432,7 +432,11 @@ typedef enum n4m_algorithm_t {
     N4M_ALGO_MB_PLS         = 7,
     N4M_ALGO_LW_PLS         = 8,
     N4M_ALGO_AOM_PLS        = 9,
-    N4M_ALGO_PCR            = 10
+    N4M_ALGO_PCR            = 10,
+    /* A self-described, PREDICT-only affine model imported from an external
+     * fitted predictor.  It is never produced by n4m_model_fit and has no
+     * latent-score/transform semantics. */
+    N4M_ALGO_IMPORTED_LINEAR_PREDICTOR = 11
     /* Nonlinear kernel PLS (RBF / polynomial / sigmoid) is intentionally
      * deferred to Phase 4 along with the kernel-type enum + setters; we do
      * not pre-declare it here so we don't lock in an unfinished surface.
@@ -747,6 +751,33 @@ N4M_API n4m_status_t n4m_model_fit(
     const n4m_config_t* cfg,
     const n4m_matrix_view_t* X,
     const n4m_matrix_view_t* Y,
+    n4m_model_t** out_model);
+
+/* Exact affine predictor import for migration of an already-fitted external
+ * model.  The caller supplies row-major coefficients of shape
+ * (n_features, n_targets), and an intercept vector of length n_targets:
+ *
+ *   y_hat = intercept + X @ coefficients
+ *
+ * All supplied values must be finite.  The library copies the inputs, so
+ * callers retain ownership and may release their buffers after the call.
+ * `source_training_samples` is provenance only and may be zero if the source
+ * format does not disclose it.  The resulting model is explicitly marked
+ * N4M_ALGO_IMPORTED_LINEAR_PREDICTOR, is N4MM-exportable/importable and
+ * supports PREDICT only.  n4m_model_transform returns N4M_ERR_UNSUPPORTED:
+ * an affine projection does not reconstruct a PLS latent decomposition.
+ */
+typedef struct n4m_linear_predictor_spec_t {
+    int64_t source_training_samples;
+    int32_t n_features;
+    int32_t n_targets;
+    const double* coefficients;
+    const double* intercept;
+} n4m_linear_predictor_spec_t;
+
+N4M_API n4m_status_t n4m_model_import_linear_predictor(
+    n4m_context_t* ctx,
+    const n4m_linear_predictor_spec_t* spec,
     n4m_model_t** out_model);
 
 N4M_API void         n4m_model_destroy(n4m_model_t* model);

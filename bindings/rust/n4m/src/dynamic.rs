@@ -32,6 +32,7 @@ macro_rules! n4m_symbols {
             n4m_config_set_scale_y(cfg: *mut ConfigRaw, enabled: i32) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_config_set_store_scores(cfg: *mut ConfigRaw, enabled: i32) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_model_fit(ctx: *mut ContextRaw, cfg: *const ConfigRaw, x: *const MatrixView, y: *const MatrixView, out: *mut *mut ModelRaw) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_model_import_linear_predictor(ctx: *mut ContextRaw, spec: *const LinearPredictorSpecRaw, out: *mut *mut ModelRaw) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_model_destroy(model: *mut ModelRaw) -> () => ();
             n4m_model_predict(ctx: *mut ContextRaw, model: *const ModelRaw, x: *const MatrixView, out: *mut MatrixView) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_model_predict_alloc(ctx: *mut ContextRaw, model: *const ModelRaw, x: *const MatrixView, out: *mut *mut ArrayRaw) -> i32 => RUNTIME_UNAVAILABLE;

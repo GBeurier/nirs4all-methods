@@ -18,7 +18,7 @@ use std::{
 compile_error!("n4m requires exactly one runtime feature: `linked` or `dynamic`");
 
 const ABI_MAJOR: u32 = 2;
-const ABI_MINOR: u32 = 2;
+const ABI_MINOR: u32 = 3;
 const OK: i32 = 0;
 const NOT_FITTED: i32 = 6;
 const DTYPE_I64: i32 = 4;
@@ -89,6 +89,14 @@ struct MatrixView {
     reserved0: i32,
 }
 #[repr(C)]
+struct LinearPredictorSpecRaw {
+    source_training_samples: i64,
+    n_features: i32,
+    n_targets: i32,
+    coefficients: *const f64,
+    intercept: *const f64,
+}
+#[repr(C)]
 struct OptimizerOptionsRaw {
     struct_size: u64,
     sampler: i32,
@@ -106,6 +114,7 @@ struct OptimizerOptionsRaw {
 }
 const _: () = assert!(mem::size_of::<MatrixView>() == 48);
 const _: () = assert!(mem::align_of::<MatrixView>() == 8);
+const _: () = assert!(mem::size_of::<LinearPredictorSpecRaw>() == 32);
 const _: () = assert!(mem::size_of::<OptimizerOptionsRaw>() == 120);
 const _: () = assert!(mem::offset_of!(OptimizerOptionsRaw, seed) == 40);
 
@@ -130,6 +139,11 @@ extern "C" {
         cfg: *const ConfigRaw,
         x: *const MatrixView,
         y: *const MatrixView,
+        out: *mut *mut ModelRaw,
+    ) -> i32;
+    fn n4m_model_import_linear_predictor(
+        ctx: *mut ContextRaw,
+        spec: *const LinearPredictorSpecRaw,
         out: *mut *mut ModelRaw,
     ) -> i32;
     fn n4m_model_destroy(model: *mut ModelRaw);
@@ -1590,6 +1604,60 @@ impl Model {
             _thread_bound: PhantomData,
         })
     }
+    /// Import a previously attested affine predictor without retraining.
+    ///
+    /// This creates an N4MM whose prediction equation is exactly
+    /// `intercept + X @ coefficients`, with coefficients in row-major
+    /// `(n_features, n_targets)` order.  The native model is deliberately
+    /// PREDICT-only: no PLS latent-score decomposition is claimed or exposed.
+    pub fn import_linear_predictor(
+        ctx: &Context,
+        source_training_samples: usize,
+        n_features: usize,
+        n_targets: usize,
+        coefficients: &[f64],
+        intercept: &[f64],
+    ) -> Result<Self, Error> {
+        if n_features == 0 || n_targets == 0 {
+            return Err(invalid("linear predictor dimensions must be non-zero"));
+        }
+        let expected = n_features
+            .checked_mul(n_targets)
+            .ok_or_else(|| invalid("linear predictor coefficient dimensions overflow"))?;
+        if coefficients.len() != expected || intercept.len() != n_targets {
+            return Err(invalid(
+                "linear predictor coefficient or intercept shape is invalid",
+            ));
+        }
+        if !coefficients
+            .iter()
+            .chain(intercept)
+            .all(|value| value.is_finite())
+        {
+            return Err(invalid(
+                "linear predictor coefficients and intercept must be finite",
+            ));
+        }
+        let spec = LinearPredictorSpecRaw {
+            source_training_samples: i64::try_from(source_training_samples)
+                .map_err(|_| invalid("source training sample count exceeds C ABI range"))?,
+            n_features: i32::try_from(n_features)
+                .map_err(|_| invalid("linear predictor feature count exceeds C ABI range"))?,
+            n_targets: i32::try_from(n_targets)
+                .map_err(|_| invalid("linear predictor target count exceeds C ABI range"))?,
+            coefficients: coefficients.as_ptr(),
+            intercept: intercept.as_ptr(),
+        };
+        let mut raw = ptr::null_mut();
+        check(
+            unsafe { n4m_model_import_linear_predictor(ctx.ptr(), &spec, &mut raw) },
+            Some(ctx.ptr()),
+        )?;
+        Ok(Self {
+            raw: NonNull::new(raw).ok_or_else(|| error(255, Some(ctx.ptr())))?,
+            _thread_bound: PhantomData,
+        })
+    }
     pub fn n_features(&self) -> Result<usize, Error> {
         let mut value = 0;
         check(
@@ -2286,6 +2354,22 @@ mod tests {
         let bytes = model.export_n4mm().unwrap();
         let restored = Model::import_n4mm(&ctx, &bytes).unwrap();
         assert_eq!(restored.predict(&ctx, x).unwrap(), core);
+    }
+    #[test]
+    fn imported_linear_predictor_is_exact_predict_only_and_n4mm_round_trips() {
+        let ctx = Context::new().unwrap();
+        let coefficients = [2.0, 0.5, -1.0, 3.0];
+        let intercept = [1.5, -2.0];
+        let model =
+            Model::import_linear_predictor(&ctx, 17, 2, 2, &coefficients, &intercept).unwrap();
+        assert_eq!(model.n_components().unwrap(), 0);
+        let x = [1.0, 4.0, -2.0, 3.0];
+        let x = MatrixRef::row_major(&x, 2, 2).unwrap();
+        let predictions = model.predict(&ctx, x).unwrap();
+        assert_eq!(predictions.data, vec![-0.5, 10.5, -5.5, 6.0]);
+        let n4mm = model.export_n4mm().unwrap();
+        let restored = Model::import_n4mm(&ctx, &n4mm).unwrap();
+        assert_eq!(restored.predict(&ctx, x).unwrap(), predictions);
     }
     #[test]
     fn native_finetune_is_selection_only_and_returns_a_copied_trace() {

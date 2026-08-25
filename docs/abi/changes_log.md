@@ -1,5 +1,15 @@
 # ABI — Changes Log
 
+## 2026-08-25 — ABI 2.3.0: imported affine predictor for verified migration
+
+Additive MINOR change: `n4m_model_import_linear_predictor` creates a
+self-described `N4M_ALGO_IMPORTED_LINEAR_PREDICTOR` N4MM from finite,
+row-major affine coefficients and intercepts.  This is deliberately a
+PREDICT-only model: it is not a claim that N4M reconstructed a source PLS
+latent decomposition, so `n4m_model_transform` refuses it.  The entry point is
+for a verifier that has already established the exact source predictor
+semantics; it never deserializes a foreign model format or retrains from data.
+
 ## 2026-07-11 — ABI 2.2.0: HPO terminal lifecycle and owning rich trace
 
 Additive MINOR change: `n4m_trial_status_t` adds the public terminal value

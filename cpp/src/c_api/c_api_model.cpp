@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -371,6 +372,8 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         !r.f64(tol) || !r.u32(max_iter)) {
         return false;
     }
+    const bool imported_linear_predictor =
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_IMPORTED_LINEAR_PREDICTOR);
     const bool regression_chassis_algorithm =
         algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_REGRESSION) ||
         algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_DA);
@@ -407,12 +410,17 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         (supported_opls &&
          deflation == static_cast<std::uint32_t>(N4M_DEFLATION_ORTHOGONAL));
     if ((!supported_pls_regression && !supported_pls_canonical && !supported_pls_svd &&
-         !supported_opls && !supported_pcr) ||
-        !supported_deflation) {
+         !supported_opls && !supported_pcr && !imported_linear_predictor) ||
+        (!imported_linear_predictor && !supported_deflation) ||
+        (imported_linear_predictor &&
+         (solver != static_cast<std::uint32_t>(N4M_SOLVER_NIPALS) ||
+          deflation != static_cast<std::uint32_t>(N4M_DEFLATION_REGRESSION)))) {
         return false;
     }
-    if (n_samples == 0U || n_features == 0U || n_targets == 0U ||
-        n_components == 0U ||
+    if ((!imported_linear_predictor && n_samples == 0U) ||
+        n_features == 0U || n_targets == 0U ||
+        (!imported_linear_predictor && n_components == 0U) ||
+        (imported_linear_predictor && n_components != 0U) ||
         n_samples > static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) ||
         n_features > static_cast<std::uint64_t>(std::numeric_limits<std::int32_t>::max()) ||
         n_targets > static_cast<std::uint64_t>(std::numeric_limits<std::int32_t>::max()) ||
@@ -507,6 +515,74 @@ N4M_API n4m_status_t n4m_model_fit(
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in n4m_model_fit");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_model_import_linear_predictor(
+    n4m_context_t* ctx,
+    const n4m_linear_predictor_spec_t* spec,
+    n4m_model_t** out_model) {
+    if (out_model != nullptr) {
+        *out_model = nullptr;
+    }
+    if (ctx == nullptr || spec == nullptr || out_model == nullptr) {
+        set_error(ctx, "null pointer in n4m_model_import_linear_predictor");
+        return N4M_ERR_NULL_POINTER;
+    }
+    if (spec->source_training_samples < 0 || spec->n_features <= 0 ||
+        spec->n_targets <= 0 || spec->coefficients == nullptr || spec->intercept == nullptr) {
+        set_error(ctx, "invalid dimensions or buffers in n4m_model_import_linear_predictor");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const auto features = static_cast<std::size_t>(spec->n_features);
+    const auto targets = static_cast<std::size_t>(spec->n_targets);
+    if (features > std::numeric_limits<std::size_t>::max() / targets) {
+        set_error(ctx, "linear predictor coefficient dimensions overflow");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const std::size_t coefficient_count = features * targets;
+    for (std::size_t i = 0; i < coefficient_count; ++i) {
+        if (!std::isfinite(spec->coefficients[i])) {
+            set_error(ctx, "linear predictor coefficients must be finite");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+    }
+    for (std::size_t i = 0; i < targets; ++i) {
+        if (!std::isfinite(spec->intercept[i])) {
+            set_error(ctx, "linear predictor intercept must be finite");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+    }
+    try {
+        auto model = std::make_unique<n4m_model_s>();
+        model->algorithm = N4M_ALGO_IMPORTED_LINEAR_PREDICTOR;
+        model->solver = N4M_SOLVER_NIPALS;
+        model->deflation = N4M_DEFLATION_REGRESSION;
+        model->n_samples = spec->source_training_samples;
+        model->n_features = spec->n_features;
+        model->n_targets = spec->n_targets;
+        model->n_components = 0;
+        model->center_x = 0;
+        model->scale_x = 0;
+        model->center_y = 0;
+        model->scale_y = 0;
+        model->store_scores = 0;
+        model->tol = 1e-6;
+        model->max_iter = 1;
+        model->x_mean.assign(features, 0.0);
+        model->x_scale.assign(features, 1.0);
+        model->y_mean.assign(spec->intercept, spec->intercept + targets);
+        model->y_scale.assign(targets, 1.0);
+        model->coefficients.assign(spec->coefficients, spec->coefficients + coefficient_count);
+        *out_model = model.release();
+        as_core(ctx)->clear_error();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_model_import_linear_predictor");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_model_import_linear_predictor");
         return N4M_ERR_INTERNAL;
     }
 }
