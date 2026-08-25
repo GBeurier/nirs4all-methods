@@ -6,7 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.11] - 2026-08-25
+
 ### Added
+- **Verified affine predictor import (ABI 2.3.0).** Added
+  `n4m_model_import_linear_predictor` and matching Python/Rust binding support
+  to construct an N4MM from an already-attested finite affine equation.  The
+  imported representation supports native `PREDICT` and N4MM round-tripping,
+  but explicitly refuses latent `transform`: it does not claim to reconstruct
+  a source PLS decomposition and never deserializes joblib/pickle or retrains.
 - **Owning HPO lifecycle trace (ABI 2.2.0).** Added terminal
   `N4M_TRIAL_CANCELLED`, structured and versioned trial errors, immutable
   terminal/intermediate replay semantics, optimizer-global event sequences,
