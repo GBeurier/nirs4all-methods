@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.12] - 2026-08-25
+
+### Fixed
+- **R binding ABI contract.** Updated the locked ABI namespace assertion to
+  2.3, matching the additive ABI used by the released N4MM affine-import
+  surface.
+
 ## [1.0.11] - 2026-08-25
 
 ### Added
