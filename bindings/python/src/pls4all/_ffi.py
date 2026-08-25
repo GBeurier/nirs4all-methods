@@ -320,6 +320,31 @@ lib.n4m_model_fit.argtypes = [
     ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
     ctypes.POINTER(ctypes.c_void_p),
 ]
+
+
+class LinearPredictorSpec(ctypes.Structure):
+    """ABI mirror of ``n4m_linear_predictor_spec_t``.
+
+    This type is intentionally private to the public migration helper.  It is
+    not a general-purpose model-construction API: callers must supply an
+    already-verified affine prediction equation.
+    """
+
+    _fields_ = [
+        ("source_training_samples", ctypes.c_int64),
+        ("n_features", ctypes.c_int32),
+        ("n_targets", ctypes.c_int32),
+        ("coefficients", ctypes.POINTER(ctypes.c_double)),
+        ("intercept", ctypes.POINTER(ctypes.c_double)),
+    ]
+
+
+lib.n4m_model_import_linear_predictor.restype = ctypes.c_int
+lib.n4m_model_import_linear_predictor.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(LinearPredictorSpec),
+    ctypes.POINTER(ctypes.c_void_p),
+]
 lib.n4m_model_destroy.restype  = None
 lib.n4m_model_destroy.argtypes = [ctypes.c_void_p]
 lib.n4m_model_predict.restype  = ctypes.c_int

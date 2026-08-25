@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.13] - 2026-08-25
+
+### Added
+- **Public Python migration export.** The slim, publicly distributed
+  `pls4all` binding now exposes `export_linear_predictor_n4mm(...)` for a
+  caller that has already verified a finite affine predictor equation.  It
+  builds the ABI-2.3 imported-linear-predictor N4MM without loading a foreign
+  pickle/joblib payload or retraining, and documents the PREDICT-only limit.
+
 ## [1.0.12] - 2026-08-25
 
 ### Fixed
