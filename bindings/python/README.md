@@ -48,6 +48,30 @@ with pls4all.Context() as ctx, pls4all.Config() as cfg:
 `scikit-learn` is an optional dependency (only `pls4all.sklearn` needs it); the
 core `import pls4all` works with NumPy alone.
 
+## Verified affine-model migration
+
+`pls4all.export_linear_predictor_n4mm(...)` is the public, PREDICT-only
+migration boundary for a converter that has already verified a source model's
+affine equation.  It accepts finite, row-major coefficients with shape
+`(n_features, n_targets)` and a target-length intercept, then returns a raw
+N4MM payload.  It neither reads pickle/joblib data nor retrains a model.
+
+```python
+from pls4all import export_linear_predictor_n4mm
+
+payload = export_linear_predictor_n4mm(
+    coefficients=[[0.5], [-1.0]],
+    intercept=[0.25],
+    source_training_samples=120,
+)
+assert payload[:4] == b"N4MM"
+```
+
+The resulting imported-linear-predictor model supports native prediction only;
+it deliberately does not claim to reconstruct a source PLS latent transform.
+Callers remain responsible for attesting that the source model is exactly
+`intercept + X @ coefficients` before conversion.
+
 ## Pure-native estimator selection in the full package
 
 The full `nirs4all-methods` distribution (imported as `n4m`) exposes the native

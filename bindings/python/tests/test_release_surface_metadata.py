@@ -70,6 +70,8 @@ def test_generated_packages_explain_distribution_import_split(tmp_path, monkeypa
     assert "from pls4all.sklearn import PLSRegression" in slim_readme
     assert "Install `nirs4all-methods` when you need the full" in slim_readme_oneline
     assert (slim / "src/pls4all/__init__.py").is_file()
+    assert (slim / "src/pls4all/migration.py").is_file()
+    assert "from n4m" not in (slim / "src/pls4all/migration.py").read_text(encoding="utf-8")
     assert not (slim / "src/n4m").exists()
 
 

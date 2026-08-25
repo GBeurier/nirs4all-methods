@@ -40,3 +40,9 @@ from n4m.decomposition import FlexiblePCA
 The estimators/transformers are sklearn-compatible with zero-copy NumPy
 `n4m_matrix_view_t` round-trips. The slim `pls4all` package keeps its name (the
 subset contract) but calls the same ABI-2 symbols under the hood.
+
+For verified migration tooling, `pls4all.export_linear_predictor_n4mm(...)`
+constructs a PREDICT-only N4MM from finite affine coefficients and intercepts.
+It does not deserialize a foreign pickle/joblib model or retrain; the caller
+must first attest that the source predictor is exactly affine.  The imported
+model intentionally does not expose a latent PLS transform.
