@@ -25,6 +25,7 @@ from ._aom import (
     aom_per_component_select,
 )
 from ._model import Model, ModelArrayKind
+from .migration import export_linear_predictor_n4mm
 from ._methods import (
     MethodResult,
     sparse_simpls_fit,
@@ -124,6 +125,7 @@ __all__ = [
     "Status",
     "Solver",
     "Context",
+    "export_linear_predictor_n4mm",
     "Config",
     "OperatorKind",
     "OperatorBank",
