@@ -356,6 +356,7 @@ n4m_model_get_n_components
 n4m_model_get_n_features
 n4m_model_get_n_targets
 n4m_model_import_from_buffer
+n4m_model_import_linear_predictor
 n4m_model_predict
 n4m_model_predict_alloc
 n4m_model_selection_aom_chain_fixed_fit_run

@@ -24,6 +24,7 @@ from ctypes import (
 
 from ._types import (
     MatrixView,
+    LinearPredictorSpec,
     FilterStats,
     OptimizerOptions,
     SplitResult,
@@ -1796,6 +1797,11 @@ SYMBOLS = (
     (
         "n4m_model_import_from_buffer",
         (c_void_p, c_void_p, c_size_t, POINTER(c_void_p)),
+        c_int,
+    ),
+    (
+        "n4m_model_import_linear_predictor",
+        (c_void_p, POINTER(LinearPredictorSpec), POINTER(c_void_p)),
         c_int,
     ),
     (

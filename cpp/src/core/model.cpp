@@ -5468,6 +5468,11 @@ n4m_status_t transform_into(Context& ctx,
                             const Model& model,
                             const n4m_matrix_view_t& X,
                             n4m_matrix_view_t& out_scores) {
+    if (model.algorithm == N4M_ALGO_IMPORTED_LINEAR_PREDICTOR) {
+        ctx.set_error(
+            "an imported linear predictor supports PREDICT only; latent transform is unavailable");
+        return N4M_ERR_UNSUPPORTED;
+    }
     const n4m_status_t status =
         validate_apply_input(ctx, model, X, out_scores,
                              static_cast<std::int64_t>(model.n_components),

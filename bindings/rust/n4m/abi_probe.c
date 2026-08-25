@@ -90,6 +90,13 @@ _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_export_to_buffer,
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_import_from_buffer,
                                      n4m_status_t (*)(n4m_context_t*, const void*, size_t, n4m_model_t**)),
                "n4m_model_import_from_buffer signature drifted");
+_Static_assert(sizeof(n4m_linear_predictor_spec_t) == 32,
+               "Rust LinearPredictorSpecRaw layout is stale relative to the C header");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_import_linear_predictor,
+                                     n4m_status_t (*)(n4m_context_t*,
+                                                      const n4m_linear_predictor_spec_t*,
+                                                      n4m_model_t**)),
+               "n4m_model_import_linear_predictor signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_serialization_inspect,
                                      n4m_status_t (*)(const void*, size_t, uint32_t*, uint32_t*, uint32_t*, uint32_t*)),
                "n4m_serialization_inspect signature drifted");
