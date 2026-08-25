@@ -18,6 +18,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -426,6 +427,79 @@ void test_model_serialization_contract() {
     destroy(f);
 }
 
+// --- Verified affine-import contract ----------------------------------------
+
+void test_imported_linear_predictor_contract() {
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+
+    // y_0 = 1.5 + 2*x_0 - x_1; y_1 = -2 + .5*x_0 + 3*x_1.
+    const std::vector<double> coefficients{2.0, 0.5, -1.0, 3.0};
+    const std::vector<double> intercept{1.5, -2.0};
+    n4m_linear_predictor_spec_t spec{};
+    spec.source_training_samples = 17;
+    spec.n_features = 2;
+    spec.n_targets = 2;
+    spec.coefficients = coefficients.data();
+    spec.intercept = intercept.data();
+
+    n4m_model_t* model = nullptr;
+    N4M_TEST_REQUIRE(n4m_model_import_linear_predictor(ctx, &spec, &model) == N4M_OK);
+    N4M_TEST_REQUIRE(model != nullptr);
+    int32_t components = -1;
+    N4M_TEST_REQUIRE(n4m_model_get_n_components(model, &components) == N4M_OK);
+    N4M_TEST_REQUIRE(components == 0);
+
+    std::vector<double> input{1.0, 4.0, -2.0, 3.0};
+    std::vector<double> output(4, 0.0);
+    n4m_matrix_view_t X{}, Y{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&X, input.data(), 2, 2, N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Y, output.data(), 2, 2, N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_predict(ctx, model, &X, &Y) == N4M_OK);
+    N4M_TEST_REQUIRE(std::fabs(output[0] - (-0.5)) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(output[1] - 10.5) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(output[2] - (-5.5)) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(output[3] - 6.0) < 1e-15);
+
+    // There is no latent decomposition to reconstruct or expose.
+    std::vector<double> scores(2, 0.0);
+    n4m_matrix_view_t T{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&T, scores.data(), 2, 1, N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_transform(ctx, model, &X, &T) == N4M_ERR_UNSUPPORTED);
+
+    std::size_t bytes = 0;
+    N4M_TEST_REQUIRE(n4m_model_export_size(model, &bytes) == N4M_OK);
+    std::vector<unsigned char> payload(bytes, 0U);
+    std::size_t written = 0;
+    N4M_TEST_REQUIRE(n4m_model_export_to_buffer(model, payload.data(), payload.size(), &written) == N4M_OK);
+    N4M_TEST_REQUIRE(written == bytes);
+    n4m_model_t* restored = nullptr;
+    N4M_TEST_REQUIRE(n4m_model_import_from_buffer(ctx, payload.data(), payload.size(), &restored) == N4M_OK);
+    std::fill(output.begin(), output.end(), 0.0);
+    N4M_TEST_REQUIRE(n4m_model_predict(ctx, restored, &X, &Y) == N4M_OK);
+    N4M_TEST_REQUIRE(std::fabs(output[0] - (-0.5)) < 1e-15);
+    N4M_TEST_REQUIRE(std::fabs(output[3] - 6.0) < 1e-15);
+
+    std::vector<double> non_finite = coefficients;
+    non_finite[0] = std::numeric_limits<double>::quiet_NaN();
+    spec.coefficients = non_finite.data();
+    n4m_model_t* rejected = reinterpret_cast<n4m_model_t*>(0x1);
+    N4M_TEST_REQUIRE(n4m_model_import_linear_predictor(ctx, &spec, &rejected) == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(rejected == nullptr);
+
+    n4m_model_destroy(restored);
+    n4m_model_destroy(model);
+
+    // Source formats that omit the training-row count remain representable;
+    // prediction semantics do not depend on a fabricated provenance value.
+    spec.source_training_samples = 0;
+    spec.coefficients = coefficients.data();
+    n4m_model_t* unknown_count = nullptr;
+    N4M_TEST_REQUIRE(n4m_model_import_linear_predictor(ctx, &spec, &unknown_count) == N4M_OK);
+    n4m_model_destroy(unknown_count);
+    n4m_context_destroy(ctx);
+}
+
 }  // namespace
 
 void register_c_abi_memory_tests(n4m_testing::Runner& r) {
@@ -438,4 +512,5 @@ void register_c_abi_memory_tests(n4m_testing::Runner& r) {
     r.run("c_abi_memory/double_free_is_safe",           test_double_free_is_safe);
     r.run("c_abi_memory/error_buffer_lifecycle",        test_error_buffer_lifecycle);
     r.run("c_abi_memory/model_serialization_contract",  test_model_serialization_contract);
+    r.run("c_abi_memory/imported_linear_predictor_contract", test_imported_linear_predictor_contract);
 }

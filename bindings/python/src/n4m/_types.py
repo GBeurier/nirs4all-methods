@@ -90,6 +90,22 @@ class MatrixView(Structure):
     ]
 
 
+class LinearPredictorSpec(Structure):
+    """Mirror of :c:struct:`n4m_linear_predictor_spec_t`.
+
+    The coefficient buffer is row-major ``(n_features, n_targets)`` and both
+    buffers are borrowed only for the duration of the native import call.
+    """
+
+    _fields_ = [
+        ("source_training_samples", c_int64),
+        ("n_features", c_int32),
+        ("n_targets", c_int32),
+        ("coefficients", POINTER(c_double)),
+        ("intercept", POINTER(c_double)),
+    ]
+
+
 # ---------------------------------------------------------------------------
 # n4m_filter_stats_t
 # ---------------------------------------------------------------------------

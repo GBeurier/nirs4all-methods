@@ -2,9 +2,11 @@
 """n4m.lowlevel role package."""
 
 from . import (
+    migration,
     moments,
 )
 
 __all__ = [
+    "migration",
     "moments",
 ]
