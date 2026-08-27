@@ -341,6 +341,15 @@ extern "C" {
         name: *const c_char,
         value: *mut f64,
     ) -> i32;
+    fn n4m_estimators_ridge_fit(
+        ctx: *mut ContextRaw,
+        cfg: *const ConfigRaw,
+        x: *const MatrixView,
+        y: *const MatrixView,
+        lambdas: *const f64,
+        n_lambdas: i64,
+        out_result: *mut *mut MethodResultRaw,
+    ) -> i32;
     fn n4m_finetune_estimator(
         ctx: *mut ContextRaw,
         estimator: i32,
@@ -1604,6 +1613,72 @@ impl Model {
             _thread_bound: PhantomData,
         })
     }
+
+    /// Fit native ridge regression, then retain it as a portable, exact affine
+    /// N4MM predictor.
+    ///
+    /// `libn4m` performs the fit through its public Ridge ABI.  The temporary
+    /// method-result contains copied coefficients/intercepts only; the model
+    /// returned here is the ABI-defined `IMPORTED_LINEAR_PREDICTOR`, whose
+    /// equation is exactly `intercept + X @ coefficients` and which can be
+    /// exported/imported as N4MM for stateless prediction.
+    pub fn fit_ridge(
+        ctx: &Context,
+        cfg: &Config,
+        x: MatrixRef<'_>,
+        y: MatrixRef<'_>,
+        lambda: f64,
+    ) -> Result<Self, Error> {
+        if x.rows != y.rows {
+            return Err(invalid("X and Y must have the same number of rows"));
+        }
+        if !lambda.is_finite() || lambda < 0.0 {
+            return Err(invalid("ridge lambda must be finite and non-negative"));
+        }
+        let (x_raw, y_raw) = (x.raw(), y.raw());
+        let mut raw = ptr::null_mut();
+        check(
+            unsafe {
+                n4m_estimators_ridge_fit(ctx.ptr(), cfg.ptr(), &x_raw, &y_raw, &lambda, 1, &mut raw)
+            },
+            Some(ctx.ptr()),
+        )?;
+        let raw = NonNull::new(raw).ok_or_else(|| error(255, Some(ctx.ptr())))?;
+        struct Owner(NonNull<MethodResultRaw>);
+        impl Drop for Owner {
+            fn drop(&mut self) {
+                unsafe { n4m_method_result_destroy(self.0.as_ptr()) }
+            }
+        }
+        let owner = Owner(raw);
+        let (coefficients, coefficient_rows, coefficient_cols) =
+            doubles(owner.0.as_ptr(), "coefficients")?;
+        let (intercept, intercept_rows, intercept_cols) = doubles(owner.0.as_ptr(), "intercept")?;
+        let n_features = usize::try_from(coefficient_rows)
+            .map_err(|_| corrupt("native ridge coefficient rows are invalid"))?;
+        let n_targets = usize::try_from(coefficient_cols)
+            .map_err(|_| corrupt("native ridge coefficient columns are invalid"))?;
+        if n_features != x.cols
+            || n_targets != y.cols
+            || intercept_rows != 1
+            || usize::try_from(intercept_cols).ok() != Some(n_targets)
+            || !coefficients
+                .iter()
+                .chain(&intercept)
+                .all(|value| value.is_finite())
+        {
+            return Err(corrupt("native ridge result shape or values are invalid"));
+        }
+        Self::import_linear_predictor(
+            ctx,
+            x.rows,
+            n_features,
+            n_targets,
+            &coefficients,
+            &intercept,
+        )
+    }
+
     /// Import a previously attested affine predictor without retraining.
     ///
     /// This creates an N4MM whose prediction equation is exactly
@@ -2370,6 +2445,33 @@ mod tests {
         let n4mm = model.export_n4mm().unwrap();
         let restored = Model::import_n4mm(&ctx, &n4mm).unwrap();
         assert_eq!(restored.predict(&ctx, x).unwrap(), predictions);
+    }
+    #[test]
+    fn native_ridge_fit_exports_a_portable_affine_n4mm() {
+        let ctx = Context::new().unwrap();
+        let cfg = Config::new().unwrap();
+        let values = [
+            0.0, 0.0, // y = 1
+            1.0, 0.0, // y = 3
+            0.0, 1.0, // y = -2
+            1.0, 1.0, // y = 0
+            2.0, 1.0, // y = 2
+            1.0, 2.0, // y = -3
+        ];
+        let targets = [1.0, 3.0, -2.0, 0.0, 2.0, -3.0];
+        let x = MatrixRef::row_major(&values, 6, 2).unwrap();
+        let y = MatrixRef::row_major(&targets, 6, 1).unwrap();
+        let model = Model::fit_ridge(&ctx, &cfg, x, y, 0.0).unwrap();
+        assert_eq!(model.n_components().unwrap(), 0);
+        let predicted = model.predict(&ctx, x).unwrap();
+        assert!(predicted
+            .data
+            .iter()
+            .zip(targets)
+            .all(|(actual, expected)| (actual - expected).abs() <= 1e-10));
+        let bytes = model.export_n4mm().unwrap();
+        let restored = Model::import_n4mm(&ctx, &bytes).unwrap();
+        assert_eq!(restored.predict(&ctx, x).unwrap(), predicted);
     }
     #[test]
     fn native_finetune_is_selection_only_and_returns_a_copied_trace() {
