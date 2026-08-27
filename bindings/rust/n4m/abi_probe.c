@@ -168,6 +168,7 @@ _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_get_n_features, n4m_status_t (*)(
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_get_n_targets, n4m_status_t (*)(const n4m_model_t*, int32_t*)), "n4m_model_get_n_targets signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_method_result_destroy, void (*)(n4m_method_result_t*)), "n4m_method_result_destroy signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_method_result_get_scalar, n4m_status_t (*)(const n4m_method_result_t*, const char*, double*)), "n4m_method_result_get_scalar signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimators_ridge_fit, n4m_status_t (*)(n4m_context_t*, const n4m_config_t*, const n4m_matrix_view_t*, const n4m_matrix_view_t*, const double*, int64_t, n4m_method_result_t**)), "n4m_estimators_ridge_fit signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_optimizer_options_init, void (*)(n4m_optimizer_options_t*)), "n4m_optimizer_options_init signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_optimizer_enqueue, n4m_status_t (*)(n4m_optimizer_t*, const char* const*, const double*, int32_t)), "n4m_optimizer_enqueue signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_optimizer_ask, n4m_status_t (*)(n4m_optimizer_t*, n4m_trial_t**)), "n4m_optimizer_ask signature drifted");
