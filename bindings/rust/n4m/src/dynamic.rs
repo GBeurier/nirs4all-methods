@@ -86,6 +86,7 @@ macro_rules! n4m_symbols {
             n4m_method_result_get_int_vector(result: *const MethodResultRaw, name: *const c_char, data: *mut *const i32, size: *mut i32) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_method_result_get_int64_vector(result: *const MethodResultRaw, name: *const c_char, data: *mut *const i64, size: *mut i64) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_method_result_get_scalar(result: *const MethodResultRaw, name: *const c_char, value: *mut f64) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_estimators_ridge_fit(ctx: *mut ContextRaw, cfg: *const ConfigRaw, x: *const MatrixView, y: *const MatrixView, lambdas: *const f64, n_lambdas: i64, out_result: *mut *mut MethodResultRaw) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_finetune_estimator(ctx: *mut ContextRaw, estimator: i32, x: *const MatrixView, y: *const MatrixView, plan: *const ValidationPlanRaw, space: *const SearchSpaceRaw, opts: *const OptimizerOptionsRaw, n_trials: i32, out_result: *mut *mut MethodResultRaw) -> i32 => RUNTIME_UNAVAILABLE;
         }
     };
