@@ -8,7 +8,11 @@ constraints; `Optimizer` exposes native ask/ask-batch/tell/intermediate/best,
 borrowed `Trial` accessors, and owning rich `TrialSnapshot` traces. Batch errors
 retain every committed borrowed trial in `AskBatchError::Partial`.
 
-`Config` + `Model::fit` call `n4m_model_fit` directly. `Model::predict_into`
+`Pipeline::snv_savgol` and `Config::set_snv_savgol_pipeline` provide the safe,
+owning Rust path for the bounded native SNV-to-Savitzky-Golay pipeline; the
+opaque pipeline handle remains alive through every `Model::fit` call and is
+released with its owner. `Config` + `Model::fit` call `n4m_model_fit` directly.
+`Model::predict_into`
 uses caller-owned row-major storage (`n4m_model_predict`); `Model::predict`
 uses core-owned storage (`n4m_model_predict_alloc`) and copies it before
 calling `n4m_array_free`. `Model::export_n4mm`/`import_n4mm` own N4MM bytes, and

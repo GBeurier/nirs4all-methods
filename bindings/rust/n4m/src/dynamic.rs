@@ -31,6 +31,10 @@ macro_rules! n4m_symbols {
             n4m_config_set_center_y(cfg: *mut ConfigRaw, enabled: i32) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_config_set_scale_y(cfg: *mut ConfigRaw, enabled: i32) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_config_set_store_scores(cfg: *mut ConfigRaw, enabled: i32) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_pipeline_create(out: *mut *mut PipelineRaw) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_pipeline_destroy(pipeline: *mut PipelineRaw) -> () => ();
+            n4m_pipeline_add_operator(pipeline: *mut PipelineRaw, kind: i32, params: *const f64, n_params: i32) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_config_set_pipeline(cfg: *mut ConfigRaw, pipeline: *const PipelineRaw) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_model_fit(ctx: *mut ContextRaw, cfg: *const ConfigRaw, x: *const MatrixView, y: *const MatrixView, out: *mut *mut ModelRaw) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_model_import_linear_predictor(ctx: *mut ContextRaw, spec: *const LinearPredictorSpecRaw, out: *mut *mut ModelRaw) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_model_destroy(model: *mut ModelRaw) -> () => ();
