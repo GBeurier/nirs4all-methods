@@ -57,7 +57,6 @@ struct ContextRaw {
 struct ConfigRaw {
     _private: [u8; 0],
 }
-#[cfg(test)]
 #[repr(C)]
 struct PipelineRaw {
     _private: [u8; 0],
@@ -192,18 +191,14 @@ extern "C" {
     fn n4m_config_set_center_y(cfg: *mut ConfigRaw, enabled: i32) -> i32;
     fn n4m_config_set_scale_y(cfg: *mut ConfigRaw, enabled: i32) -> i32;
     fn n4m_config_set_store_scores(cfg: *mut ConfigRaw, enabled: i32) -> i32;
-    #[cfg(test)]
     fn n4m_pipeline_create(out: *mut *mut PipelineRaw) -> i32;
-    #[cfg(test)]
     fn n4m_pipeline_destroy(pipeline: *mut PipelineRaw);
-    #[cfg(test)]
     fn n4m_pipeline_add_operator(
         pipeline: *mut PipelineRaw,
         kind: i32,
         params: *const f64,
         n_params: i32,
     ) -> i32;
-    #[cfg(test)]
     fn n4m_config_set_pipeline(cfg: *mut ConfigRaw, pipeline: *const PipelineRaw) -> i32;
     fn n4m_model_fit(
         ctx: *mut ContextRaw,
@@ -852,10 +847,70 @@ impl Drop for ValidationPlan {
     }
 }
 
+/// Owning native preprocessing pipeline accepted by [`Model::fit`].
+///
+/// Construction is intentionally limited to the serializable native slice.
+/// The opaque handle is never exposed, and dropping this value releases it.
+pub struct Pipeline {
+    raw: NonNull<PipelineRaw>,
+    _thread_bound: PhantomData<*mut ()>,
+}
+impl Pipeline {
+    /// Build the exact `SNV -> Savitzky-Golay smooth` pipeline supported by
+    /// native model fit and N4MM v2.
+    ///
+    /// The smooth operator canonically fixes derivative order to zero and
+    /// delta to one. Native fit remains the authoritative validation point;
+    /// these guards reject the same bounded integer domain before allocating
+    /// a handle.
+    pub fn snv_savgol(window: i32, poly_degree: i32) -> Result<Self, Error> {
+        if !(3..=501).contains(&window) || window % 2 == 0 {
+            return Err(invalid(
+                "Savitzky-Golay window length must be an odd integer in [3, 501]",
+            ));
+        }
+        if poly_degree < 0 || poly_degree >= window {
+            return Err(invalid(
+                "Savitzky-Golay polynomial degree must be non-negative and smaller than the window length",
+            ));
+        }
+
+        let mut raw = ptr::null_mut();
+        check(unsafe { n4m_pipeline_create(&mut raw) }, None)?;
+        let pipeline = Self {
+            raw: NonNull::new(raw).ok_or_else(|| error(255, None))?,
+            _thread_bound: PhantomData,
+        };
+        check(
+            unsafe { n4m_pipeline_add_operator(pipeline.ptr(), 4, ptr::null(), 0) },
+            None,
+        )?;
+        let savgol = [f64::from(window), f64::from(poly_degree)];
+        check(
+            unsafe {
+                n4m_pipeline_add_operator(pipeline.ptr(), 8, savgol.as_ptr(), savgol.len() as i32)
+            },
+            None,
+        )?;
+        Ok(pipeline)
+    }
+
+    fn ptr(&self) -> *mut PipelineRaw {
+        self.raw.as_ptr()
+    }
+}
+impl Drop for Pipeline {
+    fn drop(&mut self) {
+        unsafe { n4m_pipeline_destroy(self.ptr()) }
+    }
+}
+
 /// Mutable native fit configuration. It uses libn4m's defaults until a setter
-/// below is called; no fitting behaviour is implemented in Rust.
+/// below is called; no fitting behaviour is implemented in Rust. An attached
+/// pipeline remains owned by the configuration for every native fit call.
 pub struct Config {
     raw: NonNull<ConfigRaw>,
+    pipeline: Option<Pipeline>,
     _thread_bound: PhantomData<*mut ()>,
 }
 impl Config {
@@ -864,6 +919,7 @@ impl Config {
         check(unsafe { n4m_config_create(&mut raw) }, None)?;
         Ok(Self {
             raw: NonNull::new(raw).ok_or_else(|| error(255, None))?,
+            pipeline: None,
             _thread_bound: PhantomData,
         })
     }
@@ -908,6 +964,27 @@ impl Config {
             None,
         )?;
         Ok(self)
+    }
+
+    /// Attach an owning native pipeline. Replacing a pipeline releases the old
+    /// handle only after the native configuration points at the replacement.
+    pub fn set_pipeline(&mut self, pipeline: Pipeline) -> Result<&mut Self, Error> {
+        check(
+            unsafe { n4m_config_set_pipeline(self.ptr(), pipeline.ptr()) },
+            None,
+        )?;
+        self.pipeline = Some(pipeline);
+        Ok(self)
+    }
+
+    /// Construct and attach the supported `SNV -> Savitzky-Golay smooth`
+    /// pipeline while retaining its handle for the lifetime of this config.
+    pub fn set_snv_savgol_pipeline(
+        &mut self,
+        window: i32,
+        poly_degree: i32,
+    ) -> Result<&mut Self, Error> {
+        self.set_pipeline(Pipeline::snv_savgol(window, poly_degree)?)
     }
 }
 impl Drop for Config {
@@ -2612,6 +2689,7 @@ mod tests {
     use static_assertions::assert_not_impl_any;
     assert_not_impl_any!(Context: Send, Sync);
     assert_not_impl_any!(Config: Send, Sync);
+    assert_not_impl_any!(Pipeline: Send, Sync);
     assert_not_impl_any!(SearchSpace: Send, Sync);
     assert_not_impl_any!(Optimizer: Send, Sync);
     fn optimizer(ctx: &Context, sampler: Sampler) -> Optimizer {
@@ -2803,29 +2881,22 @@ mod tests {
     }
     #[cfg(all(feature = "linked", not(feature = "dynamic")))]
     #[test]
-    fn pipeline_v2_inspection_is_typed_and_tamper_closed() {
+    fn safe_pipeline_fit_inspect_predict_and_invalid_params() {
         let ctx = Context::new().unwrap();
         let mut cfg = Config::new().unwrap();
         cfg.set_n_components(1).unwrap();
-
-        let mut pipeline = ptr::null_mut();
-        check(unsafe { n4m_pipeline_create(&mut pipeline) }, None).unwrap();
-        check(
-            unsafe { n4m_pipeline_add_operator(pipeline, 4, ptr::null(), 0) },
-            None,
-        )
-        .unwrap();
-        let savgol = [5.0, 2.0];
-        check(
-            unsafe { n4m_pipeline_add_operator(pipeline, 8, savgol.as_ptr(), 2) },
-            None,
-        )
-        .unwrap();
-        check(
-            unsafe { n4m_config_set_pipeline(cfg.ptr(), pipeline) },
-            None,
-        )
-        .unwrap();
+        cfg.set_snv_savgol_pipeline(7, 2).unwrap();
+        cfg.set_pipeline(Pipeline::snv_savgol(5, 2).unwrap())
+            .unwrap();
+        for (window, poly_degree) in [(4, 2), (1, 0), (5, -1), (5, 5)] {
+            assert_eq!(
+                Pipeline::snv_savgol(window, poly_degree)
+                    .err()
+                    .expect("invalid pipeline parameters must be rejected")
+                    .kind,
+                ErrorKind::InvalidArgument
+            );
+        }
 
         let values = (0..90)
             .map(|index| {
@@ -2840,7 +2911,6 @@ mod tests {
         let x = MatrixRef::row_major(&values, 10, 9).unwrap();
         let y = MatrixRef::row_major(&targets, 10, 1).unwrap();
         let model = Model::fit(&ctx, &cfg, x, y).unwrap();
-        unsafe { n4m_pipeline_destroy(pipeline) };
 
         let mut bytes = model.export_n4mm().unwrap();
         let info = inspect_n4mm(&bytes).unwrap();
@@ -2866,6 +2936,9 @@ mod tests {
             PipelineFingerprintAlgorithm::Fnv1a64V1
         );
         assert_eq!(pipeline.fingerprint, 0x6c67_0bd4_a3e4_8332);
+        let predictions = model.predict(&ctx, x).unwrap();
+        assert_eq!((predictions.rows, predictions.cols), (10, 1));
+        assert!(predictions.data.iter().all(|value| value.is_finite()));
 
         let tamper_index = bytes.len() - 16;
         bytes[tamper_index] ^= 1;
