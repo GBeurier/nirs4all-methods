@@ -844,6 +844,46 @@ N4M_API n4m_status_t n4m_serialization_inspect(
     uint32_t* out_writer_abi_minor,
     uint32_t* out_writer_abi_patch);
 
+/* Versioned, allocation-free inspection of a complete N4MM fitted-model
+ * payload. Unlike n4m_serialization_inspect (which intentionally reads only
+ * the 20-byte header), this entry point validates the magic, supported wire
+ * version, checksum, model recipe, dimensions and every length-delimited
+ * section before publishing any metadata.
+ *
+ * `out_info` is byte-zeroed before any validation. It therefore remains all
+ * zero on N4M_ERR_NULL_POINTER, N4M_ERR_CORRUPT_BUFFER,
+ * N4M_ERR_VERSION_INCOMPATIBLE or N4M_ERR_UNSUPPORTED. Unknown algorithm,
+ * solver or deflation values are unsupported rather than trusted as
+ * capabilities. The capability mask is derived solely from the validated
+ * N4MM bytes; callers must not augment it from an external manifest.
+ */
+#define N4M_SERIALIZED_MODEL_INFO_SCHEMA_V1 1u
+
+#define N4M_SERIALIZED_MODEL_CAPABILITY_PREDICT   (UINT64_C(1) << 0)
+#define N4M_SERIALIZED_MODEL_CAPABILITY_TRANSFORM (UINT64_C(1) << 1)
+#define N4M_SERIALIZED_MODEL_CAPABILITY_AFFINE    (UINT64_C(1) << 2)
+
+typedef struct n4m_serialized_model_info_v1_t {
+    uint32_t schema_version;
+    uint32_t format_version;
+    uint32_t writer_abi_major;
+    uint32_t writer_abi_minor;
+    uint32_t writer_abi_patch;
+    n4m_algorithm_t algorithm;
+    n4m_solver_t solver;
+    n4m_deflation_t deflation;
+    int64_t training_samples;
+    int32_t n_features;
+    int32_t n_targets;
+    int32_t n_components;
+    uint32_t reserved0;
+    uint64_t capabilities;
+} n4m_serialized_model_info_v1_t;
+
+N4M_API n4m_status_t n4m_serialization_inspect_model_v1(
+    const void* buffer, size_t buffer_size,
+    n4m_serialized_model_info_v1_t* out_info);
+
 /* ============================================================================
  * 13. Output array helper — core-allocated arrays returned by *_alloc calls
  * ==========================================================================
@@ -1046,6 +1086,8 @@ N4M_STATIC_ASSERT(sizeof(n4m_deflation_t)     == 4, "n4m_deflation_t must be 4 b
 N4M_STATIC_ASSERT(sizeof(n4m_operator_kind_t) == 4, "n4m_operator_kind_t must be 4 bytes");
 N4M_STATIC_ASSERT(sizeof(n4m_gating_mode_t)   == 4, "n4m_gating_mode_t must be 4 bytes");
 N4M_STATIC_ASSERT(sizeof(n4m_model_array_t)   == 4, "n4m_model_array_t must be 4 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_serialized_model_info_v1_t) == 64,
+                  "n4m_serialized_model_info_v1_t must be 64 bytes");
 /* HPO enum guard rails live in n4m/optimization.h so that header is
  * independently includable. */
 

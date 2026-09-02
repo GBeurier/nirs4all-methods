@@ -19,6 +19,7 @@ from ctypes import (
     c_int32,
     c_int64,
     c_uint8,
+    c_uint32,
     c_uint64,
     c_void_p,
 )
@@ -106,6 +107,27 @@ class LinearPredictorSpec(Structure):
     ]
 
 
+class SerializedModelInfoV1(Structure):
+    """Mirror of :c:struct:`n4m_serialized_model_info_v1_t`."""
+
+    _fields_ = [
+        ("schema_version", c_uint32),
+        ("format_version", c_uint32),
+        ("writer_abi_major", c_uint32),
+        ("writer_abi_minor", c_uint32),
+        ("writer_abi_patch", c_uint32),
+        ("algorithm", c_int),
+        ("solver", c_int),
+        ("deflation", c_int),
+        ("training_samples", c_int64),
+        ("n_features", c_int32),
+        ("n_targets", c_int32),
+        ("n_components", c_int32),
+        ("reserved0", c_uint32),
+        ("capabilities", c_uint64),
+    ]
+
+
 # ---------------------------------------------------------------------------
 # n4m_filter_stats_t
 # ---------------------------------------------------------------------------
@@ -189,6 +211,10 @@ class OptimizerOptions(Structure):
 assert ctypes.sizeof(MatrixView) == 48, (
     f"MatrixView layout mismatch: {ctypes.sizeof(MatrixView)} != 48"
 )
+assert ctypes.sizeof(SerializedModelInfoV1) == 64, (
+    "SerializedModelInfoV1 layout mismatch: "
+    f"{ctypes.sizeof(SerializedModelInfoV1)} != 64"
+)
 if ctypes.sizeof(c_void_p) == 8:
     assert ctypes.sizeof(OptimizerOptions) == 120, (
         f"OptimizerOptions layout mismatch: {ctypes.sizeof(OptimizerOptions)} != 120"
@@ -212,8 +238,10 @@ if ctypes.sizeof(c_void_p) == 8:
 __all__ = [
     "Dtype",
     "FilterStats",
+    "LinearPredictorSpec",
     "MatrixView",
     "OptimizerOptions",
+    "SerializedModelInfoV1",
     "SplitResult",
     "Status",
     "TransferMetrics",

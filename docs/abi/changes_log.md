@@ -1,5 +1,21 @@
 # ABI — Changes Log
 
+## 2026-09-02 — ABI 2.4.0: authoritative fitted-model inspection
+
+Additive MINOR change: `n4m_serialization_inspect_model_v1` validates a
+complete N4MM format-1 payload without allocating model state and returns the
+fixed 64-byte `n4m_serialized_model_info_v1_t`. The result includes the result
+schema, wire format and writer ABI, the encoded algorithm/solver/deflation,
+training sample count, feature/target/component dimensions and a capability
+mask derived solely from the validated bytes. Native models report
+PREDICT/TRANSFORM; imported-linear code 11 reports PREDICT/AFFINE.
+
+The function zeroes its output before validation and fails closed for null
+pointers, corrupt checksums or structure, future wire versions and unsupported
+recipes. N4MM format version 1 and its writer/import semantics are unchanged.
+This ABI work does not resolve the separate MTH-DOC publication-attribution
+blocker.
+
 ## 2026-08-25 — ABI 2.3.0: imported affine predictor for verified migration
 
 Additive MINOR change: `n4m_model_import_linear_predictor` creates a

@@ -6,6 +6,7 @@ The C ABI implements the first binary fitted-model format behind:
 - `n4m_model_export_to_buffer`
 - `n4m_model_import_from_buffer`
 - `n4m_serialization_inspect`
+- `n4m_serialization_inspect_model_v1`
 
 The format is little-endian and starts with:
 
@@ -35,6 +36,23 @@ yet and is not the nirs4all `.n4a` pipeline bundle. The possible `.n4am`
 envelope remains a future contract and is not part of serialization format 1.
 The FNV-1a trailer detects corruption; it is not a content-address or a
 training-data fingerprint.
+
+`n4m_serialization_inspect_model_v1` is the authoritative, allocation-free
+inspection gate for a complete fitted-model payload. It validates the header,
+supported format, checksum, algorithm/solver/deflation recipe, dimensions,
+flags, all eleven length-delimited array sections and exact end-of-payload
+before filling `n4m_serialized_model_info_v1_t`. The output is zero on every
+failure. Its schema version is 1 and its capability bits are derived from the
+validated N4MM bytes:
+
+- native fitted models report `PREDICT | TRANSFORM`;
+- `N4M_ALGO_IMPORTED_LINEAR_PREDICTOR` reports `PREDICT | AFFINE` and never
+  reports `TRANSFORM`.
+
+Unknown model recipes return `N4M_ERR_UNSUPPORTED`; future wire versions return
+`N4M_ERR_VERSION_INCOMPATIBLE`; malformed or checksum-invalid payloads return
+`N4M_ERR_CORRUPT_BUFFER`. External JSON, manifests and filename conventions are
+not capability authorities.
 
 ## Optimizer checkpoint wire format
 
