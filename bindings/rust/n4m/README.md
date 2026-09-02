@@ -13,7 +13,10 @@ uses caller-owned row-major storage (`n4m_model_predict`); `Model::predict`
 uses core-owned storage (`n4m_model_predict_alloc`) and copies it before
 calling `n4m_array_free`. `Model::export_n4mm`/`import_n4mm` own N4MM bytes, and
 `inspect_n4mm` accepts raw-model v1 and bounded SNV/SG pipeline v2 payloads;
-`SerializedModelInfo::has_pipeline` is derived from the native capability mask.
+`SerializedModelInfo::pipeline` is a typed optional descriptor containing the
+validated operator order, canonical SG parameters, raw/model widths and stable
+FNV-1a-64 plan fingerprint. `has_pipeline()` reflects that authoritative
+descriptor rather than inferring a plan from host metadata.
 `Optimizer::save_n4mopt`/`load_n4mopt` own N4MOPT bytes. Checkpoint envelopes
 are preflighted to the native 64 MiB N4MOPT cap before the binding allocates a
 copy; native loading remains the authoritative decoder. Optimizer snapshots are
@@ -27,8 +30,9 @@ refit. Call `Model::fit` explicitly after selecting parameters. The native API
 rejects unsupported estimators, pruners, metrics, conditional axes, and search
 space schemas rather than broadening this binding's scope.
 
-This crate is binding work only: it does not claim a Rust package release or
-extend the public C++ ABI. It requires a prebuilt `libn4m`. The default
+This crate is binding work only: crate version 0.1.4 tracks the additive ABI-2.5
+inspection surface and is not an independent numerical-engine release. It
+requires a prebuilt `libn4m`. The default
 `linked` feature validates every Rust extern declaration against the installed
 public headers at build time; it is the development and CI mode.
 

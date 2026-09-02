@@ -27,10 +27,12 @@ from ._aom import (
 from ._model import (
     SERIALIZED_MODEL_CAPABILITY_AFFINE,
     SERIALIZED_MODEL_CAPABILITY_PREDICT,
+    SERIALIZED_MODEL_CAPABILITY_PIPELINE,
     SERIALIZED_MODEL_CAPABILITY_TRANSFORM,
     Model,
     ModelArrayKind,
     SerializedModelInfo,
+    SerializedPipelineInfo,
     inspect_n4mm,
 )
 from .migration import export_linear_predictor_n4mm
@@ -145,7 +147,9 @@ __all__ = [
     "Model",
     "ModelArrayKind",
     "SerializedModelInfo",
+    "SerializedPipelineInfo",
     "SERIALIZED_MODEL_CAPABILITY_PREDICT",
+    "SERIALIZED_MODEL_CAPABILITY_PIPELINE",
     "SERIALIZED_MODEL_CAPABILITY_TRANSFORM",
     "SERIALIZED_MODEL_CAPABILITY_AFFINE",
     "inspect_n4mm",

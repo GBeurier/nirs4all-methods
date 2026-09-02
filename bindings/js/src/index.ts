@@ -32,7 +32,11 @@ export {
     SERIALIZED_MODEL_CAPABILITY_PREDICT,
     SERIALIZED_MODEL_CAPABILITY_TRANSFORM,
     SERIALIZED_MODEL_CAPABILITY_AFFINE,
+    SERIALIZED_MODEL_CAPABILITY_PIPELINE,
+    PipelineFingerprintAlgorithm,
+    SerializedPipelineOperatorKind,
     type SerializedModelInfo,
+    type SerializedPipelineInfo,
 } from "./serialization.js";
 export {
     Status,

@@ -283,6 +283,9 @@ struct PipelineV2 {
     bool present{false};
     std::int32_t window{0};
     std::int32_t poly_degree{0};
+    std::int32_t derivative{0};
+    double delta{0.0};
+    std::uint64_t fingerprint{0};
 };
 
 void write_pipeline_v2(Writer& w, const ::n4m::core::Model& model) noexcept {
@@ -311,6 +314,7 @@ void write_pipeline_v2(Writer& w, const ::n4m::core::Model& model) noexcept {
     double poly_degree = 0.0;
     double derivative = 0.0;
     double delta = 0.0;
+    const std::size_t canonical_begin = r.pos;
     if (!r.u32(count) || !r.u32(first_kind) || !r.u32(first_params) ||
         !r.u32(second_kind) || !r.u32(second_params) || !r.f64(window) ||
         !r.f64(poly_degree) || !r.f64(derivative) || !r.f64(delta)) {
@@ -323,11 +327,12 @@ void write_pipeline_v2(Writer& w, const ::n4m::core::Model& model) noexcept {
         second_params != 4U || algorithm != N4M_ALGO_PLS_REGRESSION ||
         !std::isfinite(window) || !std::isfinite(poly_degree) ||
         window != std::round(window) || poly_degree != std::round(poly_degree) ||
+        std::signbit(window) || std::signbit(poly_degree) ||
         window < static_cast<double>(std::numeric_limits<std::int32_t>::min()) ||
         window > static_cast<double>(std::numeric_limits<std::int32_t>::max()) ||
         poly_degree < static_cast<double>(std::numeric_limits<std::int32_t>::min()) ||
         poly_degree > static_cast<double>(std::numeric_limits<std::int32_t>::max()) ||
-        derivative != 0.0 || delta != 1.0) {
+        derivative != 0.0 || std::signbit(derivative) || delta != 1.0) {
         return false;
     }
     const auto integer_window = static_cast<std::int32_t>(window);
@@ -338,6 +343,10 @@ void write_pipeline_v2(Writer& w, const ::n4m::core::Model& model) noexcept {
     out.present = true;
     out.window = integer_window;
     out.poly_degree = integer_poly_degree;
+    out.derivative = 0;
+    out.delta = 1.0;
+    out.fingerprint = fnv1a64(
+        r.data + canonical_begin, r.pos - canonical_begin);
     return true;
 }
 
@@ -439,6 +448,7 @@ struct SerializedModelMetadata {
     std::uint64_t n_targets{0};
     std::uint64_t n_components{0};
     std::uint64_t capabilities{0};
+    PipelineV2 pipeline{};
 };
 
 [[nodiscard]] n4m_status_t validate_serialized_recipe(
@@ -636,6 +646,7 @@ struct SerializedModelMetadata {
     out.n_targets = n_targets;
     out.n_components = n_components;
     out.capabilities = capabilities;
+    out.pipeline = pipeline;
     return N4M_OK;
 }
 
@@ -1252,6 +1263,49 @@ N4M_API n4m_status_t n4m_serialization_inspect_model_v1(
     out_info->n_targets = static_cast<std::int32_t>(metadata.n_targets);
     out_info->n_components = static_cast<std::int32_t>(metadata.n_components);
     out_info->capabilities = metadata.capabilities;
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_serialization_inspect_pipeline_v1(
+    const void* buffer, size_t buffer_size,
+    n4m_serialized_pipeline_info_v1_t* out_info, size_t out_info_size) {
+    if (out_info != nullptr && out_info_size != 0U) {
+        std::memset(
+            out_info, 0,
+            std::min(out_info_size, sizeof(*out_info)));
+    }
+    if (buffer == nullptr || out_info == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    if (out_info_size < sizeof(*out_info)) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    SerializedModelMetadata metadata{};
+    const n4m_status_t status =
+        inspect_serialized_model_v1(buffer, buffer_size, metadata);
+    if (status != N4M_OK) {
+        return status;
+    }
+
+    out_info->schema_version = N4M_SERIALIZED_PIPELINE_INFO_SCHEMA_V1;
+    out_info->struct_size = static_cast<std::uint32_t>(sizeof(*out_info));
+    if (!metadata.pipeline.present) {
+        return N4M_OK;
+    }
+
+    out_info->present = 1U;
+    out_info->operator_count = 2U;
+    out_info->operators[0] = N4M_OP_SNV;
+    out_info->operators[1] = N4M_OP_SAVGOL_SMOOTH;
+    out_info->savgol_window = metadata.pipeline.window;
+    out_info->savgol_poly_degree = metadata.pipeline.poly_degree;
+    out_info->savgol_derivative = metadata.pipeline.derivative;
+    out_info->savgol_delta = metadata.pipeline.delta;
+    out_info->raw_n_features = static_cast<std::int32_t>(metadata.n_features);
+    out_info->model_n_features = static_cast<std::int32_t>(metadata.n_features);
+    out_info->fingerprint_algorithm = N4M_PIPELINE_FINGERPRINT_FNV1A64_V1;
+    out_info->fingerprint = metadata.pipeline.fingerprint;
     return N4M_OK;
 }
 

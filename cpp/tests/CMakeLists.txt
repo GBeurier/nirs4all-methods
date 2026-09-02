@@ -92,6 +92,22 @@ set_tests_properties(n4m_model_pipeline_tests PROPERTIES
     LABELS "abi;parity"
     TIMEOUT 30)
 
+# Focused additive ABI inspector contract. It constructs minimal canonical
+# N4MM bytes directly, so this gate does not rerun model pipeline parity.
+add_executable(n4m_serialized_pipeline_inspect_tests
+    test_serialized_pipeline_inspect.cpp)
+target_link_libraries(n4m_serialized_pipeline_inspect_tests PRIVATE n4m_c)
+target_include_directories(n4m_serialized_pipeline_inspect_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/cpp/src
+    ${PROJECT_BINARY_DIR}/generated)
+n4m_add_warnings(n4m_serialized_pipeline_inspect_tests)
+add_test(NAME n4m_serialized_pipeline_inspect_tests
+    COMMAND n4m_serialized_pipeline_inspect_tests)
+set_tests_properties(n4m_serialized_pipeline_inspect_tests PROPERTIES
+    LABELS "abi"
+    TIMEOUT 30)
+
 # Internal-primitive tests. The PCG64 bounded-integer + choice-without-
 # replacement primitives are hidden in libn4m, so they are unreachable from
 # n4m_tests (which links the shared lib). Link the static archive instead — a

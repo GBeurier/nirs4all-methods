@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+- **Typed N4MM pipeline inspection (ABI 2.5.0).** Added a sized, versioned C
+  descriptor and matching Rust/Python/JavaScript surfaces for the validated
+  operator order, canonical Savitzky-Golay parameters, raw/model widths and
+  stable plan fingerprint. N4MM v1 reports no pipeline; malformed v2 remains
+  fail-closed with zero output.
+
 ## [1.0.13] - 2026-08-25
 
 ### Added

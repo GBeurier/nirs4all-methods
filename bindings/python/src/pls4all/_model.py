@@ -17,7 +17,7 @@ import numpy as np
 from ._config import Config
 from ._context import Context
 from ._errors import Pls4allError
-from ._ffi import MatrixView, SerializedModelInfoV1, lib
+from ._ffi import MatrixView, SerializedModelInfoV1, SerializedPipelineInfoV1, lib
 from ._types import Dtype, Status
 
 
@@ -75,6 +75,23 @@ class ModelArrayKind(IntEnum):
 SERIALIZED_MODEL_CAPABILITY_PREDICT = 1 << 0
 SERIALIZED_MODEL_CAPABILITY_TRANSFORM = 1 << 1
 SERIALIZED_MODEL_CAPABILITY_AFFINE = 1 << 2
+SERIALIZED_MODEL_CAPABILITY_PIPELINE = 1 << 3
+
+
+@dataclass(frozen=True)
+class SerializedPipelineInfo:
+    """Validated bounded preprocessing plan embedded in N4MM v2."""
+
+    schema_version: int
+    operators: tuple[int, ...]
+    savgol_window: int
+    savgol_poly_degree: int
+    savgol_derivative: int
+    savgol_delta: float
+    raw_n_features: int
+    model_n_features: int
+    fingerprint_algorithm: int
+    fingerprint: int
 
 
 @dataclass(frozen=True)
@@ -92,6 +109,7 @@ class SerializedModelInfo:
     n_targets: int
     n_components: int
     capabilities: int
+    pipeline: SerializedPipelineInfo | None
 
 
 def inspect_n4mm(payload: bytes) -> SerializedModelInfo:
@@ -101,11 +119,37 @@ def inspect_n4mm(payload: bytes) -> SerializedModelInfo:
         raise Pls4allError(int(Status.ERR_CORRUPT_BUFFER))
     buffer = (ctypes.c_uint8 * len(payload)).from_buffer_copy(payload)
     raw = SerializedModelInfoV1()
+    raw_pipeline = SerializedPipelineInfoV1()
     _check(
         lib.n4m_serialization_inspect_model_v1(
             buffer, ctypes.c_size_t(len(payload)), ctypes.byref(raw)
         )
     )
+    _check(
+        lib.n4m_serialization_inspect_pipeline_v1(
+            buffer,
+            ctypes.c_size_t(len(payload)),
+            ctypes.byref(raw_pipeline),
+            ctypes.c_size_t(ctypes.sizeof(raw_pipeline)),
+        )
+    )
+    pipeline = None
+    if raw_pipeline.present:
+        pipeline = SerializedPipelineInfo(
+            schema_version=int(raw_pipeline.schema_version),
+            operators=tuple(
+                int(raw_pipeline.operators[index])
+                for index in range(int(raw_pipeline.operator_count))
+            ),
+            savgol_window=int(raw_pipeline.savgol_window),
+            savgol_poly_degree=int(raw_pipeline.savgol_poly_degree),
+            savgol_derivative=int(raw_pipeline.savgol_derivative),
+            savgol_delta=float(raw_pipeline.savgol_delta),
+            raw_n_features=int(raw_pipeline.raw_n_features),
+            model_n_features=int(raw_pipeline.model_n_features),
+            fingerprint_algorithm=int(raw_pipeline.fingerprint_algorithm),
+            fingerprint=int(raw_pipeline.fingerprint),
+        )
     return SerializedModelInfo(
         schema_version=int(raw.schema_version),
         format_version=int(raw.format_version),
@@ -122,6 +166,7 @@ def inspect_n4mm(payload: bytes) -> SerializedModelInfo:
         n_targets=int(raw.n_targets),
         n_components=int(raw.n_components),
         capabilities=int(raw.capabilities),
+        pipeline=pipeline,
     )
 
 

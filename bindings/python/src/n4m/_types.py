@@ -128,6 +128,29 @@ class SerializedModelInfoV1(Structure):
     ]
 
 
+class SerializedPipelineInfoV1(Structure):
+    """Mirror of :c:struct:`n4m_serialized_pipeline_info_v1_t`."""
+
+    _fields_ = [
+        ("schema_version", c_uint32),
+        ("struct_size", c_uint32),
+        ("present", c_uint32),
+        ("operator_count", c_uint32),
+        ("operators", c_int32 * 2),
+        ("savgol_window", c_int32),
+        ("savgol_poly_degree", c_int32),
+        ("savgol_derivative", c_int32),
+        ("reserved0", c_uint32),
+        ("savgol_delta", c_double),
+        ("raw_n_features", c_int32),
+        ("model_n_features", c_int32),
+        ("fingerprint_algorithm", c_uint32),
+        ("reserved1", c_uint32),
+        ("fingerprint", c_uint64),
+        ("reserved", c_uint8 * 24),
+    ]
+
+
 # ---------------------------------------------------------------------------
 # n4m_filter_stats_t
 # ---------------------------------------------------------------------------
@@ -215,6 +238,10 @@ assert ctypes.sizeof(SerializedModelInfoV1) == 64, (
     "SerializedModelInfoV1 layout mismatch: "
     f"{ctypes.sizeof(SerializedModelInfoV1)} != 64"
 )
+assert ctypes.sizeof(SerializedPipelineInfoV1) == 96, (
+    "SerializedPipelineInfoV1 layout mismatch: "
+    f"{ctypes.sizeof(SerializedPipelineInfoV1)} != 96"
+)
 if ctypes.sizeof(c_void_p) == 8:
     assert ctypes.sizeof(OptimizerOptions) == 120, (
         f"OptimizerOptions layout mismatch: {ctypes.sizeof(OptimizerOptions)} != 120"
@@ -242,6 +269,7 @@ __all__ = [
     "MatrixView",
     "OptimizerOptions",
     "SerializedModelInfoV1",
+    "SerializedPipelineInfoV1",
     "SplitResult",
     "Status",
     "TransferMetrics",

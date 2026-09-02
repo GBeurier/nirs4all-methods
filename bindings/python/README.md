@@ -24,8 +24,8 @@ import numpy as np
 import pls4all
 from pls4all.sklearn import PLSRegression
 
-print(pls4all.version())      # e.g. "1.0.14+abi.2.4.0"
-print(pls4all.abi_version())  # (2, 4, 0)
+print(pls4all.version())      # e.g. "1.0.15+abi.2.5.0"
+print(pls4all.abi_version())  # (2, 5, 0)
 
 rng = np.random.default_rng(0)
 X = rng.standard_normal((40, 12))

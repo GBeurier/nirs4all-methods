@@ -1,9 +1,27 @@
 # ABI — Changes Log
 
+## 2026-09-03 — ABI 2.5.0: typed N4MM pipeline inspection
+
+Additive MINOR change: `n4m_serialization_inspect_pipeline_v1` returns the
+fixed, caller-sized 96-byte `n4m_serialized_pipeline_info_v1_t`. After the
+complete N4MM payload has passed the existing authoritative validation, format
+2 reports the exact ordered `SNV -> Savitzky-Golay smooth` operator pair,
+canonical SG window/polynomial/derivative/delta, raw and model feature widths,
+and a stable FNV-1a-64 fingerprint of the canonical 52-byte plan block. Format
+1 succeeds with `present=0` and zero pipeline fields.
+
+The output prefix is zeroed on every error, including a short caller-provided
+structure size. Recomputed-checksum tampering of tags, parameter counts,
+dimensions or non-canonical floating-point representations remains corrupt.
+The prior 64-byte model descriptor and its symbol are unchanged. Rust exposes
+the result as `SerializedModelInfo.pipeline: Option<SerializedPipelineInfo>`;
+the Python and JavaScript inspectors mirror the optional descriptor.
+
 ## 2026-09-03 — N4MM format 2: bounded SNV/SG model pipeline
 
-No C symbol or public structure changes. Models without a configured pipeline
-remain byte-compatible N4MM format 1. A PLS-regression model configured with
+The wire-format addition itself made no C symbol or public structure changes;
+ABI 2.5 above subsequently adds typed inspection. Models without a configured
+pipeline remain byte-compatible N4MM format 1. A PLS-regression model configured with
 the exact `SNV(no params) -> Savitzky-Golay smooth(window, poly)` slice exports
 format 2, which appends the canonical derivative `0` and delta `1` configuration
 after the format-1 arrays and before the existing checksum.
