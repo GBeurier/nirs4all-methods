@@ -2204,9 +2204,11 @@ void account_pls_fit_counters(AomSweepResult& out,
         return N4M_ERR_INVALID_ARGUMENT;
     }
     const bool materialize_cpu_wide_ridge =
+        !force_operator_moments &&
         should_materialize_cpu_wide_ridge(X, fold_rows);
     const bool materialize_cpu_wide_pls =
-        use_pls_gcv_proxy ? false : should_materialize_cpu_wide_pls(X, fold_rows);
+        !force_operator_moments && !use_pls_gcv_proxy &&
+        should_materialize_cpu_wide_pls(X, fold_rows);
     const bool any_head_can_use_transformed_moments =
         (do_ridge && !materialize_cpu_wide_ridge) ||
         (do_pls && !materialize_cpu_wide_pls);

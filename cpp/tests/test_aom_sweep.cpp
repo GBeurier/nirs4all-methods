@@ -1161,7 +1161,9 @@ void test_aom_chain_sweep_materialized_policy_matches_auto_scores() {
 }
 
 void test_aom_chain_sweep_force_moments_policy_accepts_full_moment_grid() {
-    constexpr std::int64_t n = 330;
+    // Keep n < 4p so the CPU-wide auto heuristic would materialize PLS. The
+    // explicit force-moments policy must override that heuristic end to end.
+    constexpr std::int64_t n = 90;
     constexpr std::int64_t p = 64;
     constexpr std::int32_t cv = 5;
     constexpr std::int64_t n_chains = 2;
