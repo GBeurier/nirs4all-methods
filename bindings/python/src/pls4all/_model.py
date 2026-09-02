@@ -8,6 +8,7 @@ float64. Falls back to `numpy.ascontiguousarray` (one copy) otherwise.
 from __future__ import annotations
 
 import ctypes
+from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any
 
@@ -16,7 +17,7 @@ import numpy as np
 from ._config import Config
 from ._context import Context
 from ._errors import Pls4allError
-from ._ffi import MatrixView, lib
+from ._ffi import MatrixView, SerializedModelInfoV1, lib
 from ._types import Dtype, Status
 
 
@@ -69,6 +70,59 @@ class ModelArrayKind(IntEnum):
     ROTATIONS_R = 9
     SCORES_T = 10
     Y_SCORES_U = 11
+
+
+SERIALIZED_MODEL_CAPABILITY_PREDICT = 1 << 0
+SERIALIZED_MODEL_CAPABILITY_TRANSFORM = 1 << 1
+SERIALIZED_MODEL_CAPABILITY_AFFINE = 1 << 2
+
+
+@dataclass(frozen=True)
+class SerializedModelInfo:
+    """Authoritative metadata from a fully validated N4MM payload."""
+
+    schema_version: int
+    format_version: int
+    writer_abi: tuple[int, int, int]
+    algorithm: int
+    solver: int
+    deflation: int
+    training_samples: int
+    n_features: int
+    n_targets: int
+    n_components: int
+    capabilities: int
+
+
+def inspect_n4mm(payload: bytes) -> SerializedModelInfo:
+    """Validate and inspect N4MM bytes without importing model state."""
+
+    if not payload:
+        raise Pls4allError(int(Status.ERR_CORRUPT_BUFFER))
+    buffer = (ctypes.c_uint8 * len(payload)).from_buffer_copy(payload)
+    raw = SerializedModelInfoV1()
+    _check(
+        lib.n4m_serialization_inspect_model_v1(
+            buffer, ctypes.c_size_t(len(payload)), ctypes.byref(raw)
+        )
+    )
+    return SerializedModelInfo(
+        schema_version=int(raw.schema_version),
+        format_version=int(raw.format_version),
+        writer_abi=(
+            int(raw.writer_abi_major),
+            int(raw.writer_abi_minor),
+            int(raw.writer_abi_patch),
+        ),
+        algorithm=int(raw.algorithm),
+        solver=int(raw.solver),
+        deflation=int(raw.deflation),
+        training_samples=int(raw.training_samples),
+        n_features=int(raw.n_features),
+        n_targets=int(raw.n_targets),
+        n_components=int(raw.n_components),
+        capabilities=int(raw.capabilities),
+    )
 
 
 class _Array:
@@ -313,6 +367,11 @@ class Model:
 __all__ = [
     "Model",
     "ModelArrayKind",
+    "SERIALIZED_MODEL_CAPABILITY_AFFINE",
+    "SERIALIZED_MODEL_CAPABILITY_PREDICT",
+    "SERIALIZED_MODEL_CAPABILITY_TRANSFORM",
+    "SerializedModelInfo",
     "_as_float64_contiguous",
     "_matrix_view",
+    "inspect_n4mm",
 ]

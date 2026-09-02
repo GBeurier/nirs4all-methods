@@ -94,6 +94,11 @@ void write_u64_le(std::vector<unsigned char>& bytes, std::size_t offset,
     }
 }
 
+bool serialized_info_is_zero(const n4m_serialized_model_info_v1_t& info) {
+    const n4m_serialized_model_info_v1_t zero{};
+    return std::memcmp(&info, &zero, sizeof(info)) == 0;
+}
+
 // --- NULL-pointer contracts on the fit/predict/array surface -----------------
 
 void test_null_pointer_contracts() {
@@ -389,6 +394,33 @@ void test_model_serialization_contract() {
     N4M_TEST_REQUIRE(writer_minor == n4m_get_abi_version_minor());
     N4M_TEST_REQUIRE(writer_patch == n4m_get_abi_version_patch());
 
+    n4m_serialized_model_info_v1_t info{};
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         payload.data(), payload.size(), &info) == N4M_OK);
+    N4M_TEST_REQUIRE(info.schema_version == N4M_SERIALIZED_MODEL_INFO_SCHEMA_V1);
+    N4M_TEST_REQUIRE(info.format_version == N4M_SERIALIZATION_FORMAT_VERSION);
+    N4M_TEST_REQUIRE(info.writer_abi_major == n4m_get_abi_version_major());
+    N4M_TEST_REQUIRE(info.writer_abi_minor == n4m_get_abi_version_minor());
+    N4M_TEST_REQUIRE(info.writer_abi_patch == n4m_get_abi_version_patch());
+    N4M_TEST_REQUIRE(info.algorithm == N4M_ALGO_PLS_REGRESSION);
+    N4M_TEST_REQUIRE(info.solver == N4M_SOLVER_NIPALS);
+    N4M_TEST_REQUIRE(info.deflation == N4M_DEFLATION_REGRESSION);
+    N4M_TEST_REQUIRE(info.training_samples == 5);
+    N4M_TEST_REQUIRE(info.n_features == 3);
+    N4M_TEST_REQUIRE(info.n_targets == 1);
+    N4M_TEST_REQUIRE(info.n_components == 2);
+    N4M_TEST_REQUIRE(info.reserved0 == 0U);
+    N4M_TEST_REQUIRE(info.capabilities ==
+                     (N4M_SERIALIZED_MODEL_CAPABILITY_PREDICT |
+                      N4M_SERIALIZED_MODEL_CAPABILITY_TRANSFORM));
+
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         nullptr, payload.size(), &info) == N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(serialized_info_is_zero(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         payload.data(), payload.size(), nullptr) == N4M_ERR_NULL_POINTER);
+
     // Magic corruption is rejected before any model allocation.
     std::vector<unsigned char> corrupt_magic = payload;
     corrupt_magic[0] = static_cast<unsigned char>(corrupt_magic[0] ^ 0xffU);
@@ -397,6 +429,25 @@ void test_model_serialization_contract() {
                          f.ctx, corrupt_magic.data(), corrupt_magic.size(),
                          &imported) == N4M_ERR_CORRUPT_BUFFER);
     N4M_TEST_REQUIRE(imported == nullptr);
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         corrupt_magic.data(), corrupt_magic.size(), &info) ==
+                     N4M_ERR_CORRUPT_BUFFER);
+    N4M_TEST_REQUIRE(serialized_info_is_zero(info));
+
+    std::vector<unsigned char> flipped = payload;
+    flipped[80] = static_cast<unsigned char>(flipped[80] ^ 0x01U);
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         flipped.data(), flipped.size(), &info) ==
+                     N4M_ERR_CORRUPT_BUFFER);
+    N4M_TEST_REQUIRE(serialized_info_is_zero(info));
+
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         payload.data(), payload.size() - 1U, &info) ==
+                     N4M_ERR_CORRUPT_BUFFER);
+    N4M_TEST_REQUIRE(serialized_info_is_zero(info));
 
     // A future wire-format version is rejected independently of its checksum.
     std::vector<unsigned char> future_format = payload;
@@ -405,6 +456,61 @@ void test_model_serialization_contract() {
                          f.ctx, future_format.data(), future_format.size(),
                          &imported) == N4M_ERR_VERSION_INCOMPATIBLE);
     N4M_TEST_REQUIRE(imported == nullptr);
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         future_format.data(), future_format.size(), &info) ==
+                     N4M_ERR_VERSION_INCOMPATIBLE);
+    N4M_TEST_REQUIRE(serialized_info_is_zero(info));
+
+    // An unknown, checksummed recipe is not allowed to claim capabilities.
+    std::vector<unsigned char> unknown_algorithm = payload;
+    write_u32_le(unknown_algorithm, 20U, 0xffffffffU);
+    const std::size_t unknown_checksum_offset =
+        unknown_algorithm.size() - sizeof(std::uint64_t);
+    write_u64_le(unknown_algorithm, unknown_checksum_offset,
+                 fnv1a64_prefix(unknown_algorithm, unknown_checksum_offset));
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         unknown_algorithm.data(), unknown_algorithm.size(), &info) ==
+                     N4M_ERR_UNSUPPORTED);
+    N4M_TEST_REQUIRE(serialized_info_is_zero(info));
+
+    std::vector<unsigned char> unknown_solver = payload;
+    write_u32_le(unknown_solver, 24U, 0xffffffffU);
+    const std::size_t unknown_solver_checksum_offset =
+        unknown_solver.size() - sizeof(std::uint64_t);
+    write_u64_le(unknown_solver, unknown_solver_checksum_offset,
+                 fnv1a64_prefix(unknown_solver, unknown_solver_checksum_offset));
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         unknown_solver.data(), unknown_solver.size(), &info) ==
+                     N4M_ERR_UNSUPPORTED);
+    N4M_TEST_REQUIRE(serialized_info_is_zero(info));
+
+    std::vector<unsigned char> unknown_deflation = payload;
+    write_u32_le(unknown_deflation, 28U, 0xffffffffU);
+    const std::size_t unknown_deflation_checksum_offset =
+        unknown_deflation.size() - sizeof(std::uint64_t);
+    write_u64_le(unknown_deflation, unknown_deflation_checksum_offset,
+                 fnv1a64_prefix(unknown_deflation, unknown_deflation_checksum_offset));
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         unknown_deflation.data(), unknown_deflation.size(), &info) ==
+                     N4M_ERR_UNSUPPORTED);
+    N4M_TEST_REQUIRE(serialized_info_is_zero(info));
+
+    // A valid checksum cannot hide an inconsistent length-delimited section.
+    std::vector<unsigned char> invalid_shape = payload;
+    write_u64_le(invalid_shape, 96U, 4U);  // x_mean must contain n_features (=3).
+    const std::size_t invalid_shape_checksum_offset =
+        invalid_shape.size() - sizeof(std::uint64_t);
+    write_u64_le(invalid_shape, invalid_shape_checksum_offset,
+                 fnv1a64_prefix(invalid_shape, invalid_shape_checksum_offset));
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         invalid_shape.data(), invalid_shape.size(), &info) ==
+                     N4M_ERR_CORRUPT_BUFFER);
+    N4M_TEST_REQUIRE(serialized_info_is_zero(info));
 
     // In format 1 the writer ABI triple is provenance, not a strict load gate.
     // Mutating it requires a fresh FNV trailer so payload integrity still holds.
@@ -473,6 +579,20 @@ void test_imported_linear_predictor_contract() {
     std::size_t written = 0;
     N4M_TEST_REQUIRE(n4m_model_export_to_buffer(model, payload.data(), payload.size(), &written) == N4M_OK);
     N4M_TEST_REQUIRE(written == bytes);
+    n4m_serialized_model_info_v1_t info{};
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                         payload.data(), payload.size(), &info) == N4M_OK);
+    N4M_TEST_REQUIRE(info.schema_version == N4M_SERIALIZED_MODEL_INFO_SCHEMA_V1);
+    N4M_TEST_REQUIRE(info.algorithm == N4M_ALGO_IMPORTED_LINEAR_PREDICTOR);
+    N4M_TEST_REQUIRE(info.solver == N4M_SOLVER_NIPALS);
+    N4M_TEST_REQUIRE(info.deflation == N4M_DEFLATION_REGRESSION);
+    N4M_TEST_REQUIRE(info.training_samples == 17);
+    N4M_TEST_REQUIRE(info.n_features == 2);
+    N4M_TEST_REQUIRE(info.n_targets == 2);
+    N4M_TEST_REQUIRE(info.n_components == 0);
+    N4M_TEST_REQUIRE(info.capabilities ==
+                     (N4M_SERIALIZED_MODEL_CAPABILITY_PREDICT |
+                      N4M_SERIALIZED_MODEL_CAPABILITY_AFFINE));
     n4m_model_t* restored = nullptr;
     N4M_TEST_REQUIRE(n4m_model_import_from_buffer(ctx, payload.data(), payload.size(), &restored) == N4M_OK);
     std::fill(output.begin(), output.end(), 0.0);

@@ -27,6 +27,14 @@ export {
 } from "./preprocessing.js";
 export { MethodResult } from "./methodResult.js";
 export {
+    inspectN4mm,
+    SERIALIZED_MODEL_INFO_SCHEMA_V1,
+    SERIALIZED_MODEL_CAPABILITY_PREDICT,
+    SERIALIZED_MODEL_CAPABILITY_TRANSFORM,
+    SERIALIZED_MODEL_CAPABILITY_AFFINE,
+    type SerializedModelInfo,
+} from "./serialization.js";
+export {
     Status,
     Dtype,
     Algorithm,

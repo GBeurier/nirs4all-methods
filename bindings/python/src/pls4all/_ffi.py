@@ -339,6 +339,30 @@ class LinearPredictorSpec(ctypes.Structure):
     ]
 
 
+class SerializedModelInfoV1(ctypes.Structure):
+    """ABI mirror of ``n4m_serialized_model_info_v1_t``."""
+
+    _fields_ = [
+        ("schema_version", ctypes.c_uint32),
+        ("format_version", ctypes.c_uint32),
+        ("writer_abi_major", ctypes.c_uint32),
+        ("writer_abi_minor", ctypes.c_uint32),
+        ("writer_abi_patch", ctypes.c_uint32),
+        ("algorithm", ctypes.c_int),
+        ("solver", ctypes.c_int),
+        ("deflation", ctypes.c_int),
+        ("training_samples", ctypes.c_int64),
+        ("n_features", ctypes.c_int32),
+        ("n_targets", ctypes.c_int32),
+        ("n_components", ctypes.c_int32),
+        ("reserved0", ctypes.c_uint32),
+        ("capabilities", ctypes.c_uint64),
+    ]
+
+
+assert ctypes.sizeof(SerializedModelInfoV1) == 64
+
+
 lib.n4m_model_import_linear_predictor.restype = ctypes.c_int
 lib.n4m_model_import_linear_predictor.argtypes = [
     ctypes.c_void_p,
@@ -405,6 +429,12 @@ lib.n4m_serialization_inspect.argtypes = [
     ctypes.c_void_p, ctypes.c_size_t,
     ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
     ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+]
+lib.n4m_serialization_inspect_model_v1.restype = ctypes.c_int
+lib.n4m_serialization_inspect_model_v1.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.POINTER(SerializedModelInfoV1),
 ]
 
 # ---- n4m_array_* ----

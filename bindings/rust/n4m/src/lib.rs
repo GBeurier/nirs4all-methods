@@ -18,7 +18,7 @@ use std::{
 compile_error!("n4m requires exactly one runtime feature: `linked` or `dynamic`");
 
 const ABI_MAJOR: u32 = 2;
-const ABI_MINOR: u32 = 3;
+const ABI_MINOR: u32 = 4;
 const OK: i32 = 0;
 const NOT_FITTED: i32 = 6;
 const DTYPE_I64: i32 = 4;
@@ -35,6 +35,10 @@ pub const MAX_ASK_BATCH: i32 = 1_048_576;
 const N4MM_MAGIC: &[u8; 4] = b"N4MM";
 const N4MM_HEADER_BYTES: usize = 20;
 const N4MM_FORMAT_VERSION: u32 = 1;
+pub const SERIALIZED_MODEL_INFO_SCHEMA_V1: u32 = 1;
+pub const SERIALIZED_MODEL_CAPABILITY_PREDICT: u64 = 1 << 0;
+pub const SERIALIZED_MODEL_CAPABILITY_TRANSFORM: u64 = 1 << 1;
+pub const SERIALIZED_MODEL_CAPABILITY_AFFINE: u64 = 1 << 2;
 const N4MOPT_MAGIC: &[u8; 8] = b"N4MOPT\r\n";
 const N4MOPT_HEADER_BYTES: usize = 32;
 const N4MOPT_MIN_BYTES: usize = N4MOPT_HEADER_BYTES + 8;
@@ -97,6 +101,24 @@ struct LinearPredictorSpecRaw {
     intercept: *const f64,
 }
 #[repr(C)]
+#[derive(Clone, Copy, Default)]
+struct SerializedModelInfoV1Raw {
+    schema_version: u32,
+    format_version: u32,
+    writer_abi_major: u32,
+    writer_abi_minor: u32,
+    writer_abi_patch: u32,
+    algorithm: i32,
+    solver: i32,
+    deflation: i32,
+    training_samples: i64,
+    n_features: i32,
+    n_targets: i32,
+    n_components: i32,
+    reserved0: u32,
+    capabilities: u64,
+}
+#[repr(C)]
 struct OptimizerOptionsRaw {
     struct_size: u64,
     sampler: i32,
@@ -115,6 +137,9 @@ struct OptimizerOptionsRaw {
 const _: () = assert!(mem::size_of::<MatrixView>() == 48);
 const _: () = assert!(mem::align_of::<MatrixView>() == 8);
 const _: () = assert!(mem::size_of::<LinearPredictorSpecRaw>() == 32);
+const _: () = assert!(mem::size_of::<SerializedModelInfoV1Raw>() == 64);
+const _: () = assert!(mem::offset_of!(SerializedModelInfoV1Raw, training_samples) == 32);
+const _: () = assert!(mem::offset_of!(SerializedModelInfoV1Raw, capabilities) == 56);
 const _: () = assert!(mem::size_of::<OptimizerOptionsRaw>() == 120);
 const _: () = assert!(mem::offset_of!(OptimizerOptionsRaw, seed) == 40);
 
@@ -200,6 +225,11 @@ extern "C" {
         out_major: *mut u32,
         out_minor: *mut u32,
         out_patch: *mut u32,
+    ) -> i32;
+    fn n4m_serialization_inspect_model_v1(
+        buffer: *const c_void,
+        len: usize,
+        out_info: *mut SerializedModelInfoV1Raw,
     ) -> i32;
     fn n4m_search_space_create(out: *mut *mut SearchSpaceRaw) -> i32;
     fn n4m_search_space_destroy(space: *mut SearchSpaceRaw);
@@ -1918,35 +1948,91 @@ fn copy_f64_array(array: *const ArrayRaw) -> Result<Matrix, Error> {
     Ok(Matrix { data, rows, cols })
 }
 
-fn preflight_n4mm(bytes: &[u8]) -> Result<(), Error> {
+/// Metadata derived by libn4m from a fully validated N4MM format-1 payload.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SerializedModelInfo {
+    pub schema_version: u32,
+    pub format_version: u32,
+    pub writer_abi: (u32, u32, u32),
+    pub algorithm: i32,
+    pub solver: i32,
+    pub deflation: i32,
+    pub training_samples: i64,
+    pub n_features: i32,
+    pub n_targets: i32,
+    pub n_components: i32,
+    pub capabilities: u64,
+}
+
+/// Validate and inspect a complete fitted-model payload without importing it.
+///
+/// Capability bits come exclusively from `n4m_serialization_inspect_model_v1`;
+/// this binding does not infer or augment them from host-side metadata.
+pub fn inspect_n4mm(bytes: &[u8]) -> Result<SerializedModelInfo, Error> {
     if bytes.len() < N4MM_HEADER_BYTES || bytes.len() > MAX_N4MM_BYTES {
         return Err(corrupt("N4MM length is invalid"));
     }
     if !bytes.starts_with(N4MM_MAGIC) {
         return Err(corrupt("N4MM magic is invalid"));
     }
-    let (mut v, mut a, mut b, mut c) = (0, 0, 0, 0);
+    let (mut format, mut abi_major, mut abi_minor, mut abi_patch) = (0, 0, 0, 0);
     check(
         unsafe {
             n4m_serialization_inspect(
                 bytes.as_ptr().cast(),
                 bytes.len(),
-                &mut v,
-                &mut a,
-                &mut b,
-                &mut c,
+                &mut format,
+                &mut abi_major,
+                &mut abi_minor,
+                &mut abi_patch,
             )
         },
         None,
     )?;
-    if v != N4MM_FORMAT_VERSION {
+    if format != N4MM_FORMAT_VERSION {
         return Err(Error {
             kind: ErrorKind::VersionIncompatible,
             status: VERSION_INCOMPATIBLE,
-            message: format!("unsupported N4MM format {v}"),
+            message: format!("unsupported N4MM format {format}"),
         });
     }
-    Ok(())
+    let mut raw = SerializedModelInfoV1Raw::default();
+    check(
+        unsafe { n4m_serialization_inspect_model_v1(bytes.as_ptr().cast(), bytes.len(), &mut raw) },
+        None,
+    )?;
+    if raw.schema_version != SERIALIZED_MODEL_INFO_SCHEMA_V1
+        || raw.format_version != N4MM_FORMAT_VERSION
+        || (
+            raw.writer_abi_major,
+            raw.writer_abi_minor,
+            raw.writer_abi_patch,
+        ) != (abi_major, abi_minor, abi_patch)
+        || raw.reserved0 != 0
+    {
+        return Err(corrupt("native N4MM inspection result is invalid"));
+    }
+    Ok(SerializedModelInfo {
+        schema_version: raw.schema_version,
+        format_version: raw.format_version,
+        writer_abi: (
+            raw.writer_abi_major,
+            raw.writer_abi_minor,
+            raw.writer_abi_patch,
+        ),
+        algorithm: raw.algorithm,
+        solver: raw.solver,
+        deflation: raw.deflation,
+        training_samples: raw.training_samples,
+        n_features: raw.n_features,
+        n_targets: raw.n_targets,
+        n_components: raw.n_components,
+        capabilities: raw.capabilities,
+    })
+}
+
+fn preflight_n4mm(bytes: &[u8]) -> Result<(), Error> {
+    inspect_n4mm(bytes).map(|_| ())
 }
 fn u32le(bytes: &[u8]) -> u32 {
     u32::from_le_bytes(bytes.try_into().expect("checked"))
@@ -2427,6 +2513,28 @@ mod tests {
         model.predict_into(&ctx, x, &mut caller).unwrap();
         assert_eq!(core.data, caller);
         let bytes = model.export_n4mm().unwrap();
+        let info = inspect_n4mm(&bytes).unwrap();
+        assert_eq!(info.schema_version, SERIALIZED_MODEL_INFO_SCHEMA_V1);
+        assert_eq!(info.format_version, N4MM_FORMAT_VERSION);
+        assert_eq!(info.writer_abi, (ABI_MAJOR, ABI_MINOR, 0));
+        assert_eq!(info.algorithm, 0);
+        assert_eq!(info.solver, 0);
+        assert_eq!(info.deflation, 0);
+        assert_eq!(info.training_samples, 6);
+        assert_eq!(
+            (info.n_features, info.n_targets, info.n_components),
+            (2, 1, 1)
+        );
+        assert_eq!(
+            info.capabilities,
+            SERIALIZED_MODEL_CAPABILITY_PREDICT | SERIALIZED_MODEL_CAPABILITY_TRANSFORM
+        );
+        let mut flipped = bytes.clone();
+        flipped[80] ^= 1;
+        assert_eq!(
+            inspect_n4mm(&flipped).unwrap_err().kind,
+            ErrorKind::CorruptBuffer
+        );
         let restored = Model::import_n4mm(&ctx, &bytes).unwrap();
         assert_eq!(restored.predict(&ctx, x).unwrap(), core);
     }
@@ -2443,6 +2551,17 @@ mod tests {
         let predictions = model.predict(&ctx, x).unwrap();
         assert_eq!(predictions.data, vec![-0.5, 10.5, -5.5, 6.0]);
         let n4mm = model.export_n4mm().unwrap();
+        let info = inspect_n4mm(&n4mm).unwrap();
+        assert_eq!(info.algorithm, 11);
+        assert_eq!(info.training_samples, 17);
+        assert_eq!(
+            (info.n_features, info.n_targets, info.n_components),
+            (2, 2, 0)
+        );
+        assert_eq!(
+            info.capabilities,
+            SERIALIZED_MODEL_CAPABILITY_PREDICT | SERIALIZED_MODEL_CAPABILITY_AFFINE
+        );
         let restored = Model::import_n4mm(&ctx, &n4mm).unwrap();
         assert_eq!(restored.predict(&ctx, x).unwrap(), predictions);
     }

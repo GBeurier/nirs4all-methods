@@ -25,6 +25,7 @@ from ctypes import (
 from ._types import (
     MatrixView,
     LinearPredictorSpec,
+    SerializedModelInfoV1,
     FilterStats,
     OptimizerOptions,
     SplitResult,
@@ -2359,6 +2360,11 @@ SYMBOLS = (
             POINTER(c_uint32),
             POINTER(c_uint32),
         ),
+        c_int,
+    ),
+    (
+        "n4m_serialization_inspect_model_v1",
+        (c_void_p, c_size_t, POINTER(SerializedModelInfoV1)),
         c_int,
     ),
     ("n4m_split_result_destroy", (POINTER(SplitResult),), None),

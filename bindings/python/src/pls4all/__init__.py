@@ -24,7 +24,15 @@ from ._aom import (
     aom_global_select,
     aom_per_component_select,
 )
-from ._model import Model, ModelArrayKind
+from ._model import (
+    SERIALIZED_MODEL_CAPABILITY_AFFINE,
+    SERIALIZED_MODEL_CAPABILITY_PREDICT,
+    SERIALIZED_MODEL_CAPABILITY_TRANSFORM,
+    Model,
+    ModelArrayKind,
+    SerializedModelInfo,
+    inspect_n4mm,
+)
 from .migration import export_linear_predictor_n4mm
 from ._methods import (
     MethodResult,
@@ -136,6 +144,11 @@ __all__ = [
     "aom_per_component_select",
     "Model",
     "ModelArrayKind",
+    "SerializedModelInfo",
+    "SERIALIZED_MODEL_CAPABILITY_PREDICT",
+    "SERIALIZED_MODEL_CAPABILITY_TRANSFORM",
+    "SERIALIZED_MODEL_CAPABILITY_AFFINE",
+    "inspect_n4mm",
     "MethodResult",
     "sparse_simpls_fit",
     "di_pls_fit",

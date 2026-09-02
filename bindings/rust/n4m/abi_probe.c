@@ -92,6 +92,12 @@ _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_import_from_buffer,
                "n4m_model_import_from_buffer signature drifted");
 _Static_assert(sizeof(n4m_linear_predictor_spec_t) == 32,
                "Rust LinearPredictorSpecRaw layout is stale relative to the C header");
+_Static_assert(sizeof(n4m_serialized_model_info_v1_t) == 64,
+               "Rust SerializedModelInfoV1Raw layout is stale relative to the C header");
+_Static_assert(offsetof(n4m_serialized_model_info_v1_t, training_samples) == 32,
+               "Rust SerializedModelInfoV1Raw.training_samples offset is stale");
+_Static_assert(offsetof(n4m_serialized_model_info_v1_t, capabilities) == 56,
+               "Rust SerializedModelInfoV1Raw.capabilities offset is stale");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_import_linear_predictor,
                                      n4m_status_t (*)(n4m_context_t*,
                                                       const n4m_linear_predictor_spec_t*,
@@ -100,6 +106,10 @@ _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_import_linear_predictor,
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_serialization_inspect,
                                      n4m_status_t (*)(const void*, size_t, uint32_t*, uint32_t*, uint32_t*, uint32_t*)),
                "n4m_serialization_inspect signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_serialization_inspect_model_v1,
+                                     n4m_status_t (*)(const void*, size_t,
+                                                      n4m_serialized_model_info_v1_t*)),
+               "n4m_serialization_inspect_model_v1 signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_optimizer_save,
                                      n4m_status_t (*)(const n4m_optimizer_t*, n4m_array_t**)),
                "n4m_optimizer_save signature drifted");

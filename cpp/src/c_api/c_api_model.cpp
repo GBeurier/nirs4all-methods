@@ -325,6 +325,208 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     return value == 0U || value == 1U;
 }
 
+struct SerializedModelMetadata {
+    std::uint32_t format_version{0};
+    std::uint32_t writer_abi_major{0};
+    std::uint32_t writer_abi_minor{0};
+    std::uint32_t writer_abi_patch{0};
+    std::uint32_t algorithm{0};
+    std::uint32_t solver{0};
+    std::uint32_t deflation{0};
+    std::uint64_t training_samples{0};
+    std::uint64_t n_features{0};
+    std::uint64_t n_targets{0};
+    std::uint64_t n_components{0};
+    std::uint64_t capabilities{0};
+};
+
+[[nodiscard]] n4m_status_t validate_serialized_recipe(
+    std::uint32_t algorithm,
+    std::uint32_t solver,
+    std::uint32_t deflation,
+    std::uint64_t& capabilities) noexcept {
+    capabilities = 0;
+    const bool imported_linear_predictor =
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_IMPORTED_LINEAR_PREDICTOR);
+    const bool regression_chassis_algorithm =
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_REGRESSION) ||
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_DA);
+    const bool supported_pls_regression =
+        regression_chassis_algorithm &&
+        (solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_ORTHOGONAL_SCORES) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_SIMPLS) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_KERNEL_ALGORITHM) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_WIDE_KERNEL) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_POWER) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_RANDOMIZED_SVD));
+    const bool supported_pls_canonical =
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_CANONICAL) &&
+        (solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS) ||
+         solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD));
+    const bool supported_pls_svd =
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_SVD) &&
+        solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD);
+    const bool opls_chassis_algorithm =
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_OPLS) ||
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_OPLS_DA);
+    const bool supported_opls =
+        opls_chassis_algorithm && solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS);
+    const bool supported_pcr =
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PCR) &&
+        solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD);
+    const bool supported_algorithm =
+        supported_pls_regression || supported_pls_canonical || supported_pls_svd ||
+        supported_opls || supported_pcr || imported_linear_predictor;
+    if (!supported_algorithm) {
+        return N4M_ERR_UNSUPPORTED;
+    }
+    const bool supported_deflation =
+        ((supported_pls_regression || supported_pcr) &&
+         deflation == static_cast<std::uint32_t>(N4M_DEFLATION_REGRESSION)) ||
+        ((supported_pls_canonical || supported_pls_svd) &&
+         deflation == static_cast<std::uint32_t>(N4M_DEFLATION_CANONICAL)) ||
+        (supported_opls &&
+         deflation == static_cast<std::uint32_t>(N4M_DEFLATION_ORTHOGONAL));
+    const bool supported_imported_recipe =
+        imported_linear_predictor &&
+        solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS) &&
+        deflation == static_cast<std::uint32_t>(N4M_DEFLATION_REGRESSION);
+    if (!supported_deflation && !supported_imported_recipe) {
+        return N4M_ERR_UNSUPPORTED;
+    }
+
+    capabilities = N4M_SERIALIZED_MODEL_CAPABILITY_PREDICT;
+    if (imported_linear_predictor) {
+        capabilities |= N4M_SERIALIZED_MODEL_CAPABILITY_AFFINE;
+    } else {
+        capabilities |= N4M_SERIALIZED_MODEL_CAPABILITY_TRANSFORM;
+    }
+    return N4M_OK;
+}
+
+[[nodiscard]] bool skip_vector(Reader& r, std::uint64_t expected) noexcept {
+    std::uint64_t count = 0;
+    if (!r.u64(count) || count != expected ||
+        count > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+        return false;
+    }
+    const std::size_t n = static_cast<std::size_t>(count);
+    if (n > (r.size - r.pos) / sizeof(double)) {
+        return false;
+    }
+    r.pos += n * sizeof(double);
+    return true;
+}
+
+[[nodiscard]] n4m_status_t inspect_serialized_model_v1(
+    const void* buffer,
+    std::size_t buffer_size,
+    SerializedModelMetadata& out) noexcept {
+    out = {};
+    std::uint32_t format = 0;
+    std::uint32_t abi_major = 0;
+    std::uint32_t abi_minor = 0;
+    std::uint32_t abi_patch = 0;
+    const n4m_status_t header_status = inspect_header(
+        buffer, buffer_size, format, abi_major, abi_minor, abi_patch);
+    if (header_status != N4M_OK) {
+        return header_status;
+    }
+    if (format != N4M_SERIALIZATION_FORMAT_VERSION) {
+        return N4M_ERR_VERSION_INCOMPATIBLE;
+    }
+    if (buffer_size < 28U) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+
+    const auto* data = static_cast<const unsigned char*>(buffer);
+    const std::size_t payload_size = buffer_size - sizeof(std::uint64_t);
+    const std::uint64_t stored_checksum = decode_u64_le(data + payload_size);
+    if (stored_checksum != fnv1a64(data, payload_size)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+
+    Reader r{data + 20U, payload_size - 20U};
+    std::uint32_t algorithm = 0;
+    std::uint32_t solver = 0;
+    std::uint32_t deflation = 0;
+    std::uint64_t n_samples = 0;
+    std::uint64_t n_features = 0;
+    std::uint64_t n_targets = 0;
+    std::uint64_t n_components = 0;
+    std::uint32_t center_x = 0;
+    std::uint32_t scale_x = 0;
+    std::uint32_t center_y = 0;
+    std::uint32_t scale_y = 0;
+    std::uint32_t store_scores = 0;
+    double tol = 0.0;
+    std::uint32_t max_iter = 0;
+    if (!r.u32(algorithm) || !r.u32(solver) || !r.u32(deflation) ||
+        !r.u64(n_samples) || !r.u64(n_features) || !r.u64(n_targets) ||
+        !r.u64(n_components) || !r.u32(center_x) || !r.u32(scale_x) ||
+        !r.u32(center_y) || !r.u32(scale_y) || !r.u32(store_scores) ||
+        !r.f64(tol) || !r.u32(max_iter)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+
+    std::uint64_t capabilities = 0;
+    const n4m_status_t recipe_status =
+        validate_serialized_recipe(algorithm, solver, deflation, capabilities);
+    if (recipe_status != N4M_OK) {
+        return recipe_status;
+    }
+    const bool imported_linear_predictor =
+        algorithm == static_cast<std::uint32_t>(N4M_ALGO_IMPORTED_LINEAR_PREDICTOR);
+    if ((!imported_linear_predictor && n_samples == 0U) || n_features == 0U ||
+        n_targets == 0U || (!imported_linear_predictor && n_components == 0U) ||
+        (imported_linear_predictor && n_components != 0U) ||
+        n_samples > static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) ||
+        n_features > static_cast<std::uint64_t>(std::numeric_limits<std::int32_t>::max()) ||
+        n_targets > static_cast<std::uint64_t>(std::numeric_limits<std::int32_t>::max()) ||
+        n_components > static_cast<std::uint64_t>(std::numeric_limits<std::int32_t>::max()) ||
+        !valid_flag(center_x) || !valid_flag(scale_x) || !valid_flag(center_y) ||
+        !valid_flag(scale_y) || !valid_flag(store_scores) || !(tol > 0.0) ||
+        max_iter == 0U) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+
+    std::uint64_t p_times_q = 0;
+    std::uint64_t p_times_a = 0;
+    std::uint64_t q_times_a = 0;
+    std::uint64_t n_times_a = 0;
+    if (!checked_product(n_features, n_targets, p_times_q) ||
+        !checked_product(n_features, n_components, p_times_a) ||
+        !checked_product(n_targets, n_components, q_times_a) ||
+        !checked_product(n_samples, n_components, n_times_a)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    const std::uint64_t expected_scores = store_scores == 0U ? 0U : n_times_a;
+    if (!skip_vector(r, n_features) || !skip_vector(r, n_features) ||
+        !skip_vector(r, n_targets) || !skip_vector(r, n_targets) ||
+        !skip_vector(r, p_times_q) || !skip_vector(r, p_times_a) ||
+        !skip_vector(r, p_times_a) || !skip_vector(r, q_times_a) ||
+        !skip_vector(r, p_times_a) || !skip_vector(r, expected_scores) ||
+        !skip_vector(r, expected_scores) || r.pos != r.size) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+
+    out.format_version = format;
+    out.writer_abi_major = abi_major;
+    out.writer_abi_minor = abi_minor;
+    out.writer_abi_patch = abi_patch;
+    out.algorithm = algorithm;
+    out.solver = solver;
+    out.deflation = deflation;
+    out.training_samples = n_samples;
+    out.n_features = n_features;
+    out.n_targets = n_targets;
+    out.n_components = n_components;
+    out.capabilities = capabilities;
+    return N4M_OK;
+}
+
 [[nodiscard]] bool import_model_from_buffer(const void* buffer,
                                             std::size_t buffer_size,
                                             std::unique_ptr<n4m_model_s>& out) {
@@ -374,47 +576,9 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     }
     const bool imported_linear_predictor =
         algorithm == static_cast<std::uint32_t>(N4M_ALGO_IMPORTED_LINEAR_PREDICTOR);
-    const bool regression_chassis_algorithm =
-        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_REGRESSION) ||
-        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_DA);
-    const bool supported_pls_regression =
-        regression_chassis_algorithm &&
-        (solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS) ||
-         solver == static_cast<std::uint32_t>(N4M_SOLVER_ORTHOGONAL_SCORES) ||
-         solver == static_cast<std::uint32_t>(N4M_SOLVER_SIMPLS) ||
-         solver == static_cast<std::uint32_t>(N4M_SOLVER_KERNEL_ALGORITHM) ||
-         solver == static_cast<std::uint32_t>(N4M_SOLVER_WIDE_KERNEL) ||
-         solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD) ||
-         solver == static_cast<std::uint32_t>(N4M_SOLVER_POWER) ||
-         solver == static_cast<std::uint32_t>(N4M_SOLVER_RANDOMIZED_SVD));
-    const bool supported_pls_canonical =
-        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_CANONICAL) &&
-        (solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS) ||
-         solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD));
-    const bool supported_pls_svd =
-        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PLS_SVD) &&
-        solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD);
-    const bool opls_chassis_algorithm =
-        algorithm == static_cast<std::uint32_t>(N4M_ALGO_OPLS) ||
-        algorithm == static_cast<std::uint32_t>(N4M_ALGO_OPLS_DA);
-    const bool supported_opls =
-        opls_chassis_algorithm && solver == static_cast<std::uint32_t>(N4M_SOLVER_NIPALS);
-    const bool supported_pcr =
-        algorithm == static_cast<std::uint32_t>(N4M_ALGO_PCR) &&
-        solver == static_cast<std::uint32_t>(N4M_SOLVER_SVD);
-    const bool supported_deflation =
-        ((supported_pls_regression || supported_pcr) &&
-         deflation == static_cast<std::uint32_t>(N4M_DEFLATION_REGRESSION)) ||
-        ((supported_pls_canonical || supported_pls_svd) &&
-         deflation == static_cast<std::uint32_t>(N4M_DEFLATION_CANONICAL)) ||
-        (supported_opls &&
-         deflation == static_cast<std::uint32_t>(N4M_DEFLATION_ORTHOGONAL));
-    if ((!supported_pls_regression && !supported_pls_canonical && !supported_pls_svd &&
-         !supported_opls && !supported_pcr && !imported_linear_predictor) ||
-        (!imported_linear_predictor && !supported_deflation) ||
-        (imported_linear_predictor &&
-         (solver != static_cast<std::uint32_t>(N4M_SOLVER_NIPALS) ||
-          deflation != static_cast<std::uint32_t>(N4M_DEFLATION_REGRESSION)))) {
+    std::uint64_t ignored_capabilities = 0;
+    if (validate_serialized_recipe(
+            algorithm, solver, deflation, ignored_capabilities) != N4M_OK) {
         return false;
     }
     if ((!imported_linear_predictor && n_samples == 0U) ||
@@ -922,6 +1086,39 @@ N4M_API n4m_status_t n4m_serialization_inspect(
     *out_writer_abi_major = abi_major;
     *out_writer_abi_minor = abi_minor;
     *out_writer_abi_patch = abi_patch;
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_serialization_inspect_model_v1(
+    const void* buffer, size_t buffer_size,
+    n4m_serialized_model_info_v1_t* out_info) {
+    if (out_info != nullptr) {
+        std::memset(out_info, 0, sizeof(*out_info));
+    }
+    if (buffer == nullptr || out_info == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+
+    SerializedModelMetadata metadata{};
+    const n4m_status_t status =
+        inspect_serialized_model_v1(buffer, buffer_size, metadata);
+    if (status != N4M_OK) {
+        return status;
+    }
+
+    out_info->schema_version = N4M_SERIALIZED_MODEL_INFO_SCHEMA_V1;
+    out_info->format_version = metadata.format_version;
+    out_info->writer_abi_major = metadata.writer_abi_major;
+    out_info->writer_abi_minor = metadata.writer_abi_minor;
+    out_info->writer_abi_patch = metadata.writer_abi_patch;
+    out_info->algorithm = static_cast<n4m_algorithm_t>(metadata.algorithm);
+    out_info->solver = static_cast<n4m_solver_t>(metadata.solver);
+    out_info->deflation = static_cast<n4m_deflation_t>(metadata.deflation);
+    out_info->training_samples = static_cast<std::int64_t>(metadata.training_samples);
+    out_info->n_features = static_cast<std::int32_t>(metadata.n_features);
+    out_info->n_targets = static_cast<std::int32_t>(metadata.n_targets);
+    out_info->n_components = static_cast<std::int32_t>(metadata.n_components);
+    out_info->capabilities = metadata.capabilities;
     return N4M_OK;
 }
 
