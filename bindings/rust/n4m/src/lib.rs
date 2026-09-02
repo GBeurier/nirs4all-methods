@@ -34,11 +34,13 @@ const MAX_TRACE_ELEMENTS: usize = 16 * 1024 * 1024;
 pub const MAX_ASK_BATCH: i32 = 1_048_576;
 const N4MM_MAGIC: &[u8; 4] = b"N4MM";
 const N4MM_HEADER_BYTES: usize = 20;
-const N4MM_FORMAT_VERSION: u32 = 1;
+const N4MM_FORMAT_VERSION_V1: u32 = 1;
+const N4MM_FORMAT_VERSION_V2: u32 = 2;
 pub const SERIALIZED_MODEL_INFO_SCHEMA_V1: u32 = 1;
 pub const SERIALIZED_MODEL_CAPABILITY_PREDICT: u64 = 1 << 0;
 pub const SERIALIZED_MODEL_CAPABILITY_TRANSFORM: u64 = 1 << 1;
 pub const SERIALIZED_MODEL_CAPABILITY_AFFINE: u64 = 1 << 2;
+pub const SERIALIZED_MODEL_CAPABILITY_PIPELINE: u64 = 1 << 3;
 const N4MOPT_MAGIC: &[u8; 8] = b"N4MOPT\r\n";
 const N4MOPT_HEADER_BYTES: usize = 32;
 const N4MOPT_MIN_BYTES: usize = N4MOPT_HEADER_BYTES + 8;
@@ -50,6 +52,11 @@ struct ContextRaw {
 }
 #[repr(C)]
 struct ConfigRaw {
+    _private: [u8; 0],
+}
+#[cfg(test)]
+#[repr(C)]
+struct PipelineRaw {
     _private: [u8; 0],
 }
 #[repr(C)]
@@ -159,6 +166,19 @@ extern "C" {
     fn n4m_config_set_center_y(cfg: *mut ConfigRaw, enabled: i32) -> i32;
     fn n4m_config_set_scale_y(cfg: *mut ConfigRaw, enabled: i32) -> i32;
     fn n4m_config_set_store_scores(cfg: *mut ConfigRaw, enabled: i32) -> i32;
+    #[cfg(test)]
+    fn n4m_pipeline_create(out: *mut *mut PipelineRaw) -> i32;
+    #[cfg(test)]
+    fn n4m_pipeline_destroy(pipeline: *mut PipelineRaw);
+    #[cfg(test)]
+    fn n4m_pipeline_add_operator(
+        pipeline: *mut PipelineRaw,
+        kind: i32,
+        params: *const f64,
+        n_params: i32,
+    ) -> i32;
+    #[cfg(test)]
+    fn n4m_config_set_pipeline(cfg: *mut ConfigRaw, pipeline: *const PipelineRaw) -> i32;
     fn n4m_model_fit(
         ctx: *mut ContextRaw,
         cfg: *const ConfigRaw,
@@ -1948,7 +1968,7 @@ fn copy_f64_array(array: *const ArrayRaw) -> Result<Matrix, Error> {
     Ok(Matrix { data, rows, cols })
 }
 
-/// Metadata derived by libn4m from a fully validated N4MM format-1 payload.
+/// Metadata derived by libn4m from a fully validated N4MM v1 or v2 payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SerializedModelInfo {
     pub schema_version: u32,
@@ -1962,6 +1982,13 @@ pub struct SerializedModelInfo {
     pub n_targets: i32,
     pub n_components: i32,
     pub capabilities: u64,
+}
+
+impl SerializedModelInfo {
+    /// Whether prediction applies the serialized native preprocessing pipeline.
+    pub fn has_pipeline(&self) -> bool {
+        self.capabilities & SERIALIZED_MODEL_CAPABILITY_PIPELINE != 0
+    }
 }
 
 /// Validate and inspect a complete fitted-model payload without importing it.
@@ -1989,7 +2016,7 @@ pub fn inspect_n4mm(bytes: &[u8]) -> Result<SerializedModelInfo, Error> {
         },
         None,
     )?;
-    if format != N4MM_FORMAT_VERSION {
+    if format != N4MM_FORMAT_VERSION_V1 && format != N4MM_FORMAT_VERSION_V2 {
         return Err(Error {
             kind: ErrorKind::VersionIncompatible,
             status: VERSION_INCOMPATIBLE,
@@ -2002,7 +2029,7 @@ pub fn inspect_n4mm(bytes: &[u8]) -> Result<SerializedModelInfo, Error> {
         None,
     )?;
     if raw.schema_version != SERIALIZED_MODEL_INFO_SCHEMA_V1
-        || raw.format_version != N4MM_FORMAT_VERSION
+        || raw.format_version != format
         || (
             raw.writer_abi_major,
             raw.writer_abi_minor,
@@ -2515,7 +2542,8 @@ mod tests {
         let bytes = model.export_n4mm().unwrap();
         let info = inspect_n4mm(&bytes).unwrap();
         assert_eq!(info.schema_version, SERIALIZED_MODEL_INFO_SCHEMA_V1);
-        assert_eq!(info.format_version, N4MM_FORMAT_VERSION);
+        assert_eq!(info.format_version, N4MM_FORMAT_VERSION_V1);
+        assert!(!info.has_pipeline());
         assert_eq!(info.writer_abi, (ABI_MAJOR, ABI_MINOR, 0));
         assert_eq!(info.algorithm, 0);
         assert_eq!(info.solver, 0);
@@ -2537,6 +2565,76 @@ mod tests {
         );
         let restored = Model::import_n4mm(&ctx, &bytes).unwrap();
         assert_eq!(restored.predict(&ctx, x).unwrap(), core);
+    }
+    #[cfg(all(feature = "linked", not(feature = "dynamic")))]
+    #[test]
+    fn pipeline_v2_descriptor_import_and_prediction_round_trip() {
+        let ctx = Context::new().unwrap();
+        let mut cfg = Config::new().unwrap();
+        cfg.set_n_components(1).unwrap();
+
+        let mut pipeline = ptr::null_mut();
+        check(unsafe { n4m_pipeline_create(&mut pipeline) }, None).unwrap();
+        assert!(!pipeline.is_null());
+        check(
+            unsafe { n4m_pipeline_add_operator(pipeline, 4, ptr::null(), 0) },
+            None,
+        )
+        .unwrap();
+        let savgol = [5.0, 2.0];
+        check(
+            unsafe { n4m_pipeline_add_operator(pipeline, 8, savgol.as_ptr(), savgol.len() as i32) },
+            None,
+        )
+        .unwrap();
+        check(
+            unsafe { n4m_config_set_pipeline(cfg.ptr(), pipeline) },
+            None,
+        )
+        .unwrap();
+
+        let mut values = Vec::new();
+        for row in 1..=10 {
+            for col in 1..=9 {
+                let r = row as f64;
+                let c = col as f64;
+                values.push(
+                    0.11 * r * c + 0.07 * r * r / (c + 1.0) + 0.013 * c * c * c + 0.003 * r * c * c,
+                );
+            }
+        }
+        let targets = (1..=10)
+            .map(|row| {
+                let r = row as f64;
+                0.4 * r + 0.09 * r * r
+            })
+            .collect::<Vec<_>>();
+        let x = MatrixRef::row_major(&values, 10, 9).unwrap();
+        let y = MatrixRef::row_major(&targets, 10, 1).unwrap();
+        let model = Model::fit(&ctx, &cfg, x, y).unwrap();
+        unsafe { n4m_pipeline_destroy(pipeline) };
+
+        let expected = model.predict(&ctx, x).unwrap();
+        let bytes = model.export_n4mm().unwrap();
+        let info = inspect_n4mm(&bytes).unwrap();
+        assert_eq!(info.format_version, N4MM_FORMAT_VERSION_V2);
+        assert!(info.has_pipeline());
+        assert_eq!(
+            info.capabilities,
+            SERIALIZED_MODEL_CAPABILITY_PREDICT
+                | SERIALIZED_MODEL_CAPABILITY_TRANSFORM
+                | SERIALIZED_MODEL_CAPABILITY_PIPELINE
+        );
+        let restored = Model::import_n4mm(&ctx, &bytes).unwrap();
+        assert_eq!(restored.predict(&ctx, x).unwrap(), expected);
+
+        let mut tampered = bytes;
+        let tamper_index = tampered.len() - 16;
+        tampered[tamper_index] ^= 1;
+        assert_eq!(
+            inspect_n4mm(&tampered).unwrap_err().kind,
+            ErrorKind::CorruptBuffer
+        );
     }
     #[test]
     fn imported_linear_predictor_is_exact_predict_only_and_n4mm_round_trips() {

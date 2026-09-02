@@ -58,6 +58,38 @@ void set_error(n4m_context_t* ctx, const char* message) noexcept {
     return true;
 }
 
+constexpr std::size_t kPipelineV2Bytes =
+    5U * sizeof(std::uint32_t) + 4U * sizeof(double);
+
+[[nodiscard]] bool supported_model_format(std::uint32_t format) noexcept {
+    return format == N4M_SERIALIZATION_FORMAT_VERSION_V1 ||
+           format == N4M_SERIALIZATION_FORMAT_VERSION_V2;
+}
+
+[[nodiscard]] std::uint32_t serialized_format(
+    const ::n4m::core::Model& model) noexcept {
+    return model.has_snv_savgol_pipeline
+        ? N4M_SERIALIZATION_FORMAT_VERSION_V2
+        : N4M_SERIALIZATION_FORMAT_VERSION_V1;
+}
+
+[[nodiscard]] bool valid_savgol_smooth_config(
+    std::int32_t window,
+    std::int32_t poly_degree) noexcept {
+    return window >= 3 && window <= 501 && (window % 2) == 1 &&
+           poly_degree >= 0 && poly_degree < window;
+}
+
+[[nodiscard]] bool valid_pipeline_model_state(
+    const ::n4m::core::Model& model) noexcept {
+    return !model.has_snv_savgol_pipeline ||
+           (model.algorithm == N4M_ALGO_PLS_REGRESSION &&
+            model.pipeline.fitted() &&
+            valid_savgol_smooth_config(
+                model.pipeline_savgol_window,
+                model.pipeline_savgol_poly_degree));
+}
+
 [[nodiscard]] bool checked_product(std::uint64_t a,
                                    std::uint64_t b,
                                    std::uint64_t& out) noexcept {
@@ -88,6 +120,7 @@ void set_error(n4m_context_t* ctx, const char* message) noexcept {
 
 [[nodiscard]] bool serialized_size(const ::n4m::core::Model& model,
                                    std::size_t& out) noexcept {
+    if (!valid_pipeline_model_state(model)) return false;
     std::size_t total = 0;
     if (!add_checked(total, 4U)) return false;                         // magic
     if (!add_checked(total, 4U * sizeof(std::uint32_t))) return false;  // format + ABI triple
@@ -108,6 +141,8 @@ void set_error(n4m_context_t* ctx, const char* message) noexcept {
     if (!add_vector_size(total, model.rotations_r)) return false;
     if (!add_vector_size(total, model.scores_t)) return false;
     if (!add_vector_size(total, model.y_scores_u)) return false;
+    if (model.has_snv_savgol_pipeline &&
+        !add_checked(total, kPipelineV2Bytes)) return false;
     if (!add_checked(total, sizeof(std::uint64_t))) return false;       // checksum
     out = total;
     return true;
@@ -244,6 +279,68 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     return true;
 }
 
+struct PipelineV2 {
+    bool present{false};
+    std::int32_t window{0};
+    std::int32_t poly_degree{0};
+};
+
+void write_pipeline_v2(Writer& w, const ::n4m::core::Model& model) noexcept {
+    w.u32(2U);  // exact operator count
+    w.u32(static_cast<std::uint32_t>(N4M_OP_SNV));
+    w.u32(0U);  // SNV has no parameters
+    w.u32(static_cast<std::uint32_t>(N4M_OP_SAVGOL_SMOOTH));
+    w.u32(4U);  // canonical window, polynomial, derivative, delta
+    w.f64(static_cast<double>(model.pipeline_savgol_window));
+    w.f64(static_cast<double>(model.pipeline_savgol_poly_degree));
+    w.f64(0.0);
+    w.f64(1.0);
+}
+
+[[nodiscard]] bool read_pipeline_v2(
+    Reader& r,
+    std::uint32_t algorithm,
+    PipelineV2& out) noexcept {
+    out = {};
+    std::uint32_t count = 0;
+    std::uint32_t first_kind = 0;
+    std::uint32_t first_params = 0;
+    std::uint32_t second_kind = 0;
+    std::uint32_t second_params = 0;
+    double window = 0.0;
+    double poly_degree = 0.0;
+    double derivative = 0.0;
+    double delta = 0.0;
+    if (!r.u32(count) || !r.u32(first_kind) || !r.u32(first_params) ||
+        !r.u32(second_kind) || !r.u32(second_params) || !r.f64(window) ||
+        !r.f64(poly_degree) || !r.f64(derivative) || !r.f64(delta)) {
+        return false;
+    }
+    if (count != 2U ||
+        first_kind != static_cast<std::uint32_t>(N4M_OP_SNV) ||
+        first_params != 0U ||
+        second_kind != static_cast<std::uint32_t>(N4M_OP_SAVGOL_SMOOTH) ||
+        second_params != 4U || algorithm != N4M_ALGO_PLS_REGRESSION ||
+        !std::isfinite(window) || !std::isfinite(poly_degree) ||
+        window != std::round(window) || poly_degree != std::round(poly_degree) ||
+        window < static_cast<double>(std::numeric_limits<std::int32_t>::min()) ||
+        window > static_cast<double>(std::numeric_limits<std::int32_t>::max()) ||
+        poly_degree < static_cast<double>(std::numeric_limits<std::int32_t>::min()) ||
+        poly_degree > static_cast<double>(std::numeric_limits<std::int32_t>::max()) ||
+        derivative != 0.0 || delta != 1.0) {
+        return false;
+    }
+    const auto integer_window = static_cast<std::int32_t>(window);
+    const auto integer_poly_degree = static_cast<std::int32_t>(poly_degree);
+    if (!valid_savgol_smooth_config(integer_window, integer_poly_degree)) {
+        return false;
+    }
+    out.present = true;
+    out.window = integer_window;
+    out.poly_degree = integer_poly_degree;
+    return true;
+}
+
 [[nodiscard]] bool write_model_to_buffer(const ::n4m::core::Model& model,
                                          void* buffer,
                                          std::size_t buffer_size,
@@ -251,7 +348,8 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     auto* out = static_cast<unsigned char*>(buffer);
     Writer w{out, buffer_size};
     w.bytes(N4M_SERIALIZATION_MAGIC, 4);
-    w.u32(N4M_SERIALIZATION_FORMAT_VERSION);
+    const std::uint32_t format = serialized_format(model);
+    w.u32(format);
     w.u32(N4M_ABI_VERSION_MAJOR);
     w.u32(N4M_ABI_VERSION_MINOR);
     w.u32(N4M_ABI_VERSION_PATCH);
@@ -282,6 +380,9 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
     write_vector(w, model.rotations_r);
     write_vector(w, model.scores_t);
     write_vector(w, model.y_scores_u);
+    if (format == N4M_SERIALIZATION_FORMAT_VERSION_V2) {
+        write_pipeline_v2(w, model);
+    }
     if (!w.ok || w.pos + sizeof(std::uint64_t) > buffer_size) {
         return false;
     }
@@ -434,7 +535,7 @@ struct SerializedModelMetadata {
     if (header_status != N4M_OK) {
         return header_status;
     }
-    if (format != N4M_SERIALIZATION_FORMAT_VERSION) {
+    if (!supported_model_format(format)) {
         return N4M_ERR_VERSION_INCOMPATIBLE;
     }
     if (buffer_size < 28U) {
@@ -508,8 +609,19 @@ struct SerializedModelMetadata {
         !skip_vector(r, p_times_q) || !skip_vector(r, p_times_a) ||
         !skip_vector(r, p_times_a) || !skip_vector(r, q_times_a) ||
         !skip_vector(r, p_times_a) || !skip_vector(r, expected_scores) ||
-        !skip_vector(r, expected_scores) || r.pos != r.size) {
+        !skip_vector(r, expected_scores)) {
         return N4M_ERR_CORRUPT_BUFFER;
+    }
+    PipelineV2 pipeline;
+    if (format == N4M_SERIALIZATION_FORMAT_VERSION_V2 &&
+        !read_pipeline_v2(r, algorithm, pipeline)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    if (r.pos != r.size) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    if (pipeline.present) {
+        capabilities |= N4M_SERIALIZED_MODEL_CAPABILITY_PIPELINE;
     }
 
     out.format_version = format;
@@ -548,7 +660,7 @@ struct SerializedModelMetadata {
     if (inspect_header(buffer, buffer_size, format, abi_major, abi_minor, abi_patch) != N4M_OK) {
         return false;
     }
-    if (format != N4M_SERIALIZATION_FORMAT_VERSION) {
+    if (!supported_model_format(format)) {
         return false;
     }
 
@@ -634,9 +746,30 @@ struct SerializedModelMetadata {
     }
     const std::uint64_t expected_scores = store_scores == 0U ? 0U : n_times_a;
     if (!read_vector(r, expected_scores, model->scores_t) ||
-        !read_vector(r, expected_scores, model->y_scores_u) ||
-        r.pos != r.size) {
+        !read_vector(r, expected_scores, model->y_scores_u)) {
         return false;
+    }
+
+    PipelineV2 pipeline;
+    if (format == N4M_SERIALIZATION_FORMAT_VERSION_V2 &&
+        !read_pipeline_v2(r, algorithm, pipeline)) {
+        return false;
+    }
+    if (r.pos != r.size) {
+        return false;
+    }
+    if (pipeline.present) {
+        ::n4m::core::Context restore_context;
+        if (model->pipeline.restore_model_snv_savgol(
+                restore_context,
+                model->n_features,
+                pipeline.window,
+                pipeline.poly_degree) != N4M_OK) {
+            return false;
+        }
+        model->has_snv_savgol_pipeline = true;
+        model->pipeline_savgol_window = pipeline.window;
+        model->pipeline_savgol_poly_degree = pipeline.poly_degree;
     }
 
     (void)abi_major;
@@ -1027,7 +1160,7 @@ N4M_API n4m_status_t n4m_model_import_from_buffer(
             set_error(ctx, "corrupt model buffer header");
             return status;
         }
-        if (format != N4M_SERIALIZATION_FORMAT_VERSION) {
+        if (!supported_model_format(format)) {
             set_error(ctx, "model serialization format version is not supported");
             return N4M_ERR_VERSION_INCOMPATIBLE;
         }

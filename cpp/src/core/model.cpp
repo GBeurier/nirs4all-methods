@@ -3835,6 +3835,31 @@ n4m_status_t predict_into(Context& ctx,
         return status;
     }
 
+    std::vector<double> transformed;
+    n4m_matrix_view_t transformed_view{};
+    const n4m_matrix_view_t* model_input = &X;
+    if (model.has_snv_savgol_pipeline) {
+        const std::size_t rows = static_cast<std::size_t>(X.rows);
+        const std::size_t cols = static_cast<std::size_t>(X.cols);
+        if (cols != 0U && rows > std::numeric_limits<std::size_t>::max() / cols) {
+            ctx.set_error("pipeline prediction input shape is too large");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        transformed.assign(rows * cols, 0.0);
+        transformed_view.data = transformed.data();
+        transformed_view.rows = X.rows;
+        transformed_view.cols = X.cols;
+        transformed_view.row_stride = X.cols;
+        transformed_view.col_stride = 1;
+        transformed_view.dtype = N4M_DTYPE_F64;
+        const n4m_status_t pipeline_status =
+            model.pipeline.transform(ctx, X, transformed_view);
+        if (pipeline_status != N4M_OK) {
+            return pipeline_status;
+        }
+        model_input = &transformed_view;
+    }
+
     const std::size_t rows = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(model.n_features);
     const std::size_t q = static_cast<std::size_t>(model.n_targets);
@@ -3842,7 +3867,7 @@ n4m_status_t predict_into(Context& ctx,
         for (std::size_t t = 0; t < q; ++t) {
             double sum = model.y_mean[t];
             for (std::size_t j = 0; j < p; ++j) {
-                const double x_value = read_value(X, i, j);
+                const double x_value = read_value(*model_input, i, j);
                 if (!std::isfinite(x_value)) {
                     ctx.set_errorf("X contains NaN or Inf at row %llu col %llu",
                                    ull(i),
@@ -5423,6 +5448,79 @@ n4m_status_t fit_model(Context& ctx,
                        const n4m_matrix_view_t& X,
                        const n4m_matrix_view_t& Y,
                        std::unique_ptr<Model>& out_model) {
+    if (cfg.pipeline != nullptr) {
+        if (cfg.operator_bank != nullptr || cfg.gating_strategy != nullptr) {
+            ctx.set_error(
+                "model_fit pipeline cannot be combined with an operator bank or gating strategy");
+            return N4M_ERR_UNSUPPORTED;
+        }
+        if (cfg.algorithm != N4M_ALGO_PLS_REGRESSION) {
+            ctx.set_error(
+                "model_fit supports the SNV/Savitzky-Golay pipeline only with PLS regression");
+            return N4M_ERR_UNSUPPORTED;
+        }
+
+        Config model_cfg = cfg;
+        model_cfg.pipeline = nullptr;
+        n4m_status_t status = validate_fit_request(ctx, model_cfg, X, Y);
+        if (status != N4M_OK) {
+            return status;
+        }
+
+        const auto* configured = static_cast<const Pipeline*>(cfg.pipeline);
+        Pipeline fitted_pipeline = *configured;
+        std::int32_t window = 0;
+        std::int32_t poly_degree = 0;
+        status = fitted_pipeline.model_snv_savgol_config(
+            ctx, window, poly_degree);
+        if (status != N4M_OK) {
+            return status;
+        }
+        status = fitted_pipeline.fit(ctx, X, &Y);
+        if (status != N4M_OK) {
+            return status;
+        }
+
+        const std::size_t rows = static_cast<std::size_t>(X.rows);
+        const std::size_t cols = static_cast<std::size_t>(X.cols);
+        std::vector<double> transformed_x(rows * cols, 0.0);
+        n4m_matrix_view_t transformed_x_view{};
+        transformed_x_view.data = transformed_x.data();
+        transformed_x_view.rows = X.rows;
+        transformed_x_view.cols = X.cols;
+        transformed_x_view.row_stride = X.cols;
+        transformed_x_view.col_stride = 1;
+        transformed_x_view.dtype = N4M_DTYPE_F64;
+        status = fitted_pipeline.transform(ctx, X, transformed_x_view);
+        if (status != N4M_OK) {
+            return status;
+        }
+
+        std::vector<double> copied_y;
+        status = copy_matrix_checked(ctx, Y, "Y", copied_y);
+        if (status != N4M_OK) {
+            return status;
+        }
+        n4m_matrix_view_t copied_y_view{};
+        copied_y_view.data = copied_y.data();
+        copied_y_view.rows = Y.rows;
+        copied_y_view.cols = Y.cols;
+        copied_y_view.row_stride = Y.cols;
+        copied_y_view.col_stride = 1;
+        copied_y_view.dtype = N4M_DTYPE_F64;
+
+        status = fit_model(
+            ctx, model_cfg, transformed_x_view, copied_y_view, out_model);
+        if (status != N4M_OK) {
+            return status;
+        }
+        out_model->has_snv_savgol_pipeline = true;
+        out_model->pipeline_savgol_window = window;
+        out_model->pipeline_savgol_poly_degree = poly_degree;
+        out_model->pipeline = std::move(fitted_pipeline);
+        ctx.clear_error();
+        return N4M_OK;
+    }
     if (cfg.algorithm == N4M_ALGO_SPARSE_PLS) {
         return fit_pls_sparse_simpls(ctx, cfg, X, Y, out_model);
     }
@@ -5481,6 +5579,31 @@ n4m_status_t transform_into(Context& ctx,
         return status;
     }
 
+    std::vector<double> transformed;
+    n4m_matrix_view_t transformed_view{};
+    const n4m_matrix_view_t* model_input = &X;
+    if (model.has_snv_savgol_pipeline) {
+        const std::size_t rows = static_cast<std::size_t>(X.rows);
+        const std::size_t cols = static_cast<std::size_t>(X.cols);
+        if (cols != 0U && rows > std::numeric_limits<std::size_t>::max() / cols) {
+            ctx.set_error("pipeline transform input shape is too large");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        transformed.assign(rows * cols, 0.0);
+        transformed_view.data = transformed.data();
+        transformed_view.rows = X.rows;
+        transformed_view.cols = X.cols;
+        transformed_view.row_stride = X.cols;
+        transformed_view.col_stride = 1;
+        transformed_view.dtype = N4M_DTYPE_F64;
+        const n4m_status_t pipeline_status =
+            model.pipeline.transform(ctx, X, transformed_view);
+        if (pipeline_status != N4M_OK) {
+            return pipeline_status;
+        }
+        model_input = &transformed_view;
+    }
+
     const std::size_t rows = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(model.n_features);
     const std::size_t a = static_cast<std::size_t>(model.n_components);
@@ -5488,7 +5611,7 @@ n4m_status_t transform_into(Context& ctx,
         for (std::size_t comp = 0; comp < a; ++comp) {
             double sum = 0.0;
             for (std::size_t j = 0; j < p; ++j) {
-                const double x_value = read_value(X, i, j);
+                const double x_value = read_value(*model_input, i, j);
                 if (!std::isfinite(x_value)) {
                     ctx.set_errorf("X contains NaN or Inf at row %llu col %llu",
                                    ull(i),

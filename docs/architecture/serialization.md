@@ -1,6 +1,6 @@
 # Fitted-model wire serialization
 
-The C ABI implements the first binary fitted-model format behind:
+The C ABI implements two backward-readable fitted-model wire versions behind:
 
 - `n4m_model_export_size`
 - `n4m_model_export_to_buffer`
@@ -12,20 +12,44 @@ The format is little-endian and starts with:
 
 ```text
 magic[4] = "N4MM"
-u32 format_version = 1
+u32 format_version = 1 or 2
 u32 writer_abi_major
 u32 writer_abi_minor
 u32 writer_abi_patch
 ```
 
-The payload stores model metadata, preprocessing statistics, coefficients,
-latent matrices and optional training scores. A trailing FNV-1a
+The shared payload stores model metadata, PLS centring/scaling statistics,
+coefficients, latent matrices and optional training scores. A trailing FNV-1a
 64-bit checksum covers every byte before the checksum field. Imports reject bad
 magic, truncated payloads, impossible dimensions, length mismatches and checksum
 failures with `N4M_ERR_CORRUPT_BUFFER`; unsupported format versions return
 `N4M_ERR_VERSION_INCOMPATIBLE`.
 
-The ABI fields are provenance, not a strict load gate in format version 1. The
+Format 1 remains byte-for-byte unchanged and is still emitted for every model
+without a pipeline. Format 2 is emitted only for a PLS-regression model fitted
+with the exact `SNV(no params) -> Savitzky-Golay smooth(window, poly)` pipeline.
+After the eleven format-1 vectors it appends, in order:
+
+```text
+u32 operator_count = 2
+u32 first_kind = N4M_OP_SNV
+u32 first_param_count = 0
+u32 second_kind = N4M_OP_SAVGOL_SMOOTH
+u32 second_param_count = 4
+f64 window                 # odd integer, 3..501
+f64 polynomial_degree      # integer, 0 <= degree < window
+f64 derivative_order = 0
+f64 delta = 1
+u64 fnv1a64 checksum
+```
+
+This fixed block is deliberately not a general pipeline envelope. Fit rejects
+different orders, operators and algorithms. Inspection/import reject altered
+tags, counts or parameters even when the non-cryptographic checksum is
+recomputed. The restored model owns the fitted stateless pipeline and reapplies
+it before prediction and latent transformation.
+
+The ABI fields are provenance, not a strict load gate in either version. The
 current importer accepts a structurally valid payload written by a different
 ABI version and records a compatibility warning on the context. Callers must
 therefore not describe an ABI-major or newer-minor mismatch as a guaranteed
@@ -33,19 +57,21 @@ rejection.
 
 `N4MM` is a raw fitted-model payload. It has no canonical filename extension
 yet and is not the nirs4all `.n4a` pipeline bundle. The possible `.n4am`
-envelope remains a future contract and is not part of serialization format 1.
+envelope remains a future contract and is not part of either N4MM version.
 The FNV-1a trailer detects corruption; it is not a content-address or a
 training-data fingerprint.
 
 `n4m_serialization_inspect_model_v1` is the authoritative, allocation-free
 inspection gate for a complete fitted-model payload. It validates the header,
 supported format, checksum, algorithm/solver/deflation recipe, dimensions,
-flags, all eleven length-delimited array sections and exact end-of-payload
+flags, all eleven length-delimited array sections, the required format-2
+pipeline block when present, and exact end-of-payload
 before filling `n4m_serialized_model_info_v1_t`. The output is zero on every
 failure. Its schema version is 1 and its capability bits are derived from the
 validated N4MM bytes:
 
-- native fitted models report `PREDICT | TRANSFORM`;
+- native format-1 fitted models report `PREDICT | TRANSFORM`;
+- the bounded format-2 pipeline model reports `PREDICT | TRANSFORM | PIPELINE`;
 - `N4M_ALGO_IMPORTED_LINEAR_PREDICTOR` reports `PREDICT | AFFINE` and never
   reports `TRANSFORM`.
 

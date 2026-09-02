@@ -35,9 +35,12 @@
  * value across subsequent n4m_* calls. */
 #define N4M_ERROR_BUFFER_BYTES 4096
 
-/* Serialization magic + format version. Kept here so consumers can write
- * import-compatibility checks without including the full n4m.h surface. */
-#define N4M_SERIALIZATION_MAGIC          "N4MM"
-#define N4M_SERIALIZATION_FORMAT_VERSION 1u
+/* Serialization magic + format versions. Format 1 remains the byte-stable
+ * raw-model payload. Format 2 adds the bounded SNV -> SG model-pipeline block;
+ * writers continue to emit format 1 for models without that pipeline. */
+#define N4M_SERIALIZATION_MAGIC             "N4MM"
+#define N4M_SERIALIZATION_FORMAT_VERSION_V1 1u
+#define N4M_SERIALIZATION_FORMAT_VERSION_V2 2u
+#define N4M_SERIALIZATION_FORMAT_VERSION    N4M_SERIALIZATION_FORMAT_VERSION_V2
 
 #endif /* N4M_N4M_VERSION_H */

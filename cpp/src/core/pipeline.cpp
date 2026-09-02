@@ -1470,6 +1470,84 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
 
 namespace n4m::core {
 
+n4m_status_t Pipeline::model_snv_savgol_config(
+    Context& ctx,
+    std::int32_t& out_window,
+    std::int32_t& out_poly_degree) const {
+    out_window = 0;
+    out_poly_degree = 0;
+    if (entries_.size() != 2U || entries_[0].kind != N4M_OP_SNV ||
+        entries_[1].kind != N4M_OP_SAVGOL_SMOOTH) {
+        ctx.set_error(
+            "model_fit supports only SNV followed by Savitzky-Golay smooth");
+        return N4M_ERR_UNSUPPORTED;
+    }
+    n4m_status_t status = require_no_params(ctx, entries_[0], "SNV");
+    if (status != N4M_OK) {
+        return status;
+    }
+    SavGolParams params;
+    status = parse_savgol_smooth(ctx, entries_[1], params);
+    if (status != N4M_OK) {
+        return status;
+    }
+    out_window = params.window;
+    out_poly_degree = params.poly_degree;
+    return N4M_OK;
+}
+
+n4m_status_t Pipeline::restore_model_snv_savgol(
+    Context& ctx,
+    std::int64_t n_features,
+    std::int32_t window,
+    std::int32_t poly_degree) {
+    fitted_ = false;
+    entries_.clear();
+    states_.clear();
+    n_features_ = 0;
+    if (n_features < 1) {
+        ctx.set_error("serialized model pipeline requires at least one feature");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    const double params[2] = {
+        static_cast<double>(window),
+        static_cast<double>(poly_degree),
+    };
+    entries_.emplace_back(N4M_OP_SNV, nullptr, 0);
+    entries_.emplace_back(N4M_OP_SAVGOL_SMOOTH, params, 2);
+
+    std::int32_t checked_window = 0;
+    std::int32_t checked_poly_degree = 0;
+    const n4m_status_t status = model_snv_savgol_config(
+        ctx, checked_window, checked_poly_degree);
+    if (status != N4M_OK || checked_window != window ||
+        checked_poly_degree != poly_degree) {
+        entries_.clear();
+        return status == N4M_OK ? N4M_ERR_INVALID_ARGUMENT : status;
+    }
+
+    OperatorState snv;
+    snv.kind = N4M_OP_SNV;
+    snv.n_features = n_features;
+    states_.push_back(std::move(snv));
+
+    OperatorState savgol;
+    savgol.kind = N4M_OP_SAVGOL_SMOOTH;
+    savgol.n_features = n_features;
+    savgol.scale.assign({
+        static_cast<double>(window),
+        static_cast<double>(poly_degree),
+        0.0,
+        1.0,
+    });
+    states_.push_back(std::move(savgol));
+    n_features_ = n_features;
+    fitted_ = true;
+    ctx.clear_error();
+    return N4M_OK;
+}
+
 n4m_status_t Pipeline::fit(Context& ctx,
                            const n4m_matrix_view_t& X,
                            const n4m_matrix_view_t* Y) {

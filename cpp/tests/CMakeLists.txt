@@ -78,6 +78,20 @@ set_tests_properties(n4m_tests PROPERTIES
     LABELS "smoke;abi;parity"
     TIMEOUT 60)
 
+# Focused N4MM v2 model-pipeline contract. Kept separate so format changes can
+# be gated without rerunning the complete native suite.
+add_executable(n4m_model_pipeline_tests test_model_pipeline.cpp)
+target_link_libraries(n4m_model_pipeline_tests PRIVATE n4m_c)
+target_include_directories(n4m_model_pipeline_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/cpp/src
+    ${PROJECT_BINARY_DIR}/generated)
+n4m_add_warnings(n4m_model_pipeline_tests)
+add_test(NAME n4m_model_pipeline_tests COMMAND n4m_model_pipeline_tests)
+set_tests_properties(n4m_model_pipeline_tests PROPERTIES
+    LABELS "abi;parity"
+    TIMEOUT 30)
+
 # Internal-primitive tests. The PCG64 bounded-integer + choice-without-
 # replacement primitives are hidden in libn4m, so they are unreachable from
 # n4m_tests (which links the shared lib). Link the static archive instead — a

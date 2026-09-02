@@ -314,7 +314,7 @@ class Model:
             return self.get_array(ctx, ModelArrayKind.COEFFICIENTS)
 
     def to_bytes(self) -> bytes:
-        """Serialize the fitted model to an N4MM format-version-1 buffer.
+        """Serialize the fitted model to an N4MM v1 or v2 buffer.
 
         This is a raw fitted-model payload, not a nirs4all ``.n4a`` pipeline
         bundle. The raw payload does not currently have a canonical filename
@@ -338,7 +338,7 @@ class Model:
         """Deserialize an N4MM buffer produced by :meth:`to_bytes`.
 
         Corrupt buffers and unsupported wire-format versions fail. The current
-        format-version-1 importer accepts writer ABI differences and records a
+        v1/v2 importer accepts writer ABI differences and records a
         compatibility warning on ``ctx`` instead of rejecting the payload.
         """
         if not payload:
