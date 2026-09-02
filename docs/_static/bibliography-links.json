@@ -1,0 +1,73 @@
+{
+  "checked_links": [
+    {
+      "field": "legacy_url",
+      "id": "legacy-aom_pls",
+      "offline_syntax_valid": true,
+      "value": "https://arxiv.org/abs/2605.13587"
+    },
+    {
+      "field": "legacy_url",
+      "id": "legacy-aom_preprocess",
+      "offline_syntax_valid": true,
+      "value": "https://arxiv.org/abs/2605.13587"
+    },
+    {
+      "field": "legacy_doi",
+      "id": "legacy-emcuve_select",
+      "offline_syntax_valid": true,
+      "value": "10.1016/j.aca.2008.02.032"
+    },
+    {
+      "field": "legacy_doi",
+      "id": "legacy-ipw_select",
+      "offline_syntax_valid": true,
+      "value": "10.1002/(SICI)1099-128X(199903/04)13:2<165::AID-CEM535>3.0.CO;2-Y"
+    },
+    {
+      "field": "legacy_doi",
+      "id": "legacy-pds",
+      "offline_syntax_valid": true,
+      "value": "10.1021/ac00023a016"
+    },
+    {
+      "field": "legacy_url",
+      "id": "legacy-pop_pls",
+      "offline_syntax_valid": true,
+      "value": "https://arxiv.org/abs/2605.13587"
+    },
+    {
+      "field": "legacy_doi",
+      "id": "legacy-rep_select",
+      "offline_syntax_valid": true,
+      "value": "10.1016/j.chemolab.2012.07.010"
+    },
+    {
+      "field": "legacy_doi",
+      "id": "legacy-st_select",
+      "offline_syntax_valid": true,
+      "value": "10.1016/j.chemolab.2012.07.010"
+    },
+    {
+      "field": "legacy_doi",
+      "id": "legacy-t2_select",
+      "offline_syntax_valid": true,
+      "value": "10.1016/j.chemolab.2016.03.020"
+    },
+    {
+      "field": "legacy_doi",
+      "id": "legacy-wvc_threshold_select",
+      "offline_syntax_valid": true,
+      "value": "10.1016/j.aca.2011.06.037"
+    },
+    {
+      "field": "cff_url",
+      "id": "nirs4all-methods",
+      "offline_syntax_valid": true,
+      "value": "https://github.com/GBeurier/nirs4all-methods"
+    }
+  ],
+  "legacy_citations_scanned": 88,
+  "missing_structured_links": 176,
+  "network_access": "not_attempted"
+}

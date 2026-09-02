@@ -7,6 +7,13 @@ on:
       - "cpp/abi/**"
       - "benchmarks/parity_timing/truth_sources.lock.json"
       - "parity/REFERENCES.md"
+      - "CITATION.cff"
+      - "docs/_extras/methods_bibliography.py"
+      - "docs/methods/_finetuning_bibliography.bib"
+      - "docs/bibliography.md"
+      - "docs/_static/bibliography.bib"
+      - "docs/_static/bibliography-links.json"
+      - "docs/_static/nirs4all-methods.cff"
       - ".github/workflows/catalog-validate.yml"
   push:
     branches: [main, 'rc/**']
@@ -15,6 +22,13 @@ on:
       - "cpp/abi/**"
       - "benchmarks/parity_timing/truth_sources.lock.json"
       - "parity/REFERENCES.md"
+      - "CITATION.cff"
+      - "docs/_extras/methods_bibliography.py"
+      - "docs/methods/_finetuning_bibliography.bib"
+      - "docs/bibliography.md"
+      - "docs/_static/bibliography.bib"
+      - "docs/_static/bibliography-links.json"
+      - "docs/_static/nirs4all-methods.cff"
       - ".github/workflows/catalog-validate.yml"
 
 jobs:
@@ -22,12 +36,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.0
+        with:
+          # Validation resolves the exact historical commit recorded in the
+          # catalog, so a shallow checkout would make provenance unverifiable.
+          fetch-depth: 0
       - uses: actions/setup-python@v6.3.0
         with:
           python-version: "3.11"
+      - name: Install BibTeX parser
+        run: sudo apt-get update && sudo apt-get install -y texlive-binaries
       - name: Validate catalog (strict ABI + reference coverage)
         run: python catalog/scripts/validate.py --strict-abi --check-references
       - name: Check split catalog
         run: python catalog/scripts/split_legacy_methods.py --check
       - name: Catalog parser self-test
         run: python catalog/scripts/selftest.py
+      - name: Migrate bibliography from recorded source blobs
+        run: python catalog/scripts/migrate_bibliography.py --check
+      - name: Validate bibliography provenance and offline links
+        run: python catalog/scripts/validate_bibliography.py
+      - name: Check generated bibliography artifacts
+        run: python catalog/scripts/generate_bibliography.py --check
+      - name: Bibliography catalog tests
+        run: python -m unittest catalog.tests.test_bibliography_catalog
