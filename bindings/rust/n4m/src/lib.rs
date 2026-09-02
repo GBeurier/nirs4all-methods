@@ -18,7 +18,7 @@ use std::{
 compile_error!("n4m requires exactly one runtime feature: `linked` or `dynamic`");
 
 const ABI_MAJOR: u32 = 2;
-const ABI_MINOR: u32 = 4;
+const ABI_MINOR: u32 = 5;
 const OK: i32 = 0;
 const NOT_FITTED: i32 = 6;
 const DTYPE_I64: i32 = 4;
@@ -41,6 +41,9 @@ pub const SERIALIZED_MODEL_CAPABILITY_PREDICT: u64 = 1 << 0;
 pub const SERIALIZED_MODEL_CAPABILITY_TRANSFORM: u64 = 1 << 1;
 pub const SERIALIZED_MODEL_CAPABILITY_AFFINE: u64 = 1 << 2;
 pub const SERIALIZED_MODEL_CAPABILITY_PIPELINE: u64 = 1 << 3;
+const SERIALIZED_PIPELINE_INFO_SCHEMA_V1: u32 = 1;
+const PIPELINE_FINGERPRINT_NONE: u32 = 0;
+const PIPELINE_FINGERPRINT_FNV1A64_V1: u32 = 1;
 const N4MOPT_MAGIC: &[u8; 8] = b"N4MOPT\r\n";
 const N4MOPT_HEADER_BYTES: usize = 32;
 const N4MOPT_MIN_BYTES: usize = N4MOPT_HEADER_BYTES + 8;
@@ -126,6 +129,26 @@ struct SerializedModelInfoV1Raw {
     capabilities: u64,
 }
 #[repr(C)]
+#[derive(Clone, Copy, Default)]
+struct SerializedPipelineInfoV1Raw {
+    schema_version: u32,
+    struct_size: u32,
+    present: u32,
+    operator_count: u32,
+    operators: [i32; 2],
+    savgol_window: i32,
+    savgol_poly_degree: i32,
+    savgol_derivative: i32,
+    reserved0: u32,
+    savgol_delta: f64,
+    raw_n_features: i32,
+    model_n_features: i32,
+    fingerprint_algorithm: u32,
+    reserved1: u32,
+    fingerprint: u64,
+    reserved: [u8; 24],
+}
+#[repr(C)]
 struct OptimizerOptionsRaw {
     struct_size: u64,
     sampler: i32,
@@ -145,8 +168,11 @@ const _: () = assert!(mem::size_of::<MatrixView>() == 48);
 const _: () = assert!(mem::align_of::<MatrixView>() == 8);
 const _: () = assert!(mem::size_of::<LinearPredictorSpecRaw>() == 32);
 const _: () = assert!(mem::size_of::<SerializedModelInfoV1Raw>() == 64);
+const _: () = assert!(mem::size_of::<SerializedPipelineInfoV1Raw>() == 96);
 const _: () = assert!(mem::offset_of!(SerializedModelInfoV1Raw, training_samples) == 32);
 const _: () = assert!(mem::offset_of!(SerializedModelInfoV1Raw, capabilities) == 56);
+const _: () = assert!(mem::offset_of!(SerializedPipelineInfoV1Raw, savgol_delta) == 40);
+const _: () = assert!(mem::offset_of!(SerializedPipelineInfoV1Raw, fingerprint) == 64);
 const _: () = assert!(mem::size_of::<OptimizerOptionsRaw>() == 120);
 const _: () = assert!(mem::offset_of!(OptimizerOptionsRaw, seed) == 40);
 
@@ -250,6 +276,12 @@ extern "C" {
         buffer: *const c_void,
         len: usize,
         out_info: *mut SerializedModelInfoV1Raw,
+    ) -> i32;
+    fn n4m_serialization_inspect_pipeline_v1(
+        buffer: *const c_void,
+        len: usize,
+        out_info: *mut SerializedPipelineInfoV1Raw,
+        out_info_size: usize,
     ) -> i32;
     fn n4m_search_space_create(out: *mut *mut SearchSpaceRaw) -> i32;
     fn n4m_search_space_destroy(space: *mut SearchSpaceRaw);
@@ -1968,6 +2000,49 @@ fn copy_f64_array(array: *const ArrayRaw) -> Result<Matrix, Error> {
     Ok(Matrix { data, rows, cols })
 }
 
+/// Operator kind in the only N4MM v2 pipeline schema currently supported.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(i32)]
+pub enum SerializedPipelineOperatorKind {
+    Snv = 4,
+    SavitzkyGolaySmooth = 8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum PipelineFingerprintAlgorithm {
+    Fnv1a64V1 = PIPELINE_FINGERPRINT_FNV1A64_V1,
+}
+
+/// Canonical finite binary64 value returned by native serialization inspection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CanonicalF64(u64);
+
+impl CanonicalF64 {
+    pub fn value(self) -> f64 {
+        f64::from_bits(self.0)
+    }
+
+    pub fn to_bits(self) -> u64 {
+        self.0
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SerializedPipelineInfo {
+    pub schema_version: u32,
+    pub operator_count: u32,
+    pub operators: [SerializedPipelineOperatorKind; 2],
+    pub savgol_window: i32,
+    pub savgol_poly_degree: i32,
+    pub savgol_derivative: i32,
+    pub savgol_delta: CanonicalF64,
+    pub raw_n_features: i32,
+    pub model_n_features: i32,
+    pub fingerprint_algorithm: PipelineFingerprintAlgorithm,
+    pub fingerprint: u64,
+}
+
 /// Metadata derived by libn4m from a fully validated N4MM v1 or v2 payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SerializedModelInfo {
@@ -1982,19 +2057,106 @@ pub struct SerializedModelInfo {
     pub n_targets: i32,
     pub n_components: i32,
     pub capabilities: u64,
+    pub pipeline: Option<SerializedPipelineInfo>,
 }
 
 impl SerializedModelInfo {
     /// Whether prediction applies the serialized native preprocessing pipeline.
     pub fn has_pipeline(&self) -> bool {
-        self.capabilities & SERIALIZED_MODEL_CAPABILITY_PIPELINE != 0
+        self.pipeline.is_some()
     }
+}
+
+fn inspect_serialized_pipeline(
+    bytes: &[u8],
+    format: u32,
+    n_features: i32,
+    capabilities: u64,
+) -> Result<Option<SerializedPipelineInfo>, Error> {
+    let mut raw = SerializedPipelineInfoV1Raw::default();
+    check(
+        unsafe {
+            n4m_serialization_inspect_pipeline_v1(
+                bytes.as_ptr().cast(),
+                bytes.len(),
+                &mut raw,
+                mem::size_of::<SerializedPipelineInfoV1Raw>(),
+            )
+        },
+        None,
+    )?;
+    if raw.schema_version != SERIALIZED_PIPELINE_INFO_SCHEMA_V1
+        || raw.struct_size as usize != mem::size_of::<SerializedPipelineInfoV1Raw>()
+        || raw.reserved0 != 0
+        || raw.reserved1 != 0
+        || raw.reserved.iter().any(|&byte| byte != 0)
+    {
+        return Err(corrupt("native N4MM pipeline inspection result is invalid"));
+    }
+
+    let capability_present = capabilities & SERIALIZED_MODEL_CAPABILITY_PIPELINE != 0;
+    if format == N4MM_FORMAT_VERSION_V1 {
+        if raw.present != 0
+            || capability_present
+            || raw.operator_count != 0
+            || raw.operators != [0, 0]
+            || raw.savgol_window != 0
+            || raw.savgol_poly_degree != 0
+            || raw.savgol_derivative != 0
+            || raw.savgol_delta.to_bits() != 0
+            || raw.raw_n_features != 0
+            || raw.model_n_features != 0
+            || raw.fingerprint_algorithm != PIPELINE_FINGERPRINT_NONE
+            || raw.fingerprint != 0
+        {
+            return Err(corrupt("native N4MM v1 unexpectedly reports a pipeline"));
+        }
+        return Ok(None);
+    }
+
+    if raw.present != 1
+        || !capability_present
+        || raw.operator_count != 2
+        || raw.operators != [4, 8]
+        || raw.savgol_window < 3
+        || raw.savgol_window > 501
+        || raw.savgol_window % 2 != 1
+        || raw.savgol_poly_degree < 0
+        || raw.savgol_poly_degree >= raw.savgol_window
+        || raw.savgol_derivative != 0
+        || raw.savgol_delta.to_bits() != 1.0f64.to_bits()
+        || raw.raw_n_features != n_features
+        || raw.model_n_features != n_features
+        || raw.fingerprint_algorithm != PIPELINE_FINGERPRINT_FNV1A64_V1
+    {
+        return Err(corrupt(
+            "native N4MM v2 pipeline inspection result is invalid",
+        ));
+    }
+
+    Ok(Some(SerializedPipelineInfo {
+        schema_version: raw.schema_version,
+        operator_count: raw.operator_count,
+        operators: [
+            SerializedPipelineOperatorKind::Snv,
+            SerializedPipelineOperatorKind::SavitzkyGolaySmooth,
+        ],
+        savgol_window: raw.savgol_window,
+        savgol_poly_degree: raw.savgol_poly_degree,
+        savgol_derivative: raw.savgol_derivative,
+        savgol_delta: CanonicalF64(raw.savgol_delta.to_bits()),
+        raw_n_features: raw.raw_n_features,
+        model_n_features: raw.model_n_features,
+        fingerprint_algorithm: PipelineFingerprintAlgorithm::Fnv1a64V1,
+        fingerprint: raw.fingerprint,
+    }))
 }
 
 /// Validate and inspect a complete fitted-model payload without importing it.
 ///
-/// Capability bits come exclusively from `n4m_serialization_inspect_model_v1`;
-/// this binding does not infer or augment them from host-side metadata.
+/// Capability bits and the optional typed pipeline descriptor come exclusively
+/// from the two native authoritative inspectors; this binding does not infer or
+/// augment either from host-side metadata.
 pub fn inspect_n4mm(bytes: &[u8]) -> Result<SerializedModelInfo, Error> {
     if bytes.len() < N4MM_HEADER_BYTES || bytes.len() > MAX_N4MM_BYTES {
         return Err(corrupt("N4MM length is invalid"));
@@ -2039,6 +2201,7 @@ pub fn inspect_n4mm(bytes: &[u8]) -> Result<SerializedModelInfo, Error> {
     {
         return Err(corrupt("native N4MM inspection result is invalid"));
     }
+    let pipeline = inspect_serialized_pipeline(bytes, format, raw.n_features, raw.capabilities)?;
     Ok(SerializedModelInfo {
         schema_version: raw.schema_version,
         format_version: raw.format_version,
@@ -2055,6 +2218,7 @@ pub fn inspect_n4mm(bytes: &[u8]) -> Result<SerializedModelInfo, Error> {
         n_targets: raw.n_targets,
         n_components: raw.n_components,
         capabilities: raw.capabilities,
+        pipeline,
     })
 }
 
@@ -2544,6 +2708,7 @@ mod tests {
         assert_eq!(info.schema_version, SERIALIZED_MODEL_INFO_SCHEMA_V1);
         assert_eq!(info.format_version, N4MM_FORMAT_VERSION_V1);
         assert!(!info.has_pipeline());
+        assert_eq!(info.pipeline, None);
         assert_eq!(info.writer_abi, (ABI_MAJOR, ABI_MINOR, 0));
         assert_eq!(info.algorithm, 0);
         assert_eq!(info.solver, 0);
@@ -2633,6 +2798,79 @@ mod tests {
         tampered[tamper_index] ^= 1;
         assert_eq!(
             inspect_n4mm(&tampered).unwrap_err().kind,
+            ErrorKind::CorruptBuffer
+        );
+    }
+    #[cfg(all(feature = "linked", not(feature = "dynamic")))]
+    #[test]
+    fn pipeline_v2_inspection_is_typed_and_tamper_closed() {
+        let ctx = Context::new().unwrap();
+        let mut cfg = Config::new().unwrap();
+        cfg.set_n_components(1).unwrap();
+
+        let mut pipeline = ptr::null_mut();
+        check(unsafe { n4m_pipeline_create(&mut pipeline) }, None).unwrap();
+        check(
+            unsafe { n4m_pipeline_add_operator(pipeline, 4, ptr::null(), 0) },
+            None,
+        )
+        .unwrap();
+        let savgol = [5.0, 2.0];
+        check(
+            unsafe { n4m_pipeline_add_operator(pipeline, 8, savgol.as_ptr(), 2) },
+            None,
+        )
+        .unwrap();
+        check(
+            unsafe { n4m_config_set_pipeline(cfg.ptr(), pipeline) },
+            None,
+        )
+        .unwrap();
+
+        let values = (0..90)
+            .map(|index| {
+                let row = (index / 9 + 1) as f64;
+                let col = (index % 9 + 1) as f64;
+                row * col + 0.03 * row * row + 0.007 * col * col * col
+            })
+            .collect::<Vec<_>>();
+        let targets = (1..=10)
+            .map(|row| (row * row + row) as f64)
+            .collect::<Vec<_>>();
+        let x = MatrixRef::row_major(&values, 10, 9).unwrap();
+        let y = MatrixRef::row_major(&targets, 10, 1).unwrap();
+        let model = Model::fit(&ctx, &cfg, x, y).unwrap();
+        unsafe { n4m_pipeline_destroy(pipeline) };
+
+        let mut bytes = model.export_n4mm().unwrap();
+        let info = inspect_n4mm(&bytes).unwrap();
+        let pipeline = info.pipeline.expect("v2 pipeline descriptor");
+        assert_eq!(pipeline.schema_version, 1);
+        assert_eq!(pipeline.operator_count, 2);
+        assert_eq!(
+            pipeline.operators,
+            [
+                SerializedPipelineOperatorKind::Snv,
+                SerializedPipelineOperatorKind::SavitzkyGolaySmooth,
+            ]
+        );
+        assert_eq!(
+            (pipeline.savgol_window, pipeline.savgol_poly_degree),
+            (5, 2)
+        );
+        assert_eq!(pipeline.savgol_derivative, 0);
+        assert_eq!(pipeline.savgol_delta.value(), 1.0);
+        assert_eq!((pipeline.raw_n_features, pipeline.model_n_features), (9, 9));
+        assert_eq!(
+            pipeline.fingerprint_algorithm,
+            PipelineFingerprintAlgorithm::Fnv1a64V1
+        );
+        assert_eq!(pipeline.fingerprint, 0x6c67_0bd4_a3e4_8332);
+
+        let tamper_index = bytes.len() - 16;
+        bytes[tamper_index] ^= 1;
+        assert_eq!(
+            inspect_n4mm(&bytes).unwrap_err().kind,
             ErrorKind::CorruptBuffer
         );
     }

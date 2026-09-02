@@ -28,7 +28,7 @@ def test_linear_predictor_export_is_predict_exact_and_round_trips() -> None:
     info = inspect_n4mm(n4mm)
     assert info.schema_version == 1
     assert info.format_version == 1
-    assert info.writer_abi == (2, 4, 0)
+    assert info.writer_abi == (2, 5, 0)
     assert info.algorithm == 11
     assert info.solver == 0
     assert info.deflation == 0
@@ -37,6 +37,7 @@ def test_linear_predictor_export_is_predict_exact_and_round_trips() -> None:
     assert info.capabilities == (
         SERIALIZED_MODEL_CAPABILITY_PREDICT | SERIALIZED_MODEL_CAPABILITY_AFFINE
     )
+    assert info.pipeline is None
     assert inspect_n4mm_full(n4mm).capabilities == info.capabilities
 
     corrupt = bytearray(n4mm)

@@ -887,6 +887,50 @@ N4M_API n4m_status_t n4m_serialization_inspect_model_v1(
     const void* buffer, size_t buffer_size,
     n4m_serialized_model_info_v1_t* out_info);
 
+/* Versioned inspection of the optional fitted-model preprocessing pipeline.
+ * The caller passes its output allocation size explicitly; current callers
+ * must pass sizeof(n4m_serialized_pipeline_info_v1_t). The function validates
+ * the complete N4MM payload through the same authoritative decoder as
+ * n4m_serialization_inspect_model_v1 before publishing any field.
+ *
+ * N4MM format 1 returns N4M_OK with present=0 and all pipeline-specific fields
+ * zero. Format 2 returns the exact validated SNV -> Savitzky-Golay plan. The
+ * two feature widths are separate ABI fields even though this bounded plan is
+ * dimension-preserving. fingerprint is FNV-1a-64 over the canonical 52-byte
+ * little-endian pipeline block (operator count/tags/parameter counts/values),
+ * and is therefore stable across machines and writer ABI versions.
+ *
+ * On every error, the writable prefix min(out_info_size, sizeof(*out_info)) is
+ * byte-zeroed. A short output allocation returns N4M_ERR_INVALID_ARGUMENT.
+ */
+#define N4M_SERIALIZED_PIPELINE_INFO_SCHEMA_V1 1u
+#define N4M_SERIALIZED_PIPELINE_MAX_OPERATORS  2u
+#define N4M_PIPELINE_FINGERPRINT_NONE          0u
+#define N4M_PIPELINE_FINGERPRINT_FNV1A64_V1    1u
+
+typedef struct n4m_serialized_pipeline_info_v1_t {
+    uint32_t schema_version;
+    uint32_t struct_size;
+    uint32_t present;
+    uint32_t operator_count;
+    n4m_operator_kind_t operators[N4M_SERIALIZED_PIPELINE_MAX_OPERATORS];
+    int32_t savgol_window;
+    int32_t savgol_poly_degree;
+    int32_t savgol_derivative;
+    uint32_t reserved0;
+    double savgol_delta;
+    int32_t raw_n_features;
+    int32_t model_n_features;
+    uint32_t fingerprint_algorithm;
+    uint32_t reserved1;
+    uint64_t fingerprint;
+    uint8_t reserved[24];
+} n4m_serialized_pipeline_info_v1_t;
+
+N4M_API n4m_status_t n4m_serialization_inspect_pipeline_v1(
+    const void* buffer, size_t buffer_size,
+    n4m_serialized_pipeline_info_v1_t* out_info, size_t out_info_size);
+
 /* ============================================================================
  * 13. Output array helper — core-allocated arrays returned by *_alloc calls
  * ==========================================================================
@@ -1091,6 +1135,8 @@ N4M_STATIC_ASSERT(sizeof(n4m_gating_mode_t)   == 4, "n4m_gating_mode_t must be 4
 N4M_STATIC_ASSERT(sizeof(n4m_model_array_t)   == 4, "n4m_model_array_t must be 4 bytes");
 N4M_STATIC_ASSERT(sizeof(n4m_serialized_model_info_v1_t) == 64,
                   "n4m_serialized_model_info_v1_t must be 64 bytes");
+N4M_STATIC_ASSERT(sizeof(n4m_serialized_pipeline_info_v1_t) == 96,
+                  "n4m_serialized_pipeline_info_v1_t must be 96 bytes");
 /* HPO enum guard rails live in n4m/optimization.h so that header is
  * independently includable. */
 

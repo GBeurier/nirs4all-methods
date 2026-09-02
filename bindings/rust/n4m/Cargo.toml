@@ -1,6 +1,6 @@
 [package]
 name = "n4m"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 rust-version = "1.77"
 license = "CECILL-2.1 OR AGPL-3.0-or-later"

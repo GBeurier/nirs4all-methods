@@ -133,6 +133,11 @@ on the context; corrupt bytes and unsupported N4MM format versions fail.
 `n4m_serialization_inspect_model_v1` reports the encoded recipe, dimensions and
 prediction, transform and pipeline capability bits. The `_v1` suffix identifies
 the fixed descriptor schema; it can inspect both N4MM wire versions.
+ABI 2.5 adds `n4m_serialization_inspect_pipeline_v1`: format 1 reports no
+pipeline, while format 2 attests the exact operator order, canonical SG
+parameters, raw/model widths and stable canonical-plan fingerprint. Rust,
+Python and JavaScript expose this as optional pipeline metadata rather than
+inferring a plan from the capability bit.
 
 The format is exposed by the C ABI functions
 `n4m_model_export_to_buffer` / `n4m_model_import_from_buffer`. The Python slim

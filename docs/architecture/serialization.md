@@ -7,6 +7,7 @@ The C ABI implements two backward-readable fitted-model wire versions behind:
 - `n4m_model_import_from_buffer`
 - `n4m_serialization_inspect`
 - `n4m_serialization_inspect_model_v1`
+- `n4m_serialization_inspect_pipeline_v1`
 
 The format is little-endian and starts with:
 
@@ -79,6 +80,23 @@ Unknown model recipes return `N4M_ERR_UNSUPPORTED`; future wire versions return
 `N4M_ERR_VERSION_INCOMPATIBLE`; malformed or checksum-invalid payloads return
 `N4M_ERR_CORRUPT_BUFFER`. External JSON, manifests and filename conventions are
 not capability authorities.
+
+`n4m_serialization_inspect_pipeline_v1` is the additive ABI-2.5 plan
+attestation surface. The caller passes both a pointer and its allocation size;
+the current `n4m_serialized_pipeline_info_v1_t` is 96 bytes. Format 1 returns
+success with `present=0`. Format 2 returns `operator_count=2`, ordered kinds
+`N4M_OP_SNV` then `N4M_OP_SAVGOL_SMOOTH`, SG window/polynomial/derivative/delta,
+and separate raw/model feature widths. Both widths equal `n_features` because
+the only admitted plan is dimension-preserving.
+
+The plan fingerprint algorithm is `N4M_PIPELINE_FINGERPRINT_FNV1A64_V1`: FNV-1a
+64 over the exact validated 52-byte little-endian block beginning at
+`operator_count` and ending at `delta`. It fingerprints the canonical plan and
+parameters, not learned model arrays or training data. The inspector uses the
+same full decoder as the model descriptor, so checksum failure, invalid tags or
+counts, non-canonical negative zero, inconsistent dimensions and trailing bytes
+fail before any field is published. The writable output prefix is zero on
+error.
 
 ## Optimizer checkpoint wire format
 

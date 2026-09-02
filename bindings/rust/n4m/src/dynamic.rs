@@ -50,6 +50,7 @@ macro_rules! n4m_symbols {
             n4m_validation_plan_get_n_folds(plan: *const ValidationPlanRaw, out_n_folds: *mut i32) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_serialization_inspect(buffer: *const c_void, len: usize, out_version: *mut u32, out_major: *mut u32, out_minor: *mut u32, out_patch: *mut u32) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_serialization_inspect_model_v1(buffer: *const c_void, len: usize, out_info: *mut SerializedModelInfoV1Raw) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_serialization_inspect_pipeline_v1(buffer: *const c_void, len: usize, out_info: *mut SerializedPipelineInfoV1Raw, out_info_size: usize) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_search_space_create(out: *mut *mut SearchSpaceRaw) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_search_space_destroy(space: *mut SearchSpaceRaw) -> () => ();
             n4m_search_space_add_int(space: *mut SearchSpaceRaw, name: *const c_char, low: i64, high: i64, step: i64, log: i32) -> i32 => RUNTIME_UNAVAILABLE;

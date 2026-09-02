@@ -4,7 +4,7 @@ use std::{
 };
 
 const ABI_MAJOR: &str = "2";
-const ABI_MINOR: &str = "4";
+const ABI_MINOR: &str = "5";
 const ABI_PATCH: &str = "0";
 const MATRIX_VIEW_SIZE: &str = "48";
 const MATRIX_VIEW_ALIGN: &str = "8";

@@ -77,6 +77,7 @@ const info = inspectN4mm(payload);
 assert.equal(info.schemaVersion, 1);
 assert.equal(info.formatVersion, 1);
 assert.deepEqual(info.writerAbi, [2, 4, 0]);
+assert.equal(info.pipeline, null);
 assert.equal(info.algorithm, Algorithm.IMPORTED_LINEAR_PREDICTOR);
 assert.equal(info.solver, 0);
 assert.equal(info.deflation, 0);

@@ -39,6 +39,7 @@ VALUE_STRUCTS = {
     "n4m_matrix_view_t": "MatrixView",
     "n4m_linear_predictor_spec_t": "LinearPredictorSpec",
     "n4m_serialized_model_info_v1_t": "SerializedModelInfoV1",
+    "n4m_serialized_pipeline_info_v1_t": "SerializedPipelineInfoV1",
     "n4m_filter_stats_t": "FilterStats",
     "n4m_optimizer_options_t": "OptimizerOptions",
     "n4m_split_result_t": "SplitResult",
@@ -84,7 +85,7 @@ from ctypes import (
     c_int64, c_size_t, c_uint8, c_uint32, c_uint64, c_void_p,
 )
 
-from ._types import MatrixView, LinearPredictorSpec, SerializedModelInfoV1, FilterStats, OptimizerOptions, SplitResult, TransferMetrics
+from ._types import MatrixView, LinearPredictorSpec, SerializedModelInfoV1, SerializedPipelineInfoV1, FilterStats, OptimizerOptions, SplitResult, TransferMetrics
 
 # Symbols: tuple of (symbol_name, argtypes_tuple, restype).
 # restype = None for void; argtypes = () for parameter-less.

@@ -25,7 +25,9 @@ from pathlib import Path
 
 _PACKAGE_DIR = Path(__file__).resolve().parent
 _SIBLING_LIBS = _PACKAGE_DIR.parent / f"{_PACKAGE_DIR.name}.libs"
-_REPO_ROOT = _PACKAGE_DIR.parents[3] if _PACKAGE_DIR.parents[3].name == "pls4all" else None
+_REPO_ROOT = (
+    _PACKAGE_DIR.parents[3] if _PACKAGE_DIR.parents[3].name == "pls4all" else None
+)
 
 # auditwheel renames the bundled library to ``libn4m-<8hexhash>.so.1``,
 # so we must accept the form ``libn4m*.so*`` in addition to ``libn4m.so*``.
@@ -110,138 +112,162 @@ lib = _load_library()
 lib.n4m_get_abi_version_major.restype = ctypes.c_uint32
 lib.n4m_get_abi_version_minor.restype = ctypes.c_uint32
 lib.n4m_get_abi_version_patch.restype = ctypes.c_uint32
-lib.n4m_get_abi_version_int.restype   = ctypes.c_uint32
-lib.n4m_get_version_string.restype    = ctypes.c_char_p
-lib.n4m_get_build_info.restype        = ctypes.c_char_p
-lib.n4m_get_git_revision.restype      = ctypes.c_char_p
+lib.n4m_get_abi_version_int.restype = ctypes.c_uint32
+lib.n4m_get_version_string.restype = ctypes.c_char_p
+lib.n4m_get_build_info.restype = ctypes.c_char_p
+lib.n4m_get_git_revision.restype = ctypes.c_char_p
 
 # ---- n4m_status / dtype / backend ----
-lib.n4m_status_to_string.restype  = ctypes.c_char_p
+lib.n4m_status_to_string.restype = ctypes.c_char_p
 lib.n4m_status_to_string.argtypes = [ctypes.c_int]
 
-lib.n4m_dtype_size.restype  = ctypes.c_size_t
+lib.n4m_dtype_size.restype = ctypes.c_size_t
 lib.n4m_dtype_size.argtypes = [ctypes.c_int]
-lib.n4m_dtype_to_string.restype  = ctypes.c_char_p
+lib.n4m_dtype_to_string.restype = ctypes.c_char_p
 lib.n4m_dtype_to_string.argtypes = [ctypes.c_int]
 
-lib.n4m_backend_is_available.restype  = ctypes.c_int
+lib.n4m_backend_is_available.restype = ctypes.c_int
 lib.n4m_backend_is_available.argtypes = [ctypes.c_int]
-lib.n4m_backend_to_string.restype  = ctypes.c_char_p
+lib.n4m_backend_to_string.restype = ctypes.c_char_p
 lib.n4m_backend_to_string.argtypes = [ctypes.c_int]
 
 # ---- n4m_context_* ----
-lib.n4m_context_create.restype  = ctypes.c_int
+lib.n4m_context_create.restype = ctypes.c_int
 lib.n4m_context_create.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
-lib.n4m_context_destroy.restype  = None
+lib.n4m_context_destroy.restype = None
 lib.n4m_context_destroy.argtypes = [ctypes.c_void_p]
-lib.n4m_context_set_seed.restype  = ctypes.c_int
+lib.n4m_context_set_seed.restype = ctypes.c_int
 lib.n4m_context_set_seed.argtypes = [ctypes.c_void_p, ctypes.c_uint64]
-lib.n4m_context_get_seed.restype  = ctypes.c_int
+lib.n4m_context_get_seed.restype = ctypes.c_int
 lib.n4m_context_get_seed.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint64)]
-lib.n4m_context_set_backend.restype  = ctypes.c_int
+lib.n4m_context_set_backend.restype = ctypes.c_int
 lib.n4m_context_set_backend.argtypes = [ctypes.c_void_p, ctypes.c_int]
-lib.n4m_context_get_backend.restype  = ctypes.c_int
+lib.n4m_context_get_backend.restype = ctypes.c_int
 lib.n4m_context_get_backend.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
-lib.n4m_context_set_num_threads.restype  = ctypes.c_int
+lib.n4m_context_set_num_threads.restype = ctypes.c_int
 lib.n4m_context_set_num_threads.argtypes = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_context_get_num_threads.restype  = ctypes.c_int
-lib.n4m_context_get_num_threads.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
-lib.n4m_context_last_error.restype  = ctypes.c_char_p
+lib.n4m_context_get_num_threads.restype = ctypes.c_int
+lib.n4m_context_get_num_threads.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
+]
+lib.n4m_context_last_error.restype = ctypes.c_char_p
 lib.n4m_context_last_error.argtypes = [ctypes.c_void_p]
-lib.n4m_context_clear_error.restype  = None
+lib.n4m_context_clear_error.restype = None
 lib.n4m_context_clear_error.argtypes = [ctypes.c_void_p]
 
 # ---- n4m_config_* (a representative subset; Phase 2 fills out the rest) ----
-lib.n4m_config_create.restype  = ctypes.c_int
+lib.n4m_config_create.restype = ctypes.c_int
 lib.n4m_config_create.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
-lib.n4m_config_destroy.restype  = None
+lib.n4m_config_destroy.restype = None
 lib.n4m_config_destroy.argtypes = [ctypes.c_void_p]
-lib.n4m_config_set_n_components.restype  = ctypes.c_int
+lib.n4m_config_set_n_components.restype = ctypes.c_int
 lib.n4m_config_set_n_components.argtypes = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_config_get_n_components.restype  = ctypes.c_int
-lib.n4m_config_get_n_components.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
-lib.n4m_config_set_tol.restype  = ctypes.c_int
+lib.n4m_config_get_n_components.restype = ctypes.c_int
+lib.n4m_config_get_n_components.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
+]
+lib.n4m_config_set_tol.restype = ctypes.c_int
 lib.n4m_config_set_tol.argtypes = [ctypes.c_void_p, ctypes.c_double]
-lib.n4m_config_get_tol.restype  = ctypes.c_int
+lib.n4m_config_get_tol.restype = ctypes.c_int
 lib.n4m_config_get_tol.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_double)]
-lib.n4m_config_set_algorithm.restype  = ctypes.c_int
+lib.n4m_config_set_algorithm.restype = ctypes.c_int
 lib.n4m_config_set_algorithm.argtypes = [ctypes.c_void_p, ctypes.c_int]
-lib.n4m_config_get_algorithm.restype  = ctypes.c_int
+lib.n4m_config_get_algorithm.restype = ctypes.c_int
 lib.n4m_config_get_algorithm.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
-lib.n4m_config_set_solver.restype  = ctypes.c_int
+lib.n4m_config_set_solver.restype = ctypes.c_int
 lib.n4m_config_set_solver.argtypes = [ctypes.c_void_p, ctypes.c_int]
-lib.n4m_config_get_solver.restype  = ctypes.c_int
+lib.n4m_config_get_solver.restype = ctypes.c_int
 lib.n4m_config_get_solver.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
-lib.n4m_config_set_deflation.restype  = ctypes.c_int
+lib.n4m_config_set_deflation.restype = ctypes.c_int
 lib.n4m_config_set_deflation.argtypes = [ctypes.c_void_p, ctypes.c_int]
-lib.n4m_config_get_deflation.restype  = ctypes.c_int
+lib.n4m_config_get_deflation.restype = ctypes.c_int
 lib.n4m_config_get_deflation.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
-lib.n4m_config_set_center_x.restype  = ctypes.c_int
+lib.n4m_config_set_center_x.restype = ctypes.c_int
 lib.n4m_config_set_center_x.argtypes = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_config_get_center_x.restype  = ctypes.c_int
+lib.n4m_config_get_center_x.restype = ctypes.c_int
 lib.n4m_config_get_center_x.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
-lib.n4m_config_set_scale_x.restype   = ctypes.c_int
-lib.n4m_config_set_scale_x.argtypes  = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_config_get_scale_x.restype   = ctypes.c_int
-lib.n4m_config_get_scale_x.argtypes  = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
-lib.n4m_config_set_center_y.restype  = ctypes.c_int
+lib.n4m_config_set_scale_x.restype = ctypes.c_int
+lib.n4m_config_set_scale_x.argtypes = [ctypes.c_void_p, ctypes.c_int32]
+lib.n4m_config_get_scale_x.restype = ctypes.c_int
+lib.n4m_config_get_scale_x.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
+lib.n4m_config_set_center_y.restype = ctypes.c_int
 lib.n4m_config_set_center_y.argtypes = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_config_get_center_y.restype  = ctypes.c_int
+lib.n4m_config_get_center_y.restype = ctypes.c_int
 lib.n4m_config_get_center_y.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
-lib.n4m_config_set_scale_y.restype   = ctypes.c_int
-lib.n4m_config_set_scale_y.argtypes  = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_config_get_scale_y.restype   = ctypes.c_int
-lib.n4m_config_get_scale_y.argtypes  = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
-lib.n4m_config_set_store_scores.restype  = ctypes.c_int
+lib.n4m_config_set_scale_y.restype = ctypes.c_int
+lib.n4m_config_set_scale_y.argtypes = [ctypes.c_void_p, ctypes.c_int32]
+lib.n4m_config_get_scale_y.restype = ctypes.c_int
+lib.n4m_config_get_scale_y.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
+lib.n4m_config_set_store_scores.restype = ctypes.c_int
 lib.n4m_config_set_store_scores.argtypes = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_config_get_store_scores.restype  = ctypes.c_int
-lib.n4m_config_get_store_scores.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
-lib.n4m_config_set_sparse_simpls_legacy.restype  = ctypes.c_int
+lib.n4m_config_get_store_scores.restype = ctypes.c_int
+lib.n4m_config_get_store_scores.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
+]
+lib.n4m_config_set_sparse_simpls_legacy.restype = ctypes.c_int
 lib.n4m_config_set_sparse_simpls_legacy.argtypes = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_config_get_sparse_simpls_legacy.restype  = ctypes.c_int
-lib.n4m_config_get_sparse_simpls_legacy.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
-lib.n4m_config_set_robust_pls_legacy.restype  = ctypes.c_int
+lib.n4m_config_get_sparse_simpls_legacy.restype = ctypes.c_int
+lib.n4m_config_get_sparse_simpls_legacy.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
+]
+lib.n4m_config_set_robust_pls_legacy.restype = ctypes.c_int
 lib.n4m_config_set_robust_pls_legacy.argtypes = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_config_get_robust_pls_legacy.restype  = ctypes.c_int
-lib.n4m_config_get_robust_pls_legacy.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
-lib.n4m_config_set_approximate_press_legacy.restype  = ctypes.c_int
+lib.n4m_config_get_robust_pls_legacy.restype = ctypes.c_int
+lib.n4m_config_get_robust_pls_legacy.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
+]
+lib.n4m_config_set_approximate_press_legacy.restype = ctypes.c_int
 lib.n4m_config_set_approximate_press_legacy.argtypes = [ctypes.c_void_p, ctypes.c_int32]
-lib.n4m_config_get_approximate_press_legacy.restype  = ctypes.c_int
-lib.n4m_config_get_approximate_press_legacy.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
+lib.n4m_config_get_approximate_press_legacy.restype = ctypes.c_int
+lib.n4m_config_get_approximate_press_legacy.argtypes = [
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
+]
 
 # ---- n4m_operator_bank_* ----
-lib.n4m_operator_bank_create.restype  = ctypes.c_int
+lib.n4m_operator_bank_create.restype = ctypes.c_int
 lib.n4m_operator_bank_create.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
-lib.n4m_operator_bank_destroy.restype  = None
+lib.n4m_operator_bank_destroy.restype = None
 lib.n4m_operator_bank_destroy.argtypes = [ctypes.c_void_p]
-lib.n4m_operator_bank_add.restype  = ctypes.c_int
+lib.n4m_operator_bank_add.restype = ctypes.c_int
 lib.n4m_operator_bank_add.argtypes = [
-    ctypes.c_void_p, ctypes.c_int,
-    ctypes.POINTER(ctypes.c_double), ctypes.c_int32,
+    ctypes.c_void_p,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_double),
+    ctypes.c_int32,
 ]
-lib.n4m_operator_bank_size.restype  = ctypes.c_int
+lib.n4m_operator_bank_size.restype = ctypes.c_int
 lib.n4m_operator_bank_size.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32)]
 
 # ---- n4m_validation_plan_* ----
-lib.n4m_validation_plan_create.restype  = ctypes.c_int
+lib.n4m_validation_plan_create.restype = ctypes.c_int
 lib.n4m_validation_plan_create.argtypes = [ctypes.POINTER(ctypes.c_void_p)]
-lib.n4m_validation_plan_destroy.restype  = None
+lib.n4m_validation_plan_destroy.restype = None
 lib.n4m_validation_plan_destroy.argtypes = [ctypes.c_void_p]
-lib.n4m_validation_plan_set_n_samples.restype  = ctypes.c_int
+lib.n4m_validation_plan_set_n_samples.restype = ctypes.c_int
 lib.n4m_validation_plan_set_n_samples.argtypes = [ctypes.c_void_p, ctypes.c_int64]
-lib.n4m_validation_plan_add_fold.restype  = ctypes.c_int
+lib.n4m_validation_plan_add_fold.restype = ctypes.c_int
 lib.n4m_validation_plan_add_fold.argtypes = [
     ctypes.c_void_p,
-    ctypes.POINTER(ctypes.c_int64), ctypes.c_int64,
-    ctypes.POINTER(ctypes.c_int64), ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_int64),
+    ctypes.c_int64,
+    ctypes.POINTER(ctypes.c_int64),
+    ctypes.c_int64,
 ]
-lib.n4m_validation_plan_get_n_samples.restype  = ctypes.c_int
+lib.n4m_validation_plan_get_n_samples.restype = ctypes.c_int
 lib.n4m_validation_plan_get_n_samples.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int64),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int64),
 ]
-lib.n4m_validation_plan_get_n_folds.restype  = ctypes.c_int
+lib.n4m_validation_plan_get_n_folds.restype = ctypes.c_int
 lib.n4m_validation_plan_get_n_folds.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
 
 # ---- n4m_matrix_view_t layout (must mirror cpp/include/n4m/n4m.h) ----
@@ -260,64 +286,80 @@ class MatrixView(ctypes.Structure):
 
 
 # ---- n4m_aom_global_* ----
-lib.n4m_model_selection_aom_pls_select.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_select.restype = ctypes.c_int
 lib.n4m_model_selection_aom_pls_select.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
-    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
-    ctypes.c_void_p, ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
 ]
-lib.n4m_model_selection_aom_pls_result_destroy.restype  = None
+lib.n4m_model_selection_aom_pls_result_destroy.restype = None
 lib.n4m_model_selection_aom_pls_result_destroy.argtypes = [ctypes.c_void_p]
-lib.n4m_model_selection_aom_pls_result_get_n_operators.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_n_operators.restype = ctypes.c_int
 lib.n4m_model_selection_aom_pls_result_get_n_operators.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_aom_pls_result_get_max_components.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_max_components.restype = ctypes.c_int
 lib.n4m_model_selection_aom_pls_result_get_max_components.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_aom_pls_result_get_selected_operator_index.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_selected_operator_index.restype = (
+    ctypes.c_int
+)
 lib.n4m_model_selection_aom_pls_result_get_selected_operator_index.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_aom_pls_result_get_selected_n_components.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_selected_n_components.restype = ctypes.c_int
 lib.n4m_model_selection_aom_pls_result_get_selected_n_components.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_aom_pls_result_get_best_score.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_best_score.restype = ctypes.c_int
 lib.n4m_model_selection_aom_pls_result_get_best_score.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_double),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_double),
 ]
-lib.n4m_model_selection_aom_pls_result_get_operator_kinds.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_operator_kinds.restype = ctypes.c_int
 lib.n4m_model_selection_aom_pls_result_get_operator_kinds.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_int)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_aom_pls_result_get_operator_scores.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_operator_scores.restype = ctypes.c_int
 lib.n4m_model_selection_aom_pls_result_get_operator_scores.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_aom_pls_result_get_rmse_curves.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_rmse_curves.restype = ctypes.c_int
 lib.n4m_model_selection_aom_pls_result_get_rmse_curves.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
-    ctypes.POINTER(ctypes.c_int32), ctypes.POINTER(ctypes.c_int32),
+    ctypes.POINTER(ctypes.c_int32),
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_aom_pls_result_get_predictions.restype  = ctypes.c_int
+lib.n4m_model_selection_aom_pls_result_get_predictions.restype = ctypes.c_int
 lib.n4m_model_selection_aom_pls_result_get_predictions.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
-    ctypes.POINTER(ctypes.c_int64), ctypes.POINTER(ctypes.c_int64),
+    ctypes.POINTER(ctypes.c_int64),
+    ctypes.POINTER(ctypes.c_int64),
 ]
 
 # ---- n4m_model_* ----
-lib.n4m_model_fit.restype  = ctypes.c_int
+lib.n4m_model_fit.restype = ctypes.c_int
 lib.n4m_model_fit.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p,
-    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(MatrixView),
     ctypes.POINTER(ctypes.c_void_p),
 ]
 
@@ -363,72 +405,119 @@ class SerializedModelInfoV1(ctypes.Structure):
 assert ctypes.sizeof(SerializedModelInfoV1) == 64
 
 
+class SerializedPipelineInfoV1(ctypes.Structure):
+    """ABI mirror of ``n4m_serialized_pipeline_info_v1_t``."""
+
+    _fields_ = [
+        ("schema_version", ctypes.c_uint32),
+        ("struct_size", ctypes.c_uint32),
+        ("present", ctypes.c_uint32),
+        ("operator_count", ctypes.c_uint32),
+        ("operators", ctypes.c_int32 * 2),
+        ("savgol_window", ctypes.c_int32),
+        ("savgol_poly_degree", ctypes.c_int32),
+        ("savgol_derivative", ctypes.c_int32),
+        ("reserved0", ctypes.c_uint32),
+        ("savgol_delta", ctypes.c_double),
+        ("raw_n_features", ctypes.c_int32),
+        ("model_n_features", ctypes.c_int32),
+        ("fingerprint_algorithm", ctypes.c_uint32),
+        ("reserved1", ctypes.c_uint32),
+        ("fingerprint", ctypes.c_uint64),
+        ("reserved", ctypes.c_uint8 * 24),
+    ]
+
+
+assert ctypes.sizeof(SerializedPipelineInfoV1) == 96
+
+
 lib.n4m_model_import_linear_predictor.restype = ctypes.c_int
 lib.n4m_model_import_linear_predictor.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(LinearPredictorSpec),
     ctypes.POINTER(ctypes.c_void_p),
 ]
-lib.n4m_model_destroy.restype  = None
+lib.n4m_model_destroy.restype = None
 lib.n4m_model_destroy.argtypes = [ctypes.c_void_p]
-lib.n4m_model_predict.restype  = ctypes.c_int
+lib.n4m_model_predict.restype = ctypes.c_int
 lib.n4m_model_predict.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p,
-    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(MatrixView),
 ]
-lib.n4m_model_transform.restype  = ctypes.c_int
+lib.n4m_model_transform.restype = ctypes.c_int
 lib.n4m_model_transform.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p,
-    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(MatrixView),
 ]
-lib.n4m_model_predict_alloc.restype  = ctypes.c_int
+lib.n4m_model_predict_alloc.restype = ctypes.c_int
 lib.n4m_model_predict_alloc.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p,
-    ctypes.POINTER(MatrixView), ctypes.POINTER(ctypes.c_void_p),
-]
-lib.n4m_model_transform_alloc.restype  = ctypes.c_int
-lib.n4m_model_transform_alloc.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p,
-    ctypes.POINTER(MatrixView), ctypes.POINTER(ctypes.c_void_p),
-]
-lib.n4m_model_get_array.restype  = ctypes.c_int
-lib.n4m_model_get_array.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
     ctypes.POINTER(ctypes.c_void_p),
 ]
-lib.n4m_model_get_n_components.restype  = ctypes.c_int
+lib.n4m_model_transform_alloc.restype = ctypes.c_int
+lib.n4m_model_transform_alloc.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(ctypes.c_void_p),
+]
+lib.n4m_model_get_array.restype = ctypes.c_int
+lib.n4m_model_get_array.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_void_p),
+]
+lib.n4m_model_get_n_components.restype = ctypes.c_int
 lib.n4m_model_get_n_components.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_get_n_features.restype  = ctypes.c_int
+lib.n4m_model_get_n_features.restype = ctypes.c_int
 lib.n4m_model_get_n_features.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_get_n_targets.restype  = ctypes.c_int
+lib.n4m_model_get_n_targets.restype = ctypes.c_int
 lib.n4m_model_get_n_targets.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
 
 # ---- n4m_model_* serialization (N4MM v1 raw model / v2 bounded pipeline) ----
-lib.n4m_model_export_size.restype  = ctypes.c_int
+lib.n4m_model_export_size.restype = ctypes.c_int
 lib.n4m_model_export_size.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t),
-]
-lib.n4m_model_export_to_buffer.restype  = ctypes.c_int
-lib.n4m_model_export_to_buffer.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t,
+    ctypes.c_void_p,
     ctypes.POINTER(ctypes.c_size_t),
 ]
-lib.n4m_model_import_from_buffer.restype  = ctypes.c_int
+lib.n4m_model_export_to_buffer.restype = ctypes.c_int
+lib.n4m_model_export_to_buffer.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_size_t),
+]
+lib.n4m_model_import_from_buffer.restype = ctypes.c_int
 lib.n4m_model_import_from_buffer.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_size_t,
     ctypes.POINTER(ctypes.c_void_p),
 ]
-lib.n4m_serialization_inspect.restype  = ctypes.c_int
+lib.n4m_serialization_inspect.restype = ctypes.c_int
 lib.n4m_serialization_inspect.argtypes = [
-    ctypes.c_void_p, ctypes.c_size_t,
-    ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
-    ctypes.POINTER(ctypes.c_uint32), ctypes.POINTER(ctypes.c_uint32),
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_uint32),
+    ctypes.POINTER(ctypes.c_uint32),
+    ctypes.POINTER(ctypes.c_uint32),
+    ctypes.POINTER(ctypes.c_uint32),
 ]
 lib.n4m_serialization_inspect_model_v1.restype = ctypes.c_int
 lib.n4m_serialization_inspect_model_v1.argtypes = [
@@ -436,74 +525,96 @@ lib.n4m_serialization_inspect_model_v1.argtypes = [
     ctypes.c_size_t,
     ctypes.POINTER(SerializedModelInfoV1),
 ]
+lib.n4m_serialization_inspect_pipeline_v1.restype = ctypes.c_int
+lib.n4m_serialization_inspect_pipeline_v1.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_size_t,
+    ctypes.POINTER(SerializedPipelineInfoV1),
+    ctypes.c_size_t,
+]
 
 # ---- n4m_array_* ----
-lib.n4m_array_dtype.restype  = ctypes.c_int
+lib.n4m_array_dtype.restype = ctypes.c_int
 lib.n4m_array_dtype.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int),
 ]
-lib.n4m_array_shape.restype  = ctypes.c_int
+lib.n4m_array_shape.restype = ctypes.c_int
 lib.n4m_array_shape.argtypes = [
     ctypes.c_void_p,
-    ctypes.POINTER(ctypes.c_int64), ctypes.POINTER(ctypes.c_int64),
+    ctypes.POINTER(ctypes.c_int64),
+    ctypes.POINTER(ctypes.c_int64),
 ]
-lib.n4m_array_view.restype  = ctypes.c_int
+lib.n4m_array_view.restype = ctypes.c_int
 lib.n4m_array_view.argtypes = [ctypes.c_void_p, ctypes.POINTER(MatrixView)]
-lib.n4m_array_free.restype  = None
+lib.n4m_array_free.restype = None
 lib.n4m_array_free.argtypes = [ctypes.c_void_p]
 
 # ---- n4m_aom_per_component_* ----
-lib.n4m_model_selection_pop_pls_select.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_select.restype = ctypes.c_int
 lib.n4m_model_selection_pop_pls_select.argtypes = [
-    ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
-    ctypes.POINTER(MatrixView), ctypes.POINTER(MatrixView),
-    ctypes.c_void_p, ctypes.c_int32, ctypes.POINTER(ctypes.c_void_p),
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(MatrixView),
+    ctypes.POINTER(MatrixView),
+    ctypes.c_void_p,
+    ctypes.c_int32,
+    ctypes.POINTER(ctypes.c_void_p),
 ]
-lib.n4m_model_selection_pop_pls_result_destroy.restype  = None
+lib.n4m_model_selection_pop_pls_result_destroy.restype = None
 lib.n4m_model_selection_pop_pls_result_destroy.argtypes = [ctypes.c_void_p]
-lib.n4m_model_selection_pop_pls_result_get_n_operators.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_n_operators.restype = ctypes.c_int
 lib.n4m_model_selection_pop_pls_result_get_n_operators.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_pop_pls_result_get_max_components.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_max_components.restype = ctypes.c_int
 lib.n4m_model_selection_pop_pls_result_get_max_components.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_pop_pls_result_get_selected_n_components.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_selected_n_components.restype = ctypes.c_int
 lib.n4m_model_selection_pop_pls_result_get_selected_n_components.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_pop_pls_result_get_best_score.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_best_score.restype = ctypes.c_int
 lib.n4m_model_selection_pop_pls_result_get_best_score.argtypes = [
-    ctypes.c_void_p, ctypes.POINTER(ctypes.c_double),
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_double),
 ]
-lib.n4m_model_selection_pop_pls_result_get_operator_kinds.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_operator_kinds.restype = ctypes.c_int
 lib.n4m_model_selection_pop_pls_result_get_operator_kinds.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_int)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_pop_pls_result_get_selected_operator_indices.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_selected_operator_indices.restype = (
+    ctypes.c_int
+)
 lib.n4m_model_selection_pop_pls_result_get_selected_operator_indices.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_int32)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_pop_pls_result_get_component_scores.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_component_scores.restype = ctypes.c_int
 lib.n4m_model_selection_pop_pls_result_get_component_scores.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
-    ctypes.POINTER(ctypes.c_int32), ctypes.POINTER(ctypes.c_int32),
+    ctypes.POINTER(ctypes.c_int32),
+    ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_pop_pls_result_get_prefix_scores.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_prefix_scores.restype = ctypes.c_int
 lib.n4m_model_selection_pop_pls_result_get_prefix_scores.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
     ctypes.POINTER(ctypes.c_int32),
 ]
-lib.n4m_model_selection_pop_pls_result_get_predictions.restype  = ctypes.c_int
+lib.n4m_model_selection_pop_pls_result_get_predictions.restype = ctypes.c_int
 lib.n4m_model_selection_pop_pls_result_get_predictions.argtypes = [
     ctypes.c_void_p,
     ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
-    ctypes.POINTER(ctypes.c_int64), ctypes.POINTER(ctypes.c_int64),
+    ctypes.POINTER(ctypes.c_int64),
+    ctypes.POINTER(ctypes.c_int64),
 ]
