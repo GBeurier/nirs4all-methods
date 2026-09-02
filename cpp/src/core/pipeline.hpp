@@ -37,6 +37,22 @@ class Pipeline {
         return fitted_;
     }
 
+    // Validate/canonicalize the only pipeline slice that a fitted Model may
+    // currently own and serialize: SNV(no params) -> Savitzky-Golay smooth.
+    [[nodiscard]] n4m_status_t model_snv_savgol_config(
+        Context& ctx,
+        std::int32_t& out_window,
+        std::int32_t& out_poly_degree) const;
+
+    // Restore the fitted state of that exact stateless slice from N4MM v2.
+    // No training statistics are needed: SNV is row-local and SG coefficients
+    // are determined entirely by the canonical window/poly configuration.
+    [[nodiscard]] n4m_status_t restore_model_snv_savgol(
+        Context& ctx,
+        std::int64_t n_features,
+        std::int32_t window,
+        std::int32_t poly_degree);
+
     [[nodiscard]] n4m_status_t fit(Context& ctx,
                                    const n4m_matrix_view_t& X,
                                    const n4m_matrix_view_t* Y);

@@ -389,7 +389,7 @@ void test_model_serialization_contract() {
     N4M_TEST_REQUIRE(n4m_serialization_inspect(
                          payload.data(), payload.size(), &format, &writer_major,
                          &writer_minor, &writer_patch) == N4M_OK);
-    N4M_TEST_REQUIRE(format == N4M_SERIALIZATION_FORMAT_VERSION);
+    N4M_TEST_REQUIRE(format == N4M_SERIALIZATION_FORMAT_VERSION_V1);
     N4M_TEST_REQUIRE(writer_major == n4m_get_abi_version_major());
     N4M_TEST_REQUIRE(writer_minor == n4m_get_abi_version_minor());
     N4M_TEST_REQUIRE(writer_patch == n4m_get_abi_version_patch());
@@ -398,7 +398,7 @@ void test_model_serialization_contract() {
     N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
                          payload.data(), payload.size(), &info) == N4M_OK);
     N4M_TEST_REQUIRE(info.schema_version == N4M_SERIALIZED_MODEL_INFO_SCHEMA_V1);
-    N4M_TEST_REQUIRE(info.format_version == N4M_SERIALIZATION_FORMAT_VERSION);
+    N4M_TEST_REQUIRE(info.format_version == N4M_SERIALIZATION_FORMAT_VERSION_V1);
     N4M_TEST_REQUIRE(info.writer_abi_major == n4m_get_abi_version_major());
     N4M_TEST_REQUIRE(info.writer_abi_minor == n4m_get_abi_version_minor());
     N4M_TEST_REQUIRE(info.writer_abi_patch == n4m_get_abi_version_patch());

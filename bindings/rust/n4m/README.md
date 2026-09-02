@@ -12,6 +12,8 @@ retain every committed borrowed trial in `AskBatchError::Partial`.
 uses caller-owned row-major storage (`n4m_model_predict`); `Model::predict`
 uses core-owned storage (`n4m_model_predict_alloc`) and copies it before
 calling `n4m_array_free`. `Model::export_n4mm`/`import_n4mm` own N4MM bytes, and
+`inspect_n4mm` accepts raw-model v1 and bounded SNV/SG pipeline v2 payloads;
+`SerializedModelInfo::has_pipeline` is derived from the native capability mask.
 `Optimizer::save_n4mopt`/`load_n4mopt` own N4MOPT bytes. Checkpoint envelopes
 are preflighted to the native 64 MiB N4MOPT cap before the binding allocates a
 copy; native loading remains the authoritative decoder. Optimizer snapshots are

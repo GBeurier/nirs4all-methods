@@ -1,5 +1,20 @@
 # ABI — Changes Log
 
+## 2026-09-03 — N4MM format 2: bounded SNV/SG model pipeline
+
+No C symbol or public structure changes. Models without a configured pipeline
+remain byte-compatible N4MM format 1. A PLS-regression model configured with
+the exact `SNV(no params) -> Savitzky-Golay smooth(window, poly)` slice exports
+format 2, which appends the canonical derivative `0` and delta `1` configuration
+after the format-1 arrays and before the existing checksum.
+
+The importer and `n4m_serialization_inspect_model_v1` accept both formats.
+Format 2 rejects every other operator tag, order, parameter count, non-canonical
+derivative/delta, invalid window/polynomial pair, inconsistent model recipe,
+trailing bytes and checksum failure. Its descriptor adds the `PIPELINE`
+capability bit. The `_v1` suffix continues to name the fixed 64-byte descriptor
+schema, not the N4MM wire version.
+
 ## 2026-09-02 — ABI 2.4.0: authoritative fitted-model inspection
 
 Additive MINOR change: `n4m_serialization_inspect_model_v1` validates a

@@ -848,7 +848,9 @@ N4M_API n4m_status_t n4m_serialization_inspect(
  * payload. Unlike n4m_serialization_inspect (which intentionally reads only
  * the 20-byte header), this entry point validates the magic, supported wire
  * version, checksum, model recipe, dimensions and every length-delimited
- * section before publishing any metadata.
+ * section, plus the bounded format-2 pipeline block when present, before
+ * publishing any metadata. The `_v1` suffix identifies this descriptor
+ * schema; the function accepts both N4MM wire versions 1 and 2.
  *
  * `out_info` is byte-zeroed before any validation. It therefore remains all
  * zero on N4M_ERR_NULL_POINTER, N4M_ERR_CORRUPT_BUFFER,
@@ -862,6 +864,7 @@ N4M_API n4m_status_t n4m_serialization_inspect(
 #define N4M_SERIALIZED_MODEL_CAPABILITY_PREDICT   (UINT64_C(1) << 0)
 #define N4M_SERIALIZED_MODEL_CAPABILITY_TRANSFORM (UINT64_C(1) << 1)
 #define N4M_SERIALIZED_MODEL_CAPABILITY_AFFINE    (UINT64_C(1) << 2)
+#define N4M_SERIALIZED_MODEL_CAPABILITY_PIPELINE  (UINT64_C(1) << 3)
 
 typedef struct n4m_serialized_model_info_v1_t {
     uint32_t schema_version;

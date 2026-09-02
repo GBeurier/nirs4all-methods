@@ -111,7 +111,7 @@ Tolerances are per-algorithm; see
 ## 5. The N4MM fitted-model payload
 
 N4MM format version 1 stores the state needed to predict or transform with a
-fitted native model:
+fitted native model without a pipeline:
 
 - algorithm, solver, deflation and fitted-model configuration fields;
 - centring and scaling statistics;
@@ -119,9 +119,20 @@ fitted native model:
 - the writer ABI triple as provenance;
 - a trailing FNV-1a integrity checksum.
 
+Format version 2 is emitted only for the bounded native
+`SNV -> Savitzky-Golay smooth -> PLS regression` slice. It retains the complete
+format-1 model state and adds the ordered operator tags plus canonical SG
+window, polynomial degree, derivative `0` and delta `1`. The importer supports
+both versions; a restored v2 model reapplies the pipeline to raw X before
+prediction.
+
 It does **not** contain the project version, a training-data fingerprint or a
 content address. A different writer ABI is currently accepted with a warning
 on the context; corrupt bytes and unsupported N4MM format versions fail.
+
+`n4m_serialization_inspect_model_v1` reports the encoded recipe, dimensions and
+prediction, transform and pipeline capability bits. The `_v1` suffix identifies
+the fixed descriptor schema; it can inspect both N4MM wire versions.
 
 The format is exposed by the C ABI functions
 `n4m_model_export_to_buffer` / `n4m_model_import_from_buffer`. The Python slim
@@ -136,7 +147,7 @@ restored.close()
 R, MATLAB and JS do not currently expose fitted-model N4MM import/export
 wrappers. The raw payload has no canonical filename extension. The `.n4a`
 extension remains the nirs4all full-pipeline bundle namespace; a possible
-`.n4am` envelope is deferred and is not part of N4MM format version 1.
+`.n4am` envelope is deferred and is not part of either N4MM wire version.
 
 ## 6. The algorithm taxonomy
 

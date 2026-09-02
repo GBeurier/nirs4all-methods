@@ -12,6 +12,7 @@
 
 #include "core/config.hpp"
 #include "core/common/context.hpp"
+#include "core/pipeline.hpp"
 
 namespace n4m::core {
 
@@ -40,6 +41,14 @@ class Model {
     std::int32_t store_scores{0};
     double tol{1e-6};
     std::int32_t max_iter{500};
+
+    // The only model-owned preprocessing slice supported by model_fit today.
+    // `pipeline` is fitted whenever `has_snv_savgol_pipeline` is true; the
+    // canonical scalar configuration is repeated explicitly for N4MM v2.
+    bool has_snv_savgol_pipeline{false};
+    std::int32_t pipeline_savgol_window{0};
+    std::int32_t pipeline_savgol_poly_degree{0};
+    Pipeline pipeline;
 
     // Row-major arrays.
     std::vector<double> x_mean;       // n_features

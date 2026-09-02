@@ -170,6 +170,10 @@ _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_config_set_scale_x, n4m_status_t (*)(n4
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_config_set_center_y, n4m_status_t (*)(n4m_config_t*, int32_t)), "n4m_config_set_center_y signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_config_set_scale_y, n4m_status_t (*)(n4m_config_t*, int32_t)), "n4m_config_set_scale_y signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_config_set_store_scores, n4m_status_t (*)(n4m_config_t*, int32_t)), "n4m_config_set_store_scores signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_pipeline_create, n4m_status_t (*)(n4m_pipeline_t**)), "n4m_pipeline_create signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_pipeline_destroy, void (*)(n4m_pipeline_t*)), "n4m_pipeline_destroy signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_pipeline_add_operator, n4m_status_t (*)(n4m_pipeline_t*, n4m_operator_kind_t, const double*, int32_t)), "n4m_pipeline_add_operator signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_config_set_pipeline, n4m_status_t (*)(n4m_config_t*, const n4m_pipeline_t*)), "n4m_config_set_pipeline signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_fit, n4m_status_t (*)(n4m_context_t*, const n4m_config_t*, const n4m_matrix_view_t*, const n4m_matrix_view_t*, n4m_model_t**)), "n4m_model_fit signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_predict, n4m_status_t (*)(n4m_context_t*, const n4m_model_t*, const n4m_matrix_view_t*, n4m_matrix_view_t*)), "n4m_model_predict signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_predict_alloc, n4m_status_t (*)(n4m_context_t*, const n4m_model_t*, const n4m_matrix_view_t*, n4m_array_t**)), "n4m_model_predict_alloc signature drifted");

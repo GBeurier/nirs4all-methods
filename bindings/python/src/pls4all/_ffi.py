@@ -409,7 +409,7 @@ lib.n4m_model_get_n_targets.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_int32),
 ]
 
-# ---- n4m_model_* serialization (N4M_SERIALIZATION_FORMAT_VERSION = 1) ----
+# ---- n4m_model_* serialization (N4MM v1 raw model / v2 bounded pipeline) ----
 lib.n4m_model_export_size.restype  = ctypes.c_int
 lib.n4m_model_export_size.argtypes = [
     ctypes.c_void_p, ctypes.POINTER(ctypes.c_size_t),
