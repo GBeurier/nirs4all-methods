@@ -132,6 +132,13 @@ std::vector<unsigned char> model_bytes(std::uint32_t format) {
         append_f64(bytes, 2.0);
         append_f64(bytes, 0.0);
         append_f64(bytes, 1.0);
+        append_u32(bytes, N4M_PIPELINE_SEMANTIC_PROFILE_NIRS4ALL_SNV_SAVGOL_V1);
+        append_u32(bytes, 1U);  // SNV axis
+        append_u32(bytes, 1U);  // SNV with_mean
+        append_u32(bytes, 1U);  // SNV with_std
+        append_u32(bytes, 0U);  // SNV ddof
+        append_u32(bytes, static_cast<std::uint32_t>(N4M_PP_SAVGOL_INTERP));
+        append_f64(bytes, 0.0);  // Savitzky-Golay cval
     }
     append_u64(bytes, fnv1a64(bytes.data(), bytes.size()));
     return bytes;
@@ -179,19 +186,37 @@ void test_v2_plan_fingerprint_and_tamper() {
     N4M_TEST_REQUIRE(info.savgol_window == 5);
     N4M_TEST_REQUIRE(info.savgol_poly_degree == 2);
     N4M_TEST_REQUIRE(info.savgol_derivative == 0);
+    N4M_TEST_REQUIRE(
+        info.semantic_profile ==
+        N4M_PIPELINE_SEMANTIC_PROFILE_NIRS4ALL_SNV_SAVGOL_V1);
     N4M_TEST_REQUIRE(info.savgol_delta == 1.0);
     N4M_TEST_REQUIRE(info.raw_n_features == 9);
     N4M_TEST_REQUIRE(info.model_n_features == 9);
     N4M_TEST_REQUIRE(info.fingerprint_algorithm == N4M_PIPELINE_FINGERPRINT_FNV1A64_V1);
-    N4M_TEST_REQUIRE(info.fingerprint == UINT64_C(0x6c670bd4a3e48332));
+    N4M_TEST_REQUIRE(info.snv_axis == 1);
+    N4M_TEST_REQUIRE(info.snv_with_mean == 1U);
+    N4M_TEST_REQUIRE(info.snv_with_std == 1U);
+    N4M_TEST_REQUIRE(info.snv_ddof == 0);
+    N4M_TEST_REQUIRE(info.savgol_mode == N4M_PP_SAVGOL_INTERP);
+    N4M_TEST_REQUIRE(info.savgol_cval == 0.0);
+    N4M_TEST_REQUIRE(info.fingerprint == UINT64_C(0x4ec584c6e32e3416));
 
-    constexpr std::size_t kPipelineBytes = 52U;
+    constexpr std::size_t kPipelineBytes = 84U;
     const std::size_t pipeline_offset = bytes.size() - 8U - kPipelineBytes;
     std::vector<unsigned char> corrupt_checksum = bytes;
     corrupt_checksum[pipeline_offset + 4U] ^= 1U;
     std::memset(&info, 0xa5, sizeof(info));
     N4M_TEST_REQUIRE(n4m_serialization_inspect_pipeline_v1(
                          corrupt_checksum.data(), corrupt_checksum.size(),
+                         &info, sizeof(info)) == N4M_ERR_CORRUPT_BUFFER);
+    N4M_TEST_REQUIRE(all_zero(info));
+
+    std::vector<unsigned char> bad_profile = bytes;
+    write_u32(bad_profile, pipeline_offset + 52U, 2U);
+    refresh_checksum(bad_profile);
+    std::memset(&info, 0xa5, sizeof(info));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_pipeline_v1(
+                         bad_profile.data(), bad_profile.size(),
                          &info, sizeof(info)) == N4M_ERR_CORRUPT_BUFFER);
     N4M_TEST_REQUIRE(all_zero(info));
 

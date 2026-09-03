@@ -59,7 +59,7 @@ void set_error(n4m_context_t* ctx, const char* message) noexcept {
 }
 
 constexpr std::size_t kPipelineV2Bytes =
-    5U * sizeof(std::uint32_t) + 4U * sizeof(double);
+    11U * sizeof(std::uint32_t) + 5U * sizeof(double);
 
 [[nodiscard]] bool supported_model_format(std::uint32_t format) noexcept {
     return format == N4M_SERIALIZATION_FORMAT_VERSION_V1 ||
@@ -87,7 +87,8 @@ constexpr std::size_t kPipelineV2Bytes =
             model.pipeline.fitted() &&
             valid_savgol_smooth_config(
                 model.pipeline_savgol_window,
-                model.pipeline_savgol_poly_degree));
+                model.pipeline_savgol_poly_degree) &&
+            model.pipeline_savgol_window <= model.n_features);
 }
 
 [[nodiscard]] bool checked_product(std::uint64_t a,
@@ -281,10 +282,17 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
 
 struct PipelineV2 {
     bool present{false};
+    std::uint32_t semantic_profile{0};
+    std::int32_t snv_axis{0};
+    bool snv_with_mean{false};
+    bool snv_with_std{false};
+    std::int32_t snv_ddof{0};
     std::int32_t window{0};
     std::int32_t poly_degree{0};
     std::int32_t derivative{0};
     double delta{0.0};
+    n4m_pp_savgol_mode_t mode{N4M_PP_SAVGOL_MIRROR};
+    double cval{0.0};
     std::uint64_t fingerprint{0};
 };
 
@@ -298,11 +306,19 @@ void write_pipeline_v2(Writer& w, const ::n4m::core::Model& model) noexcept {
     w.f64(static_cast<double>(model.pipeline_savgol_poly_degree));
     w.f64(0.0);
     w.f64(1.0);
+    w.u32(N4M_PIPELINE_SEMANTIC_PROFILE_NIRS4ALL_SNV_SAVGOL_V1);
+    w.u32(1U);  // SNV axis=1 (row-wise)
+    w.u32(1U);  // SNV with_mean=true
+    w.u32(1U);  // SNV with_std=true
+    w.u32(0U);  // SNV ddof=0
+    w.u32(static_cast<std::uint32_t>(N4M_PP_SAVGOL_INTERP));
+    w.f64(0.0);  // canonical cval (inactive for interp)
 }
 
 [[nodiscard]] bool read_pipeline_v2(
     Reader& r,
     std::uint32_t algorithm,
+    std::uint64_t n_features,
     PipelineV2& out) noexcept {
     out = {};
     std::uint32_t count = 0;
@@ -314,10 +330,20 @@ void write_pipeline_v2(Writer& w, const ::n4m::core::Model& model) noexcept {
     double poly_degree = 0.0;
     double derivative = 0.0;
     double delta = 0.0;
+    std::uint32_t semantic_profile = 0;
+    std::uint32_t snv_axis = 0;
+    std::uint32_t snv_with_mean = 0;
+    std::uint32_t snv_with_std = 0;
+    std::uint32_t snv_ddof = 0;
+    std::uint32_t savgol_mode = 0;
+    double savgol_cval = 0.0;
     const std::size_t canonical_begin = r.pos;
     if (!r.u32(count) || !r.u32(first_kind) || !r.u32(first_params) ||
         !r.u32(second_kind) || !r.u32(second_params) || !r.f64(window) ||
-        !r.f64(poly_degree) || !r.f64(derivative) || !r.f64(delta)) {
+        !r.f64(poly_degree) || !r.f64(derivative) || !r.f64(delta) ||
+        !r.u32(semantic_profile) || !r.u32(snv_axis) ||
+        !r.u32(snv_with_mean) || !r.u32(snv_with_std) ||
+        !r.u32(snv_ddof) || !r.u32(savgol_mode) || !r.f64(savgol_cval)) {
         return false;
     }
     if (count != 2U ||
@@ -332,19 +358,31 @@ void write_pipeline_v2(Writer& w, const ::n4m::core::Model& model) noexcept {
         window > static_cast<double>(std::numeric_limits<std::int32_t>::max()) ||
         poly_degree < static_cast<double>(std::numeric_limits<std::int32_t>::min()) ||
         poly_degree > static_cast<double>(std::numeric_limits<std::int32_t>::max()) ||
-        derivative != 0.0 || std::signbit(derivative) || delta != 1.0) {
+        derivative != 0.0 || std::signbit(derivative) || delta != 1.0 ||
+        semantic_profile != N4M_PIPELINE_SEMANTIC_PROFILE_NIRS4ALL_SNV_SAVGOL_V1 ||
+        snv_axis != 1U || snv_with_mean != 1U || snv_with_std != 1U ||
+        snv_ddof != 0U || savgol_mode != static_cast<std::uint32_t>(N4M_PP_SAVGOL_INTERP) ||
+        savgol_cval != 0.0 || std::signbit(savgol_cval)) {
         return false;
     }
     const auto integer_window = static_cast<std::int32_t>(window);
     const auto integer_poly_degree = static_cast<std::int32_t>(poly_degree);
-    if (!valid_savgol_smooth_config(integer_window, integer_poly_degree)) {
+    if (!valid_savgol_smooth_config(integer_window, integer_poly_degree) ||
+        static_cast<std::uint64_t>(integer_window) > n_features) {
         return false;
     }
     out.present = true;
+    out.semantic_profile = semantic_profile;
+    out.snv_axis = 1;
+    out.snv_with_mean = true;
+    out.snv_with_std = true;
+    out.snv_ddof = 0;
     out.window = integer_window;
     out.poly_degree = integer_poly_degree;
     out.derivative = 0;
     out.delta = 1.0;
+    out.mode = N4M_PP_SAVGOL_INTERP;
+    out.cval = 0.0;
     out.fingerprint = fnv1a64(
         r.data + canonical_begin, r.pos - canonical_begin);
     return true;
@@ -624,7 +662,7 @@ struct SerializedModelMetadata {
     }
     PipelineV2 pipeline;
     if (format == N4M_SERIALIZATION_FORMAT_VERSION_V2 &&
-        !read_pipeline_v2(r, algorithm, pipeline)) {
+        !read_pipeline_v2(r, algorithm, n_features, pipeline)) {
         return N4M_ERR_CORRUPT_BUFFER;
     }
     if (r.pos != r.size) {
@@ -763,7 +801,7 @@ struct SerializedModelMetadata {
 
     PipelineV2 pipeline;
     if (format == N4M_SERIALIZATION_FORMAT_VERSION_V2 &&
-        !read_pipeline_v2(r, algorithm, pipeline)) {
+        !read_pipeline_v2(r, algorithm, n_features, pipeline)) {
         return false;
     }
     if (r.pos != r.size) {
@@ -1301,11 +1339,18 @@ N4M_API n4m_status_t n4m_serialization_inspect_pipeline_v1(
     out_info->savgol_window = metadata.pipeline.window;
     out_info->savgol_poly_degree = metadata.pipeline.poly_degree;
     out_info->savgol_derivative = metadata.pipeline.derivative;
+    out_info->semantic_profile = metadata.pipeline.semantic_profile;
     out_info->savgol_delta = metadata.pipeline.delta;
     out_info->raw_n_features = static_cast<std::int32_t>(metadata.n_features);
     out_info->model_n_features = static_cast<std::int32_t>(metadata.n_features);
     out_info->fingerprint_algorithm = N4M_PIPELINE_FINGERPRINT_FNV1A64_V1;
+    out_info->snv_axis = metadata.pipeline.snv_axis;
     out_info->fingerprint = metadata.pipeline.fingerprint;
+    out_info->snv_with_mean = metadata.pipeline.snv_with_mean ? 1U : 0U;
+    out_info->snv_with_std = metadata.pipeline.snv_with_std ? 1U : 0U;
+    out_info->snv_ddof = metadata.pipeline.snv_ddof;
+    out_info->savgol_mode = metadata.pipeline.mode;
+    out_info->savgol_cval = metadata.pipeline.cval;
     return N4M_OK;
 }
 

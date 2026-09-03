@@ -896,15 +896,19 @@ N4M_API n4m_status_t n4m_serialization_inspect_model_v1(
  * N4MM format 1 returns N4M_OK with present=0 and all pipeline-specific fields
  * zero. Format 2 returns the exact validated SNV -> Savitzky-Golay plan. The
  * two feature widths are separate ABI fields even though this bounded plan is
- * dimension-preserving. fingerprint is FNV-1a-64 over the canonical 52-byte
- * little-endian pipeline block (operator count/tags/parameter counts/values),
- * and is therefore stable across machines and writer ABI versions.
+ * dimension-preserving. The semantic profile fixes row-wise SNV with mean/std
+ * and ddof=0 followed by Savitzky-Golay interp mode with cval=0. fingerprint is
+ * FNV-1a-64 over the canonical 84-byte little-endian pipeline block (operator
+ * count/tags/parameters plus the semantic-profile fields), and is therefore
+ * stable across machines and writer ABI versions.
  *
  * On every error, the writable prefix min(out_info_size, sizeof(*out_info)) is
  * byte-zeroed. A short output allocation returns N4M_ERR_INVALID_ARGUMENT.
  */
 #define N4M_SERIALIZED_PIPELINE_INFO_SCHEMA_V1 1u
 #define N4M_SERIALIZED_PIPELINE_MAX_OPERATORS  2u
+#define N4M_PIPELINE_SEMANTIC_PROFILE_NONE 0u
+#define N4M_PIPELINE_SEMANTIC_PROFILE_NIRS4ALL_SNV_SAVGOL_V1 1u
 #define N4M_PIPELINE_FINGERPRINT_NONE          0u
 #define N4M_PIPELINE_FINGERPRINT_FNV1A64_V1    1u
 
@@ -917,14 +921,18 @@ typedef struct n4m_serialized_pipeline_info_v1_t {
     int32_t savgol_window;
     int32_t savgol_poly_degree;
     int32_t savgol_derivative;
-    uint32_t reserved0;
+    uint32_t semantic_profile;
     double savgol_delta;
     int32_t raw_n_features;
     int32_t model_n_features;
     uint32_t fingerprint_algorithm;
-    uint32_t reserved1;
+    int32_t snv_axis;
     uint64_t fingerprint;
-    uint8_t reserved[24];
+    uint32_t snv_with_mean;
+    uint32_t snv_with_std;
+    int32_t snv_ddof;
+    int32_t savgol_mode; /* Numeric n4m_pp_savgol_mode_t value. */
+    double savgol_cval;
 } n4m_serialized_pipeline_info_v1_t;
 
 N4M_API n4m_status_t n4m_serialization_inspect_pipeline_v1(
@@ -1137,6 +1145,14 @@ N4M_STATIC_ASSERT(sizeof(n4m_serialized_model_info_v1_t) == 64,
                   "n4m_serialized_model_info_v1_t must be 64 bytes");
 N4M_STATIC_ASSERT(sizeof(n4m_serialized_pipeline_info_v1_t) == 96,
                   "n4m_serialized_pipeline_info_v1_t must be 96 bytes");
+N4M_STATIC_ASSERT(offsetof(n4m_serialized_pipeline_info_v1_t, semantic_profile) == 36,
+                  "serialized pipeline semantic_profile offset must be 36");
+N4M_STATIC_ASSERT(offsetof(n4m_serialized_pipeline_info_v1_t, snv_axis) == 60,
+                  "serialized pipeline snv_axis offset must be 60");
+N4M_STATIC_ASSERT(offsetof(n4m_serialized_pipeline_info_v1_t, fingerprint) == 64,
+                  "serialized pipeline fingerprint offset must be 64");
+N4M_STATIC_ASSERT(offsetof(n4m_serialized_pipeline_info_v1_t, savgol_cval) == 88,
+                  "serialized pipeline savgol_cval offset must be 88");
 /* HPO enum guard rails live in n4m/optimization.h so that header is
  * independently includable. */
 

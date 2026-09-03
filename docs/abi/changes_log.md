@@ -5,9 +5,10 @@
 Additive MINOR change: `n4m_serialization_inspect_pipeline_v1` returns the
 fixed, caller-sized 96-byte `n4m_serialized_pipeline_info_v1_t`. After the
 complete N4MM payload has passed the existing authoritative validation, format
-2 reports the exact ordered `SNV -> Savitzky-Golay smooth` operator pair,
+2 reports the exact ordered `SNV -> Savitzky-Golay smooth` operator pair, the
+versioned semantic profile (row axis, mean/std, ddof=0, interp mode and cval),
 canonical SG window/polynomial/derivative/delta, raw and model feature widths,
-and a stable FNV-1a-64 fingerprint of the canonical 52-byte plan block. Format
+and a stable FNV-1a-64 fingerprint of the canonical 84-byte plan block. Format
 1 succeeds with `present=0` and zero pipeline fields.
 
 The output prefix is zeroed on every error, including a short caller-provided
@@ -23,8 +24,9 @@ The wire-format addition itself made no C symbol or public structure changes;
 ABI 2.5 above subsequently adds typed inspection. Models without a configured
 pipeline remain byte-compatible N4MM format 1. A PLS-regression model configured with
 the exact `SNV(no params) -> Savitzky-Golay smooth(window, poly)` slice exports
-format 2, which appends the canonical derivative `0` and delta `1` configuration
-after the format-1 arrays and before the existing checksum.
+format 2, which appends the canonical derivative `0`, delta `1`, and
+`NIRS4ALL_SNV_SAVGOL_V1` semantic profile (axis 1, mean/std enabled, ddof 0,
+interp mode, cval +0) after the format-1 arrays and before the checksum.
 
 The importer and `n4m_serialization_inspect_model_v1` accept both formats.
 Format 2 rejects every other operator tag, order, parameter count, non-canonical

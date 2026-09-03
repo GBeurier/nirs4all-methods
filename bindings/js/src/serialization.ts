@@ -23,6 +23,14 @@ export enum PipelineFingerprintAlgorithm {
     Fnv1a64V1 = 1,
 }
 
+export enum PipelineSemanticProfile {
+    Nirs4allSnvSavgolV1 = 1,
+}
+
+export enum SerializedSavitzkyGolayMode {
+    Interp = 4,
+}
+
 export interface SerializedPipelineInfo {
     schemaVersion: number;
     operatorCount: number;
@@ -30,11 +38,18 @@ export interface SerializedPipelineInfo {
     savgolWindow: number;
     savgolPolyDegree: number;
     savgolDerivative: number;
+    semanticProfile: PipelineSemanticProfile;
     savgolDelta: number;
     rawNFeatures: number;
     modelNFeatures: number;
     fingerprintAlgorithm: PipelineFingerprintAlgorithm;
     fingerprint: bigint;
+    snvAxis: number;
+    snvWithMean: boolean;
+    snvWithStd: boolean;
+    snvDdof: number;
+    savgolMode: SerializedSavitzkyGolayMode;
+    savgolCval: number;
 }
 
 export interface SerializedModelInfo {
@@ -103,11 +118,18 @@ export function inspectN4mm(payload: Uint8Array): SerializedModelInfo {
             savgolWindow: pipelineView.getInt32(24, true),
             savgolPolyDegree: pipelineView.getInt32(28, true),
             savgolDerivative: pipelineView.getInt32(32, true),
+            semanticProfile: pipelineView.getUint32(36, true) as PipelineSemanticProfile,
             savgolDelta: pipelineView.getFloat64(40, true),
             rawNFeatures: pipelineView.getInt32(48, true),
             modelNFeatures: pipelineView.getInt32(52, true),
             fingerprintAlgorithm: pipelineView.getUint32(56, true) as PipelineFingerprintAlgorithm,
+            snvAxis: pipelineView.getInt32(60, true),
             fingerprint: pipelineView.getBigUint64(64, true),
+            snvWithMean: pipelineView.getUint32(72, true) !== 0,
+            snvWithStd: pipelineView.getUint32(76, true) !== 0,
+            snvDdof: pipelineView.getInt32(80, true),
+            savgolMode: pipelineView.getInt32(84, true) as SerializedSavitzkyGolayMode,
+            savgolCval: pipelineView.getFloat64(88, true),
         };
         return {
             schemaVersion: view.getUint32(0, true),

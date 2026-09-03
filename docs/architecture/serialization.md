@@ -29,6 +29,8 @@ failures with `N4M_ERR_CORRUPT_BUFFER`; unsupported format versions return
 Format 1 remains byte-for-byte unchanged and is still emitted for every model
 without a pipeline. Format 2 is emitted only for a PLS-regression model fitted
 with the exact `SNV(no params) -> Savitzky-Golay smooth(window, poly)` pipeline.
+When the SG operator omits parameters, model-pipeline parsing uses the public
+nirs4all defaults `window=11` and `poly=3`; export always records them explicitly.
 After the eleven format-1 vectors it appends, in order:
 
 ```text
@@ -41,6 +43,13 @@ f64 window                 # odd integer, 3..501
 f64 polynomial_degree      # integer, 0 <= degree < window
 f64 derivative_order = 0
 f64 delta = 1
+u32 semantic_profile = N4M_PIPELINE_SEMANTIC_PROFILE_NIRS4ALL_SNV_SAVGOL_V1
+u32 snv_axis = 1
+u32 snv_with_mean = 1
+u32 snv_with_std = 1
+u32 snv_ddof = 0
+u32 savgol_mode = N4M_PP_SAVGOL_INTERP
+f64 savgol_cval = +0
 u64 fnv1a64 checksum
 ```
 
@@ -85,14 +94,18 @@ not capability authorities.
 attestation surface. The caller passes both a pointer and its allocation size;
 the current `n4m_serialized_pipeline_info_v1_t` is 96 bytes. Format 1 returns
 success with `present=0`. Format 2 returns `operator_count=2`, ordered kinds
-`N4M_OP_SNV` then `N4M_OP_SAVGOL_SMOOTH`, SG window/polynomial/derivative/delta,
-and separate raw/model feature widths. Both widths equal `n_features` because
-the only admitted plan is dimension-preserving.
+`N4M_OP_SNV` then `N4M_OP_SAVGOL_SMOOTH`, the versioned user semantic profile,
+SNV axis/mean/std/ddof, SG window/polynomial/derivative/delta/mode/cval, and
+separate raw/model feature widths. Both widths equal `n_features` because the
+only admitted plan is dimension-preserving. The profile fixes row-wise SNV
+with population standard deviation (`ddof=0`), then SG interpolation at both
+edges (`derivative=0`, `delta=1`, `cval=+0`).
 
 The plan fingerprint algorithm is `N4M_PIPELINE_FINGERPRINT_FNV1A64_V1`: FNV-1a
-64 over the exact validated 52-byte little-endian block beginning at
-`operator_count` and ending at `delta`. It fingerprints the canonical plan and
-parameters, not learned model arrays or training data. The inspector uses the
+64 over the exact validated 84-byte little-endian block beginning at
+`operator_count` and ending at `savgol_cval`. It fingerprints the canonical
+plan, its semantic profile and parameters, not learned model arrays or training
+data. The canonical 5/2 plan has fingerprint `0x4ec584c6e32e3416`. The inspector uses the
 same full decoder as the model descriptor, so checksum failure, invalid tags or
 counts, non-canonical negative zero, inconsistent dimensions and trailing bytes
 fail before any field is published. The writable output prefix is zero on
