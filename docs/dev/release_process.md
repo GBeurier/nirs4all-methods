@@ -13,12 +13,15 @@ are automated; CRAN submission and optional registry/listing pages remain manual
 | R | `n4m` | CRAN | **Semi-automated** — `release-r.yml` vendors libn4m into `src/vendor/`, runs `R CMD check --as-cran` on the Linux/macOS/Windows + release/devel matrix, and (on tag push) attaches the tarball to the GitHub Release. **Submission is the irreducible manual web form.** | `workflow_dispatch`; tag push attaches the tarball |
 | R | `pls4all` (slim) | CRAN | **Semi-automated** — same `release-r.yml`, the matrix has a `pkg: [n4m, pls4all]` leg. | `workflow_dispatch`; tag push attaches the tarball |
 | JS / WASM | `@nirs4all/methods` | npm | **Automated** — `release-npm.yml` builds the pinned emsdk package, runs `npm test`, stages `dist/`, and publishes with npm provenance once `NPM_TOKEN`/scope are configured | tag push or `workflow_dispatch` with `publish=true` |
+| Rust | `n4m` | crates.io | **Automated and component-scoped** — `release-n4m-crate.yml` builds `libn4m`, runs `cargo package --locked`, uploads the crate plus provenance, then publishes from the protected `crates-io` environment | exact tag `n4m-v<crate-version>`; `workflow_dispatch` is dry-run only |
 | MATLAB / Octave | `+n4m` | GitHub Release | **Automated** — `release-matlab.yml` attaches `nirs4all-methods-matlab-octave-<version>.zip` to the Release. ONE binding serves both: users build the MEX with `build_mex.m` (MATLAB) or `mkoctfile` via `build_mex.m` (Octave); see `bindings/matlab/COMPAT.md`. A File Exchange / Octave Forge listing is optional + manual. | tag push attaches the zip |
 
 ## Exact release artifacts — what each binding ships, and where to upload it
 
-Every artifact below is also attached to the **GitHub Release** for the release
-tag (`v<version>`) — so all of them are downloadable from one place.
+Methods-wide artifacts below are also attached to the **GitHub Release** for
+the release tag (`v<version>`). The independently versioned Rust `n4m` crate is
+the exception: its component workflow retains the `.crate`, inventory and
+checksum as a GitHub Actions artifact and attests the `.crate` directly.
 
 | Binding | Registry | Exact file(s) | Upload |
 |---|---|---|---|
@@ -28,6 +31,7 @@ tag (`v<version>`) — so all of them are downloadable from one place.
 | R `pls4all` | CRAN | **`pls4all_<version>.tar.gz`** (source tarball) | **Manual** — web form |
 | R `n4m` + `pls4all` | R-universe | — (built from Git, no upload) | **Automated** — registry repo + app (see *R → R-universe*) |
 | JS / WASM `@nirs4all/methods` | npm | the staged `dist/` package (via `npm publish`) | **Automated** — `release-npm.yml` (needs `NPM_TOKEN` — see *JS → npm*) |
+| Rust `n4m` | crates.io | **`n4m-<crate-version>.crate`** plus file inventory and checksum in the GitHub Actions artifact | **Automated** — exact `n4m-v<crate-version>` tag; requires the protected `crates-io` environment secret `CARGO_REGISTRY_TOKEN` |
 | MATLAB / Octave `+n4m` | GitHub Release | **`nirs4all-methods-matlab-octave-<version>.zip`** — the `bindings/matlab/` source (`+n4m` package + `build_mex.m` + MEX sources + tests). ONE package for both; download + run `build_mex.m`. | **Automated** — `release-matlab.yml` attaches it (File Exchange / Octave Forge optional + manual) |
 | Source + provenance | GitHub Release | `nirs4all-methods-<version>-src.tar.gz` · `...-src.zip` · `nirs4all-methods-<version>.cdx.json` (SBOM) · `SHA256SUMS` | **Automated** — `release-source.yml` |
 
@@ -89,6 +93,14 @@ on the `pls4all` name is structurally impossible:
   the irreducible manual step**: download the tarball from the run (or the
   attached Release asset) and submit it at
   <https://cran.r-project.org/submit.html>.
+- **crates.io (`n4m`)** — the crate version in
+  `bindings/rust/n4m/Cargo.toml` is independent of the Methods engine version.
+  An exact component tag such as `n4m-v0.1.4` triggers
+  `release-n4m-crate.yml`; a Methods-wide `v*` tag cannot publish it. The
+  workflow validates the tag against both `Cargo.toml` and `Cargo.lock`, builds
+  `libn4m`, packages with the lockfile, uploads the `.crate` with provenance,
+  and publishes only from the protected `crates-io` environment. Manual
+  dispatches perform the same package path but are structurally dry-run only.
 
 ---
 
@@ -100,6 +112,22 @@ File Exchange / Octave Forge *listing* is still manual. The **JS/WASM** package 
 built + published to npm by `release-npm.yml` (`@nirs4all/methods`). Each
 binding's artifact is built from the **same `libn4m` source** at the released
 version; always run the pre-release gates first.
+
+### Rust → crates.io (`n4m`)
+
+The one-time external setup is limited to a crates.io API token stored as the
+`CARGO_REGISTRY_TOKEN` secret in the protected GitHub environment named
+`crates-io`. The crates.io crate owner must permit that token to publish `n4m`.
+There is no local/manual publish switch in the workflow: `workflow_dispatch`
+always stops after the attested package artifact, while the exact component tag
+is the only event accepted by the publish job.
+
+```bash
+# Local equivalent of the safe dry run, after building libn4m:
+N4M_LIB_DIR="$PWD/build/dev-release/cpp/src" \
+N4M_RUNTIME_RPATH="$PWD/build/dev-release/cpp/src" \
+cargo package --locked -p n4m
+```
 
 ### JS → npm (`@nirs4all/methods`)
 
