@@ -11,7 +11,7 @@ set(_N4M_OPTIONS_INCLUDED ON)
 option(N4M_BUILD_SHARED        "Build n4m_c shared library (libn4m.so/.dll/.dylib)" ON)
 option(N4M_BUILD_STATIC        "Build n4m_c_static (for Android predict-only embedders)" ON)
 option(N4M_BUILD_TESTS         "Build the doctest-based unit/ABI test suite"            ON)
-option(N4M_BUILD_FUZZ          "Build libFuzzer harnesses (requires clang)"             OFF)
+option(N4M_BUILD_FUZZ          "Build fuzz harness contracts (libFuzzer runner requires clang)" OFF)
 option(N4M_BUILD_CLI           "Build the n4m_cli executable"                       ON)
 option(N4M_BUILD_EXAMPLES      "Build examples/c/*"                                     OFF)
 option(N4M_BUILD_BENCH         "Build bench/cpp/*"                                      OFF)
@@ -46,10 +46,9 @@ if(N4M_ENABLE_ASAN AND N4M_ENABLE_TSAN)
 endif()
 
 if(N4M_BUILD_FUZZ AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
-    message(WARNING
-        "N4M_BUILD_FUZZ requires clang for libFuzzer support; "
-        "disabling fuzz targets for this build.")
-    set(N4M_BUILD_FUZZ OFF CACHE BOOL "" FORCE)
+    message(STATUS
+        "N4M_BUILD_FUZZ: libFuzzer runner requires clang; "
+        "building the portable harness smoke contract only.")
 endif()
 
 # LTO is opt-in: only applied when N4M_ENABLE_LTO=ON AND the toolchain
