@@ -41,6 +41,22 @@ requires a prebuilt `libn4m`. The default
 `linked` feature validates every Rust extern declaration against the installed
 public headers at build time; it is the development and CI mode.
 
+## Publication
+
+The crates.io identity is [`n4m`](https://crates.io/crates/n4m), versioned
+independently from the Methods engine. Maintainers publish only through
+`.github/workflows/release-n4m-crate.yml` with an exact component tag matching
+the manifest, for example `n4m-v0.1.4`. A manual workflow dispatch is always a
+dry run: it builds `libn4m`, runs `cargo package --locked`, uploads the `.crate`
+and file inventory as GitHub Actions artifacts, and records build provenance,
+but it has no publication path.
+
+The tag-triggered publish job uses the protected `crates-io` GitHub environment
+and requires its `CARGO_REGISTRY_TOKEN` secret. A missing credential fails
+explicitly. Do not publish this crate with a Methods-wide `v*` tag, and do not
+reuse the archived `bindings/_archive/rust` proof of concept: it remains frozen
+and is a different package history.
+
 ## License
 
 The crate is dual-licensed as `CECILL-2.1 OR AGPL-3.0-or-later`, at your
@@ -52,7 +68,7 @@ intentional: the repository-root `LICENSE` contains the AGPL text only and is
 not presented as the CeCILL text. Verify the package file set with:
 
 ```sh
-cargo package -p n4m --list --allow-dirty
+cargo package --locked -p n4m --list --allow-dirty
 ```
 
 Build libn4m first, then run:
