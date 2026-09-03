@@ -25,6 +25,7 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings for 
 
 ## Quick links
 
+- **R2 native artifact** — [preflight matrix](native-default-r2.md) · [wire contract](architecture/serialization.md)
 - **Architecture** — [overview](architecture/overview.md) · [memory model](architecture/memory_model.md) · [error model](architecture/error_model.md) · [threading](architecture/threading.md) · [serialization](architecture/serialization.md)
 - **ABI** — [reference](abi/reference.md) · [stability policy](abi/stability_policy.md) · [changes log](abi/changes_log.md) · [ABI 2.0 migration guide](MIGRATION_ABI2.md)
 - **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB / Octave](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md)
@@ -51,6 +52,7 @@ architecture/memory_model
 architecture/error_model
 architecture/threading
 architecture/serialization
+native-default-r2
 benchmarks/index
 benchmarks/overview
 benchmarks/cross_binding

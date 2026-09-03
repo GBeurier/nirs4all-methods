@@ -124,6 +124,8 @@ const yhat = n4m.predictPls(model, { data: Xtest, rows: rowsTest, cols });
 ```python
 # Python slim binding
 payload = mdl.to_bytes()
+info = pls4all.inspect_n4mm(payload)  # validates all bytes before import
+assert info.format_version in (1, 2)
 loaded = pls4all.Model.from_bytes(ctx, payload)
 assert payload[:4] == b"N4MM"
 loaded.close()
@@ -137,6 +139,13 @@ difference currently produces a context warning rather than a load failure.
 R, MATLAB and JS do not yet expose N4MM model import/export wrappers. The
 `.n4a` extension remains reserved for the nirs4all full-pipeline bundle, which
 has a separate lifecycle and contract.
+
+For a Core Archive V2 Methods member, use the
+[R2 artifact preflight](../native-default-r2.md) before import. It maps each
+wire limitation to the Python, JavaScript, or C inspector and links the
+scientific [SNV](../methods/pp_snv.md),
+[Savitzky-Golay](../methods/pp_savgol.md), and
+[PLS](../methods/pls.md) contracts used by format 2.
 
 ## Next steps
 

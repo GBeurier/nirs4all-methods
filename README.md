@@ -235,12 +235,13 @@ implementation.
 - 🧪 **[Cross-binding runbook](benchmarks/cross_binding/README.md)** — registry refs, clean sweeps, git-pinned refs, and legacy fixed-reference modes
 - 🔬 **[Methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, threading, hardware
 - 🏗️ **[Architecture](docs/architecture/overview.md)** — memory model · error model · threading · serialization
+- 🔎 **[R2 native artifact preflight](docs/native-default-r2.md)** — N4MM v2 inspectors, limitations, archive boundary, and scientific links
 - 📜 **[ABI reference](docs/abi/reference.md)** — `n4m_*` C ABI surface, stability policy, changes log
 - 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB / Octave](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md)
 - 🗃️ **Archived bindings** — [Android / JNI status](docs/bindings/android.md) and frozen PoCs under `bindings/_archive/`
 - ✅ **[Parity methodology](docs/parity/methodology.md)** — every algorithm cross-checked against an external library
 - 🛠️ **[Dev workflow](docs/dev/workflow.md)** · [build](docs/dev/build.md) · [testing](docs/dev/testing.md)
-- 📦 **[Releases & downloads](https://github.com/GBeurier/nirs4all-methods/releases/latest)** — every version's Python wheels, R/CRAN source tarballs, source archive + SBOM, all attached to one GitHub Release
+- 📦 **[Published releases](https://github.com/GBeurier/nirs4all-methods/releases/latest)** — published assets only; the local R2 candidate is unavailable until its signed release manifest and artifacts are locked
 - 🚀 **[Release & registration process](docs/dev/release_process.md)** — per-binding publish, the **exact files to upload**, and CRAN / R-universe registration
 
 ---
