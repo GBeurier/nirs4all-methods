@@ -121,10 +121,11 @@ fitted native model without a pipeline:
 
 Format version 2 is emitted only for the bounded native
 `SNV -> Savitzky-Golay smooth -> PLS regression` slice. It retains the complete
-format-1 model state and adds the ordered operator tags plus canonical SG
-window, polynomial degree, derivative `0` and delta `1`. The importer supports
-both versions; a restored v2 model reapplies the pipeline to raw X before
-prediction.
+format-1 model state and adds the ordered operator tags plus a versioned
+semantic profile: row-wise SNV with mean/std and `ddof=0`, followed by SG with
+explicit window/polynomial degree, derivative `0`, delta `1`, interpolation at
+the edges and cval `+0`. The importer supports both versions; a restored v2
+model reapplies the pipeline to raw X before prediction.
 
 It does **not** contain the project version, a training-data fingerprint or a
 content address. A different writer ABI is currently accepted with a warning

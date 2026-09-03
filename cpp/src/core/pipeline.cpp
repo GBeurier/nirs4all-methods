@@ -6,10 +6,13 @@
 #include <cstddef>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include "core/common/matrix_view.hpp"
 #include "core/common/status.hpp"
+#include "core/preprocessing/derivatives/savitzky_golay.h"
+#include "core/preprocessing/scatter/snv.h"
 
 namespace {
 
@@ -193,29 +196,25 @@ void center_columns(const std::vector<double>& values,
     }
 }
 
-void apply_snv(const std::vector<double>& values,
-               std::size_t rows,
-               std::size_t cols,
-               std::vector<double>& out) {
+[[nodiscard]] n4m_status_t apply_snv(::n4m::core::Context& ctx,
+                                     const std::vector<double>& values,
+                                     std::size_t rows,
+                                     std::size_t cols,
+                                     std::vector<double>& out) {
     out.assign(rows * cols, 0.0);
-    const double denom = cols > 1U ? static_cast<double>(cols - 1U) : 1.0;
-    for (std::size_t row = 0; row < rows; ++row) {
-        double mean = 0.0;
-        for (std::size_t col = 0; col < cols; ++col) {
-            mean += values[idx(row, cols, col)];
-        }
-        mean /= static_cast<double>(cols);
-        double sumsq = 0.0;
-        for (std::size_t col = 0; col < cols; ++col) {
-            const double centered = values[idx(row, cols, col)] - mean;
-            sumsq += centered * centered;
-        }
-        const double stddev = std::sqrt(sumsq / denom);
-        const double scale = (stddev == 0.0 || !std::isfinite(stddev)) ? 1.0 : stddev;
-        for (std::size_t col = 0; col < cols; ++col) {
-            out[idx(row, cols, col)] = (values[idx(row, cols, col)] - mean) / scale;
-        }
+    std::unique_ptr<n4m_pp_snv_state_t, decltype(&n4m_pp_snv_state_free)> state(
+        n4m_pp_snv_state_new(1, 1, 0), &n4m_pp_snv_state_free);
+    if (!state) {
+        ctx.set_error("out of memory while creating canonical SNV state");
+        return N4M_ERR_OUT_OF_MEMORY;
     }
+    const n4m_status_t status = n4m_pp_snv_apply(
+        state.get(), values.data(), static_cast<std::int64_t>(rows),
+        static_cast<std::int64_t>(cols), out.data());
+    if (status != N4M_OK) {
+        ctx.set_error("canonical SNV transform failed");
+    }
+    return status;
 }
 
 [[nodiscard]] bool solve_linear_system(std::vector<double> matrix,
@@ -529,8 +528,8 @@ void apply_snv(const std::vector<double>& values,
 }
 
 struct SavGolParams {
-    std::int32_t window{5};
-    std::int32_t poly_degree{2};
+    std::int32_t window{11};
+    std::int32_t poly_degree{3};
     std::int32_t derivative_order{0};
     double delta{1.0};
 };
@@ -551,14 +550,6 @@ struct WaveletParams {
     std::int32_t levels{1};
     double threshold{0.0};
 };
-
-[[nodiscard]] double factorial(std::int32_t n) noexcept {
-    double out = 1.0;
-    for (std::int32_t i = 2; i <= n; ++i) {
-        out *= static_cast<double>(i);
-    }
-    return out;
-}
 
 [[nodiscard]] std::size_t next_power_of_two(std::size_t value) noexcept {
     std::size_t out = 1U;
@@ -670,86 +661,33 @@ void norris_williams_filter(const NorrisWilliamsParams& params,
     return N4M_OK;
 }
 
-[[nodiscard]] n4m_status_t compute_savgol_coeffs(::n4m::core::Context& ctx,
-                                                 const SavGolParams& params,
-                                                 std::vector<double>& coeffs) {
-    const std::size_t window = static_cast<std::size_t>(params.window);
-    const std::size_t terms = static_cast<std::size_t>(params.poly_degree) + 1U;
-    const std::int32_t half = params.window / 2;
-
-    std::vector<double> powers(window * terms, 1.0);
-    for (std::size_t sample = 0; sample < window; ++sample) {
-        const double x = static_cast<double>(static_cast<std::int32_t>(sample) - half);
-        for (std::size_t term = 1; term < terms; ++term) {
-            powers[idx(sample, terms, term)] =
-                powers[idx(sample, terms, term - 1U)] * x;
-        }
-    }
-
-    std::vector<double> gram(terms * terms, 0.0);
-    for (std::size_t row_term = 0; row_term < terms; ++row_term) {
-        for (std::size_t col_term = 0; col_term < terms; ++col_term) {
-            double sum = 0.0;
-            for (std::size_t sample = 0; sample < window; ++sample) {
-                sum += powers[idx(sample, terms, row_term)] *
-                       powers[idx(sample, terms, col_term)];
-            }
-            gram[idx(row_term, terms, col_term)] = sum;
-        }
-    }
-
-    std::vector<double> rhs(terms, 0.0);
-    rhs[static_cast<std::size_t>(params.derivative_order)] =
-        factorial(params.derivative_order) /
-        std::pow(params.delta, static_cast<double>(params.derivative_order));
-
-    std::vector<double> projection;
-    if (!solve_linear_system(gram, rhs, terms, projection)) {
-        ctx.set_error("failed to solve Savitzky-Golay normal equations");
-        return N4M_ERR_NUMERICAL_FAILURE;
-    }
-
-    coeffs.assign(window, 0.0);
-    for (std::size_t sample = 0; sample < window; ++sample) {
-        double coeff = 0.0;
-        for (std::size_t term = 0; term < terms; ++term) {
-            coeff += projection[term] * powers[idx(sample, terms, term)];
-        }
-        coeffs[sample] = coeff;
-    }
-    return N4M_OK;
-}
-
 [[nodiscard]] n4m_status_t apply_savgol(::n4m::core::Context& ctx,
                                         const std::vector<double>& values,
                                         std::size_t rows,
                                         std::size_t cols,
                                         const SavGolParams& params,
                                         std::vector<double>& out) {
-    std::vector<double> coeffs;
-    n4m_status_t status = compute_savgol_coeffs(ctx, params, coeffs);
-    if (status != N4M_OK) {
-        return status;
+    if (cols < static_cast<std::size_t>(params.window)) {
+        ctx.set_error("Savitzky-Golay window length cannot exceed the feature width");
+        return N4M_ERR_INVALID_ARGUMENT;
     }
-
-    const std::int64_t half = static_cast<std::int64_t>(params.window / 2);
-    const std::int64_t max_col = static_cast<std::int64_t>(cols - 1U);
     out.assign(rows * cols, 0.0);
-    for (std::size_t row = 0; row < rows; ++row) {
-        for (std::size_t col = 0; col < cols; ++col) {
-            double sum = 0.0;
-            for (std::size_t k = 0; k < coeffs.size(); ++k) {
-                std::int64_t source =
-                    static_cast<std::int64_t>(col) +
-                    static_cast<std::int64_t>(k) - half;
-                source = std::max<std::int64_t>(0, std::min<std::int64_t>(source, max_col));
-                sum += coeffs[k] *
-                       values[idx(row, cols, static_cast<std::size_t>(source))];
-            }
-            out[idx(row, cols, col)] = sum;
-        }
+    std::unique_ptr<n4m_pp_savgol_state_t, decltype(&n4m_pp_savgol_state_free)> state(
+        n4m_pp_savgol_state_new(
+            params.window, params.poly_degree, params.derivative_order, params.delta,
+            N4M_PP_SAVGOL_INTERP, 0.0),
+        &n4m_pp_savgol_state_free);
+    if (!state) {
+        ctx.set_error("out of memory while creating canonical Savitzky-Golay state");
+        return N4M_ERR_OUT_OF_MEMORY;
     }
-    return N4M_OK;
+    const n4m_status_t status = n4m_pp_savgol_state_apply(
+        state.get(), values.data(), static_cast<std::int64_t>(rows),
+        static_cast<std::int64_t>(cols), out.data());
+    if (status != N4M_OK) {
+        ctx.set_error("canonical Savitzky-Golay transform failed");
+    }
+    return status;
 }
 
 [[nodiscard]] n4m_status_t apply_asls(::n4m::core::Context& ctx,
@@ -1509,6 +1447,10 @@ n4m_status_t Pipeline::restore_model_snv_savgol(
         ctx.set_error("serialized model pipeline requires at least one feature");
         return N4M_ERR_INVALID_ARGUMENT;
     }
+    if (window > n_features) {
+        ctx.set_error("serialized Savitzky-Golay window length exceeds feature width");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
 
     const double params[2] = {
         static_cast<double>(window),
@@ -1653,7 +1595,11 @@ n4m_status_t Pipeline::fit(Context& ctx,
                     states_.clear();
                     return status;
                 }
-                apply_snv(current, rows, cols, next);
+                status = apply_snv(ctx, current, rows, cols, next);
+                if (status != N4M_OK) {
+                    states_.clear();
+                    return status;
+                }
                 break;
             case N4M_OP_MSC:
                 status = require_no_params(ctx, entry, "MSC");
@@ -1892,7 +1838,10 @@ n4m_status_t Pipeline::transform(Context& ctx,
                 apply_column_transform(current, state.location, state.scale, rows, cols, next);
                 break;
             case N4M_OP_SNV:
-                apply_snv(current, rows, cols, next);
+                status = apply_snv(ctx, current, rows, cols, next);
+                if (status != N4M_OK) {
+                    return status;
+                }
                 break;
             case N4M_OP_MSC:
                 status = apply_msc(ctx, current, state.location, rows, cols, next);

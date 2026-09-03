@@ -102,8 +102,14 @@ _Static_assert(offsetof(n4m_serialized_model_info_v1_t, capabilities) == 56,
                "Rust SerializedModelInfoV1Raw.capabilities offset is stale");
 _Static_assert(offsetof(n4m_serialized_pipeline_info_v1_t, savgol_delta) == 40,
                "Rust SerializedPipelineInfoV1Raw.savgol_delta offset is stale");
+_Static_assert(offsetof(n4m_serialized_pipeline_info_v1_t, semantic_profile) == 36,
+               "Rust SerializedPipelineInfoV1Raw.semantic_profile offset is stale");
+_Static_assert(offsetof(n4m_serialized_pipeline_info_v1_t, snv_axis) == 60,
+               "Rust SerializedPipelineInfoV1Raw.snv_axis offset is stale");
 _Static_assert(offsetof(n4m_serialized_pipeline_info_v1_t, fingerprint) == 64,
                "Rust SerializedPipelineInfoV1Raw.fingerprint offset is stale");
+_Static_assert(offsetof(n4m_serialized_pipeline_info_v1_t, savgol_cval) == 88,
+               "Rust SerializedPipelineInfoV1Raw.savgol_cval offset is stale");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_model_import_linear_predictor,
                                      n4m_status_t (*)(n4m_context_t*,
                                                       const n4m_linear_predictor_spec_t*,

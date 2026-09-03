@@ -39,11 +39,18 @@ class SerializedPipelineInfo:
     savgol_window: int
     savgol_poly_degree: int
     savgol_derivative: int
+    semantic_profile: int
     savgol_delta: float
     raw_n_features: int
     model_n_features: int
     fingerprint_algorithm: int
     fingerprint: int
+    snv_axis: int
+    snv_with_mean: bool
+    snv_with_std: bool
+    snv_ddof: int
+    savgol_mode: int
+    savgol_cval: float
 
 
 @dataclass(frozen=True)
@@ -98,11 +105,18 @@ def inspect_n4mm(payload: bytes) -> SerializedModelInfo:
             savgol_window=int(raw_pipeline.savgol_window),
             savgol_poly_degree=int(raw_pipeline.savgol_poly_degree),
             savgol_derivative=int(raw_pipeline.savgol_derivative),
+            semantic_profile=int(raw_pipeline.semantic_profile),
             savgol_delta=float(raw_pipeline.savgol_delta),
             raw_n_features=int(raw_pipeline.raw_n_features),
             model_n_features=int(raw_pipeline.model_n_features),
             fingerprint_algorithm=int(raw_pipeline.fingerprint_algorithm),
             fingerprint=int(raw_pipeline.fingerprint),
+            snv_axis=int(raw_pipeline.snv_axis),
+            snv_with_mean=bool(raw_pipeline.snv_with_mean),
+            snv_with_std=bool(raw_pipeline.snv_with_std),
+            snv_ddof=int(raw_pipeline.snv_ddof),
+            savgol_mode=int(raw_pipeline.savgol_mode),
+            savgol_cval=float(raw_pipeline.savgol_cval),
         )
     return SerializedModelInfo(
         schema_version=int(raw.schema_version),

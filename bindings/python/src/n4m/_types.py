@@ -140,14 +140,18 @@ class SerializedPipelineInfoV1(Structure):
         ("savgol_window", c_int32),
         ("savgol_poly_degree", c_int32),
         ("savgol_derivative", c_int32),
-        ("reserved0", c_uint32),
+        ("semantic_profile", c_uint32),
         ("savgol_delta", c_double),
         ("raw_n_features", c_int32),
         ("model_n_features", c_int32),
         ("fingerprint_algorithm", c_uint32),
-        ("reserved1", c_uint32),
+        ("snv_axis", c_int32),
         ("fingerprint", c_uint64),
-        ("reserved", c_uint8 * 24),
+        ("snv_with_mean", c_uint32),
+        ("snv_with_std", c_uint32),
+        ("snv_ddof", c_int32),
+        ("savgol_mode", c_int32),
+        ("savgol_cval", c_double),
     ]
 
 

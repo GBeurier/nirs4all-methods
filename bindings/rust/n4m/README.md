@@ -18,8 +18,9 @@ uses core-owned storage (`n4m_model_predict_alloc`) and copies it before
 calling `n4m_array_free`. `Model::export_n4mm`/`import_n4mm` own N4MM bytes, and
 `inspect_n4mm` accepts raw-model v1 and bounded SNV/SG pipeline v2 payloads;
 `SerializedModelInfo::pipeline` is a typed optional descriptor containing the
-validated operator order, canonical SG parameters, raw/model widths and stable
-FNV-1a-64 plan fingerprint. `has_pipeline()` reflects that authoritative
+validated operator order, versioned row-wise SNV ddof-0 and SG-interp semantic
+profile, canonical SG parameters, raw/model widths and stable FNV-1a-64 plan
+fingerprint. `has_pipeline()` reflects that authoritative
 descriptor rather than inferring a plan from host metadata.
 `Optimizer::save_n4mopt`/`load_n4mopt` own N4MOPT bytes. Checkpoint envelopes
 are preflighted to the native 64 MiB N4MOPT cap before the binding allocates a

@@ -42,6 +42,7 @@ pub const SERIALIZED_MODEL_CAPABILITY_TRANSFORM: u64 = 1 << 1;
 pub const SERIALIZED_MODEL_CAPABILITY_AFFINE: u64 = 1 << 2;
 pub const SERIALIZED_MODEL_CAPABILITY_PIPELINE: u64 = 1 << 3;
 const SERIALIZED_PIPELINE_INFO_SCHEMA_V1: u32 = 1;
+const PIPELINE_SEMANTIC_PROFILE_NIRS4ALL_SNV_SAVGOL_V1: u32 = 1;
 const PIPELINE_FINGERPRINT_NONE: u32 = 0;
 const PIPELINE_FINGERPRINT_FNV1A64_V1: u32 = 1;
 const N4MOPT_MAGIC: &[u8; 8] = b"N4MOPT\r\n";
@@ -138,14 +139,18 @@ struct SerializedPipelineInfoV1Raw {
     savgol_window: i32,
     savgol_poly_degree: i32,
     savgol_derivative: i32,
-    reserved0: u32,
+    semantic_profile: u32,
     savgol_delta: f64,
     raw_n_features: i32,
     model_n_features: i32,
     fingerprint_algorithm: u32,
-    reserved1: u32,
+    snv_axis: i32,
     fingerprint: u64,
-    reserved: [u8; 24],
+    snv_with_mean: u32,
+    snv_with_std: u32,
+    snv_ddof: i32,
+    savgol_mode: i32,
+    savgol_cval: f64,
 }
 #[repr(C)]
 struct OptimizerOptionsRaw {
@@ -170,8 +175,11 @@ const _: () = assert!(mem::size_of::<SerializedModelInfoV1Raw>() == 64);
 const _: () = assert!(mem::size_of::<SerializedPipelineInfoV1Raw>() == 96);
 const _: () = assert!(mem::offset_of!(SerializedModelInfoV1Raw, training_samples) == 32);
 const _: () = assert!(mem::offset_of!(SerializedModelInfoV1Raw, capabilities) == 56);
+const _: () = assert!(mem::offset_of!(SerializedPipelineInfoV1Raw, semantic_profile) == 36);
 const _: () = assert!(mem::offset_of!(SerializedPipelineInfoV1Raw, savgol_delta) == 40);
+const _: () = assert!(mem::offset_of!(SerializedPipelineInfoV1Raw, snv_axis) == 60);
 const _: () = assert!(mem::offset_of!(SerializedPipelineInfoV1Raw, fingerprint) == 64);
+const _: () = assert!(mem::offset_of!(SerializedPipelineInfoV1Raw, savgol_cval) == 88);
 const _: () = assert!(mem::size_of::<OptimizerOptionsRaw>() == 120);
 const _: () = assert!(mem::offset_of!(OptimizerOptionsRaw, seed) == 40);
 
@@ -2091,6 +2099,18 @@ pub enum PipelineFingerprintAlgorithm {
     Fnv1a64V1 = PIPELINE_FINGERPRINT_FNV1A64_V1,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum PipelineSemanticProfile {
+    Nirs4allSnvSavgolV1 = PIPELINE_SEMANTIC_PROFILE_NIRS4ALL_SNV_SAVGOL_V1,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(i32)]
+pub enum SerializedSavitzkyGolayMode {
+    Interp = 4,
+}
+
 /// Canonical finite binary64 value returned by native serialization inspection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CanonicalF64(u64);
@@ -2113,11 +2133,18 @@ pub struct SerializedPipelineInfo {
     pub savgol_window: i32,
     pub savgol_poly_degree: i32,
     pub savgol_derivative: i32,
+    pub semantic_profile: PipelineSemanticProfile,
     pub savgol_delta: CanonicalF64,
     pub raw_n_features: i32,
     pub model_n_features: i32,
     pub fingerprint_algorithm: PipelineFingerprintAlgorithm,
     pub fingerprint: u64,
+    pub snv_axis: i32,
+    pub snv_with_mean: bool,
+    pub snv_with_std: bool,
+    pub snv_ddof: i32,
+    pub savgol_mode: SerializedSavitzkyGolayMode,
+    pub savgol_cval: CanonicalF64,
 }
 
 /// Metadata derived by libn4m from a fully validated N4MM v1 or v2 payload.
@@ -2164,9 +2191,6 @@ fn inspect_serialized_pipeline(
     )?;
     if raw.schema_version != SERIALIZED_PIPELINE_INFO_SCHEMA_V1
         || raw.struct_size as usize != mem::size_of::<SerializedPipelineInfoV1Raw>()
-        || raw.reserved0 != 0
-        || raw.reserved1 != 0
-        || raw.reserved.iter().any(|&byte| byte != 0)
     {
         return Err(corrupt("native N4MM pipeline inspection result is invalid"));
     }
@@ -2180,11 +2204,18 @@ fn inspect_serialized_pipeline(
             || raw.savgol_window != 0
             || raw.savgol_poly_degree != 0
             || raw.savgol_derivative != 0
+            || raw.semantic_profile != 0
             || raw.savgol_delta.to_bits() != 0
             || raw.raw_n_features != 0
             || raw.model_n_features != 0
             || raw.fingerprint_algorithm != PIPELINE_FINGERPRINT_NONE
+            || raw.snv_axis != 0
             || raw.fingerprint != 0
+            || raw.snv_with_mean != 0
+            || raw.snv_with_std != 0
+            || raw.snv_ddof != 0
+            || raw.savgol_mode != 0
+            || raw.savgol_cval.to_bits() != 0
         {
             return Err(corrupt("native N4MM v1 unexpectedly reports a pipeline"));
         }
@@ -2201,10 +2232,17 @@ fn inspect_serialized_pipeline(
         || raw.savgol_poly_degree < 0
         || raw.savgol_poly_degree >= raw.savgol_window
         || raw.savgol_derivative != 0
+        || raw.semantic_profile != PIPELINE_SEMANTIC_PROFILE_NIRS4ALL_SNV_SAVGOL_V1
         || raw.savgol_delta.to_bits() != 1.0f64.to_bits()
         || raw.raw_n_features != n_features
         || raw.model_n_features != n_features
         || raw.fingerprint_algorithm != PIPELINE_FINGERPRINT_FNV1A64_V1
+        || raw.snv_axis != 1
+        || raw.snv_with_mean != 1
+        || raw.snv_with_std != 1
+        || raw.snv_ddof != 0
+        || raw.savgol_mode != SerializedSavitzkyGolayMode::Interp as i32
+        || raw.savgol_cval.to_bits() != 0.0f64.to_bits()
     {
         return Err(corrupt(
             "native N4MM v2 pipeline inspection result is invalid",
@@ -2221,11 +2259,18 @@ fn inspect_serialized_pipeline(
         savgol_window: raw.savgol_window,
         savgol_poly_degree: raw.savgol_poly_degree,
         savgol_derivative: raw.savgol_derivative,
+        semantic_profile: PipelineSemanticProfile::Nirs4allSnvSavgolV1,
         savgol_delta: CanonicalF64(raw.savgol_delta.to_bits()),
         raw_n_features: raw.raw_n_features,
         model_n_features: raw.model_n_features,
         fingerprint_algorithm: PipelineFingerprintAlgorithm::Fnv1a64V1,
         fingerprint: raw.fingerprint,
+        snv_axis: raw.snv_axis,
+        snv_with_mean: true,
+        snv_with_std: true,
+        snv_ddof: raw.snv_ddof,
+        savgol_mode: SerializedSavitzkyGolayMode::Interp,
+        savgol_cval: CanonicalF64(raw.savgol_cval.to_bits()),
     }))
 }
 
@@ -2929,13 +2974,23 @@ mod tests {
             (5, 2)
         );
         assert_eq!(pipeline.savgol_derivative, 0);
+        assert_eq!(
+            pipeline.semantic_profile,
+            PipelineSemanticProfile::Nirs4allSnvSavgolV1
+        );
         assert_eq!(pipeline.savgol_delta.value(), 1.0);
         assert_eq!((pipeline.raw_n_features, pipeline.model_n_features), (9, 9));
         assert_eq!(
             pipeline.fingerprint_algorithm,
             PipelineFingerprintAlgorithm::Fnv1a64V1
         );
-        assert_eq!(pipeline.fingerprint, 0x6c67_0bd4_a3e4_8332);
+        assert_eq!(pipeline.snv_axis, 1);
+        assert!(pipeline.snv_with_mean);
+        assert!(pipeline.snv_with_std);
+        assert_eq!(pipeline.snv_ddof, 0);
+        assert_eq!(pipeline.savgol_mode, SerializedSavitzkyGolayMode::Interp);
+        assert_eq!(pipeline.savgol_cval.to_bits(), 0.0f64.to_bits());
+        assert_eq!(pipeline.fingerprint, 0x4ec5_84c6_e32e_3416);
         let predictions = model.predict(&ctx, x).unwrap();
         assert_eq!((predictions.rows, predictions.cols), (10, 1));
         assert!(predictions.data.iter().all(|value| value.is_finite()));

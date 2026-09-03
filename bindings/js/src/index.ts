@@ -34,6 +34,8 @@ export {
     SERIALIZED_MODEL_CAPABILITY_AFFINE,
     SERIALIZED_MODEL_CAPABILITY_PIPELINE,
     PipelineFingerprintAlgorithm,
+    PipelineSemanticProfile,
+    SerializedSavitzkyGolayMode,
     SerializedPipelineOperatorKind,
     type SerializedModelInfo,
     type SerializedPipelineInfo,

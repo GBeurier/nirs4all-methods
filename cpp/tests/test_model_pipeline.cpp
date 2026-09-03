@@ -17,7 +17,7 @@
 namespace {
 
 constexpr std::int64_t kRows = 10;
-constexpr std::int64_t kFeatures = 9;
+constexpr std::int64_t kFeatures = 13;
 
 std::uint64_t fnv1a64(const std::vector<unsigned char>& bytes,
                       std::size_t length) {
@@ -164,21 +164,35 @@ void test_pipeline_model_round_trip_and_parity() {
                          &pipeline_predictions) == N4M_OK);
     const std::vector<double> predicted = array_values(pipeline_predictions);
 
-    // Manual composition is the parity oracle: the same public pipeline
-    // followed by an ordinary PLS model must produce identical predictions.
+    // The authoritative standalone kernels are the user-semantics oracle,
+    // including ddof=0 and Savitzky-Golay interpolation at both edges.
+    std::vector<double> snv_values(x.size(), 0.0);
+    std::vector<double> standalone_values(x.size(), 0.0);
+    n4m_matrix_view_t snv_view = view(snv_values.data(), kRows, kFeatures);
+    n4m_matrix_view_t standalone_view =
+        view(standalone_values.data(), kRows, kFeatures);
+    n4m_pp_snv_handle_t* snv = nullptr;
+    N4M_TEST_REQUIRE(n4m_transform_snv_create(&snv, 1, 1, 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_snv_transform(snv, x_view, snv_view) == N4M_OK);
+    n4m_pp_savgol_handle_t* savgol = nullptr;
+    N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(
+                         &savgol, 5, 2, 0, 1.0,
+                         N4M_PP_SAVGOL_INTERP, 0.0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_transform(
+                         savgol, snv_view, standalone_view) == N4M_OK);
+
     N4M_TEST_REQUIRE(n4m_pipeline_fit(ctx, pipeline, &x_view, &y_view) == N4M_OK);
     n4m_array_t* transformed = nullptr;
     N4M_TEST_REQUIRE(n4m_pipeline_transform_alloc(
                          ctx, pipeline, &x_view, &transformed) == N4M_OK);
-    n4m_matrix_view_t transformed_view{};
-    N4M_TEST_REQUIRE(n4m_array_view(transformed, &transformed_view) == N4M_OK);
+    require_close(array_values(transformed), standalone_values);
     n4m_model_t* plain_model = nullptr;
     N4M_TEST_REQUIRE(n4m_model_fit(
-                         ctx, plain_config, &transformed_view, &y_view,
+                         ctx, plain_config, &standalone_view, &y_view,
                          &plain_model) == N4M_OK);
     n4m_array_t* plain_predictions = nullptr;
     N4M_TEST_REQUIRE(n4m_model_predict_alloc(
-                         ctx, plain_model, &transformed_view,
+                         ctx, plain_model, &standalone_view,
                          &plain_predictions) == N4M_OK);
     require_close(predicted, array_values(plain_predictions));
 
@@ -214,7 +228,7 @@ void test_pipeline_model_round_trip_and_parity() {
     require_close(predicted, array_values(restored_predictions));
 
     // The v2 extension is fixed-width and immediately precedes the checksum.
-    constexpr std::size_t kExtensionBytes = 5U * 4U + 4U * 8U;
+    constexpr std::size_t kExtensionBytes = 11U * 4U + 5U * 8U;
     const std::size_t extension = bytes.size() - 8U - kExtensionBytes;
 
     std::vector<unsigned char> bad_checksum = bytes;
@@ -256,6 +270,8 @@ void test_pipeline_model_round_trip_and_parity() {
     n4m_array_free(plain_predictions);
     n4m_model_destroy(plain_model);
     n4m_array_free(transformed);
+    n4m_transform_savitzky_golay_destroy(savgol);
+    n4m_transform_snv_destroy(snv);
     n4m_array_free(pipeline_predictions);
     n4m_model_destroy(pipeline_model);
     n4m_pipeline_destroy(pipeline);
@@ -309,6 +325,31 @@ void test_other_pipeline_combinations_are_rejected() {
                          ctx, config, &x_view, &y_view, &model) ==
                      N4M_ERR_INVALID_ARGUMENT);
     n4m_pipeline_destroy(invalid);
+
+    n4m_pipeline_t* defaults = make_pipeline();
+    N4M_TEST_REQUIRE(n4m_config_set_pipeline(config, defaults) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_fit(
+                         ctx, config, &x_view, &y_view, &model) == N4M_OK);
+    const std::vector<unsigned char> default_bytes = export_model(model);
+    n4m_serialized_pipeline_info_v1_t default_info{};
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_pipeline_v1(
+                         default_bytes.data(), default_bytes.size(),
+                         &default_info, sizeof(default_info)) == N4M_OK);
+    N4M_TEST_REQUIRE(default_info.savgol_window == 11);
+    N4M_TEST_REQUIRE(default_info.savgol_poly_degree == 3);
+    n4m_model_destroy(model);
+    model = nullptr;
+    n4m_pipeline_destroy(defaults);
+
+    const double too_wide_sg[2] = {15.0, 3.0};
+    n4m_pipeline_t* too_wide = make_pipeline(
+        N4M_OP_SNV, N4M_OP_SAVGOL_SMOOTH, too_wide_sg, 2);
+    N4M_TEST_REQUIRE(n4m_config_set_pipeline(config, too_wide) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_fit(
+                         ctx, config, &x_view, &y_view, &model) ==
+                     N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(model == nullptr);
+    n4m_pipeline_destroy(too_wide);
 
     const double valid_sg[2] = {5.0, 2.0};
     n4m_pipeline_t* valid = make_pipeline(
