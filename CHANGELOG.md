@@ -6,12 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.15] - 2026-09-03
+
 ### Added
+- **Bounded N4MM pipeline payload.** PLS regression can now serialize and
+  replay the exact `SNV -> Savitzky-Golay smooth -> PLS` product profile as
+  N4MM format 2. The semantic profile fixes row-wise SNV with `ddof=0` and SG
+  edge handling to `mode=interp`; models without this pipeline remain
+  byte-compatible N4MM format 1.
 - **Typed N4MM pipeline inspection (ABI 2.5.0).** Added a sized, versioned C
   descriptor and matching Rust/Python/JavaScript surfaces for the validated
   operator order, canonical Savitzky-Golay parameters, raw/model widths and
   stable plan fingerprint. N4MM v1 reports no pipeline; malformed v2 remains
   fail-closed with zero output.
+- **Authoritative model inspection (ABI 2.4.0).** Added an allocation-free
+  descriptor derived from complete validated N4MM bytes, including algorithm,
+  dimensions and native capability bits. Consumers no longer need to trust
+  filenames or host metadata to decide whether a model can predict.
 
 ## [1.0.13] - 2026-08-25
 

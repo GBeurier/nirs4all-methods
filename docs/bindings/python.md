@@ -1,6 +1,6 @@
 # Python binding
 
-The `n4m` package is a ctypes wrapper over **libn4m (ABI 2.0)**. It exposes ABI
+The `n4m` package is a ctypes wrapper over **libn4m (ABI 2.5)**. It exposes ABI
 introspection, the context / config lifecycles, and the full method surface
 through role subpackages that mirror the `n4m.<role>` namespace. See
 `bindings/python/README.md` for installation and loader rules, and the
@@ -11,14 +11,14 @@ through role subpackages that mirror the `n4m.<role>` namespace. See
 ```python
 import n4m
 
-print(n4m.abi_version())          # (2, 0, 0)
+print(n4m.abi_version())          # (2, 5, 0)
 
 with n4m.Context() as ctx:
     ctx.seed = 42
     assert ctx.seed == 42
 ```
 
-## Role packages (ABI 2.0)
+## Role packages (ABI 2.x)
 
 `n4m.__init__` exposes only metadata/helpers and the role subpackages. Public
 classes use plain role names (not `Native*`):
