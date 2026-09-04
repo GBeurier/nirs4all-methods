@@ -23,6 +23,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import sys
 from pathlib import Path
@@ -187,8 +188,12 @@ def _ctype_for(base: str, level: int, *, is_return: bool) -> str:
     # pointer with ``ctypes.c_char_p(ptr).value`` so a NULL stays falsy and the
     # core-owned string is never auto-freed by ctypes. bare char only behind ptr.
     if base == "char":
-        if level >= 1:
+        if level == 1:
             return "c_void_p" if is_return else "c_char_p"
+        if level > 1:
+            # A string array/output is not a string. Keep each remaining
+            # indirection, including for return values (no auto-conversion).
+            return _wrap_pointer("c_char_p", level - 1)
         return "c_char"
 
     # n4m_matrix_view_t and the other concrete value structs -------------------
@@ -376,7 +381,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.check:
         current = OUTPUT.read_text() if OUTPUT.exists() else ""
-        if current != rendered:
+        # Ruff may format the generated table; whitespace is not ABI drift.
+        if not current or ast.dump(ast.parse(current)) != ast.dump(ast.parse(rendered)):
             sys.stderr.write(
                 f"{OUTPUT.relative_to(REPO_ROOT)} is out of date; "
                 "run: python scripts/generate_ffi_decls.py\n"

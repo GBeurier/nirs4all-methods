@@ -398,7 +398,34 @@ print("SKLEARN_OPTIONAL_OK")
             f"    assert {module}.__version__\n"
             f"    assert {module}.abi_version()  # loads + queries the embedded libn4m\n"
         )
+    test_text += f'''
+
+
+def test_context_ownership():
+    import copy
+
+    import pytest
+    from {module} import Context
+
+    with Context() as ctx:
+        for copier in (copy.copy, copy.deepcopy):
+            with pytest.raises(TypeError, match="Context is not copyable"):
+                copier(ctx)
+        ctx.num_threads = 1
+        assert ctx.num_threads == 1
+    ctx.close()
+    assert not ctx.handle.value
+    with pytest.raises(RuntimeError, match="Context is closed"):
+        _ = ctx.num_threads
+'''
     (out / "tests" / "test_import.py").write_text(test_text, encoding="utf-8")
+    if module == "n4m":
+        # Run the public HPO contracts against installed/repaired wheels too;
+        # an import-only smoke does not validate ctypes pointer signatures.
+        shutil.copy2(
+            SRC_PKG / "tests" / "test_optimizer_smoke.py",
+            out / "tests" / "test_optimizer_smoke.py",
+        )
     print(f"generated {out.relative_to(REPO)}  (name={name}, module={module})")
     return out
 

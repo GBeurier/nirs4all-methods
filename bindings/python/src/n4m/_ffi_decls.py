@@ -2234,7 +2234,11 @@ SYMBOLS = (
         c_int,
     ),
     ("n4m_optimizer_destroy", (c_void_p,), None),
-    ("n4m_optimizer_enqueue", (c_void_p, c_char_p, POINTER(c_double), c_int32), c_int),
+    (
+        "n4m_optimizer_enqueue",
+        (c_void_p, POINTER(c_char_p), POINTER(c_double), c_int32),
+        c_int,
+    ),
     ("n4m_optimizer_get_trials", (c_void_p, c_int64, POINTER(c_void_p)), c_int),
     (
         "n4m_optimizer_load",
@@ -2406,7 +2410,7 @@ SYMBOLS = (
     ),
     (
         "n4m_search_space_add_constraint",
-        (c_void_p, c_int, c_char_p, c_char_p, c_int32),
+        (c_void_p, c_int, POINTER(c_char_p), POINTER(c_char_p), c_int32),
         c_int,
     ),
     (
@@ -2957,7 +2961,11 @@ SYMBOLS = (
     ("n4m_transform_xcorr_align_fit", (c_void_p, MatrixView), c_int),
     ("n4m_transform_xcorr_align_is_fitted", (c_void_p, POINTER(c_int)), c_int),
     ("n4m_transform_xcorr_align_transform", (c_void_p, MatrixView, MatrixView), c_int),
-    ("n4m_trial_get_category", (c_void_p, c_char_p, POINTER(c_int32), c_char_p), c_int),
+    (
+        "n4m_trial_get_category",
+        (c_void_p, c_char_p, POINTER(c_int32), POINTER(c_char_p)),
+        c_int,
+    ),
     ("n4m_trial_get_duration", (c_void_p, POINTER(c_double)), c_int),
     ("n4m_trial_get_float", (c_void_p, c_char_p, POINTER(c_double)), c_int),
     ("n4m_trial_get_id", (c_void_p, POINTER(c_int64)), c_int),

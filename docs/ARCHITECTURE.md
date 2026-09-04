@@ -20,7 +20,7 @@ A library that wants to ship to PyPI, CRAN, npm, MATLAB Toolbox Exchange, Maven 
 
 The required toolchain for `n4m` is: a C++17 compiler, CMake ≥ 3.21, and the standard C/C++ library. Everything else (BLAS, OpenMP, CUDA, Emscripten, Android NDK, MATLAB MEX, doctest, vendored JSON parser) is either optional or test-only.
 
-The reference CPU backend is implemented from scratch in `cpp/src/core/linalg/` (dot, axpy, scal, norm2, gemv, gemm-small, QR, power iteration). Optional accelerated backends (BLAS, CUDA) are alternative implementations of the same internal interface, selectable at runtime via `n4m_context_set_backend`.
+The reference CPU backend is implemented from scratch in `cpp/src/core/linalg/` (dot, axpy, scal, norm2, gemv, gemm-small, QR, power iteration). BLAS and OpenMP acceleration are build-time options. Runtime context selection accepts AUTO and REFERENCE_CPU, and CUDA when compiled and available; other backend selectors return BACKEND_UNAVAILABLE rather than implying an acceleration path exists.
 
 ### 3. CMake as the only build system
 
@@ -47,21 +47,36 @@ A binding never owns numerical logic. This is what guarantees that a model fit i
 | `n4m_tests`            | EXE     | —                                          | doctest binary, links `n4m_c` + `n4m_core`.                |
 | `n4m_cli`              | EXE     | —                                          | `--version`, `--abi-info`, `--selfcheck`.                   |
 
-Visibility is hidden by default (`-fvisibility=hidden`, `__declspec(dllimport/export)` on Windows). Only the macros `N4M_API`-decorated declarations escape, and on MSVC we additionally drive a `.def` export file.
+Visibility is hidden by default (`-fvisibility=hidden`, `__declspec(dllimport/export)` on Windows). Only `N4M_API`-decorated declarations escape; MSVC uses these export attributes, not an additional `.def` file.
 
 ## Memory model
 
 Three load-bearing rules:
 
-1. **Never free across the language boundary.** The wrapper never frees a buffer the core allocated; the core never frees a buffer the wrapper allocated. Concrete consequence: we do **not** have a `n4m_free_string` (a free-across-runtime defect waiting to happen — see the `aompls` reference). Error messages live in a context-owned thread-safe buffer; the pointer returned by `n4m_context_last_error` is invalidated by the next call on the same context.
+1. **Never free across the language boundary.** The wrapper never frees a buffer the core allocated; the core never frees a buffer the wrapper allocated. Concrete consequence: we do **not** have a `n4m_free_string`. Error messages live in a context-owned buffer, with single-threaded access; its content is invalidated by the next call on the same context.
 2. **Two output APIs.** For high-performance paths, the caller pre-allocates and passes a buffer (`n4m_predict(model, X, out_buf, out_size)`). For convenience paths, the core allocates and the core frees via `n4m_array_free(arr)`. Both, for different use cases. Never mixed.
 3. **Stride-aware everything.** `n4m_matrix_view_t` has explicit `row_stride` and `col_stride` (in element counts). This accepts NumPy row-major, R / MATLAB / Fortran column-major, transposed views, slice views, sub-matrix views — without copying. Core canonicalises internally only when an algorithm needs it.
 
 ## Error model
 
 - Every fallible `n4m_*` function returns `n4m_status_t`. `N4M_OK == 0`. Negative-look codes do not exist; the error space is a flat enum.
-- Functions that take a context write a human-readable message into the context's 4 KiB thread-safe error buffer on failure. `n4m_context_last_error(ctx)` returns the latest message; it is invalidated by the next call on the same context.
+- Functions that take a context write a human-readable message into the context's 4 KiB error buffer on failure. `n4m_context_last_error(ctx)` returns the latest message; its content is invalidated by the next call on the same context. Contexts are not thread-safe: allocate one per thread and do not share mutable handles across concurrent calls.
 - No exception ever crosses the C ABI. Internal C++ may throw; the `extern "C"` wrappers in `cpp/src/c_api/` catch and translate.
+
+### Python ownership and import validation
+
+Both Python Context classes are non-copyable owning handles. Use `with Context()`
+or call `close()` (idempotent); context operations after closing raise
+`RuntimeError`. The `handle` property is borrowed, becomes null on close, and
+must never be destroyed independently. Owning model/optimizer objects must also
+be closed before their caller-owned context. Python ctypes calls release the GIL;
+this does not make native contexts thread-safe.
+
+N4MM import first runs the same allocation-free payload validation as model
+inspection. Each vector's allocation is bounded by its actual encoded bytes;
+the total decoded vector storage cannot exceed the input payload size. Truncated
+vectors are rejected before any model allocation. Applications should additionally
+bound file/download size to their own workload budget before reading the payload.
 
 ## Versioning
 

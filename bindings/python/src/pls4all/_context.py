@@ -25,7 +25,7 @@ class Context:
 
     Usable as a context manager (``with Context() as ctx: ...``) for
     deterministic cleanup. Single-threaded use only; create one Context per
-    thread (the underlying n4m_context_t is documented as such).
+    thread (the underlying n4m_context_t is documented as such). Non-copyable.
     """
 
     def __init__(self) -> None:
@@ -35,8 +35,15 @@ class Context:
             raise Pls4allError(status, "n4m_context_create failed")
         self._h = handle
 
-    def __enter__(self) -> "Context":
+    def __enter__(self) -> Context:
+        self._require_open()
         return self
+
+    def __copy__(self):
+        raise TypeError("Context is not copyable")
+
+    def __deepcopy__(self, _memo):
+        raise TypeError("Context is not copyable")
 
     def __exit__(self, *exc) -> None:
         self.close()
@@ -48,52 +55,77 @@ class Context:
             pass
 
     def close(self) -> None:
-        if self._h:
+        if getattr(self, "_h", None):
             lib.n4m_context_destroy(self._h)
             self._h = ctypes.c_void_p(0)
 
+    def _require_open(self) -> ctypes.c_void_p:
+        if not getattr(self, "_h", None):
+            raise RuntimeError("Context is closed")
+        return self._h
+
     @property
     def handle(self) -> ctypes.c_void_p:
+        """Borrowed handle; null after close (never destroy it yourself)."""
         return self._h
 
     # ---- seed ----
     @property
     def seed(self) -> int:
         out = ctypes.c_uint64(0)
-        _check(lib.n4m_context_get_seed(self._h, ctypes.byref(out)), self._h.value)
+        _check(
+            lib.n4m_context_get_seed(self._require_open(), ctypes.byref(out)),
+            self._h.value,
+        )
         return int(out.value)
 
     @seed.setter
     def seed(self, value: int) -> None:
-        _check(lib.n4m_context_set_seed(self._h, ctypes.c_uint64(int(value))), self._h.value)
+        _check(
+            lib.n4m_context_set_seed(self._require_open(), ctypes.c_uint64(int(value))),
+            self._h.value,
+        )
 
     # ---- backend ----
     @property
     def backend(self) -> Backend:
         out = ctypes.c_int(0)
-        _check(lib.n4m_context_get_backend(self._h, ctypes.byref(out)), self._h.value)
+        _check(
+            lib.n4m_context_get_backend(self._require_open(), ctypes.byref(out)),
+            self._h.value,
+        )
         return Backend(out.value)
 
     @backend.setter
     def backend(self, value: Backend) -> None:
-        _check(lib.n4m_context_set_backend(self._h, int(value)), self._h.value)
+        _check(
+            lib.n4m_context_set_backend(self._require_open(), int(value)), self._h.value
+        )
 
     # ---- num_threads ----
     @property
     def num_threads(self) -> int:
         out = ctypes.c_int32(0)
-        _check(lib.n4m_context_get_num_threads(self._h, ctypes.byref(out)), self._h.value)
+        _check(
+            lib.n4m_context_get_num_threads(self._require_open(), ctypes.byref(out)),
+            self._h.value,
+        )
         return int(out.value)
 
     @num_threads.setter
     def num_threads(self, value: int) -> None:
-        _check(lib.n4m_context_set_num_threads(self._h, ctypes.c_int32(int(value))), self._h.value)
+        _check(
+            lib.n4m_context_set_num_threads(
+                self._require_open(), ctypes.c_int32(int(value))
+            ),
+            self._h.value,
+        )
 
     # ---- error buffer ----
     @property
     def last_error(self) -> str:
-        raw = lib.n4m_context_last_error(self._h)
+        raw = lib.n4m_context_last_error(self._require_open())
         return raw.decode("utf-8") if raw else ""
 
     def clear_error(self) -> None:
-        lib.n4m_context_clear_error(self._h)
+        lib.n4m_context_clear_error(self._require_open())
