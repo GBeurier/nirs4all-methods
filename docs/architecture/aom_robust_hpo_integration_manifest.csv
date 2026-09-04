@@ -1,0 +1,17 @@
+priority,integration_target,status,route_basis,no_name_selection_gate,first_port,acceptance_gate
+0,AOMStructuralPolicy,integrate,feature_count,metadata perturbation must not change route or predictions,Python reference estimator,route report and metadata-invariance unit tests
+0,AOMStructuralPolicyWithPgt1200Admissions,integrate,feature_count_plus_train_only_highp_admission,metadata perturbation must not change route or predictions,Python reference estimator,train-only admission report plus metadata-invariance tests
+0,AOMStructuralPolicyWithP700BlockLocalAdmission,integrate_after_rename,source_free_p700_block_local_admission,do not expose legacy BeerAdmissions name,Python reference estimator,metadata-invariance and out-of-panel false-positive tests
+1,AOMEndpointMarginStabilityGate,integrate,contiguous_cv_and_shuffled_oof_agreement,no dataset/source fields in decision,Python reference estimator,fold isolation and agreement-margin tests
+2,AOMMidPEndpointStack,integrate,train_oof_pairwise_stack,no dataset/source fields in decision,Python reference estimator added,OOF blend isolation and prediction-shape tests
+2,AOMControlSelector,integrate_baseline,train_cv_chain_head_selector,no dataset/source fields in decision,Python reference estimator using strict AOM operators,fold-local chain fit/transform tests
+2,AOMPreprocessingChain,integrate_baseline,fold_local_sequential_preprocessing,no dataset/source fields in decision,Python reference transformer,fit-transform isolation tests and chain-bank smoke tests
+2,AOMRobustHPORegressor,integrate,train_cv_bank_selector_ridge_pls,no dataset/source fields in decision,Python reference estimator,source-free metadata perturbation tests and preset-bank tests
+2,AOMRobustHPOCompact,integrate_baseline,preconfigured_compact_train_cv_bank,no dataset/source fields in decision,Python reference estimator,end-user preset export and fit/predict tests
+2,AOMRobustHPOWide,diagnostic_control,preconfigured_wide_lab_style_bank,no dataset/source fields in decision,Python reference estimator,export tests and bounded benchmark gate before product default
+2,AOMTrueBankEndpointPortfolio,integrate_guarded,train_cv_min_cv_plus_std,no dataset/source fields in decision,Python reference estimator added,true-bank chain preset and endpoint-report tests
+3,AOMRidgeBlender,integrate_native_strict_subset_and_python_reference,fold_safe_oof_simplex_blend,no dataset/source fields in decision,Native compact/wide strict-linear Ridge blender plus Python custom-candidate estimator,OOF fold isolation; simplex-weight; metadata-invariance; native contract tests
+4,AOMFallbackBlendGate,optional,conservative_oof_threshold,no dataset/source fields in decision,Python reference estimator added,threshold regression and fallback no-harm tests
+5,AOMOperatorPLSStack,integrate_native_strict_subset_and_python_reference,guarded_oof_operator_pls,no dataset/source fields in decision,Native compact/wide strict-linear single-target PLS1 score stack plus Python custom/gated estimator,OOF false-positive baseline gate; metadata-invariance; native contract tests
+9,source_route_or_dataset_lookup,do_not_integrate,identity_lookup,fail,none,explicitly forbidden by phase invariant
+9,broad_linear_moment_grinding,research_only,cartesian_screen_heavy_verify,not_a_product_selector,none,keep as capacity audit tool only

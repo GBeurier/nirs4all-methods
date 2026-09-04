@@ -298,9 +298,9 @@ entries, 6 diagnostics).
 
 ## [parity-audit-may-2026] — 2026-05-16
 
-End-to-end parity-gate audit. See
-[`docs/parity_audit_2026_05/03_closeout.md`](docs/parity_audit_2026_05/03_closeout.md)
-for the full closeout report.
+End-to-end parity-gate audit. The full historical closeout report,
+`docs/parity_audit_2026_05/03_closeout.md`, is preserved in the
+[private development archive](docs/dev/documentation.md).
 
 | Metric | Before | After |
 |--------|------:|------:|
@@ -1636,7 +1636,8 @@ SIMPLS core increment.
 
 ## [0.2.0-phase1] — 2026-05-14
 
-Phase 1 — PLS CPU reference. Roadmap at [`roadmap/phase-1.md`](roadmap/phase-1.md).
+Phase 1 — PLS CPU reference. The historical `roadmap/phase-1.md` is preserved
+in the [private development archive](docs/dev/documentation.md).
 
 ### Added
 
