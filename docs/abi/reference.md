@@ -1,16 +1,17 @@
 # ABI — Reference
 
-The public C ABI is **libn4m, ABI 2.0** (`SONAME libn4m.so.2`). It is
+The public C ABI is **libn4m, ABI 2.5.0** (`SONAME libn4m.so.2`). It is
 `extern "C"` only — no STL, no Eigen, no smart pointers, no exceptions cross
 the boundary. The single source of truth for the surface is the header tree
 under `cpp/include/n4m/` and the per-platform symbol snapshots in
 `cpp/abi/expected_symbols_{linux,macos,windows}.txt`.
 
-## Header set (ABI 2.0)
+## Header set (ABI 2.x)
 
 The flat per-category headers were removed in the 2.0 namespace clean break.
-The surface is now an umbrella header plus the 12 top-level **role** headers and
-their second-level subheaders, mirroring the `n4m.<role>` namespace tree.
+The surface is now an umbrella header plus the 12 top-level **role** headers,
+the public optimizer header and their second-level subheaders, mirroring the
+`n4m.<role>` namespace tree.
 
 - `n4m/n4m.h` — umbrella. Shared infrastructure (context, config, matrix view,
   RNG, model, pipeline, validation plan, method-result, serialization, array,
@@ -19,6 +20,8 @@ their second-level subheaders, mirroring the `n4m.<role>` namespace tree.
   `n4m/feature_selection.h`, `n4m/model_selection.h`, `n4m/domain_adaptation.h`,
   `n4m/outlier_detection.h`, `n4m/ensemble.h`, `n4m/compose.h`, `n4m/metrics.h`,
   `n4m/decomposition.h`, `n4m/lowlevel.h`.
+- `n4m/optimization.h` — optimizer and HPO configuration, observation,
+  persistence and ask/tell lifecycle.
 - Second-level subheaders:
   - `n4m/transform/{alignment,baseline,orthogonalization,resampling,scaling,scatter,signal_conversion,smoothing,specialized,wavelet}.h`
   - `n4m/estimators/{regression,classification,multiblock,survival}.h`
@@ -40,7 +43,7 @@ byte-for-byte from ABI 1.x (`_fit`, `_predict`, `_create`, `_destroy`,
 
 Examples:
 
-| Old (ABI 1.x) | New (ABI 2.0) |
+| Old (ABI 1.x) | New (ABI 2.x) |
 |---|---|
 | `n4m_ridge_fit` | `n4m_estimators_ridge_fit` |
 | `n4m_pls_fit_simple` | `n4m_estimators_pls_fit` |
@@ -66,7 +69,13 @@ The full deterministic `old_symbol → new_symbol` table is generated from
 ## Versioning
 
 `N4M_ABI_VERSION_{MAJOR,MINOR,PATCH}` in `cpp/include/n4m/n4m_version.h` is
-`2.0.0` and is independent of the project version. `N4M_ABI_VERSION_MAJOR`
+`2.5.0` and is independent of the project version. `N4M_ABI_VERSION_MAJOR`
 drives the SONAME (`libn4m.so.2`) and the Linux version-script node (`N4M_2`).
 Bindings detect header/runtime skew with
 `n4m_check_abi_compatibility(header_major, header_minor)`.
+
+ABI `2.0.0` was the namespace-breaking baseline. Releases `2.1.0` through
+`2.5.0` are additive minor revisions covering optimizer/HPO state, terminal
+lifecycle, imported affine predictors, fitted-model inspection and typed N4MM
+pipeline inspection. See the [changes log](changes_log.md) for the exact symbol
+and structure history.

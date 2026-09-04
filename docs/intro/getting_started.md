@@ -2,6 +2,10 @@
 
 A 5-minute path to a fitted PLS model in your language of choice.
 
+The examples on this page target `libn4m` ABI `2.5.0`. The Methods project and
+each binding have independent package versions; runtime hosts must validate the
+C ABI before creating a context.
+
 The shared assumption: `X` is an `(n × p)` matrix of predictors and
 `y` is an `(n,)` (or `(n × q)`) response. Centring is on, scaling
 defaults to off — the spectroscopy convention.
@@ -118,6 +122,23 @@ await n4m.loadModule();   // loads n4m.wasm
 const model = n4m.fitPls({ data: X, rows, cols }, { data: y, rows, cols: 1 }, 5);
 const yhat = n4m.predictPls(model, { data: Xtest, rows: rowsTest, cols });
 ```
+
+## Rust
+
+The `n4m` crate is the official thin Rust binding. It requires an
+exact prebuilt `libn4m`; it does not contain a second numerical engine.
+
+```rust
+n4m::configure_library("/absolute/path/to/libn4m.so.2")?;
+let context = n4m::Context::new()?;
+```
+
+The dynamic selection is process-wide and one-shot. A missing library, an ABI
+mismatch or an attempt to switch libraries after initialization is refused
+before a native handle is created. See the
+[Rust binding guide](https://github.com/GBeurier/nirs4all-methods/tree/codex/r4-doc002-methods/bindings/rust/n4m)
+for linked and dynamic
+loading, model serialization and HPO examples.
 
 ## Serialize raw fitted state
 
