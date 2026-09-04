@@ -10,9 +10,9 @@ testthat::test_that("abi version is a three-element integer vector", {
   testthat::expect_length(abi, 3)
 })
 
-testthat::test_that("abi major/minor is the locked 2.3 ML namespace", {
+testthat::test_that("abi major/minor is the locked 2.5 ML namespace", {
   abi <- n4m::n4m_abi_version()
-  testthat::expect_equal(abi[1:2], c(2L, 3L))
+  testthat::expect_equal(abi[1:2], c(2L, 5L))
 })
 
 testthat::test_that("locked role-name aliases are exported", {
