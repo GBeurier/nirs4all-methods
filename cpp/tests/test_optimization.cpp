@@ -5,12 +5,14 @@
 // and the pure-native n4m_finetune_estimator over a real PLS cross-validation).
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "n4m/n4m.h"
@@ -2879,15 +2881,17 @@ void test_ask_batch_contract() {
     n4m_optimizer_destroy(copt);
     n4m_search_space_destroy(cs);
 
-    // Timeout before the first ask: CANCELLED / count 0 (deterministic — any
-    // real elapsed time exceeds a 1 ns deadline).
+    // Timeout before the first ask: CANCELLED / count 0. Expire a short real
+    // deadline explicitly because steady_clock may not tick between create()
+    // and ask_batch() on platforms with a coarser timer resolution.
     n4m_search_space_t* ts = nullptr;
     n4m_search_space_create(&ts);
     n4m_search_space_add_int(ts, "k", 1, 100, 1, 0);
     n4m_optimizer_options_t to = default_opts();
-    to.timeout_seconds = 1e-9;
+    to.timeout_seconds = 0.001;
     n4m_optimizer_t* topt = nullptr;
     N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, ts, &to, &topt) == N4M_OK);
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
     n4m_trial_t* tbuf[2] = {sentinel, sentinel};
     int32_t tcount = -1;
     N4M_TEST_REQUIRE(n4m_optimizer_ask_batch(topt, 2, tbuf, &tcount) == N4M_ERR_CANCELLED);
