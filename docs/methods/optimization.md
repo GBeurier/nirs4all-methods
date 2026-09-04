@@ -1,6 +1,6 @@
 # Optimization role — native hyperparameter finetuning
 
-The `optimization` role (C ABI header [`n4m/optimization.h`](../../cpp/include/n4m/optimization.h), ABI 2.2) is a **portable ask/tell hyperparameter optimizer**: the search algorithm lives once in `libn4m` and can be reused by every binding. The native core and Python binding are implemented. R, MATLAB-Octave and WASM optimizer wrappers and their cross-binding gates are still pending, so cross-language reproducibility is a target backed by the shared C ABI and Track-Q fixtures, not yet a release claim for every binding. Design rationale and the full plan are in [`FINETUNING_ROADMAP.md`](../FINETUNING_ROADMAP.md) and [`NATIVE_FINETUNING.md`](../NATIVE_FINETUNING.md); the ABI freeze is detailed in [`FINETUNING_F0_PR.md`](../FINETUNING_F0_PR.md).
+The `optimization` role (C ABI header [`n4m/optimization.h`](../../cpp/include/n4m/optimization.h), ABI 2.2) is a **portable ask/tell hyperparameter optimizer**: the search algorithm lives once in `libn4m` and can be reused by every binding. The native core and Python binding are implemented. R, MATLAB-Octave and WASM optimizer wrappers and their cross-binding gates are still pending, so cross-language reproducibility is a target backed by the shared C ABI and Track-Q fixtures, not yet a release claim for every binding. Design rationale and the full plan are in [developer documentation](../dev/documentation.md) and [`NATIVE_FINETUNING.md`](../NATIVE_FINETUNING.md); the ABI freeze is detailed in [developer documentation](../dev/documentation.md).
 
 ## Model
 

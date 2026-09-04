@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `nirs4all-methods` (`n4m`) is a portable PLS/NIRS engine written in **C++17** with a **stable C ABI** (`libn4m`) and **thin first-class bindings** for the current target languages: **Python, R, MATLAB / Octave, and JS / WebAssembly**. The same numerical core powers every binding: every binding only translates native objects into `n4m_matrix_view_t` / `n4m_*` calls — it never owns numerical logic.
 
-The founding refactor document is [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md). The canonical architecture spec is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); when present, it overrides this file.
+The founding refactor document is [developer documentation](docs/dev/documentation.md). The canonical architecture spec is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); when present, it overrides this file.
 
 **Note on naming**: the project completed its `p4a`/`pls4all` → `n4m`/`nirs4all-methods` token-level rename in Phase A. `pls4all` remains as a **packaging subset name** (the slim PLS-only re-export shipped on PyPI/CRAN) — the underlying binary is always `libn4m`. The historical project URL `github.com/GBeurier/pls4all` is preserved until the GitHub repo itself is renamed.
 
@@ -206,8 +206,8 @@ catalog/                          # Phase B catalog source. catalog/methods/<id>
                                   # During transition, edit catalog/methods.yaml and
                                   # regenerate split files with split_legacy_methods.py.
 parity/                           # Reference fixture generators + comparator
-roadmap/phase-*.md                # Phase-by-phase implementation roadmaps
-docs/REFACTOR_PLAN.md             # Post-merge refactor founding document
+.private-dev/archive/            # Historical phase plans, grouped by archive date
+.private-dev/                    # Ignored private plans, reviews and dated archives
 docs/                             # Sphinx site source
 .github/ISSUE_TEMPLATE/           # 8 issue forms (method-request, binding-request, ...)
 .github/PULL_REQUEST_TEMPLATE/    # 7 PR templates (method-add, binding-add, parity-fix, ...)
@@ -243,7 +243,7 @@ From [`docs/dev/workflow.md`](docs/dev/workflow.md) and `CONTRIBUTING.md`:
 4. Author applies corrections. On disagreement, author gives Codex more context
    once; if Codex still disagrees, **Codex wins** and the author revises.
 5. The corrected diff lands on `main`.
-6. Codex transcripts are checked into docs/reviews/phase-N/.
+6. Codex transcripts are kept locally under .private-dev/current/reviews/.
 ```
 
 Codex review invocation (manual, until the MCP server is wired in):
@@ -277,7 +277,7 @@ Each template embeds the §2.10 invariants checklist the reviewer (human + Codex
 
 ## Things that will trip up a fresh agent
 
-- The token-level `p4a` → `n4m` rename is **complete**. If you see `p4a_*` anywhere outside `bindings/_archive/`, `CHANGELOG.md`, or historical merge logs under `docs/merge/` / `docs/reviews/`, that's a regression — flag it.
+- The token-level `p4a` → `n4m` rename is **complete**. If you see `p4a_*` anywhere outside `bindings/_archive/`, `CHANGELOG.md`, or historical records under `.private-dev/archive/`, that's a regression — flag it.
 - `pls4all` references still exist intentionally in: (a) the slim subset package name (`bindings/python/src/pls4all/`, `catalog/subsets/pls4all.yaml`), (b) the github.com URL, (c) historical Authors@R contributor tag. Other references are bugs.
 - `benchmarks/parity_timing/registry.py` is the legacy method catalog (~10k LOC). Phase B replaces it with `catalog/methods/<id>.yaml` (one YAML per method). When touching the registry, check whether the same fact already exists in the catalog or vice versa.
 - `catalog/scripts/validate.py` currently reports ABI symbol mismatches as warnings unless `--strict-abi` is passed. The split catalog still contains many auto-discovered symbol guesses; reconcile them against `cpp/abi/expected_symbols_*.txt` before enabling strict ABI in CI.

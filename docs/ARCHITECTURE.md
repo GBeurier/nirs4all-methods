@@ -1,6 +1,6 @@
 # Architecture
 
-This document distils the rationale behind the design choices laid out in [`REFACTOR_PLAN.md`](REFACTOR_PLAN.md). Read the full spec for the canonical detail; this file is what a new contributor reads first.
+This document distils the rationale behind the design choices laid out in [developer documentation](dev/documentation.md). Read the full spec for the canonical detail; this file is what a new contributor reads first.
 
 ## One sentence
 
@@ -80,8 +80,8 @@ The library is only as good as its agreement with the established references. We
 
 ## Phased rollout
 
-See [`ROADMAP.md`](ROADMAP.md). Phases 0 → 1 → 3 → 4 → 2 → 5 → 6 → 7. The "depth-first core" ordering reflects the priority decision captured 2026-05-14: we'd rather build a small correct multi-algorithm core before exposing it through five bindings. Binding skeletons ship at Phase 0 only so the FFI plumbing is already CI-green when Phase 2 lights it up for real.
+See [developer documentation](dev/documentation.md). Phases 0 → 1 → 3 → 4 → 2 → 5 → 6 → 7. The "depth-first core" ordering reflects the priority decision captured 2026-05-14: we'd rather build a small correct multi-algorithm core before exposing it through five bindings. Binding skeletons ship at Phase 0 only so the FFI plumbing is already CI-green when Phase 2 lights it up for real.
 
 ## Review model
 
-Every roadmap and every implementation PR is reviewed by Codex via `codex exec` (or via the `codex mcp-server` MCP integration, once registered). Codex transcripts are checked into `docs/reviews/phase-N/` for audit. On disagreement, the contributor adds context once; if Codex still disagrees, **Codex wins** and the contributor revises.
+Every roadmap and every implementation PR is reviewed by Codex via `codex exec` (or via the `codex mcp-server` MCP integration, once registered). Codex transcripts are kept locally under `.private-dev/current/reviews/` for audit. On disagreement, the contributor adds context once; if Codex still disagrees, **Codex wins** and the contributor revises.

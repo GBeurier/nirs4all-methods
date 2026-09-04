@@ -3,14 +3,14 @@
 Every roadmap and every implementation PR follows the loop captured in the master plan and `ROADMAP.md`:
 
 ```
-1. Author drafts roadmap/phase-N.md or the PR diff.
+1. Author drafts a private plan under .private-dev/current/ or the PR diff.
 2. Codex reviews it via `codex exec` (or the project-scoped MCP server
    declared in .mcp.json once Claude has reloaded MCP).
 3. Author applies corrections. If the author disagrees with Codex,
    they give Codex more context once; if Codex still disagrees,
    Codex wins.
 4. The corrected roadmap / diff lands on `main`.
-5. Codex transcripts are checked into docs/reviews/phase-N/.
+5. Codex transcripts are kept locally under .private-dev/current/reviews/.
 ```
 
 ## Building locally
@@ -41,4 +41,4 @@ codex exec -C $REPO -s read-only --skip-git-repo-check \
     -o /tmp/review.md "$(cat review_prompt.txt)"
 ```
 
-…then archive `/tmp/review.md` and the prompt under `docs/reviews/phase-N/NNNN-<topic>.md`.
+…then archive `/tmp/review.md` and the prompt under `.private-dev/current/reviews/NNNN-<topic>.md`.

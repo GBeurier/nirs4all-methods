@@ -24,9 +24,9 @@ Part of the [open-source NIRS tools](https://nirs4all.org/open-source-nirs-tools
 ecosystem: file readers, datasets, methods, browser modelling, reproducible pipelines,
 papers, benchmarks, and release dashboards for near-infrared spectroscopy.
 
-> **Status**: post-merge refactor in progress. See
-> [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md) for the founding
-> document and `roadmap/` for phase-by-phase tracking. `pls4all` is now
+> **Status**: V1 release line. See
+> [developer documentation](docs/dev/documentation.md) for current contracts
+> and the private historical archive policy. `pls4all` is now
 > a packaging subset name (slim PLS-only re-export of `n4m`); the
 > underlying binary is always `libn4m`.
 
@@ -355,7 +355,7 @@ A machine-readable [`CITATION.cff`](CITATION.cff) is provided.
 ## Roadmap
 
 `n4m` keeps the detailed historical phase log in
-[`ROADMAP.md`](ROADMAP.md). The active roadmap is now focused on the current
+[developer documentation](docs/dev/documentation.md). The active roadmap is now focused on the current
 target bindings and their shared parity surface.
 
 | Target surface | Goal |
