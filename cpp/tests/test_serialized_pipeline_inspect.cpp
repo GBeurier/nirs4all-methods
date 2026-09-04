@@ -250,11 +250,36 @@ void test_v2_plan_fingerprint_and_tamper() {
     N4M_TEST_REQUIRE(all_zero(info));
 }
 
+void test_import_rejects_truncated_vectors() {
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (const auto format : {N4M_SERIALIZATION_FORMAT_VERSION_V1,
+                              N4M_SERIALIZATION_FORMAT_VERSION_V2}) {
+        auto bytes = model_bytes(format);
+        // Keep the fixed metadata and vector count, but omit the last value
+        // of the first nine-element vector. Re-sign to exercise validation
+        // of the content, not just the checksum.
+        bytes.resize(104U + 8U * 8U + 8U);
+        refresh_checksum(bytes);
+        n4m_serialized_model_info_v1_t info{};
+        N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                             bytes.data(), bytes.size(), &info) ==
+                         N4M_ERR_CORRUPT_BUFFER);
+        n4m_model_t* model = nullptr;
+        N4M_TEST_REQUIRE(n4m_model_import_from_buffer(
+                             ctx, bytes.data(), bytes.size(), &model) ==
+                         N4M_ERR_CORRUPT_BUFFER);
+        N4M_TEST_REQUIRE(model == nullptr);
+    }
+    n4m_context_destroy(ctx);
+}
+
 }  // namespace
 
 int main() {
     n4m_testing::Runner runner("serialized_pipeline_inspect");
     runner.run("v1_absent_sized", test_v1_absent_and_sized_output);
     runner.run("v2_plan_fingerprint_tamper", test_v2_plan_fingerprint_and_tamper);
+    runner.run("import_truncated_vectors", test_import_rejects_truncated_vectors);
     return runner.finalize();
 }

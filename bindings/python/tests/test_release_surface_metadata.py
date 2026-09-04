@@ -63,6 +63,13 @@ def test_generated_packages_explain_distribution_import_split(tmp_path, monkeypa
     assert "there is no flat `n4m.sklearn` package" in full_readme_oneline
     assert (full / "src/n4m/__init__.py").is_file()
     assert not (full / "src/pls4all").exists()
+    assert (full / "tests/test_optimizer_smoke.py").read_bytes() == (
+        REPO / "bindings/python/tests/test_optimizer_smoke.py"
+    ).read_bytes()
+    for package in (full, slim):
+        assert "def test_context_ownership" in (
+            package / "tests/test_import.py"
+        ).read_text(encoding="utf-8")
 
     slim_readme = (slim / "README.md").read_text(encoding="utf-8")
     slim_readme_oneline = " ".join(slim_readme.split())

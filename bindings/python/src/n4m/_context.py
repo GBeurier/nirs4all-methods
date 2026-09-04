@@ -6,6 +6,7 @@ parameters at create-time and live independently). The context type is
 exposed mainly for completeness of the FFI surface and for future use by
 backend / seed configuration calls.
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -17,7 +18,8 @@ from ._ffi import lib
 class Context:
     """Opaque libn4m context.
 
-    Created lazily; released by ``__del__`` or :meth:`close`. Not thread-safe.
+    Created immediately; released by ``__del__`` or :meth:`close`.
+    Non-copyable and not thread-safe; use one context per thread.
     """
 
     def __init__(self) -> None:
@@ -26,21 +28,40 @@ class Context:
         check(status, "n4m_context_create")
         self._handle = handle
 
+    def __copy__(self):
+        raise TypeError("Context is not copyable")
+
+    def __deepcopy__(self, _memo):
+        raise TypeError("Context is not copyable")
+
+    def __enter__(self) -> Context:
+        self._require_open()
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
     def set_seed(self, seed: int) -> None:
-        check(lib.n4m_context_set_seed(self._handle, ctypes.c_uint64(seed)),
-              "n4m_context_set_seed")
+        check(
+            lib.n4m_context_set_seed(self._require_open(), ctypes.c_uint64(seed)),
+            "n4m_context_set_seed",
+        )
 
     @property
     def num_threads(self) -> int:
         out = ctypes.c_int32()
-        check(lib.n4m_context_get_num_threads(self._handle, ctypes.byref(out)),
-              "n4m_context_get_num_threads")
+        check(
+            lib.n4m_context_get_num_threads(self._require_open(), ctypes.byref(out)),
+            "n4m_context_get_num_threads",
+        )
         return int(out.value)
 
     @num_threads.setter
     def num_threads(self, value: int) -> None:
         check(
-            lib.n4m_context_set_num_threads(self._handle, ctypes.c_int32(int(value))),
+            lib.n4m_context_set_num_threads(
+                self._require_open(), ctypes.c_int32(int(value))
+            ),
             "n4m_context_set_num_threads",
         )
 
@@ -55,8 +76,14 @@ class Context:
         except Exception:
             pass
 
+    def _require_open(self) -> ctypes.c_void_p:
+        if not getattr(self, "_handle", None):
+            raise RuntimeError("Context is closed")
+        return self._handle
+
     @property
     def handle(self) -> ctypes.c_void_p:
+        """Borrowed handle; null after close (never destroy it yourself)."""
         return self._handle
 
 

@@ -113,7 +113,7 @@ html_favicon = "_static/brand/favicon.ico"
 html_theme_options = {
     "description": "Portable PLS / NIRS engine in C++17 with a stable C ABI "
                     "and thin first-class bindings for Python, R, MATLAB, "
-                    "JavaScript, Android, Go, Rust, Julia, Ruby, .NET, Lua, Nim.",
+                    "Octave and JavaScript / WebAssembly. Other bindings are archived prototypes.",
     "github_user": "GBeurier",
     "github_repo": "nirs4all-methods",
     # Alabaster's github_button is a third-party iframe (ghbtns.com) that

@@ -269,9 +269,12 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
         return false;
     }
     const std::size_t n = static_cast<std::size_t>(count);
+    // Bound allocation by the actual encoded bytes, not declared dimensions.
+    if (n > (r.size - r.pos) / sizeof(double)) {
+        return false;
+    }
     out.clear();
     out.resize(n);
-    std::fill(out.begin(), out.end(), 0.0);
     for (std::size_t i = 0; i < n; ++i) {
         if (!r.f64(out[i])) {
             return false;
@@ -1212,6 +1215,16 @@ N4M_API n4m_status_t n4m_model_import_from_buffer(
         if (!supported_model_format(format)) {
             set_error(ctx, "model serialization format version is not supported");
             return N4M_ERR_VERSION_INCOMPATIBLE;
+        }
+        // Validate every vector and the complete payload without allocating.
+        // The payload itself is the allocation budget: decoded double storage
+        // cannot exceed its encoded vector bytes. Keep inspection and import
+        // on the same contract before creating any owning model.
+        SerializedModelMetadata metadata;
+        status = inspect_serialized_model_v1(buffer, buffer_size, metadata);
+        if (status != N4M_OK) {
+            set_error(ctx, "invalid model buffer payload");
+            return status;
         }
         std::unique_ptr<n4m_model_s> imported;
         if (!import_model_from_buffer(buffer, buffer_size, imported)) {
