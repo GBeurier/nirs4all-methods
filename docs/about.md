@@ -1,6 +1,8 @@
 # nirs4all-methods documentation
 
-A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings for the current target languages: Python, R, MATLAB / Octave, and JS / WebAssembly.
+A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings for
+Python, R, MATLAB / Octave, JS / WebAssembly, and the official pre-release Rust
+binding.
 
 → **<a href="./">Interactive cross-binding benchmark dashboard</a>** — landing page generated from the canonical benchmark registry, filterable / sortable / column-toggleable.
 
@@ -14,9 +16,13 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings for 
   dispatcher; Octave is CI-gated, while MATLAB uses the same package but
   remains a manual runtime/release check because GitHub-hosted runners do
   not provide a MATLAB license.
-- **Archived PoCs stay archived** — Julia, JNI / Android, Go, Rust,
-  .NET, Ruby, Lua, and Nim live under `bindings/_archive/` and are not
-  current release targets.
+- **Rust binding (official pre-release)** — `bindings/rust/n4m` provides
+  real C-ABI model fit/predict, serialization, and native HPO/selection APIs.
+  It is not yet published to crates.io and has no cross-language prediction
+  fixture, so it makes no parity claim.
+- **Archived PoCs stay archived** — Julia, JNI / Android, Go, .NET, Ruby,
+  Lua, and Nim live under `bindings/_archive/` and are not current release
+  targets.
 - **Cross-binding benchmark** — generated from the canonical
   `benchmarks.parity_timing.registry` method catalog, with registry-driven
   external reference columns in addition to the language bindings.
@@ -27,8 +33,9 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings for 
 
 - **Architecture** — [overview](architecture/overview.md) · [memory model](architecture/memory_model.md) · [error model](architecture/error_model.md) · [threading](architecture/threading.md) · [serialization](architecture/serialization.md)
 - **ABI** — [reference](abi/reference.md) · [stability policy](abi/stability_policy.md) · [changes log](abi/changes_log.md) · [ABI 2.0 migration guide](MIGRATION_ABI2.md)
-- **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB / Octave](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md)
+- **Bindings** — [Python](bindings/python.md) · [R](bindings/r.md) · [MATLAB / Octave](bindings/matlab.md) · [JavaScript / WebAssembly](bindings/js.md) · [Rust (official pre-release)](bindings/rust.md)
 - **Parity** — [methodology](parity/methodology.md) · {doc}`tolerances <parity/tolerances>`
+- **About** — [global bibliography](bibliography.md)
 - **Benchmarks** — [index](benchmarks/index.md) · [overview](benchmarks/overview.md) · [cross-binding parity + timing](benchmarks/cross_binding.md) · [methodology](benchmarks/methodology.md)
 - **Development** — [workflow](dev/workflow.md) · [build](dev/build.md) · [testing](dev/testing.md) · [stabilisation plan](dev/stabilisation_plan.md) · [style](dev/style.md) · [release process](dev/release_process.md)
 - **Reviews** — Codex transcripts under `docs/reviews/`
@@ -56,11 +63,13 @@ benchmarks/cross_binding
 benchmarks/cross_binding_threads
 benchmarks/methodology
 landing/dashboard
+bibliography
 methods/index
 bindings/python
 bindings/r
 bindings/matlab
 bindings/js
+bindings/rust
 parity/methodology
 parity/tolerances
 dev/workflow

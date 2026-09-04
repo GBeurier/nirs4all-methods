@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "nirs4all-methods bibliography catalog v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["catalog_version", "baseline", "parity_provenance", "reviewed_sources", "publications", "software_citations"],
+  "properties": {
+    "catalog_version": {"const": 1},
+    "baseline": {
+      "type": "object", "additionalProperties": false,
+      "required": ["legacy_python", "legacy_python_sha256", "source_revision"],
+      "properties": {
+        "legacy_python": {"const": "docs/_extras/methods_bibliography.py"},
+        "legacy_python_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "parity_provenance": {
+      "type": "array", "minItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "reviewed_sources": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {"const": "docs/methods/_finetuning_bibliography.bib"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "publications": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "method_key": {"type": ["string", "null"]},
+          "method_title": {"type": ["string", "null"]},
+          "legacy_citation": {"type": ["string", "null"]},
+          "authors": {"type": ["array", "null"], "items": {"type": "string", "minLength": 1}},
+          "title": {"type": ["string", "null"]},
+          "year": {"type": ["integer", "null"]},
+          "journal": {"type": ["string", "null"]},
+          "doi": {"type": ["string", "null"]},
+          "url": {"type": ["string", "null"]},
+          "bibtex": {"type": ["string", "null"]},
+          "provenance": {
+            "type": "object", "additionalProperties": false,
+            "properties": {
+              "source": {"type": "string", "minLength": 1},
+              "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "entry_key": {"type": "string", "minLength": 1},
+              "entry_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "fields_status": {"enum": ["unstructured_legacy", "reviewed_structured"]},
+              "missing_fields": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "oneOf": [
+          {
+            "required": ["id", "method_key", "method_title", "legacy_citation", "authors", "title", "year", "journal", "doi", "url", "bibtex", "provenance"],
+            "properties": {
+              "id": {"type": "string", "pattern": "^legacy-[a-z0-9_]+$"},
+              "method_key": {"type": "string", "minLength": 1},
+              "method_title": {"type": "string", "minLength": 1},
+              "legacy_citation": {"type": "string", "minLength": 1},
+              "authors": {"type": "null"}, "title": {"type": "null"}, "year": {"type": "null"},
+              "journal": {"type": "null"}, "doi": {"type": "null"}, "url": {"type": "null"}, "bibtex": {"type": "null"},
+              "provenance": {
+                "type": "object", "required": ["source", "fields_status", "missing_fields"],
+                "properties": {"fields_status": {"const": "unstructured_legacy"}}
+              }
+            }
+          },
+          {
+            "required": ["id", "method_key", "method_title", "legacy_citation", "authors", "title", "year", "journal", "doi", "url", "bibtex", "provenance"],
+            "properties": {
+              "id": {"type": "string", "pattern": "^reviewed-finetuning-[A-Za-z0-9_-]+$"},
+              "method_key": {"type": "null"}, "method_title": {"type": "null"}, "legacy_citation": {"type": "null"},
+              "authors": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+              "title": {"type": "string", "minLength": 1}, "year": {"type": "integer"},
+              "journal": {"type": ["string", "null"]}, "doi": {"type": ["string", "null"]}, "url": {"type": ["string", "null"]},
+              "bibtex": {"type": "string", "minLength": 1},
+              "provenance": {
+                "type": "object", "required": ["source", "source_sha256", "entry_key", "entry_sha256", "fields_status", "missing_fields"],
+                "properties": {
+                  "source": {"const": "docs/methods/_finetuning_bibliography.bib"},
+                  "fields_status": {"const": "reviewed_structured"}
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "software_citations": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "source", "source_sha256", "cff"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1}, "source": {"const": "CITATION.cff"},
+          "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "cff": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

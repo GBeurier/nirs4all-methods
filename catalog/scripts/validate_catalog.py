@@ -275,12 +275,18 @@ def parse_yaml(text: str) -> Any:
 
 
 # ----------- minimal JSON-schema validation -----------
-# Covers what we use in method_v1 and subset_v1: type, enum, required, properties,
-# additionalProperties, pattern, items, minItems, default. Skips $ref / oneOf / allOf.
+# Covers what we use in method_v1, subset_v1 and bibliography_v1: type, const,
+# enum, required, properties, additionalProperties, pattern, items, minItems,
+# minLength, oneOf and default. Skips $ref / allOf.
 
 
 def validate_schema(obj: Any, schema: dict, path: str = "$") -> list[str]:
     errs: list[str] = []
+    if "oneOf" in schema:
+        branch_errors = [validate_schema(obj, branch, path) for branch in schema["oneOf"]]
+        matches = sum(not errors for errors in branch_errors)
+        if matches != 1:
+            errs.append(f"{path}: must match exactly one oneOf branch (matched {matches})")
     # Type-Match shortcut for nullable
     typ = schema.get("type")
     if typ:
@@ -310,6 +316,8 @@ def validate_schema(obj: Any, schema: dict, path: str = "$") -> list[str]:
             return errs
     if obj is None:
         return errs
+    if "const" in schema and obj != schema["const"]:
+        errs.append(f"{path}: value {obj!r} does not equal const {schema['const']!r}")
     if "enum" in schema and obj not in schema["enum"]:
         errs.append(f"{path}: value {obj!r} not in enum {schema['enum']}")
     if "pattern" in schema and isinstance(obj, str):
@@ -321,6 +329,11 @@ def validate_schema(obj: Any, schema: dict, path: str = "$") -> list[str]:
         if len(obj) < schema["minItems"]:
             errs.append(
                 f"{path}: array has {len(obj)} items, minItems={schema['minItems']}"
+            )
+    if "minLength" in schema and isinstance(obj, str):
+        if len(obj) < schema["minLength"]:
+            errs.append(
+                f"{path}: string has length {len(obj)}, minLength={schema['minLength']}"
             )
     if isinstance(obj, dict):
         for req in schema.get("required", []):

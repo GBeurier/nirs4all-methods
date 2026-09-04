@@ -9,8 +9,8 @@
 
 > A portable PLS / NIRS engine in **C++17** with a stable **C ABI**
 > (`libn4m`) and thin first-class bindings for the **current target
-> languages**: **Python, R, MATLAB / Octave**, and **JS / WebAssembly**.
-> Archived PoC bindings (Julia, JNI / Android, Go, Rust, .NET, Ruby,
+> languages**: **Python, R, MATLAB / Octave**, **JS / WebAssembly**, and
+> **Rust**. Archived PoC bindings (Julia, JNI / Android, Go, .NET, Ruby,
 > Lua, Nim) live under `bindings/_archive/` and are revived only by an
 > explicit binding request.
 
@@ -122,6 +122,25 @@ predict(mdl, Xnew)
 % Runtime divergences must be declared in bindings/matlab/COMPAT.md.
 ```
 
+### Rust (official pre-release binding)
+
+The `bindings/rust/n4m` crate is an official supported thin C-ABI binding, but
+is still in pre-release/local qualification: it is not a claim of a published
+crates.io package or registry release. It supports real model fit/predict,
+N4MM/N4MOPT serialization, native optimizer HPO, and selection-only
+`n4m_finetune_estimator` HPO (no automatic final refit). No cross-language Rust
+prediction fixture is committed, so it makes no prediction-parity claim. The
+native round trips below are the Linux development command; CI is configured to
+exercise Linux, macOS, and Windows separately, without this README claiming
+local macOS/Windows results.
+
+```bash
+cmake --preset dev-debug && cmake --build --preset dev-debug --parallel
+N4M_LIB_DIR="$PWD/build/dev-debug/cpp/src" \
+  N4M_RUNTIME_RPATH="$PWD/build/dev-debug/cpp/src" \
+  cargo test -p n4m
+```
+
 ---
 
 ## Tier 1 + Tier 2 binding coverage
@@ -132,11 +151,15 @@ predict(mdl, Xnew)
 | **R** (`n4m` package) | **COMPLETE** — 73 registry methods via `n4m_method()` and wrappers | NIRS-first idioms — base R formula+S3 (16 wrappers) · `pls`-compatible `plsr()` / `pcr()` · `mdatools`-compatible matrix `pls(x, y, ...)` |
 | **MATLAB / Octave**  | Shared MEX/dispatcher surface over `libn4m`; CI-gated in Octave | **18 classdefs** + unified `n4m.fit(algo, X, y, ...)` factory; MATLAB release/runtime checked manually |
 | **JS / WebAssembly** | Current target binding; packaged separately from the desktop-language surfaces | Browser / npm-facing wrappers over the same C ABI / WASM core |
-| Archived PoCs (`bindings/_archive/`) | Julia, JNI / Android, Go, Rust, Ruby, .NET, Lua, Nim are on hold | Revived only through an explicit binding request |
+| **Rust** (`bindings/rust/n4m`) | Official handle/serialization binding over the stable C ABI | Pre-release/local qualification; Linux native round trips are exercised locally and CI is configured for Linux/macOS/Windows. No registry/package publication is claimed here. |
+| Archived PoCs (`bindings/_archive/`) | Julia, JNI / Android, Go, Ruby, .NET, Lua, Nim are on hold | Revived only through an explicit binding request |
 
-Cross-binding parity: every binding's SIMPLS predictions match the
-shared fixture within `rmse_rel < 1e-12` for the committed smoke matrix. See
-[`docs/parity/`](docs/parity/) and the
+Cross-binding parity: the committed smoke matrix (C++, Python Tier 1, R Tier 1,
+and the scikit-learn reference) matches the shared SIMPLS fixture within
+`rmse_rel < 1e-12`. The Rust pre-release binding is intentionally outside this
+prediction-parity matrix because no cross-language Rust prediction fixture is
+committed; its qualification covers native fit/predict, serialization, and HPO
+APIs, not parity. See [`docs/parity/`](docs/parity/) and the
 [cross-binding benchmark](docs/benchmarks/cross_binding.md).
 
 ---
@@ -236,7 +259,7 @@ implementation.
 - 🔬 **[Methodology](docs/benchmarks/methodology.md)** — reference policy, tolerances, threading, hardware
 - 🏗️ **[Architecture](docs/architecture/overview.md)** — memory model · error model · threading · serialization
 - 📜 **[ABI reference](docs/abi/reference.md)** — `n4m_*` C ABI surface, stability policy, changes log
-- 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB / Octave](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md)
+- 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB / Octave](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md) · [Rust](bindings/rust/n4m/README.md)
 - 🗃️ **Archived bindings** — [Android / JNI status](docs/bindings/android.md) and frozen PoCs under `bindings/_archive/`
 - ✅ **[Parity methodology](docs/parity/methodology.md)** — every algorithm cross-checked against an external library
 - 🛠️ **[Dev workflow](docs/dev/workflow.md)** · [build](docs/dev/build.md) · [testing](docs/dev/testing.md)
@@ -362,9 +385,10 @@ target bindings and their shared parity surface.
 | Python / R | keep the full-catalog raw + idiomatic surfaces parity-gated and releaseable |
 | MATLAB / Octave | keep the shared `+n4m` package precise: Octave in CI, MATLAB manual runtime/release checks |
 | JS / WebAssembly | npm + browser package over the full method catalog |
+| Rust | official C-ABI binding in pre-release/local qualification; maintain native ownership and serialization checks before any registry/package publication |
 
 Archived/on-hold bindings remain under `bindings/_archive/`: Julia, JNI /
-Android, Go, Rust, .NET, Ruby, Lua, and Nim are not current release targets.
+Android, Go, .NET, Ruby, Lua, and Nim are not current release targets.
 
 ### Method requests
 

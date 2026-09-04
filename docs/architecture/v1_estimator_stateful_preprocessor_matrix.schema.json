@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nirs4all.org/schema/v1-capability-matrix-1.1.json",
+  "title": "V1 capability matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scope", "generation", "classifications", "rows"],
+  "properties": {
+    "schema_version": {"const": "1.1"},
+    "scope": {"type": "string"},
+    "classifications": {
+      "type": "array",
+      "const": ["native", "adapter", "refused", "not-promised"]
+    },
+    "generation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "deterministic", "input_digest", "platform_abi_snapshots"],
+      "properties": {
+        "command": {"type": "string"},
+        "deterministic": {"const": true},
+        "platform_abi_snapshots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["linux", "macos", "windows"],
+          "properties": {"linux": {"type": "string"}, "macos": {"type": "string"}, "windows": {"type": "string"}}
+        },
+        "input_digest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "files", "sha256"],
+          "properties": {
+            "algorithm": {"const": "sha256"},
+            "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+            "files": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}}}
+          }
+        }
+      }
+    },
+    "rows": {"type": "array", "items": {"$ref": "#/$defs/row"}}
+  },
+  "$defs": {
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "classification"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "classification": {"enum": ["native", "adapter", "refused", "not-promised"]},
+        "api_symbols": {"type": "array", "items": {"type": "string", "pattern": "^n4m_"}, "uniqueItems": true},
+        "source_headers": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "abi_proof": {"type": "object", "additionalProperties": false, "required": ["linux", "macos", "windows"], "properties": {"linux": {"type": "string"}, "macos": {"type": "string"}, "windows": {"type": "string"}}},
+        "ffi_proof": {"type": "object", "minProperties": 1},
+        "catalog_file": {"type": "string"},
+        "adapter_file": {"type": "string"},
+        "boundary": {"type": "string"},
+        "algorithms": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^N4M_ALGO_"}, "uniqueItems": true},
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["create", "destroy", "fit", "operation"],
+          "properties": {
+            "create": {"type": "string", "pattern": "^n4m_"},
+            "destroy": {"type": "string", "pattern": "^n4m_"},
+            "fit": {"type": "string", "pattern": "^n4m_"},
+            "operation": {"type": "string", "pattern": "^n4m_"},
+            "is_fitted": {"type": "string", "pattern": "^n4m_"},
+            "inverse_transform": {"type": "string", "pattern": "^n4m_"},
+            "transform_with_d": {"type": "string", "pattern": "^n4m_"},
+            "threshold": {"type": "string", "pattern": "^n4m_"},
+            "output_cols": {"type": "string", "pattern": "^n4m_"}
+          }
+        },
+        "policy_file": {"type": "string"},
+        "potential_external_or_unsupported": {"type": "object"},
+        "reason": {"type": "string"}
+      },
+      "allOf": [
+        {"if": {"properties": {"classification": {"const": "native"}}}, "then": {"required": ["api_symbols", "source_headers", "abi_proof"]}},
+        {"if": {"properties": {"classification": {"const": "adapter"}}}, "then": {"required": ["api_symbols", "ffi_proof"]}}
+      ]
+    }
+  }
+}

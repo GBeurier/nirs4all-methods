@@ -11,24 +11,15 @@
 > **Audience.** Maintainers + future contributors. If you are reading
 > this to add a *new* binding, jump to [§6 New-channel checklist](#6-new-channel-checklist).
 >
-> **License gate.** Everything ships under `CeCILL-2.1` (SPDX:
-> `CECILL-2.1`, present on the SPDX License List since v3.0).
-> Registries surveyed below accept `CECILL-2.1` either as an SPDX
-> license expression or, where expression validation is not available,
-> by packaging the full license text as a license file. Use the
-> **canonical SPDX casing `CECILL-2.1`** in every non-R manifest
-> (Cargo, npm, NuGet, vcpkg, RubyGems, conda recipes, SPDX headers).
-> Do **not** use NuGet `licenseUrl`; it is deprecated — use
-> `<PackageLicenseExpression>CECILL-2.1</PackageLicenseExpression>`.
-> We do **not** dual-license: CeCILL-2.1 is already GPL-compatible
-> and recognised by French law.
->
-> **Casing audit (done 2026-05-18 in M0.4).** All SPDX headers and
-> manifest license expressions across the tree have been normalised
-> to `CECILL-2.1`. The R `DESCRIPTION` file keeps the human-readable
-> `CeCILL (== 2.1)` form per R's license database. The C++ `LICENSE`
-> file at the repo root is the canonical license text (no SPDX field
-> there) and stays untouched.
+> **License gate.** The authoritative repository policy in
+> [`LICENSING.md`](../../LICENSING.md) is the dual SPDX expression
+> `CECILL-2.1 OR AGPL-3.0-or-later`, at the recipient's option. Registry
+> metadata must use that expression where supported, and self-contained
+> packages must include the complete applicable texts from
+> `LICENSES/CeCILL-2.1.txt` and `LICENSES/AGPL-3.0-or-later.txt`. Do **not**
+> describe the repository-root `LICENSE` as the CeCILL text: it contains the
+> AGPL-3.0-or-later text only. Use the canonical SPDX casing `CECILL-2.1`; do
+> not use NuGet `licenseUrl` (deprecated).
 
 ---
 
@@ -43,18 +34,17 @@ Three classes of artifact go out per release tag. Read this table as
 | **B. C/C++ binaries** | `libn4m.{so,dylib,dll}` + `n4m_cli` + headers, per OS/arch | GitHub Releases (canonical), Homebrew tap (macOS/Linux), vcpkg port, Conan recipe (CCI), Docker `ghcr.io/gbeurier/nirs4all-methods` | every tag | tag push |
 | **C. Language packages** | per-binding distributables (see §3) | language-specific registries (PyPI, CRAN, npm/JSR, Maven Central, MATLAB FileExchange, conda-forge, etc.) | every tag (after A+B succeed) | post-tag workflow |
 
-> **Active release targets vs. frozen PoC bindings.** Per the project
+> **Active release targets, official pre-release, and frozen PoCs.** Per the project
 > `CLAUDE.md`, the **active** release targets are: **Python** (PyPI
 > `nirs4all-methods` full binding + the slim `pls4all` subset),
 > **R** (CRAN `n4m` full binding + the slim `pls4all` subset),
 > **JS / WASM** (npm `@nirs4all/methods`), **MATLAB**, and
-> **Octave**. The **Go / Rust / .NET / Ruby / Lua / Nim** bindings are
-> **frozen proof-of-concept** bindings under `bindings/_archive/` —
-> **they are not current release targets.** The Go/Rust/.NET/Ruby/Lua/
-> Nim subsections of §3 and their crates.io / RubyGems / LuaRocks /
-> Nimble / pkg.go.dev channel rows are retained below for the historical
-> distribution plan, but are **marked frozen** and must not be treated
-> as live channels until those bindings are explicitly unfrozen.
+> **Octave**. `bindings/rust/n4m` is an **official pre-release binding**:
+> it has model fit/predict, serialization, and native HPO/selection scope,
+> but no crates.io publication and no cross-language prediction fixture or
+> parity claim. The **Go / .NET / Ruby / Lua / Nim** bindings are frozen
+> proof-of-concept bindings under `bindings/_archive/`; their historical
+> channel rows remain frozen and are not live release targets.
 
 Channel ownership is single-maintainer (currently `@GBeurier`). API
 tokens, GPG keys, and 2FA-recovery codes are documented in the
@@ -100,7 +90,7 @@ and are **not** current release targets — reserve them defensively only.
 | conda-forge feedstock | `nirs4all-methods-feedstock` (created by staged-recipes) | pending v0.98 |
 | CRAN | `n4m` (full binding) + `pls4all` (slim PLS-only subset) | submission post-stabilisation; pre-flight via R-universe |
 | R-universe | `gbeurier.r-universe.dev/n4m` (+ slim `pls4all`) | pre-CRAN rolling build (free, mandatory before CRAN) |
-| crates.io | `nirs4all-methods` *(frozen PoC)* | reserve via initial 0.0.0 publish |
+| crates.io | `n4m` *(official local pre-release)* | publication is intentionally deferred; do not reserve or upload a placeholder |
 | npm | `@nirs4all/methods` | scope `@nirs4all` — claim org |
 | JSR (`jsr.io`) | `@nirs4all/methods` | mirror of npm — new since 2024, free |
 | pkg.go.dev | `github.com/GBeurier/nirs4all-methods/bindings/_archive/go` *(frozen PoC)* | indexed automatically on first `GOPROXY` hit |
@@ -252,7 +242,7 @@ The package files themselves are uploaded to the registry, but a
 | JS | `nirs4all-methods-js-${VER}.tgz` (`npm pack` output) |
 | Julia *(frozen PoC)* | n/a — registered by Project.toml SHA; tag-only |
 | Go *(frozen PoC)* | n/a — go modules resolve from git tag directly |
-| Rust *(frozen PoC)* | `nirs4all-methods-${VER}.crate` (output of `cargo package`) |
+| Rust *(official pre-release)* | no release asset or registry publication; CI verifies `cargo package --list` for the local `n4m` crate |
 | .NET *(frozen PoC)* | `Nirs4allMethods.${VER}.nupkg`, `Nirs4allMethods.Native.${VER}.nupkg` (multi-RID) |
 | Ruby *(frozen PoC)* | `nirs4all-methods-${VER}.gem` |
 | Lua *(frozen PoC)* | `nirs4all-methods-${VER}-1.rockspec` + `nirs4all-methods-${VER}-1.src.rock` |
@@ -311,8 +301,9 @@ via a `setup.py` shim that calls
 This keeps installs pip-only (no `apt install libn4m-dev`).
 
 > **License note** (re: cibuildwheel warning): bundling libn4m is
-> fine because we *own* libn4m and it's the same CeCILL-2.1 as the
-> wheel. The `LICENSE` file gets copied to `pls4all-${VER}.dist-info/`.
+> permitted under the repository's dual `CECILL-2.1 OR AGPL-3.0-or-later`
+> policy. Distribution assets must preserve the applicable license notices;
+> the root `LICENSE` alone is the AGPL text, not a substitute for CeCILL.
 
 **Prereqs:**
 1. PyPI API token in GitHub Actions secret `PYPI_API_TOKEN` (per-project token, scope = `pls4all` only).
@@ -588,58 +579,45 @@ EOF
 LD_LIBRARY_PATH=/usr/local/lib go run .
 ```
 
-### 3.6 Rust — `nirs4all-methods` on crates.io
+### 3.6 Rust — official pre-release `n4m` crate
 
-> **FROZEN PoC.** The Rust binding lives under `bindings/_archive/` and is
-> **not a current release target.** The plan below is retained for the
-> day it is unfrozen; the channel is not live.
+> **Official pre-release; not a registry release.** The current binding is
+> `bindings/rust/n4m`, not the archived Rust PoC. It is qualified for real
+> C-ABI model fit/predict, N4MM/N4MOPT serialization, native optimizer HPO,
+> and `n4m_finetune_estimator` selection-only HPO. The latter deliberately
+> does not refit a final model. No cross-language Rust prediction fixture is
+> committed, so this binding does **not** claim numerical parity with the
+> cross-binding matrix.
 
 | Field | Value |
 |-------|-------|
-| Registry | https://crates.io/crates/nirs4all-methods |
-| Identity | `nirs4all-methods` crate, `lib` crate-type rlib (frozen) |
-| Tier | hand-rolled `extern "C"` over `libn4m` (frozen) |
+| Registry | none yet — crates.io publication is intentionally deferred |
+| Identity | workspace crate `n4m` (`bindings/rust/n4m`), `rlib` |
+| Native dependency | prebuilt dynamically linked `libn4m`; `N4M_LIB_DIR` is required |
+| Qualification | Linux/macOS/Windows binding gates; Linux ASan/UBSan/combined sanitizer runtime gate |
 
-**License field.** `crates.io` validates the `license =` field as a
-valid SPDX expression. `CECILL-2.1` is on the SPDX list, so this
-works:
-```toml
-license = "CECILL-2.1"
-```
-Cargo supports either `license` (SPDX expression) **or** `license-file`
-(arbitrary text file), but Cargo warns if **both** are set in the
-same manifest. For this crate we use `license = "CECILL-2.1"` and rely
-on Cargo's automatic inclusion of `LICENSE` in the crate.
+The manifest declares `license = "CECILL-2.1 OR AGPL-3.0-or-later"` and the
+crate packages both complete texts under `LICENSES/`. This avoids presenting
+the repository-root `LICENSE` (which is the AGPL text) as though it were the
+CeCILL text.
+The release check is:
 
-**Required assets:**
-- `nirs4all-methods-${VER}.crate` (output of `cargo package --list`).
-
-The crate **does not bundle `libn4m`**. It links dynamically via
-`build.rs`, which reads `NIRS4ALL_METHODS_LIB_DIR` / `NIRS4ALL_METHODS_INCLUDE_DIR` and
-falls back to `pkg-config --libs n4m`. The README documents
-Homebrew/Debian/conda-forge as the canonical install routes.
-
-**Future: `nirs4all-methods-sys`.** A companion `nirs4all-methods-sys` crate that
-*does* bundle libn4m as a build dep is on the roadmap. It's the
-standard Rust pattern (`openssl-sys`, `libsqlite3-sys`). For v1.0
-the single `nirs4all-methods` crate is enough.
-
-**Prereqs:**
-1. `crates.io` API token in `CARGO_REGISTRY_TOKEN` secret.
-2. `cargo publish --dry-run` clean from CI before tag day.
-
-**Publish step:**
 ```bash
-cd bindings/_archive/rust/nirs4all-methods
-cargo publish --dry-run
-cargo publish
+cargo package -p n4m --list --allow-dirty
 ```
 
-**Smoke test:**
+Its package list contains `Cargo.lock`, `Cargo.toml`, `README.md`, both
+`LICENSES/*.txt` texts, `abi_probe.c`, `build.rs`,
+`scripts/run_sanitized_tests.sh`, and `src/lib.rs`, plus Cargo-generated
+`.cargo_vcs_info.json` and `Cargo.toml.orig`. It does not bundle `libn4m`.
+
+Build the native library before testing the crate:
+
 ```bash
-cargo new --bin /tmp/n4m-smoke && cd /tmp/n4m-smoke
-cargo add nirs4all-methods@${VER}
-cargo run
+cmake --preset dev-debug && cmake --build --preset dev-debug --parallel
+N4M_LIB_DIR="$PWD/build/dev-debug/cpp/src" \
+N4M_RUNTIME_RPATH="$PWD/build/dev-debug/cpp/src" \
+cargo test -p n4m
 ```
 
 ### 3.7 .NET — `Nirs4allMethods` + native runtime packages on NuGet
@@ -682,7 +660,7 @@ the single package totals ~12 MB which is fine.
 1. NuGet API key in `NUGET_API_KEY` secret (or trusted publishing
    via NuGet's GitHub OIDC integration).
 2. `Nirs4allMethods.csproj` has `<GeneratePackageOnBuild>true</GeneratePackageOnBuild>`
-   and `<PackageLicenseExpression>CECILL-2.1</PackageLicenseExpression>`
+   and `<PackageLicenseExpression>CECILL-2.1 OR AGPL-3.0-or-later</PackageLicenseExpression>`
    (do **not** use the deprecated `licenseUrl`).
 3. `Nirs4allMethods.Native.csproj` is a `Microsoft.NET.Sdk` project with
    `<IncludeBuildOutput>false</IncludeBuildOutput>` and a `<Content>`
@@ -990,7 +968,7 @@ v1.0. Re-evaluate at v2.0.
 above. The vcpkg curated registry's PR review enforces:
 - portfile pinned to a release tag with sha512.
 - usage file `usage` printed after install.
-- license expression matches `CECILL-2.1`.
+- license expression matches `CECILL-2.1 OR AGPL-3.0-or-later`.
 
 ### 4.3 Conan recipe — Conan Center Index (CCI)
 
@@ -1057,22 +1035,20 @@ graph LR
   REL --> RP[4b. R-universe push + CRAN tarball attached]
   REL --> ML[4c. MATLAB/Octave source zip]
   REL --> NPM[4d. npm publish + JSR mirror]
-  REL --> CR[4e. cargo publish]
-  REL --> NUG[4f. dotnet pack + nuget push]
-  REL --> JL[4g. JuliaRegistrator comment]
-  REL --> GE[4h. gem push (Ruby)]
-  REL --> LR[4i. luarocks upload]
-  REL --> NB[4j. Nimble repo PR / autoupdate]
-  REL --> MV[4k. gradle publishToCentralPortal]
-  REL --> DK[4l. docker buildx push (multi-arch)]
-  REL --> HB[4m. homebrew tap formula bump PR]
-  REL --> VC[4n. vcpkg port version bump PR (manual)]
-  REL --> CC[4o. conan-center-index PR (manual)]
+  REL --> NUG[4e. dotnet pack + nuget push]
+  REL --> JL[4f. JuliaRegistrator comment]
+  REL --> GE[4g. gem push (Ruby)]
+  REL --> LR[4h. luarocks upload]
+  REL --> NB[4i. Nimble repo PR / autoupdate]
+  REL --> MV[4j. gradle publishToCentralPortal]
+  REL --> DK[4k. docker buildx push (multi-arch)]
+  REL --> HB[4l. homebrew tap formula bump PR]
+  REL --> VC[4m. vcpkg port version bump PR (manual)]
+  REL --> CC[4n. conan-center-index PR (manual)]
   PY --> SMOKE[5. Post-publish smoke test matrix]
   RP --> SMOKE
   ML --> SMOKE
   NPM --> SMOKE
-  CR --> SMOKE
   NUG --> SMOKE
   JL --> SMOKE
   GE --> SMOKE
@@ -1114,7 +1090,7 @@ PoC bindings — kept for completeness, not part of the active release set):
 | `bindings/python/pyproject.toml` | sed |
 | `bindings/r/n4m/DESCRIPTION` | sed |
 | `bindings/_archive/julia/Nirs4allMethods.jl/Project.toml` | sed |
-| `bindings/_archive/rust/nirs4all-methods/Cargo.toml` | `cargo set-version ${X}` |
+| `bindings/rust/n4m/Cargo.toml` | pre-release crate version is maintained independently until a registry-release policy is approved |
 | `bindings/js/package.json` | `npm version ${X} --no-git-tag-version` |
 | `bindings/_archive/dotnet/Nirs4allMethods/Nirs4allMethods.csproj` `<Version>` | sed |
 | `bindings/_archive/ruby/lib/nirs4all_methods/version.rb` | sed |
@@ -1158,7 +1134,7 @@ gap list):
 | `release-r.yml` | `R CMD build` + R-universe push + CRAN tarball | called from `release.yml` |
 | `release-matlab.yml` | deterministic `bindings/matlab/` zip for MATLAB/Octave | tag push / workflow dispatch |
 | `release-js.yml` | npm + JSR + CDN | called from `release.yml` |
-| `release-rust.yml` | `cargo publish` | called from `release.yml` |
+| `rust-binding.yml` | build, MSRV, ABI probe, package-list, and sanitizer qualification for the pre-release crate | push / pull request |
 | `release-dotnet.yml` | `dotnet pack` + NuGet push (managed + 6 native RIDs) | called from `release.yml` |
 | `release-julia.yml` | nothing — Yggdrasil and Registrator are external; this workflow only attaches Project.toml diff to the release notes for transparency | called from `release.yml` |
 | `release-ruby.yml` | `gem build` + `gem push` | called from `release.yml` |
@@ -1177,7 +1153,9 @@ gap list):
 When adding a new binding or registry, follow this 10-step gate. The
 checklist is reproduced inside each `bindings/${LANG}/CHECKLIST.md`.
 
-1. **License**: confirm SPDX `CECILL-2.1` or accepted equivalent. If not, halt.
+1. **License**: confirm SPDX `CECILL-2.1 OR AGPL-3.0-or-later` (or a
+   registry-specific representation that preserves the recipient's choice).
+   If not, halt.
 2. **Identity**: claim the name on the registry (empty placeholder OK).
 3. **Manifest**: add the language's package manifest (`pyproject.toml`, `gemspec`, `nimble`, `rockspec`, etc.) with a `version` field tied to the canonical version source.
 4. **Source layout**: respect `bindings/${LANG}/` with the README, the manifest, `src/`, and `tests/`.
@@ -1270,9 +1248,10 @@ maintainer may want to revisit:
    commits to the vendored static build (lower install friction).
    Trade-off: ~5 min compile on CRAN's slowest farm. If CRAN
    complains, fall back to the SystemRequirements path.
-2. **`nirs4all-methods-sys` companion crate (frozen PoC).** The doc defers it (single
-   `nirs4all-methods` crate is enough for v1.0). Revisit when a Rust
-   consumer asks for build-time `libn4m` bundling.
+2. **Rust companion crate and registry policy.** The official local
+   pre-release is the single `n4m` crate; crates.io publication and any
+   `n4m-sys` companion are deferred. Revisit both only when Rust distribution
+   policy and build-time `libn4m` bundling are approved.
 3. **Android NDK packaging timing.** The doc treats it as in-scope
    for the Maven Central artifact; current ROADMAP defers it to
    "phase 36 unfreeze". The two have to converge before v1.0.
@@ -1302,7 +1281,7 @@ MATLAB / Octave    → release-matlab.yml → nirs4all-methods-matlab-octave-${V
 MATLAB File Ex.    → optional manual .mltbx project, not wired in CI
 npm                → bindings/js/package.json
 JSR                → bindings/js/jsr.json (mirror of package.json)
-crates.io          → bindings/_archive/rust/nirs4all-methods/Cargo.toml      (frozen PoC)
+Rust pre-release   → bindings/rust/n4m/Cargo.toml (local qualification only; no crates.io publication)
 NuGet              → bindings/_archive/dotnet/Nirs4allMethods/Nirs4allMethods.csproj (managed, frozen PoC)
                    + bindings/_archive/dotnet/Nirs4allMethods.Native/Nirs4allMethods.Native.csproj (multi-RID native, frozen PoC)
 Julia General      → bindings/_archive/julia/Nirs4allMethods.jl/Project.toml + Yggdrasil PR for the JLL (frozen PoC)
@@ -1333,7 +1312,7 @@ Software Heritage  → no manifest; passive
 | npm `@nirs4all/methods` | 🟡 package.json present, never published | needs npm scope + first publish |
 | JSR | ⬜ not configured | mirror of npm — add after first npm publish |
 | pkg.go.dev *(frozen PoC)* | 🟡 module exists, not tagged in subdir convention | frozen in `bindings/_archive/`; not a release target |
-| crates.io *(frozen PoC)* | ⬜ never published | frozen in `bindings/_archive/`; not a release target |
+| Rust `n4m` *(official pre-release)* | 🟡 locally qualified, not published | `cargo package --list` includes both `LICENSES/*.txt` texts; no crates.io publication or cross-language prediction fixture/parity claim |
 | NuGet *(frozen PoC)* | ⬜ never published | frozen in `bindings/_archive/`; would need `Nirs4allMethods` (managed) + `Nirs4allMethods.Native` (multi-RID native) |
 | Julia General *(frozen PoC)* | ⬜ never registered | frozen in `bindings/_archive/`; not a release target |
 | RubyGems *(frozen PoC)* | ⬜ no gemspec | frozen in `bindings/_archive/`; not a release target |
@@ -1403,7 +1382,7 @@ Every distribution channel splits into three classes of action:
 | # | Who | Action |
 |---|-----|--------|
 | U1 | 👤 | Generate a GPG key (`gpg --full-gen-key`, ed25519), publish on `keys.openpgp.org`. Needed by Maven Central, signed git tags, signed Releases. |
-| U2 | 👤 | Enable 2FA on every account: GitHub (recovery codes saved), PyPI, npm, crates.io, RubyGems, NuGet, Maven Central, MathWorks, RubyGems, JuliaHub, Docker Hub. Most registries now refuse publication without it. |
+| U2 | 👤 | Enable 2FA on every account: GitHub (recovery codes saved), PyPI, npm, RubyGems, NuGet, Maven Central, MathWorks, RubyGems, JuliaHub, Docker Hub. Most registries now refuse publication without it. Rust has no registry account requirement while publication is deferred. |
 | U3 | 👤 | (Optional) issue a fine-grained PAT to me (`gh auth login --with-token`) with scope `contents:write, packages:write, pull-requests:write` if you want me to open upstream PRs (vcpkg, conan-center, etc.) from your account. Otherwise I deliver branches/diffs and you push. |
 | U4 | 🤖 | Maintain `scripts/bump_version.sh` and `.github/workflows/version-sync.yml`; extend them whenever a new manifest appears. |
 | U5 | 🤖 | Keep the SOVERSION preflight green from clean builds and prevent stale `libn4m.so.0` artifacts from entering packages. |
@@ -1429,7 +1408,7 @@ Legend: 🤖 = Claude can do it alone · 👤 = you only · 🤖👤 = joint.
 | **conda-forge** (two feedstocks: `libn4m` + `pls4all`) | 🤖 both `meta.yaml` recipes + PR to `conda-forge/staged-recipes` | 👤 conda-forge-admin GitHub app authorisation on your account (1 click during PR) | 🤖👤 reviewer comments, you forward to me |
 | **npm `@nirs4all/methods`** | 🤖 `release-js.yml`; **provenance is automatic** under npm Trusted Publishing (no need to pass `--provenance`) | 👤 (1) create npm org `@nirs4all` (free, 5 min), (2) configure npm Trusted Publishing OIDC → repo `GBeurier/nirs4all-methods`. Requires **npm >= 11.5.1**, **Node >= 22.14.0**, and GitHub-hosted runners. | none |
 | **JSR `@nirs4all/methods`** | 🤖 `jsr.json` mirror of npm manifest + workflow | 👤 create JSR scope `@nirs4all` at `https://jsr.io/new`; bind to GitHub repo via OIDC (1 click) | none |
-| **crates.io `nirs4all-methods`** *(frozen PoC)* | 🤖 `Cargo.toml` cleanup + `release-rust.yml` | 👤 crates.io login (GitHub OAuth, 30 sec) + paste API token in repo secret `CARGO_REGISTRY_TOKEN`. crates.io has no public OIDC yet. | none |
+| **Rust `n4m`** *(official pre-release)* | 🤖 maintain `bindings/rust/n4m`, its ABI probe, `cargo package --list`, and Linux sanitizer-runtime gate | no registry account or token while publication remains deferred | no publication; no cross-language prediction parity claim |
 
 #### Tier C — JVM, .NET, niche-scientific (later wave)
 
@@ -1479,7 +1458,7 @@ The `Settings → Secrets and variables → Actions` of `GBeurier/nirs4all-metho
 | (none for PyPI) | A | Trusted Publishing OIDC replaces this |
 | (none for npm) | B | Trusted Publishing OIDC |
 | (none for JSR) | B | OIDC |
-| `CARGO_REGISTRY_TOKEN` | B | crates.io has no OIDC yet |
+| (none for Rust) | B | the official local pre-release is not published to crates.io, so no registry token is needed |
 | (none for RubyGems) | C | OIDC |
 | `LUAROCKS_API_KEY` | C | no OIDC |
 | `MAVEN_GPG_PRIVATE_KEY`, `MAVEN_GPG_PASSPHRASE`, `CENTRAL_USERNAME`, `CENTRAL_TOKEN` | C | Maven Central |

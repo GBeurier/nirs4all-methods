@@ -10,7 +10,11 @@ The founding refactor document is [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.m
 
 **Note on naming**: the project completed its `p4a`/`pls4all` → `n4m`/`nirs4all-methods` token-level rename in Phase A. `pls4all` remains as a **packaging subset name** (the slim PLS-only re-export shipped on PyPI/CRAN) — the underlying binary is always `libn4m`. The historical project URL `github.com/GBeurier/pls4all` is preserved until the GitHub repo itself is renamed.
 
-Archived PoC bindings (Julia, JNI / Android, Go, Rust, .NET, Ruby, Lua, Nim) live under `bindings/_archive/` and are not current release targets.
+`bindings/rust/n4m` is the official local pre-release Rust binding. It is
+qualified against the stable C ABI but is not published to crates.io and makes
+no cross-language prediction-parity claim. Archived PoC bindings (Julia, JNI /
+Android, Go, .NET, Ruby, Lua, Nim) live under `bindings/_archive/` and are not
+current release targets.
 
 ## Build commands
 
@@ -192,8 +196,10 @@ bindings/
                                   # MATLAB release/runtime checks stay manual)
   octave/                         # Octave support assets / third-party reference material
   js/                             # JS / WASM binding (Emscripten)
+  rust/n4m/                        # Official local pre-release Rust binding.
+                                  # No crates.io publication or parity claim.
   _archive/                       # Frozen PoC bindings (julia, jni, android,
-                                  # go, rust, dotnet, lua, nim, ruby)
+                                  # go, dotnet, lua, nim, ruby)
 
 benchmarks/
   parity_timing/registry.py       # Legacy canonical method catalog (~10k LOC).

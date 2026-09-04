@@ -1,0 +1,2354 @@
+{
+  "baseline": {
+    "legacy_python": "docs/_extras/methods_bibliography.py",
+    "legacy_python_sha256": "140554600e9d2f835e1d11a383d9d389c730d86c5205a5f742ea8465824e6d30",
+    "source_revision": "fe5c077ba7ddccacb3befce6dbc9e398458b20d3"
+  },
+  "catalog_version": 1,
+  "parity_provenance": [
+    {
+      "path": "parity/REFERENCES.md",
+      "sha256": "52baac5aeedd0b3e6f58992e9d59ed2456442bfc249b7f9d5cd8e2235db20beb"
+    },
+    {
+      "path": "benchmarks/parity_timing/truth_sources.lock.json",
+      "sha256": "a4955a2a577ac2a9c046fd874b3623540a6e925900084ec8fd82a52832836f1b"
+    }
+  ],
+  "publications": [
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-aom_pls",
+      "journal": null,
+      "legacy_citation": "Beurier, G., Reiter, R., Noûs, C., Rouan, L. & Cornet, D. (2026). *Reframing preprocessing selection as model-internal calibration in near-infrared spectroscopy: a large-scale benchmark of operator-adaptive PLS and Ridge models*. arXiv:2605.13587. https://arxiv.org/abs/2605.13587.",
+      "method_key": "aom_pls",
+      "method_title": "AOM-PLS (global adaptive operator selection)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.aom_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-aom_preprocess",
+      "journal": null,
+      "legacy_citation": "Beurier, G., Reiter, R., Noûs, C., Rouan, L. & Cornet, D. (2026). *Reframing preprocessing selection as model-internal calibration in near-infrared spectroscopy: a large-scale benchmark of operator-adaptive PLS and Ridge models*. arXiv:2605.13587. https://arxiv.org/abs/2605.13587 — introduces operator-adaptive PLS (AOM-PLS / POP-PLS) and the bench against 50+ NIRS datasets that the git-pinned oracle `nirs4all.operators.models.sklearn.aom_pls` is calibrated against.",
+      "method_key": "aom_preprocess",
+      "method_title": "AOM (Adaptive Operator Mixture) preprocessing bank",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.aom_preprocess.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-approximate_press",
+      "journal": null,
+      "legacy_citation": "Allen, D. M. (1974). *The relationship between variable selection and data augmentation and a method for prediction*. Technometrics 16(1), 125–127.",
+      "method_key": "approximate_press",
+      "method_title": "Approximate PRESS (leave-one-out by hat-matrix)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.approximate_press.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-bagging_pls",
+      "journal": null,
+      "legacy_citation": "Breiman, L. (1996). *Bagging predictors*. Machine Learning 24(2), 123–140. — adapted for PLS by various chemometric authors.",
+      "method_key": "bagging_pls",
+      "method_title": "Bagging PLS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.bagging_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-bipls_select",
+      "journal": null,
+      "legacy_citation": "Leardi, R. & Nørgaard, L. (2004). *Sequential application of backward interval partial least squares and genetic algorithms for the selection of relevant spectral regions*. Journal of Chemometrics 18(11), 486–497.",
+      "method_key": "bipls_select",
+      "method_title": "biPLS — Backward Interval PLS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.bipls_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-boosting_pls",
+      "journal": null,
+      "legacy_citation": "Friedman, J. H. (2001). *Greedy function approximation: a gradient boosting machine*. Annals of Statistics 29(5), 1189–1232. — adapted for PLS as a base learner.",
+      "method_key": "boosting_pls",
+      "method_title": "Boosting PLS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.boosting_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-bve_select",
+      "journal": null,
+      "legacy_citation": "Forina, M., Casolino, M. C. & Pizarro Millán, C. (2004). *Iterative predictor weighting (IPW) PLS: a technique for the elimination of useless predictors in regression problems*. Journal of Chemometrics 18(2), 105–112 (§2).",
+      "method_key": "bve_select",
+      "method_title": "BVE — Backward Variable Elimination",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.bve_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-cars_select",
+      "journal": null,
+      "legacy_citation": "Li, H., Liang, Y., Xu, Q. & Cao, D. (2009). *Key wavelengths screening using competitive adaptive reweighted sampling method for multivariate calibration*. Analytica Chimica Acta 648(1), 77–84.",
+      "method_key": "cars_select",
+      "method_title": "CARS — Competitive Adaptive Reweighted Sampling",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.cars_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-continuum_regression",
+      "journal": null,
+      "legacy_citation": "Stone, M. & Brooks, R. J. (1990). *Continuum regression: cross-validated sequentially constructed prediction embracing ordinary least squares, partial least squares and principal components regression*. JRSS B 52(2), 237–269.",
+      "method_key": "continuum_regression",
+      "method_title": "Continuum Regression (Stone & Brooks 1990)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.continuum_regression.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-cppls",
+      "journal": null,
+      "legacy_citation": "Indahl, U. G. (2005). *A twist to partial least squares regression*. Journal of Chemometrics 19(1), 32–44.",
+      "method_key": "cppls",
+      "method_title": "Powered PLS (Indahl 2005)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.cppls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-di_pls",
+      "journal": null,
+      "legacy_citation": "Nikzad-Langerodi, R., Zellinger, W., Saminger-Platz, S. & Moser, B. A. (2018). *Domain-invariant partial-least-squares regression*. Analytical Chemistry 90(11), 6693–6701.",
+      "method_key": "di_pls",
+      "method_title": "Domain-Invariant PLS (di-PLS)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.di_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-ds",
+      "journal": null,
+      "legacy_citation": "Wang, Y., Veltkamp, D. J. & Kowalski, B. R. (1991). *Multivariate instrument standardisation*. Analytical Chemistry 63(23), 2750–2756.",
+      "method_key": "ds",
+      "method_title": "Direct Standardisation",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.ds.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-ecr",
+      "journal": null,
+      "legacy_citation": "Liu, Y., Zhang, B. & Hu, J. (2013). *Elastic Component Regression*. Chemometrics and Intelligent Laboratory Systems 124, 73–79. — adapted in pls4all as a continuum/elastic blend.",
+      "method_key": "ecr",
+      "method_title": "ECR — Elastic Component Regression",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.ecr.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-emcuve_select",
+      "journal": null,
+      "legacy_citation": "Han, Q.-J., Wu, H.-L., Cai, C.-B., Xu, L. & Yu, R.-Q. (2008). *An ensemble of Monte Carlo uninformative variable elimination for wavelength selection*. Analytica Chimica Acta 612(2), 121–125. https://doi.org/10.1016/j.aca.2008.02.032 — extends the MC-UVE procedure of Cai et al. (2008) (`stability_select`) by aggregating independent MC-UVE rounds through a vote rule.",
+      "method_key": "emcuve_select",
+      "method_title": "EMCUVE — Ensemble MC-UVE",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.emcuve_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-fused_sparse_pls",
+      "journal": null,
+      "legacy_citation": "Tibshirani, R., Saunders, M., Rosset, S., Zhu, J. & Knight, K. (2005). *Sparsity and smoothness via the fused lasso*. JRSS B 67(1), 91–108. — generalised to PLS loadings.",
+      "method_key": "fused_sparse_pls",
+      "method_title": "Fused-sparse PLS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.fused_sparse_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-ga_select",
+      "journal": null,
+      "legacy_citation": "Leardi, R. (2000). *Application of genetic algorithm–PLS for feature selection in spectral data sets*. Journal of Chemometrics 14(5–6), 643–655.",
+      "method_key": "ga_select",
+      "method_title": "GA-PLS — Genetic Algorithm variable selection",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.ga_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-gpr_pls",
+      "journal": null,
+      "legacy_citation": "Bishop, C. M. (2006). *Pattern Recognition and Machine Learning*, §6.4 (Gaussian Processes). — combined with a preliminary PLS dimensionality reduction for spectroscopy.",
+      "method_key": "gpr_pls",
+      "method_title": "Gaussian Process on PLS scores",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.gpr_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-group_sparse_pls",
+      "journal": null,
+      "legacy_citation": "Liquet, B., de Micheaux, P. L., Hejblum, B. P. & Thiébaut, R. (2016). *Group and sparse group partial least squares approaches applied in genomics context*. Bioinformatics 32(1), 35–42.",
+      "method_key": "group_sparse_pls",
+      "method_title": "Group-sparse PLS (Liquet 2016)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.group_sparse_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-interval_select",
+      "journal": null,
+      "legacy_citation": "Nørgaard, L., Saudland, A., Wagner, J., Nielsen, J. P., Munck, L. & Engelsen, S. B. (2000). *Interval partial least-squares regression (iPLS): a comparative chemometric study with an example from near-infrared spectroscopy*. Applied Spectroscopy 54(3), 413–419.",
+      "method_key": "interval_select",
+      "method_title": "iPLS — Interval PLS (moving-window)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.interval_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-ipw_select",
+      "journal": null,
+      "legacy_citation": "Forina, M., Casolino, C. & Pizarro Millán, C. (1999). *Iterative predictor weighting (IPW) PLS: a technique for the elimination of useless predictors in regression problems*. Journal of Chemometrics 13(2), 165–184. https://doi.org/10.1002/(SICI)1099-128X(199903/04)13:2<165::AID-CEM535>3.0.CO;2-Y",
+      "method_key": "ipw_select",
+      "method_title": "IPW — Iterative Predictor Weighting",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.ipw_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-irf_select",
+      "journal": null,
+      "legacy_citation": "Basu, S., Kumbier, K., Brown, J. B. & Yu, B. (2018). *Iterative random forests to discover predictive and stable high-order interactions*. Proceedings of the National Academy of Sciences 115(8), 1943–1948.",
+      "method_key": "irf_select",
+      "method_title": "IRF — Iterative Random Forest",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.irf_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-iriv_select",
+      "journal": null,
+      "legacy_citation": "Yun, Y. H., Wang, W. T., Tan, M. L., Liang, Y. Z., Li, H. D., Cao, D. S., Lu, H. M. & Xu, Q. S. (2014). *A strategy that iteratively retains informative variables for selecting optimal variable subset in multivariate calibration*. Analytica Chimica Acta 807, 36–43.",
+      "method_key": "iriv_select",
+      "method_title": "IRIV — Iteratively Retaining Informative Variables",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.iriv_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-kernel_pls_rbf",
+      "journal": null,
+      "legacy_citation": "Rosipal, R. & Trejo, L. J. (2001). *Kernel partial least squares regression in reproducing kernel Hilbert space*. Journal of Machine Learning Research 2, 97–123.",
+      "method_key": "kernel_pls_rbf",
+      "method_title": "Kernel PLS (Rosipal & Trejo 2001)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.kernel_pls_rbf.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-lw_pls",
+      "journal": null,
+      "legacy_citation": "Centner, V. & Massart, D. L. (1998). *Optimisation in locally weighted regression*. Analytical Chemistry 70(19), 4206–4211.",
+      "method_key": "lw_pls",
+      "method_title": "Locally-Weighted PLS (LW-PLS)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.lw_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-mb_pls",
+      "journal": null,
+      "legacy_citation": "Westerhuis, J. A., Kourti, T. & MacGregor, J. F. (1998). *Analysis of multiblock and hierarchical PCA and PLS models*. Journal of Chemometrics 12(5), 301–321.",
+      "method_key": "mb_pls",
+      "method_title": "Multi-block PLS (Westerhuis 1998)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.mb_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-mir_pls",
+      "journal": null,
+      "legacy_citation": "Sjöblom, J., Svensson, O., Josefson, M., Kullberg, H. & Wold, S. (1998). *An evaluation of orthogonal signal correction applied to calibration transfer of near infrared spectra*. Chemometrics and Intelligent Laboratory Systems 44(1–2), 229–244. — adapted for MIR regularisation conventions.",
+      "method_key": "mir_pls",
+      "method_title": "MIR-PLS (Mid-InfraRed PLS, regularised)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.mir_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-missing_aware_nipals",
+      "journal": null,
+      "legacy_citation": "Walczak, B. & Massart, D. L. (2001). *Dealing with missing data: part I & II*. Chemometrics and Intelligent Laboratory Systems 58(1), 15–27 & 29–42. — applied to the NIPALS PLS algorithm.",
+      "method_key": "missing_aware_nipals",
+      "method_title": "Missing-aware NIPALS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.missing_aware_nipals.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-n_pls",
+      "journal": null,
+      "legacy_citation": "Bro, R. (1996). *Multiway calibration. Multilinear PLS*. Journal of Chemometrics 10(1), 47–61.",
+      "method_key": "n_pls",
+      "method_title": "N-way PLS (Trilinear PLS, Bro 1996)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.n_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-o2pls",
+      "journal": null,
+      "legacy_citation": "Trygg, J. & Wold, S. (2003). *O2-PLS, a two-block (X–Y) latent variable regression method with an integral OSC filter*. Journal of Chemometrics 17(1), 53–64.",
+      "method_key": "o2pls",
+      "method_title": "O2-PLS (two-way orthogonal)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.o2pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-on_pls",
+      "journal": null,
+      "legacy_citation": "Löfstedt, T. & Trygg, J. (2011). *OnPLS — a novel multiblock method for the modelling of predictive and orthogonal variation*. Journal of Chemometrics 25(8), 441–455.",
+      "method_key": "on_pls",
+      "method_title": "OnPLS (Orthogonal N-block PLS)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.on_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-one_se_rule",
+      "journal": null,
+      "legacy_citation": "Hastie, T., Tibshirani, R. & Friedman, J. (2009). *The Elements of Statistical Learning*, 2nd ed., Springer, §7.10.",
+      "method_key": "one_se_rule",
+      "method_title": "One-SE rule for component selection",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.one_se_rule.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-opls",
+      "journal": null,
+      "legacy_citation": "Trygg, J. & Wold, S. (2002). *Orthogonal projections to latent structures (O-PLS)*. Journal of Chemometrics 16(3), 119–128.",
+      "method_key": "opls",
+      "method_title": "Orthogonal PLS (OPLS)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.opls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pcr",
+      "journal": null,
+      "legacy_citation": "Massy, W. F. (1965). *Principal Components Regression in Exploratory Statistical Research*. JASA 60(309), 234–256.",
+      "method_key": "pcr",
+      "method_title": "Principal Components Regression",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pcr.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pds",
+      "journal": null,
+      "legacy_citation": "Wang, Y., Veltkamp, D. J. & Kowalski, B. R. (1991). *Multivariate instrument standardization*. Analytical Chemistry 63(23), 2750–2756. https://doi.org/10.1021/ac00023a016 — same paper as `ds`; PDS is introduced in §3 (piecewise local regression with a sliding window of width 2w+1).",
+      "method_key": "pds",
+      "method_title": "Piecewise Direct Standardisation",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pds.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls",
+      "journal": null,
+      "legacy_citation": "de Jong, S. (1993). *SIMPLS: an alternative approach to partial least squares regression*. Chemometrics and Intelligent Laboratory Systems 18(3), 251–263.",
+      "method_key": "pls",
+      "method_title": "PLS regression (SIMPLS)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls_cox",
+      "journal": null,
+      "legacy_citation": "Bastien, P., Bertrand, F., Meyer, N. & Maumy-Bertrand, M. (2015). *Deviance residuals-based sparse PLS and sparse kernel PLS regression for censored data*. Bioinformatics 31(3), 397–404.",
+      "method_key": "pls_cox",
+      "method_title": "PLS-Cox (survival regression)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls_cox.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls_diagnostic_dmodx",
+      "journal": null,
+      "legacy_citation": "Eriksson, L., Byrne, T., Johansson, E., Trygg, J. & Vikström, C. (2013). *Multi- and Megavariate Data Analysis. Basic Principles and Applications*, 3rd ed., Umetrics Academy, §4.7.",
+      "method_key": "pls_diagnostic_dmodx",
+      "method_title": "DModX (distance to the model in X)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls_diagnostic_dmodx.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls_diagnostic_q",
+      "journal": null,
+      "legacy_citation": "Jackson, J. E. & Mudholkar, G. S. (1979). *Control procedures for residuals associated with principal component analysis*. Technometrics 21(3), 341–349.",
+      "method_key": "pls_diagnostic_q",
+      "method_title": "Q residual (squared prediction error)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls_diagnostic_q.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls_diagnostic_t2",
+      "journal": null,
+      "legacy_citation": "Hotelling, H. (1931). *The generalization of Student's ratio*. Annals of Mathematical Statistics 2(3), 360–378. — applied to PLS scores by MacGregor & Kourti 1995.",
+      "method_key": "pls_diagnostic_t2",
+      "method_title": "Hotelling T² score",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls_diagnostic_t2.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls_glm",
+      "journal": null,
+      "legacy_citation": "Marx, B. D. (1996). *Iteratively reweighted partial least squares estimation for generalized linear regression*. Technometrics 38(4), 374–381.",
+      "method_key": "pls_glm",
+      "method_title": "PLS-GLM (Generalised Linear Model PLS)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls_glm.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls_lda",
+      "journal": null,
+      "legacy_citation": "Barker, M. & Rayens, W. (2003). *Partial least squares for discrimination*. Journal of Chemometrics 17(3), 166–173.",
+      "method_key": "pls_lda",
+      "method_title": "PLS-LDA",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls_lda.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls_logistic",
+      "journal": null,
+      "legacy_citation": "Bastien, P., Esposito Vinzi, V. & Tenenhaus, M. (2005). *PLS generalised linear regression*. Computational Statistics & Data Analysis 48(1), 17–46.",
+      "method_key": "pls_logistic",
+      "method_title": "PLS-logistic regression",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls_logistic.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls_monitoring",
+      "journal": null,
+      "legacy_citation": "Kourti, T. & MacGregor, J. F. (1996). *Multivariate SPC methods for process and product monitoring and control*. Journal of Quality Technology 28(4), 409–428.",
+      "method_key": "pls_monitoring",
+      "method_title": "PLS monitoring (T² + Q with control limits)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls_monitoring.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pls_qda",
+      "journal": null,
+      "legacy_citation": "Pérez-Enciso, M. & Tenenhaus, M. (2003). *Prediction of clinical outcome with microarray data: a partial least squares discriminant analysis (PLS-DA) approach*. Human Genetics 112(5–6), 581–592.",
+      "method_key": "pls_qda",
+      "method_title": "PLS-QDA",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pls_qda.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pop_pls",
+      "journal": null,
+      "legacy_citation": "Beurier, G., Reiter, R., Noûs, C., Rouan, L. & Cornet, D. (2026). *Reframing preprocessing selection as model-internal calibration in near-infrared spectroscopy: a large-scale benchmark of operator-adaptive PLS and Ridge models*. arXiv:2605.13587. https://arxiv.org/abs/2605.13587.",
+      "method_key": "pop_pls",
+      "method_title": "POP-PLS (per-component operator selection)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pop_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-pso_select",
+      "journal": null,
+      "legacy_citation": "Kennedy, J. & Eberhart, R. (1995). *Particle swarm optimization*. IEEE ICNN 1995, vol. 4, 1942–1948. — binary PSO variant used for variable selection.",
+      "method_key": "pso_select",
+      "method_title": "PSO-PLS — Particle Swarm Optimisation",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.pso_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-random_frog_select",
+      "journal": null,
+      "legacy_citation": "Li, H., Xu, Q. & Liang, Y. (2012). *Random frog: an efficient reversible jump Markov chain Monte Carlo-like approach for variable selection*. Analytica Chimica Acta 740, 20–26.",
+      "method_key": "random_frog_select",
+      "method_title": "Random Frog",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.random_frog_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-random_subspace_pls",
+      "journal": null,
+      "legacy_citation": "Ho, T. K. (1998). *The random subspace method for constructing decision forests*. IEEE TPAMI 20(8), 832–844. — adapted for PLS regressors.",
+      "method_key": "random_subspace_pls",
+      "method_title": "Random-subspace PLS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.random_subspace_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-randomization_select",
+      "journal": null,
+      "legacy_citation": "Westad, F. & Martens, H. (2000). *Variable selection in near infrared spectroscopy based on significance testing in partial least squares regression*. JNIRS 8(2), 117–124.",
+      "method_key": "randomization_select",
+      "method_title": "Randomisation test (Y-permutation)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.randomization_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-recursive_pls",
+      "journal": null,
+      "legacy_citation": "Helland, K., Berntsen, H. E., Borgen, O. S. & Martens, H. (1992). *Recursive algorithm for partial least squares regression*. Chemometrics and Intelligent Laboratory Systems 14(1–3), 129–137.",
+      "method_key": "recursive_pls",
+      "method_title": "Recursive (moving-window) PLS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.recursive_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-rep_select",
+      "journal": null,
+      "legacy_citation": "Mehmood, T., Liland, K. H., Snipen, L. & Sæbø, S. (2012). *A review of variable selection methods in partial least squares regression*. Chemometrics and Intelligent Laboratory Systems 118, 62–69. https://doi.org/10.1016/j.chemolab.2012.07.010 — same review as `shaving_select`; §3.3 *Recursive elimination* introduces the fixed-count variant implemented here.",
+      "method_key": "rep_select",
+      "method_title": "REP — Recursive Elimination of Predictors",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.rep_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-ridge_pls",
+      "journal": null,
+      "legacy_citation": "Hoerl, A. E. & Kennard, R. W. (1970). *Ridge regression: biased estimation for nonorthogonal problems*. Technometrics 12(1), 55–67. — combined with PLS via Tikhonov regularisation of the inner regression.",
+      "method_key": "ridge_pls",
+      "method_title": "Ridge-augmented PLS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.ridge_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-robust_pls",
+      "journal": null,
+      "legacy_citation": "Serneels, S., Croux, C., Filzmoser, P. & Van Espen, P. J. (2005). *Partial Robust M-Regression*. Chemometrics and Intelligent Laboratory Systems 79(1–2), 55–64.",
+      "method_key": "robust_pls",
+      "method_title": "Robust PLS (Partial Robust M-regression)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.robust_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-rosa",
+      "journal": null,
+      "legacy_citation": "Liland, K. H. & Næs, T. (2016). *Response-oriented sequential alternation: a fast multiblock regression algorithm*. Journal of Chemometrics 30(11), 651–662.",
+      "method_key": "rosa",
+      "method_title": "ROSA (Response-Oriented Sequential Alternation)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.rosa.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-scars_select",
+      "journal": null,
+      "legacy_citation": "Zheng, K., Li, Q., Wang, J., Geng, J., Cao, P., Sui, T., Wang, X. & Du, Y. (2012). *Stability competitive adaptive reweighted sampling (SCARS) and its applications to multivariate calibration of NIR spectra*. Chemometrics and Intelligent Laboratory Systems 112, 48–54.",
+      "method_key": "scars_select",
+      "method_title": "SCARS — Stability-CARS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.scars_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-shaving_select",
+      "journal": null,
+      "legacy_citation": "Mehmood, T., Liland, K. H., Snipen, L. & Sæbø, S. (2012). *A review of variable selection methods in partial least squares regression*. Chemometrics and Intelligent Laboratory Systems 118, 62–69 (§3.2 Shaving).",
+      "method_key": "shaving_select",
+      "method_title": "Shaving (recursive elimination)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.shaving_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-sipls_select",
+      "journal": null,
+      "legacy_citation": "Nørgaard, L., Saudland, A., Wagner, J., Nielsen, J. P., Munck, L. & Engelsen, S. B. (2000). *Interval partial least-squares regression (iPLS): a comparative chemometric study with an example from near-infrared spectroscopy*. Applied Spectroscopy 54(3), 413–419 — same paper as `interval_select`; siPLS is the synergy-combinations extension proposed in §3.",
+      "method_key": "sipls_select",
+      "method_title": "siPLS — Synergy Interval PLS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.sipls_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-so_pls",
+      "journal": null,
+      "legacy_citation": "Næs, T., Tomic, O., Mevik, B.-H. & Martens, H. (2011). *Path modelling by sequential PLS regression*. Journal of Chemometrics 25(1), 28–40.",
+      "method_key": "so_pls",
+      "method_title": "Sequential and Orthogonalised PLS (SO-PLS)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.so_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-spa_select",
+      "journal": null,
+      "legacy_citation": "Araújo, M. C. U., Saldanha, T. C. B., Galvão, R. K. H., Yoneyama, T., Chame, H. C. & Visani, V. (2001). *The successive projections algorithm for variable selection in spectroscopic multicomponent analysis*. Chemometrics and Intelligent Laboratory Systems 57(2), 65–73.",
+      "method_key": "spa_select",
+      "method_title": "SPA — Successive Projections Algorithm",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.spa_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-sparse_pls_da",
+      "journal": null,
+      "legacy_citation": "Lê Cao, K.-A., Rossouw, D., Robert-Granié, C. & Besse, P. (2008). *A sparse PLS for variable selection when integrating omics data*. Statistical Applications in Genetics and Molecular Biology 7(1).",
+      "method_key": "sparse_pls_da",
+      "method_title": "Sparse PLS-DA (Lê Cao 2008)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.sparse_pls_da.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-sparse_simpls",
+      "journal": null,
+      "legacy_citation": "Chun, H. & Keleş, S. (2010). *Sparse partial least squares regression for simultaneous dimension reduction and variable selection*. JRSS B 72(1), 3–25.",
+      "method_key": "sparse_simpls",
+      "method_title": "Sparse SIMPLS (Chun & Keleş 2010)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.sparse_simpls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-st_select",
+      "journal": null,
+      "legacy_citation": "Mehmood, T., Liland, K. H., Snipen, L. & Sæbø, S. (2012). *A review of variable selection methods in partial least squares regression*. Chemometrics and Intelligent Laboratory Systems 118, 62–69. https://doi.org/10.1016/j.chemolab.2012.07.010 — same review as `shaving_select`; §3.4 *Score-threshold methods* covers the deterministic-threshold family implemented here.",
+      "method_key": "st_select",
+      "method_title": "ST-PLS — Score Threshold selection",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.st_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-stability_select",
+      "journal": null,
+      "legacy_citation": "Cai, W., Li, Y. & Shao, X. (2008). *A variable selection method based on uninformative variable elimination for multivariate calibration of near-infrared spectra*. Chemometrics and Intelligent Laboratory Systems 90(2), 188–194.",
+      "method_key": "stability_select",
+      "method_title": "MC-UVE (Monte-Carlo coefficient stability)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.stability_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-t2_select",
+      "journal": null,
+      "legacy_citation": "Mehmood, T. (2016). *Hotelling T² based variable selection in partial least squares regression*. Chemometrics and Intelligent Laboratory Systems 154, 23–28. https://doi.org/10.1016/j.chemolab.2016.03.020 — proposes T²-PLS, the loading-weights-level Hotelling T² selector. See also Wold, Sjöström & Eriksson (2001), Chemometrics and Intelligent Laboratory Systems 58(2), 109–130 §6.2 for the original T²-vs-VIP discussion in PLS.",
+      "method_key": "t2_select",
+      "method_title": "Hotelling T² loading selection",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.t2_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-uve_select",
+      "journal": null,
+      "legacy_citation": "Centner, V., Massart, D. L., de Noord, O. E., de Jong, S., Vandeginste, B. M. & Sterna, C. (1996). *Elimination of uninformative variables for multivariate calibration*. Analytical Chemistry 68(21), 3851–3858.",
+      "method_key": "uve_select",
+      "method_title": "UVE — Uninformative Variable Elimination",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.uve_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-variable_select_coef",
+      "journal": null,
+      "legacy_citation": "Martens, H. & Næs, T. (1989). *Multivariate Calibration*, §5. — the simplest ranking baseline.",
+      "method_key": "variable_select_coef",
+      "method_title": "Coefficient-magnitude selection",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.variable_select_coef.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-variable_select_sr",
+      "journal": null,
+      "legacy_citation": "Rajalahti, T., Arneberg, R., Berven, F. S., Myhr, K.-M., Ulvik, R. J. & Kvalheim, O. M. (2009). *Biomarker discovery in mass spectral profiles by means of selectivity ratio plot*. Chemometrics and Intelligent Laboratory Systems 95(1), 35–48.",
+      "method_key": "variable_select_sr",
+      "method_title": "Selectivity Ratio",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.variable_select_sr.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-variable_select_vip",
+      "journal": null,
+      "legacy_citation": "Wold, S., Sjöström, M. & Eriksson, L. (2001). *PLS-regression: a basic tool of chemometrics*. Chemometrics and Intelligent Laboratory Systems 58(2), 109–130.",
+      "method_key": "variable_select_vip",
+      "method_title": "VIP (Variable Importance in Projection)",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.variable_select_vip.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-vip_spa_select",
+      "journal": null,
+      "legacy_citation": "Hybrid heuristic combining VIP ranking and the Successive Projections Algorithm. See registry notes; no single canonical paper.",
+      "method_key": "vip_spa_select",
+      "method_title": "VIP-seeded SPA",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.vip_spa_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-vissa_select",
+      "journal": null,
+      "legacy_citation": "Deng, B. C., Yun, Y. H., Liang, Y. Z. & Yi, L. Z. (2014). *A new strategy to prevent over-fitting in partial least squares models based on model population analysis*. Analytica Chimica Acta 880, 32–41.",
+      "method_key": "vissa_select",
+      "method_title": "VISSA — Variable Iterative Space-Shrinkage",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.vissa_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-weighted_pls",
+      "journal": null,
+      "legacy_citation": "Martens, H. & Næs, T. (1989). *Multivariate Calibration*. Wiley. §4.5 'Weighted regression for non-i.i.d. errors'.",
+      "method_key": "weighted_pls",
+      "method_title": "Sample-weighted PLS",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.weighted_pls.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-wvc_select",
+      "journal": null,
+      "legacy_citation": "Andries, J. P. M. & Vander Heyden, Y. (2011). *Improved variable reduction in partial least squares modelling based on predictive-property-ranked variables and adaptation of partial least squares complexity*. Analytica Chimica Acta 705(1–2), 292–305.",
+      "method_key": "wvc_select",
+      "method_title": "WVC — Weighted Variable Contribution",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.wvc_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": null,
+      "bibtex": null,
+      "doi": null,
+      "id": "legacy-wvc_threshold_select",
+      "journal": null,
+      "legacy_citation": "Andries, J. P. M. & Vander Heyden, Y. (2011). *Improved variable reduction in partial least squares modelling based on predictive-property-ranked variables and adaptation of partial least squares complexity*. Analytica Chimica Acta 705(1–2), 292–305. https://doi.org/10.1016/j.aca.2011.06.037 — same paper as `wvc_select`; introduces both the top-$k$ ranking and the threshold / factor-of-mean rules used here.",
+      "method_key": "wvc_threshold_select",
+      "method_title": "WVC-threshold selection",
+      "provenance": {
+        "fields_status": "unstructured_legacy",
+        "missing_fields": [
+          "authors",
+          "title",
+          "year",
+          "journal",
+          "doi",
+          "url",
+          "bibtex"
+        ],
+        "source": "docs/_extras/methods_bibliography.py:BIBLIOGRAPHY.wvc_threshold_select.paper"
+      },
+      "title": null,
+      "url": null,
+      "year": null
+    },
+    {
+      "authors": [
+        "Bergstra, James",
+        "Bardenet, R{\\'e}mi",
+        "Bengio, Yoshua",
+        "K{\\'e}gl, Bal{\\'a}zs"
+      ],
+      "bibtex": "@inproceedings{bergstra2011tpe,\n  author    = {Bergstra, James and Bardenet, R{\\'e}mi and Bengio, Yoshua and\n               K{\\'e}gl, Bal{\\'a}zs},\n  title     = {Algorithms for Hyper-Parameter Optimization},\n  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},\n  year      = {2011}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-bergstra2011tpe",
+      "journal": "Advances in Neural Information Processing Systems (NeurIPS)",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "bergstra2011tpe",
+        "entry_sha256": "c772c842c76672cbb34628c228bca2b3bec48d7564c25196b29428989039103d",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Algorithms for Hyper-Parameter Optimization",
+      "url": null,
+      "year": 2011
+    },
+    {
+      "authors": [
+        "Bergstra, James",
+        "Bengio, Yoshua"
+      ],
+      "bibtex": "@article{bergstra2012random,\n  author  = {Bergstra, James and Bengio, Yoshua},\n  title   = {Random Search for Hyper-Parameter Optimization},\n  journal = {Journal of Machine Learning Research},\n  volume  = {13},\n  pages   = {281--305},\n  year    = {2012}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-bergstra2012random",
+      "journal": "Journal of Machine Learning Research",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "bergstra2012random",
+        "entry_sha256": "f962cd994563862d82f3697b3b952608a4f861d4fafdca7eea37d078678288dd",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Random Search for Hyper-Parameter Optimization",
+      "url": null,
+      "year": 2012
+    },
+    {
+      "authors": [
+        "Golovin, Daniel",
+        "Solnik, Benjamin",
+        "Moitra, Subhodeep",
+        "Kochanski, Greg",
+        "Karro, John",
+        "Sculley, D."
+      ],
+      "bibtex": "@inproceedings{golovin2017vizier,\n  author    = {Golovin, Daniel and Solnik, Benjamin and Moitra, Subhodeep and\n               Kochanski, Greg and Karro, John and Sculley, D.},\n  title     = {Google Vizier: A Service for Black-Box Optimization},\n  booktitle = {KDD},\n  year      = {2017}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-golovin2017vizier",
+      "journal": "KDD",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "golovin2017vizier",
+        "entry_sha256": "2fe09a03adf6b05603dcab9a1fa1e2135d042347b3722af53e3e8c5f87f603ad",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Google Vizier: A Service for Black-Box Optimization",
+      "url": null,
+      "year": 2017
+    },
+    {
+      "authors": [
+        "Hansen, Nikolaus",
+        "Ostermeier, Andreas"
+      ],
+      "bibtex": "@article{hansen2001cmaes,\n  author  = {Hansen, Nikolaus and Ostermeier, Andreas},\n  title   = {Completely Derandomized Self-Adaptation in Evolution Strategies},\n  journal = {Evolutionary Computation},\n  volume  = {9},\n  number  = {2},\n  pages   = {159--195},\n  year    = {2001}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-hansen2001cmaes",
+      "journal": "Evolutionary Computation",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "hansen2001cmaes",
+        "entry_sha256": "6cb779d169d29428e09a3d540e4a70bb11d3186dfe017ce0a6ac1679b0ce4be9",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Completely Derandomized Self-Adaptation in Evolution Strategies",
+      "url": null,
+      "year": 2001
+    },
+    {
+      "authors": [
+        "Jamieson, Kevin",
+        "Talwalkar, Ameet"
+      ],
+      "bibtex": "@inproceedings{jamieson2016nonstochastic,\n  author    = {Jamieson, Kevin and Talwalkar, Ameet},\n  title     = {Non-stochastic Best Arm Identification and Hyperparameter\n               Optimization},\n  booktitle = {AISTATS},\n  year      = {2016}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-jamieson2016nonstochastic",
+      "journal": "AISTATS",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "jamieson2016nonstochastic",
+        "entry_sha256": "56d5a93882456876f5e6353fca9822edc334adbb1b826cb365f710ae5eda9024",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Non-stochastic Best Arm Identification and Hyperparameter\n               Optimization",
+      "url": null,
+      "year": 2016
+    },
+    {
+      "authors": [
+        "Joe, Stephen",
+        "Kuo, Frances Y."
+      ],
+      "bibtex": "@article{joe2003remark,\n  author  = {Joe, Stephen and Kuo, Frances Y.},\n  title   = {Remark on Algorithm 659: Implementing Sobol's Quasirandom\n             Sequence Generator},\n  journal = {ACM Transactions on Mathematical Software},\n  volume  = {29},\n  number  = {1},\n  pages   = {49--57},\n  year    = {2003}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-joe2003remark",
+      "journal": "ACM Transactions on Mathematical Software",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "joe2003remark",
+        "entry_sha256": "9b774bc748fb5d268c33b339f83348ddb3387027edf170ea6d19cd1ef4b63a25",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Remark on Algorithm 659: Implementing Sobol's Quasirandom\n             Sequence Generator",
+      "url": null,
+      "year": 2003
+    },
+    {
+      "authors": [
+        "Joe, Stephen",
+        "Kuo, Frances Y."
+      ],
+      "bibtex": "@article{joe2008sobol,\n  author  = {Joe, Stephen and Kuo, Frances Y.},\n  title   = {Constructing Sobol Sequences with Better Two-Dimensional\n             Projections},\n  journal = {SIAM Journal on Scientific Computing},\n  volume  = {30},\n  number  = {5},\n  pages   = {2635--2654},\n  year    = {2008}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-joe2008sobol",
+      "journal": "SIAM Journal on Scientific Computing",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "joe2008sobol",
+        "entry_sha256": "24506a2eba09d8a050e2df37aabccd0a58f447bbc74b871d7a1d5f2c22a35e64",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Constructing Sobol Sequences with Better Two-Dimensional\n             Projections",
+      "url": null,
+      "year": 2008
+    },
+    {
+      "authors": [
+        "Jones, Donald R.",
+        "Schonlau, Matthias",
+        "Welch, William J."
+      ],
+      "bibtex": "@article{jones1998ego,\n  author  = {Jones, Donald R. and Schonlau, Matthias and Welch, William J.},\n  title   = {Efficient Global Optimization of Expensive Black-Box Functions},\n  journal = {Journal of Global Optimization},\n  volume  = {13},\n  number  = {4},\n  pages   = {455--492},\n  year    = {1998}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-jones1998ego",
+      "journal": "Journal of Global Optimization",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "jones1998ego",
+        "entry_sha256": "5954586eae5e8e5109d87ce6826ac4a681ba8d9c9757c65b79a1befd2f4cdb99",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Efficient Global Optimization of Expensive Black-Box Functions",
+      "url": null,
+      "year": 1998
+    },
+    {
+      "authors": [
+        "Kennedy, James",
+        "Eberhart, Russell C."
+      ],
+      "bibtex": "@inproceedings{kennedy1997binarypso,\n  author    = {Kennedy, James and Eberhart, Russell C.},\n  title     = {A discrete binary version of the particle swarm algorithm},\n  booktitle = {IEEE International Conference on Systems, Man, and Cybernetics},\n  pages     = {4104--4108},\n  year      = {1997}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-kennedy1997binarypso",
+      "journal": "IEEE International Conference on Systems, Man, and Cybernetics",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "kennedy1997binarypso",
+        "entry_sha256": "56478686bf429ccd91c4fadf72b372db5166c0892482c6d4fd6001f2714297fa",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "A discrete binary version of the particle swarm algorithm",
+      "url": null,
+      "year": 1997
+    },
+    {
+      "authors": [
+        "Leardi, Riccardo",
+        "Lupi{\\'a}{\\~n}ez Gonz{\\'a}lez, Amparo"
+      ],
+      "bibtex": "@article{leardi1998ga,\n  author  = {Leardi, Riccardo and Lupi{\\'a}{\\~n}ez Gonz{\\'a}lez, Amparo},\n  title   = {Genetic algorithms applied to feature selection in PLS\n             regression: how and when to use them},\n  journal = {Chemometrics and Intelligent Laboratory Systems},\n  volume  = {41},\n  number  = {2},\n  pages   = {195--207},\n  year    = {1998}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-leardi1998ga",
+      "journal": "Chemometrics and Intelligent Laboratory Systems",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "leardi1998ga",
+        "entry_sha256": "51ed19573e6ff29365e1ee27375adf9be6f6841b9b086e25c59d499f9ce64ebc",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Genetic algorithms applied to feature selection in PLS\n             regression: how and when to use them",
+      "url": null,
+      "year": 1998
+    },
+    {
+      "authors": [
+        "Li, Lisha",
+        "Jamieson, Kevin",
+        "DeSalvo, Giulia",
+        "Rostamizadeh, Afshin",
+        "Talwalkar, Ameet"
+      ],
+      "bibtex": "@article{li2018hyperband,\n  author  = {Li, Lisha and Jamieson, Kevin and DeSalvo, Giulia and\n             Rostamizadeh, Afshin and Talwalkar, Ameet},\n  title   = {Hyperband: A Novel Bandit-Based Approach to Hyperparameter\n             Optimization},\n  journal = {Journal of Machine Learning Research},\n  volume  = {18},\n  pages   = {1--52},\n  year    = {2018}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-li2018hyperband",
+      "journal": "Journal of Machine Learning Research",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "li2018hyperband",
+        "entry_sha256": "fa00cb1b13cefed18ee6f79049938a1b677cf230a0d6cf12285bad06c47d0f35",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Hyperband: A Novel Bandit-Based Approach to Hyperparameter\n             Optimization",
+      "url": null,
+      "year": 2018
+    },
+    {
+      "authors": [
+        "Li, Liam",
+        "Jamieson, Kevin",
+        "Rostamizadeh, Afshin",
+        "Gonina, Ekaterina",
+        "Ben-tzur, Jonathan",
+        "Hardt, Moritz",
+        "Recht, Benjamin",
+        "Talwalkar, Ameet"
+      ],
+      "bibtex": "@inproceedings{li2020asha,\n  author    = {Li, Liam and Jamieson, Kevin and Rostamizadeh, Afshin and\n               Gonina, Ekaterina and Ben-tzur, Jonathan and Hardt, Moritz and\n               Recht, Benjamin and Talwalkar, Ameet},\n  title     = {A System for Massively Parallel Hyperparameter Tuning},\n  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},\n  year      = {2020}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-li2020asha",
+      "journal": "Proceedings of Machine Learning and Systems (MLSys)",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "li2020asha",
+        "entry_sha256": "036d6744b43599268bd1a72a7f0d8041495f820aeb3b53ce83fedeb4374b4e1e",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "A System for Massively Parallel Hyperparameter Tuning",
+      "url": null,
+      "year": 2020
+    },
+    {
+      "authors": [
+        "McKay, Michael D.",
+        "Beckman, Richard J.",
+        "Conover, William J."
+      ],
+      "bibtex": "@article{mckay1979lhs,\n  author  = {McKay, Michael D. and Beckman, Richard J. and Conover, William J.},\n  title   = {A Comparison of Three Methods for Selecting Values of Input\n             Variables in the Analysis of Output from a Computer Code},\n  journal = {Technometrics},\n  volume  = {21},\n  number  = {2},\n  pages   = {239--245},\n  year    = {1979}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-mckay1979lhs",
+      "journal": "Technometrics",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "mckay1979lhs",
+        "entry_sha256": "4e2df3a822a09ddf581906daeaaf7005e5009a91969c5e746d219b8246211272",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "A Comparison of Three Methods for Selecting Values of Input\n             Variables in the Analysis of Output from a Computer Code",
+      "url": null,
+      "year": 1979
+    },
+    {
+      "authors": [
+        "Rasmussen, Carl Edward",
+        "Williams, Christopher K. I."
+      ],
+      "bibtex": "@book{rasmussen2006gp,\n  author    = {Rasmussen, Carl Edward and Williams, Christopher K. I.},\n  title     = {Gaussian Processes for Machine Learning},\n  publisher = {MIT Press},\n  year      = {2006}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-rasmussen2006gp",
+      "journal": null,
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "rasmussen2006gp",
+        "entry_sha256": "71429e373088634bb5d2da55478f64fb84150adece21f9119996bcc7d9f9f248",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "journal",
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "Gaussian Processes for Machine Learning",
+      "url": null,
+      "year": 2006
+    },
+    {
+      "authors": [
+        "Sobol', Ilya M."
+      ],
+      "bibtex": "@article{sobol1967distribution,\n  author  = {Sobol', Ilya M.},\n  title   = {On the distribution of points in a cube and the approximate\n             evaluation of integrals},\n  journal = {USSR Computational Mathematics and Mathematical Physics},\n  volume  = {7},\n  number  = {4},\n  pages   = {86--112},\n  year    = {1967}\n}",
+      "doi": null,
+      "id": "reviewed-finetuning-sobol1967distribution",
+      "journal": "USSR Computational Mathematics and Mathematical Physics",
+      "legacy_citation": null,
+      "method_key": null,
+      "method_title": null,
+      "provenance": {
+        "entry_key": "sobol1967distribution",
+        "entry_sha256": "d811beec8820eecb5ce3d88ad2b7f166e31831ff6e0229a5c68c983f3a17a332",
+        "fields_status": "reviewed_structured",
+        "missing_fields": [
+          "doi",
+          "url"
+        ],
+        "source": "docs/methods/_finetuning_bibliography.bib",
+        "source_sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+      },
+      "title": "On the distribution of points in a cube and the approximate\n             evaluation of integrals",
+      "url": null,
+      "year": 1967
+    }
+  ],
+  "reviewed_sources": [
+    {
+      "path": "docs/methods/_finetuning_bibliography.bib",
+      "sha256": "50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9"
+    }
+  ],
+  "software_citations": [
+    {
+      "cff": "cff-version: 1.2.0\nmessage: \"If you use nirs4all-methods in academic work, please cite the software and the relevant foundational papers below.\"\ntitle: \"nirs4all-methods: A portable Partial Least Squares engine with a stable C ABI\"\nabstract: >-\n  nirs4all-methods reimplements the Partial Least Squares family in C++17 behind a\n  stable C ABI, with first-class bindings for Python, R, MATLAB, JavaScript /\n  WebAssembly and Android. It targets near-infrared spectroscopy,\n  chemometrics, omics and process monitoring, with Adaptive Operator-Mixture\n  PLS (AOM-PLS) and Per-Operator-Per-Component PLS (POP-PLS) as scientific\n  differentiators.\ntype: software\nauthors:\n  - family-names: Beurier\n    given-names: Grégory\n    affiliation: \"CIRAD\"\nrepository-code: \"https://github.com/GBeurier/nirs4all-methods\"\nurl: \"https://github.com/GBeurier/nirs4all-methods\"\nlicense: \"CECILL-2.1\"\nversion: 1.0.9\ndate-released: \"2026-07-06\"\nkeywords:\n  - partial-least-squares\n  - PLS\n  - PLS-DA\n  - OPLS\n  - OPLS-DA\n  - SIMPLS\n  - NIPALS\n  - chemometrics\n  - near-infrared\n  - NIRS\n  - spectroscopy\n  - omics\n  - AOM-PLS\n  - POP-PLS\n  - variable-selection\n  - C-ABI\n  - bindings\n\nreferences:\n  - type: article\n    authors:\n      - family-names: Wold\n        given-names: Svante\n      - family-names: Sjöström\n        given-names: Michael\n      - family-names: Eriksson\n        given-names: Lennart\n    title: \"PLS-regression: a basic tool of chemometrics\"\n    journal: \"Chemometrics and Intelligent Laboratory Systems\"\n    year: 2001\n    volume: 58\n    issue: 2\n    pages: \"109-130\"\n  - type: article\n    authors:\n      - family-names: de Jong\n        given-names: Sijmen\n    title: \"SIMPLS: An alternative approach to partial least squares regression\"\n    journal: \"Chemometrics and Intelligent Laboratory Systems\"\n    year: 1993\n    volume: 18\n    issue: 3\n    pages: \"251-263\"\n  - type: article\n    authors:\n      - family-names: Dayal\n        given-names: Bhupinder S.\n      - family-names: MacGregor\n        given-names: John F.\n    title: \"Improved PLS algorithms\"\n    journal: \"Journal of Chemometrics\"\n    year: 1997\n    volume: 11\n    issue: 1\n    pages: \"73-85\"\n  - type: article\n    authors:\n      - family-names: Trygg\n        given-names: Johan\n      - family-names: Wold\n        given-names: Svante\n    title: \"Orthogonal projections to latent structures (O-PLS)\"\n    journal: \"Journal of Chemometrics\"\n    year: 2002\n    volume: 16\n    issue: 3\n    pages: \"119-128\"\n  - type: article\n    authors:\n      - family-names: Bylesjö\n        given-names: Max\n      - family-names: Rantalainen\n        given-names: Mattias\n      - family-names: Cloarec\n        given-names: Olivier\n      - family-names: Nicholson\n        given-names: Jeremy K.\n      - family-names: Holmes\n        given-names: Elaine\n      - family-names: Trygg\n        given-names: Johan\n    title: \"OPLS discriminant analysis: combining the strengths of PLS-DA and SIMCA classification\"\n    journal: \"Journal of Chemometrics\"\n    year: 2006\n    volume: 20\n    issue: 8-10\n    pages: \"341-351\"\n  - type: article\n    authors:\n      - family-names: Rosipal\n        given-names: Roman\n      - family-names: Trejo\n        given-names: Leonard J.\n    title: \"Kernel partial least squares regression in reproducing kernel Hilbert space\"\n    journal: \"Journal of Machine Learning Research\"\n    year: 2001\n    volume: 2\n    pages: \"97-123\"\n  - type: article\n    authors:\n      - family-names: Nørgaard\n        given-names: Lars\n      - family-names: Saudland\n        given-names: Anders\n      - family-names: Wagner\n        given-names: Jens\n      - family-names: Nielsen\n        given-names: Jens P.\n      - family-names: Munck\n        given-names: Lars\n      - family-names: Engelsen\n        given-names: Søren B.\n    title: \"Interval partial least-squares regression (iPLS): A comparative chemometric study\"\n    journal: \"Applied Spectroscopy\"\n    year: 2000\n    volume: 54\n    issue: 3\n    pages: \"413-419\"\n  - type: article\n    authors:\n      - family-names: Hubert\n        given-names: Mia\n      - family-names: Vanden Branden\n        given-names: Karlien\n    title: \"Robust methods for partial least squares regression\"\n    journal: \"Journal of Chemometrics\"\n    year: 2003\n    volume: 17\n    issue: 10\n    pages: \"537-549\"\n",
+      "id": "nirs4all-methods",
+      "source": "CITATION.cff",
+      "source_sha256": "db96d17952bb300b1898746d4f466bd755712c224ead2c371e35e3a9965f6ef8"
+    }
+  ]
+}

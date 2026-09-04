@@ -2,10 +2,12 @@
 
 **pls4all** is a portable PLS / NIRS engine written in C++17, exposed
 through a stable C ABI, and packaged behind thin first-class bindings
-for the current target languages — Python, R, MATLAB / Octave, and
-JavaScript / WebAssembly. Archived language PoCs (Go, Rust, Julia,
-Ruby, .NET, Lua, Nim, JNI, Android) live under `bindings/_archive/`
-and are not current release targets.
+for the current target languages — Python, R, MATLAB / Octave,
+JavaScript / WebAssembly, and the official pre-release Rust binding. The Rust
+crate lives at `bindings/rust/n4m`; it is locally qualified but is not yet
+published to crates.io and makes no cross-language prediction-parity claim.
+Archived language PoCs (Go, Julia, Ruby, .NET, Lua, Nim, JNI, Android) live
+under `bindings/_archive/` and are not current release targets.
 
 It is built around a single claim: **the same numerical PLS result,
 in every language**, with timings that match or beat each language's

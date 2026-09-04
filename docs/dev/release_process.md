@@ -14,6 +14,7 @@ are automated; CRAN submission and optional registry/listing pages remain manual
 | R | `pls4all` (slim) | CRAN | **Semi-automated** — same `release-r.yml`, the matrix has a `pkg: [n4m, pls4all]` leg. | `workflow_dispatch`; tag push attaches the tarball |
 | JS / WASM | `@nirs4all/methods` | npm | **Automated** — `release-npm.yml` builds the pinned emsdk package, runs `npm test`, stages `dist/`, and publishes with npm provenance once `NPM_TOKEN`/scope are configured | tag push or `workflow_dispatch` with `publish=true` |
 | MATLAB / Octave | `+n4m` | GitHub Release | **Automated** — `release-matlab.yml` attaches `nirs4all-methods-matlab-octave-<version>.zip` to the Release. ONE binding serves both: users build the MEX with `build_mex.m` (MATLAB) or `mkoctfile` via `build_mex.m` (Octave); see `bindings/matlab/COMPAT.md`. A File Exchange / Octave Forge listing is optional + manual. | tag push attaches the zip |
+| Rust | `n4m` (official pre-release) | none — crates.io publication deferred | **Qualified, not published** — `rust-binding.yml` runs Linux/macOS/Windows C-ABI gates, declared-MSRV testing, and Linux sanitizer checks; it also verifies the packed license texts | push / pull request |
 
 ## Exact release artifacts — what each binding ships, and where to upload it
 

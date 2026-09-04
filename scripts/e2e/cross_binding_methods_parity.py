@@ -664,26 +664,24 @@ def _run_wasm_smoke(timeout: int, *, fixture_path: Path | None = None) -> dict[s
     }
 
 
-def _rust_archive_status() -> dict[str, Any]:
-    manifest = REPO / "bindings/_archive/rust/pls4all/Cargo.toml"
-    lib = REPO / "build/dev-release/cpp/src/libn4m.so"
-    has_legacy_symbol = False
-    if lib.exists():
-        proc = _run(["nm", "-D", "--defined-only", str(lib)], timeout=30)
-        has_legacy_symbol = "n4m_pls_fit_simple" in proc.stdout
+def _rust_pre_release_status() -> dict[str, Any]:
+    manifest = REPO / "bindings/rust/n4m/Cargo.toml"
     return {
-        "backend": "rust_archive",
+        "backend": "rust_n4m_pre_release",
         "language": "Rust",
-        "kind": "archived_binding",
-        "release_target": False,
-        "gate": "not_applicable",
+        "kind": "official_pre_release_binding",
+        "release_status": "not_published",
+        "gate": "outside_prediction_parity_matrix",
         "manifest": str(manifest),
         "reason": (
-            "Rust lives under bindings/_archive and is not a current release "
-            "target in CLAUDE.md. The archived wrapper still targets the "
-            "removed n4m_pls_fit_simple helper."
+            "The official pre-release Rust binding has real C-ABI model "
+            "fit/predict, serialization, optimizer HPO, and selection-only "
+            "finetune scope. No cross-language Rust prediction fixture is "
+            "committed, so this E2E runner neither executes nor claims Rust "
+            "prediction parity."
         ),
-        "legacy_symbol_present": has_legacy_symbol,
+        "prediction_fixture": None,
+        "parity_claim": False,
     }
 
 
@@ -719,7 +717,7 @@ def main(argv: list[str] | None = None) -> int:
         n_components=3,
     )
     wasm = _run_wasm_smoke(args.timeout, fixture_path=wasm_fixture)
-    rust_archive = _rust_archive_status()
+    rust_pre_release = _rust_pre_release_status()
     binding_summary = _summarize_parity_rows(parity_rows)
     prediction_summary = _summarize_prediction_rows(prediction_rows)
 
@@ -734,7 +732,7 @@ def main(argv: list[str] | None = None) -> int:
         "parity_rows": parity_rows,
         "binding_summary": binding_summary,
         "wasm": wasm,
-        "rust_archive": rust_archive,
+        "rust_pre_release": rust_pre_release,
     }
     predictions_payload = {
         "schema": "n4a.methods.predictions_by_language.v1",
@@ -750,7 +748,7 @@ def main(argv: list[str] | None = None) -> int:
             "metrics_max_rmse_rel": wasm["metrics_max_rmse_rel"],
             "tolerance": wasm["tolerance"],
         },
-        "rust_archive": rust_archive,
+        "rust_pre_release": rust_pre_release,
     }
     _json_write(artifacts_dir / "binding-parity.json", binding_payload)
     _json_write(artifacts_dir / "predictions-by-language.json", predictions_payload)

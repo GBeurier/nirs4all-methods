@@ -1,0 +1,2692 @@
+{
+  "classifications": [
+    "native",
+    "adapter",
+    "refused",
+    "not-promised"
+  ],
+  "generation": {
+    "command": "python3 docs/_extras/generate_v1_capability_matrix.py --check",
+    "deterministic": true,
+    "input_digest": {
+      "algorithm": "sha256",
+      "files": [
+        {
+          "path": "CONTRIBUTING.md",
+          "sha256": "1c3eb11006184cde0489386224ae42238d6acbf74556ffb9f3bbe9390a3622ff"
+        },
+        {
+          "path": "bindings/python/src/n4m/_ffi_decls.py",
+          "sha256": "b5920730302c51f25ea97d287194903d8d328958f9164f4a046db7f8f7462062"
+        },
+        {
+          "path": "bindings/python/src/n4m/_impl/native.py",
+          "sha256": "27c0868a6ea30217c61a89e2b92d1ebdf6728ddf18aa0d0f2c50d50028a15e8a"
+        },
+        {
+          "path": "bindings/python/src/n4m/_impl/native_sweeps.py",
+          "sha256": "a7215ef781330b6060e767c417e270b5be8b8f5b58bb244e6c3a13b9a3049f03"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_chain_fixed_fit.yaml",
+          "sha256": "09cee2f210463fb4f93d9b4018796c6b632f5e2d922f3db56969fbc20ecc899e"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_chain_ridge_pls.yaml",
+          "sha256": "f9b27de6bddf45c9ad7f4ad33e18dc5ec0c0a9e7333cef527dd728b6fc387408"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_chain_screen_refit.yaml",
+          "sha256": "c8d4fa3cec6467745eb2e558c4aea67ce336492957dd0457effbfe1b22f98d95"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_chain_sweep.yaml",
+          "sha256": "c3fcbfef00e53c4152144e367784e2714494039a64730708305fddae9f1af4e2"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_pls.yaml",
+          "sha256": "faa658884e4b862cdf4ce5285817f3f4510afc2480e0b1c8600f64ee13037708"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_pls_superblock.yaml",
+          "sha256": "2703aacaaa8c6755ecfbbf2b777e5c46176db3d9e7553d75008dbb3be3a4f344"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_preprocessing.yaml",
+          "sha256": "c1751dc706ea4cb9784ec2dea41ac6058d081d6493ea50f9e6e2a8c21e9993b0"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_ridge_pls_superblock.yaml",
+          "sha256": "e08e203a8ebb8091dd92fc86660b73e9038ad647c3c7fa978ff5fee2f04ee910"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_staged_chain_campaign.yaml",
+          "sha256": "e4dc076aeb204f29954e4992ec1f9e0e1640522c74fd83009cfd07b4d2abca1e"
+        },
+        {
+          "path": "catalog/methods/aom_pop.aom_sweep.yaml",
+          "sha256": "b0ff1bc81a105ea0ff67dcc2e689862f6f634593d3cf0f258493f7b8f36db708"
+        },
+        {
+          "path": "catalog/methods/aom_pop.operator_pls_stack.yaml",
+          "sha256": "b7b5c4a48885ee5ccd921f1093e585f58af70a9e7fafc88d22bbacc50f6c6ad4"
+        },
+        {
+          "path": "catalog/methods/aom_pop.pop_pls.yaml",
+          "sha256": "6315e6ee8b81b72b6e482e277fe872436b64182d2ab5cb5ae78efc3f41dc1938"
+        },
+        {
+          "path": "catalog/methods/aom_pop.ridge_active_superblock.yaml",
+          "sha256": "3770153953017c1bed875b06990f26f3c91b58a540c5875378ce2187e0b16048"
+        },
+        {
+          "path": "catalog/methods/aom_pop.ridge_blender.yaml",
+          "sha256": "8003db6ec03896d99e017fa1168e3ceaf2641bb2e168ebdfb0d3fc352d9cdab0"
+        },
+        {
+          "path": "catalog/methods/aom_pop.ridge_global.yaml",
+          "sha256": "546779290ca8c8e29c2a8f584fe40a2b51a205fac23f3e9ff1f69d1feffe0599"
+        },
+        {
+          "path": "catalog/methods/aom_pop.ridge_mkl_superblock.yaml",
+          "sha256": "dadb23743c134b184192c40e3c5105200fd6503b9ee1e3912d2a517a528bf64d"
+        },
+        {
+          "path": "catalog/methods/aom_pop.ridge_superblock.yaml",
+          "sha256": "d46eeaa3f14a9a2795633821826f07f5ccacae605383e61225aa56dd1c85be16"
+        },
+        {
+          "path": "catalog/methods/aom_pop.robust_hpo.yaml",
+          "sha256": "54b61b9f91374590e576b569f1c941239b790b1cf4bfe085082fbb7f8a806000"
+        },
+        {
+          "path": "catalog/methods/augmentation.drift.linear_drift.yaml",
+          "sha256": "9135b8f10cb9a9cd6bb223071293e8e50cbdff448e6ba515dcb4f09878949391"
+        },
+        {
+          "path": "catalog/methods/augmentation.drift.path_length.yaml",
+          "sha256": "a98c8d01bebd549b192618ef3fd1cb6a3ac4fe5bf36d35190ea4b846d37af6e1"
+        },
+        {
+          "path": "catalog/methods/augmentation.drift.poly_drift.yaml",
+          "sha256": "138fa8c03c0dc46510d1e44298654a10cbfbe24a797e89f659462cbd9eccc341"
+        },
+        {
+          "path": "catalog/methods/augmentation.edge_artifacts.detector_rolloff.yaml",
+          "sha256": "ab2fb4d81a6dcd07e1bcd9895055c7119c212e3de9a235a4cae3a4aac0607355"
+        },
+        {
+          "path": "catalog/methods/augmentation.edge_artifacts.edge_artifacts.yaml",
+          "sha256": "07c1d98edd4de287439998168e4e7380b64f261514a5f49abc9ff8712ab9b592"
+        },
+        {
+          "path": "catalog/methods/augmentation.edge_artifacts.edge_curvature.yaml",
+          "sha256": "79810d1edb58baa3a529d5be6716aaebf06274195ad434c1419388d0e62fc34b"
+        },
+        {
+          "path": "catalog/methods/augmentation.edge_artifacts.stray_light.yaml",
+          "sha256": "9351e3270b3eb495f44cb54d4362d3fccaa387afa4c897868842f957f8c480d2"
+        },
+        {
+          "path": "catalog/methods/augmentation.edge_artifacts.truncated_peak.yaml",
+          "sha256": "68b27d851d60ee01d58f87b64bd3dc41d3ba68d57d17a57308a9c00decdbdef9"
+        },
+        {
+          "path": "catalog/methods/augmentation.environmental.moisture.yaml",
+          "sha256": "7b041038102de1aacddf416b7914406815e058f8a5bbbdab322e8585812a720d"
+        },
+        {
+          "path": "catalog/methods/augmentation.environmental.temperature.yaml",
+          "sha256": "eaedaa429c66328415a15bf3d74068922ca29c4f6efc1f5fd02134e7813f2a6e"
+        },
+        {
+          "path": "catalog/methods/augmentation.mixup.local_mixup.yaml",
+          "sha256": "bcd376952615f48e2cf07f9c9052a82abb7de1446d7287519c48d1a3d8e235c1"
+        },
+        {
+          "path": "catalog/methods/augmentation.mixup.mixup.yaml",
+          "sha256": "37be48a9c23f6c3de881496ddca9b97e7153538ab381672df3dfbdd22d29aa24"
+        },
+        {
+          "path": "catalog/methods/augmentation.noise.gaussian_noise.yaml",
+          "sha256": "30d853013df8f08c35dd41303ae233aad64fe94e487e2dcd0d859fb770b02184"
+        },
+        {
+          "path": "catalog/methods/augmentation.noise.hetero_noise.yaml",
+          "sha256": "e879e291d9afff2087909561c4310a9ab0cf67748546df577669a23b0c4a6e9b"
+        },
+        {
+          "path": "catalog/methods/augmentation.noise.multiplicative_noise.yaml",
+          "sha256": "7045e1509ed383310df49936e87d8489283eac4491bb14b545e9fa3a6dd59ac8"
+        },
+        {
+          "path": "catalog/methods/augmentation.noise.spike_noise.yaml",
+          "sha256": "0dfd2712cb4b24b822ba490068bb6c40eda72354c137a9f4fb856ded7a796665"
+        },
+        {
+          "path": "catalog/methods/augmentation.random.random_x_op.yaml",
+          "sha256": "f9ff07390b024065c418b392aef44b150c761027fcf25fc1b1288917c511ffc3"
+        },
+        {
+          "path": "catalog/methods/augmentation.random.rotate_translate.yaml",
+          "sha256": "adf12f0ac1129cf5d870a9499aca48505043a10c7ce7b4c5f124c9efdd90a92b"
+        },
+        {
+          "path": "catalog/methods/augmentation.scattering.batch_effect.yaml",
+          "sha256": "e1d0f243621518951b5ea90435ae59e0f15b379279dea2a99297b34f57f9e975"
+        },
+        {
+          "path": "catalog/methods/augmentation.scattering.dead_band.yaml",
+          "sha256": "6957c95a01b7cda7b6ff638ea10d797544cea8dcda3df25ac8bdd1014b96ef53"
+        },
+        {
+          "path": "catalog/methods/augmentation.scattering.emsc_distort.yaml",
+          "sha256": "8ee0541feeefe8bcbc9eaae5ff090fafe42249b5b26ec322191887bf22f06649"
+        },
+        {
+          "path": "catalog/methods/augmentation.scattering.instrument_broaden.yaml",
+          "sha256": "ac1481a4b6625a26475f3ea96452385bd0a387f29aefd4c72efef61a30549adc"
+        },
+        {
+          "path": "catalog/methods/augmentation.scattering.particle_size.yaml",
+          "sha256": "8a4e224414b2e92fb95a3bd9cee6c5a84deca4d89ef507f374e6aa7044f67a1a"
+        },
+        {
+          "path": "catalog/methods/augmentation.scattering.scatter_sim_msc.yaml",
+          "sha256": "df2522e3ddc174856c1ef18c9d121d3cb9ac8d3229773509cb1334ee29bf9e60"
+        },
+        {
+          "path": "catalog/methods/augmentation.spectral.band_mask.yaml",
+          "sha256": "22f1d1439bebb582814042091c2db32d684a856e14029a125a3c09a892322922"
+        },
+        {
+          "path": "catalog/methods/augmentation.spectral.band_perturb.yaml",
+          "sha256": "91ed5b318ff5dccc77e59be08d696c24411d6ac9c99217de521d8a120d5d3677"
+        },
+        {
+          "path": "catalog/methods/augmentation.spectral.channel_dropout.yaml",
+          "sha256": "7f5dc44df2933f0564cf79897c49defb5f9aad8300afe56daed2bd40226a2de7"
+        },
+        {
+          "path": "catalog/methods/augmentation.spectral.gauss_jitter.yaml",
+          "sha256": "8b3d47b9ef972e5165b6884fa15f0218777d67fda6afdb4ce48a64bd825074eb"
+        },
+        {
+          "path": "catalog/methods/augmentation.spectral.local_clip.yaml",
+          "sha256": "94e88148c74554fba69459f394a745bc049bee1701f8102cd9d3a82fbf794340"
+        },
+        {
+          "path": "catalog/methods/augmentation.spectral.magnitude_warp.yaml",
+          "sha256": "c1c8350f4d7ad8cc163d7f4c2b4ec27fdfbf4d321252ce272f73b41cbd157b58"
+        },
+        {
+          "path": "catalog/methods/augmentation.spectral.unsharp_mask.yaml",
+          "sha256": "40bbb0cafda37946dd513e4920fbccef0ed030c993b61bd37a0a2dc1e69e2a21"
+        },
+        {
+          "path": "catalog/methods/augmentation.splines.spline_curve_simplification.yaml",
+          "sha256": "ae28e5cd92cc0f63ac567df1060adc9d4cfc19e0e8cfb84c04f7572bc1b35b7e"
+        },
+        {
+          "path": "catalog/methods/augmentation.splines.spline_smoothing.yaml",
+          "sha256": "9cc323c7fe47303bf0766897248da1143a82313b95b3c64e42ec282e7da1a33e"
+        },
+        {
+          "path": "catalog/methods/augmentation.splines.spline_x_perturbations.yaml",
+          "sha256": "ab40818b6a87dfa1bf9692e069bdfeaa0357d3e697bc1cbb559898e6b53e4c73"
+        },
+        {
+          "path": "catalog/methods/augmentation.splines.spline_x_simplification.yaml",
+          "sha256": "eb819c59010572287936810da361a6b32b7624e809e9bf758f5118be3daad42e"
+        },
+        {
+          "path": "catalog/methods/augmentation.splines.spline_y_perturbations.yaml",
+          "sha256": "2938c77262fa6d5d379e92d262daf95494076e30cd1a0e6133a6b5355abcf48d"
+        },
+        {
+          "path": "catalog/methods/augmentation.wavelength.local_warp.yaml",
+          "sha256": "0864f3a89a48329a26a30433feacc33bcd2895827c085d0373913132a9506ef7"
+        },
+        {
+          "path": "catalog/methods/augmentation.wavelength.wavelength_shift.yaml",
+          "sha256": "114bf9805111d7716e1708748c1032566dde8d574aa0cd39516b9738888c81d4"
+        },
+        {
+          "path": "catalog/methods/augmentation.wavelength.wavelength_stretch.yaml",
+          "sha256": "d6e12e281a67d071eac5f6b969ef7df067c9a092a430013093b6085db83d4310"
+        },
+        {
+          "path": "catalog/methods/diagnostics.approximate_press.yaml",
+          "sha256": "b54420f0b34fd607d5509d681d8b03d41884b976143cf5fda063aa9ba3c06f9b"
+        },
+        {
+          "path": "catalog/methods/diagnostics.model_selection.yaml",
+          "sha256": "6e862f00532df4e9a4735b57e77e0b3b099d4dcdec0a4a3dbd4a27ab1568c267"
+        },
+        {
+          "path": "catalog/methods/diagnostics.pls_diagnostics.yaml",
+          "sha256": "0f1ead46edf4fe0ab0fe812d6b499abea1adbdb5553d48e445d2ea72083116fc"
+        },
+        {
+          "path": "catalog/methods/diagnostics.pls_monitoring.yaml",
+          "sha256": "2607ca752351e6d6ed0988cbbc32ab2531558376ab125044c305a48846c35193"
+        },
+        {
+          "path": "catalog/methods/diagnostics.regression_metrics.yaml",
+          "sha256": "8d982e31ef33811ed8e16943cd74f18326ba5fcfad578d1eb1246a65f9606d00"
+        },
+        {
+          "path": "catalog/methods/filters.composite.yaml",
+          "sha256": "e5c4ff373e7ea4b0b009ae992f485a88accab9db7cfb37fb99912003e5c7f33a"
+        },
+        {
+          "path": "catalog/methods/filters.correlation.yaml",
+          "sha256": "1da571f4217ed7fb80bfb8cd77529abb903dae6c8cc60d35f534fc9edc0684cd"
+        },
+        {
+          "path": "catalog/methods/filters.high_leverage.yaml",
+          "sha256": "fbea24644576c013d23d7a8687297ce6a8390b0a4454ecabec804be07c1b550a"
+        },
+        {
+          "path": "catalog/methods/filters.spectral_quality.yaml",
+          "sha256": "3b77f9b4a75aa2f8cdd8726e2a7551ddfea00ee338bec64bc2266b26d9c99e14"
+        },
+        {
+          "path": "catalog/methods/filters.variance.yaml",
+          "sha256": "18d038268d35008b2ecf96298fd4db1fbec390569738f3c5bb2aff35e138d90a"
+        },
+        {
+          "path": "catalog/methods/filters.x_outlier.yaml",
+          "sha256": "23f7966314b59c6553cde80b06599d412bbe329639ac0f498b52901e936df416"
+        },
+        {
+          "path": "catalog/methods/filters.y_outlier.yaml",
+          "sha256": "15ccb1394e43c54179558e1ef77899746aff3b97a39979085f51fd7a9b6debca"
+        },
+        {
+          "path": "catalog/methods/models.classification.pls_lda.yaml",
+          "sha256": "5aa21def48fbc412450a065a8b0ee22190a76c8dbbb518fc56d85f874a34b101"
+        },
+        {
+          "path": "catalog/methods/models.classification.pls_logistic.yaml",
+          "sha256": "acfdb3a8d043128846ad704aa3782345009ade676d23cbfe13ddf71aa02efba2"
+        },
+        {
+          "path": "catalog/methods/models.classification.pls_qda.yaml",
+          "sha256": "bbc72e1b06bda5f429258ed40865b3defbdf52b46e8251a4adffaa91d90fda00"
+        },
+        {
+          "path": "catalog/methods/models.ensembles.bagging_pls.yaml",
+          "sha256": "6a6471c0c30325a669caf3493a22c0597f20a83ca005e1a3c4fc79c166456231"
+        },
+        {
+          "path": "catalog/methods/models.ensembles.boosting_pls.yaml",
+          "sha256": "e1f49f1c7627f24fa8677d014f9383f82814ab9577de9bb08dd9a24a7641fadf"
+        },
+        {
+          "path": "catalog/methods/models.ensembles.moment_stack.yaml",
+          "sha256": "949ab62854eba021274b7b7aa415d98f31c086f2fdb18a028261c0efec460c27"
+        },
+        {
+          "path": "catalog/methods/models.ensembles.random_subspace_pls.yaml",
+          "sha256": "83b964a8ea46196d0a67d7b565ee8b3d38820ebaa116a4a25ad15b8da68c5cf4"
+        },
+        {
+          "path": "catalog/methods/models.heads.pls_cox.yaml",
+          "sha256": "371694afeeb4bf9f6dc7bdb9a9f5bd21c3b090193a0edde96eab34da8da7bad1"
+        },
+        {
+          "path": "catalog/methods/models.heads.pls_glm.yaml",
+          "sha256": "58c9625c9d95cb6d800b0c5674c0ed9b5334afe83c34fd5607ec68fdbf80093d"
+        },
+        {
+          "path": "catalog/methods/models.local.lw_pls.yaml",
+          "sha256": "764c9400a0b384d72ccb43155f235611d01664cf107223c0e418b0942a35961b"
+        },
+        {
+          "path": "catalog/methods/models.multiblock.mb_pls.yaml",
+          "sha256": "0a3911264c86ed12f739e515e706893429882aa950e4d15dd18783d035ae33a2"
+        },
+        {
+          "path": "catalog/methods/models.multiblock.mir_pls.yaml",
+          "sha256": "395e39bab6e87b507750f8455217bd7cef59f724bca36b0c7dc3c331107cab6a"
+        },
+        {
+          "path": "catalog/methods/models.multiblock.o2pls.yaml",
+          "sha256": "0c763edbe40300124b9ba6f4ce5d338aa956b5875a571eeeb9c4ea17d6a0dc10"
+        },
+        {
+          "path": "catalog/methods/models.multiblock.on_pls.yaml",
+          "sha256": "01041ee699f9f74c0513a1c9c41ee7c97d32a542839af8af8890e2d2d2672838"
+        },
+        {
+          "path": "catalog/methods/models.multiblock.rosa.yaml",
+          "sha256": "b80ccd4cf4887f1077bb2fd576133b0df5bf752ddb0eb74b6b6e154c4897126e"
+        },
+        {
+          "path": "catalog/methods/models.multiblock.so_pls.yaml",
+          "sha256": "84e9076cb9e40cdead7cb2a1c9bcd821a6b5662063d923792db4f47f2c23a141"
+        },
+        {
+          "path": "catalog/methods/models.pls.cppls.yaml",
+          "sha256": "8e8e3069822d5c03a70a39ef85dc5c70306ee95ba07e5af297bbbfffe43c5e83"
+        },
+        {
+          "path": "catalog/methods/models.pls.kernel.yaml",
+          "sha256": "043dcdb211a0a7cdce7dceec961bc7000cbaccd9114486e9b943df087061204a"
+        },
+        {
+          "path": "catalog/methods/models.pls.pcr.yaml",
+          "sha256": "e91e2c6617897959e5b33c485ebde01cfcd93b9a469d09fd7581d551eec44759"
+        },
+        {
+          "path": "catalog/methods/models.pls.pls_fit_simple.yaml",
+          "sha256": "f04292bee533cc02c504e0eb37077766c55742bfa7eb08bf17ab841f10fae59e"
+        },
+        {
+          "path": "catalog/methods/models.regularized.continuum_regression.yaml",
+          "sha256": "5a245c497a90562f49f161c0c95c50372135378ddc62e86cdbaac16cbf039a0d"
+        },
+        {
+          "path": "catalog/methods/models.regularized.ridge.yaml",
+          "sha256": "aca1beb87e5b42c1ac00b3db0047be96b798d67188bf77022dc55f6e4a7aaca9"
+        },
+        {
+          "path": "catalog/methods/models.regularized.ridge_pls.yaml",
+          "sha256": "bb7e4c1add7856c2dfb7083edc5e2f56b2a45de6b45ab8f1e601b75ee9e19522"
+        },
+        {
+          "path": "catalog/methods/models.regularized.robust_pls.yaml",
+          "sha256": "3150bad6ab3a2824658c83cd982af3b3c7730969749118fe000086d69ae976e9"
+        },
+        {
+          "path": "catalog/methods/models.regularized.weighted_pls.yaml",
+          "sha256": "3a1e4d5094d4aabf8bb0b0b5d115443b5a8a3e39fadbfc31122866151617cc60"
+        },
+        {
+          "path": "catalog/methods/models.sparse.fused_sparse_pls.yaml",
+          "sha256": "458b8f78a6820b2e4e356b51dc0898c218e7d25866dde6abd83b44e486f4c70b"
+        },
+        {
+          "path": "catalog/methods/models.sparse.group_sparse_pls.yaml",
+          "sha256": "98a1cef8cee6afff049546a5095f5fa9735aa1b0016ee5ffedf36fb8c59a0e9e"
+        },
+        {
+          "path": "catalog/methods/models.sparse.sparse_pls_da.yaml",
+          "sha256": "f6608cf7c2746775a4f61347198c9ddea2a02047f5f64afa580932ba3f99ac34"
+        },
+        {
+          "path": "catalog/methods/models.sparse.sparse_simpls.yaml",
+          "sha256": "e01ff638b87d24a7654ec73e75a666e481d2e102c675b40140e0ae2060bb63b5"
+        },
+        {
+          "path": "catalog/methods/models.specialized.ecr.yaml",
+          "sha256": "86d3bb26812c281d781c6b33651f2e57b688cb5bf444f53ea8efa98cb733362c"
+        },
+        {
+          "path": "catalog/methods/models.specialized.gpr_pls.yaml",
+          "sha256": "98ac6c5343ff878c5b936011c082bd85cf54e8cc6164c3c3ff1ed11f2e8e04ab"
+        },
+        {
+          "path": "catalog/methods/models.specialized.missing_aware_nipals.yaml",
+          "sha256": "da10d61835ba73b3f52041b8ef4bb2eeb43c1fc47d43917a07829abb353678d4"
+        },
+        {
+          "path": "catalog/methods/models.specialized.recursive.yaml",
+          "sha256": "35ecd658125587b4bbf8a85ba5532d27d3fed12a2a28d4e78cd7494602bc5d90"
+        },
+        {
+          "path": "catalog/methods/models.specialized.tensor_pls.yaml",
+          "sha256": "c9d6a48214eae23bbafa2aa1d4bfa73df8c9cbaa6d657b31a8fca287e2959056"
+        },
+        {
+          "path": "catalog/methods/models.transfer.di_pls.yaml",
+          "sha256": "cd271e0bb971befec35d5e21d958c6766cfea4392855ba4daf1241585436dcd5"
+        },
+        {
+          "path": "catalog/methods/models.transfer.ds.yaml",
+          "sha256": "79f2b41dfcb88907d97c125c9cb6165f0d301e5478c64bcd1c44d0970e312928"
+        },
+        {
+          "path": "catalog/methods/models.transfer.pds.yaml",
+          "sha256": "aadd7f590cdcfe3048ba78f46dc435c21ffc9b5612e95a94c52484a2eea05335"
+        },
+        {
+          "path": "catalog/methods/preprocessing.alignment.cow_align.yaml",
+          "sha256": "786779fda08383100640ebc0167e0d6eb9a22282f92fed37bd29b4446832b0d3"
+        },
+        {
+          "path": "catalog/methods/preprocessing.alignment.dtw_align.yaml",
+          "sha256": "7685861eb180c1abf5066f87f6700caa21ca801ad97623c314562906bf0c2016"
+        },
+        {
+          "path": "catalog/methods/preprocessing.alignment.icoshift_align.yaml",
+          "sha256": "b0498560aae2605e2171ac88f55258602e395c7168bc200603dfdfd9af7f667a"
+        },
+        {
+          "path": "catalog/methods/preprocessing.alignment.xcorr_align.yaml",
+          "sha256": "bf7dd6915080cd085fee29c952eeeb32cf9a4f1e7d1f299ca6a543d4c7d2838a"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.airpls.yaml",
+          "sha256": "acd833f1456a712420d8d075dd21110985167df5bba84763572a63a541ecf043"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.arpls.yaml",
+          "sha256": "89402486f9e14272f4547e9975a747a9b3fe0f158d70ebd2402363bc0c73d056"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.asls.yaml",
+          "sha256": "8caf2908b24a2606ff5c52eb7606d051ae82e16d34de7b2dd16b478e00dc3de9"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.beads.yaml",
+          "sha256": "f0bf3dd83146d5b10bb22ac9149d54e308c3e04e381769600f745d8d73c1a90f"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.detrend.yaml",
+          "sha256": "aa3dbb4a4cdd72befaea6d01c3d267647c21d5a11d89b47b7f2b2b451b00e1f3"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.iasls.yaml",
+          "sha256": "097dfed3adc1d05037e9b2ee7ed399986de6f7a377e164af9dcb0f3fd866ca0b"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.imodpoly.yaml",
+          "sha256": "022ac5af8d77f07bc858c3aaa33682b2ffc284f7ef3c1a86f23547076e1f5796"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.modpoly.yaml",
+          "sha256": "1446280a7f662c484451870fd07102f0da5e551ac9c3327489a4d50001b41000"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.rolling_ball.yaml",
+          "sha256": "af8e56e61253a269de0e9b44ed3f11deb9f733c486043f771f2e6df28619b0a4"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.saps.yaml",
+          "sha256": "fef318dcf48e7c6d7aa7e80bae10756063c36b6c3b9093dd4d7c0cf4f74a8fc8"
+        },
+        {
+          "path": "catalog/methods/preprocessing.baselines.snip.yaml",
+          "sha256": "dc50730dbdff31d1efd4b3bdf193f2b841428adf0684543cde77b9e7939cbfc6"
+        },
+        {
+          "path": "catalog/methods/preprocessing.derivatives.derivate.yaml",
+          "sha256": "67022c5b474bb72cd13b2f618dd6628e1b98118ef01e754ea9d8100171901cae"
+        },
+        {
+          "path": "catalog/methods/preprocessing.derivatives.first_derivative.yaml",
+          "sha256": "fdec1578c29281cd08e2067fe2b9e6650cab3850e20572b58d9bbef5ab7081b6"
+        },
+        {
+          "path": "catalog/methods/preprocessing.derivatives.norris_williams.yaml",
+          "sha256": "69233220e749eb615140e863f9b8a0568379f4c593196e7af7ed771d158e9df7"
+        },
+        {
+          "path": "catalog/methods/preprocessing.derivatives.savitzky_golay.yaml",
+          "sha256": "d78220024acb82d7ddaf58a11c4233bb08072385926b6b33f55975d9c1b1547b"
+        },
+        {
+          "path": "catalog/methods/preprocessing.derivatives.second_derivative.yaml",
+          "sha256": "cc2b0f74088275c170d10afed33fa7c1dc06987f7da2416a400013d3223edf58"
+        },
+        {
+          "path": "catalog/methods/preprocessing.feature_selection.flexible_pca.yaml",
+          "sha256": "8ef5b006bf02944ea15aab35e28dfc6b12214bb084d30cb50d42733a50af7802"
+        },
+        {
+          "path": "catalog/methods/preprocessing.feature_selection.flexible_svd.yaml",
+          "sha256": "53957e5fc3ca79f2a4ad24817bd150191d756eaa6041a145b346273f1ab1f3ec"
+        },
+        {
+          "path": "catalog/methods/preprocessing.orthogonalization.epo.yaml",
+          "sha256": "687a41800ed9a8e3d2470399fedd3528963d2aee8d1ddd901cbb67b0cf2a5b17"
+        },
+        {
+          "path": "catalog/methods/preprocessing.orthogonalization.osc.yaml",
+          "sha256": "1f00312f7347c3a459d705108c8a07f246204a0f24411ad01605a73da8ad1afb"
+        },
+        {
+          "path": "catalog/methods/preprocessing.resampling.crop.yaml",
+          "sha256": "0107453d9c0b00131d519534e1144275fbc409323c477930f40c8cc4587ae962"
+        },
+        {
+          "path": "catalog/methods/preprocessing.resampling.kbins_discretizer.yaml",
+          "sha256": "4e5d1aa3d9497061a27ab24b575cb4523ff17578f5547fc0e3ab81402e1d8204"
+        },
+        {
+          "path": "catalog/methods/preprocessing.resampling.range_discretizer.yaml",
+          "sha256": "dbefce1db71db628202ebffb69a93caa591bfdc244efa6bf7e5c95ccbf09f4cc"
+        },
+        {
+          "path": "catalog/methods/preprocessing.resampling.resample_transformer.yaml",
+          "sha256": "218ac710938c7f6c5adae53f11a759cc390ee1ed64d36bdeb109139d96ce6b84"
+        },
+        {
+          "path": "catalog/methods/preprocessing.resampling.resampler.yaml",
+          "sha256": "d0fc9795ab94f917c5caba261dc19d14ef5be2f96489e2bc2ce24d074f275505"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scaling.baseline.yaml",
+          "sha256": "2a00f8e952ff43ce8ab899c25beda82306b9fb3a5c48aabc3af97fe5ffd69eb2"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scaling.log_transform.yaml",
+          "sha256": "9a3b3b632cdea9483a8cda339a07a9a7c54a43b34549a500432c469562951b0c"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scaling.normalize.yaml",
+          "sha256": "0e97c331c18c6fb8290c3d42a5e7257f5b97ea090fc1013ae3719d26017ecd52"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scaling.simple_scale.yaml",
+          "sha256": "dab588faff93eb985d291af886cdf67e3561603a6dca8f3546a260ad042c3ee5"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.area_normalization.yaml",
+          "sha256": "c835ecfbe9ea941b6747b56e9a55ff7ec08eb86eaad7bb0d91c963916fd07b58"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.emsc.yaml",
+          "sha256": "a32a04a38a2993224c3889a28bbe4d3a076a861ec0e5e7de8687398f18e4452e"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.local_centering.yaml",
+          "sha256": "3f6d10418c8014c3ffa32de8656c553925187240765e623e30016d3cb7bab38a"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.local_snv.yaml",
+          "sha256": "8bef1ced3816cc2d35870b6ff7491cd238a2b8363366d5642bbf145b4da4f3a2"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.localized_msc.yaml",
+          "sha256": "67d48dd67d14a37a30d3f41cc9ff971f361137a5821cd2ca647d076921f40597"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.msc.yaml",
+          "sha256": "abeaf08d9f81fbab376602297a976800cd103b1164b873ded6cd4da864d9e820"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.piecewise_msc.yaml",
+          "sha256": "b8b789cdb5c01ba501909795b7349486732ae92e6ef142e4190ccb3705224f09"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.piecewise_snv.yaml",
+          "sha256": "8c808d8380148879df34b78f262655b3a8c39c78152113e8e273456c32ff60c1"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.robust_snv.yaml",
+          "sha256": "40da021abe51f5b2f43eaaf82d40c9aeb3c7d9f2098fcd619d9a2d436437fc69"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.snv.yaml",
+          "sha256": "1b061b00dfdfe60049fa58c019a61062a098ec67f95923d42e893be8b05f05d8"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.vsn.yaml",
+          "sha256": "fcc34c92f408e34675688ec1bb69e938c51edf0f5e6fe3153575637f573f538e"
+        },
+        {
+          "path": "catalog/methods/preprocessing.scatter.weighted_snv.yaml",
+          "sha256": "1170f02a5a17f627d59f15ad9039466256980e4d99e68673e51c21990d8fa182"
+        },
+        {
+          "path": "catalog/methods/preprocessing.signal_conversion.fraction_to_percent.yaml",
+          "sha256": "a84a44201c830ed93bec09d828c3e3ff12abbc5231570791babb0f5b2eeb25c6"
+        },
+        {
+          "path": "catalog/methods/preprocessing.signal_conversion.from_absorbance.yaml",
+          "sha256": "62a7b825710295e46bf3faf60e9ed125c0b5880b8d0eebb47be4415341660051"
+        },
+        {
+          "path": "catalog/methods/preprocessing.signal_conversion.kubelka_munk.yaml",
+          "sha256": "244236a73a3921e1d59a96c21d7bbf74a3a4f49e7e63f58f82ef5ea60163421d"
+        },
+        {
+          "path": "catalog/methods/preprocessing.signal_conversion.percent_to_fraction.yaml",
+          "sha256": "dff747b34c704413934b799de7964b4478a8e7ff9e027a99200a4214e56cc6f5"
+        },
+        {
+          "path": "catalog/methods/preprocessing.signal_conversion.to_absorbance.yaml",
+          "sha256": "e77b5fbc7f5a57aadbaea9f0698d0e7f9093b32f013ef57367615d35e45cf743"
+        },
+        {
+          "path": "catalog/methods/preprocessing.smoothing.gaussian.yaml",
+          "sha256": "1d18b8d2ad489c460f0c8114251bb1c7b035b87dce5d0419c920d6ea662315dc"
+        },
+        {
+          "path": "catalog/methods/preprocessing.specialized.fck_static.yaml",
+          "sha256": "56842aea9db5ee42af3cc5da8efe190e9e8cc83cb13763438e97e6b1de0039f3"
+        },
+        {
+          "path": "catalog/methods/preprocessing.transfer.direct_standardization.yaml",
+          "sha256": "3e2721c6a6611c73f25d4d447e6a2beb3a858b87b5155175a4344045491964ef"
+        },
+        {
+          "path": "catalog/methods/preprocessing.transfer.piecewise_direct_standardization.yaml",
+          "sha256": "297634866c882adfa263dab37c7f0dd3248e2a56f0b490234327ac387a6e876e"
+        },
+        {
+          "path": "catalog/methods/preprocessing.transfer.robust_direct_standardization.yaml",
+          "sha256": "0c0991a1feb2459c46b776a24c538a9482954bcb44c1370ee8ac1ad05dd5b09f"
+        },
+        {
+          "path": "catalog/methods/preprocessing.transfer.slope_bias.yaml",
+          "sha256": "7518643a743531461131da14d91ca3b2a7e6a1c00c414360dee45940d0d4f2e9"
+        },
+        {
+          "path": "catalog/methods/preprocessing.wavelets.haar.yaml",
+          "sha256": "c009aade8f7f1ccbe9419538ba4e5272f56fbeb97fed7d5be050343796888701"
+        },
+        {
+          "path": "catalog/methods/preprocessing.wavelets.wavelet.yaml",
+          "sha256": "664d1f9af3285008ecf8b6cb194fa27253ee748424ef39506bcfe3651ca31d8f"
+        },
+        {
+          "path": "catalog/methods/preprocessing.wavelets.wavelet_denoise.yaml",
+          "sha256": "e9fc67a529766bbeb260109b0b0fe1d4e613e200e2006bc7880adbc1e54bedc2"
+        },
+        {
+          "path": "catalog/methods/preprocessing.wavelets.wavelet_features.yaml",
+          "sha256": "189284bf4c2bebdfa2b6b31033c4543ef7f1840e40fce1af5aff8dd5260cee34"
+        },
+        {
+          "path": "catalog/methods/preprocessing.wavelets.wavelet_pca.yaml",
+          "sha256": "86dcbb592ba48a3f4c4c4ef23af5ee90df2c81cb7d8c39aefc9d0c9530235719"
+        },
+        {
+          "path": "catalog/methods/preprocessing.wavelets.wavelet_svd.yaml",
+          "sha256": "0b2a6fe2edae77daccf642ecccac139b3314f50e1bc646b020b9e8bf12f71b32"
+        },
+        {
+          "path": "catalog/methods/selection.bipls.yaml",
+          "sha256": "3e2ff0668736cb73cf408b3b6ab93288d0a879fe0d8ef6c5cb90dab886f6f15d"
+        },
+        {
+          "path": "catalog/methods/selection.bve.yaml",
+          "sha256": "b52c0ed2476a4ccbe4c39f7a81442e45c311ec170a4a741b387d49097ac60ff8"
+        },
+        {
+          "path": "catalog/methods/selection.cars.yaml",
+          "sha256": "6483d06460da5877520fe01e22eb295a9783bf4422dce94c18c251b7060c014b"
+        },
+        {
+          "path": "catalog/methods/selection.emcuve.yaml",
+          "sha256": "68884379783e5aa95954d3461fd1c095fc88ee3ccad8ebe36bac14204031c690"
+        },
+        {
+          "path": "catalog/methods/selection.ga.yaml",
+          "sha256": "c854a74a74935fad054262d2cedaf22cdb55823b161590944800ca62f26a0641"
+        },
+        {
+          "path": "catalog/methods/selection.interval.yaml",
+          "sha256": "3c076761651b2263986ddb7213261bf1f8761b421589f4d9b2ba1af0fe70b0b9"
+        },
+        {
+          "path": "catalog/methods/selection.ipw.yaml",
+          "sha256": "033a11242489ad0e6bd8e08ec2e351bc49e4ae25ba86d651ab345698c5809ada"
+        },
+        {
+          "path": "catalog/methods/selection.irf.yaml",
+          "sha256": "f9ad322dcb4e5a0c8c2ddabdb62d2765af737702e0cd7a72deeb8dd54ced0b5a"
+        },
+        {
+          "path": "catalog/methods/selection.iriv.yaml",
+          "sha256": "436f0ca07887ae6f4d6363c9be03eba57ff98002b16f6a9e005656fbe51df31c"
+        },
+        {
+          "path": "catalog/methods/selection.pso.yaml",
+          "sha256": "9f580c5ebe03d1b28fbd85ed740944a8edf9e8a85ce3745cfb2e58822596e648"
+        },
+        {
+          "path": "catalog/methods/selection.random_frog.yaml",
+          "sha256": "82a0b13402a5d6fcd763d2de7e02edcc7bf913ee606cb748fc87b39d73f49a0d"
+        },
+        {
+          "path": "catalog/methods/selection.randomization.yaml",
+          "sha256": "df1f9533d1516e79b451fceaab859f600d07aa5bac9ee1ef78b6b5cb169e9b42"
+        },
+        {
+          "path": "catalog/methods/selection.rep.yaml",
+          "sha256": "30d74afeb83fd17d9dadde27ca7a43f86508b8472f56d29502f97a693cc17562"
+        },
+        {
+          "path": "catalog/methods/selection.scars.yaml",
+          "sha256": "be98347f040db19a3dc242162cc1d2bfa6910e40d5878ca8603a3271c0282cc8"
+        },
+        {
+          "path": "catalog/methods/selection.shaving.yaml",
+          "sha256": "d0e360deebdca17acbd39efe592d9472fad4e9cd2815fbf2fa7209e57c65d3d5"
+        },
+        {
+          "path": "catalog/methods/selection.sipls.yaml",
+          "sha256": "a6bb9305d4653efb6da6319b5057a452eefa8fc460118e05dcc2ed16a5036dd7"
+        },
+        {
+          "path": "catalog/methods/selection.spa.yaml",
+          "sha256": "45304a76728c0fcdffbf74efcaa4fb9332205534c5b9330727ed38c00b52e45b"
+        },
+        {
+          "path": "catalog/methods/selection.st.yaml",
+          "sha256": "243a27cbc346c802131be90e1d57dbfe18b0804a5a84daebac8225623ea4a304"
+        },
+        {
+          "path": "catalog/methods/selection.stability.yaml",
+          "sha256": "aa97c2067e8da162d2992a7f22331419a373cf35dac1a37475bdf2fca797cfc1"
+        },
+        {
+          "path": "catalog/methods/selection.t2.yaml",
+          "sha256": "8215211c1c94b6caadb0720874ee97750c77b9cd57b01848ddcb74e80edb3fc4"
+        },
+        {
+          "path": "catalog/methods/selection.uve.yaml",
+          "sha256": "d0d7d05c646321f0536096550f8a4261a86afdf38f7a00bc866cd80122384642"
+        },
+        {
+          "path": "catalog/methods/selection.variable_select.yaml",
+          "sha256": "3993e16345e923432950c21fb9d28018047d387498241e0bc0bfbe39d164c1f7"
+        },
+        {
+          "path": "catalog/methods/selection.vip_spa.yaml",
+          "sha256": "737c9bc880fa8ef1dc48c37a994f893e9f4de5bb77557667721924880d0d3afc"
+        },
+        {
+          "path": "catalog/methods/selection.vissa.yaml",
+          "sha256": "5fc9edf886d09c8182428d031ca64a47545a6bdc204cacea66dff2d47ddb96dc"
+        },
+        {
+          "path": "catalog/methods/selection.wvc.yaml",
+          "sha256": "68a2ef3a0e19380de91edb51f3ed261fd22b9d316dedefa46b8f4b60fb17dda3"
+        },
+        {
+          "path": "catalog/methods/selection.wvc_threshold.yaml",
+          "sha256": "bb4008e0672fb7bdfc66c426eaa8bd3c44f52f10a348a8fabb8823c60cf0e1f6"
+        },
+        {
+          "path": "catalog/methods/splitters.binned_strat_group_kfold.yaml",
+          "sha256": "b6bce16b4d509ca82bba80b1c1d55fef89aecf6ce5aebff85039227bc83dddb9"
+        },
+        {
+          "path": "catalog/methods/splitters.kbins_stratified.yaml",
+          "sha256": "8e5b2e854f9073e99d5a92a8095db95c698425dda816a731a778f814de59396f"
+        },
+        {
+          "path": "catalog/methods/splitters.kennard_stone.yaml",
+          "sha256": "13997ecff367a301b6234f5fdb68c1e41efdd96182178b60c2f21258e4854d0e"
+        },
+        {
+          "path": "catalog/methods/splitters.kmeans.yaml",
+          "sha256": "1c59ca5dac9ad5e5d378ee21026665cbaf5492c9763b5b7f0a7c12eaf850136b"
+        },
+        {
+          "path": "catalog/methods/splitters.split_splitter.yaml",
+          "sha256": "7d03ee548d2231530076fcbe185770e7d94265831b3736e5e1add30f2196d303"
+        },
+        {
+          "path": "catalog/methods/splitters.spxy.yaml",
+          "sha256": "f5142780f5823c1c4753d9ae0348d906382ab97a5d2e5b780531d19a0650db1e"
+        },
+        {
+          "path": "catalog/methods/splitters.spxy_fold.yaml",
+          "sha256": "30c76f80fa2682cfa0232deb4cd6bc0a1495f942d32293fd85f51746f9a97c60"
+        },
+        {
+          "path": "catalog/methods/splitters.spxy_g_fold.yaml",
+          "sha256": "cdf37d84c2d5f67ebcb0fa72074146161bf8354c9406a314f38d70193586892d"
+        },
+        {
+          "path": "catalog/methods/splitters.systematic_circular.yaml",
+          "sha256": "ebe02433cdad0030db282c587f1e34655ec3c3cdb5767f4b44aa8d22c0a4d09f"
+        },
+        {
+          "path": "catalog/methods/utilities.hotelling_t2.yaml",
+          "sha256": "067f5c586ce7be8e86ee95487036e0a2f30cd53b762821caad1c17312a5532b7"
+        },
+        {
+          "path": "catalog/methods/utilities.moments.yaml",
+          "sha256": "495e89dc91bfd8d7456393fbc2952e446c662fffd90104d75be60ea13e840140"
+        },
+        {
+          "path": "catalog/methods/utilities.q_residuals.yaml",
+          "sha256": "3298812acd77805c3913508d3f681ce1e82c9ce4b51d958ad5ee4362de6507f1"
+        },
+        {
+          "path": "catalog/methods/utilities.signal_type_detector.yaml",
+          "sha256": "b448df5e354e2f1173d0c058602ff6336a2a9bb88c443a770477cd29d5bcbe0d"
+        },
+        {
+          "path": "catalog/methods/utilities.sweep.yaml",
+          "sha256": "37de0877e66488c850ac844d289dd2736c5080b11d4ddc78c3781766523af97d"
+        },
+        {
+          "path": "catalog/methods/utilities.transfer_metrics.yaml",
+          "sha256": "067f3217fcc8e353b1a0583ba5e6249491639938d2ac76eb7d78f4cbc2a43010"
+        },
+        {
+          "path": "cpp/abi/expected_symbols_linux.txt",
+          "sha256": "452ae3b4ea4f22582839d80676d8e423744aa9a62e67854326fffd5ff88ee34c"
+        },
+        {
+          "path": "cpp/abi/expected_symbols_macos.txt",
+          "sha256": "6ed4e1021c59918f7b20b9c7010bfbfd85ca7265f342612ef7c740cbd6606875"
+        },
+        {
+          "path": "cpp/abi/expected_symbols_windows.txt",
+          "sha256": "6ed4e1021c59918f7b20b9c7010bfbfd85ca7265f342612ef7c740cbd6606875"
+        },
+        {
+          "path": "cpp/include/n4m/augmentation.h",
+          "sha256": "79e095ff4d58c689c2fdafe3039e43e1d8bf5008b5952229ff216408a757c9c1"
+        },
+        {
+          "path": "cpp/include/n4m/augmentation/drift.h",
+          "sha256": "5bba7e32f1637c3f62208d77af28e529841f51551558ac98b097f240ad3e849c"
+        },
+        {
+          "path": "cpp/include/n4m/augmentation/instrument.h",
+          "sha256": "0e94c4f77f92562ff3fffd9518eb39197d2b9793ca37a23028cc3d9ce428db8c"
+        },
+        {
+          "path": "cpp/include/n4m/augmentation/mixup.h",
+          "sha256": "66b87f2c3bb7d80b3d944a1447838a59def8e21cacdd68ad64276f4352bab4e7"
+        },
+        {
+          "path": "cpp/include/n4m/augmentation/noise.h",
+          "sha256": "dc94afba54a68825e0cb88c9f2334bfd331920f13983b2b5dcab059f6ff96fa8"
+        },
+        {
+          "path": "cpp/include/n4m/augmentation/scattering.h",
+          "sha256": "65e68d5a8e1ba8115b6a91ba56753b87826181e525005a53d54a02baebf4f03a"
+        },
+        {
+          "path": "cpp/include/n4m/augmentation/spectral.h",
+          "sha256": "045a7d94fbee7ae111c218e9e5abc0b0677f1c3556c90bb52ba41d100f616dd2"
+        },
+        {
+          "path": "cpp/include/n4m/augmentation/splines.h",
+          "sha256": "765feb0a245d2fc2eaed04caf1c8d838602ca95a210fe65de9c18166e1d3332d"
+        },
+        {
+          "path": "cpp/include/n4m/augmentation/wavelength.h",
+          "sha256": "c41c9296919bce58e07d9d915af955f7bfa5d93871aa01ad5b412abc4d9f3201"
+        },
+        {
+          "path": "cpp/include/n4m/compose.h",
+          "sha256": "1e11e3d1cf8688e487462d0f6a85c0018d2d3ff0e76d1e371cc05c865a3d45ab"
+        },
+        {
+          "path": "cpp/include/n4m/decomposition.h",
+          "sha256": "5681d74a710f9370751d7a7d8423207574a4aa70964d6b01cade376874962ffc"
+        },
+        {
+          "path": "cpp/include/n4m/domain_adaptation.h",
+          "sha256": "e02559386c2b0003db529a8945303d4c6cbf31f76eaf486d9d797282a2ea5d89"
+        },
+        {
+          "path": "cpp/include/n4m/ensemble.h",
+          "sha256": "f370731fc41d804b308b6dff76975da34053048a70013d06e3753c182f858ee7"
+        },
+        {
+          "path": "cpp/include/n4m/estimators.h",
+          "sha256": "da9f53135a1e62c04f9d5566498fe227ea0ca959b845d473914ee8614a6e1084"
+        },
+        {
+          "path": "cpp/include/n4m/estimators/classification.h",
+          "sha256": "90a6bef63415c7372b1ccbef35814aa9868b2d3109511562a28429db5e81a2d4"
+        },
+        {
+          "path": "cpp/include/n4m/estimators/multiblock.h",
+          "sha256": "b6160cea2c61bb7adc8f929a53f48ab140baf83d82ffa39eacb88e323fa13f05"
+        },
+        {
+          "path": "cpp/include/n4m/estimators/regression.h",
+          "sha256": "d89728f2eb087cc77e74e374f923b48cf44c56bef15c08ebddabd5aa2042b526"
+        },
+        {
+          "path": "cpp/include/n4m/estimators/survival.h",
+          "sha256": "4990919f718599069d18ee7cd51f08938090161434c5aed67bff7fb320734977"
+        },
+        {
+          "path": "cpp/include/n4m/feature_selection.h",
+          "sha256": "7ea8e1d7cb8691f74f3dd0b4be8a08b27a0072624af7ef2dced7b3498850dbe8"
+        },
+        {
+          "path": "cpp/include/n4m/lowlevel.h",
+          "sha256": "1cc6593c4b9028f4f797472d3a59dc2a875a05526e0bae13b286c5cf015ca231"
+        },
+        {
+          "path": "cpp/include/n4m/metrics.h",
+          "sha256": "b183acc50037d01f15164789bcd07f2c87a96a8a55779455751d9a06115ec35a"
+        },
+        {
+          "path": "cpp/include/n4m/model_selection.h",
+          "sha256": "ac75f2c49f170aa5053b7b521fef543568515f719d15c24a1fae41a5fae2658a"
+        },
+        {
+          "path": "cpp/include/n4m/n4m.h",
+          "sha256": "9af17af48ed18c27eb8e25dc83a2bf90cbfcf0b479281fe6d35eedccd8b2eac5"
+        },
+        {
+          "path": "cpp/include/n4m/n4m_version.h",
+          "sha256": "615566c8be77892e595a1873cbd9f0c16bcec5939954ccc1dbed44ed4b8f91d9"
+        },
+        {
+          "path": "cpp/include/n4m/optimization.h",
+          "sha256": "e5fcd8afdf034c6255c22e41cb26102f34747fcbcf4dd42361b2415696b7b516"
+        },
+        {
+          "path": "cpp/include/n4m/outlier_detection.h",
+          "sha256": "84f4f3ca4efdbd0f305671912e94ff18b8dc8526d0b68af8fa25abd81f878b70"
+        },
+        {
+          "path": "cpp/include/n4m/transform.h",
+          "sha256": "46c7b3cac411864c7df47997c84492ec979430f0bc4d41e46f1b1810895f86f8"
+        },
+        {
+          "path": "cpp/include/n4m/transform/alignment.h",
+          "sha256": "64b0c1b92d4179f1d7403667c61a7e9df9ad747c138e2318b61e4d7154446d33"
+        },
+        {
+          "path": "cpp/include/n4m/transform/baseline.h",
+          "sha256": "982f04592da60dead86b8757841f4379dcda331990677941f0efa71bd3208495"
+        },
+        {
+          "path": "cpp/include/n4m/transform/orthogonalization.h",
+          "sha256": "3f3682a9c756ee155e05be26eec2ddb9fae743b6ba267111d1abab4441012284"
+        },
+        {
+          "path": "cpp/include/n4m/transform/resampling.h",
+          "sha256": "a354a705dea44a2563a9d3b82c98d7130dd31c84c7720ff4c58ddee54f27c520"
+        },
+        {
+          "path": "cpp/include/n4m/transform/scaling.h",
+          "sha256": "8ddb3931a23b80cd9a3d61ca645d689a7190d21196cbfb022d43c4abdb18e59c"
+        },
+        {
+          "path": "cpp/include/n4m/transform/scatter.h",
+          "sha256": "21b1da130c725d009213f819e1b3108daa01b6f1df380ff1dcb94aa18ff96a68"
+        },
+        {
+          "path": "cpp/include/n4m/transform/signal_conversion.h",
+          "sha256": "ce8a58668bbe355c9f98ffc7e0cc7cd1fc65ff6bc360a141f8e76516f2c2529a"
+        },
+        {
+          "path": "cpp/include/n4m/transform/smoothing.h",
+          "sha256": "70ded1b3b090b57abe58dbb8d4988298faaf76c91353a6e938b5233a05337c9e"
+        },
+        {
+          "path": "cpp/include/n4m/transform/specialized.h",
+          "sha256": "21d2300bff4c24c2eb290429734ed87900f7febf5da934ecfd8796eb5c8cfab3"
+        },
+        {
+          "path": "cpp/include/n4m/transform/wavelet.h",
+          "sha256": "96a7da97c5b8a2bdee6561bad446c6ad336592411905f2ce961d96b95e6e08f9"
+        }
+      ],
+      "sha256": "349fccdfc09a37d84c8396c35f0008b0f50c624fa2ffbaea1b13402a78b36d10"
+    },
+    "platform_abi_snapshots": {
+      "linux": "cpp/abi/expected_symbols_linux.txt",
+      "macos": "cpp/abi/expected_symbols_macos.txt",
+      "windows": "cpp/abi/expected_symbols_windows.txt"
+    }
+  },
+  "rows": [
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_decomposition_flexible_pca_create",
+        "n4m_decomposition_flexible_pca_destroy",
+        "n4m_decomposition_flexible_pca_fit",
+        "n4m_decomposition_flexible_pca_is_fitted",
+        "n4m_decomposition_flexible_pca_output_cols",
+        "n4m_decomposition_flexible_pca_transform"
+      ],
+      "classification": "native",
+      "id": "decomposition_flexible_pca",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_decomposition_flexible_pca_create",
+        "destroy": "n4m_decomposition_flexible_pca_destroy",
+        "fit": "n4m_decomposition_flexible_pca_fit",
+        "is_fitted": "n4m_decomposition_flexible_pca_is_fitted",
+        "operation": "n4m_decomposition_flexible_pca_transform",
+        "output_cols": "n4m_decomposition_flexible_pca_output_cols"
+      },
+      "source_headers": [
+        "cpp/include/n4m/decomposition.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_decomposition_flexible_svd_create",
+        "n4m_decomposition_flexible_svd_destroy",
+        "n4m_decomposition_flexible_svd_fit",
+        "n4m_decomposition_flexible_svd_is_fitted",
+        "n4m_decomposition_flexible_svd_output_cols",
+        "n4m_decomposition_flexible_svd_transform"
+      ],
+      "classification": "native",
+      "id": "decomposition_flexible_svd",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_decomposition_flexible_svd_create",
+        "destroy": "n4m_decomposition_flexible_svd_destroy",
+        "fit": "n4m_decomposition_flexible_svd_fit",
+        "is_fitted": "n4m_decomposition_flexible_svd_is_fitted",
+        "operation": "n4m_decomposition_flexible_svd_transform",
+        "output_cols": "n4m_decomposition_flexible_svd_output_cols"
+      },
+      "source_headers": [
+        "cpp/include/n4m/decomposition.h"
+      ]
+    },
+    {
+      "classification": "not-promised",
+      "id": "derived_hpo_boundary",
+      "kind": "optimization_boundary",
+      "potential_external_or_unsupported": {
+        "api_symbols": [
+          "n4m_model_selection_aom_chain_sweep_run",
+          "n4m_model_selection_aom_sweep_run",
+          "n4m_model_selection_robust_hpo_fit",
+          "n4m_model_selection_sweep_run",
+          "n4m_optimizer_ask",
+          "n4m_optimizer_ask_batch",
+          "n4m_optimizer_best",
+          "n4m_optimizer_create",
+          "n4m_optimizer_destroy",
+          "n4m_optimizer_enqueue",
+          "n4m_optimizer_get_trials",
+          "n4m_optimizer_load",
+          "n4m_optimizer_options_init",
+          "n4m_optimizer_save",
+          "n4m_optimizer_tell",
+          "n4m_optimizer_tell_intermediate",
+          "n4m_optimizer_tell_result"
+        ],
+        "catalog_ids": [
+          "aom_pop.aom_chain_sweep",
+          "aom_pop.aom_sweep",
+          "aom_pop.robust_hpo",
+          "utilities.sweep"
+        ]
+      },
+      "reason": "Potential HPO/executor names are mechanically derived; this does not assert a host-objective executor."
+    },
+    {
+      "classification": "refused",
+      "id": "derived_runtime_extension_boundary",
+      "kind": "extension_boundary",
+      "policy_file": "CONTRIBUTING.md",
+      "potential_external_or_unsupported": {
+        "api_symbols": [],
+        "catalog_ids": []
+      },
+      "reason": "Potential extension names are mechanically derived; policy supplies no runtime plugin API."
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_domain_adaptation_direct_standardization_create",
+        "n4m_domain_adaptation_direct_standardization_destroy",
+        "n4m_domain_adaptation_direct_standardization_fit",
+        "n4m_domain_adaptation_direct_standardization_is_fitted",
+        "n4m_domain_adaptation_direct_standardization_transform"
+      ],
+      "classification": "native",
+      "id": "domain_adaptation_direct_standardization",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_domain_adaptation_direct_standardization_create",
+        "destroy": "n4m_domain_adaptation_direct_standardization_destroy",
+        "fit": "n4m_domain_adaptation_direct_standardization_fit",
+        "is_fitted": "n4m_domain_adaptation_direct_standardization_is_fitted",
+        "operation": "n4m_domain_adaptation_direct_standardization_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/domain_adaptation.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_domain_adaptation_epo_create",
+        "n4m_domain_adaptation_epo_destroy",
+        "n4m_domain_adaptation_epo_fit",
+        "n4m_domain_adaptation_epo_inverse_transform",
+        "n4m_domain_adaptation_epo_is_fitted",
+        "n4m_domain_adaptation_epo_transform",
+        "n4m_domain_adaptation_epo_transform_with_d"
+      ],
+      "classification": "native",
+      "id": "domain_adaptation_epo",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_domain_adaptation_epo_create",
+        "destroy": "n4m_domain_adaptation_epo_destroy",
+        "fit": "n4m_domain_adaptation_epo_fit",
+        "inverse_transform": "n4m_domain_adaptation_epo_inverse_transform",
+        "is_fitted": "n4m_domain_adaptation_epo_is_fitted",
+        "operation": "n4m_domain_adaptation_epo_transform",
+        "transform_with_d": "n4m_domain_adaptation_epo_transform_with_d"
+      },
+      "source_headers": [
+        "cpp/include/n4m/domain_adaptation.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_domain_adaptation_piecewise_direct_standardization_create",
+        "n4m_domain_adaptation_piecewise_direct_standardization_destroy",
+        "n4m_domain_adaptation_piecewise_direct_standardization_fit",
+        "n4m_domain_adaptation_piecewise_direct_standardization_is_fitted",
+        "n4m_domain_adaptation_piecewise_direct_standardization_transform"
+      ],
+      "classification": "native",
+      "id": "domain_adaptation_piecewise_direct_standardization",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_domain_adaptation_piecewise_direct_standardization_create",
+        "destroy": "n4m_domain_adaptation_piecewise_direct_standardization_destroy",
+        "fit": "n4m_domain_adaptation_piecewise_direct_standardization_fit",
+        "is_fitted": "n4m_domain_adaptation_piecewise_direct_standardization_is_fitted",
+        "operation": "n4m_domain_adaptation_piecewise_direct_standardization_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/domain_adaptation.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_domain_adaptation_robust_direct_standardization_create",
+        "n4m_domain_adaptation_robust_direct_standardization_destroy",
+        "n4m_domain_adaptation_robust_direct_standardization_fit",
+        "n4m_domain_adaptation_robust_direct_standardization_is_fitted",
+        "n4m_domain_adaptation_robust_direct_standardization_transform"
+      ],
+      "classification": "native",
+      "id": "domain_adaptation_robust_direct_standardization",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_domain_adaptation_robust_direct_standardization_create",
+        "destroy": "n4m_domain_adaptation_robust_direct_standardization_destroy",
+        "fit": "n4m_domain_adaptation_robust_direct_standardization_fit",
+        "is_fitted": "n4m_domain_adaptation_robust_direct_standardization_is_fitted",
+        "operation": "n4m_domain_adaptation_robust_direct_standardization_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/domain_adaptation.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_domain_adaptation_slope_bias_create",
+        "n4m_domain_adaptation_slope_bias_destroy",
+        "n4m_domain_adaptation_slope_bias_fit",
+        "n4m_domain_adaptation_slope_bias_is_fitted",
+        "n4m_domain_adaptation_slope_bias_transform"
+      ],
+      "classification": "native",
+      "id": "domain_adaptation_slope_bias",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_domain_adaptation_slope_bias_create",
+        "destroy": "n4m_domain_adaptation_slope_bias_destroy",
+        "fit": "n4m_domain_adaptation_slope_bias_fit",
+        "is_fitted": "n4m_domain_adaptation_slope_bias_is_fitted",
+        "operation": "n4m_domain_adaptation_slope_bias_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/domain_adaptation.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_feature_selection_correlation_create",
+        "n4m_feature_selection_correlation_destroy",
+        "n4m_feature_selection_correlation_fit",
+        "n4m_feature_selection_correlation_is_fitted",
+        "n4m_feature_selection_correlation_output_cols",
+        "n4m_feature_selection_correlation_transform"
+      ],
+      "classification": "native",
+      "id": "feature_selection_correlation",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_feature_selection_correlation_create",
+        "destroy": "n4m_feature_selection_correlation_destroy",
+        "fit": "n4m_feature_selection_correlation_fit",
+        "is_fitted": "n4m_feature_selection_correlation_is_fitted",
+        "operation": "n4m_feature_selection_correlation_transform",
+        "output_cols": "n4m_feature_selection_correlation_output_cols"
+      },
+      "source_headers": [
+        "cpp/include/n4m/feature_selection.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_feature_selection_interval_generator_create",
+        "n4m_feature_selection_interval_generator_destroy",
+        "n4m_feature_selection_interval_generator_fit",
+        "n4m_feature_selection_interval_generator_is_fitted",
+        "n4m_feature_selection_interval_generator_output_cols",
+        "n4m_feature_selection_interval_generator_transform"
+      ],
+      "classification": "native",
+      "id": "feature_selection_interval_generator",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_feature_selection_interval_generator_create",
+        "destroy": "n4m_feature_selection_interval_generator_destroy",
+        "fit": "n4m_feature_selection_interval_generator_fit",
+        "is_fitted": "n4m_feature_selection_interval_generator_is_fitted",
+        "operation": "n4m_feature_selection_interval_generator_transform",
+        "output_cols": "n4m_feature_selection_interval_generator_output_cols"
+      },
+      "source_headers": [
+        "cpp/include/n4m/feature_selection.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_feature_selection_variance_create",
+        "n4m_feature_selection_variance_destroy",
+        "n4m_feature_selection_variance_fit",
+        "n4m_feature_selection_variance_is_fitted",
+        "n4m_feature_selection_variance_output_cols",
+        "n4m_feature_selection_variance_transform"
+      ],
+      "classification": "native",
+      "id": "feature_selection_variance",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_feature_selection_variance_create",
+        "destroy": "n4m_feature_selection_variance_destroy",
+        "fit": "n4m_feature_selection_variance_fit",
+        "is_fitted": "n4m_feature_selection_variance_is_fitted",
+        "operation": "n4m_feature_selection_variance_transform",
+        "output_cols": "n4m_feature_selection_variance_output_cols"
+      },
+      "source_headers": [
+        "cpp/include/n4m/feature_selection.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "algorithms": [
+        "N4M_ALGO_AOM_PLS",
+        "N4M_ALGO_LW_PLS",
+        "N4M_ALGO_MB_PLS",
+        "N4M_ALGO_OPLS",
+        "N4M_ALGO_OPLS_DA",
+        "N4M_ALGO_PCR",
+        "N4M_ALGO_PLS_CANONICAL",
+        "N4M_ALGO_PLS_DA",
+        "N4M_ALGO_PLS_REGRESSION",
+        "N4M_ALGO_PLS_SVD",
+        "N4M_ALGO_SPARSE_PLS"
+      ],
+      "api_symbols": [
+        "n4m_config_set_algorithm",
+        "n4m_model_destroy",
+        "n4m_model_fit",
+        "n4m_model_predict",
+        "n4m_model_predict_alloc",
+        "n4m_model_transform",
+        "n4m_model_transform_alloc"
+      ],
+      "classification": "native",
+      "id": "generic_n4m_model_api",
+      "kind": "generic_model_api",
+      "source_headers": [
+        "cpp/include/n4m/n4m.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_pls_lda_fit"
+      ],
+      "catalog_file": "catalog/methods/models.classification.pls_lda.yaml",
+      "classification": "native",
+      "id": "models.classification.pls_lda",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/classification.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_pls_logistic_fit"
+      ],
+      "catalog_file": "catalog/methods/models.classification.pls_logistic.yaml",
+      "classification": "native",
+      "id": "models.classification.pls_logistic",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/classification.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_pls_qda_fit"
+      ],
+      "catalog_file": "catalog/methods/models.classification.pls_qda.yaml",
+      "classification": "native",
+      "id": "models.classification.pls_qda",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/classification.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_ensemble_bagging_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.ensembles.bagging_pls.yaml",
+      "classification": "native",
+      "id": "models.ensembles.bagging_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/ensemble.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_ensemble_boosting_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.ensembles.boosting_pls.yaml",
+      "classification": "native",
+      "id": "models.ensembles.boosting_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/ensemble.h"
+      ]
+    },
+    {
+      "adapter_file": "bindings/python/src/n4m/_impl/native_sweeps.py",
+      "api_symbols": [
+        "n4m_model_selection_sweep_run"
+      ],
+      "boundary": "Python composes native sweep results and a Python Ridge meta-model; no all-native claim.",
+      "catalog_file": "catalog/methods/models.ensembles.moment_stack.yaml",
+      "classification": "adapter",
+      "ffi_proof": {
+        "adapter_class": "NativeMomentStackRegressor",
+        "call_site": "bindings/python/src/n4m/_impl/native.py",
+        "declarations": "bindings/python/src/n4m/_ffi_decls.py"
+      },
+      "id": "models.ensembles.moment_stack",
+      "kind": "model"
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_ensemble_random_subspace_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.ensembles.random_subspace_pls.yaml",
+      "classification": "native",
+      "id": "models.ensembles.random_subspace_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/ensemble.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_pls_cox_fit"
+      ],
+      "catalog_file": "catalog/methods/models.heads.pls_cox.yaml",
+      "classification": "native",
+      "id": "models.heads.pls_cox",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/survival.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_pls_glm_fit"
+      ],
+      "catalog_file": "catalog/methods/models.heads.pls_glm.yaml",
+      "classification": "native",
+      "id": "models.heads.pls_glm",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_lw_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.local.lw_pls.yaml",
+      "classification": "native",
+      "id": "models.local.lw_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_mb_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.multiblock.mb_pls.yaml",
+      "classification": "native",
+      "id": "models.multiblock.mb_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/multiblock.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_mir_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.multiblock.mir_pls.yaml",
+      "classification": "native",
+      "id": "models.multiblock.mir_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/multiblock.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_o2pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.multiblock.o2pls.yaml",
+      "classification": "native",
+      "id": "models.multiblock.o2pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/multiblock.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_on_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.multiblock.on_pls.yaml",
+      "classification": "native",
+      "id": "models.multiblock.on_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/multiblock.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_rosa_fit"
+      ],
+      "catalog_file": "catalog/methods/models.multiblock.rosa.yaml",
+      "classification": "native",
+      "id": "models.multiblock.rosa",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/multiblock.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_so_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.multiblock.so_pls.yaml",
+      "classification": "native",
+      "id": "models.multiblock.so_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/multiblock.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_cppls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.pls.cppls.yaml",
+      "classification": "native",
+      "id": "models.pls.cppls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_kernel_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.pls.kernel.yaml",
+      "classification": "native",
+      "id": "models.pls.kernel",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_pcr_fit"
+      ],
+      "catalog_file": "catalog/methods/models.pls.pcr.yaml",
+      "classification": "native",
+      "id": "models.pls.pcr",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.pls.pls_fit_simple.yaml",
+      "classification": "native",
+      "id": "models.pls.pls_fit_simple",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_continuum_regression_fit"
+      ],
+      "catalog_file": "catalog/methods/models.regularized.continuum_regression.yaml",
+      "classification": "native",
+      "id": "models.regularized.continuum_regression",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_ridge_fit"
+      ],
+      "catalog_file": "catalog/methods/models.regularized.ridge.yaml",
+      "classification": "native",
+      "id": "models.regularized.ridge",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_ridge_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.regularized.ridge_pls.yaml",
+      "classification": "native",
+      "id": "models.regularized.ridge_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_robust_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.regularized.robust_pls.yaml",
+      "classification": "native",
+      "id": "models.regularized.robust_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_weighted_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.regularized.weighted_pls.yaml",
+      "classification": "native",
+      "id": "models.regularized.weighted_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_fused_sparse_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.sparse.fused_sparse_pls.yaml",
+      "classification": "native",
+      "id": "models.sparse.fused_sparse_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_group_sparse_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.sparse.group_sparse_pls.yaml",
+      "classification": "native",
+      "id": "models.sparse.group_sparse_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_sparse_pls_da_fit"
+      ],
+      "catalog_file": "catalog/methods/models.sparse.sparse_pls_da.yaml",
+      "classification": "native",
+      "id": "models.sparse.sparse_pls_da",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/classification.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_sparse_simpls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.sparse.sparse_simpls.yaml",
+      "classification": "native",
+      "id": "models.sparse.sparse_simpls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_ecr_fit"
+      ],
+      "catalog_file": "catalog/methods/models.specialized.ecr.yaml",
+      "classification": "native",
+      "id": "models.specialized.ecr",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_gpr_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.specialized.gpr_pls.yaml",
+      "classification": "native",
+      "id": "models.specialized.gpr_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_missing_aware_nipals_fit"
+      ],
+      "catalog_file": "catalog/methods/models.specialized.missing_aware_nipals.yaml",
+      "classification": "native",
+      "id": "models.specialized.missing_aware_nipals",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_recursive_pls_run"
+      ],
+      "catalog_file": "catalog/methods/models.specialized.recursive.yaml",
+      "classification": "native",
+      "id": "models.specialized.recursive",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_estimators_n_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.specialized.tensor_pls.yaml",
+      "classification": "native",
+      "id": "models.specialized.tensor_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/estimators/regression.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_domain_adaptation_di_pls_fit"
+      ],
+      "catalog_file": "catalog/methods/models.transfer.di_pls.yaml",
+      "classification": "native",
+      "id": "models.transfer.di_pls",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/domain_adaptation.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_domain_adaptation_ds_fit"
+      ],
+      "catalog_file": "catalog/methods/models.transfer.ds.yaml",
+      "classification": "native",
+      "id": "models.transfer.ds",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/domain_adaptation.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_domain_adaptation_pds_fit"
+      ],
+      "catalog_file": "catalog/methods/models.transfer.pds.yaml",
+      "classification": "native",
+      "id": "models.transfer.pds",
+      "kind": "model",
+      "source_headers": [
+        "cpp/include/n4m/domain_adaptation.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_outlier_detection_high_leverage_apply",
+        "n4m_outlier_detection_high_leverage_create",
+        "n4m_outlier_detection_high_leverage_destroy",
+        "n4m_outlier_detection_high_leverage_fit",
+        "n4m_outlier_detection_high_leverage_is_fitted",
+        "n4m_outlier_detection_high_leverage_threshold"
+      ],
+      "classification": "native",
+      "id": "outlier_detection_high_leverage",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_outlier_detection_high_leverage_create",
+        "destroy": "n4m_outlier_detection_high_leverage_destroy",
+        "fit": "n4m_outlier_detection_high_leverage_fit",
+        "is_fitted": "n4m_outlier_detection_high_leverage_is_fitted",
+        "operation": "n4m_outlier_detection_high_leverage_apply",
+        "threshold": "n4m_outlier_detection_high_leverage_threshold"
+      },
+      "source_headers": [
+        "cpp/include/n4m/outlier_detection.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_outlier_detection_x_outlier_apply",
+        "n4m_outlier_detection_x_outlier_create",
+        "n4m_outlier_detection_x_outlier_destroy",
+        "n4m_outlier_detection_x_outlier_fit",
+        "n4m_outlier_detection_x_outlier_is_fitted"
+      ],
+      "classification": "native",
+      "id": "outlier_detection_x_outlier",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_outlier_detection_x_outlier_create",
+        "destroy": "n4m_outlier_detection_x_outlier_destroy",
+        "fit": "n4m_outlier_detection_x_outlier_fit",
+        "is_fitted": "n4m_outlier_detection_x_outlier_is_fitted",
+        "operation": "n4m_outlier_detection_x_outlier_apply"
+      },
+      "source_headers": [
+        "cpp/include/n4m/outlier_detection.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_outlier_detection_y_outlier_apply",
+        "n4m_outlier_detection_y_outlier_create",
+        "n4m_outlier_detection_y_outlier_destroy",
+        "n4m_outlier_detection_y_outlier_fit",
+        "n4m_outlier_detection_y_outlier_is_fitted"
+      ],
+      "classification": "native",
+      "id": "outlier_detection_y_outlier",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_outlier_detection_y_outlier_create",
+        "destroy": "n4m_outlier_detection_y_outlier_destroy",
+        "fit": "n4m_outlier_detection_y_outlier_fit",
+        "is_fitted": "n4m_outlier_detection_y_outlier_is_fitted",
+        "operation": "n4m_outlier_detection_y_outlier_apply"
+      },
+      "source_headers": [
+        "cpp/include/n4m/outlier_detection.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_baseline_center_create",
+        "n4m_transform_baseline_center_destroy",
+        "n4m_transform_baseline_center_fit",
+        "n4m_transform_baseline_center_inverse_transform",
+        "n4m_transform_baseline_center_is_fitted",
+        "n4m_transform_baseline_center_transform"
+      ],
+      "classification": "native",
+      "id": "transform_baseline_center",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_baseline_center_create",
+        "destroy": "n4m_transform_baseline_center_destroy",
+        "fit": "n4m_transform_baseline_center_fit",
+        "inverse_transform": "n4m_transform_baseline_center_inverse_transform",
+        "is_fitted": "n4m_transform_baseline_center_is_fitted",
+        "operation": "n4m_transform_baseline_center_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scaling.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_cow_align_create",
+        "n4m_transform_cow_align_destroy",
+        "n4m_transform_cow_align_fit",
+        "n4m_transform_cow_align_is_fitted",
+        "n4m_transform_cow_align_transform"
+      ],
+      "classification": "native",
+      "id": "transform_cow_align",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_cow_align_create",
+        "destroy": "n4m_transform_cow_align_destroy",
+        "fit": "n4m_transform_cow_align_fit",
+        "is_fitted": "n4m_transform_cow_align_is_fitted",
+        "operation": "n4m_transform_cow_align_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/alignment.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_derivative_create",
+        "n4m_transform_derivative_destroy",
+        "n4m_transform_derivative_fit",
+        "n4m_transform_derivative_output_cols",
+        "n4m_transform_derivative_transform"
+      ],
+      "classification": "native",
+      "id": "transform_derivative",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_derivative_create",
+        "destroy": "n4m_transform_derivative_destroy",
+        "fit": "n4m_transform_derivative_fit",
+        "operation": "n4m_transform_derivative_transform",
+        "output_cols": "n4m_transform_derivative_output_cols"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/smoothing.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_dtw_align_create",
+        "n4m_transform_dtw_align_destroy",
+        "n4m_transform_dtw_align_fit",
+        "n4m_transform_dtw_align_is_fitted",
+        "n4m_transform_dtw_align_transform"
+      ],
+      "classification": "native",
+      "id": "transform_dtw_align",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_dtw_align_create",
+        "destroy": "n4m_transform_dtw_align_destroy",
+        "fit": "n4m_transform_dtw_align_fit",
+        "is_fitted": "n4m_transform_dtw_align_is_fitted",
+        "operation": "n4m_transform_dtw_align_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/alignment.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_emsc_create",
+        "n4m_transform_emsc_destroy",
+        "n4m_transform_emsc_fit",
+        "n4m_transform_emsc_is_fitted",
+        "n4m_transform_emsc_transform"
+      ],
+      "classification": "native",
+      "id": "transform_emsc",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_emsc_create",
+        "destroy": "n4m_transform_emsc_destroy",
+        "fit": "n4m_transform_emsc_fit",
+        "is_fitted": "n4m_transform_emsc_is_fitted",
+        "operation": "n4m_transform_emsc_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scatter.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_icoshift_align_create",
+        "n4m_transform_icoshift_align_destroy",
+        "n4m_transform_icoshift_align_fit",
+        "n4m_transform_icoshift_align_is_fitted",
+        "n4m_transform_icoshift_align_transform"
+      ],
+      "classification": "native",
+      "id": "transform_icoshift_align",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_icoshift_align_create",
+        "destroy": "n4m_transform_icoshift_align_destroy",
+        "fit": "n4m_transform_icoshift_align_fit",
+        "is_fitted": "n4m_transform_icoshift_align_is_fitted",
+        "operation": "n4m_transform_icoshift_align_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/alignment.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_kbins_discretizer_create",
+        "n4m_transform_kbins_discretizer_destroy",
+        "n4m_transform_kbins_discretizer_fit",
+        "n4m_transform_kbins_discretizer_is_fitted",
+        "n4m_transform_kbins_discretizer_transform"
+      ],
+      "classification": "native",
+      "id": "transform_kbins_discretizer",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_kbins_discretizer_create",
+        "destroy": "n4m_transform_kbins_discretizer_destroy",
+        "fit": "n4m_transform_kbins_discretizer_fit",
+        "is_fitted": "n4m_transform_kbins_discretizer_is_fitted",
+        "operation": "n4m_transform_kbins_discretizer_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/resampling.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_local_centering_create",
+        "n4m_transform_local_centering_destroy",
+        "n4m_transform_local_centering_fit",
+        "n4m_transform_local_centering_is_fitted",
+        "n4m_transform_local_centering_transform"
+      ],
+      "classification": "native",
+      "id": "transform_local_centering",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_local_centering_create",
+        "destroy": "n4m_transform_local_centering_destroy",
+        "fit": "n4m_transform_local_centering_fit",
+        "is_fitted": "n4m_transform_local_centering_is_fitted",
+        "operation": "n4m_transform_local_centering_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scatter.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_localized_msc_create",
+        "n4m_transform_localized_msc_destroy",
+        "n4m_transform_localized_msc_fit",
+        "n4m_transform_localized_msc_is_fitted",
+        "n4m_transform_localized_msc_transform"
+      ],
+      "classification": "native",
+      "id": "transform_localized_msc",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_localized_msc_create",
+        "destroy": "n4m_transform_localized_msc_destroy",
+        "fit": "n4m_transform_localized_msc_fit",
+        "is_fitted": "n4m_transform_localized_msc_is_fitted",
+        "operation": "n4m_transform_localized_msc_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scatter.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_log_transform_create",
+        "n4m_transform_log_transform_destroy",
+        "n4m_transform_log_transform_fit",
+        "n4m_transform_log_transform_is_fitted",
+        "n4m_transform_log_transform_transform"
+      ],
+      "classification": "native",
+      "id": "transform_log_transform",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_log_transform_create",
+        "destroy": "n4m_transform_log_transform_destroy",
+        "fit": "n4m_transform_log_transform_fit",
+        "is_fitted": "n4m_transform_log_transform_is_fitted",
+        "operation": "n4m_transform_log_transform_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scaling.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_msc_create",
+        "n4m_transform_msc_destroy",
+        "n4m_transform_msc_fit",
+        "n4m_transform_msc_inverse_transform",
+        "n4m_transform_msc_is_fitted",
+        "n4m_transform_msc_transform"
+      ],
+      "classification": "native",
+      "id": "transform_msc",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_msc_create",
+        "destroy": "n4m_transform_msc_destroy",
+        "fit": "n4m_transform_msc_fit",
+        "inverse_transform": "n4m_transform_msc_inverse_transform",
+        "is_fitted": "n4m_transform_msc_is_fitted",
+        "operation": "n4m_transform_msc_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scatter.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_osc_create",
+        "n4m_transform_osc_destroy",
+        "n4m_transform_osc_fit",
+        "n4m_transform_osc_inverse_transform",
+        "n4m_transform_osc_is_fitted",
+        "n4m_transform_osc_transform"
+      ],
+      "classification": "native",
+      "id": "transform_osc",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_osc_create",
+        "destroy": "n4m_transform_osc_destroy",
+        "fit": "n4m_transform_osc_fit",
+        "inverse_transform": "n4m_transform_osc_inverse_transform",
+        "is_fitted": "n4m_transform_osc_is_fitted",
+        "operation": "n4m_transform_osc_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/orthogonalization.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_piecewise_msc_create",
+        "n4m_transform_piecewise_msc_destroy",
+        "n4m_transform_piecewise_msc_fit",
+        "n4m_transform_piecewise_msc_is_fitted",
+        "n4m_transform_piecewise_msc_transform"
+      ],
+      "classification": "native",
+      "id": "transform_piecewise_msc",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_piecewise_msc_create",
+        "destroy": "n4m_transform_piecewise_msc_destroy",
+        "fit": "n4m_transform_piecewise_msc_fit",
+        "is_fitted": "n4m_transform_piecewise_msc_is_fitted",
+        "operation": "n4m_transform_piecewise_msc_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scatter.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_piecewise_snv_create",
+        "n4m_transform_piecewise_snv_destroy",
+        "n4m_transform_piecewise_snv_fit",
+        "n4m_transform_piecewise_snv_is_fitted",
+        "n4m_transform_piecewise_snv_transform"
+      ],
+      "classification": "native",
+      "id": "transform_piecewise_snv",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_piecewise_snv_create",
+        "destroy": "n4m_transform_piecewise_snv_destroy",
+        "fit": "n4m_transform_piecewise_snv_fit",
+        "is_fitted": "n4m_transform_piecewise_snv_is_fitted",
+        "operation": "n4m_transform_piecewise_snv_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scatter.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_resampler_create",
+        "n4m_transform_resampler_destroy",
+        "n4m_transform_resampler_fit",
+        "n4m_transform_resampler_is_fitted",
+        "n4m_transform_resampler_output_cols",
+        "n4m_transform_resampler_transform"
+      ],
+      "classification": "native",
+      "id": "transform_resampler",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_resampler_create",
+        "destroy": "n4m_transform_resampler_destroy",
+        "fit": "n4m_transform_resampler_fit",
+        "is_fitted": "n4m_transform_resampler_is_fitted",
+        "operation": "n4m_transform_resampler_transform",
+        "output_cols": "n4m_transform_resampler_output_cols"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/resampling.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_saps_create",
+        "n4m_transform_saps_destroy",
+        "n4m_transform_saps_fit",
+        "n4m_transform_saps_is_fitted",
+        "n4m_transform_saps_transform"
+      ],
+      "classification": "native",
+      "id": "transform_saps",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_saps_create",
+        "destroy": "n4m_transform_saps_destroy",
+        "fit": "n4m_transform_saps_fit",
+        "is_fitted": "n4m_transform_saps_is_fitted",
+        "operation": "n4m_transform_saps_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/baseline.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_vsn_create",
+        "n4m_transform_vsn_destroy",
+        "n4m_transform_vsn_fit",
+        "n4m_transform_vsn_is_fitted",
+        "n4m_transform_vsn_transform"
+      ],
+      "classification": "native",
+      "id": "transform_vsn",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_vsn_create",
+        "destroy": "n4m_transform_vsn_destroy",
+        "fit": "n4m_transform_vsn_fit",
+        "is_fitted": "n4m_transform_vsn_is_fitted",
+        "operation": "n4m_transform_vsn_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scatter.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_wavelet_pca_create",
+        "n4m_transform_wavelet_pca_destroy",
+        "n4m_transform_wavelet_pca_fit",
+        "n4m_transform_wavelet_pca_is_fitted",
+        "n4m_transform_wavelet_pca_output_cols",
+        "n4m_transform_wavelet_pca_transform"
+      ],
+      "classification": "native",
+      "id": "transform_wavelet_pca",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_wavelet_pca_create",
+        "destroy": "n4m_transform_wavelet_pca_destroy",
+        "fit": "n4m_transform_wavelet_pca_fit",
+        "is_fitted": "n4m_transform_wavelet_pca_is_fitted",
+        "operation": "n4m_transform_wavelet_pca_transform",
+        "output_cols": "n4m_transform_wavelet_pca_output_cols"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/wavelet.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_wavelet_svd_create",
+        "n4m_transform_wavelet_svd_destroy",
+        "n4m_transform_wavelet_svd_fit",
+        "n4m_transform_wavelet_svd_is_fitted",
+        "n4m_transform_wavelet_svd_output_cols",
+        "n4m_transform_wavelet_svd_transform"
+      ],
+      "classification": "native",
+      "id": "transform_wavelet_svd",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_wavelet_svd_create",
+        "destroy": "n4m_transform_wavelet_svd_destroy",
+        "fit": "n4m_transform_wavelet_svd_fit",
+        "is_fitted": "n4m_transform_wavelet_svd_is_fitted",
+        "operation": "n4m_transform_wavelet_svd_transform",
+        "output_cols": "n4m_transform_wavelet_svd_output_cols"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/wavelet.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_weighted_snv_create",
+        "n4m_transform_weighted_snv_destroy",
+        "n4m_transform_weighted_snv_fit",
+        "n4m_transform_weighted_snv_is_fitted",
+        "n4m_transform_weighted_snv_transform"
+      ],
+      "classification": "native",
+      "id": "transform_weighted_snv",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_weighted_snv_create",
+        "destroy": "n4m_transform_weighted_snv_destroy",
+        "fit": "n4m_transform_weighted_snv_fit",
+        "is_fitted": "n4m_transform_weighted_snv_is_fitted",
+        "operation": "n4m_transform_weighted_snv_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/scatter.h"
+      ]
+    },
+    {
+      "abi_proof": {
+        "linux": "cpp/abi/expected_symbols_linux.txt",
+        "macos": "cpp/abi/expected_symbols_macos.txt",
+        "windows": "cpp/abi/expected_symbols_windows.txt"
+      },
+      "api_symbols": [
+        "n4m_transform_xcorr_align_create",
+        "n4m_transform_xcorr_align_destroy",
+        "n4m_transform_xcorr_align_fit",
+        "n4m_transform_xcorr_align_is_fitted",
+        "n4m_transform_xcorr_align_transform"
+      ],
+      "classification": "native",
+      "id": "transform_xcorr_align",
+      "kind": "stateful_preprocessor",
+      "lifecycle": {
+        "create": "n4m_transform_xcorr_align_create",
+        "destroy": "n4m_transform_xcorr_align_destroy",
+        "fit": "n4m_transform_xcorr_align_fit",
+        "is_fitted": "n4m_transform_xcorr_align_is_fitted",
+        "operation": "n4m_transform_xcorr_align_transform"
+      },
+      "source_headers": [
+        "cpp/include/n4m/transform/alignment.h"
+      ]
+    }
+  ],
+  "schema_version": "1.1",
+  "scope": "V1 catalogued models, generic model routes, stateful preprocessors, adapters, and derived boundaries"
+}

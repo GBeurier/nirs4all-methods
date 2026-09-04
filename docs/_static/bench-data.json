@@ -1,13 +1,13 @@
 {
   "generated_at": "2026-05-30 10:15 UTC",
   "host": {
-    "os": "Linux 6.6.114.1-microsoft-standard-WSL2 (x86_64)",
+    "os": "Linux 6.18.33.2-microsoft-standard-WSL2 (x86_64)",
     "python": "3.10.12",
     "cpu_model": "12th Gen Intel(R) Core(TM) i9-12900K",
     "cpu_count_logical": 24,
     "cpu_count_physical": 12,
     "ram_gb": "62.7",
-    "kernel": "6.6.114.1-microsoft-standard-WSL2",
+    "kernel": "6.18.33.2-microsoft-standard-WSL2",
     "cpu_mhz": "3187",
     "cpu_cache": "30720 KB"
   },
