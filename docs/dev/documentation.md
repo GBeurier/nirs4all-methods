@@ -17,3 +17,11 @@ The 2026-09-05 archive preserves original relative paths and contents, including
 the historical phase roadmaps, merge evidence, namespace and dashboard proposals,
 and finetuning plans. These records explain past decisions; released source,
 public contracts, and passing release gates define current behavior.
+
+Some historical files remain public because active tools consume them as
+contracts: `proposals/namespace/_rename_map.tsv` supports generation and ABI
+doc-lint; the three `docs/architecture/aom_robust_hpo_*.csv` manifests and
+`roadmap/phase-7f-aom-robust-hpo-portfolio.md` are inputs to the AOM integration
+contract tests. Their contents remain unchanged from the published baseline.
+They are executable acceptance evidence, not disposable planning notes; archival
+copies are retained privately as well.

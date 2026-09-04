@@ -7,8 +7,9 @@ maps the old surface to the new one.
 
 Authoritative sources:
 
-- `proposals/namespace/_target_ml_table.tsv` — the per-method namespace,
-  `leaf`, and `fq_name` (209 methods, 12 roles, 49 leaves).
+- The public header tree under `cpp/include/n4m/` and `catalog/methods.yaml`
+  describe the current per-method surface. The original namespace planning
+  table is preserved in the [private development archive](dev/documentation.md).
 - `proposals/namespace/_rename_map.tsv` — the deterministic
   `old_symbol → new_symbol` table (566 method symbols, 0 collisions), generated
   from `catalog/methods.yaml`.
