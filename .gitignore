@@ -383,3 +383,7 @@ roadmap/phase-A-rename-cleanup.md
 
 # coverage artefact
 coverage.xml
+
+# Local maintainer archive and Rust compilation cache.
+/.private-dev/
+/target/

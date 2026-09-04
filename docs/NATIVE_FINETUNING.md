@@ -143,7 +143,7 @@ N4M_API void         n4m_search_space_destroy(n4m_search_space_t*);
 
 ### 4.2 Optimizer handle + ask/tell
 
-> **Superseded by [`FINETUNING_ROADMAP.md`](FINETUNING_ROADMAP.md) §2–3 (adversarial review).** The enum below is the original sketch. The implementation splits **sampler ⟂ pruner** into two enums (`n4m_sampler_kind_t` × `n4m_pruner_kind_t`, composed in `n4m_optimizer_create`), drops `GRID` (exhaustive enumeration is dag-ml's parity-locked oracle, not a libn4m sampler), and moves `HALVING`/Hyperband/median into the pruner enum. The multi-fidelity axis is the **PLS `n_components` learning curve** / subsample / racing — **not** CV-fold fraction (which breaks the rank-preservation successive-halving assumes). See the roadmap for the authoritative surface.
+> **Superseded by [developer documentation](dev/documentation.md) §2–3 (adversarial review).** The enum below is the original sketch. The implementation splits **sampler ⟂ pruner** into two enums (`n4m_sampler_kind_t` × `n4m_pruner_kind_t`, composed in `n4m_optimizer_create`), drops `GRID` (exhaustive enumeration is dag-ml's parity-locked oracle, not a libn4m sampler), and moves `HALVING`/Hyperband/median into the pruner enum. The multi-fidelity axis is the **PLS `n_components` learning curve** / subsample / racing — **not** CV-fold fraction (which breaks the rank-preservation successive-halving assumes). See the roadmap for the authoritative surface.
 
 ```c
 typedef enum n4m_sampler_kind_t {
@@ -217,7 +217,7 @@ The exact C/Python syntax and keyword effects are specified in
 
 ### 4.4 Algorithm set + priorities
 
-> **Superseded by [`FINETUNING_ROADMAP.md`](FINETUNING_ROADMAP.md) §2–3 (Codex + adversarial review).** The table below is the original sketch and is retained for the ML rationale only. The authoritative facts: (a) `grid` is **not** a libn4m sampler (dag-ml owns enumeration); (b) successive-halving/Hyperband/median are **pruners** (a separate `n4m_pruner_kind_t`), not samplers; (c) the multi-fidelity axis is the **PLS `n_components` learning curve** (one max-K fit per CV fold, for eligible PLS1/NIPALS paths — *not* free for SIMPLS/multi-target), subsample, or DL epochs — **not** CV-fold fraction (which breaks the rank-preservation successive-halving assumes).
+> **Superseded by [developer documentation](dev/documentation.md) §2–3 (Codex + adversarial review).** The table below is the original sketch and is retained for the ML rationale only. The authoritative facts: (a) `grid` is **not** a libn4m sampler (dag-ml owns enumeration); (b) successive-halving/Hyperband/median are **pruners** (a separate `n4m_pruner_kind_t`), not samplers; (c) the multi-fidelity axis is the **PLS `n_components` learning curve** (one max-K fit per CV fold, for eligible PLS1/NIPALS paths — *not* free for SIMPLS/multi-target), subsample, or DL epochs — **not** CV-fold fraction (which breaks the rank-preservation successive-halving assumes).
 
 | # | Algorithm | ML rationale | Build cost | Kind |
 |---|---|---|---|---|

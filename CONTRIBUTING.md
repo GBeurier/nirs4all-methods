@@ -11,7 +11,7 @@ of the enforcement automatically.
 bindings, and packaging subsets are extensible only via Pull Request**
 to this repository. There is no plugin API, no user-side method
 registration, no runtime injection of custom operators. This is a
-deliberate choice — see [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md)
+deliberate choice — see [developer documentation](docs/dev/documentation.md)
 §1.1bis.
 
 User-driven requests go through structured GitHub issue templates so
@@ -37,7 +37,7 @@ checklist that the reviewer (human + Codex) verifies.
 ## Ground rules
 
 1. **The canonical specs are [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-   and [`docs/REFACTOR_PLAN.md`](docs/REFACTOR_PLAN.md).** Any PR that
+   and [developer documentation](docs/dev/documentation.md).** Any PR that
    violates one of their decisions (C ABI, zero mandatory deps, no
    exceptions across the boundary, no STL in the public API, single
    `libn4m` binary, etc.) will be rejected without further discussion.
@@ -101,7 +101,7 @@ In short:
 3. After every PR, Codex reviews the diff. If Codex disagrees with the
    implementation, the author adds context once; if Codex still
    disagrees, **Codex wins** and the author revises.
-4. Codex transcripts are checked into `docs/reviews/phase-N/` for audit.
+4. Codex transcripts are kept locally under `.private-dev/current/reviews/` for audit.
 
 ## Coding style
 
@@ -115,7 +115,7 @@ In short:
 - **R** — tidyverse style for the parity generators; base R for the
   in-tree binding.
 - **MATLAB / Octave** — CI exercises Octave only (per
-  `docs/REFACTOR_PLAN.md` §1.1ter). Differences between MATLAB and
+  the archived refactor specification §1.1ter). Differences between MATLAB and
   Octave are declared per-symbol in `bindings/matlab/COMPAT.md`.
 - **Commit messages** — Conventional Commits (`feat:`, `fix:`, `chore:`,
   `docs:`, `test:`, `build:`, `ci:`, `refactor:`). Scope when relevant

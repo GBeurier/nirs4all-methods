@@ -32,9 +32,7 @@ A portable PLS / NIRS engine in C++17 with a stable C ABI and thin bindings for 
 - **Parity** — [methodology](parity/methodology.md) · {doc}`tolerances <parity/tolerances>`
 - **About** — [global bibliography](bibliography.md)
 - **Benchmarks** — [index](benchmarks/index.md) · [overview](benchmarks/overview.md) · [cross-binding parity + timing](benchmarks/cross_binding.md) · [methodology](benchmarks/methodology.md)
-- **Development** — [workflow](dev/workflow.md) · [build](dev/build.md) · [testing](dev/testing.md) · [stabilisation plan](dev/stabilisation_plan.md) · [style](dev/style.md) · [release process](dev/release_process.md)
-- **Reviews** — Codex transcripts under `docs/reviews/`
-- **Roadmap** — `ROADMAP.md`, per-phase plans under `roadmap/`
+- **Development** — [documentation and private archive policy](dev/documentation.md) · [workflow](dev/workflow.md) · [build](dev/build.md) · [testing](dev/testing.md) · [style](dev/style.md) · [release process](dev/release_process.md)
 
 ```{toctree}
 :hidden:
@@ -71,7 +69,7 @@ dev/workflow
 dev/build
 dev/readthedocs
 dev/testing
-dev/stabilisation_plan
+dev/documentation
 dev/style
 dev/release_process
 ```
