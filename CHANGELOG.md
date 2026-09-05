@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.17] - 2026-09-05
+
+### Fixed
+
+- Preserve the runtime library indirection used by Python packages instead of
+  baking a build-machine path into generated loaders.
+- Keep public FFI declarations synchronized with the authoritative C ABI and
+  validate generated package imports and serialized-pipeline inspection.
+- Tighten release-surface metadata checks so the full and slim Python packages
+  remain independently installable from the same native engine source.
+
 ## [1.0.15] - 2026-09-03
 
 ### Added
