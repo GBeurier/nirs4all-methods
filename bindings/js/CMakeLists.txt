@@ -39,6 +39,7 @@ list(APPEND _js_export_list
     "_n4m_wasm_model_predict_from_coeffs"
     # AOM-PLS — operator-adaptive PLS (strict bank screen + SIMPLS on the winner)
     "_n4m_wasm_aom_fit"
+    "_n4m_wasm_aom_chain_fit"
     # POP-PLS — per-component AOM (one operator per latent component)
     "_n4m_wasm_pop_fit"
     # AOM Ridge simplex blender + AOM operator-PLS stack (input-space coeffs)
