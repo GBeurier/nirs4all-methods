@@ -154,6 +154,8 @@ infra_abi_symbols:
   - n4m_search_space_destroy
   - n4m_search_space_num_params
   - n4m_serialization_inspect
+  - n4m_serialization_inspect_model_v1
+  - n4m_serialization_inspect_pipeline_v1
   - n4m_split_result_destroy
   - n4m_status_to_string
   - n4m_trial_get_category
