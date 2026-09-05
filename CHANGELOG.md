@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.18] - 2026-09-05
+
+### Fixed
+
+- Preserve the published AOM forced-moment behavior on wide spectra while
+  retaining the 1.0.17 FFI ownership, package-import, and loader-indirection
+  corrections.
+- Expose the matching configurable AOM chain sweep through the JavaScript/WASM
+  binding so the corrected native and browser surfaces ship together.
+
 ## [1.0.17] - 2026-09-05
 
 ### Fixed
