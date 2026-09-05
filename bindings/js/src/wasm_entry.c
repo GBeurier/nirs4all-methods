@@ -1047,6 +1047,97 @@ int n4m_wasm_aom_ridge_fit(const double* x, const double* y,
     return (ok_c && ok_i) ? N4M_OK : N4M_ERR_INVALID_ARGUMENT;
 }
 
+/* Configurable native AOM chain sweep for one regression head.
+ * `heads_mask` is 1 for Ridge or 2 for PLS. The caller supplies the exact
+ * strict-linear chain descriptor used by the native sweep. The selected model
+ * is returned in raw-input space, together with its chain, model parameter and
+ * calibration-CV RMSE. */
+__attribute__((used))
+int n4m_wasm_aom_chain_fit(const double* x, const double* y,
+                           int n, int p, int q, int cv,
+                           const int32_t* chain_offsets, int n_chain_offsets,
+                           const int32_t* op_kinds, int n_op_kinds,
+                           const int32_t* param_offsets, int n_param_offsets,
+                           const double* params, int n_params,
+                           const double* ridge_lambdas, int n_ridge_lambdas,
+                           const int32_t* pls_components, int n_pls_components,
+                           int heads_mask, int moment_policy,
+                           double* coefficients_out, double* intercept_out,
+                           int32_t* selected_chain_out,
+                           double* selected_param_out, double* best_score_out) {
+    if (x == NULL || y == NULL || chain_offsets == NULL || op_kinds == NULL ||
+        param_offsets == NULL || coefficients_out == NULL || intercept_out == NULL)
+        return N4M_ERR_NULL_POINTER;
+    if (n < 2 || p < 1 || q < 1 || n_chain_offsets < 2 || n_op_kinds < 1 ||
+        n_param_offsets != n_op_kinds + 1 || (heads_mask != 1 && heads_mask != 2))
+        return N4M_ERR_INVALID_ARGUMENT;
+    if (n_params > 0 && params == NULL) return N4M_ERR_NULL_POINTER;
+    if (heads_mask == 1 && (ridge_lambdas == NULL || n_ridge_lambdas < 1))
+        return N4M_ERR_INVALID_ARGUMENT;
+    if (heads_mask == 2 && (pls_components == NULL || n_pls_components < 1))
+        return N4M_ERR_INVALID_ARGUMENT;
+
+    int k = cv; if (k < 2) k = 2; if (k > n) k = n;
+    n4m_matrix_view_t xv, yv;
+    n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q, N4M_DTYPE_F64);
+
+    n4m_context_t* ctx = NULL;
+    n4m_status_t s = n4m_context_create(&ctx);
+    if (s != N4M_OK) return s;
+    n4m_config_t* cfg = NULL;
+    s = n4m_config_create(&cfg);
+    if (s != N4M_OK) { n4m_context_destroy(ctx); return s; }
+    n4m_config_set_scale_x(cfg, 0);
+    if (moment_policy < 0 || moment_policy > 2) {
+        n4m_config_destroy(cfg); n4m_context_destroy(ctx);
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    n4m_config_set_aom_moment_policy(cfg, (n4m_aom_moment_policy_t)moment_policy);
+
+    int32_t* fold_ids = n4m_wasm_make_fold_ids(n, k);
+    if (fold_ids == NULL) {
+        n4m_config_destroy(cfg); n4m_context_destroy(ctx);
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+
+    n4m_method_result_t* res = NULL;
+    s = n4m_model_selection_aom_chain_sweep_run(
+        ctx, cfg, &xv, &yv, (int32_t)k, fold_ids, (int64_t)n,
+        chain_offsets, (int64_t)n_chain_offsets,
+        op_kinds, (int64_t)n_op_kinds,
+        param_offsets, (int64_t)n_param_offsets,
+        params, (int64_t)n_params,
+        ridge_lambdas, (int64_t)n_ridge_lambdas,
+        pls_components, (int64_t)n_pls_components,
+        (int32_t)heads_mask, &res);
+    free(fold_ids);
+    n4m_config_destroy(cfg);
+    if (s != N4M_OK || res == NULL) {
+        if (res != NULL) n4m_method_result_destroy(res);
+        n4m_context_destroy(ctx);
+        return s != N4M_OK ? s : N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    int ok_c = copy_result_matrix(res, "input_coefficients",
+                                  coefficients_out, (size_t)p * (size_t)q);
+    int ok_i = copy_result_matrix(res, "intercept", intercept_out, (size_t)q);
+    double scalar = 0.0;
+    if (selected_chain_out != NULL &&
+        n4m_method_result_get_scalar(res, "selected_chain_id", &scalar) == N4M_OK)
+        *selected_chain_out = (int32_t)scalar;
+    if (selected_param_out != NULL &&
+        n4m_method_result_get_scalar(res, "selected_param", &scalar) == N4M_OK)
+        *selected_param_out = scalar;
+    if (best_score_out != NULL &&
+        n4m_method_result_get_scalar(res, "selected_cv_rmse", &scalar) == N4M_OK)
+        *best_score_out = scalar;
+
+    n4m_method_result_destroy(res);
+    n4m_context_destroy(ctx);
+    return (ok_c && ok_i) ? N4M_OK : N4M_ERR_INVALID_ARGUMENT;
+}
+
 /* AOM operator PLS score stack with Ridge head
  * (n4m_ensemble_aom_operator_pls_stack_fit). CV-selects (n_components, alpha)
  * over the component grid [1..max_components] and `alphas`, refits the Ridge
