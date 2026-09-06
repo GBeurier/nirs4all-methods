@@ -24,7 +24,10 @@ on:
   # if-gated on a tag ref). Without this trigger that job was dead code and the
   # CRAN tarball was never auto-attached to the Release (see docs/dev/release_process.md).
   push:
-    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+      # Methods-only Python packaging hotfix; the R artifacts are unchanged.
+      - '!v1.0.19'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

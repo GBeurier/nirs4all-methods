@@ -14,7 +14,10 @@ name: release-matlab
 on:
   workflow_dispatch: {}
   push:
-    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+      # Methods-only Python packaging hotfix; MATLAB sources are unchanged.
+      - '!v1.0.19'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

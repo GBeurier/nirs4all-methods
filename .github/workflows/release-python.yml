@@ -57,6 +57,10 @@ on:
       # `!contains(github.ref_name, '-')` guard plus a regex check in
       # `publish-pypi` to keep pre-releases out of PyPI.
       - "v*.*.*"
+      # v1.0.19 is a nirs4all-methods-only packaging hotfix. The full wheel is
+      # released by release-wheels.yml; do not republish the unrelated pls4all
+      # distribution for this tag.
+      - "!v1.0.19"
   pull_request:
     paths:
       - "bindings/python/**"
