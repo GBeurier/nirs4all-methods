@@ -3,7 +3,7 @@
 ## Submission summary
 
 * This is a **new submission** to CRAN.
-* `n4m` 1.0.18 — a portable Partial Least Squares (PLS) and
+* `n4m` 1.0.19 — a portable Partial Least Squares (PLS) and
   Near-Infrared Spectroscopy (NIRS) engine. The C++17/C numerical
   core (222 translation units) is vendored under `src/vendor/` and compiled
   from source at install time. The package contains **no Fortran**: it is a
