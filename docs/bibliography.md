@@ -12,10 +12,10 @@ The CFF artifact is copied verbatim from the repository's `CITATION.cff`; it is 
 
 Baseline and donor material is pinned by content digest:
 
-- [docs/_extras/methods_bibliography.py](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/_extras/methods_bibliography.py) — `140554600e9d2f835e1d11a383d9d389c730d86c5205a5f742ea8465824e6d30`
-- [parity/REFERENCES.md](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/parity/REFERENCES.md) — `52baac5aeedd0b3e6f58992e9d59ed2456442bfc249b7f9d5cd8e2235db20beb`
-- [benchmarks/parity_timing/truth_sources.lock.json](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/benchmarks/parity_timing/truth_sources.lock.json) — `a4955a2a577ac2a9c046fd874b3623540a6e925900084ec8fd82a52832836f1b`
-- [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) — `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9` (reviewed structured source)
+- [docs/_extras/methods_bibliography.py](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/_extras/methods_bibliography.py) — `140554600e9d2f835e1d11a383d9d389c730d86c5205a5f742ea8465824e6d30`
+- [parity/REFERENCES.md](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/parity/REFERENCES.md) — `52baac5aeedd0b3e6f58992e9d59ed2456442bfc249b7f9d5cd8e2235db20beb`
+- [benchmarks/parity_timing/truth_sources.lock.json](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/benchmarks/parity_timing/truth_sources.lock.json) — `a4955a2a577ac2a9c046fd874b3623540a6e925900084ec8fd82a52832836f1b`
+- [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) — `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9` (reviewed structured source)
 
 ## Method-linked historical citations
 
@@ -755,88 +755,88 @@ _Structured fields unavailable in the historical source: authors, title, year, j
 
 Bergstra, James, Bardenet, R{\'e}mi, Bengio, Yoshua, K{\'e}gl, Bal{\'a}zs. Algorithms for Hyper-Parameter Optimization. 2011. Advances in Neural Information Processing Systems (NeurIPS).
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `bergstra2011tpe` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `c772c842c76672cbb34628c228bca2b3bec48d7564c25196b29428989039103d`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `bergstra2011tpe` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `c772c842c76672cbb34628c228bca2b3bec48d7564c25196b29428989039103d`.
 
 ### `bergstra2012random`
 
 Bergstra, James, Bengio, Yoshua. Random Search for Hyper-Parameter Optimization. 2012. Journal of Machine Learning Research.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `bergstra2012random` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `f962cd994563862d82f3697b3b952608a4f861d4fafdca7eea37d078678288dd`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `bergstra2012random` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `f962cd994563862d82f3697b3b952608a4f861d4fafdca7eea37d078678288dd`.
 
 ### `golovin2017vizier`
 
 Golovin, Daniel, Solnik, Benjamin, Moitra, Subhodeep, Kochanski, Greg, Karro, John, Sculley, D.. Google Vizier: A Service for Black-Box Optimization. 2017. KDD.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `golovin2017vizier` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `2fe09a03adf6b05603dcab9a1fa1e2135d042347b3722af53e3e8c5f87f603ad`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `golovin2017vizier` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `2fe09a03adf6b05603dcab9a1fa1e2135d042347b3722af53e3e8c5f87f603ad`.
 
 ### `hansen2001cmaes`
 
 Hansen, Nikolaus, Ostermeier, Andreas. Completely Derandomized Self-Adaptation in Evolution Strategies. 2001. Evolutionary Computation.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `hansen2001cmaes` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `6cb779d169d29428e09a3d540e4a70bb11d3186dfe017ce0a6ac1679b0ce4be9`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `hansen2001cmaes` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `6cb779d169d29428e09a3d540e4a70bb11d3186dfe017ce0a6ac1679b0ce4be9`.
 
 ### `jamieson2016nonstochastic`
 
 Jamieson, Kevin, Talwalkar, Ameet. Non-stochastic Best Arm Identification and Hyperparameter                Optimization. 2016. AISTATS.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `jamieson2016nonstochastic` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `56d5a93882456876f5e6353fca9822edc334adbb1b826cb365f710ae5eda9024`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `jamieson2016nonstochastic` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `56d5a93882456876f5e6353fca9822edc334adbb1b826cb365f710ae5eda9024`.
 
 ### `joe2003remark`
 
 Joe, Stephen, Kuo, Frances Y.. Remark on Algorithm 659: Implementing Sobol's Quasirandom              Sequence Generator. 2003. ACM Transactions on Mathematical Software.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `joe2003remark` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `9b774bc748fb5d268c33b339f83348ddb3387027edf170ea6d19cd1ef4b63a25`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `joe2003remark` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `9b774bc748fb5d268c33b339f83348ddb3387027edf170ea6d19cd1ef4b63a25`.
 
 ### `joe2008sobol`
 
 Joe, Stephen, Kuo, Frances Y.. Constructing Sobol Sequences with Better Two-Dimensional              Projections. 2008. SIAM Journal on Scientific Computing.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `joe2008sobol` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `24506a2eba09d8a050e2df37aabccd0a58f447bbc74b871d7a1d5f2c22a35e64`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `joe2008sobol` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `24506a2eba09d8a050e2df37aabccd0a58f447bbc74b871d7a1d5f2c22a35e64`.
 
 ### `jones1998ego`
 
 Jones, Donald R., Schonlau, Matthias, Welch, William J.. Efficient Global Optimization of Expensive Black-Box Functions. 1998. Journal of Global Optimization.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `jones1998ego` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `5954586eae5e8e5109d87ce6826ac4a681ba8d9c9757c65b79a1befd2f4cdb99`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `jones1998ego` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `5954586eae5e8e5109d87ce6826ac4a681ba8d9c9757c65b79a1befd2f4cdb99`.
 
 ### `kennedy1997binarypso`
 
 Kennedy, James, Eberhart, Russell C.. A discrete binary version of the particle swarm algorithm. 1997. IEEE International Conference on Systems, Man, and Cybernetics.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `kennedy1997binarypso` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `56478686bf429ccd91c4fadf72b372db5166c0892482c6d4fd6001f2714297fa`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `kennedy1997binarypso` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `56478686bf429ccd91c4fadf72b372db5166c0892482c6d4fd6001f2714297fa`.
 
 ### `leardi1998ga`
 
 Leardi, Riccardo, Lupi{\'a}{\~n}ez Gonz{\'a}lez, Amparo. Genetic algorithms applied to feature selection in PLS              regression: how and when to use them. 1998. Chemometrics and Intelligent Laboratory Systems.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `leardi1998ga` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `51ed19573e6ff29365e1ee27375adf9be6f6841b9b086e25c59d499f9ce64ebc`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `leardi1998ga` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `51ed19573e6ff29365e1ee27375adf9be6f6841b9b086e25c59d499f9ce64ebc`.
 
 ### `li2018hyperband`
 
 Li, Lisha, Jamieson, Kevin, DeSalvo, Giulia, Rostamizadeh, Afshin, Talwalkar, Ameet. Hyperband: A Novel Bandit-Based Approach to Hyperparameter              Optimization. 2018. Journal of Machine Learning Research.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `li2018hyperband` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `fa00cb1b13cefed18ee6f79049938a1b677cf230a0d6cf12285bad06c47d0f35`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `li2018hyperband` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `fa00cb1b13cefed18ee6f79049938a1b677cf230a0d6cf12285bad06c47d0f35`.
 
 ### `li2020asha`
 
 Li, Liam, Jamieson, Kevin, Rostamizadeh, Afshin, Gonina, Ekaterina, Ben-tzur, Jonathan, Hardt, Moritz, Recht, Benjamin, Talwalkar, Ameet. A System for Massively Parallel Hyperparameter Tuning. 2020. Proceedings of Machine Learning and Systems (MLSys).
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `li2020asha` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `036d6744b43599268bd1a72a7f0d8041495f820aeb3b53ce83fedeb4374b4e1e`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `li2020asha` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `036d6744b43599268bd1a72a7f0d8041495f820aeb3b53ce83fedeb4374b4e1e`.
 
 ### `mckay1979lhs`
 
 McKay, Michael D., Beckman, Richard J., Conover, William J.. A Comparison of Three Methods for Selecting Values of Input              Variables in the Analysis of Output from a Computer Code. 1979. Technometrics.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `mckay1979lhs` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `4e2df3a822a09ddf581906daeaaf7005e5009a91969c5e746d219b8246211272`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `mckay1979lhs` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `4e2df3a822a09ddf581906daeaaf7005e5009a91969c5e746d219b8246211272`.
 
 ### `rasmussen2006gp`
 
 Rasmussen, Carl Edward, Williams, Christopher K. I.. Gaussian Processes for Machine Learning. 2006.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `rasmussen2006gp` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `71429e373088634bb5d2da55478f64fb84150adece21f9119996bcc7d9f9f248`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `rasmussen2006gp` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `71429e373088634bb5d2da55478f64fb84150adece21f9119996bcc7d9f9f248`.
 
 ### `sobol1967distribution`
 
 Sobol', Ilya M.. On the distribution of points in a cube and the approximate              evaluation of integrals. 1967. USSR Computational Mathematics and Mathematical Physics.
 
-Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/a9faae2909c71a833bb7f3b208dc20548cf01588/docs/methods/_finetuning_bibliography.bib) entry `sobol1967distribution` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `d811beec8820eecb5ce3d88ad2b7f166e31831ff6e0229a5c68c983f3a17a332`.
+Reviewed structured provenance: [docs/methods/_finetuning_bibliography.bib](https://github.com/GBeurier/nirs4all-methods/blob/4a4ecae9a019c39c798ca5066a5def312e97948a/docs/methods/_finetuning_bibliography.bib) entry `sobol1967distribution` — source digest `50c1ca245548898f3e740b8038a5336a5e5e431a5c2fc2e4093ea7bacb8a68d9`, entry digest `d811beec8820eecb5ce3d88ad2b7f166e31831ff6e0229a5c68c983f3a17a332`.
