@@ -25,7 +25,10 @@ on:
   push:
     # GitHub tag filters are globs, not regex; '-rc' tags still match here and
     # are filtered out of the publish step below.
-    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+      # Methods-only Python packaging hotfix; the npm artifact is unchanged.
+      - '!v1.0.19'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
