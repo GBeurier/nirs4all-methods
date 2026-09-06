@@ -9,8 +9,10 @@ because the :file:`setup.py` shim forces ``has_ext_modules() == True``
 not the CPython-ABI prefix.
 
 This script post-processes a directory of wheels (typically
-``wheelhouse/``) and rewrites each ``pls4all-${VER}-cp3X-cp3X-${plat}.whl``
-to ``pls4all-${VER}-py3-none-${plat}.whl`` in three lockstep changes:
+``wheelhouse/``) and rewrites each ctypes-only Python package wheel such as
+``pls4all-${VER}-cp3X-cp3X-${plat}.whl`` or
+``nirs4all_methods-${VER}-cp3X-cp3X-${plat}.whl`` to the corresponding
+``${DIST}-${VER}-py3-none-${plat}.whl`` in three lockstep changes:
 
 1. the wheel filename;
 2. the ``Tag:`` lines inside ``${distinfo}/WHEEL``;

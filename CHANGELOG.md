@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.19] - 2026-09-06
+
+### Fixed
+
+- Publish the ctypes-only `nirs4all-methods` binding as portable
+  `py3-none-<platform>` wheels and validate the same native payload on CPython
+  3.10 through 3.14, including the `nirs4all==1.0.1` installation path.
+
 ## [1.0.18] - 2026-09-05
 
 ### Fixed
