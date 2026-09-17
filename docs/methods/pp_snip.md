@@ -1,68 +1,60 @@
-# `pp_snip` — S N I P
+# `pp_snip` — Statistics-sensitive nonlinear iterative peak clipping (SNIP)
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.SNIP` · _C ABI_: `n4m_transform_snip_*`
+_Group_: **Baseline correction** · _C ABI_: `n4m_transform_snip_*`
 
 ## Description
 
 Statistics-sensitive nonlinear iterative peak-clipping baseline.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `max_half_window` | `int` | `20` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_snip_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L97) · [`n4m_transform_snip_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L99) · [`n4m_transform_snip_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L100). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.baseline import SNIP
+```
+
+Source signature: [`SNIP(max_half_window: int = 20)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/baseline.py#L158).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Ryan et al. (1988), *SNIP, a statistics-sensitive background treatment for the quantitative analysis of PIXE spectra in geoscience applications*, Nuclear Instruments and Methods B 34, 396–402, https://doi.org/10.1016/0168-583X(88)90063-8.
 
 ### Mathematical principle
 
-Statistics-sensitive nonlinear iterative peak-clipping baseline.
+After a stabilizing transform, iterative half-windows compare each center with a symmetric neighborhood estimate and clip peaks downward; reversing the transform yields a slowly varying baseline that is subtracted.
+
+### Appropriate uses
+
+Background removal for spectra dominated by positive peaks with a characteristic maximum peak width.
+
+### Limits and validation
+
+`max_half_window` sets which structures are treated as peaks; broad bands can be removed and boundaries receive fewer symmetric comparisons. Published SNIP variants differ in transform and window order.
 
 ### Implementation
 
-C ABI `n4m_transform_snip_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SNIP`. The same numerical kernel backs every language binding.
+`n4m.transform.baseline.SNIP` uses `n4m_transform_snip_*`; the exact transform and clipping schedule are in `preprocessing/baselines/snip.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_snip_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import SNIP
-op = SNIP()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1016/0168-583X(88)90063-8; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/snip.c
 
 
 ---

@@ -1,12 +1,12 @@
-# `aug_detector_rolloff` — Detector Roll Off Augmenter
+# `aug_detector_rolloff` — Detector sensitivity roll-off artifact
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.DetectorRollOffAugmenter` · _C ABI_: `n4m_augmentation_detector_rolloff_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_detector_rolloff_*`
 
 ## Description
 
 Detector edge roll-off artifact.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -18,57 +18,49 @@ Detector edge roll-off artifact.
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_detector_rolloff_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/instrument.h#L56) · [`n4m_augmentation_detector_rolloff_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/instrument.h#L49) · [`n4m_augmentation_detector_rolloff_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/instrument.h#L61). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.instrument import DetectorRollOffAugmenter
+```
+
+Source signature: [`DetectorRollOffAugmenter(detector_model: int = 4, effect_strength: float = 1.0, noise_amplification: float = 0.02, include_baseline_distortion: bool = True, wavelengths = None, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L988).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No single paper defines the five detector presets in this implementation. They are literature-inspired internal curves; the enum and native source are the auditable specification.
 
 ### Mathematical principle
 
-Detector edge roll-off artifact.
+The selected InGaAs, extended InGaAs, PbS, silicon CCD, or generic NIR preset defines an optimal range, roll-off rate, and minimum sensitivity. Falling sensitivity toward the edges amplifies random noise and, when enabled, adds a small baseline distortion; `effect_strength` and `noise_amplification` scale these terms.
+
+### Appropriate uses
+
+Robustness testing near detector range limits or across detector technologies.
+
+### Limits and validation
+
+Presets are not manufacturer response calibrations and require a meaningful wavelength axis. They should not be used to identify a detector or predict its signal-to-noise ratio.
 
 ### Implementation
 
-C ABI `n4m_augmentation_detector_rolloff_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.DetectorRollOffAugmenter`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.instrument.DetectorRollOffAugmenter`; ABI 2 family `n4m_augmentation_detector_rolloff_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_detector_rolloff_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import DetectorRollOffAugmenter
-op = DetectorRollOffAugmenter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>nirs4all</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/edge_artifacts/detector_rolloff.h
 
 
 ---

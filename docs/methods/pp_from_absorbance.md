@@ -1,68 +1,60 @@
-# `pp_from_absorbance` — From Absorbance
+# `pp_from_absorbance` — Absorbance-to-reflectance/transmittance conversion
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.FromAbsorbance` · _C ABI_: `n4m_transform_from_absorbance_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_from_absorbance_*`
 
 ## Description
 
 R = 10**(-A), optionally returned as percent.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `is_percent` | `bool` | `False` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_from_absorbance_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/signal_conversion.h#L24) · [`n4m_transform_from_absorbance_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/signal_conversion.h#L26) · [`n4m_transform_from_absorbance_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/signal_conversion.h#L28). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.signal_conversion import FromAbsorbance
+```
+
+Source signature: [`FromAbsorbance(is_percent: bool = False)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L465).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Beer (1852), *Bestimmung der Absorption des rothen Lichts in farbigen Flüssigkeiten*, Annalen der Physik 162, 78–88, https://doi.org/10.1002/andp.18521620505.
 
 ### Mathematical principle
 
-R = 10**(-A), optionally returned as percent.
+The inverse base-10 absorbance relation is applied element-wise: $R=10^{-A}$ (or $T=10^{-A}$). With `is_percent`, the result is additionally multiplied by 100.
+
+### Appropriate uses
+
+Returning log-transformed spectra to fractional or percent reflectance/transmittance units.
+
+### Limits and validation
+
+The formula cannot distinguish reflectance from transmittance and assumes base-10 absorbance. Large negative or positive values can overflow or underflow.
 
 ### Implementation
 
-C ABI `n4m_transform_from_absorbance_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FromAbsorbance`. The same numerical kernel backs every language binding.
+`n4m.transform.signal_conversion.FromAbsorbance` wraps `n4m_transform_from_absorbance_*`; the power transform is in `signal_conversion/from_absorbance.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_from_absorbance_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import FromAbsorbance
-op = FromAbsorbance()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1002/andp.18521620505; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/from_absorbance.c
 
 
 ---

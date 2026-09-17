@@ -1,0 +1,3201 @@
+{
+  "purpose": "offline syntax report for current method-science references",
+  "records": [
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_search.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_chain_ridge_pls.cpp"
+        }
+      ],
+      "page": "aom_chain_ridge_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_search.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_chain_sweep.cpp"
+        }
+      ],
+      "page": "aom_chain_sweep_run"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/ensemble.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_operator_pls_stack.cpp"
+        }
+      ],
+      "page": "aom_operator_pls_stack"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_preprocessing.cpp"
+        }
+      ],
+      "page": "aom_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/compose/aom_superblock.py"
+        }
+      ],
+      "page": "aom_pls_superblock"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_method_result.cpp"
+        }
+      ],
+      "page": "aom_pop_aom_chain_fixed_fit"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_campaign.py"
+        }
+      ],
+      "page": "aom_pop_aom_chain_screen_refit"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_preprocessing.cpp"
+        }
+      ],
+      "page": "aom_preprocess"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/compose/aom_superblock.py"
+        }
+      ],
+      "page": "aom_ridge_active_superblock"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/ensemble.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_ridge_blender.cpp"
+        }
+      ],
+      "page": "aom_ridge_blender"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_search.py"
+        }
+      ],
+      "page": "aom_ridge_global"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/compose/aom_superblock.py"
+        }
+      ],
+      "page": "aom_ridge_mkl_superblock"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/compose/aom_superblock.py"
+        }
+      ],
+      "page": "aom_ridge_pls_superblock"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/compose/aom_superblock.py"
+        }
+      ],
+      "page": "aom_ridge_superblock"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_method_result.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_robust_hpo.cpp"
+        }
+      ],
+      "page": "aom_robust_hpo"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_campaign.py"
+        }
+      ],
+      "page": "aom_staged_chain_campaign"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_search.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_sweep.cpp"
+        }
+      ],
+      "page": "aom_sweep_run"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/00401706.1974.10489157"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00401706.1974.10489157"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "approximate_press"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/band_mask.h"
+        }
+      ],
+      "page": "aug_band_mask"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/band_perturb.h"
+        }
+      ],
+      "page": "aug_band_perturb"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/scattering/batch_effect.h"
+        }
+      ],
+      "page": "aug_batch_effect"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/channel_dropout.h"
+        }
+      ],
+      "page": "aug_channel_dropout"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/scattering/dead_band.h"
+        }
+      ],
+      "page": "aug_dead_band"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/edge_artifacts/detector_rolloff.h"
+        }
+      ],
+      "page": "aug_detector_rolloff"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_augmenters_edge_splines_random.cpp#L426"
+        }
+      ],
+      "page": "aug_edge_artifacts"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/edge_artifacts/edge_curvature.h"
+        }
+      ],
+      "page": "aug_edge_curve"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/0731-7085(91)80188-F"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/0731-7085(91)80188-F"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/scattering/emsc_distort.h"
+        }
+      ],
+      "page": "aug_emsc_distort"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/gauss_jitter.h"
+        }
+      ],
+      "page": "aug_gauss_jitter"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/1710.01927"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/noise/gaussian_noise.h"
+        }
+      ],
+      "page": "aug_gaussian_noise"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/noise/hetero_noise.h"
+        }
+      ],
+      "page": "aug_hetero_noise"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/scattering/instrument_broaden.h"
+        }
+      ],
+      "page": "aug_instrument_broaden"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/1710.01927"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/drift/linear_drift.h"
+        }
+      ],
+      "page": "aug_linear_drift"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/local_clip.h"
+        }
+      ],
+      "page": "aug_local_clip"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/1710.09412"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/mixup/local_mixup.h"
+        }
+      ],
+      "page": "aug_local_mixup"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/wavelength/local_warp.h"
+        }
+      ],
+      "page": "aug_local_warp"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/magnitude_warp.h"
+        }
+      ],
+      "page": "aug_magnitude_warp"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/1710.09412"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/mixup/mixup.h"
+        }
+      ],
+      "page": "aug_mixup"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/environmental/moisture.h"
+        }
+      ],
+      "page": "aug_moisture"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/1710.01927"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/noise/multiplicative_noise.h"
+        }
+      ],
+      "page": "aug_multiplicative_noise"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/scattering/particle_size.h"
+        }
+      ],
+      "page": "aug_particle_size"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/0731-7085(91)80188-F"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/0731-7085(91)80188-F"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/drift/path_length.h"
+        }
+      ],
+      "page": "aug_path_length"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/drift/poly_drift.h"
+        }
+      ],
+      "page": "aug_poly_drift"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/random/random_x_op.h"
+        }
+      ],
+      "page": "aug_random_x_op"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/random/rotate_translate.h"
+        }
+      ],
+      "page": "aug_rotate_translate"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702854248656"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702854248656"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/scattering/scatter_sim_msc.h"
+        }
+      ],
+      "page": "aug_scatter_sim"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/noise/spike_noise.h"
+        }
+      ],
+      "page": "aug_spike_noise"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/splines/spline_curve_simplification.h"
+        }
+      ],
+      "page": "aug_spline_curve_simplify"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1007/BF02162161"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1007/BF02162161"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/splines/spline_smoothing.h"
+        }
+      ],
+      "page": "aug_spline_smooth"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/splines/spline_x_perturbations.h"
+        }
+      ],
+      "page": "aug_spline_x_perturb"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/splines/spline_simplify_common.h"
+        }
+      ],
+      "page": "aug_spline_x_simplify"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/splines/spline_y_perturbations.h"
+        }
+      ],
+      "page": "aug_spline_y_perturb"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/edge_artifacts/stray_light.h"
+        }
+      ],
+      "page": "aug_stray_light"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/environmental/temperature.h"
+        }
+      ],
+      "page": "aug_temperature"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/edge_artifacts/truncated_peak.h"
+        }
+      ],
+      "page": "aug_truncated_peak"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/unsharp_mask.h"
+        }
+      ],
+      "page": "aug_unsharp_mask"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/wavelength/wavelength_shift.h"
+        }
+      ],
+      "page": "aug_wavelength_shift"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/wavelength/wavelength_stretch.h"
+        }
+      ],
+      "page": "aug_wavelength_stretch"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1023/A:1018054314350"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1023/A:1018054314350"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "bagging_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/cem.893"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/cem.893"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/bipls_selection.cpp"
+        }
+      ],
+      "page": "bipls_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1214/aos/1013203451"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1214/aos/1013203451"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "boosting_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1186/1748-7188-6-27"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1186/1748-7188-6-27"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/bve_selection.cpp"
+        }
+      ],
+      "page": "bve_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.aca.2009.06.046"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.aca.2009.06.046"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/cars_selection.cpp"
+        }
+      ],
+      "page": "cars_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1111/j.2517-6161.1990.tb01786.x"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1111/j.2517-6161.1990.tb01786.x"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "continuum_regression"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/cem.1243"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/cem.1243"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "cppls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1021/acs.analchem.8b00498"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1021/acs.analchem.8b00498"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "di_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/S0169-7439(01)00155-1"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1080/00401706.1979.10489779"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1214/aoms/1177732979"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/S0169-7439(01)00155-1"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00401706.1979.10489779"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1214/aoms/1177732979"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pls_diagnostics.cpp"
+        }
+      ],
+      "page": "diagnostics_pls_diagnostics"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.trac.2010.07.005"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.trac.2010.07.005"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/nirs_metrics.c"
+        }
+      ],
+      "page": "diagnostics_regression_metrics"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1021/ac00023a016"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1021/ac00023a016"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "ds"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2010.08.003"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2010.08.003"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/ecr.cpp"
+        }
+      ],
+      "page": "ecr"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.aca.2008.02.032"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.aca.2008.02.032"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/emcuve_selection.cpp"
+        }
+      ],
+      "page": "emcuve_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/filters/composite.h"
+        }
+      ],
+      "page": "filter_composite"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L1138"
+        }
+      ],
+      "page": "filter_correlation"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/01621459.1990.10474920"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/01621459.1990.10474920"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/filters/high_leverage.h"
+        }
+      ],
+      "page": "filter_leverage"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/filters/spectral_quality.h"
+        }
+      ],
+      "page": "filter_quality"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L1138"
+        }
+      ],
+      "page": "filter_variance"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/00401706.1999.10485670"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1109/ICDM.2008.17"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1145/342009.335388"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00401706.1999.10485670"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/ICDM.2008.17"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1145/342009.335388"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/filters/x_outlier.h"
+        }
+      ],
+      "page": "filter_x_outlier"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/filters/y_outlier.h"
+        }
+      ],
+      "page": "filter_y_outlier"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "fused_sparse_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/1099-128X(200009/12)14:5/6%3C643::AID-CEM621%3E3.0.CO;2-E"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/1099-128X(200009/12)14:5/6%3C643::AID-CEM621%3E3.0.CO;2-E"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/ga_selection.cpp"
+        }
+      ],
+      "page": "ga_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/gpr_pls.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://link.springer.com/book/9780387310732"
+        }
+      ],
+      "page": "gpr_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1093/bioinformatics/btv535"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1093/bioinformatics/btv535"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "group_sparse_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L1225-L1303"
+        }
+      ],
+      "page": "interval_generator"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702001949500"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702001949500"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/interval_selection.cpp"
+        }
+      ],
+      "page": "interval_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/(SICI)1099-128X(199903/04)13:2"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1002/(SICI)1099-128X(199903/04)13:2<165::AID-CEM535>3.0.CO;2-Y"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/(SICI)1099-128X(199903/04)13:2"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/ipw_selection.cpp"
+        }
+      ],
+      "page": "ipw_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.saa.2013.03.083"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.saa.2013.03.083"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/irf_selection.cpp"
+        }
+      ],
+      "page": "irf_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.aca.2013.11.032"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.aca.2013.11.032"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/iriv_selection.cpp"
+        }
+      ],
+      "page": "iriv_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/kernel_pls.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://www.jmlr.org/papers/v2/rosipal01a.html"
+        }
+      ],
+      "page": "kernel_pls_rbf"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1021/ac980208r"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1021/ac980208r"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "lw_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/(SICI)1099-128X(199809/10)12:5%3C301::AID-CEM515%3E3.0.CO;2-S"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/(SICI)1099-128X(199809/10)12:5%3C301::AID-CEM515%3E3.0.CO;2-S"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "mb_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "mir_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/S0169-7439(01)00131-9"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1016/S0169-7439(01)00132-0"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/S0169-7439(01)00131-9"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/S0169-7439(01)00132-0"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/model.cpp"
+        }
+      ],
+      "page": "missing_aware_nipals"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/moment_facade.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/ensemble.py"
+        }
+      ],
+      "page": "models_ensembles_moment_stack"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/00401706.1970.10488634"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00401706.1970.10488634"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/estimators/regression/regularized.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/ridge.cpp"
+        }
+      ],
+      "page": "models_regularized_ridge"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/(SICI)1099-128X(199601)10:1%3C47::AID-CEM400%3E3.0.CO;2-C"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/(SICI)1099-128X(199601)10:1%3C47::AID-CEM400%3E3.0.CO;2-C"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "n_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/cem.775"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/cem.775"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "o2pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/cem.1388"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/cem.1388"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "on_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1007/978-0-387-84858-7"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1007/978-0-387-84858-7"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "one_se_rule"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/cem.695"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/cem.695"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "opls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/01621459.1965.10480787"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/01621459.1965.10480787"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/model.cpp"
+        }
+      ],
+      "page": "pcr"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1021/ac00023a016"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1021/ac00023a016"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "pds"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/0169-7439(93)85002-X"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/0169-7439(93)85002-X"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/model.cpp"
+        }
+      ],
+      "page": "pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "pls_cox"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pls_diagnostics.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://search.worldcat.org/title/891362497"
+        }
+      ],
+      "page": "pls_diagnostic_dmodx"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/00401706.1979.10489779"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00401706.1979.10489779"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pls_diagnostics.cpp"
+        }
+      ],
+      "page": "pls_diagnostic_q"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1214/aoms/1177732979"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1214/aoms/1177732979"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pls_diagnostics.cpp"
+        }
+      ],
+      "page": "pls_diagnostic_t2"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "pls_glm"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/cem.785"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/cem.785"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pls_lda.cpp"
+        }
+      ],
+      "page": "pls_lda"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.csda.2004.02.005"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.csda.2004.02.005"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pls_logistic.cpp"
+        }
+      ],
+      "page": "pls_logistic"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/00224065.1996.11979699"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00224065.1996.11979699"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pls_monitoring.cpp"
+        }
+      ],
+      "page": "pls_monitoring"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1007/s00439-003-0921-9"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1007/s00439-003-0921-9"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "pls_qda"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "pop_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1039/B922045C"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1039/B922045C"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/airpls.c"
+        }
+      ],
+      "page": "pp_airpls"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scatter/area_normalization.c"
+        }
+      ],
+      "page": "pp_area"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1039/C4AN01061B"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1039/C4AN01061B"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/arpls.c"
+        }
+      ],
+      "page": "pp_arpls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1039/C4AN01061B"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1039/C4AN01061B"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/asls.c"
+        }
+      ],
+      "page": "pp_asls"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scaling/baseline.c"
+        }
+      ],
+      "page": "pp_baseline"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2014.09.014"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2014.09.014"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/beads.c"
+        }
+      ],
+      "page": "pp_beads"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/(SICI)1099-128X(199811/12)12:6%3C521::AID-CEM515%3E3.0.CO;2-Z"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/(SICI)1099-128X(199811/12)12:6%3C521::AID-CEM515%3E3.0.CO;2-Z"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_cow_align"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/crop.c"
+        }
+      ],
+      "page": "pp_crop"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/derivatives/derivate.c"
+        }
+      ],
+      "page": "pp_derivate"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/detrend.c"
+        }
+      ],
+      "page": "pp_detrend"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1021/ac00023a016"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1021/ac00023a016"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_direct_standardization"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1109/TASSP.1978.1163055"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/TASSP.1978.1163055"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_dtw_align"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/0731-7085(91)80188-F"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/0731-7085(91)80188-F"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scatter/emsc.c"
+        }
+      ],
+      "page": "pp_emsc"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/S0169-7439(03)00051-0"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/S0169-7439(03)00051-0"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/orthogonalization/epo.c"
+        }
+      ],
+      "page": "pp_epo"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/common/fck_kernel.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/specialized/fck_static.c"
+        }
+      ],
+      "page": "pp_fck_static"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/derivatives/first_derivative.c"
+        },
+        {
+          "kind": "url",
+          "value": "https://numpy.org/doc/stable/reference/generated/numpy.gradient.html"
+        }
+      ],
+      "page": "pp_first_derivative"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/14786440109462720"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/14786440109462720"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/feature_selection/flexible_pca.c"
+        }
+      ],
+      "page": "pp_flex_pca"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1007/BF02288367"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1007/BF02288367"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/feature_selection/flexible_svd.c"
+        }
+      ],
+      "page": "pp_flex_svd"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/fraction_to_percent.c"
+        }
+      ],
+      "page": "pp_frac_to_pct"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/andp.18521620505"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/andp.18521620505"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/from_absorbance.c"
+        }
+      ],
+      "page": "pp_from_absorbance"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/smoothing/gaussian.c"
+        }
+      ],
+      "page": "pp_gaussian"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1007/BF01456326"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1007/BF01456326"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/wavelets/haar.c"
+        }
+      ],
+      "page": "pp_haar"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1039/C4AY00068D"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1039/C4AY00068D"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/iasls.c"
+        }
+      ],
+      "page": "pp_iasls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.jmr.2009.11.012"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.jmr.2009.11.012"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_icoshift_align"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2005.08.009"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2005.08.009"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/imodpoly.c"
+        }
+      ],
+      "page": "pp_imodpoly"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/kbins_discretizer.c"
+        },
+        {
+          "kind": "url",
+          "value": "https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.KBinsDiscretizer.html"
+        }
+      ],
+      "page": "pp_kbins_disc"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/col.5080010404"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/col.5080010404"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/kubelka_munk.c"
+        }
+      ],
+      "page": "pp_kubelka_munk"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_local_centering"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702854248656"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702854248656"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_localized_msc"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scaling/log_transform.c"
+        }
+      ],
+      "page": "pp_log"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scatter/local_snv.c"
+        }
+      ],
+      "page": "pp_lsnv"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/000370203322554518"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/000370203322554518"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/modpoly.c"
+        }
+      ],
+      "page": "pp_modpoly"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702854248656"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702854248656"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scatter/msc.c"
+        }
+      ],
+      "page": "pp_msc"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scaling/normalize.c"
+        }
+      ],
+      "page": "pp_normalize"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/derivatives/norris_williams.c"
+        },
+        {
+          "kind": "url",
+          "value": "https://www.cerealsgrains.org/publications/cc/backissues/1984/Documents/61_158.pdf"
+        }
+      ],
+      "page": "pp_norris_williams"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/S0169-7439(98)00109-9"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/S0169-7439(98)00109-9"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/orthogonalization/osc.c"
+        }
+      ],
+      "page": "pp_osc"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/percent_to_fraction.c"
+        }
+      ],
+      "page": "pp_pct_to_frac"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/0169-7439(95)00074-7"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/0169-7439(95)00074-7"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_piecewise_direct_standardization"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702854248656"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702854248656"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_piecewise_msc"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_piecewise_snv"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/range_discretizer.c"
+        },
+        {
+          "kind": "url",
+          "value": "https://numpy.org/doc/stable/reference/generated/numpy.digitize.html"
+        }
+      ],
+      "page": "pp_range_disc"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/resample_transformer.c"
+        }
+      ],
+      "page": "pp_resample"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.CubicSpline.html"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/resampler.c"
+        }
+      ],
+      "page": "pp_resampler"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/S0003-2670(98)00737-5"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/S0003-2670(98)00737-5"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scatter/robust_snv.c"
+        }
+      ],
+      "page": "pp_rnv"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1021/ac00023a016"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1021/ac00023a016"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp"
+        }
+      ],
+      "page": "pp_robust_direct_standardization"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/0168-583X(95)00908-6"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/0168-583X(95)00908-6"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/rolling_ball.c"
+        }
+      ],
+      "page": "pp_rolling_ball"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L356-L496"
+        }
+      ],
+      "page": "pp_saps"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1021/ac60214a047"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1021/ac60214a047"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/derivatives/savitzky_golay.c"
+        }
+      ],
+      "page": "pp_savgol"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/derivatives/second_derivative.c"
+        },
+        {
+          "kind": "url",
+          "value": "https://numpy.org/doc/stable/reference/generated/numpy.gradient.html"
+        }
+      ],
+      "page": "pp_second_derivative"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scaling/simple_scale.c"
+        }
+      ],
+      "page": "pp_simple_scale"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L499-L523"
+        }
+      ],
+      "page": "pp_slope_bias"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/0168-583X(88)90063-8"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/0168-583X(88)90063-8"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/snip.c"
+        }
+      ],
+      "page": "pp_snip"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scatter/snv.c"
+        }
+      ],
+      "page": "pp_snv"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/andp.18521620505"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/andp.18521620505"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/to_absorbance.c"
+        }
+      ],
+      "page": "pp_to_absorbance"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/cem.3164"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/cem.3164"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L560-L635"
+        }
+      ],
+      "page": "pp_vsn"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1109/34.192463"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/34.192463"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/common/wavelet_kernels.c"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/wavelets/wavelet.c"
+        }
+      ],
+      "page": "pp_wavelet"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1093/biomet/81.3.425"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1093/biomet/81.3.425"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/wavelets/wavelet_denoise.c"
+        }
+      ],
+      "page": "pp_wavelet_denoise"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1109/34.192463"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/34.192463"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/wavelets/wavelet_features.c"
+        }
+      ],
+      "page": "pp_wavelet_features"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/14786440109462720"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1109/34.192463"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/14786440109462720"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/34.192463"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/wavelets/wavelet_pca.c"
+        }
+      ],
+      "page": "pp_wavelet_pca"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1007/BF02288367"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1109/34.192463"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1007/BF02288367"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/34.192463"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/wavelets/wavelet_svd.c"
+        }
+      ],
+      "page": "pp_wavelet_svd"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702894202201"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L526-L635"
+        }
+      ],
+      "page": "pp_weighted_snv"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L798-L900"
+        }
+      ],
+      "page": "pp_xcorr_align"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1109/ICNN.1995.488968"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/ICNN.1995.488968"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pso_selection.cpp"
+        }
+      ],
+      "page": "pso_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.aca.2012.06.031"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.aca.2012.06.031"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/random_frog_selection.cpp"
+        }
+      ],
+      "page": "random_frog_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1109/34.709601"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/34.709601"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "random_subspace_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1255/jnirs.271"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1255/jnirs.271"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/randomization_selection.cpp"
+        }
+      ],
+      "page": "randomization_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/0169-7439(92)80098-O"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/0169-7439(92)80098-O"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "recursive_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2012.07.010"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2012.07.010"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/rep_selection.cpp"
+        }
+      ],
+      "page": "rep_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/00401706.1970.10488634"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00401706.1970.10488634"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "ridge_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2005.04.007"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2005.04.007"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "robust_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/cem.2824"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/cem.2824"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "rosa"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2012.01.002"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2012.01.002"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/scars_selection.cpp"
+        }
+      ],
+      "page": "scars_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2012.07.010"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2012.07.010"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/shaving_selection.cpp"
+        }
+      ],
+      "page": "shaving_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1366/0003702001949500"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1366/0003702001949500"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/sipls_selection.cpp"
+        }
+      ],
+      "page": "sipls_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/cem.1357"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/cem.1357"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        }
+      ],
+      "page": "so_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/S0169-7439(01)00119-8"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/S0169-7439(01)00119-8"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/spa_selection.cpp"
+        }
+      ],
+      "page": "spa_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.2202/1544-6115.1390"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.2202/1544-6115.1390"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_method_result.cpp"
+        }
+      ],
+      "page": "sparse_pls_da"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1111/j.1467-9868.2009.00723.x"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1111/j.1467-9868.2009.00723.x"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/model.cpp"
+        }
+      ],
+      "page": "sparse_simpls"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/binned_strat_group_kfold.h"
+        }
+      ],
+      "page": "split_binned_strat_group_kfold"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/kbins_stratified.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedShuffleSplit.html"
+        }
+      ],
+      "page": "split_kbins_stratified"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/00401706.1969.10490666"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00401706.1969.10490666"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/kennard_stone.h"
+        }
+      ],
+      "page": "split_kennard_stone"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.5555/1283383.1283494"
+        },
+        {
+          "kind": "url",
+          "value": "https://dl.acm.org/doi/10.5555/1283383.1283494"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/kmeans.h"
+        }
+      ],
+      "page": "split_kmeans"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/00401706.2021.1921037"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00401706.2021.1921037"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/split_splitter.h"
+        }
+      ],
+      "page": "split_split_splitter"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.talanta.2005.03.025"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.talanta.2005.03.025"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/spxy.h"
+        }
+      ],
+      "page": "split_spxy"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.talanta.2005.03.025"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.talanta.2005.03.025"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/splitters.py#L146"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/spxy_fold.h"
+        }
+      ],
+      "page": "split_spxy_fold"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.talanta.2005.03.025"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.talanta.2005.03.025"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/splitters.py#L202"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/spxy_g_fold.h"
+        }
+      ],
+      "page": "split_spxy_g_fold"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/systematic_circular.h"
+        }
+      ],
+      "page": "split_systematic_circular"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2012.07.010"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2012.07.010"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/st_selection.cpp"
+        }
+      ],
+      "page": "st_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2007.10.001"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2007.10.001"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/stability_selection.cpp"
+        }
+      ],
+      "page": "stability_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2016.03.020"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2016.03.020"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/t2_selection.cpp"
+        }
+      ],
+      "page": "t2_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1214/aoms/1177732979"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1214/aoms/1177732979"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/hotelling_t2.c"
+        }
+      ],
+      "page": "utilities_hotelling_t2"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/lowlevel/moments.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/lowlevel.h"
+        }
+      ],
+      "page": "utilities_moments"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/00401706.1979.10489779"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/00401706.1979.10489779"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/q_residuals.c"
+        }
+      ],
+      "page": "utilities_q_residuals"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/signal_type_detector.c"
+        }
+      ],
+      "page": "utilities_signal_type_detector"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/sweep.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h"
+        }
+      ],
+      "page": "utilities_sweep"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1007/BF02291478"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1016/S0893-6080(01)00150-6"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1007/BF02291478"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/S0893-6080(01)00150-6"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/transfer_metrics.c"
+        },
+        {
+          "kind": "url",
+          "value": "https://proceedings.mlr.press/v97/kornblith19a.html"
+        }
+      ],
+      "page": "utilities_transfer_metrics"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1021/ac960321m"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1021/ac960321m"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/uve_selection.cpp"
+        }
+      ],
+      "page": "uve_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/variable_selection.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://search.worldcat.org/title/Multivariate-calibration/oclc/19847282"
+        }
+      ],
+      "page": "variable_select_coef"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.chemolab.2008.08.004"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.chemolab.2008.08.004"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/variable_selection.cpp"
+        }
+      ],
+      "page": "variable_select_sr"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/S0169-7439(01)00155-1"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/S0169-7439(01)00155-1"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/variable_selection.cpp"
+        }
+      ],
+      "page": "variable_select_vip"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/vip_spa_selection.cpp"
+        }
+      ],
+      "page": "vip_spa_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.aca.2015.04.045"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.aca.2015.04.045"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/vissa_selection.cpp"
+        }
+      ],
+      "page": "vissa_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://search.worldcat.org/title/Multivariate-calibration/oclc/19847282"
+        }
+      ],
+      "page": "weighted_pls"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.aca.2011.06.037"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.aca.2011.06.037"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/wvc_selection.cpp"
+        }
+      ],
+      "page": "wvc_select"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.aca.2011.06.037"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.aca.2011.06.037"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/wvc_selection.cpp"
+        }
+      ],
+      "page": "wvc_threshold_select"
+    }
+  ],
+  "schema": 1,
+  "source_digests": {
+    "docs/_extras/methods_bibliography.py": "140554600e9d2f835e1d11a383d9d389c730d86c5205a5f742ea8465824e6d30",
+    "docs/_extras/scientific_aom.py": "50a9a222d32ad9ae90c3fbb2fa9532ce9959dc1d6dde0c8b2ddff906bcf5192d",
+    "docs/_extras/scientific_augmentation_filter_split.py": "a32c7074bf922c3dcaad3923f9e2bc985c96d5efb4bf14dea04abbff62a7e76d",
+    "docs/_extras/scientific_legacy.py": "86eff28f0919a803edd3072d4e565305cdc0eb703aa4b3b8e4e5171a2a52dd89",
+    "docs/_extras/scientific_remaining.py": "c43c2c812f82c57b3cb5f5178f21a0260fed7f97389adf0253110ff6bda150c4"
+  }
+}

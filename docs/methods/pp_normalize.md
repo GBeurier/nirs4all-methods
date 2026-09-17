@@ -1,69 +1,61 @@
-# `pp_normalize` — Normalize
+# `pp_normalize` — Column-wise normalization
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.Normalize` · _C ABI_: `n4m_transform_normalize_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_normalize_*`
 
 ## Description
 
 Column-wise normalisation.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `feature_min` | `float` | `-1.0` |
 | `feature_max` | `float` | `1.0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_normalize_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scaling.h#L15) · [`n4m_transform_normalize_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scaling.h#L18) · [`n4m_transform_normalize_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scaling.h#L19). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.scaling import Normalize
+```
+
+Source signature: [`Normalize(feature_min: float = -1.0, feature_max: float = 1.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L121).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No canonical paper: the default is column L2 normalization; a non-default feature range selects column-wise min–max scaling. The source defines this mode switch.
 
 ### Mathematical principle
 
-Column-wise normalisation.
+With the default range `(-1, 1)`, every column is divided by $\sqrt{\sum_i X_{ij}^2}$. If either range endpoint is changed, each column is instead mapped affinely from its observed minimum and maximum to the requested interval.
+
+### Appropriate uses
+
+Equalizing feature magnitudes before algorithms sensitive to Euclidean scale, or mapping every wavelength to a prescribed numeric range.
+
+### Limits and validation
+
+The name hides two different operations. Statistics are computed from the matrix passed to the operation rather than stored as a fitted training state, and zero-norm or constant columns can produce non-finite values.
 
 ### Implementation
 
-C ABI `n4m_transform_normalize_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Normalize`. The same numerical kernel backs every language binding.
+`n4m.transform.scaling.Normalize` wraps `n4m_transform_normalize_*`; the exact default-mode branch is in `preprocessing/scaling/normalize.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_normalize_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import Normalize
-op = Normalize()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scaling/normalize.c
 
 
 ---

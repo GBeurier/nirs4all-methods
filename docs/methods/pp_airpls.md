@@ -1,12 +1,12 @@
-# `pp_airpls` — Air P L S
+# `pp_airpls` — Adaptive iteratively reweighted penalized least squares (airPLS)
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.AirPLS` · _C ABI_: `n4m_transform_airpls_*`
+_Group_: **Baseline correction** · _C ABI_: `n4m_transform_airpls_*`
 
 ## Description
 
 Adaptive iteratively reweighted PLS (Zhang 2010).
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,57 +14,49 @@ Adaptive iteratively reweighted PLS (Zhang 2010).
 | `max_iter` | `int` | `50` |
 | `tol` | `float` | `0.001` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_airpls_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L41) · [`n4m_transform_airpls_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L44) · [`n4m_transform_airpls_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L45). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.baseline import AirPLS
+```
+
+Source signature: [`AirPLS(lam: float = 1000000.0, max_iter: int = 50, tol: float = 0.001)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/baseline.py#L58).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Zhang, Chen & Liang (2010), *Baseline correction using adaptive iteratively reweighted penalized least squares*, Analyst 135, 1138–1146, https://doi.org/10.1039/B922045C.
 
 ### Mathematical principle
 
-Adaptive iteratively reweighted PLS (Zhang 2010).
+For a spectrum $y$, airPLS repeatedly solves a Whittaker problem $\min_z \|W^{1/2}(y-z)\|_2^2+\lambda\|D^2z\|_2^2$. Points above the current baseline receive zero weight; negative residuals receive exponentially increasing weights until their mass is small or the iteration budget is spent.
+
+### Appropriate uses
+
+Removal of smooth fluorescence or background drift when peaks are expected to lie mainly above the baseline.
+
+### Limits and validation
+
+The result depends strongly on $\lambda$ and iteration stopping. Broad, dense, or negative bands can be mistaken for baseline; it is not a physical scatter model.
 
 ### Implementation
 
-C ABI `n4m_transform_airpls_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.AirPLS`. The same numerical kernel backs every language binding.
+`n4m.transform.baseline.AirPLS` wraps the ABI-2 `n4m_transform_airpls_*` lifecycle; the numerical loop is in `cpp/src/core/preprocessing/baselines/airpls.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_airpls_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import AirPLS
-op = AirPLS()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1039/B922045C; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/airpls.c
 
 
 ---

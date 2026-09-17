@@ -13,6 +13,9 @@ on:
       - "docs/bibliography.md"
       - "docs/_static/bibliography.bib"
       - "docs/_static/bibliography-links.json"
+      - "docs/_static/scientific-reference-links.json"
+      - "docs/_extras/scientific_*.py"
+      - "docs/_extras/generate_scientific_reference_index.py"
       - "docs/_static/nirs4all-methods.cff"
       - ".github/workflows/catalog-validate.yml"
   push:
@@ -28,6 +31,9 @@ on:
       - "docs/bibliography.md"
       - "docs/_static/bibliography.bib"
       - "docs/_static/bibliography-links.json"
+      - "docs/_static/scientific-reference-links.json"
+      - "docs/_extras/scientific_*.py"
+      - "docs/_extras/generate_scientific_reference_index.py"
       - "docs/_static/nirs4all-methods.cff"
       - ".github/workflows/catalog-validate.yml"
 
@@ -57,5 +63,7 @@ jobs:
         run: python catalog/scripts/validate_bibliography.py
       - name: Check generated bibliography artifacts
         run: python catalog/scripts/generate_bibliography.py --check
+      - name: Check current method-science reference index
+        run: python docs/_extras/generate_scientific_reference_index.py --check
       - name: Bibliography catalog tests
         run: python -m unittest catalog.tests.test_bibliography_catalog

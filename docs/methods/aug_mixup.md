@@ -1,12 +1,12 @@
-# `aug_mixup` — Mixup augmentation
+# `aug_mixup` — Within-batch convex mixup of spectra
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.MixupAugmenter` · _C ABI_: `n4m_augmentation_mixup_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_mixup_*`
 
 ## Description
 
 Batch-wise mixup augmentation.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,27 +14,50 @@ Batch-wise mixup augmentation.
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_mixup_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/mixup.h#L16) · [`n4m_augmentation_mixup_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/mixup.h#L13) · [`n4m_augmentation_mixup_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/mixup.h#L19). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.mixup import MixupAugmenter
+```
+
+Source signature: [`MixupAugmenter(alpha: float = 0.2, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L712).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-Zhang, H., Cisse, M., Dauphin, Y. N. & Lopez-Paz, D. (2018). *mixup: Beyond Empirical Risk Minimization*. ICLR 2018.
+Zhang, Cisse, Dauphin & Lopez-Paz (2018), *mixup: Beyond Empirical Risk Minimization*, ICLR, arXiv:1710.09412 (https://arxiv.org/abs/1710.09412).
 
 ### Mathematical principle
 
-Forms convex combinations of sample pairs, $\tilde{\mathbf{x}} = \lambda\mathbf{x}_i + (1-\lambda)\mathbf{x}_j$ and $\tilde{y} = \lambda y_i + (1-\lambda) y_j$ with $\lambda \sim \mathrm{Beta}(\alpha,\alpha)$, encouraging linear behaviour between training examples and regularising the calibration model.
+A random permutation $\pi$ pairs rows and independent weights are drawn as $\lambda_i\sim\operatorname{Beta}(\alpha,\alpha)$. The operator returns $X'_i=\lambda_iX_i+(1-\lambda_i)X_{\pi(i)}$. `alpha` below one favors near-endpoint mixtures; larger values concentrate around one half.
+
+### Appropriate uses
+
+Regularizing models by filling linear neighborhoods between observed spectra.
+
+### Limits and validation
+
+This transformer returns only mixed X. It does not mix target labels, although the original mixup method requires the same convex combination of y; callers must preserve label consistency themselves. Pairing is restricted to the batch.
 
 ### Implementation
 
-C ABI `n4m_augmentation_mixup_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.MixupAugmenter`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.mixup.MixupAugmenter`; ABI 2 family `n4m_augmentation_mixup_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_mixup_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import MixupAugmenter
-op = MixupAugmenter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/mixup/mixup.h; https://arxiv.org/abs/1710.09412
+
 
 ---
 

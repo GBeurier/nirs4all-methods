@@ -1,12 +1,12 @@
-# `pp_wavelet_features` — Wavelet Features
+# `pp_wavelet_features` — Multilevel wavelet summary features
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletFeatures` · _C ABI_: `n4m_transform_wavelet_features_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_transform_wavelet_features_*`
 
 ## Description
 
 Multi-level DWT summary features.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -15,57 +15,49 @@ Multi-level DWT summary features.
 | `max_level` | `int` | `3` |
 | `entropy` | `str` | `'energy'` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_wavelet_features_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L78) · [`n4m_transform_wavelet_features_create_ex`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L83) · [`n4m_transform_wavelet_features_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L89) · [`n4m_transform_wavelet_features_output_cols`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L91) · [`n4m_transform_wavelet_features_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L94). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.wavelet import WaveletFeatures
+```
+
+Source signature: [`WaveletFeatures(family: str = 'haar', mode: str = 'periodization', max_level: int = 3, entropy: str = 'energy')`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L165).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No single canonical paper defines this exact four-statistic descriptor. It uses the multiresolution analysis of Mallat (1989), https://doi.org/10.1109/34.192463, with implementation-specific summaries.
 
 ### Mathematical principle
 
-Multi-level DWT summary features.
+After multilevel DWT, every approximation/detail band contributes four values: mean, population standard deviation, energy $\sum c_i^2$, and either normalized-energy entropy or ten-bin histogram entropy. Output width is $4(L+1)$.
+
+### Appropriate uses
+
+Producing compact, fixed-size multiscale descriptors for classification or regression.
+
+### Limits and validation
+
+Band summaries discard coefficient position and sign structure beyond the mean. Entropy definitions are implementation-specific and depend on family, mode, and feasible decomposition depth.
 
 ### Implementation
 
-C ABI `n4m_transform_wavelet_features_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletFeatures`. The same numerical kernel backs every language binding.
+`n4m.transform.wavelet.WaveletFeatures` uses `n4m_transform_wavelet_features_*`; all four summaries and entropy modes are in `preprocessing/wavelets/wavelet_features.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_wavelet_features_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import WaveletFeatures
-op = WaveletFeatures()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1109/34.192463; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/wavelets/wavelet_features.c
 
 
 ---

@@ -1,12 +1,12 @@
-# `aug_multiplicative_noise` — Multiplicative Noise
+# `aug_multiplicative_noise` — Per-spectrum multiplicative gain noise
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.MultiplicativeNoise` · _C ABI_: `n4m_augmentation_multiplicative_noise_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_multiplicative_noise_*`
 
 ## Description
 
 Apply per-element multiplicative Gaussian noise.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,57 +14,49 @@ Apply per-element multiplicative Gaussian noise.
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_multiplicative_noise_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/noise.h#L31) · [`n4m_augmentation_multiplicative_noise_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/noise.h#L25) · [`n4m_augmentation_multiplicative_noise_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/noise.h#L29). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.noise import MultiplicativeNoise
+```
+
+Source signature: [`MultiplicativeNoise(sigma_gain: float = 0.01, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L395).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No publication uniquely defines this implementation. It belongs to the family of spectral offset/slope/gain augmentation discussed by Bjerrum et al. (2017), arXiv:1710.01927 (https://arxiv.org/abs/1710.01927).
 
 ### Mathematical principle
 
-Apply per-element multiplicative Gaussian noise.
+One draw is made per row: $g_i=1+\sigma_g Z_i$, $Z_i\sim\mathcal N(0,1)$, then $X'_{ij}=g_iX_{ij}$ for every wavelength. `sigma_gain` controls relative gain variation, so all channels in a spectrum move together.
+
+### Appropriate uses
+
+Simulating sample-wise optical gain, concentration scale, or path-length changes.
+
+### Limits and validation
+
+The public operator implements per-sample gain only: it does not draw an independent gain at every wavelength and does not constrain $g_i$ to be positive. Large `sigma_gain` can invert a spectrum.
 
 ### Implementation
 
-C ABI `n4m_augmentation_multiplicative_noise_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.MultiplicativeNoise`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.noise.MultiplicativeNoise`; ABI 2 family `n4m_augmentation_multiplicative_noise_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_multiplicative_noise_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import MultiplicativeNoise
-op = MultiplicativeNoise()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>nirs4all</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/noise/multiplicative_noise.h; https://arxiv.org/abs/1710.01927
 
 
 ---

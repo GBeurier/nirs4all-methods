@@ -1,68 +1,60 @@
-# `pp_emsc` — Extended Multiplicative Scatter Correction (EMSC)
+# `pp_emsc` — Extended multiplicative scatter correction (EMSC)
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.EMSC` · _C ABI_: `n4m_transform_emsc_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_emsc_*`
 
 ## Description
 
 Extended Multiplicative Scatter Correction (polynomial).
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `degree` | `int` | `2` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_emsc_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L118) · [`n4m_transform_emsc_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L120) · [`n4m_transform_emsc_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L121) · [`n4m_transform_emsc_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L126) · [`n4m_transform_emsc_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L123). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.scatter import EMSC
+```
+
+Source signature: [`EMSC(degree: int = 2)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L213).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-Martens, H. & Stark, E. (1991). *Extended multiplicative signal correction and spectral interference subtraction*. Journal of Pharmaceutical and Biomedical Analysis 9(8), 625–635.
+Martens & Stark (1991), *Extended multiplicative signal correction and spectral interference subtraction*, Journal of Pharmaceutical and Biomedical Analysis 9, 625–635, https://doi.org/10.1016/0731-7085(91)80188-F.
 
 ### Mathematical principle
 
-EMSC augments the MSC regression basis with polynomial wavelength terms (and optionally known interferent spectra), so the model $\mathbf{x}_i = a_i + b_i\bar{\mathbf{x}} + d_i\boldsymbol{\lambda} + e_i\boldsymbol{\lambda}^2 + \dots$ separates chemical signal from smooth physical baselines more flexibly than plain MSC.
+Each spectrum is regressed on the fitted mean reference plus polynomial channel terms through the requested degree. Subtracting polynomial contributions and dividing by the reference coefficient extends MSC to smooth additive backgrounds.
+
+### Appropriate uses
+
+Correcting multiplicative scatter together with smooth baseline curvature while preserving the reference-shaped chemical contribution.
+
+### Limits and validation
+
+The polynomial basis can absorb broad analyte variation, and this implementation does not accept arbitrary constituent/interferent spectra. Fit the reference on training data only.
 
 ### Implementation
 
-C ABI `n4m_transform_emsc_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.EMSC`. The same numerical kernel backs every language binding.
+`n4m.transform.scatter.EMSC` uses `n4m_transform_emsc_*`; the training reference and per-row least-squares correction are in `preprocessing/scatter/emsc.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_emsc_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import EMSC
-op = EMSC()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1016/0731-7085(91)80188-F; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scatter/emsc.c
 
 
 ---

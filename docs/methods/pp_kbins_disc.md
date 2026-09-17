@@ -1,69 +1,61 @@
-# `pp_kbins_disc` — Integer K Bins Discretizer
+# `pp_kbins_disc` — Per-feature integer k-bin discretization
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.IntegerKBinsDiscretizer` · _C ABI_: `n4m_transform_kbins_discretizer_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_kbins_discretizer_*`
 
 ## Description
 
 Per-column integer binning using uniform or quantile edges.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `n_bins` | `int` | `5` |
-| `strategy` | `str | int` | `0` |
+| `strategy` | `str \| int` | `0` |
+
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_kbins_discretizer_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L57) · [`n4m_transform_kbins_discretizer_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L60) · [`n4m_transform_kbins_discretizer_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L61) · [`n4m_transform_kbins_discretizer_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L63) · [`n4m_transform_kbins_discretizer_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L65). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.resampling import IntegerKBinsDiscretizer
+```
+
+Source signature: [`IntegerKBinsDiscretizer(n_bins: int = 5, strategy: str | int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/resampling.py#L182).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No single canonical paper: this is uniform or empirical-quantile scalar quantization. Scikit-learn documents the corresponding estimator at https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.KBinsDiscretizer.html.
 
 ### Mathematical principle
 
-Per-column integer binning using uniform or quantile edges.
+Fit computes `n_bins + 1` edges independently for every column, either equally spaced between its extrema or at empirical quantiles. Transform replaces each value by the integer bin index selected by those stored edges.
+
+### Appropriate uses
+
+Robust coarse encoding for threshold models or exploratory analyses where continuous amplitude resolution is unnecessary.
+
+### Limits and validation
+
+Quantization discards within-bin information; quantile edges can collapse with ties and all edges are training-data dependent. It is rarely appropriate before models that exploit smooth spectral geometry.
 
 ### Implementation
 
-C ABI `n4m_transform_kbins_discretizer_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IntegerKBinsDiscretizer`. The same numerical kernel backs every language binding.
+`n4m.transform.resampling.IntegerKBinsDiscretizer` calls `n4m_transform_kbins_discretizer_*`; fitting and integer encoding are in `resampling/kbins_discretizer.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_kbins_discretizer_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import IntegerKBinsDiscretizer
-op = IntegerKBinsDiscretizer()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.KBinsDiscretizer.html; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/kbins_discretizer.c
 
 
 ---

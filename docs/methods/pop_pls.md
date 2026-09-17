@@ -12,9 +12,17 @@ POP-PLS — per-component adaptive operator selection
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `max_components` | `int` | `3` | registry benchmark cell value |
+| `X` | `—` | `required` | current public binding signature |
+| `y` | `—` | `required` | current public binding signature |
+| `max_components` | `int` | `3` | current public binding signature |
+| `operators` | `—` | `None` | current public binding signature |
+| `cv` | `int` | `3` | current public binding signature |
+| `fold_ids` | `—` | `None` | current public binding signature |
+| `center_x` | `bool \| None` | `None` | current public binding signature |
+| `scale_x` | `bool \| None` | `None` | current public binding signature |
+| `center_y` | `bool \| None` | `None` | current public binding signature |
+| `scale_y` | `bool \| None` | `None` | current public binding signature |
 | `n_operators` | `int` | `9` | registry benchmark cell value |
-| `cv` | `int` | `3` | registry benchmark cell value |
 
 ## Explanations
 
@@ -44,137 +52,46 @@ $$\mathbf{Z} = \bigl[\mathbf{A}_{b_1}^{\top}\mathbf{r}_1\;\cdots\;\mathbf{A}_{b_
 
 $\mathbf{B}$ lives in the original wavelength space, so — exactly as for AOM-PLS — predictions are a single dot product $\hat{\mathbf{Y}}(\mathbf{X}^{\star}) = \mathbf{X}^{\star}\mathbf{B}$, **with no preprocessing replay at predict time**. The relaxation buys wavelength-region adaptivity (the model can pick a smoother for one component and a derivative for the next), at the cost of $B$ extra cheap left actions per component.
 
+### Appropriate uses
+
+Population-based search over PLS model configurations when exhaustive enumeration is impractical.
+
+### Limits and validation
+
+Stochastic search has no guarantee of the global optimum and must evaluate candidates on leakage-free validation data.
+
 ### Implementation
 
 `n4m_model_selection_pop_pls_select` via the Python/R/MATLAB dispatchers. Uses the same compact strict-linear bank as AOM-PLS; the per-component greedy is implemented in `select_per_component` (`aom_nirs/pls/selection.py`). Reference: git-pinned oracle `nirs4all.operators.models.sklearn.aom_pls.POPPLSRegressor` (sanctioned exception).
 
-R roxygen note (`methods_extra.R::pop_pls`):
+### Sources and provenance
 
-> POP-PLS with per-component operator selection.
+Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp).
 
-MATLAB header (`bindings/matlab/+pls4all/pop_pls.m`):
 
-```text
-pls4all.pop_pls  POP-PLS per-component operator selection.
-```
+### API and bindings
 
-### Usage
+**C ABI (ABI 2):** [`n4m_model_selection_pop_pls_result_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L194) · [`n4m_model_selection_pop_pls_result_get_best_score`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L203) · [`n4m_model_selection_pop_pls_result_get_component_scores`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L212) · [`n4m_model_selection_pop_pls_result_get_coefficients`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L221) · [`n4m_model_selection_pop_pls_result_get_input_coefficients`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L224) · [`n4m_model_selection_pop_pls_result_get_intercept`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L227) · [`n4m_model_selection_pop_pls_result_get_max_components`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L199) · [`n4m_model_selection_pop_pls_result_get_n_operators`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L197) · [`n4m_model_selection_pop_pls_result_get_operator_kinds`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L206) · [`n4m_model_selection_pop_pls_result_get_predictions`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L218) · [`n4m_model_selection_pop_pls_result_get_prefix_scores`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L215) · [`n4m_model_selection_pop_pls_result_get_selected_n_components`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L201) · [`n4m_model_selection_pop_pls_result_get_selected_operator_indices`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L209) · [`n4m_model_selection_pop_pls_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L184). Use the linked public header for the exact signature, configuration, and result handles.
 
-Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
-
-**pls4all bindings**
-
-::::{tab-set}
-:class: pls4all-bindings
-
-:::{tab-item} C ABI · libn4m
-:sync: c
-:class-label: lang-c
-
-```c
-/* C ABI — libn4m AOM/POP selector path */
-n4m_context_t* ctx = n4m_context_create();
-n4m_config_t*  cfg = n4m_config_create();
-n4m_operator_bank_t* bank = NULL;
-n4m_validation_plan_t* plan = NULL;
-n4m_aom_per_component_result_t* res = NULL;
-n4m_operator_bank_create(&bank);
-/* add compact nirs4all-style operators: identity, SG, detrend, FD */
-n4m_validation_plan_create(&plan);
-/* fill CV folds on plan */
-n4m_model_selection_pop_pls_select(ctx, cfg, bank, &x_view, &y_view, plan,
-              /* max_components */ 2, &res);
-/* read predictions and selection diagnostics via result getters */
-n4m_model_selection_pop_pls_result_destroy(res);
-n4m_validation_plan_destroy(plan);
-n4m_operator_bank_destroy(bank);
-n4m_config_destroy(cfg);
-n4m_context_destroy(ctx);
-```
-
-:::
-
-:::{tab-item} Python · pls4all (raw)
-:sync: python-raw
-:class-label: lang-python
+**Python (verified public re-export):**
 
 ```python
-import pls4all
-
-with pls4all.Context() as ctx, pls4all.Config() as cfg:
-    bank = pls4all.OperatorBank()
-    plan = pls4all.ValidationPlan()
-    # Add compact nirs4all-style operators and CV folds.
-    res = pls4all.aom_per_component_select(
-        ctx, cfg, bank, X.ravel(), y.ravel(), plan,
-        max_components=2,
-        x_rows=X.shape[0], x_cols=X.shape[1],
-        y_rows=y.shape[0], y_cols=1,
-    )
-    values, rows, cols = res.predictions
+from n4m.model_selection.aom_search import aom_per_component_select
+result = aom_per_component_select(X, y)
 ```
 
-:::
+Source signature: `aom_per_component_select(X, y, *, max_components: int = 3, operators = None, cv: int = 3, fold_ids = None, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6115)).
 
-:::{tab-item} Python · pls4all.sklearn
-:sync: python-sklearn
-:class-label: lang-python
-
-_No tier-2 sklearn-style class yet — exposed via the `pls4all.aom_global_select` / `pls4all.aom_per_component_select` low-level ABI._
-
-:::
-
-:::{tab-item} R · pls4all_method()
-:sync: r-dispatcher
-:class-label: lang-r
+**R (source-verified):** [`pop_pls(X, Y, max_components = 3L, n_operators = 9L, cv = 3L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 
 ```r
-library(pls4all)
-# Unified low-level dispatcher (May 2026 R cleanup):
-res <- pls4all_method("pop_pls", X, y,
-                      n_components = 2L, params = list(max_components = 3L, n_operators = 9L, cv = 3L))
-# res is a named list with MethodResult arrays/scalars.
-# selected_indices / top_k_intervals are 1-based.
+library(n4m)
+result <- pop_pls(X, Y)
 ```
 
-:::
+**MATLAB / Octave (source-verified):** [`pop_pls(X, Y, max_components, n_operators, cv)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/matlab/+n4m/pop_pls.m).
 
-:::{tab-item} R · pls4all (raw fn)
-:sync: r-raw
-:class-label: lang-r
-
-```r
-library(pls4all)
-res  <- pop_pls(X, Y, max_components = 3L, n_operators = 9L, cv = 3L)
-yhat <- pls4all_predict(res, X_test)
-```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (MEX)
-:sync: matlab-mex
-:class-label: lang-matlab
-
-```matlab
-res = pls4all.pop_pls(X, y, 2);
-% see header of bindings/matlab/+pls4all/pop_pls.m for full
-% parameter surface:
-%   res = pop_pls(X, Y, max_components, n_operators, cv)
-yhat = predict(res, Xtest);
-```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (classdef)
-:sync: matlab-classdef
-:class-label: lang-matlab
-
-_No idiomatic classdef wrapper — invoke `pls4all.fit("pop_pls", X, y, …)` directly from the unified MEX factory._
-
-:::
-
-::::
-
+The source signature has additional required inputs, so no example call is fabricated.
 
 **Registry parity references** 📐
 
@@ -182,17 +99,20 @@ _No idiomatic classdef wrapper — invoke `pls4all.fit("pop_pls", X, y, …)` di
 :class-card: external-refs
 
 - 📐 **`nirs4all`** (python · python) — `nirs4all` in-tree · strict (rmse_rel ≤ 1e-08) — In-tree nirs4all AOM/POP estimator stack (sanctioned reference). The pls4all ABI uses the same compact strict-linear bank and contiguous folds for cross-binding determinism; nirs4all remains the qualitative algorithmic reference.
+
 :::
 
 ### Benchmarks
 
+**Archived measurement identity.** Backend labels in this table are the raw IDs recorded when the benchmark ran (including historical `pls4all.*` IDs). They preserve measurement provenance and do not describe a current public Python, R, or MATLAB binding; use the source-verified **API and bindings** section above for current entry points.
+
 Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
 
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
+**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = archived binding-harness result agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
 
 **Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-08`).
 
-Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; pls4all language bindings show binding parity against the C++ backend. Hover the icon for role and tolerance band.
+Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; archived language-harness rows show binding parity against the C++ backend. Hover the icon for role and tolerance band.
 
 ::::{tab-set}
 :class: parity-tabs
@@ -206,11 +126,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 5e-15</td><td class="ms ms-best">6.24 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">7.23 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">6.51 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">12.0 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">12.5 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">24.7 ms</td></tr>
@@ -233,11 +153,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 5e-15</td><td class="ms">7.34 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">7.46 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">6.77 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">13.2 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">12.9 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">10.0 ms</td></tr>
@@ -260,11 +180,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 5e-15</td><td class="ms">15.3 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">11.1 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">7.06 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">34.2 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">22.8 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">13.5 ms</td></tr>

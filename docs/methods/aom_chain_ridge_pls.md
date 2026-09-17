@@ -1,62 +1,70 @@
-# `aom_chain_ridge_pls` - strict-chain AOM Ridge-PLS
+# `aom_chain_ridge_pls` — n4m.model_selection.aom_search.aom_chain_ridge_pls
 
-`n4m.aom_chain_ridge_pls` ports the strict/raw-base subset of donor FastAOM
-SingleChainPLSRidge into `nirs4all-methods`. It applies each candidate
-strict-linear AOM chain sequentially, selects the chain, PLS component count
-and Ridge-PLS penalty by train CV, then folds the selected final coefficients
-back to raw input-space `input_coefficients` plus `intercept`.
+_Namespace_: **`n4m.model_selection.aom_search`** · _Fully-qualified_: `n4m.model_selection.aom_search.aom_chain_ridge_pls` · _Catalog id_: `aom_pop.aom_chain_ridge_pls`
 
-This is a reusable linear method. It intentionally excludes SNV, MSC, EMSC,
-OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels, trees,
-TabPFN residuals and dataset/source routing.
+## API surface
 
-## API
+**C ABI:** no standalone exported symbol is declared for this method.
 
-```python
-import n4m
+**Python (verified public re-export):** `from n4m.model_selection.aom_search import aom_chain_ridge_pls`
 
-chains = [
-    [("identity", ())],
-    [("savgol_smooth", (5, 2)), ("finite_difference", (1,))],
-]
+**Signature:** [`aom_chain_ridge_pls(X, y, chains = None, *, profile: str = 'compact', families: dict | None = None, templates: Sequence[Sequence[str]] | None = None, max_chains: int | None = None, n_components: int = 2, pls_components: Sequence[int] | None = None, ridge_lambda: float | None = None, ridge_lambdas: Sequence[float] = (0.0, 0.1, 1.0, 10.0), cv: int = 5, fold_ids = None, center_x: bool = True, center_y: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8177)
 
-res = n4m.aom_chain_ridge_pls(
-    X,
-    y,
-    chains=chains,
-    pls_components=[1, 2, 4],
-    ridge_lambdas=[0.0, 0.1, 1.0],
-    cv=5,
-)
+**R:** no current source-verified entry point was found for this catalog method.
 
-y_hat = X @ res["input_coefficients"] + res["intercept"]
-```
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
-If `chains` is omitted, the function builds a strict-chain grid with
-`build_aom_strict_chain_grid(profile=...)`.
+### Parameters
 
-The sklearn wrapper is `n4m.sklearn.NativeAOMChainRidgePLSRegressor`. Its
-`predict()` method uses only the folded input coefficients and intercept.
+| Name | Type | Default |
+|---|---|---|
+| `X` | `—` | `required` |
+| `y` | `—` | `required` |
+| `chains` | `—` | `None` |
+| `profile` | `str` | `'compact'` |
+| `families` | `dict \| None` | `None` |
+| `templates` | `Sequence[Sequence[str]] \| None` | `None` |
+| `max_chains` | `int \| None` | `None` |
+| `n_components` | `int` | `2` |
+| `pls_components` | `Sequence[int] \| None` | `None` |
+| `ridge_lambda` | `float \| None` | `None` |
+| `ridge_lambdas` | `Sequence[float]` | `(0.0, 0.1, 1.0, 10.0)` |
+| `cv` | `int` | `5` |
+| `fold_ids` | `—` | `None` |
+| `center_x` | `bool` | `True` |
+| `center_y` | `bool` | `True` |
 
-## Selection
+## Explanations
 
-For each candidate `(chain, n_components, ridge_lambda)`, every CV fold applies
-the same strict-linear chain to the fold train and validation matrices, fits
-native `ridge_pls` on the transformed fold train matrix, and scores validation
-RMSE. The final model refits the selected tuple on all calibration rows.
+### Bibliographic source
 
-The raw-space replay is exact for strict-linear chains because the selected
-chain is also applied to the identity matrix to recover its composed linear
-map.
+No canonical publication defines this strict-chain Ridge-PLS product surface. Beurier, G. et al. (2026). *AOM-PLS / POP-PLS* paper companion, arXiv:2605.13587, https://arxiv.org/abs/2605.13587. The product variants below are implementation-specific extensions; the paper does not by itself specify their ABI-2 orchestration.
 
-## Benchmark
+### Mathematical principle
 
-```bash
-PYTHONPATH=bindings/python/src \
-N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
-python benchmarks/cross_binding/bench_aom_chain_ridge_pls_timing.py
-```
+For every declared strict-linear chain, PLS component count, and Ridge penalty, fit within each CV fold and select the lowest validation RMSE. Composition of linear chain maps permits the final Ridge-PLS coefficients to be expressed in raw input space.
 
-CUDA-enabled builds can run the same benchmark by pointing `N4M_LIB_PATH` at
-`build/cuda-on/cpp/src/libn4m.so`. This is a compatibility smoke, not a fused
-many-chain GPU Ridge-PLS grinder.
+### Appropriate uses
+
+Selecting among a small, auditable set of linear preprocessing chains while retaining a single coefficient vector for deployment.
+
+### Limits and validation
+
+Only chains that are genuinely linear and sample-independent can be folded back exactly. Cross-validation chooses among many candidates and therefore needs an outer assessment; it does not cover MSC/SNV/EMSC or nonlinear candidate families.
+
+### Implementation
+
+`n4m.model_selection.aom_search.aom_chain_ridge_pls` and `AOMChainRidgePLSRegressor`; C ABI `n4m_model_selection_aom_chain_ridge_pls_run`.
+
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_chain_ridge_pls.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_search.py
+
+## Catalog note
+
+Python-backed strict/raw-base subset of donor FastAOM SingleChainPLSRidge. It applies strict-linear AOM chains sequentially, selects one chain plus PLS component count and Ridge-PLS lambda by train CV, fits through the native ridge_pls binding, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not a fused many-chain GPU Ridge-PLS grinder.
+
+_Timing benchmark_: `benchmarks/cross_binding/bench_aom_chain_ridge_pls_timing.py`
+
+
+_See also_: [methods index](index.md).

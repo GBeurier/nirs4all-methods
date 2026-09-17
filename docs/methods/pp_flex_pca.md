@@ -1,68 +1,60 @@
-# `pp_flex_pca` — Flexible P C A
+# `pp_flex_pca` — Flexible principal component analysis
 
-_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.FlexiblePCA` · _C ABI_: `n4m_decomposition_flexible_pca_*`
+_Group_: **Feature extraction** · _C ABI_: `n4m_decomposition_flexible_pca_*`
 
 ## Description
 
 PCA with integer or explained-variance component selection.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `n_components` | `float` | `5.0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_decomposition_flexible_pca_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L13) · [`n4m_decomposition_flexible_pca_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L15) · [`n4m_decomposition_flexible_pca_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L16) · [`n4m_decomposition_flexible_pca_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L21) · [`n4m_decomposition_flexible_pca_output_cols`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L23) · [`n4m_decomposition_flexible_pca_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L18). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.decomposition import FlexiblePCA
+```
+
+Source signature: [`FlexiblePCA()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/feature_extraction.py#L158).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Pearson (1901), *On Lines and Planes of Closest Fit to Systems of Points in Space*, Philosophical Magazine 2, 559–572, https://doi.org/10.1080/14786440109462720.
 
 ### Mathematical principle
 
-PCA with integer or explained-variance component selection.
+After column centering, compact SVD gives $X_c=U\Sigma V^T$ and scores $T=U_k\Sigma_k$. `n_components` is interpreted either as an integer count or as a target cumulative explained-variance fraction.
+
+### Appropriate uses
+
+Unsupervised compression, visualization, noise reduction, or a fixed latent feature stage before regression.
+
+### Limits and validation
+
+PCA maximizes variance rather than relevance to a response, is scale-sensitive, and requires fold-local fitting. A variance threshold may choose different dimensions across folds.
 
 ### Implementation
 
-C ABI `n4m_decomposition_flexible_pca_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FlexiblePCA`. The same numerical kernel backs every language binding.
+`n4m.decomposition.FlexiblePCA` wraps `n4m_decomposition_flexible_pca_*`; centering, SVD, variance selection, and projection are in `flexible_pca.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_decomposition_flexible_pca_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import FlexiblePCA
-op = FlexiblePCA()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1080/14786440109462720; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/feature_selection/flexible_pca.c
 
 
 ---
