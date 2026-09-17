@@ -1,0 +1,955 @@
+{
+  "methods": {
+    "aom_pls": {
+      "nirs4all": {
+        "id": "python_nirs4all",
+        "language": "python",
+        "library": "nirs4all",
+        "notes": "In-tree nirs4all AOM/POP estimator stack (sanctioned reference). The pls4all ABI uses the same compact strict-linear bank and contiguous folds for cross-binding determinism; nirs4all remains the qualitative algorithmic reference.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "in-tree"
+      }
+    },
+    "aom_preprocess": {
+      "nirs4all": {
+        "id": "python_nirs4all",
+        "language": "python",
+        "library": "nirs4all",
+        "notes": "In-tree nirs4all AOM provider (sanctioned external reference). pls4all's current primitive exposes a small operator-bank preprocessing kernel, while nirs4all exposes the full AOM/POP estimator stack; the parity remains qualitative.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "in-tree"
+      }
+    },
+    "approximate_press": {
+      "ref.r_pls": {
+        "id": "r_pls",
+        "language": "R",
+        "library": "pls",
+        "notes": "R `pls::plsr(validation='LOO', method='simpls', scale=FALSE)$validation$PRESS`. Default pls4all path runs true LOO PRESS over the same SIMPLS kernel and matches R bit-for-bit; `cfg.approximate_press_legacy = 1` falls back to the pre-0.97.4 Eastment-Krzanowski training-residual approximation.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-10,
+        "version": "2.8.5"
+      }
+    },
+    "bagging_pls": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "sklearn `BaggingRegressor(PLSRegression(scale=False), bootstrap=True, max_samples=1.0)`. pls4all wraps the same sklearn objects, giving bit-for-bit parity.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "1.8.0"
+      }
+    },
+    "bipls_select": {
+      "ref.r_mdatools": {
+        "id": "r_mdatools",
+        "language": "R",
+        "library": "mdatools",
+        "notes": "R `mdatools::ipls(method='backward')` — biPLS elimination. Returns variables from intervals that survive the backward sweep.",
+        "quality": "qualitative",
+        "role": "r",
+        "tolerance": 0.7,
+        "version": "0.15.0"
+      }
+    },
+    "boosting_pls": {
+      "ref.r_mboost": {
+        "id": "r_mboost",
+        "language": "R",
+        "library": "mboost",
+        "notes": "R `mboost::glmboost(family=Gaussian())` — componentwise L2-Boost with univariate linear weak learners. pls4all's default mirrors this exactly; bit-for-bit parity gate.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "2.9-11"
+      }
+    },
+    "bve_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::bve_pls` — backward variable elimination with VIP filter.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "cars_select": {
+      "ref.r_enpls": {
+        "id": "r_enpls",
+        "language": "R",
+        "library": "enpls",
+        "notes": "R `enpls::enpls.fs(method='mc')` is the closest installable approximation of CARS — Monte-Carlo subsampling + importance ranking. The algorithm differs from the competitive-adaptive-reweighted-sampling original (Li et al. 2009), so set overlap is qualitative.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 0.0,
+        "version": "6.1"
+      }
+    },
+    "continuum_regression": {
+      "ref.python_stone_brooks_1990_py": {
+        "id": "python_stone_brooks_1990_py",
+        "language": "python",
+        "library": "stone-brooks-1990-py",
+        "notes": "NumPy reference for Stone & Brooks (1990) continuum regression. First-component weight is (X'X)^{-tau} X'y, computed via the centered-X SVD; subsequent components use SIMPLS basis-v deflation of the modified cross-product matrix.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "1.0"
+      },
+      "ref.r_jico": {
+        "id": "r_jico",
+        "language": "R",
+        "library": "JICO",
+        "notes": "R `JICO::continuum` (Stone & Brooks 1990). Different parameterization than pls4all — JICO uses (lambda, gamma, om) while pls4all maps a single τ. Predictions are reconstructed by regressing Y on JICO's latent scores.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.1"
+      }
+    },
+    "cppls": {
+      "ref.r_pls": {
+        "id": "r_pls",
+        "language": "R",
+        "library": "pls",
+        "notes": "R `pls::cppls` Canonical Powered PLS (Indahl, Liland & Næs 2009); default lower=upper=0.5 reduces to NIPALS PLS1 with X-only deflation for q=1.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "2.9.0"
+      }
+    },
+    "di_pls": {
+      "ref.python_diplslib": {
+        "id": "python_diplslib",
+        "language": "python",
+        "library": "diPLSlib",
+        "notes": "Python `diPLSlib.models.DIPLS` (B-Analytics; Nikzad-Langerodi 2018 authors). Same di-PLS penalty applied during deflation; centering / target rescaling differ slightly, so tolerance is widened.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "2.5.0"
+      }
+    },
+    "ds": {
+      "ref.r_base": {
+        "id": "r_base",
+        "language": "R",
+        "library": "base",
+        "notes": "Base R `lm` per spectral band — closest installable analog to Wang 1991 Piecewise Direct Standardization. With window_half_width=0 this reduces to Direct Standardization.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "R 4.3.3"
+      }
+    },
+    "ecr": {
+      "ref.matlab_libpls": {
+        "id": "matlab_libpls",
+        "language": "matlab",
+        "library": "libPLS",
+        "notes": "Octave-bridged libPLS 1.95 `ecr(X, y, A, 'center', alpha)`. Predictions computed as X_predict @ B + y_mean using the fitted coefficient matrix and centring parameters.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.95"
+      }
+    },
+    "emcuve_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::mcuve_pls` repeated N times with different seeds, then vote-aggregated. Same algorithm family as pls4all's EMCUVE. RNGs differ; mask metric ~0=perfect.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "fused_sparse_pls": {},
+    "ga_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::ga_pls` — genetic-algorithm variable selection. RNG differs from pls4all's GA so set overlap is loose.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "gpr_pls": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "sklearn GP head on the same PLS training scores pls4all produces. PLS rotation conventions diverge per-component; comparing the GP head on shared T isolates the novel stage.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.4.2"
+      }
+    },
+    "group_sparse_pls": {
+      "ref.python_numpy": {
+        "id": "python_numpy",
+        "language": "python",
+        "library": "numpy",
+        "notes": "In-tree NumPy port of Liquet et al. 2016 group sparse PLS (R `sgPLS::gPLS`, regression mode, scale=TRUE). pls4all's default wrapper calls the same function, so the parity gate is bit-for-bit (max_abs < 1e-6). R `sgPLS::gPLS` is the published algorithmic counterpart and also matches to double-precision; the legacy C++ kernel (SIMPLS + soft-threshold-on-weights) is opt-in via ``legacy=True``.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "in-tree"
+      },
+      "ref.r_sgpls": {
+        "id": "r_sgpls",
+        "language": "R",
+        "library": "sgPLS",
+        "notes": "R `sgPLS::gPLS(X, Y, ncomp, ind.block.x, keepX=length(bnd))` (regression, scale=TRUE). The pls4all default kernel is a deterministic NumPy port of this algorithm and agrees to 1e-14 against this reference.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "1.8.1"
+      }
+    },
+    "interval_select": {
+      "ref.r_mdatools": {
+        "id": "r_mdatools",
+        "language": "R",
+        "library": "mdatools",
+        "notes": "R `mdatools::ipls` forward-iPLS — returns the union of selected interval variables. pls4all's `interval_select` uses a slightly different scoring (fold-RMSE on a fixed validation plan), so set/index overlap is the metric of interest.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.15.0"
+      }
+    },
+    "ipw_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::ipw_pls` — iterative predictor weighting with the RC filter.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "irf_select": {
+      "ref.python_auswahl": {
+        "id": "python_auswahl",
+        "language": "python",
+        "library": "auswahl",
+        "notes": "Python `auswahl.IntervalRandomFrog` (LSX-UniWue; Yun 2013). Same algorithm as libPLS `irf` with pinned `random_state` for bit-exact mask parity.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "0.9.0"
+      }
+    },
+    "iriv_select": {
+      "ref.python_iriv_numpy_port": {
+        "id": "python_iriv_numpy_port",
+        "language": "python",
+        "library": "iriv_numpy_port",
+        "notes": "NumPy port of libPLS `iriv` (Yun 2014). Mann-Whitney U test via `scipy.stats.mannwhitneyu`; binary-matrix sampler keyed to `np.random.default_rng(seed)` for bit-exact reproducibility.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "1.0.0"
+      }
+    },
+    "kernel_pls_rbf": {
+      "ref.r_kernlab_pls": {
+        "id": "r_kernlab_pls",
+        "language": "R",
+        "library": "kernlab+pls",
+        "notes": "R `kernlab::kernelMatrix` (RBF/poly/sigmoid) + `pls::plsr` on the centered kernel matrix is a Rosipal-Trejo-style kernel PLS reference. pls4all uses a different deflation order so the parity is qualitative.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "0.9.33+2.8.5"
+      }
+    },
+    "lw_pls": {
+      "nirs4all": {
+        "id": "python_nirs4all",
+        "language": "python",
+        "library": "nirs4all",
+        "notes": "In-tree Python LW-PLS (sanctioned external reference). Locally-weighted PLS (Naes 1990 / Centner 1998). pls4all's default solver (NIPALS) implements the same Gaussian-weighted local PLS as the nirs4all reference, deriving the kernel bandwidth `lambda = max(1.0, 0.5 * n_neighbors)`. The legacy k-NN cutoff variant remains available via cfg.solver = SIMPLS.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "in-tree"
+      }
+    },
+    "mb_pls": {
+      "nirs4all": {
+        "id": "python_nirs4all",
+        "language": "python",
+        "library": "nirs4all",
+        "notes": "In-tree Python MB-PLS (sanctioned external reference). The mbpls PyPI package is broken against sklearn 1.8 (uses the deprecated `force_all_finite` kwarg). nirs4all's implementation is a clean re-derivation of Westerhuis 1998.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "in-tree"
+      }
+    },
+    "mir_pls": {},
+    "missing_aware_nipals": {
+      "ref.r_softimpute": {
+        "id": "r_softimpute",
+        "language": "R",
+        "library": "softImpute",
+        "notes": "R `softImpute::softImpute` followed by `pls::plsr` on the completed (X, Y). Different imputation algorithm than Nelson 1996 NIPALS-missing; same goal.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "1.4-1"
+      }
+    },
+    "n_pls": {
+      "ref.python_tensorly": {
+        "id": "python_tensorly",
+        "language": "python",
+        "library": "tensorly",
+        "notes": "Python `tensorly.parafac` + OLS on mode-1 loadings. pls4all default matches bit-for-bit; Bro 1996 multilinear PLS is opt-in via `legacy=True`.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "0.9.0"
+      }
+    },
+    "o2pls": {
+      "ref.r_omicspls": {
+        "id": "r_omicspls",
+        "language": "R",
+        "library": "OmicsPLS",
+        "notes": "R `OmicsPLS::o2m` (Bouhaddani 2018), joint-SVD O2PLS. pls4all's default O2PLS path now matches this algorithm bit-for-bit (max_abs ~1e-13 on the parity sizes); the legacy peel-then-PLS implementation is opt-in.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-10,
+        "version": "2.1.0"
+      }
+    },
+    "on_pls": {
+      "ref.python_onpls": {
+        "id": "python_onpls",
+        "language": "python",
+        "library": "OnPLS",
+        "notes": "Python `OnPLS` (Löfstedt & Trygg 2011). Vendored from GitHub because R `multiblock 0.8.10` lacks `onpls`. Both impls return the joint-component reconstruction X̂_0.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "github tomlof/OnPLS"
+      }
+    },
+    "one_se_rule": {
+      "ref.r_pls": {
+        "id": "r_pls",
+        "language": "R",
+        "library": "pls",
+        "notes": "R `pls::plsr(validation='CV', segment.type='consecutive', method='simpls', scale=FALSE)` + `pls::selectNcomp(method='onesigma')`. The pls4all wrapper performs the same consecutive-fold CV with a SIMPLS kernel matching `pls::simpls.fit` bit-for-bit, then routes the pooled per-component RMSEP through `n4m_one_se_rule_compute`. We compare `mean_rmse_per_component` directly.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "2.8.5"
+      }
+    },
+    "opls": {
+      "ref.r_ropls": {
+        "id": "r_ropls",
+        "language": "R",
+        "library": "ropls",
+        "notes": "Bioconductor `ropls::opls` — OPLS reference. Permutations and plotting are disabled in benchmark timing; ropls still requires crossvalI >= 1 for a finite Q2 path.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "Bioc"
+      }
+    },
+    "pcr": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "sklearn Pipeline(PCA(svd_solver='full') + LinearRegression).",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "1.7.2"
+      },
+      "ref.r_pls": {
+        "id": "r_pls",
+        "language": "R",
+        "library": "pls",
+        "notes": "R pls::pcr(scale=FALSE).",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "2.8.5"
+      }
+    },
+    "pds": {
+      "ref.r_base": {
+        "id": "r_base",
+        "language": "R",
+        "library": "base",
+        "notes": "Base R `lm` per spectral band — closest installable analog to Wang 1991 Piecewise Direct Standardization. With window_half_width=0 this reduces to Direct Standardization.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "R 4.3.3"
+      }
+    },
+    "pls": {
+      "ref.python_ikpls": {
+        "id": "python_ikpls",
+        "language": "python",
+        "library": "ikpls",
+        "notes": "ikpls.numpy_ikpls.PLS algorithm 1.",
+        "quality": "strict",
+        "role": "ikpls",
+        "tolerance": 1e-08,
+        "version": "MISSING"
+      },
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "sklearn.cross_decomposition.PLSRegression(scale=False).",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.7.2"
+      },
+      "ref.r_mixomics": {
+        "id": "r_mixomics",
+        "language": "R",
+        "library": "mixOmics",
+        "notes": "Bioconductor mixOmics::pls(mode='regression', scale=FALSE).",
+        "quality": "strict",
+        "role": "mixOmics",
+        "tolerance": 1e-08,
+        "version": "6.26.0"
+      },
+      "ref.r_pls": {
+        "id": "r_pls",
+        "language": "R",
+        "library": "pls",
+        "notes": "R pls::plsr(method='simpls', scale=FALSE).",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "2.8.5"
+      }
+    },
+    "pls_cox": {
+      "ref.python_numpy": {
+        "id": "python_numpy",
+        "language": "python",
+        "library": "numpy",
+        "notes": "In-tree NumPy port of Bastien 2008 PLS-Cox (deviance residuals + NIPALS PLS + Breslow Cox PH). pls4all's default wrapper calls the same function, so the parity gate is bit-for-bit (max_abs < 1e-6). R `plsRcox::coxsplsDR` is the published algorithmic counterpart but differs at the 1e-3 level due to Efron ties + scaling conventions; the legacy single-pass C++ kernel (SIMPLS on log-time pseudo-response) is opt-in via ``legacy=True``.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "in-tree"
+      }
+    },
+    "pls_diagnostic_dmodx": {
+      "ref.r_mdatools": {
+        "id": "r_mdatools",
+        "language": "R",
+        "library": "mdatools",
+        "notes": "R `mdatools::pls` with `predict()$xdecomp$T2 / $Q`. DModX is derived locally from $Q + DOF. mdatools uses different SIMPLS deflation / normalization conventions than pls4all, so cross-implementation parity is qualitative.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "0.15.0"
+      }
+    },
+    "pls_diagnostic_q": {
+      "ref.r_mdatools": {
+        "id": "r_mdatools",
+        "language": "R",
+        "library": "mdatools",
+        "notes": "R `mdatools::pls` with `predict()$xdecomp$T2 / $Q`. DModX is derived locally from $Q + DOF. mdatools uses different SIMPLS deflation / normalization conventions than pls4all, so cross-implementation parity is qualitative.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "0.15.0"
+      }
+    },
+    "pls_diagnostic_t2": {
+      "ref.r_mdatools": {
+        "id": "r_mdatools",
+        "language": "R",
+        "library": "mdatools",
+        "notes": "R `mdatools::pls` with `predict()$xdecomp$T2 / $Q`. DModX is derived locally from $Q + DOF. mdatools uses different SIMPLS deflation / normalization conventions than pls4all, so cross-implementation parity is qualitative.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "0.15.0"
+      }
+    },
+    "pls_glm": {
+      "ref.r_plsrglm": {
+        "id": "r_plsrglm",
+        "language": "R",
+        "library": "plsRglm",
+        "notes": "R `plsRglm::plsRglm` (Bastien, Vinzi & Tenenhaus 2005) with the `pls-glm-gaussian` / `pls-glm-poisson` family. pls4all implements a simpler PLS-then-link variant so predictions diverge substantially; the parity check is a presence flag for the external reference.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "1.5.1"
+      }
+    },
+    "pls_lda": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "sklearn `PLSRegression -> LinearDiscriminantAnalysis` pipeline. pls4all's PLS-LDA uses a single SIMPLS pass with an internal LDA head; sklearn fits PLS on dummy-encoded targets and feeds the scores into LDA — both are LDA on PLS scores but the latent bases diverge. We compare class boundaries via one-hot decision scores.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.8.0"
+      }
+    },
+    "pls_logistic": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "sklearn `PLSRegression -> LogisticRegression` pipeline. pls4all's PLS-Logistic does a single PLS + softmax IRLS in C; sklearn fits PLS on one-hot Y, then a multinomial LogisticRegression on the scores. Both are valid PLS-logistic pipelines but the latent decompositions differ; parity is on the decision-score shape.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.8.0"
+      }
+    },
+    "pls_monitoring": {
+      "ref.r_mdatools": {
+        "id": "r_mdatools",
+        "language": "R",
+        "library": "mdatools",
+        "notes": "R `mdatools::pls` returning T² for monitoring rows. SIMPLS-convention differences with pls4all inflate divergence; qualitative parity.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "0.15.0"
+      }
+    },
+    "pls_qda": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "sklearn `PLSRegression(scale=False) -> QuadraticDiscriminantAnalysis(reg_param=0.0)` pipeline. pls4all's default PLS-QDA reuses the same convention: NIPALS PLS scores from the C kernel, then sklearn-style QDA in Python. Bit-for-bit parity (max_abs < 1e-6).",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "1.8.0"
+      }
+    },
+    "pop_pls": {
+      "nirs4all": {
+        "id": "python_nirs4all",
+        "language": "python",
+        "library": "nirs4all",
+        "notes": "In-tree nirs4all AOM/POP estimator stack (sanctioned reference). The pls4all ABI uses the same compact strict-linear bank and contiguous folds for cross-binding determinism; nirs4all remains the qualitative algorithmic reference.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "in-tree"
+      }
+    },
+    "pso_select": {
+      "ref.python_pyswarms": {
+        "id": "python_pyswarms",
+        "language": "python",
+        "library": "pyswarms",
+        "notes": "Python `pyswarms.discrete.BinaryPSO` with deterministic seed=11; the pls4all default path calls the same helper with the same seed, so masks coincide bit-for-bit. The C++ splitmix64 PSO kernel is opt-in via legacy=True.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "1.3.0"
+      }
+    },
+    "random_frog_select": {
+      "ref.python_auswahl": {
+        "id": "python_auswahl",
+        "language": "python",
+        "library": "auswahl",
+        "notes": "Python `auswahl.RandomFrog` (LSX-UniWue; Li 2012). Same algorithm as libPLS `randomfrog_pls` with pinned `random_state` for bit-exact mask parity.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "0.9.0"
+      }
+    },
+    "random_subspace_pls": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "sklearn `BaggingRegressor(PLSRegression(), max_features=…, bootstrap=False)`. Random feature subspaces with full sample rows, matching pls4all's sampling shape. RNG differs from pls4all; qualitative parity.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "1.8.0"
+      }
+    },
+    "randomization_select": {
+      "ref.r_pls_stats": {
+        "id": "r_pls_stats",
+        "language": "R",
+        "library": "pls+stats",
+        "notes": "Base R: SIMPLS coefficients vs permuted-Y null distribution. Selects features with empirical p-value < alpha. Same idea as pls4all's randomization_test selector.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "R 4.3.3"
+      }
+    },
+    "recursive_pls": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "Moving-window refit using sklearn PLSRegression (NIPALS).",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.4.2"
+      },
+      "ref.r_pls": {
+        "id": "r_pls",
+        "language": "R",
+        "library": "pls",
+        "notes": "Moving-window refit using R `pls::plsr` (SIMPLS by default).",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "2.8.5"
+      }
+    },
+    "rep_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::rep_pls` — repeated VIP-thresholded variable selection.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "ridge_pls": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "Ridge-augmented PLS via sklearn PLSRegression on the (X aug, Y aug) matrices — standard data-augmentation trick to fold an L2 penalty into a least-squares-style algorithm.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.4.2"
+      }
+    },
+    "robust_pls": {
+      "ref.r_chemometrics": {
+        "id": "r_chemometrics",
+        "language": "R",
+        "library": "chemometrics",
+        "notes": "R `chemometrics::prm` (Partial Robust M-regression). pls4all uses Huber IRLS over weighted SIMPLS; this is an M-estimator variant from the same family. Predictions diverge by O(0.5).",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "0.7.x"
+      }
+    },
+    "rosa": {
+      "ref.python_numpy": {
+        "id": "python_numpy",
+        "language": "python",
+        "library": "numpy",
+        "notes": "Canonical multiblock ROSA in NumPy (Liland, Næs & Indahl 2016). Reproduces R `multiblock::rosa(canonical=TRUE)` exactly for single-target Y; for q >= 2 it uses proper column-mean centering and diverges from R `multiblock` because that package recycles `colMeans(y)` incorrectly. pls4all matches this NumPy reference for q == 1 at IEEE round-off.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "2.2.6"
+      },
+      "ref.r_multiblock": {
+        "id": "r_multiblock",
+        "language": "R",
+        "library": "multiblock",
+        "notes": "R `multiblock::rosa 0.8.10` (Liland, Næs & Indahl 2016). ROSA's greedy block-selection-per-component may diverge from pls4all's ordering — tolerance widened.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.8.10"
+      }
+    },
+    "scars_select": {
+      "ref.python_scars_numpy_port": {
+        "id": "python_scars_numpy_port",
+        "language": "python",
+        "library": "scars_numpy_port",
+        "notes": "NumPy port of Stability CARS (Zheng 2014) — Monte-Carlo subsampling + stability scoring + CARS exponential shrinkage. Pinned `np.random.default_rng(seed)` for bit-exact reproducibility.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "1.0.0"
+      }
+    },
+    "shaving_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::shaving(method='SR')` — iterative SR-shaving of low-importance features. Uses the same `set.seed(11)` as the pls4all wrapper so the CV fold assignments coincide.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "sipls_select": {},
+    "so_pls": {
+      "ref.r_multiblock": {
+        "id": "r_multiblock",
+        "language": "R",
+        "library": "multiblock",
+        "notes": "R `multiblock::sopls 0.8.10` (Næs et al. 2011) canonical SO-PLS — in-sample fitted values via fit$fitted at the full (k1,..,kB) slice match pls4all's canonical NIPALS SO-PLS to ~1e-15 in centered space.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.8.10"
+      }
+    },
+    "spa_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::spa_pls` — Successive Projections Algorithm.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "sparse_pls_da": {
+      "ref.python_chun_keles_splsda": {
+        "id": "python_chun_keles_splsda",
+        "language": "python",
+        "library": "chun_keles_splsda",
+        "notes": "Sparse SIMPLS (Chun & Keles 2010) on dummy-coded class labels, followed by argmax over decision scores. Mirrors pls4all's `n4m_sparse_pls_da_fit` (default, cfg.sparse_simpls_legacy = 0) bit-for-bit.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.0"
+      },
+      "ref.r_spls": {
+        "id": "r_spls",
+        "language": "R",
+        "library": "spls",
+        "notes": "R `spls::splsda` (Chun & Keles). Predictions returned as hard class labels by the package; we one-hot encode them to match pls4all's soft-assignment prediction shape, so the parity check is on the classification *boundary* rather than continuous score values.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "2.3.2"
+      }
+    },
+    "sparse_simpls": {
+      "ref.python_chun_keles_spls": {
+        "id": "python_chun_keles_spls",
+        "language": "python",
+        "library": "chun_keles_spls",
+        "notes": "In-tree NumPy port of Chun & Keles 2010 sparse PLS (the default `pls2` / `simpls` configuration of R `spls::spls`). Verified against the R 2.3.2 package on the parity cells.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.0"
+      },
+      "ref.r_spls": {
+        "id": "r_spls",
+        "language": "R",
+        "library": "spls",
+        "notes": "R `spls` 2.3.2 (Chun & Keles). Predicts via the regression coefficient matrix from sparse-thresholded SIMPLS.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-08,
+        "version": "2.3.2"
+      }
+    },
+    "st_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::stpls` (Sæbø et al. 2008) — soft-threshold PLS variable selection. We sweep the shrink parameter and pick the most aggressive shrinkage that still keeps ≥ `min_selected` features non-zero (mirrors pls4all's min-selected guard).",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "stability_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::mcuve_pls` Monte-Carlo UVE. Returns the selected indices (no separate score buffer is exposed by the package; we just use the survivor list).",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "t2_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::T2_pls` — Hotelling T² loading-weight selection. Same idea as pls4all's T2_select.",
+        "quality": "qualitative",
+        "role": "r",
+        "tolerance": 2.0,
+        "version": "0.10.0"
+      }
+    },
+    "uve_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::mcuve_pls` with a noise threshold — UVE elimination of low-stability features.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "variable_select_coef": {
+      "ref.r_pls": {
+        "id": "r_pls",
+        "language": "R",
+        "library": "pls",
+        "notes": "R `pls::plsr` coefficient magnitudes — top-k indices ranked by |coef|. Mirrors method=1 of pls4all's ranker.",
+        "quality": "qualitative",
+        "role": "r",
+        "tolerance": 1.1,
+        "version": "2.8.5"
+      }
+    },
+    "variable_select_sr": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::SR` selectivity ratio on a fitted `pls::plsr` model. Top-k indices.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "variable_select_vip": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::VIP` ranking on `pls::plsr(method='kernelpls', scale=FALSE)` — matches the pls4all kernel-PLS path used by `_variable_select_rank_pls4all(rank_method=0)`. The top-k indices are returned (1-based -> 0-based in the loader).",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    },
+    "vip_spa_select": {
+      "ref.python_auswahl": {
+        "id": "python_auswahl",
+        "language": "python",
+        "library": "auswahl",
+        "notes": "Python `auswahl.VIP_SPA` from LSX-UniWue. Same VIP scoring and 0.3 threshold as pls4all; auswahl enumerates every candidate SPA start and picks the CV-best, pls4all takes argmax-VIP within the mask. Mask metric.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "0.9.0"
+      }
+    },
+    "vissa_select": {
+      "ref.python_auswahl": {
+        "id": "python_auswahl",
+        "language": "python",
+        "library": "auswahl",
+        "notes": "Python `auswahl.VISSA` from LSX-UniWue with deterministic seed=11; the pls4all default path calls the same helper with the same seed, so masks coincide bit-for-bit. The C++ splitmix64 VISSA kernel is opt-in via legacy=True.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-06,
+        "version": "0.9.0"
+      }
+    },
+    "weighted_pls": {
+      "ref.python_scikit_learn": {
+        "id": "python_scikit_learn",
+        "language": "python",
+        "library": "scikit-learn",
+        "notes": "Weighted PLS computed via sklearn PLSRegression on the sqrt(w)-prescaled centered (X, Y). sklearn is the external PLS engine; the row-scaling is a standard preconditioning step that is mathematically equivalent to weighted PLS.",
+        "quality": "strict",
+        "role": "python",
+        "tolerance": 1e-08,
+        "version": "1.4.2"
+      }
+    },
+    "wvc_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::WVC_pls` — weighted-variable-component scoring.",
+        "quality": "qualitative",
+        "role": "r",
+        "tolerance": 0.7,
+        "version": "0.10.0"
+      }
+    },
+    "wvc_threshold_select": {
+      "ref.r_plsvarsel": {
+        "id": "r_plsvarsel",
+        "language": "R",
+        "library": "plsVarSel",
+        "notes": "R `plsVarSel::WVC_pls` with explicit threshold — picks features whose weighted-variable scores exceed the median × threshold-factor.",
+        "quality": "strict",
+        "role": "r",
+        "tolerance": 1e-06,
+        "version": "0.10.0"
+      }
+    }
+  },
+  "schema": 1,
+  "source": {
+    "description": "Reviewed resolved parity-reference metadata for the generated method corpus.",
+    "exporter": "docs/_extras/refresh_method_truth_sources.py",
+    "lockfile": "benchmarks/parity_timing/truth_sources.lock.json",
+    "registry": "benchmarks/parity_timing/registry.py",
+    "sha256": "a4955a2a577ac2a9c046fd874b3623540a6e925900084ec8fd82a52832836f1b"
+  }
+}

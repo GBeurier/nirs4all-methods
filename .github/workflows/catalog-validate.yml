@@ -16,6 +16,8 @@ on:
       - "docs/_static/scientific-reference-links.json"
       - "docs/_extras/scientific_*.py"
       - "docs/_extras/generate_scientific_reference_index.py"
+      - "docs/_extras/method_truth_sources.json"
+      - "docs/_extras/refresh_method_truth_sources.py"
       - "docs/_static/nirs4all-methods.cff"
       - ".github/workflows/catalog-validate.yml"
   push:
@@ -34,6 +36,8 @@ on:
       - "docs/_static/scientific-reference-links.json"
       - "docs/_extras/scientific_*.py"
       - "docs/_extras/generate_scientific_reference_index.py"
+      - "docs/_extras/method_truth_sources.json"
+      - "docs/_extras/refresh_method_truth_sources.py"
       - "docs/_static/nirs4all-methods.cff"
       - ".github/workflows/catalog-validate.yml"
 

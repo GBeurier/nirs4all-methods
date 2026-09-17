@@ -14,6 +14,8 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - "benchmarks/parity_timing/registry.py"
+      - "benchmarks/parity_timing/truth_sources.lock.json"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 

@@ -34,7 +34,9 @@ from __future__ import annotations
 import argparse
 import ast
 import csv
+import hashlib
 import json
+import math
 import re
 import sys
 from collections import defaultdict
@@ -77,6 +79,13 @@ METHODS_CATALOG_YAML = ROOT / "catalog" / "methods.yaml"
 RENAME_MAP_TSV = ROOT / "proposals" / "namespace" / "_rename_map.tsv"
 CSV_PATH = ROOT / "benchmarks" / "cross_binding" / "results" / "full_matrix.csv"
 METHODS_DIR = ROOT / "docs" / "methods"
+# Rich benchmark-reference labels must be reproducible from a clean docs
+# environment.  The live registry resolves optional R/Python adapters, so its
+# result varies with the packages installed on the builder.  This reviewed
+# snapshot preserves the resolved references, versions and notes that were
+# used for the committed benchmark corpus.
+TRUTH_SOURCES_JSON = ROOT / "docs" / "_extras" / "method_truth_sources.json"
+TRUTH_SOURCES_LOCK_JSON = ROOT / "benchmarks" / "parity_timing" / "truth_sources.lock.json"
 
 # Source directories for the current ABI-2 binding surface.  The former
 # ``pls4all`` / ``n4m.sklearn`` trees were removed during the namespace
@@ -1109,10 +1118,9 @@ BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
 #
 # The icon next to each backend row in a method's benchmark table marks
 # rows that are *also* declared in `benchmarks/parity_timing/registry.py`
-# as parity references for that method. We resolve the live registry
-# rather than re-AST-parsing it so the rendered tooltip carries the
-# actual library version and the resolved cid matches the cross-binding
-# orchestrator's `ref.<id>` column ids.
+# as parity references for that method. The reviewed snapshot carries the
+# corresponding version and cid, avoiding host-dependent optional adapters
+# during documentation builds.
 # ---------------------------------------------------------------------------
 
 TRUTH_SOURCE_ICON = "📐"
@@ -1121,53 +1129,92 @@ PAPER_ONLY_ICON = "📜"
 
 def load_truth_source_metadata(
         strict: bool = False) -> dict[str, dict[str, dict]]:
-    """Return {method_name: {cid: metadata}} from the live registry.
+    """Return reviewed, host-independent benchmark-reference metadata.
 
-    Imports `benchmarks.parity_timing.registry`. The registry depends
-    only on numpy at module load, but the per-reference factories may
-    import sklearn / ikpls / rpy2 etc. when called; `resolved_references_
-    for_method()` swallows resolution errors so optional refs absent on
-    the doc-build host are simply omitted.
-
-    When `strict=False` (the default), any failure to import the
-    registry yields an empty dict and a warning so the doc build still
-    produces pages without the icon. `--strict` propagates the import
-    error.
+    The registry resolves optional adapters (notably R packages) at import
+    time.  Rendering those results directly makes a clean checkout differ
+    from a developer machine.  The committed snapshot records the reviewed
+    reference ids, versions, tolerances and notes used for this documentation
+    corpus; update it deliberately when the benchmark-reference contract
+    changes.
     """
-    sys.path.insert(0, str(ROOT))
     try:
-        from benchmarks.parity_timing.registry import (
-            METHODS,
-            truth_source_metadata_for,
-        )
+        snapshot = json.loads(TRUTH_SOURCES_JSON.read_text(encoding="utf-8"))
+        if not isinstance(snapshot, dict) or snapshot.get("schema") != 1:
+            raise ValueError("unsupported snapshot schema")
+        source = snapshot.get("source")
+        if not isinstance(source, dict) or source.get("registry") != (
+                "benchmarks/parity_timing/registry.py"):
+            raise ValueError("missing canonical registry provenance")
+        lock_hash = hashlib.sha256(
+            TRUTH_SOURCES_LOCK_JSON.read_bytes()).hexdigest()
+        if source.get("lockfile") != (
+                "benchmarks/parity_timing/truth_sources.lock.json") or \
+                source.get("sha256") != lock_hash:
+            raise ValueError("truth-source lockfile hash differs from snapshot")
+        payload = snapshot.get("methods")
+        required = {"id", "role", "language", "library", "version", "notes",
+                    "tolerance", "quality"}
+        if not isinstance(payload, dict):
+            raise ValueError("top-level value must be an object")
+        for method, sources in payload.items():
+            if not isinstance(method, str) or not isinstance(sources, dict):
+                raise ValueError("method/source mapping must use string method keys")
+            for cid, metadata in sources.items():
+                if not isinstance(cid, str) or not isinstance(metadata, dict):
+                    raise ValueError(f"{method}: invalid reference metadata")
+                missing = sorted(required - set(metadata))
+                if missing:
+                    raise ValueError(f"{method}/{cid}: missing {', '.join(missing)}")
+                for field in required - {"tolerance"}:
+                    value = metadata[field]
+                    if not isinstance(value, str) or not value.strip():
+                        raise ValueError(f"{method}/{cid}: invalid {field}")
+                tolerance = metadata["tolerance"]
+                if isinstance(tolerance, bool) or not isinstance(tolerance, (int, float)) \
+                        or not math.isfinite(tolerance):
+                    raise ValueError(f"{method}/{cid}: invalid tolerance")
+
+        lock = json.loads(TRUTH_SOURCES_LOCK_JSON.read_text(encoding="utf-8"))
+        lock_records = lock.get("methods") if isinstance(lock, dict) else None
+        if not isinstance(lock_records, list):
+            raise ValueError("truth-source lockfile has no methods list")
+        lock_by_name = {record.get("name"): record for record in lock_records
+                        if isinstance(record, dict) and isinstance(record.get("name"), str)}
+        if set(payload) != set(lock_by_name):
+            raise ValueError("truth-source snapshot does not cover the lockfile methods")
+        for method, sources in payload.items():
+            locked = lock_by_name[method]
+            expected_roles = set(locked.get("extra_reference_roles") or [])
+            if locked.get("has_python_reference"):
+                expected_roles.add("python")
+            if locked.get("has_r_reference"):
+                expected_roles.add("r")
+            if bool(sources) is bool(locked.get("paper_only")):
+                raise ValueError(f"{method}: paper-only/reference surface mismatch")
+            if {metadata["role"] for metadata in sources.values()} != expected_roles:
+                raise ValueError(f"{method}: reference roles differ from lockfile")
+            expected_tolerance = locked.get("rmse_rel_tol")
+            for cid, metadata in sources.items():
+                if cid != canonical_truth_source_cid(f"ref.{metadata['id']}"):
+                    raise ValueError(f"{method}/{cid}: noncanonical reference id")
+                if metadata["tolerance"] != expected_tolerance:
+                    raise ValueError(f"{method}/{cid}: tolerance differs from lockfile")
+                tolerance = metadata["tolerance"]
+                expected_quality = (
+                    "strict" if tolerance <= 1e-6 else
+                    "relaxed" if tolerance < 1e-1 else "qualitative")
+                if metadata["quality"] != expected_quality:
+                    raise ValueError(f"{method}/{cid}: invalid tolerance quality")
     except Exception as exc:
-        msg = (f"warning: could not import parity_timing registry "
-               f"for truth-source metadata ({type(exc).__name__}: {exc}); "
-               "the 📐 icon will not appear in generated pages.")
+        msg = (f"warning: could not read reviewed truth-source snapshot "
+               f"({type(exc).__name__}: {exc}); the 📐 icon will not appear "
+               "in generated pages.")
         if strict:
             raise
         print(msg, file=sys.stderr)
         return {}
-    out: dict[str, dict[str, dict]] = {}
-    for method in METHODS:
-        try:
-            remapped: dict[str, dict] = {}
-            for cid, meta in truth_source_metadata_for(method).items():
-                if cid.startswith("ref."):
-                    backend = "ref_" + cid[len("ref."):]
-                    cid = REF_DISPLAY_OVERRIDE.get(backend, cid)
-                remapped[cid] = meta
-            out[method.name] = remapped
-        except Exception as exc:
-            if strict:
-                raise
-            print(
-                f"warning: truth-source metadata failed for "
-                f"`{method.name}` ({type(exc).__name__}: {exc})",
-                file=sys.stderr,
-            )
-            out[method.name] = {}
-    return out
+    return payload
 
 
 def parse_registry(path: Path) -> list[dict]:
@@ -1352,6 +1399,16 @@ REF_DISPLAY_OVERRIDE = {
     "ref_python_nirs4all_operators_models_sklearn_lwpls":   "nirs4all",
     "ref_python_nirs4all_bench_aom_v0_aompls":              "nirs4all",
 }
+
+
+def canonical_truth_source_cid(cid: str) -> str:
+    """Map a registry reference id to the renderer's benchmark column id."""
+    if not cid.startswith("ref."):
+        return cid
+    backend = "ref_" + cid[len("ref."):]
+    return REF_DISPLAY_OVERRIDE.get(backend, cid)
+
+
 CPP_BUILD_SUFFIX = {
     "dev-release": "ref",
     "blas-on":     "blas",
@@ -1365,8 +1422,7 @@ def column_id(backend: str, build: str) -> str:
     if backend == "cpp":
         return f"pls4all.cpp.{CPP_BUILD_SUFFIX.get(build, build)}"
     if backend.startswith("ref_"):
-        return REF_DISPLAY_OVERRIDE.get(
-            backend, "ref." + backend[len("ref_"):])
+        return canonical_truth_source_cid("ref." + backend[len("ref_"):])
     return BACKEND_DISPLAY.get(backend, backend)
 
 
