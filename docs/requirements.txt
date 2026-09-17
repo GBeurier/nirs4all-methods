@@ -7,5 +7,5 @@ linkify-it-py>=2.0,<3      # for myst linkify extension
 # The strict method-doc generator imports the benchmark registry for its
 # source-of-truth metadata.  Pin the rendered external-reference version so
 # clean documentation builds reproduce the committed corpus.
-numpy>=1.23
+numpy==2.2.6
 scikit-learn==1.7.2
