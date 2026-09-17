@@ -339,8 +339,19 @@ button.ctl[aria-pressed="true"] { background: var(--teal); color: #fff; border-c
   background: rgba(255,255,255,.65); position: sticky; top: 0;
 }
 .drawer-head .dh-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.drawer-head h2 { font-family: var(--display); font-size: 1.4rem; font-weight: 700; margin: 0; letter-spacing: -.02em; }
-.drawer-head .dh-sym { font-family: var(--mono); font-size: .78rem; color: var(--text-2); margin-top: 4px; }
+.drawer-head .dh-top > div { min-width: 0; }
+.drawer-head h2 { font-family: var(--display); font-size: 1.4rem; font-weight: 700; margin: 0; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.drawer-head .dh-sym { font-family: var(--mono); font-size: .78rem; color: var(--text-2); margin-top: 4px; overflow-wrap: anywhere; }
+.drawer-doc-cta {
+  display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 13px; padding: 10px 12px;
+  background: var(--teal-d); color: #fff; border: 1px solid var(--teal-d); border-radius: var(--radius-sm);
+  box-shadow: 0 2px 6px rgba(15,118,110,.18); font-size: .88rem; font-weight: 600; line-height: 1.25;
+}
+.drawer-doc-cta:hover { background: var(--teal); border-color: var(--teal); color: #fff; text-decoration: none; }
+.drawer-doc-cta:focus-visible { outline-color: var(--cyan); outline-offset: 3px; text-decoration: none; }
+.drawer-doc-cta-icon { flex: 0 0 auto; font-size: 1.2rem; line-height: 1; }
+.drawer-doc-cta-copy { display: grid; min-width: 0; gap: 2px; }
+.drawer-doc-cta-copy small { color: rgba(255,255,255,.9); font-size: .75rem; font-weight: 500; overflow-wrap: anywhere; }
 .drawer-head .dh-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
 .btn-close {
   border: 1px solid var(--border); background: #fff; border-radius: 10px; width: 36px; height: 36px;
