@@ -4,8 +4,3 @@ myst-parser>=3.0,<5
 sphinx-design>=0.6,<1
 sphinxext-opengraph>=0.9,<1  # social cards (Open Graph meta)
 linkify-it-py>=2.0,<3      # for myst linkify extension
-# The strict method-doc generator imports the benchmark registry for its
-# source-of-truth metadata.  Pin the rendered external-reference version so
-# clean documentation builds reproduce the committed corpus.
-numpy==2.2.6
-scikit-learn==1.7.2
