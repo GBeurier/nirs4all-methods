@@ -1,69 +1,61 @@
-# `pp_derivate` — Derivate
+# `pp_derivate` — Order-$d$ finite-difference derivative
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.Derivate` · _C ABI_: `n4m_transform_derivative_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_derivative_*`
 
 ## Description
 
 Finite-difference derivative along the wavelength axis.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `order` | `int` | `1` |
 | `delta` | `float` | `1.0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_derivative_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L35) · [`n4m_transform_derivative_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L37) · [`n4m_transform_derivative_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L38) · [`n4m_transform_derivative_output_cols`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L30) · [`n4m_transform_derivative_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L40). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.smoothing import Derivate
+```
+
+Source signature: [`Derivate(order: int = 1, delta: float = 1.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L245).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No unique canonical paper: this is repeated forward finite differencing. For the spectroscopic rationale see Norris & Williams (1984), *Optimization of mathematical treatments of raw near-infrared signal*.
 
 ### Mathematical principle
 
-Finite-difference derivative along the wavelength axis.
+The operator applies $d$ successive first differences along wavelength and divides by `delta` at each pass, reducing the output width by `order`. A first difference removes constant offsets; a second also suppresses linear trends.
+
+### Appropriate uses
+
+Emphasizing slopes or narrow bands when a reduced-width difference representation is acceptable.
+
+### Limits and validation
+
+Differencing amplifies high-frequency noise, shortens the feature axis, and assumes uniform spacing represented by `delta`. It is distinct from the shape-preserving gradient operators.
 
 ### Implementation
 
-C ABI `n4m_transform_derivative_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Derivate`. The same numerical kernel backs every language binding.
+`n4m.transform.smoothing.Derivate` calls `n4m_transform_derivative_*`; repeated difference kernels are in `preprocessing/derivatives/derivate.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_derivative_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import Derivate
-op = Derivate()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/derivatives/derivate.c
 
 
 ---

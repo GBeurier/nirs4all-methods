@@ -37,10 +37,29 @@ import csv
 import json
 import re
 import sys
-import textwrap
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+
+from public_api_docs import (
+    binding_for_catalog,
+    cross_bindings_for_catalog,
+    scan_matlab_public_api,
+    scan_public_api,
+    scan_r_public_api,
+)
+from selection_parity_policy import (
+    binding_cross_check_reason,
+    dependency_unavailable_reason,
+    jaccard_from_note,
+    selection_bydesign_reason,
+)
+
+try:
+    from method_param_docs import lookup as _param_doc_lookup
+except ImportError:  # pragma: no cover - depends on import path
+    def _param_doc_lookup(method: str, param: str) -> str:
+        return ""
 
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PY = ROOT / "benchmarks" / "parity_timing" / "registry.py"
@@ -59,11 +78,14 @@ RENAME_MAP_TSV = ROOT / "proposals" / "namespace" / "_rename_map.tsv"
 CSV_PATH = ROOT / "benchmarks" / "cross_binding" / "results" / "full_matrix.csv"
 METHODS_DIR = ROOT / "docs" / "methods"
 
-# Source dirs scanned for docstrings to enrich per-method pages.
-PY_SKLEARN_DIR = (
-    ROOT / "bindings" / "python" / "src" / "pls4all" / "sklearn")
-R_DIR = ROOT / "bindings" / "r" / "pls4all" / "R"
-MATLAB_DIR = ROOT / "bindings" / "matlab" / "+pls4all"
+# Source directories for the current ABI-2 binding surface.  The former
+# ``pls4all`` / ``n4m.sklearn`` trees were removed during the namespace
+# migration.  Do not silently fall back to them: doing so leaves generated
+# pages apparently valid while advertising imports that no longer exist.
+N4M_PYTHON_DIR = ROOT / "bindings" / "python" / "src" / "n4m"
+N4M_IMPL_DIR = N4M_PYTHON_DIR / "_impl"
+R_DIR = ROOT / "bindings" / "r" / "n4m" / "R"
+MATLAB_DIR = ROOT / "bindings" / "matlab" / "+n4m"
 
 # ---------------------------------------------------------------------------
 # Per-method bibliographic / math metadata.
@@ -78,18 +100,136 @@ try:
 except ImportError:  # pragma: no cover - depends on import path
     _CURATED_BIB = {}
 
-from selection_parity_policy import (
-    binding_cross_check_reason,
-    dependency_unavailable_reason,
-    jaccard_from_note,
-    selection_bydesign_reason,
-)
+try:
+    from scientific_legacy import SCIENTIFIC_CONTENT as _LEGACY_SCIENCE
+except ImportError:  # pragma: no cover - diagnosed by the strict content gate
+    _LEGACY_SCIENCE = {}
+
+# The operator and ABI-2-stub records deliberately live in small, separately
+# owned modules.  Their keys are documentation page stems, not display names:
+# that makes a rename in the ABI catalog visible to the coverage gate.
+try:
+    from scientific_augmentation_filter_split import SCIENTIFIC_CONTENT as _AUGMENTATION_SCIENCE
+except ImportError:  # pragma: no cover - permits partial contributor checkouts
+    _AUGMENTATION_SCIENCE = {}
 
 try:
-    from method_param_docs import lookup as _param_doc_lookup
-except ImportError:  # pragma: no cover - depends on import path
-    def _param_doc_lookup(method: str, param: str) -> str:
-        return ""
+    from scientific_remaining import SCIENTIFIC_CONTENT as _REMAINING_SCIENCE
+except ImportError:  # pragma: no cover - permits partial contributor checkouts
+    _REMAINING_SCIENCE = {}
+
+try:
+    from scientific_aom import SCIENTIFIC_CONTENT as _AOM_SCIENCE
+except ImportError:  # pragma: no cover - permits partial contributor checkouts
+    _AOM_SCIENCE = {}
+
+SCIENTIFIC_FIELDS = (
+    "title", "paper", "principle", "use_cases", "limitations",
+    "implementation", "provenance",
+)
+
+_GENERIC_SCIENCE_PLACEHOLDERS = (
+    "sourced entirely from the catalog",
+    "standard spectroscopic operator",
+    "no binding description",
+    "no curated reference",
+)
+
+# The remaining-content contributor supplied four temporary ABI-2 stub stems
+# for the AOM Ridge compositions.  `scientific_aom.py` now owns the stable
+# published pages with the full current function signatures; keeping both
+# would create four unlinked duplicate documents.  The source records remain
+# available for audit in their module, while the rendered corpus uses the
+# more specific page records below.
+_SUPERSEDED_SCIENCE_RECORDS = {
+    "aom_pop_ridge_global",
+    "aom_pop_ridge_superblock",
+    "aom_pop_ridge_active_superblock",
+    "aom_pop_ridge_mkl_superblock",
+}
+
+
+def validate_scientific_records(
+        records: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
+    """Validate the complete seven-section scientific-record contract.
+
+    The generator deliberately fails on incomplete prose instead of silently
+    emitting a page which has parameters and a parity table but no scientific
+    explanation.  Newlines are accepted in Markdown prose; every other C0
+    control character is rejected because accidental Python escapes such as
+    ``\\bar`` and ``\\theta`` otherwise become invisible backspace/tab bytes
+    and corrupt MathJax output.
+    """
+    normalized_records: dict[str, dict[str, str]] = {}
+    for stem, record in records.items():
+        if not isinstance(record, dict):
+            raise ValueError(f"scientific record {stem!r} is not a mapping")
+        normalized = dict(record)
+        missing_fields = [
+            field for field in SCIENTIFIC_FIELDS
+            if not isinstance(normalized.get(field), str)
+            or not normalized[field].strip()
+        ]
+        if missing_fields:
+            raise ValueError(
+                f"scientific record {stem!r} missing required fields: "
+                f"{', '.join(missing_fields)}")
+        text = "\n".join(normalized[field] for field in SCIENTIFIC_FIELDS)
+        controls = sorted({ord(char) for char in text
+                           if ord(char) < 32 and char != "\n"})
+        if controls:
+            rendered = ", ".join(f"U+{code:04X}" for code in controls)
+            raise ValueError(
+                f"scientific record {stem!r} contains forbidden C0 controls: "
+                f"{rendered}")
+        unbalanced_math = [
+            field for field in SCIENTIFIC_FIELDS
+            if normalized[field].count("$") % 2
+        ]
+        if unbalanced_math:
+            raise ValueError(
+                f"scientific record {stem!r} contains unbalanced inline-math delimiters: "
+                f"{', '.join(unbalanced_math)}")
+        lowered = text.lower()
+        placeholders = [token for token in _GENERIC_SCIENCE_PLACEHOLDERS
+                        if token in lowered]
+        if placeholders:
+            raise ValueError(
+                f"scientific record {stem!r} contains placeholders: {placeholders}")
+        normalized_records[stem] = normalized
+    return normalized_records
+
+
+def scientific_content() -> dict[str, dict[str, str]]:
+    """Join and validate the complete rendered scientific corpus.
+
+    The legacy source remains an unchanged historical archive.  Its rendered
+    counterpart is the explicit 73-record scientific overlay, so corrections
+    are reviewable without editing or silently trusting archived prose.
+    """
+    if set(_LEGACY_SCIENCE) != set(_CURATED_BIB):
+        missing = sorted(set(_CURATED_BIB) - set(_LEGACY_SCIENCE))
+        extra = sorted(set(_LEGACY_SCIENCE) - set(_CURATED_BIB))
+        raise ValueError(
+            "legacy scientific overlay does not exactly cover bibliography: "
+            f"missing={missing}, extra={extra}")
+    sources = (
+        ("scientific_legacy", _LEGACY_SCIENCE),
+        ("scientific_augmentation_filter_split", _AUGMENTATION_SCIENCE),
+        ("scientific_remaining", {
+            stem: record for stem, record in _REMAINING_SCIENCE.items()
+            if stem not in _SUPERSEDED_SCIENCE_RECORDS
+        }),
+        ("scientific_aom", _AOM_SCIENCE),
+    )
+    merged: dict[str, dict[str, str]] = {}
+    for source_name, records in sources:
+        for stem, record in records.items():
+            if stem in merged:
+                raise ValueError(
+                    f"duplicate scientific record for {stem!r}: {source_name}")
+            merged[stem] = record
+    return validate_scientific_records(merged)
 
 BIBLIOGRAPHY: dict[str, dict] = dict(_CURATED_BIB) or {
     "pls": {
@@ -1399,7 +1539,9 @@ def parse_csv(path: Path) -> dict[str, list[dict]]:
                 if not algo:
                     continue
                 try:
-                    n = int(r["n"]); p = int(r["p"]); t = int(r["threads"])
+                    n = int(r["n"])
+                    p = int(r["p"])
+                    t = int(r["threads"])
                 except (KeyError, TypeError, ValueError):
                     continue
                 cid = column_id(r.get("backend", ""),
@@ -1432,12 +1574,17 @@ def parse_csv(path: Path) -> dict[str, list[dict]]:
 # ---------------------------------------------------------------------------
 
 def parse_python_sklearn(directory: Path) -> dict[str, dict]:
-    """Return {ClassName: {docstring, init_params}} extracted from every
-    `_*.py` file in `bindings/python/src/pls4all/sklearn/`."""
+    """Return public n4m implementation classes and their constructor data.
+
+    The historical function name is retained while the migration is in
+    progress, but it now parses the private implementation modules re-exported
+    by the public ``n4m.<role>`` packages.  It never reads the retired
+    ``pls4all.sklearn`` tree.
+    """
     out: dict[str, dict] = {}
     if not directory.exists():
         return out
-    for py in sorted(directory.glob("_*.py")):
+    for py in sorted(directory.glob("*.py")):
         try:
             tree = ast.parse(py.read_text())
         except SyntaxError:
@@ -1456,7 +1603,6 @@ def parse_python_sklearn(directory: Path) -> dict[str, dict]:
                     defaults = args.defaults
                     kwonly = args.kwonlyargs
                     kwonly_defaults = args.kw_defaults
-                    n_args = len(args.args)
                     # Skip `self`
                     arg_names = [a.arg for a in args.args[1:]]
                     arg_annots = [
@@ -1478,6 +1624,39 @@ def parse_python_sklearn(directory: Path) -> dict[str, dict]:
                     break
             out[node.name] = {"docstring": doc, "init_params": params}
     return out
+
+
+def parse_n4m_public_imports(directory: Path) -> dict[str, tuple[str, str]]:
+    """Map implementation class names to current public import locations.
+
+    The public role modules explicitly re-export their implementation classes
+    using ``from n4m._impl import Class [as PublicName]``.  AST parsing keeps
+    the documentation generator independent of libn4m availability and makes
+    stale catalog binding metadata detectable in tests.
+    """
+    imports: dict[str, tuple[str, str]] = {}
+    for py in sorted(directory.rglob("*.py")):
+        if "_impl" in py.parts:
+            continue
+        rel = py.relative_to(directory).with_suffix("")
+        module_parts = ["n4m", *rel.parts]
+        if module_parts[-1] == "__init__":
+            module_parts.pop()
+        module = ".".join(module_parts)
+        try:
+            tree = ast.parse(py.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            if node.module not in {"n4m._impl", "n4m._impl.native"}:
+                continue
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                imports.setdefault(alias.name, (module, alias.asname or alias.name))
+    return imports
 
 
 def _repr_default(node: ast.AST | None) -> str:
@@ -1591,315 +1770,12 @@ def parse_matlab(directory: Path) -> dict[str, dict]:
 
 
 # ---------------------------------------------------------------------------
-# Registry method → binding entry-point lookup tables
-# ---------------------------------------------------------------------------
-
-# Registry method name → Python sklearn class name in `pls4all.sklearn`.
-METHOD_TO_PY_SKLEARN: dict[str, str] = {
-    "pls": "PLSRegression",
-    "pcr": "PCR",
-    "opls": "OPLSRegression",
-    "sparse_simpls": "SparseSimplsRegression",
-    "di_pls": "DIPLSRegression",
-    "cppls": "CPPLSRegression",
-    "weighted_pls": "WeightedPLSRegression",
-    "robust_pls": "RobustPLSRegression",
-    "ridge_pls": "RidgePLSRegression",
-    "continuum_regression": "ContinuumRegression",
-    "n_pls": "NPLSRegression",
-    "kernel_pls_rbf": "KernelPLSRegression",
-    "o2pls": "O2PLSRegression",
-    "recursive_pls": "RecursivePLSRegression",
-    "mb_pls": "MBPLSRegression",
-    "lw_pls": "LWPLSRegression",
-    "mir_pls": "MIRPLSRegression",
-    "missing_aware_nipals": "MissingAwareNipalsRegression",
-    "ecr": "ECRegression",
-    "bagging_pls": "BaggingPLSRegression",
-    "boosting_pls": "BoostingPLSRegression",
-    "random_subspace_pls": "RandomSubspacePLSRegression",
-    "gpr_pls": "GPRPLSRegression",
-    "so_pls": "SOPLSRegression",
-    "rosa": "ROSARegression",
-    "group_sparse_pls": "GroupSparsePLSRegression",
-    "fused_sparse_pls": "FusedSparsePLSRegression",
-    "pls_glm": "PLSGLMRegressor",
-    "pls_cox": "PLSCoxRegressor",
-    "pls_lda": "PLSLDAClassifier",
-    "pls_qda": "PLSQDAClassifier",
-    "pls_logistic": "PLSLogisticClassifier",
-    "sparse_pls_da": "SparsePLSDAClassifier",
-    "pds": "PDSTransformer",
-    "ds": "DSTransformer",
-    # Selectors
-    "variable_select_vip": "VIPSelector",
-    "variable_select_coef": "CoefficientSelector",
-    "variable_select_sr": "SelectivityRatioSelector",
-    "spa_select": "SPASelector",
-    "stability_select": "StabilitySelector",
-    "uve_select": "UVESelector",
-    "cars_select": "CARSSelector",
-    "random_frog_select": "RandomFrogSelector",
-    "scars_select": "SCARSSelector",
-    "ga_select": "GASelector",
-    "pso_select": "PSOSelector",
-    "vissa_select": "VISSASelector",
-    "shaving_select": "ShavingSelector",
-    "bve_select": "BVESelector",
-    "rep_select": "REPSelector",
-    "ipw_select": "IPWSelector",
-    "st_select": "STSelector",
-    "interval_select": "IntervalSelector",
-    "bipls_select": "BiPLSSelector",
-    "sipls_select": "SiPLSSelector",
-    "t2_select": "T2Selector",
-    "wvc_select": "WVCSelector",
-    "wvc_threshold_select": "WVCThresholdSelector",
-    "emcuve_select": "EMCUVESelector",
-    "randomization_select": "RandomizationSelector",
-    "iriv_select": "IRIVSelector",
-    "irf_select": "IRFSelector",
-    "vip_spa_select": "VIPSPASelector",
-}
-
-# Diagnostics / module-level helpers: registry name → Python function name
-# exposed by `pls4all.sklearn._diagnostics` (re-exported in
-# `pls4all.sklearn.__all__`).
-METHOD_TO_PY_FN: dict[str, str] = {
-    "pls_diagnostic_t2":    "t2_score",
-    "pls_diagnostic_q":     "q_score",
-    "pls_diagnostic_dmodx": "dmodx_score",
-    "approximate_press":    "approximate_press",
-    "one_se_rule":          "one_se_rule",
-    "pls_monitoring":       "pls_monitoring",
-    "aom_preprocess":       "aom_preprocess",
-    "on_pls":               "on_pls",
-}
-
-# Registry name → R tier-1 raw function (in methods.R / methods_extra.R
-# / selectors.R / diagnostics.R). The dispatcher
-# `pls4all_method(algo, X, Y, k, params=list(…))` covers all fits +
-# selectors + diagnostics; the per-algo helpers below are the idiomatic
-# tier-1 shortcuts. `pls`, `pcr`, `opls` deliberately have no raw helper
-# — they are reached through the dispatcher (algo strings
-# `"pls_nipals"`, `"pcr"`, `"opls_nipals"`) or their formula wrappers.
-METHOD_TO_R_RAW: dict[str, str] = {
-    # methods.R / methods_extra.R — *_fit family
-    "sparse_simpls": "sparse_simpls_fit",
-    "cppls": "cppls_fit",
-    "weighted_pls": "weighted_pls_fit",
-    "mb_pls": "mb_pls_fit",
-    "pls_glm": "pls_glm_fit",
-    "mir_pls": "mir_pls_fit",
-    "ecr": "ecr_fit",
-    "di_pls": "di_pls_fit",
-    "robust_pls": "robust_pls_fit",
-    "ridge_pls": "ridge_pls_fit",
-    "continuum_regression": "continuum_regression_fit",
-    "recursive_pls": "recursive_pls_fit",
-    "n_pls": "n_pls_fit",
-    "kernel_pls_rbf": "kernel_pls_fit",
-    "o2pls": "o2pls_fit",
-    "sparse_pls_da": "sparse_pls_da_fit",
-    "group_sparse_pls": "group_sparse_pls_fit",
-    "fused_sparse_pls": "fused_sparse_pls_fit",
-    "so_pls": "so_pls_fit",
-    "on_pls": "on_pls_fit",
-    "rosa": "rosa_fit",
-    "bagging_pls": "bagging_pls_fit",
-    "boosting_pls": "boosting_pls_fit",
-    "random_subspace_pls": "random_subspace_pls_fit",
-    "gpr_pls": "gpr_pls_fit",
-    "pls_qda": "pls_qda_fit",
-    "pls_cox": "pls_cox_fit",
-    "pds": "pds_fit",
-    "ds": "ds_fit",
-    "missing_aware_nipals": "missing_aware_nipals_fit",
-    "lw_pls": "lw_pls_fit",
-    "pls_lda": "pls_lda_fit",
-    "pls_logistic": "pls_logistic_fit",
-    "aom_preprocess": "aom_preprocess",
-    "aom_pls": "aom_pls",
-    "pop_pls": "pop_pls",
-    "aom_preprocess": "aom_preprocess",
-    # selectors.R / methods_extra.R — *_select family
-    "variable_select_vip":  "vip_select",
-    "variable_select_coef": "coefficient_select",
-    "variable_select_sr":   "selectivity_ratio_select",
-    "spa_select":          "spa_select",
-    "cars_select":         "cars_select",
-    "stability_select":    "stability_select",
-    "uve_select":          "uve_select",
-    "interval_select":     "interval_select",
-    "random_frog_select":  "random_frog_select",
-    "scars_select":        "scars_select",
-    "ga_select":           "ga_select",
-    "pso_select":          "pso_select",
-    "vissa_select":        "vissa_select",
-    "shaving_select":      "shaving_select",
-    "bve_select":          "bve_select",
-    "wvc_select":          "wvc_select",
-    "wvc_threshold_select":"wvc_threshold_select",
-    "emcuve_select":       "emcuve_select",
-    "randomization_select":"randomization_select",
-    "bipls_select":        "bipls_select",
-    "sipls_select":        "sipls_select",
-    "rep_select":          "rep_select",
-    "ipw_select":          "ipw_select",
-    "st_select":           "st_select",
-    "iriv_select":         "iriv_select",
-    "irf_select":          "irf_select",
-    "vip_spa_select":      "vip_spa_select",
-    "t2_select":           "t2_select",
-    # diagnostics.R
-    "approximate_press":    "approximate_press",
-    "one_se_rule":          "one_se_rule",
-    "pls_monitoring":       "pls_monitoring",
-    "pls_diagnostic_t2":    "pls_diagnostics",
-    "pls_diagnostic_q":     "pls_diagnostics",
-    "pls_diagnostic_dmodx": "pls_diagnostics",
-}
-
-# Parsnip / mlr3 integrations were factored out into
-# `bindings/r/archive/parsnip-mlr3/` and are NOT shipped with the CRAN
-# pls4all R package. The doc generator no longer renders a parsnip / mlr3
-# tab; leaving the variable here (empty) keeps the rendering code path
-# explicit.
-PARSNIP_MLR3_ALGOS: set[str] = set()
-
-# Registry name → R tier-2 formula function (sklearn.R, sklearn_methods.R,
-# sklearn_extra.R). These are the idiomatic sklearn-style formula wrappers
-# (`<fn>(formula, data, ncomp, ...)`).
-METHOD_TO_R_FORMULA: dict[str, str] = {
-    "pls": "pls",
-    "opls": "opls",
-    "sparse_simpls": "sparse_pls",
-    "cppls": "cppls",
-    "di_pls": "di_pls",
-    "weighted_pls": "weighted_pls",
-    "mb_pls": "mb_pls",
-    "pls_glm": "pls_glm",
-    "mir_pls": "mir_pls",
-    "ecr": "ecr",
-    "robust_pls": "robust_pls",
-    "ridge_pls": "ridge_pls",
-    "continuum_regression": "continuum_regression",
-    "recursive_pls": "recursive_pls",
-    "bagging_pls": "bagging_pls",
-    "boosting_pls": "boosting_pls",
-    "random_subspace_pls": "random_subspace_pls",
-    "o2pls": "o2pls",
-    "missing_aware_nipals": "missing_aware_nipals",
-}
-
-# Registry name → CRAN-`pls`-package-compatible alias in
-# `bindings/r/pls4all/R/pls_compat.R`. These mirror the `pls::plsr` /
-# `pls::pcr` / `pls::mvr` signatures so existing chemometrics code that
-# uses the CRAN `pls` package can swap pls4all in with no rewrite.
-METHOD_TO_R_PLS_COMPAT: dict[str, str] = {
-    "pls": "plsr",
-    "pcr": "pcr",
-}
-
-# Registry name → `mdatools::pls(x, y, ...)`-compatible alias in
-# `bindings/r/pls4all/R/mdatools_compat.R`. A single function
-# `pls_mdatools(x, y, ncomp, method = ...)` covers PLS / PCR / CPPLS via
-# its `method=` switch (mirroring the mdatools matrix-oriented API).
-METHOD_TO_R_MDATOOLS: dict[str, tuple[str, str]] = {
-    # method → (fn_name, method-arg string for the snippet)
-    "pls": ("pls_mdatools", "simpls"),
-    "pcr": ("pls_mdatools", "pcr"),
-    "cppls": ("pls_mdatools", "cppls"),
-}
-
-# Registry method → libn4m C ABI function (the `n4m_<fn>` symbol exposed
-# as `pls4all._methods.<fn>` on the Python side). Most methods follow the
-# convention `<method>_fit`; the entries below cover the exceptions
-# (variable-rank shared kernel, diagnostic / monitoring helpers,
-# `_run` / `_compute` suffixes, and Model-based methods that have no
-# per-method shim — they go through `Model.fit`).
-METHOD_TO_C_FUNCTION: dict[str, str] = {
-    # Variable-rank selectors share one C kernel.
-    "variable_select_vip":  "variable_select_rank",
-    "variable_select_coef": "variable_select_rank",
-    "variable_select_sr":   "variable_select_rank",
-    # Diagnostics share one C kernel.
-    "pls_diagnostic_t2":    "pls_diagnostics_compute",
-    "pls_diagnostic_q":     "pls_diagnostics_compute",
-    "pls_diagnostic_dmodx": "pls_diagnostics_compute",
-    # `_run` / `_compute` exceptions.
-    "approximate_press":    "approximate_press_compute",
-    "one_se_rule":          "one_se_rule_compute",
-    "pls_monitoring":       "pls_monitoring_run",
-    "recursive_pls":        "recursive_pls_run",
-}
-# Methods that have no tier-1 `_methods.py` shim — they reach the C core
-# through `Model.fit` (Algorithm / Solver / Deflation on Config). Used by
-# `usage_section` to pick the C / Python snippet variant.
-MODEL_FIT_METHODS: set[str] = {"pls", "pcr", "opls"}
+# Legacy language-specific mapping tables were retired with the ABI-2
+# bindings.  Current Python, R, and MATLAB surfaces are scanned from their
+# public sources by dedicated helpers instead of being inferred from these
+# historical spellings.
 
 
-# Registry name → MATLAB tier-2 classdef name.
-METHOD_TO_MATLAB_CLASS: dict[str, str] = {
-    "pls": "Regression",
-    "pcr": "PcrRegression",
-    "opls": "OplsRegression",
-    "cppls": "CpplsRegression",
-    "sparse_simpls": "SparsePlsRegression",
-    "weighted_pls": "WeightedPlsRegression",
-    "mb_pls": "MbPlsRegression",
-    "ecr": "EcrRegression",
-    "di_pls": "DiPlsRegression",
-    "robust_pls": "RobustPlsRegression",
-    "ridge_pls": "RidgePlsRegression",
-    "continuum_regression": "ContinuumRegression",
-    "n_pls": "NPlsRegression",
-    "kernel_pls_rbf": "KernelPlsRegression",
-    "o2pls": "O2plsRegression",
-    "bagging_pls": "BaggingPlsRegression",
-    "boosting_pls": "BoostingPlsRegression",
-    "mir_pls": "MirRegression",
-    "missing_aware_nipals": "MissingAwareNipalsRegression",
-    "recursive_pls": "RecursivePlsRegression",
-    "pls_glm": "GlmRegression",
-}
-
-# Registry name → MATLAB tier-1 function (.m file, snake_case). Aliases
-# below cover the cases where the file name and the registry method name
-# differ (PLS → pls_fit.m, RBF kernel PLS → kernel_pls.m, the three
-# diagnostics share pls_diagnostics.m, and the variable-rank selectors
-# use distinct file names).
-METHOD_TO_MATLAB_FN: dict[str, str] = {
-    name: name for name in (
-        "aom_preprocess", "aom_pls", "approximate_press", "bagging_pls",
-        "bipls_select", "boosting_pls", "bve_select", "cars_select",
-        "continuum_regression", "cppls", "di_pls", "ds", "ecr",
-        "emcuve_select", "fused_sparse_pls", "ga_select", "gpr_pls",
-        "group_sparse_pls", "interval_select", "ipw_select", "irf_select",
-        "iriv_select", "lw_pls", "mb_pls", "mir_pls",
-        "missing_aware_nipals", "n_pls", "o2pls", "on_pls", "one_se_rule",
-        "opls", "pcr", "pds", "pls_cox", "pls_glm", "pls_lda",
-        "pls_logistic", "pls_monitoring", "pls_qda", "pso_select",
-        "pop_pls", "random_frog_select", "random_subspace_pls",
-        "randomization_select", "recursive_pls", "rep_select",
-        "ridge_pls", "robust_pls", "rosa", "scars_select",
-        "shaving_select", "sipls_select", "so_pls", "spa_select",
-        "sparse_pls_da", "sparse_simpls", "st_select", "stability_select",
-        "t2_select", "uve_select", "vip_spa_select", "vissa_select",
-        "weighted_pls", "wvc_select", "wvc_threshold_select",
-    )
-}
-METHOD_TO_MATLAB_FN["kernel_pls_rbf"] = "kernel_pls"
-METHOD_TO_MATLAB_FN["pls"] = "pls_fit"
-METHOD_TO_MATLAB_FN["pls_diagnostic_t2"] = "pls_diagnostics"
-METHOD_TO_MATLAB_FN["pls_diagnostic_q"] = "pls_diagnostics"
-METHOD_TO_MATLAB_FN["pls_diagnostic_dmodx"] = "pls_diagnostics"
-METHOD_TO_MATLAB_FN["variable_select_vip"] = "vip_select"
-METHOD_TO_MATLAB_FN["variable_select_coef"] = "coefficient_select"
-METHOD_TO_MATLAB_FN["variable_select_sr"] = "selectivity_ratio_select"
-
-
-# ---------------------------------------------------------------------------
 # Page renderers
 # ---------------------------------------------------------------------------
 
@@ -1969,9 +1845,9 @@ def method_group(name: str) -> str:
 
 BAND_ORDER = [
     ("cpp",            "C++ native · libn4m"),
-    ("python-pls4all", "Python · pls4all"),
-    ("r-pls4all",      "R · pls4all"),
-    ("matlab-pls4all", "MATLAB · pls4all"),
+    ("python-pls4all", "Python · archived pls4all benchmark"),
+    ("r-pls4all",      "R · archived pls4all benchmark"),
+    ("matlab-pls4all", "MATLAB · archived pls4all benchmark"),
     ("python-ext",     "Python · external"),
     ("r-ext",          "R · external"),
     ("matlab-ext",     "MATLAB · external"),
@@ -2279,7 +2155,9 @@ def parity_table(method: str, rows: list[dict],
     cells: dict[tuple[str, int, int, int], dict] = {}
     for r in rows:
         try:
-            n = int(r["n"]); p = int(r["p"]); t = int(r["threads"])
+            n = int(r["n"])
+            p = int(r["p"])
+            t = int(r["threads"])
         except (KeyError, ValueError):
             continue
         cid = column_id(r["backend"], r.get("libp4a_build", ""))
@@ -2336,6 +2214,11 @@ def parity_table(method: str, rows: list[dict],
     lines: list[str] = []
     lines.append("### Benchmarks\n")
     legend_lines = [
+        "**Archived measurement identity.** Backend labels in this table are the raw IDs recorded when the "
+        "benchmark ran (including historical `pls4all.*` IDs). They preserve measurement provenance and do not "
+        "describe a current public Python, R, or MATLAB binding; use the source-verified **API and bindings** "
+        "section above for current entry points.",
+        "",
         "Adaptive wall-clock per cell measured against "
         "[`full_matrix.csv`](../benchmarks/overview.md). "
         "Only backends that implement this method are listed; "
@@ -2343,7 +2226,7 @@ def parity_table(method: str, rows: list[dict],
         "",
         "**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a "
         "reference-gate pass at strict / relaxed / qualitative "
-        "tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees "
+        "tolerance &nbsp;·&nbsp; ✓ bind = archived binding-harness result agrees "
         "with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented "
         "by-design selector/RNG/model, noncanonical API/facade convention, "
         "or secondary oracle "
@@ -2362,14 +2245,14 @@ def parity_table(method: str, rows: list[dict],
             legend_lines += [
                 "",
                 f"**Reference gate**: relaxed — known algorithmic "
-                f"drift between pls4all and the external reference "
+                f"drift between the archived benchmark harness and the external reference "
                 f"(`rmse_rel_tol ≤ {method_tol:.0e}`).",
             ]
         elif method_quality == "qualitative":
             legend_lines += [
                 "",
                 f"**Reference gate**: qualitative — shape/smoke "
-                f"comparison only. The external library and pls4all "
+                f"comparison only. The external library and archived benchmark harness "
                 f"do not produce numerically equivalent output for "
                 f"this method (see the MethodSpec notes); the "
                 f"`rmse_rel_tol ≤ {method_tol:.0e}` budget is set "
@@ -2383,8 +2266,8 @@ def parity_table(method: str, rows: list[dict],
             "canonical parity references for this method "
             "(declared in "
             "[`parity_timing.registry`](../benchmarks/methodology.md)). "
-            "C++ and external rows show reference parity; pls4all "
-            "language bindings show binding parity against the C++ "
+            "C++ and external rows show reference parity; archived "
+            "language-harness rows show binding parity against the C++ "
             "backend. Hover the icon for role and tolerance band.",
         ]
     legend_lines.append("")
@@ -2527,6 +2410,49 @@ def parity_table(method: str, rows: list[dict],
     return "\n".join(lines)
 
 
+_ARCHIVED_BENCHMARK_DISCLOSURE = (
+    "**Archived measurement identity.** Backend labels in this table are the raw IDs recorded when the "
+    "benchmark ran (including historical `pls4all.*` IDs). They preserve measurement provenance and do not "
+    "describe a current public Python, R, or MATLAB binding; use the source-verified **API and bindings** "
+    "section above for current entry points."
+)
+
+
+def normalize_benchmark_snapshot(block: str) -> str:
+    """Qualify legacy snapshots without changing timing or parity values.
+
+    Snapshot JSON contains pre-rendered historical benchmark blocks. Both a
+    clean ``--no-bench`` generation and Sphinx's source-read hook load those
+    blocks directly, bypassing :func:`parity_table`. This normalizes only the
+    captions and explanation, preserving raw backend IDs and every measured
+    timing/parity cell as historical provenance.
+    """
+    if "### Benchmarks" not in block:
+        return block
+    text = block
+    if _ARCHIVED_BENCHMARK_DISCLOSURE not in text:
+        text = text.replace(
+            "### Benchmarks\n",
+            "### Benchmarks\n\n" + _ARCHIVED_BENCHMARK_DISCLOSURE + "\n",
+            1,
+        )
+    replacements = {
+        "✓ bind = pls4all binding agrees": "✓ bind = archived binding-harness result agrees",
+        "drift between pls4all and the external reference": (
+            "drift between the archived benchmark harness and the external reference"),
+        "The external library and pls4all do not": (
+            "The external library and archived benchmark harness do not"),
+        "C++ and external rows show reference parity; pls4all language bindings": (
+            "C++ and external rows show reference parity; archived language-harness rows"),
+        "Python · pls4all": "Python · archived pls4all benchmark",
+        "R · pls4all": "R · archived pls4all benchmark",
+        "MATLAB · pls4all": "MATLAB · archived pls4all benchmark",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
+
+
 def _tab_open(label: str, sync: str, cls: str = "") -> str:
     """Open a sphinx-design tab-item with sync key + optional class."""
     line = f":::{{tab-item}} {label}\n:sync: {sync}"
@@ -2539,461 +2465,164 @@ def _tab_close() -> str:
     return ":::\n"
 
 
-def usage_section(method: str, spec: dict, cat: dict | None,
-                   py_docs: dict, r_docs: dict, m_docs: dict,
-                   truth_sources: dict[str, dict] | None = None,
-                   old_to_new: dict[str, str] | None = None) -> str:
-    """Build the multi-binding usage section. Pulls real signatures from
-    the parsed Python sklearn classes, R roxygen blocks and MATLAB
-    headers when available; falls back to a generic template otherwise.
+def _current_python_binding(cat: dict | None, public_api: Any,
+                            registry_name: str | None = None) -> dict[str, Any] | None:
+    """Return a source-verified binding and signature, never a guessed name."""
+    return binding_for_catalog(cat or {}, public_api, registry_name)
 
-    `truth_sources` is `{cid -> metadata}` from
-    `benchmarks.parity_timing.registry.truth_source_metadata_for(method)`.
-    The bottom "Registry parity references" card is rendered from this
-    metadata when available — covering the resolved library, version and
-    quality band for every reference that actually instantiates on the
-    doc-build host. Falls back to the legacy boolean summary otherwise.
+
+def catalog_c_symbols(method: dict | None) -> list[str]:
+    """Normalize a catalog C surface without treating ``\"none\"`` as letters."""
+    raw = (method or {}).get("c_surface") or []
+    if raw == "none":
+        return []
+    if isinstance(raw, str):
+        return [raw]
+    if isinstance(raw, list):
+        return [str(symbol) for symbol in raw if str(symbol) != "none"]
+    return []
+
+
+def c_abi_declarations(symbols: list[str]) -> list[tuple[str, str, int]]:
+    """Locate C-ABI declarations in the installed public headers.
+
+    The catalog names the operation but not its header.  Linking the exact
+    declaration keeps C-only pages actionable without inventing a Python
+    wrapper or copying a potentially stale prototype into Markdown.
     """
-    truth_sources = truth_sources or {}
-    old_to_new = old_to_new or {}
-    name = method
-    nc = spec.get("cell_params", {}).get("n_components", 2)
-    needs_xt = spec.get("needs_x_target")
-    needs_sw = spec.get("needs_sample_weights")
-    needs_y = spec.get("needs_labels")
-    needs_g = spec.get("needs_group_assignment")
-
-    # ---- native (libn4m C ABI) ----
-    # Model-based methods (`pls`, `pcr`, `opls`) reach the C core through
-    # `n4m_model_fit`, not a per-method shim. Detect that and emit the
-    # Model.fit path for both the C and Python snippets. For every other
-    # method, the ABI-2 C symbol comes from the catalog/rename map via
-    # `method_c_symbol`; there is no legacy `<method>_fit` fallback.
-    cat_algorithm = (cat or {}).get("algorithm")
-    cat_solver = (cat or {}).get("solver")
-    use_model_path = name in MODEL_FIT_METHODS
-    c_symbol = method_c_symbol(name, old_to_new)
-    # Python-side `pls4all._methods` function name (not a C ABI symbol).
-    py_fn = METHOD_TO_C_FUNCTION.get(name) or f"{name}_fit"
-
-    def _ren(sym: str) -> str:
-        return old_to_new.get(sym, sym)
-
-    if name in {"aom_pls", "pop_pls"}:
-        selector_fn = (_ren("n4m_aom_per_component_select")
-                       if name == "pop_pls" else _ren("n4m_aom_global_select"))
-        # The result struct types kept their ABI-1 names in the ABI-2 headers;
-        # only the functions were renamed, so the *_result_t types stay as-is.
-        result_t = ("n4m_aom_per_component_result_t"
-                    if name == "pop_pls" else "n4m_aom_global_result_t")
-        destroy_fn = (_ren("n4m_aom_per_component_result_destroy")
-                      if name == "pop_pls"
-                      else _ren("n4m_aom_global_result_destroy"))
-        native = textwrap.dedent(f"""\
-            ```c
-            /* C ABI — libn4m AOM/POP selector path */
-            n4m_context_t* ctx = n4m_context_create();
-            n4m_config_t*  cfg = n4m_config_create();
-            n4m_operator_bank_t* bank = NULL;
-            n4m_validation_plan_t* plan = NULL;
-            {result_t}* res = NULL;
-            n4m_operator_bank_create(&bank);
-            /* add compact nirs4all-style operators: identity, SG, detrend, FD */
-            n4m_validation_plan_create(&plan);
-            /* fill CV folds on plan */
-            {selector_fn}(ctx, cfg, bank, &x_view, &y_view, plan,
-                          /* max_components */ {nc}, &res);
-            /* read predictions and selection diagnostics via result getters */
-            {destroy_fn}(res);
-            n4m_validation_plan_destroy(plan);
-            n4m_operator_bank_destroy(bank);
-            n4m_config_destroy(cfg);
-            n4m_context_destroy(ctx);
-            ```""")
-    elif use_model_path:
-        # All three MODEL_FIT_METHODS (pls / pcr / opls) have a YAML
-        # catalog entry exposing the right algorithm / solver enum values.
-        algo_enum = cat_algorithm or "PLS_REGRESSION"
-        solver_enum = cat_solver or "SIMPLS"
-        native = textwrap.dedent(f"""\
-            ```c
-            /* C ABI — libn4m (Model.fit path) */
-            n4m_context_t* ctx = n4m_context_create();
-            n4m_config_t*  cfg = n4m_config_create();
-            n4m_config_set_algorithm(cfg, N4M_ALGORITHM_{algo_enum});
-            n4m_config_set_solver   (cfg, N4M_SOLVER_{solver_enum});
-            n4m_config_set_n_components(cfg, {nc});
-            n4m_model_t* mdl = NULL;
-            n4m_model_fit(ctx, cfg, &x_view, &y_view, &mdl);
-            n4m_model_predict(ctx, mdl, &x_test_view, &y_hat_view);
-            n4m_model_destroy(mdl);
-            n4m_config_destroy(cfg);
-            n4m_context_destroy(ctx);
-            ```""")
-    else:
-        # ABI-2 C symbol from the catalog/rename map. If a registry method has
-        # no resolvable native symbol (Python-only references), fall back to
-        # the generic method-result entry point rather than a fabricated name.
-        call_sym = c_symbol or "n4m_method_result_compute"
-        native = textwrap.dedent(f"""\
-            ```c
-            /* C ABI — libn4m */
-            n4m_context_t* ctx = n4m_context_create();
-            n4m_config_t*  cfg = n4m_config_create();
-            n4m_method_result_t* res = NULL;
-            {call_sym}(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
-            /* … read coefficients / mask / scores via */
-            /* n4m_method_result_get_double_matrix / vector / scalar … */
-            n4m_method_result_destroy(res);
-            n4m_config_destroy(cfg);
-            n4m_context_destroy(ctx);
-            ```""")
-
-    # ---- pls4all.python (tier-1) ----
-    py_kwargs = ""
-    extras = []
-    if needs_xt:
-        extras.append("X_target=X_target")
-    if needs_sw:
-        extras.append("sample_weights=sample_w")
-    if needs_y:
-        extras.append("y_labels=y_labels")
-    if needs_g:
-        extras.append("group_assignment=groups")
-    if "n_components" in spec.get("cell_params", {}):
-        py_kwargs = f"n_components={nc}"
-    args_str = ", ".join([a for a in [py_kwargs] + extras if a])
-    if name in {"aom_pls", "pop_pls"}:
-        py_selector = "aom_per_component_select" if name == "pop_pls" else "aom_global_select"
-        python_raw = textwrap.dedent(f"""\
-            ```python
-            import pls4all
-
-            with pls4all.Context() as ctx, pls4all.Config() as cfg:
-                bank = pls4all.OperatorBank()
-                plan = pls4all.ValidationPlan()
-                # Add compact nirs4all-style operators and CV folds.
-                res = pls4all.{py_selector}(
-                    ctx, cfg, bank, X.ravel(), y.ravel(), plan,
-                    max_components={nc},
-                    x_rows=X.shape[0], x_cols=X.shape[1],
-                    y_rows=y.shape[0], y_cols=1,
-                )
-                values, rows, cols = res.predictions
-            ```""")
-    elif use_model_path:
-        algo_enum = cat_algorithm or "PLS_REGRESSION"
-        solver_enum = cat_solver or "SIMPLS"
-        python_raw = textwrap.dedent(f"""\
-            ```python
-            import pls4all
-            from pls4all import Algorithm, Solver
-            with pls4all.Context() as ctx, pls4all.Config() as cfg:
-                cfg.algorithm = Algorithm.{algo_enum}
-                cfg.solver = Solver.{solver_enum}
-                cfg.n_components = {nc}
-                with pls4all.Model.fit(ctx, cfg, X, y) as mdl:
-                    y_hat = mdl.predict(X_test)
-            ```""")
-    else:
-        python_raw = textwrap.dedent(f"""\
-            ```python
-            import pls4all
-            from pls4all._methods import {py_fn}
-            with pls4all.Context() as ctx, pls4all.Config() as cfg:
-                res = {py_fn}(ctx, cfg, X, y{', ' + args_str if args_str else ''})
-            # then: res.matrix("predictions"), res.matrix("coefficients"),
-            # res.vector("mask"), res.scalar("intercept"), …
-            ```""")
-
-    # ---- pls4all.sklearn (tier-2 Python) — pull real __init__ params ----
-    py_class = METHOD_TO_PY_SKLEARN.get(name)
-    py_fn = METHOD_TO_PY_FN.get(name)
-    if py_class and py_class in py_docs:
-        meta = py_docs[py_class]
-        params = meta.get("init_params") or []
-        rendered = []
-        for p in params:
-            d = p.get("default")
-            if d in (None, ""):
-                rendered.append(p["name"])
-            else:
-                rendered.append(f"{p['name']}={d}")
-        fit_args = ["X, y"]
-        if needs_xt:
-            fit_args.append("X_target=X_target")
-        if needs_sw:
-            fit_args.append("sample_weight=sample_w")
-        python_sklearn = textwrap.dedent(f"""\
-            ```python
-            from pls4all.sklearn import {py_class}
-            mdl = {py_class}({', '.join(rendered) or 'n_components=' + str(nc)})
-            mdl.fit({', '.join(fit_args)})
-            y_hat = mdl.predict(X_test)
-            ```""")
-    elif py_fn:
-        python_sklearn = textwrap.dedent(f"""\
-            ```python
-            from pls4all.sklearn import {py_fn}
-            result = {py_fn}(X, y, n_components={nc})
-            ```""")
-    elif name in {"aom_pls", "pop_pls"}:
-        python_sklearn = (
-            "_No tier-2 sklearn-style class yet — exposed via the "
-            "`pls4all.aom_global_select` / "
-            "`pls4all.aom_per_component_select` low-level ABI._")
-    else:
-        python_sklearn = (
-            "_No tier-2 sklearn-style class — exposed only via "
-            "`pls4all._methods`._")
-
-    # ---- pls4all.R (tier-1 dispatcher) ----
-    # Build params=list(...) for extra hyperparameters.
-    extra_params = []
-    for k, v in (spec.get("cell_params") or {}).items():
-        if k in ("n_samples", "n_features", "n_components"):
+    unresolved = set(symbols)
+    found: dict[str, tuple[str, int]] = {}
+    include_dir = ROOT / "cpp" / "include" / "n4m"
+    if not include_dir.exists():
+        return []
+    for header in sorted(include_dir.rglob("*.h")):
+        if not unresolved:
+            break
+        try:
+            lines = header.read_text(encoding="utf-8").splitlines()
+        except OSError:
             continue
-        if isinstance(v, str):
-            extra_params.append(f'{k} = "{v}"')
-        elif isinstance(v, float):
-            extra_params.append(f"{k} = {v}")
+        for line_number, line in enumerate(lines, start=1):
+            for symbol in tuple(unresolved):
+                if re.search(rf"\b{re.escape(symbol)}\b", line):
+                    found[symbol] = (
+                        header.relative_to(ROOT).as_posix(), line_number)
+                    unresolved.remove(symbol)
+    return [(symbol, *found[symbol]) for symbol in symbols if symbol in found]
+
+
+def render_c_abi_surface(symbols: list[str]) -> str:
+    """Render linked, source-verified C entry points for a method page."""
+    if not symbols:
+        return "**C ABI:** no standalone exported symbol is declared for this method."
+    details = {symbol: (path, line) for symbol, path, line in c_abi_declarations(symbols)}
+    rendered: list[str] = []
+    for symbol in symbols:
+        declaration = details.get(symbol)
+        if declaration:
+            path, line = declaration
+            url = f"https://github.com/GBeurier/nirs4all-methods/blob/main/{path}#L{line}"
+            rendered.append(f"[`{symbol}`]({url})")
         else:
-            extra_params.append(f"{k} = {v}L")
-    params_arg = (", params = list(" + ", ".join(extra_params) + ")") \
-        if extra_params else ""
-    r_raw = textwrap.dedent(f"""\
-        ```r
-        library(pls4all)
-        # Unified low-level dispatcher (May 2026 R cleanup):
-        res <- pls4all_method("{name}", X, y,
-                              n_components = {nc}L{params_arg})
-        # res is a named list with MethodResult arrays/scalars.
-        # selected_indices / top_k_intervals are 1-based.
-        ```""")
+            rendered.append(f"`{symbol}`")
+    return ("**C ABI (ABI 2):** " + " · ".join(rendered) + ". "
+            "Use the linked public header for the exact signature, configuration, and result handles.")
 
-    # ---- pls4all.R (tier-1 raw function from methods.R/methods_extra.R) ----
-    r_raw_fn = METHOD_TO_R_RAW.get(name)
-    r_raw_block = None
-    if r_raw_fn and r_raw_fn in r_docs:
-        sig = r_docs[r_raw_fn]["signature"]
-        r_raw_block = textwrap.dedent(f"""\
-            ```r
-            library(pls4all)
-            res  <- {sig}
-            yhat <- pls4all_predict(res, X_test)
-            ```""")
 
-    # ---- pls4all.R (tier-2 formula + S3) ----
-    r_formula_fn = METHOD_TO_R_FORMULA.get(name)
-    r_formula_block = None
-    if r_formula_fn and r_formula_fn in r_docs:
-        r_formula_block = textwrap.dedent(f"""\
-            ```r
-            library(pls4all)
-            fit  <- {r_formula_fn}(y ~ ., data = train, ncomp = {nc}L)
-            yhat <- predict(fit, newdata = test)
-            summary(fit)
-            ```""")
-
-    # ---- pls4all.R (CRAN `pls`-package compatibility) ----
-    # `pls_compat.R` exports `plsr()`, `pcr()`, `mvr()` with the same
-    # signatures as the CRAN `pls` package so existing chemometrics code
-    # can swap pls4all in without a rewrite.
-    r_pls_compat_fn = METHOD_TO_R_PLS_COMPAT.get(name)
-    r_pls_compat_block = None
-    if r_pls_compat_fn:
-        r_pls_compat_block = textwrap.dedent(f"""\
-            ```r
-            library(pls4all)
-            # Drop-in for CRAN `pls::{r_pls_compat_fn}` (same signature).
-            fit  <- {r_pls_compat_fn}(y ~ ., ncomp = {nc}L, data = train,
-                                       validation = "CV", segments = 10L)
-            yhat <- predict(fit, newdata = test, ncomp = {nc}L)
-            RMSEP(fit)
-            ```""")
-
-    # ---- pls4all.R (`mdatools::pls` matrix-API compatibility) ----
-    # `mdatools_compat.R` exports `pls_mdatools(x, y, ncomp, method = ...)`
-    # mirroring the matrix-oriented signature used by NIRS / chemometrics
-    # workflows.
-    r_mdatools_pair = METHOD_TO_R_MDATOOLS.get(name)
-    r_mdatools_block = None
-    if r_mdatools_pair:
-        mfn, mmethod = r_mdatools_pair
-        r_mdatools_block = textwrap.dedent(f"""\
-            ```r
-            library(pls4all)
-            # Drop-in for `mdatools::pls(x, y, ncomp, method = "{mmethod}")`.
-            fit  <- {mfn}(X, y, ncomp = {nc}L, method = "{mmethod}",
-                           center = TRUE, scale = FALSE)
-            yhat <- predict(fit, newdata = X_test, ncomp = {nc}L)
-            ```""")
-
-    # ---- pls4all.matlab (tier-1 function) ----
-    m_fn = METHOD_TO_MATLAB_FN.get(name)
-    if m_fn and m_fn in m_docs:
-        # Use the actual signature header from the .m file.
-        sig = m_docs[m_fn]["signature"].replace("function ", "").strip()
-        matlab_tier1 = textwrap.dedent(f"""\
-            ```matlab
-            res = pls4all.{m_fn}(X, y, {nc});
-            % see header of bindings/matlab/+pls4all/{m_fn}.m for full
-            % parameter surface:
-            %   {sig}
-            yhat = predict(res, Xtest);
-            ```""")
-    else:
-        matlab_tier1 = textwrap.dedent(f"""\
-            ```matlab
-            res  = pls4all.fit("{name}", X, y, "NumComponents", {nc});
-            yhat = predict(res, Xtest);
-            ```""")
-
-    # ---- pls4all.matlab (tier-2 classdef) ----
-    m_class = METHOD_TO_MATLAB_CLASS.get(name)
-    if m_class:
-        matlab_tier2 = textwrap.dedent(f"""\
-            ```matlab
-            mdl  = pls4all.fit("{name}", X, y, "NumComponents", {nc});
-            yhat = predict(mdl, Xtest);
-            ```""")
-    else:
-        matlab_tier2 = (
-            "_No idiomatic classdef wrapper — invoke "
-            f"`pls4all.fit(\"{name}\", X, y, …)` directly from the unified "
-            "MEX factory._")
-
-    # ---- external references ----
-    py_ext: list[str] = []
-    if spec.get("has_py_ref"):
-        py_ext.append("`scikit-learn` (declared as `python_reference` in "
-                       "the registry)")
-    for r in spec.get("extra_refs", []):
-        if r in {"ikpls"}:
-            py_ext.append("`ikpls`")
-    if not py_ext:
-        py_ext.append("_No widely installable Python reference._")
-
-    r_ext: list[str] = []
-    if spec.get("has_r_ref"):
-        r_ext.append("CRAN / Bioconductor reference declared in the "
-                      "registry (see *Bibliographic source*).")
-    for r in spec.get("extra_refs", []):
-        if r in {"mixOmics", "ropls", "spls"}:
-            r_ext.append(f"`{r}`")
-    if not r_ext:
-        r_ext.append("_No R reference declared for this method._")
-
-    parts: list[str] = [
-        "### Usage\n",
-        "Every pls4all binding tab dispatches into the same C kernel; "
-        "the external libraries listed at the bottom of the page are the "
-        "parity references registered in "
-        "`benchmarks.parity_timing.registry`. Switch tabs to read the "
-        "same fit in your language. The R package now ships "
-        "drop-in-compatible facades for the CRAN `pls` package "
-        "(`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` "
-        "matrix idiom — those tabs appear only on the methods that have "
-        "a meaningful equivalence.\n",
-    ]
-
-    # tab-set 1: pls4all bindings -------------------------------------
-    parts.append("**pls4all bindings**\n")
-    parts.append("::::{tab-set}\n:class: pls4all-bindings\n")
-    parts.append(_tab_open("C ABI · libn4m", "c", "c"))
-    parts.append(native + "\n")
-    parts.append(_tab_close())
-    parts.append(_tab_open(
-        "Python · pls4all (raw)", "python-raw", "python"))
-    parts.append(python_raw + "\n")
-    parts.append(_tab_close())
-    parts.append(_tab_open(
-        "Python · pls4all.sklearn", "python-sklearn", "python"))
-    parts.append(python_sklearn + "\n")
-    parts.append(_tab_close())
-    parts.append(_tab_open(
-        "R · pls4all_method()", "r-dispatcher", "r"))
-    parts.append(r_raw + "\n")
-    parts.append(_tab_close())
-    if r_raw_block:
-        parts.append(_tab_open(
-            "R · pls4all (raw fn)", "r-raw", "r"))
-        parts.append(r_raw_block + "\n")
-        parts.append(_tab_close())
-    if r_formula_block:
-        parts.append(_tab_open(
-            "R · pls4all (formula+S3)", "r-formula", "r"))
-        parts.append(r_formula_block + "\n")
-        parts.append(_tab_close())
-    if r_pls_compat_block:
-        parts.append(_tab_open(
-            "R · `pls` package compat", "r-pls-compat", "r"))
-        parts.append(r_pls_compat_block + "\n")
-        parts.append(_tab_close())
-    if r_mdatools_block:
-        parts.append(_tab_open(
-            "R · `mdatools` compat", "r-mdatools", "r"))
-        parts.append(r_mdatools_block + "\n")
-        parts.append(_tab_close())
-    parts.append(_tab_open(
-        "MATLAB · pls4all (MEX)", "matlab-mex", "matlab"))
-    parts.append(matlab_tier1 + "\n")
-    parts.append(_tab_close())
-    parts.append(_tab_open(
-        "MATLAB · pls4all (classdef)", "matlab-classdef", "matlab"))
-    parts.append(matlab_tier2 + "\n")
-    parts.append(_tab_close())
-    parts.append("::::\n")
-
-    # Registry parity references block (separate card, not tabbed).
-    #
-    # Source of truth: the resolved metadata from
-    # `truth_source_metadata_for(method)`. We render one bullet per
-    # registry-declared reference (Python or R), each tagged with the
-    # 📐 icon to match the parity table rows. Paper-only methods get a
-    # 📜 marker explaining there is no executable reference.
-    parts.append(f"\n**Registry parity references** "
-                  f"{TRUTH_SOURCE_ICON}\n")
-    parts.append(":::{card}\n:class-card: external-refs\n")
-    if spec.get("paper_only"):
-        parts.append(
-            f"- {PAPER_ONLY_ICON} **Paper-only** — no executable parity "
-            "reference; the `pls4all` implementation is verified by a "
-            "smoke fit only. Canonical citation: "
-            + spec["paper_only"]
-        )
-    if truth_sources:
-        for cid in sorted(truth_sources):
-            meta = truth_sources[cid]
-            label = _truth_quality_label(
-                meta.get("quality", "qualitative"),
-                float(meta.get("tolerance") or 0.0),
-            )
-            note = (meta.get("notes") or "").strip()
-            note_clause = f" — {note}" if note else ""
-            parts.append(
-                f"- {TRUTH_SOURCE_ICON} **`{cid}`** "
-                f"({meta.get('language', '?')} · {meta.get('role', '?')}) — "
-                f"`{meta.get('library', '?')}` "
-                f"{meta.get('version', '')} · {label}{note_clause}"
-            )
-    elif not spec.get("paper_only"):
-        # No resolved metadata available — fall back to the legacy
-        # boolean summary. Happens when the doc-build env can't import
-        # the registry (e.g. RTD without numpy fully provisioned).
-        parts.append("- **Python** — " + "; ".join(py_ext))
-        parts.append("- **R** — " + "; ".join(r_ext))
-    parts.append(":::\n")
+def render_cross_binding_surfaces(cross_bindings: dict[str, dict[str, Any]]) -> str:
+    """Render current R/MATLAB access only when source scanning proves it."""
+    labels = (("r", "R", "r"), ("matlab", "MATLAB / Octave", "matlab"))
+    parts: list[str] = []
+    for key, label, language in labels:
+        binding = cross_bindings.get(key)
+        if not binding:
+            parts.append(f"**{label}:** no current source-verified entry point was found for this catalog method.\n")
+            continue
+        source_url = "https://github.com/GBeurier/nirs4all-methods/blob/main/" + binding["source"]
+        signature = f"{binding['symbol']}{binding['signature']}"
+        parts.append(f"**{label} (source-verified):** [`{signature}`]({source_url}).\n")
+        if binding.get("call"):
+            parts.append(f"```{language}\n{binding['snippet']}\n```\n")
+        else:
+            parts.append("The source signature has additional required inputs, so no example call is fabricated.\n")
     return "\n".join(parts)
 
 
-def parameters_section(method: str, spec: dict, cat: dict | None,
-                        py_docs: dict) -> str:
-    """Render the canonical parameters block (pls4all native names).
+def usage_section(method: str, spec: dict, cat: dict | None,
+                  public_api: Any,
+                  cross_bindings: dict[str, dict[str, Any]],
+                  truth_sources: dict[str, dict] | None = None,
+                  old_to_new: dict[str, str] | None = None) -> str:
+    """Render only current, source-verified ABI-2 access paths.
 
-    Prefers the actual Python sklearn class __init__ signature (which
-    *is* the canonical pls4all parameter surface) over the YAML catalog
-    or the registry's cell_params dict."""
+    The former documentation generated nominal ``pls4all``/``n4m.sklearn``
+    examples from retired trees.  An import statement is useful only when it
+    is executable in the current package; complex multi-binding calls are not
+    fabricated here.  Detailed parameters remain in ``parameters_section``.
+    """
+    truth_sources = truth_sources or {}
+    old_to_new = old_to_new or {}
+    parts = ["### API and bindings\n"]
+
+    c_symbols = catalog_c_symbols(cat)
+    if not c_symbols:
+        symbol = method_c_symbol(method, old_to_new)
+        if symbol:
+            c_symbols = [symbol]
+    parts.append(render_c_abi_surface(c_symbols) + "\n")
+
+    binding = _current_python_binding(cat, public_api, method)
+    if binding:
+        snippet = binding["import"]
+        if binding.get("call"):
+            snippet += "\nresult = " + binding["call"]
+        parts.append("**Python (verified public re-export):**\n\n"
+                     "```python\n"
+                     f"{snippet}\n"
+                     "```\n")
+        source_url = ("https://github.com/GBeurier/nirs4all-methods/blob/main/"
+                      "bindings/python/src/" + binding["source"])
+        if binding.get("source_line"):
+            source_url += f"#L{binding['source_line']}"
+        parts.append(f"Source signature: `{binding['symbol']}{binding['signature'] or '(...)'}` "
+                     f"([`{binding['source']}`]({source_url})).\n")
+    else:
+        parts.append("**Python:** no current AST-verified public `n4m` re-export was found for this "
+                     "method. The linked C ABI above is the documented surface in this checkout.\n")
+
+    parts.append(render_cross_binding_surfaces(cross_bindings))
+
+    parts.append(f"**Registry parity references** {TRUTH_SOURCE_ICON}\n")
+    parts.append(":::{card}\n:class-card: external-refs\n")
+    if spec.get("paper_only"):
+        parts.append(f"- {PAPER_ONLY_ICON} **Paper-only** — no executable parity reference; "
+                     "the paper citation is recorded in *Bibliographic source*.\n")
+    if truth_sources:
+        for cid in sorted(truth_sources):
+            meta = truth_sources[cid]
+            label = _truth_quality_label(meta.get("quality", "qualitative"),
+                                         float(meta.get("tolerance") or 0.0))
+            note = (meta.get("notes") or "").strip()
+            note_clause = f" — {note}" if note else ""
+            parts.append(f"- {TRUTH_SOURCE_ICON} **`{cid}`** "
+                         f"({meta.get('language', '?')} · {meta.get('role', '?')}) — "
+                         f"`{meta.get('library', '?')}` {meta.get('version', '')} · "
+                         f"{label}{note_clause}\n")
+    elif not spec.get("paper_only"):
+        parts.append("- No executable parity reference was resolved in this build; consult the "
+                     "registry metadata and the bibliographic source above.\n")
+    parts.append(":::\n")
+    return "\n".join(parts)
+
+def markdown_table_cell(value: object) -> str:
+    """Make one value safe to place in a pipe-delimited Markdown table."""
+    return str(value).replace("\n", " ").replace("|", r"\|")
+
+
+def parameters_section(method: str, spec: dict, cat: dict | None,
+                       py_docs: dict,
+                       binding: dict[str, Any] | None = None) -> str:
+    """Render current public, catalog, and benchmark parameter evidence."""
     rows: list[tuple[str, str, str, str]] = []
     seen: set[str] = set()
 
@@ -3002,14 +2631,16 @@ def parameters_section(method: str, spec: dict, cat: dict | None,
             seen.add(n)
             rows.append((n, t, d, note))
 
-    # 1) Python sklearn class __init__ signature — most authoritative.
-    py_class = METHOD_TO_PY_SKLEARN.get(method)
-    if py_class and py_class in py_docs:
-        for p in py_docs[py_class].get("init_params") or []:
-            add(p["name"], p.get("type", "") or "—",
-                str(p.get("default", "")) or "—", "")
+    # 0) Current public n4m callable signature, AST-traced through re-exports.
+    if binding:
+        for p in binding.get("parameters", []):
+            default = p.get("default")
+            add(str(p.get("name") or ""),
+                str(p.get("annotation") or "—"),
+                str(default) if default is not None else "required",
+                "current public binding signature")
 
-    # 2) Fall back to YAML catalog
+    # 1) Catalog-declared C/API parameters.
     for p in (cat or {}).get("params", []) or []:
         if isinstance(p, dict):
             add(p.get("name", ""), str(p.get("type", "")) or "—",
@@ -3022,7 +2653,7 @@ def parameters_section(method: str, spec: dict, cat: dict | None,
                 f"{e.get('type', '')} ({req})", "",
                 "fit-time extra (not part of `__init__`)")
 
-    # 3) Registry cell_params — values used by the benchmark.
+    # 2) Registry cell_params — values used by the benchmark.
     for k, v in (spec.get("cell_params") or {}).items():
         if k in ("n_samples", "n_features"):
             continue
@@ -3044,10 +2675,9 @@ def parameters_section(method: str, spec: dict, cat: dict | None,
               "| Name | Type | Default | Notes |",
               "|------|------|---------|-------|"]
     for (n, t, d, nt) in enriched:
-        # Markdown table cells can't contain raw newlines.
-        nt = (nt or "").replace("\n", " ").replace("|", "\\|")
-        d = d.replace("\n", " ")
-        lines.append(f"| `{n}` | `{t}` | `{d}` | {nt} |")
+        lines.append("| `{}` | `{}` | `{}` | {} |".format(
+            markdown_table_cell(n), markdown_table_cell(t),
+            markdown_table_cell(d), markdown_table_cell(nt or "")))
     return "\n".join(lines)
 
 
@@ -3059,17 +2689,45 @@ def _docstring_summary(doc: str) -> str:
     return paragraphs[0].strip().replace("\n    ", " ").replace("\n  ", " ")
 
 
+def _append_scientific_sections(parts: list[str], record: dict[str, str]) -> None:
+    """Render the explanatory contract shared by every generated page."""
+    parts.append("## Explanations\n")
+    labels = (
+        ("paper", "Bibliographic source"),
+        ("principle", "Mathematical principle"),
+        ("use_cases", "Appropriate uses"),
+        ("limitations", "Limits and validation"),
+        ("implementation", "Implementation"),
+        ("provenance", "Sources and provenance"),
+    )
+    for field, label in labels:
+        value = (record.get(field) or "").strip()
+        if value:
+            parts.append(f"### {label}\n")
+            parts.append(value)
+            parts.append("")
+
+
+def _legacy_science_record(name: str) -> dict[str, str]:
+    """Return the reviewed render-layer record for one archived entry."""
+    return dict(_LEGACY_SCIENCE.get(name) or {})
+
+
 def render_method_page(spec: dict, cat: dict | None,
                        bench_rows: list[dict],
                        py_docs: dict, r_docs: dict, m_docs: dict,
+                       public_api: Any,
+                       r_public_api: Any,
+                       matlab_public_api: Any,
                        truth_sources: dict[str, dict] | None = None,
                        old_to_new: dict[str, str] | None = None,
-                       rename_pattern: re.Pattern[str] | None = None) -> str:
+                       rename_pattern: re.Pattern[str] | None = None,
+                       benchmark_snapshot: str | None = None) -> str:
     """Build the full markdown for one method."""
     name = spec["name"]
     truth_sources = truth_sources or {}
     old_to_new = old_to_new or {}
-    bib = BIBLIOGRAPHY.get(name, {})
+    bib = _legacy_science_record(name)
     title = bib.get("title") or spec.get("desc") or name
     grp = method_group(name)
     grp_label = GROUP_LABELS.get(grp, grp.capitalize())
@@ -3086,78 +2744,37 @@ def render_method_page(spec: dict, cat: dict | None,
     parts.append("## Description\n")
     parts.append(f"{spec.get('desc') or '_No registry description._'}\n")
 
-    # Python sklearn class docstring — when richer than the registry desc,
-    # quote it.
-    py_class = METHOD_TO_PY_SKLEARN.get(name)
-    if py_class and py_class in py_docs:
-        doc = py_docs[py_class]["docstring"]
-        summary = _docstring_summary(doc)
-        if summary and summary.lower() not in (spec.get("desc") or "").lower():
-            parts.append(f"From the `pls4all.sklearn.{py_class}` "
-                          f"docstring:\n\n> {summary}\n")
-        if doc and "----------" in doc:
-            # Full parameters block is typically below the summary —
-            # surface it verbatim in a collapsed code block.
-            parts.append("<details>\n<summary>Full Python "
-                          "<code>sklearn</code>-wrapper docstring</summary>\n")
-            parts.append("```text\n" + doc.strip() + "\n```\n")
-            parts.append("</details>\n")
-
     if spec.get("notes"):
         parts.append("> **Registry note** — " + spec["notes"].replace("\n", " ")
                       + "\n")
 
-    parts.append(parameters_section(name, spec, cat, py_docs) + "\n")
+    binding = _current_python_binding(cat, public_api, name)
+    cross_bindings = cross_bindings_for_catalog(
+        cat or {}, r_public_api, matlab_public_api)
+    parts.append(parameters_section(name, spec, cat, py_docs, binding) + "\n")
 
-    parts.append("## Explanations\n")
-    parts.append("### Bibliographic source\n")
-    parts.append(bib.get("paper") or "_No curated reference; see registry "
-                  "notes and the [benchmark methodology](../benchmarks/methodology.md)._")
-    parts.append("\n### Mathematical principle\n")
-    parts.append(bib.get("principle") or
-                  "_Standard derivation — see the cited reference._")
-    parts.append("\n### Implementation\n")
-    impl_text = bib.get("implementation")
-    if not impl_text:
+    if not bib.get("implementation"):
         sym = method_c_symbol(name, old_to_new)
-        impl_text = (f"`{sym}` in libn4m." if sym
-                     else "Python-only reference; no exported C symbol.")
-    parts.append(impl_text)
+        bib["implementation"] = (f"`{sym}` in libn4m." if sym
+                                 else "Python-only reference; no exported C symbol.")
+    _append_scientific_sections(parts, bib)
 
-    # R roxygen — pull the first paragraph of the formula-style wrapper
-    # if available; otherwise the raw-function one.
-    r_meta = None
-    for r_name in (METHOD_TO_R_FORMULA.get(name),
-                    METHOD_TO_R_RAW.get(name)):
-        if r_name and r_name in r_docs:
-            r_meta = r_docs[r_name]
-            break
-    if r_meta:
-        roxy = r_meta["roxygen"].strip()
-        # Keep only the first paragraph
-        first_para = roxy.split("\n\n")[0]
-        parts.append("\nR roxygen note (`" + r_meta["file"] + "::"
-                      + r_meta["signature"].split("(")[0] + "`):\n")
-        parts.append("> " + first_para.replace("\n", "\n> "))
-
-    # MATLAB classdef / function header — first 5 lines.
-    m_name = (METHOD_TO_MATLAB_CLASS.get(name)
-              or METHOD_TO_MATLAB_FN.get(name))
-    if m_name and m_name in m_docs:
-        header = m_docs[m_name]["header"].strip()
-        if header:
-            short = "\n".join(header.splitlines()[:6])
-            parts.append("\nMATLAB header (`bindings/matlab/+pls4all/"
-                          + m_docs[m_name]["file"] + "`):\n")
-            parts.append("```text\n" + short + "\n```")
+    # R and MATLAB role pages remain linked from the verified API section.
+    # We deliberately do not promote their historical wrapper docstrings into
+    # this page: several use a pre-ABI-2 method name and are not a source of
+    # executable examples until their own public export is AST-validated.
     parts.append("")
 
-    parts.append(usage_section(name, spec, cat, py_docs, r_docs, m_docs,
+    parts.append(usage_section(name, spec, cat, public_api, cross_bindings,
                                 truth_sources=truth_sources,
                                 old_to_new=old_to_new))
 
-    parts.append(parity_table(name, bench_rows,
-                                truth_sources=truth_sources))
+    # A strict source-only regeneration must retain the committed parity
+    # snapshot when the benchmark CSV is deliberately absent.  Sphinx later
+    # refreshes this same section from live CSV data when it is available.
+    parts.append(parity_table(name, bench_rows, truth_sources=truth_sources)
+                 if bench_rows else (benchmark_snapshot or parity_table(
+                     name, [], truth_sources=truth_sources)))
     parts.append("")
     parts.append("---")
     parts.append("\n_See also_: "
@@ -3223,18 +2840,25 @@ _INDEX_PAGE_OVERRIDES: dict[str, str | None] = {
     "utilities.sweep":                  "sweep_run",
     "aom_pop.aom_sweep":                "aom_sweep_run",
     "aom_pop.aom_chain_sweep":          "aom_chain_sweep_run",
-    "aom_pop.aom_chain_fixed_fit":      "aom_chain_sweep_run",
-    "aom_pop.aom_chain_screen_refit":   "aom_chain_sweep_run",
+    # These have related orchestration but distinct semantics and output.
+    # Give each its own scientific record rather than silently redirecting to
+    # the generic chain sweep page.
+    "aom_pop.aom_chain_fixed_fit":      None,
+    "aom_pop.aom_chain_screen_refit":   None,
+    "aom_pop.robust_hpo":                "aom_robust_hpo",
     "diagnostics.regression_metrics":   None,
     "diagnostics.pls_diagnostics":      None,
     "utilities.hotelling_t2":           None,
     "utilities.q_residuals":            None,
     "utilities.signal_type_detector":   None,
     "utilities.transfer_metrics":       None,
-    "aom_pop.ridge_global":             None,
-    "aom_pop.ridge_superblock":         None,
-    "aom_pop.ridge_active_superblock":  None,
-    "aom_pop.ridge_mkl_superblock":     None,
+    # These are distinct AOM Ridge compositions, each with its own verified
+    # scientific record and stable published page.  They must not collapse
+    # into the generic AOM sweep or leave a stale hand-written page in place.
+    "aom_pop.ridge_global":             "aom_ridge_global",
+    "aom_pop.ridge_superblock":         "aom_ridge_superblock",
+    "aom_pop.ridge_active_superblock":  "aom_ridge_active_superblock",
+    "aom_pop.ridge_mkl_superblock":     "aom_ridge_mkl_superblock",
 }
 
 
@@ -3449,30 +3073,92 @@ def resolve_catalog_page(method: dict,
     return None
 
 
-def render_catalog_stub_page(method: dict) -> str:
-    """Minimal page for a catalog method with no legacy documentation page.
+def inverse_prefix_map(old_to_new: dict[str, str]) -> dict[str, str]:
+    """Return ABI-2 operator prefix -> historical documentation page prefix."""
+    inverse: dict[str, str] = {}
+    for old, new in old_to_new.items():
+        # Multiple old symbols may expose operations of one prefix.  A single
+        # pair is sufficient, and conflicting mappings are a migration error.
+        prior = inverse.setdefault(new, old)
+        if prior != old:
+            raise ValueError(f"ambiguous ABI prefix migration for {new}: {prior}, {old}")
+    return inverse
 
-    Sourced entirely from the catalog — no fabricated bibliography.
-    """
+
+def documentation_page_for_operator(
+        spec: dict, new_to_old_prefix: dict[str, str]) -> str:
+    """Resolve a current ABI-2 operator to its stable documentation stem."""
+    old_prefix = new_to_old_prefix.get(spec["c_prefix"])
+    if old_prefix and old_prefix.startswith("n4m_"):
+        return old_prefix[len("n4m_"):]
+    return spec["name"]
+
+
+def render_coverage_report(catalog: list[dict], page_for: dict[str, str],
+                           content: dict[str, dict[str, str]]) -> str:
+    """Small human-readable coverage artifact committed with the corpus."""
+    rows = [
+        "# Method documentation coverage\n",
+        "This generated report records the documentation source used for each "
+        "catalog entry. It is a content-coverage check, not a parity score.\n",
+        f"- Catalog entries: **{len(catalog)}**",
+        f"- Curated scientific records: **{len(content)}**",
+        f"- Resolved documentation pages: **{len(set(page_for.values()))}**\n",
+        "| Catalog id | Documentation page | Scientific record |",
+        "|---|---|---|",
+    ]
+    for method in sorted(catalog, key=lambda item: item["method_id"]):
+        page = page_for[method["method_id"]]
+        source = "curated" if page in content else "missing"
+        rows.append(f"| `{method['method_id']}` | [{page}]({page}.md) | {source} |")
+    return "\n".join(rows) + "\n"
+
+
+def render_catalog_stub_page(method: dict, science: dict[str, str],
+                             public_api: Any, r_public_api: Any,
+                             matlab_public_api: Any) -> str:
+    """Render a full catalog page when no legacy registry page exists."""
     leaf = method["leaf"]
     fq = method["fq_name"]
     ns = method["namespace"]
     notes = (method.get("notes") or "").strip()
-    syms = [s for s in (method.get("c_surface") or []) if s != "none"]
+    syms = catalog_c_symbols(method)
     parts = [
         f"# `{leaf}` — {fq}\n",
         f"_Namespace_: **`n4m.{ns}`** · _Fully-qualified_: `{fq}` · "
         f"_Catalog id_: `{method['method_id']}`\n",
     ]
-    if syms:
-        sym_list = " · ".join(f"`{s}`" for s in syms)
-        parts.append(f"_C ABI symbols_ (ABI 2.0): {sym_list}\n")
-    else:
-        parts.append("_C ABI_: Python-only method (no exported C symbol).\n")
-    py = (method.get("bindings", {}) or {}).get("python", {}) or {}
-    if py.get("module") and py.get("class"):
-        parts.append(f"_Python_: `from {py['module']} import {py['class']}`\n")
-    if notes:
+    parts.append("## API surface\n")
+    parts.append(render_c_abi_surface(syms) + "\n")
+    binding = _current_python_binding(method, public_api)
+    if binding:
+        parts.append("**Python (verified public re-export):** "
+                     f"`{binding['import']}`\n")
+        source_url = ("https://github.com/GBeurier/nirs4all-methods/blob/main/"
+                      "bindings/python/src/" + binding["source"])
+        if binding.get("source_line"):
+            source_url += f"#L{binding['source_line']}"
+        parts.append(f"**Signature:** [`{binding['symbol']}{binding['signature'] or '(...)'}`]({source_url})\n")
+    elif (method.get("bindings", {}) or {}).get("python"):
+        parts.append("**Python:** catalog binding is not currently an AST-verified public "
+                     "`n4m` re-export. See the implementation source below.\n")
+    parts.append(render_cross_binding_surfaces(
+        cross_bindings_for_catalog(method, r_public_api, matlab_public_api)))
+    if binding and binding.get("parameters"):
+        parts.append("### Parameters\n")
+        parts.append("| Name | Type | Default |")
+        parts.append("|---|---|---|")
+        for parameter in binding["parameters"]:
+            default = parameter.get("default")
+            rendered_default = str(default) if default is not None else "required"
+            parts.append("| `{}` | `{}` | `{}` |".format(
+                markdown_table_cell(parameter["name"]),
+                markdown_table_cell(parameter.get("annotation") or "—"),
+                markdown_table_cell(rendered_default)))
+        parts.append("")
+    _append_scientific_sections(parts, science)
+    if notes and not notes.startswith("Auto-discovered"):
+        parts.append("## Catalog note\n")
         parts.append(f"{notes}\n")
     bench = method.get("bench", {}) or {}
     reg = bench.get("registry_entry")
@@ -3484,7 +3170,7 @@ def render_catalog_stub_page(method: dict) -> str:
 
 def _catalog_refs(method: dict) -> str:
     """Short ref tag column for the index (sources of truth, not parity)."""
-    syms = [s for s in (method.get("c_surface") or []) if s != "none"]
+    syms = catalog_c_symbols(method)
     tags: list[str] = []
     if syms:
         tags.append("C")
@@ -3516,7 +3202,9 @@ def render_catalog_index(catalog: list[dict],
         "page and shows its fully-qualified name "
         "`n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, "
         "mathematical principles, binding signatures, and benchmark rows are "
-        "on the linked pages.\n",
+        "on the linked pages. The [current method-science reference index]"
+        "(scientific-references.md) collects every rendered citation and source "
+        "provenance.\n",
         f"_Total catalogued native methods_: **{total}**. Additional Python "
         "reference\nsurfaces are documented where relevant.\n",
         "```{toctree}\n:hidden:\n:glob:\n:maxdepth: 1\n\n*\n```\n",
@@ -3901,17 +3589,22 @@ def _class_c_prefix(node: ast.ClassDef,
     return None
 
 
-def parse_operator_bindings(src_dir: Path) -> list[dict]:
-    """AST-parse the n4m sklearn binding into operator spec dicts.
+def parse_operator_bindings(
+        src_dir: Path,
+        public_imports: dict[str, tuple[str, str]] | None = None) -> list[dict]:
+    """AST-parse current n4m implementation operators into spec dictionaries.
 
-    One spec per operator class (prefix resolved by `_class_c_prefix`).
-    Deduplicated by `<name>`, keeping the entry with the richest docstring.
+    One spec per operator class (prefix resolved by `_class_c_prefix`).  The
+    implementation layer is deliberately scanned because it owns the C ABI
+    calls; ``public_imports`` supplies the stable role-package import that is
+    rendered to readers.  Deduplication keeps the richest docstring.
     """
     specs: dict[str, dict] = {}
+    public_imports = public_imports or {}
     if not src_dir.exists():
         return []
     for py in sorted(src_dir.glob("*.py")):
-        if py.name.startswith("_"):
+        if py.name in {"__init__.py", "compat.py", "estimator_base.py"}:
             continue
         group = OPERATOR_MODULE_GROUP.get(py.stem, "transform")
         try:
@@ -3934,6 +3627,9 @@ def parse_operator_bindings(src_dir: Path) -> list[dict]:
                 "group": group, "doc": doc, "c_prefix": cprefix,
                 "params": _operator_init_params(node, classes_by_name),
             }
+            public = public_imports.get(node.name)
+            if public:
+                spec["public_module"], spec["public_class"] = public
             prev = specs.get(name)
             if prev is None or len(doc) > len(prev["doc"]):
                 specs[name] = spec
@@ -3944,64 +3640,75 @@ def _operator_param_example(spec: dict) -> str:
     return ""  # default-constructed in the usage snippet
 
 
-def render_operator_page(spec: dict, bench_rows: list[dict] | None = None,
+def render_operator_page(spec: dict, science: dict[str, str],
+                         cat: dict | None, public_api: Any,
+                         r_public_api: Any, matlab_public_api: Any,
+                         bench_rows: list[dict] | None = None,
                          prefix_old_to_new: dict[str, str] | None = None) -> str:
-    """Markdown page for one C++ operator, mirroring the method-page format.
-
-    `spec['c_prefix']` is resolved from the binding source, which may carry the
-    legacy ABI-1 family prefix (e.g. `n4m_pp_snv`). It is rewritten to its
-    ABI-2 form (`n4m_transform_snv`) through `prefix_old_to_new` so the
-    rendered `<prefix>_*` "C ABI" wildcard never advertises a dead ABI-1
-    prefix.
-    """
+    """Render a current n4m operator page from a curated scientific record."""
     name = spec["name"]
     cls = spec["class"]
-    bib = OPERATOR_BIB.get(name, {})
     grp = spec["group"]
     grp_label = OPERATOR_GROUP_LABELS.get(grp, grp.capitalize())
-    title = bib.get("title") or _humanize_class(cls)
-    summary = _docstring_summary(spec["doc"]) or "_No binding description._"
+    title = science.get("title") or _humanize_class(cls)
+    summary = _docstring_summary(spec["doc"]) or science.get("principle", "")
     prefix_old_to_new = prefix_old_to_new or {}
     c_prefix = prefix_old_to_new.get(spec["c_prefix"], spec["c_prefix"])
+    binding = _current_python_binding(cat, public_api, name)
+    cross_bindings = cross_bindings_for_catalog(
+        cat or {}, r_public_api, matlab_public_api)
 
     p: list[str] = []
     p.append(f"# `{name}` — {title}\n")
-    p.append(f"_Group_: **{grp_label}** · _Binding_: `n4m.sklearn.{cls}` · "
-             f"_C ABI_: `{c_prefix}_*`\n")
-
+    p.append(f"_Group_: **{grp_label}** · _C ABI_: `{c_prefix}_*`\n")
     p.append("## Description\n")
     p.append(summary + "\n")
     if spec["doc"] and len(spec["doc"].strip()) > len(summary) + 24:
         p.append("<details>\n<summary>Full binding docstring</summary>\n\n"
                  "```text\n" + spec["doc"].strip() + "\n```\n</details>\n")
 
-    p.append("### Parameters\n")
+    p.append("## Parameters\n")
     if spec["params"]:
         p.append("| Name | Type | Default |")
         p.append("|------|------|---------|")
         for prm in spec["params"]:
-            p.append(f"| `{prm['name']}` | `{prm['type']}` | `{prm['default']}` |")
+            p.append("| `{}` | `{}` | `{}` |".format(
+                markdown_table_cell(prm["name"]),
+                markdown_table_cell(prm["type"]),
+                markdown_table_cell(prm["default"])))
     else:
         p.append("_No constructor parameters._")
     p.append("")
 
-    p.append("## Explanations\n")
-    p.append("### Bibliographic source\n")
-    p.append(bib.get("paper") or
-             "_Standard spectroscopic operator — see the nirs4all "
-             "preprocessing / augmentation handbook and the cited literature "
-             "within the binding docstring._")
-    p.append("\n### Mathematical principle\n")
-    p.append(bib.get("principle") or summary)
-    p.append("\n### Implementation\n")
-    p.append(f"C ABI `{c_prefix}_*` in libn4m "
-             f"(create / apply / destroy lifecycle), wrapped by "
-             f"`n4m.sklearn.{cls}`. The same numerical kernel backs every "
-             f"language binding.")
+    # The implementation scan supplies detailed constructor parameters while
+    # the catalog / public API scans prove the import and cross-language
+    # surfaces.  Keep both: a public re-export alone must not erase the
+    # operator's constructor documentation.
+    p.append("## API and bindings\n")
+    symbols = catalog_c_symbols(cat)
+    if not symbols:
+        p.append(f"**C ABI (family):** `{c_prefix}_*`. No catalogued exact entry point was found.\n")
+    else:
+        p.append(render_c_abi_surface(symbols) + "\n")
+    if binding:
+        snippet = binding["import"]
+        p.append("**Python (verified public re-export):**\n\n"
+                 f"```python\n{snippet}\n```\n")
+        source_url = ("https://github.com/GBeurier/nirs4all-methods/blob/main/"
+                      "bindings/python/src/" + binding["source"])
+        if binding.get("source_line"):
+            source_url += f"#L{binding['source_line']}"
+        p.append(f"Source signature: [`{binding['symbol']}{binding['signature'] or '(...)'}`]({source_url}).\n")
+    else:
+        p.append("**Python:** no current AST-verified public `n4m` re-export was found for this method.\n")
+    p.append(render_cross_binding_surfaces(cross_bindings))
 
-    p.append("\n### Usage\n")
-    p.append("```python\nfrom n4m.sklearn import " + cls + "\n"
-             "op = " + cls + "()\nX_transformed = op.fit_transform(X)\n```")
+    record = dict(science)
+    record["implementation"] = (
+        record.get("implementation", "").strip() + "\n\n"
+        f"The ABI-2 implementation is the `{c_prefix}_*` lifecycle in libn4m."
+    ).strip()
+    _append_scientific_sections(p, record)
 
     if bench_rows:
         p.append("")
@@ -4144,7 +3851,7 @@ def main() -> None:
             raise SystemExit(f"missing registry: {REGISTRY_PY}")
         return
     methods = parse_registry(REGISTRY_PY)
-    cat = parse_catalog(CATALOG_YAML)
+    science = scientific_content()
     old_to_new = load_symbol_old_to_new(RENAME_MAP_TSV)
     if args.strict and not old_to_new:
         raise SystemExit(f"missing/empty symbol rename map: {RENAME_MAP_TSV}")
@@ -4152,41 +3859,70 @@ def main() -> None:
     # ABI-1 family prefix → ABI-2 family prefix (drives the operator-page
     # `<prefix>_*` "C ABI" wildcard rewrite). Derived from the rename map and
     # cross-checked against the catalog ABI-2 surface.
+    catalog_methods = parse_methods_catalog(METHODS_CATALOG_YAML)
     prefix_old_to_new = load_prefix_old_to_new(
-        RENAME_MAP_TSV, parse_methods_catalog(METHODS_CATALOG_YAML))
+        RENAME_MAP_TSV, catalog_methods)
     prefix_pattern = _compile_prefix_rename(prefix_old_to_new)
-    py_docs = parse_python_sklearn(PY_SKLEARN_DIR)
+    new_to_old_prefix = inverse_prefix_map(prefix_old_to_new)
+    py_docs = parse_python_sklearn(N4M_IMPL_DIR)
+    public_imports = parse_n4m_public_imports(N4M_PYTHON_DIR)
+    public_api = scan_public_api(N4M_PYTHON_DIR)
+    r_public_api = scan_r_public_api()
+    matlab_public_api = scan_matlab_public_api()
+    # Retained solely for the generation summary while R/MATLAB rendering uses
+    # the source-verified public indexes above.
     r_docs = parse_r_signatures(R_DIR)
     m_docs = parse_matlab(MATLAB_DIR)
     truth_sources = load_truth_source_metadata(strict=args.strict)
 
     if args.no_bench or not CSV_PATH.exists():
-        if args.strict and not CSV_PATH.exists():
+        if args.strict and not args.no_bench and not CSV_PATH.exists():
             raise SystemExit(f"missing CSV: {CSV_PATH}")
         bench_rows: dict[str, list[dict]] = {}
     else:
         bench_rows = parse_csv(CSV_PATH)
 
-    # Match registry-method to YAML catalog entry — used only as the
-    # secondary parameter source.
-    cat_by_cfn: dict[str, dict] = {}
-    for entry in cat.values():
-        cfn = entry.get("c_function", "")
-        if cfn:
-            cat_by_cfn[cfn] = entry
+    # This module intentionally loads JSON only. It does not import the
+    # generator back, so it is safe to use here and makes --no-bench
+    # regeneration lossless for committed parity tables.
+    from method_benchmark_tables import load_snapshot
+    benchmark_snapshots = {
+        name: normalize_benchmark_snapshot(block)
+        for name, block in load_snapshot().items()
+    }
+
+    # Match registry methods to the current catalog, never the retired
+    # tier-2 catalog.  It provides the ABI-2 C surface, current public
+    # binding metadata, and detailed parameter declarations.
     method_to_cat: dict[str, dict] = {}
+    registry_source_pages = set(science) | {method["name"] for method in methods}
+    registry_page_rename_map = _load_symbol_rename_map(RENAME_MAP_TSV)
     for m in methods:
         n = m["name"]
-        for suffix in ("_fit", "_run", "_select", "_compute"):
-            if (n + suffix) in cat_by_cfn:
-                method_to_cat[n] = cat_by_cfn[n + suffix]
-                break
-        else:
-            for e in cat.values():
-                if e.get("name", "").lower().startswith(
-                        n.replace("_", "")):
-                    method_to_cat[n] = e
-                    break
+        exact = [entry for entry in catalog_methods
+                 if entry.get("leaf") == n
+                 or n in {str(x).split(".")[-1]
+                          for x in (entry.get("legacy_ids") or [])}]
+        if len(exact) == 1:
+            method_to_cat[n] = exact[0]
+            continue
+        token = f"_{n}_"
+        by_symbol = [entry for entry in catalog_methods
+                     if any(token in f"_{sym}_"
+                            for sym in (entry.get("c_surface") or []))]
+        if len(by_symbol) == 1:
+            method_to_cat[n] = by_symbol[0]
+            continue
+        # Some registry names predate the ABI-2 catalog leaf (for example
+        # `kernel_pls_rbf` versus `models.pls.kernel`). Resolve through the
+        # same stable page mapping used by the catalogue index so their
+        # source-verified R/MATLAB surfaces are not silently omitted.
+        by_page = [entry for entry in catalog_methods
+                   if resolve_catalog_page(
+                       entry, registry_source_pages,
+                       registry_page_rename_map) == n]
+        if len(by_page) == 1:
+            method_to_cat[n] = by_page[0]
 
     # Render registry methods
     method_names = {m["name"] for m in methods}
@@ -4194,18 +3930,54 @@ def main() -> None:
         rows = bench_rows.get(m["name"], [])
         page = render_method_page(
             m, method_to_cat.get(m["name"]), rows,
-            py_docs, r_docs, m_docs,
+            py_docs, r_docs, m_docs, public_api,
+            r_public_api, matlab_public_api,
             truth_sources=truth_sources.get(m["name"], {}),
-            old_to_new=old_to_new, rename_pattern=rename_pattern)
+            old_to_new=old_to_new, rename_pattern=rename_pattern,
+            benchmark_snapshot=benchmark_snapshots.get(m["name"]))
         (out_dir / f"{m['name']}.md").write_text(page, encoding="utf-8")
 
-    # Render C++ operator pages (augmentation / preprocessing / baseline /
-    # filters / splitters / transforms) from the n4m binding. Skip any whose
-    # name collides with a registry method (registry page wins).
-    operators = [op for op in parse_operator_bindings(N4M_SKLEARN_DIR)
-                 if op["name"] not in method_names]
+    # Render C++ operator pages from the current ABI-2 implementation layer.
+    # The rename map retains the historical file stem so existing public URLs
+    # remain stable while the displayed C ABI is current.
+    operators = parse_operator_bindings(N4M_IMPL_DIR, public_imports)
     for op in operators:
-        page = render_operator_page(op, bench_rows.get(op["name"]),
+        op["name"] = documentation_page_for_operator(op, new_to_old_prefix)
+    operators = [op for op in operators if op["name"] not in method_names]
+
+    # Resolve the catalog before rendering operator pages.  This gives every
+    # one of the 118 implementation-derived pages the same current Python,
+    # R, MATLAB, and exact C-header evidence as registry and ABI-2 catalog
+    # pages.  Page identity, rather than an inferred class/module name, is
+    # the join key because it is already checked against the rename map.
+    operator_page_names = {op["name"] for op in operators}
+    preexisting_pages = set(science) | operator_page_names | method_names
+    rename_map = _load_symbol_rename_map(RENAME_MAP_TSV)
+    page_for: dict[str, str] = {}
+    catalog_by_page: dict[str, list[dict]] = defaultdict(list)
+    for catalog_method in catalog_methods:
+        page = resolve_catalog_page(catalog_method, preexisting_pages, rename_map)
+        if page is None:
+            page = catalog_method["method_id"].replace(".", "_")
+        page_for[catalog_method["method_id"]] = page
+        catalog_by_page[page].append(catalog_method)
+
+    for op in operators:
+        record = science.get(op["name"]) or OPERATOR_BIB.get(op["name"], {})
+        if not record:
+            if args.strict:
+                raise SystemExit(
+                    f"missing scientific record for operator page: {op['name']}")
+            continue
+        matching_catalog = catalog_by_page.get(op["name"], [])
+        if args.strict and len(matching_catalog) != 1:
+            raise SystemExit(
+                "operator page must resolve to exactly one catalog entry: "
+                f"{op['name']} -> {[m['method_id'] for m in matching_catalog]}")
+        page = render_operator_page(op, record,
+                                    matching_catalog[0] if matching_catalog else None,
+                                    public_api, r_public_api, matlab_public_api,
+                                    bench_rows.get(op["name"]),
                                     prefix_old_to_new=prefix_old_to_new)
         (out_dir / f"{op['name']}.md").write_text(page, encoding="utf-8")
 
@@ -4214,7 +3986,6 @@ def main() -> None:
     # `fq_name`; the index lists every method grouped by top-level role and
     # links to its page. Methods added during the namespace migration with no
     # legacy page get a catalog-sourced stub page so every link resolves.
-    catalog_methods = parse_methods_catalog(METHODS_CATALOG_YAML)
     if not catalog_methods:
         if args.strict:
             raise SystemExit(f"missing/empty method catalog: {METHODS_CATALOG_YAML}")
@@ -4226,27 +3997,42 @@ def main() -> None:
               f"+ legacy index in {out_dir}")
         return
 
-    rename_map = _load_symbol_rename_map(RENAME_MAP_TSV)
-    existing_pages = {
-        p.stem for p in out_dir.glob("*.md") if p.stem != "index"
-    }
-    page_for: dict[str, str] = {}
-    stubbed = 0
+    # Resolve against maintained scientific sources, never against arbitrary
+    # residual Markdown in the output directory.  This makes regeneration
+    # deterministic and surfaces a missing mapping before it reaches RTD.
+    existing_pages = set(preexisting_pages)
+    catalog_pages = 0
     for m in catalog_methods:
-        page = resolve_catalog_page(m, existing_pages, rename_map)
-        if page is None:
-            page = m["method_id"].replace(".", "_")
+        page = page_for[m["method_id"]]
+
+        # Registry and operator pages have their own richer renderer. Every
+        # other catalog page is still emitted here, even when its stem already
+        # occurs in a curated source module.  Resolving a source key without
+        # writing a file used to leave an arbitrary old Markdown page in place
+        # and made a fresh checkout non-reproducible.
+        if page not in method_names and page not in operator_page_names:
+            record = science.get(page)
+            if not record:
+                if args.strict:
+                    raise SystemExit(
+                        f"missing scientific record for catalog method "
+                        f"{m['method_id']} ({page}.md)")
+                continue
             (out_dir / f"{page}.md").write_text(
-                render_catalog_stub_page(m), encoding="utf-8")
+                render_catalog_stub_page(
+                    m, record, public_api, r_public_api, matlab_public_api),
+                encoding="utf-8")
             existing_pages.add(page)
-            stubbed += 1
-        page_for[m["method_id"]] = page
+            catalog_pages += 1
 
     (out_dir / "index.md").write_text(
         render_catalog_index(catalog_methods, page_for), encoding="utf-8")
+    (out_dir / "coverage.md").write_text(
+        render_coverage_report(catalog_methods, page_for, science),
+        encoding="utf-8")
 
     print(f"wrote {len(methods)} registry + {len(operators)} operator pages, "
-          f"{stubbed} catalog stub pages, "
+          f"{catalog_pages} catalog pages, "
           f"+ catalog index ({len(catalog_methods)} methods) in {out_dir} "
           f"(py docstrings: {len(py_docs)}, R sigs: {len(r_docs)}, "
           f"MATLAB sigs: {len(m_docs)})")

@@ -1,175 +1,66 @@
-# `aom_ridge_blender` - native AOM Ridge OOF simplex blender
+# `aom_ridge_blender` — n4m.ensemble.aom_ridge_blender
 
-_Group_: **Diagnostic / AOM** · _ABI_: `n4m_ensemble_aom_ridge_blender_fit`
+_Namespace_: **`n4m.ensemble`** · _Fully-qualified_: `n4m.ensemble.aom_ridge_blender` · _Catalog id_: `aom_pop.ridge_blender`
 
-`aom_ridge_blender` runs a native strict-linear AOM Ridge candidate pool,
-builds out-of-fold predictions for every chain/lambda candidate, solves a
-non-negative simplex blend, then refits every candidate on the full training
-set for final blended predictions. Because every native candidate is a
-strict-linear chain plus Ridge head, the final simplex blend is also exported
-as a reusable linear model in the original input feature space.
+## API surface
 
-The sklearn-style `AOMRidgeBlender` reference estimator is still available as
-`n4m.AOMRidgeBlender` and `n4m.sklearn.AOMRidgeBlender` for explicit custom
-candidate estimators.
+**C ABI (ABI 2):** [`n4m_ensemble_aom_ridge_blender_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ensemble.h#L39). Use the linked public header for the exact signature, configuration, and result handles.
 
-## Status
+**Python (verified public re-export):** `from n4m.ensemble import aom_ridge_blender`
 
-- API surface: C ABI, Python function `n4m.aom_ridge_blender`, and native
-  sklearn wrapper `NativeAOMRidgeBlenderRegressor`.
-- Native ABI: yes, since ABI `1.17.0`.
-- Catalog status: `aom_pop.ridge_blender`.
-- CPU: tested.
-- CUDA: builds and smoke-tests with the CUDA-enabled library; native v1 is not
-  a fused batched GPU blender.
-- Candidate scope: fixed compact/wide strict-linear AOM chain banks and
-  strictly positive Ridge lambdas. Compact has 12 chains; wide has 31 chains,
-  including Gaussian, FCK and Whittaker variants.
-- Dataset/source routing: forbidden. `metadata` passed to `fit` is audit-only
-  for the Python estimator and does not affect candidates, weights, or
-  predictions.
+**Signature:** [`aom_ridge_blender(X, y, *, profile: str | int = 'compact', cv: int = 5, fold_ids = None, ridge_lambdas = (0.0001, 0.01, 1.0, 100.0), regularizer: float = 0.01, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6770)
 
-## Python Function
+**R:** no current source-verified entry point was found for this catalog method.
 
-```python
-n4m.aom_ridge_blender(
-    X,
-    y,
-    profile="compact",
-    cv=5,
-    fold_ids=None,
-    ridge_lambdas=(1e-4, 1e-2, 1.0, 100.0),
-    regularizer=0.01,
-    scale_x=False,
-)
-```
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
-## Example
+### Parameters
 
-```python
-import n4m
+| Name | Type | Default |
+|---|---|---|
+| `X` | `—` | `required` |
+| `y` | `—` | `required` |
+| `profile` | `str \| int` | `'compact'` |
+| `cv` | `int` | `5` |
+| `fold_ids` | `—` | `None` |
+| `ridge_lambdas` | `—` | `(0.0001, 0.01, 1.0, 100.0)` |
+| `regularizer` | `float` | `0.01` |
+| `center_x` | `bool \| None` | `None` |
+| `scale_x` | `bool \| None` | `None` |
+| `center_y` | `bool \| None` | `None` |
+| `scale_y` | `bool \| None` | `None` |
 
-res = n4m.aom_ridge_blender(
-    X_train,
-    y_train,
-    profile="compact",
-    cv=5,
-    fold_ids=fold_ids,
-    ridge_lambdas=[1e-4, 1e-2, 1.0, 100.0],
-    regularizer=0.01,
-    scale_x=False,
-)
+## Explanations
 
-print(res["blend_oof_rmse"], res["selected_chain_id"], res["selected_param"])
-print(res["weights"])
+### Bibliographic source
 
-y_hat = X_train @ res["input_coefficients"] + res["intercept"]
-```
+No canonical paper defines this exact n4m candidate bank; it uses non-negative stacking. Beurier, G. et al. (2026). *AOM-PLS / POP-PLS* paper companion, arXiv:2605.13587, https://arxiv.org/abs/2605.13587. The product variants below are implementation-specific extensions; the paper does not by itself specify their ABI-2 orchestration.
 
-## Outputs
+### Mathematical principle
 
-The native method returns a `MethodResult` dictionary with:
+Generate OOF predictions for every strict-linear AOM Ridge candidate, solve non-negative weights constrained to sum to one, refit each candidate on all rows, and blend their raw-space linear coefficients.
 
-- `candidate_scores` `(n_candidates, 5)`: `candidate_id`, `chain_id`,
-  `lambda`, `cv_rmse`, `weight`
-- `weights` `(1, n_candidates)`: non-negative simplex weights
-- `oof_predictions` `(n_samples, n_targets)`: blended OOF predictions
-- `predictions` `(n_samples, n_targets)`: blended final in-sample predictions
-- `input_coefficients` `(n_features, n_targets)`: final blended coefficients
-  folded back into the original input feature space
-- `intercept` `(1, n_targets)`: final blended intercept
-- `oof_candidate_predictions` `(n_samples * n_targets, n_candidates)`
-- `candidate_predictions` `(n_samples * n_targets, n_candidates)`
-- `fold_ids`
+### Appropriate uses
 
-Scalar diagnostics include `selected_candidate_id`, `selected_chain_id`,
-`selected_param`, `selected_cv_rmse`, `blend_oof_rmse`, `regularizer`,
-`n_candidates`, `n_chains`, `profile`, `cv`, `n_samples`, `n_features` and
-`n_targets`.
+Stable combination of several plausible strict AOM Ridge candidates while retaining a replayable linear predictor.
 
-The selected blend can be replayed on compatible spectra as:
+### Limits and validation
 
-```python
-pred = X_new @ res["input_coefficients"] + res["intercept"]
-```
+Weights must be learned from OOF rather than in-sample predictions. Highly correlated candidates can yield unstable weights; the native bank is finite and is not a generic arbitrary-estimator blender.
 
-## Python Estimator
+### Implementation
 
-`NativeAOMRidgeBlenderRegressor` is the sklearn-style wrapper over the native
-compact/wide ABI. It stores `coef_`, `intercept_`, `weights_`,
-`candidate_scores_`, OOF predictions, and diagnostics while predicting from
-the folded native coefficients.
+`n4m.ensemble.aom_ridge_blender` and `AOMRidgeBlenderRegressor`; C ABI `n4m_ensemble_aom_ridge_blender_fit`.
 
-`AOMRidgeBlender` remains the flexible Python/sklearn reference layer. It can
-blend explicit estimator/factory candidates or build a default AOM-Ridge pool
-from `build_aom_control_chain_bank(profile)`. It supports custom `chains`,
-candidate labels, `random_state`, `n_jobs`, and candidate failure reporting.
+### Sources and provenance
 
-Use the native function for the catalogued compact/wide strict-linear Ridge
-bank. Use the estimator when the candidates are Python objects or when a
-scikit-learn-compatible estimator API is needed.
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_ridge_blender.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/ensemble.py
 
-## Validation
+## Catalog note
 
-The native tests cover:
+Native strict-linear AOM Ridge OOF simplex blender over compact/wide chain banks and positive Ridge-lambda grids. Compact has 12 chains; wide has 31 strict-linear chains, including Gaussian, FCK and Whittaker variants. It returns candidate predictions, OOF candidate predictions, non-negative blend weights, and final input_coefficients plus intercept for replay through NativeAOMRidgeBlenderRegressor; native v1 builds in CUDA-enabled configurations but is not yet a fused batched GPU blender.
 
-- compact and wide chain/lambda candidate counts and result shapes;
-- simplex non-negativity and unit-sum weights;
-- exact reconstruction of blended OOF/final predictions from candidate
-  prediction matrices;
-- exact replay of final predictions from `input_coefficients` and `intercept`;
-- explicit fold ids;
-- rejection of non-positive Ridge lambdas;
-- CPU and CUDA-enabled C++ test suites.
+_Timing benchmark_: `benchmarks/cross_binding/bench_aom_ridge_blender_timing.py`
 
-The Python estimator tests cover:
 
-- simplex weights and exact OOF blend recovery on synthetic candidates;
-- fold-local OOF fitting, with the validation fold excluded from each candidate
-  fit;
-- metadata perturbation invariance;
-- default chain+Ridge candidate construction;
-- `predict` before `fit` error behavior.
-
-## Benchmarks
-
-Timing script:
-
-```bash
-PYTHONPATH=bindings/python/src \
-N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
-python3 benchmarks/cross_binding/bench_aom_ridge_blender_timing.py
-```
-
-CUDA-build smoke:
-
-```bash
-CUDA_VISIBLE_DEVICES=0 \
-PYTHONPATH=bindings/python/src \
-N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
-python3 benchmarks/cross_binding/bench_aom_ridge_blender_timing.py \
-  --output benchmarks/cross_binding/aom_ridge_blender_timing_cuda_smoke.csv \
-  --mode both
-```
-
-Current smoke CSVs:
-
-- `benchmarks/cross_binding/aom_ridge_blender_timing.csv`
-- `benchmarks/cross_binding/aom_ridge_blender_timing_cuda_smoke.csv`
-
-The CUDA smoke CSV includes both the ABI-close function row
-`native_aom_ridge_blender` and the sklearn replay wrapper row
-`native_aom_ridge_blender_sklearn`. The wrapper row records
-`prediction_replay_max_abs_error` to prove `predict(X)` replays the native
-folded coefficients/intercept state on the CUDA build path.
-
-The timing rows also expose deterministic Ridge fit accounting:
-`n_ridge_blender_cv_fits = n_candidates * cv`,
-`n_ridge_blender_final_fits = n_candidates`, and
-`n_ridge_blender_fit_calls = n_candidates * (cv + 1)`. For the compact smoke
-grid (`cv=5`, 12 chains, 4 lambdas), those counters are `240`, `48`, and
-`288`.
-
-On the same synthetic cells, `blend_oof_rmse` is lower than the best single
-candidate OOF RMSE, which confirms that the stored simplex weights and
-candidate OOF matrix are doing useful blend work in the smoke benchmark.
+_See also_: [methods index](index.md).

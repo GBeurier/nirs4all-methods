@@ -1,69 +1,61 @@
-# `split_systematic_circular` — Systematic Circular Splitter
+# `split_systematic_circular` — Systematic circular sampling over sorted targets
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.SystematicCircularSplitter` · _C ABI_: `n4m_model_selection_systematic_circular_*`
+_Group_: **Splitters** · _C ABI_: `n4m_model_selection_systematic_circular_*`
 
 ## Description
 
 Systematic circular split over sorted or ordered targets.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `test_size` | `float` | `0.25` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_model_selection_systematic_circular_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L122) · [`n4m_model_selection_systematic_circular_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L124) · [`n4m_model_selection_systematic_circular_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L126). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.model_selection.splitters import SystematicCircular
+```
+
+Source signature: [`SystematicCircular(test_size: float = 0.25, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/splitters.py#L414).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No canonical paper defines this exact rotate-and-systematically-sample implementation. It is an internal systematic sampling heuristic whose seeded offset and rounding rules are source-defined.
 
 ### Mathematical principle
 
-Systematic circular split over sorted or ordered targets.
+Sort sample indices by y, draw a seeded circular offset, rotate that order, and choose `n_train` positions at approximately equal spacing $step=n/n_{train}$ using rounded $step\,i$. The remaining rotated positions form the test set; the engine sorts both final index arrays for stable output.
+
+### Appropriate uses
+
+Spreading calibration samples across the ordered response range without bin boundaries.
+
+### Limits and validation
+
+It uses y and therefore is inappropriate for a blind final test. Periodic ordering and rounding can create structure; ties are resolved by sorting behavior, and multicolumn y is rejected. The current Python binding requires y as `(n_samples, 1)` because its generic 1-D promotion creates the wrong orientation.
 
 ### Implementation
 
-C ABI `n4m_model_selection_systematic_circular_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SystematicCircularSplitter`. The same numerical kernel backs every language binding.
+Python role API `n4m.model_selection.splitters.SystematicCircular`; binding class `SystematicCircularSplitter`; ABI 2 family `n4m_model_selection_systematic_circular_{create,split,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_model_selection_systematic_circular_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import SystematicCircularSplitter
-op = SystematicCircularSplitter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>nirs4all</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/systematic_circular.h
 
 
 ---

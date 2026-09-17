@@ -1,12 +1,15 @@
-# `aug_spline_x_simplify` — Spline X Simplification Augmenter
+# `aug_spline_x_simplify` — Cubic-spline reconstruction from sparse x controls
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.SplineXSimplificationAugmenter` · _C ABI_: `n4m_augmentation_spline_x_simplification_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_spline_x_simplification_*`
 
 ## Description
 
-Simplify each spectrum by refitting a cubic interpolating B-spline through a random control subset on the x-axis (`numpy.choice(replace=False)`, bit-for-bit). `spline_points <= 0` uses the reference default of n_features // 4.
+Simplify each spectrum via a cubic B-spline through a random control
+subset on the x-axis (nirs4all ``Spline_X_Simplification``). ``spline_points
+<= 0`` selects the reference default of n_features // 4. Mirrors the
+reference defaults (``uniform=False``).
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -15,27 +18,50 @@ Simplify each spectrum by refitting a cubic interpolating B-spline through a ran
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_spline_x_simplification_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/splines.h#L63) · [`n4m_augmentation_spline_x_simplification_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/splines.h#L58) · [`n4m_augmentation_spline_x_simplification_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/splines.h#L66). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.splines import SplineXSimplificationAugmenter
+```
+
+Source signature: [`SplineXSimplificationAugmenter(spline_points: int = -1, uniform: bool = False, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L1165).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No canonical paper defines this augmentation heuristic. It uses a classical interpolating B-spline but the control subset and parity rules are implementation-specific.
 
 ### Mathematical principle
 
-Simplify each spectrum by refitting a cubic interpolating B-spline through a random control subset on the x-axis (`numpy.choice(replace=False)`, bit-for-bit). `spline_points <= 0` uses the reference default of n_features // 4.
+Keep `spline_points` channel/value controls (default $p/4$), selected uniformly or by PCG64 sampling without replacement. Fit an interpolating not-a-knot cubic B-spline through those controls and evaluate it at all original channels.
+
+### Appropriate uses
+
+Testing robustness to reduced effective spectral resolution and sparse sampling.
+
+### Limits and validation
+
+Fine features between controls are irrecoverable and cubic interpolation may overshoot. This x variant does not apply the curve variant's final `unique` step in uniform mode.
 
 ### Implementation
 
-C ABI `n4m_augmentation_spline_x_simplification_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SplineXSimplificationAugmenter`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.splines.SplineXSimplificationAugmenter`; ABI 2 family `n4m_augmentation_spline_x_simplification_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_spline_x_simplification_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import SplineXSimplificationAugmenter
-op = SplineXSimplificationAugmenter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/splines/spline_simplify_common.h
+
 
 ---
 

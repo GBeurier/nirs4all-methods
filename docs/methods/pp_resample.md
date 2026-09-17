@@ -1,68 +1,60 @@
-# `pp_resample` — Resample Transformer
+# `pp_resample` — Fixed-length normalized-axis resampling
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.ResampleTransformer` · _C ABI_: `n4m_transform_resample_transformer_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_resample_transformer_*`
 
 ## Description
 
 Resize spectra to a fixed column count.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `num_samples` | `int` | `—` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_resample_transformer_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L46) · [`n4m_transform_resample_transformer_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L48) · [`n4m_transform_resample_transformer_output_cols`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L49) · [`n4m_transform_resample_transformer_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L51). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.resampling import ResampleTransformer
+```
+
+Source signature: [`ResampleTransformer(num_samples: int)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/resampling.py#L46).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No unique canonical paper: this is piecewise-linear interpolation on normalized sample positions, matching SciPy `interp1d(kind='linear')`: https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html.
 
 ### Mathematical principle
 
-Resize spectra to a fixed column count.
+For an input of width $p$ and requested width $q$, source and destination coordinates are `linspace(0,1,p)` and `linspace(0,1,q)`. Each row is linearly interpolated; equal width is an exact copy and `-1` is identity.
+
+### Appropriate uses
+
+Making variable-width or differently sampled spectra a common feature length when physical wavelength coordinates are unavailable.
+
+### Limits and validation
+
+Normalized positions assume matching endpoints and uniform semantic coverage. The operator ignores actual wavelengths and linear interpolation can smooth narrow bands.
 
 ### Implementation
 
-C ABI `n4m_transform_resample_transformer_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ResampleTransformer`. The same numerical kernel backs every language binding.
+`n4m.transform.resampling.ResampleTransformer` uses `n4m_transform_resample_transformer_*`; the linspace and interpolation arithmetic are in `resampling/resample_transformer.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_resample_transformer_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import ResampleTransformer
-op = ResampleTransformer()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/resample_transformer.c
 
 
 ---

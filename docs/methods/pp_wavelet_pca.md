@@ -1,12 +1,12 @@
-# `pp_wavelet_pca` — Wavelet P C A
+# `pp_wavelet_pca` — PCA of multilevel wavelet coefficients
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.WaveletPCA` · _C ABI_: `n4m_transform_wavelet_pca_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_transform_wavelet_pca_*`
 
 ## Description
 
 DWT coefficient projection through PCA scores.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -15,57 +15,49 @@ DWT coefficient projection through PCA scores.
 | `max_level` | `int` | `2` |
 | `n_components` | `float` | `5.0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_wavelet_pca_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L98) · [`n4m_transform_wavelet_pca_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L104) · [`n4m_transform_wavelet_pca_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L106) · [`n4m_transform_wavelet_pca_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L111) · [`n4m_transform_wavelet_pca_output_cols`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L113) · [`n4m_transform_wavelet_pca_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L108). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.wavelet import WaveletPCA
+```
+
+Source signature: [`WaveletPCA(family: str = 'haar', mode: str = 'periodization', max_level: int = 2, n_components: float = 5.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L247).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No unique paper defines this composite. It combines Mallat's DWT (https://doi.org/10.1109/34.192463) with Pearson PCA (https://doi.org/10.1080/14786440109462720).
 
 ### Mathematical principle
 
-DWT coefficient projection through PCA scores.
+Each row's multilevel DWT coefficients are packed into one vector. Fit centers that coefficient matrix, performs compact SVD, and retains an integer component count or the smallest count reaching the requested explained-variance fraction; transform projects centered coefficients onto those loadings.
+
+### Appropriate uses
+
+Joint multiscale denoising and dimensionality reduction when raw wavelet coefficients are too numerous for the downstream model.
+
+### Limits and validation
+
+Both DWT and PCA are scale/shift sensitive; interpretation mixes bands and fitting is training-dependent. A variance threshold can yield changing output dimension across folds.
 
 ### Implementation
 
-C ABI `n4m_transform_wavelet_pca_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WaveletPCA`. The same numerical kernel backs every language binding.
+`n4m.transform.wavelet.WaveletPCA` wraps `n4m_transform_wavelet_pca_*`; packing, centering, SVD, selection, and projection are in `wavelet_pca.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_wavelet_pca_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import WaveletPCA
-op = WaveletPCA()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1109/34.192463; https://doi.org/10.1080/14786440109462720; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/wavelets/wavelet_pca.c
 
 
 ---

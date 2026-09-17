@@ -1,69 +1,61 @@
-# `pp_rolling_ball` — Rolling Ball
+# `pp_rolling_ball` — Rolling-ball morphological baseline correction
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.RollingBall` · _C ABI_: `n4m_transform_rolling_ball_*`
+_Group_: **Baseline correction** · _C ABI_: `n4m_transform_rolling_ball_*`
 
 ## Description
 
 Rolling-ball morphological baseline correction.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `half_window` | `int` | `20` |
 | `smooth_half_window` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_rolling_ball_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L110) · [`n4m_transform_rolling_ball_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L113) · [`n4m_transform_rolling_ball_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L115). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.baseline import RollingBall
+```
+
+Source signature: [`RollingBall(half_window: int = 20, smooth_half_window: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/baseline.py#L178).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Kneen & Annegarn (1996), *Algorithm for fitting XRF, SEM and PIXE X-ray spectra backgrounds*, Nuclear Instruments and Methods in Physics Research B 109, 209–213, https://doi.org/10.1016/0168-583X(95)00908-6.
 
 ### Mathematical principle
 
-Rolling-ball morphological baseline correction.
+A lower morphological envelope is estimated with a structuring radius `half_window` (erosion followed by dilation/rolling-ball analogue), optionally smoothed, and subtracted from the spectrum.
+
+### Appropriate uses
+
+Removing slowly varying positive backgrounds without fitting a global polynomial.
+
+### Limits and validation
+
+Features wider than the structuring element may enter the baseline, while too large a window underfits drift. Morphological operations can create edge artifacts and are not differentiable.
 
 ### Implementation
 
-C ABI `n4m_transform_rolling_ball_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RollingBall`. The same numerical kernel backs every language binding.
+`n4m.transform.baseline.RollingBall` uses `n4m_transform_rolling_ball_*`; the 1-D morphological envelope is in `preprocessing/baselines/rolling_ball.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_rolling_ball_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import RollingBall
-op = RollingBall()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1016/0168-583X(95)00908-6; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/rolling_ball.c
 
 
 ---
