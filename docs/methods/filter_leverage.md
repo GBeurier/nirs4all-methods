@@ -1,72 +1,64 @@
-# `filter_leverage` — High Leverage Filter
+# `filter_leverage` — Hat-matrix or PCA-score leverage filter
 
-_Group_: **Sample / feature filters** · _Binding_: `n4m.sklearn.HighLeverageFilter` · _C ABI_: `n4m_outlier_detection_high_leverage_*`
+_Group_: **Sample / feature filters** · _C ABI_: `n4m_outlier_detection_high_leverage_*`
 
 ## Description
 
 Hat-matrix or PCA score-space leverage filter.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
-| `method` | `str | int` | `'hat'` |
+| `method` | `str \| int` | `'hat'` |
 | `threshold_multiplier` | `float` | `2.0` |
-| `absolute_threshold` | `float | None` | `None` |
+| `absolute_threshold` | `float \| None` | `None` |
 | `n_components` | `int` | `0` |
 | `center` | `bool` | `True` |
+
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_outlier_detection_high_leverage_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L73) · [`n4m_outlier_detection_high_leverage_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L59) · [`n4m_outlier_detection_high_leverage_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L67) · [`n4m_outlier_detection_high_leverage_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L69) · [`n4m_outlier_detection_high_leverage_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L71) · [`n4m_outlier_detection_high_leverage_threshold`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L77). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.outlier_detection import HighLeverageFilter
+```
+
+Source signature: [`HighLeverageFilter(method: str | int = 'hat', threshold_multiplier: float = 2.0, absolute_threshold: float | None = None, n_components: int = 0, center: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/filters.py#L226).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Rousseeuw & van Zomeren (1990), *Unmasking Multivariate Outliers and Leverage Points*, JASA 85, 633–639, DOI 10.1080/01621459.1990.10474920 (https://doi.org/10.1080/01621459.1990.10474920), provides the leverage/outlier context; the fallback and thresholds here are implementation-specific.
 
 ### Mathematical principle
 
-Hat-matrix or PCA score-space leverage filter.
+Hat mode computes $h_i=x_i^T(X^TX+10^{-10}I)^{-1}x_i$ after optional centering. PCA mode computes leverage in retained score space; `n_components<=0` selects $\min(n-1,p,50)$. Unless `absolute_threshold` in (0,1) is supplied, the cutoff is `threshold_multiplier` times mean training leverage. Rows at or below the cutoff are kept.
+
+### Appropriate uses
+
+Detecting calibration samples geometrically remote from the fitted X design space.
+
+### Limits and validation
+
+When rows are not greater than columns, requested hat mode silently uses PCA. Leverage measures influence geometry, not spectral quality or response error, and thresholds are training-distribution dependent.
 
 ### Implementation
 
-C ABI `n4m_outlier_detection_high_leverage_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.HighLeverageFilter`. The same numerical kernel backs every language binding.
+Python role API `n4m.outlier_detection.HighLeverageFilter`; ABI 2 family `n4m_outlier_detection_high_leverage_{create,fit,apply,threshold,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_outlier_detection_high_leverage_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import HighLeverageFilter
-op = HighLeverageFilter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>nirs4all</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/filters/high_leverage.h; https://doi.org/10.1080/01621459.1990.10474920
 
 
 ---

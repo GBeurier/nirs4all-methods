@@ -6,68 +6,31 @@ _Group_: **Core PLS** · _Registry tolerance_: `1e-08`
 
 SIMPLS PLS regression baseline
 
-From the `pls4all.sklearn.PLSRegression` docstring:
-
-> Partial Least Squares regression backed by `pls4all`'s C core.
-
-<details>
-<summary>Full Python <code>sklearn</code>-wrapper docstring</summary>
-
-```text
-Partial Least Squares regression backed by `pls4all`'s C core.
-
-Drop-in replacement for `sklearn.cross_decomposition.PLSRegression`
-with two distinguishing knobs:
-
-* `solver` selects the inner algorithm (NIPALS, SIMPLS, SVD, …)
-  directly — sklearn only exposes 'nipals' / 'svd'.
-* Round-trip via `pickle.dumps` is bit-exact, backed by the raw C ABI
-  N4MM fitted-model payload (`n4m_model_export_to_buffer`).
-
-Parameters
-----------
-n_components : int, default=2
-    Number of latent components.
-solver : str, default='simpls'
-    One of 'nipals', 'simpls', 'orthogonal-scores', 'kernel',
-    'wide-kernel', 'svd', 'power', 'randomized-svd'.
-center_x, scale_x : bool, default=True
-    Standardize X columns to zero mean / unit variance.
-center_y : bool, default=True
-    Center y to zero mean.
-scale_y : bool, default=False
-    Standardize y columns to unit variance.
-tol : float, default=1e-6
-    Convergence tolerance for iterative solvers.
-max_iter : int, default=500
-    Max NIPALS iterations.
-store_scores : bool, default=False
-    Keep the latent score matrices (`x_scores_`) after fit.
-```
-
-</details>
-
 > **Registry note** — Baseline SIMPLS cell. sklearn uses NIPALS and ikpls uses improved-kernel PLS, so exact bit parity is not expected; the row exists to anchor timing comparisons.
 
 ### Parameters
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `2` | Number of latent components extracted (k). |
-| `solver` | `str` | `'simpls'` | Inner algorithm: 'nipals', 'simpls', 'svd', 'kernel', 'orthogonal-scores', 'power', 'randomized-svd', 'wide-kernel'. |
-| `center_x` | `bool` | `True` | Subtract the column mean of X before fitting. |
-| `scale_x` | `bool` | `True` | Standardize X columns to unit variance before fitting. |
-| `center_y` | `bool` | `True` | Subtract the column mean of y before fitting. |
-| `scale_y` | `bool` | `False` | Standardize y columns to unit variance before fitting. |
-| `tol` | `float` | `1e-06` | Convergence tolerance for iterative solvers (NIPALS / power-iteration). |
-| `max_iter` | `int` | `500` | Maximum iterations for iterative solvers. |
-| `store_scores` | `bool` | `False` | If True, keep the latent score matrix (`x_scores_`) after fit. |
+| `X` | `—` | `required` | current public binding signature |
+| `y` | `—` | `required` | current public binding signature |
+| `n_components` | `int` | `2` | current public binding signature |
+| `pls_components` | `—` | `None` | current public binding signature |
+| `cv` | `int` | `5` | current public binding signature |
+| `fold_ids` | `—` | `None` | current public binding signature |
+| `center_x` | `bool \| None` | `None` | current public binding signature |
+| `scale_x` | `bool \| None` | `None` | current public binding signature |
+| `center_y` | `bool \| None` | `None` | current public binding signature |
+| `scale_y` | `bool \| None` | `None` | current public binding signature |
+| `cuda_pls_parallel_folds` | `bool \| None` | `None` | current public binding signature |
+| `cuda_pls_min_device_features` | `int \| None` | `None` | current public binding signature |
+| `cuda_pls_many_batched` | `bool \| None` | `None` | current public binding signature |
 
 ## Explanations
 
 ### Bibliographic source
 
-de Jong, S. (1993). *SIMPLS: an alternative approach to partial least squares regression*. Chemometrics and Intelligent Laboratory Systems 18(3), 251–263.
+de Jong, S. (1993). *SIMPLS: an alternative approach to partial least squares regression*. Chemometrics and Intelligent Laboratory Systems 18(3), 251--263. DOI [10.1016/0169-7439(93)85002-X](https://doi.org/10.1016/0169-7439(93)85002-X).
 
 ### Mathematical principle
 
@@ -79,169 +42,43 @@ Given centred $\mathbf{X} \in \mathbb{R}^{n\times p}$ and $\mathbf{Y} \in \mathb
 
 Once $k$ latent scores have been extracted the regression coefficients are reconstructed as $\mathbf{B} = \mathbf{W}(\mathbf{P}^{\top}\mathbf{W})^{-1}\mathbf{Q}^{\top}$, where $\mathbf{P}, \mathbf{Q}$ are the X- and Y-loadings. Predictions on new $\mathbf{X}^{\star}$ follow $\hat{\mathbf{Y}} = \mathbf{X}^{\star}\mathbf{B} + \bar{\mathbf{y}}$. The choice of $k$ trades bias and variance: use cross-validated PRESS or the one-SE rule of Hastie et al. (2009) to select it.
 
+### Appropriate uses
+
+Linear multivariate calibration when predictors are numerous, collinear, and response-linked latent directions are useful.
+
+### Limits and validation
+
+Predictions remain linear in X; component count and preprocessing must be validated without leaking validation samples.
+
 ### Implementation
 
 Dispatched through `Algorithm.PLS_REGRESSION` + `Solver.SIMPLS` in libn4m (the `n4m_model_fit` C entry point). The same `Model.fit` / `Model.predict` surface is used by every binding. NIPALS, SVD, power-iteration, randomised-SVD, orthogonal-scores, kernel and wide-kernel solver variants are all available — see the `Solver` enum.
 
-R roxygen note (`sklearn.R::pls`):
+### Sources and provenance
 
-> Formula-based PLS regression wrapper around the n4m C ABI.
+Current implementation: [cpp/src/core/model.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/model.cpp).
 
-MATLAB header (`bindings/matlab/+pls4all/Regression.m`):
 
-```text
-pls4all.Regression — Statistics Toolbox-style class for PLS regression.
+### API and bindings
 
- Tier-2 idiomatic MATLAB / Octave wrapper around the tier-1
- pls4all.pls_fit(X, Y, n_components) primitive. Mirrors the shape
- of MATLAB's built-in RegressionPartialLeastSquares: object-oriented
- properties + methods, factory function `pls4all.fitrpls`, and a
-```
+**C ABI (ABI 2):** [`n4m_estimators_pls_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/regression.h#L290). Use the linked public header for the exact signature, configuration, and result handles.
 
-### Usage
-
-Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
-
-**pls4all bindings**
-
-::::{tab-set}
-:class: pls4all-bindings
-
-:::{tab-item} C ABI · libn4m
-:sync: c
-:class-label: lang-c
-
-```c
-/* C ABI — libn4m (Model.fit path) */
-n4m_context_t* ctx = n4m_context_create();
-n4m_config_t*  cfg = n4m_config_create();
-n4m_config_set_algorithm(cfg, N4M_ALGORITHM_PLS_REGRESSION);
-n4m_config_set_solver   (cfg, N4M_SOLVER_SIMPLS);
-n4m_config_set_n_components(cfg, 4);
-n4m_model_t* mdl = NULL;
-n4m_model_fit(ctx, cfg, &x_view, &y_view, &mdl);
-n4m_model_predict(ctx, mdl, &x_test_view, &y_hat_view);
-n4m_model_destroy(mdl);
-n4m_config_destroy(cfg);
-n4m_context_destroy(ctx);
-```
-
-:::
-
-:::{tab-item} Python · pls4all (raw)
-:sync: python-raw
-:class-label: lang-python
+**Python (verified public re-export):**
 
 ```python
-import pls4all
-from pls4all import Algorithm, Solver
-with pls4all.Context() as ctx, pls4all.Config() as cfg:
-    cfg.algorithm = Algorithm.PLS_REGRESSION
-    cfg.solver = Solver.SIMPLS
-    cfg.n_components = 4
-    with pls4all.Model.fit(ctx, cfg, X, y) as mdl:
-        y_hat = mdl.predict(X_test)
+from n4m.estimators.regression.latent import pls
+result = pls(X, y)
 ```
 
-:::
+Source signature: `pls(X, y, *, n_components: int = 2, pls_components = None, cv: int = 5, fold_ids = None, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None, cuda_pls_parallel_folds: bool | None = None, cuda_pls_min_device_features: int | None = None, cuda_pls_many_batched: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8527)).
 
-:::{tab-item} Python · pls4all.sklearn
-:sync: python-sklearn
-:class-label: lang-python
+**R (source-verified):** [`pls(formula, data, ncomp = 2L, algo = "pls_nipals", na.action = stats::na.omit, ...)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn.R).
 
-```python
-from pls4all.sklearn import PLSRegression
-mdl = PLSRegression(n_components=2, solver='simpls', center_x=True, scale_x=True, center_y=True, scale_y=False, tol=1e-06, max_iter=500, store_scores=False)
-mdl.fit(X, y)
-y_hat = mdl.predict(X_test)
-```
+The source signature has additional required inputs, so no example call is fabricated.
 
-:::
+**MATLAB / Octave (source-verified):** [`pls_fit(X, Y, n_components)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/matlab/+n4m/pls_fit.m).
 
-:::{tab-item} R · pls4all_method()
-:sync: r-dispatcher
-:class-label: lang-r
-
-```r
-library(pls4all)
-# Unified low-level dispatcher (May 2026 R cleanup):
-res <- pls4all_method("pls", X, y,
-                      n_components = 4L)
-# res is a named list with MethodResult arrays/scalars.
-# selected_indices / top_k_intervals are 1-based.
-```
-
-:::
-
-:::{tab-item} R · pls4all (formula+S3)
-:sync: r-formula
-:class-label: lang-r
-
-```r
-library(pls4all)
-fit  <- pls(y ~ ., data = train, ncomp = 4L)
-yhat <- predict(fit, newdata = test)
-summary(fit)
-```
-
-:::
-
-:::{tab-item} R · `pls` package compat
-:sync: r-pls-compat
-:class-label: lang-r
-
-```r
-library(pls4all)
-# Drop-in for CRAN `pls::plsr` (same signature).
-fit  <- plsr(y ~ ., ncomp = 4L, data = train,
-                           validation = "CV", segments = 10L)
-yhat <- predict(fit, newdata = test, ncomp = 4L)
-RMSEP(fit)
-```
-
-:::
-
-:::{tab-item} R · `mdatools` compat
-:sync: r-mdatools
-:class-label: lang-r
-
-```r
-library(pls4all)
-# Drop-in for `mdatools::pls(x, y, ncomp, method = "simpls")`.
-fit  <- pls_mdatools(X, y, ncomp = 4L, method = "simpls",
-               center = TRUE, scale = FALSE)
-yhat <- predict(fit, newdata = X_test, ncomp = 4L)
-```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (MEX)
-:sync: matlab-mex
-:class-label: lang-matlab
-
-```matlab
-res = pls4all.pls_fit(X, y, 4);
-% see header of bindings/matlab/+pls4all/pls_fit.m for full
-% parameter surface:
-%   [coefs, x_mean, y_mean, predictions] = pls_fit(X, Y, n_components)
-yhat = predict(res, Xtest);
-```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (classdef)
-:sync: matlab-classdef
-:class-label: lang-matlab
-
-```matlab
-mdl  = pls4all.fit("pls", X, y, "NumComponents", 4);
-yhat = predict(mdl, Xtest);
-```
-
-:::
-
-::::
-
+The source signature has additional required inputs, so no example call is fabricated.
 
 **Registry parity references** 📐
 
@@ -249,20 +86,26 @@ yhat = predict(mdl, Xtest);
 :class-card: external-refs
 
 - 📐 **`ref.python_ikpls`** (python · ikpls) — `ikpls` MISSING · strict (rmse_rel ≤ 1e-08) — ikpls.numpy_ikpls.PLS algorithm 1.
+
 - 📐 **`ref.python_scikit_learn`** (python · python) — `scikit-learn` 1.7.2 · strict (rmse_rel ≤ 1e-08) — sklearn.cross_decomposition.PLSRegression(scale=False).
+
 - 📐 **`ref.r_mixomics`** (R · mixOmics) — `mixOmics` 6.26.0 · strict (rmse_rel ≤ 1e-08) — Bioconductor mixOmics::pls(mode='regression', scale=FALSE).
+
 - 📐 **`ref.r_pls`** (R · r) — `pls` 2.8.5 · strict (rmse_rel ≤ 1e-08) — R pls::plsr(method='simpls', scale=FALSE).
+
 :::
 
 ### Benchmarks
 
+**Archived measurement identity.** Backend labels in this table are the raw IDs recorded when the benchmark ran (including historical `pls4all.*` IDs). They preserve measurement provenance and do not describe a current public Python, R, or MATLAB binding; use the source-verified **API and bindings** section above for current entry points.
+
 Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
 
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
+**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = archived binding-harness result agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
 
 **Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-08`).
 
-Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; pls4all language bindings show binding parity against the C++ backend. Hover the icon for role and tolerance band.
+Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; archived language-harness rows show binding parity against the C++ backend. Hover the icon for role and tolerance band.
 
 ::::{tab-set}
 :class: parity-tabs
@@ -276,11 +119,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 6e-16</td><td class="ms">1.70 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">1.69 ms<span class="medal" title="fastest">🏆</span></td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.97 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">4.79 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">5.26 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">5.92 ms</td></tr>
@@ -308,11 +151,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 6e-16</td><td class="ms">1.79 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">1.76 ms<span class="medal" title="fastest">🏆</span></td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.95 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">4.43 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">5.76 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">6.29 ms</td></tr>
@@ -340,11 +183,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 6e-16</td><td class="ms">1.79 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">1.78 ms<span class="medal" title="fastest">🏆</span></td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.93 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">4.69 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">5.49 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-exact">✓ 7e-15</td><td class="ms">5.59 ms</td></tr>

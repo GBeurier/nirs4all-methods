@@ -1,12 +1,12 @@
-# `pp_beads` — B E A D S
+# `pp_beads` — Baseline estimation and denoising with sparsity (BEADS)
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.BEADS` · _C ABI_: `n4m_transform_beads_*`
+_Group_: **Baseline correction** · _C ABI_: `n4m_transform_beads_*`
 
 ## Description
 
 Baseline estimation and denoising with sparsity.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -16,57 +16,49 @@ Baseline estimation and denoising with sparsity.
 | `max_iter` | `int` | `50` |
 | `tol` | `float` | `0.001` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_beads_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L155) · [`n4m_transform_beads_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L159) · [`n4m_transform_beads_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L160). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.baseline import BEADS
+```
+
+Source signature: [`BEADS(lam_0: float = 100.0, lam_1: float = 0.5, lam_2: float = 0.5, max_iter: int = 50, tol: float = 0.001)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/baseline.py#L243).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Ning, Selesnick & Duval (2014), *Chromatogram baseline estimation and denoising using sparsity (BEADS)*, Chemometrics and Intelligent Laboratory Systems 139, 156–167, https://doi.org/10.1016/j.chemolab.2014.09.014.
 
 ### Mathematical principle
 
-Baseline estimation and denoising with sparsity.
+BEADS decomposes a trace into a slowly varying baseline and a sparse signal by penalizing signal amplitude and first/second differences while constraining the baseline through a high-pass filter model. The native solver iterates this sparse penalized approximation with `lam_0`, `lam_1`, and `lam_2`.
+
+### Appropriate uses
+
+Spectra or chromatograms needing simultaneous smooth-background removal and sparse peak denoising.
+
+### Limits and validation
+
+Its sparsity assumptions suit isolated peaks better than broad overlapping bands; three penalties and the convergence budget need tuning. The native implementation is an iterative approximation of the published formulation.
 
 ### Implementation
 
-C ABI `n4m_transform_beads_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BEADS`. The same numerical kernel backs every language binding.
+`n4m.transform.baseline.BEADS` wraps `n4m_transform_beads_*`; the shipped solver is `cpp/src/core/preprocessing/baselines/beads.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_beads_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import BEADS
-op = BEADS()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1016/j.chemolab.2014.09.014; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/beads.c
 
 
 ---

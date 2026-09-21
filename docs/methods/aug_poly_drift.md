@@ -1,12 +1,12 @@
-# `aug_poly_drift` — Polynomial Baseline Drift
+# `aug_poly_drift` — Random polynomial baseline drift
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.PolynomialBaselineDrift` · _C ABI_: `n4m_augmentation_poly_drift_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_poly_drift_*`
 
 ## Description
 
 Add random polynomial baseline drift.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -16,57 +16,49 @@ Add random polynomial baseline drift.
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_poly_drift_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/drift.h#L31) · [`n4m_augmentation_poly_drift_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/drift.h#L25) · [`n4m_augmentation_poly_drift_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/drift.h#L30). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.drift import PolynomialBaselineDrift
+```
+
+Source signature: [`PolynomialBaselineDrift(degree: int = 2, coeff_min = None, coeff_max = None, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L472).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No canonical publication specifies these random coefficient ranges. The method is a controlled extension of offset/slope spectral augmentation.
 
 ### Mathematical principle
 
-Add random polynomial baseline drift.
+Channels are mapped to $t_j\in[-1,1]$. For every order $k=0,\ldots,d$, a coefficient $c_{ik}$ is sampled uniformly between `coeff_min[k]` and `coeff_max[k]`, and $X'_{ij}=X_{ij}+\sum_{k=0}^{d}c_{ik}t_j^k$. `degree` sets curvature order; the coefficient arrays must contain `degree + 1` bounds.
+
+### Appropriate uses
+
+Generating smooth, low-frequency baseline shapes beyond an affine tilt.
+
+### Limits and validation
+
+Polynomial drift is a numerical nuisance model rather than a physical scatter model. High degrees can oscillate and extrapolation meaning changes with the number or ordering of channels.
 
 ### Implementation
 
-C ABI `n4m_augmentation_poly_drift_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.PolynomialBaselineDrift`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.drift.PolynomialBaselineDrift`; ABI 2 family `n4m_augmentation_poly_drift_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_poly_drift_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import PolynomialBaselineDrift
-op = PolynomialBaselineDrift()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>nirs4all</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/drift/poly_drift.h
 
 
 ---

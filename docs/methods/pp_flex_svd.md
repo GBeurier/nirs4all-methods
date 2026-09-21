@@ -1,68 +1,60 @@
-# `pp_flex_svd` — Flexible S V D
+# `pp_flex_svd` — Flexible truncated singular-value decomposition
 
-_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.FlexibleSVD` · _C ABI_: `n4m_decomposition_flexible_svd_*`
+_Group_: **Feature extraction** · _C ABI_: `n4m_decomposition_flexible_svd_*`
 
 ## Description
 
 SVD with integer component selection.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `n_components` | `float` | `5.0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_decomposition_flexible_svd_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L28) · [`n4m_decomposition_flexible_svd_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L30) · [`n4m_decomposition_flexible_svd_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L31) · [`n4m_decomposition_flexible_svd_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L36) · [`n4m_decomposition_flexible_svd_output_cols`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L38) · [`n4m_decomposition_flexible_svd_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/decomposition.h#L33). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.decomposition import FlexibleSVD
+```
+
+Source signature: [`FlexibleSVD()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/feature_extraction.py#L164).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Eckart & Young (1936), *The approximation of one matrix by another of lower rank*, Psychometrika 1, 211–218, https://doi.org/10.1007/BF02288367.
 
 ### Mathematical principle
 
-SVD with integer component selection.
+Compact SVD factorizes the uncentered input as $X=U\Sigma V^T$ and emits the first $k$ coordinates $XV_k$. A parameter at least one is truncated to an integer rank; a parameter in $(0,1)$ selects the smallest rank reaching that fraction of total column variance using the projected-component variance ratios.
+
+### Appropriate uses
+
+Low-rank compression when retaining the mean direction is intentional and rank should be chosen directly or from a variance target.
+
+### Limits and validation
+
+Uncentered SVD can devote its first direction to mean offset and is scale-sensitive. The fractional criterion is based on projected variance rather than simply squared singular-value energy, and fitting must remain inside validation folds.
 
 ### Implementation
 
-C ABI `n4m_decomposition_flexible_svd_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.FlexibleSVD`. The same numerical kernel backs every language binding.
+`n4m.decomposition.FlexibleSVD` calls `n4m_decomposition_flexible_svd_*`; the compact factorization and transform are in `flexible_svd.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_decomposition_flexible_svd_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import FlexibleSVD
-op = FlexibleSVD()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1007/BF02288367; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/feature_selection/flexible_svd.c
 
 
 ---

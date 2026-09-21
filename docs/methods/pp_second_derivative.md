@@ -1,69 +1,61 @@
-# `pp_second_derivative` — Second derivative
+# `pp_second_derivative` — Shape-preserving second numerical derivative
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SecondDerivative` · _C ABI_: `n4m_transform_second_derivative_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_second_derivative_*`
 
 ## Description
 
 Two passes of ``np.gradient`` (shape-preserving).
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `delta` | `float` | `1.0` |
 | `edge_order` | `int` | `2` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_second_derivative_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L109) · [`n4m_transform_second_derivative_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L111) · [`n4m_transform_second_derivative_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L113). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.smoothing import SecondDerivative
+```
+
+Source signature: [`SecondDerivative(delta: float = 1.0, edge_order: int = 2)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L416).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-Standard finite-difference / gap derivative; see Savitzky & Golay (1964) and Norris & Williams (1984).
+No unique paper defines two `numpy.gradient` passes; the spectroscopic derivative rationale follows Norris & Williams (1984), while the numerical reference is https://numpy.org/doc/stable/reference/generated/numpy.gradient.html.
 
 ### Mathematical principle
 
-Approximates $\mathrm{d}^2\mathbf{x}/\mathrm{d}\lambda^2$. The second derivative removes both constant and linear baselines and resolves overlapping peaks into sharp negative lobes at the original band positions, at the cost of amplifying high-frequency noise (hence it is usually paired with smoothing).
+The implementation applies the shape-preserving first-gradient stencil twice along each row, using `delta` and the requested boundary `edge_order` at both passes. It approximates $d^2x/d\lambda^2$ without dropping edge columns.
+
+### Appropriate uses
+
+Suppressing constant and linear backgrounds and resolving overlapping absorption bands.
+
+### Limits and validation
+
+Second differentiation strongly amplifies high-frequency noise and assumes a uniform grid. Boundary estimates compound one-sided errors and smoothing is usually needed.
 
 ### Implementation
 
-C ABI `n4m_transform_second_derivative_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SecondDerivative`. The same numerical kernel backs every language binding.
+`n4m.transform.smoothing.SecondDerivative` calls `n4m_transform_second_derivative_*`; both gradient passes are in `preprocessing/derivatives/second_derivative.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_second_derivative_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import SecondDerivative
-op = SecondDerivative()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://numpy.org/doc/stable/reference/generated/numpy.gradient.html; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/derivatives/second_derivative.c
 
 
 ---

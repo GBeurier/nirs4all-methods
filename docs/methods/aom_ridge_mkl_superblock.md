@@ -1,66 +1,66 @@
-# `aom_ridge_mkl_superblock` - strict-linear AOM Ridge MKL-light superblock
+# `ridge_mkl_superblock` — n4m.compose.aom_superblock.ridge_mkl_superblock
 
-`n4m.aom_ridge_mkl_superblock` is the moment-compatible subset of donor
-AOM-Ridge MKL-light. It learns non-negative train-only KTA weights over a bank
-of strict-linear AOM operator views, fits native Ridge on the equivalent
-weighted superblock, then folds the final model back to raw input-space
-`input_coefficients` plus `intercept`.
+_Namespace_: **`n4m.compose.aom_superblock`** · _Fully-qualified_: `n4m.compose.aom_superblock.ridge_mkl_superblock` · _Catalog id_: `aom_pop.ridge_mkl_superblock`
 
-This is not a nonlinear kernel route. The combined model is equivalent to a
-single linear Ridge model on concatenated weighted operator features, so
-`predict()` can replay directly as:
+## API surface
 
-```python
-y_hat = X @ res["input_coefficients"] + res["intercept"]
-```
+**C ABI:** no standalone exported symbol is declared for this method.
 
-It intentionally excludes branch/global preprocessing, row-reference-dependent
-preprocessing, local/SNV/MSC branches, nonlinear kernels and TabPFN residuals.
+**Python (verified public re-export):** `from n4m.compose.aom_superblock import aom_ridge_mkl_superblock`
 
-## API
+**Signature:** [`aom_ridge_mkl_superblock(X, y, *, operators = None, alpha: float | None = None, alphas: Sequence[float] = (0.0001, 0.01, 1.0, 100.0), cv: int = 5, fold_ids = None, mkl_top_k: int = 6, block_scaling: str = 'none', center_x: bool = True, center_y: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L7372)
 
-```python
-import n4m
+**R:** no current source-verified entry point was found for this catalog method.
 
-res = n4m.aom_ridge_mkl_superblock(
-    X,
-    y,
-    operators=["identity", ("finite_difference", [1]), ("savgol_smooth", [5, 2])],
-    alphas=[0.01, 0.1, 1.0],
-    mkl_top_k=3,
-    cv=5,
-)
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
-print(res["mkl_weights"].ravel())
-print(res["selected_operator_indices"])
-```
+### Parameters
 
-The sklearn wrapper is `n4m.sklearn.NativeAOMRidgeMKLSuperblockRegressor`.
+| Name | Type | Default |
+|---|---|---|
+| `X` | `—` | `required` |
+| `y` | `—` | `required` |
+| `operators` | `—` | `None` |
+| `alpha` | `float \| None` | `None` |
+| `alphas` | `Sequence[float]` | `(0.0001, 0.01, 1.0, 100.0)` |
+| `cv` | `int` | `5` |
+| `fold_ids` | `—` | `None` |
+| `mkl_top_k` | `int` | `6` |
+| `block_scaling` | `str` | `'none'` |
+| `center_x` | `bool` | `True` |
+| `center_y` | `bool` | `True` |
 
-## Selection
+## Explanations
 
-For each alpha-CV fold, operator weights are learned only from the fold training
-rows:
+### Bibliographic source
 
-1. Build each strict-linear operator output block.
-2. Center the block and target on the fold training rows.
-3. Score each block by kernel-target alignment between `Z_b Z_b.T` and
-   `Y Y.T`.
-4. Keep at most `mkl_top_k` positive-alignment blocks and project weights onto
-   the simplex.
-5. Fit native Ridge on the weighted superblock and score the validation rows.
+No canonical publication defines this product-specific MKL-light surface. Beurier, G. et al. (2026). *AOM-PLS / POP-PLS* paper companion, arXiv:2605.13587, https://arxiv.org/abs/2605.13587. The product variants below are implementation-specific extensions; the paper does not by itself specify their ABI-2 orchestration.
 
-The final model relearns weights on the full calibration rows and refits the
-selected alpha. Held-out/test rows are never used for production selection.
+### Mathematical principle
 
-## Benchmark
+For each centered block $Z_b$, compute $K_b=Z_bZ_b^\top$ and its alignment $A_b=\langle K_b,Y_cY_c^\top\rangle_F/(\lVert K_b\rVert_F\lVert Y_cY_c^\top\rVert_F)$. The top-$k$ blocks receive simplex weights $w_b=\max(A_b,0)/\sum_b\max(A_b,0)$; multiplying each retained block by $\sqrt{w_b}$ before Ridge yields the final weighted superblock. If every retained alignment is nonpositive, the implementation uses uniform weights $1/k$ instead.
 
-```bash
-PYTHONPATH=bindings/python/src \
-N4M_LIB_PATH=build/dev-release/cpp/src/libn4m.so \
-python benchmarks/cross_binding/bench_aom_ridge_mkl_superblock_timing.py
-```
+### Appropriate uses
 
-CUDA-enabled builds can run the same smoke by pointing `N4M_LIB_PATH` at
-`build/cuda-on/cpp/src/libn4m.so`; this proves CUDA-build compatibility, but the
-current implementation is not a fused GPU weighted-superblock grinder.
+Comparing a small collection of complementary strict spectral representations with a controlled linear head.
+
+### Limits and validation
+
+The weighting is not equivalent to full multiple-kernel learning. The uniform fallback makes nonpositive alignments non-discriminative. Top-$k$, weights, and Ridge penalty are selected fold-locally and refit on all rows; stateful/nonlinear branches break simple coefficient replay.
+
+### Implementation
+
+`n4m.compose.aom_superblock.aom_ridge_mkl_superblock` and `AOMRidgeMKLSuperblock`; no standalone C ABI symbol.
+
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/compose/aom_superblock.py
+
+## Catalog note
+
+Python-backed donor-style AOM Ridge MKL-light superblock constrained to strict-linear single-operator AOM views. It learns non-negative train-only KTA weights over operator blocks inside every alpha-CV fold, refits weights on the full calibration set, fits native Ridge on the equivalent weighted superblock, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, row-reference-dependent preprocessing, nonlinear kernels and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU weighted-superblock grinder.
+
+_Timing benchmark_: `benchmarks/cross_binding/bench_aom_ridge_mkl_superblock_timing.py`
+
+
+_See also_: [methods index](index.md).

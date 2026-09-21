@@ -1,12 +1,12 @@
-# `aug_edge_curve` — Edge Curvature Augmenter
+# `aug_edge_curve` — Smooth detector-edge curvature
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.EdgeCurvatureAugmenter` · _C ABI_: `n4m_augmentation_edge_curvature_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_edge_curvature_*`
 
 ## Description
 
 Curved edge response artifact.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -18,27 +18,50 @@ Curved edge response artifact.
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_edge_curvature_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/instrument.h#L90) · [`n4m_augmentation_edge_curvature_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/instrument.h#L83) · [`n4m_augmentation_edge_curvature_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/instrument.h#L95). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.instrument import EdgeCurvatureAugmenter
+```
+
+Source signature: [`EdgeCurvatureAugmenter(curvature_strength: float = 0.02, curvature_type: int = 0, asymmetry: float = 0.0, edge_focus: float = 0.7, wavelengths = None, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L1036).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No canonical paper defines the smile/frown/asymmetric templates. They are internal edge-response heuristics with formulas fixed by the native source.
 
 ### Mathematical principle
 
-Curved edge response artifact.
+A normalized wavelength coordinate drives a smooth edge-focused curve. `curvature_type` selects random, smile, frown, or asymmetric shape; `curvature_strength` sets amplitude, `asymmetry` differentiates left and right, and `edge_focus` concentrates the effect toward edges.
+
+### Appropriate uses
+
+Robustness to smooth baseline curvature near the boundaries of an instrument's range.
+
+### Limits and validation
+
+Template curvature is phenomenological and depends on the supplied wavelength span. It does not estimate optical smile or detector geometry from metadata.
 
 ### Implementation
 
-C ABI `n4m_augmentation_edge_curvature_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.EdgeCurvatureAugmenter`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.instrument.EdgeCurvatureAugmenter`; ABI 2 family `n4m_augmentation_edge_curvature_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_edge_curvature_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import EdgeCurvatureAugmenter
-op = EdgeCurvatureAugmenter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/edge_artifacts/edge_curvature.h
+
 
 ---
 

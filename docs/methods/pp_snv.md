@@ -1,12 +1,12 @@
-# `pp_snv` — Standard Normal Variate (SNV)
+# `pp_snv` — Standard normal variate (SNV)
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.SNV` · _C ABI_: `n4m_transform_snv_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_snv_*`
 
 ## Description
 
 Standard Normal Variate normalisation.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,57 +14,59 @@ Standard Normal Variate normalisation.
 | `with_std` | `bool` | `True` |
 | `ddof` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L13) · [`n4m_transform_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L15) · [`n4m_transform_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L16). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.scatter import SNV
+```
+
+Source signature: [`SNV(with_mean: bool = True, with_std: bool = True, ddof: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L18).
+
+**R (source-verified):** [`snv_transform(X, with_mean = TRUE, with_std = TRUE, ddof = 0L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
+
+```r
+library(n4m)
+result <- snv_transform(X)
+```
+
+**MATLAB / Octave (source-verified):** [`snv_transform(X, varargin)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/matlab/+n4m/snv_transform.m).
+
+```matlab
+addpath('bindings/matlab')
+result = n4m.snv_transform(X);
+```
+
 ## Explanations
 
 ### Bibliographic source
 
-Barnes, R. J., Dhanoa, M. S. & Lister, S. J. (1989). *Standard Normal Variate Transformation and De-trending of Near-Infrared Diffuse Reflectance Spectra*. Applied Spectroscopy 43(5), 772–777.
+Barnes, Dhanoa & Lister (1989), *Standard Normal Variate Transformation and De-trending of Near-Infrared Diffuse Reflectance Spectra*, Applied Spectroscopy 43, 772–777, https://doi.org/10.1366/0003702894202201.
 
 ### Mathematical principle
 
-Each spectrum $\mathbf{x}_i$ is centred and scaled by its own row statistics: $\mathrm{SNV}(\mathbf{x}_i) = (\mathbf{x}_i - \bar{x}_i)/s_i$, where $\bar{x}_i$ and $s_i$ are the mean and standard deviation across the wavelengths of that single spectrum. This removes multiplicative scatter and additive baseline shifts on a per-sample basis without needing a reference spectrum, which is why SNV is robust to sample-to-sample path-length variation in diffuse-reflectance NIR.
+Each spectrum is independently centered and scaled: $x'_i=(x_i-\bar{x}_i)/s_i$, with optional centering, scaling, and configurable `ddof`. Row statistics make the transform stateless across samples.
+
+### Appropriate uses
+
+Reducing additive and multiplicative scatter caused by particle size or optical path variation in diffuse-reflectance spectra.
+
+### Limits and validation
+
+Near-constant spectra have unstable scale, and SNV removes absolute row amplitude that may contain analyte information. It does not remove wavelength-dependent baselines.
 
 ### Implementation
 
-C ABI `n4m_transform_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SNV`. The same numerical kernel backs every language binding.
+`n4m.transform.scatter.SNV` wraps `n4m_transform_snv_*`; row mean/variance and flags are in `preprocessing/scatter/snv.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_snv_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import SNV
-op = SNV()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1366/0003702894202201; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scatter/snv.c
 
 
 ---

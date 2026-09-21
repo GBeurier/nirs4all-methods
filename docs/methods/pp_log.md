@@ -1,12 +1,12 @@
-# `pp_log` — Log Transform
+# `pp_log` — Element-wise logarithmic transform
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.LogTransform` · _C ABI_: `n4m_transform_log_transform_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_log_transform_*`
 
 ## Description
 
 Element-wise logarithm with optional fit-time auto-offset.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -15,57 +15,49 @@ Element-wise logarithm with optional fit-time auto-offset.
 | `auto_offset` | `bool` | `True` |
 | `min_value` | `float` | `1e-08` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_log_transform_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scaling.h#L57) · [`n4m_transform_log_transform_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scaling.h#L60) · [`n4m_transform_log_transform_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scaling.h#L47) · [`n4m_transform_log_transform_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scaling.h#L63) · [`n4m_transform_log_transform_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scaling.h#L65). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.scaling import LogTransform
+```
+
+Source signature: [`LogTransform(base: float = 0.0, offset: float = 0.0, auto_offset: bool = True, min_value: float = 1e-08)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L161).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No canonical paper: this is the mathematical logarithm with an implementation-defined offset policy.
 
 ### Mathematical principle
 
-Element-wise logarithm with optional fit-time auto-offset.
+Transform evaluates $\log_b(x+c)$, using the natural logarithm when `base=0`. With `auto_offset`, fit chooses an offset that moves the training minimum to at least `min_value`; the same offset is reused on later data.
+
+### Appropriate uses
+
+Compressing right-skewed positive intensities or expressing multiplicative changes on an additive scale.
+
+### Limits and validation
+
+Nonpositive shifted values are invalid. A data-derived offset changes interpretation and must be fit without leakage; logs are not interchangeable with physical absorbance unless the correct sign and base are used.
 
 ### Implementation
 
-C ABI `n4m_transform_log_transform_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LogTransform`. The same numerical kernel backs every language binding.
+`n4m.transform.scaling.LogTransform` uses `n4m_transform_log_transform_*`; offset fitting and base conversion are in `preprocessing/scaling/log_transform.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_log_transform_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import LogTransform
-op = LogTransform()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scaling/log_transform.c
 
 
 ---

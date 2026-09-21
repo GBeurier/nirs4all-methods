@@ -1,12 +1,12 @@
-# `pp_robust_direct_standardization` — Robust Direct Standardization
+# `pp_robust_direct_standardization` — Trimmed robust direct standardization
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.RobustDirectStandardization` · _C ABI_: `n4m_domain_adaptation_robust_direct_standardization_*`
+_Group_: **Signal transforms** · _C ABI_: `n4m_domain_adaptation_robust_direct_standardization_*`
 
 ## Description
 
 Direct standardization with iterative residual trimming.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -15,27 +15,50 @@ Direct standardization with iterative residual trimming.
 | `trim_quantile` | `float` | `0.9` |
 | `max_iter` | `int` | `3` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_domain_adaptation_robust_direct_standardization_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L79) · [`n4m_domain_adaptation_robust_direct_standardization_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L82) · [`n4m_domain_adaptation_robust_direct_standardization_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L84) · [`n4m_domain_adaptation_robust_direct_standardization_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L90) · [`n4m_domain_adaptation_robust_direct_standardization_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L87). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.domain_adaptation.standardization import robust_direct_standardization
+```
+
+Source signature: [`robust_direct_standardization(X_source, X_target, X = None, fit_intercept: bool = True, ridge: float = 0.0, trim_quantile: float = 0.9, max_iter: int = 3)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L9664).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No single canonical paper defines this implementation. It robustifies direct standardization from Wang et al. (1991), https://doi.org/10.1021/ac00023a016, by iterative residual trimming.
 
 ### Mathematical principle
 
-Direct standardization with iterative residual trimming.
+A global affine DS map is fit on paired spectra. After each fit, row residual norms are computed and only rows at or below `trim_quantile` are retained for the next fit, up to `max_iter`; optional ridge regularization remains active.
+
+### Appropriate uses
+
+Instrument transfer with a small proportion of mismatched or corrupted paired standards.
+
+### Limits and validation
+
+Hard trimming can discard legitimate domain extremes and the method is not a formal high-breakdown estimator. It still assumes one global linear map and enough retained pairs to identify it.
 
 ### Implementation
 
-C ABI `n4m_domain_adaptation_robust_direct_standardization_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RobustDirectStandardization`. The same numerical kernel backs every language binding.
+`n4m.domain_adaptation.standardization.RobustDirectStandardization` calls `n4m_domain_adaptation_robust_direct_standardization_*`; trimming is implemented in `cpp/src/c_api/c_api_advanced.cpp`.
 
-### Usage
+The ABI-2 implementation is the `n4m_domain_adaptation_robust_direct_standardization_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import RobustDirectStandardization
-op = RobustDirectStandardization()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://doi.org/10.1021/ac00023a016; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp
+
 
 ---
 

@@ -1,12 +1,12 @@
-# `pp_piecewise_snv` — Piecewise S N V
+# `pp_piecewise_snv` — Piecewise standard normal variate
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.PiecewiseSNV` · _C ABI_: `n4m_transform_piecewise_snv_*`
+_Group_: **Signal transforms** · _C ABI_: `n4m_transform_piecewise_snv_*`
 
 ## Description
 
 Apply SNV independently inside fixed wavelength intervals.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,27 +14,50 @@ Apply SNV independently inside fixed wavelength intervals.
 | `ddof` | `int` | `0` |
 | `eps` | `float` | `1e-12` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_piecewise_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L168) · [`n4m_transform_piecewise_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L171) · [`n4m_transform_piecewise_snv_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L172) · [`n4m_transform_piecewise_snv_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L177) · [`n4m_transform_piecewise_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L174). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.scatter import PiecewiseSNV
+```
+
+Source signature: [`PiecewiseSNV(window_size: int = 32, ddof: int = 0, eps: float = 1e-12)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/advanced.py#L277).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No single paper canonically defines this interval variant. It applies the SNV normalization of Barnes, Dhanoa & Lister (1989), https://doi.org/10.1366/0003702894202201, independently by interval.
 
 ### Mathematical principle
 
-Apply SNV independently inside fixed wavelength intervals.
+The axis is partitioned into non-overlapping windows of `window_size`. Within each window, each row is centered by its local mean and divided by its local standard deviation using `ddof`, with variance floored by `eps`.
+
+### Appropriate uses
+
+Removing region-dependent scatter while preserving separation between spectral regions better than a single global SNV statistic.
+
+### Limits and validation
+
+Window boundaries can cause jumps, and low-variance or narrow intervals amplify noise. Local normalization may erase broad analyte differences between regions.
 
 ### Implementation
 
-C ABI `n4m_transform_piecewise_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.PiecewiseSNV`. The same numerical kernel backs every language binding.
+`n4m.transform.scatter.PiecewiseSNV` calls `n4m_transform_piecewise_snv_*`; the exact interval and variance rules are in `cpp/src/c_api/c_api_advanced.cpp`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_piecewise_snv_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import PiecewiseSNV
-op = PiecewiseSNV()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://doi.org/10.1366/0003702894202201; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp
+
 
 ---
 

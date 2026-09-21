@@ -19,7 +19,7 @@ One-SE component selection rule (§10)
 
 ### Bibliographic source
 
-Hastie, T., Tibshirani, R. & Friedman, J. (2009). *The Elements of Statistical Learning*, 2nd ed., Springer, §7.10.
+Hastie, T., Tibshirani, R. & Friedman, J. (2009). *The Elements of Statistical Learning*, 2nd ed., Springer, §7.10. Verified primary link: [https://doi.org/10.1007/978-0-387-84858-7](https://doi.org/10.1007/978-0-387-84858-7).
 
 ### Mathematical principle
 
@@ -29,128 +29,36 @@ This yields a more parsimonious model with negligible predictive cost — the sm
 
 Inputs: a fold × component RMSE matrix from cross-validation. Output: an integer component count.
 
+### Appropriate uses
+
+Choosing a parsimonious component count whose cross-validation error is statistically indistinguishable from the minimum.
+
+### Limits and validation
+
+The result depends on fold construction and on how the standard error is computed across genuinely independent validation units.
+
 ### Implementation
 
 `n4m_metrics_one_se_rule_compute`. Returns an integer.
 
-R roxygen note (`methods_extra.R::one_se_rule`):
+### Sources and provenance
 
-> One-SE rule from a (max_components × n_folds) fold RMSE matrix.
-> @param fold_rmse_matrix Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
-> @export
+Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp).
 
-MATLAB header (`bindings/matlab/+pls4all/one_se_rule.m`):
 
-```text
-pls4all.one_se_rule  One-SE component selection from a fold RMSE matrix.
- fold_rmse_matrix: (max_components × n_folds) matrix of fold RMSE values.
-```
+### API and bindings
 
-### Usage
+**C ABI (ABI 2):** [`n4m_metrics_one_se_rule_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L83). Use the linked public header for the exact signature, configuration, and result handles.
 
-Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
-**pls4all bindings**
+**R (source-verified):** [`one_se_rule(fold_rmse_matrix)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 
-::::{tab-set}
-:class: pls4all-bindings
+The source signature has additional required inputs, so no example call is fabricated.
 
-:::{tab-item} C ABI · libn4m
-:sync: c
-:class-label: lang-c
+**MATLAB / Octave (source-verified):** [`one_se_rule(fold_rmse_matrix)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/matlab/+n4m/one_se_rule.m).
 
-```c
-/* C ABI — libn4m */
-n4m_context_t* ctx = n4m_context_create();
-n4m_config_t*  cfg = n4m_config_create();
-n4m_method_result_t* res = NULL;
-n4m_metrics_one_se_rule_compute(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
-/* … read coefficients / mask / scores via */
-/* n4m_method_result_get_double_matrix / vector / scalar … */
-n4m_method_result_destroy(res);
-n4m_config_destroy(cfg);
-n4m_context_destroy(ctx);
-```
-
-:::
-
-:::{tab-item} Python · pls4all (raw)
-:sync: python-raw
-:class-label: lang-python
-
-```python
-import pls4all
-from pls4all._methods import one_se_rule_compute
-with pls4all.Context() as ctx, pls4all.Config() as cfg:
-    res = one_se_rule_compute(ctx, cfg, X, y)
-# then: res.matrix("predictions"), res.matrix("coefficients"),
-# res.vector("mask"), res.scalar("intercept"), …
-```
-
-:::
-
-:::{tab-item} Python · pls4all.sklearn
-:sync: python-sklearn
-:class-label: lang-python
-
-```python
-from pls4all.sklearn import one_se_rule
-result = one_se_rule(X, y, n_components=2)
-```
-
-:::
-
-:::{tab-item} R · pls4all_method()
-:sync: r-dispatcher
-:class-label: lang-r
-
-```r
-library(pls4all)
-# Unified low-level dispatcher (May 2026 R cleanup):
-res <- pls4all_method("one_se_rule", X, y,
-                      n_components = 2L, params = list(max_components = 8L, n_folds = 5L))
-# res is a named list with MethodResult arrays/scalars.
-# selected_indices / top_k_intervals are 1-based.
-```
-
-:::
-
-:::{tab-item} R · pls4all (raw fn)
-:sync: r-raw
-:class-label: lang-r
-
-```r
-library(pls4all)
-res  <- one_se_rule(fold_rmse_matrix)
-yhat <- pls4all_predict(res, X_test)
-```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (MEX)
-:sync: matlab-mex
-:class-label: lang-matlab
-
-```matlab
-res = pls4all.one_se_rule(X, y, 2);
-% see header of bindings/matlab/+pls4all/one_se_rule.m for full
-% parameter surface:
-%   res = one_se_rule(fold_rmse_matrix)
-yhat = predict(res, Xtest);
-```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (classdef)
-:sync: matlab-classdef
-:class-label: lang-matlab
-
-_No idiomatic classdef wrapper — invoke `pls4all.fit("one_se_rule", X, y, …)` directly from the unified MEX factory._
-
-:::
-
-::::
-
+The source signature has additional required inputs, so no example call is fabricated.
 
 **Registry parity references** 📐
 
@@ -158,17 +66,20 @@ _No idiomatic classdef wrapper — invoke `pls4all.fit("one_se_rule", X, y, …)
 :class-card: external-refs
 
 - 📐 **`ref.r_pls`** (R · r) — `pls` 2.8.5 · strict (rmse_rel ≤ 1e-06) — R `pls::plsr(validation='CV', segment.type='consecutive', method='simpls', scale=FALSE)` + `pls::selectNcomp(method='onesigma')`. The pls4all wrapper performs the same consecutive-fold CV with a SIMPLS kernel matching `pls::simpls.fit` bit-for-bit, then routes the pooled per-component RMSEP through `n4m_metrics_one_se_rule_compute`. We compare `mean_rmse_per_component` directly.
+
 :::
 
 ### Benchmarks
 
+**Archived measurement identity.** Backend labels in this table are the raw IDs recorded when the benchmark ran (including historical `pls4all.*` IDs). They preserve measurement provenance and do not describe a current public Python, R, or MATLAB binding; use the source-verified **API and bindings** section above for current entry points.
+
 Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
 
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
+**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = archived binding-harness result agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
 
 **Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-06`).
 
-Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; pls4all language bindings show binding parity against the C++ backend. Hover the icon for role and tolerance band.
+Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; archived language-harness rows show binding parity against the C++ backend. Hover the icon for role and tolerance band.
 
 ::::{tab-set}
 :class: parity-tabs
@@ -182,11 +93,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 4e-14</td><td class="ms">2.10 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.08 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms ms-best">1.13 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms">3.25 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms">3.87 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms">3.96 ms</td></tr>
@@ -209,11 +120,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 4e-14</td><td class="ms">7.61 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.19 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms ms-best">1.23 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms">3.28 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms">4.07 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms">4.07 ms</td></tr>
@@ -236,11 +147,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 4e-14</td><td class="ms">2.06 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.14 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms ms-best">1.13 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms">2.80 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms">5.64 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-cross_check">⇄ +9e-01</td><td class="ms">4.37 ms</td></tr>

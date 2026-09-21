@@ -1,41 +1,64 @@
-# `aug_channel_dropout` — Channel Dropout
+# `aug_channel_dropout` — Independent spectral-channel dropout
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.ChannelDropout` · _C ABI_: `n4m_augmentation_channel_dropout_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_channel_dropout_*`
 
 ## Description
 
 Randomly drop individual wavelength channels.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `dropout_prob` | `float` | `0.05` |
-| `mode` | `str | int` | `'zero'` |
+| `mode` | `str \| int` | `'zero'` |
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
+
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_channel_dropout_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L47) · [`n4m_augmentation_channel_dropout_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L42) · [`n4m_augmentation_channel_dropout_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L50). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.spectral import ChannelDropout
+```
+
+Source signature: [`ChannelDropout(dropout_prob: float = 0.05, mode: str | int = 'zero', rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L617).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No canonical NIR publication defines this cellwise dropout. The exact mask and replacement rules are implementation-defined.
 
 ### Mathematical principle
 
-Randomly drop individual wavelength channels.
+Each cell is marked independently with probability `dropout_prob`. Marked values are either set to zero or linearly interpolated from surviving channel indices in that row. The latter uses endpoint values beyond the first or last survivor.
+
+### Appropriate uses
+
+Simulating sporadic dead pixels/channels and discouraging reliance on single wavelengths.
+
+### Limits and validation
+
+Real sensor failures are often persistent or contiguous rather than IID. If too few channels survive, interpolation becomes poorly informative; zero mode is representation-dependent.
 
 ### Implementation
 
-C ABI `n4m_augmentation_channel_dropout_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ChannelDropout`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.spectral.ChannelDropout`; ABI 2 family `n4m_augmentation_channel_dropout_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_channel_dropout_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import ChannelDropout
-op = ChannelDropout()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/channel_dropout.h
+
 
 ---
 

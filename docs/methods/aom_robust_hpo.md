@@ -1,158 +1,60 @@
-# `aom_robust_hpo` - native AOM robust-HPO preprocessing screen
+# `robust_hpo` — n4m.model_selection.aom_search.robust_hpo
 
-_Group_: **Diagnostic / AOM** · _ABI_: `n4m_model_selection_robust_hpo_fit`
+_Namespace_: **`n4m.model_selection.aom_search`** · _Fully-qualified_: `n4m.model_selection.aom_search.robust_hpo` · _Catalog id_: `aom_pop.robust_hpo`
 
-## Description
+## API surface
 
-`aom_robust_hpo` screens a fixed bank of strict-linear spectral preprocessing
-chains and selects the best Ridge or PLS head by contiguous K-fold CV RMSE.
-It is intended for fast, reproducible preprocessing-candidate campaigns where
-the user wants the candidate-score table, the selected chain/head/parameter,
-and a reusable linear prediction surface in the original input feature space.
+**C ABI (ABI 2):** [`n4m_model_selection_robust_hpo_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L429). Use the linked public header for the exact signature, configuration, and result handles.
 
-Native v1 deliberately excludes stateful or sample-fitted preprocessings
-(`SNV`, `MSC`, `EMSC`, `ASLS`, etc.). Those remain available in the Python
-sklearn estimator `AOMRobustHPORegressor`, which fits each chain fold-locally.
+**Python (verified public re-export):** `from n4m.model_selection.aom_search import aom_robust_hpo`
 
-## Backend Status
+**Signature:** [`aom_robust_hpo(X, y, *, profile: str | int = 'compact', cv: int = 5, heads = ('ridge', 'pls'))`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8897)
 
-The public method is a native C ABI method and builds in both the regular CPU
-and CUDA-enabled `libn4m` configurations. The preprocessing bank and Ridge head
-are strict CPU kernels. The PLS head goes through the existing native PLS model
-path, so a CUDA build can use the library's configured accelerated linear
-algebra path where available.
+**R:** no current source-verified entry point was found for this catalog method.
 
-This is not yet the lab-scale batched 200k-chain GPU grinder. It is the
-catalogued product method: deterministic, source-free, ABI-stable, and suitable
-for compact/wide preprocessing selection from Python or C.
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
-## Parameters
+### Parameters
 
-| Name | Type | Default | Notes |
-|------|------|---------|-------|
-| `profile` | `int` | `0` | `0=compact`, `1=wide` |
-| `cv` | `int` | `5` | Contiguous folds, clipped to `n_samples` |
-| `heads_mask` | `int` | `3` | Bitmask: `1=Ridge`, `2=PLS`, `3=both` |
+| Name | Type | Default |
+|---|---|---|
+| `X` | `—` | `required` |
+| `y` | `—` | `required` |
+| `profile` | `str \| int` | `'compact'` |
+| `cv` | `int` | `5` |
+| `heads` | `—` | `('ridge', 'pls')` |
 
-## Result
+## Explanations
 
-The C ABI returns `n4m_method_result_t` with:
+### Bibliographic source
 
-| Key | Shape | Meaning |
-|-----|-------|---------|
-| `predictions` | `n_samples x 1` | In-sample predictions after refitting the selected candidate |
-| `coefficients_transformed` | `n_features x 1` | Linear coefficients in the selected transformed feature space |
-| `input_coefficients` | `n_input_features x 1` | Selected transformed-space coefficients folded back into the original input feature space |
-| `intercept` | `1 x 1` | Fitted intercept |
-| `candidate_scores` | `n_candidates x 4` | `chain_id`, `head_id`, `param`, `mean_cv_rmse` |
+No single canonical paper defines this ABI-2 compact/wide screen. Beurier, G. et al. (2026). *AOM-PLS / POP-PLS* paper companion, arXiv:2605.13587, https://arxiv.org/abs/2605.13587. The product variants below are implementation-specific extensions; the paper does not by itself specify their ABI-2 orchestration.
 
-Scalar diagnostics: `selected_chain_id`, `selected_head_id`,
-`selected_param`, `selected_cv_rmse`, `n_chains`, `n_candidates`, `profile`,
-`cv`, `n_samples`, `n_features`, `n_features_transformed`, `n_targets`.
+### Mathematical principle
 
-The selected model can be replayed on any compatible input matrix as:
+Evaluate a finite bank of strict-linear spectral chains with Ridge and/or PLS heads by contiguous-fold CV RMSE, select the minimum-score tuple, refit on all calibration rows, and fold its linear coefficients back to the original feature space.
 
-```python
-y_hat = X @ res["input_coefficients"] + res["intercept"]
-```
+### Appropriate uses
 
-## Python Usage
+Fast, reproducible comparison of a declared preprocessing bank when the final model must remain a replayable linear predictor.
 
-```python
-import numpy as np
-import n4m
+### Limits and validation
 
-rng = np.random.default_rng(7)
-X = rng.standard_normal((64, 256))
-y = X[:, 8] - 0.4 * X[:, 19] + 0.05 * rng.standard_normal(64)
+Candidate selection must be nested inside external validation. Native v1 excludes stateful, sample-fitted, nonlinear, and source-routed transformations; a CUDA build does not make the complete candidate bank a fused GPU search.
 
-res = n4m.aom_robust_hpo(X, y, profile="compact", cv=5, heads=("ridge", "pls"))
-print(res["selected_chain_id"], res["selected_head_id"], res["selected_cv_rmse"])
-print(res["candidate_scores"][:5])
+### Implementation
 
-np.testing.assert_allclose(
-    X @ res["input_coefficients"] + res["intercept"],
-    res["predictions"],
-)
-```
+`n4m.model_selection.aom_search.aom_robust_hpo` and `AOMRobustHPOSweepRegressor`; C ABI `n4m_model_selection_robust_hpo_fit`.
 
-The native sklearn wrapper uses the same folded coefficients:
+### Sources and provenance
 
-```python
-model = n4m.NativeAOMRobustHPORegressor(profile="compact", cv=5).fit(X, y)
-pred = model.predict(X_new)
-diag = model.get_diagnostics()
-```
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_robust_hpo.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_method_result.cpp
 
-## C ABI Usage
+## Catalog note
 
-```c
-n4m_context_t* ctx = NULL;
-n4m_config_t* cfg = NULL;
-n4m_method_result_t* res = NULL;
-n4m_context_create(&ctx);
-n4m_config_create(&cfg);
+Native strict-linear AOM robust-HPO screen over compact/wide preprocessing banks and Ridge/PLS heads. Compact has 12 chains; wide has 31 strict-linear chains, including Gaussian, FCK and Whittaker variants. Exposes input_coefficients plus intercept for replay in original feature space and backs NativeAOMRobustHPORegressor. Builds in CPU and CUDA-enabled libn4m configurations; native v1 is not the fused batched GPU grinder.
 
-n4m_model_selection_robust_hpo_fit(ctx, cfg, &x_view, &y_view,
-                       /*profile=*/0, /*cv=*/5, /*heads_mask=*/3, &res);
+_Timing benchmark_: `benchmarks/cross_binding/bench_aom_robust_hpo_timing.py`
 
-const double* scores = NULL;
-int64_t rows = 0, cols = 0;
-n4m_method_result_get_double_matrix(res, "candidate_scores",
-                                    &scores, &rows, &cols);
 
-n4m_method_result_destroy(res);
-n4m_config_destroy(cfg);
-n4m_context_destroy(ctx);
-```
-
-## Native Profiles
-
-`compact` includes raw, detrend degree 1/2, six Savitzky-Golay-style
-smooth/derivative variants, Norris-Williams, finite difference, and a few
-strict-linear compositions.
-
-Compact `chain_id` mapping:
-
-| ID | Chain |
-|----|-------|
-| 0 | `raw` |
-| 1 | `detrend1` |
-| 2 | `detrend2` |
-| 3 | `savgol_w5_p2_d0` |
-| 4 | `savgol_w7_p2_d0` |
-| 5 | `savgol_w7_p2_d1` |
-| 6 | `savgol_w11_p2_d2` |
-| 7 | `nw_s5_g5_d1` |
-| 8 | `finite_diff1` |
-| 9 | `detrend1_savgol_w7_p2_d1` |
-| 10 | `detrend1_nw_s5_g5_d1` |
-| 11 | `savgol_w5_p2_d0_finite_diff1` |
-
-`wide` has 31 chains. It adds larger Savitzky-Golay windows, more
-Norris-Williams variants, second finite difference, Gaussian/FCK variants,
-Whittaker smoothing, and additional strict-linear compositions.
-
-## Benchmarks
-
-Timing script: `benchmarks/cross_binding/bench_aom_robust_hpo_timing.py`.
-Latest checked-in CSV: `benchmarks/cross_binding/aom_robust_hpo_timing.csv`.
-CUDA-build native smoke timing can be regenerated with:
-
-```bash
-PYTHONPATH=bindings/python/src \
-N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
-python benchmarks/cross_binding/bench_aom_robust_hpo_timing.py \
-  --native-only \
-  --output benchmarks/cross_binding/aom_robust_hpo_timing_cuda_smoke.csv
-```
-
-The checked-in compact smoke timing on ABI `1.16.0` shows the native ABI path
-and the Python sklearn preset selecting from the same 84 compact candidates.
-CPU medians were 3.14 ms for 32 x 64, 16.33 ms for 64 x 128, and 60.47 ms for
-96 x 256. The Python sklearn reference wrapper took 29.03 ms, 49.74 ms, and
-263.59 ms on the same cells.
-
-The CUDA-build native smoke medians were 506.16 ms, 313.89 ms, and 245.42 ms
-on those cells. This validates the CUDA-enabled build path; it is not evidence
-of fused GPU acceleration for compact AOM robust-HPO.
+_See also_: [methods index](index.md).

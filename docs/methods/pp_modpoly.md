@@ -1,12 +1,12 @@
-# `pp_modpoly` — Mod Poly
+# `pp_modpoly` — Modified-polynomial baseline correction (ModPoly)
 
-_Group_: **Baseline correction** · _Binding_: `n4m.sklearn.ModPoly` · _C ABI_: `n4m_transform_modpoly_*`
+_Group_: **Baseline correction** · _C ABI_: `n4m_transform_modpoly_*`
 
 ## Description
 
 Modified polynomial baseline correction.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,57 +14,49 @@ Modified polynomial baseline correction.
 | `max_iter` | `int` | `250` |
 | `tol` | `float` | `0.001` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_modpoly_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L68) · [`n4m_transform_modpoly_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L71) · [`n4m_transform_modpoly_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/baseline.h#L72). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.baseline import ModPoly
+```
+
+Source signature: [`ModPoly(polyorder: int = 2, max_iter: int = 250, tol: float = 0.001)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/baseline.py#L108).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Lieber & Mahadevan-Jansen (2003), *Automated method for subtraction of fluorescence from biological Raman spectra*, Applied Spectroscopy 57, 1363–1367, https://doi.org/10.1366/000370203322554518.
 
 ### Mathematical principle
 
-Modified polynomial baseline correction.
+A polynomial baseline is fit iteratively. After each fit, samples above the fitted baseline are clipped to it in the working spectrum, so positive peaks have decreasing influence on the next polynomial estimate; iteration stops by tolerance or budget.
+
+### Appropriate uses
+
+Subtracting smooth fluorescence from spectra containing mostly positive, relatively narrow peaks.
+
+### Limits and validation
+
+Broad peaks can be clipped into the baseline and high polynomial orders are unstable at edges. Negative bands violate the one-sided clipping assumption.
 
 ### Implementation
 
-C ABI `n4m_transform_modpoly_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.ModPoly`. The same numerical kernel backs every language binding.
+`n4m.transform.baseline.ModPoly` wraps `n4m_transform_modpoly_*`; iterative clipping and polynomial fitting are in `preprocessing/baselines/modpoly.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_modpoly_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import ModPoly
-op = ModPoly()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1366/000370203322554518; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/baselines/modpoly.c
 
 
 ---

@@ -1,8 +1,8 @@
 # Python binding
 
-The `n4m` package is a ctypes wrapper over **libn4m (ABI 2.5)**. It exposes ABI
-introspection, the context / config lifecycles, and the full method surface
-through role subpackages that mirror the `n4m.<role>` namespace. See
+`n4m` is the full current ctypes binding over **libn4m (ABI 2.5)**. It exposes
+ABI introspection, context/config lifecycles, and the method surface through
+role subpackages that mirror the `n4m.<role>` namespace. See
 `bindings/python/README.md` for installation and loader rules, and the
 [ABI 2.0 migration guide](../MIGRATION_ABI2.md) for the old→new mapping.
 
@@ -38,8 +38,11 @@ from n4m.decomposition import FlexiblePCA
 ```
 
 The estimators/transformers are sklearn-compatible with zero-copy NumPy
-`n4m_matrix_view_t` round-trips. The slim `pls4all` package keeps its name (the
-subset contract) but calls the same ABI-2 symbols under the hood.
+`n4m_matrix_view_t` round-trips. The separately shipped `pls4all` package
+remains an active slim PLS-focused compatibility subset over the same ABI-2
+library. Method pages use `n4m` imports only when their exact current public
+role export was verified from source; they do not substitute a `pls4all` route
+for a full `n4m` method.
 
 For verified migration tooling, `pls4all.export_linear_predictor_n4mm(...)`
 constructs a PREDICT-only N4MM from finite affine coefficients and intercepts.

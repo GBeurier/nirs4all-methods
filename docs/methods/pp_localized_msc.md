@@ -1,12 +1,12 @@
-# `pp_localized_msc` — Localized M S C
+# `pp_localized_msc` — Localized moving-window multiplicative scatter correction
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.LocalizedMSC` · _C ABI_: `n4m_transform_localized_msc_*`
+_Group_: **Signal transforms** · _C ABI_: `n4m_transform_localized_msc_*`
 
 ## Description
 
 Feature-wise MSC using a moving local wavelength window.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,27 +14,50 @@ Feature-wise MSC using a moving local wavelength window.
 | `reference` | `—` | `None` |
 | `eps` | `float` | `1e-12` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_localized_msc_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L194) · [`n4m_transform_localized_msc_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L197) · [`n4m_transform_localized_msc_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L199) · [`n4m_transform_localized_msc_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L204) · [`n4m_transform_localized_msc_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L201). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.scatter import LocalizedMSC
+```
+
+Source signature: [`LocalizedMSC()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/advanced.py#L352).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No single paper canonically defines this implementation. It is a moving-window extension of Geladi, MacDougall & Martens (1985), https://doi.org/10.1366/0003702854248656.
 
 ### Mathematical principle
 
-Feature-wise MSC using a moving local wavelength window.
+At each wavelength, a local window is regressed on the corresponding reference window to obtain an intercept and slope; the center value is corrected by those local coefficients. The fitted reference is either supplied or learned from the training mean.
+
+### Appropriate uses
+
+Correcting scatter whose offset or gain changes gradually across the wavelength axis.
+
+### Limits and validation
+
+Local regressions become unstable in flat windows or with small windows; `eps` only guards degeneracy. Moving coefficients can distort broad bands and require a stable reference.
 
 ### Implementation
 
-C ABI `n4m_transform_localized_msc_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.LocalizedMSC`. The same numerical kernel backs every language binding.
+`n4m.transform.scatter.LocalizedMSC` wraps `n4m_transform_localized_msc_*`; the local regressions are in `cpp/src/c_api/c_api_advanced.cpp`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_localized_msc_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import LocalizedMSC
-op = LocalizedMSC()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://doi.org/10.1366/0003702854248656; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp
+
 
 ---
 
