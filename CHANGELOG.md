@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.21] - 2026-09-21
+
+### Fixed
+
+- Aligned the R package ABI regression test with the released ABI 2.6 surface,
+  restoring the Linux, macOS ARM, and Windows CRAN-check matrix.
+- Integrated the ABI 2.6 AOM calibration and affine-stack surfaces into the
+  generated scientific documentation coverage gate (212/212 methods).
+
 ## [1.0.20] - 2026-09-21
 
 ### Added
