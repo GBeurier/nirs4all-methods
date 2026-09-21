@@ -5,10 +5,7 @@ Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2
 _Total catalogued native methods_: **212**. Additional Python reference
 surfaces are documented where relevant.
 
-Python facade guides: [AOM calibration contracts](aom_calibration.md),
-[moment-based fitting and diagnostics](moments.md),
-[moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the
-[direct Ridge facade](ridge.md).
+Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
 
 ```{toctree}
 :hidden:

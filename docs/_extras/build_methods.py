@@ -3263,6 +3263,10 @@ def render_catalog_index(catalog: list[dict],
         "provenance.\n",
         f"_Total catalogued native methods_: **{total}**. Additional Python "
         "reference\nsurfaces are documented where relevant.\n",
+        "Python facade guides: [AOM calibration contracts](aom_calibration.md), "
+        "[moment-based fitting and diagnostics](moments.md), "
+        "[moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the "
+        "[direct Ridge facade](ridge.md).\n",
         "```{toctree}\n:hidden:\n:glob:\n:maxdepth: 1\n\n*\n```\n",
     ]
     seen_roles = [r for r in ROLE_ORDER if r in by_role]
