@@ -25,6 +25,7 @@ option(N4M_BUILD_BINDINGS_ANDROID  "Build the Android AAR (NDK)"               O
 
 # ---- Accelerated backends (Phase 7) ---------------------------------------
 option(N4M_WITH_BLAS    "Build optional BLAS backend"   OFF)
+option(N4M_AOM_WITH_LAPACKE "Use LAPACKE for AOM Ridge eigenpaths when supplied by BLAS" ON)
 option(N4M_WITH_OPENMP  "Build optional OpenMP backend" OFF)
 option(N4M_WITH_CUDA    "Build optional CUDA backend"   OFF)
 

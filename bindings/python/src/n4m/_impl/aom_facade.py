@@ -5,9 +5,10 @@ This module keeps AOM discoverable as a coherent product surface while reusing
 the single ``libn4m`` C/CUDA runtime and the existing ``n4m.python`` /
 ``n4m.sklearn`` bindings.
 """
+
 from __future__ import annotations
 
-from . import native as _native
+from ..model_selection.aom_calibration import AOMPLSRegressor
 from . import (
     AOMCandidateSpec,
     AOMControlSelector,
@@ -15,8 +16,8 @@ from . import (
     AOMEndpointMarginStabilityGate,
     AOMFallbackBlendGate,
     AOMMidPEndpointStack,
-    AOMOperatorPLSStack,
     AOMOperatorPLSSpec,
+    AOMOperatorPLSStack,
     AOMPreprocessingChain,
     AOMRidgeBlender,
     AOMRobustHPOCompact,
@@ -31,28 +32,30 @@ from . import (
     NativeAOMChainRidgePLSRegressor,
     NativeAOMChainSweepRegressor,
     NativeAOMFixedCandidateRegressor,
-    NativeAOMMomentPLSScreenRefitRegressor,
     NativeAOMMomentPLSExactScreenRefitRegressor,
+    NativeAOMMomentPLSScreenRefitRegressor,
     NativeAOMMomentRidgeScreenRefitRegressor,
     NativeAOMMomentScreenRefitRegressor,
     NativeAOMOperatorPLSStackRegressor,
     NativeAOMPLSRegressor,
     NativeAOMPLSSuperblockRegressor,
-    NativeAOMRidgePLSSuperblockRegressor,
-    NativeAOMRidgeBlenderRegressor,
     NativeAOMRidgeActiveSuperblockRegressor,
+    NativeAOMRidgeBlenderRegressor,
     NativeAOMRidgeGlobalRegressor,
     NativeAOMRidgeMKLSuperblockRegressor,
+    NativeAOMRidgePLSSuperblockRegressor,
     NativeAOMRidgeSuperblockRegressor,
     NativeAOMRobustHPORegressor,
     NativeAOMSavgolFocusRegressor,
     NativeAOMScreenRefitRegressor,
-    NativeAOMStrictFamilyLiteRegressor,
     NativeAOMStagedChainCampaignRegressor,
+    NativeAOMStrictFamilyLiteRegressor,
     NativeAOMSweepRegressor,
     NativePOPPLSRegressor,
     build_aom_control_chain_bank,
 )
+from . import native as _native
+from .linear_ridge_stack import LinearRidgeStackRegressor, compress_linear_stack
 
 aom_robust_hpo = _native.aom_robust_hpo
 aom_global_select = _native.aom_global_select
@@ -202,8 +205,10 @@ _STAGED_CAMPAIGN_OPTIONS = (
     "return_stage_screens",
 )
 _STAGED_CAMPAIGN_ESTIMATOR_OPTIONS = tuple(
-    option for option in _STAGED_CAMPAIGN_OPTIONS
-    if option not in {
+    option
+    for option in _STAGED_CAMPAIGN_OPTIONS
+    if option
+    not in {
         "return_predictions",
         "X_audit",
         "y_audit",
@@ -214,7 +219,8 @@ _STAGED_CAMPAIGN_ESTIMATOR_OPTIONS = tuple(
     "final_moment_policy",
 )
 _SAVGOL_FOCUS_ESTIMATOR_OPTIONS = tuple(
-    option for option in _STAGED_CAMPAIGN_ESTIMATOR_OPTIONS
+    option
+    for option in _STAGED_CAMPAIGN_ESTIMATOR_OPTIONS
     if option not in {"stages", "plan", "families", "templates"}
 )
 _STRICT_FAMILY_LITE_ESTIMATOR_OPTIONS = _SAVGOL_FOCUS_ESTIMATOR_OPTIONS
@@ -389,9 +395,7 @@ _AOM_CHAIN_GRID_ITER_OPTIONS = (
     "chunk_size",
     "with_ids",
 )
-_AOM_CANDIDATE_TABLE_OPTIONS = (
-    "sort",
-)
+_AOM_CANDIDATE_TABLE_OPTIONS = ("sort",)
 _AOM_EVALUATE_OPTIONS = (
     "top_k",
     "sort_by",
@@ -420,11 +424,80 @@ _AOM_SAVE_REPORT_OPTIONS = (
     "format",
     "include_predictions",
 )
-_AOM_LOAD_REPORT_OPTIONS = (
-    "format",
+_AOM_LOAD_REPORT_OPTIONS = ("format",)
+_AOM_CALIBRATION_OPTIONS = (
+    "max_components",
+    "alphas",
+    "cv",
+    "fold_ids",
+    "branches",
+    "max_depth",
+    "rank",
+)
+_LINEAR_RIDGE_STACK_OPTIONS = (
+    "operators",
+    "alphas",
+    "meta_alphas",
+    "cv",
+    "fold_ids",
+    "inner_cv",
+)
+_LINEAR_STACK_COMPRESS_OPTIONS = (
+    "base_coefficients",
+    "base_intercepts",
+    "meta_weights",
+    "meta_intercept",
 )
 
 _METHOD_INVENTORY = (
+    {
+        "name": "calibration",
+        "entry": "AOMPLSRegressor",
+        "kind": "sklearn_estimator",
+        "source_module": "n4m.model_selection.aom_calibration",
+        "role": "global_branch_operator_calibration",
+        "heads": ("pls",),
+        "reuse": "selected_affine_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.calibration",
+        "catalog_role": "catalog_binding",
+        "doc_path": "docs/methods/aom_calibration.md",
+        "config_options": _AOM_CALIBRATION_OPTIONS,
+        "notes": "Native global branch/operator/component calibration with explicit fold contracts.",
+    },
+    {
+        "name": "linear_ridge_stack",
+        "entry": "LinearRidgeStackRegressor",
+        "kind": "sklearn_estimator",
+        "source_module": "n4m.ensemble",
+        "role": "nested_oof_linear_stack",
+        "heads": ("ridge",),
+        "reuse": "compressed_affine_model",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.linear_ridge_stack",
+        "catalog_role": "catalog_binding",
+        "doc_path": "docs/methods/aom_calibration.md",
+        "config_options": _LINEAR_RIDGE_STACK_OPTIONS,
+        "notes": "Nested-CV Ridge base views and OOF Ridge meta-head with affine export.",
+    },
+    {
+        "name": "linear_stack_compress",
+        "entry": "compress_linear_stack",
+        "kind": "function",
+        "source_module": "n4m.ensemble",
+        "role": "affine_stack_compression",
+        "heads": ("ridge",),
+        "reuse": "deployment_affine_predictor",
+        "cpu": True,
+        "cuda": True,
+        "catalog_id": "aom_pop.linear_stack_compress",
+        "catalog_role": "catalog_binding",
+        "doc_path": "docs/methods/aom_calibration.md",
+        "config_options": _LINEAR_STACK_COMPRESS_OPTIONS,
+        "notes": "Native composition of affine base and meta coefficients for deployment.",
+    },
     {
         "name": "preprocess",
         "entry": "aom_preprocess",
@@ -1089,8 +1162,9 @@ __all__ = [
     "AOMEndpointMarginStabilityGate",
     "AOMFallbackBlendGate",
     "AOMMidPEndpointStack",
-    "AOMOperatorPLSStack",
     "AOMOperatorPLSSpec",
+    "AOMOperatorPLSStack",
+    "AOMPLSRegressor",
     "AOMPreprocessingChain",
     "AOMRidgeBlender",
     "AOMRobustHPOCompact",
@@ -1102,34 +1176,35 @@ __all__ = [
     "AOMStructuralPolicyWithPgt1200Admissions",
     "AOMTrueBankEndpointPortfolio",
     "EndpointStabilityDecision",
+    "LinearRidgeStackRegressor",
     "NativeAOMChainRidgePLSRegressor",
     "NativeAOMChainSweepRegressor",
     "NativeAOMFixedCandidateRegressor",
-    "NativeAOMMomentPLSScreenRefitRegressor",
     "NativeAOMMomentPLSExactScreenRefitRegressor",
+    "NativeAOMMomentPLSScreenRefitRegressor",
     "NativeAOMMomentRidgeScreenRefitRegressor",
     "NativeAOMMomentScreenRefitRegressor",
     "NativeAOMOperatorPLSStackRegressor",
     "NativeAOMPLSRegressor",
     "NativeAOMPLSSuperblockRegressor",
-    "NativeAOMRidgePLSSuperblockRegressor",
-    "NativeAOMRidgeBlenderRegressor",
     "NativeAOMRidgeActiveSuperblockRegressor",
+    "NativeAOMRidgeBlenderRegressor",
     "NativeAOMRidgeGlobalRegressor",
     "NativeAOMRidgeMKLSuperblockRegressor",
+    "NativeAOMRidgePLSSuperblockRegressor",
     "NativeAOMRidgeSuperblockRegressor",
     "NativeAOMRobustHPORegressor",
     "NativeAOMSavgolFocusRegressor",
     "NativeAOMScreenRefitRegressor",
-    "NativeAOMStrictFamilyLiteRegressor",
     "NativeAOMStagedChainCampaignRegressor",
+    "NativeAOMStrictFamilyLiteRegressor",
     "NativeAOMSweepRegressor",
     "NativePOPPLSRegressor",
     "aom_candidate_operator_summary",
     "aom_candidate_preprocessing_impact",
-    "aom_candidate_route_summary",
     "aom_candidate_rank_diagnostics",
     "aom_candidate_report_records",
+    "aom_candidate_route_summary",
     "aom_candidate_table",
     "aom_chain_fixed_fit_run",
     "aom_chain_ridge_pls",
@@ -1142,13 +1217,13 @@ __all__ = [
     "aom_moment_screen_refit_campaign",
     "aom_operator_pls_stack",
     "aom_per_component_select",
-    "aom_preprocess",
     "aom_pls",
     "aom_pls_superblock",
+    "aom_preprocess",
     "aom_refit_candidates",
     "aom_refit_execution_plan",
-    "aom_ridge_blender",
     "aom_ridge_active_superblock",
+    "aom_ridge_blender",
     "aom_ridge_global",
     "aom_ridge_mkl_superblock",
     "aom_ridge_pls_superblock",
@@ -1161,6 +1236,7 @@ __all__ = [
     "available_methods",
     "build_aom_control_chain_bank",
     "build_aom_strict_chain_grid",
+    "compress_linear_stack",
     "decode_aom_chains",
     "iter_aom_strict_chain_grid",
     "pop_pls",

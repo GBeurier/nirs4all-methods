@@ -172,7 +172,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-12 g++-12 ninja-build cmake
           python3 -m pip install --upgrade pip
-          python3 -m pip install build numpy pytest
+          python3 -m pip install build numpy pytest scikit-learn scipy
 
       - name: Build libn4m for package smoke
         run: |
@@ -181,6 +181,13 @@ jobs:
 
       - name: Unit-test package smoke helpers
         run: python3 -m pytest bindings/python/tests/test_installed_nirs4all_methods_smoke.py -q
+
+      - name: Full Python binding suite
+        run: |
+          N4M_LIB_PATH="$PWD/$(ls build/ci-linux-gcc12-release/cpp/src/libn4m.so.*.*.* | head -1)" \
+          PYTHONPATH=bindings/python/src \
+          OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
+            python3 -m pytest bindings/python/tests -q
 
       - name: Installed wheel smoke
         run: make test-python-install

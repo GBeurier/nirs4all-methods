@@ -2,6 +2,12 @@
 """n4m.model_selection role package."""
 
 from .._errors import PartialBatchError
+from .aom_calibration import (
+    AOMPLSRegressor,
+    AOMRidgeRegressor,
+    FastAOMPLSRegressor,
+    FastAOMRidgeRegressor,
+)
 from . import (
     aom_campaign,
     aom_search,
@@ -33,6 +39,10 @@ from .optimizer import (
 )
 
 __all__ = [
+    "AOMPLSRegressor",
+    "AOMRidgeRegressor",
+    "FastAOMPLSRegressor",
+    "FastAOMRidgeRegressor",
     "aom_campaign",
     "aom_search",
     "optimizer",

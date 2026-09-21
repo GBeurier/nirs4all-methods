@@ -1,0 +1,52 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.calibration"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "2.6.0"
+abi_symbols:
+  - "n4m_model_selection_aom_calibration_fit"
+  - "n4m_model_selection_aom_calibration_predict"
+tu:
+  - "cpp/src/core/aom_calibration.cpp"
+  - "cpp/src/c_api/c_api_aom_calibration.cpp"
+headers:
+  - "cpp/include/n4m/model_selection.h"
+carry_along_tu:
+  - "cpp/src/core/ridge.cpp"
+  - "cpp/src/core/aom_operators.cpp"
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/core/component_coefficients.cpp"
+  - "cpp/src/core/common/svd.c"
+  - "cpp/src/core/common/linalg.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/calibration-contract"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.calibration"
+  registry_entry: "benchmarks/cross_binding/bench_aom_calibration_contract.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.model_selection.aom_calibration"
+    class: "AOMPLSRegressor"
+    legacy_aliases: []
+publications: []
+notes: "Versioned strict10 native global/Fast PLS and Ridge branch-CV protocols. Also exposes AOMRidgeRegressor, FastAOMPLSRegressor and experimental FastAOMRidgeRegressor. See docs/methods/aom_calibration.md."
+c_surface:
+  - "n4m_model_selection_aom_calibration_fit"
+  - "n4m_model_selection_aom_calibration_predict"
+fq_name: "n4m.model_selection.aom_calibration.calibration"
+leaf: "calibration"
+legacy_ids:
+  - "aom_pop.calibration"
+namespace: "model_selection.aom_calibration"
