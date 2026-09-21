@@ -438,6 +438,40 @@ verify_abi_constants() {
 }
 verify_abi_constants
 
+verify_rust_abi_constants() {
+    local build_rel="bindings/rust/n4m/build.rs"
+    local lib_rel="bindings/rust/n4m/src/lib.rs"
+    local build_abs="${ROOT}/${build_rel}"
+    local lib_abs="${ROOT}/${lib_rel}"
+    local gm gn gp
+
+    if [[ ! -f "${build_abs}" ]]; then
+        echo "  DRIFT: ${build_rel} missing (expected Rust ABI build probe)" >&2
+        DRIFTED+=("${build_rel}"); EXIT_CODE=1
+    else
+        gm=$(sed -nE 's/^const ABI_MAJOR: &str = "([0-9]+)";/\1/p' "${build_abs}" | head -n1)
+        gn=$(sed -nE 's/^const ABI_MINOR: &str = "([0-9]+)";/\1/p' "${build_abs}" | head -n1)
+        gp=$(sed -nE 's/^const ABI_PATCH: &str = "([0-9]+)";/\1/p' "${build_abs}" | head -n1)
+        if [[ "${gm}.${gn}.${gp}" != "${ABI_VERSION}" ]]; then
+            echo "  DRIFT: ${build_rel} ABI constants ${gm}.${gn}.${gp} != header ABI ${ABI_VERSION}" >&2
+            DRIFTED+=("${build_rel}"); EXIT_CODE=1
+        fi
+    fi
+
+    if [[ ! -f "${lib_abs}" ]]; then
+        echo "  DRIFT: ${lib_rel} missing (expected Rust ABI binding)" >&2
+        DRIFTED+=("${lib_rel}"); EXIT_CODE=1
+    else
+        gm=$(sed -nE 's/^const ABI_MAJOR: u32 = ([0-9]+);/\1/p' "${lib_abs}" | head -n1)
+        gn=$(sed -nE 's/^const ABI_MINOR: u32 = ([0-9]+);/\1/p' "${lib_abs}" | head -n1)
+        if [[ "${gm}.${gn}" != "${AMAJOR}.${AMINOR}" ]]; then
+            echo "  DRIFT: ${lib_rel} ABI constants ${gm}.${gn} != header ABI ${AMAJOR}.${AMINOR}" >&2
+            DRIFTED+=("${lib_rel}"); EXIT_CODE=1
+        fi
+    fi
+}
+verify_rust_abi_constants
+
 # ---------------------------------------------------------------------------
 # 7. Summary
 # ---------------------------------------------------------------------------

@@ -43,7 +43,9 @@ class SmokeError(RuntimeError):
 def _run(
     cmd: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
-    proc = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True)
+    proc = subprocess.run(
+        cmd, cwd=cwd, env=env, capture_output=True, text=True, check=False
+    )
     if proc.returncode != 0:
         rendered = " ".join(cmd)
         raise SmokeError(
@@ -87,7 +89,7 @@ def _is_abi_compatible(path: Path, major: int, minor: int) -> tuple[bool, str]:
         check.argtypes = [ctypes.c_int32, ctypes.c_int32]
         check.restype = ctypes.c_int
         status = int(check(major, minor))
-    except Exception as exc:  # pragma: no cover - host/linker-specific detail
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover - linker detail
         return False, str(exc)
     if status != 0:
         return (
@@ -234,6 +236,7 @@ def _child_program() -> str:
         import numpy as np
 
         import n4m
+        from n4m.ensemble import LinearRidgeStackRegressor
         from n4m.estimators.regression.latent import PLS
         from n4m.model_selection import (
             Algorithm,
@@ -245,6 +248,7 @@ def _child_program() -> str:
             ValidationPlan,
             finetune_estimator,
         )
+        from n4m.model_selection.aom_calibration import AOMPLSRegressor
         from n4m.transform.scatter import SNV
 
         module_path = Path(n4m.__file__).resolve()
@@ -297,6 +301,33 @@ def _child_program() -> str:
         assert np.all(np.isfinite(pred))
         diagnostics = model.get_diagnostics()
         assert diagnostics["method"] == "pls"
+
+        rng = np.random.default_rng(41)
+        X_aom = rng.standard_normal((24, 31))
+        y_aom = X_aom[:, 3] - 0.2 * X_aom[:, 9]
+        aom_folds = np.arange(X_aom.shape[0], dtype=np.int32) % 3
+        calibration = AOMPLSRegressor(
+            max_components=2,
+            branches=("raw",),
+            cv=3,
+            fold_ids=aom_folds,
+        ).fit(X_aom, y_aom)
+        calibration_predictions = calibration.predict(X_aom)
+        assert np.isfinite(calibration_predictions).all()
+        stack = LinearRidgeStackRegressor(
+            operators=("identity",),
+            alphas=(0.1,),
+            meta_alphas=(0.1,),
+            cv=3,
+            fold_ids=aom_folds,
+            inner_cv=2,
+        ).fit(X_aom, y_aom)
+        np.testing.assert_allclose(
+            stack.predict(X_aom),
+            stack.predict_uncompressed(X_aom),
+            rtol=1e-10,
+            atol=1e-10,
+        )
 
         fold_ids = np.arange(X.shape[0], dtype=np.int32) % 2
         with ValidationPlan.from_fold_ids(fold_ids) as plan:
@@ -356,6 +387,7 @@ def _child_program() -> str:
             "library": str(lib_path),
             "abi": abi,
             "prediction_checksum": float(np.sum(pred)),
+            "aom_prediction_checksum": float(np.sum(calibration_predictions)),
             "optimizer_best_n_components": best_n_components,
             "optimizer_best_score": best_score,
             "finetune_estimator": finetune.estimator.name,

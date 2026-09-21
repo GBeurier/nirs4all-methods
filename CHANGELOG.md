@@ -6,6 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.0.21] - 2026-09-21
+
+### Fixed
+
+- Aligned the R package ABI regression test with the released ABI 2.6 surface,
+  restoring the Linux, macOS ARM, and Windows CRAN-check matrix.
+- Integrated the ABI 2.6 AOM calibration and affine-stack surfaces into the
+  generated scientific documentation coverage gate (212/212 methods).
+
+## [1.0.20] - 2026-09-21
+
+### Added
+
+- ABI 2.6.0: native branch-aware AOM calibration fit/predict and affine stack
+  compression (`n4m_model_selection_aom_calibration_fit`,
+  `n4m_model_selection_aom_calibration_predict`,
+  `n4m_ensemble_linear_stack_compress`). Existing ABI symbols remain available.
+- Python AOM/FastAOM PLS and Ridge calibration facades, and a nested-OOF linear
+  Ridge stack with an independent one-vector-plus-intercept export.
+  See `docs/methods/aom_calibration.md` for versioned numerical contracts.
+- Stack training shares a smaller-Gram Ridge eigenpath across penalties on wide inputs, preserves pooled-CV selection, and falls back to the native direct Ridge solver on numerical convergence failure.
+- Optional detected LAPACKE acceleration for the new AOM Ridge eigenpath
+  (`N4M_AOM_WITH_LAPACKE`), retaining the portable backend when unavailable.
+- Optional Gaussian descriptor normalization flag; historical descriptors
+  remain normalized. The strict10 bank explicitly requests unnormalized kernels.
+
+### Documentation
+
+- Distinguish native L2-augmented Ridge-PLS from Ridge on PLS scores. Historical
+  entry points retain their algorithms rather than silently changing semantics.
+
 ## [1.0.19] - 2026-09-06
 
 ### Fixed

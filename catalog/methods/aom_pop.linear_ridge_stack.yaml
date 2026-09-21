@@ -1,0 +1,38 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "aom_pop.linear_ridge_stack"
+family: "aom_pop.aom"
+category: "aom_pop"
+subcategory: "aom"
+since_abi: "2.6.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/aom_sweep.cpp"
+headers:
+  - "cpp/include/n4m/ensemble.h"
+carry_along_tu: []
+parity:
+  fixtures: []
+  tolerance_row: "n4m/linear_ridge_stack-contract"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "aom_pop.linear_ridge_stack"
+  registry_entry: "benchmarks/cross_binding/bench_aom_calibration_contract.py"
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.ensemble"
+    class: "LinearRidgeStackRegressor"
+    legacy_aliases: []
+publications: []
+notes: "Python orchestration over native Ridge sweep and compression: nested-CV base tuning, OOF Ridge meta-head, deployment-only affine export. Distinct from the simplex blender."
+c_surface: "none"
+fq_name: "n4m.ensemble.linear_ridge_stack"
+leaf: "linear_ridge_stack"
+legacy_ids:
+  - "aom_pop.linear_ridge_stack"
+namespace: "ensemble"

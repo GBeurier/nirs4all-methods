@@ -116,6 +116,65 @@
         },
         {
           "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_calibration.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_aom_calibration.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_calibration.cpp"
+        }
+      ],
+      "page": "aom_pop_calibration"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/linear_ridge_stack.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/linear_stack.cpp"
+        }
+      ],
+      "page": "aom_pop_linear_ridge_stack"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/linear_ridge_stack.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ensemble.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_linear_stack.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/linear_stack.cpp"
+        }
+      ],
+      "page": "aom_pop_linear_stack_compress"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/2605.13587"
+        },
+        {
+          "kind": "url",
           "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_preprocessing.cpp"
         }
       ],
@@ -3193,7 +3252,7 @@
   "schema": 1,
   "source_digests": {
     "docs/_extras/methods_bibliography.py": "140554600e9d2f835e1d11a383d9d389c730d86c5205a5f742ea8465824e6d30",
-    "docs/_extras/scientific_aom.py": "50a9a222d32ad9ae90c3fbb2fa9532ce9959dc1d6dde0c8b2ddff906bcf5192d",
+    "docs/_extras/scientific_aom.py": "43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93",
     "docs/_extras/scientific_augmentation_filter_split.py": "a32c7074bf922c3dcaad3923f9e2bc985c96d5efb4bf14dea04abbff62a7e76d",
     "docs/_extras/scientific_legacy.py": "86eff28f0919a803edd3072d4e565305cdc0eb703aa4b3b8e4e5171a2a52dd89",
     "docs/_extras/scientific_remaining.py": "c43c2c812f82c57b3cb5f5178f21a0260fed7f97389adf0253110ff6bda150c4"

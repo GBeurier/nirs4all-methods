@@ -182,7 +182,7 @@ def _version() -> str:
     m = re.search(
         r'^version\s*=\s*"([^"]+)"',
         (SRC_PKG / "pyproject.toml").read_text(encoding="utf-8"),
-        re.M,
+        re.MULTILINE,
     )
     return m.group(1) if m else "0.0.0"
 
@@ -196,7 +196,9 @@ def _abi_version() -> tuple[str, str]:
     )
     values = []
     for field in ("MAJOR", "MINOR", "PATCH"):
-        match = re.search(rf"^#define N4M_ABI_VERSION_{field}\s+(\d+)$", header, re.M)
+        match = re.search(
+            rf"^#define N4M_ABI_VERSION_{field}\s+(\d+)$", header, re.MULTILINE
+        )
         if match is None:
             raise RuntimeError(
                 f"cannot read N4M_ABI_VERSION_{field} from n4m_version.h"
@@ -260,7 +262,9 @@ def generate(name: str) -> Path:
     from n4m._impl import aom_facade as aom
     from n4m._impl import moment_facade as moment
     from n4m._impl import native
+    from n4m.ensemble import LinearRidgeStackRegressor
     from n4m.estimators.regression.regularized import Ridge
+    from n4m.model_selection.aom_calibration import AOMPLSRegressor
     from n4m.model_selection.aom_campaign import AOMMomentScreenRefitRegressor
     from n4m.model_selection.aom_search import aom_screen_refit_candidate_pool
 
@@ -278,9 +282,14 @@ def generate(name: str) -> Path:
     for facade in (aom, moment):
         for row in facade.available_methods():
             assert hasattr(facade, row["entry"]), (facade.__name__, row["name"], row["entry"])
-    assert {"preprocess", "moment_mixed_screen_refit", "fixed_candidate"}.issubset(
-        aom_inventory
-    )
+    assert {
+        "preprocess",
+        "moment_mixed_screen_refit",
+        "fixed_candidate",
+        "calibration",
+        "linear_ridge_stack",
+        "linear_stack_compress",
+    }.issubset(aom_inventory)
     assert {"moments", "moment_sweep", "ridge", "ridge_regressor"}.issubset(
         moment_inventory
     )
@@ -307,6 +316,24 @@ def generate(name: str) -> Path:
     ridge_model = Ridge(alpha=0.1, scale_x=False).fit(X, y)
     np.testing.assert_allclose(
         ridge_model.predict(X), ridge["predictions"].ravel(), rtol=1e-10, atol=1e-10
+    )
+    calibration = AOMPLSRegressor(
+        max_components=2,
+        branches=("raw",),
+        cv=4,
+        fold_ids=folds,
+    ).fit(X, y)
+    assert np.isfinite(calibration.predict(X)).all()
+    stack = LinearRidgeStackRegressor(
+        operators=("identity",),
+        alphas=(0.1,),
+        meta_alphas=(0.1,),
+        cv=4,
+        fold_ids=folds,
+        inner_cv=2,
+    ).fit(X, y)
+    np.testing.assert_allclose(
+        stack.predict(X), stack.predict_uncompressed(X), rtol=1e-10, atol=1e-10
     )
 
     model = AOMMomentScreenRefitRegressor(
@@ -398,7 +425,7 @@ print("SKLEARN_OPTIONAL_OK")
             f"    assert {module}.__version__\n"
             f"    assert {module}.abi_version()  # loads + queries the embedded libn4m\n"
         )
-    test_text += f'''
+    test_text += f"""
 
 
 def test_context_ownership():
@@ -417,7 +444,7 @@ def test_context_ownership():
     assert not ctx.handle.value
     with pytest.raises(RuntimeError, match="Context is closed"):
         _ = ctx.num_threads
-'''
+"""
     (out / "tests" / "test_import.py").write_text(test_text, encoding="utf-8")
     if module == "n4m":
         # Run the public HPO contracts against installed/repaired wheels too;

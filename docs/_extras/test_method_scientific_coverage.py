@@ -56,9 +56,9 @@ from public_api_docs import (  # noqa: E402
     scan_r_public_api,
 )
 
-CATALOG_SIZE = 209
+CATALOG_SIZE = 212
 REGISTRY_SIZE = 73
-PYTHON_VERIFIED = 178
+PYTHON_VERIFIED = 181
 PYTHON_C_ONLY = 31
 R_VERIFIED = 70
 MATLAB_VERIFIED = 69
@@ -82,6 +82,7 @@ MANUAL_METHOD_PAGES = frozenset(
         "aom_pop_ridge_global.md",
         "aom_pop_ridge_mkl_superblock.md",
         "aom_pop_ridge_superblock.md",
+        "aom_calibration.md",
         "asha.md",
         "cmaes.md",
         "ga_search.md",

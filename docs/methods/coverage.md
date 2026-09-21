@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **209**
-- Curated scientific records: **216**
-- Resolved documentation pages: **209**
+- Catalog entries: **212**
+- Curated scientific records: **219**
+- Resolved documentation pages: **212**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -18,6 +18,9 @@ This generated report records the documentation source used for each catalog ent
 | `aom_pop.aom_ridge_pls_superblock` | [aom_ridge_pls_superblock](aom_ridge_pls_superblock.md) | curated |
 | `aom_pop.aom_staged_chain_campaign` | [aom_staged_chain_campaign](aom_staged_chain_campaign.md) | curated |
 | `aom_pop.aom_sweep` | [aom_sweep_run](aom_sweep_run.md) | curated |
+| `aom_pop.calibration` | [aom_pop_calibration](aom_pop_calibration.md) | curated |
+| `aom_pop.linear_ridge_stack` | [aom_pop_linear_ridge_stack](aom_pop_linear_ridge_stack.md) | curated |
+| `aom_pop.linear_stack_compress` | [aom_pop_linear_stack_compress](aom_pop_linear_stack_compress.md) | curated |
 | `aom_pop.operator_pls_stack` | [aom_operator_pls_stack](aom_operator_pls_stack.md) | curated |
 | `aom_pop.pop_pls` | [pop_pls](pop_pls.md) | curated |
 | `aom_pop.ridge_active_superblock` | [aom_ridge_active_superblock](aom_ridge_active_superblock.md) | curated |

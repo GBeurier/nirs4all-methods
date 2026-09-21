@@ -33,6 +33,73 @@ def _record(
 
 
 SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
+    "aom_pop_calibration": _record(
+        "Versioned AOM branch calibration",
+        "No canonical publication defines this complete ABI-2 calibration protocol. "
+        + _AOM_PAPER,
+        "Evaluate the declared raw, SNV, and MSC branches fold-locally with the "
+        "strict10 operator bank, select the branch, chain, and PLS component or "
+        "Ridge penalty by training-fold RMSE, then refit the selected configuration "
+        "on every calibration row.",
+        "Reproducible global or screened AOM calibration when branch state, candidate "
+        "identity, and the final refit must share one versioned native contract.",
+        "The fast protocol screens candidates and does not prove that discarded "
+        "candidates are inferior. Selection scores require an outer assessment, and "
+        "sample-adaptive SNV or MSC branches cannot be reduced to one raw-input affine map.",
+        "`n4m.model_selection.aom_calibration` exposes the global and Fast AOM PLS/Ridge "
+        "estimators; C ABI `n4m_model_selection_aom_calibration_fit` and "
+        "`n4m_model_selection_aom_calibration_predict`.",
+        _REPO
+        + "cpp/src/core/aom_calibration.cpp; "
+        + _REPO
+        + "cpp/src/c_api/c_api_aom_calibration.cpp; "
+        + _REPO
+        + "bindings/python/src/n4m/model_selection/aom_calibration.py",
+    ),
+    "aom_pop_linear_stack_compress": _record(
+        "Affine linear-stack compression",
+        "No separate publication defines this ABI-2 deployment operation; it is the "
+        "exact affine composition used by the versioned AOM stack contract. Source "
+        "contract: "
+        + _REPO
+        + "cpp/include/n4m/ensemble.h.",
+        "Given base coefficient columns B, base intercepts b, meta weights w, and a "
+        "meta intercept c, compute the deployment predictor with coefficients B w and "
+        "intercept b w + c, preserving every output column without refitting.",
+        "Collapsing an already fitted fully affine stack into one portable coefficient "
+        "matrix and intercept vector for lower-cost replay.",
+        "Every preprocessing and base predictor must already be affine in the supplied "
+        "input coordinates. The operation performs no fitting, validation, or leakage check "
+        "and cannot compress nonlinear or sample-adaptive transformations.",
+        "`n4m.ensemble.compress_linear_stack`; C ABI "
+        "`n4m_ensemble_linear_stack_compress`.",
+        _REPO
+        + "cpp/src/core/linear_stack.cpp; "
+        + _REPO
+        + "cpp/src/c_api/c_api_linear_stack.cpp; "
+        + _REPO
+        + "bindings/python/src/n4m/_impl/linear_ridge_stack.py",
+    ),
+    "aom_pop_linear_ridge_stack": _record(
+        "Nested-OOF linear Ridge stack",
+        "No canonical publication defines this exact AOM candidate bank and affine-export "
+        "surface; it is a product-specific stacked generalization protocol. "
+        + _AOM_PAPER,
+        "Tune every affine base route inside each outer training fold, assemble only its "
+        "out-of-fold predictions, fit a Ridge meta-head on that OOF design, refit the bases "
+        "on all calibration rows, and compose the fitted stack into one affine predictor.",
+        "Combining complementary strict-linear AOM views while retaining an auditable OOF "
+        "training path and a compact deployment representation.",
+        "The inner and outer fold identities are part of the estimator contract. Meta-model "
+        "selection is not an unbiased test estimate, correlated bases can destabilize weights, "
+        "and nonlinear or sample-adaptive bases cannot be exported as one affine predictor.",
+        "`n4m.ensemble.LinearRidgeStackRegressor` orchestrates native Ridge sweeps and "
+        "`n4m_ensemble_linear_stack_compress`; it has no standalone fit C ABI symbol.",
+        _REPO
+        + "bindings/python/src/n4m/_impl/linear_ridge_stack.py; "
+        + _REPO
+        + "cpp/src/core/linear_stack.cpp",
+    ),
     "aom_robust_hpo": _record(
         "Strict-linear AOM robust-HPO screen",
         "No single canonical paper defines this ABI-2 compact/wide screen. " + _AOM_PAPER,
@@ -60,7 +127,7 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "Cross-validation chooses among many candidates and therefore needs an outer assessment; it "
         "does not cover MSC/SNV/EMSC or nonlinear candidate families.",
         "`n4m.model_selection.aom_search.aom_chain_ridge_pls` and "
-        "`AOMChainRidgePLSRegressor`; C ABI `n4m_model_selection_aom_chain_ridge_pls_run`.",
+        "`AOMChainRidgePLSRegressor`; there is no standalone C ABI entry point.",
         _REPO + "cpp/src/core/aom_chain_ridge_pls.cpp; " + _REPO + "bindings/python/src/n4m/model_selection/aom_search.py",
     ),
     "aom_pop_aom_chain_fixed_fit": _record(

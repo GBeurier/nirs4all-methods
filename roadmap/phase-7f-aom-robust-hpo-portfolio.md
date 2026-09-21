@@ -1,5 +1,9 @@
 # Phase 7f - AOM robust HPO portfolio integration
 
+> **ARCHIVE SUR PLACE — 17 septembre 2026.** AOM : travail de l’article considéré terminé et soumission prochaine selon le mainteneur. Ce portfolio HPO reste un historique / une extension distincte, pas un chantier obligatoire à relancer. Le document reste à ce chemin car des tests de contrat le lisent ; ses invariants sont conservés. Cette clôture de planification ne certifie pas le portage de toutes ses extensions ABI.
+> [Backlog actif](../../BACKLOG_ECOSYSTEME.md) · [Premier chantier](../../ROADMAP_CONSOLIDATION_MULTIMODALE.md).
+
+
 Status: proposed from `moment_sweep_proto` stop/go audit.
 
 Initial local scaffold:

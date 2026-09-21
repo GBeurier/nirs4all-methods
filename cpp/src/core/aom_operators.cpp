@@ -195,6 +195,7 @@ struct SavGolParams {
 struct GaussianParams {
     double sigma{1.0};
     double truncate{4.0};
+    bool normalize{true};
 };
 
 [[nodiscard]] double factorial(std::int32_t n) noexcept {
@@ -356,13 +357,20 @@ struct GaussianParams {
     if (entry.params.empty()) {
         return N4M_OK;
     }
-    if (entry.params.size() != 1U && entry.params.size() != 2U) {
-        ctx.set_error("AOM Gaussian expects zero params, sigma, or sigma/truncate");
+    if (entry.params.size() != 1U && entry.params.size() != 2U && entry.params.size() != 3U) {
+        ctx.set_error("AOM Gaussian expects sigma[, truncate[, normalize (0 or 1)]]");
         return N4M_ERR_INVALID_ARGUMENT;
     }
     params.sigma = entry.params[0];
-    if (entry.params.size() == 2U) {
+    if (entry.params.size() >= 2U) {
         params.truncate = entry.params[1];
+    }
+    if (entry.params.size() == 3U) {
+        if (entry.params[2] != 0.0 && entry.params[2] != 1.0) {
+            ctx.set_error("AOM Gaussian normalize must be zero or one");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        params.normalize = entry.params[2] != 0.0;
     }
     if (!std::isfinite(params.sigma) || params.sigma <= 0.0) {
         ctx.set_error("AOM Gaussian sigma must be finite and positive");
@@ -403,8 +411,8 @@ struct GaussianParams {
         ctx.set_error("failed to build AOM Gaussian kernel");
         return N4M_ERR_NUMERICAL_FAILURE;
     }
-    for (double& value : kernel) {
-        value /= total;
+    if (params.normalize) {
+        for (double& value : kernel) value /= total;
     }
     return N4M_OK;
 }

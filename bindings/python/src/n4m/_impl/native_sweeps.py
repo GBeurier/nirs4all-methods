@@ -7,7 +7,7 @@ from collections.abc import Sequence
 import numpy as np
 
 from . import native as _native
-from .compat import BaseEstimator
+from .compat import BaseEstimator, RegressorMixin
 
 
 def _as_X(X) -> np.ndarray:
@@ -96,7 +96,7 @@ def _candidate_head(candidate: dict) -> str:
     raise ValueError("candidate must contain 'head' or 'head_id'")
 
 
-class _NativeLinearResultRegressor(BaseEstimator):
+class _NativeLinearResultRegressor(RegressorMixin, BaseEstimator):
     """Base class for native sweep results that export linear input-space state."""
 
     _result_coef_key = "coefficients"
@@ -228,7 +228,7 @@ class _NativeLinearResultRegressor(BaseEstimator):
         }
 
 
-class _NativeDirectMomentRegressor(BaseEstimator):
+class _NativeDirectMomentRegressor(RegressorMixin, BaseEstimator):
     """Base class for direct native moment/linear heads with reusable coefficients."""
 
     _method_name = "native_direct"
@@ -783,7 +783,7 @@ class NativeMomentSweepRegressor(_NativeLinearResultRegressor):
         )
 
 
-class NativeMomentStackRegressor(BaseEstimator):
+class NativeMomentStackRegressor(RegressorMixin, BaseEstimator):
     """OOF linear stack over native moment-compatible base regressors.
 
     The heavy base predictions are produced by native Ridge/PLS/PCR/continuum/
@@ -1654,7 +1654,7 @@ class NativeAOMFixedCandidateRegressor(_NativeLinearResultRegressor):
         return report
 
 
-class NativeAOMScreenRefitRegressor(BaseEstimator):
+class NativeAOMScreenRefitRegressor(RegressorMixin, BaseEstimator):
     """Two-pass AOM preprocessing screen with exact-CV candidate reuse.
 
     The estimator runs ``aom_chain_screen_refit_campaign`` during ``fit`` and
@@ -2095,7 +2095,7 @@ class NativeAOMScreenRefitRegressor(BaseEstimator):
         }
 
 
-class NativeAOMStagedChainCampaignRegressor(BaseEstimator):
+class NativeAOMStagedChainCampaignRegressor(RegressorMixin, BaseEstimator):
     """Reusable sklearn estimator for staged AOM/moment chain campaigns.
 
     ``fit`` runs the pure-Python ``aom_staged_chain_campaign`` orchestration,
@@ -3060,7 +3060,7 @@ class NativeAOMMomentRidgeScreenRefitRegressor(NativeAOMScreenRefitRegressor):
         return report
 
 
-class NativeAOMRobustHPORegressor(BaseEstimator):
+class NativeAOMRobustHPORegressor(RegressorMixin, BaseEstimator):
     """Native strict-linear AOM robust-HPO estimator with reusable coefficients."""
 
     def __init__(
@@ -3146,7 +3146,7 @@ class NativeAOMRobustHPORegressor(BaseEstimator):
         }
 
 
-class NativeAOMRidgeBlenderRegressor(BaseEstimator):
+class NativeAOMRidgeBlenderRegressor(RegressorMixin, BaseEstimator):
     """Native strict-linear AOM Ridge simplex blender with reusable coefficients."""
 
     def __init__(
@@ -3264,7 +3264,7 @@ class NativeAOMRidgeBlenderRegressor(BaseEstimator):
         }
 
 
-class NativeAOMRidgeSuperblockRegressor(BaseEstimator):
+class NativeAOMRidgeSuperblockRegressor(RegressorMixin, BaseEstimator):
     """Strict-linear AOM operator superblock with a Ridge head."""
 
     def __init__(
@@ -3361,7 +3361,7 @@ class NativeAOMRidgeSuperblockRegressor(BaseEstimator):
         }
 
 
-class NativeAOMRidgeMKLSuperblockRegressor(BaseEstimator):
+class NativeAOMRidgeMKLSuperblockRegressor(RegressorMixin, BaseEstimator):
     """Strict-linear AOM Ridge superblock with train-only KTA block weights."""
 
     def __init__(
@@ -3475,7 +3475,7 @@ class NativeAOMRidgeMKLSuperblockRegressor(BaseEstimator):
         }
 
 
-class NativeAOMRidgeActiveSuperblockRegressor(BaseEstimator):
+class NativeAOMRidgeActiveSuperblockRegressor(RegressorMixin, BaseEstimator):
     """Strict-linear AOM Ridge superblock with train-only active operator pruning."""
 
     def __init__(
@@ -3604,7 +3604,7 @@ class NativeAOMRidgeActiveSuperblockRegressor(BaseEstimator):
         }
 
 
-class NativeAOMPLSSuperblockRegressor(BaseEstimator):
+class NativeAOMPLSSuperblockRegressor(RegressorMixin, BaseEstimator):
     """Strict-linear AOM operator superblock with a PLS head."""
 
     def __init__(
@@ -3729,7 +3729,7 @@ class NativeAOMPLSSuperblockRegressor(BaseEstimator):
         return report
 
 
-class NativeAOMRidgePLSSuperblockRegressor(BaseEstimator):
+class NativeAOMRidgePLSSuperblockRegressor(RegressorMixin, BaseEstimator):
     """Strict-linear AOM operator superblock with a Ridge-PLS head."""
 
     def __init__(
@@ -3836,7 +3836,7 @@ class NativeAOMRidgePLSSuperblockRegressor(BaseEstimator):
         }
 
 
-class NativeAOMChainRidgePLSRegressor(BaseEstimator):
+class NativeAOMChainRidgePLSRegressor(RegressorMixin, BaseEstimator):
     """Strict-linear AOM chain selector with a native Ridge-PLS head."""
 
     def __init__(
@@ -3963,7 +3963,7 @@ class NativeAOMChainRidgePLSRegressor(BaseEstimator):
         }
 
 
-class NativeAOMOperatorPLSStackRegressor(BaseEstimator):
+class NativeAOMOperatorPLSStackRegressor(RegressorMixin, BaseEstimator):
     """Native strict-linear AOM operator PLS stack with reusable coefficients."""
 
     def __init__(
@@ -4103,7 +4103,7 @@ class NativeAOMOperatorPLSStackRegressor(BaseEstimator):
         }
 
 
-class _NativeAOMSelectorRegressor(BaseEstimator):
+class _NativeAOMSelectorRegressor(RegressorMixin, BaseEstimator):
     """Base class for native AOM/POP selector results with input coefficients."""
 
     def _fit_native_result(self, X: np.ndarray, y: np.ndarray) -> dict:

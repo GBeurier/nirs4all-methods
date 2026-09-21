@@ -7,28 +7,26 @@ import subprocess
 import sys
 from pathlib import Path
 
+import n4m
+import n4m._impl as native_sklearn
 import numpy as np
 import pytest
-
-import n4m
-from n4m._impl import native
-import n4m._impl as native_sklearn
 from n4m._impl import (
     NativeAOMChainRidgePLSRegressor,
     NativeAOMChainSweepRegressor,
     NativeAOMFixedCandidateRegressor,
-    NativeAOMMomentScreenRefitRegressor,
-    NativeAOMMomentPLSScreenRefitRegressor,
     NativeAOMMomentPLSExactScreenRefitRegressor,
+    NativeAOMMomentPLSScreenRefitRegressor,
     NativeAOMMomentRidgeScreenRefitRegressor,
+    NativeAOMMomentScreenRefitRegressor,
     NativeAOMOperatorPLSStackRegressor,
     NativeAOMPLSRegressor,
     NativeAOMPLSSuperblockRegressor,
-    NativeAOMRidgePLSSuperblockRegressor,
-    NativeAOMRidgeBlenderRegressor,
     NativeAOMRidgeActiveSuperblockRegressor,
+    NativeAOMRidgeBlenderRegressor,
     NativeAOMRidgeGlobalRegressor,
     NativeAOMRidgeMKLSuperblockRegressor,
+    NativeAOMRidgePLSSuperblockRegressor,
     NativeAOMRidgeSuperblockRegressor,
     NativeAOMRobustHPORegressor,
     NativeAOMScreenRefitRegressor,
@@ -41,11 +39,13 @@ from n4m._impl import (
     NativePCRRegressor,
     NativePLSRegressor,
     NativePOPPLSRegressor,
-    NativeRidgeRegressor,
     NativeRidgePLSRegressor,
+    NativeRidgeRegressor,
     NativeRobustPLSRegressor,
     NativeWeightedPLSRegressor,
+    native,
 )
+from sklearn.base import is_regressor
 
 
 def _dataset():
@@ -6010,6 +6010,7 @@ def test_native_aom_pls_and_pop_pls_sklearn_regressors_replay_coefficients():
             scale_x=False,
         ),
     ):
+        assert is_regressor(model)
         fitted = model.fit(X, y)
         np.testing.assert_allclose(
             fitted.predict(X),

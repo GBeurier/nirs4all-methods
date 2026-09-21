@@ -458,6 +458,30 @@ N4M_API n4m_status_t n4m_model_selection_aom_preprocessing_fit(
     const n4m_matrix_view_t* Y,
     n4m_method_result_t** out_result);
 
+
+/* Complete branch/chain calibration, CPU, single target. Head 0=SIMPLS,
+ * 1=Ridge (absolute alphas), 2=Ridge (raw-training trace-relative alphas),
+ * 3=Ridge (absolute alphas, pooled validation RMSE, for the linear stack).
+ * Heads 0/1/2 use the mean of fold RMSEs. fast=1 screens one leader per fold with the rank-r covariance
+ * criterion. Branches: 0=raw, 1=SNV, 2=MSC fitted inside each training fold.
+ * Operators are flattened in bank; offsets has n_chains+1 entries.
+ * Caller owns all outputs: coefficients[p], state[2*p+2] (branch mean, MSC reference, intercept, alpha base), selected[3]
+ * (branch index, chain index, parameter index), scores[n_scores].
+ * n_scores = n_parameters for Fast, otherwise n_branches*n_chains*n_parameters.
+ * PLS parameters are prefixes 1..n_parameters; alphas is unused for PLS.
+ * Fold ids must contain every id 0..n_folds-1. No test targets are accepted.
+ */
+N4M_API n4m_status_t n4m_model_selection_aom_calibration_fit(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const n4m_matrix_view_t* Y,
+    const n4m_operator_bank_t* bank, const int32_t* offsets, int32_t n_chains,
+    const int32_t* branches, int32_t n_branches, const int32_t* fold_ids, int32_t n_folds,
+    int32_t head, int32_t fast, int32_t rank, const double* alphas, int32_t n_parameters,
+    double* coefficients, int64_t n_coefficients, double* state, int64_t n_state,
+    double* scores, int64_t n_scores, int32_t* selected);
+N4M_API n4m_status_t n4m_model_selection_aom_calibration_predict(
+    const n4m_matrix_view_t* X, int32_t branch, const double* coefficients,
+    int64_t n_coefficients, const double* state, int64_t n_state, n4m_matrix_view_t* out);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif

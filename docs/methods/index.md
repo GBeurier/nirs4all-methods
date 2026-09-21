@@ -2,8 +2,10 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **209**. Additional Python reference
+_Total catalogued native methods_: **212**. Additional Python reference
 surfaces are documented where relevant.
+
+Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
 
 ```{toctree}
 :hidden:
@@ -190,6 +192,7 @@ surfaces are documented where relevant.
 
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
+| [`calibration`](aom_pop_calibration.md) | `n4m.model_selection.aom_calibration.calibration` | `n4m.model_selection.aom_calibration` | C, Py |
 | [`aom_chain_screen_refit`](aom_pop_aom_chain_screen_refit.md) | `n4m.model_selection.aom_campaign.aom_chain_screen_refit` | `n4m.model_selection.aom_campaign` | Py |
 | [`aom_staged_chain_campaign`](aom_staged_chain_campaign.md) | `n4m.model_selection.aom_campaign.aom_staged_chain_campaign` | `n4m.model_selection.aom_campaign` | Py |
 | [`aom_chain_fixed_fit`](aom_pop_aom_chain_fixed_fit.md) | `n4m.model_selection.aom_search.aom_chain_fixed_fit` | `n4m.model_selection.aom_search` | C, Py |
@@ -246,6 +249,8 @@ surfaces are documented where relevant.
 | [`aom_ridge_blender`](aom_ridge_blender.md) | `n4m.ensemble.aom_ridge_blender` | `n4m.ensemble` | C, Py |
 | [`bagging_pls`](bagging_pls.md) | `n4m.ensemble.bagging_pls` | `n4m.ensemble` | C |
 | [`boosting_pls`](boosting_pls.md) | `n4m.ensemble.boosting_pls` | `n4m.ensemble` | C |
+| [`linear_ridge_stack`](aom_pop_linear_ridge_stack.md) | `n4m.ensemble.linear_ridge_stack` | `n4m.ensemble` | Py |
+| [`linear_stack_compress`](aom_pop_linear_stack_compress.md) | `n4m.ensemble.linear_stack_compress` | `n4m.ensemble` | C, Py |
 | [`moment_stack`](models_ensembles_moment_stack.md) | `n4m.ensemble.moment_stack` | `n4m.ensemble` | Py |
 | [`random_subspace_pls`](random_subspace_pls.md) | `n4m.ensemble.random_subspace_pls` | `n4m.ensemble` | C |
 

@@ -18,7 +18,7 @@ use std::{
 compile_error!("n4m requires exactly one runtime feature: `linked` or `dynamic`");
 
 const ABI_MAJOR: u32 = 2;
-const ABI_MINOR: u32 = 5;
+const ABI_MINOR: u32 = 6;
 const OK: i32 = 0;
 const NOT_FITTED: i32 = 6;
 const DTYPE_I64: i32 = 4;

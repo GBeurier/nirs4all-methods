@@ -8,8 +8,8 @@ The Python wheel only requires NumPy, but when scikit-learn is installed the
 from __future__ import annotations
 
 try:  # pragma: no cover - exercised only when scikit-learn is installed
-    from sklearn.base import BaseEstimator, TransformerMixin
-except Exception:  # pragma: no cover - keep the core binding dependency-light
+    from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin
+except ImportError:  # pragma: no cover - keep the core binding dependency-light
 
     class BaseEstimator:
         """Small fallback with the get/set params contract used by sklearn."""
@@ -34,5 +34,10 @@ except Exception:  # pragma: no cover - keep the core binding dependency-light
                 return self.fit(X, **fit_params).transform(X)
             return self.fit(X, y, **fit_params).transform(X)
 
+    class RegressorMixin:
+        """Fallback marker matching scikit-learn's regressor contract."""
 
-__all__ = ["BaseEstimator", "TransformerMixin"]
+        _estimator_type = "regressor"
+
+
+__all__ = ["BaseEstimator", "RegressorMixin", "TransformerMixin"]

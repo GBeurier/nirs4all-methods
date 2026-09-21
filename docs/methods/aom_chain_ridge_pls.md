@@ -54,7 +54,7 @@ Only chains that are genuinely linear and sample-independent can be folded back 
 
 ### Implementation
 
-`n4m.model_selection.aom_search.aom_chain_ridge_pls` and `AOMChainRidgePLSRegressor`; C ABI `n4m_model_selection_aom_chain_ridge_pls_run`.
+`n4m.model_selection.aom_search.aom_chain_ridge_pls` and `AOMChainRidgePLSRegressor`; there is no standalone C ABI entry point.
 
 ### Sources and provenance
 
@@ -62,7 +62,7 @@ https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_chain_ri
 
 ## Catalog note
 
-Python-backed strict/raw-base subset of donor FastAOM SingleChainPLSRidge. It applies strict-linear AOM chains sequentially, selects one chain plus PLS component count and Ridge-PLS lambda by train CV, fits through the native ridge_pls binding, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not a fused many-chain GPU Ridge-PLS grinder.
+Native L2-augmented-design Ridge-PLS on strict/raw-base chains, distinct from donor Ridge-on-PLS-scores SingleChainPLSRidge; not a parity port. It applies strict-linear AOM chains sequentially, selects one chain plus PLS component count and Ridge-PLS lambda by train CV, fits through the native ridge_pls binding, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not a fused many-chain GPU Ridge-PLS grinder.
 
 _Timing benchmark_: `benchmarks/cross_binding/bench_aom_chain_ridge_pls_timing.py`
 

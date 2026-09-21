@@ -2,14 +2,14 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **216**
+- Curated records: **219**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
 ## Source inputs
 
 - `docs/_extras/methods_bibliography.py` — SHA-256 `140554600e9d2f835e1d11a383d9d389c730d86c5205a5f742ea8465824e6d30`
-- `docs/_extras/scientific_aom.py` — SHA-256 `50a9a222d32ad9ae90c3fbb2fa9532ce9959dc1d6dde0c8b2ddff906bcf5192d`
+- `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `a32c7074bf922c3dcaad3923f9e2bc985c96d5efb4bf14dea04abbff62a7e76d`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `86eff28f0919a803edd3072d4e565305cdc0eb703aa4b3b8e4e5171a2a52dd89`
 - `docs/_extras/scientific_remaining.py` — SHA-256 `c43c2c812f82c57b3cb5f5178f21a0260fed7f97389adf0253110ff6bda150c4`
@@ -57,6 +57,24 @@ No single canonical paper defines this fixed-candidate ABI wrapper. Beurier, G. 
 No single canonical paper defines this screen/refit orchestration surface. Beurier, G. et al. (2026). *AOM-PLS / POP-PLS* paper companion, arXiv:2605.13587, https://arxiv.org/abs/2605.13587. The product variants below are implementation-specific extensions; the paper does not by itself specify their ABI-2 orchestration.
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_campaign.py
+
+### [`aom_pop_calibration`](aom_pop_calibration.md) — Versioned AOM branch calibration
+
+No canonical publication defines this complete ABI-2 calibration protocol. Beurier, G. et al. (2026). *AOM-PLS / POP-PLS* paper companion, arXiv:2605.13587, https://arxiv.org/abs/2605.13587. The product variants below are implementation-specific extensions; the paper does not by itself specify their ABI-2 orchestration.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_calibration.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_aom_calibration.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_calibration.py
+
+### [`aom_pop_linear_ridge_stack`](aom_pop_linear_ridge_stack.md) — Nested-OOF linear Ridge stack
+
+No canonical publication defines this exact AOM candidate bank and affine-export surface; it is a product-specific stacked generalization protocol. Beurier, G. et al. (2026). *AOM-PLS / POP-PLS* paper companion, arXiv:2605.13587, https://arxiv.org/abs/2605.13587. The product variants below are implementation-specific extensions; the paper does not by itself specify their ABI-2 orchestration.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/linear_ridge_stack.py; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/linear_stack.cpp
+
+### [`aom_pop_linear_stack_compress`](aom_pop_linear_stack_compress.md) — Affine linear-stack compression
+
+No separate publication defines this ABI-2 deployment operation; it is the exact affine composition used by the versioned AOM stack contract. Source contract: https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ensemble.h.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/linear_stack.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_linear_stack.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/linear_ridge_stack.py
 
 ### [`aom_preprocess`](aom_preprocess.md) — AOM (Adaptive Operator Mixture) preprocessing bank
 
