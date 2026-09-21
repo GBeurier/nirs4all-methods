@@ -55,6 +55,10 @@ gates and per-algorithm tables are in
 
 ## Quick start
 
+Development ABI 2.6 adds the [versioned AOM/FastAOM calibration facades and
+compressed linear Ridge stack](docs/methods/aom_calibration.md). These additions
+require the current development build; they are not in released 1.0.19 wheels.
+
 ### Python
 
 ```bash
@@ -344,7 +348,7 @@ choice; CeCILL-2.1 is recognised by French law and GPL-family-compatible) — wi
   title   = {nirs4all-methods: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/nirs4all-methods},
-  version = {1.0.19}
+  version = {1.0.20}
 }
 ```
 

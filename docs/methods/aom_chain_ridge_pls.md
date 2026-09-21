@@ -1,7 +1,6 @@
 # `aom_chain_ridge_pls` - strict-chain AOM Ridge-PLS
 
-`n4m.aom_chain_ridge_pls` ports the strict/raw-base subset of donor FastAOM
-SingleChainPLSRidge into `nirs4all-methods`. It applies each candidate
+`n4m.model_selection.aom_search.aom_chain_ridge_pls` uses native L2-augmented-design PLS. It is distinct from the research FastAOM SingleChainPLSRidge algorithm, which fits Ridge on PLS scores. It applies each candidate
 strict-linear AOM chain sequentially, selects the chain, PLS component count
 and Ridge-PLS penalty by train CV, then folds the selected final coefficients
 back to raw input-space `input_coefficients` plus `intercept`.
@@ -13,14 +12,14 @@ TabPFN residuals and dataset/source routing.
 ## API
 
 ```python
-import n4m
+from n4m.model_selection.aom_search import aom_chain_ridge_pls
 
 chains = [
     [("identity", ())],
     [("savgol_smooth", (5, 2)), ("finite_difference", (1,))],
 ]
 
-res = n4m.aom_chain_ridge_pls(
+res = aom_chain_ridge_pls(
     X,
     y,
     chains=chains,
@@ -35,7 +34,7 @@ y_hat = X @ res["input_coefficients"] + res["intercept"]
 If `chains` is omitted, the function builds a strict-chain grid with
 `build_aom_strict_chain_grid(profile=...)`.
 
-The sklearn wrapper is `n4m.sklearn.NativeAOMChainRidgePLSRegressor`. Its
+The sklearn wrapper is `n4m.model_selection.aom_search.NativeAOMChainRidgePLSRegressor`. Its
 `predict()` method uses only the folded input coefficients and intercept.
 
 ## Selection

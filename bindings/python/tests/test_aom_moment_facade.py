@@ -9,15 +9,15 @@ exact backing implementation object — never a copy and never a name with no ba
 export. This caught the ``pop_pls`` gap, where the inventory named
 ``NativePOPPLSRegressor`` but the facade did not re-export it.
 """
+
 from __future__ import annotations
 
 import importlib
 from collections import defaultdict
 from pathlib import Path
 
-import pytest
-
 import n4m._impl as native_sklearn
+import pytest
 from n4m._impl import aom_facade as aom
 from n4m._impl import moment_facade as moment
 from n4m._impl import native
@@ -29,6 +29,13 @@ _CATALOG_ROOT = _REPO_ROOT / "catalog" / "methods"
 # Where each inventory ``kind`` is sourced from: sklearn estimators come from the
 # scikit-learn layer, every other kind is an ABI-close function on ``n4m.python``.
 _SOURCE_FOR_KIND = {"sklearn_estimator": native_sklearn}
+
+
+def _source_for_row(row):
+    source_module = row.get("source_module")
+    if source_module:
+        return importlib.import_module(source_module)
+    return _SOURCE_FOR_KIND.get(row["kind"], native)
 
 
 def _rows(facade):
@@ -82,7 +89,12 @@ def _catalog_python_binding(text):
             in_python = True
             in_aliases = False
             continue
-        if in_python and line.startswith("  ") and not line.startswith("    ") and line.strip():
+        if (
+            in_python
+            and line.startswith("  ")
+            and not line.startswith("    ")
+            and line.strip()
+        ):
             break
         if in_python and line.startswith("    module:"):
             module = _yaml_scalar(line)
@@ -141,8 +153,13 @@ def test_facade_entries_are_the_underlying_objects(label):
     facade = _FACADES[label]
     for row in _rows(facade):
         name, entry, kind = row["name"], row["entry"], row["kind"]
-        source = _SOURCE_FOR_KIND.get(kind, native)
-        assert getattr(facade, entry) is getattr(source, entry), (label, name, entry, kind)
+        source = _source_for_row(row)
+        assert getattr(facade, entry) is getattr(source, entry), (
+            label,
+            name,
+            entry,
+            kind,
+        )
 
 
 @pytest.mark.parametrize("label", sorted(_FACADES))
@@ -151,8 +168,8 @@ def test_facade_entries_are_shared_with_backing_implementation(label):
     # entries must still be the exact backing implementation objects.
     facade = _FACADES[label]
     for row in _rows(facade):
-        name, entry, kind = row["name"], row["entry"], row["kind"]
-        source = _SOURCE_FOR_KIND.get(kind, native)
+        name, entry = row["name"], row["entry"]
+        source = _source_for_row(row)
         assert hasattr(source, entry), (label, name, entry)
         assert getattr(facade, entry) is getattr(source, entry), (label, name, entry)
 
@@ -250,12 +267,21 @@ def test_inventory_catalog_binding_roles_are_coherent(label):
         )
         bound_module = importlib.import_module(binding["module"])
         assert hasattr(bound_module, binding["class"]), (label, row["name"], binding)
-        assert hasattr(native, binding["class"]), (label, row["name"], binding)
+        if row.get("source_module"):
+            assert getattr(facade, row["entry"]) is getattr(
+                bound_module, binding["class"]
+            ), (label, row["name"], binding)
+        else:
+            assert hasattr(native, binding["class"]), (label, row["name"], binding)
         for alias in binding["legacy_aliases"]:
             assert hasattr(bound_module, alias), (label, row["name"], alias)
             assert hasattr(native, alias), (label, row["name"], alias)
         if row.get("catalog_role") == "alias":
-            assert row["entry"] in binding["legacy_aliases"], (label, row["name"], binding)
+            assert row["entry"] in binding["legacy_aliases"], (
+                label,
+                row["name"],
+                binding,
+            )
 
 
 @pytest.mark.parametrize("label", sorted(_FACADES))
@@ -458,7 +484,8 @@ def test_preset_sklearn_wrappers_are_bounded_reusable_presets(label):
     facade = _FACADES[label]
     fixed_by_preset = {"plan", "stages", "families", "templates"}
     presets = [
-        row for row in _rows(facade)
+        row
+        for row in _rows(facade)
         if row.get("catalog_role") == "preset_sklearn_wrapper"
     ]
     assert presets, label

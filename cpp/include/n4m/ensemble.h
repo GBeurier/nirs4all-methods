@@ -151,6 +151,18 @@ N4M_API n4m_status_t n4m_ensemble_random_subspace_pls_fit(
     uint64_t seed,
     n4m_method_result_t** out_result);
 
+
+/* Collapse affine base outputs B (features x base outputs), base intercepts
+ * (1 x base outputs), affine meta weights (base outputs x targets), and meta
+ * intercept (1 x targets). Caller allocates coefficients (features x targets)
+ * and intercept (1 x targets). Inputs/outputs must not overlap. No training
+ * is repeated; nonlinear/sample-dependent preprocessing is not representable.
+ */
+N4M_API n4m_status_t n4m_ensemble_linear_stack_compress(
+    const n4m_matrix_view_t* base_coefficients, const n4m_matrix_view_t* base_intercepts,
+    const n4m_matrix_view_t* meta_weights, const n4m_matrix_view_t* meta_intercept,
+    n4m_matrix_view_t* coefficients, n4m_matrix_view_t* intercept);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif

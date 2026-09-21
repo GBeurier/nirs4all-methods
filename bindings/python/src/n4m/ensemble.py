@@ -1,5 +1,11 @@
 # SPDX-License-Identifier: CECILL-2.1
 
+from n4m._impl.linear_ridge_stack import (
+    AffinePredictor,
+    LinearRidgeStackRegressor,
+    compress_linear_stack,
+)
+
 from n4m._impl import (
     AOMEndpointMarginStabilityGate,
     AOMFallbackBlendGate,
@@ -19,6 +25,9 @@ aom_ridge_blender = _native.aom_ridge_blender
 moment_stack = _native.moment_stack
 
 __all__ = [
+    "AffinePredictor",
+    "LinearRidgeStackRegressor",
+    "compress_linear_stack",
     "AOMEndpointMarginStabilityGate",
     "AOMFallbackBlendGate",
     "AOMMidPEndpointStack",

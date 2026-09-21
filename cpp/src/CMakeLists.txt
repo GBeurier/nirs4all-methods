@@ -29,6 +29,8 @@ add_library(n4m_core OBJECT
   core/aom_robust_hpo.cpp
     core/aom_sweep.cpp
     core/aom_selection.cpp
+    core/aom_calibration.cpp
+    core/linear_stack.cpp
     core/bipls_selection.cpp
     core/bve_selection.cpp
     core/emcuve_selection.cpp
@@ -168,6 +170,28 @@ if(N4M_WITH_BLAS)
     # Linking it here on the OBJECT library is inert because PRIVATE
     # link deps do not propagate through $<TARGET_OBJECTS:>.
     message(STATUS "  BLAS backend      : ON  (${BLAS_LIBRARIES})")
+    if(N4M_AOM_WITH_LAPACKE)
+        include(CheckCXXSourceCompiles)
+        include(CMakePushCheckState)
+        cmake_push_check_state(RESET)
+        set(CMAKE_REQUIRED_INCLUDES ${BLAS_INCLUDE_DIRS})
+        set(CMAKE_REQUIRED_LIBRARIES ${BLAS_LIBRARIES})
+        # Verify the selected BLAS actually supplies this interface; platforms
+        # without LAPACKE keep the portable eigensolver and direct-Ridge fallback.
+        unset(N4M_HAS_AOM_LAPACKE CACHE)
+        check_cxx_source_compiles("#include <lapacke.h>
+            int main() { double a[1] = {1.0}, w[1];
+            return LAPACKE_dsyevd(LAPACK_ROW_MAJOR, 'V', 'U', 1, a, 1, w); }"
+            N4M_HAS_AOM_LAPACKE)
+        cmake_pop_check_state()
+        if(N4M_HAS_AOM_LAPACKE)
+            set_property(SOURCE core/aom_calibration.cpp APPEND PROPERTY
+                COMPILE_DEFINITIONS N4M_AOM_USE_LAPACKE=1)
+            message(STATUS "  AOM Ridge eigenpath: LAPACKE dsyevd")
+        else()
+            message(STATUS "  AOM Ridge eigenpath: portable (LAPACKE unavailable)")
+        endif()
+    endif()
 else()
     message(STATUS "  BLAS backend      : OFF (reference scalar loops)")
 endif()
