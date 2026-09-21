@@ -1,69 +1,61 @@
-# `pp_wavelet` — Wavelet
+# `pp_wavelet` — Single-level discrete wavelet coefficient transform
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.Wavelet` · _C ABI_: `n4m_transform_wavelet_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_transform_wavelet_*`
 
 ## Description
 
 Single-level DWT coefficient transform.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `family` | `str` | `'haar'` |
 | `mode` | `str` | `'periodization'` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_wavelet_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L46) · [`n4m_transform_wavelet_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L49) · [`n4m_transform_wavelet_output_cols`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L50) · [`n4m_transform_wavelet_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/wavelet.h#L53). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.wavelet import Wavelet
+```
+
+Source signature: [`Wavelet(family: str = 'haar', mode: str = 'periodization')`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L32).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Mallat (1989), *A theory for multiresolution signal decomposition: the wavelet representation*, IEEE TPAMI 11, 674–693, https://doi.org/10.1109/34.192463.
 
 ### Mathematical principle
 
-Single-level DWT coefficient transform.
+A one-level analysis filter bank convolves each spectrum with the selected wavelet's low-pass and high-pass filters and downsamples by two. Approximation coefficients are concatenated with detail coefficients; the configured extension mode determines edge samples.
+
+### Appropriate uses
+
+Separating coarse spectral shape from fine-scale detail or supplying wavelet-domain features to a model.
+
+### Limits and validation
+
+The coefficients are shift-sensitive and their length/order depend on wavelet family, boundary mode, and input width. They are not on the original wavelength grid.
 
 ### Implementation
 
-C ABI `n4m_transform_wavelet_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.Wavelet`. The same numerical kernel backs every language binding.
+`n4m.transform.wavelet.Wavelet` wraps `n4m_transform_wavelet_*`; orchestration is in `preprocessing/wavelets/wavelet.c` and shared filters are in `wavelet_kernels.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_wavelet_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import Wavelet
-op = Wavelet()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1109/34.192463; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/wavelets/wavelet.c; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/common/wavelet_kernels.c
 
 
 ---

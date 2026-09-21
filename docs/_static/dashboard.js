@@ -393,9 +393,9 @@ function methodCard(m) {
     : `<div class="m-sym" style="opacity:.55">${escapeHtml(m.algo)}</div>`;
   const docLink = m.docUrl
     ? `<a class="m-doc" href="${escapeAttr(m.docUrl)}"
-          title="Open method documentation"
-          aria-label="${escapeAttr(m.display)} documentation"
-          onclick="event.stopPropagation()">📄 docs</a>`
+          title="Read scientific rationale, sources, and API"
+          aria-label="${escapeAttr(m.display)} scientific documentation and API"
+          onclick="event.stopPropagation()">📚 science &amp; API</a>`
     : '';
   return `
     <div class="mcard" style="--accent:${accent}" data-algo="${escapeAttr(m.algo)}"
@@ -510,10 +510,17 @@ function openDrawer(algo) {
   const _fq = m.fq
     ? `<span style="font-family:var(--mono)">${escapeHtml(m.fq)}</span>`
     : `<span style="opacity:.7">${escapeHtml(m.algo)} — no namespace mapping</span>`;
-  const _doc = m.docUrl
-    ? `  ·  <a href="${escapeAttr(m.docUrl)}">Open documentation</a>`
-    : '';
-  document.getElementById('drawerSym').innerHTML = _fq + _doc;
+  document.getElementById('drawerSym').innerHTML = _fq;
+  const docLink = document.getElementById('drawerDocLink');
+  if (m.docUrl) {
+    docLink.href = m.docUrl;
+    docLink.hidden = false;
+    docLink.setAttribute('aria-label', `View full documentation for ${m.display}`);
+  } else {
+    docLink.removeAttribute('href');
+    docLink.hidden = true;
+    docLink.removeAttribute('aria-label');
+  }
   document.getElementById('drawerMeta').innerHTML = drawerMetaHtml(m);
   document.getElementById('drawerBody').innerHTML = drawerBodyHtml(m);
 

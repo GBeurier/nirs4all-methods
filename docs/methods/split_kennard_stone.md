@@ -1,6 +1,6 @@
-# `split_kennard_stone` — Kennard Stone Splitter
+# `split_kennard_stone` — Kennard–Stone maximin calibration split
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.KennardStoneSplitter` · _C ABI_: `n4m_model_selection_kennard_stone_*`
+_Group_: **Splitters** · _C ABI_: `n4m_model_selection_kennard_stone_*`
 
 ## Description
 
@@ -17,63 +17,65 @@ of pairwise Euclidean distance.
 ```
 </details>
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `test_size` | `float` | `0.25` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_model_selection_kennard_stone_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L37) · [`n4m_model_selection_kennard_stone_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L39) · [`n4m_model_selection_kennard_stone_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L40). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.model_selection.splitters import KennardStone
+```
+
+Source signature: [`KennardStone(test_size: float = 0.25)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/splitters.py#L82).
+
+**R (source-verified):** [`kennard_stone_split(X, test_size = 0.25, zero_based = FALSE)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
+
+```r
+library(n4m)
+result <- kennard_stone_split(X)
+```
+
+**MATLAB / Octave (source-verified):** [`kennard_stone_split(X, varargin)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/matlab/+n4m/kennard_stone_split.m).
+
+```matlab
+addpath('bindings/matlab')
+result = n4m.kennard_stone_split(X);
+```
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Kennard & Stone (1969), *Computer Aided Design of Experiments*, Technometrics 11, 137–148, DOI 10.1080/00401706.1969.10490666 (https://doi.org/10.1080/00401706.1969.10490666).
 
 ### Mathematical principle
 
-Kennard-Stone train/test split.
+Compute all Euclidean distances in X, initialize the training set with the globally farthest pair, then repeatedly add the unselected sample maximizing its minimum distance to the selected set. For n samples, `test_size` gives $n_{test}=\lceil n\,test\_size\rceil$ and the remaining maximin points are training.
+
+### Appropriate uses
+
+Constructing a calibration set that covers X-space while reserving the complement for testing.
+
+### Limits and validation
+
+It is deterministic, quadratic in memory/time for distances, sensitive to feature scaling, and ignores y. The test complement is not an IID random sample.
 
 ### Implementation
 
-C ABI `n4m_model_selection_kennard_stone_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KennardStoneSplitter`. The same numerical kernel backs every language binding.
+Python role API `n4m.model_selection.splitters.KennardStone`; binding class `KennardStoneSplitter`; ABI 2 family `n4m_model_selection_kennard_stone_{create,split,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_model_selection_kennard_stone_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import KennardStoneSplitter
-op = KennardStoneSplitter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>nirs4all</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/kennard_stone.h; https://doi.org/10.1080/00401706.1969.10490666
 
 
 ---

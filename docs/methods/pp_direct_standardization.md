@@ -1,39 +1,62 @@
-# `pp_direct_standardization` — Direct Standardization
+# `pp_direct_standardization` — Direct standardization (DS)
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.DirectStandardization` · _C ABI_: `n4m_domain_adaptation_direct_standardization_*`
+_Group_: **Signal transforms** · _C ABI_: `n4m_domain_adaptation_direct_standardization_*`
 
 ## Description
 
 Direct standardization transfer map between paired instruments.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `fit_intercept` | `bool` | `True` |
 | `ridge` | `float` | `0.0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_domain_adaptation_direct_standardization_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L64) · [`n4m_domain_adaptation_direct_standardization_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L66) · [`n4m_domain_adaptation_direct_standardization_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L68) · [`n4m_domain_adaptation_direct_standardization_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L74) · [`n4m_domain_adaptation_direct_standardization_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L71). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.domain_adaptation.standardization import direct_standardization
+```
+
+Source signature: [`direct_standardization(X_source, X_target, X = None, fit_intercept: bool = True, ridge: float = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L9651).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Wang et al. (1991), *Improvement of multivariate calibration through instrument standardization*, Analytical Chemistry 63, 2750–2756, https://doi.org/10.1021/ac00023a016.
 
 ### Mathematical principle
 
-Direct standardization transfer map between paired instruments.
+Using paired source and target spectra, DS fits a global affine map $X_s B+\mathbf{1}b\approx X_t$ by least squares, optionally with ridge regularization. New source spectra are multiplied by the learned transfer matrix.
+
+### Appropriate uses
+
+Transferring a calibration between instruments or measurement conditions when representative paired standards are available.
+
+### Limits and validation
+
+It requires paired samples and assumes one global linear relation. With many wavelengths the map can overfit unless regularized; extrapolation beyond transfer standards is unsafe.
 
 ### Implementation
 
-C ABI `n4m_domain_adaptation_direct_standardization_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.DirectStandardization`. The same numerical kernel backs every language binding.
+`n4m.domain_adaptation.standardization.DirectStandardization` wraps `n4m_domain_adaptation_direct_standardization_*`; fitting is in `cpp/src/c_api/c_api_advanced.cpp`.
 
-### Usage
+The ABI-2 implementation is the `n4m_domain_adaptation_direct_standardization_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import DirectStandardization
-op = DirectStandardization()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://doi.org/10.1021/ac00023a016; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp
+
 
 ---
 

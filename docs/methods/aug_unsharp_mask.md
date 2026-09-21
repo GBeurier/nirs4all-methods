@@ -1,12 +1,12 @@
-# `aug_unsharp_mask` — Unsharp Mask
+# `aug_unsharp_mask` — Unsharp spectral masking
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.UnsharpMask` · _C ABI_: `n4m_augmentation_unsharp_mask_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_unsharp_mask_*`
 
 ## Description
 
 Random unsharp spectral mask.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -17,27 +17,50 @@ Random unsharp spectral mask.
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_unsharp_mask_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L67) · [`n4m_augmentation_unsharp_mask_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L62) · [`n4m_augmentation_unsharp_mask_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L70). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.spectral import UnsharpMask
+```
+
+Source signature: [`UnsharpMask(amount_lo: float = 0.1, amount_hi: float = 0.5, sigma: float = 1.0, kernel_width: int = 11, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L653).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Unsharp masking is a classical signal/image sharpening construction, but no single NIR paper defines this stochastic parameterization; source code is normative.
 
 ### Mathematical principle
 
-Random unsharp spectral mask.
+Build a Gaussian-smoothed row $S_i=G_{\sigma,w}*X_i$, draw $a_i\sim U(\text{amount_lo},\text{amount_hi})$, and compute $X'_i=X_i+a_i(X_i-S_i)$. `sigma` and odd `kernel_width` set the low-pass scale; `amount_*` controls sharpening.
+
+### Appropriate uses
+
+Varying apparent spectral resolution and sensitivity to narrow bands during training.
+
+### Limits and validation
+
+Sharpening amplifies high-frequency noise and can create overshoot. Reflect padding changes behavior near the first and last wavelengths.
 
 ### Implementation
 
-C ABI `n4m_augmentation_unsharp_mask_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.UnsharpMask`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.spectral.UnsharpMask`; ABI 2 family `n4m_augmentation_unsharp_mask_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_unsharp_mask_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import UnsharpMask
-op = UnsharpMask()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/unsharp_mask.h
+
 
 ---
 

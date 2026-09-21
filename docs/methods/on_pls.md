@@ -14,7 +14,7 @@ _No tunable parameters declared at the binding level._
 
 ### Bibliographic source
 
-Löfstedt, T. & Trygg, J. (2011). *OnPLS — a novel multiblock method for the modelling of predictive and orthogonal variation*. Journal of Chemometrics 25(8), 441–455.
+Löfstedt, T. & Trygg, J. (2011). *OnPLS — a novel multiblock method for the modelling of predictive and orthogonal variation*. Journal of Chemometrics 25(8), 441–455. Verified primary link: [https://doi.org/10.1002/cem.1388](https://doi.org/10.1002/cem.1388).
 
 ### Mathematical principle
 
@@ -24,133 +24,36 @@ The procedure iteratively refines a joint component by alternating projections a
 
 The CRAN `OnPLS` package was archived in 2024 so the Python implementation is vendored at `bindings/python/vendor/OnPLS/` to remove the dependency.
 
+### Appropriate uses
+
+Multi-block exploratory modelling that separates globally joint, locally joint, and unique variation.
+
+### Limits and validation
+
+Component interpretation is sensitive to block scaling and rank choices; predictive claims require external validation.
+
 ### Implementation
 
 `n4m_estimators_on_pls_fit` — requires `n_joint`, `n_unique_per_block`, `block_sizes`. The CRAN OnPLS package is archived; pls4all carries an in-tree vendored port for the parity reference.
 
-R roxygen note (`methods_extra.R::on_pls_fit`):
+### Sources and provenance
 
-> OnPLS — Orthogonal multi-block PLS (joint + unique loadings).
-> @param n_joint Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
-> @param n_unique_per_block Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
-> @param block_sizes Integer vector. Per-block feature counts for multi-block PLS.
-> @param X Numeric matrix of predictors (rows = samples, cols = features).
-> @param Y Numeric matrix or vector of responses, with one row per sample.
-> @export
+Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp).
 
-MATLAB header (`bindings/matlab/+pls4all/on_pls.m`):
 
-```text
-pls4all.on_pls  Orthogonal multi-block PLS (joint + unique loadings).
- n_components arg is unused by on_pls (it has its own block structure),
- but the dispatcher still requires it; we pass n_joint.
-```
+### API and bindings
 
-### Usage
+**C ABI (ABI 2):** [`n4m_estimators_on_pls_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/multiblock.h#L60). Use the linked public header for the exact signature, configuration, and result handles.
 
-Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
-**pls4all bindings**
+**R (source-verified):** [`on_pls_fit(X, Y, n_joint, n_unique_per_block, block_sizes)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 
-::::{tab-set}
-:class: pls4all-bindings
+The source signature has additional required inputs, so no example call is fabricated.
 
-:::{tab-item} C ABI · libn4m
-:sync: c
-:class-label: lang-c
+**MATLAB / Octave (source-verified):** [`on_pls(X, Y, n_joint, n_unique_per_block, block_sizes)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/matlab/+n4m/on_pls.m).
 
-```c
-/* C ABI — libn4m */
-n4m_context_t* ctx = n4m_context_create();
-n4m_config_t*  cfg = n4m_config_create();
-n4m_method_result_t* res = NULL;
-n4m_estimators_on_pls_fit(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
-/* … read coefficients / mask / scores via */
-/* n4m_method_result_get_double_matrix / vector / scalar … */
-n4m_method_result_destroy(res);
-n4m_config_destroy(cfg);
-n4m_context_destroy(ctx);
-```
-
-:::
-
-:::{tab-item} Python · pls4all (raw)
-:sync: python-raw
-:class-label: lang-python
-
-```python
-import pls4all
-from pls4all._methods import on_pls_fit
-with pls4all.Context() as ctx, pls4all.Config() as cfg:
-    res = on_pls_fit(ctx, cfg, X, y)
-# then: res.matrix("predictions"), res.matrix("coefficients"),
-# res.vector("mask"), res.scalar("intercept"), …
-```
-
-:::
-
-:::{tab-item} Python · pls4all.sklearn
-:sync: python-sklearn
-:class-label: lang-python
-
-```python
-from pls4all.sklearn import on_pls
-result = on_pls(X, y, n_components=2)
-```
-
-:::
-
-:::{tab-item} R · pls4all_method()
-:sync: r-dispatcher
-:class-label: lang-r
-
-```r
-library(pls4all)
-# Unified low-level dispatcher (May 2026 R cleanup):
-res <- pls4all_method("on_pls", X, y,
-                      n_components = 2L)
-# res is a named list with MethodResult arrays/scalars.
-# selected_indices / top_k_intervals are 1-based.
-```
-
-:::
-
-:::{tab-item} R · pls4all (raw fn)
-:sync: r-raw
-:class-label: lang-r
-
-```r
-library(pls4all)
-res  <- on_pls_fit(X, Y, n_joint, n_unique_per_block, block_sizes)
-yhat <- pls4all_predict(res, X_test)
-```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (MEX)
-:sync: matlab-mex
-:class-label: lang-matlab
-
-```matlab
-res = pls4all.on_pls(X, y, 2);
-% see header of bindings/matlab/+pls4all/on_pls.m for full
-% parameter surface:
-%   res = on_pls(X, Y, n_joint, n_unique_per_block, block_sizes)
-yhat = predict(res, Xtest);
-```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (classdef)
-:sync: matlab-classdef
-:class-label: lang-matlab
-
-_No idiomatic classdef wrapper — invoke `pls4all.fit("on_pls", X, y, …)` directly from the unified MEX factory._
-
-:::
-
-::::
-
+The source signature has additional required inputs, so no example call is fabricated.
 
 **Registry parity references** 📐
 
@@ -158,17 +61,20 @@ _No idiomatic classdef wrapper — invoke `pls4all.fit("on_pls", X, y, …)` dir
 :class-card: external-refs
 
 - 📐 **`ref.python_onpls`** (python · python) — `OnPLS` github tomlof/OnPLS · strict (rmse_rel ≤ 1e-06) — Python `OnPLS` (Löfstedt & Trygg 2011). Vendored from GitHub because R `multiblock 0.8.10` lacks `onpls`. Both impls return the joint-component reconstruction X̂_0.
+
 :::
 
 ### Benchmarks
 
+**Archived measurement identity.** Backend labels in this table are the raw IDs recorded when the benchmark ran (including historical `pls4all.*` IDs). They preserve measurement provenance and do not describe a current public Python, R, or MATLAB binding; use the source-verified **API and bindings** section above for current entry points.
+
 Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
 
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
+**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = archived binding-harness result agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
 
 **Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-06`).
 
-Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; pls4all language bindings show binding parity against the C++ backend. Hover the icon for role and tolerance band.
+Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; archived language-harness rows show binding parity against the C++ backend. Hover the icon for role and tolerance band.
 
 ::::{tab-set}
 :class: parity-tabs
@@ -182,7 +88,7 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 2e-11</td><td class="ms">6.20 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">3.02 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">2.69 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
@@ -203,7 +109,7 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 2e-11</td><td class="ms ms-best">1.81 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.91 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">1.84 ms</td></tr>
 </tbody>
@@ -224,7 +130,7 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 2e-11</td><td class="ms ms-best">1.91 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.00 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">16.0 ms</td></tr>
 </tbody>

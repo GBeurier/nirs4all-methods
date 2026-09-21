@@ -1,12 +1,12 @@
-# `aug_path_length` — Path Length Augmenter
+# `aug_path_length` — Multiplicative path-length perturbation
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.PathLengthAugmenter` · _C ABI_: `n4m_augmentation_path_length_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_path_length_*`
 
 ## Description
 
 Simulate multiplicative path-length variation.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -15,57 +15,49 @@ Simulate multiplicative path-length variation.
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_path_length_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/drift.h#L40) · [`n4m_augmentation_path_length_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/drift.h#L35) · [`n4m_augmentation_path_length_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/drift.h#L39). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.drift import PathLengthAugmenter
+```
+
+Source signature: [`PathLengthAugmenter(path_length_std: float = 0.05, min_path_length: float = 0.1, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L496).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+There is no paper canonical to this random simulator. Its physical motivation is the multiplicative path-length/scatter term treated by Martens & Stark (1991), DOI 10.1016/0731-7085(91)80188-F (https://doi.org/10.1016/0731-7085(91)80188-F).
 
 ### Mathematical principle
 
-Simulate multiplicative path-length variation.
+For row $i$, draw $L_i=1+sZ_i$ with `path_length_std` $s$ and $Z_i\sim\mathcal N(0,1)$, clamp $L_i$ below by `min_path_length`, and return $X'_{ij}=L_iX_{ij}$.
+
+### Appropriate uses
+
+Training against moderate sample-thickness or optical path-length variability.
+
+### Limits and validation
+
+Every wavelength receives the same factor, so wavelength-dependent scattering and additive baselines are absent. The lower clamp makes the factor distribution non-Gaussian when variability is large.
 
 ### Implementation
 
-C ABI `n4m_augmentation_path_length_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.PathLengthAugmenter`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.drift.PathLengthAugmenter`; ABI 2 family `n4m_augmentation_path_length_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_path_length_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import PathLengthAugmenter
-op = PathLengthAugmenter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>nirs4all</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/drift/path_length.h; https://doi.org/10.1016/0731-7085(91)80188-F
 
 
 ---

@@ -1,68 +1,60 @@
-# `split_spxy` — S P X Y Splitter
+# `split_spxy` — SPXY joint X–Y maximin split
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.SPXYSplitter` · _C ABI_: `n4m_model_selection_spxy_*`
+_Group_: **Splitters** · _C ABI_: `n4m_model_selection_spxy_*`
 
 ## Description
 
 SPXY (Sample set Partitioning based on X and Y) train/test split.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `test_size` | `float` | `0.25` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_model_selection_spxy_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L46) · [`n4m_model_selection_spxy_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L48) · [`n4m_model_selection_spxy_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L49). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.model_selection.splitters import SPXY
+```
+
+Source signature: [`SPXY(test_size: float = 0.25)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/splitters.py#L116).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Galvão et al. (2005), *A method for calibration and validation subset partitioning*, Talanta 67, 736–740, DOI 10.1016/j.talanta.2005.03.025 (https://doi.org/10.1016/j.talanta.2005.03.025).
 
 ### Mathematical principle
 
-SPXY (Sample set Partitioning based on X and Y) train/test split.
+Compute Euclidean pairwise matrices $D_X$ and $D_Y$, normalize each by its maximum, then form $D=D_X/\max D_X+D_Y/\max D_Y$. Apply the Kennard–Stone farthest-pair then maximin sequence to D. Y may have one or several columns.
+
+### Appropriate uses
+
+Calibration/validation partitioning that covers both spectra and reference-value space.
+
+### Limits and validation
+
+It uses all y values to design the split, so it is unsuitable for a final blind test and can be optimistic. Euclidean geometry remains scale-sensitive within multicolumn X or Y, and full distances are quadratic. In the current Python binding, univariate y must be passed explicitly as shape `(n_samples, 1)`; a 1-D array is promoted to one row and fails the X/Y row check.
 
 ### Implementation
 
-C ABI `n4m_model_selection_spxy_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.SPXYSplitter`. The same numerical kernel backs every language binding.
+Python role API `n4m.model_selection.splitters.SPXY`; binding class `SPXYSplitter`; ABI 2 family `n4m_model_selection_spxy_{create,split,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_model_selection_spxy_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import SPXYSplitter
-op = SPXYSplitter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>nirs4all</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/spxy.h; https://doi.org/10.1016/j.talanta.2005.03.025
 
 
 ---

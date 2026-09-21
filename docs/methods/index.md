@@ -1,6 +1,6 @@
 # Methods catalogue
 
-Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages.
+Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
 _Total catalogued native methods_: **212**. Additional Python reference
 surfaces are documented where relevant.
@@ -143,7 +143,7 @@ surfaces are documented where relevant.
 | [`pls`](pls.md) | `n4m.estimators.regression.latent.pls` | `n4m.estimators.regression.latent` | C, Py |
 | [`lw_pls`](lw_pls.md) | `n4m.estimators.regression.local.lw_pls` | `n4m.estimators.regression.local` | C |
 | [`recursive_pls`](recursive_pls.md) | `n4m.estimators.regression.online.recursive_pls` | `n4m.estimators.regression.online` | C |
-| [`ridge`](ridge.md) | `n4m.estimators.regression.regularized.ridge` | `n4m.estimators.regression.regularized` | C, Py |
+| [`ridge`](models_regularized_ridge.md) | `n4m.estimators.regression.regularized.ridge` | `n4m.estimators.regression.regularized` | C, Py |
 | [`ridge_pls`](ridge_pls.md) | `n4m.estimators.regression.regularized.ridge_pls` | `n4m.estimators.regression.regularized` | C, Py |
 | [`robust_pls`](robust_pls.md) | `n4m.estimators.regression.robust.robust_pls` | `n4m.estimators.regression.robust` | C, Py |
 | [`weighted_pls`](weighted_pls.md) | `n4m.estimators.regression.robust.weighted_pls` | `n4m.estimators.regression.robust` | C, Py |
@@ -190,17 +190,17 @@ surfaces are documented where relevant.
 
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
-| [`aom_chain_screen_refit`](aom_chain_sweep_run.md) | `n4m.model_selection.aom_campaign.aom_chain_screen_refit` | `n4m.model_selection.aom_campaign` | C, Py |
-| [`aom_staged_chain_campaign`](aom_staged_chain_campaign.md) | `n4m.model_selection.aom_campaign.aom_staged_chain_campaign` | `n4m.model_selection.aom_campaign` | C, Py |
-| [`aom_chain_fixed_fit`](aom_chain_sweep_run.md) | `n4m.model_selection.aom_search.aom_chain_fixed_fit` | `n4m.model_selection.aom_search` | C, Py |
-| [`aom_chain_ridge_pls`](aom_chain_ridge_pls.md) | `n4m.model_selection.aom_search.aom_chain_ridge_pls` | `n4m.model_selection.aom_search` | C, Py |
+| [`calibration`](aom_pop_calibration.md) | `n4m.model_selection.aom_calibration.calibration` | `n4m.model_selection.aom_calibration` | C, Py |
+| [`aom_chain_screen_refit`](aom_pop_aom_chain_screen_refit.md) | `n4m.model_selection.aom_campaign.aom_chain_screen_refit` | `n4m.model_selection.aom_campaign` | Py |
+| [`aom_staged_chain_campaign`](aom_staged_chain_campaign.md) | `n4m.model_selection.aom_campaign.aom_staged_chain_campaign` | `n4m.model_selection.aom_campaign` | Py |
+| [`aom_chain_fixed_fit`](aom_pop_aom_chain_fixed_fit.md) | `n4m.model_selection.aom_search.aom_chain_fixed_fit` | `n4m.model_selection.aom_search` | C, Py |
+| [`aom_chain_ridge_pls`](aom_chain_ridge_pls.md) | `n4m.model_selection.aom_search.aom_chain_ridge_pls` | `n4m.model_selection.aom_search` | Py |
 | [`aom_chain_sweep`](aom_chain_sweep_run.md) | `n4m.model_selection.aom_search.aom_chain_sweep` | `n4m.model_selection.aom_search` | C, Py |
-| [`calibration`](aom_calibration.md) | `n4m.model_selection.aom_calibration.calibration` | `n4m.model_selection.aom_calibration` | C, Py |
 | [`aom_pls`](aom_pls.md) | `n4m.model_selection.aom_search.aom_pls` | `n4m.model_selection.aom_search` | C, Py |
 | [`aom_preprocessing`](aom_preprocess.md) | `n4m.model_selection.aom_search.aom_preprocessing` | `n4m.model_selection.aom_search` | C, Py |
 | [`aom_sweep`](aom_sweep_run.md) | `n4m.model_selection.aom_search.aom_sweep` | `n4m.model_selection.aom_search` | C, Py |
 | [`pop_pls`](pop_pls.md) | `n4m.model_selection.aom_search.pop_pls` | `n4m.model_selection.aom_search` | C, Py |
-| [`ridge_global`](aom_ridge_global.md) | `n4m.model_selection.aom_search.ridge_global` | `n4m.model_selection.aom_search` | C, Py |
+| [`ridge_global`](aom_ridge_global.md) | `n4m.model_selection.aom_search.ridge_global` | `n4m.model_selection.aom_search` | Py |
 | [`robust_hpo`](aom_robust_hpo.md) | `n4m.model_selection.aom_search.robust_hpo` | `n4m.model_selection.aom_search` | C, Py |
 | [`binned_strat_group_kfold`](split_binned_strat_group_kfold.md) | `n4m.model_selection.splitters.binned_strat_group_kfold` | `n4m.model_selection.splitters` | C |
 | [`data_twinning`](split_split_splitter.md) | `n4m.model_selection.splitters.data_twinning` | `n4m.model_selection.splitters` | C |
@@ -211,7 +211,7 @@ surfaces are documented where relevant.
 | [`spxy_fold`](split_spxy_fold.md) | `n4m.model_selection.splitters.spxy_fold` | `n4m.model_selection.splitters` | C |
 | [`spxy_g_fold`](split_spxy_g_fold.md) | `n4m.model_selection.splitters.spxy_g_fold` | `n4m.model_selection.splitters` | C |
 | [`systematic_circular`](split_systematic_circular.md) | `n4m.model_selection.splitters.systematic_circular` | `n4m.model_selection.splitters` | C |
-| [`sweep`](sweep_run.md) | `n4m.model_selection.sweep.sweep` | `n4m.model_selection.sweep` | C, Py |
+| [`sweep`](utilities_sweep.md) | `n4m.model_selection.sweep.sweep` | `n4m.model_selection.sweep` | C, Py |
 
 ## domain_adaptation — calibration transfer / standardization
 
@@ -247,20 +247,20 @@ surfaces are documented where relevant.
 | [`aom_ridge_blender`](aom_ridge_blender.md) | `n4m.ensemble.aom_ridge_blender` | `n4m.ensemble` | C, Py |
 | [`bagging_pls`](bagging_pls.md) | `n4m.ensemble.bagging_pls` | `n4m.ensemble` | C |
 | [`boosting_pls`](boosting_pls.md) | `n4m.ensemble.boosting_pls` | `n4m.ensemble` | C |
-| [`linear_ridge_stack`](aom_calibration.md) | `n4m.ensemble.linear_ridge_stack` | `n4m.ensemble` | Py |
-| [`linear_stack_compress`](aom_calibration.md) | `n4m.ensemble.linear_stack_compress` | `n4m.ensemble` | C, Py |
-| [`moment_stack`](moment_stack.md) | `n4m.ensemble.moment_stack` | `n4m.ensemble` | C, Py |
+| [`linear_ridge_stack`](aom_pop_linear_ridge_stack.md) | `n4m.ensemble.linear_ridge_stack` | `n4m.ensemble` | Py |
+| [`linear_stack_compress`](aom_pop_linear_stack_compress.md) | `n4m.ensemble.linear_stack_compress` | `n4m.ensemble` | C, Py |
+| [`moment_stack`](models_ensembles_moment_stack.md) | `n4m.ensemble.moment_stack` | `n4m.ensemble` | Py |
 | [`random_subspace_pls`](random_subspace_pls.md) | `n4m.ensemble.random_subspace_pls` | `n4m.ensemble` | C |
 
 ## compose — AOM operator superblocks
 
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
-| [`aom_pls_superblock`](aom_pls_superblock.md) | `n4m.compose.aom_superblock.aom_pls_superblock` | `n4m.compose.aom_superblock` | C, Py |
-| [`aom_ridge_pls_superblock`](aom_ridge_pls_superblock.md) | `n4m.compose.aom_superblock.aom_ridge_pls_superblock` | `n4m.compose.aom_superblock` | C, Py |
-| [`ridge_active_superblock`](aom_ridge_active_superblock.md) | `n4m.compose.aom_superblock.ridge_active_superblock` | `n4m.compose.aom_superblock` | C, Py |
-| [`ridge_mkl_superblock`](aom_ridge_mkl_superblock.md) | `n4m.compose.aom_superblock.ridge_mkl_superblock` | `n4m.compose.aom_superblock` | C, Py |
-| [`ridge_superblock`](aom_ridge_superblock.md) | `n4m.compose.aom_superblock.ridge_superblock` | `n4m.compose.aom_superblock` | C, Py |
+| [`aom_pls_superblock`](aom_pls_superblock.md) | `n4m.compose.aom_superblock.aom_pls_superblock` | `n4m.compose.aom_superblock` | Py |
+| [`aom_ridge_pls_superblock`](aom_ridge_pls_superblock.md) | `n4m.compose.aom_superblock.aom_ridge_pls_superblock` | `n4m.compose.aom_superblock` | Py |
+| [`ridge_active_superblock`](aom_ridge_active_superblock.md) | `n4m.compose.aom_superblock.ridge_active_superblock` | `n4m.compose.aom_superblock` | Py |
+| [`ridge_mkl_superblock`](aom_ridge_mkl_superblock.md) | `n4m.compose.aom_superblock.ridge_mkl_superblock` | `n4m.compose.aom_superblock` | Py |
+| [`ridge_superblock`](aom_ridge_superblock.md) | `n4m.compose.aom_superblock.ridge_superblock` | `n4m.compose.aom_superblock` | Py |
 
 ## metrics — scoring + diagnostics
 
@@ -283,7 +283,7 @@ surfaces are documented where relevant.
 
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
-| [`moments`](moments.md) | `n4m.lowlevel.moments.moments` | `n4m.lowlevel.moments` | C, Py |
+| [`moments`](utilities_moments.md) | `n4m.lowlevel.moments.moments` | `n4m.lowlevel.moments` | C, Py |
 
 ---
 

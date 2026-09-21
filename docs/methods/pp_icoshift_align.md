@@ -1,12 +1,12 @@
-# `pp_icoshift_align` — Icoshift Alignment
+# `pp_icoshift_align` — Interval correlation optimized shifting (icoshift-style)
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.IcoshiftAlignment` · _C ABI_: `n4m_transform_icoshift_align_*`
+_Group_: **Signal transforms** · _C ABI_: `n4m_transform_icoshift_align_*`
 
 ## Description
 
 Interval correlation shifting with fixed-size intervals.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,27 +14,50 @@ Interval correlation shifting with fixed-size intervals.
 | `interval_size` | `int` | `32` |
 | `max_shift` | `int` | `5` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_icoshift_align_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/alignment.h#L26) · [`n4m_transform_icoshift_align_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/alignment.h#L29) · [`n4m_transform_icoshift_align_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/alignment.h#L31) · [`n4m_transform_icoshift_align_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/alignment.h#L36) · [`n4m_transform_icoshift_align_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/alignment.h#L33). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.alignment import IcoshiftAlignment
+```
+
+Source signature: [`IcoshiftAlignment(reference = None, interval_size: int = 32, max_shift: int = 5)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/advanced.py#L414).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Savorani, Tomasi & Engelsen (2010), *icoshift: A versatile tool for the rapid alignment of 1D NMR spectra*, Journal of Magnetic Resonance 202, 190–202, https://doi.org/10.1016/j.jmr.2009.11.012.
 
 ### Mathematical principle
 
-Interval correlation shifting with fixed-size intervals.
+Each fixed interval is compared with the same reference interval over integer lags within `max_shift`; the lag maximizing the centered cross-product score is applied independently with edge replication. Output length and interval positions are retained.
+
+### Appropriate uses
+
+Fast correction of piecewise-constant local channel shifts when peak order is stable.
+
+### Limits and validation
+
+This is a fixed-interval, bounded-shift implementation rather than every option in the original icoshift software. Independent intervals may create seams and weak intervals yield unstable correlations.
 
 ### Implementation
 
-C ABI `n4m_transform_icoshift_align_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.IcoshiftAlignment`. The same numerical kernel backs every language binding.
+`n4m.transform.alignment.IcoshiftAlignment` uses `n4m_transform_icoshift_align_*`; interval search is implemented in `cpp/src/c_api/c_api_advanced.cpp`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_icoshift_align_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import IcoshiftAlignment
-op = IcoshiftAlignment()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://doi.org/10.1016/j.jmr.2009.11.012; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp
+
 
 ---
 

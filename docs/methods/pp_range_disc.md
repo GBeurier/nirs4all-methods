@@ -1,69 +1,61 @@
-# `pp_range_disc` — Range Discretizer
+# `pp_range_disc` — Fixed-edge range discretization
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.RangeDiscretizer` · _C ABI_: `n4m_transform_range_discretizer_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_range_discretizer_*`
 
 ## Description
 
 Integer binning against monotonic numeric edges.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
-| `edges` | `Sequence[float] | None` | `None` |
-| `edges_csv` | `str | None` | `None` |
+| `edges` | `Sequence[float] \| None` | `None` |
+| `edges_csv` | `str \| None` | `None` |
+
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_range_discretizer_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L71) · [`n4m_transform_range_discretizer_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L74) · [`n4m_transform_range_discretizer_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/resampling.h#L75). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.resampling import RangeDiscretizer
+```
+
+Source signature: [`RangeDiscretizer(edges: Sequence[float] | None = None, edges_csv: str | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/resampling.py#L218).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No canonical paper: this is scalar quantization against user-supplied ordered edges, equivalent in concept to `numpy.digitize`: https://numpy.org/doc/stable/reference/generated/numpy.digitize.html.
 
 ### Mathematical principle
 
-Integer binning against monotonic numeric edges.
+Every value is replaced by the integer index of the interval delimited by the stored monotonic numeric edges. Unlike k-bin discretization, no distribution statistics are learned from $X$.
+
+### Appropriate uses
+
+Applying domain-defined concentration or intensity bands consistently across datasets.
+
+### Limits and validation
+
+Discretization loses continuous information and results depend on edge inclusion semantics. The same edges are applied to all columns and may be unsuitable for wavelengths with different scales.
 
 ### Implementation
 
-C ABI `n4m_transform_range_discretizer_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RangeDiscretizer`. The same numerical kernel backs every language binding.
+`n4m.transform.resampling.RangeDiscretizer` wraps `n4m_transform_range_discretizer_*`; edge validation and bin lookup are in `resampling/range_discretizer.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_range_discretizer_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import RangeDiscretizer
-op = RangeDiscretizer()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://numpy.org/doc/stable/reference/generated/numpy.digitize.html; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/range_discretizer.c
 
 
 ---

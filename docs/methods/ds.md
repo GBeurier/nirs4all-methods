@@ -6,10 +6,6 @@ _Group_: **Calibration transfer** · _Registry tolerance_: `1e-08`
 
 DS — Direct Standardization (§13)
 
-From the `pls4all.sklearn.DSTransformer` docstring:
-
-> Direct Standardization — full-band cross-instrument regression.
-
 > **Registry note** — Base R per-band `lm.fit` with window_half_width=0 — Direct Standardization is just per-band linear regression.
 
 _No tunable parameters declared at the binding level._
@@ -18,7 +14,7 @@ _No tunable parameters declared at the binding level._
 
 ### Bibliographic source
 
-Wang, Y., Veltkamp, D. J. & Kowalski, B. R. (1991). *Multivariate instrument standardisation*. Analytical Chemistry 63(23), 2750–2756.
+Wang, Y., Veltkamp, D. J. & Kowalski, B. R. (1991). *Multivariate instrument standardisation*. Analytical Chemistry 63(23), 2750–2756. Verified primary link: [https://doi.org/10.1021/ac00023a016](https://doi.org/10.1021/ac00023a016).
 
 ### Mathematical principle
 
@@ -28,130 +24,42 @@ DS is the simplest member of the calibration-transfer family and works well when
 
 A canonical workflow: fit DS on $\le 30$ transfer standards, apply $\mathbf{F}$ to all subsequent secondary-instrument spectra, then use a single PLS model fit only on primary data.
 
+### Appropriate uses
+
+Transferring spectra from a secondary instrument to a reference instrument using paired standards.
+
+### Limits and validation
+
+Requires representative paired transfer samples and a stable linear relation between instruments.
+
 ### Implementation
 
 `n4m_domain_adaptation_ds_fit` (TransformerMixin in tier 2). Reference: R `chemometrics::stdize`.
 
-R roxygen note (`methods_extra.R::ds_fit`):
+### Sources and provenance
 
-> Direct Standardization (calibration transfer).
-> @param X_source Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
-> @param X_target Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
-> @export
+Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp).
 
-MATLAB header (`bindings/matlab/+pls4all/ds.m`):
 
-```text
-pls4all.ds  Direct Standardization (calibration transfer).
-```
+### API and bindings
 
-### Usage
+**C ABI (ABI 2):** [`n4m_domain_adaptation_ds_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L162). Use the linked public header for the exact signature, configuration, and result handles.
 
-Every pls4all binding tab dispatches into the same C kernel; the external libraries listed at the bottom of the page are the parity references registered in `benchmarks.parity_timing.registry`. Switch tabs to read the same fit in your language. The R package now ships drop-in-compatible facades for the CRAN `pls` package (`plsr`, `pcr`, `mvr`) and for the `mdatools::pls(x, y, ...)` matrix idiom — those tabs appear only on the methods that have a meaningful equivalence.
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
-**pls4all bindings**
-
-::::{tab-set}
-:class: pls4all-bindings
-
-:::{tab-item} C ABI · libn4m
-:sync: c
-:class-label: lang-c
-
-```c
-/* C ABI — libn4m */
-n4m_context_t* ctx = n4m_context_create();
-n4m_config_t*  cfg = n4m_config_create();
-n4m_method_result_t* res = NULL;
-n4m_domain_adaptation_ds_fit(ctx, cfg, &x_view, &y_view, /* hyperparams */, &res);
-/* … read coefficients / mask / scores via */
-/* n4m_method_result_get_double_matrix / vector / scalar … */
-n4m_method_result_destroy(res);
-n4m_config_destroy(cfg);
-n4m_context_destroy(ctx);
-```
-
-:::
-
-:::{tab-item} Python · pls4all (raw)
-:sync: python-raw
-:class-label: lang-python
-
-```python
-import pls4all
-from pls4all._methods import ds_fit
-with pls4all.Context() as ctx, pls4all.Config() as cfg:
-    res = ds_fit(ctx, cfg, X, y, X_target=X_target)
-# then: res.matrix("predictions"), res.matrix("coefficients"),
-# res.vector("mask"), res.scalar("intercept"), …
-```
-
-:::
-
-:::{tab-item} Python · pls4all.sklearn
-:sync: python-sklearn
-:class-label: lang-python
-
-```python
-from pls4all.sklearn import DSTransformer
-mdl = DSTransformer(n_components=2)
-mdl.fit(X, y, X_target=X_target)
-y_hat = mdl.predict(X_test)
-```
-
-:::
-
-:::{tab-item} R · pls4all_method()
-:sync: r-dispatcher
-:class-label: lang-r
+**R (source-verified):** [`ds_fit(X_source, X_target)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 
 ```r
-library(pls4all)
-# Unified low-level dispatcher (May 2026 R cleanup):
-res <- pls4all_method("ds", X, y,
-                      n_components = 2L)
-# res is a named list with MethodResult arrays/scalars.
-# selected_indices / top_k_intervals are 1-based.
+library(n4m)
+result <- ds_fit(X_source, X_target)
 ```
 
-:::
-
-:::{tab-item} R · pls4all (raw fn)
-:sync: r-raw
-:class-label: lang-r
-
-```r
-library(pls4all)
-res  <- ds_fit(X_source, X_target)
-yhat <- pls4all_predict(res, X_test)
-```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (MEX)
-:sync: matlab-mex
-:class-label: lang-matlab
+**MATLAB / Octave (source-verified):** [`ds(X_source, X_target)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/matlab/+n4m/ds.m).
 
 ```matlab
-res = pls4all.ds(X, y, 2);
-% see header of bindings/matlab/+pls4all/ds.m for full
-% parameter surface:
-%   res = ds(X_source, X_target)
-yhat = predict(res, Xtest);
+addpath('bindings/matlab')
+result = n4m.ds(X_source, X_target);
 ```
-
-:::
-
-:::{tab-item} MATLAB · pls4all (classdef)
-:sync: matlab-classdef
-:class-label: lang-matlab
-
-_No idiomatic classdef wrapper — invoke `pls4all.fit("ds", X, y, …)` directly from the unified MEX factory._
-
-:::
-
-::::
-
 
 **Registry parity references** 📐
 
@@ -159,17 +67,20 @@ _No idiomatic classdef wrapper — invoke `pls4all.fit("ds", X, y, …)` directl
 :class-card: external-refs
 
 - 📐 **`ref.r_base`** (R · r) — `base` R 4.3.3 · strict (rmse_rel ≤ 1e-08) — Base R `lm` per spectral band — closest installable analog to Wang 1991 Piecewise Direct Standardization. With window_half_width=0 this reduces to Direct Standardization.
+
 :::
 
 ### Benchmarks
 
+**Archived measurement identity.** Backend labels in this table are the raw IDs recorded when the benchmark ran (including historical `pls4all.*` IDs). They preserve measurement provenance and do not describe a current public Python, R, or MATLAB binding; use the source-verified **API and bindings** section above for current entry points.
+
 Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
 
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
+**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = archived binding-harness result agrees with the C++ baseline &nbsp;·&nbsp; ⇄ cross-check = documented by-design selector/RNG/model, noncanonical API/facade convention, or secondary oracle &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
 
 **Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-08`).
 
-Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; pls4all language bindings show binding parity against the C++ backend. Hover the icon for role and tolerance band.
+Rows tagged with **📐** are the canonical parity references for this method (declared in [`parity_timing.registry`](../benchmarks/methodology.md)). C++ and external rows show reference parity; archived language-harness rows show binding parity against the C++ backend. Hover the icon for role and tolerance band.
 
 ::::{tab-set}
 :class: parity-tabs
@@ -183,11 +94,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 6e-09</td><td class="ms ms-best">1.64 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.09 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ 9e-16</td><td class="ms">2.27 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">10.2 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">14.0 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">11.4 ms</td></tr>
@@ -210,11 +121,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 6e-09</td><td class="ms">3.32 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms ms-best">1.57 ms<span class="medal" title="fastest">🏆</span></td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ 9e-16</td><td class="ms">1.72 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">11.1 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">11.8 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">10.7 ms</td></tr>
@@ -237,11 +148,11 @@ Rows tagged with **📐** are the canonical parity references for this method (d
 <tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref 6e-09</td><td class="ms ms-best">1.42 ms<span class="medal" title="fastest">🏆</span></td></tr>
 </tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · pls4all</th></tr>
+<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>Python · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.python</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">2.13 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.sklearn</code></td><td class="parity parity-exact">✓ 9e-16</td><td class="ms">1.72 ms</td></tr>
 </tbody>
-<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · pls4all</th></tr>
+<tbody class="lang-band lang-r"><tr class="lang-band-row" data-lang="r"><th colspan="3" scope="rowgroup"><span class="lang-band-dot"></span>R · archived pls4all benchmark</th></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">8.95 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.formula</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">9.70 ms</td></tr>
 <tr class="bk-row"><td class="bk-name"><code>pls4all.R.mdatools</code></td><td class="parity parity-exact">✓ bind</td><td class="ms">9.43 ms</td></tr>

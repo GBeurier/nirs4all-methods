@@ -1,12 +1,12 @@
-# `aug_gauss_jitter` — Gaussian Jitter
+# `aug_gauss_jitter` — Random Gaussian smoothing jitter
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.GaussianJitter` · _C ABI_: `n4m_augmentation_gauss_jitter_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_gauss_jitter_*`
 
 ## Description
 
 Gaussian smoothing jitter.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -16,27 +16,50 @@ Gaussian smoothing jitter.
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_gauss_jitter_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L57) · [`n4m_augmentation_gauss_jitter_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L52) · [`n4m_augmentation_gauss_jitter_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L60). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.spectral import GaussianJitter
+```
+
+Source signature: [`GaussianJitter(sigma_lo: float = 0.5, sigma_hi: float = 1.5, kernel_width: int = 9, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L635).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No unique paper defines randomizing the smoothing width. The operator is a stochastic Gaussian convolution whose source defines boundary behavior.
 
 ### Mathematical principle
 
-Gaussian smoothing jitter.
+For each spectrum draw $s_i\sim U(\text{sigma_lo},\text{sigma_hi})$, build the normalized odd-width kernel $k(t)\propto\exp[-t^2/(2s_i^2)]$, and convolve along wavelength with reflect padding. `kernel_width` truncates the Gaussian.
+
+### Appropriate uses
+
+Robustness to small variations in spectral resolution or smoothing strength.
+
+### Limits and validation
+
+This is smoothing, despite the name “jitter”; it adds no random residual noise. Finite kernel width and reflected boundaries affect edge bands.
 
 ### Implementation
 
-C ABI `n4m_augmentation_gauss_jitter_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.GaussianJitter`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.spectral.GaussianJitter`; ABI 2 family `n4m_augmentation_gauss_jitter_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_gauss_jitter_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import GaussianJitter
-op = GaussianJitter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/gauss_jitter.h
+
 
 ---
 

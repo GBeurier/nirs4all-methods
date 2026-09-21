@@ -1,12 +1,12 @@
-# `aug_band_mask` — Band Masking
+# `aug_band_mask` — Random contiguous-band masking
 
-_Group_: **Augmentation** · _Binding_: `n4m.sklearn.BandMasking` · _C ABI_: `n4m_augmentation_band_mask_*`
+_Group_: **Augmentation** · _C ABI_: `n4m_augmentation_band_mask_*`
 
 ## Description
 
 Mask random spectral bands with zero-fill or interpolation.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,31 +14,54 @@ Mask random spectral bands with zero-fill or interpolation.
 | `n_bands_hi` | `int` | `3` |
 | `bw_lo` | `int` | `5` |
 | `bw_hi` | `int` | `15` |
-| `mode` | `str | int` | `'zero'` |
+| `mode` | `str \| int` | `'zero'` |
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
+
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_augmentation_band_mask_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L37) · [`n4m_augmentation_band_mask_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L31) · [`n4m_augmentation_band_mask_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/augmentation/spectral.h#L40). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.augmentation.spectral import BandMasking
+```
+
+Source signature: [`BandMasking(n_bands_lo: int = 1, n_bands_hi: int = 3, bw_lo: int = 5, bw_hi: int = 15, mode: str | int = 'zero', rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L591).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No single spectroscopy paper defines this operator. It is analogous to structured feature dropout, with exact band sampling defined by the native source.
 
 ### Mathematical principle
 
-Mask random spectral bands with zero-fill or interpolation.
+For each spectrum, draw a band count in `n_bands_range`; for each band draw a center and integer width in `band_width_range`. In `zero` mode set the half-open slice to zero; in `interp` mode replace it by the line joining the nearest edge values. Overlapping bands are applied sequentially.
+
+### Appropriate uses
+
+Testing whether a model survives missing or corrupted contiguous wavelength regions.
+
+### Limits and validation
+
+Zero is not a neutral absorbance for every representation, while interpolation can create unrealistically straight segments. Edge clipping and band overlap mean realized masked width may be below the requested sum.
 
 ### Implementation
 
-C ABI `n4m_augmentation_band_mask_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.BandMasking`. The same numerical kernel backs every language binding.
+Python role API `n4m.augmentation.spectral.BandMasking`; ABI 2 family `n4m_augmentation_band_mask_{create,apply,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_augmentation_band_mask_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import BandMasking
-op = BandMasking()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/augmentation/spectral/band_mask.h
+
 
 ---
 

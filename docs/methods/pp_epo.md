@@ -1,68 +1,60 @@
-# `pp_epo` — E P O
+# `pp_epo` — External parameter orthogonalization (EPO)
 
-_Group_: **Feature extraction** · _Binding_: `n4m.sklearn.EPO` · _C ABI_: `n4m_domain_adaptation_epo_*`
+_Group_: **Feature extraction** · _C ABI_: `n4m_domain_adaptation_epo_*`
 
 ## Description
 
 External Parameter Orthogonalisation.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
 | `scale` | `bool` | `True` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_domain_adaptation_epo_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L13) · [`n4m_domain_adaptation_epo_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L14) · [`n4m_domain_adaptation_epo_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L15) · [`n4m_domain_adaptation_epo_inverse_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L26) · [`n4m_domain_adaptation_epo_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L29) · [`n4m_domain_adaptation_epo_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L18) · [`n4m_domain_adaptation_epo_transform_with_d`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L21). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.domain_adaptation.orthogonalization import epo
+```
+
+Source signature: [`epo(X, d, scale: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L9555).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Roger, Chauchard & Bellon-Maurel (2003), *EPO-PLS external parameter orthogonalisation of PLS application to temperature-independent measurement of sugar content of intact fruits*, Chemometrics and Intelligent Laboratory Systems 66, 191–204, https://doi.org/10.1016/S0169-7439(03)00051-0.
 
 ### Mathematical principle
 
-External Parameter Orthogonalisation.
+From nuisance-variation spectra, EPO estimates leading singular vectors $P$ of the external-parameter subspace and projects data with $I-PP^T$. Optional scaling is learned before the projection and reused at transform time.
+
+### Appropriate uses
+
+Removing measured instrument, temperature, moisture, or batch variation before a calibration is fitted.
+
+### Limits and validation
+
+The nuisance experiment must span unwanted variation without confounding analyte signal. Removing too many components deletes predictive information; EPO is stateful and must be fit within validation folds.
 
 ### Implementation
 
-C ABI `n4m_domain_adaptation_epo_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.EPO`. The same numerical kernel backs every language binding.
+`n4m.domain_adaptation.orthogonalization.EPO` wraps `n4m_domain_adaptation_epo_*`; SVD and projection are in `preprocessing/orthogonalization/epo.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_domain_adaptation_epo_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import EPO
-op = EPO()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1016/S0169-7439(03)00051-0; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/orthogonalization/epo.c
 
 
 ---

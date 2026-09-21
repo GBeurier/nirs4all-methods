@@ -1,80 +1,66 @@
-# `aom_ridge_global` - strict-linear AOM Ridge global selector
+# `ridge_global` — n4m.model_selection.aom_search.ridge_global
 
-_Group_: **Diagnostic / AOM** · _Backend_: native `aom_chain_sweep_run`
+_Namespace_: **`n4m.model_selection.aom_search`** · _Fully-qualified_: `n4m.model_selection.aom_search.ridge_global` · _Catalog id_: `aom_pop.ridge_global`
 
-`aom_ridge_global` selects one strict-linear AOM operator and one Ridge alpha by
-native cross-validation, then returns the final reusable model folded back into
-the original input feature space. It is the moment-compatible donor
-AOM-Ridge global route. It does not include branch-global reference-dependent
-preprocessing, MKL/kernel routing, nonlinear lifts, or dataset/source-name
-routing.
+## API surface
 
-## Status
+**C ABI:** no standalone exported symbol is declared for this method.
 
-- API surface: Python function `n4m.aom_ridge_global` and sklearn wrapper
-  `NativeAOMRidgeGlobalRegressor`.
-- Native ABI: no new ABI; it delegates to native `n4m.aom_chain_sweep_run`.
-- Catalog status: `aom_pop.ridge_global`.
-- CPU: tested.
-- CUDA: works against CUDA-enabled `libn4m` builds; this is not a fused GPU
-  grinder.
-- Candidate scope: caller-provided strict single operators or the default
-  strict AOM selector bank.
+**Python (verified public re-export):** `from n4m.model_selection.aom_search import aom_ridge_global`
 
-## Python Function
+**Signature:** [`aom_ridge_global(X, y, *, operators = None, cv: int = 5, fold_ids = None, ridge_lambdas = (0.0001, 0.01, 1.0, 100.0), center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None, moment_policy: str | int = 'auto')`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6721)
 
-```python
-n4m.aom_ridge_global(
-    X,
-    y,
-    operators=None,
-    cv=5,
-    fold_ids=None,
-    ridge_lambdas=(1e-4, 1e-2, 1.0, 100.0),
-    scale_x=False,
-    moment_policy="auto",
-)
-```
+**R:** no current source-verified entry point was found for this catalog method.
 
-`operators` are converted to one-op strict AOM chains. Selection uses the
-native Ridge-only AOM chain sweep and `selected_cv_rmse`.
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
-## Outputs
+### Parameters
 
-The method returns the native AOM sweep result plus:
+| Name | Type | Default |
+|---|---|---|
+| `X` | `—` | `required` |
+| `y` | `—` | `required` |
+| `operators` | `—` | `None` |
+| `cv` | `int` | `5` |
+| `fold_ids` | `—` | `None` |
+| `ridge_lambdas` | `—` | `(0.0001, 0.01, 1.0, 100.0)` |
+| `center_x` | `bool \| None` | `None` |
+| `scale_x` | `bool \| None` | `None` |
+| `center_y` | `bool \| None` | `None` |
+| `scale_y` | `bool \| None` | `None` |
+| `moment_policy` | `str \| int` | `'auto'` |
 
-- `operators`: the canonical one-op chain bank
-- `selected_operator`, `selected_operator_index`, `selected_operator_kind`
-- `selection_mode="global"`
-- `ridge_backend="native_aom_chain_sweep"`
+## Explanations
 
-The final model can be replayed as:
+### Bibliographic source
 
-```python
-pred = X_new @ res["input_coefficients"] + res["intercept"]
-```
+No canonical paper defines this strict-linear Ridge route. Beurier, G. et al. (2026). *AOM-PLS / POP-PLS* paper companion, arXiv:2605.13587, https://arxiv.org/abs/2605.13587. The product variants below are implementation-specific extensions; the paper does not by itself specify their ABI-2 orchestration.
 
-## Python Estimator
+### Mathematical principle
 
-```python
-from n4m.sklearn import NativeAOMRidgeGlobalRegressor
+Treat each declared strict AOM operator as a one-step chain, choose the operator and positive Ridge penalty by CV RMSE, then export the selected linear predictor in original input coordinates.
 
-model = NativeAOMRidgeGlobalRegressor(
-    operators=["identity", ("finite_difference", [1])],
-    ridge_lambdas=[0.01, 0.1, 1.0],
-    cv=5,
-).fit(X_train, y_train)
+### Appropriate uses
 
-y_hat = model.predict(X_test)
-```
+A concise, auditable global preprocessing choice for Ridge calibration models.
 
-## Benchmarks
+### Limits and validation
 
-```bash
-CUDA_VISIBLE_DEVICES=0 \
-PYTHONPATH=bindings/python/src \
-N4M_LIB_PATH=build/cuda-on/cpp/src/libn4m.so \
-python3 benchmarks/cross_binding/bench_aom_ridge_global_timing.py \
-  --output benchmarks/cross_binding/aom_ridge_global_timing_cuda_smoke.csv \
-  --repeats 1 --cv 4 --mode both
-```
+It cannot model interactions among sequential operators. A low CV score after selection is optimistic unless evaluated in an outer split; only strict linear transformations can be folded back.
+
+### Implementation
+
+`n4m.model_selection.aom_search.aom_ridge_global` and `AOMRidgeGlobalRegressor`; no standalone C ABI symbol.
+
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_search.py
+
+## Catalog note
+
+Python-backed donor-style AOM Ridge global selector constrained to strict-linear single-operator AOM views. It delegates scoring and final fit to the native aom_chain_sweep_run Ridge-only path, selects one operator plus one positive Ridge alpha by train CV, and returns folded input_coefficients plus intercept for replay through NativeAOMRidgeGlobalRegressor. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU grinder.
+
+_Timing benchmark_: `benchmarks/cross_binding/bench_aom_ridge_global_timing.py`
+
+
+_See also_: [methods index](index.md).

@@ -115,7 +115,12 @@ def save_snapshot(blocks: dict[str, str],
 
 
 def load_snapshot(path: Path = SNAPSHOT_PATH) -> dict[str, str]:
-    """Load a previously-written snapshot. Empty dict on miss."""
+    """Load a previously-written snapshot. Empty dict on miss.
+
+    Existing snapshots deliberately preserve raw historical measurements.  The
+    renderer normalizes their explanatory caption so legacy ``pls4all`` IDs
+    are never presented as current binding surfaces.
+    """
     if not path.exists():
         return {}
     try:
@@ -123,7 +128,12 @@ def load_snapshot(path: Path = SNAPSHOT_PATH) -> dict[str, str]:
     except (OSError, json.JSONDecodeError):
         return {}
     blocks = data.get("blocks", {})
-    return {k: v for k, v in blocks.items() if isinstance(v, str)}
+    bm = _import_build_methods()
+    return {
+        k: bm.normalize_benchmark_snapshot(v)
+        for k, v in blocks.items()
+        if isinstance(v, str)
+    }
 
 
 def load_or_build_blocks() -> tuple[dict[str, str], str]:

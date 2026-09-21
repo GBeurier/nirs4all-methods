@@ -1,12 +1,12 @@
-# `pp_rnv` — Robust Normal Variate (RNV)
+# `pp_rnv` — Robust normal variate (RNV)
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.RNV` · _C ABI_: `n4m_transform_robust_snv_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_robust_snv_*`
 
 ## Description
 
 Robust SNV using median + k * MAD.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,57 +14,49 @@ Robust SNV using median + k * MAD.
 | `with_scale` | `bool` | `True` |
 | `k` | `float` | `1.4826` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_robust_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L38) · [`n4m_transform_robust_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L41) · [`n4m_transform_robust_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L42). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.scatter import RNV
+```
+
+Source signature: [`RNV(with_center: bool = True, with_scale: bool = True, k: float = 1.4826)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L73).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-Guo, Q., Wu, W. & Massart, D. L. (1999). *The robust normal variate transform for pattern recognition with near-infrared data*. Analytica Chimica Acta 382(1–2), 87–103.
+Guo, Wu & Massart (1999), *The robust normal variate transform for pattern recognition with near-infrared data*, Analytica Chimica Acta 382, 87–103, https://doi.org/10.1016/S0003-2670(98)00737-5.
 
 ### Mathematical principle
 
-A median/IQR analogue of SNV: each spectrum is corrected as $(\mathbf{x}_i - \mathrm{median}(\mathbf{x}_i)) / \mathrm{IQR}(\mathbf{x}_i)$. Replacing the mean and standard deviation with robust location/scale estimators makes the normalisation insensitive to a small number of strong absorption bands or outlying channels.
+For each row, RNV subtracts its median and divides by `k` times its median absolute deviation, according to the enabled centering/scaling flags. The default $k=1.4826$ makes MAD consistent for Gaussian scale.
+
+### Appropriate uses
+
+Scatter normalization when isolated spikes or intense bands would destabilize the mean and standard deviation used by SNV.
+
+### Limits and validation
+
+MAD is zero for sufficiently flat or tied spectra, requiring guarded behaviour, and robust row scaling can still erase meaningful absolute intensity. It does not model wavelength-local scatter.
 
 ### Implementation
 
-C ABI `n4m_transform_robust_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.RNV`. The same numerical kernel backs every language binding.
+`n4m.transform.scatter.RNV` uses `n4m_transform_robust_snv_*`; median/MAD selection and flags are implemented in `preprocessing/scatter/robust_snv.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_robust_snv_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import RNV
-op = RNV()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://doi.org/10.1016/S0003-2670(98)00737-5; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scatter/robust_snv.c
 
 
 ---

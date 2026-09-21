@@ -1,12 +1,12 @@
-# `split_kmeans` — K Means Splitter
+# `split_kmeans` — K-means++ representative-sample split
 
-_Group_: **Splitters** · _Binding_: `n4m.sklearn.KMeansSplitter` · _C ABI_: `n4m_model_selection_kmeans_*`
+_Group_: **Splitters** · _C ABI_: `n4m_model_selection_kmeans_*`
 
 ## Description
 
 K-means++ diversity splitter.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,57 +14,49 @@ K-means++ diversity splitter.
 | `seed` | `int` | `0` |
 | `max_iter` | `int` | `100` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_model_selection_kmeans_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L84) · [`n4m_model_selection_kmeans_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L87) · [`n4m_model_selection_kmeans_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L88). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.model_selection.splitters import KMeans
+```
+
+Source signature: [`KMeans(test_size: float = 0.25, seed: int = 0, max_iter: int = 100)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/splitters.py#L268).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+Arthur & Vassilvitskii (2007), *k-means++: The Advantages of Careful Seeding*, SODA, 1027–1035 (https://dl.acm.org/doi/10.5555/1283383.1283494). The surrounding representative split is implementation-specific.
 
 ### Mathematical principle
 
-K-means++ diversity splitter.
+Set k to the requested training count, initialize k centroids with seeded k-means++, and run Lloyd iterations up to `max_iter`. Select the nearest observed sample to each centroid, deduplicate those indices, and use the sorted complement as test.
+
+### Appropriate uses
+
+Selecting observed spectra near cluster centers as a representative training subset.
+
+### Limits and validation
+
+Deduplication can yield fewer training samples than requested when centroids choose the same row. Results depend on scaling and seed; the native PCG64 implementation is not scikit-learn KMeans.
 
 ### Implementation
 
-C ABI `n4m_model_selection_kmeans_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.KMeansSplitter`. The same numerical kernel backs every language binding.
+Python role API `n4m.model_selection.splitters.KMeans`; binding class `KMeansSplitter`; ABI 2 family `n4m_model_selection_kmeans_{create,split,destroy}`.
 
-### Usage
+The ABI-2 implementation is the `n4m_model_selection_kmeans_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import KMeansSplitter
-op = KMeansSplitter()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>nirs4all</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/splitters/kmeans.h; https://dl.acm.org/doi/10.5555/1283383.1283494
 
 
 ---

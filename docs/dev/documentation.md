@@ -4,6 +4,7 @@ The public developer documentation describes the supported library:
 
 - [Architecture](../ARCHITECTURE.md) and [architecture overview](../architecture/overview.md).
 - [Build](build.md), [testing](testing.md), and [release process](release_process.md).
+- [Method documentation restoration and maintenance](documentation-restoration.md).
 - [ABI policy](../abi/stability_policy.md) and [serialization](../architecture/serialization.md).
 - [Contribution workflow](workflow.md) and the repository's `CONTRIBUTING.md`.
 

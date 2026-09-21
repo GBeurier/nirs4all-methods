@@ -1,12 +1,12 @@
-# `pp_weighted_snv` — Weighted S N V
+# `pp_weighted_snv` — Weighted standard normal variate
 
-_Group_: **Signal transforms** · _Binding_: `n4m.sklearn.WeightedSNV` · _C ABI_: `n4m_transform_weighted_snv_*`
+_Group_: **Signal transforms** · _C ABI_: `n4m_transform_weighted_snv_*`
 
 ## Description
 
 Weighted standard normal variate normalization.
 
-### Parameters
+## Parameters
 
 | Name | Type | Default |
 |------|------|---------|
@@ -14,27 +14,50 @@ Weighted standard normal variate normalization.
 | `ddof` | `int` | `0` |
 | `eps` | `float` | `1e-12` |
 
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_weighted_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L144) · [`n4m_transform_weighted_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L147) · [`n4m_transform_weighted_snv_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L148) · [`n4m_transform_weighted_snv_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L153) · [`n4m_transform_weighted_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L150). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.scatter import WeightedSNV
+```
+
+Source signature: [`WeightedSNV(weights = None, ddof: int = 0, eps: float = 1e-12)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/advanced.py#L215).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No single canonical paper defines this exact weighted estimator. It generalizes the SNV transform of Barnes, Dhanoa & Lister (1989), https://doi.org/10.1366/0003702894202201.
 
 ### Mathematical principle
 
-Weighted standard normal variate normalization.
+Fit validates and normalizes supplied nonnegative wavelength weights, or uses uniform weights. For every row it computes weighted mean and variance, applies the configured `ddof` correction, floors variance by `eps`, and standardizes all wavelengths with that weighted location and scale.
+
+### Appropriate uses
+
+Reducing scatter while making trusted or diagnostically useful wavelength regions dominate the normalization statistics.
+
+### Limits and validation
+
+Weights require scientific justification and can bias the whole row statistic toward a small band. Negative/zero-total weights are invalid, and normalization can remove absolute amplitude information.
 
 ### Implementation
 
-C ABI `n4m_transform_weighted_snv_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.WeightedSNV`. The same numerical kernel backs every language binding.
+`n4m.transform.scatter.WeightedSNV` uses `n4m_transform_weighted_snv_*`; normalized weights and weighted moments are in `cpp/src/c_api/c_api_advanced.cpp`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_weighted_snv_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import WeightedSNV
-op = WeightedSNV()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
+
+https://doi.org/10.1366/0003702894202201; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L526-L635
+
 
 ---
 

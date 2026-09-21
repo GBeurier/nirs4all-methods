@@ -1,66 +1,58 @@
-# `pp_pct_to_frac` — Percent To Fraction
+# `pp_pct_to_frac` — Percent-to-fraction signal conversion
 
-_Group_: **Preprocessing** · _Binding_: `n4m.sklearn.PercentToFraction` · _C ABI_: `n4m_transform_percent_to_fraction_*`
+_Group_: **Preprocessing** · _C ABI_: `n4m_transform_percent_to_fraction_*`
 
 ## Description
 
 Convert percent reflectance/transmittance to fraction.
 
-### Parameters
+## Parameters
 
 _No constructor parameters._
+
+## API and bindings
+
+**C ABI (ABI 2):** [`n4m_transform_percent_to_fraction_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/signal_conversion.h#L34) · [`n4m_transform_percent_to_fraction_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/signal_conversion.h#L36) · [`n4m_transform_percent_to_fraction_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/signal_conversion.h#L38). Use the linked public header for the exact signature, configuration, and result handles.
+
+**Python (verified public re-export):**
+
+```python
+from n4m.transform.signal_conversion import PercentToFraction
+```
+
+Source signature: [`PercentToFraction()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L485).
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 
 ## Explanations
 
 ### Bibliographic source
 
-_Standard spectroscopic operator — see the nirs4all preprocessing / augmentation handbook and the cited literature within the binding docstring._
+No canonical paper: this is exactly the unit conversion $x=x_{\%}/100$.
 
 ### Mathematical principle
 
-Convert percent reflectance/transmittance to fraction.
+Every element is divided by 100 without estimating statistics or changing spectral shape.
+
+### Appropriate uses
+
+Converting percent reflectance or transmittance to the fractional scale required by absorbance and Kubelka–Munk transforms.
+
+### Limits and validation
+
+The operator does not detect current units; applying it to fractional or absorbance data silently creates an invalid scale.
 
 ### Implementation
 
-C ABI `n4m_transform_percent_to_fraction_*` in libn4m (create / apply / destroy lifecycle), wrapped by `n4m.sklearn.PercentToFraction`. The same numerical kernel backs every language binding.
+`n4m.transform.signal_conversion.PercentToFraction` calls `n4m_transform_percent_to_fraction_*`; the kernel is `signal_conversion/percent_to_fraction.c`.
 
-### Usage
+The ABI-2 implementation is the `n4m_transform_percent_to_fraction_*` lifecycle in libn4m.
 
-```python
-from n4m.sklearn import PercentToFraction
-op = PercentToFraction()
-X_transformed = op.fit_transform(X)
-```
+### Sources and provenance
 
-### Benchmarks
-
-Adaptive wall-clock per cell measured against [`full_matrix.csv`](../benchmarks/overview.md). Only backends that implement this method are listed; libraries without the method are omitted.
-
-**Verdict** &nbsp;·&nbsp; ✓ ref / ≈ ref / ~ shape mark a reference-gate pass at strict / relaxed / qualitative tolerance &nbsp;·&nbsp; ✓ bind = pls4all binding agrees with the C++ baseline &nbsp;·&nbsp; ✗ divergent &nbsp;·&nbsp; ⚠ error &nbsp;·&nbsp; — not run. The fastest backend per column is marked 🏆.
-
-**Reference gate**: strict — numeric equivalence (`rmse_rel_tol ≤ 1e-12`).
-
-::::{tab-set}
-:class: parity-tabs
-
-:::{tab-item} 1 thread
-:sync: threads-1
-
-<div class="parity-table-wrap">
-<table class="docutils parity-grouped">
-<thead><tr><th scope="col">Backend</th><th scope="col">Parity</th><th class="size-col" scope="col">50×250 (ms)</th><th class="size-col" scope="col">250×50 (ms)</th></tr></thead>
-<tbody class="lang-band lang-cpp"><tr class="lang-band-row" data-lang="cpp"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>C++ native · libn4m</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>pls4all.cpp.blas+omp</code></td><td class="parity parity-ref-strict">✓ ref</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-<tbody class="lang-band lang-python"><tr class="lang-band-row" data-lang="python"><th colspan="4" scope="rowgroup"><span class="lang-band-dot"></span>Python · external</th></tr>
-<tr class="bk-row"><td class="bk-name"><code>ref.python_numpy</code></td><td class="parity parity-ref-source">source</td><td class="ms">—</td><td class="ms">—</td></tr>
-</tbody>
-</table>
-</div>
-
-:::
-
-::::
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/percent_to_fraction.c
 
 
 ---
