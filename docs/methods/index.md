@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages.
 
-_Total catalogued native methods_: **209**. Additional Python reference
+_Total catalogued native methods_: **212**. Additional Python reference
 surfaces are documented where relevant.
 
 ```{toctree}
@@ -195,6 +195,7 @@ surfaces are documented where relevant.
 | [`aom_chain_fixed_fit`](aom_chain_sweep_run.md) | `n4m.model_selection.aom_search.aom_chain_fixed_fit` | `n4m.model_selection.aom_search` | C, Py |
 | [`aom_chain_ridge_pls`](aom_chain_ridge_pls.md) | `n4m.model_selection.aom_search.aom_chain_ridge_pls` | `n4m.model_selection.aom_search` | C, Py |
 | [`aom_chain_sweep`](aom_chain_sweep_run.md) | `n4m.model_selection.aom_search.aom_chain_sweep` | `n4m.model_selection.aom_search` | C, Py |
+| [`calibration`](aom_calibration.md) | `n4m.model_selection.aom_calibration.calibration` | `n4m.model_selection.aom_calibration` | C, Py |
 | [`aom_pls`](aom_pls.md) | `n4m.model_selection.aom_search.aom_pls` | `n4m.model_selection.aom_search` | C, Py |
 | [`aom_preprocessing`](aom_preprocess.md) | `n4m.model_selection.aom_search.aom_preprocessing` | `n4m.model_selection.aom_search` | C, Py |
 | [`aom_sweep`](aom_sweep_run.md) | `n4m.model_selection.aom_search.aom_sweep` | `n4m.model_selection.aom_search` | C, Py |
@@ -246,6 +247,8 @@ surfaces are documented where relevant.
 | [`aom_ridge_blender`](aom_ridge_blender.md) | `n4m.ensemble.aom_ridge_blender` | `n4m.ensemble` | C, Py |
 | [`bagging_pls`](bagging_pls.md) | `n4m.ensemble.bagging_pls` | `n4m.ensemble` | C |
 | [`boosting_pls`](boosting_pls.md) | `n4m.ensemble.boosting_pls` | `n4m.ensemble` | C |
+| [`linear_ridge_stack`](aom_calibration.md) | `n4m.ensemble.linear_ridge_stack` | `n4m.ensemble` | Py |
+| [`linear_stack_compress`](aom_calibration.md) | `n4m.ensemble.linear_stack_compress` | `n4m.ensemble` | C, Py |
 | [`moment_stack`](moment_stack.md) | `n4m.ensemble.moment_stack` | `n4m.ensemble` | C, Py |
 | [`random_subspace_pls`](random_subspace_pls.md) | `n4m.ensemble.random_subspace_pls` | `n4m.ensemble` | C |
 

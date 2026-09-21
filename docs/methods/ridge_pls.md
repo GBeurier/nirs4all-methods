@@ -27,15 +27,24 @@ Hoerl, A. E. & Kennard, R. W. (1970). *Ridge regression: biased estimation for n
 
 ### Mathematical principle
 
-When the number of components $k$ approaches the rank of $\mathbf{X}$, the inner regression of $\mathbf{Y}$ on the PLS scores becomes ill-conditioned. Ridge-augmented PLS adds an L2 penalty to that inner regression: $\hat{\mathbf{Q}} = (\mathbf{T}^{\top}\mathbf{T} + \lambda \mathbf{I})^{-1}\mathbf{T}^{\top}\mathbf{Y}$, yielding a shrinkage-stabilised coefficient matrix.
+The native method first centers X and Y, forms the augmented design
+`X_aug = [X_centered; sqrt(lambda) I]`, `Y_aug = [Y_centered; 0]`, then fits PLS.
+The NIPALS route centers the augmented design again to match the registered
+sklearn reference; the historical SIMPLS route works directly on the augmented
+arrays. Prediction uses the original calibration means. The solver and this
+centering convention are part of the numerical contract.
 
-Setting $\lambda$ from cross-validation on a logarithmic grid is the standard procedure. The combined method is more forgiving than pure PLS to a slightly over-specified $k$: pure PLS over-fits hard at $k > k_{\mathrm{opt}}$ while ridge-augmented degrades smoothly. Conceptually it is a continuous interpolation between PLS ($\lambda=0$) and a heavily-regularised low-rank ridge regression in latent space.
-
-When $\lambda$ is set per component via the SVD spectrum of $\mathbf{T}$, ridge PLS is closely related to Krylov-subspace PCR with shrinkage.
+This is different from first fitting ordinary PLS on X and then fitting Ridge
+on its scores, `(T.T @ T + lambda I)^(-1) @ T.T @ Y`. The latter is used by
+research AOM Ridge-on-scores models; its latent space does not generally match
+PLS fitted to the augmented design. These formulations must not be aliased or
+compared for numerical parity as if they were one implementation.
 
 ### Implementation
 
-`n4m_estimators_ridge_pls_fit` (in-sample only). No widely installable reference for this exact formulation; the test compares against an sklearn `PLSRegression` + manual Tikhonov inner regression.
+`n4m_estimators_ridge_pls_fit` calls `fit_ridge_pls` in
+`cpp/src/core/extra_pls.cpp`. The NIPALS reference is sklearn PLSRegression on
+the augmented design, with matching scaling, component count and centering.
 
 R roxygen note (`sklearn_extra.R::ridge_pls`):
 

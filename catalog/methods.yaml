@@ -1,5 +1,5 @@
 schema_version: 1
-method_count: 209
+method_count: 212
 methods:
   - method_id: "aom_pop.aom_preprocessing"
     family: "aom_pop.aom"
@@ -511,7 +511,7 @@ methods:
         class: "aom_chain_ridge_pls"
         legacy_aliases: []
     publications: []
-    notes: "Python-backed strict/raw-base subset of donor FastAOM SingleChainPLSRidge. It applies strict-linear AOM chains sequentially, selects one chain plus PLS component count and Ridge-PLS lambda by train CV, fits through the native ridge_pls binding, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not a fused many-chain GPU Ridge-PLS grinder."
+    notes: "Native L2-augmented-design Ridge-PLS on strict/raw-base chains, distinct from donor Ridge-on-PLS-scores SingleChainPLSRidge; not a parity port. It applies strict-linear AOM chains sequentially, selects one chain plus PLS component count and Ridge-PLS lambda by train CV, fits through the native ridge_pls binding, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not a fused many-chain GPU Ridge-PLS grinder."
     namespace: "model_selection.aom_search"
     leaf: "aom_chain_ridge_pls"
     fq_name: "n4m.model_selection.aom_search.aom_chain_ridge_pls"
@@ -8551,3 +8551,123 @@ methods:
       - "n4m_model_selection_sweep_run"
     legacy_ids:
       - "utilities.sweep"
+  - method_id: aom_pop.calibration
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 2.6.0
+    abi_symbols:
+      - n4m_model_selection_aom_calibration_fit
+      - n4m_model_selection_aom_calibration_predict
+    tu:
+      - cpp/src/core/aom_calibration.cpp
+      - cpp/src/c_api/c_api_aom_calibration.cpp
+    headers:
+      - cpp/include/n4m/model_selection.h
+    carry_along_tu:
+      - cpp/src/core/ridge.cpp
+      - cpp/src/core/aom_operators.cpp
+      - cpp/src/core/model.cpp
+      - cpp/src/core/component_coefficients.cpp
+      - cpp/src/core/common/svd.c
+      - cpp/src/core/common/linalg.c
+      - cpp/src/core/common/context.cpp
+      - cpp/src/core/common/status.cpp
+      - cpp/src/core/common/matrix_view.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/calibration-contract
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: aom_pop.calibration
+      registry_entry: benchmarks/cross_binding/bench_aom_calibration_contract.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.model_selection.aom_calibration
+        class: AOMPLSRegressor
+        legacy_aliases: []
+    publications: []
+    notes: Versioned strict10 native global/Fast PLS and Ridge branch-CV protocols. Also exposes AOMRidgeRegressor, FastAOMPLSRegressor and experimental FastAOMRidgeRegressor. See docs/methods/aom_calibration.md.
+    namespace: model_selection.aom_calibration
+    leaf: calibration
+    fq_name: n4m.model_selection.aom_calibration.calibration
+    c_surface:
+      - n4m_model_selection_aom_calibration_fit
+      - n4m_model_selection_aom_calibration_predict
+    legacy_ids:
+      - aom_pop.calibration
+  - method_id: aom_pop.linear_stack_compress
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 2.6.0
+    abi_symbols:
+      - n4m_ensemble_linear_stack_compress
+    tu:
+      - cpp/src/core/linear_stack.cpp
+      - cpp/src/c_api/c_api_linear_stack.cpp
+    headers:
+      - cpp/include/n4m/ensemble.h
+    carry_along_tu:
+      - cpp/src/core/common/matrix_view.cpp
+    parity:
+      fixtures: []
+      tolerance_row: n4m/linear_stack_compress-contract
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: aom_pop.linear_stack_compress
+      registry_entry: benchmarks/cross_binding/bench_aom_calibration_contract.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.ensemble
+        class: compress_linear_stack
+        legacy_aliases: []
+    publications: []
+    notes: Native affine coefficient/intercept composition, including multiple outputs. No fitting or prediction changes; fully affine inputs required.
+    namespace: ensemble
+    leaf: linear_stack_compress
+    fq_name: n4m.ensemble.linear_stack_compress
+    c_surface:
+      - n4m_ensemble_linear_stack_compress
+    legacy_ids:
+      - aom_pop.linear_stack_compress
+  - method_id: aom_pop.linear_ridge_stack
+    family: aom_pop.aom
+    category: aom_pop
+    subcategory: aom
+    since_abi: 2.6.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/aom_sweep.cpp
+    headers:
+      - cpp/include/n4m/ensemble.h
+    carry_along_tu: []
+    parity:
+      fixtures: []
+      tolerance_row: n4m/linear_ridge_stack-contract
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: aom_pop.linear_ridge_stack
+      registry_entry: benchmarks/cross_binding/bench_aom_calibration_contract.py
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.ensemble
+        class: LinearRidgeStackRegressor
+        legacy_aliases: []
+    publications: []
+    notes: 'Python orchestration over native Ridge sweep and compression: nested-CV base tuning, OOF Ridge meta-head, deployment-only affine export. Distinct from the simplex blender.'
+    namespace: ensemble
+    leaf: linear_ridge_stack
+    fq_name: n4m.ensemble.linear_ridge_stack
+    c_surface: none
+    legacy_ids:
+      - aom_pop.linear_ridge_stack
