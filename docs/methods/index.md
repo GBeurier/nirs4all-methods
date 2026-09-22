@@ -192,7 +192,7 @@ Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-b
 
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
-| [`calibration`](aom_pop_calibration.md) | `n4m.model_selection.aom_calibration.calibration` | `n4m.model_selection.aom_calibration` | C, Py |
+| [`calibration`](aom_calibration.md) | `n4m.model_selection.aom_calibration.calibration` | `n4m.model_selection.aom_calibration` | C, Py |
 | [`aom_chain_screen_refit`](aom_pop_aom_chain_screen_refit.md) | `n4m.model_selection.aom_campaign.aom_chain_screen_refit` | `n4m.model_selection.aom_campaign` | Py |
 | [`aom_staged_chain_campaign`](aom_staged_chain_campaign.md) | `n4m.model_selection.aom_campaign.aom_staged_chain_campaign` | `n4m.model_selection.aom_campaign` | Py |
 | [`aom_chain_fixed_fit`](aom_pop_aom_chain_fixed_fit.md) | `n4m.model_selection.aom_search.aom_chain_fixed_fit` | `n4m.model_selection.aom_search` | C, Py |
@@ -285,7 +285,7 @@ Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-b
 
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
-| [`moments`](utilities_moments.md) | `n4m.lowlevel.moments.moments` | `n4m.lowlevel.moments` | C, Py |
+| [`moments`](moments.md) | `n4m.lowlevel.moments.moments` | `n4m.lowlevel.moments` | C, Py |
 
 ---
 
