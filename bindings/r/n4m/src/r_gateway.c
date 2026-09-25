@@ -324,6 +324,74 @@ SEXP r_n4m_predict(SEXP model_ptr, SEXP X) {
     return out;
 }
 
+/* N4MM is the portable fitted-model format shared by all libn4m bindings.
+ * R's external pointers cannot be persisted with saveRDS(), so expose the
+ * bytes explicitly and leave file I/O to the R host. */
+SEXP r_n4m_model_export(SEXP model_ptr) {
+    if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
+    const n4m_model_t* model = (const n4m_model_t*)R_ExternalPtrAddr(model_ptr);
+    if (model == NULL) Rf_error("model handle is NULL (already freed?)");
+    size_t size = 0;
+    n4m_status_t status = n4m_model_export_size(model, &size);
+    if (status != N4M_OK) r_throw_status("n4m_model_export_size", status, NULL);
+    if (size == 0 || size > (size_t)R_XLEN_T_MAX) Rf_error("N4MM model size is invalid for R");
+    SEXP bytes = PROTECT(Rf_allocVector(RAWSXP, (R_xlen_t)size));
+    size_t written = 0;
+    status = n4m_model_export_to_buffer(model, RAW(bytes), size, &written);
+    if (status != N4M_OK || written != size) {
+        UNPROTECT(1);
+        if (status != N4M_OK) r_throw_status("n4m_model_export_to_buffer", status, NULL);
+        Rf_error("n4m_model_export_to_buffer wrote an unexpected byte count");
+    }
+    UNPROTECT(1);
+    return bytes;
+}
+
+SEXP r_n4m_model_import(SEXP bytes) {
+    if (TYPEOF(bytes) != RAWSXP || XLENGTH(bytes) == 0)
+        Rf_error("bytes must be a non-empty raw N4MM vector");
+    n4m_context_t* ctx = NULL;
+    n4m_status_t status = n4m_context_create(&ctx);
+    if (status != N4M_OK) r_throw_status("n4m_context_create", status, NULL);
+    n4m_model_t* model = NULL;
+    status = n4m_model_import_from_buffer(ctx, RAW(bytes), (size_t)XLENGTH(bytes), &model);
+    if (status != N4M_OK) r_throw_status("n4m_model_import_from_buffer", status, ctx);
+    n4m_context_destroy(ctx);
+    SEXP ptr = PROTECT(R_MakeExternalPtr(model, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(ptr, r_model_finalize, TRUE);
+    int32_t nf = 0, nt = 0;
+    n4m_model_get_n_features(model, &nf);
+    n4m_model_get_n_targets(model, &nt);
+    SEXP n_features_attr = PROTECT(Rf_ScalarInteger((int)nf));
+    SEXP n_targets_attr = PROTECT(Rf_ScalarInteger((int)nt));
+    Rf_setAttrib(ptr, Rf_install("n_features"), n_features_attr);
+    Rf_setAttrib(ptr, Rf_install("n_targets"), n_targets_attr);
+    UNPROTECT(3);
+    return ptr;
+}
+
+SEXP r_n4m_model_inspect(SEXP bytes) {
+    if (TYPEOF(bytes) != RAWSXP || XLENGTH(bytes) == 0)
+        Rf_error("bytes must be a non-empty raw N4MM vector");
+    uint32_t format = 0, major = 0, minor = 0, patch = 0;
+    n4m_status_t status = n4m_serialization_inspect(
+        RAW(bytes), (size_t)XLENGTH(bytes), &format, &major, &minor, &patch);
+    if (status != N4M_OK) r_throw_status("n4m_serialization_inspect", status, NULL);
+    SEXP result = PROTECT(Rf_allocVector(VECSXP, 2));
+    SEXP abi = PROTECT(Rf_allocVector(REALSXP, 3));
+    REAL(abi)[0] = (double)major;
+    REAL(abi)[1] = (double)minor;
+    REAL(abi)[2] = (double)patch;
+    SET_VECTOR_ELT(result, 0, Rf_ScalarReal((double)format));
+    SET_VECTOR_ELT(result, 1, abi);
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, 2));
+    SET_STRING_ELT(names, 0, Rf_mkChar("format_version"));
+    SET_STRING_ELT(names, 1, Rf_mkChar("writer_abi"));
+    Rf_setAttrib(result, R_NamesSymbol, names);
+    UNPROTECT(3);
+    return result;
+}
+
 /* ---- tagged model-array accessor ------------------------------------- */
 
 /* Return a fitted-model array (e.g. coefficients) as a column-major R
