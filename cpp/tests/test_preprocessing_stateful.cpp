@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -138,7 +139,7 @@ void test_msc_reference_roundtrip() {
     N4M_TEST_REQUIRE(n4m_transform_msc_transform(imported, make_rowmajor_view(test, 2, 4),
                                                    make_rowmajor_view(restored, 2, 4)) == N4M_OK);
     for (int i = 0; i < 8; ++i) N4M_TEST_REQUIRE(original[i] == restored[i]);
-    double invalid[4] = {1.0, 2.0, INFINITY, 4.0};
+    double invalid[4] = {1.0, 2.0, std::numeric_limits<double>::infinity(), 4.0};
     N4M_TEST_REQUIRE(n4m_transform_msc_set_reference(imported, invalid, 4) == N4M_ERR_INVALID_ARGUMENT);
     N4M_TEST_REQUIRE(n4m_transform_msc_reference_size(imported, &cols) == N4M_OK);
     N4M_TEST_REQUIRE(cols == 4);
@@ -195,7 +196,7 @@ void test_emsc_reference_roundtrip() {
                          imported, make_rowmajor_view(test, 2, 5),
                          make_rowmajor_view(restored, 2, 5)) == N4M_OK);
     for (int i = 0; i < 10; ++i) N4M_TEST_REQUIRE(original[i] == restored[i]);
-    double invalid[5] = {1.0, 2.0, INFINITY, 4.0, 5.0};
+    double invalid[5] = {1.0, 2.0, std::numeric_limits<double>::infinity(), 4.0, 5.0};
     N4M_TEST_REQUIRE(n4m_transform_emsc_set_reference(imported, invalid, 5) ==
                      N4M_ERR_INVALID_ARGUMENT);
     N4M_TEST_REQUIRE(n4m_transform_emsc_reference_size(imported, &cols) == N4M_OK);
