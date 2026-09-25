@@ -98,6 +98,43 @@ n4m_model_import <- function(bytes) {
   .Call("r_n4m_model_import", bytes, PACKAGE = "n4m")
 }
 
+#' Import a native affine predictor into the portable N4MM model format
+#'
+#' Wraps the n4m C ABI affine importer. Coefficients are features-by-targets
+#' and predictions are `X %*% coefficients + intercept`. The returned model
+#' can be exported to N4MM and imported in other n4m bindings. This function
+#' does not fit coefficients or claim a PLS latent decomposition.
+#'
+#' @param coefficients Finite numeric features-by-targets matrix.
+#' @param intercept Finite numeric vector of one intercept per target.
+#' @param source_training_samples Non-negative training row count, or zero
+#'   when the source format does not attest it.
+#' @return A native model pointer accepted by [n4m_predict()] and
+#'   [n4m_model_export()].
+#' @export
+n4m_model_import_linear_predictor <- function(coefficients, intercept,
+                                               source_training_samples = 0L) {
+  if (!is.matrix(coefficients) || !is.numeric(coefficients) ||
+      any(dim(coefficients) < 1L) || anyNA(coefficients) ||
+      any(!is.finite(coefficients)))
+    stop("coefficients must be a finite numeric matrix", call. = FALSE)
+  if (!is.numeric(intercept) || is.matrix(intercept) ||
+      length(intercept) != ncol(coefficients) || anyNA(intercept) ||
+      any(!is.finite(intercept)))
+    stop("intercept must be one finite numeric value per target", call. = FALSE)
+  if (!is.numeric(source_training_samples) ||
+      length(source_training_samples) != 1L ||
+      !is.finite(source_training_samples) ||
+      source_training_samples < 0L ||
+      source_training_samples > .Machine$integer.max ||
+      source_training_samples != floor(source_training_samples))
+    stop("source_training_samples must be a non-negative integer", call. = FALSE)
+  storage.mode(coefficients) <- "double"
+  intercept <- as.double(intercept)
+  .Call("r_n4m_model_import_linear_predictor", coefficients, intercept,
+        as.integer(source_training_samples), PACKAGE = "n4m")
+}
+
 #' Inspect portable N4MM model metadata before import
 #'
 #' @param bytes Non-empty raw N4MM vector.
