@@ -22,11 +22,15 @@
 #' @param scale_x Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @param center_y Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
 #' @param scale_y Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.
+#' @param embedded_snv_savgol Optional two-number vector `c(window_length,
+#'   polyorder)`. The native N4MM model then embeds default SNV followed by
+#'   Savitzky-Golay smoothing, and predicts directly from raw spectra.
 #' @export
 n4m_fit <- function(X, Y, algo, n_components,
                          store_scores = FALSE,
                          center_x = TRUE, scale_x = TRUE,
-                         center_y = TRUE, scale_y = TRUE) {
+                         center_y = TRUE, scale_y = TRUE,
+                         embedded_snv_savgol = NULL) {
   if (!is.numeric(X)) stop("X must be numeric")
   if (!is.matrix(X)) X <- as.matrix(X)
   if (is.null(dim(Y))) Y <- matrix(as.numeric(Y), ncol = 1L)
@@ -36,6 +40,17 @@ n4m_fit <- function(X, Y, algo, n_components,
     stop(sprintf("nrow(X) (%d) must equal nrow(Y) (%d)",
                  nrow(X), nrow(Y)))
   }
+  if (!is.null(embedded_snv_savgol)) {
+    params <- embedded_snv_savgol
+    if (!is.numeric(params) || length(params) != 2L ||
+        anyNA(params) || any(!is.finite(params)) ||
+        any(params != floor(params)) || params[[1L]] < 3L ||
+        params[[1L]] %% 2L != 1L || params[[2L]] < 0L ||
+        params[[2L]] >= params[[1L]] ||
+        any(params > .Machine$integer.max))
+      stop("embedded_snv_savgol must contain an odd window >= 3 and a smaller non-negative degree")
+    embedded_snv_savgol <- as.double(params)
+  }
   .Call("r_n4m_fit",
         X, Y,
         as.character(algo),
@@ -43,6 +58,7 @@ n4m_fit <- function(X, Y, algo, n_components,
         as.logical(store_scores),
         as.logical(center_x), as.logical(scale_x),
         as.logical(center_y), as.logical(scale_y),
+        embedded_snv_savgol,
         PACKAGE = "n4m")
 }
 
@@ -89,4 +105,30 @@ n4m_model_import <- function(bytes) {
 #' @export
 n4m_model_inspect <- function(bytes) {
   .Call("r_n4m_model_inspect", bytes, PACKAGE = "n4m")
+}
+
+#' Inspect the native preprocessing state embedded in N4MM bytes
+#'
+#' Uses the authoritative libn4m decoder and rejects malformed payloads.
+#' Format-1 models return `present = FALSE`. For the supported format-2
+#' profile, the returned fingerprint is a hexadecimal FNV-1a-64 identity.
+#' @param bytes Non-empty raw N4MM vector.
+#' @return A list with `present`, `semantic_profile`, Savitzky-Golay parameters,
+#'   raw/model feature widths, and `fingerprint`.
+#' @export
+n4m_model_pipeline_info <- function(bytes) {
+  .Call("r_n4m_model_pipeline_info", bytes, PACKAGE = "n4m")
+}
+
+#' Inspect a fully validated N4MM model descriptor
+#'
+#' Unlike the header-only inspection, this validates all sections before
+#' reporting the numerical recipe and capabilities. Enum values are the
+#' versioned C ABI values from `n4m.h`.
+#' @param bytes Non-empty raw N4MM vector.
+#' @return A list of wire version, algorithm, solver, deflation, feature/target
+#'   dimensions, component count, and capability mask.
+#' @export
+n4m_model_descriptor <- function(bytes) {
+  .Call("r_n4m_model_descriptor", bytes, PACKAGE = "n4m")
 }

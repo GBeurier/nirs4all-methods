@@ -24,3 +24,33 @@ test_that("N4MM import rejects malformed bytes", {
   expect_error(n4m_model_inspect(as.raw(c(1, 2, 3, 4))))
   expect_error(n4m_model_export(NULL), "external pointer")
 })
+
+test_that("embedded SNV-Savitzky-Golay state predicts raw spectra and round-trips", {
+  x <- outer(seq_len(24L), seq_len(13L),
+             function(i, j) sin(i * j / 11) + i * j / 170)
+  y <- 1 + x[, 2L] - 0.3 * x[, 8L]
+  embedded <- n4m_fit(x, y, "pls_simpls", 2L,
+                      embedded_snv_savgol = c(5, 2))
+  transformed <- savgol_transform(snv_transform(x), 5L, 2L, mode = "interp")
+  plain <- n4m_fit(transformed, y, "pls_simpls", 2L)
+  expect_equal(n4m_predict(embedded, x), n4m_predict(plain, transformed),
+               tolerance = 1e-12)
+  bytes <- n4m_model_export(embedded)
+  info <- n4m_model_pipeline_info(bytes)
+  descriptor <- n4m_model_descriptor(bytes)
+  expect_true(info$present)
+  expect_identical(info$semantic_profile, 1L)
+  expect_identical(info$window_length, 5L)
+  expect_identical(info$polyorder, 2L)
+  expect_identical(info$raw_n_features, 13L)
+  expect_identical(descriptor$format_version, 2L)
+  expect_identical(descriptor$solver, 1L)
+  expect_identical(descriptor$n_components, 2L)
+  expect_equal(n4m_predict(n4m_model_import(bytes), x),
+               n4m_predict(embedded, x), tolerance = 1e-12)
+  expect_false(n4m_model_pipeline_info(n4m_model_export(plain))$present)
+  expect_error(n4m_fit(x, y, "pls_simpls", 2L,
+                       embedded_snv_savgol = c(4, 2)), "odd window")
+  expect_error(n4m_model_pipeline_info(bytes[-length(bytes)]))
+  expect_error(n4m_model_descriptor(bytes[-length(bytes)]))
+})
