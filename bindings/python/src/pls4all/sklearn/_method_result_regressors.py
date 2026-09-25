@@ -9,10 +9,10 @@ function to call and (if non-default) which result keys to read.
 
 Methods deliberately NOT wrapped here:
 
-* ``weighted_pls_fit`` / ``robust_pls_fit`` / ``ridge_pls_fit`` /
-  ``continuum_regression_fit`` — current C ABI exposes only
-  predictions in the MethodResult, not coefficients, so we cannot
-  predict on new X without a refit.
+* ``weighted_pls_fit`` — its sklearn wrapper still uses the fit-only
+  contract because sample weights require a separate fit interface.
+  Robust PLS, Ridge-PLS, and Continuum Regression already expose the
+  coefficient triple and use the shared predictor from ``_in_sample``.
 * ``recursive_pls_run`` / ``so_pls_fit`` / ``rosa_fit`` / ``lw_pls_fit``
   — return predictions only; locally-fitted models with no global
   coefficient export.
@@ -28,8 +28,6 @@ Methods deliberately NOT wrapped here:
 """
 
 from __future__ import annotations
-
-from typing import Any
 
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
