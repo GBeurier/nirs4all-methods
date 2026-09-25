@@ -13,7 +13,8 @@ n4m_fit(
   center_x = TRUE,
   scale_x = TRUE,
   center_y = TRUE,
-  scale_y = TRUE
+  scale_y = TRUE,
+  embedded_snv_savgol = NULL
 )
 }
 \arguments{
@@ -34,6 +35,10 @@ n4m_fit(
 \item{center_y}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
 
 \item{scale_y}{Method-specific parameter. See the underlying `*_fit()` function for the exact semantics.}
+
+\item{embedded_snv_savgol}{Optional two-number vector `c(window_length,
+polyorder)`. The native N4MM model then embeds default SNV followed by
+Savitzky-Golay smoothing, and predicts directly from raw spectra.}
 }
 \value{
 An external pointer wrapping the fitted model handle. Pass it

@@ -52,6 +52,130 @@ savgol_transform <- function(X, window_length, polyorder = 3L, deriv = 0L,
           PACKAGE = "n4m")
 }
 
+#' Local Standard Normal Variate transform.
+#' @param X Numeric matrix.
+#' @param window Odd sliding window length.
+#' @param pad_mode One of `"reflect"`, `"edge"`, or `"constant"`.
+#' @param constant_value Padding value for constant mode.
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+local_snv_transform <- function(X, window = 11L, pad_mode = "reflect",
+                                constant_value = 0) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    .Call("r_n4m_local_snv_transform", X, as.integer(window), pad_mode,
+          as.numeric(constant_value), PACKAGE = "n4m")
+}
+
+#' Robust Standard Normal Variate transform.
+#' @param X Numeric matrix.
+#' @param with_center Center rows by their median.
+#' @param with_scale Scale rows by robust dispersion.
+#' @param k Robust scale factor, usually 1.4826.
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+robust_snv_transform <- function(X, with_center = TRUE, with_scale = TRUE,
+                                 k = 1.4826) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    .Call("r_n4m_robust_snv_transform", X, as.logical(with_center),
+          as.logical(with_scale), as.numeric(k), PACKAGE = "n4m")
+}
+
+#' Area normalization transform.
+#' @param X Numeric matrix.
+#' @param method One of `"sum"`, `"abs_sum"`, or `"trapz"`.
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+area_normalization_transform <- function(X, method = "sum") {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    .Call("r_n4m_area_normalization_transform", X, method, PACKAGE = "n4m")
+}
+
+#' Polynomial detrend transform.
+#' @param X Numeric matrix.
+#' @param polyorder Non-negative baseline polynomial order.
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+detrend_transform <- function(X, polyorder = 1L) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    .Call("r_n4m_detrend_transform", X, as.integer(polyorder), PACKAGE = "n4m")
+}
+
+#' Fit Multiplicative Scatter Correction on training spectra.
+#'
+#' Returns only the native fitted reference spectrum. Save this vector and
+#' pass it to [msc_transform()] for validation or future samples; do not fit
+#' again on those samples.
+#' @param X Finite numeric training matrix with at least two features.
+#' @return Numeric reference spectrum, length `ncol(X)`.
+#' @export
+msc_fit <- function(X) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    if (ncol(X) < 2L || anyNA(X) || any(!is.finite(X)))
+        stop("X must be a finite matrix with at least two features", call. = FALSE)
+    .Call("r_n4m_msc_fit", X, PACKAGE = "n4m")
+}
+
+#' Apply fitted Multiplicative Scatter Correction.
+#' @param X Finite numeric matrix with the same feature order as training.
+#' @param reference Reference spectrum from [msc_fit()].
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+msc_transform <- function(X, reference) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    if (!is.numeric(reference) || is.matrix(reference) ||
+        length(reference) != ncol(X) || anyNA(reference) ||
+        any(!is.finite(reference)) || anyNA(X) || any(!is.finite(X)))
+        stop("X and fitted reference must be finite and feature-aligned", call. = FALSE)
+    .Call("r_n4m_msc_transform", X, as.numeric(reference), PACKAGE = "n4m")
+}
+
+#' Fit Extended Multiplicative Scatter Correction on training spectra.
+#'
+#' The native engine uses the training-column mean as its reference and the
+#' integer feature axis `0:(ncol(X)-1)` for polynomial terms. The returned
+#' vector is the complete fitted state when combined with `degree`.
+#' @param X Finite numeric training matrix.
+#' @param degree Positive polynomial degree; requires at least `degree + 2` features.
+#' @return Numeric reference spectrum of length `ncol(X)`.
+#' @export
+emsc_fit <- function(X, degree = 2L) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    if (length(degree) != 1L || !is.numeric(degree) || !is.finite(degree) ||
+        degree < 1L || degree > .Machine$integer.max - 2L || degree != floor(degree))
+        stop("degree must be a positive integer", call. = FALSE)
+    if (ncol(X) < degree + 2L || anyNA(X) || any(!is.finite(X)))
+        stop("X must be finite with at least degree + 2 features", call. = FALSE)
+    .Call("r_n4m_emsc_fit", X, as.integer(degree), PACKAGE = "n4m")
+}
+
+#' Apply fitted Extended Multiplicative Scatter Correction.
+#' @param X Finite numeric spectra with the training feature order.
+#' @param reference Reference returned by [emsc_fit()].
+#' @param degree Same polynomial degree used at fit time.
+#' @return Numeric matrix with the shape of `X`.
+#' @export
+emsc_transform <- function(X, reference, degree = 2L) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    if (length(degree) != 1L || !is.numeric(degree) || !is.finite(degree) ||
+        degree < 1L || degree > .Machine$integer.max - 2L || degree != floor(degree))
+        stop("degree must be a positive integer", call. = FALSE)
+    if (!is.numeric(reference) || is.matrix(reference) ||
+        length(reference) != ncol(X) || ncol(X) < degree + 2L ||
+        anyNA(reference) || any(!is.finite(reference)) ||
+        anyNA(X) || any(!is.finite(X)))
+        stop("X and fitted reference must be finite and feature-aligned", call. = FALSE)
+    .Call("r_n4m_emsc_transform", X, as.numeric(reference),
+          as.integer(degree), PACKAGE = "n4m")
+}
+
 #' Kennard-Stone train/test split.
 #'
 #' Delegates to libn4m's Kennard-Stone splitter and returns train/test sample

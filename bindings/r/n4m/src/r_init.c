@@ -11,12 +11,26 @@
 SEXP r_n4m_version(void);
 SEXP r_n4m_abi_version(void);
 SEXP r_n4m_fit(SEXP X, SEXP Y, SEXP algo, SEXP n_components, SEXP store_scores,
-                    SEXP center_x, SEXP scale_x, SEXP center_y, SEXP scale_y);
+                    SEXP center_x, SEXP scale_x, SEXP center_y, SEXP scale_y,
+                    SEXP embedded_snv_savgol);
 SEXP r_n4m_predict(SEXP model_ptr, SEXP X);
+SEXP r_n4m_model_export(SEXP model_ptr);
+SEXP r_n4m_model_import(SEXP bytes);
+SEXP r_n4m_model_inspect(SEXP bytes);
+SEXP r_n4m_model_pipeline_info(SEXP bytes);
+SEXP r_n4m_model_descriptor(SEXP bytes);
 SEXP r_n4m_model_get_array(SEXP model_ptr, SEXP which);
 SEXP r_n4m_snv_transform(SEXP X, SEXP with_mean, SEXP with_std, SEXP ddof);
 SEXP r_n4m_savgol_transform(SEXP X, SEXP window_length, SEXP polyorder,
                             SEXP deriv, SEXP delta, SEXP mode, SEXP cval);
+SEXP r_n4m_local_snv_transform(SEXP X, SEXP window, SEXP pad_mode, SEXP constant_value);
+SEXP r_n4m_robust_snv_transform(SEXP X, SEXP with_center, SEXP with_scale, SEXP k);
+SEXP r_n4m_area_normalization_transform(SEXP X, SEXP method);
+SEXP r_n4m_detrend_transform(SEXP X, SEXP polyorder);
+SEXP r_n4m_msc_fit(SEXP X);
+SEXP r_n4m_msc_transform(SEXP X, SEXP reference);
+SEXP r_n4m_emsc_fit(SEXP X, SEXP degree);
+SEXP r_n4m_emsc_transform(SEXP X, SEXP reference, SEXP degree);
 SEXP r_n4m_kennard_stone_split(SEXP X, SEXP test_size, SEXP zero_based);
 
 /* r_methods.c — MethodResult fits */
@@ -48,11 +62,24 @@ static const R_CallMethodDef callMethods[] = {
     /* core */
     {"r_n4m_version",     (DL_FUNC)&r_n4m_version,     0},
     {"r_n4m_abi_version", (DL_FUNC)&r_n4m_abi_version, 0},
-    {"r_n4m_fit",         (DL_FUNC)&r_n4m_fit,         9},
+    {"r_n4m_fit",         (DL_FUNC)&r_n4m_fit,         10},
     {"r_n4m_predict",     (DL_FUNC)&r_n4m_predict,     2},
+    {"r_n4m_model_export", (DL_FUNC)&r_n4m_model_export, 1},
+    {"r_n4m_model_import", (DL_FUNC)&r_n4m_model_import, 1},
+    {"r_n4m_model_inspect", (DL_FUNC)&r_n4m_model_inspect, 1},
+    {"r_n4m_model_pipeline_info", (DL_FUNC)&r_n4m_model_pipeline_info, 1},
+    {"r_n4m_model_descriptor", (DL_FUNC)&r_n4m_model_descriptor, 1},
     {"r_n4m_model_get_array", (DL_FUNC)&r_n4m_model_get_array, 2},
     {"r_n4m_snv_transform", (DL_FUNC)&r_n4m_snv_transform, 4},
     {"r_n4m_savgol_transform", (DL_FUNC)&r_n4m_savgol_transform, 7},
+    {"r_n4m_local_snv_transform", (DL_FUNC)&r_n4m_local_snv_transform, 4},
+    {"r_n4m_robust_snv_transform", (DL_FUNC)&r_n4m_robust_snv_transform, 4},
+    {"r_n4m_area_normalization_transform", (DL_FUNC)&r_n4m_area_normalization_transform, 2},
+    {"r_n4m_detrend_transform", (DL_FUNC)&r_n4m_detrend_transform, 2},
+    {"r_n4m_msc_fit", (DL_FUNC)&r_n4m_msc_fit, 1},
+    {"r_n4m_msc_transform", (DL_FUNC)&r_n4m_msc_transform, 2},
+    {"r_n4m_emsc_fit", (DL_FUNC)&r_n4m_emsc_fit, 2},
+    {"r_n4m_emsc_transform", (DL_FUNC)&r_n4m_emsc_transform, 3},
     {"r_n4m_kennard_stone_split", (DL_FUNC)&r_n4m_kennard_stone_split, 3},
 
     /* MethodResult fits */

@@ -629,6 +629,9 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         }
     } else if (strcmp(algo, "cppls") == 0) {
         double g = get_double(params, "gamma", 0.5);
+        /* Match the C ABI/Python default CPPLS convention (NIPALS PLS1).
+         * The dispatcher-wide SIMPLS default is a different, legacy recipe. */
+        n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
         st = n4m_estimators_cppls_fit(ctx, cfg, &Xv, &Yv, g, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ecr") == 0) {
@@ -671,6 +674,8 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ridge_pls") == 0) {
         double l = get_double(params, "ridge_lambda", 1.0);
+        /* Match the core/Python default on the ridge-augmented design. */
+        n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
         st = n4m_estimators_ridge_pls_fit(ctx, cfg, &Xv, &Yv, l, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ridge") == 0) {

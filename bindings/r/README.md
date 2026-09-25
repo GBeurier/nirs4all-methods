@@ -34,7 +34,7 @@ on the system path or export `LD_LIBRARY_PATH` (Linux) /
 library(n4m)
 
 n4m_version()
-# "1.0.19+abi.2.6.0"
+# "1.0.21+abi.2.8.0"
 
 n4m_abi_version()
 # c(2, 3, 0)
@@ -55,8 +55,20 @@ libn4m C ABI:
 X_snv <- snv_transform(X)
 X_sg <- savgol_transform(X, window_length = 11, polyorder = 3,
                          deriv = 0, mode = "interp")
+X_local <- local_snv_transform(X, window = 11)
+X_robust <- robust_snv_transform(X)
+X_area <- area_normalization_transform(X, method = "trapz")
+X_detrended <- detrend_transform(X, polyorder = 2)
+msc_reference <- msc_fit(X)
+X_msc <- msc_transform(X, msc_reference)
 split <- kennard_stone_split(X, test_size = 0.3)
 ```
+
+The four additional stateless operators plus MSC and EMSC use the same native
+C ABI as Python `n4m` and have frozen cross-language matrix parity tests. MSC
+and EMSC export their fitted reference vectors; only training spectra are used
+to learn them. EMSC replay additionally requires the same polynomial degree.
+Other stateful operators still need explicit state import/export surfaces.
 
 ## Available solvers
 
