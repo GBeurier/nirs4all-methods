@@ -28,6 +28,7 @@ from sklearn.preprocessing import StandardScaler
 
 from pls4all.sklearn import (
     CPPLSRegression,
+    ContinuumRegression,
     DIPLSRegression,
     ECRegression,
     MBPLSRegression,
@@ -37,6 +38,8 @@ from pls4all.sklearn import (
     PLSCanonical,
     PLSRegression,
     PLSSVD,
+    RidgePLSRegression,
+    RobustPLSRegression,
     SparsePLSRegression,
     SparseSimplsRegression,
 )
@@ -62,6 +65,9 @@ REGRESSORS_SINGLE = [
     (SparsePLSRegression, dict(n_components=5, sparsity_lambda=0.05)),
     (SparseSimplsRegression, dict(n_components=5, sparsity_lambda=0.05)),
     (CPPLSRegression, dict(n_components=5, gamma=0.5)),
+    (RobustPLSRegression, dict(n_components=5, huber_k=1.345)),
+    (RidgePLSRegression, dict(n_components=5, ridge_lambda=0.5)),
+    (ContinuumRegression, dict(n_components=5, tau=0.5)),
     (ECRegression, dict(n_components=5, alpha=0.5)),
     (MIRPLSRegression, dict(n_components=5)),
     (MBPLSRegression, dict(n_components=5, block_sizes=[15, 15])),
@@ -137,7 +143,8 @@ def test_regressor_get_params_roundtrip(cls, kwargs):
 # Bit-exact wrapper-vs-tier1 parity for MethodResult regressors
 # -----------------------------------------------------------------
 
-def _raw_method_result_predict(fn, n_components, X, y, **fn_kwargs):
+def _raw_method_result_predict(fn, n_components, X, y, *, X_predict=None,
+                               **fn_kwargs):
     """Run the tier-1 *_fit and replay the prediction math the wrapper
     is supposed to use: ``(X - x_mean) @ coef + y_mean``."""
     import pls4all
@@ -161,7 +168,7 @@ def _raw_method_result_predict(fn, n_components, X, y, **fn_kwargs):
     coef = np.asarray(res.matrix("coefficients"), dtype=np.float64)
     x_mean = np.asarray(res.matrix("x_mean"), dtype=np.float64).ravel()
     y_mean = np.asarray(res.matrix("y_mean"), dtype=np.float64).ravel()
-    preds = (X - x_mean) @ coef + y_mean
+    preds = ((X if X_predict is None else X_predict) - x_mean) @ coef + y_mean
     return preds.ravel()
 
 
@@ -198,6 +205,33 @@ def test_mir_pls_wrapper_bitexact(regression_data):
     assert np.array_equal(preds_wrapper, preds_raw)
 
 
+@pytest.mark.parametrize(
+    ("cls", "kwargs", "fit_name", "fit_kwargs"),
+    [
+        (RobustPLSRegression, {"huber_k": 1.4, "max_irls_iter": 8},
+         "robust_pls_fit", {"huber_k": 1.4, "max_irls_iter": 8}),
+        (RidgePLSRegression, {"ridge_lambda": 0.3},
+         "ridge_pls_fit", {"ridge_lambda": 0.3}),
+        (ContinuumRegression, {"tau": 0.4},
+         "continuum_regression_fit", {"tau": 0.4}),
+    ],
+)
+def test_affine_method_result_predicts_held_out(
+    cls, kwargs, fit_name, fit_kwargs, regression_data
+):
+    import pls4all
+
+    X, y, _ = regression_data
+    held_out = X[:17].copy() + 0.025
+    model = cls(n_components=3, **kwargs).fit(X, y)
+    expected = _raw_method_result_predict(
+        getattr(pls4all, fit_name), 3, X, y,
+        X_predict=held_out, **fit_kwargs)
+    assert np.allclose(model.predict(held_out), expected, rtol=0, atol=1e-10)
+    restored = pickle.loads(pickle.dumps(model))
+    assert np.array_equal(restored.predict(held_out), model.predict(held_out))
+
+
 def test_method_result_regressor_failed_refit_preserves_state(regression_data):
     """Codex catch: a failed refit on a fitted MethodResult regressor
     must leave the prior fitted state intact (n_features_in_, coef_,
@@ -208,7 +242,8 @@ def test_method_result_regressor_failed_refit_preserves_state(regression_data):
     orig_coef = m.coef_.copy()
     orig_n_features = m.n_features_in_
     # Refit with a NaN — must raise without corrupting state.
-    bad_X = X.copy(); bad_X[0, 0] = np.nan
+    bad_X = X.copy()
+    bad_X[0, 0] = np.nan
     with pytest.raises(ValueError):
         m.fit(bad_X, y)
     # State preserved.
