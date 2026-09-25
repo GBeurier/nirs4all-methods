@@ -55,8 +55,16 @@ libn4m C ABI:
 X_snv <- snv_transform(X)
 X_sg <- savgol_transform(X, window_length = 11, polyorder = 3,
                          deriv = 0, mode = "interp")
+X_local <- local_snv_transform(X, window = 11)
+X_robust <- robust_snv_transform(X)
+X_area <- area_normalization_transform(X, method = "trapz")
+X_detrended <- detrend_transform(X, polyorder = 2)
 split <- kennard_stone_split(X, test_size = 0.3)
 ```
+
+The four additional stateless operators above use the same native C ABI as
+Python `n4m` and have frozen cross-language matrix parity tests. Stateful
+operators such as MSC are not yet exposed with a serializable fit state.
 
 ## Available solvers
 

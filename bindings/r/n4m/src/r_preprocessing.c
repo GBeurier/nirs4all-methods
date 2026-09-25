@@ -109,6 +109,84 @@ static int r_pp_savgol_mode(SEXP value) {
     return mode;
 }
 
+#define R_PP_APPLY_SAME_SHAPE(X, handle, prefix)                                      \
+    do {                                                                             \
+        int64_t rows = 0, cols = 0;                                                   \
+        r_pp_matrix_shape((X), &rows, &cols);                                         \
+        SEXP input_rm = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)(rows * cols)));    \
+        SEXP output_rm = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)(rows * cols)));   \
+        r_pp_copy_r_to_rowmajor((X), rows, cols, REAL(input_rm));                     \
+        n4m_matrix_view_t input_view, output_view;                                    \
+        n4m_matrix_view_init_rowmajor(&input_view, REAL(input_rm), rows, cols,        \
+                                      N4M_DTYPE_F64);                                 \
+        n4m_matrix_view_init_rowmajor(&output_view, REAL(output_rm), rows, cols,      \
+                                      N4M_DTYPE_F64);                                 \
+        n4m_status_t run_status = prefix##_transform((handle), input_view,           \
+                                                     output_view);                    \
+        prefix##_destroy((handle));                                                   \
+        if (run_status != N4M_OK) {                                                   \
+            UNPROTECT(2);                                                            \
+            r_pp_throw_status(#prefix "_transform", run_status);                     \
+        }                                                                            \
+        SEXP result = PROTECT(r_pp_rowmajor_to_matrix(REAL(output_rm), rows, cols)); \
+        UNPROTECT(3);                                                                \
+        return result;                                                               \
+    } while (0)
+
+static int r_pp_local_snv_mode(SEXP value) {
+    if (TYPEOF(value) != STRSXP || Rf_length(value) != 1 || STRING_ELT(value, 0) == NA_STRING)
+        Rf_error("pad_mode must be one non-missing string");
+    const char* mode = CHAR(STRING_ELT(value, 0));
+    if (strcmp(mode, "reflect") == 0) return N4M_PP_LSNV_PAD_REFLECT;
+    if (strcmp(mode, "edge") == 0) return N4M_PP_LSNV_PAD_EDGE;
+    if (strcmp(mode, "constant") == 0) return N4M_PP_LSNV_PAD_CONSTANT;
+    Rf_error("unsupported local SNV pad_mode: %s", mode);
+}
+
+static int r_pp_area_method(SEXP value) {
+    if (TYPEOF(value) != STRSXP || Rf_length(value) != 1 || STRING_ELT(value, 0) == NA_STRING)
+        Rf_error("method must be one non-missing string");
+    const char* method = CHAR(STRING_ELT(value, 0));
+    if (strcmp(method, "sum") == 0) return N4M_PP_AREA_SUM;
+    if (strcmp(method, "abs_sum") == 0) return N4M_PP_AREA_ABS_SUM;
+    if (strcmp(method, "trapz") == 0) return N4M_PP_AREA_TRAPZ;
+    Rf_error("unsupported area normalization method: %s", method);
+}
+
+SEXP r_n4m_local_snv_transform(SEXP X, SEXP window, SEXP pad_mode, SEXP constant_value) {
+    n4m_pp_lsnv_handle_t* handle = NULL;
+    n4m_status_t status = n4m_transform_local_snv_create(
+        &handle, r_pp_int_scalar(window, "window"), r_pp_local_snv_mode(pad_mode),
+        r_pp_double_scalar(constant_value, "constant_value"));
+    if (status != N4M_OK) r_pp_throw_status("n4m_transform_local_snv_create", status);
+    R_PP_APPLY_SAME_SHAPE(X, handle, n4m_transform_local_snv);
+}
+
+SEXP r_n4m_robust_snv_transform(SEXP X, SEXP with_center, SEXP with_scale, SEXP k) {
+    n4m_pp_rnv_handle_t* handle = NULL;
+    n4m_status_t status = n4m_transform_robust_snv_create(
+        &handle, r_pp_flag(with_center, 1), r_pp_flag(with_scale, 1),
+        r_pp_double_scalar(k, "k"));
+    if (status != N4M_OK) r_pp_throw_status("n4m_transform_robust_snv_create", status);
+    R_PP_APPLY_SAME_SHAPE(X, handle, n4m_transform_robust_snv);
+}
+
+SEXP r_n4m_area_normalization_transform(SEXP X, SEXP method) {
+    n4m_pp_area_handle_t* handle = NULL;
+    n4m_status_t status = n4m_transform_area_normalization_create(
+        &handle, r_pp_area_method(method));
+    if (status != N4M_OK) r_pp_throw_status("n4m_transform_area_normalization_create", status);
+    R_PP_APPLY_SAME_SHAPE(X, handle, n4m_transform_area_normalization);
+}
+
+SEXP r_n4m_detrend_transform(SEXP X, SEXP polyorder) {
+    n4m_pp_detrend_handle_t* handle = NULL;
+    n4m_status_t status = n4m_transform_detrend_create(
+        &handle, r_pp_int_scalar(polyorder, "polyorder"));
+    if (status != N4M_OK) r_pp_throw_status("n4m_transform_detrend_create", status);
+    R_PP_APPLY_SAME_SHAPE(X, handle, n4m_transform_detrend);
+}
+
 SEXP r_n4m_snv_transform(SEXP X, SEXP with_mean, SEXP with_std, SEXP ddof) {
     int64_t rows = 0;
     int64_t cols = 0;

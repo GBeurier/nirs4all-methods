@@ -9,6 +9,10 @@ export(n4m_fit)
 export(n4m_predict)
 export(snv_transform)
 export(savgol_transform)
+export(local_snv_transform)
+export(robust_snv_transform)
+export(area_normalization_transform)
+export(detrend_transform)
 export(kennard_stone_split)
 
 # Tier 1 — MethodResult fits
