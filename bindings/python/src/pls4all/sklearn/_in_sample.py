@@ -1,6 +1,4 @@
-"""sklearn-compatible wrappers for methods whose C MethodResult exposes
-only in-sample predictions (no regression coefficients or per-feature
-preprocessing stats).
+"""Sklearn-compatible wrappers for methods without reusable prediction state.
 
 The C ABI for these kernels intentionally captures only what was
 computed during the fit (often a moving window, an ensemble vote, a
@@ -11,12 +9,15 @@ matrix). Predict-on-arbitrary-new-X would require either:
 * re-fitting on (X_train, y_train) + X_new at predict time (which the
   user can do explicitly via tier 1).
 
-Until then we expose these methods as **fit-only sklearn estimators**:
+Until then we expose the methods without coefficients as **fit-only sklearn
+estimators**. Robust PLS, Ridge-PLS, and Continuum Regression live in this
+module for API compatibility, but now use the shared coefficient-backed
+MethodResult predictor.
 
 * ``fit(X, y)`` runs the C kernel, stores ``self.predictions_`` (1-D
   or 2-D, matching the y shape on the way in).
-* ``predict(X)`` returns ``self.predictions_`` IFF ``X is X_train``
-  (identity match — same numpy array). Otherwise raises an
+* ``predict(X)`` returns ``self.predictions_`` iff X has the same values as
+  the training matrix. Otherwise it raises an
   informative :class:`NotImplementedError` explaining the limitation
   and pointing at the tier-1 entry point.
 
@@ -27,7 +28,7 @@ The fit-only contract makes these classes usable in:
 * sklearn ``cross_val_score`` with ``cv="prefit"`` workflows that
   refit per fold via the wrapper itself.
 
-It is NOT a drop-in for ``Pipeline(... → predict(X_new))``.
+Only the fit-only classes are unsuitable for ``Pipeline(... → predict(X_new))``.
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ from .. import _methods
 from .._context import Context
 from .._types import Algorithm, Deflation, Solver
 from ._base import _validate_X_y_no_mutate
+from ._method_result import _MethodResultRegressor
 
 
 class _InSampleOnlyRegressor(BaseEstimator, RegressorMixin):
@@ -143,8 +145,8 @@ class WeightedPLSRegression(_InSampleOnlyRegressor):
             cfg.close()
 
 
-class RobustPLSRegression(_InSampleOnlyRegressor):
-    """Robust PLS via Huber IRLS over weighted SIMPLS."""
+class RobustPLSRegression(_MethodResultRegressor):
+    """Robust PLS via Huber IRLS with held-out prediction."""
 
     def __init__(self, n_components: int = 2,
                   *, huber_k: float = 1.345,
@@ -153,7 +155,7 @@ class RobustPLSRegression(_InSampleOnlyRegressor):
         self.huber_k = huber_k
         self.max_irls_iter = max_irls_iter
 
-    def _run_fit(self, ctx, X, y):
+    def _fit_method_result(self, ctx, X, y):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.robust_pls_fit(
@@ -164,15 +166,15 @@ class RobustPLSRegression(_InSampleOnlyRegressor):
             cfg.close()
 
 
-class RidgePLSRegression(_InSampleOnlyRegressor):
-    """L2-augmented PLS regression."""
+class RidgePLSRegression(_MethodResultRegressor):
+    """L2-augmented PLS regression with held-out prediction."""
 
     def __init__(self, n_components: int = 2,
                   *, ridge_lambda: float = 1.0) -> None:
         self.n_components = n_components
         self.ridge_lambda = ridge_lambda
 
-    def _run_fit(self, ctx, X, y):
+    def _fit_method_result(self, ctx, X, y):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.ridge_pls_fit(
@@ -181,14 +183,14 @@ class RidgePLSRegression(_InSampleOnlyRegressor):
             cfg.close()
 
 
-class ContinuumRegression(_InSampleOnlyRegressor):
-    """Continuum regression τ ∈ [0, 1] interpolates PLS (1) / OLS (0)."""
+class ContinuumRegression(_MethodResultRegressor):
+    """Continuum regression τ ∈ [0, 1] with held-out prediction."""
 
     def __init__(self, n_components: int = 2, *, tau: float = 0.5) -> None:
         self.n_components = n_components
         self.tau = tau
 
-    def _run_fit(self, ctx, X, y):
+    def _fit_method_result(self, ctx, X, y):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.continuum_regression_fit(

@@ -18,10 +18,10 @@ Persistence strategy per family:
 * **MethodResult-based regressors** that carry coefficients
   (`SparseSimplsRegression`, `CPPLSRegression`, `ECRegression`,
   `DIPLSRegression`, `MIRPLSRegression`, `MBPLSRegression`,
-  `NPLSRegression`, `O2PLSRegression`, `PLSGLMRegressor`)
+  `NPLSRegression`, `O2PLSRegression`, `PLSGLMRegressor`,
+  `RobustPLSRegression`, `RidgePLSRegression`, `ContinuumRegression`)
   serialize their (coef, x_mean, y_mean) state as plain NumPy.
 * **In-sample-only regressors** (`WeightedPLSRegression`,
-  `RobustPLSRegression`, `RidgePLSRegression`, `ContinuumRegression`,
   `RecursivePLSRegression`, `LWPLSRegression`,
   `MissingAwareNipalsRegression`, `GroupSparsePLSRegression`,
   `FusedSparsePLSRegression`, `BaggingPLSRegression`,
@@ -87,7 +87,7 @@ from ._classifiers_extras import (
 # Calibration transfer (TransformerMixin)
 from ._transformers import DSTransformer, PDSTransformer
 
-# In-sample-only regressors
+# Historical module also contains three coefficient-backed regressors.
 from ._in_sample import (
     BaggingPLSRegression,
     BoostingPLSRegression,
