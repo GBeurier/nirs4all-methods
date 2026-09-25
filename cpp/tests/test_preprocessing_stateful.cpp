@@ -167,6 +167,42 @@ void test_emsc_smoke() {
     n4m_transform_emsc_destroy(h);
 }
 
+void test_emsc_reference_roundtrip() {
+    double train[15] = {1.2, 2.1, 2.9, 4.4, 5.0,
+                        1.6, 2.8, 3.5, 4.2, 5.8,
+                        1.1, 1.9, 3.2, 4.8, 5.3};
+    double test[10] = {1.4, 2.3, 3.4, 4.3, 5.5,
+                       1.7, 2.5, 3.1, 4.9, 5.9};
+    double original[10] = {0}, restored[10] = {0}, reference[5] = {0};
+    n4m_pp_emsc_handle_t *fitted = nullptr, *imported = nullptr;
+    N4M_TEST_REQUIRE(n4m_transform_emsc_create(&fitted, 2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_emsc_create(&imported, 2) == N4M_OK);
+    int64_t cols = -1;
+    N4M_TEST_REQUIRE(n4m_transform_emsc_reference_size(fitted, &cols) ==
+                     N4M_ERR_NOT_FITTED);
+    N4M_TEST_REQUIRE(n4m_transform_emsc_fit(
+                         fitted, make_rowmajor_view(train, 3, 5)) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_emsc_reference_size(fitted, &cols) == N4M_OK);
+    N4M_TEST_REQUIRE(cols == 5);
+    N4M_TEST_REQUIRE(n4m_transform_emsc_get_reference(fitted, reference, 4) ==
+                     N4M_ERR_SHAPE_MISMATCH);
+    N4M_TEST_REQUIRE(n4m_transform_emsc_get_reference(fitted, reference, 5) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_emsc_set_reference(imported, reference, 5) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_emsc_transform(
+                         fitted, make_rowmajor_view(test, 2, 5),
+                         make_rowmajor_view(original, 2, 5)) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_emsc_transform(
+                         imported, make_rowmajor_view(test, 2, 5),
+                         make_rowmajor_view(restored, 2, 5)) == N4M_OK);
+    for (int i = 0; i < 10; ++i) N4M_TEST_REQUIRE(original[i] == restored[i]);
+    double invalid[5] = {1.0, 2.0, INFINITY, 4.0, 5.0};
+    N4M_TEST_REQUIRE(n4m_transform_emsc_set_reference(imported, invalid, 5) ==
+                     N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_transform_emsc_reference_size(imported, &cols) == N4M_OK);
+    n4m_transform_emsc_destroy(fitted);
+    n4m_transform_emsc_destroy(imported);
+}
+
 void test_baseline_smoke() {
     double X[6] = {1, 2, 3, 4, 5, 6};
     double Y[6] = {0};
@@ -548,6 +584,7 @@ void register_preprocessing_stateful_tests(n4m_testing::Runner& r) {
     r.run("pp_msc_parity",           verify_msc_parity);
     r.run("pp_msc_refit",            test_msc_refit_replaces_state);
     r.run("pp_emsc_smoke",           test_emsc_smoke);
+    r.run("pp_emsc_reference_roundtrip", test_emsc_reference_roundtrip);
     r.run("pp_emsc_not_fitted",      test_emsc_not_fitted);
     r.run("pp_emsc_parity",          verify_emsc_parity);
     r.run("pp_emsc_refit",           test_emsc_refit_replaces_state);
