@@ -52,6 +52,58 @@ savgol_transform <- function(X, window_length, polyorder = 3L, deriv = 0L,
           PACKAGE = "n4m")
 }
 
+#' Local Standard Normal Variate transform.
+#' @param X Numeric matrix.
+#' @param window Odd sliding window length.
+#' @param pad_mode One of `"reflect"`, `"edge"`, or `"constant"`.
+#' @param constant_value Padding value for constant mode.
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+local_snv_transform <- function(X, window = 11L, pad_mode = "reflect",
+                                constant_value = 0) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    .Call("r_n4m_local_snv_transform", X, as.integer(window), pad_mode,
+          as.numeric(constant_value), PACKAGE = "n4m")
+}
+
+#' Robust Standard Normal Variate transform.
+#' @param X Numeric matrix.
+#' @param with_center Center rows by their median.
+#' @param with_scale Scale rows by robust dispersion.
+#' @param k Robust scale factor, usually 1.4826.
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+robust_snv_transform <- function(X, with_center = TRUE, with_scale = TRUE,
+                                 k = 1.4826) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    .Call("r_n4m_robust_snv_transform", X, as.logical(with_center),
+          as.logical(with_scale), as.numeric(k), PACKAGE = "n4m")
+}
+
+#' Area normalization transform.
+#' @param X Numeric matrix.
+#' @param method One of `"sum"`, `"abs_sum"`, or `"trapz"`.
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+area_normalization_transform <- function(X, method = "sum") {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    .Call("r_n4m_area_normalization_transform", X, method, PACKAGE = "n4m")
+}
+
+#' Polynomial detrend transform.
+#' @param X Numeric matrix.
+#' @param polyorder Non-negative baseline polynomial order.
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+detrend_transform <- function(X, polyorder = 1L) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    .Call("r_n4m_detrend_transform", X, as.integer(polyorder), PACKAGE = "n4m")
+}
+
 #' Kennard-Stone train/test split.
 #'
 #' Delegates to libn4m's Kennard-Stone splitter and returns train/test sample
