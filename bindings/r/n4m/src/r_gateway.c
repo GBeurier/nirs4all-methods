@@ -397,6 +397,59 @@ SEXP r_n4m_model_import(SEXP bytes) {
     return ptr;
 }
 
+/* Translate an R column-major affine predictor into the public row-major
+ * n4m_linear_predictor_spec_t. The native importer owns its copied state. */
+SEXP r_n4m_model_import_linear_predictor(SEXP coefficients, SEXP intercept,
+                                          SEXP source_training_samples) {
+    if (TYPEOF(coefficients) != REALSXP || TYPEOF(intercept) != REALSXP)
+        Rf_error("coefficients and intercept must be double precision");
+    SEXP dims = Rf_getAttrib(coefficients, R_DimSymbol);
+    if (TYPEOF(dims) != INTSXP || XLENGTH(dims) != 2)
+        Rf_error("coefficients must be a numeric matrix");
+    const int p = INTEGER(dims)[0];
+    const int q = INTEGER(dims)[1];
+    if (p < 1 || q < 1 || XLENGTH(intercept) != q)
+        Rf_error("coefficients and intercept have incompatible dimensions");
+    if (TYPEOF(source_training_samples) != INTSXP ||
+        XLENGTH(source_training_samples) != 1 ||
+        INTEGER(source_training_samples)[0] < 0 ||
+        INTEGER(source_training_samples)[0] == NA_INTEGER)
+        Rf_error("source_training_samples must be a non-negative integer");
+
+    SEXP rowmajor = PROTECT(Rf_allocVector(REALSXP, XLENGTH(coefficients)));
+    const double* input = REAL(coefficients);
+    double* output = REAL(rowmajor);
+    for (int j = 0; j < q; ++j)
+        for (int i = 0; i < p; ++i)
+            output[(R_xlen_t)i * q + j] = input[i + (R_xlen_t)j * p];
+
+    n4m_linear_predictor_spec_t spec = {0};
+    spec.source_training_samples = INTEGER(source_training_samples)[0];
+    spec.n_features = p;
+    spec.n_targets = q;
+    spec.coefficients = output;
+    spec.intercept = REAL(intercept);
+    n4m_context_t* ctx = NULL;
+    n4m_status_t status = n4m_context_create(&ctx);
+    if (status != N4M_OK) {
+        UNPROTECT(1);
+        r_throw_status("n4m_context_create", status, NULL);
+    }
+    n4m_model_t* model = NULL;
+    status = n4m_model_import_linear_predictor(ctx, &spec, &model);
+    if (status != N4M_OK) {
+        UNPROTECT(1);
+        r_throw_status("n4m_model_import_linear_predictor", status, ctx);
+    }
+    n4m_context_destroy(ctx);
+    SEXP ptr = PROTECT(R_MakeExternalPtr(model, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(ptr, r_model_finalize, TRUE);
+    Rf_setAttrib(ptr, Rf_install("n_features"), Rf_ScalarInteger(p));
+    Rf_setAttrib(ptr, Rf_install("n_targets"), Rf_ScalarInteger(q));
+    UNPROTECT(2);
+    return ptr;
+}
+
 SEXP r_n4m_model_inspect(SEXP bytes) {
     if (TYPEOF(bytes) != RAWSXP || XLENGTH(bytes) == 0)
         Rf_error("bytes must be a non-empty raw N4MM vector");
