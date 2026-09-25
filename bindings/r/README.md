@@ -34,7 +34,7 @@ on the system path or export `LD_LIBRARY_PATH` (Linux) /
 library(n4m)
 
 n4m_version()
-# "1.0.19+abi.2.6.0"
+# "1.0.21+abi.2.7.0"
 
 n4m_abi_version()
 # c(2, 3, 0)
@@ -59,12 +59,15 @@ X_local <- local_snv_transform(X, window = 11)
 X_robust <- robust_snv_transform(X)
 X_area <- area_normalization_transform(X, method = "trapz")
 X_detrended <- detrend_transform(X, polyorder = 2)
+msc_reference <- msc_fit(X)
+X_msc <- msc_transform(X, msc_reference)
 split <- kennard_stone_split(X, test_size = 0.3)
 ```
 
-The four additional stateless operators above use the same native C ABI as
-Python `n4m` and have frozen cross-language matrix parity tests. Stateful
-operators such as MSC are not yet exposed with a serializable fit state.
+The four additional stateless operators and MSC use the same native C ABI as
+Python `n4m` and have frozen cross-language matrix parity tests. MSC exports
+its fitted reference vector; only training spectra are used to learn it.
+Other stateful operators still need explicit state import/export surfaces.
 
 ## Available solvers
 

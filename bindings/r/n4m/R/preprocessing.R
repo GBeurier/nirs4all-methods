@@ -104,6 +104,37 @@ detrend_transform <- function(X, polyorder = 1L) {
     .Call("r_n4m_detrend_transform", X, as.integer(polyorder), PACKAGE = "n4m")
 }
 
+#' Fit Multiplicative Scatter Correction on training spectra.
+#'
+#' Returns only the native fitted reference spectrum. Save this vector and
+#' pass it to [msc_transform()] for validation or future samples; do not fit
+#' again on those samples.
+#' @param X Finite numeric training matrix with at least two features.
+#' @return Numeric reference spectrum, length `ncol(X)`.
+#' @export
+msc_fit <- function(X) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    if (ncol(X) < 2L || anyNA(X) || any(!is.finite(X)))
+        stop("X must be a finite matrix with at least two features", call. = FALSE)
+    .Call("r_n4m_msc_fit", X, PACKAGE = "n4m")
+}
+
+#' Apply fitted Multiplicative Scatter Correction.
+#' @param X Finite numeric matrix with the same feature order as training.
+#' @param reference Reference spectrum from [msc_fit()].
+#' @return Numeric matrix with the same shape as `X`.
+#' @export
+msc_transform <- function(X, reference) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    if (!is.numeric(reference) || is.matrix(reference) ||
+        length(reference) != ncol(X) || anyNA(reference) ||
+        any(!is.finite(reference)) || anyNA(X) || any(!is.finite(X)))
+        stop("X and fitted reference must be finite and feature-aligned", call. = FALSE)
+    .Call("r_n4m_msc_transform", X, as.numeric(reference), PACKAGE = "n4m")
+}
+
 #' Kennard-Stone train/test split.
 #'
 #' Delegates to libn4m's Kennard-Stone splitter and returns train/test sample

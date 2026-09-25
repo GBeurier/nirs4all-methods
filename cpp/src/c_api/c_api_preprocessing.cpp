@@ -832,6 +832,39 @@ N4M_API n4m_status_t n4m_transform_msc_is_fitted(const n4m_pp_msc_handle_t* h,
     }
 }
 
+N4M_API n4m_status_t n4m_transform_msc_reference_size(
+    const n4m_pp_msc_handle_t* h, int64_t* out_cols) {
+    if (h == nullptr || out_cols == nullptr) return N4M_ERR_NULL_POINTER;
+    try {
+        const int64_t cols = n4m_pp_msc_state_n_features(h->state);
+        if (cols == 0) return N4M_ERR_NOT_FITTED;
+        *out_cols = cols;
+        return N4M_OK;
+    } catch (...) {
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_transform_msc_get_reference(
+    const n4m_pp_msc_handle_t* h, double* out, int64_t cols) {
+    if (h == nullptr) return N4M_ERR_NULL_POINTER;
+    try {
+        return n4m_pp_msc_state_get_reference(h->state, out, cols);
+    } catch (...) {
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_transform_msc_set_reference(
+    n4m_pp_msc_handle_t* h, const double* reference, int64_t cols) {
+    if (h == nullptr) return N4M_ERR_NULL_POINTER;
+    try {
+        return n4m_pp_msc_state_set_reference(h->state, reference, cols);
+    } catch (...) {
+        return N4M_ERR_INTERNAL;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // EMSC (Phase 3 stateful)
 // ---------------------------------------------------------------------------

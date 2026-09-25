@@ -236,6 +236,10 @@ n4m_status_t n4m_pp_msc_state_set_reference(n4m_pp_msc_state_t* state,
         return N4M_ERR_OUT_OF_MEMORY;
     }
     for (int64_t j = 0; j < cols; ++j) {
+        if (!isfinite(reference[j])) {
+            free(ref_copy);
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
         ref_copy[j] = reference[j];
     }
 
@@ -252,7 +256,7 @@ n4m_status_t n4m_pp_msc_state_set_reference(n4m_pp_msc_state_t* state,
         const double centered = ref_copy[j] - ref_mean;
         ref_den += centered * centered;
     }
-    if (ref_den <= 0.0) {
+    if (!isfinite(ref_mean) || !isfinite(ref_den) || ref_den <= 0.0) {
         free(ref_copy);
         return N4M_ERR_NUMERICAL_FAILURE;
     }

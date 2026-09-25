@@ -16,6 +16,8 @@ export(local_snv_transform)
 export(robust_snv_transform)
 export(area_normalization_transform)
 export(detrend_transform)
+export(msc_fit)
+export(msc_transform)
 export(kennard_stone_split)
 
 # Tier 1 — MethodResult fits
