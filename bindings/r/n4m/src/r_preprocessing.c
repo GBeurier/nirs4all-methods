@@ -240,6 +240,59 @@ SEXP r_n4m_msc_transform(SEXP X, SEXP reference) {
     R_PP_APPLY_SAME_SHAPE(X, handle, n4m_transform_msc);
 }
 
+SEXP r_n4m_emsc_fit(SEXP X, SEXP degree) {
+    int64_t rows = 0, cols = 0;
+    r_pp_matrix_shape(X, &rows, &cols);
+    SEXP input_rm = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)(rows * cols)));
+    r_pp_copy_r_to_rowmajor(X, rows, cols, REAL(input_rm));
+    n4m_pp_emsc_handle_t* handle = NULL;
+    n4m_status_t status = n4m_transform_emsc_create(&handle, r_pp_int_scalar(degree, "degree"));
+    if (status != N4M_OK) {
+        UNPROTECT(1);
+        r_pp_throw_status("n4m_transform_emsc_create", status);
+    }
+    n4m_matrix_view_t input_view;
+    n4m_matrix_view_init_rowmajor(&input_view, REAL(input_rm), rows, cols, N4M_DTYPE_F64);
+    status = n4m_transform_emsc_fit(handle, input_view);
+    if (status != N4M_OK) {
+        n4m_transform_emsc_destroy(handle);
+        UNPROTECT(1);
+        r_pp_throw_status("n4m_transform_emsc_fit", status);
+    }
+    int64_t reference_cols = 0;
+    status = n4m_transform_emsc_reference_size(handle, &reference_cols);
+    if (status != N4M_OK || reference_cols != cols) {
+        n4m_transform_emsc_destroy(handle);
+        UNPROTECT(1);
+        Rf_error("fitted EMSC reference size differs from training width");
+    }
+    SEXP reference = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)cols));
+    status = n4m_transform_emsc_get_reference(handle, REAL(reference), cols);
+    n4m_transform_emsc_destroy(handle);
+    if (status != N4M_OK) {
+        UNPROTECT(2);
+        r_pp_throw_status("n4m_transform_emsc_get_reference", status);
+    }
+    UNPROTECT(2);
+    return reference;
+}
+
+SEXP r_n4m_emsc_transform(SEXP X, SEXP reference, SEXP degree) {
+    int64_t rows = 0, cols = 0;
+    r_pp_matrix_shape(X, &rows, &cols);
+    if (TYPEOF(reference) != REALSXP || XLENGTH(reference) != cols)
+        Rf_error("EMSC reference must be a numeric vector matching X columns");
+    n4m_pp_emsc_handle_t* handle = NULL;
+    n4m_status_t status = n4m_transform_emsc_create(&handle, r_pp_int_scalar(degree, "degree"));
+    if (status != N4M_OK) r_pp_throw_status("n4m_transform_emsc_create", status);
+    status = n4m_transform_emsc_set_reference(handle, REAL(reference), cols);
+    if (status != N4M_OK) {
+        n4m_transform_emsc_destroy(handle);
+        r_pp_throw_status("n4m_transform_emsc_set_reference", status);
+    }
+    R_PP_APPLY_SAME_SHAPE(X, handle, n4m_transform_emsc);
+}
+
 SEXP r_n4m_snv_transform(SEXP X, SEXP with_mean, SEXP with_std, SEXP ddof) {
     int64_t rows = 0;
     int64_t cols = 0;

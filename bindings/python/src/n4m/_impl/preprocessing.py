@@ -279,6 +279,51 @@ class EMSC(StatefulOperator):
         )
         return h
 
+    @property
+    def reference_(self) -> np.ndarray:
+        """Copy the fitted training reference for a portable EMSC replay."""
+        if not self._fitted:
+            raise RuntimeError("EMSC must be fitted before exporting its reference")
+        cols = ctypes.c_int64()
+        check(
+            lib.n4m_transform_emsc_reference_size(
+                self._ensure_handle(), ctypes.byref(cols)
+            ),
+            "n4m_transform_emsc_reference_size",
+        )
+        reference = np.empty(cols.value, dtype=np.float64)
+        check(
+            lib.n4m_transform_emsc_get_reference(
+                self._ensure_handle(),
+                reference.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_int64(cols.value),
+            ),
+            "n4m_transform_emsc_get_reference",
+        )
+        return reference
+
+    def restore_reference(self, reference) -> "EMSC":
+        """Restore a reference fitted with the same polynomial degree."""
+        values = np.asarray(reference, dtype=np.float64)
+        if (
+            values.ndim != 1
+            or values.size < self.degree + 2
+            or not np.all(np.isfinite(values))
+        ):
+            raise ValueError("EMSC reference must be finite with degree + 2 values")
+        values = np.ascontiguousarray(values)
+        check(
+            lib.n4m_transform_emsc_set_reference(
+                self._ensure_handle(),
+                values.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_int64(values.size),
+            ),
+            "n4m_transform_emsc_set_reference",
+        )
+        self.n_features_in_ = values.size
+        self._fitted = True
+        return self
+
 
 class BaselineCenter(StatefulOperator):
     """Column-mean baseline centering."""

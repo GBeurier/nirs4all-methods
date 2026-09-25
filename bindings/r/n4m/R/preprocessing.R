@@ -135,6 +135,47 @@ msc_transform <- function(X, reference) {
     .Call("r_n4m_msc_transform", X, as.numeric(reference), PACKAGE = "n4m")
 }
 
+#' Fit Extended Multiplicative Scatter Correction on training spectra.
+#'
+#' The native engine uses the training-column mean as its reference and the
+#' integer feature axis `0:(ncol(X)-1)` for polynomial terms. The returned
+#' vector is the complete fitted state when combined with `degree`.
+#' @param X Finite numeric training matrix.
+#' @param degree Positive polynomial degree; requires at least `degree + 2` features.
+#' @return Numeric reference spectrum of length `ncol(X)`.
+#' @export
+emsc_fit <- function(X, degree = 2L) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    if (length(degree) != 1L || !is.numeric(degree) || !is.finite(degree) ||
+        degree < 1L || degree > .Machine$integer.max - 2L || degree != floor(degree))
+        stop("degree must be a positive integer", call. = FALSE)
+    if (ncol(X) < degree + 2L || anyNA(X) || any(!is.finite(X)))
+        stop("X must be finite with at least degree + 2 features", call. = FALSE)
+    .Call("r_n4m_emsc_fit", X, as.integer(degree), PACKAGE = "n4m")
+}
+
+#' Apply fitted Extended Multiplicative Scatter Correction.
+#' @param X Finite numeric spectra with the training feature order.
+#' @param reference Reference returned by [emsc_fit()].
+#' @param degree Same polynomial degree used at fit time.
+#' @return Numeric matrix with the shape of `X`.
+#' @export
+emsc_transform <- function(X, reference, degree = 2L) {
+    if (!is.matrix(X)) X <- as.matrix(X)
+    storage.mode(X) <- "double"
+    if (length(degree) != 1L || !is.numeric(degree) || !is.finite(degree) ||
+        degree < 1L || degree > .Machine$integer.max - 2L || degree != floor(degree))
+        stop("degree must be a positive integer", call. = FALSE)
+    if (!is.numeric(reference) || is.matrix(reference) ||
+        length(reference) != ncol(X) || ncol(X) < degree + 2L ||
+        anyNA(reference) || any(!is.finite(reference)) ||
+        anyNA(X) || any(!is.finite(X)))
+        stop("X and fitted reference must be finite and feature-aligned", call. = FALSE)
+    .Call("r_n4m_emsc_transform", X, as.numeric(reference),
+          as.integer(degree), PACKAGE = "n4m")
+}
+
 #' Kennard-Stone train/test split.
 #'
 #' Delegates to libn4m's Kennard-Stone splitter and returns train/test sample

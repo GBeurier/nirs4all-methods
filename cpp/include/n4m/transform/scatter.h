@@ -135,6 +135,12 @@ N4M_API n4m_status_t n4m_transform_emsc_transform(const n4m_pp_emsc_handle_t* ha
                                             n4m_matrix_view_t out);
 N4M_API n4m_status_t n4m_transform_emsc_is_fitted(const n4m_pp_emsc_handle_t* handle,
                                             int* out_fitted);
+N4M_API n4m_status_t n4m_transform_emsc_reference_size(
+    const n4m_pp_emsc_handle_t* handle, int64_t* out_cols);
+N4M_API n4m_status_t n4m_transform_emsc_get_reference(
+    const n4m_pp_emsc_handle_t* handle, double* out, int64_t cols);
+N4M_API n4m_status_t n4m_transform_emsc_set_reference(
+    n4m_pp_emsc_handle_t* handle, const double* reference, int64_t cols);
 
 typedef struct n4m_pp_local_centering_handle_t n4m_pp_local_centering_handle_t;
 N4M_API n4m_status_t n4m_transform_local_centering_create(

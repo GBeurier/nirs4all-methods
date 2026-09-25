@@ -26,6 +26,8 @@ SEXP r_n4m_area_normalization_transform(SEXP X, SEXP method);
 SEXP r_n4m_detrend_transform(SEXP X, SEXP polyorder);
 SEXP r_n4m_msc_fit(SEXP X);
 SEXP r_n4m_msc_transform(SEXP X, SEXP reference);
+SEXP r_n4m_emsc_fit(SEXP X, SEXP degree);
+SEXP r_n4m_emsc_transform(SEXP X, SEXP reference, SEXP degree);
 SEXP r_n4m_kennard_stone_split(SEXP X, SEXP test_size, SEXP zero_based);
 
 /* r_methods.c — MethodResult fits */
@@ -71,6 +73,8 @@ static const R_CallMethodDef callMethods[] = {
     {"r_n4m_detrend_transform", (DL_FUNC)&r_n4m_detrend_transform, 2},
     {"r_n4m_msc_fit", (DL_FUNC)&r_n4m_msc_fit, 1},
     {"r_n4m_msc_transform", (DL_FUNC)&r_n4m_msc_transform, 2},
+    {"r_n4m_emsc_fit", (DL_FUNC)&r_n4m_emsc_fit, 2},
+    {"r_n4m_emsc_transform", (DL_FUNC)&r_n4m_emsc_transform, 3},
     {"r_n4m_kennard_stone_split", (DL_FUNC)&r_n4m_kennard_stone_split, 3},
 
     /* MethodResult fits */

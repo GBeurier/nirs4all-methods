@@ -45,6 +45,14 @@ void n4m_pp_emsc_state_free(n4m_pp_emsc_state_t* state);
  * otherwise. NULL-safe (returns 0 on NULL). */
 int n4m_pp_emsc_state_is_fitted(const n4m_pp_emsc_state_t* state);
 
+/* Copy or restore the fitted mean reference; polynomial degree belongs to the
+ * state created by n4m_pp_emsc_state_new. */
+int64_t n4m_pp_emsc_state_n_features(const n4m_pp_emsc_state_t* state);
+n4m_status_t n4m_pp_emsc_state_get_reference(const n4m_pp_emsc_state_t* state,
+                                              double* out, int64_t cols);
+n4m_status_t n4m_pp_emsc_state_set_reference(n4m_pp_emsc_state_t* state,
+                                              const double* reference, int64_t cols);
+
 /* Fit on X (rows x cols). Requires rows >= 1 and cols >= degree + 2.
  * Replaces any prior fitted state. */
 n4m_status_t n4m_pp_emsc_state_fit(n4m_pp_emsc_state_t* state,
