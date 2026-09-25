@@ -25,6 +25,36 @@ test_that("N4MM import rejects malformed bytes", {
   expect_error(n4m_model_export(NULL), "external pointer")
 })
 
+test_that("native affine import exports multi-target N4MM without transposing coefficients", {
+  coefficients <- matrix(c(2, 0.5, -1, 3), nrow = 2L, byrow = TRUE)
+  intercept <- c(1.5, -2)
+  X <- matrix(c(1, 4, -2, 3, 0.5, -1), ncol = 2L, byrow = TRUE)
+  expected <- sweep(X %*% coefficients, 2L, intercept, "+")
+  model <- n4m_model_import_linear_predictor(coefficients, intercept,
+                                             source_training_samples = 17L)
+  expect_equal(n4m_predict(model, X), expected, tolerance = 1e-14)
+  bytes <- n4m_model_export(model)
+  descriptor <- n4m_model_descriptor(bytes)
+  expect_identical(descriptor$format_version, 1L)
+  expect_identical(descriptor$algorithm, 11L)
+  expect_identical(descriptor$n_features, 2L)
+  expect_identical(descriptor$n_targets, 2L)
+  expect_identical(descriptor$n_components, 0L)
+  expect_identical(descriptor$capabilities, 5)
+  restored <- n4m_model_import(bytes)
+  expect_equal(n4m_predict(restored, X), expected, tolerance = 1e-14)
+  expect_identical(n4m_model_export(restored), bytes)
+  unknown_count <- n4m_model_import_linear_predictor(coefficients, intercept)
+  expect_equal(n4m_predict(unknown_count, X), expected, tolerance = 1e-14)
+  expect_error(n4m_model_import_linear_predictor(coefficients, 1),
+               "one finite numeric value")
+  expect_error(n4m_model_import_linear_predictor(matrix(NaN, 1L), 0),
+               "finite numeric matrix")
+  expect_error(n4m_model_import_linear_predictor(coefficients, intercept,
+                                                 source_training_samples = -1L),
+               "non-negative integer")
+})
+
 test_that("embedded SNV-Savitzky-Golay state predicts raw spectra and round-trips", {
   x <- outer(seq_len(24L), seq_len(13L),
              function(i, j) sin(i * j / 11) + i * j / 170)
