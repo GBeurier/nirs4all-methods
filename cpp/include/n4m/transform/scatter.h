@@ -88,6 +88,16 @@ N4M_API n4m_status_t n4m_transform_msc_inverse_transform(
     n4m_matrix_view_t out);
 N4M_API n4m_status_t n4m_transform_msc_is_fitted(const n4m_pp_msc_handle_t* handle,
                                            int* out_fitted);
+/* Export/import the fitted reference spectrum, not the source training rows.
+ * A restored handle produces the same forward transform as the fitted handle.
+ * `reference_size` returns N4M_ERR_NOT_FITTED before a successful fit/import.
+ * `set_reference` rejects non-finite or zero-variance references. */
+N4M_API n4m_status_t n4m_transform_msc_reference_size(
+    const n4m_pp_msc_handle_t* handle, int64_t* out_cols);
+N4M_API n4m_status_t n4m_transform_msc_get_reference(
+    const n4m_pp_msc_handle_t* handle, double* out, int64_t cols);
+N4M_API n4m_status_t n4m_transform_msc_set_reference(
+    n4m_pp_msc_handle_t* handle, const double* reference, int64_t cols);
 
 /* ---------- EMSC (Extended Multiplicative Scatter Correction) ------------ */
 /*
@@ -125,6 +135,12 @@ N4M_API n4m_status_t n4m_transform_emsc_transform(const n4m_pp_emsc_handle_t* ha
                                             n4m_matrix_view_t out);
 N4M_API n4m_status_t n4m_transform_emsc_is_fitted(const n4m_pp_emsc_handle_t* handle,
                                             int* out_fitted);
+N4M_API n4m_status_t n4m_transform_emsc_reference_size(
+    const n4m_pp_emsc_handle_t* handle, int64_t* out_cols);
+N4M_API n4m_status_t n4m_transform_emsc_get_reference(
+    const n4m_pp_emsc_handle_t* handle, double* out, int64_t cols);
+N4M_API n4m_status_t n4m_transform_emsc_set_reference(
+    n4m_pp_emsc_handle_t* handle, const double* reference, int64_t cols);
 
 typedef struct n4m_pp_local_centering_handle_t n4m_pp_local_centering_handle_t;
 N4M_API n4m_status_t n4m_transform_local_centering_create(

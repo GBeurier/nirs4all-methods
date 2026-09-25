@@ -42,6 +42,7 @@ struct n4m_pp_emsc_state_t {
     int32_t  m;             /* basis dimensionality = degree + 1 */
     double*  basis_qr;      /* p * m, row-major: in-place Householder factor */
     double*  tau;           /* m, Householder scaling factors */
+    double*  reference;     /* p, fitted training-column mean */
     double*  poly_basis;    /* p * degree, row-major: cached wavelengths^d
                              * columns for the subtraction step. */
 };
@@ -60,6 +61,7 @@ n4m_pp_emsc_state_t* n4m_pp_emsc_state_new(int32_t degree) {
     s->m          = degree + 1;
     s->basis_qr   = NULL;
     s->tau        = NULL;
+    s->reference  = NULL;
     s->poly_basis = NULL;
     return s;
 }
@@ -68,12 +70,36 @@ void n4m_pp_emsc_state_free(n4m_pp_emsc_state_t* state) {
     if (state == NULL) return;
     free(state->basis_qr);
     free(state->tau);
+    free(state->reference);
     free(state->poly_basis);
     free(state);
 }
 
 int n4m_pp_emsc_state_is_fitted(const n4m_pp_emsc_state_t* state) {
     return (state != NULL && state->fitted) ? 1 : 0;
+}
+
+int64_t n4m_pp_emsc_state_n_features(const n4m_pp_emsc_state_t* state) {
+    return n4m_pp_emsc_state_is_fitted(state) ? state->cols : 0;
+}
+
+n4m_status_t n4m_pp_emsc_state_get_reference(const n4m_pp_emsc_state_t* state,
+                                              double* out, int64_t cols) {
+    if (state == NULL || out == NULL) return N4M_ERR_NULL_POINTER;
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    if (cols != state->cols) return N4M_ERR_SHAPE_MISMATCH;
+    memcpy(out, state->reference, (size_t)cols * sizeof(double));
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_emsc_state_set_reference(n4m_pp_emsc_state_t* state,
+                                              const double* reference, int64_t cols) {
+    if (state == NULL || reference == NULL) return N4M_ERR_NULL_POINTER;
+    if (cols < (int64_t)(state->degree + 2)) return N4M_ERR_INVALID_ARGUMENT;
+    for (int64_t j = 0; j < cols; ++j) {
+        if (!isfinite(reference[j])) return N4M_ERR_INVALID_ARGUMENT;
+    }
+    return n4m_pp_emsc_state_fit(state, reference, 1, cols);
 }
 
 n4m_status_t n4m_pp_emsc_state_fit(n4m_pp_emsc_state_t* state,
@@ -104,6 +130,13 @@ n4m_status_t n4m_pp_emsc_state_fit(n4m_pp_emsc_state_t* state,
         free(poly);
         return N4M_ERR_OUT_OF_MEMORY;
     }
+    double* reference = (double*)malloc((size_t)p * sizeof(double));
+    if (reference == NULL) {
+        free(basis);
+        free(poly);
+        free(tau);
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
 
     /* Column 0 = reference = mean(X, axis=0). */
     const double rows_d = (double)rows;
@@ -112,7 +145,15 @@ n4m_status_t n4m_pp_emsc_state_fit(n4m_pp_emsc_state_t* state,
         for (int64_t i = 0; i < rows; ++i) {
             acc += X[(size_t)i * (size_t)cols + (size_t)j];
         }
-        basis[(size_t)j * (size_t)m + 0u] = acc / rows_d;
+        reference[j] = acc / rows_d;
+        if (!isfinite(reference[j])) {
+            free(basis);
+            free(poly);
+            free(tau);
+            free(reference);
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        basis[(size_t)j * (size_t)m + 0u] = reference[j];
     }
     /* Columns 1..degree = wavelengths^d, wavelengths = 0, 1, ..., p-1. */
     for (int64_t j = 0; j < p; ++j) {
@@ -133,6 +174,7 @@ n4m_status_t n4m_pp_emsc_state_fit(n4m_pp_emsc_state_t* state,
             free(basis);
             free(poly);
             free(tau);
+            free(reference);
             return qst;
         }
     }
@@ -140,10 +182,12 @@ n4m_status_t n4m_pp_emsc_state_fit(n4m_pp_emsc_state_t* state,
     /* Commit. */
     free(state->basis_qr);
     free(state->tau);
+    free(state->reference);
     free(state->poly_basis);
     state->cols       = cols;
     state->basis_qr   = basis;
     state->tau        = tau;
+    state->reference  = reference;
     state->poly_basis = poly;
     state->fitted     = 1;
     return N4M_OK;

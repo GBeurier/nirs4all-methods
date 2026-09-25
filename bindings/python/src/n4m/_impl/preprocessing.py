@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: CECILL-2.1
 """Stateless and stateful preprocessing wrappers."""
+
 from __future__ import annotations
 
 import ctypes
+
+import numpy as np
 
 from .._errors import check
 from .._ffi import lib
@@ -45,8 +48,9 @@ class LSNV(StatelessOperator):
 
     _C_PREFIX = "n4m_transform_local_snv"
 
-    def __init__(self, window: int = 11, pad_mode: str = "reflect",
-                 constant_value: float = 0.0):
+    def __init__(
+        self, window: int = 11, pad_mode: str = "reflect", constant_value: float = 0.0
+    ):
         super().__init__()
         self.window = int(window)
         self.pad_mode = str(pad_mode)
@@ -75,8 +79,9 @@ class RNV(StatelessOperator):
 
     _C_PREFIX = "n4m_transform_robust_snv"
 
-    def __init__(self, with_center: bool = True, with_scale: bool = True,
-                 k: float = 1.4826):
+    def __init__(
+        self, with_center: bool = True, with_scale: bool = True, k: float = 1.4826
+    ):
         super().__init__()
         self.with_center = bool(with_center)
         self.with_scale = bool(with_scale)
@@ -110,9 +115,13 @@ class AreaNormalization(StatelessOperator):
         try:
             method = _AREA_METHODS[self.method]
         except KeyError as exc:
-            raise ValueError(f"Unknown AreaNormalization method: {self.method}") from exc
+            raise ValueError(
+                f"Unknown AreaNormalization method: {self.method}"
+            ) from exc
         check(
-            lib.n4m_transform_area_normalization_create(ctypes.byref(h), ctypes.c_int32(method)),
+            lib.n4m_transform_area_normalization_create(
+                ctypes.byref(h), ctypes.c_int32(method)
+            ),
             "n4m_transform_area_normalization_create",
         )
         return h
@@ -209,6 +218,49 @@ class MSC(StatefulOperator):
         check(lib.n4m_transform_msc_create(ctypes.byref(h)), "n4m_transform_msc_create")
         return h
 
+    @property
+    def reference_(self) -> np.ndarray:
+        """Copy the fitted reference spectrum for portable prediction later."""
+        if not self._fitted:
+            raise RuntimeError("MSC must be fitted before exporting its reference")
+        cols = ctypes.c_int64()
+        check(
+            lib.n4m_transform_msc_reference_size(
+                self._ensure_handle(), ctypes.byref(cols)
+            ),
+            "n4m_transform_msc_reference_size",
+        )
+        reference = np.empty(cols.value, dtype=np.float64)
+        check(
+            lib.n4m_transform_msc_get_reference(
+                self._ensure_handle(),
+                reference.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_int64(cols.value),
+            ),
+            "n4m_transform_msc_get_reference",
+        )
+        return reference
+
+    def restore_reference(self, reference) -> "MSC":
+        """Restore a training reference without refitting on prediction data."""
+        values = np.asarray(reference, dtype=np.float64)
+        if values.ndim != 1 or values.size < 2 or not np.all(np.isfinite(values)):
+            raise ValueError(
+                "MSC reference must be a finite vector of at least two values"
+            )
+        values = np.ascontiguousarray(values)
+        check(
+            lib.n4m_transform_msc_set_reference(
+                self._ensure_handle(),
+                values.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_int64(values.size),
+            ),
+            "n4m_transform_msc_set_reference",
+        )
+        self.n_features_in_ = values.size
+        self._fitted = True
+        return self
+
 
 class EMSC(StatefulOperator):
     """Extended Multiplicative Scatter Correction (polynomial)."""
@@ -227,6 +279,51 @@ class EMSC(StatefulOperator):
         )
         return h
 
+    @property
+    def reference_(self) -> np.ndarray:
+        """Copy the fitted training reference for a portable EMSC replay."""
+        if not self._fitted:
+            raise RuntimeError("EMSC must be fitted before exporting its reference")
+        cols = ctypes.c_int64()
+        check(
+            lib.n4m_transform_emsc_reference_size(
+                self._ensure_handle(), ctypes.byref(cols)
+            ),
+            "n4m_transform_emsc_reference_size",
+        )
+        reference = np.empty(cols.value, dtype=np.float64)
+        check(
+            lib.n4m_transform_emsc_get_reference(
+                self._ensure_handle(),
+                reference.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_int64(cols.value),
+            ),
+            "n4m_transform_emsc_get_reference",
+        )
+        return reference
+
+    def restore_reference(self, reference) -> "EMSC":
+        """Restore a reference fitted with the same polynomial degree."""
+        values = np.asarray(reference, dtype=np.float64)
+        if (
+            values.ndim != 1
+            or values.size < self.degree + 2
+            or not np.all(np.isfinite(values))
+        ):
+            raise ValueError("EMSC reference must be finite with degree + 2 values")
+        values = np.ascontiguousarray(values)
+        check(
+            lib.n4m_transform_emsc_set_reference(
+                self._ensure_handle(),
+                values.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                ctypes.c_int64(values.size),
+            ),
+            "n4m_transform_emsc_set_reference",
+        )
+        self.n_features_in_ = values.size
+        self._fitted = True
+        return self
+
 
 class BaselineCenter(StatefulOperator):
     """Column-mean baseline centering."""
@@ -238,7 +335,10 @@ class BaselineCenter(StatefulOperator):
 
     def _create_handle(self):
         h = ctypes.c_void_p()
-        check(lib.n4m_transform_baseline_center_create(ctypes.byref(h)), "n4m_transform_baseline_center_create")
+        check(
+            lib.n4m_transform_baseline_center_create(ctypes.byref(h)),
+            "n4m_transform_baseline_center_create",
+        )
         return h
 
 
@@ -270,9 +370,11 @@ class Derivate(StatefulOperator):
         from .._matrix import as_f64_2d
 
         X = as_f64_2d(X)
-        out_cols = int(lib.n4m_transform_derivative_output_cols(
-            ctypes.c_int32(self.order), ctypes.c_int64(X.shape[1])
-        ))
+        out_cols = int(
+            lib.n4m_transform_derivative_output_cols(
+                ctypes.c_int32(self.order), ctypes.c_int64(X.shape[1])
+            )
+        )
         if out_cols <= 0:
             raise ValueError(
                 "Derivate output has no columns; order must be smaller than input width"
@@ -285,9 +387,15 @@ class SavitzkyGolay(StatelessOperator):
 
     _C_PREFIX = "n4m_transform_savitzky_golay"
 
-    def __init__(self, window_length: int = 5, polyorder: int = 2,
-                 deriv: int = 0, delta: float = 1.0,
-                 mode: str = "mirror", cval: float = 0.0):
+    def __init__(
+        self,
+        window_length: int = 5,
+        polyorder: int = 2,
+        deriv: int = 0,
+        delta: float = 1.0,
+        mode: str = "mirror",
+        cval: float = 0.0,
+    ):
         super().__init__()
         self.window_length = int(window_length)
         self.polyorder = int(polyorder)
@@ -441,8 +549,12 @@ class ToAbsorbance(StatelessOperator):
 
     _C_PREFIX = "n4m_transform_to_absorbance"
 
-    def __init__(self, is_percent: bool = False, epsilon: float = 1e-10,
-                 clip_negative: bool = True):
+    def __init__(
+        self,
+        is_percent: bool = False,
+        epsilon: float = 1e-10,
+        clip_negative: bool = True,
+    ):
         super().__init__()
         self.is_percent = bool(is_percent)
         self.epsilon = float(epsilon)

@@ -633,6 +633,7 @@ def _fit_method_result(
     matrices: Sequence[str],
     scalars: Sequence[str],
     n_components: int | None = None,
+    solver: int | None = None,
     center_x: bool | None = None,
     scale_x: bool | None = None,
     center_y: bool | None = None,
@@ -654,6 +655,11 @@ def _fit_method_result(
             center_y=center_y,
             scale_y=scale_y,
         )
+        if solver is not None:
+            check(
+                lib.n4m_config_set_solver(cfg, ctypes.c_int(int(solver))),
+                "n4m_config_set_solver",
+            )
         Xv = numpy_to_view(X_arr)
         Yv = numpy_to_view(y_arr)
         check(
@@ -8735,7 +8741,7 @@ def continuum_regression(
     tau: float = 0.5,
     n_components: int = 2,
 ) -> dict[str, np.ndarray | float]:
-    """Fit native continuum regression and return its MethodResult."""
+    """Fit canonical Stone-Brooks continuum regression, returning MethodResult."""
     return _fit_method_result(
         "n4m_estimators_continuum_regression_fit",
         X,
@@ -8744,6 +8750,7 @@ def continuum_regression(
         matrices=("coefficients", "predictions", "x_mean", "y_mean"),
         scalars=("rmse", "tau"),
         n_components=n_components,
+        solver=1,  # SIMPLS selects canonical continuum; NIPALS selects legacy rescaling.
     )
 
 

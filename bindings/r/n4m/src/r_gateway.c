@@ -15,6 +15,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "n4m/n4m.h"
@@ -159,11 +160,16 @@ static int sexp_flag(SEXP s, int dflt) {
 SEXP r_n4m_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
                     SEXP store_scores_sexp,
                     SEXP center_x_sexp, SEXP scale_x_sexp,
-                    SEXP center_y_sexp, SEXP scale_y_sexp) {
+                    SEXP center_y_sexp, SEXP scale_y_sexp,
+                    SEXP embedded_snv_savgol_sexp) {
     if (TYPEOF(X) != REALSXP) Rf_error("X must be a numeric matrix");
     if (TYPEOF(Y) != REALSXP) Rf_error("Y must be a numeric matrix");
     if (TYPEOF(algo_sexp) != STRSXP) Rf_error("algo must be character");
     if (TYPEOF(n_components_sexp) != INTSXP) Rf_error("n_components must be integer");
+    if (embedded_snv_savgol_sexp != R_NilValue &&
+        (TYPEOF(embedded_snv_savgol_sexp) != REALSXP ||
+         XLENGTH(embedded_snv_savgol_sexp) != 2))
+        Rf_error("embedded_snv_savgol must be NULL or two double values");
     const int store_scores = sexp_flag(store_scores_sexp, 0);
     const int center_x = sexp_flag(center_x_sexp, 1);
     const int scale_x  = sexp_flag(scale_x_sexp,  1);
@@ -234,6 +240,26 @@ SEXP r_n4m_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
     n4m_config_set_scale_y(cfg, scale_y);
     n4m_config_set_store_scores(cfg, store_scores ? 1 : 0);
 
+    /* The native model owns a snapshot of this fitted preprocessing chain.
+     * Keep the non-owning config hook alive until n4m_model_fit returns. */
+    n4m_pipeline_t* embedded = NULL;
+    if (embedded_snv_savgol_sexp != R_NilValue) {
+        status = n4m_pipeline_create(&embedded);
+        if (status == N4M_OK)
+            status = n4m_pipeline_add_operator(embedded, N4M_OP_SNV, NULL, 0);
+        if (status == N4M_OK)
+            status = n4m_pipeline_add_operator(embedded, N4M_OP_SAVGOL_SMOOTH,
+                                               REAL(embedded_snv_savgol_sexp), 2);
+        if (status == N4M_OK)
+            status = n4m_config_set_pipeline(cfg, embedded);
+        if (status != N4M_OK) {
+            if (embedded != NULL) n4m_pipeline_destroy(embedded);
+            n4m_config_destroy(cfg);
+            UNPROTECT(2);
+            r_throw_status("n4m embedded pipeline setup", status, ctx);
+        }
+    }
+
     n4m_matrix_view_t X_view;
     n4m_matrix_view_t Y_view;
     n4m_matrix_view_init_rowmajor(&X_view, xrm, n_rows, n_cols, N4M_DTYPE_F64);
@@ -241,6 +267,7 @@ SEXP r_n4m_fit(SEXP X, SEXP Y, SEXP algo_sexp, SEXP n_components_sexp,
 
     n4m_model_t* model = NULL;
     status = n4m_model_fit(ctx, cfg, &X_view, &Y_view, &model);
+    if (embedded != NULL) n4m_pipeline_destroy(embedded);
     n4m_config_destroy(cfg);
     if (status != N4M_OK) {
         UNPROTECT(2);
@@ -321,6 +348,132 @@ SEXP r_n4m_predict(SEXP model_ptr, SEXP X) {
         }
     }
     UNPROTECT(3);
+    return out;
+}
+
+/* N4MM is the portable fitted-model format shared by all libn4m bindings.
+ * R's external pointers cannot be persisted with saveRDS(), so expose the
+ * bytes explicitly and leave file I/O to the R host. */
+SEXP r_n4m_model_export(SEXP model_ptr) {
+    if (TYPEOF(model_ptr) != EXTPTRSXP) Rf_error("model must be an external pointer");
+    const n4m_model_t* model = (const n4m_model_t*)R_ExternalPtrAddr(model_ptr);
+    if (model == NULL) Rf_error("model handle is NULL (already freed?)");
+    size_t size = 0;
+    n4m_status_t status = n4m_model_export_size(model, &size);
+    if (status != N4M_OK) r_throw_status("n4m_model_export_size", status, NULL);
+    if (size == 0 || size > (size_t)R_XLEN_T_MAX) Rf_error("N4MM model size is invalid for R");
+    SEXP bytes = PROTECT(Rf_allocVector(RAWSXP, (R_xlen_t)size));
+    size_t written = 0;
+    status = n4m_model_export_to_buffer(model, RAW(bytes), size, &written);
+    if (status != N4M_OK || written != size) {
+        UNPROTECT(1);
+        if (status != N4M_OK) r_throw_status("n4m_model_export_to_buffer", status, NULL);
+        Rf_error("n4m_model_export_to_buffer wrote an unexpected byte count");
+    }
+    UNPROTECT(1);
+    return bytes;
+}
+
+SEXP r_n4m_model_import(SEXP bytes) {
+    if (TYPEOF(bytes) != RAWSXP || XLENGTH(bytes) == 0)
+        Rf_error("bytes must be a non-empty raw N4MM vector");
+    n4m_context_t* ctx = NULL;
+    n4m_status_t status = n4m_context_create(&ctx);
+    if (status != N4M_OK) r_throw_status("n4m_context_create", status, NULL);
+    n4m_model_t* model = NULL;
+    status = n4m_model_import_from_buffer(ctx, RAW(bytes), (size_t)XLENGTH(bytes), &model);
+    if (status != N4M_OK) r_throw_status("n4m_model_import_from_buffer", status, ctx);
+    n4m_context_destroy(ctx);
+    SEXP ptr = PROTECT(R_MakeExternalPtr(model, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(ptr, r_model_finalize, TRUE);
+    int32_t nf = 0, nt = 0;
+    n4m_model_get_n_features(model, &nf);
+    n4m_model_get_n_targets(model, &nt);
+    SEXP n_features_attr = PROTECT(Rf_ScalarInteger((int)nf));
+    SEXP n_targets_attr = PROTECT(Rf_ScalarInteger((int)nt));
+    Rf_setAttrib(ptr, Rf_install("n_features"), n_features_attr);
+    Rf_setAttrib(ptr, Rf_install("n_targets"), n_targets_attr);
+    UNPROTECT(3);
+    return ptr;
+}
+
+SEXP r_n4m_model_inspect(SEXP bytes) {
+    if (TYPEOF(bytes) != RAWSXP || XLENGTH(bytes) == 0)
+        Rf_error("bytes must be a non-empty raw N4MM vector");
+    uint32_t format = 0, major = 0, minor = 0, patch = 0;
+    n4m_status_t status = n4m_serialization_inspect(
+        RAW(bytes), (size_t)XLENGTH(bytes), &format, &major, &minor, &patch);
+    if (status != N4M_OK) r_throw_status("n4m_serialization_inspect", status, NULL);
+    SEXP result = PROTECT(Rf_allocVector(VECSXP, 2));
+    SEXP abi = PROTECT(Rf_allocVector(REALSXP, 3));
+    REAL(abi)[0] = (double)major;
+    REAL(abi)[1] = (double)minor;
+    REAL(abi)[2] = (double)patch;
+    SET_VECTOR_ELT(result, 0, Rf_ScalarReal((double)format));
+    SET_VECTOR_ELT(result, 1, abi);
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, 2));
+    SET_STRING_ELT(names, 0, Rf_mkChar("format_version"));
+    SET_STRING_ELT(names, 1, Rf_mkChar("writer_abi"));
+    Rf_setAttrib(result, R_NamesSymbol, names);
+    UNPROTECT(3);
+    return result;
+}
+
+SEXP r_n4m_model_pipeline_info(SEXP bytes) {
+    if (TYPEOF(bytes) != RAWSXP || XLENGTH(bytes) == 0)
+        Rf_error("bytes must be a non-empty raw N4MM vector");
+    n4m_serialized_pipeline_info_v1_t info;
+    memset(&info, 0, sizeof(info));
+    n4m_status_t status = n4m_serialization_inspect_pipeline_v1(
+        RAW(bytes), (size_t)XLENGTH(bytes), &info, sizeof(info));
+    if (status != N4M_OK)
+        r_throw_status("n4m_serialization_inspect_pipeline_v1", status, NULL);
+    SEXP out = PROTECT(Rf_allocVector(VECSXP, 7));
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, 7));
+    const char* labels[] = {"present", "semantic_profile", "window_length",
+                            "polyorder", "raw_n_features", "model_n_features",
+                            "fingerprint"};
+    SET_VECTOR_ELT(out, 0, Rf_ScalarLogical(info.present != 0));
+    SET_VECTOR_ELT(out, 1, Rf_ScalarInteger((int)info.semantic_profile));
+    SET_VECTOR_ELT(out, 2, Rf_ScalarInteger((int)info.savgol_window));
+    SET_VECTOR_ELT(out, 3, Rf_ScalarInteger((int)info.savgol_poly_degree));
+    SET_VECTOR_ELT(out, 4, Rf_ScalarInteger((int)info.raw_n_features));
+    SET_VECTOR_ELT(out, 5, Rf_ScalarInteger((int)info.model_n_features));
+    char fingerprint[17];
+    snprintf(fingerprint, sizeof(fingerprint), "%016llx",
+             (unsigned long long)info.fingerprint);
+    SET_VECTOR_ELT(out, 6, Rf_mkString(fingerprint));
+    for (int i = 0; i < 7; ++i) SET_STRING_ELT(names, i, Rf_mkChar(labels[i]));
+    Rf_setAttrib(out, R_NamesSymbol, names);
+    UNPROTECT(2);
+    return out;
+}
+
+SEXP r_n4m_model_descriptor(SEXP bytes) {
+    if (TYPEOF(bytes) != RAWSXP || XLENGTH(bytes) == 0)
+        Rf_error("bytes must be a non-empty raw N4MM vector");
+    n4m_serialized_model_info_v1_t info;
+    memset(&info, 0, sizeof(info));
+    n4m_status_t status = n4m_serialization_inspect_model_v1(
+        RAW(bytes), (size_t)XLENGTH(bytes), &info);
+    if (status != N4M_OK)
+        r_throw_status("n4m_serialization_inspect_model_v1", status, NULL);
+    SEXP out = PROTECT(Rf_allocVector(VECSXP, 8));
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, 8));
+    const char* labels[] = {"format_version", "algorithm", "solver",
+                            "deflation", "n_features", "n_targets",
+                            "n_components", "capabilities"};
+    SET_VECTOR_ELT(out, 0, Rf_ScalarInteger((int)info.format_version));
+    SET_VECTOR_ELT(out, 1, Rf_ScalarInteger((int)info.algorithm));
+    SET_VECTOR_ELT(out, 2, Rf_ScalarInteger((int)info.solver));
+    SET_VECTOR_ELT(out, 3, Rf_ScalarInteger((int)info.deflation));
+    SET_VECTOR_ELT(out, 4, Rf_ScalarInteger((int)info.n_features));
+    SET_VECTOR_ELT(out, 5, Rf_ScalarInteger((int)info.n_targets));
+    SET_VECTOR_ELT(out, 6, Rf_ScalarInteger((int)info.n_components));
+    SET_VECTOR_ELT(out, 7, Rf_ScalarReal((double)info.capabilities));
+    for (int i = 0; i < 8; ++i) SET_STRING_ELT(names, i, Rf_mkChar(labels[i]));
+    Rf_setAttrib(out, R_NamesSymbol, names);
+    UNPROTECT(2);
     return out;
 }
 
