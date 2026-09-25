@@ -58,3 +58,35 @@ n4m_predict <- function(model, X) {
   storage.mode(X) <- "double"
   .Call("r_n4m_predict", model, X, PACKAGE = "n4m")
 }
+
+#' Export a fitted n4m model in the portable N4MM format
+#'
+#' Unlike an R external pointer or RDS file, these bytes can be imported by
+#' another libn4m binding (including Python) with a compatible N4MM reader.
+#' Treat model bytes as untrusted input when importing from another source.
+#'
+#' @param model External pointer returned by [n4m_fit()] or [n4m_model_import()].
+#' @return A raw vector containing one N4MM model.
+#' @export
+n4m_model_export <- function(model) {
+  .Call("r_n4m_model_export", model, PACKAGE = "n4m")
+}
+
+#' Import a portable N4MM fitted model
+#'
+#' @param bytes Non-empty raw vector returned by [n4m_model_export()] or an
+#'   equivalent libn4m binding. The native parser validates its format.
+#' @return An external pointer with the same lifecycle as [n4m_fit()].
+#' @export
+n4m_model_import <- function(bytes) {
+  .Call("r_n4m_model_import", bytes, PACKAGE = "n4m")
+}
+
+#' Inspect portable N4MM model metadata before import
+#'
+#' @param bytes Non-empty raw N4MM vector.
+#' @return A list with `format_version` and `writer_abi`.
+#' @export
+n4m_model_inspect <- function(bytes) {
+  .Call("r_n4m_model_inspect", bytes, PACKAGE = "n4m")
+}
