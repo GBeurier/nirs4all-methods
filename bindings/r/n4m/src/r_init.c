@@ -59,6 +59,10 @@ SEXP r_n4m_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
                          SEXP params,
                          SEXP center_x, SEXP scale_x,
                          SEXP center_y, SEXP scale_y);
+SEXP r_n4m_affine_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                                SEXP params,
+                                SEXP center_x, SEXP scale_x,
+                                SEXP center_y, SEXP scale_y);
 
 static const R_CallMethodDef callMethods[] = {
     /* core */
@@ -105,6 +109,7 @@ static const R_CallMethodDef callMethods[] = {
 
     /* unified dispatcher */
     {"r_n4m_dispatch_fit", (DL_FUNC)&r_n4m_dispatch_fit, 9},
+    {"r_n4m_affine_dispatch_fit", (DL_FUNC)&r_n4m_affine_dispatch_fit, 9},
 
     {NULL, NULL, 0},
 };

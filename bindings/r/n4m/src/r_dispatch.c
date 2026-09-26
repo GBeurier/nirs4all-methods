@@ -214,7 +214,8 @@ static SEXP make_list(const char** names, SEXP* vals, int n) {
     return out;
 }
 
-/* Pack a MethodResult by category. NULL-terminated key arrays. */
+/* Pack a MethodResult by category. The dispatcher keeps the native result
+ * alive until any requested model conversion is complete. */
 static SEXP pack_result(n4m_method_result_t* mr,
                           const char** dmat, const char** iv,
                           const char** i64, const char** sc) {
@@ -245,7 +246,6 @@ static SEXP pack_result(n4m_method_result_t* mr,
     }
     SEXP out = make_list(names, vals, total);
     UNPROTECT(total);
-    n4m_method_result_destroy(mr);
     return out;
 }
 
@@ -555,10 +555,19 @@ static SEXP pack_aom_per_component_result(n4m_aom_per_component_result_t* res) {
  *  Main dispatcher
  * ===================================================================== */
 
-SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
+static void affine_model_finalize(SEXP ptr) {
+    n4m_model_t* model = (n4m_model_t*)R_ExternalPtrAddr(ptr);
+    if (model != NULL) {
+        n4m_model_destroy(model);
+        R_ClearExternalPtr(ptr);
+    }
+}
+
+static SEXP dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
                          SEXP n_components_sexp, SEXP params,
                          SEXP center_x_sexp, SEXP scale_x_sexp,
-                         SEXP center_y_sexp, SEXP scale_y_sexp) {
+                         SEXP center_y_sexp, SEXP scale_y_sexp,
+                         int affine_model) {
     /* Early validation BEFORE ctx/cfg allocation: pass NULL for both. */
     if (TYPEOF(algo_sexp) != STRSXP) cleanup_err(NULL, NULL, "algo must be character");
     const char* algo = CHAR(STRING_ELT(algo_sexp, 0));
@@ -1341,8 +1350,60 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     }
 
     n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
+        if (mr != NULL) n4m_method_result_destroy(mr);
+        UNPROTECT(2);
+        r_throw(algo, st, ctx);
+    }
+    if (affine_model) {
+        if (mr == NULL || out == R_NilValue) {
+            UNPROTECT(2);
+            r_throw("affine MethodResult", N4M_ERR_INVALID_ARGUMENT, ctx);
+        }
+        n4m_model_t* model = NULL;
+        st = n4m_model_from_method_result(ctx, mr, &model);
+        if (st != N4M_OK) {
+            n4m_method_result_destroy(mr);
+            UNPROTECT(2);
+            r_throw("n4m_model_from_method_result", st, ctx);
+        }
+        SEXP protected_out = PROTECT(out);
+        SEXP ptr = PROTECT(R_MakeExternalPtr(model, R_NilValue, R_NilValue));
+        R_RegisterCFinalizerEx(ptr, affine_model_finalize, TRUE);
+        SEXP n_features = PROTECT(Rf_ScalarInteger(p));
+        SEXP n_targets = PROTECT(Rf_ScalarInteger(q));
+        Rf_setAttrib(ptr, Rf_install("n_features"), n_features);
+        Rf_setAttrib(ptr, Rf_install("n_targets"), n_targets);
+        int count = Rf_length(protected_out);
+        SEXP combined = PROTECT(Rf_allocVector(VECSXP, count + 1));
+        SEXP names = PROTECT(Rf_allocVector(STRSXP, count + 1));
+        SEXP source_names = Rf_getAttrib(protected_out, R_NamesSymbol);
+        for (int i = 0; i < count; ++i) {
+            SET_VECTOR_ELT(combined, i, VECTOR_ELT(protected_out, i));
+            SET_STRING_ELT(names, i, STRING_ELT(source_names, i));
+        }
+        SET_VECTOR_ELT(combined, count, ptr);
+        SET_STRING_ELT(names, count, Rf_mkChar("native_model"));
+        Rf_setAttrib(combined, R_NamesSymbol, names);
+        out = combined;
+        UNPROTECT(6);
+    }
+    if (mr != NULL) n4m_method_result_destroy(mr);
     UNPROTECT(2);  /* X_rm, Y_rm */
-    if (st != N4M_OK) r_throw(algo, st, ctx);
     n4m_context_destroy(ctx);
     return out;
+}
+
+SEXP r_n4m_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                         SEXP params, SEXP center_x, SEXP scale_x,
+                         SEXP center_y, SEXP scale_y) {
+    return dispatch_fit(algo, X, Y, n_components, params,
+                        center_x, scale_x, center_y, scale_y, 0);
+}
+
+SEXP r_n4m_affine_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                                SEXP params, SEXP center_x, SEXP scale_x,
+                                SEXP center_y, SEXP scale_y) {
+    return dispatch_fit(algo, X, Y, n_components, params,
+                        center_x, scale_x, center_y, scale_y, 1);
 }
