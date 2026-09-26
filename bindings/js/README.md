@@ -69,6 +69,10 @@ const ordered = n4m.splitNative("SPXYFold", { data: X, rows, cols },
                                 { data: y, rows, cols: 1 },
                                 { nSplits: 3, foldIndex: 0 });
 // ordered.trainIndices / ordered.testIndices are zero-based Int32Array values.
+
+// Training-only X-to-X augmentation; no Y mixing or fitted-state export.
+const noisyTrainX = n4m.augmentNative("GaussianNoise",
+                                     { data: X, rows, cols }, [0.03], 42);
 ```
 
 `Context` / `Config` / `MethodResult` are also exported for the lower-level

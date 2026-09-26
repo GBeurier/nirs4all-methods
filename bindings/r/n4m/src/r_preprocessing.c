@@ -543,3 +543,31 @@ SEXP r_n4m_splitter_run(SEXP kind, SEXP X, SEXP Y, SEXP groups,
     UNPROTECT(4);
     return out;
 }
+
+/* Seeded, train-only X->X augmentation; no label mixing occurs in this ABI. */
+SEXP r_n4m_augmentation_run(SEXP kind, SEXP X, SEXP params, SEXP seed) {
+    if (TYPEOF(params) != REALSXP || XLENGTH(params) > INT_MAX)
+        Rf_error("augmentation params must be a numeric vector");
+    if (TYPEOF(seed) != REALSXP || XLENGTH(seed) != 1)
+        Rf_error("augmentation seed must be an exact scalar");
+    const double seed_value = REAL(seed)[0];
+    if (!R_finite(seed_value) || seed_value < 0 ||
+        seed_value > 9007199254740991.0 || seed_value != floor(seed_value))
+        Rf_error("augmentation seed must be an exact nonnegative integer");
+    const int32_t code = r_pp_int_scalar(kind, "kind");
+    int64_t rows = 0, cols = 0;
+    r_pp_matrix_shape(X, &rows, &cols);
+    double* input = (double*)R_alloc((size_t)(rows * cols), sizeof(double));
+    double* output = (double*)R_alloc((size_t)(rows * cols), sizeof(double));
+    r_pp_copy_r_to_rowmajor(X, rows, cols, input);
+    n4m_matrix_view_t xv = {0}, ov = {0};
+    n4m_status_t status = n4m_matrix_view_init_rowmajor(
+        &xv, input, rows, cols, N4M_DTYPE_F64);
+    if (status != N4M_OK) r_pp_throw_status("augmentation X view", status);
+    status = n4m_matrix_view_init_rowmajor(&ov, output, rows, cols, N4M_DTYPE_F64);
+    if (status != N4M_OK) r_pp_throw_status("augmentation output view", status);
+    status = n4m_augmentation_run(code, REAL(params), (int32_t)XLENGTH(params),
+                                  (uint64_t)seed_value, xv, ov);
+    if (status != N4M_OK) r_pp_throw_status("n4m_augmentation_run", status);
+    return r_pp_rowmajor_to_matrix(output, rows, cols);
+}

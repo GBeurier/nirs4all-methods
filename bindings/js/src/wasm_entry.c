@@ -2012,3 +2012,20 @@ int n4m_wasm_splitter_indices(const n4m_splitter_spec_t* spec,
     n4m_split_result_destroy(&result);
     return N4M_OK;
 }
+
+/* ABI-2.11 train-only augmentation facade: data and RNG stay in C++. */
+__attribute__((used))
+int n4m_wasm_augmentation_apply(int kind, const double* params, int n_params,
+                                unsigned int seed_lo, unsigned int seed_hi,
+                                const double* x, int n, int p, double* out) {
+    if (x == NULL || out == NULL || n < 1 || p < 1)
+        return N4M_ERR_INVALID_ARGUMENT;
+    n4m_matrix_view_t xv = {0}, ov = {0};
+    n4m_status_t status = n4m_matrix_view_init_rowmajor(
+        &xv, (void*)x, n, p, N4M_DTYPE_F64);
+    if (status != N4M_OK) return status;
+    status = n4m_matrix_view_init_rowmajor(&ov, out, n, p, N4M_DTYPE_F64);
+    if (status != N4M_OK) return status;
+    const uint64_t seed = ((uint64_t)seed_hi << 32) | (uint64_t)seed_lo;
+    return n4m_augmentation_run(kind, params, n_params, seed, xv, ov);
+}

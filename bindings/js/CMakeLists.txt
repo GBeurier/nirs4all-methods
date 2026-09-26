@@ -49,6 +49,7 @@ list(APPEND _js_export_list
     "_n4m_wasm_split"
     "_n4m_wasm_split_indices"
     "_n4m_wasm_splitter_indices"
+    "_n4m_wasm_augmentation_apply"
     # Generic preprocessing dispatcher (raw-pointer surface; numerics in libn4m)
     "_n4m_wasm_pp_create"
     "_n4m_wasm_pp_fit"
