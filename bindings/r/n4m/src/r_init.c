@@ -34,6 +34,9 @@ SEXP r_n4m_msc_transform(SEXP X, SEXP reference);
 SEXP r_n4m_emsc_fit(SEXP X, SEXP degree);
 SEXP r_n4m_emsc_transform(SEXP X, SEXP reference, SEXP degree);
 SEXP r_n4m_kennard_stone_split(SEXP X, SEXP test_size, SEXP zero_based);
+SEXP r_n4m_splitter_run(SEXP kind, SEXP X, SEXP Y, SEXP groups,
+                        SEXP params, SEXP fold_index, SEXP zero_based);
+SEXP r_n4m_augmentation_run(SEXP kind, SEXP X, SEXP params, SEXP seed);
 
 /* r_methods.c — MethodResult fits */
 SEXP r_n4m_sparse_simpls_fit(SEXP X, SEXP Y, SEXP n_components, SEXP sparsity_lambda);
@@ -98,6 +101,8 @@ static const R_CallMethodDef callMethods[] = {
     {"r_n4m_emsc_fit", (DL_FUNC)&r_n4m_emsc_fit, 2},
     {"r_n4m_emsc_transform", (DL_FUNC)&r_n4m_emsc_transform, 3},
     {"r_n4m_kennard_stone_split", (DL_FUNC)&r_n4m_kennard_stone_split, 3},
+    {"r_n4m_splitter_run", (DL_FUNC)&r_n4m_splitter_run, 7},
+    {"r_n4m_augmentation_run", (DL_FUNC)&r_n4m_augmentation_run, 4},
 
     /* MethodResult fits */
     {"r_n4m_sparse_simpls_fit", (DL_FUNC)&r_n4m_sparse_simpls_fit, 4},

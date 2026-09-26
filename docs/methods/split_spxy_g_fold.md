@@ -16,7 +16,7 @@ Group-aware SPXY k-fold splitter.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_model_selection_spxy_g_fold_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L69) · [`n4m_model_selection_spxy_g_fold_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L73) · [`n4m_model_selection_spxy_g_fold_n_splits`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L74) · [`n4m_model_selection_spxy_g_fold_split_fold`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L76). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_spxy_g_fold_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L109) · [`n4m_model_selection_spxy_g_fold_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L113) · [`n4m_model_selection_spxy_g_fold_n_splits`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L114) · [`n4m_model_selection_spxy_g_fold_split_fold`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L116). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

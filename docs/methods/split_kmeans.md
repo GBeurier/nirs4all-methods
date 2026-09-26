@@ -16,7 +16,7 @@ K-means++ diversity splitter.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_model_selection_kmeans_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L84) · [`n4m_model_selection_kmeans_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L87) · [`n4m_model_selection_kmeans_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L88). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_kmeans_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L124) · [`n4m_model_selection_kmeans_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L127) · [`n4m_model_selection_kmeans_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L128). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

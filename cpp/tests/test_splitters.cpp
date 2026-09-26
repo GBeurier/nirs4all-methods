@@ -617,6 +617,88 @@ void verify_split_splitter_parity() {
     }
 }
 
+void test_generic_splitter_all_kinds() {
+    double X[60], Y[30];
+    std::int64_t groups[30];
+    for (int i = 0; i < 30; ++i) {
+        X[i * 2] = static_cast<double>(i);
+        X[i * 2 + 1] = static_cast<double>((i * 7) % 13);
+        Y[i] = static_cast<double>(i % 11);
+        groups[i] = i / 2;
+    }
+    auto xv = make_rowmajor_view(X, 30, 2);
+    auto yv = make_rowmajor_view(Y, 30, 1);
+    for (int kind = 0; kind < 9; ++kind) {
+        n4m_splitter_spec_t spec{};
+        spec.kind = kind;
+        spec.test_size = 0.25;
+        spec.n_splits = 3;
+        spec.y_metric = N4M_SPLIT_Y_METRIC_EUCLIDEAN;
+        spec.aggregation = N4M_SPLIT_AGGREGATION_MEAN;
+        spec.n_bins = 2;
+        spec.strategy = N4M_SPLIT_KBINS_UNIFORM;
+        spec.shuffle = 1;
+        spec.max_iter = 100;
+        spec.seed = 42;
+        const bool x_needed = kind == 0 || kind == 1 || kind == 2 ||
+                              kind == 3 || kind == 4 || kind == 8;
+        const bool y_needed = kind == 1 || kind == 2 || kind == 3 ||
+                              kind == 5 || kind == 6 || kind == 7;
+        const bool grouped = kind == 3 || kind == 6;
+        n4m_split_result_t first{}, second{};
+        auto run = [&](n4m_split_result_t* result) {
+            return n4m_splitter_run(&spec, x_needed ? &xv : nullptr,
+                                    y_needed ? &yv : nullptr,
+                                    grouped ? groups : nullptr,
+                                    grouped ? 30 : 0, 0, result);
+        };
+        N4M_TEST_REQUIRE(run(&first) == N4M_OK);
+        N4M_TEST_REQUIRE(run(&second) == N4M_OK);
+        N4M_TEST_REQUIRE(first.n_train + first.n_test == 30);
+        N4M_TEST_REQUIRE(first.n_train == second.n_train);
+        N4M_TEST_REQUIRE(first.n_test == second.n_test);
+        std::vector<int> seen(30, 0);
+        for (std::int64_t i = 0; i < first.n_train; ++i) {
+            const auto idx = first.train_idx[i];
+            N4M_TEST_REQUIRE(idx >= 0 && idx < 30);
+            N4M_TEST_REQUIRE(++seen[static_cast<std::size_t>(idx)] == 1);
+            N4M_TEST_REQUIRE(idx == second.train_idx[i]);
+        }
+        for (std::int64_t i = 0; i < first.n_test; ++i) {
+            const auto idx = first.test_idx[i];
+            N4M_TEST_REQUIRE(idx >= 0 && idx < 30);
+            N4M_TEST_REQUIRE(++seen[static_cast<std::size_t>(idx)] == 1);
+            N4M_TEST_REQUIRE(idx == second.test_idx[i]);
+        }
+        if (grouped) {
+            for (std::int64_t i = 0; i < first.n_test; ++i) {
+                for (std::int64_t j = 0; j < first.n_train; ++j) {
+                    N4M_TEST_REQUIRE(groups[first.test_idx[i]] !=
+                                     groups[first.train_idx[j]]);
+                }
+            }
+        }
+        n4m_split_result_destroy(&first);
+        n4m_split_result_destroy(&second);
+        N4M_TEST_REQUIRE(n4m_splitter_run(&spec, x_needed ? &xv : nullptr,
+                                         y_needed ? &yv : nullptr, nullptr, 0, 0,
+                                         &first) == (grouped ? N4M_ERR_NULL_POINTER : N4M_OK));
+        if (!grouped) n4m_split_result_destroy(&first);
+    }
+    n4m_splitter_spec_t invalid{};
+    invalid.kind = N4M_SPLITTER_SPXY_GROUP_FOLD;
+    invalid.n_splits = 3;
+    N4M_TEST_REQUIRE(n4m_splitter_run(&invalid, &xv, &yv, groups, 29, 0,
+                                     nullptr) == N4M_ERR_NULL_POINTER);
+    n4m_split_result_t result{};
+    N4M_TEST_REQUIRE(n4m_splitter_run(&invalid, &xv, &yv, groups, 29, 0,
+                                     &result) == N4M_ERR_SHAPE_MISMATCH);
+    N4M_TEST_REQUIRE(n4m_splitter_run(&invalid, &xv, nullptr, groups, 30, 0,
+                                     &result) == N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(n4m_splitter_run(&invalid, &xv, &yv, groups, 30, 3,
+                                     &result) == N4M_ERR_INVALID_ARGUMENT);
+}
+
 }  // namespace
 
 void register_splitters_tests(n4m_testing::Runner& r);
@@ -639,4 +721,5 @@ void register_splitters_tests(n4m_testing::Runner& r) {
     r.run("split_systematic_circular_parity",  verify_systematic_circular_parity);
     r.run("split_split_splitter_smoke",        test_split_splitter_smoke);
     r.run("split_split_splitter_parity",       verify_split_splitter_parity);
+    r.run("split_generic_all_kinds",           test_generic_splitter_all_kinds);
 }

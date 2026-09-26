@@ -14,7 +14,7 @@ SPXY (Sample set Partitioning based on X and Y) train/test split.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_model_selection_spxy_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L46) · [`n4m_model_selection_spxy_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L48) · [`n4m_model_selection_spxy_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L49). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_spxy_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L86) · [`n4m_model_selection_spxy_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L88) · [`n4m_model_selection_spxy_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L89). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

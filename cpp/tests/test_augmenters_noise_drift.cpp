@@ -30,6 +30,16 @@
 
 namespace {
 
+#define CHECK_DIRECT(KIND, HANDLE, NAME, ...) \
+    case KIND: { \
+        HANDLE* h = nullptr; \
+        N4M_TEST_REQUIRE(n4m_augmentation_##NAME##_create( \
+            &h, rng, __VA_ARGS__) == N4M_OK); \
+        N4M_TEST_REQUIRE(n4m_augmentation_##NAME##_apply(h, xv, bv) == N4M_OK); \
+        n4m_augmentation_##NAME##_destroy(h); \
+        break; \
+    }
+
 #define AUG_REQUIRE(cond) N4M_TEST_REQUIRE(cond)
 
 constexpr double kParityTol = 1e-15;
@@ -763,8 +773,138 @@ void test_path_length_parity() {
 
 }  // namespace
 
+namespace {
+
+void test_common_augmentation_dispatch() {
+    constexpr int64_t rows = 8, cols = 32;
+    std::vector<double> input(rows * cols), first(rows * cols), second(rows * cols);
+    for (int64_t i = 0; i < rows * cols; ++i)
+        input[static_cast<size_t>(i)] = 1.0 + 0.02 * static_cast<double>(i % cols);
+    n4m_matrix_view_t xv{}, av{}, bv{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&xv, input.data(), rows, cols,
+                                                    N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&av, first.data(), rows, cols,
+                                                    N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&bv, second.data(), rows, cols,
+                                                    N4M_DTYPE_F64) == N4M_OK);
+    struct Case { int32_t kind; std::vector<double> params; };
+    const std::vector<Case> cases = {
+        {0, {.03}}, {1, {.03}}, {2, {1, 2, .1, .2}}, {3, {.01, .02}},
+        {4, {.01, .02, .001, .002}}, {5, {.05, .5}},
+        {6, {1, 2, 4, .9, 1.1, -.01, .01}}, {7, {1, 1, 2, 4, 0}},
+        {8, {.1, 0}}, {9, {.5, 1., 5}}, {10, {.1, .2, 1., 5}},
+        {11, {1, 2, 4}}, {12, {.05, .05}}, {13, {0, .9, 1.1}},
+        {14, {.9, 1.1, -.01, .01}}, {15, {1, 2, 4, .01, .5, 0}},
+        {16, {.01, .01, .01, 0}}, {17, {}}, {18, {3, .2, -.1, .1}},
+        {19, {4, .1}}, {20, {8, 1}}, {21, {8, 1}}
+    };
+    for (const auto& entry : cases) {
+        const double* params = entry.params.empty() ? nullptr : entry.params.data();
+        N4M_TEST_REQUIRE(n4m_augmentation_run(entry.kind, params,
+            static_cast<int32_t>(entry.params.size()) + 1, 42, xv, av) ==
+            N4M_ERR_INVALID_ARGUMENT);
+        const auto a = n4m_augmentation_run(entry.kind, params,
+                                            static_cast<int32_t>(entry.params.size()),
+                                            42, xv, av);
+        const auto b = n4m_augmentation_run(entry.kind, params,
+                                            static_cast<int32_t>(entry.params.size()),
+                                            42, xv, bv);
+        N4M_TEST_REQUIRE(a == N4M_OK);
+        N4M_TEST_REQUIRE(b == N4M_OK);
+        for (size_t i = 0; i < first.size(); ++i) {
+            N4M_TEST_REQUIRE(std::isfinite(first[i]));
+            N4M_TEST_REQUIRE(first[i] == second[i]);
+        }
+        n4m_rng_pcg64_state_t* rng = nullptr;
+        N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42, &rng) == N4M_OK);
+        const double* p = params;
+        switch (entry.kind) {
+            CHECK_DIRECT(0, n4m_aug_gaussian_noise_handle_t, gaussian_noise, p[0]);
+            CHECK_DIRECT(1, n4m_aug_multiplicative_noise_handle_t, multiplicative_noise, p[0]);
+            CHECK_DIRECT(2, n4m_aug_spike_noise_handle_t, spike_noise,
+                         static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), p[2], p[3]);
+            CHECK_DIRECT(3, n4m_aug_hetero_noise_handle_t, hetero_noise, p[0], p[1]);
+            CHECK_DIRECT(4, n4m_aug_linear_drift_handle_t, linear_drift,
+                         p[0], p[1], p[2], p[3]);
+            CHECK_DIRECT(5, n4m_aug_path_length_handle_t, path_length, p[0], p[1]);
+            CHECK_DIRECT(6, n4m_aug_band_perturb_handle_t, band_perturb,
+                         static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), static_cast<int32_t>(p[2]),
+                         p[3], p[4], p[5], p[6]);
+            CHECK_DIRECT(7, n4m_aug_band_mask_handle_t, band_mask,
+                         static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), static_cast<int32_t>(p[2]),
+                         static_cast<int32_t>(p[3]), static_cast<int32_t>(p[4]));
+            CHECK_DIRECT(8, n4m_aug_channel_dropout_handle_t, channel_dropout,
+                         p[0], static_cast<int32_t>(p[1]));
+            CHECK_DIRECT(9, n4m_aug_gauss_jitter_handle_t, gauss_jitter,
+                         p[0], p[1], static_cast<int32_t>(p[2]));
+            CHECK_DIRECT(10, n4m_aug_unsharp_mask_handle_t, unsharp_mask,
+                         p[0], p[1], p[2], static_cast<int32_t>(p[3]));
+            CHECK_DIRECT(11, n4m_aug_local_clip_handle_t, local_clip,
+                         static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), static_cast<int32_t>(p[2]));
+            CHECK_DIRECT(12, n4m_aug_rotate_translate_handle_t, rotate_translate,
+                         p[0], p[1]);
+            CHECK_DIRECT(13, n4m_aug_random_x_op_handle_t, random_x_op,
+                         static_cast<int32_t>(p[0]), p[1], p[2]);
+            CHECK_DIRECT(14, n4m_aug_scatter_sim_handle_t, scatter_sim_msc,
+                         p[0], p[1], p[2], p[3]);
+            CHECK_DIRECT(15, n4m_aug_dead_band_handle_t, dead_band,
+                         static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), static_cast<int32_t>(p[2]),
+                         p[3], p[4], static_cast<int32_t>(p[5]));
+            CHECK_DIRECT(16, n4m_aug_batch_effect_handle_t, batch_effect,
+                         p[0], p[1], p[2], static_cast<int32_t>(p[3]), nullptr, 0);
+            case 17: {
+                n4m_aug_spline_smooth_handle_t* h = nullptr;
+                N4M_TEST_REQUIRE(n4m_augmentation_spline_smoothing_create(&h, rng) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_augmentation_spline_smoothing_apply(h, xv, bv) == N4M_OK);
+                n4m_augmentation_spline_smoothing_destroy(h);
+                break;
+            }
+            CHECK_DIRECT(18, n4m_aug_spline_x_perturb_handle_t, spline_x_perturbations,
+                         static_cast<int32_t>(p[0]), p[1], p[2], p[3]);
+            CHECK_DIRECT(19, n4m_aug_spline_y_perturb_handle_t, spline_y_perturbations,
+                         static_cast<int32_t>(p[0]), p[1]);
+            CHECK_DIRECT(20, n4m_aug_spline_x_simplify_handle_t, spline_x_simplification,
+                         static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]));
+            CHECK_DIRECT(21, n4m_aug_spline_curve_simplify_handle_t,
+                         spline_curve_simplification, static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]));
+            default: N4M_TEST_REQUIRE(false);
+        }
+        n4m_rng_pcg64_destroy(rng);
+        N4M_TEST_REQUIRE(first == second);
+    }
+    const double sigma[] = {.03};
+    n4m_rng_pcg64_state_t* rng = nullptr;
+    N4M_TEST_REQUIRE(n4m_rng_pcg64_create(42, &rng) == N4M_OK);
+    n4m_aug_gaussian_noise_handle_t* handle = nullptr;
+    N4M_TEST_REQUIRE(n4m_augmentation_gaussian_noise_create(&handle, rng, .03) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_gaussian_noise_apply(handle, xv, bv) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_run(N4M_AUG_GAUSSIAN_NOISE, sigma, 1,
+                                          42, xv, av) == N4M_OK);
+    N4M_TEST_REQUIRE(first == second);
+    n4m_augmentation_gaussian_noise_destroy(handle);
+    n4m_rng_pcg64_destroy(rng);
+    // The closed enum intentionally has no codes for the 17 deferred kernels.
+    for (int32_t excluded = 22; excluded < 39; ++excluded)
+        N4M_TEST_REQUIRE(n4m_augmentation_run(excluded, sigma, 1,
+                                              42, xv, av) == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_augmentation_run(39, sigma, 1, 42, xv, av) ==
+                     N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_augmentation_run(0, nullptr, 1, 42, xv, av) ==
+                     N4M_ERR_NULL_POINTER);
+    const double fractional[] = {1.5, 2, .1, .2};
+    N4M_TEST_REQUIRE(n4m_augmentation_run(N4M_AUG_SPIKE_NOISE, fractional, 4,
+                                          42, xv, av) == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_augmentation_run(0, sigma, 1, 42, xv, xv) ==
+                     N4M_ERR_INVALID_ARGUMENT);
+}
+
+#undef CHECK_DIRECT
+
+}  // namespace
+
 void register_augmenters_noise_drift_tests(n4m_testing::Runner& r);
 void register_augmenters_noise_drift_tests(n4m_testing::Runner& r) {
+    r.run("aug_common_dispatch_22_kinds", test_common_augmentation_dispatch);
     r.run("aug_gaussian_noise_smoke",         test_gaussian_noise_smoke);
     r.run("aug_multiplicative_noise_smoke",   test_multiplicative_noise_smoke);
     r.run("aug_spike_noise_smoke",            test_spike_noise_smoke);
