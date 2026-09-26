@@ -92,6 +92,42 @@ for (const blocks of [[], [12], [4, 4, 5]]) {
   ok(rejected, `MBPLS rejects invalid block_sizes ${JSON.stringify(blocks)}`)
 }
 
+// Group-sparse PLS carries one explicit group id per feature. These frozen
+// held-out predictions come from the corrected native Python n4m binding;
+// λ > 0 must actually shrink predictive coefficients, not a discarded W copy.
+const gsN = 21, gsP = 8
+const gsXData = new Float64Array(gsN * gsP)
+const gsYData = new Float64Array(gsN)
+for (let i = 0; i < gsN; i++) {
+  for (let j = 0; j < gsP; j++) {
+    gsXData[i * gsP + j] = Math.sin((i + 1) * (j + 1) / 9)
+      + Math.cos((i + 1) + (j + 1) / 7) + (i + 1) * (j + 1) / 100
+  }
+  gsYData[i] = 1.3 + 0.7 * gsXData[i * gsP + 1] - 0.4 * gsXData[i * gsP + 5]
+}
+const gsX = { data: gsXData, rows: gsN, cols: gsP }
+const gsY = { data: gsYData, rows: gsN, cols: 1 }
+const gsHeld = new Float64Array(3 * gsP)
+for (const [row, source] of [1, 7, 16].entries()) {
+  for (let j = 0; j < gsP; j++) gsHeld[row * gsP + j] = gsXData[source * gsP + j] + 0.031
+}
+const gsGroups = [0, 0, 1, 1, 2, 2, 3, 3]
+for (const [lambda, oracle] of [
+  [0, [0.9908421322687999, 2.2185030364862124, 0.936452057620222]],
+  [0.15, [1.0634702655693697, 1.8270584733785862, 1.0614347191399331]],
+]) {
+  const model = n4m.fitModel('GroupSparsePLS', gsX, gsY, 2, [lambda, ...gsGroups])
+  const pred = n4m.predictModel(model, { data: gsHeld, rows: 3, cols: gsP }).data
+  ok(pred.every((value, i) => Math.abs(value - oracle[i]) < 1e-10),
+    `GroupSparsePLS lambda=${lambda} held-out predictions match Python n4m`)
+}
+for (const params of [[], [0.1], [0.1, 0, 0, 1, 1, 2, 2, 3, -1],
+  [0.1, 0, 0, 1, 1, 2, 2, 3, 0.5]]) {
+  let rejected = false
+  try { n4m.fitModel('GroupSparsePLS', gsX, gsY, 2, params) } catch { rejected = true }
+  ok(rejected, `GroupSparsePLS rejects invalid groups ${JSON.stringify(params)}`)
+}
+
 // ---- AOM-Ridge blender + AOM operator-PLS stack ----
 const ridge = n4m.fitAomRidge(X, Y, { cv: 4 })
 ok(finite(ridge.coefficients) && finite(ridge.intercept), 'AOM-Ridge coeffs + intercept finite')
