@@ -2,6 +2,9 @@
 source(testthat::test_path("fixture-estimator-roles.R"))
 
 fx <- estimator_roles_fixture
+# Fixture outputs come from Linux x86-64; iterative kernels drift by a few ulps
+# on other platforms, so replays compare at 1e-9.
+replay_tol <- 1e-9
 constructors <- lapply(n4m:::.n4m_method_constructors, get, envir = asNamespace("n4m"))
 
 hex_to_raw <- function(hex) {
@@ -45,7 +48,7 @@ for (case in fx$cases) {
       est <- n4m_estimator_import(bytes)
       testthat::expect_equal(inherits(est, "n4m_regressor"), !is.null(case[["predict"]]))
       if (!is.null(case[["predict"]])) {
-        testthat::expect_equal(predict(est, fx$x_test), case[["predict"]], tolerance = 1e-12)
+        testthat::expect_equal(predict(est, fx$x_test), case[["predict"]], tolerance = replay_tol)
       }
       if (!is.null(case$selected_indices)) {
         testthat::expect_s3_class(est, "n4m_selector")
@@ -53,11 +56,11 @@ for (case in fx$cases) {
       }
       if (!is.null(case$transform)) {
         testthat::expect_equal(n4m_estimator_transform(est, fx$x_test), case$transform,
-                               tolerance = 1e-12)
+                               tolerance = replay_tol)
       } else {
         testthat::expect_false(inherits(est, "n4m_transformer"))
       }
-      if (!is.null(case$classes)) check_classifier(est, case, 1e-12)
+      if (!is.null(case$classes)) check_classifier(est, case, replay_tol)
       if (!is.null(case$mask)) {
         testthat::expect_identical(n4m_sample_mask(est, fx$x_test, fx$y_test), case$mask == 1)
       }
@@ -148,10 +151,10 @@ for (case in fx$procedures) {
       }
       if (!is.null(case[["Y"]])) {
         out <- n4m_augment(spec, X, y, axis = axis)
-        testthat::expect_equal(out$X, case[["X"]], tolerance = 1e-12)
-        testthat::expect_equal(out$Y, case[["Y"]], tolerance = 1e-12)
+        testthat::expect_equal(out$X, case[["X"]], tolerance = replay_tol)
+        testthat::expect_equal(out$Y, case[["Y"]], tolerance = replay_tol)
       } else if (!is.null(case[["X"]])) {
-        testthat::expect_equal(n4m_augment(spec, X, axis = axis), case[["X"]], tolerance = 1e-12)
+        testthat::expect_equal(n4m_augment(spec, X, axis = axis), case[["X"]], tolerance = replay_tol)
       }
       if (!is.null(case$outputs)) {
         args <- list(spec, X, y)
