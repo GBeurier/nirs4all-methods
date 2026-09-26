@@ -41,6 +41,25 @@ c_surface:
   - "n4m_transform_weighted_snv_fit"
   - "n4m_transform_weighted_snv_is_fitted"
   - "n4m_transform_weighted_snv_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_weighted_snv"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "weights"
+      type: "double_array"
+      default: []
+    - name: "ddof"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "eps"
+      type: "double"
+      default: 1e-12
+      min: 0.0
 fq_name: "n4m.transform.scatter.weighted_snv"
 leaf: "weighted_snv"
 legacy_ids:

@@ -41,6 +41,26 @@ c_surface:
   - "n4m_domain_adaptation_piecewise_direct_standardization_fit"
   - "n4m_domain_adaptation_piecewise_direct_standardization_is_fitted"
   - "n4m_domain_adaptation_piecewise_direct_standardization_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_piecewise_direct_standardization"
+  roles: "[transformer]"
+  state: "window_coefs"
+  inputs:
+    y: "optional"
+    target_domain: "required"
+  params:
+    - name: "window_size"
+      type: "int"
+      default: 5
+      min: 1
+    - name: "fit_intercept"
+      type: "bool"
+      default: true
+    - name: "ridge"
+      type: "double"
+      default: 0.0
+      min: 0.0
 fq_name: "n4m.domain_adaptation.standardization.piecewise_direct_standardization"
 leaf: "piecewise_direct_standardization"
 legacy_ids:

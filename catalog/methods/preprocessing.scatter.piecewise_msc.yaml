@@ -41,6 +41,25 @@ c_surface:
   - "n4m_transform_piecewise_msc_fit"
   - "n4m_transform_piecewise_msc_is_fitted"
   - "n4m_transform_piecewise_msc_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_piecewise_msc"
+  roles: "[transformer]"
+  state: "reference"
+  inputs:
+    y: "optional"
+  params:
+    - name: "window_size"
+      type: "int"
+      default: 32
+      min: 1
+    - name: "reference"
+      type: "double_array"
+      default: []
+    - name: "eps"
+      type: "double"
+      default: 1e-12
+      min: 0.0
 fq_name: "n4m.transform.scatter.piecewise_msc"
 leaf: "piecewise_msc"
 legacy_ids:

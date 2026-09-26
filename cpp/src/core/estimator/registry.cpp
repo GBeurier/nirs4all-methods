@@ -69,7 +69,9 @@ const ParamSpec& Params::checked(const char* name, std::int32_t* index) const {
 n4m_status_t Params::set_ints(const char* name, n4m_method_param_type_t type, const std::int64_t* v,
                               std::int64_t n) {
     const std::int32_t i = param_index(*spec_, name);
-    if (i < 0 || v == nullptr) return i < 0 ? N4M_ERR_INVALID_ARGUMENT : N4M_ERR_NULL_POINTER;
+    // An empty array may come without storage (values NULL, n 0).
+    if (i < 0) return N4M_ERR_INVALID_ARGUMENT;
+    if (v == nullptr && n != 0) return N4M_ERR_NULL_POINTER;
     const ParamSpec& p = spec_->params[i];
     if (p.type != type || (is_array_type(type) ? n < 0 : n != 1)) {
         return N4M_ERR_INVALID_ARGUMENT;
@@ -94,7 +96,9 @@ n4m_status_t Params::set_ints(const char* name, n4m_method_param_type_t type, co
 n4m_status_t Params::set_doubles(const char* name, n4m_method_param_type_t type, const double* v,
                                  std::int64_t n) {
     const std::int32_t i = param_index(*spec_, name);
-    if (i < 0 || v == nullptr) return i < 0 ? N4M_ERR_INVALID_ARGUMENT : N4M_ERR_NULL_POINTER;
+    // An empty array may come without storage (values NULL, n 0).
+    if (i < 0) return N4M_ERR_INVALID_ARGUMENT;
+    if (v == nullptr && n != 0) return N4M_ERR_NULL_POINTER;
     const ParamSpec& p = spec_->params[i];
     if (p.type != type || (is_array_type(type) ? n < 0 : n != 1)) {
         return N4M_ERR_INVALID_ARGUMENT;

@@ -41,6 +41,29 @@ c_surface:
   - "n4m_transform_saps_fit"
   - "n4m_transform_saps_is_fitted"
   - "n4m_transform_saps_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_saps"
+  roles: "[transformer]"
+  state: "projection_map"
+  inputs:
+    y: "optional"
+    target_domain: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 5
+      min: 1
+    - name: "score_weight"
+      type: "double"
+      default: 1.0
+    - name: "fit_intercept"
+      type: "bool"
+      default: true
+    - name: "ridge"
+      type: "double"
+      default: 0.0
+      min: 0.0
 fq_name: "n4m.transform.baseline.saps"
 leaf: "saps"
 legacy_ids:
