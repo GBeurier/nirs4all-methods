@@ -2,16 +2,22 @@
 \name{n4m_estimator_role_constructors}
 \alias{n4m_estimator_role_constructors}
 \alias{n4m_aom_chain_fixed_fit}
+\alias{n4m_aom_chain_ridge_pls}
 \alias{n4m_aom_chain_sweep}
 \alias{n4m_aom_pls}
+\alias{n4m_aom_pls_superblock}
 \alias{n4m_aom_preprocessing}
+\alias{n4m_aom_ridge_pls_superblock}
 \alias{n4m_aom_sweep}
 \alias{n4m_calibration}
 \alias{n4m_linear_stack_compress}
 \alias{n4m_operator_pls_stack}
 \alias{n4m_pop_pls}
+\alias{n4m_ridge_active_superblock}
 \alias{n4m_ridge_blender}
 \alias{n4m_ridge_global}
+\alias{n4m_ridge_mkl_superblock}
+\alias{n4m_ridge_superblock}
 \alias{n4m_robust_hpo}
 \alias{n4m_linear_drift}
 \alias{n4m_path_length}
@@ -69,6 +75,8 @@
 \alias{n4m_bagging_pls}
 \alias{n4m_boosting_pls}
 \alias{n4m_random_subspace_pls}
+\alias{n4m_pls_cox}
+\alias{n4m_pls_glm}
 \alias{n4m_lw_pls}
 \alias{n4m_mb_pls}
 \alias{n4m_mir_pls}
@@ -204,16 +212,22 @@
 \title{Constructors of the generic native estimator roles}
 \usage{
 n4m_aom_chain_fixed_fit(op_kinds = NULL, param_offsets = NULL, chain_params = c(), head = "ridge", param = 0.1, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE, moment_policy = "auto")
+n4m_aom_chain_ridge_pls(chain_offsets = c(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 11L, 13L, 15L), op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L, 7L, 9L, 7L, 10L, 8L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L, 17L, 20L, 21L, 24L, 26L, 27L), chain_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0, 1.0, 7.0, 2.0, 1.0, 1.0, 5.0, 5.0, 1.0, 5.0, 2.0, 1.0), pls_components = c(2L), ridge_lambdas = c(0.0, 0.1, 1.0, 10.0), cv = 5L, center_x = TRUE, center_y = TRUE)
 n4m_aom_chain_sweep(chain_offsets = NULL, op_kinds = NULL, param_offsets = NULL, chain_params = c(), cv = 5L, ridge_lambdas = c(0.01, 0.1, 1.0, 10.0), pls_components = c(), heads = "ridge", center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE, moment_policy = "auto")
 n4m_aom_pls(max_components = 3L, op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), cv = 3L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
+n4m_aom_pls_superblock(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), pls_components = c(2L), cv = 5L, block_scaling = "rms", center_x = TRUE, center_y = TRUE)
 n4m_aom_preprocessing(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), gating_mode = "soft")
+n4m_aom_ridge_pls_superblock(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), pls_components = c(2L), ridge_lambdas = c(0.0, 0.1, 1.0, 10.0), cv = 5L, block_scaling = "rms", center_x = TRUE)
 n4m_aom_sweep(profile = "compact", cv = 5L, ridge_lambdas = c(0.01, 0.1, 1.0, 10.0), pls_components = c(), heads = "ridge", center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE, moment_policy = "auto")
 n4m_calibration(head = "pls", fast = FALSE, max_components = 25L, alphas = c(), cv = 3L, branches = c(0L, 1L, 2L), max_depth = 1L, rank = 200L)
 n4m_linear_stack_compress(base_intercepts = NULL, meta_weights = NULL, meta_intercept = NULL)
 n4m_operator_pls_stack(profile = "compact", cv = 5L, components = c(2L, 4L, 8L), alphas = c(0.001, 0.01, 0.1, 1.0, 10.0, 100.0), std_penalty = 0.0, gap_penalty = 0.0, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
 n4m_pop_pls(max_components = 3L, op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), cv = 3L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
+n4m_ridge_active_superblock(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), alphas = c(0.0001, 0.01, 1.0, 100.0), cv = 5L, active_top_m = 20L, active_diversity_threshold = 0.98, active_score_method = "norm", active_max_per_family = 0L, keep_identity = TRUE, block_scaling = "rms", center_x = TRUE, center_y = TRUE)
 n4m_ridge_blender(profile = "compact", cv = 5L, ridge_lambdas = c(0.0001, 0.01, 1.0, 100.0), regularizer = 0.01, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
 n4m_ridge_global(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), cv = 5L, ridge_lambdas = c(0.0001, 0.01, 1.0, 100.0), center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE, moment_policy = "auto")
+n4m_ridge_mkl_superblock(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), alphas = c(0.0001, 0.01, 1.0, 100.0), cv = 5L, mkl_top_k = 6L, block_scaling = "none", center_x = TRUE, center_y = TRUE)
+n4m_ridge_superblock(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), alphas = c(0.0001, 0.01, 1.0, 100.0), cv = 5L, block_scaling = "rms", center_x = TRUE, center_y = TRUE)
 n4m_robust_hpo(profile = "compact", cv = 5L, heads = "ridge_pls")
 n4m_linear_drift(offset_min = -0.05, offset_max = 0.05, slope_min = -0.01, slope_max = 0.01, seed = 0L)
 n4m_path_length(path_length_std = 0.05, min_path_length = 0.1, seed = 0L)
@@ -271,6 +285,8 @@ n4m_pls_qda(n_components = 2L)
 n4m_bagging_pls(n_components = 2L, n_estimators = 50L, seed = 0L)
 n4m_boosting_pls(n_components = 2L, n_estimators = 50L, learning_rate = 0.1)
 n4m_random_subspace_pls(n_components = 2L, n_estimators = 50L, features_per_subspace = 10L, seed = 0L)
+n4m_pls_cox(n_components = 2L, max_iter = 50L, tol = 1e-10)
+n4m_pls_glm(n_components = 2L, family = "gaussian", max_iter = 100L, tol = 1e-10)
 n4m_lw_pls(n_components = 2L, n_neighbors = NULL, mode = "weighted")
 n4m_mb_pls(n_components = 2L)
 n4m_mir_pls(n_components = 2L)
@@ -408,6 +424,10 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{a_high}{Native parameter (double); defaults come from the n4m manifest.}
 \item{a_low}{Native parameter (double); defaults come from the n4m manifest.}
 \item{absolute_threshold}{Native parameter (double); defaults come from the n4m manifest.}
+\item{active_diversity_threshold}{Native parameter (double); defaults come from the n4m manifest.}
+\item{active_max_per_family}{Native parameter (int); defaults come from the n4m manifest.}
+\item{active_score_method}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{active_top_m}{Native parameter (int); defaults come from the n4m manifest.}
 \item{add_high}{Native parameter (double); defaults come from the n4m manifest.}
 \item{add_low}{Native parameter (double); defaults come from the n4m manifest.}
 \item{aggregation}{Native parameter (enum); defaults come from the n4m manifest.}
@@ -426,6 +446,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{b_low}{Native parameter (double); defaults come from the n4m manifest.}
 \item{base}{Native parameter (double); defaults come from the n4m manifest.}
 \item{base_intercepts}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{block_scaling}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{bound_water_shift}{Native parameter (double); defaults come from the n4m manifest.}
 \item{bounds_error}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{branches}{Native parameter (int_array); defaults come from the n4m manifest.}
@@ -516,6 +537,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{is_percent}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{k}{Native parameter (double); defaults come from the n4m manifest.}
 \item{k_neighbors}{Native parameter (int); defaults come from the n4m manifest.}
+\item{keep_identity}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{kernel}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{kernel_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{kernel_width}{Native parameter (int); defaults come from the n4m manifest.}
@@ -554,6 +576,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{min_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{min_value}{Native parameter (double); defaults come from the n4m manifest.}
 \item{min_variance}{Native parameter (double); defaults come from the n4m manifest.}
+\item{mkl_top_k}{Native parameter (int); defaults come from the n4m manifest.}
 \item{mode}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{mode_j}{Native parameter (int); defaults come from the n4m manifest.}
 \item{mode_k}{Native parameter (int); defaults come from the n4m manifest.}
@@ -738,16 +761,22 @@ fit it with \code{\link{n4m_estimator_fit}}.}
 One constructor per native method of the n4m manifest:
 \itemize{
 \item \code{n4m_aom_chain_fixed_fit}: \code{aom_pop.aom_chain_fixed_fit} (regressor)
+\item \code{n4m_aom_chain_ridge_pls}: \code{aom_pop.aom_chain_ridge_pls} (regressor)
 \item \code{n4m_aom_chain_sweep}: \code{aom_pop.aom_chain_sweep} (regressor)
 \item \code{n4m_aom_pls}: \code{aom_pop.aom_pls} (regressor)
+\item \code{n4m_aom_pls_superblock}: \code{aom_pop.aom_pls_superblock} (regressor)
 \item \code{n4m_aom_preprocessing}: \code{aom_pop.aom_preprocessing} (transformer)
+\item \code{n4m_aom_ridge_pls_superblock}: \code{aom_pop.aom_ridge_pls_superblock} (regressor)
 \item \code{n4m_aom_sweep}: \code{aom_pop.aom_sweep} (regressor)
 \item \code{n4m_calibration}: \code{aom_pop.calibration} (regressor)
 \item \code{n4m_linear_stack_compress}: \code{aom_pop.linear_stack_compress} (generic)
 \item \code{n4m_operator_pls_stack}: \code{aom_pop.operator_pls_stack} (regressor)
 \item \code{n4m_pop_pls}: \code{aom_pop.pop_pls} (regressor)
+\item \code{n4m_ridge_active_superblock}: \code{aom_pop.ridge_active_superblock} (regressor)
 \item \code{n4m_ridge_blender}: \code{aom_pop.ridge_blender} (regressor)
 \item \code{n4m_ridge_global}: \code{aom_pop.ridge_global} (regressor)
+\item \code{n4m_ridge_mkl_superblock}: \code{aom_pop.ridge_mkl_superblock} (regressor)
+\item \code{n4m_ridge_superblock}: \code{aom_pop.ridge_superblock} (regressor)
 \item \code{n4m_robust_hpo}: \code{aom_pop.robust_hpo} (regressor)
 \item \code{n4m_linear_drift}: \code{augmentation.drift.linear_drift} (augmenter)
 \item \code{n4m_path_length}: \code{augmentation.drift.path_length} (augmenter)
@@ -805,6 +834,8 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_bagging_pls}: \code{models.ensembles.bagging_pls} (regressor)
 \item \code{n4m_boosting_pls}: \code{models.ensembles.boosting_pls} (regressor)
 \item \code{n4m_random_subspace_pls}: \code{models.ensembles.random_subspace_pls} (regressor)
+\item \code{n4m_pls_cox}: \code{models.heads.pls_cox} (regressor)
+\item \code{n4m_pls_glm}: \code{models.heads.pls_glm} (regressor)
 \item \code{n4m_lw_pls}: \code{models.local.lw_pls} (regressor)
 \item \code{n4m_mb_pls}: \code{models.multiblock.mb_pls} (regressor)
 \item \code{n4m_mir_pls}: \code{models.multiblock.mir_pls} (regressor)

@@ -132,7 +132,13 @@ def test_classes_expose_exactly_their_role_interfaces(cls):
 @pytest.mark.parametrize("cls", REGRESSORS, ids=lambda c: c.__name__)
 def test_fit_predict_roundtrip(cls, data):
     X, y, X_test, X_target, y_test = data
-    est = build(cls).fit(X, y, **fit_kwargs(cls, X_target))
+    # PLS-Cox reads (time, event): times fall with y, so the risk score rises with it.
+    target = (
+        np.column_stack([np.exp(-0.3 * y), np.arange(y.size) % 4 != 0])
+        if cls is roles.PLSCox
+        else y
+    )
+    est = build(cls).fit(X, target, **fit_kwargs(cls, X_target))
     pred = est.predict(X_test)
     assert pred.shape == (X_test.shape[0],)
     assert np.all(np.isfinite(pred))

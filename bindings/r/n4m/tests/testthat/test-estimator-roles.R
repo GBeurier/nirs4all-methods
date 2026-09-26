@@ -66,7 +66,8 @@ for (case in fx$cases) {
 
     testthat::test_that(paste("R fit reproduces the Python fit:", case$method_id), {
       spec <- do.call(constructors[[case$method_id]], case$params)
-      target <- if (is.null(case$classes)) fx$y_train else fx$labels_train
+      target <- if (!is.null(case[["y"]])) fx[[case[["y"]]]] else
+        if (is.null(case$classes)) fx$y_train else fx$labels_train
       fitted <- do.call(n4m_estimator_fit, c(list(spec, fx$x_train, target),
                                              fit_inputs(case$fit_inputs)))
       if (!is.null(case$mask)) {

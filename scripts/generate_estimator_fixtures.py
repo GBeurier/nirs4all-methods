@@ -92,6 +92,17 @@ def class_labels(y) -> np.ndarray:
     return 10 * (1 + np.digitize(y, np.quantile(y, [1 / 3, 2 / 3])))
 
 
+def survival(y) -> np.ndarray:
+    """PLS-Cox response: time falling with y, then the event flag (every fourth row censored)."""
+    return np.column_stack(
+        [np.exp(-0.3 * y), (np.arange(y.size) % 4 != 0).astype(float)]
+    )
+
+
+# Estimators fitted on another response than y (the case's "y" names it).
+TARGETS = {"models.heads.pls_cox": "survival_train"}
+
+
 def explicit_params(cls) -> dict:
     params = {k: v for k, v in EXPLICIT_PARAMS.items() if k in cls._param_types}
     if cls is roles.RandomFrog:
@@ -169,12 +180,15 @@ def main() -> None:
             continue  # procedures have no fitted state
         params = explicit_params(cls)
         target = labels if issubclass(cls, roles.NativeClassifier) else y
+        if method_id in TARGETS:
+            target = survival(y)
         est = cls(**params).fit(X, target, **fit_inputs(cls, X_target))
         serializable = roles.method_info(method_id).capabilities & CAP_SERIALIZABLE
         case = {
             "method_id": method_id,
             "fit_inputs": sorted(fit_inputs(cls, X_target)),
             "params": params,
+            **({"y": TARGETS[method_id]} if method_id in TARGETS else {}),
             # Filters are train-only; the X-outlier state is not serializable.
             "n4me_base64": (
                 base64.b64encode(est.to_n4me(allow_training_rows=True)).decode()
@@ -202,6 +216,7 @@ def main() -> None:
         "x_train": X.tolist(),
         "y_train": y.tolist(),
         "labels_train": labels.tolist(),
+        "survival_train": survival(y).tolist(),
         "x_target": X_target.tolist(),
         "feature_groups": (np.arange(N_FEATURES) // 4).tolist(),
         "blocks": [4, 4, 4],
@@ -244,6 +259,7 @@ def render_r(doc: dict) -> str:
         f"  x_train = {r_matrix(doc['x_train'])},",
         f"  y_train = {r_vector(doc['y_train'])},",
         f"  labels_train = {r_vector(doc['labels_train'])},",
+        f"  survival_train = {r_matrix(doc['survival_train'])},",
         f"  x_target = {r_matrix(doc['x_target'])},",
         f"  feature_groups = {r_vector(doc['feature_groups'])},",
         f"  blocks = {r_vector(doc['blocks'])},",
@@ -269,6 +285,8 @@ def render_r(doc: dict) -> str:
             f"    fit_inputs = c({inputs})",
             f"    params = list({params})",
         ]
+        if "y" in case:
+            fields.append(f'    y = "{case["y"]}"')
         if "predict" in case:
             fields.append(f"    predict = {r_vector(case['predict'])}")
         if "selected_indices" in case:

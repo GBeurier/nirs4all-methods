@@ -534,8 +534,13 @@ fn replays_the_cross_language_fixture() {
         let method_id = case["method_id"].as_str().unwrap();
         let params = params_for(&ctx, method_id, &case["params"]);
         let mut fitted = Estimator::new(&ctx, method_id, Some(&params)).unwrap();
+        let response = case
+            .get("y")
+            .map(|name| Dense::new(&fx[name.as_str().unwrap()]));
         let base = if case.get("classes").is_some() {
             FitInputs::new(xt).labels(&labels)
+        } else if let Some(response) = &response {
+            FitInputs::new(xt).y(response.view())
         } else {
             FitInputs::new(xt).y(y_train.view())
         };

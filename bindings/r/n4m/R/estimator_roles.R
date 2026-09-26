@@ -112,7 +112,9 @@ n4m_estimator_fit.n4m_estimator <- function(object, X, y = NULL, sample_weight =
   object$state <- list2env(list(
     pointer = pointer,
     n4me = if (serializable) .Call("r_n4m_estimator_export", pointer, PACKAGE = "n4m"),
-    y_vector = !is.null(y) && is.null(dim(y)),
+    # One prediction column comes back as a vector unless y was a one-column
+    # matrix (a survival (time, event) response gives one risk column).
+    y_vector = !is.null(y) && !identical(ncol(y), 1L),
     levels = levels
   ))
   object
