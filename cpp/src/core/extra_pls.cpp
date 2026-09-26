@@ -941,6 +941,15 @@ n4m_status_t fit_group_sparse_pls(Context& ctx,
         ctx.set_error("group_assignment must have one entry per feature");
         return N4M_ERR_SHAPE_MISMATCH;
     }
+    if (!std::isfinite(group_lambda) || group_lambda < 0.0) {
+        ctx.set_error("group_lambda must be finite and non-negative");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (std::any_of(group_assignment.begin(), group_assignment.end(),
+                    [](std::int32_t group) { return group < 0; })) {
+        ctx.set_error("group_assignment must contain non-negative group ids");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
     std::vector<double> X_buf, Y_buf;
     n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
     if (status != N4M_OK) return status;
@@ -957,45 +966,42 @@ n4m_status_t fit_group_sparse_pls(Context& ctx,
         static_cast<std::size_t>(cfg.n_components),
         std::min(n - 1, p));
     std::vector<double> coefs;
-    std::vector<double> weights;
-    simple_simpls(X_buf, Y_buf, n, p, q, a, coefs, &weights);
-    // Apply group soft-thresholding per component using group_lambda.
+    simple_simpls(X_buf, Y_buf, n, p, q, a, coefs, nullptr);
+    std::vector<std::int32_t> group_ids = group_assignment;
+    std::sort(group_ids.begin(), group_ids.end());
+    group_ids.erase(std::unique(group_ids.begin(), group_ids.end()), group_ids.end());
+    out.n_groups = static_cast<std::int32_t>(group_ids.size());
     if (group_lambda > 0.0) {
-        std::int32_t max_group = 0;
-        for (auto g : group_assignment)
-            if (g > max_group) max_group = g;
-        const std::size_t n_groups =
-            static_cast<std::size_t>(max_group) + 1;
-        out.n_groups = static_cast<std::int32_t>(n_groups);
-        for (std::size_t comp = 0; comp < a; ++comp) {
-            std::vector<double> group_norm(n_groups, 0.0);
-            for (std::size_t f = 0; f < p; ++f) {
-                const std::size_t g =
-                    static_cast<std::size_t>(group_assignment[f]);
-                const double w_val = weights[f * a + comp];
-                group_norm[g] += w_val * w_val;
-            }
-            for (auto& gn : group_norm) gn = std::sqrt(gn);
-            for (std::size_t f = 0; f < p; ++f) {
-                const std::size_t g =
-                    static_cast<std::size_t>(group_assignment[f]);
-                if (group_norm[g] < kEps) {
-                    weights[f * a + comp] = 0.0;
-                } else {
-                    const double scale = std::max(
-                        0.0,
-                        1.0 - group_lambda / group_norm[g]);
-                    weights[f * a + comp] *= scale;
-                }
+        // Proximal group-lasso shrinkage of the *predictive coefficients*.
+        // This is a post-SIMPLS approximation, not a refit of the latent
+        // directions and not the Liquet et al. sgPLS estimator. In contrast
+        // to thresholding a discarded copy of W, it affects predictions and
+        // sets complete groups of coefficient rows exactly to zero.
+        std::vector<double> norm_sq(group_ids.size(), 0.0);
+        for (std::size_t f = 0; f < p; ++f) {
+            const auto it = std::lower_bound(group_ids.begin(), group_ids.end(),
+                                             group_assignment[f]);
+            const std::size_t g = static_cast<std::size_t>(it - group_ids.begin());
+            for (std::size_t target = 0; target < q; ++target) {
+                const double coefficient = coefs[f * q + target];
+                norm_sq[g] += coefficient * coefficient;
             }
         }
-        // Recompute coefficients via R = W (P' W)^{-1} ... not done here
-        // for simplicity: scale the original coefficients by the same
-        // factor as the dominant direction (approximation).
-        // For minimum viable shipped behaviour we keep `coefs` and report
-        // both the thresholded weight matrix indirectly through n_groups.
-    } else {
-        out.n_groups = 0;
+        std::vector<double> shrink(group_ids.size(), 0.0);
+        for (std::size_t g = 0; g < group_ids.size(); ++g) {
+            const double norm = std::sqrt(norm_sq[g]);
+            if (norm > group_lambda) {
+                shrink[g] = 1.0 - group_lambda / norm;
+            }
+        }
+        for (std::size_t f = 0; f < p; ++f) {
+            const auto it = std::lower_bound(group_ids.begin(), group_ids.end(),
+                                             group_assignment[f]);
+            const std::size_t g = static_cast<std::size_t>(it - group_ids.begin());
+            for (std::size_t target = 0; target < q; ++target) {
+                coefs[f * q + target] *= shrink[g];
+            }
+        }
     }
     out.n_features = static_cast<std::int32_t>(p);
     out.n_components = static_cast<std::int32_t>(a);
