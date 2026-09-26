@@ -41,6 +41,18 @@ c_surface:
   - "n4m_transform_vsn_fit"
   - "n4m_transform_vsn_is_fitted"
   - "n4m_transform_vsn_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_vsn"
+  roles: "[transformer]"
+  state: "weights"
+  inputs:
+    y: "optional"
+  params:
+    - name: "eps"
+      type: "double"
+      default: 1e-12
+      min: 0.0
 fq_name: "n4m.transform.scatter.vsn"
 leaf: "vsn"
 legacy_ids:

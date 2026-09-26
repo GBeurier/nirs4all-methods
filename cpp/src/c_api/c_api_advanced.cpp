@@ -15,6 +15,7 @@
 
 #include "n4m/n4m.h"
 #include "core/common/matrix_view.hpp"
+#include "core/estimator/advanced_state.hpp"
 
 namespace {
 
@@ -225,6 +226,23 @@ double shift_sample(const double* row, std::int64_t cols, std::int64_t j,
     return row[lo] * (1.0 - frac) + row[lo + 1] * frac;
 }
 
+// Fitted-state serialization (core/estimator/advanced_state.hpp). Reads a
+// rows x cols array, refusing any other stored length.
+bool read_f64s(n4m_state_reader_t* r, std::int64_t rows, std::int64_t cols,
+               std::vector<double>& out) {
+    std::int64_t n = 0;
+    if (!n4m_state_peek_array_length(r, std::numeric_limits<std::int64_t>::max(), &n) ||
+        cols < 1 || n % cols != 0 || n / cols != rows) {
+        return false;
+    }
+    out.resize(to_index(n));
+    return n4m_state_read_f64_array(r, out.data(), n) != 0;
+}
+
+void write_f64s(n4m_state_writer_t* w, const std::vector<double>& v) {
+    n4m_state_write_f64_array(w, v.data(), static_cast<std::int64_t>(v.size()));
+}
+
 struct DSState {
     bool fit_intercept = true;
     double ridge = 0.0;
@@ -282,6 +300,20 @@ n4m_status_t ds_transform(const DSState& s, const n4m_matrix_view_t& x_v,
     return N4M_OK;
 }
 
+n4m_status_t ds_save(const DSState& s, n4m_state_writer_t* w) {
+    write_f64s(w, s.coef);
+    return N4M_OK;
+}
+
+n4m_status_t ds_load(DSState& s, n4m_state_reader_t* r, std::int64_t n_features) {
+    if (!read_f64s(r, n_features + (s.fit_intercept ? 1 : 0), n_features, s.coef)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    s.features = n_features;
+    s.fitted = true;
+    return N4M_OK;
+}
+
 struct PDSState {
     std::int32_t window = 5;
     bool fit_intercept = true;
@@ -291,6 +323,17 @@ struct PDSState {
     std::vector<std::pair<std::int64_t, std::int64_t>> windows;
     std::vector<std::vector<double>> coefs;
 };
+
+// Source window [j - window/2, j + window/2] regressed onto target column j.
+void pds_set_windows(PDSState& s, std::int64_t cols) {
+    s.features = cols;
+    s.windows.clear();
+    const std::int64_t half = s.window / 2;
+    for (std::int64_t j = 0; j < cols; ++j) {
+        s.windows.emplace_back(std::max<std::int64_t>(0, j - half),
+                               std::min<std::int64_t>(cols, j + half + 1));
+    }
+}
 
 n4m_status_t pds_fit(PDSState& s, const n4m_matrix_view_t& source_v,
                      const n4m_matrix_view_t& target_v) {
@@ -302,19 +345,15 @@ n4m_status_t pds_fit(PDSState& s, const n4m_matrix_view_t& source_v,
     st = require_same_shape(source, target);
     if (st != N4M_OK) return st;
     if (source.rows < 1 || source.cols < 1 || s.window < 1) return N4M_ERR_INVALID_ARGUMENT;
-    s.features = source.cols;
-    s.windows.clear();
+    pds_set_windows(s, source.cols);
     s.coefs.clear();
-    const std::int64_t half = s.window / 2;
     for (std::int64_t j = 0; j < source.cols; ++j) {
-        const std::int64_t lo = std::max<std::int64_t>(0, j - half);
-        const std::int64_t hi = std::min<std::int64_t>(source.cols, j + half + 1);
+        const auto [lo, hi] = s.windows[to_index(j)];
         std::vector<double> ycol(static_cast<std::size_t>(source.rows));
         MatrixIn y{ycol.data(), source.rows, 1};
         for (std::int64_t i = 0; i < source.rows; ++i) {
             ycol[static_cast<std::size_t>(i)] = at(target, i, j);
         }
-        s.windows.emplace_back(lo, hi);
         s.coefs.push_back(fit_ols(source, y, s.fit_intercept, s.ridge, nullptr, lo, hi));
     }
     s.fitted = true;
@@ -353,6 +392,27 @@ n4m_status_t pds_transform(const PDSState& s, const n4m_matrix_view_t& x_v,
     return N4M_OK;
 }
 
+// One coefficient array per target column, each of its window width (plus
+// the intercept).
+n4m_status_t pds_save(const PDSState& s, n4m_state_writer_t* w) {
+    for (const auto& coef : s.coefs) write_f64s(w, coef);
+    return N4M_OK;
+}
+
+n4m_status_t pds_load(PDSState& s, n4m_state_reader_t* r, std::int64_t n_features) {
+    if (s.window < 1) return N4M_ERR_CORRUPT_BUFFER;
+    pds_set_windows(s, n_features);
+    s.coefs.assign(to_index(n_features), {});
+    for (std::size_t j = 0; j < s.coefs.size(); ++j) {
+        const auto [lo, hi] = s.windows[j];
+        if (!read_f64s(r, 1, hi - lo + (s.fit_intercept ? 1 : 0), s.coefs[j])) {
+            return N4M_ERR_CORRUPT_BUFFER;
+        }
+    }
+    s.fitted = true;
+    return N4M_OK;
+}
+
 struct SAPSState {
     std::int32_t n_components = 5;
     double score_weight = 1.0;
@@ -366,6 +426,10 @@ struct SAPSState {
     std::vector<double> coef;
 };
 
+std::int64_t saps_components(const SAPSState& s, std::int64_t cols) {
+    return std::min<std::int64_t>(std::max<std::int32_t>(1, s.n_components), cols);
+}
+
 void fit_power_components(SAPSState& s, const MatrixIn& x) {
     const std::size_t rows = to_index(x.rows);
     const std::size_t cols = to_index(x.cols);
@@ -374,7 +438,7 @@ void fit_power_components(SAPSState& s, const MatrixIn& x) {
         for (std::size_t j = 0; j < cols; ++j) s.mean[j] += at(x, i, j);
     }
     for (double& v : s.mean) v /= static_cast<double>(x.rows);
-    s.components = std::min<std::int64_t>(std::max<std::int32_t>(1, s.n_components), x.cols);
+    s.components = saps_components(s, x.cols);
     const std::size_t components = to_index(s.components);
     s.loadings.assign(components * cols, 0.0);
     std::vector<double> cov(cols * cols, 0.0);
@@ -496,6 +560,26 @@ n4m_status_t saps_transform(const SAPSState& s, const n4m_matrix_view_t& x_v,
     return N4M_OK;
 }
 
+n4m_status_t saps_save(const SAPSState& s, n4m_state_writer_t* w) {
+    write_f64s(w, s.mean);
+    write_f64s(w, s.loadings);
+    write_f64s(w, s.coef);
+    return N4M_OK;
+}
+
+n4m_status_t saps_load(SAPSState& s, n4m_state_reader_t* r, std::int64_t n_features) {
+    s.components = saps_components(s, n_features);
+    const std::int64_t params = n_features + s.components + (s.fit_intercept ? 1 : 0);
+    if (!read_f64s(r, 1, n_features, s.mean) ||
+        !read_f64s(r, s.components, n_features, s.loadings) ||
+        !read_f64s(r, params, n_features, s.coef)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    s.features = n_features;
+    s.fitted = true;
+    return N4M_OK;
+}
+
 struct SlopeBiasState {
     bool fitted = false;
     double slope = 1.0;
@@ -540,21 +624,27 @@ n4m_status_t normalize_weights(std::vector<double>& w) {
     return N4M_OK;
 }
 
-n4m_status_t weighted_snv_fit(VectorWeightsState& s, const n4m_matrix_view_t& x_v) {
-    MatrixIn x;
-    n4m_status_t st = require_f64_rowmajor(x_v, x);
-    if (st != N4M_OK) return st;
-    if (x.cols < 1) return N4M_ERR_INVALID_ARGUMENT;
+// Weighted SNV learns nothing from the data: its weights follow from the
+// create-time weights (or uniform ones) and the input width.
+n4m_status_t weighted_snv_init(VectorWeightsState& s, std::int64_t cols) {
+    if (cols < 1) return N4M_ERR_INVALID_ARGUMENT;
     if (s.has_initial) {
-        if (static_cast<std::int64_t>(s.initial.size()) != x.cols) return N4M_ERR_SHAPE_MISMATCH;
+        if (static_cast<std::int64_t>(s.initial.size()) != cols) return N4M_ERR_SHAPE_MISMATCH;
         s.weights = s.initial;
     } else {
-        s.weights.assign(static_cast<std::size_t>(x.cols), 1.0);
+        s.weights.assign(static_cast<std::size_t>(cols), 1.0);
     }
-    st = normalize_weights(s.weights);
+    const n4m_status_t st = normalize_weights(s.weights);
     if (st != N4M_OK) return st;
     s.fitted = true;
     return N4M_OK;
+}
+
+n4m_status_t weighted_snv_fit(VectorWeightsState& s, const n4m_matrix_view_t& x_v) {
+    MatrixIn x;
+    const n4m_status_t st = require_f64_rowmajor(x_v, x);
+    if (st != N4M_OK) return st;
+    return weighted_snv_init(s, x.cols);
 }
 
 n4m_status_t vsn_fit(VectorWeightsState& s, const n4m_matrix_view_t& x_v) {
@@ -634,6 +724,28 @@ n4m_status_t weighted_snv_transform(const VectorWeightsState& s,
     return N4M_OK;
 }
 
+// VSN learns its weights from the data; weighted SNV rebuilds them from its
+// parameters and the width, so it stores nothing.
+n4m_status_t vsn_save(const VectorWeightsState& s, n4m_state_writer_t* w) {
+    write_f64s(w, s.weights);
+    return N4M_OK;
+}
+
+n4m_status_t vsn_load(VectorWeightsState& s, n4m_state_reader_t* r, std::int64_t n_features) {
+    if (!read_f64s(r, 1, n_features, s.weights)) return N4M_ERR_CORRUPT_BUFFER;
+    s.fitted = true;
+    return N4M_OK;
+}
+
+n4m_status_t weighted_snv_save(const VectorWeightsState&, n4m_state_writer_t*) {
+    return N4M_OK;
+}
+
+n4m_status_t weighted_snv_load(VectorWeightsState& s, n4m_state_reader_t*,
+                               std::int64_t n_features) {
+    return weighted_snv_init(s, n_features);
+}
+
 struct PiecewiseSNVState {
     bool fitted = false;
     std::int32_t window = 32;
@@ -649,6 +761,19 @@ n4m_status_t piecewise_snv_fit(PiecewiseSNVState& s, const n4m_matrix_view_t& x_
     if (st != N4M_OK) return st;
     s.features = x.cols;
     s.bands = intervals(x.cols, s.window, s.window);
+    s.fitted = true;
+    return N4M_OK;
+}
+
+// Only the width is fitted; the bands follow from it as at fit.
+n4m_status_t piecewise_snv_save(const PiecewiseSNVState&, n4m_state_writer_t*) {
+    return N4M_OK;
+}
+
+n4m_status_t piecewise_snv_load(PiecewiseSNVState& s, n4m_state_reader_t*,
+                                std::int64_t n_features) {
+    s.features = n_features;
+    s.bands = intervals(n_features, s.window, s.window);
     s.fitted = true;
     return N4M_OK;
 }
@@ -795,6 +920,19 @@ n4m_status_t msc_transform(const MSCState& s, const n4m_matrix_view_t& x_v,
     return N4M_OK;
 }
 
+n4m_status_t msc_save(const MSCState& s, n4m_state_writer_t* w) {
+    write_f64s(w, s.reference);
+    return N4M_OK;
+}
+
+n4m_status_t msc_load(MSCState& s, n4m_state_reader_t* r, std::int64_t n_features) {
+    if (!read_f64s(r, 1, n_features, s.reference)) return N4M_ERR_CORRUPT_BUFFER;
+    s.features = n_features;
+    s.bands = intervals(n_features, s.window, s.window);
+    s.fitted = true;
+    return N4M_OK;
+}
+
 struct AlignState {
     bool fitted = false;
     bool interval_mode = false;
@@ -803,6 +941,7 @@ struct AlignState {
     std::int32_t interval_size = 32;
     std::int32_t max_shift = 5;
     std::int64_t features = 0;
+    std::vector<double> initial_reference;
     std::vector<double> reference;
 };
 
@@ -810,8 +949,12 @@ n4m_status_t align_fit(AlignState& s, const n4m_matrix_view_t& x_v) {
     MatrixIn x;
     n4m_status_t st = require_f64_rowmajor(x_v, x);
     if (st != N4M_OK) return st;
-    s.features = x.cols;
-    if (s.reference.empty()) {
+    if (!s.initial_reference.empty()) {
+        if (static_cast<std::int64_t>(s.initial_reference.size()) != x.cols) {
+            return N4M_ERR_SHAPE_MISMATCH;
+        }
+        s.reference = s.initial_reference;
+    } else {
         const std::size_t rows = to_index(x.rows);
         const std::size_t cols = to_index(x.cols);
         s.reference.assign(cols, 0.0);
@@ -819,9 +962,20 @@ n4m_status_t align_fit(AlignState& s, const n4m_matrix_view_t& x_v) {
             for (std::size_t j = 0; j < cols; ++j) s.reference[j] += at(x, i, j);
         }
         for (double& v : s.reference) v /= static_cast<double>(x.rows);
-    } else if (static_cast<std::int64_t>(s.reference.size()) != x.cols) {
-        return N4M_ERR_SHAPE_MISMATCH;
     }
+    s.features = x.cols;
+    s.fitted = true;
+    return N4M_OK;
+}
+
+n4m_status_t align_save(const AlignState& s, n4m_state_writer_t* w) {
+    write_f64s(w, s.reference);
+    return N4M_OK;
+}
+
+n4m_status_t align_load(AlignState& s, n4m_state_reader_t* r, std::int64_t n_features) {
+    if (!read_f64s(r, 1, n_features, s.reference)) return N4M_ERR_CORRUPT_BUFFER;
+    s.features = n_features;
     s.fitted = true;
     return N4M_OK;
 }
@@ -1334,6 +1488,43 @@ struct n4m_feature_filter_t {
 };
 struct n4m_interval_generator_handle_t { IntervalState s; };
 
+#define DEFINE_STATE_IO(name, HandleType, kernel) \
+n4m_status_t name##_state_save(const HandleType* h, n4m_state_writer_t* w) { \
+    return kernel##_save(h->s, w); \
+} \
+n4m_status_t name##_state_load(HandleType* h, n4m_state_reader_t* r, int64_t n_features) { \
+    return kernel##_load(h->s, r, n_features); \
+}
+
+DEFINE_STATE_IO(direct_standardization, n4m_pp_direct_standardization_handle_t, ds)
+DEFINE_STATE_IO(robust_direct_standardization, n4m_pp_robust_direct_standardization_handle_t, ds)
+DEFINE_STATE_IO(piecewise_direct_standardization,
+                n4m_pp_piecewise_direct_standardization_handle_t, pds)
+DEFINE_STATE_IO(saps, n4m_pp_saps_handle_t, saps)
+DEFINE_STATE_IO(weighted_snv, n4m_pp_weighted_snv_handle_t, weighted_snv)
+DEFINE_STATE_IO(vsn, n4m_pp_vsn_handle_t, vsn)
+DEFINE_STATE_IO(piecewise_snv, n4m_pp_piecewise_snv_handle_t, piecewise_snv)
+DEFINE_STATE_IO(piecewise_msc, n4m_pp_piecewise_msc_handle_t, msc)
+DEFINE_STATE_IO(localized_msc, n4m_pp_localized_msc_handle_t, msc)
+DEFINE_STATE_IO(xcorr_align, n4m_pp_xcorr_align_handle_t, align)
+DEFINE_STATE_IO(icoshift_align, n4m_pp_icoshift_align_handle_t, align)
+DEFINE_STATE_IO(dtw_align, n4m_pp_dtw_align_handle_t, align)
+DEFINE_STATE_IO(cow_align, n4m_pp_cow_align_handle_t, align)
+
+n4m_status_t local_centering_state_save(const n4m_pp_local_centering_handle_t* h,
+                                        n4m_state_writer_t* w) {
+    write_f64s(w, h->delta);
+    return N4M_OK;
+}
+
+n4m_status_t local_centering_state_load(n4m_pp_local_centering_handle_t* h,
+                                        n4m_state_reader_t* r, int64_t n_features) {
+    if (!read_f64s(r, 1, n_features, h->delta)) return N4M_ERR_CORRUPT_BUFFER;
+    h->features = n_features;
+    h->fitted = true;
+    return N4M_OK;
+}
+
 extern "C" N4M_API n4m_status_t n4m_domain_adaptation_direct_standardization_create(
     n4m_pp_direct_standardization_handle_t** out, int fit_intercept, double ridge) {
     n4m_pp_direct_standardization_handle_t init;
@@ -1682,7 +1873,7 @@ DEFINE_MSC_API(n4m_transform_localized_msc, n4m_pp_localized_msc_handle_t, true)
 #define DEFINE_ALIGN_API(prefix, HandleType, interval_flag, dtw_flag, cow_flag) \
 extern "C" N4M_API n4m_status_t prefix##_create(HandleType** out, const double* reference, int64_t n_reference, int32_t interval_size, int32_t max_shift) { \
     HandleType init; init.s.interval_mode = interval_flag; init.s.dtw = dtw_flag; init.s.cow = cow_flag; init.s.interval_size = interval_size; init.s.max_shift = max_shift; \
-    if (reference != nullptr && n_reference > 0) init.s.reference.assign(reference, reference + n_reference); \
+    if (reference != nullptr && n_reference > 0) init.s.initial_reference.assign(reference, reference + n_reference); \
     return make_handle(out, init); \
 } \
 extern "C" N4M_API void prefix##_destroy(HandleType* h) { delete h; } \

@@ -41,6 +41,14 @@ c_surface:
   - "n4m_transform_local_centering_fit"
   - "n4m_transform_local_centering_is_fitted"
   - "n4m_transform_local_centering_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_local_centering"
+  roles: "[transformer]"
+  state: "offset"
+  inputs:
+    y: "optional"
+    target_domain: "required"
 fq_name: "n4m.transform.scatter.local_centering"
 leaf: "local_centering"
 legacy_ids:
