@@ -329,6 +329,22 @@ static int copy_result_matrix(const n4m_method_result_t* r, const char* name,
     return 0;
 }
 
+/* Require the exact matrix shape before publishing a fitted predictor.
+ * A product-only check would accept a transposed coefficient matrix when
+ * p != q, silently changing the interpretation of the same bytes. */
+static int required_result_matrix(const n4m_method_result_t* r,
+                                  const char* name, int64_t expect_rows,
+                                  int64_t expect_cols, const double** out) {
+    int64_t rows = 0, cols = 0;
+    const double* data = NULL;
+    if (n4m_method_result_get_double_matrix(r, name, &data, &rows, &cols) != N4M_OK ||
+        data == NULL || rows != expect_rows || cols != expect_cols) {
+        return 0;
+    }
+    *out = data;
+    return 1;
+}
+
 /* Tier B — call the standalone fit for `kind`, then read the coeff triple
  * (+ intercept for Ridge) out of the returned method-result.
  *
@@ -515,10 +531,22 @@ static int n4m_wasm_model_fit_tier_b(
         return s != N4M_OK ? s : N4M_ERR_INVALID_ARGUMENT;
     }
 
-    copy_result_matrix(res, "coefficients", coefficients_out,
-                       (size_t)p * (size_t)q);
-    copy_result_matrix(res, "x_mean", x_mean_out, (size_t)p);
-    copy_result_matrix(res, "y_mean", y_mean_out, (size_t)q);
+    /* Validate the complete predictor before writing any caller buffer. A
+     * successful fit with an incomplete MethodResult must not be mistaken
+     * for a usable model, nor leave a partly written coefficient triple. */
+    const double* coefficients = NULL;
+    const double* x_mean = NULL;
+    const double* y_mean = NULL;
+    if (!required_result_matrix(res, "coefficients", p, q, &coefficients) ||
+        !required_result_matrix(res, "x_mean", 1, p, &x_mean) ||
+        !required_result_matrix(res, "y_mean", 1, q, &y_mean)) {
+        n4m_method_result_destroy(res);
+        n4m_context_destroy(ctx);
+        return N4M_ERR_INTERNAL;
+    }
+    memcpy(coefficients_out, coefficients, (size_t)p * (size_t)q * sizeof(double));
+    memcpy(x_mean_out, x_mean, (size_t)p * sizeof(double));
+    memcpy(y_mean_out, y_mean, (size_t)q * sizeof(double));
     /* Only the standalone fits that emit a genuine affine "intercept" matrix
      * (currently just Ridge: intercept = y_mean - x_mean.B_descaled) set the
      * has_intercept flag. The PLS-based Tier-B fits expose only the centred
