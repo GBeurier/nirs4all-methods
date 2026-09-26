@@ -37,6 +37,24 @@ c_surface:
   - "n4m_model_selection_kmeans_create"
   - "n4m_model_selection_kmeans_destroy"
   - "n4m_model_selection_kmeans_split"
+estimator:
+  kind: "procedure"
+  adapter: "splitter"
+  roles: "[splitter]"
+  params:
+    - name: "test_size"
+      type: "double"
+      default: 0.25
+      min: 0.0
+      max: 1.0
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "max_iter"
+      type: "int"
+      default: 100
+      min: 1
 fq_name: "n4m.model_selection.splitters.kmeans"
 leaf: "kmeans"
 legacy_ids:

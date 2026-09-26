@@ -37,6 +37,23 @@ c_surface:
   - "n4m_augmentation_wavelength_stretch_apply"
   - "n4m_augmentation_wavelength_stretch_create"
   - "n4m_augmentation_wavelength_stretch_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_wavelength_stretch"
+  roles: "[augmenter]"
+  inputs:
+    axis: "optional"
+  params:
+    - name: "stretch_lo"
+      type: "double"
+      default: 0.99
+    - name: "stretch_hi"
+      type: "double"
+      default: 1.01
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.wavelength.wavelength_stretch"
 leaf: "wavelength_stretch"
 legacy_ids:

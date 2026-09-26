@@ -42,6 +42,42 @@ publications: []
 notes: "Native Ridge/PLS candidate screen. Ridge is exact over row-additive moments when efficient and uses native dual kernels in wide regimes; compatible single-target NIPALS/regression PLS1 grids score from train/held-out moments, with a scalar host loop for medium-width CUDA builds and a device-resident cuBLAS component loop plus reused exact-CV fold workspace for very wide p>=1024 CUDA moment screens; materialized prefix scoring remains for other PLS regimes. PLS fit-cost counters are exposed as n_pls_moment_cv_fits, n_pls_moment_host_cv_fits, n_pls_moment_cuda_device_cv_fits, n_pls_materialized_cv_fits, n_pls_moment_final_fits, n_pls_moment_host_final_fits, n_pls_moment_cuda_device_final_fits and n_pls_materialized_final_fits so timing screens can distinguish moment-prefix fits, host/device PLS1 moment execution, and materialized fallback fits. Python exposes score_only=True for ranking passes that keep scores and selected ids while skipping selected-model buffers; score-only materialized fallback cells compute held-out SSE directly from linear fits when possible, and wide dual cross-kernel Ridge cells score directly from K_cross, to avoid held-out prediction-buffer allocation. This is not stream-parallel or fused batched IKPLS yet."
 c_surface:
   - "n4m_model_selection_sweep_run"
+estimator:
+  kind: "procedure"
+  adapter: "sweep"
+  roles: "[generic]"
+  inputs:
+    y: "required"
+    fold_ids: "optional"
+  params:
+    - name: "cv"
+      type: "int"
+      default: 5
+      min: 2
+    - name: "ridge_lambdas"
+      type: "double_array"
+      default: "[0.01, 0.1, 1.0, 10.0]"
+      min: 0.0
+    - name: "pls_components"
+      type: "int_array"
+      default: "[1, 2, 3, 4, 5]"
+      min: 1
+    - name: "heads"
+      type: "enum"
+      default: "ridge"
+      choices: "[ridge, pls, ridge_pls]"
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
+    - name: "scale_y"
+      type: "bool"
+      default: true
 fq_name: "n4m.model_selection.sweep.sweep"
 leaf: "sweep"
 legacy_ids:

@@ -44,6 +44,12 @@ c_surface:
   - "n4m_lowlevel_moments_compute"
   - "n4m_lowlevel_moments_subset_compute"
   - "n4m_lowlevel_moments_subtract"
+estimator:
+  kind: "procedure"
+  adapter: "moments"
+  roles: "[generic]"
+  inputs:
+    y: "required"
 fq_name: "n4m.lowlevel.moments.moments"
 leaf: "moments"
 legacy_ids:

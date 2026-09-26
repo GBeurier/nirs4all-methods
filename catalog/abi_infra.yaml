@@ -131,8 +131,10 @@ infra_abi_symbols:
   - n4m_matrix_view_validate
   - n4m_method_result_destroy
   - n4m_method_result_get_double_matrix
+  - n4m_method_result_get_fold
   - n4m_method_result_get_int64_vector
   - n4m_method_result_get_int_vector
+  - n4m_method_result_get_n_folds
   - n4m_method_result_get_scalar
   - n4m_model_destroy
   - n4m_model_export_size
@@ -183,6 +185,7 @@ infra_abi_symbols:
   - n4m_pipeline_transform
   - n4m_pipeline_transform_alloc
   - n4m_pls_cross_validate
+  - n4m_procedure_run
   - n4m_rng_pcg64_advance
   - n4m_rng_pcg64_create
   - n4m_rng_pcg64_destroy

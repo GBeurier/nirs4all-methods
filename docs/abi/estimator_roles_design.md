@@ -48,8 +48,7 @@ Each catalog entry declares `kind: estimator` or `kind: procedure`.
   They are called through one generic entry point,
   `n4m_procedure_run(ctx, method_index, params, inputs, out_result)`, which
   validates named parameters and inputs against the manifest and returns a
-  `n4m_method_result_t` (splitters and augmenters additionally keep typed
-  outputs, D5).
+  `n4m_method_result_t` whose layout is fixed by the procedure role (D5).
 
 "Every method usable in Python, R and WASM" therefore means: every estimator
 through the estimator life cycle and every procedure through the procedure
@@ -276,7 +275,8 @@ restriction of the 2.11/2.12 roles.
 ```c
 typedef enum { N4M_ROLE_TRANSFORMER = 1, N4M_ROLE_REGRESSOR = 2, N4M_ROLE_CLASSIFIER = 4,
                N4M_ROLE_SELECTOR = 8, N4M_ROLE_SAMPLE_FILTER = 16 } n4m_role_t;
-/* procedures: kind = N4M_PROCEDURE_{GENERIC, SPLITTER, AUGMENTER} in n4m_method_info_v1_t */
+/* procedures (kind N4M_METHOD_PROCEDURE): N4M_ROLE_SPLITTER = 32, N4M_ROLE_AUGMENTER = 64,
+   N4M_ROLE_GENERIC = 128, exactly one */
 
 /* capabilities */
 #define N4M_CAP_OOS_TRANSFORM       (1ull << 0)  /* transform new rows */
@@ -324,18 +324,42 @@ each classifier documents its score semantics in the manifest, and
 set by the caller; unknown trailing fields are rejected, shorter known
 layouts accepted.
 
-Procedures with typed outputs keep dedicated dispatch calls, now driven by
-method index and named parameters (no handle, no no-op `fit`):
+Procedures run through one call, driven by method index and named
+parameters (no handle, no no-op `fit`); the role fixes the result layout:
 
 ```c
+/* roles: N4M_ROLE_SPLITTER | N4M_ROLE_AUGMENTER | N4M_ROLE_GENERIC, exactly one */
 N4M_API n4m_status_t n4m_procedure_run(n4m_context_t*, int32_t method_index, const n4m_params_t*,
                                        const n4m_fit_inputs_v1_t*, n4m_method_result_t** out);
-N4M_API n4m_status_t n4m_split_run(n4m_context_t*, int32_t method_index, const n4m_params_t*,
-                                   const n4m_fit_inputs_v1_t*, int32_t fold, n4m_split_result_t* out);
-N4M_API n4m_status_t n4m_augment_run(n4m_context_t*, int32_t method_index, const n4m_params_t*,
-                                     const n4m_fit_inputs_v1_t*, n4m_matrix_view_t* out_X,
-                                     n4m_matrix_view_t* out_Y /* paired-Y kinds only */);
+/* splitters: every fold, zero-based rows of X, borrowed from the result */
+N4M_API n4m_status_t n4m_method_result_get_n_folds(const n4m_method_result_t*, int32_t* out);
+N4M_API n4m_status_t n4m_method_result_get_fold(const n4m_method_result_t*, int32_t fold,
+                                                const int64_t** train, int64_t* n_train,
+                                                const int64_t** test, int64_t* n_test);
 ```
+
+- *Splitter*: all folds in one call (a DAG-ML `split` node needs them all);
+  `n_folds` is `n_splits` for k-fold kinds, 1 otherwise. Y-only splitters
+  split the rows of `X` without reading it.
+- *Augmenter*: double matrix `"X"`, same shape and row order as the input,
+  train-only. A future paired-Y kind adds `"Y"` to the same result.
+- *Generic*: the named outputs of the method's C function; functions that
+  return plain values (metrics, T², transfer metrics) are packed under their
+  C names.
+
+Rejected: the separate `n4m_split_run` (one fold per call) and
+`n4m_augment_run` (caller-allocated output) proposed earlier. They double the
+entry points for no capability: the result is read once, and a per-fold call
+recomputes the whole partition for every fold.
+
+Inputs reuse `n4m_fit_inputs_v1_t` and its checks (a missing required or an
+unused input is refused by name). Diagnostics that need a second matrix take
+it as `target_domain` (PLS monitoring: the phase-2 rows; transfer metrics:
+the target set); diagnostics defined on a fitted PLS model fit it from `X`,
+`y` and the declared PLS parameters. Axis-dependent augmenters take `axis`
+only when their kernel works in the axis' own units (optional where the
+kernel falls back to the index grid); kernels with nanometre constants stay
+out until they declare their unit.
 
 Paired-Y augmentation (mixup, local mixup) requires the kernels to expose the
 sampled partners and weights so Y is mixed with the same draw; that kernel
@@ -378,8 +402,7 @@ Python, R and WASM.
   (`n4m_transform_*`, `n4m_estimators_*_fit`, …) stay as the kernel-level API.
   Bindings stop using them for the generic path.
 - The ABI 2.11 `n4m_splitter_run` / `n4m_augmentation_run` (on `main`, in the
-  R `n4m` 1.0.21.9006 source) stay, implemented over the same code as
-  `n4m_split_run` / `n4m_augment_run`.
+  R `n4m` 1.0.21.9006 source) stay; `n4m_procedure_run` calls them.
 - The ABI 2.12 filter-role symbols (`n4m_sample_filter_*`,
   `n4m_feature_filter_*`) were never distributed (verified 2026-09-26: they
   existed only on the unmerged branch of PR #37 and a local R library). They
@@ -448,6 +471,17 @@ JS/WASM facades are generated from the manifest, and the shared fixture
 reproduces the Python fit. Each role class also matches its n4m reference
 class (bitwise where the same kernel runs).
 
+Procedures (2026-09-27): 51 entries run through `n4m_procedure_run` — the
+9 splitters, 31 augmenters (the 22 of `n4m_augmentation_run`, `poly_drift`,
+and `wavelength_shift`, `wavelength_stretch`, `local_warp`,
+`magnitude_warp`, `instrument_broaden`, `emsc_distort`, `edge_curvature`,
+`truncated_peak` with `axis`), the 5 diagnostics and the 6 utilities. The
+C++ conformance suite checks each against its direct C entry point
+bitwise. Left out: `mixup` and `local_mixup` (no paired Y); `temperature`,
+`moisture`, `particle_size`, `detector_rolloff` and `edge_artifacts`
+(nanometre constants in the kernels); `stray_light` (its C entry point
+requires an axis it never reads). No binding facade exists yet.
+
 ## 5. Tests
 
 - **Conformance suite (C++), generated from the manifest**: for every method,
@@ -455,6 +489,9 @@ class (bitwise where the same kernel runs).
   import → identical outputs (bitwise); parameter round trip; refusal of each
   missing required input; refusal of unsupported operations; seeded
   determinism.
+  Procedures: run with the default parameters, same seed → same result,
+  column-major X → same result, refusal of missing, unused and foreign
+  inputs or parameters, and bitwise equality with the direct C entry point.
 - **Kernel equivalence**: estimator output equals the per-method C function
   output (and each N4MP kind equals its kernel).
 - **Cross-binding matrix**: one fixture set produced by the C++ suite

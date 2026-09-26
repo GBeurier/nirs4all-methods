@@ -33,6 +33,29 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_metrics_pls_diagnostics_compute"
+estimator:
+  kind: "procedure"
+  adapter: "pls_diagnostics"
+  roles: "[generic]"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
+    - name: "scale_y"
+      type: "bool"
+      default: true
 fq_name: "n4m.metrics.diagnostics.pls_diagnostics"
 leaf: "pls_diagnostics"
 legacy_ids:

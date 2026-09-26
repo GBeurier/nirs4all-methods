@@ -3,8 +3,11 @@
  *
  * Every catalog method with a reusable fitted state is exposed through one
  * life cycle: create (method id + named parameters) -> fit -> transform /
- * predict on new rows -> export / import (N4ME bytes). Bindings and
- * controllers consume this surface instead of per-method functions.
+ * predict on new rows -> export / import (N4ME bytes). Methods without
+ * reusable state (splitters, augmenters, diagnostics) are procedures, run
+ * once through n4m_procedure_run with the same parameters and inputs.
+ * Bindings and controllers consume this surface instead of per-method
+ * functions.
  * Design: docs/abi/estimator_roles_design.md.
  *
  * Conventions:
@@ -37,6 +40,10 @@ typedef enum n4m_method_kind_t {
 #define N4M_ROLE_CLASSIFIER    (1u << 2)
 #define N4M_ROLE_SELECTOR      (1u << 3)
 #define N4M_ROLE_SAMPLE_FILTER (1u << 4)
+/* Procedure roles: a procedure declares exactly one. */
+#define N4M_ROLE_SPLITTER      (1u << 5)
+#define N4M_ROLE_AUGMENTER     (1u << 6)
+#define N4M_ROLE_GENERIC       (1u << 7)
 
 #define N4M_CAP_TRANSFORM             (UINT64_C(1) << 0)
 #define N4M_CAP_PREDICT               (UINT64_C(1) << 1)
@@ -87,7 +94,7 @@ typedef struct n4m_method_info_v1_t {
     const char* fq_name;          /* "n4m.estimators.pls.cppls" */
     uint32_t roles;               /* N4M_ROLE_* mask */
     int32_t n_params;
-    uint64_t capabilities;        /* N4M_CAP_* of a fitted estimator */
+    uint64_t capabilities;        /* N4M_CAP_* of a fitted estimator, 0 for procedures */
     const char* state_format;     /* N4ME state block format, "" if none */
     int32_t inputs[N4M_FIT_INPUT_COUNT]; /* n4m_input_requirement_t */
 } n4m_method_info_v1_t;
@@ -224,6 +231,32 @@ N4M_API n4m_status_t n4m_estimator_apply_mask(n4m_context_t* ctx, const n4m_esti
  * example after import). */
 N4M_API n4m_status_t n4m_estimator_fit_result(const n4m_estimator_t* est,
                                               const n4m_method_result_t** out_borrowed);
+
+/* ---- Procedures ------------------------------------------------------ */
+
+/* Runs a procedure (kind N4M_METHOD_PROCEDURE) once. `params` may be NULL
+ * (all defaults); inputs are checked against the manifest as in
+ * n4m_estimator_fit. The caller owns *out (n4m_method_result_destroy). The
+ * result depends on the procedure role:
+ *   N4M_ROLE_SPLITTER   every fold, read with n4m_method_result_get_n_folds
+ *                       and n4m_method_result_get_fold;
+ *   N4M_ROLE_AUGMENTER  double matrix "X": the augmented rows, same shape and
+ *                       row order as inputs->X (train-only, no fitted state);
+ *   N4M_ROLE_GENERIC    the named outputs of the method's C function.
+ * N4M_ERR_INVALID_ARGUMENT for an estimator. */
+N4M_API n4m_status_t n4m_procedure_run(n4m_context_t* ctx, int32_t method_index,
+                                       const n4m_params_t* params,
+                                       const n4m_fit_inputs_v1_t* inputs,
+                                       n4m_method_result_t** out);
+/* Folds of a splitter result: zero-based row indices of inputs->X in the
+ * splitter's order. The arrays are borrowed from the result.
+ * N4M_ERR_INVALID_ARGUMENT when the result holds no folds or the fold is
+ * out of range. */
+N4M_API n4m_status_t n4m_method_result_get_n_folds(const n4m_method_result_t* result,
+                                                   int32_t* out_n_folds);
+N4M_API n4m_status_t n4m_method_result_get_fold(const n4m_method_result_t* result, int32_t fold,
+                                                const int64_t** out_train, int64_t* out_n_train,
+                                                const int64_t** out_test, int64_t* out_n_test);
 
 /* ---- N4ME fitted-state serialization -------------------------------- */
 

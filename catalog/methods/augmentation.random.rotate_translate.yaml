@@ -37,6 +37,21 @@ c_surface:
   - "n4m_augmentation_rotate_translate_apply"
   - "n4m_augmentation_rotate_translate_create"
   - "n4m_augmentation_rotate_translate_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "augmentation_dispatch"
+  roles: "[augmenter]"
+  params:
+    - name: "p_range"
+      type: "double"
+      default: 2.0
+    - name: "y_factor"
+      type: "double"
+      default: 3.0
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.mixup.rotate_translate"
 leaf: "rotate_translate"
 legacy_ids:
