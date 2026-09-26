@@ -41,6 +41,30 @@ c_surface:
   - "n4m_transform_wavelet_features_destroy"
   - "n4m_transform_wavelet_features_output_cols"
   - "n4m_transform_wavelet_features_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_wavelet_features"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "family"
+      type: "enum"
+      choices: "[haar, db4, sym4, coif1]"
+      default: "haar"
+    - name: "mode"
+      type: "enum"
+      choices: "[periodization, symmetric, zero]"
+      default: "periodization"
+    - name: "max_level"
+      type: "int"
+      default: 3
+      min: 1
+    - name: "entropy"
+      type: "enum"
+      choices: "[energy, histogram]"
+      default: "energy"
 fq_name: "n4m.transform.wavelet.wavelet_features"
 leaf: "wavelet_features"
 legacy_ids:

@@ -37,6 +37,23 @@ publications: []
 notes: "Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration."
 c_surface:
   - "n4m_estimators_continuum_regression_fit"
+estimator:
+  kind: "estimator"
+  adapter: "affine_continuum_regression"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "tau"
+      type: "double"
+      default: 0.5
+      min: 0.0
+      max: 1.0
 fq_name: "n4m.estimators.regression.latent.continuum_regression"
 leaf: "continuum_regression"
 legacy_ids:

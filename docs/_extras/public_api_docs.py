@@ -472,7 +472,10 @@ def scan_public_api(source_dir: Path = DEFAULT_N4M_SOURCE) -> PublicApiIndex:
     resolver = _SourceResolver(source_dir)
     symbol_rows: list[PublicSymbol] = []
     for path in sorted(source_dir.rglob("*.py")):
-        if "_impl" in path.parts:
+        # n4m.roles re-exposes catalog methods through the generated generic
+        # role classes; their coverage is documented by
+        # docs/parity/estimator_roles_coverage.md, not per-method pages.
+        if "_impl" in path.parts or "roles" in path.parts:
             continue
         rel = path.relative_to(source_dir).with_suffix("")
         parts = ["n4m", *rel.parts]

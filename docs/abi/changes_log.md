@@ -1,5 +1,56 @@
 # ABI — Changes Log
 
+## 2026-09-27 — ABI 2.13.0: generic estimator roles (unreleased)
+
+Adds one life cycle for catalog methods with reusable fitted state
+(`n4m/estimator.h`, design in `docs/abi/estimator_roles_design.md`):
+
+- a native manifest compiled from the catalog `estimator` blocks, exposed by
+  `n4m_method_count/find/info_v1/param_info_v1/param_default_*`;
+- named, typed parameters (`n4m_params_*`) whose defaults are owned by the
+  core, so one `{method_id, params}` recipe builds the same estimator in every
+  binding;
+- `n4m_estimator_*`: create, fit with a versioned `n4m_fit_inputs_v1_t`
+  (required/unused inputs checked against the manifest), transform, predict,
+  decision function, probabilities, labels, classes, selected indices, masks,
+  borrowed fit diagnostics;
+- the N4ME v1 fitted-state format (`n4m_estimator_export_*`,
+  `n4m_estimator_import_from_buffer`, `n4m_context_set_max_state_bytes`),
+  which stores resolved parameters and embeds N4MM where the method has one.
+
+Roles are typed interfaces (transformer, selector, regressor, classifier,
+sample filter; splitter and augmenter procedures): every operation checks the
+method's declared role, and the manifest publishes the DAG-ML node kinds.
+Seeds are parameters of the methods that use them; internal-CV methods take a
+`cv` parameter and optional `fold_ids`, with the canonical contiguous plan
+built natively.
+
+Current coverage: 21 regressors (PLS regression with selectable solver,
+SIMPLS, PCR, CPPLS, robust/ridge/continuum/weighted PLS, Ridge,
+sparse/fused/group-sparse PLS, O2PLS, MIR-PLS, MB-PLS, ECR, N-PLS, DI-PLS,
+bagging/boosting/random-subspace PLS) and 25 selectors (SPA, VIP-SPA, CARS,
+SCARS, UVE, EMCUVE, random frog, GA, PSO, VISSA, shaving, BVE, REP, IPW, ST,
+T2, BiPLS, SiPLS, IRIV, IRF, WVC, stability, randomization, variable ranking).
+`models.pls.pls_regression` is a new catalog entry for the general PLS
+estimator. The per-method C functions are unchanged. Behaviour changes:
+WeightedPLS and O2PLS results are marked affine predictors; bagging and
+random-subspace PLS now draw samples with portable rejection sampling and
+Fisher-Yates on mt19937_64 (std distributions differed between standard
+libraries), so their fits change once and become platform independent.
+
+## 2026-09-26 — ABI 2.12.0: closed native filter roles (unreleased)
+
+`n4m_sample_filter_*` and `n4m_feature_filter_*` add two shared fit/apply
+contracts over seven existing native filters. The row-mask role covers
+Y-outlier, X-outlier, high leverage, spectral quality and composite filters;
+the column role covers variance and correlation filters. Composite handles own
+their native children and destroy the borrowing composite first. Correlation
+and Y-outlier require a one-column Y aligned to X rows. The column role returns
+the original zero-based selected indices from native fitted state. No kernel,
+RNG, or numerical convention changes; these handles do not export fitted state.
+The additive ABI minor change does not change package versions or publish an
+artifact by itself.
+
 ## 2026-09-26 — ABI 2.11.0: common native sample-splitter dispatch (release pending)
 
 `n4m_splitter_run` adds a closed, typed one-shot interface for the nine existing

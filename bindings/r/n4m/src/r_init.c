@@ -37,6 +37,14 @@ SEXP r_n4m_kennard_stone_split(SEXP X, SEXP test_size, SEXP zero_based);
 SEXP r_n4m_splitter_run(SEXP kind, SEXP X, SEXP Y, SEXP groups,
                         SEXP params, SEXP fold_index, SEXP zero_based);
 SEXP r_n4m_augmentation_run(SEXP kind, SEXP X, SEXP params, SEXP seed);
+SEXP r_n4m_sample_filter_create(SEXP kind, SEXP ints, SEXP values, SEXP seed);
+SEXP r_n4m_sample_filter_add_child(SEXP ptr, SEXP kind, SEXP ints, SEXP values, SEXP seed);
+SEXP r_n4m_sample_filter_fit(SEXP ptr, SEXP X, SEXP Y);
+SEXP r_n4m_sample_filter_apply(SEXP ptr, SEXP X, SEXP Y);
+SEXP r_n4m_feature_filter_create(SEXP kind, SEXP threshold, SEXP top_k);
+SEXP r_n4m_feature_filter_fit(SEXP ptr, SEXP X, SEXP Y);
+SEXP r_n4m_feature_filter_indices(SEXP ptr);
+SEXP r_n4m_feature_filter_transform(SEXP ptr, SEXP X);
 
 /* r_methods.c — MethodResult fits */
 SEXP r_n4m_sparse_simpls_fit(SEXP X, SEXP Y, SEXP n_components, SEXP sparsity_lambda);
@@ -77,6 +85,16 @@ SEXP r_n4m_preprocess_export(SEXP ptr);
 SEXP r_n4m_preprocess_import(SEXP bytes);
 SEXP r_n4m_preprocess_plan(SEXP ptr);
 
+/* generic estimator roles (ABI 2.13) */
+SEXP r_n4m_estimator_fit(SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP r_n4m_estimator_predict(SEXP, SEXP);
+SEXP r_n4m_estimator_transform(SEXP, SEXP);
+SEXP r_n4m_estimator_export(SEXP);
+SEXP r_n4m_estimator_import(SEXP);
+SEXP r_n4m_estimator_alive(SEXP);
+SEXP r_n4m_estimator_info(SEXP);
+SEXP r_n4m_estimator_selected_indices(SEXP);
+
 static const R_CallMethodDef callMethods[] = {
     /* core */
     {"r_n4m_version",     (DL_FUNC)&r_n4m_version,     0},
@@ -103,6 +121,14 @@ static const R_CallMethodDef callMethods[] = {
     {"r_n4m_kennard_stone_split", (DL_FUNC)&r_n4m_kennard_stone_split, 3},
     {"r_n4m_splitter_run", (DL_FUNC)&r_n4m_splitter_run, 7},
     {"r_n4m_augmentation_run", (DL_FUNC)&r_n4m_augmentation_run, 4},
+    {"r_n4m_sample_filter_create", (DL_FUNC)&r_n4m_sample_filter_create, 4},
+    {"r_n4m_sample_filter_add_child", (DL_FUNC)&r_n4m_sample_filter_add_child, 5},
+    {"r_n4m_sample_filter_fit", (DL_FUNC)&r_n4m_sample_filter_fit, 3},
+    {"r_n4m_sample_filter_apply", (DL_FUNC)&r_n4m_sample_filter_apply, 3},
+    {"r_n4m_feature_filter_create", (DL_FUNC)&r_n4m_feature_filter_create, 3},
+    {"r_n4m_feature_filter_fit", (DL_FUNC)&r_n4m_feature_filter_fit, 3},
+    {"r_n4m_feature_filter_indices", (DL_FUNC)&r_n4m_feature_filter_indices, 1},
+    {"r_n4m_feature_filter_transform", (DL_FUNC)&r_n4m_feature_filter_transform, 2},
 
     /* MethodResult fits */
     {"r_n4m_sparse_simpls_fit", (DL_FUNC)&r_n4m_sparse_simpls_fit, 4},
@@ -132,6 +158,15 @@ static const R_CallMethodDef callMethods[] = {
     {"r_n4m_preprocess_export", (DL_FUNC)&r_n4m_preprocess_export, 1},
     {"r_n4m_preprocess_import", (DL_FUNC)&r_n4m_preprocess_import, 1},
     {"r_n4m_preprocess_plan", (DL_FUNC)&r_n4m_preprocess_plan, 1},
+
+    {"r_n4m_estimator_fit", (DL_FUNC)&r_n4m_estimator_fit, 5},
+    {"r_n4m_estimator_predict", (DL_FUNC)&r_n4m_estimator_predict, 2},
+    {"r_n4m_estimator_transform", (DL_FUNC)&r_n4m_estimator_transform, 2},
+    {"r_n4m_estimator_export", (DL_FUNC)&r_n4m_estimator_export, 1},
+    {"r_n4m_estimator_import", (DL_FUNC)&r_n4m_estimator_import, 1},
+    {"r_n4m_estimator_alive", (DL_FUNC)&r_n4m_estimator_alive, 1},
+    {"r_n4m_estimator_info", (DL_FUNC)&r_n4m_estimator_info, 1},
+    {"r_n4m_estimator_selected_indices", (DL_FUNC)&r_n4m_estimator_selected_indices, 1},
 
     {NULL, NULL, 0},
 };

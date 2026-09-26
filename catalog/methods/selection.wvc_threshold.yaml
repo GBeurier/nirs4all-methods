@@ -33,6 +33,32 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_feature_selection_wvc_threshold_select"
+estimator:
+  kind: "estimator"
+  adapter: "select_wvc_threshold"
+  roles: "[selector]"
+  state: "selection"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "normalize"
+      type: "bool"
+      default: true
+    - name: "score_threshold"
+      type: "double"
+      default: 0.0
+    - name: "threshold_factor"
+      type: "double"
+      default: 1.0
+      min: 0.0
+    - name: "min_selected"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.feature_selection.wrapper.wvc_threshold"
 leaf: "wvc_threshold"
 legacy_ids:

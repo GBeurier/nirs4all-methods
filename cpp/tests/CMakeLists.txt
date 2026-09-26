@@ -74,6 +74,12 @@ if(WIN32)
 endif()
 
 add_test(NAME n4m_tests COMMAND n4m_tests)
+add_executable(n4m_filter_role_tests test_filter_role.cpp)
+target_link_libraries(n4m_filter_role_tests PRIVATE n4m_c)
+add_test(NAME n4m_filter_role_tests COMMAND n4m_filter_role_tests)
+add_executable(n4m_estimator_tests test_estimator.cpp)
+target_link_libraries(n4m_estimator_tests PRIVATE n4m_c)
+add_test(NAME n4m_estimator_tests COMMAND n4m_estimator_tests)
 set_tests_properties(n4m_tests PROPERTIES
     LABELS "smoke;abi;parity"
     TIMEOUT 60)

@@ -32,6 +32,31 @@ def _entry(
 
 
 SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
+    "models_pls_pls_regression": _entry(
+        "PLS regression with a selectable solver",
+        "Wold, Sjöström & Eriksson (2001), *PLS-regression: a basic tool of "
+        "chemometrics*, Chemometrics and Intelligent Laboratory Systems 58, 109–130, "
+        "https://doi.org/10.1016/S0169-7439(01)00155-1; de Jong (1993), *SIMPLS: an "
+        "alternative approach to partial least squares regression*, https://doi.org/10.1016/0169-7439(93)85002-X.",
+        "PLS regression extracts $k$ latent components $t_a = X w_a$ whose weights "
+        "maximize the covariance between the (centered, optionally scaled) predictors and "
+        "responses, deflates, and regresses $Y$ on the scores. The fitted model is the "
+        "affine predictor $\\hat Y = \\bar y + (X-\\bar x) B$ with $B = W(P^T W)^{-1} Q^T$; "
+        "NIPALS, SIMPLS, kernel, SVD and power solvers compute the same subspace up to "
+        "numerical and single-response conventions.",
+        "General multivariate calibration of spectra to one or several responses, as the "
+        "reference linear model and as a latent-score feature extractor ahead of another "
+        "estimator.",
+        "The component count must be chosen by validation on held-out data; solvers can "
+        "differ at the last digits and SIMPLS deflates only the cross-covariance, so "
+        "multi-response scores are not identical across solvers. Scaling choices change "
+        "the fitted subspace.",
+        "Generic role estimator `models.pls.pls_regression` (regressor and transformer) "
+        "over `n4m_model_fit`; state is an N4MM model inside the N4ME format.",
+        "https://doi.org/10.1016/S0169-7439(01)00155-1; "
+        + _REPO
+        + "cpp/src/core/model.cpp",
+    ),
     "pp_airpls": _entry(
         "Adaptive iteratively reweighted penalized least squares (airPLS)",
         "Zhang, Chen & Liang (2010), *Baseline correction using adaptive iteratively "

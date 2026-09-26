@@ -37,6 +37,26 @@ c_surface:
   - "n4m_transform_arpls_create"
   - "n4m_transform_arpls_destroy"
   - "n4m_transform_arpls_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_arpls"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "lam"
+      type: "double"
+      default: 100000.0
+      min: 0.0
+    - name: "max_iter"
+      type: "int"
+      default: 50
+      min: 1
+    - name: "tol"
+      type: "double"
+      default: 0.001
+      min: 0.0
 fq_name: "n4m.transform.baseline.arpls"
 leaf: "arpls"
 legacy_ids:

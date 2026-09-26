@@ -52,6 +52,10 @@ class Context {
     void set_num_threads(std::int32_t n) noexcept { num_threads_ = n; }
     [[nodiscard]] std::int32_t num_threads() const noexcept { return num_threads_; }
 
+    // Upper bound on imported estimator state payloads (N4ME).
+    void set_max_state_bytes(std::uint64_t n) noexcept { max_state_bytes_ = n; }
+    [[nodiscard]] std::uint64_t max_state_bytes() const noexcept { return max_state_bytes_; }
+
     void set_user_data(void* user) noexcept { user_data_ = user; }
     [[nodiscard]] void* user_data() const noexcept { return user_data_; }
 
@@ -70,6 +74,7 @@ class Context {
     n4m_backend_t backend_;
     std::int32_t  num_threads_;
     void*         user_data_;
+    std::uint64_t max_state_bytes_ = std::uint64_t{256} * 1024 * 1024;
     char          error_buf_[N4M_ERROR_BUFFER_BYTES];
 };
 

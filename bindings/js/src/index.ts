@@ -27,9 +27,14 @@ export {
 } from "./preprocessing.js";
 export { MethodResult } from "./methodResult.js";
 export { NativeModel } from "./nativeModel.js";
+export { NativeEstimator, type Regressor, type Selector, type Transformer, type FitInputs, type ParamType, type ParamValue } from "./estimatorRoles.js";
+export * from "./estimatorRolesGenerated.js";
 export { splitNative, type NativeSplitterKind,
          type NativeSplitterOptions, type NativeSplitIndices } from "./nativeSplitter.js";
 export { augmentNative, type NativeAugmentationKind } from "./nativeAugmentation.js";
+export { NativeSampleFilter, NativeFeatureFilter,
+         type SampleFilterKind, type FeatureFilterKind,
+         type NativeFilterStats } from "./nativeFilter.js";
 export {
     NativePreprocessingPipeline,
     PipelineOperatorKind,

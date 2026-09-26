@@ -11,8 +11,11 @@ from . import (
     splines,
     wavelength,
 )
+from .native import native_augmentation_specs, run_native
 
 __all__ = [
+    "native_augmentation_specs",
+    "run_native",
     "drift",
     "instrument",
     "mixup",

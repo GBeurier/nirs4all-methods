@@ -1,4 +1,56 @@
 infra_abi_symbols:
+  - n4m_context_set_max_state_bytes
+  - n4m_estimator_apply_mask
+  - n4m_estimator_classes
+  - n4m_estimator_create
+  - n4m_estimator_decision_function
+  - n4m_estimator_destroy
+  - n4m_estimator_export_size
+  - n4m_estimator_export_to_buffer
+  - n4m_estimator_fit
+  - n4m_estimator_fit_result
+  - n4m_estimator_get_params
+  - n4m_estimator_import_from_buffer
+  - n4m_estimator_info
+  - n4m_estimator_is_fitted
+  - n4m_estimator_n_features_in
+  - n4m_estimator_n_outputs
+  - n4m_estimator_predict
+  - n4m_estimator_predict_labels
+  - n4m_estimator_predict_proba
+  - n4m_estimator_selected_indices
+  - n4m_estimator_transform
+  - n4m_estimator_transform_cols
+  - n4m_method_count
+  - n4m_method_find
+  - n4m_method_info_v1
+  - n4m_method_param_default_double
+  - n4m_method_param_default_int
+  - n4m_method_param_info_v1
+  - n4m_params_create
+  - n4m_params_destroy
+  - n4m_params_get_double
+  - n4m_params_get_int
+  - n4m_params_set_bool
+  - n4m_params_set_double
+  - n4m_params_set_double_array
+  - n4m_params_set_enum
+  - n4m_params_set_int
+  - n4m_params_set_int_array
+  - n4m_params_validate
+  - n4m_feature_filter_create
+  - n4m_feature_filter_destroy
+  - n4m_feature_filter_fit
+  - n4m_feature_filter_is_fitted
+  - n4m_feature_filter_output_cols
+  - n4m_feature_filter_selected_indices
+  - n4m_feature_filter_transform
+  - n4m_sample_filter_add_child
+  - n4m_sample_filter_apply
+  - n4m_sample_filter_create
+  - n4m_sample_filter_destroy
+  - n4m_sample_filter_fit
+  - n4m_sample_filter_is_fitted
   - n4m_augmentation_run
   - n4m_array_dtype
   - n4m_array_free

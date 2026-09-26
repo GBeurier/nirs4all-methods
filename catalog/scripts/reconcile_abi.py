@@ -52,10 +52,20 @@ INFRA_PREFIXES = (
     # Shared handles used by ALL methods of a family (not per-method operators):
     "n4m_model_",         # the generic trained-model handle (fit/predict/transform/export/import)
     "n4m_split_result_",  # the shared splitter result handle
+    # Generic estimator roles (ABI 2.13): manifest introspection, typed
+    # params and the estimator life cycle shared by every catalog method.
+    "n4m_method_", "n4m_params_", "n4m_estimator_",
 )
 
 # Exact reserved/support symbols whose prefix is otherwise method-owned.
 INFRA_SYMBOLS = {
+    "n4m_feature_filter_create", "n4m_feature_filter_destroy",
+    "n4m_feature_filter_fit", "n4m_feature_filter_is_fitted",
+    "n4m_feature_filter_output_cols", "n4m_feature_filter_selected_indices",
+    "n4m_feature_filter_transform", "n4m_sample_filter_add_child",
+    "n4m_sample_filter_apply", "n4m_sample_filter_create",
+    "n4m_sample_filter_destroy", "n4m_sample_filter_fit",
+    "n4m_sample_filter_is_fitted",
     "n4m_augmentation_run",  # shared dispatcher for supported X-only augmentations
     "n4m_pls_cross_validate",  # reserved fused/batched PLS CV ABI, not a production method
     "n4m_splitter_run",  # shared dispatcher for nine catalogued splitters

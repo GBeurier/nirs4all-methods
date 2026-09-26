@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **219**
+- Curated records: **220**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `a32c7074bf922c3dcaad3923f9e2bc985c96d5efb4bf14dea04abbff62a7e76d`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `b1f2a131fe74b33659a0d29b9480bef356efefa2f1d1bf5e453de1daaaedb87d`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `c43c2c812f82c57b3cb5f5178f21a0260fed7f97389adf0253110ff6bda150c4`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `9b9d58596371dcc1fd96d0c1976a3058e640f405a5a6e4e5da49e07ea892b75d`
 
 ## References by documentation page
 
@@ -585,6 +585,12 @@ Walczak, B. & Massart, D. L. (2001). *Dealing with missing data: Part I and Part
 No canonical paper defines this n4m moment-stack product route; its implementation is a documented linear stack over moment-compatible candidate predictions.
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/ensemble.py; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/moment_facade.py
+
+### [`models_pls_pls_regression`](models_pls_pls_regression.md) — PLS regression with a selectable solver
+
+Wold, Sjöström & Eriksson (2001), *PLS-regression: a basic tool of chemometrics*, Chemometrics and Intelligent Laboratory Systems 58, 109–130, https://doi.org/10.1016/S0169-7439(01)00155-1; de Jong (1993), *SIMPLS: an alternative approach to partial least squares regression*, https://doi.org/10.1016/0169-7439(93)85002-X.
+
+**Provenance:** https://doi.org/10.1016/S0169-7439(01)00155-1; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/model.cpp
 
 ### [`models_regularized_ridge`](models_regularized_ridge.md) — Ridge regression
 

@@ -33,6 +33,26 @@ publications: []
 notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
 c_surface:
   - "n4m_estimators_fused_sparse_pls_fit"
+estimator:
+  kind: "estimator"
+  adapter: "affine_fused_sparse_pls"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "l1_lambda"
+      type: "double"
+      default: 0.05
+      min: 0.0
+    - name: "fusion_lambda"
+      type: "double"
+      default: 0.05
+      min: 0.0
 fq_name: "n4m.estimators.regression.sparse.fused_sparse_pls"
 leaf: "fused_sparse_pls"
 legacy_ids:

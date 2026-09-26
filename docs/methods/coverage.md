@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **212**
-- Curated scientific records: **219**
-- Resolved documentation pages: **212**
+- Catalog entries: **213**
+- Curated scientific records: **220**
+- Resolved documentation pages: **213**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -100,6 +100,7 @@ This generated report records the documentation source used for each catalog ent
 | `models.pls.kernel` | [kernel_pls_rbf](kernel_pls_rbf.md) | curated |
 | `models.pls.pcr` | [pcr](pcr.md) | curated |
 | `models.pls.pls_fit_simple` | [pls](pls.md) | curated |
+| `models.pls.pls_regression` | [models_pls_pls_regression](models_pls_pls_regression.md) | curated |
 | `models.regularized.continuum_regression` | [continuum_regression](continuum_regression.md) | curated |
 | `models.regularized.ridge` | [models_regularized_ridge](models_regularized_ridge.md) | curated |
 | `models.regularized.ridge_pls` | [ridge_pls](ridge_pls.md) | curated |
