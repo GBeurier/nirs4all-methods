@@ -35,6 +35,48 @@ refit. Call `Model::fit` explicitly after selecting parameters. The native API
 rejects unsupported estimators, pruners, metrics, conditional axes, and search
 space schemas rather than broadening this binding's scope.
 
+## Generic estimator roles (ABI 2.13)
+
+`n4m::roles` exposes every catalog method through the generic C-ABI roles of
+`n4m/estimator.h`, the same surface the Python, R and JS/WASM bindings use:
+
+- `manifest_json()` returns the native manifest (roles, DAG-ML node kinds,
+  capabilities, fit inputs, typed parameters); `methods()` / `method_info(id)`
+  give the same data as typed `MethodInfo` / `ParamInfo`.
+- `Params::new(&ctx, id)` plus typed setters (`set_int`, `set_double`,
+  `set_bool`, `set_enum`, `set_*_array`, or `set(name, &ParamValue)`); unset
+  parameters keep their native defaults.
+- `FitInputs::new(x)` with optional `y`, `labels`, `sample_weight`, `groups`,
+  `feature_groups`, `blocks`, `axis`, `x_target` and `fold_ids`. Matrices are
+  `MatrixRef` views, row-major or strided (`MatrixRef::strided`, e.g.
+  column-major) without a copy.
+- `Estimator::new(&ctx, id, params)` then `fit`, and per role `transform`,
+  `predict`, `decision_function`, `predict_proba`, `predict_labels`,
+  `classes`, `selected_indices` and `apply_mask`. Role and input checks are
+  native: an operation the method does not define fails with
+  `ErrorKind::Unsupported`, and the error message carries the context text.
+- `to_n4me(&ctx, allow_training_rows)` / `Estimator::from_n4me(&ctx, bytes)`
+  exchange fitted states as N4ME bytes, readable by every n4m binding
+  (`Context::set_max_state_bytes` bounds imports, 256 MiB by default).
+- `run_procedure(&ctx, id, params, &inputs)` runs splitters (`folds()`),
+  augmenters (`double_matrix("X")`) and generic procedures (`entries()` plus
+  typed getters) once.
+
+```rust
+use n4m::{roles::{Estimator, FitInputs}, Context, MatrixRef};
+
+let ctx = Context::new()?;
+let (x, y) = (MatrixRef::row_major(&x, n, p)?, MatrixRef::row_major(&y, n, 1)?);
+let mut pls = Estimator::new(&ctx, "models.pls.cppls", None)?;
+pls.fit(&ctx, &FitInputs::new(x).y(y))?;
+let state = pls.to_n4me(&ctx, false)?; // predicts identically in Python, R, WASM
+```
+
+`tests/estimator_roles.rs` replays the shared
+`parity/fixtures/estimator_roles_n4me.json` fixture written by the Python
+binding: every N4ME state predicts at 1e-12 and every Rust refit and procedure
+run reproduces the Python outputs at 1e-9.
+
 This crate is binding work only: crate version 0.1.4 tracks the additive ABI-2.5
 inspection surface and is not an independent numerical-engine release. It
 requires a prebuilt `libn4m`. The default
