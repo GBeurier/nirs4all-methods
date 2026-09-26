@@ -540,6 +540,10 @@ std::vector<double> direct_augmentation(const n4m_params_t* params,
                 n4m_matrix_view_t o) { return n4m_augmentation_detector_rolloff_apply(h, x, wl, o); },
             n4m_augmentation_detector_rolloff_destroy, X, O);
     } else if (current_ == "augmentation.edge_artifacts.stray_light") {
+        // No axis input: the released entry point still takes one, as the runner does.
+        std::vector<double> channels(static_cast<std::size_t>(X.cols));
+        for (std::size_t j = 0; j < channels.size(); ++j) channels[j] = static_cast<double>(j);
+        const n4m_matrix_view_t wl = view(channels.data(), 1, X.cols);
         direct_apply<n4m_aug_stray_light_handle_t>(
             params,
             [&](n4m_aug_stray_light_handle_t** h, n4m_rng_pcg64_state_t* rng) {
@@ -547,7 +551,10 @@ std::vector<double> direct_augmentation(const n4m_params_t* params,
                     h, rng, pdbl(params, "stray_light_fraction"), pdbl(params, "edge_enhancement"),
                     pdbl(params, "edge_width"), pi32(params, "include_peak_truncation"));
             },
-            n4m_augmentation_stray_light_apply, n4m_augmentation_stray_light_destroy, X, O);
+            [&](const n4m_aug_stray_light_handle_t* h, n4m_matrix_view_t x, n4m_matrix_view_t o) {
+                return n4m_augmentation_stray_light_apply(h, x, wl, o);
+            },
+            n4m_augmentation_stray_light_destroy, X, O);
     } else if (current_ == "augmentation.edge_artifacts.edge_artifacts") {
         const n4m_matrix_view_t wl = view(axis, 1, n_axis);
         const int32_t flags = (pint(params, "detector_roll_off") != 0 ? 0x1 : 0) |

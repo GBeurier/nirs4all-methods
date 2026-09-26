@@ -272,6 +272,7 @@ N4M_API void n4m_augmentation_stray_light_destroy(n4m_aug_stray_light_handle_t* 
 N4M_API n4m_status_t n4m_augmentation_stray_light_apply(
     const n4m_aug_stray_light_handle_t* h,
     n4m_matrix_view_t X,
+    n4m_matrix_view_t wavelengths,
     n4m_matrix_view_t out) {
     if (h == nullptr) return N4M_ERR_NULL_POINTER;
     try {
@@ -282,6 +283,11 @@ N4M_API n4m_status_t n4m_augmentation_stray_light_apply(
         s = require_rowmajor_f64(out, op, orw, oc);
         if (s != N4M_OK) return s;
         s = require_matching_shape(xr, xc, orw, oc);
+        if (s != N4M_OK) return s;
+        // Released signature: the wavelengths are still validated, but the
+        // stray-light profile depends on the channel count only.
+        const double* wlp = nullptr;
+        s = require_wavelengths_match(wavelengths, xc, wlp);
         if (s != N4M_OK) return s;
         return n4m_aug_stray_light_state_apply(
             h->state, rng_engine(h->rng), xp, xr, xc, op);

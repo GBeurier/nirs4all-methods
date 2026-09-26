@@ -588,7 +588,18 @@ n4m_status_t run_aug_stray_light(n4m_context_t* ctx, const Params& params, const
                     params.get_double("edge_enhancement"), params.get_double("edge_width"),
                     params.get_bool("include_peak_truncation") ? 1 : 0);
             },
-            n4m_augmentation_stray_light_apply, n4m_augmentation_stray_light_destroy, X, o);
+            [](const n4m_aug_stray_light_handle_t* h, n4m_matrix_view_t x,
+               n4m_matrix_view_t y_out) {
+                // The released entry point takes a wavelength view it only
+                // checks for width; the profile uses the channel count.
+                std::vector<double> channels(static_cast<std::size_t>(x.cols));
+                for (std::size_t j = 0; j < channels.size(); ++j) channels[j] = static_cast<double>(j);
+                n4m_matrix_view_t wl{};
+                const n4m_status_t st = n4m_matrix_view_init_rowmajor(
+                    &wl, channels.data(), 1, x.cols, N4M_DTYPE_F64);
+                return st != N4M_OK ? st : n4m_augmentation_stray_light_apply(h, x, wl, y_out);
+            },
+            n4m_augmentation_stray_light_destroy, X, o);
     });
 }
 

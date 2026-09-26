@@ -194,11 +194,12 @@ void test_stray_light() {
 
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t X = rowmajor_view(Xv.data(), 4, 32);
+    n4m_matrix_view_t W = rowmajor_view(wlv.data(), 1, 32);
     n4m_matrix_view_t O = rowmajor_view(O1.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_augmentation_stray_light_apply(h, X, O) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_stray_light_apply(h, X, W, O) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_rng_pcg64_set_seed(rng, kSeed) == N4M_OK);
     n4m_matrix_view_t O22 = rowmajor_view(O2.data(), 4, 32);
-    N4M_TEST_REQUIRE(n4m_augmentation_stray_light_apply(h, X, O22) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_augmentation_stray_light_apply(h, X, W, O22) == N4M_OK);
     require_equal_arrays(O1, O2, 0.0, "stray_light determinism");
 
     n4m_augmentation_stray_light_destroy(h);
@@ -224,11 +225,12 @@ void test_stray_light() {
         n4m_aug_stray_light_handle_t* hh = nullptr;
         N4M_TEST_REQUIRE(n4m_augmentation_stray_light_create(
             &hh, r, fraction, edge_enh, edge_width, peak_trunc) == N4M_OK);
-        std::vector<double> in = fx.input;
+        std::vector<double> in = fx.input, wl = fx.wavelengths;
         std::vector<double> out(static_cast<std::size_t>(fx.rows * fx.cols));
         n4m_matrix_view_t Xv2 = rowmajor_view(in.data(), fx.rows, fx.cols);
+        n4m_matrix_view_t Wv2 = rowmajor_view(wl.data(), 1, fx.cols);
         n4m_matrix_view_t Ov2 = rowmajor_view(out.data(), fx.rows, fx.cols);
-        N4M_TEST_REQUIRE(n4m_augmentation_stray_light_apply(hh, Xv2, Ov2) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_augmentation_stray_light_apply(hh, Xv2, Wv2, Ov2) == N4M_OK);
         n4m_testing::assert_close(out, c.expected_output,
                                   "stray_light parity[" + c.name + "]");
         n4m_augmentation_stray_light_destroy(hh);
