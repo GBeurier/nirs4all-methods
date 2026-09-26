@@ -6157,7 +6157,7 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+    notes: "Procedure input axis: wavelengths in nanometres, finite and strictly increasing (the kernel holds band positions or detector ranges in nm, as the n4m reference does)."
     namespace: "augmentation.instrument"
     leaf: "detector_rolloff"
     fq_name: "n4m.augmentation.instrument.detector_rolloff"
@@ -6167,6 +6167,30 @@ methods:
       - "n4m_augmentation_detector_rolloff_destroy"
     legacy_ids:
       - "augmentation.edge_artifacts.detector_rolloff"
+    estimator:
+      kind: procedure
+      adapter: aug_detector_rolloff
+      roles: [augmenter]
+      inputs:
+        axis: required
+      params:
+        - name: detector_model
+          type: enum
+          default: generic_nir
+          choices: [ingaas_standard, ingaas_extended, pbs, silicon_ccd, generic_nir]
+        - name: effect_strength
+          type: double
+          default: 1.0
+        - name: noise_amplification
+          type: double
+          default: 0.02
+        - name: include_baseline_distortion
+          type: bool
+          default: true
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.edge_artifacts.edge_curvature"
     family: "augmentation.edge_artifacts"
     category: "augmentation"
@@ -6272,6 +6296,30 @@ methods:
       - "n4m_augmentation_stray_light_destroy"
     legacy_ids:
       - "augmentation.edge_artifacts.stray_light"
+    estimator:
+      kind: procedure
+      adapter: aug_stray_light
+      roles: [augmenter]
+      params:
+        - name: stray_light_fraction
+          type: double
+          default: 0.001
+          min: 0.0
+        - name: edge_enhancement
+          type: double
+          default: 2.0
+        - name: edge_width
+          type: double
+          default: 0.1
+          min: 0.0
+          max: 0.5
+        - name: include_peak_truncation
+          type: bool
+          default: true
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.edge_artifacts.truncated_peak"
     family: "augmentation.edge_artifacts"
     category: "augmentation"
@@ -6378,7 +6426,7 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+    notes: "Procedure input axis: wavelengths in nanometres, finite and strictly increasing (the kernel holds band positions or detector ranges in nm, as the n4m reference does)."
     namespace: "augmentation.instrument"
     leaf: "moisture"
     fq_name: "n4m.augmentation.instrument.moisture"
@@ -6388,6 +6436,47 @@ methods:
       - "n4m_augmentation_moisture_destroy"
     legacy_ids:
       - "augmentation.environmental.moisture"
+    estimator:
+      kind: procedure
+      adapter: aug_moisture
+      roles: [augmenter]
+      inputs:
+        axis: required
+      params:
+        - name: water_activity_delta
+          type: double
+          default: 0.0
+        - name: use_aw_range
+          type: bool
+          default: false
+        - name: aw_low
+          type: double
+          default: 0.0
+        - name: aw_high
+          type: double
+          default: 1.0
+        - name: reference_water_activity
+          type: double
+          default: 0.5
+        - name: free_water_fraction
+          type: double
+          default: 0.3
+        - name: bound_water_shift
+          type: double
+          default: 25.0
+        - name: moisture_content
+          type: double
+          default: 0.1
+        - name: enable_shift
+          type: bool
+          default: true
+        - name: enable_intensity
+          type: bool
+          default: true
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.environmental.temperature"
     family: "augmentation.environmental"
     category: "augmentation"
@@ -6418,7 +6507,7 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+    notes: "Procedure input axis: wavelengths in nanometres, finite and strictly increasing (the kernel holds band positions or detector ranges in nm, as the n4m reference does)."
     namespace: "augmentation.instrument"
     leaf: "temperature"
     fq_name: "n4m.augmentation.instrument.temperature"
@@ -6428,6 +6517,41 @@ methods:
       - "n4m_augmentation_temperature_destroy"
     legacy_ids:
       - "augmentation.environmental.temperature"
+    estimator:
+      kind: procedure
+      adapter: aug_temperature
+      roles: [augmenter]
+      inputs:
+        axis: required
+      params:
+        - name: temperature_delta
+          type: double
+          default: 0.0
+        - name: use_temp_range
+          type: bool
+          default: false
+        - name: temp_low
+          type: double
+          default: -5.0
+        - name: temp_high
+          type: double
+          default: 5.0
+        - name: enable_shift
+          type: bool
+          default: true
+        - name: enable_intensity
+          type: bool
+          default: true
+        - name: enable_broadening
+          type: bool
+          default: true
+        - name: region_specific
+          type: bool
+          default: true
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.mixup.local_mixup"
     family: "augmentation.mixup"
     category: "augmentation"
@@ -6468,6 +6592,25 @@ methods:
       - "n4m_augmentation_local_mixup_destroy"
     legacy_ids:
       - "augmentation.mixup.local_mixup"
+    estimator:
+      kind: procedure
+      adapter: aug_local_mixup
+      roles: [augmenter]
+      inputs:
+        y: required
+      params:
+        - name: alpha
+          type: double
+          default: 0.2
+          min: 0.0
+        - name: k_neighbors
+          type: int
+          default: 5
+          min: 1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.mixup.mixup"
     family: "augmentation.mixup"
     category: "augmentation"
@@ -6508,6 +6651,21 @@ methods:
       - "n4m_augmentation_mixup_destroy"
     legacy_ids:
       - "augmentation.mixup.mixup"
+    estimator:
+      kind: procedure
+      adapter: aug_mixup
+      roles: [augmenter]
+      inputs:
+        y: required
+      params:
+        - name: alpha
+          type: double
+          default: 0.2
+          min: 0.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.noise.gaussian_noise"
     family: "augmentation.noise"
     category: "augmentation"
@@ -7161,7 +7319,7 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+    notes: "Procedure input axis: wavelengths in nanometres, finite and strictly increasing (the kernel holds band positions or detector ranges in nm, as the n4m reference does)."
     namespace: "augmentation.scattering"
     leaf: "particle_size"
     fq_name: "n4m.augmentation.scattering.particle_size"
@@ -7171,6 +7329,48 @@ methods:
       - "n4m_augmentation_particle_size_destroy"
     legacy_ids:
       - "augmentation.scattering.particle_size"
+    estimator:
+      kind: procedure
+      adapter: aug_particle_size
+      roles: [augmenter]
+      inputs:
+        axis: required
+      params:
+        - name: mean_size_um
+          type: double
+          default: 50.0
+        - name: size_variation_um
+          type: double
+          default: 15.0
+          min: 0.0
+        - name: use_size_range
+          type: bool
+          default: false
+        - name: size_range_low_um
+          type: double
+          default: 5.0
+        - name: size_range_high_um
+          type: double
+          default: 500.0
+        - name: reference_size_um
+          type: double
+          default: 50.0
+        - name: wavelength_exponent
+          type: double
+          default: 1.5
+        - name: size_effect_strength
+          type: double
+          default: 0.1
+        - name: include_path_length
+          type: bool
+          default: true
+        - name: path_length_sensitivity
+          type: double
+          default: 0.5
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.scattering.scatter_sim_msc"
     family: "augmentation.scattering"
     category: "augmentation"
@@ -9331,7 +9531,7 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+    notes: "Procedure input axis: wavelengths in nanometres, finite and strictly increasing (the kernel holds band positions or detector ranges in nm, as the n4m reference does)."
     namespace: "augmentation.instrument"
     leaf: "edge_artifacts"
     fq_name: "n4m.augmentation.instrument.edge_artifacts"
@@ -9341,6 +9541,36 @@ methods:
       - "n4m_augmentation_edge_artifacts_destroy"
     legacy_ids:
       - "augmentation.edge_artifacts.edge_artifacts"
+    estimator:
+      kind: procedure
+      adapter: aug_edge_artifacts
+      roles: [augmenter]
+      inputs:
+        axis: required
+      params:
+        - name: detector_roll_off
+          type: bool
+          default: true
+        - name: stray_light
+          type: bool
+          default: true
+        - name: edge_curvature
+          type: bool
+          default: true
+        - name: truncated_peaks
+          type: bool
+          default: true
+        - name: overall_strength
+          type: double
+          default: 1.0
+        - name: detector_model
+          type: enum
+          default: generic_nir
+          choices: [ingaas_standard, ingaas_extended, pbs, silicon_ccd, generic_nir]
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "diagnostics.approximate_press"
     family: "diagnostics.validation"
     category: "diagnostics"

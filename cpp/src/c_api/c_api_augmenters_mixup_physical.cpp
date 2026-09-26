@@ -125,7 +125,7 @@ N4M_API n4m_status_t n4m_augmentation_mixup_apply(const n4m_aug_mixup_handle_t* 
     if (st != N4M_OK) return st;
     try {
         return n4m_aug_mixup_apply_impl(h->state, &h->rng->engine,
-                                         Xp, rows, cols, Yp);
+                                         Xp, rows, cols, nullptr, 0, Yp, nullptr);
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
@@ -177,7 +177,7 @@ N4M_API n4m_status_t n4m_augmentation_local_mixup_apply(const n4m_aug_local_mixu
     if ((st = validate_shapes(X, out)) != N4M_OK) return st;
     try {
         return n4m_aug_local_mixup_apply_impl(h->state, &h->rng->engine,
-                                               Xp, rows, cols, Yp);
+                                               Xp, rows, cols, nullptr, 0, Yp, nullptr);
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 

@@ -284,11 +284,13 @@ N4M_API n4m_status_t n4m_augmentation_stray_light_apply(
         if (s != N4M_OK) return s;
         s = require_matching_shape(xr, xc, orw, oc);
         if (s != N4M_OK) return s;
+        // Released signature: the wavelengths are still validated, but the
+        // stray-light profile depends on the channel count only.
         const double* wlp = nullptr;
         s = require_wavelengths_match(wavelengths, xc, wlp);
         if (s != N4M_OK) return s;
         return n4m_aug_stray_light_state_apply(
-            h->state, rng_engine(h->rng), xp, xr, xc, wlp, op);
+            h->state, rng_engine(h->rng), xp, xr, xc, op);
     } catch (...) { return N4M_ERR_INTERNAL; }
 }
 
@@ -558,7 +560,7 @@ N4M_API n4m_status_t n4m_augmentation_edge_artifacts_apply(
         if (h->stray_state != nullptr) {
             const n4m_status_t st = n4m_aug_stray_light_state_apply(
                 h->stray_state, const_cast<n4m_rng_pcg64*>(&h->stray_rng),
-                op, xr, xc, wlp, op);
+                op, xr, xc, op);
             if (st != N4M_OK) return st;
         }
         if (h->detector_state != nullptr) {

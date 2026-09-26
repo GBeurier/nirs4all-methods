@@ -175,7 +175,10 @@ typedef struct n4m_fit_inputs_v1_t {
     int64_t n_feature_groups;
     const int64_t* block_sizes;              /* multiblock column partition */
     int64_t n_blocks;
-    const double* axis;                      /* spectral axis, one per column */
+    const double* axis;                      /* spectral axis, one per column;
+                                                wavelengths in nm, finite and
+                                                strictly increasing, for the
+                                                augmenters with nm constants */
     int64_t n_axis;
     const n4m_matrix_view_t* X_target;       /* target-domain / slave spectra */
     const int64_t* fold_ids;                 /* internal-CV test fold per row */
@@ -247,6 +250,10 @@ N4M_API n4m_status_t n4m_estimator_fit_result(const n4m_estimator_t* est,
  *                       and n4m_method_result_get_fold;
  *   N4M_ROLE_AUGMENTER  double matrix "X": the augmented rows, same shape and
  *                       row order as inputs->X (train-only, no fitted state);
+ *                       augmenters that mix rows (y required) also return
+ *                       double matrix "Y": the targets mixed with the same
+ *                       draw, same shape as inputs->Y, row i paired with
+ *                       row i of "X";
  *   N4M_ROLE_GENERIC    the named outputs of the method's C function.
  * N4M_ERR_INVALID_ARGUMENT for an estimator. */
 N4M_API n4m_status_t n4m_procedure_run(n4m_context_t* ctx, int32_t method_index,

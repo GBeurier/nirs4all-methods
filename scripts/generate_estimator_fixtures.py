@@ -132,7 +132,10 @@ def procedure_case(cls, data: dict) -> dict:
         folds = proc.split(X, kw.get("y"), kw.get("groups"))
         case["folds"] = [[tr.tolist(), te.tolist()] for tr, te in folds]
     elif issubclass(cls, roles.NativeAugmenter):
-        case["X"] = proc.augment(X, axis=kw.get("axis")).tolist()
+        out = proc.augment(X, kw.get("y"), axis=kw.get("axis"))
+        if isinstance(out, tuple):  # target-mixing: y mixed with the draw of X
+            out, case["Y"] = out[0], out[1].tolist()
+        case["X"] = out.tolist()
     else:
         y = kw.pop("y", None)
         out = proc.run(X, y, **kw)
@@ -299,6 +302,8 @@ def render_r(doc: dict) -> str:
             fields.append(f"    folds = list({folds})")
         if "X" in case:
             fields.append(f"    X = {r_matrix(case['X'])}")
+        if "Y" in case:
+            fields.append(f"    Y = {r_vector(case['Y'])}")
         if "outputs" in case:
             outputs = ", ".join(
                 f"`{k}` = {r_output(v)}" for k, v in case["outputs"].items()

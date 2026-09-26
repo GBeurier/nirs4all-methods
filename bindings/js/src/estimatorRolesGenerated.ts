@@ -17,6 +17,7 @@ import {
     type SampleFilter,
     type Selector,
     type Splitter,
+    type TargetMixingAugmenter,
     type Transformer,
 } from "./estimatorRoles.js";
 import type { Matrix } from "./types.js";
@@ -660,6 +661,84 @@ export class PolyDrift extends NativeProcedure implements Augmenter {
 }
 NativeMethod.register("augmentation.drift.poly_drift", PolyDrift);
 
+/** Parameters of DetectorRolloff; unset values take the native defaults. */
+export interface DetectorRolloffParams {
+    /** Default "generic_nir". */
+    detector_model?: "ingaas_standard" | "ingaas_extended" | "pbs" | "silicon_ccd" | "generic_nir";
+    /** Default 1. */
+    effect_strength?: number;
+    /** Default 0.02. */
+    noise_amplification?: number;
+    /** Default true. */
+    include_baseline_distortion?: boolean;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.edge_artifacts.detector_rolloff` (augmenter). Required inputs: axis. */
+export class DetectorRolloff extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.edge_artifacts.detector_rolloff";
+    readonly paramTypes = {
+        detector_model: "enum",
+        effect_strength: "double",
+        noise_amplification: "double",
+        include_baseline_distortion: "bool",
+        seed: "int",
+    } as const;
+
+    constructor(params: DetectorRolloffParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.edge_artifacts.detector_rolloff", DetectorRolloff);
+
+/** Parameters of EdgeArtifacts; unset values take the native defaults. */
+export interface EdgeArtifactsParams {
+    /** Default true. */
+    detector_roll_off?: boolean;
+    /** Default true. */
+    stray_light?: boolean;
+    /** Default true. */
+    edge_curvature?: boolean;
+    /** Default true. */
+    truncated_peaks?: boolean;
+    /** Default 1. */
+    overall_strength?: number;
+    /** Default "generic_nir". */
+    detector_model?: "ingaas_standard" | "ingaas_extended" | "pbs" | "silicon_ccd" | "generic_nir";
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.edge_artifacts.edge_artifacts` (augmenter). Required inputs: axis. */
+export class EdgeArtifacts extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.edge_artifacts.edge_artifacts";
+    readonly paramTypes = {
+        detector_roll_off: "bool",
+        stray_light: "bool",
+        edge_curvature: "bool",
+        truncated_peaks: "bool",
+        overall_strength: "double",
+        detector_model: "enum",
+        seed: "int",
+    } as const;
+
+    constructor(params: EdgeArtifactsParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.edge_artifacts.edge_artifacts", EdgeArtifacts);
+
 /** Parameters of EdgeCurvature; unset values take the native defaults. */
 export interface EdgeCurvatureParams {
     /** Default 0.02. */
@@ -695,6 +774,42 @@ export class EdgeCurvature extends NativeProcedure implements Augmenter {
     }
 }
 NativeMethod.register("augmentation.edge_artifacts.edge_curvature", EdgeCurvature);
+
+/** Parameters of StrayLight; unset values take the native defaults. */
+export interface StrayLightParams {
+    /** Default 0.001. */
+    stray_light_fraction?: number;
+    /** Default 2. */
+    edge_enhancement?: number;
+    /** Default 0.1. */
+    edge_width?: number;
+    /** Default true. */
+    include_peak_truncation?: boolean;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.edge_artifacts.stray_light` (augmenter). */
+export class StrayLight extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.edge_artifacts.stray_light";
+    readonly paramTypes = {
+        stray_light_fraction: "double",
+        edge_enhancement: "double",
+        edge_width: "double",
+        include_peak_truncation: "bool",
+        seed: "int",
+    } as const;
+
+    constructor(params: StrayLightParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.edge_artifacts.stray_light", StrayLight);
 
 /** Parameters of TruncatedPeak; unset values take the native defaults. */
 export interface TruncatedPeakParams {
@@ -740,6 +855,165 @@ export class TruncatedPeak extends NativeProcedure implements Augmenter {
     }
 }
 NativeMethod.register("augmentation.edge_artifacts.truncated_peak", TruncatedPeak);
+
+/** Parameters of Moisture; unset values take the native defaults. */
+export interface MoistureParams {
+    /** Default 0. */
+    water_activity_delta?: number;
+    /** Default false. */
+    use_aw_range?: boolean;
+    /** Default 0. */
+    aw_low?: number;
+    /** Default 1. */
+    aw_high?: number;
+    /** Default 0.5. */
+    reference_water_activity?: number;
+    /** Default 0.3. */
+    free_water_fraction?: number;
+    /** Default 25. */
+    bound_water_shift?: number;
+    /** Default 0.1. */
+    moisture_content?: number;
+    /** Default true. */
+    enable_shift?: boolean;
+    /** Default true. */
+    enable_intensity?: boolean;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.environmental.moisture` (augmenter). Required inputs: axis. */
+export class Moisture extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.environmental.moisture";
+    readonly paramTypes = {
+        water_activity_delta: "double",
+        use_aw_range: "bool",
+        aw_low: "double",
+        aw_high: "double",
+        reference_water_activity: "double",
+        free_water_fraction: "double",
+        bound_water_shift: "double",
+        moisture_content: "double",
+        enable_shift: "bool",
+        enable_intensity: "bool",
+        seed: "int",
+    } as const;
+
+    constructor(params: MoistureParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.environmental.moisture", Moisture);
+
+/** Parameters of Temperature; unset values take the native defaults. */
+export interface TemperatureParams {
+    /** Default 0. */
+    temperature_delta?: number;
+    /** Default false. */
+    use_temp_range?: boolean;
+    /** Default -5. */
+    temp_low?: number;
+    /** Default 5. */
+    temp_high?: number;
+    /** Default true. */
+    enable_shift?: boolean;
+    /** Default true. */
+    enable_intensity?: boolean;
+    /** Default true. */
+    enable_broadening?: boolean;
+    /** Default true. */
+    region_specific?: boolean;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.environmental.temperature` (augmenter). Required inputs: axis. */
+export class Temperature extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.environmental.temperature";
+    readonly paramTypes = {
+        temperature_delta: "double",
+        use_temp_range: "bool",
+        temp_low: "double",
+        temp_high: "double",
+        enable_shift: "bool",
+        enable_intensity: "bool",
+        enable_broadening: "bool",
+        region_specific: "bool",
+        seed: "int",
+    } as const;
+
+    constructor(params: TemperatureParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.environmental.temperature", Temperature);
+
+/** Parameters of LocalMixup; unset values take the native defaults. */
+export interface LocalMixupParams {
+    /** Default 0.2. */
+    alpha?: number;
+    /** Default 5. */
+    k_neighbors?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.mixup.local_mixup` (augmenter). Required inputs: y. */
+export class LocalMixup extends NativeProcedure implements TargetMixingAugmenter {
+    readonly methodId = "augmentation.mixup.local_mixup";
+    readonly paramTypes = {
+        alpha: "double",
+        k_neighbors: "int",
+        seed: "int",
+    } as const;
+
+    constructor(params: LocalMixupParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, y: Matrix | Float64Array | ArrayLike<number>, axis?: Float64Array | number[]): { X: Matrix; Y: Matrix } {
+        return this.augmentWithTargets(X, y, axis);
+    }
+}
+NativeMethod.register("augmentation.mixup.local_mixup", LocalMixup);
+
+/** Parameters of Mixup; unset values take the native defaults. */
+export interface MixupParams {
+    /** Default 0.2. */
+    alpha?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.mixup.mixup` (augmenter). Required inputs: y. */
+export class Mixup extends NativeProcedure implements TargetMixingAugmenter {
+    readonly methodId = "augmentation.mixup.mixup";
+    readonly paramTypes = {
+        alpha: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: MixupParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, y: Matrix | Float64Array | ArrayLike<number>, axis?: Float64Array | number[]): { X: Matrix; Y: Matrix } {
+        return this.augmentWithTargets(X, y, axis);
+    }
+}
+NativeMethod.register("augmentation.mixup.mixup", Mixup);
 
 /** Parameters of GaussianNoise; unset values take the native defaults. */
 export interface GaussianNoiseParams {
@@ -1085,6 +1359,60 @@ export class InstrumentBroaden extends NativeProcedure implements Augmenter {
     }
 }
 NativeMethod.register("augmentation.scattering.instrument_broaden", InstrumentBroaden);
+
+/** Parameters of ParticleSize; unset values take the native defaults. */
+export interface ParticleSizeParams {
+    /** Default 50. */
+    mean_size_um?: number;
+    /** Default 15. */
+    size_variation_um?: number;
+    /** Default false. */
+    use_size_range?: boolean;
+    /** Default 5. */
+    size_range_low_um?: number;
+    /** Default 500. */
+    size_range_high_um?: number;
+    /** Default 50. */
+    reference_size_um?: number;
+    /** Default 1.5. */
+    wavelength_exponent?: number;
+    /** Default 0.1. */
+    size_effect_strength?: number;
+    /** Default true. */
+    include_path_length?: boolean;
+    /** Default 0.5. */
+    path_length_sensitivity?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.scattering.particle_size` (augmenter). Required inputs: axis. */
+export class ParticleSize extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.scattering.particle_size";
+    readonly paramTypes = {
+        mean_size_um: "double",
+        size_variation_um: "double",
+        use_size_range: "bool",
+        size_range_low_um: "double",
+        size_range_high_um: "double",
+        reference_size_um: "double",
+        wavelength_exponent: "double",
+        size_effect_strength: "double",
+        include_path_length: "bool",
+        path_length_sensitivity: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: ParticleSizeParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.scattering.particle_size", ParticleSize);
 
 /** Parameters of ScatterSimMSC; unset values take the native defaults. */
 export interface ScatterSimMSCParams {

@@ -32,11 +32,46 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Procedure input axis: wavelengths in nanometres, finite and strictly increasing (the kernel holds band positions or detector ranges in nm, as the n4m reference does)."
 c_surface:
   - "n4m_augmentation_temperature_apply"
   - "n4m_augmentation_temperature_create"
   - "n4m_augmentation_temperature_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_temperature"
+  roles: "[augmenter]"
+  inputs:
+    axis: "required"
+  params:
+    - name: "temperature_delta"
+      type: "double"
+      default: 0.0
+    - name: "use_temp_range"
+      type: "bool"
+      default: false
+    - name: "temp_low"
+      type: "double"
+      default: -5.0
+    - name: "temp_high"
+      type: "double"
+      default: 5.0
+    - name: "enable_shift"
+      type: "bool"
+      default: true
+    - name: "enable_intensity"
+      type: "bool"
+      default: true
+    - name: "enable_broadening"
+      type: "bool"
+      default: true
+    - name: "region_specific"
+      type: "bool"
+      default: true
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.instrument.temperature"
 leaf: "temperature"
 legacy_ids:

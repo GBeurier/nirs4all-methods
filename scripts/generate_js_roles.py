@@ -40,6 +40,15 @@ PROCEDURE_METHODS = {
         "augment(X: Matrix, axis?: Float64Array | number[]): Matrix",
         "return this.augmentMatrix(X, axis);",
     ),
+    # Augmenters that mix rows require y and return it mixed with X.
+    "target_augmenter": (
+        "TargetMixingAugmenter",
+        (
+            "augment(X: Matrix, y: Matrix | Float64Array | ArrayLike<number>,"
+            " axis?: Float64Array | number[]): { X: Matrix; Y: Matrix }"
+        ),
+        "return this.augmentWithTargets(X, y, axis);",
+    ),
     "generic": (
         "Procedure",
         (
@@ -85,6 +94,7 @@ def render(manifest: dict) -> str:
         "    type SampleFilter,",
         "    type Selector,",
         "    type Splitter,",
+        "    type TargetMixingAugmenter,",
         "    type Transformer,",
         '} from "./estimatorRoles.js";',
         'import type { Matrix } from "./types.js";',
@@ -199,7 +209,10 @@ def params_interface(m: dict, name: str) -> list[str]:
 
 def render_procedure(m: dict, name: str) -> list[str]:
     (role,) = m["roles"]
-    iface, signature, body = PROCEDURE_METHODS[role]
+    mixes_targets = role == "augmenter" and m["inputs"]["y"] == "required"
+    iface, signature, body = PROCEDURE_METHODS[
+        "target_augmenter" if mixes_targets else role
+    ]
     needed = [k for k, v in m["inputs"].items() if v == "required"]
     doc = f"Native `{m['method_id']}` ({role})."
     if needed:

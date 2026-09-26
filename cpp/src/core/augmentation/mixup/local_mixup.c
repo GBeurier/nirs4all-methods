@@ -7,7 +7,8 @@
  *   2. Draw a uniform integer in [0, k) to pick which neighbor (excluding
  *      self at index 0).
  *   3. Draw Beta(alpha, alpha) for lambda.
- *   4. out[i] = lam * X[i] + (1 - lam) * X[neighbor_idx]
+ *   4. out[i] = lam * X[i] + (1 - lam) * X[neighbor_idx], and the same
+ *      mix of the targets when they are given.
  *
  * The reference uses sklearn NearestNeighbors with default parameters which
  * is brute force for small inputs. We mirror that by computing the full
@@ -15,6 +16,7 @@
  */
 
 #include "local_mixup.h"
+#include "mixup.h"
 
 #include <stdlib.h>
 
@@ -78,11 +80,13 @@ n4m_status_t n4m_aug_local_mixup_apply_impl(
     const n4m_aug_local_mixup_state_t* state,
     n4m_rng_pcg64* rng,
     const double* X, int64_t rows, int64_t cols,
-    double* out) {
-    if (state == NULL || rng == NULL || X == NULL || out == NULL) {
+    const double* Y, int64_t y_cols,
+    double* out, double* out_y) {
+    if (state == NULL || rng == NULL || X == NULL || out == NULL ||
+        (Y != NULL && out_y == NULL)) {
         return N4M_ERR_NULL_POINTER;
     }
-    if (rows < 0 || cols < 0) {
+    if (rows < 0 || cols < 0 || (Y != NULL && y_cols < 0)) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
     if (rows == 0 || cols == 0) {
@@ -94,24 +98,15 @@ n4m_status_t n4m_aug_local_mixup_apply_impl(
         return N4M_ERR_INVALID_ARGUMENT;
     }
 
-    /* Workspace: dist[rows], idx[rows] for each query row. */
-    double*  dist = (double*)malloc((size_t)rows * sizeof(double));
-    int64_t* idx  = (int64_t*)malloc((size_t)rows * sizeof(int64_t));
-    if (dist == NULL || idx == NULL) {
-        free(dist); free(idx);
+    /* Workspace: dist[rows], idx[rows] for each query row; the drawn
+     * neighbour and weight of every row. */
+    double*  dist    = (double*)malloc((size_t)rows * sizeof(double));
+    int64_t* idx     = (int64_t*)malloc((size_t)rows * sizeof(int64_t));
+    int64_t* partner = (int64_t*)malloc((size_t)rows * sizeof(int64_t));
+    double*  lam     = (double*)malloc((size_t)rows * sizeof(double));
+    if (dist == NULL || idx == NULL || partner == NULL || lam == NULL) {
+        free(dist); free(idx); free(partner); free(lam);
         return N4M_ERR_OUT_OF_MEMORY;
-    }
-
-    /* For in-place support stage to tmp. */
-    double* dest = out;
-    double* tmp  = NULL;
-    if (out == X) {
-        tmp = (double*)malloc((size_t)rows * (size_t)cols * sizeof(double));
-        if (tmp == NULL) {
-            free(dist); free(idx);
-            return N4M_ERR_OUT_OF_MEMORY;
-        }
-        dest = tmp;
     }
 
     n4m_aug_randint_state_t randint_state;
@@ -131,25 +126,17 @@ n4m_status_t n4m_aug_local_mixup_apply_impl(
          * `rng.choice(indices[i, 1:])` advances the bit stream by one
          * integers(0, k) call. */
         const int64_t pick = n4m_aug_randint(&randint_state, 0, k);
-        const int64_t neighbor_idx = idx[1 + pick];
-
-        const double lam = n4m_aug_rng_beta(rng, state->alpha, state->alpha);
-        const double cl  = 1.0 - lam;
-        const double* a = X + (size_t)i * (size_t)cols;
-        const double* b = X + (size_t)neighbor_idx * (size_t)cols;
-        double*       d = dest + (size_t)i * (size_t)cols;
-        for (int64_t j = 0; j < cols; ++j) {
-            d[j] = lam * a[j] + cl * b[j];
-        }
+        partner[i] = idx[1 + pick];
+        lam[i] = n4m_aug_rng_beta(rng, state->alpha, state->alpha);
     }
 
-    if (tmp != NULL) {
-        for (size_t kk = 0, n = (size_t)rows * (size_t)cols; kk < n; ++kk) {
-            out[kk] = tmp[kk];
-        }
-        free(tmp);
+    n4m_status_t st = n4m_aug_mix_rows(X, rows, cols, partner, lam, out);
+    if (st == N4M_OK && Y != NULL && y_cols > 0) {
+        st = n4m_aug_mix_rows(Y, rows, y_cols, partner, lam, out_y);
     }
     free(dist);
     free(idx);
-    return N4M_OK;
+    free(partner);
+    free(lam);
+    return st;
 }

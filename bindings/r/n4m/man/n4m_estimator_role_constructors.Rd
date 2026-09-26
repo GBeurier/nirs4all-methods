@@ -16,8 +16,15 @@
 \alias{n4m_linear_drift}
 \alias{n4m_path_length}
 \alias{n4m_poly_drift}
+\alias{n4m_detector_rolloff}
+\alias{n4m_edge_artifacts}
 \alias{n4m_edge_curvature}
+\alias{n4m_stray_light}
 \alias{n4m_truncated_peak}
+\alias{n4m_moisture}
+\alias{n4m_temperature}
+\alias{n4m_local_mixup}
+\alias{n4m_mixup}
 \alias{n4m_gaussian_noise}
 \alias{n4m_hetero_noise}
 \alias{n4m_multiplicative_noise}
@@ -28,6 +35,7 @@
 \alias{n4m_dead_band}
 \alias{n4m_emsc_distort}
 \alias{n4m_instrument_broaden}
+\alias{n4m_particle_size}
 \alias{n4m_scatter_sim_msc}
 \alias{n4m_band_mask}
 \alias{n4m_band_perturb}
@@ -210,8 +218,15 @@ n4m_robust_hpo(profile = "compact", cv = 5L, heads = "ridge_pls")
 n4m_linear_drift(offset_min = -0.05, offset_max = 0.05, slope_min = -0.01, slope_max = 0.01, seed = 0L)
 n4m_path_length(path_length_std = 0.05, min_path_length = 0.1, seed = 0L)
 n4m_poly_drift(coeff_min = c(-0.01, -0.01, -0.01), coeff_max = c(0.01, 0.01, 0.01), seed = 0L)
+n4m_detector_rolloff(detector_model = "generic_nir", effect_strength = 1.0, noise_amplification = 0.02, include_baseline_distortion = TRUE, seed = 0L)
+n4m_edge_artifacts(detector_roll_off = TRUE, stray_light = TRUE, edge_curvature = TRUE, truncated_peaks = TRUE, overall_strength = 1.0, detector_model = "generic_nir", seed = 0L)
 n4m_edge_curvature(curvature_strength = 0.02, curvature_type = "random", asymmetry = 0.0, edge_focus = 0.7, seed = 0L)
+n4m_stray_light(stray_light_fraction = 0.001, edge_enhancement = 2.0, edge_width = 0.1, include_peak_truncation = TRUE, seed = 0L)
 n4m_truncated_peak(peak_probability = 0.5, amplitude_min = 0.01, amplitude_max = 0.1, width_min = 50.0, width_max = 200.0, left_edge = TRUE, right_edge = TRUE, seed = 0L)
+n4m_moisture(water_activity_delta = 0.0, use_aw_range = FALSE, aw_low = 0.0, aw_high = 1.0, reference_water_activity = 0.5, free_water_fraction = 0.3, bound_water_shift = 25.0, moisture_content = 0.1, enable_shift = TRUE, enable_intensity = TRUE, seed = 0L)
+n4m_temperature(temperature_delta = 0.0, use_temp_range = FALSE, temp_low = -5.0, temp_high = 5.0, enable_shift = TRUE, enable_intensity = TRUE, enable_broadening = TRUE, region_specific = TRUE, seed = 0L)
+n4m_local_mixup(alpha = 0.2, k_neighbors = 5L, seed = 0L)
+n4m_mixup(alpha = 0.2, seed = 0L)
 n4m_gaussian_noise(sigma = 0.01, seed = 0L)
 n4m_hetero_noise(noise_base = 0.001, noise_signal_dep = 0.01, seed = 0L)
 n4m_multiplicative_noise(sigma_gain = 0.01, seed = 0L)
@@ -222,6 +237,7 @@ n4m_batch_effect(offset_std = 0.0, slope_std = 0.0, gain_std = 0.0, variation_sc
 n4m_dead_band(n_bands = 1L, width_low = 5L, width_high = 10L, noise_std = 0.05, probability = 0.0, variation_scope = "sample", seed = 0L)
 n4m_emsc_distort(mult_low = 0.9, mult_high = 1.1, add_low = -0.05, add_high = 0.05, polynomial_order = 2L, polynomial_strength = 0.02, correlation = 0.3, seed = 0L)
 n4m_instrument_broaden(fwhm = 5.0, use_fwhm_range = FALSE, fwhm_low = 3.0, fwhm_high = 8.0, variation_scope = "sample", seed = 0L)
+n4m_particle_size(mean_size_um = 50.0, size_variation_um = 15.0, use_size_range = FALSE, size_range_low_um = 5.0, size_range_high_um = 500.0, reference_size_um = 50.0, wavelength_exponent = 1.5, size_effect_strength = 0.1, include_path_length = TRUE, path_length_sensitivity = 0.5, seed = 0L)
 n4m_scatter_sim_msc(a_low = -0.05, a_high = 0.05, b_low = 0.9, b_high = 1.1, seed = 0L)
 n4m_band_mask(n_bands_lo = 1L, n_bands_hi = 3L, bw_lo = 5L, bw_hi = 15L, mode = "zero", seed = 0L)
 n4m_band_perturb(n_bands = 3L, bw_lo = 5L, bw_hi = 15L, gain_lo = 0.9, gain_hi = 1.1, offset_lo = -0.01, offset_hi = 0.01, seed = 0L)
@@ -404,10 +420,13 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{amplitude_min}{Native parameter (double); defaults come from the n4m manifest.}
 \item{asymmetry}{Native parameter (double); defaults come from the n4m manifest.}
 \item{auto_offset}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{aw_high}{Native parameter (double); defaults come from the n4m manifest.}
+\item{aw_low}{Native parameter (double); defaults come from the n4m manifest.}
 \item{b_high}{Native parameter (double); defaults come from the n4m manifest.}
 \item{b_low}{Native parameter (double); defaults come from the n4m manifest.}
 \item{base}{Native parameter (double); defaults come from the n4m manifest.}
 \item{base_intercepts}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{bound_water_shift}{Native parameter (double); defaults come from the n4m manifest.}
 \item{bounds_error}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{branches}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{bw_hi}{Native parameter (int); defaults come from the n4m manifest.}
@@ -442,12 +461,21 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{delta}{Native parameter (double); defaults come from the n4m manifest.}
 \item{deriv}{Native parameter (int); defaults come from the n4m manifest.}
 \item{derivative_order}{Native parameter (int); defaults come from the n4m manifest.}
+\item{detector_model}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{detector_roll_off}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{di_lambda}{Native parameter (double); defaults come from the n4m manifest.}
 \item{diff_order}{Native parameter (int); defaults come from the n4m manifest.}
 \item{dropout_prob}{Native parameter (double); defaults come from the n4m manifest.}
+\item{edge_curvature}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{edge_enhancement}{Native parameter (double); defaults come from the n4m manifest.}
 \item{edge_focus}{Native parameter (double); defaults come from the n4m manifest.}
 \item{edge_order}{Native parameter (int); defaults come from the n4m manifest.}
+\item{edge_width}{Native parameter (double); defaults come from the n4m manifest.}
 \item{edges}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{effect_strength}{Native parameter (double); defaults come from the n4m manifest.}
+\item{enable_broadening}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{enable_intensity}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{enable_shift}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{end}{Native parameter (int); defaults come from the n4m manifest.}
 \item{entropy}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{eps}{Native parameter (double); defaults come from the n4m manifest.}
@@ -461,6 +489,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{fill_value}{Native parameter (double); defaults come from the n4m manifest.}
 \item{fit_intercept}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{floor_probability}{Native parameter (double); defaults come from the n4m manifest.}
+\item{free_water_fraction}{Native parameter (double); defaults come from the n4m manifest.}
 \item{fusion_lambda}{Native parameter (double); defaults come from the n4m manifest.}
 \item{fwhm}{Native parameter (double); defaults come from the n4m manifest.}
 \item{fwhm_high}{Native parameter (double); defaults come from the n4m manifest.}
@@ -477,6 +506,9 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{head}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{heads}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{huber_k}{Native parameter (double); defaults come from the n4m manifest.}
+\item{include_baseline_distortion}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{include_path_length}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{include_peak_truncation}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{initial_intervals}{Native parameter (int); defaults come from the n4m manifest.}
 \item{initial_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{interval_size}{Native parameter (int); defaults come from the n4m manifest.}
@@ -511,6 +543,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{max_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{max_value}{Native parameter (double); defaults come from the n4m manifest.}
 \item{max_zero_ratio}{Native parameter (double); defaults come from the n4m manifest.}
+\item{mean_size_um}{Native parameter (double); defaults come from the n4m manifest.}
 \item{meta_intercept}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{meta_weights}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{method}{Native parameter (enum); defaults come from the n4m manifest.}
@@ -524,6 +557,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{mode}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{mode_j}{Native parameter (int); defaults come from the n4m manifest.}
 \item{mode_k}{Native parameter (int); defaults come from the n4m manifest.}
+\item{moisture_content}{Native parameter (double); defaults come from the n4m manifest.}
 \item{moment_policy}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{mult_high}{Native parameter (double); defaults come from the n4m manifest.}
 \item{mult_low}{Native parameter (double); defaults come from the n4m manifest.}
@@ -553,6 +587,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{n_unique_per_block}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{n_x_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_y_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}
+\item{noise_amplification}{Native parameter (double); defaults come from the n4m manifest.}
 \item{noise_base}{Native parameter (double); defaults come from the n4m manifest.}
 \item{noise_estimator}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{noise_features}{Native parameter (int); defaults come from the n4m manifest.}
@@ -574,11 +609,13 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{operator_range_max}{Native parameter (double); defaults come from the n4m manifest.}
 \item{operator_range_min}{Native parameter (double); defaults come from the n4m manifest.}
 \item{order}{Native parameter (int); defaults come from the n4m manifest.}
+\item{overall_strength}{Native parameter (double); defaults come from the n4m manifest.}
 \item{p}{Native parameter (double); defaults come from the n4m manifest.}
 \item{p_range}{Native parameter (double); defaults come from the n4m manifest.}
 \item{pad_mode}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{param}{Native parameter (double); defaults come from the n4m manifest.}
 \item{param_offsets}{Native parameter (int_array); defaults come from the n4m manifest.}
+\item{path_length_sensitivity}{Native parameter (double); defaults come from the n4m manifest.}
 \item{path_length_std}{Native parameter (double); defaults come from the n4m manifest.}
 \item{peak_probability}{Native parameter (double); defaults come from the n4m manifest.}
 \item{perturbation_density}{Native parameter (double); defaults come from the n4m manifest.}
@@ -597,6 +634,9 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{rank_method}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{ratio_kept}{Native parameter (double); defaults come from the n4m manifest.}
 \item{reference}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{reference_size_um}{Native parameter (double); defaults come from the n4m manifest.}
+\item{reference_water_activity}{Native parameter (double); defaults come from the n4m manifest.}
+\item{region_specific}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{regularizer}{Native parameter (double); defaults come from the n4m manifest.}
 \item{remove_count}{Native parameter (int); defaults come from the n4m manifest.}
 \item{ridge}{Native parameter (double); defaults come from the n4m manifest.}
@@ -620,6 +660,10 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{sigma_hi}{Native parameter (double); defaults come from the n4m manifest.}
 \item{sigma_lo}{Native parameter (double); defaults come from the n4m manifest.}
 \item{sigmas}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{size_effect_strength}{Native parameter (double); defaults come from the n4m manifest.}
+\item{size_range_high_um}{Native parameter (double); defaults come from the n4m manifest.}
+\item{size_range_low_um}{Native parameter (double); defaults come from the n4m manifest.}
+\item{size_variation_um}{Native parameter (double); defaults come from the n4m manifest.}
 \item{slope_max}{Native parameter (double); defaults come from the n4m manifest.}
 \item{slope_min}{Native parameter (double); defaults come from the n4m manifest.}
 \item{slope_std}{Native parameter (double); defaults come from the n4m manifest.}
@@ -632,10 +676,15 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{std_penalty}{Native parameter (double); defaults come from the n4m manifest.}
 \item{step}{Native parameter (int); defaults come from the n4m manifest.}
 \item{strategy}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{stray_light}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{stray_light_fraction}{Native parameter (double); defaults come from the n4m manifest.}
 \item{stretch_hi}{Native parameter (double); defaults come from the n4m manifest.}
 \item{stretch_lo}{Native parameter (double); defaults come from the n4m manifest.}
 \item{target_wavelengths}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{tau}{Native parameter (double); defaults come from the n4m manifest.}
+\item{temp_high}{Native parameter (double); defaults come from the n4m manifest.}
+\item{temp_low}{Native parameter (double); defaults come from the n4m manifest.}
+\item{temperature_delta}{Native parameter (double); defaults come from the n4m manifest.}
 \item{test_size}{Native parameter (double); defaults come from the n4m manifest.}
 \item{tgt_min}{Native parameter (double); defaults come from the n4m manifest.}
 \item{tgt_n}{Native parameter (int); defaults come from the n4m manifest.}
@@ -649,15 +698,21 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{top_k}{Native parameter (int); defaults come from the n4m manifest.}
 \item{trim_quantile}{Native parameter (double); defaults come from the n4m manifest.}
 \item{truncate}{Native parameter (double); defaults come from the n4m manifest.}
+\item{truncated_peaks}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{uniform}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{upper_percentile}{Native parameter (double); defaults come from the n4m manifest.}
+\item{use_aw_range}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{use_crop}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{use_fwhm_range}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{use_size_range}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{use_temp_range}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{v_max}{Native parameter (double); defaults come from the n4m manifest.}
 \item{variation_scope}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{vip_threshold}{Native parameter (double); defaults come from the n4m manifest.}
 \item{vote_threshold}{Native parameter (double); defaults come from the n4m manifest.}
 \item{w}{Native parameter (double); defaults come from the n4m manifest.}
+\item{water_activity_delta}{Native parameter (double); defaults come from the n4m manifest.}
+\item{wavelength_exponent}{Native parameter (double); defaults come from the n4m manifest.}
 \item{weight_floor}{Native parameter (double); defaults come from the n4m manifest.}
 \item{weights}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{width_hi}{Native parameter (int); defaults come from the n4m manifest.}
@@ -697,8 +752,15 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_linear_drift}: \code{augmentation.drift.linear_drift} (augmenter)
 \item \code{n4m_path_length}: \code{augmentation.drift.path_length} (augmenter)
 \item \code{n4m_poly_drift}: \code{augmentation.drift.poly_drift} (augmenter)
+\item \code{n4m_detector_rolloff}: \code{augmentation.edge_artifacts.detector_rolloff} (augmenter)
+\item \code{n4m_edge_artifacts}: \code{augmentation.edge_artifacts.edge_artifacts} (augmenter)
 \item \code{n4m_edge_curvature}: \code{augmentation.edge_artifacts.edge_curvature} (augmenter)
+\item \code{n4m_stray_light}: \code{augmentation.edge_artifacts.stray_light} (augmenter)
 \item \code{n4m_truncated_peak}: \code{augmentation.edge_artifacts.truncated_peak} (augmenter)
+\item \code{n4m_moisture}: \code{augmentation.environmental.moisture} (augmenter)
+\item \code{n4m_temperature}: \code{augmentation.environmental.temperature} (augmenter)
+\item \code{n4m_local_mixup}: \code{augmentation.mixup.local_mixup} (augmenter)
+\item \code{n4m_mixup}: \code{augmentation.mixup.mixup} (augmenter)
 \item \code{n4m_gaussian_noise}: \code{augmentation.noise.gaussian_noise} (augmenter)
 \item \code{n4m_hetero_noise}: \code{augmentation.noise.hetero_noise} (augmenter)
 \item \code{n4m_multiplicative_noise}: \code{augmentation.noise.multiplicative_noise} (augmenter)
@@ -709,6 +771,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_dead_band}: \code{augmentation.scattering.dead_band} (augmenter)
 \item \code{n4m_emsc_distort}: \code{augmentation.scattering.emsc_distort} (augmenter)
 \item \code{n4m_instrument_broaden}: \code{augmentation.scattering.instrument_broaden} (augmenter)
+\item \code{n4m_particle_size}: \code{augmentation.scattering.particle_size} (augmenter)
 \item \code{n4m_scatter_sim_msc}: \code{augmentation.scattering.scatter_sim_msc} (augmenter)
 \item \code{n4m_band_mask}: \code{augmentation.spectral.band_mask} (augmenter)
 \item \code{n4m_band_perturb}: \code{augmentation.spectral.band_perturb} (augmenter)
