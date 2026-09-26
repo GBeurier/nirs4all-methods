@@ -35,6 +35,8 @@ from ._base import _check_X_p4a, _validate_X_y_no_mutate
 class _MethodResultRegressor(BaseEstimator, RegressorMixin):
     """Base for regressors backed by a MethodResult (not a Model)."""
 
+    _native_affine_model = False
+
     # Coefficient + preprocessing-mean keys read from the MethodResult.
     # We only read x_mean and y_mean: per the C ABI contract, coefficients
     # are already in the original X/Y space, so x_scale / y_scale are not
@@ -54,7 +56,7 @@ class _MethodResultRegressor(BaseEstimator, RegressorMixin):
 
     # --- Common state extraction ----------------------------------------
 
-    def _extract_state(self, result) -> None:
+    def _extract_state(self, result, *, intercept_override=None) -> None:
         """Pull coef + means from the MethodResult and store as numpy
         arrays. Subclasses with non-standard result schemas (e.g.
         MBPLSRegression, which exposes intercept directly) may
@@ -72,7 +74,10 @@ class _MethodResultRegressor(BaseEstimator, RegressorMixin):
             result.matrix(keys["y_mean"]), dtype=np.float64).ravel()
         # Compute sklearn-style intercept BEFORE binding so a partial
         # failure here leaves the previous fit intact.
-        if coef_T.ndim == 1:
+        if intercept_override is not None:
+            native_intercept = np.asarray(intercept_override, dtype=np.float64).ravel()
+            intercept = float(native_intercept[0]) if coef_T.ndim == 1 else native_intercept
+        elif coef_T.ndim == 1:
             intercept = float(y_mean[0] - x_mean @ coef_T)
         else:
             intercept = y_mean - x_mean @ coef_T.T
@@ -90,8 +95,19 @@ class _MethodResultRegressor(BaseEstimator, RegressorMixin):
         X_arr, y_arr, y_ndim_orig = _validate_X_y_no_mutate(X, y)
         ctx = Context()
         result = self._fit_method_result(ctx, X_arr, y_arr)
-        # Commit fitted state only after every read from `result` succeeded.
-        self._extract_state(result)
+        try:
+            if self._native_affine_model:
+                from .._model import ModelArrayKind
+
+                with result.to_affine_model(ctx) as model:
+                    native_intercept = model.get_array(ctx, ModelArrayKind.INTERCEPT)
+                    bundle = model.to_bytes()
+                self._extract_state(result, intercept_override=native_intercept)
+                self._bundle_ = bundle
+            else:
+                self._extract_state(result)
+        finally:
+            result.close()
         self.n_features_in_ = int(X_arr.shape[1])
         if hasattr(X, "columns"):
             self.feature_names_in_ = np.asarray(X.columns, dtype=object)
@@ -101,6 +117,12 @@ class _MethodResultRegressor(BaseEstimator, RegressorMixin):
     def predict(self, X: Any) -> np.ndarray:
         check_is_fitted(self)
         X_arr = _check_X_p4a(self, X)
+        if self._native_affine_model:
+            from .._model import Model
+
+            with Context() as ctx, Model.from_bytes(ctx, self._bundle_) as model:
+                preds = model.predict(ctx, X_arr)
+            return preds.ravel() if self._y_ndim_ == 1 else preds
         # C ABI convention: coefficients are in original X/Y space; do NOT
         # divide by x_scale. See cpp/src/core/model.cpp::fill_prediction.
         Xc = X_arr - self.x_mean_
@@ -113,3 +135,10 @@ class _MethodResultRegressor(BaseEstimator, RegressorMixin):
             if preds.ndim == 2 and preds.shape[1] == 1:
                 preds = preds.ravel()
         return preds
+
+    def export_n4mm(self) -> bytes:
+        """Return the native predict-only N4MM payload when available."""
+        check_is_fitted(self)
+        if not self._native_affine_model:
+            raise NotImplementedError("this MethodResult has no native affine model")
+        return self._bundle_

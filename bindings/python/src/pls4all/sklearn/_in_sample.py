@@ -9,8 +9,8 @@ matrix). Predict-on-arbitrary-new-X for those methods would require either:
   user can do explicitly via tier 1).
 
 Methods without coefficients remain **fit-only sklearn estimators**. Robust
-PLS, Ridge-PLS, Continuum Regression, Fused Sparse PLS, Bagging PLS, Boosting
-PLS, and Random Subspace PLS live in this module for API compatibility and
+PLS, Ridge-PLS, Continuum Regression, Group Sparse PLS, Fused Sparse PLS,
+Bagging PLS, Boosting PLS, and Random Subspace PLS live here for compatibility and
 use the shared coefficient-backed MethodResult predictor on held-out rows.
 
 For fit-only estimators, ``fit(X, y)`` runs the C kernel and stores
@@ -33,6 +33,7 @@ Only the fit-only classes are unsuitable for ``Pipeline(... → predict(X_new))`
 
 from __future__ import annotations
 
+from numbers import Real
 from typing import Any
 
 import numpy as np
@@ -64,8 +65,7 @@ class _InSampleOnlyRegressor(BaseEstimator, RegressorMixin):
     predictions_: np.ndarray | None = None
     _X_train_: np.ndarray | None = None
 
-    def _run_fit(self, ctx: Context, X: np.ndarray,
-                  y: np.ndarray) -> Any:
+    def _run_fit(self, ctx: Context, X: np.ndarray, y: np.ndarray) -> Any:
         raise NotImplementedError
 
     def fit(self, X, y):
@@ -89,8 +89,9 @@ class _InSampleOnlyRegressor(BaseEstimator, RegressorMixin):
     def predict(self, X):
         check_is_fitted(self, ["predictions_", "_X_train_"])
         X_arr = np.ascontiguousarray(X, dtype=np.float64)
-        if (X_arr.shape != self._X_train_.shape
-                or not np.array_equal(X_arr, self._X_train_)):
+        if X_arr.shape != self._X_train_.shape or not np.array_equal(
+            X_arr, self._X_train_
+        ):
             cls = type(self).__name__
             raise NotImplementedError(
                 f"{cls} is an in-sample-only estimator: its C kernel "
@@ -106,6 +107,7 @@ class _InSampleOnlyRegressor(BaseEstimator, RegressorMixin):
 def _basic_cfg(n_components: int) -> Any:
     """Standard PLS regression Config used by every in-sample wrapper."""
     from .._config import Config
+
     cfg = Config()
     cfg.algorithm = Algorithm.PLS_REGRESSION
     cfg.solver = Solver.SIMPLS
@@ -122,6 +124,7 @@ def _basic_cfg(n_components: int) -> Any:
 # Regressors with extra fit-time parameters
 # ----------------------------------------------------------------------
 
+
 class WeightedPLSRegression(_InSampleOnlyRegressor):
     """Sample-weighted PLS (sqrt(w)-prescaled SIMPLS)."""
 
@@ -130,17 +133,18 @@ class WeightedPLSRegression(_InSampleOnlyRegressor):
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is None:
-            raise ValueError(
-                "WeightedPLSRegression.fit requires `sample_weight`")
+            raise ValueError("WeightedPLSRegression.fit requires `sample_weight`")
         self._sample_weight = np.ascontiguousarray(
-            sample_weight, dtype=np.float64).ravel()
+            sample_weight, dtype=np.float64
+        ).ravel()
         return super().fit(X, y)
 
     def _run_fit(self, ctx, X, y):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.weighted_pls_fit(
-                ctx, cfg, X, y, sample_weights=self._sample_weight)
+                ctx, cfg, X, y, sample_weights=self._sample_weight
+            )
         finally:
             cfg.close()
 
@@ -148,9 +152,9 @@ class WeightedPLSRegression(_InSampleOnlyRegressor):
 class RobustPLSRegression(_MethodResultRegressor):
     """Robust PLS via Huber IRLS with held-out prediction."""
 
-    def __init__(self, n_components: int = 2,
-                  *, huber_k: float = 1.345,
-                  max_irls_iter: int = 20) -> None:
+    def __init__(
+        self, n_components: int = 2, *, huber_k: float = 1.345, max_irls_iter: int = 20
+    ) -> None:
         self.n_components = n_components
         self.huber_k = huber_k
         self.max_irls_iter = max_irls_iter
@@ -159,9 +163,13 @@ class RobustPLSRegression(_MethodResultRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.robust_pls_fit(
-                ctx, cfg, X, y,
+                ctx,
+                cfg,
+                X,
+                y,
                 huber_k=float(self.huber_k),
-                max_irls_iter=int(self.max_irls_iter))
+                max_irls_iter=int(self.max_irls_iter),
+            )
         finally:
             cfg.close()
 
@@ -169,8 +177,7 @@ class RobustPLSRegression(_MethodResultRegressor):
 class RidgePLSRegression(_MethodResultRegressor):
     """L2-augmented PLS regression with held-out prediction."""
 
-    def __init__(self, n_components: int = 2,
-                  *, ridge_lambda: float = 1.0) -> None:
+    def __init__(self, n_components: int = 2, *, ridge_lambda: float = 1.0) -> None:
         self.n_components = n_components
         self.ridge_lambda = ridge_lambda
 
@@ -178,7 +185,8 @@ class RidgePLSRegression(_MethodResultRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.ridge_pls_fit(
-                ctx, cfg, X, y, ridge_lambda=float(self.ridge_lambda))
+                ctx, cfg, X, y, ridge_lambda=float(self.ridge_lambda)
+            )
         finally:
             cfg.close()
 
@@ -194,7 +202,8 @@ class ContinuumRegression(_MethodResultRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.continuum_regression_fit(
-                ctx, cfg, X, y, tau=float(self.tau))
+                ctx, cfg, X, y, tau=float(self.tau)
+            )
         finally:
             cfg.close()
 
@@ -202,8 +211,7 @@ class ContinuumRegression(_MethodResultRegressor):
 class RecursivePLSRegression(_InSampleOnlyRegressor):
     """Moving-window recursive PLS."""
 
-    def __init__(self, n_components: int = 2,
-                  *, window_size: int = 50) -> None:
+    def __init__(self, n_components: int = 2, *, window_size: int = 50) -> None:
         self.n_components = n_components
         self.window_size = window_size
 
@@ -211,7 +219,8 @@ class RecursivePLSRegression(_InSampleOnlyRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.recursive_pls_run(
-                ctx, cfg, X, y, window_size=int(self.window_size))
+                ctx, cfg, X, y, window_size=int(self.window_size)
+            )
         finally:
             cfg.close()
 
@@ -219,8 +228,7 @@ class RecursivePLSRegression(_InSampleOnlyRegressor):
 class LWPLSRegression(_InSampleOnlyRegressor):
     """Locally-weighted PLS (Næs & Centner 1998)."""
 
-    def __init__(self, n_components: int = 2,
-                  *, n_neighbors: int = 30) -> None:
+    def __init__(self, n_components: int = 2, *, n_neighbors: int = 30) -> None:
         self.n_components = n_components
         self.n_neighbors = n_neighbors
 
@@ -228,7 +236,8 @@ class LWPLSRegression(_InSampleOnlyRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.lw_pls_fit(
-                ctx, cfg, X, y, n_neighbors=int(self.n_neighbors))
+                ctx, cfg, X, y, n_neighbors=int(self.n_neighbors)
+            )
         finally:
             cfg.close()
 
@@ -247,24 +256,52 @@ class MissingAwareNipalsRegression(_InSampleOnlyRegressor):
             cfg.close()
 
 
-class GroupSparsePLSRegression(_InSampleOnlyRegressor):
-    """Group-sparse PLS — L1 across pre-declared feature groups."""
+class GroupSparsePLSRegression(_MethodResultRegressor):
+    """Group-sparse SIMPLS with held-out prediction from native coefficients."""
 
-    def __init__(self, n_components: int = 2,
-                  *, group_assignment=None,
-                  group_lambda: float = 0.05) -> None:
+    _native_affine_model = True
+
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        group_assignment=None,
+        group_lambda: float = 0.05,
+    ) -> None:
         self.n_components = n_components
         self.group_assignment = group_assignment
         self.group_lambda = group_lambda
 
-    def _run_fit(self, ctx, X, y):
+    def _fit_method_result(self, ctx, X, y):
+        groups = np.asarray(self.group_assignment, dtype=object)
+        if groups.ndim != 1 or groups.size != X.shape[1]:
+            raise ValueError("group_assignment must contain one ID per X feature")
+        if any(
+            isinstance(group, (bool, np.bool_))
+            or not isinstance(group, (int, np.integer))
+            or group < 0
+            or group > np.iinfo(np.int32).max
+            for group in groups
+        ):
+            raise ValueError("group_assignment IDs must be nonnegative int32 integers")
+        if isinstance(self.group_lambda, (bool, np.bool_)) or not isinstance(
+            self.group_lambda, Real
+        ):
+            raise ValueError("group_lambda must be a finite nonnegative number")  # noqa: TRY004
+        try:
+            penalty = float(self.group_lambda)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(
+                "group_lambda must be a finite nonnegative number"
+            ) from exc
+        if not np.isfinite(penalty) or penalty < 0:
+            raise ValueError("group_lambda must be a finite nonnegative number")
         cfg = _basic_cfg(self.n_components)
         try:
-            ga = np.ascontiguousarray(
-                self.group_assignment, dtype=np.int32).ravel()
+            ga = np.ascontiguousarray(groups, dtype=np.int32)
             return _methods.group_sparse_pls_fit(
-                ctx, cfg, X, y, group_assignment=ga,
-                group_lambda=float(self.group_lambda))
+                ctx, cfg, X, y, group_assignment=ga, group_lambda=penalty
+            )
         finally:
             cfg.close()
 
@@ -272,9 +309,13 @@ class GroupSparsePLSRegression(_InSampleOnlyRegressor):
 class FusedSparsePLSRegression(_MethodResultRegressor):
     """Fused-sparse PLS — L1 + adjacent-coef smoothing."""
 
-    def __init__(self, n_components: int = 2,
-                  *, l1_lambda: float = 0.05,
-                  fusion_lambda: float = 0.05) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        l1_lambda: float = 0.05,
+        fusion_lambda: float = 0.05,
+    ) -> None:
         self.n_components = n_components
         self.l1_lambda = l1_lambda
         self.fusion_lambda = fusion_lambda
@@ -283,9 +324,13 @@ class FusedSparsePLSRegression(_MethodResultRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.fused_sparse_pls_fit(
-                ctx, cfg, X, y,
+                ctx,
+                cfg,
+                X,
+                y,
                 l1_lambda=float(self.l1_lambda),
-                fusion_lambda=float(self.fusion_lambda))
+                fusion_lambda=float(self.fusion_lambda),
+            )
         finally:
             cfg.close()
 
@@ -294,11 +339,13 @@ class FusedSparsePLSRegression(_MethodResultRegressor):
 # Ensemble regressors (need n_estimators)
 # ----------------------------------------------------------------------
 
+
 class BaggingPLSRegression(_MethodResultRegressor):
     """Bagged PLS (Breiman 1996)."""
 
-    def __init__(self, n_components: int = 2,
-                  *, n_estimators: int = 50, seed: int = 0) -> None:
+    def __init__(
+        self, n_components: int = 2, *, n_estimators: int = 50, seed: int = 0
+    ) -> None:
         self.n_components = n_components
         self.n_estimators = n_estimators
         self.seed = seed
@@ -307,9 +354,8 @@ class BaggingPLSRegression(_MethodResultRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.bagging_pls_fit(
-                ctx, cfg, X, y,
-                n_estimators=int(self.n_estimators),
-                seed=int(self.seed))
+                ctx, cfg, X, y, n_estimators=int(self.n_estimators), seed=int(self.seed)
+            )
         finally:
             cfg.close()
 
@@ -317,10 +363,14 @@ class BaggingPLSRegression(_MethodResultRegressor):
 class GPRPLSRegression(_InSampleOnlyRegressor):
     """Gaussian-process head on SIMPLS training scores."""
 
-    def __init__(self, n_components: int = 2,
-                  *, length_scale: float = 1.0,
-                  noise_level: float = 1e-3,
-                  seed: int = 0) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        length_scale: float = 1.0,
+        noise_level: float = 1e-3,
+        seed: int = 0,
+    ) -> None:
         self.n_components = n_components
         self.length_scale = length_scale
         self.noise_level = noise_level
@@ -330,11 +380,15 @@ class GPRPLSRegression(_InSampleOnlyRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.gpr_pls_fit(
-                ctx, cfg, X, y,
+                ctx,
+                cfg,
+                X,
+                y,
                 n_components=int(self.n_components),
                 length_scale=float(self.length_scale),
                 noise_level=float(self.noise_level),
-                seed=int(self.seed))
+                seed=int(self.seed),
+            )
         finally:
             cfg.close()
 
@@ -342,9 +396,13 @@ class GPRPLSRegression(_InSampleOnlyRegressor):
 class BoostingPLSRegression(_MethodResultRegressor):
     """Boosted PLS regression."""
 
-    def __init__(self, n_components: int = 2,
-                  *, n_estimators: int = 50,
-                  learning_rate: float = 0.1) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        n_estimators: int = 50,
+        learning_rate: float = 0.1,
+    ) -> None:
         self.n_components = n_components
         self.n_estimators = n_estimators
         self.learning_rate = learning_rate
@@ -355,9 +413,13 @@ class BoostingPLSRegression(_MethodResultRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.boosting_pls_fit(
-                ctx, cfg, X, y,
+                ctx,
+                cfg,
+                X,
+                y,
                 n_estimators=int(self.n_estimators),
-                learning_rate=float(self.learning_rate))
+                learning_rate=float(self.learning_rate),
+            )
         finally:
             cfg.close()
 
@@ -365,10 +427,14 @@ class BoostingPLSRegression(_MethodResultRegressor):
 class RandomSubspacePLSRegression(_MethodResultRegressor):
     """Random-subspace PLS — Ho 1998."""
 
-    def __init__(self, n_components: int = 2,
-                  *, n_estimators: int = 50,
-                  features_per_subspace: int = 10,
-                  seed: int = 0) -> None:
+    def __init__(
+        self,
+        n_components: int = 2,
+        *,
+        n_estimators: int = 50,
+        features_per_subspace: int = 10,
+        seed: int = 0,
+    ) -> None:
         self.n_components = n_components
         self.n_estimators = n_estimators
         self.features_per_subspace = features_per_subspace
@@ -378,10 +444,14 @@ class RandomSubspacePLSRegression(_MethodResultRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.random_subspace_pls_fit(
-                ctx, cfg, X, y,
+                ctx,
+                cfg,
+                X,
+                y,
                 n_estimators=int(self.n_estimators),
                 features_per_subspace=int(self.features_per_subspace),
-                seed=int(self.seed))
+                seed=int(self.seed),
+            )
         finally:
             cfg.close()
 
@@ -390,11 +460,11 @@ class RandomSubspacePLSRegression(_MethodResultRegressor):
 # Multi-block regressors (need X_blocks; X is the concatenated matrix)
 # ----------------------------------------------------------------------
 
+
 class SOPLSRegression(_InSampleOnlyRegressor):
     """Sequential & Orthogonalised multi-block PLS (Næs et al. 2011)."""
 
-    def __init__(self, *, n_components_per_block=None,
-                  block_sizes=None) -> None:
+    def __init__(self, *, n_components_per_block=None, block_sizes=None) -> None:
         self.n_components_per_block = n_components_per_block
         self.block_sizes = block_sizes
 
@@ -406,11 +476,10 @@ class SOPLSRegression(_InSampleOnlyRegressor):
         cfg = _basic_cfg(self.n_components)
         try:
             blocks = _split_blocks(X, self.block_sizes)
-            comps = np.ascontiguousarray(
-                self.n_components_per_block, dtype=np.int32)
+            comps = np.ascontiguousarray(self.n_components_per_block, dtype=np.int32)
             return _methods.so_pls_fit(
-                ctx, cfg, X_blocks=blocks, Y=y,
-                n_components_per_block=comps)
+                ctx, cfg, X_blocks=blocks, Y=y, n_components_per_block=comps
+            )
         finally:
             cfg.close()
 
@@ -418,8 +487,7 @@ class SOPLSRegression(_InSampleOnlyRegressor):
 class ROSARegression(_InSampleOnlyRegressor):
     """Response-Oriented Sequential Alternation (Liland & Næs 2016)."""
 
-    def __init__(self, n_components: int = 2,
-                  *, block_sizes=None) -> None:
+    def __init__(self, n_components: int = 2, *, block_sizes=None) -> None:
         self.n_components = n_components
         self.block_sizes = block_sizes
 
@@ -428,8 +496,8 @@ class ROSARegression(_InSampleOnlyRegressor):
         try:
             blocks = _split_blocks(X, self.block_sizes)
             return _methods.rosa_fit(
-                ctx, cfg, X_blocks=blocks, Y=y,
-                n_components=int(self.n_components))
+                ctx, cfg, X_blocks=blocks, Y=y, n_components=int(self.n_components)
+            )
         finally:
             cfg.close()
 
@@ -442,32 +510,33 @@ def _split_blocks(X, block_sizes):
     sizes = list(block_sizes)
     if int(sum(sizes)) != X.shape[1]:
         raise ValueError(
-            f"sum(block_sizes)={sum(sizes)} must equal X.shape[1]={X.shape[1]}")
+            f"sum(block_sizes)={sum(sizes)} must equal X.shape[1]={X.shape[1]}"
+        )
     out = []
     cursor = 0
     for k in sizes:
-        block = np.ascontiguousarray(X[:, cursor:cursor + int(k)], dtype=np.float64)
+        block = np.ascontiguousarray(X[:, cursor : cursor + int(k)], dtype=np.float64)
         out.append(block)
         cursor += int(k)
     return out
 
 
 __all__ = [
-    "WeightedPLSRegression",
-    "RobustPLSRegression",
-    "RidgePLSRegression",
+    "BaggingPLSRegression",
+    "BoostingPLSRegression",
     "ContinuumRegression",
-    "RecursivePLSRegression",
+    "FusedSparsePLSRegression",
+    "GPRPLSRegression",
+    "GroupSparsePLSRegression",
     "LWPLSRegression",
     "MissingAwareNipalsRegression",
-    "GroupSparsePLSRegression",
-    "FusedSparsePLSRegression",
-    "BaggingPLSRegression",
-    "GPRPLSRegression",
-    "BoostingPLSRegression",
-    "RandomSubspacePLSRegression",
-    "SOPLSRegression",
     "ROSARegression",
+    "RandomSubspacePLSRegression",
+    "RecursivePLSRegression",
+    "RidgePLSRegression",
+    "RobustPLSRegression",
+    "SOPLSRegression",
+    "WeightedPLSRegression",
 ]
 # NOTE: ONPLSRegression deliberately NOT exposed: the on_pls_fit
 # MethodResult is decomposition-only (joint/unique loadings + scores)

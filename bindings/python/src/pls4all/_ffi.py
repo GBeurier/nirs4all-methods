@@ -441,6 +441,12 @@ lib.n4m_model_import_linear_predictor.argtypes = [
     ctypes.POINTER(LinearPredictorSpec),
     ctypes.POINTER(ctypes.c_void_p),
 ]
+lib.n4m_model_from_method_result.restype = ctypes.c_int
+lib.n4m_model_from_method_result.argtypes = [
+    ctypes.c_void_p,
+    ctypes.c_void_p,
+    ctypes.POINTER(ctypes.c_void_p),
+]
 lib.n4m_model_destroy.restype = None
 lib.n4m_model_destroy.argtypes = [ctypes.c_void_p]
 lib.n4m_model_predict.restype = ctypes.c_int

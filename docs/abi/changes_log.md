@@ -1,5 +1,18 @@
 # ABI — Changes Log
 
+## 2026-09-26 — ABI 2.9.0: affine MethodResult promotion (release pending)
+
+`n4m_model_from_method_result` copies a natively marked affine MethodResult
+into a predict-only `N4M_ALGO_IMPORTED_LINEAR_PREDICTOR` model. It validates
+finite coefficients and either a direct intercept or both X/Y means with
+exact shapes, derives the intercept in C++ when necessary, and exports a
+standalone N4MM payload with unknown training-row provenance (`0`). Results
+without the explicit `affine_predictor=1` capability are rejected. Marked
+producers in this batch are GroupSparsePLS, FusedSparsePLS, RobustPLS,
+RidgePLS, ContinuumRegression, BaggingPLS, BoostingPLS, and
+RandomSubspacePLS; their held-out oracles confirm the affine convention.
+This batch does not publish a package or change a package version number.
+
 ## 2026-09-03 — ABI 2.5.0: typed N4MM pipeline inspection
 
 Additive MINOR change: `n4m_serialization_inspect_pipeline_v1` returns the
