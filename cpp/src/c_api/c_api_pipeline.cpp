@@ -200,4 +200,99 @@ N4M_API n4m_status_t n4m_pipeline_transform_alloc(n4m_context_t* ctx,
     }
 }
 
+N4M_API n4m_status_t n4m_pipeline_export_size(const n4m_pipeline_t* pipe,
+                                               size_t* out_size) {
+    if (out_size != nullptr) *out_size = 0;
+    if (pipe == nullptr || out_size == nullptr) return N4M_ERR_NULL_POINTER;
+    try {
+        return as_core(pipe)->serialized_size(*out_size)
+            ? N4M_OK : N4M_ERR_INVALID_ARGUMENT;
+    } catch (...) {
+        *out_size = 0;
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_pipeline_get_info(
+    const n4m_pipeline_t* pipe, int64_t* out_n_features,
+    int32_t* out_n_operators) {
+    if (out_n_features != nullptr) *out_n_features = 0;
+    if (out_n_operators != nullptr) *out_n_operators = 0;
+    if (pipe == nullptr || out_n_features == nullptr || out_n_operators == nullptr)
+        return N4M_ERR_NULL_POINTER;
+    if (!as_core(pipe)->fitted()) return N4M_ERR_NOT_FITTED;
+    *out_n_features = as_core(pipe)->n_features();
+    *out_n_operators = as_core(pipe)->size();
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_pipeline_get_operator(
+    const n4m_pipeline_t* pipe, int32_t index, n4m_operator_kind_t* out_kind,
+    double* out_params, int32_t capacity, int32_t* out_count) {
+    if (out_kind != nullptr) *out_kind = N4M_OP_IDENTITY;
+    if (out_count != nullptr) *out_count = 0;
+    if (pipe == nullptr || out_kind == nullptr || out_count == nullptr)
+        return N4M_ERR_NULL_POINTER;
+    if (!as_core(pipe)->fitted()) return N4M_ERR_NOT_FITTED;
+    const auto& entries = as_core(pipe)->entries();
+    if (index < 0 || static_cast<std::size_t>(index) >= entries.size() ||
+        capacity < 0 || (out_params == nullptr && capacity != 0))
+        return N4M_ERR_INVALID_ARGUMENT;
+    const auto& entry = entries[static_cast<std::size_t>(index)];
+    const auto required = static_cast<int32_t>(entry.params.size());
+    if (out_params == nullptr) {
+        *out_kind = entry.kind;
+        *out_count = required;
+        return N4M_OK;
+    }
+    if (capacity < required) {
+        *out_count = required;
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    for (int32_t i = 0; i < required; ++i)
+        out_params[i] = entry.params[static_cast<std::size_t>(i)];
+    *out_kind = entry.kind;
+    *out_count = required;
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_pipeline_export_to_buffer(
+    const n4m_pipeline_t* pipe, void* buffer, size_t buffer_size,
+    size_t* out_written) {
+    if (out_written != nullptr) *out_written = 0;
+    if (pipe == nullptr || buffer == nullptr || out_written == nullptr)
+        return N4M_ERR_NULL_POINTER;
+    try {
+        return as_core(pipe)->export_to_buffer(buffer, buffer_size, *out_written)
+            ? N4M_OK : N4M_ERR_INVALID_ARGUMENT;
+    } catch (...) {
+        *out_written = 0;
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_pipeline_import_from_buffer(
+    n4m_context_t* ctx, const void* buffer, size_t buffer_size,
+    n4m_pipeline_t** out_pipeline) {
+    if (out_pipeline != nullptr) *out_pipeline = nullptr;
+    if (ctx == nullptr || buffer == nullptr || out_pipeline == nullptr) {
+        set_error(ctx, "null pointer in n4m_pipeline_import_from_buffer");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        auto candidate = std::make_unique<n4m_pipeline_s>();
+        const n4m_status_t status = ::n4m::core::Pipeline::import_from_buffer(
+            *as_core(ctx), buffer, buffer_size, *candidate);
+        if (status != N4M_OK) return status;
+        *out_pipeline = candidate.release();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory importing pipeline");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error importing pipeline");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
 }  // extern "C"

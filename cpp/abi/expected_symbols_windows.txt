@@ -476,7 +476,12 @@ n4m_pipeline_add_operator
 n4m_pipeline_clone
 n4m_pipeline_create
 n4m_pipeline_destroy
+n4m_pipeline_export_size
+n4m_pipeline_export_to_buffer
 n4m_pipeline_fit
+n4m_pipeline_get_info
+n4m_pipeline_get_operator
+n4m_pipeline_import_from_buffer
 n4m_pipeline_size
 n4m_pipeline_transform
 n4m_pipeline_transform_alloc

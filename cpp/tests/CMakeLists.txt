@@ -92,6 +92,17 @@ set_tests_properties(n4m_model_pipeline_tests PROPERTIES
     LABELS "abi;parity"
     TIMEOUT 30)
 
+# Standalone fitted N4MP preprocessing wire; distinct from model N4MM.
+add_executable(n4m_preprocess_wire_tests test_preprocess_wire.cpp)
+target_link_libraries(n4m_preprocess_wire_tests PRIVATE n4m_c)
+target_include_directories(n4m_preprocess_wire_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/cpp/src
+    ${PROJECT_BINARY_DIR}/generated)
+n4m_add_warnings(n4m_preprocess_wire_tests)
+add_test(NAME n4m_preprocess_wire_tests COMMAND n4m_preprocess_wire_tests)
+set_tests_properties(n4m_preprocess_wire_tests PROPERTIES LABELS "abi;parity" TIMEOUT 30)
+
 # Focused additive ABI inspector contract. It constructs minimal canonical
 # N4MM bytes directly, so this gate does not rerun model pipeline parity.
 add_executable(n4m_serialized_pipeline_inspect_tests
