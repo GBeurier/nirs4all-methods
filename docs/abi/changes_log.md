@@ -18,12 +18,25 @@ Adds one life cycle for catalog methods with reusable fitted state
   `n4m_estimator_import_from_buffer`, `n4m_context_set_max_state_bytes`),
   which stores resolved parameters and embeds N4MM where the method has one.
 
-First slice: 19 regressors (PLS regression with selectable solver, SIMPLS,
-PCR, CPPLS, robust/ridge/continuum PLS, Ridge, sparse/fused/group-sparse PLS,
-MIR-PLS, MB-PLS, ECR, N-PLS, DI-PLS, bagging/boosting/random-subspace PLS).
+Roles are typed interfaces (transformer, selector, regressor, classifier,
+sample filter; splitter and augmenter procedures): every operation checks the
+method's declared role, and the manifest publishes the DAG-ML node kinds.
+Seeds are parameters of the methods that use them; internal-CV methods take a
+`cv` parameter and optional `fold_ids`, with the canonical contiguous plan
+built natively.
+
+Current coverage: 21 regressors (PLS regression with selectable solver,
+SIMPLS, PCR, CPPLS, robust/ridge/continuum/weighted PLS, Ridge,
+sparse/fused/group-sparse PLS, O2PLS, MIR-PLS, MB-PLS, ECR, N-PLS, DI-PLS,
+bagging/boosting/random-subspace PLS) and 25 selectors (SPA, VIP-SPA, CARS,
+SCARS, UVE, EMCUVE, random frog, GA, PSO, VISSA, shaving, BVE, REP, IPW, ST,
+T2, BiPLS, SiPLS, IRIV, IRF, WVC, stability, randomization, variable ranking).
 `models.pls.pls_regression` is a new catalog entry for the general PLS
-estimator. Adapters call the existing kernels; no numerical change. The
-per-method C functions are unchanged.
+estimator. The per-method C functions are unchanged. Behaviour changes:
+WeightedPLS and O2PLS results are marked affine predictors; bagging and
+random-subspace PLS now draw samples with portable rejection sampling and
+Fisher-Yates on mt19937_64 (std distributions differed between standard
+libraries), so their fits change once and become platform independent.
 
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (unreleased)
 
