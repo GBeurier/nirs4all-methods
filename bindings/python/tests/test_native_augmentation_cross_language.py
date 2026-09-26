@@ -3,7 +3,7 @@
 
 import numpy as np
 import pytest
-
+from n4m.augmentation import native_augmentation_specs, run_native
 from n4m.augmentation.noise import GaussianAdditiveNoise
 from n4m.augmentation.scattering import ScatterSimulationMSC
 from n4m.augmentation.spectral import BandMasking
@@ -45,3 +45,21 @@ def test_native_augmenter_matches_r_wasm_seeded_oracle(
     np.testing.assert_allclose(np.sum(out), sum_expected, rtol=1e-12)
     np.testing.assert_allclose(np.sum(out * out), sumsq_expected, rtol=1e-12)
     np.testing.assert_allclose(out.ravel()[:4], prefix, rtol=1e-12)
+
+
+def test_generic_augmentation_schema_and_seeded_oracle():
+    specs = native_augmentation_specs()
+    assert len(specs) == 22
+    assert specs["gaussian_noise"] == 1
+    specs.pop("gaussian_noise")
+    assert native_augmentation_specs()["gaussian_noise"] == 1
+    x = np.tile(1.0 + 0.02 * np.arange(32), (8, 1))
+    native = run_native("gaussian_noise", x, [0.03], 42)
+    direct = GaussianAdditiveNoise(sigma=0.03, seed=42).transform(x)
+    np.testing.assert_array_equal(native, direct)
+    with pytest.raises(ValueError, match="parameter vector"):
+        run_native("gaussian_noise", x, [], 42)
+    with pytest.raises(ValueError, match="seed"):
+        run_native("gaussian_noise", x, [0.03], 2**53)
+    with pytest.raises(ValueError, match="unknown"):
+        run_native("mixup", x, [], 42)
