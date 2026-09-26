@@ -263,6 +263,7 @@ def render_init(manifest: dict) -> str:
         [
             *ROLE_BASES.values(),
             "NativeEstimator",
+            "NativeMethod",
             "manifest",
             "method_class",
             "method_info",
