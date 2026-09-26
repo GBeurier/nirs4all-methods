@@ -571,3 +571,180 @@ SEXP r_n4m_augmentation_run(SEXP kind, SEXP X, SEXP params, SEXP seed) {
     if (status != N4M_OK) r_pp_throw_status("n4m_augmentation_run", status);
     return r_pp_rowmajor_to_matrix(output, rows, cols);
 }
+
+/* ABI 2.12 closed filter roles. Opaque pointers own fitted native state; the
+ * R layer performs matrix layout conversion only. No filtering arithmetic. */
+static void r_pp_sample_finalizer(SEXP ptr) {
+    n4m_sample_filter_destroy((n4m_sample_filter_t*)R_ExternalPtrAddr(ptr));
+    R_ClearExternalPtr(ptr);
+}
+
+static void r_pp_feature_finalizer(SEXP ptr) {
+    n4m_feature_filter_destroy((n4m_feature_filter_t*)R_ExternalPtrAddr(ptr));
+    R_ClearExternalPtr(ptr);
+}
+
+static void* r_pp_filter_ptr(SEXP ptr, const char* role) {
+    if (TYPEOF(ptr) != EXTPTRSXP || R_ExternalPtrAddr(ptr) == NULL)
+        Rf_error("%s filter handle is not live", role);
+    return R_ExternalPtrAddr(ptr);
+}
+
+static int64_t* r_pp_integer_params(SEXP ints, int32_t* count) {
+    if (TYPEOF(ints) != REALSXP || XLENGTH(ints) > INT_MAX)
+        Rf_error("filter integer parameters must be a numeric vector");
+    *count = (int32_t)XLENGTH(ints);
+    int64_t* out = (int64_t*)R_alloc((size_t)(*count > 0 ? *count : 1), sizeof(int64_t));
+    for (int32_t j = 0; j < *count; ++j) {
+        double v = REAL(ints)[j];
+        if (!R_finite(v) || v != floor(v) || fabs(v) > 9007199254740991.0)
+            Rf_error("filter integer parameters must be exact signed integers");
+        out[j] = (int64_t)v;
+    }
+    return out;
+}
+
+static const double* r_pp_double_params(SEXP values, int32_t* count) {
+    if (TYPEOF(values) != REALSXP || XLENGTH(values) > INT_MAX)
+        Rf_error("filter double parameters must be a numeric vector");
+    *count = (int32_t)XLENGTH(values);
+    for (int32_t j = 0; j < *count; ++j) {
+        if (!R_finite(REAL(values)[j])) Rf_error("filter double parameters must be finite");
+    }
+    return REAL(values);
+}
+
+static uint64_t r_pp_seed(SEXP seed) {
+    double value = r_pp_double_scalar(seed, "seed");
+    if (value < 0 || value > 9007199254740991.0 || value != floor(value))
+        Rf_error("filter seed must be an exact nonnegative integer");
+    return (uint64_t)value;
+}
+
+static n4m_matrix_view_t r_pp_filter_view(SEXP X) {
+    int64_t rows = 0, cols = 0;
+    r_pp_matrix_shape(X, &rows, &cols);
+    double* data = (double*)R_alloc((size_t)(rows * cols), sizeof(double));
+    r_pp_copy_r_to_rowmajor(X, rows, cols, data);
+    n4m_matrix_view_t view = {0};
+    n4m_status_t st = n4m_matrix_view_init_rowmajor(&view, data, rows, cols, N4M_DTYPE_F64);
+    if (st != N4M_OK) r_pp_throw_status("filter matrix view", st);
+    return view;
+}
+
+SEXP r_n4m_sample_filter_create(SEXP kind, SEXP ints, SEXP values, SEXP seed) {
+    int32_t ni = 0, nd = 0;
+    int64_t* ip = r_pp_integer_params(ints, &ni);
+    const double* dp = r_pp_double_params(values, &nd);
+    n4m_sample_filter_t* h = NULL;
+    n4m_status_t st = n4m_sample_filter_create(r_pp_int_scalar(kind, "kind"), ip,
+                                               ni, dp, nd, r_pp_seed(seed), &h);
+    if (st != N4M_OK) r_pp_throw_status("n4m_sample_filter_create", st);
+    SEXP ptr = PROTECT(R_MakeExternalPtr(h, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(ptr, r_pp_sample_finalizer, TRUE);
+    UNPROTECT(1);
+    return ptr;
+}
+
+SEXP r_n4m_sample_filter_add_child(SEXP ptr, SEXP kind, SEXP ints,
+                                    SEXP values, SEXP seed) {
+    int32_t ni = 0, nd = 0;
+    int64_t* ip = r_pp_integer_params(ints, &ni);
+    const double* dp = r_pp_double_params(values, &nd);
+    n4m_status_t st = n4m_sample_filter_add_child(
+        (n4m_sample_filter_t*)r_pp_filter_ptr(ptr, "sample"),
+        r_pp_int_scalar(kind, "kind"), ip, ni, dp, nd, r_pp_seed(seed));
+    if (st != N4M_OK) r_pp_throw_status("n4m_sample_filter_add_child", st);
+    return ptr;
+}
+
+SEXP r_n4m_sample_filter_fit(SEXP ptr, SEXP X, SEXP Y) {
+    n4m_matrix_view_t xv = r_pp_filter_view(X), yv = {0};
+    if (Y != R_NilValue) yv = r_pp_filter_view(Y);
+    n4m_status_t st = n4m_sample_filter_fit(
+        (n4m_sample_filter_t*)r_pp_filter_ptr(ptr, "sample"), &xv,
+        Y == R_NilValue ? NULL : &yv);
+    if (st != N4M_OK) r_pp_throw_status("n4m_sample_filter_fit", st);
+    return ptr;
+}
+
+SEXP r_n4m_sample_filter_apply(SEXP ptr, SEXP X, SEXP Y) {
+    n4m_matrix_view_t xv = r_pp_filter_view(X), yv = {0};
+    if (Y != R_NilValue) yv = r_pp_filter_view(Y);
+    uint8_t* bits = (uint8_t*)R_alloc((size_t)xv.rows, sizeof(uint8_t));
+    n4m_filter_stats_t stats = {0};
+    n4m_status_t st = n4m_sample_filter_apply(
+        (n4m_sample_filter_t*)r_pp_filter_ptr(ptr, "sample"), &xv,
+        Y == R_NilValue ? NULL : &yv, bits, &stats);
+    if (st != N4M_OK) r_pp_throw_status("n4m_sample_filter_apply", st);
+    SEXP mask = PROTECT(Rf_allocVector(LGLSXP, xv.rows));
+    for (int64_t j = 0; j < xv.rows; ++j) LOGICAL(mask)[j] = bits[j] != 0;
+    SEXP counts = PROTECT(Rf_allocVector(REALSXP, 4));
+    REAL(counts)[0] = (double)stats.n_samples;
+    REAL(counts)[1] = (double)stats.n_kept;
+    REAL(counts)[2] = (double)stats.n_excluded;
+    REAL(counts)[3] = stats.exclusion_rate;
+    SEXP out = PROTECT(Rf_allocVector(VECSXP, 2));
+    SET_VECTOR_ELT(out, 0, mask);
+    SET_VECTOR_ELT(out, 1, counts);
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, 2));
+    SET_STRING_ELT(names, 0, Rf_mkChar("mask"));
+    SET_STRING_ELT(names, 1, Rf_mkChar("stats"));
+    Rf_setAttrib(out, R_NamesSymbol, names);
+    UNPROTECT(4);
+    return out;
+}
+
+SEXP r_n4m_feature_filter_create(SEXP kind, SEXP threshold, SEXP top_k) {
+    n4m_feature_filter_t* h = NULL;
+    n4m_status_t st = n4m_feature_filter_create(
+        r_pp_int_scalar(kind, "kind"), r_pp_double_scalar(threshold, "threshold"),
+        r_pp_int_scalar(top_k, "top_k"), &h);
+    if (st != N4M_OK) r_pp_throw_status("n4m_feature_filter_create", st);
+    SEXP ptr = PROTECT(R_MakeExternalPtr(h, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(ptr, r_pp_feature_finalizer, TRUE);
+    UNPROTECT(1);
+    return ptr;
+}
+
+SEXP r_n4m_feature_filter_fit(SEXP ptr, SEXP X, SEXP Y) {
+    n4m_matrix_view_t xv = r_pp_filter_view(X), yv = {0};
+    if (Y != R_NilValue) yv = r_pp_filter_view(Y);
+    n4m_status_t st = n4m_feature_filter_fit(
+        (n4m_feature_filter_t*)r_pp_filter_ptr(ptr, "feature"), &xv,
+        Y == R_NilValue ? NULL : &yv);
+    if (st != N4M_OK) r_pp_throw_status("n4m_feature_filter_fit", st);
+    return ptr;
+}
+
+SEXP r_n4m_feature_filter_indices(SEXP ptr) {
+    n4m_feature_filter_t* h = (n4m_feature_filter_t*)r_pp_filter_ptr(ptr, "feature");
+    int64_t count = 0;
+    n4m_status_t st = n4m_feature_filter_selected_indices(h, NULL, 0, &count);
+    if (st != N4M_OK) r_pp_throw_status("n4m_feature_filter_selected_indices", st);
+    if (count > INT_MAX) Rf_error("selected index count exceeds R integer limit");
+    int64_t* ids = (int64_t*)R_alloc((size_t)(count > 0 ? count : 1), sizeof(int64_t));
+    st = n4m_feature_filter_selected_indices(h, ids, count, &count);
+    if (st != N4M_OK) r_pp_throw_status("n4m_feature_filter_selected_indices", st);
+    SEXP out = PROTECT(Rf_allocVector(INTSXP, count));
+    for (int64_t j = 0; j < count; ++j) {
+        if (ids[j] < 0 || ids[j] >= INT_MAX) Rf_error("native selected index exceeds R limit");
+        INTEGER(out)[j] = (int)ids[j] + 1;
+    }
+    UNPROTECT(1);
+    return out;
+}
+
+SEXP r_n4m_feature_filter_transform(SEXP ptr, SEXP X) {
+    n4m_feature_filter_t* h = (n4m_feature_filter_t*)r_pp_filter_ptr(ptr, "feature");
+    n4m_matrix_view_t xv = r_pp_filter_view(X), ov = {0};
+    int64_t cols = 0;
+    n4m_status_t st = n4m_feature_filter_output_cols(h, &cols);
+    if (st != N4M_OK) r_pp_throw_status("n4m_feature_filter_output_cols", st);
+    double* output = (double*)R_alloc((size_t)(xv.rows * (cols > 0 ? cols : 1)), sizeof(double));
+    st = n4m_matrix_view_init_rowmajor(&ov, output, xv.rows, cols, N4M_DTYPE_F64);
+    if (st != N4M_OK) r_pp_throw_status("feature filter output view", st);
+    st = n4m_feature_filter_transform(h, &xv, &ov);
+    if (st != N4M_OK) r_pp_throw_status("n4m_feature_filter_transform", st);
+    return r_pp_rowmajor_to_matrix(output, xv.rows, cols);
+}
