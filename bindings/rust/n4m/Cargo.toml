@@ -41,4 +41,6 @@ cc = "1.1"
 libloading = { version = "0.8", optional = true }
 
 [dev-dependencies]
+base64 = "0.22"
+serde_json = { version = "1", features = ["float_roundtrip"] }
 static_assertions = "1.1"
