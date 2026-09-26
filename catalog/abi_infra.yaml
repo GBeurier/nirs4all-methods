@@ -1,4 +1,17 @@
 infra_abi_symbols:
+  - n4m_feature_filter_create
+  - n4m_feature_filter_destroy
+  - n4m_feature_filter_fit
+  - n4m_feature_filter_is_fitted
+  - n4m_feature_filter_output_cols
+  - n4m_feature_filter_selected_indices
+  - n4m_feature_filter_transform
+  - n4m_sample_filter_add_child
+  - n4m_sample_filter_apply
+  - n4m_sample_filter_create
+  - n4m_sample_filter_destroy
+  - n4m_sample_filter_fit
+  - n4m_sample_filter_is_fitted
   - n4m_augmentation_run
   - n4m_array_dtype
   - n4m_array_free

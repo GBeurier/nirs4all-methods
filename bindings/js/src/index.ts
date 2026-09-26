@@ -30,6 +30,9 @@ export { NativeModel } from "./nativeModel.js";
 export { splitNative, type NativeSplitterKind,
          type NativeSplitterOptions, type NativeSplitIndices } from "./nativeSplitter.js";
 export { augmentNative, type NativeAugmentationKind } from "./nativeAugmentation.js";
+export { NativeSampleFilter, NativeFeatureFilter,
+         type SampleFilterKind, type FeatureFilterKind,
+         type NativeFilterStats } from "./nativeFilter.js";
 export {
     NativePreprocessingPipeline,
     PipelineOperatorKind,
