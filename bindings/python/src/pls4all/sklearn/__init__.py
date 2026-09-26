@@ -19,14 +19,14 @@ Persistence strategy per family:
   (`SparseSimplsRegression`, `CPPLSRegression`, `ECRegression`,
   `DIPLSRegression`, `MIRPLSRegression`, `MBPLSRegression`,
   `NPLSRegression`, `O2PLSRegression`, `PLSGLMRegressor`,
-  `RobustPLSRegression`, `RidgePLSRegression`, `ContinuumRegression`)
+  `RobustPLSRegression`, `RidgePLSRegression`, `ContinuumRegression`,
+  `FusedSparsePLSRegression`, `BaggingPLSRegression`,
+  `BoostingPLSRegression`, `RandomSubspacePLSRegression`)
   serialize their (coef, x_mean, y_mean) state as plain NumPy.
 * **In-sample-only regressors** (`WeightedPLSRegression`,
   `RecursivePLSRegression`, `LWPLSRegression`,
   `MissingAwareNipalsRegression`, `GroupSparsePLSRegression`,
-  `FusedSparsePLSRegression`, `BaggingPLSRegression`,
-  `GPRPLSRegression`, `BoostingPLSRegression`,
-  `RandomSubspacePLSRegression`, `SOPLSRegression`, `ROSARegression`)
+  `GPRPLSRegression`, `SOPLSRegression`, `ROSARegression`)
   store the in-sample `predictions_` and refuse predict-on-new-X
   with an informative error pointing to tier 1. See
   :mod:`pls4all.sklearn._in_sample` for the contract.

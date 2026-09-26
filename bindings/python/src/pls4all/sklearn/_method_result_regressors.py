@@ -16,12 +16,11 @@ Methods deliberately NOT wrapped here:
 * ``recursive_pls_run`` / ``so_pls_fit`` / ``rosa_fit`` / ``lw_pls_fit``
   — return predictions only; locally-fitted models with no global
   coefficient export.
-* ``bagging_pls_fit`` / ``boosting_pls_fit`` /
-  ``random_subspace_pls_fit`` — ensembles without exposed per-member
-  state; deferred until the ABI grows an export hook.
-* ``group_sparse_pls_fit`` / ``fused_sparse_pls_fit`` /
-  ``on_pls_fit`` / ``o2pls_fit`` — decomposition only; no
-  predict-on-new-X path yet.
+* ``on_pls_fit`` — decomposition only; no global predict-on-new-X path yet.
+  Fused Sparse PLS, Bagging PLS, Boosting PLS, and Random Subspace PLS
+  expose aggregate affine coefficients and predict via wrappers in
+  ``_in_sample``. Group Sparse PLS also exposes coefficients in the ABI,
+  but its Python wrapper has not yet been promoted.
 * ``missing_aware_nipals_fit`` / ``kernel_pls_fit`` — special preds
   paths (kernel needs alpha + kernel matrix); deferred to dedicated
   wrappers.

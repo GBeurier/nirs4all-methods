@@ -23,26 +23,29 @@ import pickle
 
 import numpy as np
 import pytest
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-
 from pls4all.sklearn import (
-    CPPLSRegression,
+    PCR,
+    PLSSVD,
+    BaggingPLSRegression,
+    BoostingPLSRegression,
     ContinuumRegression,
+    CPPLSRegression,
     DIPLSRegression,
     ECRegression,
+    FusedSparsePLSRegression,
     MBPLSRegression,
     MIRPLSRegression,
     OPLSRegression,
-    PCR,
     PLSCanonical,
     PLSRegression,
-    PLSSVD,
+    RandomSubspacePLSRegression,
     RidgePLSRegression,
     RobustPLSRegression,
     SparsePLSRegression,
     SparseSimplsRegression,
 )
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 
 @pytest.fixture(scope="module")
@@ -70,6 +73,10 @@ REGRESSORS_SINGLE = [
     (ContinuumRegression, dict(n_components=5, tau=0.5)),
     (ECRegression, dict(n_components=5, alpha=0.5)),
     (MIRPLSRegression, dict(n_components=5)),
+    (FusedSparsePLSRegression, dict(n_components=5, l1_lambda=0.05, fusion_lambda=0.05)),
+    (BaggingPLSRegression, dict(n_components=5, n_estimators=5, seed=7)),
+    (BoostingPLSRegression, dict(n_components=5, n_estimators=5, learning_rate=0.1)),
+    (RandomSubspacePLSRegression, dict(n_components=5, n_estimators=5, features_per_subspace=10, seed=7)),
     (MBPLSRegression, dict(n_components=5, block_sizes=[15, 15])),
 ]
 
@@ -148,7 +155,7 @@ def _raw_method_result_predict(fn, n_components, X, y, *, X_predict=None,
     """Run the tier-1 *_fit and replay the prediction math the wrapper
     is supposed to use: ``(X - x_mean) @ coef + y_mean``."""
     import pls4all
-    from pls4all import Algorithm, Solver, Deflation
+    from pls4all import Algorithm, Deflation, Solver
     ctx = pls4all.Context()
     cfg = pls4all.Config()
     cfg.algorithm = Algorithm.PLS_REGRESSION
@@ -162,14 +169,84 @@ def _raw_method_result_predict(fn, n_components, X, y, *, X_predict=None,
     cfg.tol = 1e-6
     cfg.max_iter = 500
     try:
-        res = fn(ctx, cfg, X, y.reshape(-1, 1), **fn_kwargs)
+        res = fn(ctx, cfg, X, y.reshape(X.shape[0], -1), **fn_kwargs)
     finally:
         cfg.close()
     coef = np.asarray(res.matrix("coefficients"), dtype=np.float64)
     x_mean = np.asarray(res.matrix("x_mean"), dtype=np.float64).ravel()
     y_mean = np.asarray(res.matrix("y_mean"), dtype=np.float64).ravel()
     preds = ((X if X_predict is None else X_predict) - x_mean) @ coef + y_mean
-    return preds.ravel()
+    return preds.ravel() if y.ndim == 1 else preds
+
+
+@pytest.mark.parametrize("cls,params,fit_name,fit_params", [
+    (FusedSparsePLSRegression, {"l1_lambda": 0.08, "fusion_lambda": 0.2},
+     "fused_sparse_pls_fit", {"l1_lambda": 0.08, "fusion_lambda": 0.2}),
+    (BaggingPLSRegression, {"n_estimators": 7, "seed": 13},
+     "bagging_pls_fit", {"n_estimators": 7, "seed": 13}),
+    (BoostingPLSRegression, {"n_estimators": 7, "learning_rate": 0.3},
+     "boosting_pls_fit", {"n_estimators": 7, "learning_rate": 0.3}),
+    (RandomSubspacePLSRegression,
+     {"n_estimators": 7, "features_per_subspace": 11, "seed": 13},
+     "random_subspace_pls_fit",
+     {"n_estimators": 7, "features_per_subspace": 11, "seed": 13}),
+])
+def test_affine_extra_heldout_matches_native_coefficients(
+        cls, params, fit_name, fit_params, regression_data):
+    import pls4all
+    from pls4all.migration import export_linear_predictor_n4mm
+
+    X, y, _ = regression_data
+    X_heldout = X[:9] + 0.031
+    estimator = cls(n_components=3, **params).fit(X, y)
+    expected = _raw_method_result_predict(
+        getattr(pls4all, fit_name), 3, X, y,
+        X_predict=X_heldout, **fit_params)
+    np.testing.assert_allclose(estimator.predict(X_heldout), expected,
+                               rtol=0, atol=1e-12)
+    np.testing.assert_array_equal(
+        estimator.predict(X_heldout),
+        pickle.loads(pickle.dumps(estimator)).predict(X_heldout))
+    payload = export_linear_predictor_n4mm(
+        np.asarray(estimator.coef_, dtype=np.float64).reshape(-1, 1).tolist(),
+        [float(estimator.intercept_)],
+        source_training_samples=X.shape[0])
+    with pls4all.Context() as context, pls4all.Model.from_bytes(context, payload) as model:
+        np.testing.assert_allclose(
+            model.predict(context, X_heldout).ravel(),
+            estimator.predict(X_heldout), rtol=0, atol=1e-12)
+
+
+@pytest.mark.parametrize("cls,params,fit_name", [
+    (FusedSparsePLSRegression, {"l1_lambda": 0.05, "fusion_lambda": 0.05},
+     "fused_sparse_pls_fit"),
+    (BaggingPLSRegression, {"n_estimators": 5, "seed": 7}, "bagging_pls_fit"),
+    (BoostingPLSRegression, {"n_estimators": 5, "learning_rate": 0.1},
+     "boosting_pls_fit"),
+    (RandomSubspacePLSRegression,
+     {"n_estimators": 5, "features_per_subspace": 10, "seed": 7},
+     "random_subspace_pls_fit"),
+])
+def test_affine_extra_multi_target_heldout_and_n4mm(
+        cls, params, fit_name, regression_data):
+    import pls4all
+    from pls4all.migration import export_linear_predictor_n4mm
+
+    X, _, Y = regression_data
+    X_heldout = X[:7] - 0.019
+    estimator = cls(n_components=3, **params).fit(X, Y)
+    native_expected = _raw_method_result_predict(
+        getattr(pls4all, fit_name), 3, X, Y,
+        X_predict=X_heldout, **params)
+    np.testing.assert_allclose(estimator.predict(X_heldout), native_expected,
+                               rtol=0, atol=1e-12)
+    payload = export_linear_predictor_n4mm(
+        np.asarray(estimator.coef_, dtype=np.float64).T.tolist(),
+        np.asarray(estimator.intercept_, dtype=np.float64).tolist(),
+        source_training_samples=X.shape[0])
+    with pls4all.Context() as context, pls4all.Model.from_bytes(context, payload) as model:
+        np.testing.assert_allclose(model.predict(context, X_heldout),
+                                   estimator.predict(X_heldout), rtol=0, atol=1e-12)
 
 
 def test_sparse_simpls_wrapper_bitexact(regression_data):
@@ -256,7 +333,7 @@ def test_mb_pls_wrapper_predict_matches_in_sample(regression_data):
     """MB-PLS stores its in-sample predictions directly. Wrapper.predict
     on X_train must match res.matrix('predictions')."""
     import pls4all
-    from pls4all import Algorithm, Solver, Deflation
+    from pls4all import Algorithm, Deflation, Solver
     X, y, _ = regression_data
     block_sizes = np.array([15, 15], dtype=np.int64)
     wrapper = MBPLSRegression(n_components=5,
