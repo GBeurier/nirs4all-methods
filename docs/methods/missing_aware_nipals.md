@@ -47,7 +47,7 @@ Current implementation: [cpp/src/core/model.cpp](https://github.com/GBeurier/nir
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_estimators_missing_aware_nipals_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/regression.h#L321). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_estimators_missing_aware_nipals_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/regression.h#L326). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 

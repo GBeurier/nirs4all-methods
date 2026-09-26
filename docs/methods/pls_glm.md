@@ -1,4 +1,4 @@
-# `pls_glm` — PLS-GLM compatibility entry point
+# `pls_glm` — PLS generalized linear regression
 
 _Group_: **Classification & GLM** · _Registry tolerance_: `1e-06`
 
@@ -6,7 +6,7 @@ _Group_: **Classification & GLM** · _Registry tolerance_: `1e-06`
 
 PLS-GLM (§5) — softmax/Poisson IRLS on PLS scores
 
-> **Registry note** — R `plsRglm::plsRglm` (Bastien, Vinzi & Tenenhaus 2005) with `scaleX=FALSE`. pls4all's default now mirrors the plsRglm algorithm exactly: per-component partial-regression weights (Gaussian-identity uses closed-form OLS; Poisson-log uses IRLS), score-space GLM coefficients, and per-target stacking. The legacy single-pass C++ kernel (centred SIMPLS + column-mean intercept) is opt-in via ``legacy=True``.
+> **Registry note** — R `plsRglm::plsRglm` (Bastien, Vinzi & Tenenhaus 2005) with `scaleX=FALSE`. pls4all's default now mirrors the plsRglm algorithm exactly: per-component partial-regression weights (Gaussian-identity uses closed-form OLS; Poisson-log uses IRLS), score-space GLM coefficients, and per-target stacking. The native C++ kernel (``legacy=True``) runs the same algorithm.
 
 ### Parameters
 
@@ -20,23 +20,23 @@ PLS-GLM (§5) — softmax/Poisson IRLS on PLS scores
 
 ### Bibliographic source
 
-No canonical paper validates the shipped SIMPLS compatibility path as a Poisson/generalized-linear model; it is not attributed to a GLM solver.
+Bastien, P., Esposito Vinzi, V. & Tenenhaus, M. (2005). *PLS generalised linear regression*. Computational Statistics & Data Analysis 48(1), 17--46. DOI [10.1016/j.csda.2004.02.005](https://doi.org/10.1016/j.csda.2004.02.005).
 
 ### Mathematical principle
 
-The shipped routine centres Y once and fits ordinary SIMPLS. It does not construct GLM working responses, apply an inverse link, or iterate reweighted least squares. The stored Poisson flag does not alter the numerical fit.
+Component $k$ weights column $j$ by the coefficient of the deflated $\mathbf X_j$ in the GLM of $y$ on $(1,\mathbf t_1,\dots,\mathbf t_{k-1},\mathbf X_j)$; the normalized weights give the score $\mathbf t_k$ and $\mathbf X$ is deflated on it. A final GLM of $y$ on $(1,\mathbf T)$ with the identity, log or logit link is folded back to the input scale through $\mathbf W(\mathbf P^\top\mathbf W)^{-1}$.
 
 ### Appropriate uses
 
-Compatibility experiments requiring the public PLS-GLM entry point with continuous responses.
+Generalized linear regression of continuous (Gaussian), count (Poisson) or proportion (binomial) responses on many collinear spectral predictors.
 
 ### Limits and validation
 
-Current code only centers Y and runs one SIMPLS fit; the Poisson flag is stored but does not change fitting, and no link or IRLS is implemented.
+Weights come from one GLM fit per column and component, so the Poisson and binomial fits cost p IRLS solves per component; X is not scaled (plsRglm scaleX = FALSE), and separable binomial data make the logit coefficients diverge.
 
 ### Implementation
 
-Outputs must be interpreted as linear PLS predictions. In particular, they are not constrained positive and are not fitted by a Poisson likelihood; use of this entry point for count inference would be misleading.
+One model per response column, as plsRglm with scaleX = FALSE: Gaussian weights use the closed-form partial regression, Poisson and binomial weights and the final score model use IRLS (at most `max_iter` steps, tolerance `tol`). Predictions are the mean response $g^{-1}(\mathbf X\mathbf B+b_0)$.
 
 ### Sources and provenance
 
@@ -45,7 +45,7 @@ Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_estimators_pls_glm_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/regression.h#L306). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_estimators_pls_glm_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/regression.h#L311). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
@@ -62,7 +62,7 @@ The source signature has additional required inputs, so no example call is fabri
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.r_plsrglm`** (R · r) — `plsRglm` 1.5.1 · strict (rmse_rel ≤ 1e-06) — R `plsRglm::plsRglm` (Bastien, Vinzi & Tenenhaus 2005) with the `pls-glm-gaussian` / `pls-glm-poisson` family. pls4all implements a simpler PLS-then-link variant so predictions diverge substantially; the parity check is a presence flag for the external reference.
+- 📐 **`ref.r_plsrglm`** (R · r) — `plsRglm` 1.5.1 · strict (rmse_rel ≤ 1e-06) — R `plsRglm::plsRglm` (Bastien, Vinzi & Tenenhaus 2005) with the `pls-glm-gaussian` / `pls-glm-poisson` family. The native n4m kernel implements the same algorithm (ABI 2.13).
 
 :::
 

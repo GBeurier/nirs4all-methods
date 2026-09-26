@@ -30,9 +30,33 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+notes: "PLS generalized linear regression (Bastien, Esposito Vinzi & Tenenhaus 2005) as plsRglm runs it with scaleX = FALSE, one model per Y column; gaussian identity, poisson log or binomial logit link. Estimator role: predict returns the mean response g^-1(X B + b); state = input-scale coefficients + intercept + family."
 c_surface:
   - "n4m_estimators_pls_glm_fit"
+estimator:
+  kind: "estimator"
+  adapter: "pls_glm"
+  roles: "[regressor]"
+  state: "pls_glm"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "family"
+      type: "enum"
+      choices: "[gaussian, poisson, binomial]"
+      default: "gaussian"
+    - name: "max_iter"
+      type: "int"
+      default: 100
+      min: 1
+    - name: "tol"
+      type: "double"
+      default: 1e-10
+      min: 0.0
 fq_name: "n4m.estimators.regression.glm.pls_glm"
 leaf: "pls_glm"
 legacy_ids:
