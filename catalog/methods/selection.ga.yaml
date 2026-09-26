@@ -33,6 +33,48 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_feature_selection_ga_select"
+estimator:
+  kind: "estimator"
+  adapter: "select_ga"
+  roles: "[selector]"
+  state: "selection"
+  inputs:
+    y: "required"
+    fold_ids: "optional"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "n_generations"
+      type: "int"
+      default: 30
+      min: 1
+    - name: "population_size"
+      type: "int"
+      default: 40
+      min: 2
+    - name: "min_features"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "max_features"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "mutation_rate"
+      type: "double"
+      default: 0.05
+      min: 0.0
+      max: 1.0
+    - name: "cv"
+      type: "int"
+      default: 3
+      min: 2
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.feature_selection.wrapper.ga"
 leaf: "ga"
 legacy_ids:

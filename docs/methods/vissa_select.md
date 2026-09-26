@@ -12,14 +12,13 @@ VISSA-PLS — Variable Iterative Space Shrinkage (§49)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `2` | current public binding signature |
-| `n_iterations` | `int` | `10` | current public binding signature |
-| `n_submodels` | `int` | `60` | current public binding signature |
-| `ratio_kept` | `float` | `0.1` | current public binding signature |
-| `threshold` | `float` | `0.5` | current public binding signature |
-| `floor_probability` | `float` | `0.05` | current public binding signature |
-| `n_folds` | `int` | `3` | current public binding signature |
-| `seed` | `int` | `0` | current public binding signature |
+| `n_components` | `int` | `3` | registry benchmark cell value |
+| `n_iterations` | `int` | `10` | registry benchmark cell value |
+| `n_submodels` | `int` | `60` | registry benchmark cell value |
+| `ratio_kept` | `float` | `0.1` | registry benchmark cell value |
+| `threshold` | `float` | `0.5` | registry benchmark cell value |
+| `floor_probability` | `float` | `0.05` | registry benchmark cell value |
+| `seed` | `int` | `42` | registry benchmark cell value |
 
 ## Explanations
 
@@ -54,13 +53,7 @@ Current implementation: [cpp/src/core/vissa_selection.cpp](https://github.com/GB
 
 **C ABI (ABI 2):** [`n4m_feature_selection_vissa_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L216). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import VISSA
-```
-
-Source signature: `VISSA(*, n_components: int = 2, n_iterations: int = 10, n_submodels: int = 60, ratio_kept: float = 0.1, threshold: float = 0.5, floor_probability: float = 0.05, n_folds: int = 3, seed: int = 0)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L365)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`vissa_select(X, Y, n_components, n_iterations = 20L, n_submodels = 100L, ratio_kept = 0.1, threshold = 0.5, floor_probability = 0.01, seed = 0L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

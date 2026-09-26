@@ -33,6 +33,31 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_feature_selection_cars_select"
+estimator:
+  kind: "estimator"
+  adapter: "select_cars"
+  roles: "[selector]"
+  state: "selection"
+  inputs:
+    y: "required"
+    fold_ids: "optional"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "n_iterations"
+      type: "int"
+      default: 50
+      min: 1
+    - name: "min_features"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "cv"
+      type: "int"
+      default: 3
+      min: 2
 fq_name: "n4m.feature_selection.wrapper.cars"
 leaf: "cars"
 legacy_ids:

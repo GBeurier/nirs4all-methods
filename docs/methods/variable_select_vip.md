@@ -12,9 +12,8 @@ VIP top-k variable selection (§18 Phase 5a, method=0)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `top_k` | `int` | `required` | current public binding signature |
-| `n_components` | `int` | `2` | current public binding signature |
-| `rank_method` | `int` | `0` | current public binding signature |
+| `n_components` | `int` | `4` | registry benchmark cell value |
+| `top_k` | `int` | `10` | registry benchmark cell value |
 
 ## Explanations
 
@@ -49,13 +48,7 @@ Current implementation: [cpp/src/core/variable_selection.cpp](https://github.com
 
 **C ABI (ABI 2):** [`n4m_feature_selection_variable_select_rank`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L58). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.ranking import VariableSelect
-```
-
-Source signature: `VariableSelect(top_k: int, *, n_components: int = 2, rank_method: int = 0)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L93)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R:** no current source-verified entry point was found for this catalog method.
 

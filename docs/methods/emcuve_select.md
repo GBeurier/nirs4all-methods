@@ -12,12 +12,11 @@ EMCUVE ensemble MC-UVE (§18 Phase 5n)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `2` | current public binding signature |
-| `noise_features` | `int` | `50` | current public binding signature |
-| `noise_seed` | `int` | `0` | current public binding signature |
-| `n_ensembles` | `int` | `10` | current public binding signature |
-| `vote_threshold` | `float` | `0.5` | current public binding signature |
-| `n_folds` | `int` | `3` | current public binding signature |
+| `n_components` | `int` | `4` | registry benchmark cell value |
+| `noise_features` | `int` | `5` | registry benchmark cell value |
+| `n_ensembles` | `int` | `5` | registry benchmark cell value |
+| `vote_threshold` | `float` | `0.5` | registry benchmark cell value |
+| `noise_seed` | `int` | `11` | registry benchmark cell value |
 
 ## Explanations
 
@@ -52,13 +51,7 @@ Current implementation: [cpp/src/core/emcuve_selection.cpp](https://github.com/G
 
 **C ABI (ABI 2):** [`n4m_feature_selection_emcuve_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L289). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import EMCUVE
-```
-
-Source signature: `EMCUVE(*, n_components: int = 2, noise_features: int = 50, noise_seed: int = 0, n_ensembles: int = 10, vote_threshold: float = 0.5, n_folds: int = 3)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L674)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`emcuve_select(X, Y, n_components, noise_features = NULL, noise_seed = 0L, n_ensembles = 5L, vote_threshold = 0.5)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

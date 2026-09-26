@@ -53,6 +53,10 @@ estimator:
       type: "int"
       default: 10
       min: 1
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.ensemble.random_subspace_pls"
 leaf: "random_subspace_pls"
 legacy_ids:

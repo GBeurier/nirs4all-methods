@@ -12,8 +12,8 @@ SPA Successive Projections (§18 Phase 5e)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `top_k` | `int` | `required` | current public binding signature |
-| `n_components` | `int` | `2` | current public binding signature |
+| `n_components` | `int` | `4` | registry benchmark cell value |
+| `top_k` | `int` | `10` | registry benchmark cell value |
 
 ## Explanations
 
@@ -50,13 +50,7 @@ Current implementation: [cpp/src/core/spa_selection.cpp](https://github.com/GBeu
 
 **C ABI (ABI 2):** [`n4m_feature_selection_spa_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L99). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import SPA
-```
-
-Source signature: `SPA(top_k: int, *, n_components: int = 2)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L109)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`spa_select(X, Y, n_components, top_k)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/selectors.R).
 

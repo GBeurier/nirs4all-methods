@@ -3,9 +3,11 @@
 
 const std::int64_t kDefault_models_ensembles_bagging_pls_n_components[] = {2};
 const std::int64_t kDefault_models_ensembles_bagging_pls_n_estimators[] = {50};
+const std::int64_t kDefault_models_ensembles_bagging_pls_seed[] = {0};
 const ParamSpec kParams_models_ensembles_bagging_pls[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_bagging_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_bagging_pls_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_bagging_pls_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
 const std::int64_t kDefault_models_ensembles_boosting_pls_n_components[] = {2};
 const std::int64_t kDefault_models_ensembles_boosting_pls_n_estimators[] = {50};
@@ -18,10 +20,12 @@ const ParamSpec kParams_models_ensembles_boosting_pls[] = {
 const std::int64_t kDefault_models_ensembles_random_subspace_pls_n_components[] = {2};
 const std::int64_t kDefault_models_ensembles_random_subspace_pls_n_estimators[] = {50};
 const std::int64_t kDefault_models_ensembles_random_subspace_pls_features_per_subspace[] = {10};
+const std::int64_t kDefault_models_ensembles_random_subspace_pls_seed[] = {0};
 const ParamSpec kParams_models_ensembles_random_subspace_pls[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"features_per_subspace", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_features_per_subspace, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
 const std::int64_t kDefault_models_multiblock_mb_pls_n_components[] = {2};
 const ParamSpec kParams_models_multiblock_mb_pls[] = {
@@ -172,11 +176,300 @@ const ParamSpec kParams_models_transfer_di_pls[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_transfer_di_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"di_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_transfer_di_pls_di_lambda, 1, 0.0, kNaN, nullptr, 0},
 };
+const std::int64_t kDefault_selection_bipls_n_components[] = {2};
+const std::int64_t kDefault_selection_bipls_interval_width[] = {10};
+const std::int64_t kDefault_selection_bipls_min_intervals[] = {2};
+const std::int64_t kDefault_selection_bipls_cv[] = {3};
+const ParamSpec kParams_selection_bipls[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"interval_width", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_interval_width, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"min_intervals", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_min_intervals, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_bve_n_components[] = {2};
+const std::int64_t kDefault_selection_bve_n_steps[] = {10};
+const std::int64_t kDefault_selection_bve_min_features[] = {0};
+const std::int64_t kDefault_selection_bve_cv[] = {3};
+const ParamSpec kParams_selection_bve[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_steps", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_n_steps, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_cars_n_components[] = {2};
+const std::int64_t kDefault_selection_cars_n_iterations[] = {50};
+const std::int64_t kDefault_selection_cars_min_features[] = {0};
+const std::int64_t kDefault_selection_cars_cv[] = {3};
+const ParamSpec kParams_selection_cars[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_emcuve_n_components[] = {2};
+const std::int64_t kDefault_selection_emcuve_noise_features[] = {50};
+const std::int64_t kDefault_selection_emcuve_noise_seed[] = {0};
+const std::int64_t kDefault_selection_emcuve_n_ensembles[] = {10};
+const double kDefault_selection_emcuve_vote_threshold[] = {0.5};
+const std::int64_t kDefault_selection_emcuve_cv[] = {3};
+const ParamSpec kParams_selection_emcuve[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"noise_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_noise_features, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"noise_seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_ensembles", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_n_ensembles, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"vote_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_emcuve_vote_threshold, 1, 0.0, 1.0, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_ga_n_components[] = {2};
+const std::int64_t kDefault_selection_ga_n_generations[] = {30};
+const std::int64_t kDefault_selection_ga_population_size[] = {40};
+const std::int64_t kDefault_selection_ga_min_features[] = {0};
+const std::int64_t kDefault_selection_ga_max_features[] = {0};
+const double kDefault_selection_ga_mutation_rate[] = {0.05};
+const std::int64_t kDefault_selection_ga_cv[] = {3};
+const std::int64_t kDefault_selection_ga_seed[] = {0};
+const ParamSpec kParams_selection_ga[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_generations", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_n_generations, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"population_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_population_size, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"max_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_max_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"mutation_rate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ga_mutation_rate, 1, 0.0, 1.0, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_ipw_n_components[] = {2};
+const std::int64_t kDefault_selection_ipw_n_iterations[] = {20};
+const double kDefault_selection_ipw_damping[] = {0.5};
+const double kDefault_selection_ipw_weight_floor[] = {1e-06};
+const std::int64_t kDefault_selection_ipw_cv[] = {3};
+const ParamSpec kParams_selection_ipw[] = {
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_ipw_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_ipw_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"damping", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ipw_damping, 1, 0.0, 1.0, nullptr, 0},
+    {"weight_floor", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ipw_weight_floor, 1, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_ipw_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_irf_n_components[] = {2};
+const std::int64_t kDefault_selection_irf_n_iterations[] = {100};
+const std::int64_t kDefault_selection_irf_window_size[] = {5};
+const std::int64_t kDefault_selection_irf_initial_intervals[] = {5};
+const std::int64_t kDefault_selection_irf_cv[] = {3};
+const std::int64_t kDefault_selection_irf_seed[] = {0};
+const ParamSpec kParams_selection_irf[] = {
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"initial_intervals", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_initial_intervals, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_iriv_n_components[] = {2};
+const std::int64_t kDefault_selection_iriv_max_rounds[] = {5};
+const std::int64_t kDefault_selection_iriv_cv[] = {5};
+const std::int64_t kDefault_selection_iriv_seed[] = {0};
+const ParamSpec kParams_selection_iriv[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"max_rounds", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_max_rounds, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_pso_n_components[] = {2};
+const std::int64_t kDefault_selection_pso_n_swarm[] = {30};
+const std::int64_t kDefault_selection_pso_n_iterations[] = {50};
+const double kDefault_selection_pso_w[] = {0.729};
+const double kDefault_selection_pso_c1[] = {1.494};
+const double kDefault_selection_pso_c2[] = {1.494};
+const double kDefault_selection_pso_v_max[] = {4.0};
+const std::int64_t kDefault_selection_pso_cv[] = {3};
+const std::int64_t kDefault_selection_pso_seed[] = {0};
+const ParamSpec kParams_selection_pso[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_swarm", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_n_swarm, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"w", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_w, 1, kNaN, kNaN, nullptr, 0},
+    {"c1", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_c1, 1, kNaN, kNaN, nullptr, 0},
+    {"c2", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_c2, 1, kNaN, kNaN, nullptr, 0},
+    {"v_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_v_max, 1, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_random_frog_n_components[] = {2};
+const std::int64_t kDefault_selection_random_frog_n_iterations[] = {100};
+const std::int64_t kDefault_selection_random_frog_initial_size[] = {20};
+const std::int64_t kDefault_selection_random_frog_min_size[] = {0};
+const std::int64_t kDefault_selection_random_frog_max_size[] = {0};
+const std::int64_t kDefault_selection_random_frog_cv[] = {3};
+const std::int64_t kDefault_selection_random_frog_seed[] = {0};
+const ParamSpec kParams_selection_random_frog[] = {
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"initial_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_initial_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"min_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_min_size, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"max_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_max_size, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_randomization_n_components[] = {2};
+const std::int64_t kDefault_selection_randomization_n_permutations[] = {200};
+const std::int64_t kDefault_selection_randomization_randomization_seed[] = {0};
+const double kDefault_selection_randomization_alpha[] = {0.05};
+const ParamSpec kParams_selection_randomization[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_randomization_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_permutations", N4M_METHOD_PARAM_INT, true, kDefault_selection_randomization_n_permutations, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"randomization_seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_randomization_randomization_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_randomization_alpha, 1, 0.0, 1.0, nullptr, 0},
+};
+const std::int64_t kDefault_selection_rep_n_components[] = {2};
+const std::int64_t kDefault_selection_rep_n_steps[] = {10};
+const std::int64_t kDefault_selection_rep_min_features[] = {0};
+const std::int64_t kDefault_selection_rep_remove_count[] = {1};
+const std::int64_t kDefault_selection_rep_cv[] = {3};
+const ParamSpec kParams_selection_rep[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_steps", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_n_steps, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"remove_count", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_remove_count, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_scars_n_components[] = {2};
+const std::int64_t kDefault_selection_scars_n_iterations[] = {50};
+const std::int64_t kDefault_selection_scars_min_features[] = {0};
+const double kDefault_selection_scars_sample_fraction[] = {0.8};
+const std::int64_t kDefault_selection_scars_cv[] = {3};
+const std::int64_t kDefault_selection_scars_seed[] = {0};
+const ParamSpec kParams_selection_scars[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"sample_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_scars_sample_fraction, 1, 0.0, 1.0, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_shaving_n_components[] = {2};
+const std::int64_t kDefault_selection_shaving_n_steps[] = {10};
+const std::int64_t kDefault_selection_shaving_min_features[] = {0};
+const double kDefault_selection_shaving_shave_fraction[] = {0.2};
+const std::int64_t kDefault_selection_shaving_cv[] = {3};
+const ParamSpec kParams_selection_shaving[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_steps", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_n_steps, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"shave_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_shaving_shave_fraction, 1, 0.0, 1.0, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_sipls_n_components[] = {2};
+const std::int64_t kDefault_selection_sipls_interval_width[] = {10};
+const std::int64_t kDefault_selection_sipls_combination_size[] = {2};
+const std::int64_t kDefault_selection_sipls_cv[] = {3};
+const ParamSpec kParams_selection_sipls[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"interval_width", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_interval_width, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"combination_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_combination_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_spa_n_components[] = {2};
+const ParamSpec kParams_selection_spa[] = {
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_spa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_st_n_components[] = {2};
+const std::int64_t kDefault_selection_st_min_selected[] = {0};
+const std::int64_t kDefault_selection_st_cv[] = {3};
+const ParamSpec kParams_selection_st[] = {
+    {"thresholds", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_st_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"min_selected", N4M_METHOD_PARAM_INT, true, kDefault_selection_st_min_selected, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_st_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_stability_n_components[] = {2};
+const std::int64_t kDefault_selection_stability_cv[] = {3};
+const ParamSpec kParams_selection_stability[] = {
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_stability_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_stability_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_t2_n_components[] = {2};
+const std::int64_t kDefault_selection_t2_min_selected[] = {0};
+const std::int64_t kDefault_selection_t2_cv[] = {3};
+const ParamSpec kParams_selection_t2[] = {
+    {"alpha_thresholds", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_t2_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"min_selected", N4M_METHOD_PARAM_INT, true, kDefault_selection_t2_min_selected, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_t2_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_uve_n_components[] = {2};
+const std::int64_t kDefault_selection_uve_noise_features[] = {50};
+const std::int64_t kDefault_selection_uve_noise_seed[] = {0};
+const std::int64_t kDefault_selection_uve_min_features[] = {-1};
+const std::int64_t kDefault_selection_uve_cv[] = {3};
+const ParamSpec kParams_selection_uve[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"noise_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_noise_features, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"noise_seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_min_features, nullptr, 1, -1.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_variable_select_n_components[] = {2};
+const std::int64_t kDefault_selection_variable_select_rank_method[] = {0};
+const char* const kChoices_selection_variable_select_rank_method[] = {"vip", "coefficient", "selectivity_ratio"};
+const ParamSpec kParams_selection_variable_select[] = {
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_variable_select_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"rank_method", N4M_METHOD_PARAM_ENUM, true, kDefault_selection_variable_select_rank_method, nullptr, 1, kNaN, kNaN, kChoices_selection_variable_select_rank_method, 3},
+};
+const std::int64_t kDefault_selection_vip_spa_n_components[] = {2};
+const double kDefault_selection_vip_spa_vip_threshold[] = {0.3};
+const ParamSpec kParams_selection_vip_spa[] = {
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_vip_spa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"vip_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vip_spa_vip_threshold, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_vissa_n_components[] = {2};
+const std::int64_t kDefault_selection_vissa_n_iterations[] = {10};
+const std::int64_t kDefault_selection_vissa_n_submodels[] = {60};
+const double kDefault_selection_vissa_ratio_kept[] = {0.1};
+const double kDefault_selection_vissa_threshold[] = {0.5};
+const double kDefault_selection_vissa_floor_probability[] = {0.05};
+const std::int64_t kDefault_selection_vissa_cv[] = {3};
+const std::int64_t kDefault_selection_vissa_seed[] = {0};
+const ParamSpec kParams_selection_vissa[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_submodels", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_n_submodels, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"ratio_kept", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vissa_ratio_kept, 1, 0.0, 1.0, nullptr, 0},
+    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vissa_threshold, 1, 0.0, 1.0, nullptr, 0},
+    {"floor_probability", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vissa_floor_probability, 1, 0.0, 1.0, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_wvc_n_components[] = {2};
+const std::int64_t kDefault_selection_wvc_normalize[] = {1};
+const ParamSpec kParams_selection_wvc[] = {
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_wvc_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"normalize", N4M_METHOD_PARAM_BOOL, true, kDefault_selection_wvc_normalize, nullptr, 1, kNaN, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_wvc_threshold_n_components[] = {2};
+const std::int64_t kDefault_selection_wvc_threshold_normalize[] = {1};
+const double kDefault_selection_wvc_threshold_score_threshold[] = {0.0};
+const double kDefault_selection_wvc_threshold_threshold_factor[] = {1.0};
+const std::int64_t kDefault_selection_wvc_threshold_min_selected[] = {0};
+const ParamSpec kParams_selection_wvc_threshold[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_wvc_threshold_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"normalize", N4M_METHOD_PARAM_BOOL, true, kDefault_selection_wvc_threshold_normalize, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"score_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_wvc_threshold_score_threshold, 1, kNaN, kNaN, nullptr, 0},
+    {"threshold_factor", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_wvc_threshold_threshold_factor, 1, 0.0, kNaN, nullptr, 0},
+    {"min_selected", N4M_METHOD_PARAM_INT, true, kDefault_selection_wvc_threshold_min_selected, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
 
 const MethodSpec kMethods[] = {
-    {"models.ensembles.bagging_pls", "n4m.ensemble.bagging_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_bagging_pls, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_bagging_pls},
+    {"models.ensembles.bagging_pls", "n4m.ensemble.bagging_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_bagging_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_bagging_pls},
     {"models.ensembles.boosting_pls", "n4m.ensemble.boosting_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_boosting_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_boosting_pls},
-    {"models.ensembles.random_subspace_pls", "n4m.ensemble.random_subspace_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_random_subspace_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_random_subspace_pls},
+    {"models.ensembles.random_subspace_pls", "n4m.ensemble.random_subspace_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_random_subspace_pls, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_random_subspace_pls},
     {"models.multiblock.mb_pls", "n4m.estimators.multiblock.mb_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_mb_pls, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_mb_pls},
     {"models.multiblock.mir_pls", "n4m.estimators.multiblock.mir_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_mir_pls, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_mir_pls},
     {"models.multiblock.o2pls", "n4m.estimators.multiblock.o2pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_o2pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_o2pls},
@@ -195,4 +488,29 @@ const MethodSpec kMethods[] = {
     {"models.specialized.ecr", "n4m.estimators.regression.latent.ecr", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_specialized_ecr, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_ecr},
     {"models.specialized.tensor_pls", "n4m.estimators.regression.tensor.n_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_specialized_tensor_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_n_pls},
     {"models.transfer.di_pls", "n4m.domain_adaptation.invariant.di_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_transfer_di_pls, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "n4mm", &make_affine_di_pls},
+    {"selection.bipls", "n4m.feature_selection.wrapper.bipls", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_bipls, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_bipls},
+    {"selection.bve", "n4m.feature_selection.wrapper.bve", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_bve, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_bve},
+    {"selection.cars", "n4m.feature_selection.wrapper.cars", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_cars, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_cars},
+    {"selection.emcuve", "n4m.feature_selection.wrapper.emcuve", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_emcuve, 6, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_emcuve},
+    {"selection.ga", "n4m.feature_selection.wrapper.ga", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_ga, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_ga},
+    {"selection.ipw", "n4m.feature_selection.wrapper.ipw", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_ipw, 6, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_ipw},
+    {"selection.irf", "n4m.feature_selection.wrapper.irf", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_irf, 7, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_irf},
+    {"selection.iriv", "n4m.feature_selection.wrapper.iriv", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_iriv, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_iriv},
+    {"selection.pso", "n4m.feature_selection.wrapper.pso", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_pso, 9, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_pso},
+    {"selection.random_frog", "n4m.feature_selection.wrapper.random_frog", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_random_frog, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_random_frog},
+    {"selection.randomization", "n4m.feature_selection.wrapper.randomization", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_randomization, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "selection", &make_select_randomization},
+    {"selection.rep", "n4m.feature_selection.wrapper.rep", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_rep, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_rep},
+    {"selection.scars", "n4m.feature_selection.wrapper.scars", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_scars, 6, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_scars},
+    {"selection.shaving", "n4m.feature_selection.wrapper.shaving", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_shaving, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_shaving},
+    {"selection.sipls", "n4m.feature_selection.wrapper.sipls", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_sipls, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_sipls},
+    {"selection.spa", "n4m.feature_selection.wrapper.spa", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_spa, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "selection", &make_select_spa},
+    {"selection.st", "n4m.feature_selection.wrapper.st", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_st, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_st},
+    {"selection.stability", "n4m.feature_selection.wrapper.stability", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_stability, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_stability},
+    {"selection.t2", "n4m.feature_selection.wrapper.t2", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_t2, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_t2},
+    {"selection.uve", "n4m.feature_selection.wrapper.uve", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_uve, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_uve},
+    {"selection.variable_select", "n4m.feature_selection.ranking.variable_select", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_variable_select, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "selection", &make_select_variable_rank},
+    {"selection.vip_spa", "n4m.feature_selection.wrapper.vip_spa", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_vip_spa, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "selection", &make_select_vip_spa},
+    {"selection.vissa", "n4m.feature_selection.wrapper.vissa", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_vissa, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_vissa},
+    {"selection.wvc", "n4m.feature_selection.wrapper.wvc", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_wvc, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "selection", &make_select_wvc},
+    {"selection.wvc_threshold", "n4m.feature_selection.wrapper.wvc_threshold", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_wvc_threshold, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "selection", &make_select_wvc_threshold},
 };

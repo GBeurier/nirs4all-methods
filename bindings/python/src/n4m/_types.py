@@ -288,7 +288,6 @@ class FitInputsV1(Structure):
         ("X_target", c_void_p),
         ("fold_ids", c_void_p),
         ("n_fold_ids", c_int64),
-        ("seed", c_uint64),
     ]
 
 

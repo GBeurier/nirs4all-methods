@@ -8,13 +8,7 @@ T²-PLS loading-weight selection (§18 Phase 5l)
 
 > **Registry note** — R `plsVarSel::T2_pls` (Mehmood 2016) Hotelling-T² loading-weight selection, called with train=test so it matches pls4all's single-training-set selector. VERIFIED IDENTICAL where it matters: pls4all's per-feature T², the UCL = ((p-1)^2/p)*qbeta(1-alpha, a/2, (p-a-1)/2), the sample covariance over features (/(p-1)), the t2>ucl threshold, the top-k floor fallback, and the min-CV-error alpha pick are all bit-identical to plsVarSel t2_calc / T2_pls. The residual mask divergence is an UPSTREAM PLS loading-weight convention difference: plsVarSel computes T² from R `pls::plsr` `loading.weights` (== sklearn `x_weights_`), while pls4all computes T² from the fitted model's `weights_w`; on borderline features near the UCL the two select slightly different sets (Jaccard ~0.7–1.0; both capture the true signal). Both are valid T²-PLS selectors. Gated on Jaccard via the orchestrator SELECTION_DIVERGENCE_ALLOWLIST.
 
-### Parameters
-
-| Name | Type | Default | Notes |
-|------|------|---------|-------|
-| `alpha_thresholds` | `—` | `required` | current public binding signature |
-| `n_components` | `int` | `2` | current public binding signature |
-| `min_selected` | `int \| None` | `None` | current public binding signature |
+_No tunable parameters declared at the binding level._
 
 ## Explanations
 
@@ -47,13 +41,7 @@ Current implementation: [cpp/src/core/t2_selection.cpp](https://github.com/GBeur
 
 **C ABI (ABI 2):** [`n4m_feature_selection_t2_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L255). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import T2
-```
-
-Source signature: `T2(alpha_thresholds, *, n_components: int = 2, min_selected: int | None = None)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L593)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`t2_select(X, Y, n_components, alpha_thresholds, min_selected = NULL)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

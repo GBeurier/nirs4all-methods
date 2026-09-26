@@ -26,10 +26,15 @@ for (case in fx$cases) {
     testthat::test_that(paste("Python N4ME state predicts identically in R:", case$method_id), {
       bytes <- hex_to_raw(case$n4me)
       est <- n4m_estimator_import(bytes)
-      testthat::expect_s3_class(est, "n4m_regressor")
-      testthat::expect_equal(predict(est, fx$x_test), case$predict, tolerance = 1e-12)
+      testthat::expect_equal(inherits(est, "n4m_regressor"), !is.null(case$predict))
+      if (!is.null(case$predict)) {
+        testthat::expect_equal(predict(est, fx$x_test), case$predict, tolerance = 1e-12)
+      }
+      if (!is.null(case$selected_indices)) {
+        testthat::expect_s3_class(est, "n4m_selector")
+        testthat::expect_equal(n4m_selected_indices(est), case$selected_indices + 1)
+      }
       if (!is.null(case$transform)) {
-        testthat::expect_s3_class(est, "n4m_transformer")
         testthat::expect_equal(n4m_estimator_transform(est, fx$x_test), case$transform,
                                tolerance = 1e-12)
       } else {
@@ -39,13 +44,20 @@ for (case in fx$cases) {
     })
 
     testthat::test_that(paste("R fit reproduces the Python fit:", case$method_id), {
-      spec <- do.call(constructors[[case$method_id]], case$int_params)
+      spec <- do.call(constructors[[case$method_id]], case$params)
       fitted <- do.call(n4m_estimator_fit, c(list(spec, fx$x_train, fx$y_train),
                                              fit_inputs(case$fit_inputs)))
-      testthat::expect_equal(predict(fitted, fx$x_test), case$predict, tolerance = 1e-9)
       path <- tempfile(fileext = ".rds")
       saveRDS(fitted, path)
-      testthat::expect_identical(predict(readRDS(path), fx$x_test), predict(fitted, fx$x_test))
+      restored <- readRDS(path)
+      if (!is.null(case$predict)) {
+        testthat::expect_equal(predict(fitted, fx$x_test), case$predict, tolerance = 1e-9)
+        testthat::expect_identical(predict(restored, fx$x_test), predict(fitted, fx$x_test))
+      }
+      if (!is.null(case$selected_indices)) {
+        testthat::expect_equal(n4m_selected_indices(fitted), case$selected_indices + 1)
+        testthat::expect_identical(n4m_selected_indices(restored), n4m_selected_indices(fitted))
+      }
     })
   })
 }

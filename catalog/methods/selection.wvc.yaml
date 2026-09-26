@@ -33,6 +33,24 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_feature_selection_wvc_select"
+estimator:
+  kind: "estimator"
+  adapter: "select_wvc"
+  roles: "[selector]"
+  state: "selection"
+  inputs:
+    y: "required"
+  params:
+    - name: "top_k"
+      type: "int"
+      min: 1
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "normalize"
+      type: "bool"
+      default: true
 fq_name: "n4m.feature_selection.wrapper.wvc"
 leaf: "wvc"
 legacy_ids:

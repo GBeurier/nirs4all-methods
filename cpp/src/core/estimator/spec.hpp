@@ -79,8 +79,8 @@ class Params {
     std::int64_t get_int(const char* name) const;
     double get_double(const char* name) const;
     bool get_bool(const char* name) const { return get_int(name) != 0; }
-    const std::vector<std::int64_t>& get_ints(const char* name) const;
-    const std::vector<double>& get_doubles(const char* name) const;
+    std::vector<std::int64_t> get_ints(const char* name) const;
+    std::vector<double> get_doubles(const char* name) const;
 
     // Resolved value by index (for serialization and copies).
     bool resolved(std::int32_t index, std::vector<std::int64_t>* ints,
@@ -92,8 +92,6 @@ class Params {
     const ParamSpec& checked(const char* name, std::int32_t* index) const;
     const MethodSpec* spec_;
     std::vector<ParamValue> values_;
-    mutable std::vector<std::int64_t> scratch_ints_;
-    mutable std::vector<double> scratch_doubles_;
 };
 
 // Fit inputs with every optional field normalized (absent = null/0).
@@ -115,7 +113,6 @@ struct FitInputs {
     const n4m_matrix_view_t* X_target = nullptr;
     const std::int64_t* fold_ids = nullptr;
     std::int64_t n_fold_ids = 0;
-    std::uint64_t seed = 0;
 };
 
 // One state block of an N4ME payload.

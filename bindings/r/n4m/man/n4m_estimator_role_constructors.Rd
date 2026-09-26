@@ -22,11 +22,36 @@
 \alias{n4m_ecr}
 \alias{n4m_tensor_pls}
 \alias{n4m_di_pls}
+\alias{n4m_bipls}
+\alias{n4m_bve}
+\alias{n4m_cars}
+\alias{n4m_emcuve}
+\alias{n4m_ga}
+\alias{n4m_ipw}
+\alias{n4m_irf}
+\alias{n4m_iriv}
+\alias{n4m_pso}
+\alias{n4m_random_frog}
+\alias{n4m_randomization}
+\alias{n4m_rep}
+\alias{n4m_scars}
+\alias{n4m_shaving}
+\alias{n4m_sipls}
+\alias{n4m_spa}
+\alias{n4m_st}
+\alias{n4m_stability}
+\alias{n4m_t2}
+\alias{n4m_uve}
+\alias{n4m_variable_select}
+\alias{n4m_vip_spa}
+\alias{n4m_vissa}
+\alias{n4m_wvc}
+\alias{n4m_wvc_threshold}
 \title{Constructors of the generic native estimator roles}
 \usage{
-n4m_bagging_pls(n_components = 2L, n_estimators = 50L)
+n4m_bagging_pls(n_components = 2L, n_estimators = 50L, seed = 0L)
 n4m_boosting_pls(n_components = 2L, n_estimators = 50L, learning_rate = 0.1)
-n4m_random_subspace_pls(n_components = 2L, n_estimators = 50L, features_per_subspace = 10L)
+n4m_random_subspace_pls(n_components = 2L, n_estimators = 50L, features_per_subspace = 10L, seed = 0L)
 n4m_mb_pls(n_components = 2L)
 n4m_mir_pls(n_components = 2L)
 n4m_o2pls(n_predictive = 2L, n_x_orthogonal = 1L, n_y_orthogonal = 1L)
@@ -45,33 +70,105 @@ n4m_sparse_simpls(n_components = 2L, sparsity_lambda = 0.05)
 n4m_ecr(n_components = 2L, alpha = 0.5)
 n4m_tensor_pls(n_components = 2L, mode_j = NULL, mode_k = NULL)
 n4m_di_pls(n_components = 2L, di_lambda = 1.0)
+n4m_bipls(n_components = 2L, interval_width = 10L, min_intervals = 2L, cv = 3L)
+n4m_bve(n_components = 2L, n_steps = 10L, min_features = 0L, cv = 3L)
+n4m_cars(n_components = 2L, n_iterations = 50L, min_features = 0L, cv = 3L)
+n4m_emcuve(n_components = 2L, noise_features = 50L, noise_seed = 0L, n_ensembles = 10L, vote_threshold = 0.5, cv = 3L)
+n4m_ga(n_components = 2L, n_generations = 30L, population_size = 40L, min_features = 0L, max_features = 0L, mutation_rate = 0.05, cv = 3L, seed = 0L)
+n4m_ipw(top_k = NULL, n_components = 2L, n_iterations = 20L, damping = 0.5, weight_floor = 1e-06, cv = 3L)
+n4m_irf(top_k = NULL, n_components = 2L, n_iterations = 100L, window_size = 5L, initial_intervals = 5L, cv = 3L, seed = 0L)
+n4m_iriv(n_components = 2L, max_rounds = 5L, cv = 5L, seed = 0L)
+n4m_pso(n_components = 2L, n_swarm = 30L, n_iterations = 50L, w = 0.729, c1 = 1.494, c2 = 1.494, v_max = 4.0, cv = 3L, seed = 0L)
+n4m_random_frog(top_k = NULL, n_components = 2L, n_iterations = 100L, initial_size = 20L, min_size = 0L, max_size = 0L, cv = 3L, seed = 0L)
+n4m_randomization(n_components = 2L, n_permutations = 200L, randomization_seed = 0L, alpha = 0.05)
+n4m_rep(n_components = 2L, n_steps = 10L, min_features = 0L, remove_count = 1L, cv = 3L)
+n4m_scars(n_components = 2L, n_iterations = 50L, min_features = 0L, sample_fraction = 0.8, cv = 3L, seed = 0L)
+n4m_shaving(n_components = 2L, n_steps = 10L, min_features = 0L, shave_fraction = 0.2, cv = 3L)
+n4m_sipls(n_components = 2L, interval_width = 10L, combination_size = 2L, cv = 3L)
+n4m_spa(top_k = NULL, n_components = 2L)
+n4m_st(thresholds = NULL, n_components = 2L, min_selected = 0L, cv = 3L)
+n4m_stability(top_k = NULL, n_components = 2L, cv = 3L)
+n4m_t2(alpha_thresholds = NULL, n_components = 2L, min_selected = 0L, cv = 3L)
+n4m_uve(n_components = 2L, noise_features = 50L, noise_seed = 0L, min_features = -1L, cv = 3L)
+n4m_variable_select(top_k = NULL, n_components = 2L, rank_method = "vip")
+n4m_vip_spa(top_k = NULL, n_components = 2L, vip_threshold = 0.3)
+n4m_vissa(n_components = 2L, n_iterations = 10L, n_submodels = 60L, ratio_kept = 0.1, threshold = 0.5, floor_probability = 0.05, cv = 3L, seed = 0L)
+n4m_wvc(top_k = NULL, n_components = 2L, normalize = TRUE)
+n4m_wvc_threshold(n_components = 2L, normalize = TRUE, score_threshold = 0.0, threshold_factor = 1.0, min_selected = 0L)
 }
 \arguments{
 \item{alpha}{Native parameter (double); defaults come from the n4m manifest.}
+\item{alpha_thresholds}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{c1}{Native parameter (double); defaults come from the n4m manifest.}
+\item{c2}{Native parameter (double); defaults come from the n4m manifest.}
 \item{center_x}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{center_y}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{combination_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{cv}{Native parameter (int); defaults come from the n4m manifest.}
+\item{damping}{Native parameter (double); defaults come from the n4m manifest.}
 \item{di_lambda}{Native parameter (double); defaults come from the n4m manifest.}
 \item{features_per_subspace}{Native parameter (int); defaults come from the n4m manifest.}
+\item{floor_probability}{Native parameter (double); defaults come from the n4m manifest.}
 \item{fusion_lambda}{Native parameter (double); defaults come from the n4m manifest.}
 \item{gamma}{Native parameter (double); defaults come from the n4m manifest.}
 \item{group_lambda}{Native parameter (double); defaults come from the n4m manifest.}
 \item{huber_k}{Native parameter (double); defaults come from the n4m manifest.}
+\item{initial_intervals}{Native parameter (int); defaults come from the n4m manifest.}
+\item{initial_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{interval_width}{Native parameter (int); defaults come from the n4m manifest.}
 \item{l1_lambda}{Native parameter (double); defaults come from the n4m manifest.}
 \item{learning_rate}{Native parameter (double); defaults come from the n4m manifest.}
+\item{max_features}{Native parameter (int); defaults come from the n4m manifest.}
 \item{max_irls_iter}{Native parameter (int); defaults come from the n4m manifest.}
+\item{max_rounds}{Native parameter (int); defaults come from the n4m manifest.}
+\item{max_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{min_features}{Native parameter (int); defaults come from the n4m manifest.}
+\item{min_intervals}{Native parameter (int); defaults come from the n4m manifest.}
+\item{min_selected}{Native parameter (int); defaults come from the n4m manifest.}
+\item{min_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{mode_j}{Native parameter (int); defaults come from the n4m manifest.}
 \item{mode_k}{Native parameter (int); defaults come from the n4m manifest.}
+\item{mutation_rate}{Native parameter (double); defaults come from the n4m manifest.}
 \item{n_components}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_ensembles}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_estimators}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_generations}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_iterations}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_permutations}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_predictive}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_steps}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_submodels}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_swarm}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_x_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_y_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}
+\item{noise_features}{Native parameter (int); defaults come from the n4m manifest.}
+\item{noise_seed}{Native parameter (int); defaults come from the n4m manifest.}
+\item{normalize}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{population_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{randomization_seed}{Native parameter (int); defaults come from the n4m manifest.}
+\item{rank_method}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{ratio_kept}{Native parameter (double); defaults come from the n4m manifest.}
+\item{remove_count}{Native parameter (int); defaults come from the n4m manifest.}
 \item{ridge_lambda}{Native parameter (double); defaults come from the n4m manifest.}
+\item{sample_fraction}{Native parameter (double); defaults come from the n4m manifest.}
 \item{scale_x}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{scale_y}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{score_threshold}{Native parameter (double); defaults come from the n4m manifest.}
+\item{seed}{Native parameter (int); defaults come from the n4m manifest.}
+\item{shave_fraction}{Native parameter (double); defaults come from the n4m manifest.}
 \item{solver}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{sparsity_lambda}{Native parameter (double); defaults come from the n4m manifest.}
 \item{tau}{Native parameter (double); defaults come from the n4m manifest.}
+\item{threshold}{Native parameter (double); defaults come from the n4m manifest.}
+\item{threshold_factor}{Native parameter (double); defaults come from the n4m manifest.}
+\item{thresholds}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{top_k}{Native parameter (int); defaults come from the n4m manifest.}
+\item{v_max}{Native parameter (double); defaults come from the n4m manifest.}
+\item{vip_threshold}{Native parameter (double); defaults come from the n4m manifest.}
+\item{vote_threshold}{Native parameter (double); defaults come from the n4m manifest.}
+\item{w}{Native parameter (double); defaults come from the n4m manifest.}
+\item{weight_floor}{Native parameter (double); defaults come from the n4m manifest.}
+\item{window_size}{Native parameter (int); defaults come from the n4m manifest.}
 }
 \value{An unfitted estimator whose classes are its role interfaces;
 fit it with \code{\link{n4m_estimator_fit}}.}
@@ -99,5 +196,30 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_ecr}: \code{models.specialized.ecr} (regressor)
 \item \code{n4m_tensor_pls}: \code{models.specialized.tensor_pls} (regressor)
 \item \code{n4m_di_pls}: \code{models.transfer.di_pls} (regressor)
+\item \code{n4m_bipls}: \code{selection.bipls} (selector)
+\item \code{n4m_bve}: \code{selection.bve} (selector)
+\item \code{n4m_cars}: \code{selection.cars} (selector)
+\item \code{n4m_emcuve}: \code{selection.emcuve} (selector)
+\item \code{n4m_ga}: \code{selection.ga} (selector)
+\item \code{n4m_ipw}: \code{selection.ipw} (selector)
+\item \code{n4m_irf}: \code{selection.irf} (selector)
+\item \code{n4m_iriv}: \code{selection.iriv} (selector)
+\item \code{n4m_pso}: \code{selection.pso} (selector)
+\item \code{n4m_random_frog}: \code{selection.random_frog} (selector)
+\item \code{n4m_randomization}: \code{selection.randomization} (selector)
+\item \code{n4m_rep}: \code{selection.rep} (selector)
+\item \code{n4m_scars}: \code{selection.scars} (selector)
+\item \code{n4m_shaving}: \code{selection.shaving} (selector)
+\item \code{n4m_sipls}: \code{selection.sipls} (selector)
+\item \code{n4m_spa}: \code{selection.spa} (selector)
+\item \code{n4m_st}: \code{selection.st} (selector)
+\item \code{n4m_stability}: \code{selection.stability} (selector)
+\item \code{n4m_t2}: \code{selection.t2} (selector)
+\item \code{n4m_uve}: \code{selection.uve} (selector)
+\item \code{n4m_variable_select}: \code{selection.variable_select} (selector)
+\item \code{n4m_vip_spa}: \code{selection.vip_spa} (selector)
+\item \code{n4m_vissa}: \code{selection.vissa} (selector)
+\item \code{n4m_wvc}: \code{selection.wvc} (selector)
+\item \code{n4m_wvc_threshold}: \code{selection.wvc_threshold} (selector)
 }
 }
