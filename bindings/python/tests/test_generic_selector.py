@@ -122,8 +122,33 @@ def test_generic_selector_refuses_nonportable_params(
         Selector(method, method_params=params).fit(X[:28], y[:28])
 
 
+@pytest.mark.parametrize(
+    "n_train,n_components,cases",
+    [
+        (28, 2, CASES),
+        (
+            4,
+            1,
+            {
+                "interval_select": CASES["interval_select"],
+                "stability_select": {"top_k": 3},
+            },
+        ),
+        (
+            5,
+            1,
+            {
+                "interval_select": CASES["interval_select"],
+                "stability_select": {"top_k": 3},
+            },
+        ),
+    ],
+)
 def test_generic_selector_matches_independent_r_native_dispatcher(
     samples: tuple[np.ndarray, np.ndarray],
+    n_train: int,
+    n_components: int,
+    cases: dict[str, dict[str, object]],
 ) -> None:
     r_libs = os.environ.get("N4M_R_LIBS")
     rscript = os.environ.get("N4M_RSCRIPT") or shutil.which("Rscript")
@@ -133,10 +158,11 @@ def test_generic_selector_matches_independent_r_native_dispatcher(
         )
     X, y = samples
     request = {
-        "X": X[:28].tolist(),
-        "heldout": X[28:].tolist(),
-        "y": y[:28].tolist(),
-        "cases": CASES,
+        "X": X[:n_train].tolist(),
+        "heldout": X[n_train:].tolist(),
+        "y": y[:n_train].tolist(),
+        "cases": cases,
+        "n_components": n_components,
     }
     script = r"""
 request <- jsonlite::fromJSON(paste(readLines("stdin", warn = FALSE), collapse = ""),
@@ -148,7 +174,8 @@ y <- as.numeric(unlist(request$y))
 output <- lapply(names(request$cases), function(method) {
   params <- lapply(request$cases[[method]], function(value)
     if (is.list(value)) as.numeric(unlist(value)) else value)
-  indices <- n4m::n4m_method(method, X, y, 2L, params = params)$selected_indices
+  indices <- n4m::n4m_method(method, X, y, request$n_components,
+                             params = params)$selected_indices
   list(selected_indices = unname(as.list(as.integer(indices) - 1L)),
        heldout = unname(lapply(seq_len(nrow(heldout)), function(i)
          unname(as.list(heldout[i, sort(indices)])))))
@@ -166,17 +193,17 @@ cat(as.character(jsonlite::toJSON(output, auto_unbox = TRUE, digits = 17L)))
         env=env,
     )
     reference = json.loads(result.stdout)
-    for method, params in CASES.items():
-        selector = Selector(method, n_components=2, method_params=params).fit(
-            X[:28], y[:28]
-        )
+    for method, params in cases.items():
+        selector = Selector(
+            method, n_components=n_components, method_params=params
+        ).fit(X[:n_train], y[:n_train])
         np.testing.assert_array_equal(
             selector.selected_indices_,
             reference[method]["selected_indices"],
             err_msg=f"R/Python n4m selected_indices differ for {method}",
         )
         np.testing.assert_allclose(
-            selector.transform(X[28:]),
+            selector.transform(X[n_train:]),
             reference[method]["heldout"],
             rtol=0,
             atol=0,
