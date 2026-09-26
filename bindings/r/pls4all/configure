@@ -74,6 +74,10 @@ if [ "$FORCE_PREBUILT" != "1" ] && { [ "${N4M_R_VENDOR:-0}" = "1" ] || [ "$VENDO
 PKG_CPPFLAGS = -Ivendor/cpp/include -Ivendor/cpp/src -Ivendor/generated \
                -DN4M_STATIC=1
 CXX_STD = CXX17
+# No FMA contraction: the same bits as every other n4m binding (see the root
+# CMakeLists.txt). Unix R toolchains are GCC or Clang.
+PKG_CFLAGS = -ffp-contract=off
+PKG_CXXFLAGS = -ffp-contract=off
 
 VEND_C   := $(shell find vendor -name '*.c')
 # cuda_dispatch.cpp is the CUDA backend (needs cublas); excluded from the

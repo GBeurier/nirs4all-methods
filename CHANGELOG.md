@@ -50,6 +50,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   routines on every platform, equal bitwise to the former Fortran build and
   to scipy's `UnivariateSpline`; Windows, WASM and CRAN R builds no longer
   fall back to the Reinsch approximation, and gfortran is no longer needed.
+- GCC and Clang builds (CMake and the R packages on Unix) compile with
+  `-ffp-contract=off`: arm64 builds no longer fuse multiply-adds, so every
+  platform returns the same bits as x86-64 and WASM.
 
 - Expose native domain-invariant PLS as `n4m.domain_adaptation.invariant.di_pls`
   and the scikit-learn-compatible `DIPLS` estimator. Both require an explicit
