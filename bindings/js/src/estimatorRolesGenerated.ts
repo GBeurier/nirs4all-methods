@@ -73,6 +73,54 @@ export class AOMFixedCandidate extends NativeEstimator implements Regressor {
 }
 NativeMethod.register("aom_pop.aom_chain_fixed_fit", AOMFixedCandidate);
 
+/** Parameters of AOMChainRidgePLS; unset values take the native defaults. */
+export interface AOMChainRidgePLSParams {
+    /** Default [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 15]. */
+    chain_offsets?: number[];
+    /** Default [0, 7, 7, 8, 8, 9, 9, 10, 15, 7, 9, 7, 10, 8, 15]. */
+    op_kinds?: number[];
+    /** Default [0, 0, 1, 2, 4, 6, 9, 12, 15, 16, 17, 20, 21, 24, 26, 27]. */
+    param_offsets?: number[];
+    /** Default [1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1, 1, 7, 2, 1, 1, 5, 5, 1, 5, 2, 1]. */
+    chain_params?: number[];
+    /** Default [2]. */
+    pls_components?: number[];
+    /** Default [0, 0.1, 1, 10]. */
+    ridge_lambdas?: number[];
+    /** Default 5. */
+    cv?: number;
+    /** Default true. */
+    center_x?: boolean;
+    /** Default true. */
+    center_y?: boolean;
+}
+
+/** Native `aom_pop.aom_chain_ridge_pls` (regressor). */
+export class AOMChainRidgePLS extends NativeEstimator implements Regressor {
+    readonly methodId = "aom_pop.aom_chain_ridge_pls";
+    readonly paramTypes = {
+        chain_offsets: "int_array",
+        op_kinds: "int_array",
+        param_offsets: "int_array",
+        chain_params: "double_array",
+        pls_components: "int_array",
+        ridge_lambdas: "double_array",
+        cv: "int",
+        center_x: "bool",
+        center_y: "bool",
+    } as const;
+
+    constructor(params: AOMChainRidgePLSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("aom_pop.aom_chain_ridge_pls", AOMChainRidgePLS);
+
 /** Parameters of AOMChainSweep; unset values take the native defaults. */
 export interface AOMChainSweepParams {
     /** Required. */
@@ -181,6 +229,51 @@ export class AOMPLS extends NativeEstimator implements Regressor {
 }
 NativeMethod.register("aom_pop.aom_pls", AOMPLS);
 
+/** Parameters of AOMPLSSuperblock; unset values take the native defaults. */
+export interface AOMPLSSuperblockParams {
+    /** Default [0, 7, 7, 8, 8, 9, 9, 10, 15]. */
+    op_kinds?: number[];
+    /** Default [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]. */
+    param_offsets?: number[];
+    /** Default [1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1]. */
+    op_params?: number[];
+    /** Default [2]. */
+    pls_components?: number[];
+    /** Default 5. */
+    cv?: number;
+    /** Default "rms". */
+    block_scaling?: "rms" | "none";
+    /** Default true. */
+    center_x?: boolean;
+    /** Default true. */
+    center_y?: boolean;
+}
+
+/** Native `aom_pop.aom_pls_superblock` (regressor). */
+export class AOMPLSSuperblock extends NativeEstimator implements Regressor {
+    readonly methodId = "aom_pop.aom_pls_superblock";
+    readonly paramTypes = {
+        op_kinds: "int_array",
+        param_offsets: "int_array",
+        op_params: "double_array",
+        pls_components: "int_array",
+        cv: "int",
+        block_scaling: "enum",
+        center_x: "bool",
+        center_y: "bool",
+    } as const;
+
+    constructor(params: AOMPLSSuperblockParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("aom_pop.aom_pls_superblock", AOMPLSSuperblock);
+
 /** Parameters of AOMPreprocessing; unset values take the native defaults. */
 export interface AOMPreprocessingParams {
     /** Default [0, 7, 7, 8, 8, 9, 9, 10, 15]. */
@@ -213,6 +306,51 @@ export class AOMPreprocessing extends NativeEstimator implements Transformer {
     }
 }
 NativeMethod.register("aom_pop.aom_preprocessing", AOMPreprocessing);
+
+/** Parameters of AOMRidgePLSSuperblock; unset values take the native defaults. */
+export interface AOMRidgePLSSuperblockParams {
+    /** Default [0, 7, 7, 8, 8, 9, 9, 10, 15]. */
+    op_kinds?: number[];
+    /** Default [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]. */
+    param_offsets?: number[];
+    /** Default [1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1]. */
+    op_params?: number[];
+    /** Default [2]. */
+    pls_components?: number[];
+    /** Default [0, 0.1, 1, 10]. */
+    ridge_lambdas?: number[];
+    /** Default 5. */
+    cv?: number;
+    /** Default "rms". */
+    block_scaling?: "rms" | "none";
+    /** Default true. */
+    center_x?: boolean;
+}
+
+/** Native `aom_pop.aom_ridge_pls_superblock` (regressor). */
+export class AOMRidgePLSSuperblock extends NativeEstimator implements Regressor {
+    readonly methodId = "aom_pop.aom_ridge_pls_superblock";
+    readonly paramTypes = {
+        op_kinds: "int_array",
+        param_offsets: "int_array",
+        op_params: "double_array",
+        pls_components: "int_array",
+        ridge_lambdas: "double_array",
+        cv: "int",
+        block_scaling: "enum",
+        center_x: "bool",
+    } as const;
+
+    constructor(params: AOMRidgePLSSuperblockParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("aom_pop.aom_ridge_pls_superblock", AOMRidgePLSSuperblock);
 
 /** Parameters of AOMSweep; unset values take the native defaults. */
 export interface AOMSweepParams {
@@ -439,6 +577,66 @@ export class POPPLS extends NativeEstimator implements Regressor {
 }
 NativeMethod.register("aom_pop.pop_pls", POPPLS);
 
+/** Parameters of AOMRidgeActiveSuperblock; unset values take the native defaults. */
+export interface AOMRidgeActiveSuperblockParams {
+    /** Default [0, 7, 7, 8, 8, 9, 9, 10, 15]. */
+    op_kinds?: number[];
+    /** Default [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]. */
+    param_offsets?: number[];
+    /** Default [1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1]. */
+    op_params?: number[];
+    /** Default [0.0001, 0.01, 1, 100]. */
+    alphas?: number[];
+    /** Default 5. */
+    cv?: number;
+    /** Default 20. */
+    active_top_m?: number;
+    /** Default 0.98. */
+    active_diversity_threshold?: number;
+    /** Default "norm". */
+    active_score_method?: "norm" | "kta" | "blend";
+    /** Default 0. */
+    active_max_per_family?: number;
+    /** Default true. */
+    keep_identity?: boolean;
+    /** Default "rms". */
+    block_scaling?: "rms" | "none";
+    /** Default true. */
+    center_x?: boolean;
+    /** Default true. */
+    center_y?: boolean;
+}
+
+/** Native `aom_pop.ridge_active_superblock` (regressor). */
+export class AOMRidgeActiveSuperblock extends NativeEstimator implements Regressor {
+    readonly methodId = "aom_pop.ridge_active_superblock";
+    readonly paramTypes = {
+        op_kinds: "int_array",
+        param_offsets: "int_array",
+        op_params: "double_array",
+        alphas: "double_array",
+        cv: "int",
+        active_top_m: "int",
+        active_diversity_threshold: "double",
+        active_score_method: "enum",
+        active_max_per_family: "int",
+        keep_identity: "bool",
+        block_scaling: "enum",
+        center_x: "bool",
+        center_y: "bool",
+    } as const;
+
+    constructor(params: AOMRidgeActiveSuperblockParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("aom_pop.ridge_active_superblock", AOMRidgeActiveSuperblock);
+
 /** Parameters of AOMRidgeBlender; unset values take the native defaults. */
 export interface AOMRidgeBlenderParams {
     /** Default "compact". */
@@ -534,6 +732,99 @@ export class AOMRidgeGlobal extends NativeEstimator implements Regressor {
     }
 }
 NativeMethod.register("aom_pop.ridge_global", AOMRidgeGlobal);
+
+/** Parameters of AOMRidgeMKLSuperblock; unset values take the native defaults. */
+export interface AOMRidgeMKLSuperblockParams {
+    /** Default [0, 7, 7, 8, 8, 9, 9, 10, 15]. */
+    op_kinds?: number[];
+    /** Default [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]. */
+    param_offsets?: number[];
+    /** Default [1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1]. */
+    op_params?: number[];
+    /** Default [0.0001, 0.01, 1, 100]. */
+    alphas?: number[];
+    /** Default 5. */
+    cv?: number;
+    /** Default 6. */
+    mkl_top_k?: number;
+    /** Default "none". */
+    block_scaling?: "rms" | "none";
+    /** Default true. */
+    center_x?: boolean;
+    /** Default true. */
+    center_y?: boolean;
+}
+
+/** Native `aom_pop.ridge_mkl_superblock` (regressor). */
+export class AOMRidgeMKLSuperblock extends NativeEstimator implements Regressor {
+    readonly methodId = "aom_pop.ridge_mkl_superblock";
+    readonly paramTypes = {
+        op_kinds: "int_array",
+        param_offsets: "int_array",
+        op_params: "double_array",
+        alphas: "double_array",
+        cv: "int",
+        mkl_top_k: "int",
+        block_scaling: "enum",
+        center_x: "bool",
+        center_y: "bool",
+    } as const;
+
+    constructor(params: AOMRidgeMKLSuperblockParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("aom_pop.ridge_mkl_superblock", AOMRidgeMKLSuperblock);
+
+/** Parameters of AOMRidgeSuperblock; unset values take the native defaults. */
+export interface AOMRidgeSuperblockParams {
+    /** Default [0, 7, 7, 8, 8, 9, 9, 10, 15]. */
+    op_kinds?: number[];
+    /** Default [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]. */
+    param_offsets?: number[];
+    /** Default [1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1]. */
+    op_params?: number[];
+    /** Default [0.0001, 0.01, 1, 100]. */
+    alphas?: number[];
+    /** Default 5. */
+    cv?: number;
+    /** Default "rms". */
+    block_scaling?: "rms" | "none";
+    /** Default true. */
+    center_x?: boolean;
+    /** Default true. */
+    center_y?: boolean;
+}
+
+/** Native `aom_pop.ridge_superblock` (regressor). */
+export class AOMRidgeSuperblock extends NativeEstimator implements Regressor {
+    readonly methodId = "aom_pop.ridge_superblock";
+    readonly paramTypes = {
+        op_kinds: "int_array",
+        param_offsets: "int_array",
+        op_params: "double_array",
+        alphas: "double_array",
+        cv: "int",
+        block_scaling: "enum",
+        center_x: "bool",
+        center_y: "bool",
+    } as const;
+
+    constructor(params: AOMRidgeSuperblockParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("aom_pop.ridge_superblock", AOMRidgeSuperblock);
 
 /** Parameters of AOMRobustHPO; unset values take the native defaults. */
 export interface AOMRobustHPOParams {
@@ -2494,6 +2785,69 @@ export class RandomSubspacePLS extends NativeEstimator implements Regressor {
     }
 }
 NativeMethod.register("models.ensembles.random_subspace_pls", RandomSubspacePLS);
+
+/** Parameters of PLSCox; unset values take the native defaults. */
+export interface PLSCoxParams {
+    /** Default 2. */
+    n_components?: number;
+    /** Default 50. */
+    max_iter?: number;
+    /** Default 1e-10. */
+    tol?: number;
+}
+
+/** Native `models.heads.pls_cox` (regressor). */
+export class PLSCox extends NativeEstimator implements Regressor {
+    readonly methodId = "models.heads.pls_cox";
+    readonly paramTypes = {
+        n_components: "int",
+        max_iter: "int",
+        tol: "double",
+    } as const;
+
+    constructor(params: PLSCoxParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("models.heads.pls_cox", PLSCox);
+
+/** Parameters of PLSGLM; unset values take the native defaults. */
+export interface PLSGLMParams {
+    /** Default 2. */
+    n_components?: number;
+    /** Default "gaussian". */
+    family?: "gaussian" | "poisson" | "binomial";
+    /** Default 100. */
+    max_iter?: number;
+    /** Default 1e-10. */
+    tol?: number;
+}
+
+/** Native `models.heads.pls_glm` (regressor). */
+export class PLSGLM extends NativeEstimator implements Regressor {
+    readonly methodId = "models.heads.pls_glm";
+    readonly paramTypes = {
+        n_components: "int",
+        family: "enum",
+        max_iter: "int",
+        tol: "double",
+    } as const;
+
+    constructor(params: PLSGLMParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("models.heads.pls_glm", PLSGLM);
 
 /** Parameters of LWPLS; unset values take the native defaults. */
 export interface LWPLSParams {

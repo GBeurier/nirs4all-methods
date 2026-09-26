@@ -74,6 +74,46 @@ class AOMFixedCandidate(NativeRegressor):
         self.moment_policy = moment_policy
 
 
+class AOMChainRidgePLS(NativeRegressor):
+    """Native ``aom_pop.aom_chain_ridge_pls`` (regressor)."""
+
+    _method_id = "aom_pop.aom_chain_ridge_pls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "chain_offsets": "int_array",
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "chain_params": "double_array",
+        "pls_components": "int_array",
+        "ridge_lambdas": "double_array",
+        "cv": "int",
+        "center_x": "bool",
+        "center_y": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        chain_offsets=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 15),
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15, 7, 9, 7, 10, 8, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16, 17, 20, 21, 24, 26, 27),
+        chain_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1, 1, 7, 2, 1, 1, 5, 5, 1, 5, 2, 1),
+        pls_components=(2,),
+        ridge_lambdas=(0, 0.1, 1, 10),
+        cv=5,
+        center_x=True,
+        center_y=True,
+    ) -> None:
+        self.chain_offsets = chain_offsets
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.chain_params = chain_params
+        self.pls_components = pls_components
+        self.ridge_lambdas = ridge_lambdas
+        self.cv = cv
+        self.center_x = center_x
+        self.center_y = center_y
+
+
 class AOMChainSweep(NativeRegressor):
     """Native ``aom_pop.aom_chain_sweep`` (regressor)."""
 
@@ -178,6 +218,49 @@ class AOMPLS(NativeRegressor):
         self.scale_y = scale_y
 
 
+class AOMPLSSuperblock(NativeRegressor):
+    """Native ``aom_pop.aom_pls_superblock`` (regressor)."""
+
+    _method_id = "aom_pop.aom_pls_superblock"
+    _param_types: ClassVar[dict[str, str]] = {
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "op_params": "double_array",
+        "pls_components": "int_array",
+        "cv": "int",
+        "block_scaling": "enum",
+        "center_x": "bool",
+        "center_y": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "block_scaling": (
+            "rms",
+            "none",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16),
+        op_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1),
+        pls_components=(2,),
+        cv=5,
+        block_scaling="rms",
+        center_x=True,
+        center_y=True,
+    ) -> None:
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.op_params = op_params
+        self.pls_components = pls_components
+        self.cv = cv
+        self.block_scaling = block_scaling
+        self.center_x = center_x
+        self.center_y = center_y
+
+
 class AOMPreprocessing(NativeTransformer):
     """Native ``aom_pop.aom_preprocessing`` (transformer)."""
 
@@ -207,6 +290,49 @@ class AOMPreprocessing(NativeTransformer):
         self.param_offsets = param_offsets
         self.op_params = op_params
         self.gating_mode = gating_mode
+
+
+class AOMRidgePLSSuperblock(NativeRegressor):
+    """Native ``aom_pop.aom_ridge_pls_superblock`` (regressor)."""
+
+    _method_id = "aom_pop.aom_ridge_pls_superblock"
+    _param_types: ClassVar[dict[str, str]] = {
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "op_params": "double_array",
+        "pls_components": "int_array",
+        "ridge_lambdas": "double_array",
+        "cv": "int",
+        "block_scaling": "enum",
+        "center_x": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "block_scaling": (
+            "rms",
+            "none",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16),
+        op_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1),
+        pls_components=(2,),
+        ridge_lambdas=(0, 0.1, 1, 10),
+        cv=5,
+        block_scaling="rms",
+        center_x=True,
+    ) -> None:
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.op_params = op_params
+        self.pls_components = pls_components
+        self.ridge_lambdas = ridge_lambdas
+        self.cv = cv
+        self.block_scaling = block_scaling
+        self.center_x = center_x
 
 
 class AOMSweep(NativeRegressor):
@@ -422,6 +548,69 @@ class POPPLS(NativeRegressor):
         self.scale_y = scale_y
 
 
+class AOMRidgeActiveSuperblock(NativeRegressor):
+    """Native ``aom_pop.ridge_active_superblock`` (regressor)."""
+
+    _method_id = "aom_pop.ridge_active_superblock"
+    _param_types: ClassVar[dict[str, str]] = {
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "op_params": "double_array",
+        "alphas": "double_array",
+        "cv": "int",
+        "active_top_m": "int",
+        "active_diversity_threshold": "double",
+        "active_score_method": "enum",
+        "active_max_per_family": "int",
+        "keep_identity": "bool",
+        "block_scaling": "enum",
+        "center_x": "bool",
+        "center_y": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "active_score_method": (
+            "norm",
+            "kta",
+            "blend",
+        ),
+        "block_scaling": (
+            "rms",
+            "none",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16),
+        op_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1),
+        alphas=(0.0001, 0.01, 1, 100),
+        cv=5,
+        active_top_m=20,
+        active_diversity_threshold=0.98,
+        active_score_method="norm",
+        active_max_per_family=0,
+        keep_identity=True,
+        block_scaling="rms",
+        center_x=True,
+        center_y=True,
+    ) -> None:
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.op_params = op_params
+        self.alphas = alphas
+        self.cv = cv
+        self.active_top_m = active_top_m
+        self.active_diversity_threshold = active_diversity_threshold
+        self.active_score_method = active_score_method
+        self.active_max_per_family = active_max_per_family
+        self.keep_identity = keep_identity
+        self.block_scaling = block_scaling
+        self.center_x = center_x
+        self.center_y = center_y
+
+
 class AOMRidgeBlender(NativeRegressor):
     """Native ``aom_pop.ridge_blender`` (regressor)."""
 
@@ -513,6 +702,95 @@ class AOMRidgeGlobal(NativeRegressor):
         self.center_y = center_y
         self.scale_y = scale_y
         self.moment_policy = moment_policy
+
+
+class AOMRidgeMKLSuperblock(NativeRegressor):
+    """Native ``aom_pop.ridge_mkl_superblock`` (regressor)."""
+
+    _method_id = "aom_pop.ridge_mkl_superblock"
+    _param_types: ClassVar[dict[str, str]] = {
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "op_params": "double_array",
+        "alphas": "double_array",
+        "cv": "int",
+        "mkl_top_k": "int",
+        "block_scaling": "enum",
+        "center_x": "bool",
+        "center_y": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "block_scaling": (
+            "rms",
+            "none",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16),
+        op_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1),
+        alphas=(0.0001, 0.01, 1, 100),
+        cv=5,
+        mkl_top_k=6,
+        block_scaling="none",
+        center_x=True,
+        center_y=True,
+    ) -> None:
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.op_params = op_params
+        self.alphas = alphas
+        self.cv = cv
+        self.mkl_top_k = mkl_top_k
+        self.block_scaling = block_scaling
+        self.center_x = center_x
+        self.center_y = center_y
+
+
+class AOMRidgeSuperblock(NativeRegressor):
+    """Native ``aom_pop.ridge_superblock`` (regressor)."""
+
+    _method_id = "aom_pop.ridge_superblock"
+    _param_types: ClassVar[dict[str, str]] = {
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "op_params": "double_array",
+        "alphas": "double_array",
+        "cv": "int",
+        "block_scaling": "enum",
+        "center_x": "bool",
+        "center_y": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "block_scaling": (
+            "rms",
+            "none",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16),
+        op_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1),
+        alphas=(0.0001, 0.01, 1, 100),
+        cv=5,
+        block_scaling="rms",
+        center_x=True,
+        center_y=True,
+    ) -> None:
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.op_params = op_params
+        self.alphas = alphas
+        self.cv = cv
+        self.block_scaling = block_scaling
+        self.center_x = center_x
+        self.center_y = center_y
 
 
 class AOMRobustHPO(NativeRegressor):
@@ -2102,6 +2380,60 @@ class RandomSubspacePLS(NativeRegressor):
         self.n_estimators = n_estimators
         self.features_per_subspace = features_per_subspace
         self.seed = seed
+
+
+class PLSCox(NativeRegressor):
+    """Native ``models.heads.pls_cox`` (regressor)."""
+
+    _method_id = "models.heads.pls_cox"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "max_iter": "int",
+        "tol": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        max_iter=50,
+        tol=1e-10,
+    ) -> None:
+        self.n_components = n_components
+        self.max_iter = max_iter
+        self.tol = tol
+
+
+class PLSGLM(NativeRegressor):
+    """Native ``models.heads.pls_glm`` (regressor)."""
+
+    _method_id = "models.heads.pls_glm"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "family": "enum",
+        "max_iter": "int",
+        "tol": "double",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "family": (
+            "gaussian",
+            "poisson",
+            "binomial",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        family="gaussian",
+        max_iter=100,
+        tol=1e-10,
+    ) -> None:
+        self.n_components = n_components
+        self.family = family
+        self.max_iter = max_iter
+        self.tol = tol
 
 
 class LWPLS(NativeRegressor):
@@ -5257,6 +5589,7 @@ __all__ = [
     "OSC",
     "PCR",
     "PDS",
+    "PLSGLM",
     "PLSLDA",
     "PLSQDA",
     "POPPLS",
@@ -5277,12 +5610,18 @@ __all__ = [
     "VISSA",
     "WVC",
     "AOMCalibration",
+    "AOMChainRidgePLS",
     "AOMChainSweep",
     "AOMFixedCandidate",
     "AOMOperatorPLSStack",
+    "AOMPLSSuperblock",
     "AOMPreprocessing",
+    "AOMRidgeActiveSuperblock",
     "AOMRidgeBlender",
     "AOMRidgeGlobal",
+    "AOMRidgeMKLSuperblock",
+    "AOMRidgePLSSuperblock",
+    "AOMRidgeSuperblock",
     "AOMRobustHPO",
     "AOMSweep",
     "AirPLS",
@@ -5358,6 +5697,7 @@ __all__ = [
     "Normalize",
     "NorrisWilliams",
     "OnPLS",
+    "PLSCox",
     "PLSDiagnostics",
     "PLSLogistic",
     "PLSMonitoring",

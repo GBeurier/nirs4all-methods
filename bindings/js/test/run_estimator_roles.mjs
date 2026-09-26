@@ -81,7 +81,7 @@ for (const c of fixture.cases) {
     assert.deepEqual(est.toN4me(), payload, `${c.method_id} re-export`);
     est.dispose();
 
-    const target = c.classes ? fixture.labels_train : yTrain;
+    const target = c.y ? matrix(fixture[c.y]) : c.classes ? fixture.labels_train : yTrain;
     const fitted = new Cls(c.params).fit(xTrain, target, inputsFor(c.fit_inputs));
     if (c.classes) checkClassifier(fitted, c, 1e-9, `${c.method_id} JS fit`);
     checkMask(fitted, c, `${c.method_id} JS fit`);

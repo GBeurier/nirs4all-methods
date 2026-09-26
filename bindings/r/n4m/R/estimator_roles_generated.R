@@ -4,16 +4,22 @@
 
 .n4m_method_roles <- list(
   "aom_pop.aom_chain_fixed_fit" = c("regressor"),
+  "aom_pop.aom_chain_ridge_pls" = c("regressor"),
   "aom_pop.aom_chain_sweep" = c("regressor"),
   "aom_pop.aom_pls" = c("regressor"),
+  "aom_pop.aom_pls_superblock" = c("regressor"),
   "aom_pop.aom_preprocessing" = c("transformer"),
+  "aom_pop.aom_ridge_pls_superblock" = c("regressor"),
   "aom_pop.aom_sweep" = c("regressor"),
   "aom_pop.calibration" = c("regressor"),
   "aom_pop.linear_stack_compress" = c("generic"),
   "aom_pop.operator_pls_stack" = c("regressor"),
   "aom_pop.pop_pls" = c("regressor"),
+  "aom_pop.ridge_active_superblock" = c("regressor"),
   "aom_pop.ridge_blender" = c("regressor"),
   "aom_pop.ridge_global" = c("regressor"),
+  "aom_pop.ridge_mkl_superblock" = c("regressor"),
+  "aom_pop.ridge_superblock" = c("regressor"),
   "aom_pop.robust_hpo" = c("regressor"),
   "augmentation.drift.linear_drift" = c("augmenter"),
   "augmentation.drift.path_length" = c("augmenter"),
@@ -71,6 +77,8 @@
   "models.ensembles.bagging_pls" = c("regressor"),
   "models.ensembles.boosting_pls" = c("regressor"),
   "models.ensembles.random_subspace_pls" = c("regressor"),
+  "models.heads.pls_cox" = c("regressor"),
+  "models.heads.pls_glm" = c("regressor"),
   "models.local.lw_pls" = c("regressor"),
   "models.multiblock.mb_pls" = c("regressor"),
   "models.multiblock.mir_pls" = c("regressor"),
@@ -207,16 +215,22 @@
 
 .n4m_method_constructors <- c(
   "aom_pop.aom_chain_fixed_fit" = "n4m_aom_chain_fixed_fit",
+  "aom_pop.aom_chain_ridge_pls" = "n4m_aom_chain_ridge_pls",
   "aom_pop.aom_chain_sweep" = "n4m_aom_chain_sweep",
   "aom_pop.aom_pls" = "n4m_aom_pls",
+  "aom_pop.aom_pls_superblock" = "n4m_aom_pls_superblock",
   "aom_pop.aom_preprocessing" = "n4m_aom_preprocessing",
+  "aom_pop.aom_ridge_pls_superblock" = "n4m_aom_ridge_pls_superblock",
   "aom_pop.aom_sweep" = "n4m_aom_sweep",
   "aom_pop.calibration" = "n4m_calibration",
   "aom_pop.linear_stack_compress" = "n4m_linear_stack_compress",
   "aom_pop.operator_pls_stack" = "n4m_operator_pls_stack",
   "aom_pop.pop_pls" = "n4m_pop_pls",
+  "aom_pop.ridge_active_superblock" = "n4m_ridge_active_superblock",
   "aom_pop.ridge_blender" = "n4m_ridge_blender",
   "aom_pop.ridge_global" = "n4m_ridge_global",
+  "aom_pop.ridge_mkl_superblock" = "n4m_ridge_mkl_superblock",
+  "aom_pop.ridge_superblock" = "n4m_ridge_superblock",
   "aom_pop.robust_hpo" = "n4m_robust_hpo",
   "augmentation.drift.linear_drift" = "n4m_linear_drift",
   "augmentation.drift.path_length" = "n4m_path_length",
@@ -274,6 +288,8 @@
   "models.ensembles.bagging_pls" = "n4m_bagging_pls",
   "models.ensembles.boosting_pls" = "n4m_boosting_pls",
   "models.ensembles.random_subspace_pls" = "n4m_random_subspace_pls",
+  "models.heads.pls_cox" = "n4m_pls_cox",
+  "models.heads.pls_glm" = "n4m_pls_glm",
   "models.local.lw_pls" = "n4m_lw_pls",
   "models.multiblock.mb_pls" = "n4m_mb_pls",
   "models.multiblock.mir_pls" = "n4m_mir_pls",
@@ -416,6 +432,12 @@ n4m_aom_chain_fixed_fit <- function(op_kinds = NULL, param_offsets = NULL, chain
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_aom_chain_ridge_pls <- function(chain_offsets = c(0L, 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 11L, 13L, 15L), op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L, 7L, 9L, 7L, 10L, 8L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L, 17L, 20L, 21L, 24L, 26L, 27L), chain_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0, 1.0, 7.0, 2.0, 1.0, 1.0, 5.0, 5.0, 1.0, 5.0, 2.0, 1.0), pls_components = c(2L), ridge_lambdas = c(0.0, 0.1, 1.0, 10.0), cv = 5L, center_x = TRUE, center_y = TRUE) {
+  .n4m_estimator("aom_pop.aom_chain_ridge_pls", c("regressor"), list(chain_offsets = chain_offsets, op_kinds = op_kinds, param_offsets = param_offsets, chain_params = chain_params, pls_components = pls_components, ridge_lambdas = ridge_lambdas, cv = cv, center_x = center_x, center_y = center_y))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_aom_chain_sweep <- function(chain_offsets = NULL, op_kinds = NULL, param_offsets = NULL, chain_params = c(), cv = 5L, ridge_lambdas = c(0.01, 0.1, 1.0, 10.0), pls_components = c(), heads = "ridge", center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE, moment_policy = "auto") {
   .n4m_estimator("aom_pop.aom_chain_sweep", c("regressor"), list(chain_offsets = chain_offsets, op_kinds = op_kinds, param_offsets = param_offsets, chain_params = chain_params, cv = cv, ridge_lambdas = ridge_lambdas, pls_components = pls_components, heads = heads, center_x = center_x, scale_x = scale_x, center_y = center_y, scale_y = scale_y, moment_policy = moment_policy))
 }
@@ -428,8 +450,20 @@ n4m_aom_pls <- function(max_components = 3L, op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_aom_pls_superblock <- function(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), pls_components = c(2L), cv = 5L, block_scaling = "rms", center_x = TRUE, center_y = TRUE) {
+  .n4m_estimator("aom_pop.aom_pls_superblock", c("regressor"), list(op_kinds = op_kinds, param_offsets = param_offsets, op_params = op_params, pls_components = pls_components, cv = cv, block_scaling = block_scaling, center_x = center_x, center_y = center_y))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_aom_preprocessing <- function(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), gating_mode = "soft") {
   .n4m_estimator("aom_pop.aom_preprocessing", c("transformer"), list(op_kinds = op_kinds, param_offsets = param_offsets, op_params = op_params, gating_mode = gating_mode))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_aom_ridge_pls_superblock <- function(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), pls_components = c(2L), ridge_lambdas = c(0.0, 0.1, 1.0, 10.0), cv = 5L, block_scaling = "rms", center_x = TRUE) {
+  .n4m_estimator("aom_pop.aom_ridge_pls_superblock", c("regressor"), list(op_kinds = op_kinds, param_offsets = param_offsets, op_params = op_params, pls_components = pls_components, ridge_lambdas = ridge_lambdas, cv = cv, block_scaling = block_scaling, center_x = center_x))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -464,6 +498,12 @@ n4m_pop_pls <- function(max_components = 3L, op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_ridge_active_superblock <- function(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), alphas = c(0.0001, 0.01, 1.0, 100.0), cv = 5L, active_top_m = 20L, active_diversity_threshold = 0.98, active_score_method = "norm", active_max_per_family = 0L, keep_identity = TRUE, block_scaling = "rms", center_x = TRUE, center_y = TRUE) {
+  .n4m_estimator("aom_pop.ridge_active_superblock", c("regressor"), list(op_kinds = op_kinds, param_offsets = param_offsets, op_params = op_params, alphas = alphas, cv = cv, active_top_m = active_top_m, active_diversity_threshold = active_diversity_threshold, active_score_method = active_score_method, active_max_per_family = active_max_per_family, keep_identity = keep_identity, block_scaling = block_scaling, center_x = center_x, center_y = center_y))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_ridge_blender <- function(profile = "compact", cv = 5L, ridge_lambdas = c(0.0001, 0.01, 1.0, 100.0), regularizer = 0.01, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE) {
   .n4m_estimator("aom_pop.ridge_blender", c("regressor"), list(profile = profile, cv = cv, ridge_lambdas = ridge_lambdas, regularizer = regularizer, center_x = center_x, scale_x = scale_x, center_y = center_y, scale_y = scale_y))
 }
@@ -472,6 +512,18 @@ n4m_ridge_blender <- function(profile = "compact", cv = 5L, ridge_lambdas = c(0.
 #' @export
 n4m_ridge_global <- function(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), cv = 5L, ridge_lambdas = c(0.0001, 0.01, 1.0, 100.0), center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE, moment_policy = "auto") {
   .n4m_estimator("aom_pop.ridge_global", c("regressor"), list(op_kinds = op_kinds, param_offsets = param_offsets, op_params = op_params, cv = cv, ridge_lambdas = ridge_lambdas, center_x = center_x, scale_x = scale_x, center_y = center_y, scale_y = scale_y, moment_policy = moment_policy))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_ridge_mkl_superblock <- function(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), alphas = c(0.0001, 0.01, 1.0, 100.0), cv = 5L, mkl_top_k = 6L, block_scaling = "none", center_x = TRUE, center_y = TRUE) {
+  .n4m_estimator("aom_pop.ridge_mkl_superblock", c("regressor"), list(op_kinds = op_kinds, param_offsets = param_offsets, op_params = op_params, alphas = alphas, cv = cv, mkl_top_k = mkl_top_k, block_scaling = block_scaling, center_x = center_x, center_y = center_y))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_ridge_superblock <- function(op_kinds = c(0L, 7L, 7L, 8L, 8L, 9L, 9L, 10L, 15L), param_offsets = c(0L, 0L, 1L, 2L, 4L, 6L, 9L, 12L, 15L, 16L), op_params = c(1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0), alphas = c(0.0001, 0.01, 1.0, 100.0), cv = 5L, block_scaling = "rms", center_x = TRUE, center_y = TRUE) {
+  .n4m_estimator("aom_pop.ridge_superblock", c("regressor"), list(op_kinds = op_kinds, param_offsets = param_offsets, op_params = op_params, alphas = alphas, cv = cv, block_scaling = block_scaling, center_x = center_x, center_y = center_y))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -814,6 +866,18 @@ n4m_boosting_pls <- function(n_components = 2L, n_estimators = 50L, learning_rat
 #' @export
 n4m_random_subspace_pls <- function(n_components = 2L, n_estimators = 50L, features_per_subspace = 10L, seed = 0L) {
   .n4m_estimator("models.ensembles.random_subspace_pls", c("regressor"), list(n_components = n_components, n_estimators = n_estimators, features_per_subspace = features_per_subspace, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pls_cox <- function(n_components = 2L, max_iter = 50L, tol = 1e-10) {
+  .n4m_estimator("models.heads.pls_cox", c("regressor"), list(n_components = n_components, max_iter = max_iter, tol = tol))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pls_glm <- function(n_components = 2L, family = "gaussian", max_iter = 100L, tol = 1e-10) {
+  .n4m_estimator("models.heads.pls_glm", c("regressor"), list(n_components = n_components, family = family, max_iter = max_iter, tol = tol))
 }
 
 #' @rdname n4m_estimator_role_constructors

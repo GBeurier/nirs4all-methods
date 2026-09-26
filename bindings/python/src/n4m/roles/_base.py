@@ -287,7 +287,9 @@ class NativeEstimator(NativeMethod):
         labels = None
         if y is not None and isinstance(self, NativeClassifier):
             labels, y = self._encode_labels(y), None
-        self._y_1d_ = y is not None and np.ndim(y) == 1
+        # A single prediction column comes back 1-D unless y was a one-column
+        # matrix (a survival (time, event) response gives one risk column).
+        self._y_1d_ = y is not None and not (np.ndim(y) == 2 and np.shape(y)[1] == 1)
         keep: list[Any] = []
         inputs = _fit_inputs(
             keep,

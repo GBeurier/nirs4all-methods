@@ -122,6 +122,14 @@ CLASS_NAMES = {
     "aom_pop.operator_pls_stack": "AOMOperatorPLSStack",
     "aom_pop.calibration": "AOMCalibration",
     "aom_pop.aom_preprocessing": "AOMPreprocessing",
+    "aom_pop.ridge_superblock": "AOMRidgeSuperblock",
+    "aom_pop.ridge_mkl_superblock": "AOMRidgeMKLSuperblock",
+    "aom_pop.ridge_active_superblock": "AOMRidgeActiveSuperblock",
+    "aom_pop.aom_pls_superblock": "AOMPLSSuperblock",
+    "aom_pop.aom_ridge_pls_superblock": "AOMRidgePLSSuperblock",
+    "aom_pop.aom_chain_ridge_pls": "AOMChainRidgePLS",
+    "models.heads.pls_glm": "PLSGLM",
+    "models.heads.pls_cox": "PLSCox",
 }
 # Role interface -> Python role base class (docs/abi/estimator_roles_design.md, D0b).
 ROLE_BASES = {
