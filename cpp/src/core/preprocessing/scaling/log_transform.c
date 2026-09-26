@@ -188,3 +188,23 @@ n4m_status_t n4m_pp_log_apply(const n4m_pp_log_state_t* state,
 
     return N4M_OK;
 }
+
+n4m_status_t n4m_pp_log_state_save(const n4m_pp_log_state_t* state,
+                                   n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    n4m_state_write_f64(w, state->fitted_offset);
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_log_state_load(n4m_pp_log_state_t* state,
+                                   n4m_state_reader_t* r, int64_t n_features) {
+    (void)n_features;
+    double fitted_offset = 0.0;
+    if (!n4m_state_read_f64(r, &fitted_offset) ||
+        (!state->auto_offset && fitted_offset != state->offset)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    state->fitted_offset = fitted_offset;
+    state->fitted        = 1;
+    return N4M_OK;
+}

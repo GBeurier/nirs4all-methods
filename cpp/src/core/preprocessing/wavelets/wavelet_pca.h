@@ -21,6 +21,7 @@
 #include <stdint.h>
 
 #include "n4m/n4m.h"
+#include "core/estimator/state_io.h"
 #include "core/common/wavelet_kernels.h"
 
 #ifdef __cplusplus
@@ -51,6 +52,14 @@ n4m_status_t n4m_pp_wavelet_pca_state_apply(
     const n4m_pp_wavelet_pca_state_t* state,
     const double* X, int64_t rows, int64_t cols,
     int64_t out_cols, double* out);
+
+/* Fitted-state serialization (core/estimator/state_io.h): the coefficient
+ * mean and the kept components (the decomposition level and flattened width
+ * follow from the input width, as at fit). */
+n4m_status_t n4m_pp_wavelet_pca_state_save(
+    const n4m_pp_wavelet_pca_state_t* state, n4m_state_writer_t* w);
+n4m_status_t n4m_pp_wavelet_pca_state_load(
+    n4m_pp_wavelet_pca_state_t* state, n4m_state_reader_t* r, int64_t n_features);
 
 #ifdef __cplusplus
 }  /* extern "C" */

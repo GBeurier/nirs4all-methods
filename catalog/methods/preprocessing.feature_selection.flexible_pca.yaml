@@ -43,6 +43,18 @@ c_surface:
   - "n4m_decomposition_flexible_pca_is_fitted"
   - "n4m_decomposition_flexible_pca_output_cols"
   - "n4m_decomposition_flexible_pca_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_flexible_pca"
+  roles: "[transformer]"
+  state: "components"
+  inputs:
+    y: "optional"
+  params:
+    - name: "n_components"
+      type: "double"
+      default: 5.0
+      min: 0.0
 fq_name: "n4m.decomposition.flexible_pca"
 leaf: "flexible_pca"
 legacy_ids:
