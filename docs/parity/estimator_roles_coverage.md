@@ -8,7 +8,7 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**167 of 213 catalog entries covered.**
+**180 of 213 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
@@ -16,9 +16,9 @@ three bindings and each binding's own fit reproduces the Python fit.
 | augmentation | 31 | 39 |
 | diagnostics | 5 | 5 |
 | filters | 6 | 7 |
-| models | 25 | 38 |
-| preprocessing | 60 | 62 |
-| selection | 25 | 26 |
+| models | 35 | 38 |
+| preprocessing | 62 | 62 |
+| selection | 26 | 26 |
 | splitters | 9 | 9 |
 | utilities | 6 | 6 |
 
@@ -105,15 +105,15 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `models.ensembles.random_subspace_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.heads.pls_cox` | not yet | - | - |
 | `models.heads.pls_glm` | not yet | - | - |
-| `models.local.lw_pls` | not yet | - | - |
+| `models.local.lw_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.multiblock.mb_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.multiblock.mir_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.multiblock.o2pls` | estimator | regressor | Python, R, JS/WASM |
-| `models.multiblock.on_pls` | not yet | - | - |
-| `models.multiblock.rosa` | not yet | - | - |
-| `models.multiblock.so_pls` | not yet | - | - |
+| `models.multiblock.on_pls` | estimator | transformer | Python, R, JS/WASM |
+| `models.multiblock.rosa` | estimator | regressor | Python, R, JS/WASM |
+| `models.multiblock.so_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.pls.cppls` | estimator | regressor | Python, R, JS/WASM |
-| `models.pls.kernel` | not yet | - | - |
+| `models.pls.kernel` | estimator | regressor | Python, R, JS/WASM |
 | `models.pls.pcr` | estimator | transformer, regressor | Python, R, JS/WASM |
 | `models.pls.pls_fit_simple` | estimator | transformer, regressor | Python, R, JS/WASM |
 | `models.pls.pls_regression` | estimator | transformer, regressor | Python, R, JS/WASM |
@@ -127,13 +127,13 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `models.sparse.sparse_pls_da` | estimator | classifier | Python, R, JS/WASM |
 | `models.sparse.sparse_simpls` | estimator | regressor | Python, R, JS/WASM |
 | `models.specialized.ecr` | estimator | regressor | Python, R, JS/WASM |
-| `models.specialized.gpr_pls` | not yet | - | - |
-| `models.specialized.missing_aware_nipals` | not yet | - | - |
-| `models.specialized.recursive` | not yet | - | - |
+| `models.specialized.gpr_pls` | estimator | regressor | Python, R, JS/WASM |
+| `models.specialized.missing_aware_nipals` | estimator | regressor | Python, R, JS/WASM |
+| `models.specialized.recursive` | estimator | transformer, regressor | Python, R, JS/WASM |
 | `models.specialized.tensor_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.transfer.di_pls` | estimator | regressor | Python, R, JS/WASM |
-| `models.transfer.ds` | not yet | - | - |
-| `models.transfer.pds` | not yet | - | - |
+| `models.transfer.ds` | estimator | transformer | Python, R, JS/WASM |
+| `models.transfer.pds` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.alignment.cow_align` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.alignment.dtw_align` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.alignment.icoshift_align` | estimator | transformer | Python, R, JS/WASM |
@@ -156,7 +156,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `preprocessing.derivatives.second_derivative` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.feature_selection.flexible_pca` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.feature_selection.flexible_svd` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.orthogonalization.epo` | not yet | - | - |
+| `preprocessing.orthogonalization.epo` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.orthogonalization.osc` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.resampling.crop` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.resampling.kbins_discretizer` | estimator | transformer | Python, R, JS/WASM |
@@ -189,7 +189,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `preprocessing.transfer.direct_standardization` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.transfer.piecewise_direct_standardization` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.transfer.robust_direct_standardization` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.transfer.slope_bias` | not yet | - | - |
+| `preprocessing.transfer.slope_bias` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.wavelets.haar` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.wavelets.wavelet` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.wavelets.wavelet_denoise` | estimator | transformer | Python, R, JS/WASM |
@@ -201,7 +201,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `selection.cars` | estimator | selector | Python, R, JS/WASM |
 | `selection.emcuve` | estimator | selector | Python, R, JS/WASM |
 | `selection.ga` | estimator | selector | Python, R, JS/WASM |
-| `selection.interval` | not yet | - | - |
+| `selection.interval` | estimator | transformer | Python, R, JS/WASM |
 | `selection.ipw` | estimator | selector | Python, R, JS/WASM |
 | `selection.irf` | estimator | selector | Python, R, JS/WASM |
 | `selection.iriv` | estimator | selector | Python, R, JS/WASM |

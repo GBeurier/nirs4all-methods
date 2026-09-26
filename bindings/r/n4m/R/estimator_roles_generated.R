@@ -51,10 +51,15 @@
   "models.ensembles.bagging_pls" = c("regressor"),
   "models.ensembles.boosting_pls" = c("regressor"),
   "models.ensembles.random_subspace_pls" = c("regressor"),
+  "models.local.lw_pls" = c("regressor"),
   "models.multiblock.mb_pls" = c("regressor"),
   "models.multiblock.mir_pls" = c("regressor"),
   "models.multiblock.o2pls" = c("regressor"),
+  "models.multiblock.on_pls" = c("transformer"),
+  "models.multiblock.rosa" = c("regressor"),
+  "models.multiblock.so_pls" = c("regressor"),
   "models.pls.cppls" = c("regressor"),
+  "models.pls.kernel" = c("regressor"),
   "models.pls.pcr" = c("transformer", "regressor"),
   "models.pls.pls_fit_simple" = c("transformer", "regressor"),
   "models.pls.pls_regression" = c("transformer", "regressor"),
@@ -68,8 +73,13 @@
   "models.sparse.sparse_pls_da" = c("classifier"),
   "models.sparse.sparse_simpls" = c("regressor"),
   "models.specialized.ecr" = c("regressor"),
+  "models.specialized.gpr_pls" = c("regressor"),
+  "models.specialized.missing_aware_nipals" = c("regressor"),
+  "models.specialized.recursive" = c("transformer", "regressor"),
   "models.specialized.tensor_pls" = c("regressor"),
   "models.transfer.di_pls" = c("regressor"),
+  "models.transfer.ds" = c("transformer"),
+  "models.transfer.pds" = c("transformer"),
   "preprocessing.alignment.cow_align" = c("transformer"),
   "preprocessing.alignment.dtw_align" = c("transformer"),
   "preprocessing.alignment.icoshift_align" = c("transformer"),
@@ -92,6 +102,7 @@
   "preprocessing.derivatives.second_derivative" = c("transformer"),
   "preprocessing.feature_selection.flexible_pca" = c("transformer"),
   "preprocessing.feature_selection.flexible_svd" = c("transformer"),
+  "preprocessing.orthogonalization.epo" = c("transformer"),
   "preprocessing.orthogonalization.osc" = c("transformer"),
   "preprocessing.resampling.crop" = c("transformer"),
   "preprocessing.resampling.kbins_discretizer" = c("transformer"),
@@ -124,6 +135,7 @@
   "preprocessing.transfer.direct_standardization" = c("transformer"),
   "preprocessing.transfer.piecewise_direct_standardization" = c("transformer"),
   "preprocessing.transfer.robust_direct_standardization" = c("transformer"),
+  "preprocessing.transfer.slope_bias" = c("transformer"),
   "preprocessing.wavelets.haar" = c("transformer"),
   "preprocessing.wavelets.wavelet" = c("transformer"),
   "preprocessing.wavelets.wavelet_denoise" = c("transformer"),
@@ -135,6 +147,7 @@
   "selection.cars" = c("selector"),
   "selection.emcuve" = c("selector"),
   "selection.ga" = c("selector"),
+  "selection.interval" = c("transformer"),
   "selection.ipw" = c("selector"),
   "selection.irf" = c("selector"),
   "selection.iriv" = c("selector"),
@@ -221,10 +234,15 @@
   "models.ensembles.bagging_pls" = "n4m_bagging_pls",
   "models.ensembles.boosting_pls" = "n4m_boosting_pls",
   "models.ensembles.random_subspace_pls" = "n4m_random_subspace_pls",
+  "models.local.lw_pls" = "n4m_lw_pls",
   "models.multiblock.mb_pls" = "n4m_mb_pls",
   "models.multiblock.mir_pls" = "n4m_mir_pls",
   "models.multiblock.o2pls" = "n4m_o2pls",
+  "models.multiblock.on_pls" = "n4m_on_pls",
+  "models.multiblock.rosa" = "n4m_rosa",
+  "models.multiblock.so_pls" = "n4m_so_pls",
   "models.pls.cppls" = "n4m_cppls",
+  "models.pls.kernel" = "n4m_kernel",
   "models.pls.pcr" = "n4m_pcr",
   "models.pls.pls_fit_simple" = "n4m_pls_fit_simple",
   "models.pls.pls_regression" = "n4m_pls_regression",
@@ -238,8 +256,13 @@
   "models.sparse.sparse_pls_da" = "n4m_sparse_pls_da",
   "models.sparse.sparse_simpls" = "n4m_sparse_simpls",
   "models.specialized.ecr" = "n4m_ecr",
+  "models.specialized.gpr_pls" = "n4m_gpr_pls",
+  "models.specialized.missing_aware_nipals" = "n4m_missing_aware_nipals",
+  "models.specialized.recursive" = "n4m_recursive",
   "models.specialized.tensor_pls" = "n4m_tensor_pls",
   "models.transfer.di_pls" = "n4m_di_pls",
+  "models.transfer.ds" = "n4m_ds",
+  "models.transfer.pds" = "n4m_pds",
   "preprocessing.alignment.cow_align" = "n4m_cow_align",
   "preprocessing.alignment.dtw_align" = "n4m_dtw_align",
   "preprocessing.alignment.icoshift_align" = "n4m_icoshift_align",
@@ -262,6 +285,7 @@
   "preprocessing.derivatives.second_derivative" = "n4m_second_derivative",
   "preprocessing.feature_selection.flexible_pca" = "n4m_flexible_pca",
   "preprocessing.feature_selection.flexible_svd" = "n4m_flexible_svd",
+  "preprocessing.orthogonalization.epo" = "n4m_epo",
   "preprocessing.orthogonalization.osc" = "n4m_osc",
   "preprocessing.resampling.crop" = "n4m_crop",
   "preprocessing.resampling.kbins_discretizer" = "n4m_kbins_discretizer",
@@ -294,6 +318,7 @@
   "preprocessing.transfer.direct_standardization" = "n4m_direct_standardization",
   "preprocessing.transfer.piecewise_direct_standardization" = "n4m_piecewise_direct_standardization",
   "preprocessing.transfer.robust_direct_standardization" = "n4m_robust_direct_standardization",
+  "preprocessing.transfer.slope_bias" = "n4m_slope_bias",
   "preprocessing.wavelets.haar" = "n4m_haar",
   "preprocessing.wavelets.wavelet" = "n4m_wavelet",
   "preprocessing.wavelets.wavelet_denoise" = "n4m_wavelet_denoise",
@@ -305,6 +330,7 @@
   "selection.cars" = "n4m_cars",
   "selection.emcuve" = "n4m_emcuve",
   "selection.ga" = "n4m_ga",
+  "selection.interval" = "n4m_interval",
   "selection.ipw" = "n4m_ipw",
   "selection.irf" = "n4m_irf",
   "selection.iriv" = "n4m_iriv",
@@ -632,6 +658,12 @@ n4m_random_subspace_pls <- function(n_components = 2L, n_estimators = 50L, featu
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_lw_pls <- function(n_components = 2L, n_neighbors = NULL, mode = "weighted") {
+  .n4m_estimator("models.local.lw_pls", c("regressor"), list(n_components = n_components, n_neighbors = n_neighbors, mode = mode))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_mb_pls <- function(n_components = 2L) {
   .n4m_estimator("models.multiblock.mb_pls", c("regressor"), list(n_components = n_components))
 }
@@ -650,8 +682,32 @@ n4m_o2pls <- function(n_predictive = 2L, n_x_orthogonal = 1L, n_y_orthogonal = 1
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_on_pls <- function(n_joint = 1L, n_unique_per_block = NULL) {
+  .n4m_estimator("models.multiblock.on_pls", c("transformer"), list(n_joint = n_joint, n_unique_per_block = n_unique_per_block))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_rosa <- function(n_components = 2L) {
+  .n4m_estimator("models.multiblock.rosa", c("regressor"), list(n_components = n_components))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_so_pls <- function(n_components_per_block = NULL) {
+  .n4m_estimator("models.multiblock.so_pls", c("regressor"), list(n_components_per_block = n_components_per_block))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_cppls <- function(n_components = 2L, gamma = 0.5) {
   .n4m_estimator("models.pls.cppls", c("regressor"), list(n_components = n_components, gamma = gamma))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_kernel <- function(n_components = 2L, kernel = "rbf", gamma = 0.0, coef0 = 1.0, degree = 3L) {
+  .n4m_estimator("models.pls.kernel", c("regressor"), list(n_components = n_components, kernel = kernel, gamma = gamma, coef0 = coef0, degree = degree))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -734,6 +790,24 @@ n4m_ecr <- function(n_components = 2L, alpha = 0.5) {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_gpr_pls <- function(n_components = 2L, length_scale = 1.0, noise_level = 0.001) {
+  .n4m_estimator("models.specialized.gpr_pls", c("regressor"), list(n_components = n_components, length_scale = length_scale, noise_level = noise_level))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_missing_aware_nipals <- function(n_components = 2L) {
+  .n4m_estimator("models.specialized.missing_aware_nipals", c("regressor"), list(n_components = n_components))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_recursive <- function(n_components = 2L, window_size = NULL) {
+  .n4m_estimator("models.specialized.recursive", c("transformer", "regressor"), list(n_components = n_components, window_size = window_size))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_tensor_pls <- function(n_components = 2L, mode_j = NULL, mode_k = NULL) {
   .n4m_estimator("models.specialized.tensor_pls", c("regressor"), list(n_components = n_components, mode_j = mode_j, mode_k = mode_k))
 }
@@ -742,6 +816,18 @@ n4m_tensor_pls <- function(n_components = 2L, mode_j = NULL, mode_k = NULL) {
 #' @export
 n4m_di_pls <- function(n_components = 2L, di_lambda = 1.0) {
   .n4m_estimator("models.transfer.di_pls", c("regressor"), list(n_components = n_components, di_lambda = di_lambda))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_ds <- function() {
+  .n4m_estimator("models.transfer.ds", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pds <- function(window_half_width = 2L) {
+  .n4m_estimator("models.transfer.pds", c("transformer"), list(window_half_width = window_half_width))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -874,6 +960,12 @@ n4m_flexible_pca <- function(n_components = 5.0) {
 #' @export
 n4m_flexible_svd <- function(n_components = 5.0) {
   .n4m_estimator("preprocessing.feature_selection.flexible_svd", c("transformer"), list(n_components = n_components))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_epo <- function(scale = TRUE) {
+  .n4m_estimator("preprocessing.orthogonalization.epo", c("transformer"), list(scale = scale))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -1070,6 +1162,12 @@ n4m_robust_direct_standardization <- function(fit_intercept = TRUE, ridge = 0.0,
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_slope_bias <- function() {
+  .n4m_estimator("preprocessing.transfer.slope_bias", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_haar <- function() {
   .n4m_estimator("preprocessing.wavelets.haar", c("transformer"), list())
 }
@@ -1132,6 +1230,12 @@ n4m_emcuve <- function(n_components = 2L, noise_features = 50L, noise_seed = 0L,
 #' @export
 n4m_ga <- function(n_components = 2L, n_generations = 30L, population_size = 40L, min_features = 0L, max_features = 0L, mutation_rate = 0.05, cv = 3L, seed = 0L) {
   .n4m_estimator("selection.ga", c("selector"), list(n_components = n_components, n_generations = n_generations, population_size = population_size, min_features = min_features, max_features = max_features, mutation_rate = mutation_rate, cv = cv, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_interval <- function(interval_size = 32L, step = 0L) {
+  .n4m_estimator("selection.interval", c("transformer"), list(interval_size = interval_size, step = step))
 }
 
 #' @rdname n4m_estimator_role_constructors

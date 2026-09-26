@@ -1280,6 +1280,34 @@ class RandomSubspacePLS(NativeRegressor):
         self.seed = seed
 
 
+class LWPLS(NativeRegressor):
+    """Native ``models.local.lw_pls`` (regressor)."""
+
+    _method_id = "models.local.lw_pls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_neighbors": "int",
+        "mode": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "mode": (
+            "weighted",
+            "knn",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_neighbors=None,
+        mode="weighted",
+    ) -> None:
+        self.n_components = n_components
+        self.n_neighbors = n_neighbors
+        self.mode = mode
+
+
 class MBPLS(NativeRegressor):
     """Native ``models.multiblock.mb_pls`` (regressor).
 
@@ -1337,6 +1365,66 @@ class O2PLS(NativeRegressor):
         self.n_y_orthogonal = n_y_orthogonal
 
 
+class OnPLS(NativeTransformer):
+    """Native ``models.multiblock.on_pls`` (transformer).
+
+    Required fit inputs: blocks.
+    """
+
+    _method_id = "models.multiblock.on_pls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_joint": "int",
+        "n_unique_per_block": "int_array",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_joint=1,
+        n_unique_per_block=None,
+    ) -> None:
+        self.n_joint = n_joint
+        self.n_unique_per_block = n_unique_per_block
+
+
+class ROSA(NativeRegressor):
+    """Native ``models.multiblock.rosa`` (regressor).
+
+    Required fit inputs: blocks.
+    """
+
+    _method_id = "models.multiblock.rosa"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+    ) -> None:
+        self.n_components = n_components
+
+
+class SOPLS(NativeRegressor):
+    """Native ``models.multiblock.so_pls`` (regressor).
+
+    Required fit inputs: blocks.
+    """
+
+    _method_id = "models.multiblock.so_pls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components_per_block": "int_array",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components_per_block=None,
+    ) -> None:
+        self.n_components_per_block = n_components_per_block
+
+
 class CPPLS(NativeRegressor):
     """Native ``models.pls.cppls`` (regressor)."""
 
@@ -1354,6 +1442,42 @@ class CPPLS(NativeRegressor):
     ) -> None:
         self.n_components = n_components
         self.gamma = gamma
+
+
+class KernelPLS(NativeRegressor):
+    """Native ``models.pls.kernel`` (regressor)."""
+
+    _method_id = "models.pls.kernel"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "kernel": "enum",
+        "gamma": "double",
+        "coef0": "double",
+        "degree": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "kernel": (
+            "linear",
+            "rbf",
+            "polynomial",
+            "sigmoid",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        kernel="rbf",
+        gamma=0,
+        coef0=1,
+        degree=3,
+    ) -> None:
+        self.n_components = n_components
+        self.kernel = kernel
+        self.gamma = gamma
+        self.coef0 = coef0
+        self.degree = degree
 
 
 class PCR(NativeRegressor, NativeTransformer):
@@ -1684,6 +1808,63 @@ class ECR(NativeRegressor):
         self.alpha = alpha
 
 
+class GPRPLS(NativeRegressor):
+    """Native ``models.specialized.gpr_pls`` (regressor)."""
+
+    _method_id = "models.specialized.gpr_pls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "length_scale": "double",
+        "noise_level": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        length_scale=1,
+        noise_level=0.001,
+    ) -> None:
+        self.n_components = n_components
+        self.length_scale = length_scale
+        self.noise_level = noise_level
+
+
+class MissingAwareNIPALS(NativeRegressor):
+    """Native ``models.specialized.missing_aware_nipals`` (regressor)."""
+
+    _method_id = "models.specialized.missing_aware_nipals"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+    ) -> None:
+        self.n_components = n_components
+
+
+class RecursivePLS(NativeRegressor, NativeTransformer):
+    """Native ``models.specialized.recursive`` (transformer, regressor)."""
+
+    _method_id = "models.specialized.recursive"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "window_size": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        window_size=None,
+    ) -> None:
+        self.n_components = n_components
+        self.window_size = window_size
+
+
 class NPLS(NativeRegressor):
     """Native ``models.specialized.tensor_pls`` (regressor)."""
 
@@ -1726,6 +1907,38 @@ class DIPLS(NativeRegressor):
     ) -> None:
         self.n_components = n_components
         self.di_lambda = di_lambda
+
+
+class DS(NativeTransformer):
+    """Native ``models.transfer.ds`` (transformer).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "models.transfer.ds"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
+
+
+class PDS(NativeTransformer):
+    """Native ``models.transfer.pds`` (transformer).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "models.transfer.pds"
+    _param_types: ClassVar[dict[str, str]] = {
+        "window_half_width": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        window_half_width=2,
+    ) -> None:
+        self.window_half_width = window_half_width
 
 
 class CorrelationOptimizedWarping(NativeTransformer):
@@ -2213,6 +2426,22 @@ class FlexibleSVD(NativeTransformer):
         n_components=5,
     ) -> None:
         self.n_components = n_components
+
+
+class EPO(NativeTransformer):
+    """Native ``preprocessing.orthogonalization.epo`` (transformer)."""
+
+    _method_id = "preprocessing.orthogonalization.epo"
+    _param_types: ClassVar[dict[str, str]] = {
+        "scale": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        scale=True,
+    ) -> None:
+        self.scale = scale
 
 
 class OSC(NativeTransformer):
@@ -2880,6 +3109,16 @@ class RobustDirectStandardization(NativeTransformer):
         self.max_iter = max_iter
 
 
+class SlopeBiasCorrection(NativeTransformer):
+    """Native ``preprocessing.transfer.slope_bias`` (transformer)."""
+
+    _method_id = "preprocessing.transfer.slope_bias"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
+
+
 class Haar(NativeTransformer):
     """Native ``preprocessing.wavelets.haar`` (transformer)."""
 
@@ -3230,6 +3469,25 @@ class GA(NativeSelector):
         self.mutation_rate = mutation_rate
         self.cv = cv
         self.seed = seed
+
+
+class IntervalGenerator(NativeTransformer):
+    """Native ``selection.interval`` (transformer)."""
+
+    _method_id = "selection.interval"
+    _param_types: ClassVar[dict[str, str]] = {
+        "interval_size": "int",
+        "step": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        interval_size=32,
+        step=0,
+    ) -> None:
+        self.interval_size = interval_size
+        self.step = step
 
 
 class IPW(NativeSelector):
@@ -4154,14 +4412,18 @@ __all__ = [
     "CARS",
     "CPPLS",
     "DIPLS",
+    "DS",
     "ECR",
     "EMCUVE",
     "EMSC",
+    "EPO",
     "GA",
+    "GPRPLS",
     "IPW",
     "IRF",
     "IRIV",
     "LSNV",
+    "LWPLS",
     "MBPLS",
     "MIRPLS",
     "MSC",
@@ -4169,14 +4431,17 @@ __all__ = [
     "O2PLS",
     "OSC",
     "PCR",
+    "PDS",
     "PLSLDA",
     "PLSQDA",
     "PSO",
     "REP",
     "RNV",
+    "ROSA",
     "SCARS",
     "SNIP",
     "SNV",
+    "SOPLS",
     "SPA",
     "SPXY",
     "ST",
@@ -4231,9 +4496,11 @@ __all__ = [
     "IcoshiftAlignment",
     "InstrumentBroaden",
     "IntegerKBinsDiscretizer",
+    "IntervalGenerator",
     "KBinsStratified",
     "KMeans",
     "KennardStone",
+    "KernelPLS",
     "KubelkaMunk",
     "LinearDrift",
     "LocalCentering",
@@ -4242,12 +4509,14 @@ __all__ = [
     "LocalizedMSC",
     "LogTransform",
     "MagnitudeWarp",
+    "MissingAwareNIPALS",
     "ModPoly",
     "ModelSelection",
     "Moments",
     "MultiplicativeNoise",
     "Normalize",
     "NorrisWilliams",
+    "OnPLS",
     "PLSDiagnostics",
     "PLSLogistic",
     "PLSMonitoring",
@@ -4264,6 +4533,7 @@ __all__ = [
     "RandomXOp",
     "Randomization",
     "RangeDiscretizer",
+    "RecursivePLS",
     "RegressionMetrics",
     "ResampleTransformer",
     "Resampler",
@@ -4285,6 +4555,7 @@ __all__ = [
     "SignalTypeDetector",
     "SimplePLS",
     "SimpleScale",
+    "SlopeBiasCorrection",
     "SparsePLSDA",
     "SparseSIMPLS",
     "SpectralQualityFilter",

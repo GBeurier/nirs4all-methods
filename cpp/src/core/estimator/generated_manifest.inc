@@ -471,6 +471,14 @@ const ParamSpec kParams_models_ensembles_random_subspace_pls[] = {
     {"features_per_subspace", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_features_per_subspace, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"seed", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
+const std::int64_t kDefault_models_local_lw_pls_n_components[] = {2};
+const std::int64_t kDefault_models_local_lw_pls_mode[] = {0};
+const char* const kChoices_models_local_lw_pls_mode[] = {"weighted", "knn"};
+const ParamSpec kParams_models_local_lw_pls[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_local_lw_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_neighbors", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 2.0, kNaN, nullptr, 0},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_models_local_lw_pls_mode, nullptr, 1, kNaN, kNaN, kChoices_models_local_lw_pls_mode, 2},
+};
 const std::int64_t kDefault_models_multiblock_mb_pls_n_components[] = {2};
 const ParamSpec kParams_models_multiblock_mb_pls[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_mb_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
@@ -487,11 +495,36 @@ const ParamSpec kParams_models_multiblock_o2pls[] = {
     {"n_x_orthogonal", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_o2pls_n_x_orthogonal, nullptr, 1, 0.0, kNaN, nullptr, 0},
     {"n_y_orthogonal", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_o2pls_n_y_orthogonal, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
+const std::int64_t kDefault_models_multiblock_on_pls_n_joint[] = {1};
+const ParamSpec kParams_models_multiblock_on_pls[] = {
+    {"n_joint", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_on_pls_n_joint, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_unique_per_block", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_models_multiblock_rosa_n_components[] = {2};
+const ParamSpec kParams_models_multiblock_rosa[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_rosa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+};
+const ParamSpec kParams_models_multiblock_so_pls[] = {
+    {"n_components_per_block", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0},
+};
 const std::int64_t kDefault_models_pls_cppls_n_components[] = {2};
 const double kDefault_models_pls_cppls_gamma[] = {0.5};
 const ParamSpec kParams_models_pls_cppls[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_cppls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"gamma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_cppls_gamma, 1, 0.0, 1.0, nullptr, 0},
+};
+const std::int64_t kDefault_models_pls_kernel_n_components[] = {2};
+const std::int64_t kDefault_models_pls_kernel_kernel[] = {1};
+const char* const kChoices_models_pls_kernel_kernel[] = {"linear", "rbf", "polynomial", "sigmoid"};
+const double kDefault_models_pls_kernel_gamma[] = {0.0};
+const double kDefault_models_pls_kernel_coef0[] = {1.0};
+const std::int64_t kDefault_models_pls_kernel_degree[] = {3};
+const ParamSpec kParams_models_pls_kernel[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_kernel_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"kernel", N4M_METHOD_PARAM_ENUM, true, kDefault_models_pls_kernel_kernel, nullptr, 1, kNaN, kNaN, kChoices_models_pls_kernel_kernel, 4},
+    {"gamma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_kernel_gamma, 1, 0.0, kNaN, nullptr, 0},
+    {"coef0", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_kernel_coef0, 1, kNaN, kNaN, nullptr, 0},
+    {"degree", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_kernel_degree, nullptr, 1, 1.0, kNaN, nullptr, 0},
 };
 const std::int64_t kDefault_models_pls_pcr_n_components[] = {2};
 const std::int64_t kDefault_models_pls_pcr_center_x[] = {1};
@@ -614,6 +647,23 @@ const ParamSpec kParams_models_specialized_ecr[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_ecr_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_specialized_ecr_alpha, 1, 0.0, 1.0, nullptr, 0},
 };
+const std::int64_t kDefault_models_specialized_gpr_pls_n_components[] = {2};
+const double kDefault_models_specialized_gpr_pls_length_scale[] = {1.0};
+const double kDefault_models_specialized_gpr_pls_noise_level[] = {0.001};
+const ParamSpec kParams_models_specialized_gpr_pls[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_gpr_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"length_scale", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_specialized_gpr_pls_length_scale, 1, 0.0, kNaN, nullptr, 0},
+    {"noise_level", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_specialized_gpr_pls_noise_level, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_models_specialized_missing_aware_nipals_n_components[] = {2};
+const ParamSpec kParams_models_specialized_missing_aware_nipals[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_missing_aware_nipals_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_models_specialized_recursive_n_components[] = {2};
+const ParamSpec kParams_models_specialized_recursive[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_recursive_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"window_size", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 2.0, kNaN, nullptr, 0},
+};
 const std::int64_t kDefault_models_specialized_tensor_pls_n_components[] = {2};
 const ParamSpec kParams_models_specialized_tensor_pls[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_tensor_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
@@ -625,6 +675,10 @@ const double kDefault_models_transfer_di_pls_di_lambda[] = {1.0};
 const ParamSpec kParams_models_transfer_di_pls[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_transfer_di_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"di_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_transfer_di_pls_di_lambda, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_models_transfer_pds_window_half_width[] = {2};
+const ParamSpec kParams_models_transfer_pds[] = {
+    {"window_half_width", N4M_METHOD_PARAM_INT, true, kDefault_models_transfer_pds_window_half_width, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
 const double kDefault_preprocessing_alignment_cow_align_reference[] = {0};
 const std::int64_t kDefault_preprocessing_alignment_cow_align_interval_size[] = {32};
@@ -796,6 +850,10 @@ const ParamSpec kParams_preprocessing_feature_selection_flexible_pca[] = {
 const double kDefault_preprocessing_feature_selection_flexible_svd_n_components[] = {5.0};
 const ParamSpec kParams_preprocessing_feature_selection_flexible_svd[] = {
     {"n_components", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_feature_selection_flexible_svd_n_components, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_orthogonalization_epo_scale[] = {1};
+const ParamSpec kParams_preprocessing_orthogonalization_epo[] = {
+    {"scale", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_orthogonalization_epo_scale, nullptr, 1, kNaN, kNaN, nullptr, 0},
 };
 const std::int64_t kDefault_preprocessing_orthogonalization_osc_n_components[] = {1};
 const std::int64_t kDefault_preprocessing_orthogonalization_osc_scale[] = {1};
@@ -1113,6 +1171,12 @@ const ParamSpec kParams_selection_ga[] = {
     {"mutation_rate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ga_mutation_rate, 1, 0.0, 1.0, nullptr, 0},
     {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
     {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_selection_interval_interval_size[] = {32};
+const std::int64_t kDefault_selection_interval_step[] = {0};
+const ParamSpec kParams_selection_interval[] = {
+    {"interval_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_interval_interval_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"step", N4M_METHOD_PARAM_INT, true, kDefault_selection_interval_step, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
 const std::int64_t kDefault_selection_ipw_n_components[] = {2};
 const std::int64_t kDefault_selection_ipw_n_iterations[] = {20};
@@ -1503,10 +1567,15 @@ const MethodSpec kMethods[] = {
     {"models.ensembles.bagging_pls", "n4m.ensemble.bagging_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_bagging_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_bagging_pls, nullptr},
     {"models.ensembles.boosting_pls", "n4m.ensemble.boosting_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_boosting_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_boosting_pls, nullptr},
     {"models.ensembles.random_subspace_pls", "n4m.ensemble.random_subspace_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_random_subspace_pls, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_random_subspace_pls, nullptr},
+    {"models.local.lw_pls", "n4m.estimators.regression.local.lw_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_local_lw_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "training_rows", &make_lw_pls, nullptr},
     {"models.multiblock.mb_pls", "n4m.estimators.multiblock.mb_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_mb_pls, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_mb_pls, nullptr},
     {"models.multiblock.mir_pls", "n4m.estimators.multiblock.mir_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_mir_pls, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_mir_pls, nullptr},
     {"models.multiblock.o2pls", "n4m.estimators.multiblock.o2pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_o2pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_o2pls, nullptr},
+    {"models.multiblock.on_pls", "n4m.estimators.multiblock.on_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_models_multiblock_on_pls, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "on_pls", &make_tr_on_pls, nullptr},
+    {"models.multiblock.rosa", "n4m.estimators.multiblock.rosa", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_rosa, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_rosa, nullptr},
+    {"models.multiblock.so_pls", "n4m.estimators.multiblock.so_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_so_pls, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_so_pls, nullptr},
     {"models.pls.cppls", "n4m.estimators.regression.latent.cppls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_pls_cppls, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_cppls, nullptr},
+    {"models.pls.kernel", "n4m.estimators.regression.kernel.kernel_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_pls_kernel, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "kernel_pls", &make_kernel_pls, nullptr},
     {"models.pls.pcr", "n4m.estimators.regression.latent.pcr", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_pls_pcr, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_pcr, nullptr},
     {"models.pls.pls_fit_simple", "n4m.estimators.regression.latent.pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_pls_pls_fit_simple, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_pls_fit_simple, nullptr},
     {"models.pls.pls_regression", "n4m.estimators.regression.latent.pls_regression", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_pls_pls_regression, 6, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_pls_regression, nullptr},
@@ -1520,8 +1589,13 @@ const MethodSpec kMethods[] = {
     {"models.sparse.sparse_pls_da", "n4m.estimators.classification.sparse_pls_da", N4M_METHOD_ESTIMATOR, N4M_ROLE_CLASSIFIER, kParams_models_sparse_sparse_pls_da, 2, {N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "classifier", &make_cls_sparse_pls_da, nullptr},
     {"models.sparse.sparse_simpls", "n4m.estimators.regression.sparse.sparse_simpls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_sparse_sparse_simpls, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_sparse_simpls, nullptr},
     {"models.specialized.ecr", "n4m.estimators.regression.latent.ecr", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_specialized_ecr, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_ecr, nullptr},
+    {"models.specialized.gpr_pls", "n4m.estimators.regression.kernel.gpr_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_specialized_gpr_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "gpr_pls", &make_gpr_pls, nullptr},
+    {"models.specialized.missing_aware_nipals", "n4m.estimators.regression.latent.missing_aware_nipals", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_specialized_missing_aware_nipals, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "coef", &make_missing_aware_nipals, nullptr},
+    {"models.specialized.recursive", "n4m.estimators.regression.online.recursive_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_specialized_recursive, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_recursive_pls, nullptr},
     {"models.specialized.tensor_pls", "n4m.estimators.regression.tensor.n_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_specialized_tensor_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_n_pls, nullptr},
     {"models.transfer.di_pls", "n4m.domain_adaptation.invariant.di_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_transfer_di_pls, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "n4mm", &make_affine_di_pls, nullptr},
+    {"models.transfer.ds", "n4m.domain_adaptation.standardization.ds", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "coef", &make_tr_ds, nullptr},
+    {"models.transfer.pds", "n4m.domain_adaptation.standardization.pds", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_models_transfer_pds, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "coef", &make_tr_pds, nullptr},
     {"preprocessing.alignment.cow_align", "n4m.transform.alignment.cow_align", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_alignment_cow_align, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "reference", &make_tr_cow_align, nullptr},
     {"preprocessing.alignment.dtw_align", "n4m.transform.alignment.dtw_align", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_alignment_dtw_align, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "reference", &make_tr_dtw_align, nullptr},
     {"preprocessing.alignment.icoshift_align", "n4m.transform.alignment.icoshift_align", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_alignment_icoshift_align, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "reference", &make_tr_icoshift_align, nullptr},
@@ -1544,6 +1618,7 @@ const MethodSpec kMethods[] = {
     {"preprocessing.derivatives.second_derivative", "n4m.transform.smoothing.second_derivative", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_derivatives_second_derivative, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_second_derivative, nullptr},
     {"preprocessing.feature_selection.flexible_pca", "n4m.decomposition.flexible_pca", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_feature_selection_flexible_pca, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "components", &make_tr_flexible_pca, nullptr},
     {"preprocessing.feature_selection.flexible_svd", "n4m.decomposition.flexible_svd", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_feature_selection_flexible_svd, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "components", &make_tr_flexible_svd, nullptr},
+    {"preprocessing.orthogonalization.epo", "n4m.domain_adaptation.orthogonalization.epo", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_orthogonalization_epo, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "epo", &make_tr_epo, nullptr},
     {"preprocessing.orthogonalization.osc", "n4m.transform.orthogonalization.osc", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_orthogonalization_osc, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "orthogonal_components", &make_tr_osc, nullptr},
     {"preprocessing.resampling.crop", "n4m.transform.resampling.crop", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_crop, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_crop, nullptr},
     {"preprocessing.resampling.kbins_discretizer", "n4m.transform.resampling.kbins_discretizer", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_kbins_discretizer, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "bin_edges", &make_tr_kbins_discretizer, nullptr},
@@ -1576,6 +1651,7 @@ const MethodSpec kMethods[] = {
     {"preprocessing.transfer.direct_standardization", "n4m.domain_adaptation.standardization.direct_standardization", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_transfer_direct_standardization, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "coef", &make_tr_direct_standardization, nullptr},
     {"preprocessing.transfer.piecewise_direct_standardization", "n4m.domain_adaptation.standardization.piecewise_direct_standardization", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_transfer_piecewise_direct_standardization, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "window_coefs", &make_tr_piecewise_direct_standardization, nullptr},
     {"preprocessing.transfer.robust_direct_standardization", "n4m.domain_adaptation.standardization.robust_direct_standardization", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_transfer_robust_direct_standardization, 4, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "coef", &make_tr_robust_direct_standardization, nullptr},
+    {"preprocessing.transfer.slope_bias", "n4m.domain_adaptation.standardization.slope_bias", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "coef", &make_tr_slope_bias, nullptr},
     {"preprocessing.wavelets.haar", "n4m.transform.wavelet.haar", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_haar, nullptr},
     {"preprocessing.wavelets.wavelet", "n4m.transform.wavelet.wavelet", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_wavelets_wavelet, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_wavelet, nullptr},
     {"preprocessing.wavelets.wavelet_denoise", "n4m.transform.wavelet.wavelet_denoise", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_wavelets_wavelet_denoise, 5, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_wavelet_denoise, nullptr},
@@ -1587,6 +1663,7 @@ const MethodSpec kMethods[] = {
     {"selection.cars", "n4m.feature_selection.wrapper.cars", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_cars, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_cars, nullptr},
     {"selection.emcuve", "n4m.feature_selection.wrapper.emcuve", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_emcuve, 6, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_emcuve, nullptr},
     {"selection.ga", "n4m.feature_selection.wrapper.ga", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_ga, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_ga, nullptr},
+    {"selection.interval", "n4m.feature_selection.interval.interval", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_selection_interval, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_interval_generator, nullptr},
     {"selection.ipw", "n4m.feature_selection.wrapper.ipw", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_ipw, 6, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_ipw, nullptr},
     {"selection.irf", "n4m.feature_selection.wrapper.irf", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_irf, 7, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_irf, nullptr},
     {"selection.iriv", "n4m.feature_selection.wrapper.iriv", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_iriv, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_iriv, nullptr},

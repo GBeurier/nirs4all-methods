@@ -90,6 +90,18 @@ struct GprPlsResult {
     std::uint64_t seed,
     GprPlsResult& out);
 
+// Posterior mean for new rows (n x 1): with t = (x - x_mean) @ R,
+//     y = y_mean + sum_j K(t, t_j) alpha_j,
+// the noise-free kernel (the noise term only regularizes the fit), as
+// sklearn GaussianProcessRegressor(RBF + WhiteKernel).predict. Uses
+// rotation_r, x_mean, length_scale and the GP head's T_train, alpha and
+// y_mean_scalar.
+[[nodiscard]] n4m_status_t predict_gpr_pls(
+    Context& ctx,
+    const GprPlsResult& model,
+    const n4m_matrix_view_t& X,
+    std::vector<double>& out);
+
 }  // namespace n4m::core
 
 #endif  // PLS4ALL_CORE_GPR_PLS_HPP

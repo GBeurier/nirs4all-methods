@@ -2484,11 +2484,13 @@ n4m_status_t fit_pls_glm(Context& ctx,
     subtract_means(Y_centered, n, q, y_mean);
     std::vector<double> coefs;
     simple_simpls(X_buf, Y_centered, n, p, q, a, coefs, nullptr);
-    // Step 2: a few IRLS iterations on the predicted scores to refine
-    // intercept and coefficient scaling.
+    // The coefficients apply to centered X; fold the centering into the
+    // intercept so that predictions are X @ coefficients + intercept.
     std::vector<double> intercept(q, 0.0);
     for (std::size_t target = 0; target < q; ++target) {
-        intercept[target] = y_mean[target];
+        double v = y_mean[target];
+        for (std::size_t f = 0; f < p; ++f) v -= x_mean[f] * coefs[f * q + target];
+        intercept[target] = v;
     }
     out.coefficients = std::move(coefs);
     out.intercept = std::move(intercept);
@@ -2861,6 +2863,29 @@ n4m_status_t fit_pds(Context& ctx,
     return N4M_OK;
 }
 
+n4m_status_t apply_pds(const PdsResult& model,
+                       const n4m_matrix_view_t& X,
+                       std::vector<double>& out) {
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t ps = static_cast<std::size_t>(X.cols);
+    if (ps == 0 || model.transformation.size() % ps != 0) return N4M_ERR_SHAPE_MISMATCH;
+    const std::size_t pt = model.transformation.size() / ps;
+    const auto* xs = static_cast<const double*>(X.data);
+    const std::size_t rs = static_cast<std::size_t>(X.row_stride);
+    const std::size_t cs = static_cast<std::size_t>(X.col_stride);
+    out.assign(n * pt, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = 0; j < pt; ++j) {
+            double s = 0.0;
+            for (std::size_t k = 0; k < ps; ++k) {
+                s += xs[i * rs + k * cs] * model.transformation[j * ps + k];
+            }
+            out[i * pt + j] = s;
+        }
+    }
+    return N4M_OK;
+}
+
 n4m_status_t fit_ds(Context& ctx,
                      const n4m_matrix_view_t& X_source,
                      const n4m_matrix_view_t& X_target,
@@ -2960,6 +2985,29 @@ n4m_status_t fit_ds(Context& ctx,
         out.bias[j] = s;
     }
     ctx.clear_error();
+    return N4M_OK;
+}
+
+n4m_status_t apply_ds(const DsResult& model,
+                      const n4m_matrix_view_t& X,
+                      std::vector<double>& out) {
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t ps = static_cast<std::size_t>(X.cols);
+    const std::size_t pt = model.bias.size();
+    if (model.transformation.size() != ps * pt) return N4M_ERR_SHAPE_MISMATCH;
+    const auto* xs = static_cast<const double*>(X.data);
+    const std::size_t rs = static_cast<std::size_t>(X.row_stride);
+    const std::size_t cs = static_cast<std::size_t>(X.col_stride);
+    out.assign(n * pt, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = 0; j < pt; ++j) {
+            double s = model.bias[j];
+            for (std::size_t k = 0; k < ps; ++k) {
+                s += xs[i * rs + k * cs] * model.transformation[k * pt + j];
+            }
+            out[i * pt + j] = s;
+        }
+    }
     return N4M_OK;
 }
 
@@ -3114,6 +3162,28 @@ n4m_status_t fit_missing_aware_nipals(Context& ctx,
     out.n_components = static_cast<std::int32_t>(a);
     ctx.clear_error();
     return N4M_OK;
+}
+
+void predict_missing_aware_nipals(const WeightedPlsResult& model,
+                                  const n4m_matrix_view_t& X,
+                                  std::vector<double>& out) {
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t p = model.x_mean.size();
+    const std::size_t q = model.y_mean.size();
+    const auto* x = static_cast<const double*>(X.data);
+    const std::size_t rs = static_cast<std::size_t>(X.row_stride);
+    const std::size_t cs = static_cast<std::size_t>(X.col_stride);
+    out.assign(n * q, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t t = 0; t < q; ++t) {
+            double acc = model.y_mean[t];
+            for (std::size_t f = 0; f < p; ++f) {
+                const double v = x[i * rs + f * cs];
+                if (std::isfinite(v)) acc += (v - model.x_mean[f]) * model.coefficients[f * q + t];
+            }
+            out[i * q + t] = acc;
+        }
+    }
 }
 
 // ---- approximate-PRESS -------------------------------------------------

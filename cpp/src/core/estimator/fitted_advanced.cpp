@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // Fitted transformer adapters over the advanced kernels of c_api_advanced.cpp:
-// alignment, paired source -> target standardization, and piecewise / localized
-// / weighted scatter corrections. Their fitted state is written and restored by
-// the kernel-side save / load functions (advanced_state.hpp).
+// alignment, paired source -> target standardization, slope / bias
+// correction, piecewise / localized / weighted scatter corrections and the
+// interval generator. Their fitted state is written and restored by the
+// kernel-side save / load functions (advanced_state.hpp).
 
 #include <vector>
 
@@ -57,6 +58,38 @@ std::unique_ptr<Adapter> align(AlignCreate<H> create, const char* interval_param
 }
 
 // Piecewise / localized MSC: window, optional reference, eps.
+// One slope / bias pair per X column, each fitted against the single y
+// column: for one column this is the SlopeBiasCorrection of transferred
+// predictions (x = source predictions, y = reference values).
+struct SlopeBiasColumns {
+    SlopeBiasColumns() = default;
+    SlopeBiasColumns(const SlopeBiasColumns&) = delete;
+    SlopeBiasColumns& operator=(const SlopeBiasColumns&) = delete;
+    ~SlopeBiasColumns() {
+        for (n4m_pp_slope_bias_handle_t* h : columns) n4m_domain_adaptation_slope_bias_destroy(h);
+    }
+    n4m_status_t resize(std::int64_t n) {
+        while (static_cast<std::int64_t>(columns.size()) < n) {
+            n4m_pp_slope_bias_handle_t* h = nullptr;
+            const n4m_status_t st = n4m_domain_adaptation_slope_bias_create(&h);
+            if (st != N4M_OK) return st;
+            columns.push_back(h);
+        }
+        return N4M_OK;
+    }
+    std::vector<n4m_pp_slope_bias_handle_t*> columns;
+};
+
+void destroy_slope_bias(SlopeBiasColumns* s) { delete s; }
+
+// Column j of a row-major contiguous view.
+std::vector<double> column(n4m_matrix_view_t x, std::int64_t j) {
+    std::vector<double> out(static_cast<std::size_t>(x.rows));
+    const auto* data = static_cast<const double*>(x.data);
+    for (std::int64_t i = 0; i < x.rows; ++i) out[static_cast<std::size_t>(i)] = data[i * x.cols + j];
+    return out;
+}
+
 template <typename H>
 std::unique_ptr<Adapter> msc(n4m_status_t (*create)(H**, const double*, int64_t, int32_t, double),
                              n4m_status_t (*fit)(H*, n4m_matrix_view_t),
@@ -255,6 +288,82 @@ std::unique_ptr<Adapter> make_tr_vsn(const MethodSpec&) {
          {},
          vsn_state_save,
          vsn_state_load});
+}
+
+std::unique_ptr<Adapter> make_tr_slope_bias(const MethodSpec&) {
+    using H = SlopeBiasColumns;
+    return fitted<H>(
+        {[](H** h, const Params&) {
+             *h = new H();
+             return N4M_OK;
+         },
+         [](n4m_context_t* ctx, H* h, const FitInputs& in) {
+             if (in.Y->cols != 1) {
+                 set_error(ctx, "slope / bias correction needs a univariate y");
+                 return N4M_ERR_SHAPE_MISMATCH;
+             }
+             std::vector<double> x_storage, y_storage;
+             const n4m_matrix_view_t x = contiguous_view(*in.X, x_storage);
+             const n4m_matrix_view_t y = contiguous_view(*in.Y, y_storage);
+             n4m_status_t st = h->resize(x.cols);
+             for (std::int64_t j = 0; st == N4M_OK && j < x.cols; ++j) {
+                 const std::vector<double> source = column(x, j);
+                 st = n4m_domain_adaptation_slope_bias_fit(
+                     h->columns[static_cast<std::size_t>(j)], source.data(),
+                     static_cast<const double*>(y.data), x.rows);
+             }
+             return st;
+         },
+         [](const H* h, n4m_matrix_view_t x, n4m_matrix_view_t out) {
+             std::vector<double> corrected(static_cast<std::size_t>(x.rows));
+             auto* dst = static_cast<double*>(out.data);
+             for (std::int64_t j = 0; j < x.cols; ++j) {
+                 const std::vector<double> source = column(x, j);
+                 const n4m_status_t st = n4m_domain_adaptation_slope_bias_transform(
+                     h->columns[static_cast<std::size_t>(j)], source.data(), x.rows,
+                     corrected.data());
+                 if (st != N4M_OK) return st;
+                 for (std::int64_t i = 0; i < x.rows; ++i) {
+                     dst[i * x.cols + j] = corrected[static_cast<std::size_t>(i)];
+                 }
+             }
+             return N4M_OK;
+         },
+         destroy_slope_bias,
+         {},
+         [](const H* h, n4m_state_writer_t* w) {
+             for (const n4m_pp_slope_bias_handle_t* c : h->columns) {
+                 const n4m_status_t st = slope_bias_state_save(c, w);
+                 if (st != N4M_OK) return st;
+             }
+             return N4M_OK;
+         },
+         [](H* h, n4m_state_reader_t* r, std::int64_t n_features) {
+             n4m_status_t st = h->resize(n_features);
+             for (n4m_pp_slope_bias_handle_t* c : h->columns) {
+                 if (st == N4M_OK) st = slope_bias_state_load(c, r, 1);
+             }
+             return st;
+         }});
+}
+
+std::unique_ptr<Adapter> make_tr_interval_generator(const MethodSpec&) {
+    using H = n4m_interval_generator_handle_t;
+    return fitted<H>(
+        {[](H** h, const Params& p) {
+             return n4m_feature_selection_interval_generator_create(
+                 h, to_i32(p.get_int("interval_size")), to_i32(p.get_int("step")));
+         },
+         [](n4m_context_t*, H* h, const FitInputs& in) {
+             return fit_x(n4m_feature_selection_interval_generator_fit, h, in);
+         },
+         n4m_feature_selection_interval_generator_transform,
+         n4m_feature_selection_interval_generator_destroy,
+         [](const H* h, std::int64_t, std::int64_t* out) {
+             return n4m_feature_selection_interval_generator_output_cols(h, out);
+         },
+         interval_generator_state_save,
+         interval_generator_state_load});
 }
 
 }  // namespace n4m::estimator

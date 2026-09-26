@@ -1398,6 +1398,28 @@ N4M_API n4m_status_t n4m_estimators_recursive_pls_run(
 
 namespace {
 
+// Multiblock affine predictors (SO-PLS, ROSA): the full coefficients over
+// the concatenated blocks, their means, and the per-block row slices.
+void set_multiblock_affine(n4m_method_result_s& handle, const n4m_matrix_view_t* X_blocks,
+                           std::int32_t n_blocks, const std::vector<double>& coefficients,
+                           const std::vector<double>& x_mean, const std::vector<double>& y_mean,
+                           std::int64_t q) {
+    const auto p = static_cast<std::int64_t>(x_mean.size());
+    handle.set_scalar("affine_predictor", 1.0);
+    handle.set_double_matrix("coefficients", coefficients, p, q);
+    handle.set_double_matrix("x_mean", x_mean, 1, p);
+    handle.set_double_matrix("y_mean", y_mean, 1, q);
+    std::int64_t offset = 0;
+    for (std::int32_t b = 0; b < n_blocks; ++b) {
+        const std::int64_t pb = X_blocks[b].cols;
+        const auto first = coefficients.begin() + static_cast<std::ptrdiff_t>(offset * q);
+        handle.set_double_matrix("block_coefficients_" + std::to_string(b),
+                                 std::vector<double>(first, first + static_cast<std::ptrdiff_t>(pb * q)),
+                                 pb, q);
+        offset += pb;
+    }
+}
+
 void pack_weighted_result(n4m_method_result_s& handle,
                            const ::n4m::core::WeightedPlsResult& res,
                            const n4m_matrix_view_t& X,
@@ -2262,15 +2284,8 @@ N4M_API n4m_status_t n4m_estimators_so_pls_fit(
         const auto n = static_cast<std::int64_t>(Y->rows);
         const auto q = static_cast<std::int64_t>(Y->cols);
         handle->set_double_matrix("predictions", res.predictions, n, q);
-        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
-        for (std::int32_t b = 0; b < res.n_blocks; ++b) {
-            const auto bi = static_cast<std::size_t>(b);
-            const auto pb = static_cast<std::int64_t>(
-                X_blocks[bi].cols);
-            std::string name = "block_coefficients_" + std::to_string(b);
-            handle->set_double_matrix(name, res.block_coefficients[bi],
-                                       pb, q);
-        }
+        set_multiblock_affine(*handle, X_blocks, n_blocks, res.coefficients, res.x_mean,
+                              res.y_mean, q);
         handle->set_scalar("n_blocks",
                             static_cast<double>(res.n_blocks));
         const double rmse = in_sample_rmse(res.predictions, *Y);
@@ -2386,19 +2401,10 @@ N4M_API n4m_status_t n4m_estimators_rosa_fit(
         const auto n = static_cast<std::int64_t>(Y->rows);
         const auto q = static_cast<std::int64_t>(Y->cols);
         handle->set_double_matrix("predictions", res.predictions, n, q);
-        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+        set_multiblock_affine(*handle, X_blocks, n_blocks, res.coefficients, res.x_mean,
+                              res.y_mean, q);
         handle->set_int_vector("selected_block_per_component",
                                 std::move(res.selected_block_per_component));
-        for (std::int32_t b = 0;
-             b < static_cast<std::int32_t>(res.block_coefficients.size());
-             ++b) {
-            const auto bi = static_cast<std::size_t>(b);
-            const auto pb = static_cast<std::int64_t>(
-                X_blocks[bi].cols);
-            handle->set_double_matrix(
-                "block_coefficients_" + std::to_string(b),
-                res.block_coefficients[bi], pb, q);
-        }
         handle->set_scalar("n_components",
                             static_cast<double>(res.n_components));
         const double rmse = in_sample_rmse(res.predictions, *Y);
@@ -2866,29 +2872,13 @@ N4M_API n4m_status_t n4m_domain_adaptation_pds_fit(
         handle->set_double_matrix("transformation", res.transformation,
                                    pt, ps);
         // Predicted target = X_source @ transformation.T.
-        const std::size_t n = static_cast<std::size_t>(X_source->rows);
-        std::vector<double> preds(n * static_cast<std::size_t>(pt), 0.0);
-        const auto* xs = static_cast<const double*>(X_source->data);
-        const std::size_t xs_rs = static_cast<std::size_t>(
-            X_source->row_stride);
-        const std::size_t xs_cs = static_cast<std::size_t>(
-            X_source->col_stride);
-        for (std::size_t i = 0; i < n; ++i) {
-            for (std::size_t j = 0;
-                 j < static_cast<std::size_t>(pt); ++j) {
-                double s = 0.0;
-                for (std::size_t k = 0;
-                     k < static_cast<std::size_t>(ps); ++k) {
-                    s += xs[i * xs_rs + k * xs_cs] *
-                          res.transformation[j *
-                            static_cast<std::size_t>(ps) + k];
-                }
-                preds[i * static_cast<std::size_t>(pt) + j] = s;
-            }
-        }
+        std::vector<double> preds;
+        const n4m_status_t apply_status =
+            ::n4m::core::apply_pds(res, *X_source, preds);
+        if (apply_status != N4M_OK) return apply_status;
         const double rmse = in_sample_rmse(preds, *X_target);
         handle->set_double_matrix("predictions", std::move(preds),
-                                   static_cast<std::int64_t>(n), pt);
+                                   X_source->rows, pt);
         handle->set_scalar("rmse", rmse);
         handle->set_scalar("window_half_width",
                             static_cast<double>(window_half_width));
@@ -2928,29 +2918,13 @@ N4M_API n4m_status_t n4m_domain_adaptation_ds_fit(
                                    ps, pt);
         handle->set_double_matrix("bias", res.bias, 1, pt);
         // Predicted target = X_source @ transformation + bias.
-        const std::size_t n = static_cast<std::size_t>(X_source->rows);
-        std::vector<double> preds(n * static_cast<std::size_t>(pt), 0.0);
-        const auto* xs = static_cast<const double*>(X_source->data);
-        const std::size_t xs_rs = static_cast<std::size_t>(
-            X_source->row_stride);
-        const std::size_t xs_cs = static_cast<std::size_t>(
-            X_source->col_stride);
-        for (std::size_t i = 0; i < n; ++i) {
-            for (std::size_t j = 0;
-                 j < static_cast<std::size_t>(pt); ++j) {
-                double s = res.bias[j];
-                for (std::size_t k = 0;
-                     k < static_cast<std::size_t>(ps); ++k) {
-                    s += xs[i * xs_rs + k * xs_cs] *
-                          res.transformation[k *
-                            static_cast<std::size_t>(pt) + j];
-                }
-                preds[i * static_cast<std::size_t>(pt) + j] = s;
-            }
-        }
+        std::vector<double> preds;
+        const n4m_status_t apply_status =
+            ::n4m::core::apply_ds(res, *X_source, preds);
+        if (apply_status != N4M_OK) return apply_status;
         const double rmse = in_sample_rmse(preds, *X_target);
         handle->set_double_matrix("predictions", std::move(preds),
-                                   static_cast<std::int64_t>(n), pt);
+                                   X_source->rows, pt);
         handle->set_scalar("rmse", rmse);
 
         *out_result = handle.release();
@@ -3032,7 +3006,15 @@ N4M_API n4m_status_t n4m_estimators_missing_aware_nipals_fit(
         if (status != N4M_OK) return status;
 
         auto handle = std::make_unique<n4m_method_result_s>();
-        pack_weighted_result(*handle, res, *X, *Y);
+        const auto p = static_cast<std::int64_t>(res.n_features);
+        const auto q = static_cast<std::int64_t>(res.n_targets);
+        handle->set_double_matrix("coefficients", res.coefficients, p, q);
+        handle->set_double_matrix("x_mean", res.x_mean, 1, p);
+        handle->set_double_matrix("y_mean", res.y_mean, 1, q);
+        std::vector<double> predictions;
+        ::n4m::core::predict_missing_aware_nipals(res, *X, predictions);
+        handle->set_scalar("rmse", in_sample_rmse(predictions, *Y));
+        handle->set_double_matrix("predictions", std::move(predictions), X->rows, q);
 
         *out_result = handle.release();
         return N4M_OK;

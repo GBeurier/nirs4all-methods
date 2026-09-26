@@ -78,3 +78,13 @@ n4m_status_t variance_filter_selected(const n4m_filter_variance_handle_t* h,
                                      std::vector<std::int64_t>& out);
 n4m_status_t correlation_filter_selected(const n4m_filter_correlation_handle_t* h,
                                         std::vector<std::int64_t>& out);
+
+// Slope / bias: the fitted pair. Interval generator: nothing beyond the
+// width (the bands follow from the create-time width and step).
+n4m_status_t slope_bias_state_save(const n4m_pp_slope_bias_handle_t* h, n4m_state_writer_t* w);
+n4m_status_t slope_bias_state_load(n4m_pp_slope_bias_handle_t* h, n4m_state_reader_t* r,
+                                   int64_t n_features);
+n4m_status_t interval_generator_state_save(const n4m_interval_generator_handle_t* h,
+                                           n4m_state_writer_t* w);
+n4m_status_t interval_generator_state_load(n4m_interval_generator_handle_t* h,
+                                           n4m_state_reader_t* r, int64_t n_features);

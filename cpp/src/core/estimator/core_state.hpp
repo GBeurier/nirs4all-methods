@@ -20,6 +20,7 @@ namespace n4m::estimator {
     n4m_status_t kernel_load(H* h, n4m_state_reader_t* r, std::int64_t n_features);
 
 N4M_CORE_STATE_IO(n4m_pp_osc_handle_t)
+N4M_CORE_STATE_IO(n4m_pp_epo_handle_t)
 N4M_CORE_STATE_IO(n4m_pp_flex_pca_handle_t)
 N4M_CORE_STATE_IO(n4m_pp_flex_svd_handle_t)
 N4M_CORE_STATE_IO(n4m_pp_wavelet_pca_handle_t)

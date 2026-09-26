@@ -1624,6 +1624,36 @@ export class RandomSubspacePLS extends NativeEstimator implements Regressor {
 }
 NativeMethod.register("models.ensembles.random_subspace_pls", RandomSubspacePLS);
 
+/** Parameters of LWPLS; unset values take the native defaults. */
+export interface LWPLSParams {
+    /** Default 2. */
+    n_components?: number;
+    /** Required. */
+    n_neighbors?: number;
+    /** Default "weighted". */
+    mode?: "weighted" | "knn";
+}
+
+/** Native `models.local.lw_pls` (regressor). */
+export class LWPLS extends NativeEstimator implements Regressor {
+    readonly methodId = "models.local.lw_pls";
+    readonly paramTypes = {
+        n_components: "int",
+        n_neighbors: "int",
+        mode: "enum",
+    } as const;
+
+    constructor(params: LWPLSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("models.local.lw_pls", LWPLS);
+
 /** Parameters of MBPLS; unset values take the native defaults. */
 export interface MBPLSParams {
     /** Default 2. */
@@ -1702,6 +1732,81 @@ export class O2PLS extends NativeEstimator implements Regressor {
 }
 NativeMethod.register("models.multiblock.o2pls", O2PLS);
 
+/** Parameters of OnPLS; unset values take the native defaults. */
+export interface OnPLSParams {
+    /** Default 1. */
+    n_joint?: number;
+    /** Required. */
+    n_unique_per_block?: number[];
+}
+
+/** Native `models.multiblock.on_pls` (transformer). Required fit inputs: blocks. */
+export class OnPLS extends NativeEstimator implements Transformer {
+    readonly methodId = "models.multiblock.on_pls";
+    readonly paramTypes = {
+        n_joint: "int",
+        n_unique_per_block: "int_array",
+    } as const;
+
+    constructor(params: OnPLSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("models.multiblock.on_pls", OnPLS);
+
+/** Parameters of ROSA; unset values take the native defaults. */
+export interface ROSAParams {
+    /** Default 2. */
+    n_components?: number;
+}
+
+/** Native `models.multiblock.rosa` (regressor). Required fit inputs: blocks. */
+export class ROSA extends NativeEstimator implements Regressor {
+    readonly methodId = "models.multiblock.rosa";
+    readonly paramTypes = {
+        n_components: "int",
+    } as const;
+
+    constructor(params: ROSAParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("models.multiblock.rosa", ROSA);
+
+/** Parameters of SOPLS; unset values take the native defaults. */
+export interface SOPLSParams {
+    /** Required. */
+    n_components_per_block?: number[];
+}
+
+/** Native `models.multiblock.so_pls` (regressor). Required fit inputs: blocks. */
+export class SOPLS extends NativeEstimator implements Regressor {
+    readonly methodId = "models.multiblock.so_pls";
+    readonly paramTypes = {
+        n_components_per_block: "int_array",
+    } as const;
+
+    constructor(params: SOPLSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("models.multiblock.so_pls", SOPLS);
+
 /** Parameters of CPPLS; unset values take the native defaults. */
 export interface CPPLSParams {
     /** Default 2. */
@@ -1728,6 +1833,42 @@ export class CPPLS extends NativeEstimator implements Regressor {
     }
 }
 NativeMethod.register("models.pls.cppls", CPPLS);
+
+/** Parameters of KernelPLS; unset values take the native defaults. */
+export interface KernelPLSParams {
+    /** Default 2. */
+    n_components?: number;
+    /** Default "rbf". */
+    kernel?: "linear" | "rbf" | "polynomial" | "sigmoid";
+    /** Default 0. */
+    gamma?: number;
+    /** Default 1. */
+    coef0?: number;
+    /** Default 3. */
+    degree?: number;
+}
+
+/** Native `models.pls.kernel` (regressor). */
+export class KernelPLS extends NativeEstimator implements Regressor {
+    readonly methodId = "models.pls.kernel";
+    readonly paramTypes = {
+        n_components: "int",
+        kernel: "enum",
+        gamma: "double",
+        coef0: "double",
+        degree: "int",
+    } as const;
+
+    constructor(params: KernelPLSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("models.pls.kernel", KernelPLS);
 
 /** Parameters of PCR; unset values take the native defaults. */
 export interface PCRParams {
@@ -2164,6 +2305,91 @@ export class ECR extends NativeEstimator implements Regressor {
 }
 NativeMethod.register("models.specialized.ecr", ECR);
 
+/** Parameters of GPRPLS; unset values take the native defaults. */
+export interface GPRPLSParams {
+    /** Default 2. */
+    n_components?: number;
+    /** Default 1. */
+    length_scale?: number;
+    /** Default 0.001. */
+    noise_level?: number;
+}
+
+/** Native `models.specialized.gpr_pls` (regressor). */
+export class GPRPLS extends NativeEstimator implements Regressor {
+    readonly methodId = "models.specialized.gpr_pls";
+    readonly paramTypes = {
+        n_components: "int",
+        length_scale: "double",
+        noise_level: "double",
+    } as const;
+
+    constructor(params: GPRPLSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("models.specialized.gpr_pls", GPRPLS);
+
+/** Parameters of MissingAwareNIPALS; unset values take the native defaults. */
+export interface MissingAwareNIPALSParams {
+    /** Default 2. */
+    n_components?: number;
+}
+
+/** Native `models.specialized.missing_aware_nipals` (regressor). */
+export class MissingAwareNIPALS extends NativeEstimator implements Regressor {
+    readonly methodId = "models.specialized.missing_aware_nipals";
+    readonly paramTypes = {
+        n_components: "int",
+    } as const;
+
+    constructor(params: MissingAwareNIPALSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+}
+NativeMethod.register("models.specialized.missing_aware_nipals", MissingAwareNIPALS);
+
+/** Parameters of RecursivePLS; unset values take the native defaults. */
+export interface RecursivePLSParams {
+    /** Default 2. */
+    n_components?: number;
+    /** Required. */
+    window_size?: number;
+}
+
+/** Native `models.specialized.recursive` (transformer, regressor). */
+export class RecursivePLS extends NativeEstimator implements Regressor, Transformer {
+    readonly methodId = "models.specialized.recursive";
+    readonly paramTypes = {
+        n_components: "int",
+        window_size: "int",
+    } as const;
+
+    constructor(params: RecursivePLSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("models.specialized.recursive", RecursivePLS);
+
 /** Parameters of NPLS; unset values take the native defaults. */
 export interface NPLSParams {
     /** Default 2. */
@@ -2220,6 +2446,51 @@ export class DIPLS extends NativeEstimator implements Regressor {
     }
 }
 NativeMethod.register("models.transfer.di_pls", DIPLS);
+
+/** Parameters of DS; unset values take the native defaults. */
+export interface DSParams {
+}
+
+/** Native `models.transfer.ds` (transformer). Required fit inputs: target_domain. */
+export class DS extends NativeEstimator implements Transformer {
+    readonly methodId = "models.transfer.ds";
+    readonly paramTypes = {
+    } as const;
+
+    constructor(params: DSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("models.transfer.ds", DS);
+
+/** Parameters of PDS; unset values take the native defaults. */
+export interface PDSParams {
+    /** Default 2. */
+    window_half_width?: number;
+}
+
+/** Native `models.transfer.pds` (transformer). Required fit inputs: target_domain. */
+export class PDS extends NativeEstimator implements Transformer {
+    readonly methodId = "models.transfer.pds";
+    readonly paramTypes = {
+        window_half_width: "int",
+    } as const;
+
+    constructor(params: PDSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("models.transfer.pds", PDS);
 
 /** Parameters of CorrelationOptimizedWarping; unset values take the native defaults. */
 export interface CorrelationOptimizedWarpingParams {
@@ -2871,6 +3142,30 @@ export class FlexibleSVD extends NativeEstimator implements Transformer {
     }
 }
 NativeMethod.register("preprocessing.feature_selection.flexible_svd", FlexibleSVD);
+
+/** Parameters of EPO; unset values take the native defaults. */
+export interface EPOParams {
+    /** Default true. */
+    scale?: boolean;
+}
+
+/** Native `preprocessing.orthogonalization.epo` (transformer). */
+export class EPO extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.orthogonalization.epo";
+    readonly paramTypes = {
+        scale: "bool",
+    } as const;
+
+    constructor(params: EPOParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("preprocessing.orthogonalization.epo", EPO);
 
 /** Parameters of OSC; unset values take the native defaults. */
 export interface OSCParams {
@@ -3760,6 +4055,27 @@ export class RobustDirectStandardization extends NativeEstimator implements Tran
 }
 NativeMethod.register("preprocessing.transfer.robust_direct_standardization", RobustDirectStandardization);
 
+/** Parameters of SlopeBiasCorrection; unset values take the native defaults. */
+export interface SlopeBiasCorrectionParams {
+}
+
+/** Native `preprocessing.transfer.slope_bias` (transformer). */
+export class SlopeBiasCorrection extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.transfer.slope_bias";
+    readonly paramTypes = {
+    } as const;
+
+    constructor(params: SlopeBiasCorrectionParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("preprocessing.transfer.slope_bias", SlopeBiasCorrection);
+
 /** Parameters of Haar; unset values take the native defaults. */
 export interface HaarParams {
 }
@@ -4145,6 +4461,33 @@ export class GA extends NativeEstimator implements Selector {
     }
 }
 NativeMethod.register("selection.ga", GA);
+
+/** Parameters of IntervalGenerator; unset values take the native defaults. */
+export interface IntervalGeneratorParams {
+    /** Default 32. */
+    interval_size?: number;
+    /** Default 0. */
+    step?: number;
+}
+
+/** Native `selection.interval` (transformer). */
+export class IntervalGenerator extends NativeEstimator implements Transformer {
+    readonly methodId = "selection.interval";
+    readonly paramTypes = {
+        interval_size: "int",
+        step: "int",
+    } as const;
+
+    constructor(params: IntervalGeneratorParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("selection.interval", IntervalGenerator);
 
 /** Parameters of IPW; unset values take the native defaults. */
 export interface IPWParams {

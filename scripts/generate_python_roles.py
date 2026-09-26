@@ -99,6 +99,18 @@ CLASS_NAMES = {
     "splitters.spxy": "SPXY",
     "splitters.spxy_fold": "SPXYFold",
     "splitters.spxy_g_fold": "SPXYGroupFold",
+    "models.pls.kernel": "KernelPLS",
+    "models.specialized.gpr_pls": "GPRPLS",
+    "models.local.lw_pls": "LWPLS",
+    "models.specialized.recursive": "RecursivePLS",
+    "models.specialized.missing_aware_nipals": "MissingAwareNIPALS",
+    "models.multiblock.so_pls": "SOPLS",
+    "models.multiblock.rosa": "ROSA",
+    "models.transfer.ds": "DS",
+    "models.transfer.pds": "PDS",
+    "preprocessing.transfer.slope_bias": "SlopeBiasCorrection",
+    "preprocessing.orthogonalization.epo": "EPO",
+    "selection.interval": "IntervalGenerator",
 }
 # Role interface -> Python role base class (docs/abi/estimator_roles_design.md, D0b).
 ROLE_BASES = {

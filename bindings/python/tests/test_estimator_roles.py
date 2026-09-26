@@ -50,10 +50,24 @@ def manifest_methods() -> set[str]:
     return ids
 
 
+# Values the test data needs: required parameters, and a linear kernel for
+# kernel PLS (the linear-response data).
+REQUIRED_MODEL_PARAMS = {
+    "kernel": "linear",
+    "mode_j": 3,
+    "mode_k": 4,
+    "n_neighbors": 10,
+    "window_size": 20,
+    "n_components_per_block": [1, 1, 1],
+    "n_unique_per_block": [1, 1, 1],
+}
+
+
 def build(cls):
-    """Instance plus the fit inputs its method requires."""
-    params = {"mode_j": 3, "mode_k": 4} if cls is roles.NPLS else {}
-    return cls(**params)
+    """Instance with values for the parameters its method requires."""
+    return cls(
+        **{k: v for k, v in REQUIRED_MODEL_PARAMS.items() if k in cls._param_types}
+    )
 
 
 # Fit input name -> n4m_fit_input_t index (n4m/estimator.h).
@@ -118,11 +132,15 @@ def test_fit_predict_roundtrip(cls, data):
     assert np.all(np.isfinite(pred))
     assert np.corrcoef(pred, y_test)[0, 1] > 0.9
 
-    restored = roles.NativeEstimator.from_n4me(est.to_n4me())
+    payload = est.to_n4me(allow_training_rows=True)
+    restored = roles.NativeEstimator.from_n4me(payload)
     assert type(restored) is cls
     assert restored.get_params() == est.get_params()
     np.testing.assert_array_equal(restored.predict(X_test), pred)
-    assert restored.to_n4me() == est.to_n4me()
+    assert restored.to_n4me(allow_training_rows=True) == payload
+    if est.capabilities_ & (1 << 9):  # RETAINS_TRAINING_ROWS: explicit consent
+        with pytest.raises(N4MError):
+            est.to_n4me()
 
     np.testing.assert_array_equal(pickle.loads(pickle.dumps(est)).predict(X_test), pred)
     assert clone(est).get_params() == est.get_params()
@@ -274,7 +292,7 @@ def test_cross_language_fixture_states_replay():
                     rtol=1e-12,
                     atol=1e-12,
                 )
-        assert est.to_n4me() == payload
+        assert est.to_n4me(allow_training_rows=True) == payload
 
 
 # Selector role -------------------------------------------------------------
@@ -574,9 +592,18 @@ FITTED_CASES = [
         "axis",
     ),
 ]
+# Normalize / SimpleScale have their own test; the S4 transformers (transfer,
+# OnPLS, EPO, slope/bias, interval) are checked against their references by
+# the model equivalence harness, their reference APIs differing in shape.
 FITTED_REFERENCE_CLASSES = {case[0] for case in FITTED_CASES} | {
     "Normalize",
     "SimpleScale",
+    "OnPLS",
+    "DS",
+    "PDS",
+    "EPO",
+    "SlopeBiasCorrection",
+    "IntervalGenerator",
 }
 
 
@@ -659,6 +686,7 @@ def test_scaling_roles_apply_training_statistics(spectra):
 # Transformer role --------------------------------------------------------
 
 TRANSFORMER_PARAMS = {
+    "n_unique_per_block": [1, 1, 1],
     "start": 2,
     "end": 10,
     "num_samples": 8,

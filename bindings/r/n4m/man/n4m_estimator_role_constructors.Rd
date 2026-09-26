@@ -49,10 +49,15 @@
 \alias{n4m_bagging_pls}
 \alias{n4m_boosting_pls}
 \alias{n4m_random_subspace_pls}
+\alias{n4m_lw_pls}
 \alias{n4m_mb_pls}
 \alias{n4m_mir_pls}
 \alias{n4m_o2pls}
+\alias{n4m_on_pls}
+\alias{n4m_rosa}
+\alias{n4m_so_pls}
 \alias{n4m_cppls}
+\alias{n4m_kernel}
 \alias{n4m_pcr}
 \alias{n4m_pls_fit_simple}
 \alias{n4m_pls_regression}
@@ -66,8 +71,13 @@
 \alias{n4m_sparse_pls_da}
 \alias{n4m_sparse_simpls}
 \alias{n4m_ecr}
+\alias{n4m_gpr_pls}
+\alias{n4m_missing_aware_nipals}
+\alias{n4m_recursive}
 \alias{n4m_tensor_pls}
 \alias{n4m_di_pls}
+\alias{n4m_ds}
+\alias{n4m_pds}
 \alias{n4m_cow_align}
 \alias{n4m_dtw_align}
 \alias{n4m_icoshift_align}
@@ -90,6 +100,7 @@
 \alias{n4m_second_derivative}
 \alias{n4m_flexible_pca}
 \alias{n4m_flexible_svd}
+\alias{n4m_epo}
 \alias{n4m_osc}
 \alias{n4m_crop}
 \alias{n4m_kbins_discretizer}
@@ -122,6 +133,7 @@
 \alias{n4m_direct_standardization}
 \alias{n4m_piecewise_direct_standardization}
 \alias{n4m_robust_direct_standardization}
+\alias{n4m_slope_bias}
 \alias{n4m_haar}
 \alias{n4m_wavelet}
 \alias{n4m_wavelet_denoise}
@@ -133,6 +145,7 @@
 \alias{n4m_cars}
 \alias{n4m_emcuve}
 \alias{n4m_ga}
+\alias{n4m_interval}
 \alias{n4m_ipw}
 \alias{n4m_irf}
 \alias{n4m_iriv}
@@ -218,10 +231,15 @@ n4m_pls_qda(n_components = 2L)
 n4m_bagging_pls(n_components = 2L, n_estimators = 50L, seed = 0L)
 n4m_boosting_pls(n_components = 2L, n_estimators = 50L, learning_rate = 0.1)
 n4m_random_subspace_pls(n_components = 2L, n_estimators = 50L, features_per_subspace = 10L, seed = 0L)
+n4m_lw_pls(n_components = 2L, n_neighbors = NULL, mode = "weighted")
 n4m_mb_pls(n_components = 2L)
 n4m_mir_pls(n_components = 2L)
 n4m_o2pls(n_predictive = 2L, n_x_orthogonal = 1L, n_y_orthogonal = 1L)
+n4m_on_pls(n_joint = 1L, n_unique_per_block = NULL)
+n4m_rosa(n_components = 2L)
+n4m_so_pls(n_components_per_block = NULL)
 n4m_cppls(n_components = 2L, gamma = 0.5)
+n4m_kernel(n_components = 2L, kernel = "rbf", gamma = 0.0, coef0 = 1.0, degree = 3L)
 n4m_pcr(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = FALSE)
 n4m_pls_fit_simple(n_components = 2L)
 n4m_pls_regression(n_components = 2L, solver = "nipals", center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
@@ -235,8 +253,13 @@ n4m_group_sparse_pls(n_components = 2L, group_lambda = 0.05)
 n4m_sparse_pls_da(n_components = 2L, sparsity_lambda = 0.05)
 n4m_sparse_simpls(n_components = 2L, sparsity_lambda = 0.05)
 n4m_ecr(n_components = 2L, alpha = 0.5)
+n4m_gpr_pls(n_components = 2L, length_scale = 1.0, noise_level = 0.001)
+n4m_missing_aware_nipals(n_components = 2L)
+n4m_recursive(n_components = 2L, window_size = NULL)
 n4m_tensor_pls(n_components = 2L, mode_j = NULL, mode_k = NULL)
 n4m_di_pls(n_components = 2L, di_lambda = 1.0)
+n4m_ds()
+n4m_pds(window_half_width = 2L)
 n4m_cow_align(reference = c(), interval_size = 32L, max_shift = 5L)
 n4m_dtw_align(reference = c())
 n4m_icoshift_align(reference = c(), interval_size = 32L, max_shift = 5L)
@@ -259,6 +282,7 @@ n4m_savitzky_golay(window_length = 5L, polyorder = 2L, deriv = 0L, delta = 1.0, 
 n4m_second_derivative(delta = 1.0, edge_order = 2L)
 n4m_flexible_pca(n_components = 5.0)
 n4m_flexible_svd(n_components = 5.0)
+n4m_epo(scale = TRUE)
 n4m_osc(n_components = 1L, scale = TRUE)
 n4m_crop(start = NULL, end = NULL)
 n4m_kbins_discretizer(n_bins = 5L, strategy = "uniform")
@@ -291,6 +315,7 @@ n4m_fck_static(kernel_size = NULL, alphas = NULL, sigmas = NULL)
 n4m_direct_standardization(fit_intercept = TRUE, ridge = 0.0)
 n4m_piecewise_direct_standardization(window_size = 5L, fit_intercept = TRUE, ridge = 0.0)
 n4m_robust_direct_standardization(fit_intercept = TRUE, ridge = 0.0, trim_quantile = 0.9, max_iter = 3L)
+n4m_slope_bias()
 n4m_haar()
 n4m_wavelet(family = "haar", mode = "periodization")
 n4m_wavelet_denoise(family = "db4", mode = "periodization", level = 3L, threshold_mode = "soft", noise_estimator = "median")
@@ -302,6 +327,7 @@ n4m_bve(n_components = 2L, n_steps = 10L, min_features = 0L, cv = 3L)
 n4m_cars(n_components = 2L, n_iterations = 50L, min_features = 0L, cv = 3L)
 n4m_emcuve(n_components = 2L, noise_features = 50L, noise_seed = 0L, n_ensembles = 10L, vote_threshold = 0.5, cv = 3L)
 n4m_ga(n_components = 2L, n_generations = 30L, population_size = 40L, min_features = 0L, max_features = 0L, mutation_rate = 0.05, cv = 3L, seed = 0L)
+n4m_interval(interval_size = 32L, step = 0L)
 n4m_ipw(top_k = NULL, n_components = 2L, n_iterations = 20L, damping = 0.5, weight_floor = 1e-06, cv = 3L)
 n4m_irf(top_k = NULL, n_components = 2L, n_iterations = 100L, window_size = 5L, initial_intervals = 5L, cv = 3L, seed = 0L)
 n4m_iriv(n_components = 2L, max_rounds = 5L, cv = 5L, seed = 0L)
@@ -367,6 +393,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{center_y}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{check_inf}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{clip_negative}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{coef0}{Native parameter (double); defaults come from the n4m manifest.}
 \item{coeff_max}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{coeff_min}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{combination_size}{Native parameter (int); defaults come from the n4m manifest.}
@@ -424,6 +451,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{is_percent}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{k}{Native parameter (double); defaults come from the n4m manifest.}
 \item{k_neighbors}{Native parameter (int); defaults come from the n4m manifest.}
+\item{kernel}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{kernel_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{kernel_width}{Native parameter (int); defaults come from the n4m manifest.}
 \item{l1_lambda}{Native parameter (double); defaults come from the n4m manifest.}
@@ -433,6 +461,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{lam_2}{Native parameter (double); defaults come from the n4m manifest.}
 \item{learning_rate}{Native parameter (double); defaults come from the n4m manifest.}
 \item{left_edge}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{length_scale}{Native parameter (double); defaults come from the n4m manifest.}
 \item{level}{Native parameter (int); defaults come from the n4m manifest.}
 \item{lower_percentile}{Native parameter (double); defaults come from the n4m manifest.}
 \item{max_components}{Native parameter (int); defaults come from the n4m manifest.}
@@ -467,11 +496,14 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{n_bands_lo}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_bins}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_components}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_components_per_block}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{n_control_points}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_ensembles}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_estimators}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_generations}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_iterations}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_joint}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_neighbors}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_permutations}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_predictive}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_regions}{Native parameter (int); defaults come from the n4m manifest.}
@@ -481,11 +513,13 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{n_steps}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_submodels}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_swarm}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_unique_per_block}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{n_x_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_y_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}
 \item{noise_base}{Native parameter (double); defaults come from the n4m manifest.}
 \item{noise_estimator}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{noise_features}{Native parameter (int); defaults come from the n4m manifest.}
+\item{noise_level}{Native parameter (double); defaults come from the n4m manifest.}
 \item{noise_seed}{Native parameter (int); defaults come from the n4m manifest.}
 \item{noise_signal_dep}{Native parameter (double); defaults come from the n4m manifest.}
 \item{noise_std}{Native parameter (double); defaults come from the n4m manifest.}
@@ -551,6 +585,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{spline_degree}{Native parameter (int); defaults come from the n4m manifest.}
 \item{spline_points}{Native parameter (int); defaults come from the n4m manifest.}
 \item{start}{Native parameter (int); defaults come from the n4m manifest.}
+\item{step}{Native parameter (int); defaults come from the n4m manifest.}
 \item{strategy}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{stretch_hi}{Native parameter (double); defaults come from the n4m manifest.}
 \item{stretch_lo}{Native parameter (double); defaults come from the n4m manifest.}
@@ -587,6 +622,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = 0L)
 \item{width_max}{Native parameter (double); defaults come from the n4m manifest.}
 \item{width_min}{Native parameter (double); defaults come from the n4m manifest.}
 \item{window}{Native parameter (int); defaults come from the n4m manifest.}
+\item{window_half_width}{Native parameter (int); defaults come from the n4m manifest.}
 \item{window_length}{Native parameter (int); defaults come from the n4m manifest.}
 \item{window_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{with_center}{Native parameter (bool); defaults come from the n4m manifest.}
@@ -649,10 +685,15 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_bagging_pls}: \code{models.ensembles.bagging_pls} (regressor)
 \item \code{n4m_boosting_pls}: \code{models.ensembles.boosting_pls} (regressor)
 \item \code{n4m_random_subspace_pls}: \code{models.ensembles.random_subspace_pls} (regressor)
+\item \code{n4m_lw_pls}: \code{models.local.lw_pls} (regressor)
 \item \code{n4m_mb_pls}: \code{models.multiblock.mb_pls} (regressor)
 \item \code{n4m_mir_pls}: \code{models.multiblock.mir_pls} (regressor)
 \item \code{n4m_o2pls}: \code{models.multiblock.o2pls} (regressor)
+\item \code{n4m_on_pls}: \code{models.multiblock.on_pls} (transformer)
+\item \code{n4m_rosa}: \code{models.multiblock.rosa} (regressor)
+\item \code{n4m_so_pls}: \code{models.multiblock.so_pls} (regressor)
 \item \code{n4m_cppls}: \code{models.pls.cppls} (regressor)
+\item \code{n4m_kernel}: \code{models.pls.kernel} (regressor)
 \item \code{n4m_pcr}: \code{models.pls.pcr} (transformer, regressor)
 \item \code{n4m_pls_fit_simple}: \code{models.pls.pls_fit_simple} (transformer, regressor)
 \item \code{n4m_pls_regression}: \code{models.pls.pls_regression} (transformer, regressor)
@@ -666,8 +707,13 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_sparse_pls_da}: \code{models.sparse.sparse_pls_da} (classifier)
 \item \code{n4m_sparse_simpls}: \code{models.sparse.sparse_simpls} (regressor)
 \item \code{n4m_ecr}: \code{models.specialized.ecr} (regressor)
+\item \code{n4m_gpr_pls}: \code{models.specialized.gpr_pls} (regressor)
+\item \code{n4m_missing_aware_nipals}: \code{models.specialized.missing_aware_nipals} (regressor)
+\item \code{n4m_recursive}: \code{models.specialized.recursive} (transformer, regressor)
 \item \code{n4m_tensor_pls}: \code{models.specialized.tensor_pls} (regressor)
 \item \code{n4m_di_pls}: \code{models.transfer.di_pls} (regressor)
+\item \code{n4m_ds}: \code{models.transfer.ds} (transformer)
+\item \code{n4m_pds}: \code{models.transfer.pds} (transformer)
 \item \code{n4m_cow_align}: \code{preprocessing.alignment.cow_align} (transformer)
 \item \code{n4m_dtw_align}: \code{preprocessing.alignment.dtw_align} (transformer)
 \item \code{n4m_icoshift_align}: \code{preprocessing.alignment.icoshift_align} (transformer)
@@ -690,6 +736,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_second_derivative}: \code{preprocessing.derivatives.second_derivative} (transformer)
 \item \code{n4m_flexible_pca}: \code{preprocessing.feature_selection.flexible_pca} (transformer)
 \item \code{n4m_flexible_svd}: \code{preprocessing.feature_selection.flexible_svd} (transformer)
+\item \code{n4m_epo}: \code{preprocessing.orthogonalization.epo} (transformer)
 \item \code{n4m_osc}: \code{preprocessing.orthogonalization.osc} (transformer)
 \item \code{n4m_crop}: \code{preprocessing.resampling.crop} (transformer)
 \item \code{n4m_kbins_discretizer}: \code{preprocessing.resampling.kbins_discretizer} (transformer)
@@ -722,6 +769,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_direct_standardization}: \code{preprocessing.transfer.direct_standardization} (transformer)
 \item \code{n4m_piecewise_direct_standardization}: \code{preprocessing.transfer.piecewise_direct_standardization} (transformer)
 \item \code{n4m_robust_direct_standardization}: \code{preprocessing.transfer.robust_direct_standardization} (transformer)
+\item \code{n4m_slope_bias}: \code{preprocessing.transfer.slope_bias} (transformer)
 \item \code{n4m_haar}: \code{preprocessing.wavelets.haar} (transformer)
 \item \code{n4m_wavelet}: \code{preprocessing.wavelets.wavelet} (transformer)
 \item \code{n4m_wavelet_denoise}: \code{preprocessing.wavelets.wavelet_denoise} (transformer)
@@ -733,6 +781,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_cars}: \code{selection.cars} (selector)
 \item \code{n4m_emcuve}: \code{selection.emcuve} (selector)
 \item \code{n4m_ga}: \code{selection.ga} (selector)
+\item \code{n4m_interval}: \code{selection.interval} (transformer)
 \item \code{n4m_ipw}: \code{selection.ipw} (selector)
 \item \code{n4m_irf}: \code{selection.irf} (selector)
 \item \code{n4m_iriv}: \code{selection.iriv} (selector)

@@ -149,6 +149,15 @@ void fill_required(int32_t index, n4m_params_t* params) {
         } else if (std::strcmp(pi.name, "sigmas") == 0) {
             const double v[] = {1.0, 2.0};
             CHECK(n4m_params_set_double_array(params, pi.name, v, 2) == N4M_OK);
+        } else if (std::strcmp(pi.name, "n_neighbors") == 0) {
+            CHECK(n4m_params_set_int(params, pi.name, 10) == N4M_OK);
+        } else if (std::strcmp(pi.name, "window_size") == 0) {
+            CHECK(n4m_params_set_int(params, pi.name, 12) == N4M_OK);
+        } else if (std::strcmp(pi.name, "n_components_per_block") == 0 ||
+                   std::strcmp(pi.name, "n_unique_per_block") == 0) {
+            // One per test block (3 blocks of 4 columns).
+            const int64_t v[] = {1, 1, 1};
+            CHECK(n4m_params_set_int_array(params, pi.name, v, 3) == N4M_OK);
         } else {
             throw std::runtime_error(std::string("no test value for required parameter ") +
                                      pi.name + " @" + current_);
@@ -156,12 +165,22 @@ void fill_required(int32_t index, n4m_params_t* params) {
     }
 }
 
+// States that retain training rows export only when the caller allows it.
 std::vector<unsigned char> export_bytes(n4m_context_t* ctx, const n4m_estimator_t* est) {
+    int32_t idx = -1;
+    uint64_t caps = 0;
+    CHECK(n4m_estimator_info(est, &idx, &caps) == N4M_OK);
+    uint32_t flags = 0;
     size_t size = 0;
-    CHECK(n4m_estimator_export_size(ctx, est, 0, &size) == N4M_OK);
+    if ((caps & N4M_CAP_RETAINS_TRAINING_ROWS) != 0) {
+        CHECK(n4m_estimator_export_size(ctx, est, 0, &size) == N4M_ERR_INVALID_ARGUMENT);
+        flags = N4M_EXPORT_ALLOW_TRAINING_ROWS;
+    }
+    CHECK(n4m_estimator_export_size(ctx, est, flags, &size) == N4M_OK);
     std::vector<unsigned char> bytes(size);
     size_t written = 0;
-    CHECK(n4m_estimator_export_to_buffer(ctx, est, 0, bytes.data(), size, &written) == N4M_OK);
+    CHECK(n4m_estimator_export_to_buffer(ctx, est, flags, bytes.data(), size, &written) ==
+          N4M_OK);
     CHECK(written == size);
     return bytes;
 }
@@ -538,6 +557,81 @@ void test_pls_fit_simple_equivalence(n4m_context_t* ctx, Inputs& in) {
     n4m_estimator_destroy(est);
 }
 
+// Estimators over kernels that also predict their own training rows
+// reproduce those predictions (bitwise when the same kernel path runs).
+void test_in_sample_equivalence(n4m_context_t* ctx, Inputs& in) {
+    n4m_config_t* cfg = nullptr;
+    CHECK(n4m_config_create(&cfg) == N4M_OK);
+    std::vector<n4m_matrix_view_t> blocks;
+    for (int64_t b = 0; b < 3; ++b) {
+        n4m_matrix_view_t v = in.X;
+        v.data = in.data.x_train.data() + 4 * b;
+        v.cols = 4;
+        blocks.push_back(v);
+    }
+    const int32_t per_block[] = {1, 1, 1};
+    struct Case {
+        const char* method_id;
+        double tolerance;  // 0: bitwise
+        n4m_status_t status;
+        n4m_method_result_t* result;
+    };
+    Case cases[] = {
+        {"models.pls.kernel", 0.0, N4M_OK, nullptr},
+        {"models.local.lw_pls", 0.0, N4M_OK, nullptr},
+        {"models.specialized.missing_aware_nipals", 0.0, N4M_OK, nullptr},
+        // In-sample GPR uses (K + s2 I) alpha = y; predict evaluates K alpha.
+        {"models.specialized.gpr_pls", 1e-9, N4M_OK, nullptr},
+        // In-sample SO-PLS / ROSA accumulate scores; predict is the affine map.
+        {"models.multiblock.so_pls", 1e-10, N4M_OK, nullptr},
+        {"models.multiblock.rosa", 1e-10, N4M_OK, nullptr},
+    };
+    cases[0].status = n4m_estimators_kernel_pls_fit(ctx, cfg, 1, 0.0, 1.0, 3, &in.X, &in.Y,
+                                                    &cases[0].result);
+    cases[1].status = n4m_estimators_lw_pls_fit(ctx, cfg, &in.X, &in.Y, 10, &cases[1].result);
+    cases[2].status =
+        n4m_estimators_missing_aware_nipals_fit(ctx, cfg, &in.X, &in.Y, &cases[2].result);
+    cases[3].status =
+        n4m_estimators_gpr_pls_fit(ctx, cfg, &in.X, &in.Y, 1.0, 1e-3, 0, &cases[3].result);
+    cases[4].status = n4m_estimators_so_pls_fit(ctx, cfg, blocks.data(), 3, &in.Y, per_block, 3,
+                                                &cases[4].result);
+    cases[5].status =
+        n4m_estimators_rosa_fit(ctx, cfg, blocks.data(), 3, &in.Y, 2, &cases[5].result);
+    n4m_config_destroy(cfg);
+    for (Case& c : cases) {
+        current_ = std::string(c.method_id) + " in-sample equivalence";
+        CHECK(c.status == N4M_OK);
+        const double* ref = nullptr;
+        int64_t rows = 0, cols = 0;
+        CHECK(n4m_method_result_get_double_matrix(c.result, "predictions", &ref, &rows, &cols) ==
+              N4M_OK);
+        CHECK(rows == kTrain && cols == 1);
+        int32_t index = -1;
+        CHECK(n4m_method_find(c.method_id, &index) == N4M_OK);
+        n4m_params_t* params = nullptr;
+        CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+        fill_required(index, params);
+        n4m_estimator_t* est = nullptr;
+        CHECK(n4m_estimator_create(ctx, c.method_id, params, &est) == N4M_OK);
+        n4m_params_destroy(params);
+        n4m_method_info_v1_t info{};
+        info.struct_size = sizeof(info);
+        CHECK(n4m_method_info_v1(index, &info) == N4M_OK);
+        n4m_fit_inputs_v1_t inputs = in.for_method(info);
+        CHECK(n4m_estimator_fit(ctx, est, &inputs) == N4M_OK);
+        std::vector<double> pred(kTrain);
+        auto P = view(pred.data(), kTrain, 1);
+        CHECK(n4m_estimator_predict(ctx, est, &in.X, &P) == N4M_OK);
+        for (int64_t i = 0; i < kTrain; ++i) {
+            const double r = ref[i], v = pred[static_cast<size_t>(i)];
+            CHECK(c.tolerance == 0.0 ? std::memcmp(&r, &v, sizeof(double)) == 0
+                                     : std::fabs(r - v) <= c.tolerance * (1.0 + std::fabs(r)));
+        }
+        n4m_estimator_destroy(est);
+        n4m_method_result_destroy(c.result);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -556,6 +650,7 @@ int main() {
     Inputs in;
     run([&] { test_introspection_and_params(ctx); });
     run([&] { test_pls_fit_simple_equivalence(ctx, in); });
+    run([&] { test_in_sample_equivalence(ctx, in); });
     int32_t count = 0;
     n4m_method_count(&count);
     for (int32_t i = 0; i < count; ++i) {

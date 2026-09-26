@@ -461,26 +461,19 @@ unlock:
 The final claim is per entry: estimator or procedure, languages, operations,
 oracle result — never a bare 212/212.
 
-Status (2026-09-26): 116 catalog entries reach a role (21 regressors, three
-of them also transformers; 4 classifiers; 27 selectors; 60 transformers; 4
-sample filters); the generated
-per-entry record is `docs/parity/estimator_roles_coverage.md`. Python, R and
-JS/WASM facades are generated from the manifest, and the shared fixture
-`parity/fixtures/estimator_roles_n4me.json` is replayed by the three bindings
-(outputs at 1e-12, byte-identical re-export) while every binding's own fit
-reproduces the Python fit. Each role class also matches its n4m reference
-class (bitwise where the same kernel runs).
-
-Procedures (2026-09-27): 51 entries run through `n4m_procedure_run` — the
-9 splitters, 31 augmenters (the 22 of `n4m_augmentation_run`, `poly_drift`,
-and `wavelength_shift`, `wavelength_stretch`, `local_warp`,
-`magnitude_warp`, `instrument_broaden`, `emsc_distort`, `edge_curvature`,
-`truncated_peak` with `axis`), the 5 diagnostics and the 6 utilities. The
-C++ conformance suite checks each against its direct C entry point
-bitwise. Left out: `mixup` and `local_mixup` (no paired Y); `temperature`,
-`moisture`, `particle_size`, `detector_rolloff` and `edge_artifacts`
-(nanometre constants in the kernels); `stray_light` (its C entry point
-requires an axis it never reads). No binding facade exists yet.
+Status (2026-09-26): 180 of 213 catalog entries reach the generic surface —
+129 estimators (the regressors, 4 classifiers, the selectors, transformers and
+4 sample filters) and 51 procedures (9 splitters, 31 augmenters, 11 generic);
+the generated per-entry record is `docs/parity/estimator_roles_coverage.md`.
+Python, R and JS/WASM facades are generated from the manifest. The shared
+fixture `parity/fixtures/estimator_roles_n4me.json` is replayed by the three
+bindings: estimator states at 1e-12 with byte-identical re-export, each
+binding's own fit reproducing the Python fit, and every procedure's default
+run. Each role class also matches its n4m reference (bitwise where the same
+kernel runs). Not covered: the 21 AOM/POP entries, PLS-GLM (the kernel fits no
+link), PLS-Cox (no survival inputs in `n4m_fit_inputs_v1_t`), the Python-only
+moment stack, the composite filter (composition is DAG-ML's), mixup /
+local_mixup (no paired Y) and six augmenters with unit-bound constants.
 
 ## 5. Tests
 

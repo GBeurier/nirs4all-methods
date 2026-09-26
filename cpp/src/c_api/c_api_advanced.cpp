@@ -608,6 +608,20 @@ n4m_status_t slope_fit(SlopeBiasState& s, const double* source,
     return N4M_OK;
 }
 
+n4m_status_t slope_save(const SlopeBiasState& s, n4m_state_writer_t* w) {
+    n4m_state_write_f64(w, s.slope);
+    n4m_state_write_f64(w, s.bias);
+    return N4M_OK;
+}
+
+n4m_status_t slope_load(SlopeBiasState& s, n4m_state_reader_t* r, std::int64_t) {
+    if (!n4m_state_read_f64(r, &s.slope) || !n4m_state_read_f64(r, &s.bias)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    s.fitted = true;
+    return N4M_OK;
+}
+
 struct VectorWeightsState {
     bool fitted = false;
     bool has_initial = false;
@@ -1386,14 +1400,26 @@ struct IntervalState {
     std::vector<std::pair<std::int64_t, std::int64_t>> bands;
 };
 
+// The bands follow from the create-time width / step and the input width.
+void interval_set_width(IntervalState& s, std::int64_t cols) {
+    s.features = cols;
+    const std::int64_t actual_step = s.step > 0 ? s.step : s.width;
+    s.bands = intervals(cols, s.width, actual_step);
+    s.fitted = true;
+}
+
 n4m_status_t interval_fit(IntervalState& s, const n4m_matrix_view_t& x_v) {
     MatrixIn x;
     n4m_status_t st = require_f64_rowmajor(x_v, x);
     if (st != N4M_OK) return st;
-    s.features = x.cols;
-    const std::int64_t actual_step = s.step > 0 ? s.step : s.width;
-    s.bands = intervals(x.cols, s.width, actual_step);
-    s.fitted = true;
+    interval_set_width(s, x.cols);
+    return N4M_OK;
+}
+
+n4m_status_t interval_save(const IntervalState&, n4m_state_writer_t*) { return N4M_OK; }
+
+n4m_status_t interval_load(IntervalState& s, n4m_state_reader_t*, std::int64_t n_features) {
+    interval_set_width(s, n_features);
     return N4M_OK;
 }
 
@@ -1507,6 +1533,8 @@ DEFINE_STATE_IO(xcorr_align, n4m_pp_xcorr_align_handle_t, align)
 DEFINE_STATE_IO(icoshift_align, n4m_pp_icoshift_align_handle_t, align)
 DEFINE_STATE_IO(dtw_align, n4m_pp_dtw_align_handle_t, align)
 DEFINE_STATE_IO(cow_align, n4m_pp_cow_align_handle_t, align)
+DEFINE_STATE_IO(slope_bias, n4m_pp_slope_bias_handle_t, slope)
+DEFINE_STATE_IO(interval_generator, n4m_interval_generator_handle_t, interval)
 
 n4m_status_t local_centering_state_save(const n4m_pp_local_centering_handle_t* h,
                                         n4m_state_writer_t* w) {

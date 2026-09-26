@@ -15,6 +15,7 @@
 
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/spec.hpp"
+#include "core/estimator/state_io.hpp"
 
 namespace n4m::estimator {
 
@@ -217,6 +218,39 @@ class AffineResultAdapter final : public ModelAdapter {
     Configure configure_;
 };
 
+// Recursive (moving-window) PLS: the model that predicts the next sample, a
+// SIMPLS fit on the last `window_size` rows (n4m_estimators_recursive_pls_run
+// predicts row i from the window of rows i - window_size .. i - 1).
+class RecursivePlsAdapter final : public ModelAdapter {
+  public:
+    RecursivePlsAdapter()
+        : ModelAdapter(N4M_CAP_PREDICT | N4M_CAP_TRANSFORM | N4M_CAP_AFFINE |
+                       N4M_CAP_SERIALIZABLE) {}
+
+    n4m_status_t fit(n4m_context_t* ctx, const Params& params, const FitInputs& in) override {
+        reset();
+        const std::int64_t window = params.get_int("window_size");
+        if (window > in.X->rows || params.get_int("n_components") >= window) {
+            set_error(ctx, "recursive PLS needs n_components < window_size <= n_samples");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        ConfigPtr cfg;
+        n4m_status_t st = make_config(params, cfg);
+        if (st == N4M_OK) st = n4m_config_set_solver(cfg.get(), N4M_SOLVER_SIMPLS);
+        if (st != N4M_OK) return st;
+        n4m_matrix_view_t X = *in.X, Y = *in.Y;
+        const std::int64_t first = in.X->rows - window;
+        X.data = static_cast<double*>(X.data) + static_cast<std::ptrdiff_t>(first * X.row_stride);
+        Y.data = static_cast<double*>(Y.data) + static_cast<std::ptrdiff_t>(first * Y.row_stride);
+        X.rows = window;
+        Y.rows = window;
+        n4m_model_t* model = nullptr;
+        st = n4m_model_fit(ctx, cfg.get(), &X, &Y, &model);
+        if (st == N4M_OK) model_.reset(model);
+        return st;
+    }
+};
+
 std::int32_t narrow(std::int64_t v) {
     if (v > std::numeric_limits<std::int32_t>::max() ||
         v < std::numeric_limits<std::int32_t>::min()) {
@@ -382,6 +416,32 @@ std::unique_ptr<Adapter> make_affine_di_pls(const MethodSpec&) {
             if (st == N4M_OK) st = n4m_config_set_scale_y(cfg, 0);
             return st;
         });
+}
+
+std::unique_ptr<Adapter> make_recursive_pls(const MethodSpec&) {
+    return std::make_unique<RecursivePlsAdapter>();
+}
+
+// Multiblock fits on the column partition of X given by the `blocks` input.
+std::unique_ptr<Adapter> make_affine_so_pls(const MethodSpec&) {
+    return affine([](auto ctx, auto cfg, const Params& p, const FitInputs& in, auto out) {
+        const std::vector<std::int64_t> sizes(in.block_sizes, in.block_sizes + in.n_blocks);
+        const std::vector<n4m_matrix_view_t> views = block_views(*in.X, sizes);
+        std::vector<std::int32_t> components;
+        for (std::int64_t k : p.get_ints("n_components_per_block")) components.push_back(narrow(k));
+        return n4m_estimators_so_pls_fit(ctx, cfg, views.data(), narrow(in.n_blocks), in.Y,
+                                         components.data(),
+                                         static_cast<std::int64_t>(components.size()), out);
+    });
+}
+
+std::unique_ptr<Adapter> make_affine_rosa(const MethodSpec&) {
+    return affine([](auto ctx, auto cfg, const Params& p, const FitInputs& in, auto out) {
+        const std::vector<std::int64_t> sizes(in.block_sizes, in.block_sizes + in.n_blocks);
+        const std::vector<n4m_matrix_view_t> views = block_views(*in.X, sizes);
+        return n4m_estimators_rosa_fit(ctx, cfg, views.data(), narrow(in.n_blocks), in.Y,
+                                       narrow(p.get_int("n_components")), out);
+    });
 }
 
 std::unique_ptr<Adapter> make_affine_bagging_pls(const MethodSpec&) {

@@ -92,6 +92,24 @@ facades expose splitters (`split`, a scikit-learn cross-validator in Python),
 augmenters (`augment`) and generic procedures (`run`, the named outputs); the
 shared fixture replays every procedure's default run in the three bindings.
 
+Model roles (S4): kernel PLS, GPR-on-PLS and LW-PLS regressors predict new
+rows from states that retain training rows (exported only with
+`N4M_EXPORT_ALLOW_TRAINING_ROWS`); recursive PLS keeps the model of its last
+window; missing-aware NIPALS predicts with the fit's mean imputation; SO-PLS
+and ROSA are affine regressors on the `blocks` partition; OnPLS transforms to
+the concatenated joint scores; DS, PDS (`target_domain`), slope/bias (per X
+column against y) and EPO (external parameter d as y) are transformers; the
+interval generator is a transformer. New core predict paths: GPR-PLS posterior
+mean, LW-PLS and OnPLS scores for new rows, DS/PDS maps. Behaviour changes:
+`n4m_estimators_so_pls_fit` and `n4m_estimators_rosa_fit` return the affine
+predictor (`coefficients`, `x_mean`, `affine_predictor`) and
+`block_coefficients_<b>` are now its per-block rows (SO-PLS reported
+orthogonalized-space coefficients, ROSA summed `w q'` ignoring score
+orthogonalization and deflation); `n4m_estimators_pls_glm_fit` folds the X
+centering into `intercept`, so `predictions` no longer miss `x_mean @ B`;
+`n4m_estimators_missing_aware_nipals_fit` in-sample predictions impute
+missing X entries instead of returning NaN.
+
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (superseded, never released)
 
 A draft `n4m_sample_filter_*` / `n4m_feature_filter_*` surface was added on a
