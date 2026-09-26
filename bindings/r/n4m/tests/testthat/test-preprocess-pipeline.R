@@ -68,5 +68,30 @@ test_that("all 15 implemented operator kinds use native fit and transform", {
         result <- n4m_preprocess_transform(fitted, held_out)
         expect_equal(dim(result), dim(held_out), info = kind)
         expect_true(all(is.finite(result)), info = kind)
+        bytes <- n4m_preprocess_export(fitted)
+        expect_type(bytes, "raw", info = kind)
+        imported <- n4m_preprocess_import(bytes)
+        expect_equal(n4m_preprocess_transform(imported, held_out), result,
+                     tolerance = 1e-12, info = kind)
+        expect_identical(n4m_preprocess_export(imported), bytes, info = kind)
     }
+})
+
+test_that("portable fitted preprocessing rejects corruption and width mismatch", {
+    x <- outer(1:12, 1:12, function(i, j) sin(i * j / 13) + i / 20)
+    fitted <- n4m_preprocess_fit(x, list(
+        n4m_preprocess_step("center"), n4m_preprocess_step("snv"),
+        n4m_preprocess_step("msc")))
+    bytes <- n4m_preprocess_export(fitted)
+    imported <- n4m_preprocess_import(unserialize(serialize(bytes, NULL)))
+    held_out <- x[c(2, 5), , drop = FALSE]
+    expect_equal(n4m_preprocess_transform(imported, held_out),
+                 n4m_preprocess_transform(fitted, held_out), tolerance = 1e-12)
+    expect_error(n4m_preprocess_transform(imported, held_out[, -1, drop = FALSE]),
+                 "feature width")
+    expect_error(n4m_preprocess_import(bytes[-length(bytes)]), "pipeline import")
+    tampered <- bytes
+    tampered[1L] <- as.raw(bitwXor(as.integer(tampered[1L]), 255L))
+    expect_error(n4m_preprocess_import(tampered), "pipeline import")
+    expect_error(n4m_preprocess_import(integer()), "raw vector")
 })

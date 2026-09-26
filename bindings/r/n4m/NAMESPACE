@@ -27,6 +27,9 @@ export(n4m_preprocess_capabilities)
 export(n4m_preprocess_step)
 export(n4m_preprocess_fit)
 export(n4m_preprocess_transform)
+export(n4m_preprocess_export)
+export(n4m_preprocess_import)
+export(n4m_preprocess_plan)
 export(kennard_stone_split)
 
 # Tier 1 — MethodResult fits
