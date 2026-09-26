@@ -10,6 +10,7 @@
 #include <Rinternals.h>
 
 #include <limits.h>
+#include <math.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -437,4 +438,136 @@ SEXP r_n4m_kennard_stone_split(SEXP X, SEXP test_size, SEXP zero_based) {
 
     UNPROTECT(5);
     return out;
+}
+
+/* One matrix/parameter marshalling path for all nine native splitters. */
+SEXP r_n4m_splitter_run(SEXP kind, SEXP X, SEXP Y, SEXP groups,
+                        SEXP params, SEXP fold_index, SEXP zero_based) {
+    if (TYPEOF(params) != REALSXP || XLENGTH(params) != 9)
+        Rf_error("splitter params must be a nine-value numeric vector");
+    if (TYPEOF(kind) != INTSXP || XLENGTH(kind) != 1 || INTEGER(kind)[0] == NA_INTEGER)
+        Rf_error("splitter kind must be a scalar integer");
+    n4m_splitter_spec_t spec = {0};
+    const double* p = REAL(params);
+    for (int i = 0; i < 7; ++i) {
+        if (!R_finite(p[i]) || p[i] != floor(p[i]) ||
+            p[i] < INT_MIN || p[i] > INT_MAX)
+            Rf_error("splitter integer parameters must be exact int32 values");
+    }
+    if (!R_finite(p[7]) || !R_finite(p[8]) || p[8] < 0 ||
+        p[8] > 9007199254740991.0 || p[8] != floor(p[8]))
+        Rf_error("splitter test_size/seed must be finite; seed must be exact");
+    spec.kind = INTEGER(kind)[0];
+    spec.n_splits = (int32_t)p[0];
+    spec.y_metric = (int32_t)p[1];
+    spec.aggregation = (int32_t)p[2];
+    spec.n_bins = (int32_t)p[3];
+    spec.strategy = (int32_t)p[4];
+    spec.shuffle = (int32_t)p[5];
+    spec.max_iter = (int32_t)p[6];
+    spec.test_size = p[7];
+    spec.seed = (uint64_t)p[8];
+    const int offset = r_pp_flag(zero_based, 0) ? 0 : 1;
+
+    n4m_matrix_view_t xv = {0}, yv = {0};
+    const n4m_matrix_view_t *xp = NULL, *yp = NULL;
+    int64_t xr = 0, xc = 0, yr = 0, yc = 0;
+    if (X != R_NilValue) {
+        r_pp_matrix_shape(X, &xr, &xc);
+        double* data = (double*)R_alloc((size_t)(xr * xc), sizeof(double));
+        r_pp_copy_r_to_rowmajor(X, xr, xc, data);
+        n4m_status_t s = n4m_matrix_view_init_rowmajor(&xv, data, xr, xc, N4M_DTYPE_F64);
+        if (s != N4M_OK) r_pp_throw_status("splitter X view", s);
+        xp = &xv;
+    }
+    if (Y != R_NilValue) {
+        r_pp_matrix_shape(Y, &yr, &yc);
+        double* data = (double*)R_alloc((size_t)(yr * yc), sizeof(double));
+        r_pp_copy_r_to_rowmajor(Y, yr, yc, data);
+        n4m_status_t s = n4m_matrix_view_init_rowmajor(&yv, data, yr, yc, N4M_DTYPE_F64);
+        if (s != N4M_OK) r_pp_throw_status("splitter Y view", s);
+        yp = &yv;
+    }
+    int64_t* group_data = NULL;
+    int64_t group_count = 0;
+    if (groups != R_NilValue) {
+        if (TYPEOF(groups) != REALSXP) Rf_error("groups must be numeric");
+        group_count = (int64_t)XLENGTH(groups);
+        group_data = (int64_t*)R_alloc((size_t)group_count, sizeof(int64_t));
+        for (int64_t i = 0; i < group_count; ++i) {
+            const double value = REAL(groups)[i];
+            if (!R_finite(value) || value != floor(value) ||
+                value < -9007199254740991.0 || value > 9007199254740991.0)
+                Rf_error("groups must be exact signed integer IDs");
+            group_data[i] = (int64_t)value;
+        }
+    }
+    n4m_split_result_t result = {0};
+    n4m_status_t status = n4m_splitter_run(&spec, xp, yp, group_data,
+                                           group_count,
+                                           r_pp_int_scalar(fold_index, "fold_index"), &result);
+    if (status != N4M_OK) {
+        n4m_split_result_destroy(&result);
+        r_pp_throw_status("n4m_splitter_run", status);
+    }
+    if (result.n_train > INT_MAX || result.n_test > INT_MAX) {
+        n4m_split_result_destroy(&result);
+        Rf_error("split size exceeds R integer limits");
+    }
+    SEXP train = PROTECT(Rf_allocVector(INTSXP, (R_xlen_t)result.n_train));
+    SEXP test = PROTECT(Rf_allocVector(INTSXP, (R_xlen_t)result.n_test));
+    for (int64_t i = 0; i < result.n_train; ++i) {
+        if (result.train_idx[i] < 0 || result.train_idx[i] > INT_MAX - offset) {
+            n4m_split_result_destroy(&result);
+            UNPROTECT(2);
+            Rf_error("native train index exceeds R integer limits");
+        }
+        INTEGER(train)[i] = (int)(result.train_idx[i] + offset);
+    }
+    for (int64_t i = 0; i < result.n_test; ++i) {
+        if (result.test_idx[i] < 0 || result.test_idx[i] > INT_MAX - offset) {
+            n4m_split_result_destroy(&result);
+            UNPROTECT(2);
+            Rf_error("native test index exceeds R integer limits");
+        }
+        INTEGER(test)[i] = (int)(result.test_idx[i] + offset);
+    }
+    n4m_split_result_destroy(&result);
+    SEXP out = PROTECT(Rf_allocVector(VECSXP, 2));
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, 2));
+    SET_VECTOR_ELT(out, 0, train);
+    SET_VECTOR_ELT(out, 1, test);
+    SET_STRING_ELT(names, 0, Rf_mkChar("train"));
+    SET_STRING_ELT(names, 1, Rf_mkChar("test"));
+    Rf_setAttrib(out, R_NamesSymbol, names);
+    UNPROTECT(4);
+    return out;
+}
+
+/* Seeded, train-only X->X augmentation; no label mixing occurs in this ABI. */
+SEXP r_n4m_augmentation_run(SEXP kind, SEXP X, SEXP params, SEXP seed) {
+    if (TYPEOF(params) != REALSXP || XLENGTH(params) > INT_MAX)
+        Rf_error("augmentation params must be a numeric vector");
+    if (TYPEOF(seed) != REALSXP || XLENGTH(seed) != 1)
+        Rf_error("augmentation seed must be an exact scalar");
+    const double seed_value = REAL(seed)[0];
+    if (!R_finite(seed_value) || seed_value < 0 ||
+        seed_value > 9007199254740991.0 || seed_value != floor(seed_value))
+        Rf_error("augmentation seed must be an exact nonnegative integer");
+    const int32_t code = r_pp_int_scalar(kind, "kind");
+    int64_t rows = 0, cols = 0;
+    r_pp_matrix_shape(X, &rows, &cols);
+    double* input = (double*)R_alloc((size_t)(rows * cols), sizeof(double));
+    double* output = (double*)R_alloc((size_t)(rows * cols), sizeof(double));
+    r_pp_copy_r_to_rowmajor(X, rows, cols, input);
+    n4m_matrix_view_t xv = {0}, ov = {0};
+    n4m_status_t status = n4m_matrix_view_init_rowmajor(
+        &xv, input, rows, cols, N4M_DTYPE_F64);
+    if (status != N4M_OK) r_pp_throw_status("augmentation X view", status);
+    status = n4m_matrix_view_init_rowmajor(&ov, output, rows, cols, N4M_DTYPE_F64);
+    if (status != N4M_OK) r_pp_throw_status("augmentation output view", status);
+    status = n4m_augmentation_run(code, REAL(params), (int32_t)XLENGTH(params),
+                                  (uint64_t)seed_value, xv, ov);
+    if (status != N4M_OK) r_pp_throw_status("n4m_augmentation_run", status);
+    return r_pp_rowmajor_to_matrix(output, rows, cols);
 }

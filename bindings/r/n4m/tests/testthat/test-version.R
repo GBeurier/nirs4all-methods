@@ -10,9 +10,9 @@ testthat::test_that("abi version is a three-element integer vector", {
   testthat::expect_length(abi, 3)
 })
 
-testthat::test_that("abi major/minor includes portable fitted preprocessing", {
+testthat::test_that("abi major/minor includes generic native splitters", {
   abi <- n4m::n4m_abi_version()
-  testthat::expect_equal(abi[1:2], c(2L, 10L))
+  testthat::expect_equal(abi[1:2], c(2L, 11L))
 })
 
 testthat::test_that("locked role-name aliases are exported", {

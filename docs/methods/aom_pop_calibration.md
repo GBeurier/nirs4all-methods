@@ -4,7 +4,7 @@ _Namespace_: **`n4m.model_selection.aom_calibration`** · _Fully-qualified_: `n4
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_model_selection_aom_calibration_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L474) · [`n4m_model_selection_aom_calibration_predict`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L481). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_aom_calibration_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L514) · [`n4m_model_selection_aom_calibration_predict`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L521). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.model_selection.aom_calibration import AOMPLSRegressor`
 

@@ -31,6 +31,8 @@ export(n4m_preprocess_export)
 export(n4m_preprocess_import)
 export(n4m_preprocess_plan)
 export(kennard_stone_split)
+export(n4m_splitter_run)
+export(n4m_augmentation_apply)
 
 # Tier 1 — MethodResult fits
 export(sparse_simpls_fit)

@@ -27,6 +27,9 @@ export {
 } from "./preprocessing.js";
 export { MethodResult } from "./methodResult.js";
 export { NativeModel } from "./nativeModel.js";
+export { splitNative, type NativeSplitterKind,
+         type NativeSplitterOptions, type NativeSplitIndices } from "./nativeSplitter.js";
+export { augmentNative, type NativeAugmentationKind } from "./nativeAugmentation.js";
 export {
     NativePreprocessingPipeline,
     PipelineOperatorKind,
