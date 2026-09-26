@@ -122,6 +122,14 @@ if(N4M_WITH_CUDA)
     set(CMAKE_CUDA_EXTENSIONS OFF)
 endif()
 
+# Same bits on every platform: GCC and Clang fuse a*b+c into FMA by default
+# where the target has it (arm64, x86-64-v3), which changes iterative kernels
+# by far more than an ulp. The C ABI promises identical results in every
+# binding, so contraction is off everywhere (WASM and MSVC never contract).
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:-ffp-contract=off>)
+endif()
+
 # n4m needs at least one library output to be useful.
 if(NOT N4M_BUILD_SHARED AND NOT N4M_BUILD_STATIC)
     message(FATAL_ERROR
