@@ -568,10 +568,11 @@ fn replays_the_cross_language_fixture() {
             "x_predictions" => x_predictions.view(),
             other => panic!("fixture matrix {other}"),
         };
+        let params = case.get("params").map(|p| params_for(&ctx, method_id, p));
         let result = roles::run_procedure(
             &ctx,
             method_id,
-            None,
+            params.as_ref(),
             &extra.add(FitInputs::new(x), &case["inputs"]),
         )
         .unwrap_or_else(|e| panic!("{method_id}: {e}"));

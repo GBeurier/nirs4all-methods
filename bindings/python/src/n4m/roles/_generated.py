@@ -20,6 +20,534 @@ from ._base import (
 )
 
 
+class AOMFixedCandidate(NativeRegressor):
+    """Native ``aom_pop.aom_chain_fixed_fit`` (regressor)."""
+
+    _method_id = "aom_pop.aom_chain_fixed_fit"
+    _param_types: ClassVar[dict[str, str]] = {
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "chain_params": "double_array",
+        "head": "enum",
+        "param": "double",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+        "moment_policy": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "head": (
+            "ridge",
+            "pls",
+        ),
+        "moment_policy": (
+            "auto",
+            "materialized",
+            "force",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        op_kinds=None,
+        param_offsets=None,
+        chain_params=(),
+        head="ridge",
+        param=0.1,
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+        moment_policy="auto",
+    ) -> None:
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.chain_params = chain_params
+        self.head = head
+        self.param = param
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.moment_policy = moment_policy
+
+
+class AOMChainSweep(NativeRegressor):
+    """Native ``aom_pop.aom_chain_sweep`` (regressor)."""
+
+    _method_id = "aom_pop.aom_chain_sweep"
+    _param_types: ClassVar[dict[str, str]] = {
+        "chain_offsets": "int_array",
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "chain_params": "double_array",
+        "cv": "int",
+        "ridge_lambdas": "double_array",
+        "pls_components": "int_array",
+        "heads": "enum",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+        "moment_policy": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "heads": (
+            "ridge",
+            "pls",
+            "ridge_pls",
+        ),
+        "moment_policy": (
+            "auto",
+            "materialized",
+            "force",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        chain_offsets=None,
+        op_kinds=None,
+        param_offsets=None,
+        chain_params=(),
+        cv=5,
+        ridge_lambdas=(0.01, 0.1, 1, 10),
+        pls_components=(),
+        heads="ridge",
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+        moment_policy="auto",
+    ) -> None:
+        self.chain_offsets = chain_offsets
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.chain_params = chain_params
+        self.cv = cv
+        self.ridge_lambdas = ridge_lambdas
+        self.pls_components = pls_components
+        self.heads = heads
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.moment_policy = moment_policy
+
+
+class AOMPLS(NativeRegressor):
+    """Native ``aom_pop.aom_pls`` (regressor)."""
+
+    _method_id = "aom_pop.aom_pls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "max_components": "int",
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "op_params": "double_array",
+        "cv": "int",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        max_components=3,
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16),
+        op_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1),
+        cv=3,
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+    ) -> None:
+        self.max_components = max_components
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.op_params = op_params
+        self.cv = cv
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+
+class AOMPreprocessing(NativeTransformer):
+    """Native ``aom_pop.aom_preprocessing`` (transformer)."""
+
+    _method_id = "aom_pop.aom_preprocessing"
+    _param_types: ClassVar[dict[str, str]] = {
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "op_params": "double_array",
+        "gating_mode": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "gating_mode": (
+            "hard",
+            "soft",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16),
+        op_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1),
+        gating_mode="soft",
+    ) -> None:
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.op_params = op_params
+        self.gating_mode = gating_mode
+
+
+class AOMSweep(NativeRegressor):
+    """Native ``aom_pop.aom_sweep`` (regressor)."""
+
+    _method_id = "aom_pop.aom_sweep"
+    _param_types: ClassVar[dict[str, str]] = {
+        "profile": "enum",
+        "cv": "int",
+        "ridge_lambdas": "double_array",
+        "pls_components": "int_array",
+        "heads": "enum",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+        "moment_policy": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "profile": (
+            "compact",
+            "wide",
+        ),
+        "heads": (
+            "ridge",
+            "pls",
+            "ridge_pls",
+        ),
+        "moment_policy": (
+            "auto",
+            "materialized",
+            "force",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        profile="compact",
+        cv=5,
+        ridge_lambdas=(0.01, 0.1, 1, 10),
+        pls_components=(),
+        heads="ridge",
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+        moment_policy="auto",
+    ) -> None:
+        self.profile = profile
+        self.cv = cv
+        self.ridge_lambdas = ridge_lambdas
+        self.pls_components = pls_components
+        self.heads = heads
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.moment_policy = moment_policy
+
+
+class AOMCalibration(NativeRegressor):
+    """Native ``aom_pop.calibration`` (regressor)."""
+
+    _method_id = "aom_pop.calibration"
+    _param_types: ClassVar[dict[str, str]] = {
+        "head": "enum",
+        "fast": "bool",
+        "max_components": "int",
+        "alphas": "double_array",
+        "cv": "int",
+        "branches": "int_array",
+        "max_depth": "int",
+        "rank": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "head": (
+            "pls",
+            "ridge",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        head="pls",
+        fast=False,
+        max_components=25,
+        alphas=(),
+        cv=3,
+        branches=(0, 1, 2),
+        max_depth=1,
+        rank=200,
+    ) -> None:
+        self.head = head
+        self.fast = fast
+        self.max_components = max_components
+        self.alphas = alphas
+        self.cv = cv
+        self.branches = branches
+        self.max_depth = max_depth
+        self.rank = rank
+
+
+class LinearStackCompress(NativeProcedure):
+    """Native ``aom_pop.linear_stack_compress`` (generic)."""
+
+    _method_id = "aom_pop.linear_stack_compress"
+    _param_types: ClassVar[dict[str, str]] = {
+        "base_intercepts": "double_array",
+        "meta_weights": "double_array",
+        "meta_intercept": "double_array",
+    }
+
+    def __init__(
+        self,
+        *,
+        base_intercepts=None,
+        meta_weights=None,
+        meta_intercept=None,
+    ) -> None:
+        self.base_intercepts = base_intercepts
+        self.meta_weights = meta_weights
+        self.meta_intercept = meta_intercept
+
+
+class AOMOperatorPLSStack(NativeRegressor):
+    """Native ``aom_pop.operator_pls_stack`` (regressor)."""
+
+    _method_id = "aom_pop.operator_pls_stack"
+    _param_types: ClassVar[dict[str, str]] = {
+        "profile": "enum",
+        "cv": "int",
+        "components": "int_array",
+        "alphas": "double_array",
+        "std_penalty": "double",
+        "gap_penalty": "double",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "profile": (
+            "compact",
+            "wide",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        profile="compact",
+        cv=5,
+        components=(2, 4, 8),
+        alphas=(0.001, 0.01, 0.1, 1, 10, 100),
+        std_penalty=0,
+        gap_penalty=0,
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+    ) -> None:
+        self.profile = profile
+        self.cv = cv
+        self.components = components
+        self.alphas = alphas
+        self.std_penalty = std_penalty
+        self.gap_penalty = gap_penalty
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+
+class POPPLS(NativeRegressor):
+    """Native ``aom_pop.pop_pls`` (regressor)."""
+
+    _method_id = "aom_pop.pop_pls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "max_components": "int",
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "op_params": "double_array",
+        "cv": "int",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        max_components=3,
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16),
+        op_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1),
+        cv=3,
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+    ) -> None:
+        self.max_components = max_components
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.op_params = op_params
+        self.cv = cv
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+
+class AOMRidgeBlender(NativeRegressor):
+    """Native ``aom_pop.ridge_blender`` (regressor)."""
+
+    _method_id = "aom_pop.ridge_blender"
+    _param_types: ClassVar[dict[str, str]] = {
+        "profile": "enum",
+        "cv": "int",
+        "ridge_lambdas": "double_array",
+        "regularizer": "double",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "profile": (
+            "compact",
+            "wide",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        profile="compact",
+        cv=5,
+        ridge_lambdas=(0.0001, 0.01, 1, 100),
+        regularizer=0.01,
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+    ) -> None:
+        self.profile = profile
+        self.cv = cv
+        self.ridge_lambdas = ridge_lambdas
+        self.regularizer = regularizer
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+
+class AOMRidgeGlobal(NativeRegressor):
+    """Native ``aom_pop.ridge_global`` (regressor)."""
+
+    _method_id = "aom_pop.ridge_global"
+    _param_types: ClassVar[dict[str, str]] = {
+        "op_kinds": "int_array",
+        "param_offsets": "int_array",
+        "op_params": "double_array",
+        "cv": "int",
+        "ridge_lambdas": "double_array",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+        "moment_policy": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "moment_policy": (
+            "auto",
+            "materialized",
+            "force",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        op_kinds=(0, 7, 7, 8, 8, 9, 9, 10, 15),
+        param_offsets=(0, 0, 1, 2, 4, 6, 9, 12, 15, 16),
+        op_params=(1, 2, 5, 2, 7, 2, 7, 2, 1, 11, 2, 2, 5, 5, 1, 1),
+        cv=5,
+        ridge_lambdas=(0.0001, 0.01, 1, 100),
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+        moment_policy="auto",
+    ) -> None:
+        self.op_kinds = op_kinds
+        self.param_offsets = param_offsets
+        self.op_params = op_params
+        self.cv = cv
+        self.ridge_lambdas = ridge_lambdas
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.moment_policy = moment_policy
+
+
+class AOMRobustHPO(NativeRegressor):
+    """Native ``aom_pop.robust_hpo`` (regressor)."""
+
+    _method_id = "aom_pop.robust_hpo"
+    _param_types: ClassVar[dict[str, str]] = {
+        "profile": "enum",
+        "cv": "int",
+        "heads": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "profile": (
+            "compact",
+            "wide",
+        ),
+        "heads": (
+            "ridge",
+            "pls",
+            "ridge_pls",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        profile="compact",
+        cv=5,
+        heads="ridge_pls",
+    ) -> None:
+        self.profile = profile
+        self.cv = cv
+        self.heads = heads
+
+
 class LinearDrift(NativeAugmenter):
     """Native ``augmentation.drift.linear_drift`` (augmenter)."""
 
@@ -4407,6 +4935,7 @@ class TransferMetrics(NativeProcedure):
 
 
 __all__ = [
+    "AOMPLS",
     "BEADS",
     "BVE",
     "CARS",
@@ -4434,6 +4963,7 @@ __all__ = [
     "PDS",
     "PLSLDA",
     "PLSQDA",
+    "POPPLS",
     "PSO",
     "REP",
     "RNV",
@@ -4450,6 +4980,15 @@ __all__ = [
     "VIPSPA",
     "VISSA",
     "WVC",
+    "AOMCalibration",
+    "AOMChainSweep",
+    "AOMFixedCandidate",
+    "AOMOperatorPLSStack",
+    "AOMPreprocessing",
+    "AOMRidgeBlender",
+    "AOMRidgeGlobal",
+    "AOMRobustHPO",
+    "AOMSweep",
     "AirPLS",
     "ApproximatePress",
     "ArPLS",
@@ -4503,6 +5042,7 @@ __all__ = [
     "KernelPLS",
     "KubelkaMunk",
     "LinearDrift",
+    "LinearStackCompress",
     "LocalCentering",
     "LocalClip",
     "LocalWarp",

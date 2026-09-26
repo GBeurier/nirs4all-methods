@@ -116,6 +116,33 @@ orthogonalization and deflation); `n4m_estimators_pls_glm_fit` folds the X
 centering into `intercept`, so `predictions` no longer miss `x_mean @ B`;
 `n4m_estimators_missing_aware_nipals_fit` in-sample predictions impute
 missing X entries instead of returning NaN.
+The AOM calibration kernel reports a numerically infeasible candidate path
+through its status instead of an exception, so WASM builds (compiled without
+exception catching) no longer abort on such candidates; results are
+unchanged.
+
+AOM / POP roles: ten regressors, one transformer and one procedure. The AOM
+and chain sweeps, the fixed-chain fit, the Ridge global selector (one operator
+per chain, Ridge head), AOM-PLS and POP-PLS, the robust-HPO screen, the Ridge
+simplex blender and the operator PLS stack predict new rows from their
+selected model folded into the input space (`input_coefficients` plus
+intercept, an N4MM linear predictor); the branch calibration (strict10 bank,
+global or Fast, PLS or Ridge head, raw / SNV / MSC branches) keeps its
+coefficient and branch state and predicts through
+`n4m_model_selection_aom_calibration_predict`; AOM preprocessing is a
+stateless transformer over its operator bank and gating mode. Operator banks
+and chains are parameters in the kernels' flat descriptor form (`op_kinds`,
+`param_offsets`, `op_params` or `chain_offsets` + `chain_params`), defaulting
+to the n4m reference banks; `fold_ids` replace the balanced `cv` plan.
+`aom_pop.linear_stack_compress` is a generic procedure (X holds the base
+coefficients; intercepts and meta weights are parameters). Coefficients equal
+the n4m reference fits bitwise. Not covered: the superblocks and chain
+Ridge-PLS (their numerics are the Python reference's), the screen/refit and
+staged campaigns and the linear Ridge stack (Python orchestration over the
+covered kernels). No kernel changes. Python facade fixes: results holding an
+empty (0 x 0) matrix, such as the fixed-chain fit's out-of-fold predictions,
+are read as empty arrays instead of raising, and an imported estimator reports
+array parameters as tuples, like the generated defaults.
 
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (superseded, never released)
 

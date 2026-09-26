@@ -42,6 +42,26 @@ publications: []
 notes: "Native strict-linear AOM robust-HPO screen over compact/wide preprocessing banks and Ridge/PLS heads. Compact has 12 chains; wide has 31 strict-linear chains, including Gaussian, FCK and Whittaker variants. Exposes input_coefficients plus intercept for replay in original feature space and backs NativeAOMRobustHPORegressor. Builds in CPU and CUDA-enabled libn4m configurations; native v1 is not the fused batched GPU grinder."
 c_surface:
   - "n4m_model_selection_robust_hpo_fit"
+estimator:
+  kind: "estimator"
+  adapter: "aom_robust_hpo"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "profile"
+      type: "enum"
+      default: "compact"
+      choices: "[compact, wide]"
+    - name: "cv"
+      type: "int"
+      default: 5
+      min: 2
+    - name: "heads"
+      type: "enum"
+      default: "ridge_pls"
+      choices: "[ridge, pls, ridge_pls]"
 fq_name: "n4m.model_selection.aom_search.robust_hpo"
 leaf: "robust_hpo"
 legacy_ids:
