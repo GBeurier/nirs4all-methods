@@ -18,7 +18,7 @@ Stratified group k-fold splitter after binning continuous ``y``.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_model_selection_binned_strat_group_kfold_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L106) · [`n4m_model_selection_binned_strat_group_kfold_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L110) · [`n4m_model_selection_binned_strat_group_kfold_n_splits`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L112) · [`n4m_model_selection_binned_strat_group_kfold_split_fold`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L114). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_binned_strat_group_kfold_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L146) · [`n4m_model_selection_binned_strat_group_kfold_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L150) · [`n4m_model_selection_binned_strat_group_kfold_n_splits`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L152) · [`n4m_model_selection_binned_strat_group_kfold_split_fold`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L154). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

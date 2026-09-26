@@ -96,7 +96,7 @@ extern "C" N4M_API n4m_status_t n4m_augmentation_run(
         AUG_RUN(N4M_AUG_MULTIPLICATIVE_NOISE, n4m_aug_multiplicative_noise_handle_t,
                 multiplicative_noise, p[0]);
         AUG_RUN(N4M_AUG_SPIKE_NOISE, n4m_aug_spike_noise_handle_t,
-                spike_noise, (int32_t)p[0], (int32_t)p[1], p[2], p[3]);
+                spike_noise, static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), p[2], p[3]);
         AUG_RUN(N4M_AUG_HETERO_NOISE, n4m_aug_hetero_noise_handle_t,
                 hetero_noise, p[0], p[1]);
         AUG_RUN(N4M_AUG_LINEAR_DRIFT, n4m_aug_linear_drift_handle_t,
@@ -104,30 +104,30 @@ extern "C" N4M_API n4m_status_t n4m_augmentation_run(
         AUG_RUN(N4M_AUG_PATH_LENGTH, n4m_aug_path_length_handle_t,
                 path_length, p[0], p[1]);
         AUG_RUN(N4M_AUG_BAND_PERTURB, n4m_aug_band_perturb_handle_t,
-                band_perturb, (int32_t)p[0], (int32_t)p[1], (int32_t)p[2],
+                band_perturb, static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), static_cast<int32_t>(p[2]),
                 p[3], p[4], p[5], p[6]);
         AUG_RUN(N4M_AUG_BAND_MASK, n4m_aug_band_mask_handle_t,
-                band_mask, (int32_t)p[0], (int32_t)p[1], (int32_t)p[2],
-                (int32_t)p[3], (int32_t)p[4]);
+                band_mask, static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), static_cast<int32_t>(p[2]),
+                static_cast<int32_t>(p[3]), static_cast<int32_t>(p[4]));
         AUG_RUN(N4M_AUG_CHANNEL_DROPOUT, n4m_aug_channel_dropout_handle_t,
-                channel_dropout, p[0], (int32_t)p[1]);
+                channel_dropout, p[0], static_cast<int32_t>(p[1]));
         AUG_RUN(N4M_AUG_GAUSS_JITTER, n4m_aug_gauss_jitter_handle_t,
-                gauss_jitter, p[0], p[1], (int32_t)p[2]);
+                gauss_jitter, p[0], p[1], static_cast<int32_t>(p[2]));
         AUG_RUN(N4M_AUG_UNSHARP_MASK, n4m_aug_unsharp_mask_handle_t,
-                unsharp_mask, p[0], p[1], p[2], (int32_t)p[3]);
+                unsharp_mask, p[0], p[1], p[2], static_cast<int32_t>(p[3]));
         AUG_RUN(N4M_AUG_LOCAL_CLIP, n4m_aug_local_clip_handle_t,
-                local_clip, (int32_t)p[0], (int32_t)p[1], (int32_t)p[2]);
+                local_clip, static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), static_cast<int32_t>(p[2]));
         AUG_RUN(N4M_AUG_ROTATE_TRANSLATE, n4m_aug_rotate_translate_handle_t,
                 rotate_translate, p[0], p[1]);
         AUG_RUN(N4M_AUG_RANDOM_X_OP, n4m_aug_random_x_op_handle_t,
-                random_x_op, (int32_t)p[0], p[1], p[2]);
+                random_x_op, static_cast<int32_t>(p[0]), p[1], p[2]);
         AUG_RUN(N4M_AUG_SCATTER_SIM_MSC, n4m_aug_scatter_sim_handle_t,
                 scatter_sim_msc, p[0], p[1], p[2], p[3]);
         AUG_RUN(N4M_AUG_DEAD_BAND, n4m_aug_dead_band_handle_t,
-                dead_band, (int32_t)p[0], (int32_t)p[1], (int32_t)p[2],
-                p[3], p[4], (int32_t)p[5]);
+                dead_band, static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]), static_cast<int32_t>(p[2]),
+                p[3], p[4], static_cast<int32_t>(p[5]));
         AUG_RUN(N4M_AUG_BATCH_EFFECT, n4m_aug_batch_effect_handle_t,
-                batch_effect, p[0], p[1], p[2], (int32_t)p[3], nullptr, 0);
+                batch_effect, p[0], p[1], p[2], static_cast<int32_t>(p[3]), nullptr, 0);
         case N4M_AUG_SPLINE_SMOOTHING:
             return run_one<n4m_aug_spline_smooth_handle_t>(seed,
                 [](auto** h, auto* rng) {
@@ -135,13 +135,13 @@ extern "C" N4M_API n4m_status_t n4m_augmentation_run(
                 }, n4m_augmentation_spline_smoothing_apply,
                 n4m_augmentation_spline_smoothing_destroy, X, out);
         AUG_RUN(N4M_AUG_SPLINE_X_PERTURB, n4m_aug_spline_x_perturb_handle_t,
-                spline_x_perturbations, (int32_t)p[0], p[1], p[2], p[3]);
+                spline_x_perturbations, static_cast<int32_t>(p[0]), p[1], p[2], p[3]);
         AUG_RUN(N4M_AUG_SPLINE_Y_PERTURB, n4m_aug_spline_y_perturb_handle_t,
-                spline_y_perturbations, (int32_t)p[0], p[1]);
+                spline_y_perturbations, static_cast<int32_t>(p[0]), p[1]);
         AUG_RUN(N4M_AUG_SPLINE_X_SIMPLIFY, n4m_aug_spline_x_simplify_handle_t,
-                spline_x_simplification, (int32_t)p[0], (int32_t)p[1]);
+                spline_x_simplification, static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]));
         AUG_RUN(N4M_AUG_SPLINE_CURVE_SIMPLIFY, n4m_aug_spline_curve_simplify_handle_t,
-                spline_curve_simplification, (int32_t)p[0], (int32_t)p[1]);
+                spline_curve_simplification, static_cast<int32_t>(p[0]), static_cast<int32_t>(p[1]));
         default: return N4M_ERR_INVALID_ARGUMENT;
     }
 }

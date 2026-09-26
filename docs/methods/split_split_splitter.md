@@ -15,7 +15,7 @@ SPlit data-twinning splitter.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_model_selection_data_twinning_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L132) · [`n4m_model_selection_data_twinning_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L134) · [`n4m_model_selection_data_twinning_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L135). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_data_twinning_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L172) · [`n4m_model_selection_data_twinning_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L174) · [`n4m_model_selection_data_twinning_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L175). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

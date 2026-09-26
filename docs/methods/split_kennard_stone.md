@@ -25,7 +25,7 @@ of pairwise Euclidean distance.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_model_selection_kennard_stone_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L37) · [`n4m_model_selection_kennard_stone_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L39) · [`n4m_model_selection_kennard_stone_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L40). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_kennard_stone_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L77) · [`n4m_model_selection_kennard_stone_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L79) · [`n4m_model_selection_kennard_stone_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L80). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
