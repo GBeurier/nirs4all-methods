@@ -24,7 +24,7 @@ check_classifier <- function(est, case, tolerance) {
 }
 
 fit_inputs <- function(names) {
-  all <- list(feature_groups = fx$feature_groups, blocks = fx$blocks,
+  all <- list(feature_groups = fx$feature_groups, blocks = fx$blocks, axis = fx$axis,
               X_target = fx$x_target)
   all[names]
 }

@@ -8,7 +8,7 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**82 of 213 catalog entries covered.**
+**110 of 213 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
@@ -17,7 +17,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | diagnostics | 0 | 5 |
 | filters | 0 | 7 |
 | models | 25 | 38 |
-| preprocessing | 32 | 62 |
+| preprocessing | 60 | 62 |
 | selection | 25 | 26 |
 | splitters | 0 | 9 |
 | utilities | 0 | 6 |
@@ -134,10 +134,10 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `models.transfer.di_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.transfer.ds` | not yet | - | - |
 | `models.transfer.pds` | not yet | - | - |
-| `preprocessing.alignment.cow_align` | not yet | - | - |
-| `preprocessing.alignment.dtw_align` | not yet | - | - |
-| `preprocessing.alignment.icoshift_align` | not yet | - | - |
-| `preprocessing.alignment.xcorr_align` | not yet | - | - |
+| `preprocessing.alignment.cow_align` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.alignment.dtw_align` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.alignment.icoshift_align` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.alignment.xcorr_align` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.baselines.airpls` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.baselines.arpls` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.baselines.asls` | estimator | transformer | Python, R, JS/WASM |
@@ -147,55 +147,55 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `preprocessing.baselines.imodpoly` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.baselines.modpoly` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.baselines.rolling_ball` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.baselines.saps` | not yet | - | - |
+| `preprocessing.baselines.saps` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.baselines.snip` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.derivatives.derivate` | not yet | - | - |
+| `preprocessing.derivatives.derivate` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.derivatives.first_derivative` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.derivatives.norris_williams` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.derivatives.savitzky_golay` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.derivatives.second_derivative` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.feature_selection.flexible_pca` | not yet | - | - |
-| `preprocessing.feature_selection.flexible_svd` | not yet | - | - |
+| `preprocessing.feature_selection.flexible_pca` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.feature_selection.flexible_svd` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.orthogonalization.epo` | not yet | - | - |
-| `preprocessing.orthogonalization.osc` | not yet | - | - |
+| `preprocessing.orthogonalization.osc` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.resampling.crop` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.resampling.kbins_discretizer` | not yet | - | - |
-| `preprocessing.resampling.range_discretizer` | not yet | - | - |
+| `preprocessing.resampling.kbins_discretizer` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.resampling.range_discretizer` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.resampling.resample_transformer` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.resampling.resampler` | not yet | - | - |
-| `preprocessing.scaling.baseline` | not yet | - | - |
-| `preprocessing.scaling.log_transform` | not yet | - | - |
-| `preprocessing.scaling.normalize` | not yet | - | - |
-| `preprocessing.scaling.simple_scale` | not yet | - | - |
+| `preprocessing.resampling.resampler` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.scaling.baseline` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.scaling.log_transform` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.scaling.normalize` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.scaling.simple_scale` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scatter.area_normalization` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scatter.emsc` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.scatter.local_centering` | not yet | - | - |
+| `preprocessing.scatter.local_centering` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scatter.local_snv` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.scatter.localized_msc` | not yet | - | - |
+| `preprocessing.scatter.localized_msc` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scatter.msc` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.scatter.piecewise_msc` | not yet | - | - |
-| `preprocessing.scatter.piecewise_snv` | not yet | - | - |
+| `preprocessing.scatter.piecewise_msc` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.scatter.piecewise_snv` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scatter.robust_snv` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scatter.snv` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.scatter.vsn` | not yet | - | - |
-| `preprocessing.scatter.weighted_snv` | not yet | - | - |
+| `preprocessing.scatter.vsn` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.scatter.weighted_snv` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.signal_conversion.fraction_to_percent` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.signal_conversion.from_absorbance` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.signal_conversion.kubelka_munk` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.signal_conversion.percent_to_fraction` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.signal_conversion.to_absorbance` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.smoothing.gaussian` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.specialized.fck_static` | not yet | - | - |
-| `preprocessing.transfer.direct_standardization` | not yet | - | - |
-| `preprocessing.transfer.piecewise_direct_standardization` | not yet | - | - |
-| `preprocessing.transfer.robust_direct_standardization` | not yet | - | - |
+| `preprocessing.specialized.fck_static` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.transfer.direct_standardization` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.transfer.piecewise_direct_standardization` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.transfer.robust_direct_standardization` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.transfer.slope_bias` | not yet | - | - |
 | `preprocessing.wavelets.haar` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.wavelets.wavelet` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.wavelets.wavelet_denoise` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.wavelets.wavelet_features` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.wavelets.wavelet_pca` | not yet | - | - |
-| `preprocessing.wavelets.wavelet_svd` | not yet | - | - |
+| `preprocessing.wavelets.wavelet_pca` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.wavelets.wavelet_svd` | estimator | transformer | Python, R, JS/WASM |
 | `selection.bipls` | estimator | selector | Python, R, JS/WASM |
 | `selection.bve` | estimator | selector | Python, R, JS/WASM |
 | `selection.cars` | estimator | selector | Python, R, JS/WASM |

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <limits>
@@ -1134,7 +1135,8 @@ void cow_row(const MatrixIn& x, MatrixOut& out, const AlignState& s,
         const std::int64_t lo = boundaries[static_cast<std::size_t>(k)];
         const std::int64_t hi = boundaries[static_cast<std::size_t>(k + 1)];
         auto& seg = ref_segments[static_cast<std::size_t>(k)];
-        seg.assign(s.reference.begin() + lo, s.reference.begin() + hi);
+        seg.assign(s.reference.begin() + static_cast<std::ptrdiff_t>(lo),
+                   s.reference.begin() + static_cast<std::ptrdiff_t>(hi));
         ref_norms[static_cast<std::size_t>(k)] = centered_norm(seg);
     }
 
@@ -1340,7 +1342,7 @@ n4m_status_t variance_fit(SelectorState& s, const n4m_matrix_view_t& x_v,
             return scores[to_index(a)] < scores[to_index(b)];
         });
         const std::int64_t keep = std::min<std::int64_t>(s.top_k, x.cols);
-        idx.erase(idx.begin(), idx.end() - keep);
+        idx.erase(idx.begin(), idx.end() - static_cast<std::ptrdiff_t>(keep));
     } else {
         for (std::size_t j = 0; j < cols; ++j) {
             if (scores[j] > s.threshold) idx.push_back(static_cast<std::int64_t>(j));

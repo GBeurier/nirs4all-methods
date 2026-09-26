@@ -588,6 +588,85 @@ class DIPLS(NativeRegressor):
         self.di_lambda = di_lambda
 
 
+class CorrelationOptimizedWarping(NativeTransformer):
+    """Native ``preprocessing.alignment.cow_align`` (transformer)."""
+
+    _method_id = "preprocessing.alignment.cow_align"
+    _param_types: ClassVar[dict[str, str]] = {
+        "reference": "double_array",
+        "interval_size": "int",
+        "max_shift": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        reference=[],
+        interval_size=32,
+        max_shift=5,
+    ) -> None:
+        self.reference = reference
+        self.interval_size = interval_size
+        self.max_shift = max_shift
+
+
+class DynamicTimeWarpingAlignment(NativeTransformer):
+    """Native ``preprocessing.alignment.dtw_align`` (transformer)."""
+
+    _method_id = "preprocessing.alignment.dtw_align"
+    _param_types: ClassVar[dict[str, str]] = {
+        "reference": "double_array",
+    }
+
+    def __init__(
+        self,
+        *,
+        reference=[],
+    ) -> None:
+        self.reference = reference
+
+
+class IcoshiftAlignment(NativeTransformer):
+    """Native ``preprocessing.alignment.icoshift_align`` (transformer)."""
+
+    _method_id = "preprocessing.alignment.icoshift_align"
+    _param_types: ClassVar[dict[str, str]] = {
+        "reference": "double_array",
+        "interval_size": "int",
+        "max_shift": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        reference=[],
+        interval_size=32,
+        max_shift=5,
+    ) -> None:
+        self.reference = reference
+        self.interval_size = interval_size
+        self.max_shift = max_shift
+
+
+class CrossCorrelationAlignment(NativeTransformer):
+    """Native ``preprocessing.alignment.xcorr_align`` (transformer)."""
+
+    _method_id = "preprocessing.alignment.xcorr_align"
+    _param_types: ClassVar[dict[str, str]] = {
+        "reference": "double_array",
+        "max_shift": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        reference=[],
+        max_shift=5,
+    ) -> None:
+        self.reference = reference
+        self.max_shift = max_shift
+
+
 class AirPLS(NativeTransformer):
     """Native ``preprocessing.baselines.airpls`` (transformer)."""
 
@@ -798,6 +877,34 @@ class RollingBall(NativeTransformer):
         self.smooth_half_window = smooth_half_window
 
 
+class ScoreAugmentedProjectionStandardization(NativeTransformer):
+    """Native ``preprocessing.baselines.saps`` (transformer).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "preprocessing.baselines.saps"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "score_weight": "double",
+        "fit_intercept": "bool",
+        "ridge": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=5,
+        score_weight=1,
+        fit_intercept=True,
+        ridge=0,
+    ) -> None:
+        self.n_components = n_components
+        self.score_weight = score_weight
+        self.fit_intercept = fit_intercept
+        self.ridge = ridge
+
+
 class SNIP(NativeTransformer):
     """Native ``preprocessing.baselines.snip`` (transformer)."""
 
@@ -812,6 +919,25 @@ class SNIP(NativeTransformer):
         max_half_window=20,
     ) -> None:
         self.max_half_window = max_half_window
+
+
+class Derivate(NativeTransformer):
+    """Native ``preprocessing.derivatives.derivate`` (transformer)."""
+
+    _method_id = "preprocessing.derivatives.derivate"
+    _param_types: ClassVar[dict[str, str]] = {
+        "order": "int",
+        "delta": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        order=1,
+        delta=1,
+    ) -> None:
+        self.order = order
+        self.delta = delta
 
 
 class FirstDerivative(NativeTransformer):
@@ -917,6 +1043,57 @@ class SecondDerivative(NativeTransformer):
         self.edge_order = edge_order
 
 
+class FlexiblePCA(NativeTransformer):
+    """Native ``preprocessing.feature_selection.flexible_pca`` (transformer)."""
+
+    _method_id = "preprocessing.feature_selection.flexible_pca"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=5,
+    ) -> None:
+        self.n_components = n_components
+
+
+class FlexibleSVD(NativeTransformer):
+    """Native ``preprocessing.feature_selection.flexible_svd`` (transformer)."""
+
+    _method_id = "preprocessing.feature_selection.flexible_svd"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=5,
+    ) -> None:
+        self.n_components = n_components
+
+
+class OSC(NativeTransformer):
+    """Native ``preprocessing.orthogonalization.osc`` (transformer)."""
+
+    _method_id = "preprocessing.orthogonalization.osc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "scale": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=1,
+        scale=True,
+    ) -> None:
+        self.n_components = n_components
+        self.scale = scale
+
+
 class CropTransformer(NativeTransformer):
     """Native ``preprocessing.resampling.crop`` (transformer)."""
 
@@ -936,6 +1113,47 @@ class CropTransformer(NativeTransformer):
         self.end = end
 
 
+class IntegerKBinsDiscretizer(NativeTransformer):
+    """Native ``preprocessing.resampling.kbins_discretizer`` (transformer)."""
+
+    _method_id = "preprocessing.resampling.kbins_discretizer"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_bins": "int",
+        "strategy": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "strategy": (
+            "uniform",
+            "quantile",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        n_bins=5,
+        strategy="uniform",
+    ) -> None:
+        self.n_bins = n_bins
+        self.strategy = strategy
+
+
+class RangeDiscretizer(NativeTransformer):
+    """Native ``preprocessing.resampling.range_discretizer`` (transformer)."""
+
+    _method_id = "preprocessing.resampling.range_discretizer"
+    _param_types: ClassVar[dict[str, str]] = {
+        "edges": "double_array",
+    }
+
+    def __init__(
+        self,
+        *,
+        edges=None,
+    ) -> None:
+        self.edges = edges
+
+
 class ResampleTransformer(NativeTransformer):
     """Native ``preprocessing.resampling.resample_transformer`` (transformer)."""
 
@@ -950,6 +1168,126 @@ class ResampleTransformer(NativeTransformer):
         num_samples=None,
     ) -> None:
         self.num_samples = num_samples
+
+
+class Resampler(NativeTransformer):
+    """Native ``preprocessing.resampling.resampler`` (transformer).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "preprocessing.resampling.resampler"
+    _param_types: ClassVar[dict[str, str]] = {
+        "target_wavelengths": "double_array",
+        "method": "enum",
+        "crop_min": "double",
+        "crop_max": "double",
+        "use_crop": "bool",
+        "fill_value": "double",
+        "bounds_error": "bool",
+        "extrapolate": "bool",
+        "tgt_min": "double",
+        "tgt_step": "double",
+        "tgt_n": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "method": (
+            "linear",
+            "nearest",
+            "cubic",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        target_wavelengths=[],
+        method="linear",
+        crop_min=0,
+        crop_max=0,
+        use_crop=False,
+        fill_value=0,
+        bounds_error=False,
+        extrapolate=False,
+        tgt_min=0,
+        tgt_step=1,
+        tgt_n=0,
+    ) -> None:
+        self.target_wavelengths = target_wavelengths
+        self.method = method
+        self.crop_min = crop_min
+        self.crop_max = crop_max
+        self.use_crop = use_crop
+        self.fill_value = fill_value
+        self.bounds_error = bounds_error
+        self.extrapolate = extrapolate
+        self.tgt_min = tgt_min
+        self.tgt_step = tgt_step
+        self.tgt_n = tgt_n
+
+
+class BaselineCenter(NativeTransformer):
+    """Native ``preprocessing.scaling.baseline`` (transformer)."""
+
+    _method_id = "preprocessing.scaling.baseline"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
+
+
+class LogTransform(NativeTransformer):
+    """Native ``preprocessing.scaling.log_transform`` (transformer)."""
+
+    _method_id = "preprocessing.scaling.log_transform"
+    _param_types: ClassVar[dict[str, str]] = {
+        "base": "double",
+        "offset": "double",
+        "auto_offset": "bool",
+        "min_value": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        base=0,
+        offset=0,
+        auto_offset=True,
+        min_value=1e-08,
+    ) -> None:
+        self.base = base
+        self.offset = offset
+        self.auto_offset = auto_offset
+        self.min_value = min_value
+
+
+class Normalize(NativeTransformer):
+    """Native ``preprocessing.scaling.normalize`` (transformer)."""
+
+    _method_id = "preprocessing.scaling.normalize"
+    _param_types: ClassVar[dict[str, str]] = {
+        "feature_min": "double",
+        "feature_max": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        feature_min=-1,
+        feature_max=1,
+    ) -> None:
+        self.feature_min = feature_min
+        self.feature_max = feature_max
+
+
+class SimpleScale(NativeTransformer):
+    """Native ``preprocessing.scaling.simple_scale`` (transformer)."""
+
+    _method_id = "preprocessing.scaling.simple_scale"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
 
 
 class AreaNormalization(NativeTransformer):
@@ -991,6 +1329,19 @@ class EMSC(NativeTransformer):
         self.degree = degree
 
 
+class LocalCentering(NativeTransformer):
+    """Native ``preprocessing.scatter.local_centering`` (transformer).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "preprocessing.scatter.local_centering"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
+
+
 class LSNV(NativeTransformer):
     """Native ``preprocessing.scatter.local_snv`` (transformer)."""
 
@@ -1020,6 +1371,28 @@ class LSNV(NativeTransformer):
         self.constant_value = constant_value
 
 
+class LocalizedMSC(NativeTransformer):
+    """Native ``preprocessing.scatter.localized_msc`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.localized_msc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "window_size": "int",
+        "reference": "double_array",
+        "eps": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        window_size=32,
+        reference=[],
+        eps=1e-12,
+    ) -> None:
+        self.window_size = window_size
+        self.reference = reference
+        self.eps = eps
+
+
 class MSC(NativeTransformer):
     """Native ``preprocessing.scatter.msc`` (transformer)."""
 
@@ -1028,6 +1401,50 @@ class MSC(NativeTransformer):
 
     def __init__(self) -> None:
         pass
+
+
+class PiecewiseMSC(NativeTransformer):
+    """Native ``preprocessing.scatter.piecewise_msc`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.piecewise_msc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "window_size": "int",
+        "reference": "double_array",
+        "eps": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        window_size=32,
+        reference=[],
+        eps=1e-12,
+    ) -> None:
+        self.window_size = window_size
+        self.reference = reference
+        self.eps = eps
+
+
+class PiecewiseSNV(NativeTransformer):
+    """Native ``preprocessing.scatter.piecewise_snv`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.piecewise_snv"
+    _param_types: ClassVar[dict[str, str]] = {
+        "window_size": "int",
+        "ddof": "int",
+        "eps": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        window_size=32,
+        ddof=0,
+        eps=1e-12,
+    ) -> None:
+        self.window_size = window_size
+        self.ddof = ddof
+        self.eps = eps
 
 
 class RNV(NativeTransformer):
@@ -1072,6 +1489,44 @@ class SNV(NativeTransformer):
         self.with_mean = with_mean
         self.with_std = with_std
         self.ddof = ddof
+
+
+class VariableSortingNormalization(NativeTransformer):
+    """Native ``preprocessing.scatter.vsn`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.vsn"
+    _param_types: ClassVar[dict[str, str]] = {
+        "eps": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        eps=1e-12,
+    ) -> None:
+        self.eps = eps
+
+
+class WeightedSNV(NativeTransformer):
+    """Native ``preprocessing.scatter.weighted_snv`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.weighted_snv"
+    _param_types: ClassVar[dict[str, str]] = {
+        "weights": "double_array",
+        "ddof": "int",
+        "eps": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        weights=[],
+        ddof=0,
+        eps=1e-12,
+    ) -> None:
+        self.weights = weights
+        self.ddof = ddof
+        self.eps = eps
 
 
 class FractionToPercent(NativeTransformer):
@@ -1186,6 +1641,103 @@ class Gaussian(NativeTransformer):
         self.mode = mode
         self.cval = cval
         self.truncate = truncate
+
+
+class FCKStaticTransformer(NativeTransformer):
+    """Native ``preprocessing.specialized.fck_static`` (transformer)."""
+
+    _method_id = "preprocessing.specialized.fck_static"
+    _param_types: ClassVar[dict[str, str]] = {
+        "kernel_size": "int",
+        "alphas": "double_array",
+        "sigmas": "double_array",
+    }
+
+    def __init__(
+        self,
+        *,
+        kernel_size=None,
+        alphas=None,
+        sigmas=None,
+    ) -> None:
+        self.kernel_size = kernel_size
+        self.alphas = alphas
+        self.sigmas = sigmas
+
+
+class DirectStandardization(NativeTransformer):
+    """Native ``preprocessing.transfer.direct_standardization`` (transformer).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "preprocessing.transfer.direct_standardization"
+    _param_types: ClassVar[dict[str, str]] = {
+        "fit_intercept": "bool",
+        "ridge": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        fit_intercept=True,
+        ridge=0,
+    ) -> None:
+        self.fit_intercept = fit_intercept
+        self.ridge = ridge
+
+
+class PiecewiseDirectStandardization(NativeTransformer):
+    """Native ``preprocessing.transfer.piecewise_direct_standardization`` (transformer).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "preprocessing.transfer.piecewise_direct_standardization"
+    _param_types: ClassVar[dict[str, str]] = {
+        "window_size": "int",
+        "fit_intercept": "bool",
+        "ridge": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        window_size=5,
+        fit_intercept=True,
+        ridge=0,
+    ) -> None:
+        self.window_size = window_size
+        self.fit_intercept = fit_intercept
+        self.ridge = ridge
+
+
+class RobustDirectStandardization(NativeTransformer):
+    """Native ``preprocessing.transfer.robust_direct_standardization`` (transformer).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "preprocessing.transfer.robust_direct_standardization"
+    _param_types: ClassVar[dict[str, str]] = {
+        "fit_intercept": "bool",
+        "ridge": "double",
+        "trim_quantile": "double",
+        "max_iter": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        fit_intercept=True,
+        ridge=0,
+        trim_quantile=0.9,
+        max_iter=3,
+    ) -> None:
+        self.fit_intercept = fit_intercept
+        self.ridge = ridge
+        self.trim_quantile = trim_quantile
+        self.max_iter = max_iter
 
 
 class Haar(NativeTransformer):
@@ -1319,6 +1871,82 @@ class WaveletFeatures(NativeTransformer):
         self.mode = mode
         self.max_level = max_level
         self.entropy = entropy
+
+
+class WaveletPCA(NativeTransformer):
+    """Native ``preprocessing.wavelets.wavelet_pca`` (transformer)."""
+
+    _method_id = "preprocessing.wavelets.wavelet_pca"
+    _param_types: ClassVar[dict[str, str]] = {
+        "family": "enum",
+        "mode": "enum",
+        "max_level": "int",
+        "n_components": "double",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "family": (
+            "haar",
+            "db4",
+            "sym4",
+            "coif1",
+        ),
+        "mode": (
+            "periodization",
+            "symmetric",
+            "zero",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        family="haar",
+        mode="periodization",
+        max_level=2,
+        n_components=5,
+    ) -> None:
+        self.family = family
+        self.mode = mode
+        self.max_level = max_level
+        self.n_components = n_components
+
+
+class WaveletSVD(NativeTransformer):
+    """Native ``preprocessing.wavelets.wavelet_svd`` (transformer)."""
+
+    _method_id = "preprocessing.wavelets.wavelet_svd"
+    _param_types: ClassVar[dict[str, str]] = {
+        "family": "enum",
+        "mode": "enum",
+        "max_level": "int",
+        "n_components": "double",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "family": (
+            "haar",
+            "db4",
+            "sym4",
+            "coif1",
+        ),
+        "mode": (
+            "periodization",
+            "symmetric",
+            "zero",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        family="haar",
+        mode="periodization",
+        max_level=2,
+        n_components=5,
+    ) -> None:
+        self.family = family
+        self.mode = mode
+        self.max_level = max_level
+        self.n_components = n_components
 
 
 class BiPLS(NativeSelector):
@@ -2044,6 +2672,7 @@ __all__ = [
     "MSC",
     "NPLS",
     "O2PLS",
+    "OSC",
     "PCR",
     "PLSLDA",
     "PLSQDA",
@@ -2065,12 +2694,21 @@ __all__ = [
     "AreaNormalization",
     "AsLS",
     "BaggingPLS",
+    "BaselineCenter",
     "BiPLS",
     "BoostingPLS",
     "ContinuumRegression",
+    "CorrelationOptimizedWarping",
     "CropTransformer",
+    "CrossCorrelationAlignment",
+    "Derivate",
     "Detrend",
+    "DirectStandardization",
+    "DynamicTimeWarpingAlignment",
+    "FCKStaticTransformer",
     "FirstDerivative",
+    "FlexiblePCA",
+    "FlexibleSVD",
     "FractionToPercent",
     "FromAbsorbance",
     "FusedSparsePLS",
@@ -2079,33 +2717,51 @@ __all__ = [
     "Haar",
     "IAsLS",
     "IModPoly",
+    "IcoshiftAlignment",
+    "IntegerKBinsDiscretizer",
     "KubelkaMunk",
+    "LocalCentering",
+    "LocalizedMSC",
+    "LogTransform",
     "ModPoly",
+    "Normalize",
     "NorrisWilliams",
     "PLSLogistic",
     "PLSRegression",
     "PercentToFraction",
+    "PiecewiseDirectStandardization",
+    "PiecewiseMSC",
+    "PiecewiseSNV",
     "RandomFrog",
     "RandomSubspacePLS",
     "Randomization",
+    "RangeDiscretizer",
     "ResampleTransformer",
+    "Resampler",
     "Ridge",
     "RidgePLS",
+    "RobustDirectStandardization",
     "RobustPLS",
     "RollingBall",
     "SavitzkyGolay",
+    "ScoreAugmentedProjectionStandardization",
     "SecondDerivative",
     "Shaving",
     "SiPLS",
     "SimplePLS",
+    "SimpleScale",
     "SparsePLSDA",
     "SparseSIMPLS",
     "Stability",
     "ToAbsorbance",
     "VariableSelect",
+    "VariableSortingNormalization",
     "WVCThreshold",
     "Wavelet",
     "WaveletDenoise",
     "WaveletFeatures",
+    "WaveletPCA",
+    "WaveletSVD",
     "WeightedPLS",
+    "WeightedSNV",
 ]
