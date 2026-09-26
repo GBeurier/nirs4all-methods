@@ -181,7 +181,7 @@ enum n4m_wasm_model_kind {
     /* Tier B extension — additional coeff-triple fits */
     MK_MIR_PLS, MK_MB_PLS, MK_MISSING_NIPALS,
     /* Tier B extension 2 — ECR (alpha PCR↔PLS) + O2PLS (orthogonal PLS) */
-    MK_ECR, MK_O2PLS
+    MK_ECR, MK_O2PLS, MK_N_PLS
 };
 
 static int model_kind_for(const char* model) {
@@ -208,6 +208,7 @@ static int model_kind_for(const char* model) {
     if (strcmp(model, "MissingAwareNIPALS") == 0) return MK_MISSING_NIPALS;
     if (strcmp(model, "ECR") == 0) return MK_ECR;
     if (strcmp(model, "O2PLS") == 0) return MK_O2PLS;
+    if (strcmp(model, "NPLS") == 0) return MK_N_PLS;
     return MK_NONE;
 }
 
@@ -383,14 +384,14 @@ static int n4m_wasm_model_fit_tier_b(
             return s;
         }
     }
-    /* The portable affine fits and canonical O2PLS use centred, unscaled data in the
+    /* The portable affine fits, O2PLS, and NPLS use centred, unscaled data in the
      * R/Python bindings. R selects SIMPLS except for canonical CPPLS and
      * RidgePLS, which select NIPALS. Preserve the other shim models' config. */
     if (kind == MK_RIDGE || kind == MK_RIDGE_PLS || kind == MK_ROBUST_PLS ||
         kind == MK_CPPLS || kind == MK_SPARSE_SIMPLS || kind == MK_ECR ||
         kind == MK_CONTINUUM || kind == MK_MIR_PLS || kind == MK_FUSED_SPARSE_PLS ||
         kind == MK_BAGGING_PLS || kind == MK_BOOSTING_PLS ||
-        kind == MK_RANDOM_SUBSPACE_PLS || kind == MK_O2PLS) {
+        kind == MK_RANDOM_SUBSPACE_PLS || kind == MK_O2PLS || kind == MK_N_PLS) {
         s = n4m_config_set_center_x(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_center_y(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_scale_x(cfg, 0);
@@ -527,6 +528,29 @@ static int n4m_wasm_model_fit_tier_b(
             if (s != N4M_OK) break;
             const int32_t n_pred = counts[0], n_xo = counts[1], n_yo = counts[2];
             s = n4m_estimators_o2pls_fit(ctx, cfg, &xv, &yv, n_pred, n_xo, n_yo, &res);
+            break;
+        }
+        case MK_N_PLS: {
+            /* Flattened tensor X is n × (mode_j * mode_k). The C result
+             * exports the original-input coefficient triple used by
+             * predict_n_pls; dimensions are required, not inferred. */
+            if (n_params != 2) { s = N4M_ERR_INVALID_ARGUMENT; break; }
+            int32_t dims[2] = {0, 0};
+            for (int i = 0; i < 2; ++i) {
+                const double value = params[i];
+                if (!isfinite(value) || value != floor(value) || value < 1.0 ||
+                    value > 2147483647.0) {
+                    s = N4M_ERR_INVALID_ARGUMENT;
+                    break;
+                }
+                dims[i] = (int32_t)value;
+            }
+            if (s != N4M_OK) break;
+            if ((int64_t)dims[0] * dims[1] != p) {
+                s = N4M_ERR_SHAPE_MISMATCH;
+                break;
+            }
+            s = n4m_estimators_n_pls_fit(ctx, cfg, &xv, dims[0], dims[1], &yv, &res);
             break;
         }
         default:
