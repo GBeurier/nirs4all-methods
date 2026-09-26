@@ -6,6 +6,8 @@
 \alias{predict.n4m_classifier}
 \alias{n4m_classes}
 \alias{n4m_classes.n4m_classifier}
+\alias{n4m_sample_mask}
+\alias{n4m_sample_mask.n4m_sample_filter}
 \alias{n4m_estimator_transform}
 \alias{n4m_estimator_transform.n4m_transformer}
 \alias{n4m_estimator_transform.n4m_selector}
@@ -29,6 +31,10 @@ n4m_estimator_fit(object, X, y = NULL, ...)
 n4m_classes(object)
 
 \method{n4m_classes}{n4m_classifier}(object)
+
+n4m_sample_mask(object, X, y = NULL)
+
+\method{n4m_sample_mask}{n4m_sample_filter}(object, X, y = NULL)
 
 n4m_estimator_transform(object, X, ...)
 
@@ -67,7 +73,8 @@ probabilities, for methods that define them) or \code{"decision"}
 \value{
 \code{n4m_estimator_fit()} returns the fitted estimator; \code{predict()} and
 \code{n4m_estimator_transform()} return numeric results (class labels for
-\code{predict(type = "class")}); \code{n4m_classes()} the fitted classes;
+\code{predict(type = "class")}); \code{n4m_classes()} the fitted classes; \code{n4m_sample_mask()} a logical
+vector (\code{TRUE} keeps the row);
 \code{n4m_estimator_export()} a raw vector; \code{n4m_estimator_import()} a
 fitted estimator.
 }
@@ -78,7 +85,9 @@ an unfitted estimator whose classes are its role interfaces:
 (\code{predict}, \code{n4m_classes}), \code{n4m_transformer}
 (\code{n4m_estimator_transform}) and \code{n4m_selector}
 (\code{n4m_estimator_transform}, which returns the selected columns in input
-order, and \code{n4m_selected_indices}, 1-based in native selection order). The fitted state is kept as portable N4ME
+order, and \code{n4m_selected_indices}, 1-based in native selection order) and
+\code{n4m_sample_filter} (\code{n4m_sample_mask}, a logical keep mask; filters
+are train-only, filters on the target read \code{y}). The fitted state is kept as portable N4ME
 bytes, so \code{saveRDS()}/\code{readRDS()} and the Python and JS/WASM
 bindings reuse it without refitting.
 }

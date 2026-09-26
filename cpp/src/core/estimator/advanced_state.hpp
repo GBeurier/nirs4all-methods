@@ -9,6 +9,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "n4m/n4m.h"
 #include "core/estimator/state_io.h"
@@ -70,3 +71,10 @@ n4m_status_t piecewise_snv_state_save(const n4m_pp_piecewise_snv_handle_t* h,
                                       n4m_state_writer_t* w);
 n4m_status_t piecewise_snv_state_load(n4m_pp_piecewise_snv_handle_t* h, n4m_state_reader_t* r,
                                       int64_t n_features);
+
+// Variance / correlation feature filters: the selected columns (0-based, in
+// selection order) of a fitted handle.
+n4m_status_t variance_filter_selected(const n4m_filter_variance_handle_t* h,
+                                     std::vector<std::int64_t>& out);
+n4m_status_t correlation_filter_selected(const n4m_filter_correlation_handle_t* h,
+                                        std::vector<std::int64_t>& out);

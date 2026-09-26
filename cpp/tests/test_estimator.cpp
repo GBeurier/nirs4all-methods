@@ -211,6 +211,49 @@ void conformance_classifier(n4m_context_t* ctx, const n4m_estimator_t* est, Inpu
     n4m_estimator_destroy(back);
 }
 
+// Sample filters: a 0/1 keep mask that keeps rows, identical for column-major
+// input, and an identical mask after an N4ME round trip when serializable.
+void conformance_sample_filter(n4m_context_t* ctx, const n4m_estimator_t* est, Inputs& in,
+                               const n4m_method_info_v1_t& info) {
+    std::vector<uint8_t> mask(kTrain, 2), mask2(kTrain, 2);
+    const n4m_matrix_view_t* Y = &in.Y;
+    CHECK(n4m_estimator_apply_mask(ctx, est, &in.X, Y, mask.data(), kTrain) == N4M_OK);
+    int64_t kept = 0;
+    for (uint8_t m : mask) {
+        CHECK(m <= 1);
+        kept += m;
+    }
+    CHECK(kept > 0);
+    if (info.inputs[N4M_FIT_INPUT_Y] == N4M_INPUT_REQUIRED) {
+        CHECK(n4m_estimator_apply_mask(ctx, est, &in.X, nullptr, mask2.data(), kTrain) != N4M_OK);
+    }
+    std::vector<double> x_cm(static_cast<size_t>(kTrain * kCols));
+    for (int64_t i = 0; i < kTrain; ++i) {
+        for (int64_t j = 0; j < kCols; ++j) {
+            x_cm[static_cast<size_t>(j * kTrain + i)] = in.data.x_train[static_cast<size_t>(i * kCols + j)];
+        }
+    }
+    n4m_matrix_view_t Xc{};
+    CHECK(n4m_matrix_view_init_colmajor(&Xc, x_cm.data(), kTrain, kCols, N4M_DTYPE_F64) == N4M_OK);
+    CHECK(n4m_estimator_apply_mask(ctx, est, &Xc, Y, mask2.data(), kTrain) == N4M_OK);
+    CHECK(mask2 == mask);
+    int64_t cols = 0;
+    CHECK(n4m_estimator_transform_cols(est, &cols) != N4M_OK);
+    if ((info.capabilities & N4M_CAP_SERIALIZABLE) == 0) {
+        size_t size = 0;
+        CHECK(n4m_estimator_export_size(ctx, est, 0, &size) != N4M_OK);
+        return;
+    }
+    const auto bytes = export_bytes(ctx, est);
+    n4m_estimator_t* back = nullptr;
+    CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) == N4M_OK);
+    std::fill(mask2.begin(), mask2.end(), uint8_t{2});
+    CHECK(n4m_estimator_apply_mask(ctx, back, &in.X, Y, mask2.data(), kTrain) == N4M_OK);
+    CHECK(mask2 == mask);
+    CHECK(export_bytes(ctx, back) == bytes);
+    n4m_estimator_destroy(back);
+}
+
 // Selectors and pure transformers: out-of-sample transform, selected columns,
 // and bitwise N4ME round trip.
 void conformance_transform_only(n4m_context_t* ctx, const n4m_estimator_t* est, Inputs& in,
@@ -332,6 +375,11 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
         return;
     }
     CHECK(n4m_estimator_n_outputs(est, &n_out) == N4M_OK && n_out == (predicts ? 1 : 0));
+    if ((info.roles & N4M_ROLE_SAMPLE_FILTER) != 0) {
+        conformance_sample_filter(ctx, est, in, info);
+        n4m_estimator_destroy(est);
+        return;
+    }
 
     if (!predicts) {
         CHECK(n4m_estimator_predict(ctx, est, &X_test, &P) == N4M_ERR_UNSUPPORTED);

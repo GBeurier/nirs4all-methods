@@ -39,6 +39,7 @@ for (case in fx$cases) {
   local({
     case <- case
     testthat::test_that(paste("Python N4ME state predicts identically in R:", case$method_id), {
+      testthat::skip_if(is.null(case$n4me), "train-only filter without a serializable state")
       bytes <- hex_to_raw(case$n4me)
       est <- n4m_estimator_import(bytes)
       testthat::expect_equal(inherits(est, "n4m_regressor"), !is.null(case[["predict"]]))
@@ -56,6 +57,9 @@ for (case in fx$cases) {
         testthat::expect_false(inherits(est, "n4m_transformer"))
       }
       if (!is.null(case$classes)) check_classifier(est, case, 1e-12)
+      if (!is.null(case$mask)) {
+        testthat::expect_identical(n4m_sample_mask(est, fx$x_test, fx$y_test), case$mask == 1)
+      }
       testthat::expect_identical(n4m_estimator_export(est), bytes)
     })
 
@@ -64,6 +68,10 @@ for (case in fx$cases) {
       target <- if (is.null(case$classes)) fx$y_train else fx$labels_train
       fitted <- do.call(n4m_estimator_fit, c(list(spec, fx$x_train, target),
                                              fit_inputs(case$fit_inputs)))
+      if (!is.null(case$mask)) {
+        testthat::expect_identical(n4m_sample_mask(fitted, fx$x_test, fx$y_test), case$mask == 1)
+      }
+      if (is.null(case$n4me)) return(invisible())
       path <- tempfile(fileext = ".rds")
       saveRDS(fitted, path)
       restored <- readRDS(path)

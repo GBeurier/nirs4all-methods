@@ -43,6 +43,31 @@ c_surface:
   - "n4m_outlier_detection_high_leverage_fit"
   - "n4m_outlier_detection_high_leverage_is_fitted"
   - "n4m_outlier_detection_high_leverage_threshold"
+estimator:
+  kind: "estimator"
+  adapter: "filter_high_leverage"
+  roles: "[sample_filter]"
+  state: "leverage_model"
+  inputs:
+    y: "optional"
+  params:
+    - name: "method"
+      type: "enum"
+      choices: "[hat, pca]"
+      default: "hat"
+    - name: "threshold_multiplier"
+      type: "double"
+      default: 2.0
+    - name: "absolute_threshold"
+      type: "double"
+      default: nan
+    - name: "n_components"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "center"
+      type: "bool"
+      default: true
 fq_name: "n4m.outlier_detection.high_leverage"
 leaf: "high_leverage"
 legacy_ids:

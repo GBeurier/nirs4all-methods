@@ -290,6 +290,25 @@ SEXP r_n4m_estimator_predict_labels(SEXP ptr, SEXP X) {
     return out;
 }
 
+/* Keep mask (logical) of the rows of X; Y is the one-column target or NULL. */
+SEXP r_n4m_estimator_apply_mask(SEXP ptr, SEXP X, SEXP Y) {
+    n4m_estimator_t* est = r_est_get(ptr);
+    n4m_matrix_view_t Xv = r_est_view(X, "X");
+    n4m_matrix_view_t Yv;
+    if (!Rf_isNull(Y)) Yv = r_est_view(Y, "y");
+    const int64_t n = (int64_t)Rf_nrows(X);
+    uint8_t* mask = (uint8_t*)R_alloc((size_t)(n > 0 ? n : 1), sizeof(uint8_t));
+    n4m_context_t* ctx = r_est_context();
+    n4m_status_t st =
+        n4m_estimator_apply_mask(ctx, est, &Xv, Rf_isNull(Y) ? NULL : &Yv, mask, n);
+    if (st != N4M_OK) r_est_fail("n4m_estimator_apply_mask", st, ctx, NULL, NULL);
+    n4m_context_destroy(ctx);
+    SEXP out = PROTECT(Rf_allocVector(LGLSXP, (R_xlen_t)n));
+    for (int64_t k = 0; k < n; ++k) LOGICAL(out)[k] = mask[k] != 0;
+    UNPROTECT(1);
+    return out;
+}
+
 /* Fitted class ids, sorted. */
 SEXP r_n4m_estimator_classes(SEXP ptr) {
     n4m_estimator_t* est = r_est_get(ptr);

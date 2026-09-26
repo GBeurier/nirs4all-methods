@@ -33,6 +33,15 @@ export interface ProbabilisticClassifier extends Classifier {
     predictProba(X: Matrix): Matrix;
 }
 
+/**
+ * Sample-filter role: Data[n, p] (+ Target) -> keep mask[n], train only.
+ * Filters on the target read `y` at fit and in getMask; the others ignore it.
+ */
+export interface SampleFilter {
+    /** Keep mask of the rows of X (true keeps the row). */
+    getMask(X: Matrix, y?: Float64Array | ArrayLike<number>): boolean[];
+}
+
 /** Transformer role: Data[n, p] (+ Target) -> Data[n, k]. */
 export interface Transformer {
     transform(X: Matrix): Matrix;
@@ -290,6 +299,25 @@ export abstract class NativeEstimator {
             return Array.from({ length: X.rows }, (_, i) => readI64(buf + 8 * i));
         } finally {
             xv.free();
+            m._free(buf);
+        }
+    }
+
+    protected maskArray(X: Matrix, y?: Float64Array | ArrayLike<number>): boolean[] {
+        const m = getModule();
+        const handle = this.handle();
+        const xv = makeMatrixView(X.data, X.rows, X.cols);
+        const yv = y === undefined ? undefined
+            : makeMatrixView(Float64Array.from(y as ArrayLike<number>), X.rows, 1);
+        const buf = m._malloc(Math.max(1, X.rows));
+        try {
+            withContext((ctx) => checkStatus(m.ccall("n4m_estimator_apply_mask", "number",
+                ["number", "number", "number", "number", "number", "i64"],
+                [ctx, handle, xv.viewPtr, yv ? yv.viewPtr : 0, buf, BigInt(X.rows)]) as number, ctx));
+            return Array.from(m.HEAPU8.subarray(buf, buf + X.rows), (v) => v !== 0);
+        } finally {
+            xv.free();
+            yv?.free();
             m._free(buf);
         }
     }

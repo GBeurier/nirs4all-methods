@@ -8,14 +8,14 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**110 of 213 catalog entries covered.**
+**116 of 213 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
 | aom_pop | 0 | 21 |
 | augmentation | 0 | 39 |
 | diagnostics | 0 | 5 |
-| filters | 0 | 7 |
+| filters | 6 | 7 |
 | models | 25 | 38 |
 | preprocessing | 60 | 62 |
 | selection | 25 | 26 |
@@ -90,12 +90,12 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `diagnostics.pls_monitoring` | not yet | - | - |
 | `diagnostics.regression_metrics` | not yet | - | - |
 | `filters.composite` | not yet | - | - |
-| `filters.correlation` | not yet | - | - |
-| `filters.high_leverage` | not yet | - | - |
-| `filters.spectral_quality` | not yet | - | - |
-| `filters.variance` | not yet | - | - |
-| `filters.x_outlier` | not yet | - | - |
-| `filters.y_outlier` | not yet | - | - |
+| `filters.correlation` | estimator | selector | Python, R, JS/WASM |
+| `filters.high_leverage` | estimator | sample_filter | Python, R, JS/WASM |
+| `filters.spectral_quality` | estimator | sample_filter | Python, R, JS/WASM |
+| `filters.variance` | estimator | selector | Python, R, JS/WASM |
+| `filters.x_outlier` | estimator | sample_filter | Python, R, JS/WASM |
+| `filters.y_outlier` | estimator | sample_filter | Python, R, JS/WASM |
 | `models.classification.pls_lda` | estimator | classifier | Python, R, JS/WASM |
 | `models.classification.pls_logistic` | estimator | classifier | Python, R, JS/WASM |
 | `models.classification.pls_qda` | estimator | classifier | Python, R, JS/WASM |

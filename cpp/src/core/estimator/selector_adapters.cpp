@@ -14,8 +14,10 @@
 #include <stdexcept>
 #include <vector>
 
+#include "core/estimator/advanced_state.hpp"
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/spec.hpp"
+#include "core/estimator/state_io.hpp"
 #include "core/method_result.hpp"
 
 namespace n4m::estimator {
@@ -561,6 +563,59 @@ std::unique_ptr<Adapter> make_select_variable_rank(const MethodSpec&) {
                 ctx, model.get(), in.X, i32(p.get_int("rank_method")), i32(p.get_int("top_k")),
                 out);
         });
+}
+
+namespace {
+
+// Variance / correlation filters: the kernel handle's selected columns.
+template <typename H>
+std::unique_ptr<Adapter> column_filter(
+    n4m_status_t (*create)(H**, double, std::int32_t), void (*destroy)(H*),
+    n4m_status_t (*fit)(H*, n4m_matrix_view_t, const FitInputs&),
+    n4m_status_t (*selected)(const H*, std::vector<std::int64_t>&)) {
+    return std::make_unique<SelectorAdapter>(
+        [=](n4m_context_t* ctx, const Params& p, const FitInputs& in, n4m_method_result_t** out) {
+            H* raw = nullptr;
+            n4m_status_t st = create(&raw, p.get_double("threshold"), i32(p.get_int("top_k")));
+            if (st != N4M_OK) {
+                set_error(ctx, "invalid filter parameters");
+                return st;
+            }
+            std::unique_ptr<H, void (*)(H*)> handle(raw, destroy);
+            std::vector<double> storage;
+            st = fit(handle.get(), contiguous_view(*in.X, storage), in);
+            std::vector<std::int64_t> indices;
+            if (st == N4M_OK) st = selected(handle.get(), indices);
+            if (st != N4M_OK) return st;
+            auto result = std::make_unique<n4m_method_result_s>();
+            result->set_int64_vector("selected_indices", std::move(indices));
+            *out = result.release();
+            return N4M_OK;
+        });
+}
+
+}  // namespace
+
+std::unique_ptr<Adapter> make_select_variance(const MethodSpec&) {
+    return column_filter<n4m_filter_variance_handle_t>(
+        n4m_feature_selection_variance_create, n4m_feature_selection_variance_destroy,
+        [](n4m_filter_variance_handle_t* h, n4m_matrix_view_t x, const FitInputs&) {
+            return n4m_feature_selection_variance_fit(h, x);
+        },
+        variance_filter_selected);
+}
+
+std::unique_ptr<Adapter> make_select_correlation(const MethodSpec&) {
+    return column_filter<n4m_filter_correlation_handle_t>(
+        n4m_feature_selection_correlation_create, n4m_feature_selection_correlation_destroy,
+        [](n4m_filter_correlation_handle_t* h, n4m_matrix_view_t x, const FitInputs& in) {
+            if (in.Y->cols != 1) return N4M_ERR_SHAPE_MISMATCH;
+            std::vector<double> y;
+            const n4m_matrix_view_t yv = contiguous_view(*in.Y, y);
+            return n4m_feature_selection_correlation_fit(
+                h, x, static_cast<const double*>(yv.data), yv.rows);
+        },
+        correlation_filter_selected);
 }
 
 }  // namespace n4m::estimator

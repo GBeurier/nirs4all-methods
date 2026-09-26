@@ -49,6 +49,7 @@ EXPLICIT_PARAMS = {
 # Fit input name -> n4m_fit_input_t index (n4m/estimator.h).
 DATA_INPUTS = {"feature_groups": 4, "blocks": 5, "axis": 6, "X_target": 7}
 AXIS = (1000.0 + 2.0 * np.arange(N_FEATURES)).tolist()
+CAP_SERIALIZABLE = 1 << 7
 
 
 def dataset():
@@ -62,7 +63,7 @@ def dataset():
     # Strictly positive, reflectance-like values keep every conversion defined.
     shift = 1.0 - min(X.min(), X_target.min())
     X, X_target = (X + shift) / (2 * shift), (X_target + shift) / (2 * shift)
-    return X[:36], y[:36], X[36:], X_target
+    return X[:36], y[:36], X[36:], X_target, y[36:]
 
 
 def class_labels(y) -> np.ndarray:
@@ -92,7 +93,7 @@ def fit_inputs(cls, X_target):
 
 
 def main() -> None:
-    X, y, X_test, X_target = dataset()
+    X, y, X_test, X_target, y_test = dataset()
     labels = class_labels(y)
     cases = []
     for method_id in sorted(_REGISTRY):
@@ -100,11 +101,15 @@ def main() -> None:
         params = explicit_params(cls)
         target = labels if issubclass(cls, roles.NativeClassifier) else y
         est = cls(**params).fit(X, target, **fit_inputs(cls, X_target))
+        serializable = roles.method_info(method_id).capabilities & CAP_SERIALIZABLE
         case = {
             "method_id": method_id,
             "fit_inputs": sorted(fit_inputs(cls, X_target)),
             "params": params,
-            "n4me_base64": base64.b64encode(est.to_n4me()).decode(),
+            # Filters are train-only; the X-outlier state is not serializable.
+            "n4me_base64": (
+                base64.b64encode(est.to_n4me()).decode() if serializable else None
+            ),
         }
         if isinstance(est, roles.NativeRegressor):
             case["predict"] = est.predict(X_test).tolist()
@@ -112,6 +117,8 @@ def main() -> None:
             case["transform"] = est.transform(X_test).tolist()
         if isinstance(est, roles.NativeSelector):
             case["selected_indices"] = est.selected_indices_.tolist()
+        if isinstance(est, roles.NativeSampleFilter):
+            case["mask"] = est.get_mask(X_test, y_test).astype(int).tolist()
         if isinstance(est, roles.NativeClassifier):
             case["classes"] = est.classes_.tolist()
             case["predict_labels"] = est.predict(X_test).tolist()
@@ -129,6 +136,7 @@ def main() -> None:
         "blocks": [4, 4, 4],
         "axis": AXIS,
         "x_test": X_test.tolist(),
+        "y_test": y_test.tolist(),
         "cases": cases,
     }
     OUTPUT.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
@@ -166,16 +174,21 @@ def render_r(doc: dict) -> str:
         f"  blocks = {r_vector(doc['blocks'])},",
         f"  axis = {r_vector(doc['axis'])},",
         f"  x_test = {r_matrix(doc['x_test'])},",
+        f"  y_test = {r_vector(doc['y_test'])},",
         "  cases = list(",
     ]
     cases = []
     for case in doc["cases"]:
-        hexa = base64.b64decode(case["n4me_base64"]).hex()
+        hexa = (
+            "NULL"
+            if case["n4me_base64"] is None
+            else f'"{base64.b64decode(case["n4me_base64"]).hex()}"'
+        )
         inputs = ", ".join(f'"{n}"' for n in case["fit_inputs"])
         params = ", ".join(f"{k} = {r_value(v)}" for k, v in case["params"].items())
         fields = [
             f'    method_id = "{case["method_id"]}"',
-            f'    n4me = "{hexa}"',
+            f"    n4me = {hexa}",
             f"    fit_inputs = c({inputs})",
             f"    params = list({params})",
         ]
@@ -187,7 +200,7 @@ def render_r(doc: dict) -> str:
             )
         if "transform" in case:
             fields.append(f"    transform = {r_matrix(case['transform'])}")
-        for name in ("classes", "predict_labels"):
+        for name in ("classes", "predict_labels", "mask"):
             if name in case:
                 fields.append(f"    {name} = {r_vector(case[name])}")
         for name in ("decision_function", "predict_proba"):

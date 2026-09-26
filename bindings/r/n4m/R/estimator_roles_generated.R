@@ -3,6 +3,12 @@
 # Native ABI 2.13.0.
 
 .n4m_method_roles <- list(
+  "filters.correlation" = c("selector"),
+  "filters.high_leverage" = c("sample_filter"),
+  "filters.spectral_quality" = c("sample_filter"),
+  "filters.variance" = c("selector"),
+  "filters.x_outlier" = c("sample_filter"),
+  "filters.y_outlier" = c("sample_filter"),
   "models.classification.pls_lda" = c("classifier"),
   "models.classification.pls_logistic" = c("classifier"),
   "models.classification.pls_qda" = c("classifier"),
@@ -116,6 +122,12 @@
 )
 
 .n4m_method_constructors <- c(
+  "filters.correlation" = "n4m_correlation",
+  "filters.high_leverage" = "n4m_high_leverage",
+  "filters.spectral_quality" = "n4m_spectral_quality",
+  "filters.variance" = "n4m_variance",
+  "filters.x_outlier" = "n4m_x_outlier",
+  "filters.y_outlier" = "n4m_y_outlier",
   "models.classification.pls_lda" = "n4m_pls_lda",
   "models.classification.pls_logistic" = "n4m_pls_logistic",
   "models.classification.pls_qda" = "n4m_pls_qda",
@@ -227,6 +239,42 @@
   "selection.wvc" = "n4m_wvc",
   "selection.wvc_threshold" = "n4m_wvc_threshold"
 )
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_correlation <- function(threshold = 0.0, top_k = -1L) {
+  .n4m_estimator("filters.correlation", c("selector"), list(threshold = threshold, top_k = top_k))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_high_leverage <- function(method = "hat", threshold_multiplier = 2.0, absolute_threshold = NULL, n_components = 0L, center = TRUE) {
+  .n4m_estimator("filters.high_leverage", c("sample_filter"), list(method = method, threshold_multiplier = threshold_multiplier, absolute_threshold = absolute_threshold, n_components = n_components, center = center))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spectral_quality <- function(max_nan_ratio = 0.1, max_zero_ratio = 0.5, min_variance = 1e-08, max_value = NULL, min_value = NULL, check_inf = TRUE) {
+  .n4m_estimator("filters.spectral_quality", c("sample_filter"), list(max_nan_ratio = max_nan_ratio, max_zero_ratio = max_zero_ratio, min_variance = min_variance, max_value = max_value, min_value = min_value, check_inf = check_inf))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_variance <- function(threshold = 0.0, top_k = -1L) {
+  .n4m_estimator("filters.variance", c("selector"), list(threshold = threshold, top_k = top_k))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_x_outlier <- function(method = "mahalanobis", threshold = NULL, n_components = 0L, contamination = 0.1, seed = 0L, n_estimators = 100L, max_samples = 256L) {
+  .n4m_estimator("filters.x_outlier", c("sample_filter"), list(method = method, threshold = threshold, n_components = n_components, contamination = contamination, seed = seed, n_estimators = n_estimators, max_samples = max_samples))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_y_outlier <- function(method = "iqr", threshold = 1.5, lower_percentile = 1.0, upper_percentile = 99.0) {
+  .n4m_estimator("filters.y_outlier", c("sample_filter"), list(method = method, threshold = threshold, lower_percentile = lower_percentile, upper_percentile = upper_percentile))
+}
 
 #' @rdname n4m_estimator_role_constructors
 #' @export

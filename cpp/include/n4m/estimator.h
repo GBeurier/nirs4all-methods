@@ -129,7 +129,9 @@ N4M_API n4m_status_t n4m_params_create(n4m_context_t* ctx, int32_t method_index,
 N4M_API void n4m_params_destroy(n4m_params_t* params);
 /* Setters validate name, type and bounds; they return
  * N4M_ERR_INVALID_ARGUMENT without a message. n4m_params_validate reports
- * the first invalid or missing required parameter by name through ctx. */
+ * the first invalid or missing required parameter by name through ctx.
+ * Doubles must be finite, except that a parameter whose default is NaN
+ * (an optional value, unused when NaN) also accepts NaN. */
 N4M_API n4m_status_t n4m_params_set_int(n4m_params_t*, const char* name, int64_t value);
 N4M_API n4m_status_t n4m_params_set_double(n4m_params_t*, const char* name, double value);
 N4M_API n4m_status_t n4m_params_set_bool(n4m_params_t*, const char* name, int32_t value);

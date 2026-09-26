@@ -382,10 +382,10 @@ Python, R and WASM.
   `n4m_split_run` / `n4m_augment_run`.
 - The ABI 2.12 filter-role symbols (`n4m_sample_filter_*`,
   `n4m_feature_filter_*`) were never distributed (verified 2026-09-26: they
-  exist only on the unmerged branch of PR #37 and a local R library). They
-  are replaced by the `SAMPLE_FILTER` / `SELECTOR` estimator roles; headers,
-  the three symbol snapshots and the change log are rewritten together so the
-  released 2.13 describes 2.12 as a superseded, unreleased draft. The
+  existed only on the unmerged branch of PR #37 and a local R library). They
+  are replaced by the `SAMPLE_FILTER` / `SELECTOR` estimator roles and
+  removed (header, symbol snapshots, binding facades); the change log records
+  2.12 as a superseded, unreleased draft. The
   composite filter is not carried over: composing filters is DAG-ML's job
   (D8).
 - N4MP operator kinds are re-pointed at the per-method kernels, with an
@@ -438,12 +438,15 @@ unlock:
 The final claim is per entry: estimator or procedure, languages, operations,
 oracle result — never a bare 212/212.
 
-Status (2026-09-27): S0 and S1 are implemented for 46 methods (21 regressors,
-25 selectors) with Python, R and JS/WASM facades generated from the manifest.
-The shared fixture `parity/fixtures/estimator_roles_n4me.json` is replayed by
-the three bindings (predictions, transforms and selected columns at 1e-12,
-byte-identical re-export) and every binding's own fit reproduces the Python
-fit; the selectors reproduce the n4m reference selections exactly.
+Status (2026-09-26): 116 catalog entries reach a role (21 regressors, three
+of them also transformers; 4 classifiers; 27 selectors; 60 transformers; 4
+sample filters); the generated
+per-entry record is `docs/parity/estimator_roles_coverage.md`. Python, R and
+JS/WASM facades are generated from the manifest, and the shared fixture
+`parity/fixtures/estimator_roles_n4me.json` is replayed by the three bindings
+(outputs at 1e-12, byte-identical re-export) while every binding's own fit
+reproduces the Python fit. Each role class also matches its n4m reference
+class (bitwise where the same kernel runs).
 
 ## 5. Tests
 

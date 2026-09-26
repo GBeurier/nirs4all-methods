@@ -26,6 +26,7 @@ ROLE_METHODS = {
     "classifier": ("Classifier", "decisionFunction", "decisionMatrix"),
     "transformer": ("Transformer", "transform", "transformMatrix"),
     "selector": ("Selector", "transform", "transformMatrix"),
+    "sample_filter": ("SampleFilter", "getMask", "maskArray"),
 }
 TS_TYPES = {
     "int": "number",
@@ -53,6 +54,7 @@ def render(manifest: dict) -> str:
         "    NativeEstimator,",
         "    type ProbabilisticClassifier,",
         "    type Regressor,",
+        "    type SampleFilter,",
         "    type Selector,",
         "    type Transformer,",
         '} from "./estimatorRoles.js";',
@@ -62,7 +64,13 @@ def render(manifest: dict) -> str:
         name = class_name(m)
         roles = [
             ROLE_METHODS[r]
-            for r in ("regressor", "classifier", "transformer", "selector")
+            for r in (
+                "regressor",
+                "classifier",
+                "transformer",
+                "selector",
+                "sample_filter",
+            )
             if r in m["roles"]
         ]
         missing = set(m["roles"]) - set(ROLE_METHODS)
@@ -110,7 +118,15 @@ def render(manifest: dict) -> str:
             "        this.params = { ...params };",
             "    }",
         ]
-        for _, method, helper in roles:
+        for iface, method, helper in roles:
+            if iface == "SampleFilter":
+                out += [
+                    "",
+                    f"    {method}(X: Matrix, y?: Float64Array | ArrayLike<number>): boolean[] {{",
+                    f"        return this.{helper}(X, y);",
+                    "    }",
+                ]
+                continue
             out += [
                 "",
                 f"    {method}(X: Matrix): Matrix {{",

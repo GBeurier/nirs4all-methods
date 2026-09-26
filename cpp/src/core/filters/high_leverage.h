@@ -28,6 +28,7 @@
 #include <stdint.h>
 
 #include "n4m/n4m.h"
+#include "core/estimator/state_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,6 +106,14 @@ n4m_status_t n4m_filter_leverage_state_apply(
 /* Read-only accessor: the threshold computed at fit time. Returns NaN if
  * the state is not fitted. */
 double n4m_filter_leverage_state_threshold(const n4m_filter_leverage_state_t* state);
+
+/* Fitted state for the estimator role's N4ME payload: the path actually
+ * used, the column mean, the path's factors and the threshold. Load
+ * replaces any fitted state; `n_features` is the fitted width. */
+n4m_status_t n4m_filter_leverage_state_save(const n4m_filter_leverage_state_t* state,
+                                            n4m_state_writer_t* w);
+n4m_status_t n4m_filter_leverage_state_load(n4m_filter_leverage_state_t* state,
+                                            n4m_state_reader_t* r, int64_t n_features);
 
 #ifdef __cplusplus
 }  /* extern "C" */
