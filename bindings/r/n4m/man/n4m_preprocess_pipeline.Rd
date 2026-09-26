@@ -3,6 +3,9 @@
 \alias{n4m_preprocess_step}
 \alias{n4m_preprocess_fit}
 \alias{n4m_preprocess_transform}
+\alias{n4m_preprocess_export}
+\alias{n4m_preprocess_import}
+\alias{n4m_preprocess_plan}
 \title{Generic native preprocessing pipeline}
 \usage{
 n4m_preprocess_capabilities()
@@ -12,6 +15,12 @@ n4m_preprocess_step(kind, params = numeric())
 n4m_preprocess_fit(X, steps, Y = NULL)
 
 n4m_preprocess_transform(object, X)
+
+n4m_preprocess_export(object)
+
+n4m_preprocess_import(bytes)
+
+n4m_preprocess_plan(object)
 }
 \arguments{
 \item{kind}{Operator name from \code{n4m_preprocess_capabilities()}.}
@@ -20,12 +29,16 @@ n4m_preprocess_transform(object, X)
 \item{steps}{Nonempty list of \code{n4m_preprocess_step()} specifications.}
 \item{Y}{Optional finite numeric response matrix, required for supervised OSC and EPO.}
 \item{object}{Fitted native pipeline returned by \code{n4m_preprocess_fit()}.}
+\item{bytes}{A raw vector containing a fitted native N4MP pipeline.}
 }
 \value{
 \code{n4m_preprocess_capabilities()} returns a data frame of names, numeric
 codes, and support flags. \code{n4m_preprocess_step()} returns an operator
 specification. \code{n4m_preprocess_fit()} returns fitted native state.
 \code{n4m_preprocess_transform()} returns a numeric matrix.
+\code{n4m_preprocess_export()} returns portable raw bytes;
+\code{n4m_preprocess_import()} restores a fitted native pipeline.
+\code{n4m_preprocess_plan()} returns its ordered original operator plan.
 }
 \description{
 A thin R interface to the libn4m C ABI pipeline. The C ABI names 19 operator
@@ -35,8 +48,8 @@ rejected by \code{n4m_preprocess_step()}.
 }
 \details{
 All numerical fitting and transformation is performed by libn4m. The fitted
-state is an in-process native pointer; it is not a portable serialized
-preprocessing artifact and must not be saved for use in another R session.
+state is an in-process native pointer; save the exported N4MP raw bytes,
+not this pointer, for use in another R session or supported language binding.
 
 Parameter vectors are positional; use \code{numeric()} for the native default.
 The contract is defined by \code{n4m_operator_kind_t} and the native pipeline

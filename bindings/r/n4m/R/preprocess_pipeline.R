@@ -44,8 +44,8 @@ n4m_preprocess_step <- function(kind, params = numeric()) {
 
 #' Fit a native preprocessing pipeline
 #'
-#' The fitted state is an in-process native handle. It remains valid while this
-#' object lives; it is not a portable serialized preprocessing artifact.
+#' The fitted state is an in-process native handle. Use
+#' [n4m_preprocess_export()] to persist it as a portable native artifact.
 #' @param X Finite numeric training matrix.
 #' @param steps Nonempty list of [n4m_preprocess_step()] specifications.
 #' @param Y Optional finite numeric target matrix for supervised OSC/EPO.
@@ -84,4 +84,51 @@ n4m_preprocess_transform <- function(object, X) {
         stop("X must be finite and match the fitted feature width", call. = FALSE)
     X <- matrix(as.double(X), nrow = nrow(X), dimnames = dimnames(X))
     .Call("r_n4m_preprocess_transform", object$handle, X, PACKAGE = "n4m")
+}
+
+#' Export a fitted native preprocessing pipeline
+#'
+#' The result is a versioned N4MP byte stream. It contains the exact learned
+#' native preprocessing state, not the training spectra.
+#' @param object Result of [n4m_preprocess_fit()] or [n4m_preprocess_import()].
+#' @return A raw vector with the portable N4MP artifact.
+#' @export
+n4m_preprocess_export <- function(object) {
+    if (!inherits(object, "n4m_preprocess_fit"))
+        stop("object must be fitted native preprocessing state", call. = FALSE)
+    .Call("r_n4m_preprocess_export", object$handle, PACKAGE = "n4m")
+}
+
+#' Inspect the ordered native preprocessing plan
+#'
+#' Parameters are the original positional values, not expanded defaults.
+#' @param object Fitted native preprocessing pipeline.
+#' @return Ordered list of [n4m_preprocess_step()] specifications.
+#' @export
+n4m_preprocess_plan <- function(object) {
+    if (!inherits(object, "n4m_preprocess_fit"))
+        stop("object must be fitted native preprocessing state", call. = FALSE)
+    entries <- .Call("r_n4m_preprocess_plan", object$handle, PACKAGE = "n4m")
+    lapply(entries, function(entry) {
+        code <- entry[[1L]]
+        kind <- names(.n4m_preprocess_kinds)[match(code, .n4m_preprocess_kinds)]
+        if (is.na(kind)) stop("native pipeline returned an unknown kind", call. = FALSE)
+        n4m_preprocess_step(kind, entry[[2L]])
+    })
+}
+
+#' Import a fitted native preprocessing pipeline
+#'
+#' The native decoder validates the version, dimensions and operator state.
+#' @param bytes A raw vector returned by [n4m_preprocess_export()].
+#' @return Fitted native preprocessing state for [n4m_preprocess_transform()].
+#' @export
+n4m_preprocess_import <- function(bytes) {
+    if (!is.raw(bytes) || length(bytes) == 0L)
+        stop("bytes must be a nonempty raw vector", call. = FALSE)
+    state <- .Call("r_n4m_preprocess_import", bytes, PACKAGE = "n4m")
+    result <- structure(list(handle = state[[1L]], n_features = state[[2L]],
+                             steps = NULL), class = "n4m_preprocess_fit")
+    result$steps <- n4m_preprocess_plan(result)
+    result
 }

@@ -134,3 +134,95 @@ SEXP r_n4m_preprocess_transform(SEXP ptr, SEXP X) {
     UNPROTECT(1);
     return output;
 }
+
+SEXP r_n4m_preprocess_export(SEXP ptr) {
+    if (TYPEOF(ptr) != EXTPTRSXP || R_ExternalPtrAddr(ptr) == NULL)
+        Rf_error("pipeline state must be a live native external pointer");
+    const n4m_pipeline_t* pipeline = (const n4m_pipeline_t*)R_ExternalPtrAddr(ptr);
+    size_t size = 0;
+    n4m_status_t status = n4m_pipeline_export_size(pipeline, &size);
+    if (status != N4M_OK)
+        Rf_error("pipeline export size: %s", n4m_status_to_string(status));
+    if (size == 0 || size > (size_t)R_XLEN_T_MAX)
+        Rf_error("pipeline export exceeds R raw-vector limits");
+    SEXP bytes = PROTECT(Rf_allocVector(RAWSXP, (R_xlen_t)size));
+    size_t written = 0;
+    status = n4m_pipeline_export_to_buffer(pipeline, RAW(bytes), size, &written);
+    if (status != N4M_OK || written != size) {
+        UNPROTECT(1);
+        Rf_error("pipeline export: %s", n4m_status_to_string(status));
+    }
+    UNPROTECT(1);
+    return bytes;
+}
+
+SEXP r_n4m_preprocess_plan(SEXP ptr) {
+    if (TYPEOF(ptr) != EXTPTRSXP || R_ExternalPtrAddr(ptr) == NULL)
+        Rf_error("pipeline state must be a live native external pointer");
+    const n4m_pipeline_t* pipeline = (const n4m_pipeline_t*)R_ExternalPtrAddr(ptr);
+    int64_t n_features = 0;
+    int32_t count = 0;
+    n4m_status_t status = n4m_pipeline_get_info(pipeline, &n_features, &count);
+    if (status != N4M_OK || n_features < 1 || count < 1)
+        Rf_error("pipeline plan requires fitted native state");
+    SEXP plan = PROTECT(Rf_allocVector(VECSXP, count));
+    for (int32_t index = 0; index < count; ++index) {
+        n4m_operator_kind_t kind = N4M_OP_IDENTITY;
+        int32_t n_params = 0;
+        status = n4m_pipeline_get_operator(pipeline, index, &kind, NULL, 0, &n_params);
+        if (status != N4M_OK || n_params < 0) {
+            UNPROTECT(1);
+            Rf_error("pipeline plan query: %s", n4m_status_to_string(status));
+        }
+        SEXP entry = PROTECT(Rf_allocVector(VECSXP, 2));
+        SEXP params = PROTECT(Rf_allocVector(REALSXP, n_params));
+        status = n4m_pipeline_get_operator(
+            pipeline, index, &kind, n_params == 0 ? NULL : REAL(params), n_params, &n_params);
+        if (status != N4M_OK) {
+            UNPROTECT(3);
+            Rf_error("pipeline plan copy: %s", n4m_status_to_string(status));
+        }
+        SET_VECTOR_ELT(entry, 0, Rf_ScalarInteger((int)kind));
+        SET_VECTOR_ELT(entry, 1, params);
+        SET_VECTOR_ELT(plan, index, entry);
+        UNPROTECT(2);
+    }
+    UNPROTECT(1);
+    return plan;
+}
+
+SEXP r_n4m_preprocess_import(SEXP bytes) {
+    if (TYPEOF(bytes) != RAWSXP || XLENGTH(bytes) == 0)
+        Rf_error("pipeline bytes must be a nonempty raw vector");
+    n4m_context_t* context = NULL;
+    n4m_status_t status = n4m_context_create(&context);
+    if (status != N4M_OK)
+        Rf_error("context create: %s", n4m_status_to_string(status));
+    n4m_pipeline_t* pipeline = NULL;
+    status = n4m_pipeline_import_from_buffer(
+        context, RAW(bytes), (size_t)XLENGTH(bytes), &pipeline);
+    char import_error[512] = {0};
+    if (status != N4M_OK) {
+        const char* detail = n4m_context_last_error(context);
+        snprintf(import_error, sizeof(import_error), "%s", detail == NULL ? "" : detail);
+    }
+    n4m_context_destroy(context);
+    if (status != N4M_OK) {
+        if (pipeline != NULL) n4m_pipeline_destroy(pipeline);
+        Rf_error("pipeline import: %s: %s", n4m_status_to_string(status), import_error);
+    }
+    int64_t n_features = 0;
+    int32_t n_operators = 0;
+    status = n4m_pipeline_get_info(pipeline, &n_features, &n_operators);
+    if (status != N4M_OK || n_features < 1 || n_features > INT32_MAX || n_operators < 1) {
+        n4m_pipeline_destroy(pipeline);
+        Rf_error("imported pipeline has invalid fitted dimensions");
+    }
+    SEXP output = PROTECT(Rf_allocVector(VECSXP, 2));
+    SEXP ptr = PROTECT(R_MakeExternalPtr(pipeline, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(ptr, r_pipeline_finalize, TRUE);
+    SET_VECTOR_ELT(output, 0, ptr);
+    SET_VECTOR_ELT(output, 1, Rf_ScalarInteger((int)n_features));
+    UNPROTECT(2);
+    return output;
+}
