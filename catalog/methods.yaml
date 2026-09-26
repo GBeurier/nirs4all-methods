@@ -9271,6 +9271,22 @@ methods:
       - "n4m_domain_adaptation_direct_standardization_transform"
     legacy_ids:
       - "preprocessing.transfer.direct_standardization"
+    estimator:
+      kind: estimator
+      adapter: tr_direct_standardization
+      roles: [transformer]
+      state: coef
+      inputs:
+        y: optional
+        target_domain: required
+      params:
+        - name: fit_intercept
+          type: bool
+          default: true
+        - name: ridge
+          type: double
+          default: 0.0
+          min: 0.0
   - method_id: "preprocessing.transfer.piecewise_direct_standardization"
     family: "preprocessing.transfer"
     category: "preprocessing"
@@ -9316,6 +9332,26 @@ methods:
       - "n4m_domain_adaptation_piecewise_direct_standardization_transform"
     legacy_ids:
       - "preprocessing.transfer.piecewise_direct_standardization"
+    estimator:
+      kind: estimator
+      adapter: tr_piecewise_direct_standardization
+      roles: [transformer]
+      state: window_coefs
+      inputs:
+        y: optional
+        target_domain: required
+      params:
+        - name: window_size
+          type: int
+          default: 5
+          min: 1
+        - name: fit_intercept
+          type: bool
+          default: true
+        - name: ridge
+          type: double
+          default: 0.0
+          min: 0.0
   - method_id: "preprocessing.transfer.robust_direct_standardization"
     family: "preprocessing.transfer"
     category: "preprocessing"
@@ -9361,6 +9397,31 @@ methods:
       - "n4m_domain_adaptation_robust_direct_standardization_transform"
     legacy_ids:
       - "preprocessing.transfer.robust_direct_standardization"
+    estimator:
+      kind: estimator
+      adapter: tr_robust_direct_standardization
+      roles: [transformer]
+      state: coef
+      inputs:
+        y: optional
+        target_domain: required
+      params:
+        - name: fit_intercept
+          type: bool
+          default: true
+        - name: ridge
+          type: double
+          default: 0.0
+          min: 0.0
+        - name: trim_quantile
+          type: double
+          default: 0.9
+          min: 0.0
+          max: 1.0
+        - name: max_iter
+          type: int
+          default: 3
+          min: 1
   - method_id: "preprocessing.transfer.slope_bias"
     family: "preprocessing.transfer"
     category: "preprocessing"
@@ -9451,6 +9512,25 @@ methods:
       - "n4m_transform_cow_align_transform"
     legacy_ids:
       - "preprocessing.alignment.cow_align"
+    estimator:
+      kind: estimator
+      adapter: tr_cow_align
+      roles: [transformer]
+      state: reference
+      inputs:
+        y: optional
+      params:
+        - name: reference
+          type: double_array
+          default: []
+        - name: interval_size
+          type: int
+          default: 32
+          min: 1
+        - name: max_shift
+          type: int
+          default: 5
+          min: 0
   - method_id: "preprocessing.alignment.dtw_align"
     family: "preprocessing.alignment"
     category: "preprocessing"
@@ -9496,6 +9576,17 @@ methods:
       - "n4m_transform_dtw_align_transform"
     legacy_ids:
       - "preprocessing.alignment.dtw_align"
+    estimator:
+      kind: estimator
+      adapter: tr_dtw_align
+      roles: [transformer]
+      state: reference
+      inputs:
+        y: optional
+      params:
+        - name: reference
+          type: double_array
+          default: []
   - method_id: "preprocessing.alignment.icoshift_align"
     family: "preprocessing.alignment"
     category: "preprocessing"
@@ -9541,6 +9632,25 @@ methods:
       - "n4m_transform_icoshift_align_transform"
     legacy_ids:
       - "preprocessing.alignment.icoshift_align"
+    estimator:
+      kind: estimator
+      adapter: tr_icoshift_align
+      roles: [transformer]
+      state: reference
+      inputs:
+        y: optional
+      params:
+        - name: reference
+          type: double_array
+          default: []
+        - name: interval_size
+          type: int
+          default: 32
+          min: 1
+        - name: max_shift
+          type: int
+          default: 5
+          min: 0
   - method_id: "preprocessing.alignment.xcorr_align"
     family: "preprocessing.alignment"
     category: "preprocessing"
@@ -9586,6 +9696,21 @@ methods:
       - "n4m_transform_xcorr_align_transform"
     legacy_ids:
       - "preprocessing.alignment.xcorr_align"
+    estimator:
+      kind: estimator
+      adapter: tr_xcorr_align
+      roles: [transformer]
+      state: reference
+      inputs:
+        y: optional
+      params:
+        - name: reference
+          type: double_array
+          default: []
+        - name: max_shift
+          type: int
+          default: 5
+          min: 0
   - method_id: "preprocessing.scatter.localized_msc"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -9631,6 +9756,25 @@ methods:
       - "n4m_transform_localized_msc_transform"
     legacy_ids:
       - "preprocessing.scatter.localized_msc"
+    estimator:
+      kind: estimator
+      adapter: tr_localized_msc
+      roles: [transformer]
+      state: reference
+      inputs:
+        y: optional
+      params:
+        - name: window_size
+          type: int
+          default: 32
+          min: 1
+        - name: reference
+          type: double_array
+          default: []
+        - name: eps
+          type: double
+          default: 1e-12
+          min: 0.0
   - method_id: "preprocessing.scatter.piecewise_msc"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -9676,6 +9820,25 @@ methods:
       - "n4m_transform_piecewise_msc_transform"
     legacy_ids:
       - "preprocessing.scatter.piecewise_msc"
+    estimator:
+      kind: estimator
+      adapter: tr_piecewise_msc
+      roles: [transformer]
+      state: reference
+      inputs:
+        y: optional
+      params:
+        - name: window_size
+          type: int
+          default: 32
+          min: 1
+        - name: reference
+          type: double_array
+          default: []
+        - name: eps
+          type: double
+          default: 1e-12
+          min: 0.0
   - method_id: "preprocessing.scatter.piecewise_snv"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -9721,6 +9884,26 @@ methods:
       - "n4m_transform_piecewise_snv_transform"
     legacy_ids:
       - "preprocessing.scatter.piecewise_snv"
+    estimator:
+      kind: estimator
+      adapter: tr_piecewise_snv
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: window_size
+          type: int
+          default: 32
+          min: 1
+        - name: ddof
+          type: int
+          default: 0
+          min: 0
+        - name: eps
+          type: double
+          default: 1e-12
+          min: 0.0
   - method_id: "preprocessing.scatter.weighted_snv"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -9766,6 +9949,25 @@ methods:
       - "n4m_transform_weighted_snv_transform"
     legacy_ids:
       - "preprocessing.scatter.weighted_snv"
+    estimator:
+      kind: estimator
+      adapter: tr_weighted_snv
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: weights
+          type: double_array
+          default: []
+        - name: ddof
+          type: int
+          default: 0
+          min: 0
+        - name: eps
+          type: double
+          default: 1e-12
+          min: 0.0
   - method_id: "preprocessing.scatter.local_centering"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -9811,6 +10013,14 @@ methods:
       - "n4m_transform_local_centering_transform"
     legacy_ids:
       - "preprocessing.scatter.local_centering"
+    estimator:
+      kind: estimator
+      adapter: tr_local_centering
+      roles: [transformer]
+      state: offset
+      inputs:
+        y: optional
+        target_domain: required
   - method_id: "preprocessing.scatter.vsn"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -9856,6 +10066,18 @@ methods:
       - "n4m_transform_vsn_transform"
     legacy_ids:
       - "preprocessing.scatter.vsn"
+    estimator:
+      kind: estimator
+      adapter: tr_vsn
+      roles: [transformer]
+      state: weights
+      inputs:
+        y: optional
+      params:
+        - name: eps
+          type: double
+          default: 1e-12
+          min: 0.0
   - method_id: "preprocessing.baselines.saps"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -9901,6 +10123,29 @@ methods:
       - "n4m_transform_saps_transform"
     legacy_ids:
       - "preprocessing.baselines.saps"
+    estimator:
+      kind: estimator
+      adapter: tr_saps
+      roles: [transformer]
+      state: projection_map
+      inputs:
+        y: optional
+        target_domain: required
+      params:
+        - name: n_components
+          type: int
+          default: 5
+          min: 1
+        - name: score_weight
+          type: double
+          default: 1.0
+        - name: fit_intercept
+          type: bool
+          default: true
+        - name: ridge
+          type: double
+          default: 0.0
+          min: 0.0
   - method_id: "aom_pop.aom_sweep"
     family: "aom_pop.aom"
     category: "aom_pop"

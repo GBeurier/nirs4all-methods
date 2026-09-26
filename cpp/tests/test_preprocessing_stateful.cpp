@@ -518,6 +518,32 @@ void test_msc_refit_replaces_state() {
     n4m_transform_msc_destroy(h);
 }
 
+// A refit relearns the reference from the new X (here of another width)
+// unless one was given at create.
+void test_align_refit_relearns_reference() {
+    n4m_pp_xcorr_align_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_transform_xcorr_align_create(&h, nullptr, 0, 0, 1) == N4M_OK);
+    double X1[6] = {1.0, 3.0, 2.0,
+                    2.0, 4.0, 3.0};
+    double X2[8] = {1.0, 2.0, 5.0, 2.0,
+                    2.0, 3.0, 6.0, 3.0};
+    double out[8];
+    n4m_matrix_view_t vX1, vX2, vout;
+    n4m_matrix_view_init_rowmajor(&vX1, X1, 2, 3, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&vX2, X2, 2, 4, N4M_DTYPE_F64);
+    n4m_matrix_view_init_rowmajor(&vout, out, 2, 4, N4M_DTYPE_F64);
+    N4M_TEST_REQUIRE(n4m_transform_xcorr_align_fit(h, vX1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_xcorr_align_fit(h, vX2) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_xcorr_align_transform(h, vX2, vout) == N4M_OK);
+    n4m_transform_xcorr_align_destroy(h);
+
+    const double reference[3] = {1.0, 3.0, 2.0};
+    N4M_TEST_REQUIRE(n4m_transform_xcorr_align_create(&h, reference, 3, 0, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_xcorr_align_fit(h, vX1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_transform_xcorr_align_fit(h, vX2) == N4M_ERR_SHAPE_MISMATCH);
+    n4m_transform_xcorr_align_destroy(h);
+}
+
 void test_emsc_refit_replaces_state() {
     n4m_pp_emsc_handle_t* h = nullptr;
     N4M_TEST_REQUIRE(n4m_transform_emsc_create(&h, 2) == N4M_OK);
@@ -584,6 +610,7 @@ void register_preprocessing_stateful_tests(n4m_testing::Runner& r) {
     r.run("pp_msc_not_fitted",       test_msc_not_fitted);
     r.run("pp_msc_parity",           verify_msc_parity);
     r.run("pp_msc_refit",            test_msc_refit_replaces_state);
+    r.run("pp_align_refit",          test_align_refit_relearns_reference);
     r.run("pp_emsc_smoke",           test_emsc_smoke);
     r.run("pp_emsc_reference_roundtrip", test_emsc_reference_roundtrip);
     r.run("pp_emsc_not_fitted",      test_emsc_not_fitted);
