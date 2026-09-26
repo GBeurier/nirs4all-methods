@@ -6,9 +6,11 @@
   binding can replay the native model.
 - R formula estimators use native prediction for qualified affine results and
   retain N4MM bytes for `saveRDS()`/`readRDS()` across processes.
-- R exposes a generic native preprocessing fit/transform interface for the
-  fifteen operator kinds supported by the C pipeline. Its fitted state is
-  process-local; no general trained-state interchange is claimed.
+- R and Python expose the same generic native preprocessing pipeline for the
+  fifteen supported operator kinds. Fitted linear-chain state can be exchanged
+  as versioned N4MP bytes, with native plan inspection and strict decoding.
+  Branching, variable selection and product-level trained pipeline archives
+  are not implied by this low-level format.
 
 # n4m 1.0.21.9004
 
