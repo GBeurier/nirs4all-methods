@@ -893,6 +893,22 @@ class AreaNormalization(NativeTransformer):
         self.method = method
 
 
+class EMSC(NativeTransformer):
+    """Native ``preprocessing.scatter.emsc`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.emsc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "degree": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        degree=2,
+    ) -> None:
+        self.degree = degree
+
+
 class LSNV(NativeTransformer):
     """Native ``preprocessing.scatter.local_snv`` (transformer)."""
 
@@ -920,6 +936,17 @@ class LSNV(NativeTransformer):
         self.window = window
         self.pad_mode = pad_mode
         self.constant_value = constant_value
+
+
+class MSC(NativeTransformer):
+    """Native ``preprocessing.scatter.msc`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.msc"
+    _param_types: ClassVar[dict[str, str]] = {
+    }
+
+    def __init__(self) -> None:
+        pass
 
 
 class RNV(NativeTransformer):
@@ -1928,6 +1955,7 @@ __all__ = [
     "DIPLS",
     "ECR",
     "EMCUVE",
+    "EMSC",
     "GA",
     "IPW",
     "IRF",
@@ -1935,6 +1963,7 @@ __all__ = [
     "LSNV",
     "MBPLS",
     "MIRPLS",
+    "MSC",
     "NPLS",
     "O2PLS",
     "PCR",

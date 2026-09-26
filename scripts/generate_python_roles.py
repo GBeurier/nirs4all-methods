@@ -49,6 +49,8 @@ ACRONYMS = {
     "emcuve",
     "iriv",
     "irf",
+    "msc",
+    "emsc",
 }
 CLASS_NAMES = {
     "models.specialized.tensor_pls": "NPLS",

@@ -4359,6 +4359,18 @@ methods:
       - "n4m_transform_emsc_transform"
     legacy_ids:
       - "preprocessing.scatter.emsc"
+    estimator:
+      kind: estimator
+      adapter: tr_emsc
+      roles: [transformer]
+      state: reference
+      inputs:
+        y: optional
+      params:
+        - name: degree
+          type: int
+          default: 2
+          min: 1
   - method_id: "preprocessing.scatter.local_snv"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -4470,6 +4482,13 @@ methods:
       - "n4m_transform_msc_transform"
     legacy_ids:
       - "preprocessing.scatter.msc"
+    estimator:
+      kind: estimator
+      adapter: tr_msc
+      roles: [transformer]
+      state: reference
+      inputs:
+        y: optional
   - method_id: "preprocessing.scatter.robust_snv"
     family: "preprocessing.scatter"
     category: "preprocessing"

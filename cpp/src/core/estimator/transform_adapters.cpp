@@ -16,6 +16,7 @@
 
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/spec.hpp"
+#include "core/estimator/state_io.hpp"
 
 namespace n4m::estimator {
 
@@ -27,25 +28,38 @@ bool row_major(const n4m_matrix_view_t& v) noexcept {
     return v.dtype == N4M_DTYPE_F64 && v.col_stride == 1 && v.row_stride == v.cols;
 }
 
+}  // namespace
+
+n4m_matrix_view_t contiguous_view(const n4m_matrix_view_t& X, std::vector<double>& storage) {
+    if (row_major(X)) return X;
+    storage.resize(static_cast<std::size_t>(X.rows * X.cols));
+    const auto* src = static_cast<const double*>(X.data);
+    for (std::int64_t i = 0; i < X.rows; ++i) {
+        for (std::int64_t j = 0; j < X.cols; ++j) {
+            storage[static_cast<std::size_t>(i * X.cols + j)] = src[i * X.row_stride + j * X.col_stride];
+        }
+    }
+    n4m_matrix_view_t v{};
+    n4m_matrix_view_init_rowmajor(&v, storage.data(), X.rows, X.cols, N4M_DTYPE_F64);
+    return v;
+}
+
+std::int32_t to_i32(std::int64_t v) {
+    if (v > std::numeric_limits<std::int32_t>::max() ||
+        v < std::numeric_limits<std::int32_t>::min()) {
+        throw std::out_of_range("integer parameter exceeds int32");
+    }
+    return static_cast<std::int32_t>(v);
+}
+
 // Runs a contiguous-only kernel on possibly strided views.
 n4m_status_t contiguous_call(
     const n4m_matrix_view_t& X, n4m_matrix_view_t& out,
     const std::function<n4m_status_t(n4m_matrix_view_t, n4m_matrix_view_t)>& kernel) {
     if (X.dtype != N4M_DTYPE_F64 || out.dtype != N4M_DTYPE_F64) return N4M_ERR_DTYPE_MISMATCH;
     std::vector<double> x_copy, out_copy;
-    n4m_matrix_view_t x_view = X;
+    const n4m_matrix_view_t x_view = contiguous_view(X, x_copy);
     n4m_matrix_view_t out_view = out;
-    if (!row_major(X)) {
-        x_copy.resize(static_cast<std::size_t>(X.rows * X.cols));
-        const auto* src = static_cast<const double*>(X.data);
-        for (std::int64_t i = 0; i < X.rows; ++i) {
-            for (std::int64_t j = 0; j < X.cols; ++j) {
-                x_copy[static_cast<std::size_t>(i * X.cols + j)] =
-                    src[i * X.row_stride + j * X.col_stride];
-            }
-        }
-        n4m_matrix_view_init_rowmajor(&x_view, x_copy.data(), X.rows, X.cols, N4M_DTYPE_F64);
-    }
     if (!row_major(out)) {
         out_copy.resize(static_cast<std::size_t>(out.rows * out.cols));
         n4m_matrix_view_init_rowmajor(&out_view, out_copy.data(), out.rows, out.cols,
@@ -64,13 +78,9 @@ n4m_status_t contiguous_call(
     return st;
 }
 
-std::int32_t i32(std::int64_t v) {
-    if (v > std::numeric_limits<std::int32_t>::max() ||
-        v < std::numeric_limits<std::int32_t>::min()) {
-        throw std::out_of_range("integer parameter exceeds int32");
-    }
-    return static_cast<std::int32_t>(v);
-}
+namespace {
+
+std::int32_t i32(std::int64_t v) { return to_i32(v); }
 
 // A stateless kernel: create from parameters, transform, destroy, and the
 // output width for a given input width.

@@ -309,6 +309,10 @@ const char* const kChoices_preprocessing_scatter_area_normalization_method[] = {
 const ParamSpec kParams_preprocessing_scatter_area_normalization[] = {
     {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_scatter_area_normalization_method, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_scatter_area_normalization_method, 3},
 };
+const std::int64_t kDefault_preprocessing_scatter_emsc_degree[] = {2};
+const ParamSpec kParams_preprocessing_scatter_emsc[] = {
+    {"degree", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_emsc_degree, nullptr, 1, 1.0, kNaN, nullptr, 0},
+};
 const std::int64_t kDefault_preprocessing_scatter_local_snv_window[] = {11};
 const std::int64_t kDefault_preprocessing_scatter_local_snv_pad_mode[] = {0};
 const char* const kChoices_preprocessing_scatter_local_snv_pad_mode[] = {"reflect", "edge", "constant"};
@@ -731,7 +735,9 @@ const MethodSpec kMethods[] = {
     {"preprocessing.resampling.crop", "n4m.transform.resampling.crop", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_crop, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_crop},
     {"preprocessing.resampling.resample_transformer", "n4m.transform.resampling.resample_transformer", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_resample_transformer, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_resample},
     {"preprocessing.scatter.area_normalization", "n4m.transform.scatter.area_normalization", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_area_normalization, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_area_normalization},
+    {"preprocessing.scatter.emsc", "n4m.transform.scatter.emsc", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_emsc, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "reference", &make_tr_emsc},
     {"preprocessing.scatter.local_snv", "n4m.transform.scatter.local_snv", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_local_snv, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_local_snv},
+    {"preprocessing.scatter.msc", "n4m.transform.scatter.msc", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "reference", &make_tr_msc},
     {"preprocessing.scatter.robust_snv", "n4m.transform.scatter.robust_snv", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_robust_snv, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_robust_snv},
     {"preprocessing.scatter.snv", "n4m.transform.scatter.snv", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_snv, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_snv},
     {"preprocessing.signal_conversion.fraction_to_percent", "n4m.transform.signal_conversion.fraction_to_percent", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_fraction_to_percent},
