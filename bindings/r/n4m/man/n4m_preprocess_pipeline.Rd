@@ -50,6 +50,10 @@ rejected by \code{n4m_preprocess_step()}.
 All numerical fitting and transformation is performed by libn4m. The fitted
 state is an in-process native pointer; save the exported N4MP raw bytes,
 not this pointer, for use in another R session or supported language binding.
+The generic pipeline EMSC uses a reference, intercept, and polynomial basis
+on a normalized wavelength axis. It is not numerically interchangeable with
+the historical standalone \code{emsc_transform()} convention, which has no
+intercept and uses integer wavelength powers.
 
 Parameter vectors are positional; use \code{numeric()} for the native default.
 The contract is defined by \code{n4m_operator_kind_t} and the native pipeline

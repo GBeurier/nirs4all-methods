@@ -46,6 +46,9 @@ n4m_preprocess_step <- function(kind, params = numeric()) {
 #'
 #' The fitted state is an in-process native handle. Use
 #' [n4m_preprocess_export()] to persist it as a portable native artifact.
+#' The generic pipeline EMSC uses a reference, intercept, and polynomial basis
+#' on a normalized wavelength axis; it is not numerically interchangeable with
+#' the historical standalone [emsc_transform()] convention.
 #' @param X Finite numeric training matrix.
 #' @param steps Nonempty list of [n4m_preprocess_step()] specifications.
 #' @param Y Optional finite numeric target matrix for supervised OSC/EPO.
