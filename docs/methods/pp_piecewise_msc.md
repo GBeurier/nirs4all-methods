@@ -16,7 +16,7 @@ Apply MSC independently inside fixed wavelength intervals.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_piecewise_msc_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L182) · [`n4m_transform_piecewise_msc_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L185) · [`n4m_transform_piecewise_msc_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L187) · [`n4m_transform_piecewise_msc_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L192) · [`n4m_transform_piecewise_msc_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L189). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_piecewise_msc_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L198) · [`n4m_transform_piecewise_msc_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L201) · [`n4m_transform_piecewise_msc_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L203) · [`n4m_transform_piecewise_msc_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L208) · [`n4m_transform_piecewise_msc_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L205). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

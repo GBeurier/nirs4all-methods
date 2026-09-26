@@ -23,7 +23,7 @@ Column-wise normalisation.
 from n4m.transform.scaling import Normalize
 ```
 
-Source signature: [`Normalize(feature_min: float = -1.0, feature_max: float = 1.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L121).
+Source signature: [`Normalize(feature_min: float = -1.0, feature_max: float = 1.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L130).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

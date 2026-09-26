@@ -31,11 +31,11 @@ Exploratory smoothing of adjacent regression coefficients for ordered spectral v
 
 ### Limits and validation
 
-This is four fixed neighbour-averaging passes, not a fused-lasso/total-variation optimizer. `l1_lambda` now shrinks the full predictive coefficient matrix before those passes, but it is not an elementwise L1 penalty.
+This is four fixed neighbour-averaging passes, not a fused-lasso/total-variation optimizer; l1_lambda uses post-SIMPLS group shrinkage.
 
 ### Implementation
 
-`l1_lambda` applies post-SIMPLS proximal shrinkage to all coefficients as one group. `fusion_lambda` controls the strength of a fixed smoothing heuristic, not a converged convex penalty solution.
+`l1_lambda` shrinks the full predictive coefficient matrix as one group before four neighbour-averaging passes. `fusion_lambda` controls a smoothing heuristic, not a converged fused-lasso solution.
 
 ### Sources and provenance
 

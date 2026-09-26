@@ -52,7 +52,7 @@ _ANNOTATIONS: dict[str, tuple[str, str, str]] = {
     ),
     "group_sparse_pls": (
         "Exploratory group selection with predefined wavelength groups when post-fit coefficient shrinkage is acceptable.",
-        "The penalty now shrinks predictive coefficient groups and affects predictions, but does not refit the latent directions or implement sgPLS::gPLS.",
+        "The penalty shrinks predictive coefficient groups and affects predictions, but does not refit latent directions or implement sgPLS::gPLS. Its units depend on raw-X and target scaling; select it using held-out data.",
         _src("cpp/src/core/extra_pls.cpp"),
     ),
     "fused_sparse_pls": (
@@ -541,9 +541,10 @@ _OVERRIDES: dict[str, dict[str, str]] = {'approximate_press': {'implementation':
                                'applied in genomics context*. Bioinformatics 32(1), 35–42. '
                                'Verified primary link: '
                                '[https://doi.org/10.1093/bioinformatics/btv535](https://doi.org/10.1093/bioinformatics/btv535).',
-                      'principle': 'The routine fits ordinary SIMPLS and applies groupwise proximal '
-                                   'shrinkage to its predictive coefficients. Entire groups can '
-                                   'be zeroed, but the latent directions are not refitted.'},
+                      'principle': 'The routine fits ordinary SIMPLS, then applies the proximal '
+                                   'map `B_g <- max(0, 1 - group_lambda / ||B_g||_F) B_g` '
+                                   'to each group of predictive coefficient rows. Entire groups '
+                                   'can be zeroed, but latent directions are not refitted.'},
  'interval_select': {'paper': 'Nørgaard, L., Saudland, A., Wagner, J., Nielsen, J. P., Munck, L. & '
                               'Engelsen, S. B. (2000). *Interval partial least-squares regression '
                               '(iPLS): a comparative chemometric study with an example from '

@@ -24,7 +24,12 @@ from n4m.transform.baseline import Detrend
 
 Source signature: [`Detrend(polyorder: int = 1)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/baseline.py#L12).
 
-**R:** no current source-verified entry point was found for this catalog method.
+**R (source-verified):** [`detrend_transform(X, polyorder = 1L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
+
+```r
+library(n4m)
+result <- detrend_transform(X)
+```
 
 **MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 

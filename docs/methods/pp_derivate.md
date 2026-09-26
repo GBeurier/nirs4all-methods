@@ -23,7 +23,7 @@ Finite-difference derivative along the wavelength axis.
 from n4m.transform.smoothing import Derivate
 ```
 
-Source signature: [`Derivate(order: int = 1, delta: float = 1.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L245).
+Source signature: [`Derivate(order: int = 1, delta: float = 1.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L345).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

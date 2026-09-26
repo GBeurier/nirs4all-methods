@@ -22,7 +22,7 @@ R = 10**(-A), optionally returned as percent.
 from n4m.transform.signal_conversion import FromAbsorbance
 ```
 
-Source signature: [`FromAbsorbance(is_percent: bool = False)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L465).
+Source signature: [`FromAbsorbance(is_percent: bool = False)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L577).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

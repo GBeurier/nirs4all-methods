@@ -24,9 +24,14 @@ Sliding-window (local) SNV.
 from n4m.transform.scatter import LSNV
 ```
 
-Source signature: [`LSNV(window: int = 11, pad_mode: str = 'reflect', constant_value: float = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L43).
+Source signature: [`LSNV(window: int = 11, pad_mode: str = 'reflect', constant_value: float = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L46).
 
-**R:** no current source-verified entry point was found for this catalog method.
+**R (source-verified):** [`local_snv_transform(X, window = 11L, pad_mode = "reflect", constant_value = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
+
+```r
+library(n4m)
+result <- local_snv_transform(X)
+```
 
 **MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 

@@ -22,7 +22,7 @@ External Parameter Orthogonalisation.
 from n4m.domain_adaptation.orthogonalization import epo
 ```
 
-Source signature: [`epo(X, d, scale: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L9555).
+Source signature: [`epo(X, d, scale: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L9562).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

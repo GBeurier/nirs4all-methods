@@ -8,7 +8,7 @@ _Namespace_: **`n4m.model_selection.sweep`** · _Fully-qualified_: `n4m.model_se
 
 **Python (verified public re-export):** `from n4m.model_selection.sweep import sweep_run`
 
-**Signature:** [`sweep_run(X, y, *, cv: int = 5, fold_ids = None, ridge_lambdas = (0.01, 0.1, 1.0, 10.0), pls_components = None, heads = ('ridge',), center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None, score_only: bool = False, cuda_pls_parallel_folds: bool | None = None, cuda_pls_min_device_features: int | None = None, cuda_pls_many_batched: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6150)
+**Signature:** [`sweep_run(X, y, *, cv: int = 5, fold_ids = None, ridge_lambdas = (0.01, 0.1, 1.0, 10.0), pls_components = None, heads = ('ridge',), center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None, score_only: bool = False, cuda_pls_parallel_folds: bool | None = None, cuda_pls_min_device_features: int | None = None, cuda_pls_many_batched: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6156)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

@@ -24,7 +24,7 @@ Standard Normal Variate normalisation.
 from n4m.transform.scatter import SNV
 ```
 
-Source signature: [`SNV(with_mean: bool = True, with_std: bool = True, ddof: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L18).
+Source signature: [`SNV(with_mean: bool = True, with_std: bool = True, ddof: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L21).
 
 **R (source-verified):** [`snv_transform(X, with_mean = TRUE, with_std = TRUE, ddof = 0L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
 

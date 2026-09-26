@@ -27,7 +27,7 @@ scipy.signal.savgol_filter parity.
 from n4m.transform.smoothing import SavitzkyGolay
 ```
 
-Source signature: [`SavitzkyGolay(window_length: int = 5, polyorder: int = 2, deriv: int = 0, delta: float = 1.0, mode: str = 'mirror', cval: float = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L283).
+Source signature: [`SavitzkyGolay(window_length: int = 5, polyorder: int = 2, deriv: int = 0, delta: float = 1.0, mode: str = 'mirror', cval: float = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L385).
 
 **R (source-verified):** [`savgol_transform(X, window_length, polyorder = 3L, deriv = 0L, delta = 1.0, mode = "mirror", cval = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
 

@@ -12,7 +12,7 @@ _No constructor parameters._
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_local_centering_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L130) · [`n4m_transform_local_centering_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L132) · [`n4m_transform_local_centering_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L134) · [`n4m_transform_local_centering_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L140) · [`n4m_transform_local_centering_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L137). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_local_centering_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L146) · [`n4m_transform_local_centering_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L148) · [`n4m_transform_local_centering_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L150) · [`n4m_transform_local_centering_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L156) · [`n4m_transform_local_centering_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L153). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

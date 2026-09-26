@@ -16,7 +16,7 @@ Apply SNV independently inside fixed wavelength intervals.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_piecewise_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L168) · [`n4m_transform_piecewise_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L171) · [`n4m_transform_piecewise_snv_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L172) · [`n4m_transform_piecewise_snv_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L177) · [`n4m_transform_piecewise_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L174). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_piecewise_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L184) · [`n4m_transform_piecewise_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L187) · [`n4m_transform_piecewise_snv_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L188) · [`n4m_transform_piecewise_snv_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L193) · [`n4m_transform_piecewise_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L190). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
