@@ -68,6 +68,31 @@ const split = n4m.computeSplitIndices("KennardStone", { data: X, rows, cols }, n
 `Context` / `Config` / `MethodResult` are also exported for the lower-level
 path. There is no idiomatic (sklearn-style) layer — that is intentional.
 
+Fitted preprocessing uses the native pipeline handle. Its N4MP bytes contain
+the fitted state and original ordered operator plan, not an N4MM model:
+
+```typescript
+const ctx = n4m.Context.create();
+const recipe = [
+  { kind: n4m.PipelineOperatorKind.SNV, params: [] },
+  { kind: n4m.PipelineOperatorKind.MSC, params: [] },
+];
+const pipeline = n4m.NativePreprocessingPipeline.fit(ctx, recipe, trainX);
+const payload = pipeline.toBytes();
+const restored = n4m.NativePreprocessingPipeline.fromBytes(ctx, payload, recipe);
+const transformed = restored.transform(heldOutX);
+console.log(restored.nFeatures, restored.steps); // plan read from native handle
+restored.destroy();
+pipeline.destroy();
+ctx.destroy();
+```
+
+`trainX` and `heldOutX` are row-major `{ data: Float64Array, rows, cols }`.
+OSC/EPO additionally require a training `Y` matrix at `fit`. The optional
+`fromBytes` recipe argument checks the imported native plan, including
+positional parameters; applications should also bind the blob to their
+feature schema. Native N4MP v1 supports operator kinds 0–14 only (15 kinds).
+
 ## Build options
 
 The CMake `emscripten` preset sets:

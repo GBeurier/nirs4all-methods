@@ -72,7 +72,7 @@ try {
     const payload = model.toN4mm();
     const info = inspectN4mm(payload);
     assert.equal(info.algorithm, Algorithm.IMPORTED_LINEAR_PREDICTOR);
-    assert.equal(info.trainingSamples, 0n);
+    assert.equal(info.trainingSamples, BigInt(rows));
     assert.equal(info.nFeatures, features);
     assert.equal(info.nTargets, 1);
     assert.equal(info.capabilities,
