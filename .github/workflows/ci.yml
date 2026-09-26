@@ -179,8 +179,10 @@ jobs:
           cmake --preset ci-linux-gcc12-release
           cmake --build --preset ci-linux-gcc12-release --target n4m_c n4m_cli --parallel
 
-      - name: Check generated Python estimator roles
-        run: python3 scripts/generate_python_roles.py --cli build/ci-linux-gcc12-release/cpp/cli/n4m_cli --check
+      - name: Check generated Python and R estimator roles
+        run: |
+          python3 scripts/generate_python_roles.py --cli build/ci-linux-gcc12-release/cpp/cli/n4m_cli --check
+          python3 scripts/generate_r_roles.py --cli build/ci-linux-gcc12-release/cpp/cli/n4m_cli --check
 
       - name: Unit-test package smoke helpers
         run: python3 -m pytest bindings/python/tests/test_installed_nirs4all_methods_smoke.py -q
