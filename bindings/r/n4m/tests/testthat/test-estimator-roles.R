@@ -161,3 +161,13 @@ for (case in fx$procedures) {
     })
   })
 }
+
+testthat::test_that("the native manifest and constructor lookup cover every method", {
+  json <- n4m_manifest_json()
+  testthat::expect_true(startsWith(json, "{\"abi\":\"2.13"))
+  for (id in names(constructors)) {
+    testthat::expect_true(grepl(paste0("\"method_id\":\"", id, "\""), json, fixed = TRUE))
+    testthat::expect_identical(n4m_constructor(id), constructors[[id]])
+  }
+  testthat::expect_error(n4m_constructor("models.pls.missing"), "no n4m role class")
+})

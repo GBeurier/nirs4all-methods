@@ -53,6 +53,8 @@ COMMON_EXPORTS = [
     "export(n4m_estimator_fit)",
     "export(n4m_estimator_import)",
     "export(n4m_estimator_transform)",
+    "export(n4m_manifest_json)",
+    "export(n4m_constructor)",
     "S3method(n4m_estimator_fit, n4m_estimator)",
     "S3method(print, n4m_method)",
 ]

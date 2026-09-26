@@ -245,6 +245,27 @@ export abstract class NativeMethod {
     }
 }
 
+/** The native manifest: every method's roles, node kinds, fit inputs and typed parameters. */
+export function manifest(): { abi: string; methods: Array<Record<string, unknown>> } {
+    const m = getModule();
+    const sizePtr = m._malloc(4);
+    try {
+        checkStatus(m.ccall("n4m_method_manifest_json", "number", ["number", "number", "number"],
+            [0, 0, sizePtr]) as number);
+        const size = m.getValue(sizePtr, "i32");
+        const buf = m._malloc(Math.max(1, size));
+        try {
+            checkStatus(m.ccall("n4m_method_manifest_json", "number", ["number", "number", "number"],
+                [buf, size, sizePtr]) as number);
+            return JSON.parse(new TextDecoder().decode(m.HEAPU8.subarray(buf, buf + size)));
+        } finally {
+            m._free(buf);
+        }
+    } finally {
+        m._free(sizePtr);
+    }
+}
+
 /** The generated class of a catalog method id. */
 export function methodClass(methodId: string): new () => NativeMethod {
     const cls = registry.get(methodId);

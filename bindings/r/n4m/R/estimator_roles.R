@@ -287,3 +287,29 @@ n4m_run <- function(object, X, y = NULL, ...) UseMethod("n4m_run")
 n4m_run.n4m_procedure <- function(object, X, y = NULL, ...) {
   .n4m_procedure_run(object, X, y, list(...))
 }
+
+#' Native manifest and method lookup
+#'
+#' \code{n4m_manifest_json()} returns the native manifest (every catalog
+#' method's roles, DAG-ML node kinds, fit inputs and typed parameters with
+#' defaults) as a JSON string, the same document every n4m binding reads.
+#' \code{n4m_constructor()} returns the generated constructor of a catalog
+#' method id, so pipelines can be built from method ids.
+#'
+#' @param method_id Catalog method id, for example \code{"models.pls.cppls"}.
+#' @return A JSON string, or a constructor function.
+#' @name n4m_manifest
+NULL
+
+#' @rdname n4m_manifest
+#' @export
+n4m_manifest_json <- function() .Call("r_n4m_manifest_json", PACKAGE = "n4m")
+
+#' @rdname n4m_manifest
+#' @export
+n4m_constructor <- function(method_id) {
+  name <- .n4m_method_constructors[method_id]
+  if (is.na(name)) stop("no n4m role class for '", method_id, "'", call. = FALSE)
+  get(name, envir = asNamespace("n4m"))
+}
+

@@ -18,6 +18,7 @@ from ._base import (
     NativeSelector,
     NativeSplitter,
     NativeTransformer,
+    manifest,
     method_class,
     method_info,
 )
@@ -394,6 +395,7 @@ __all__ = [
     "WeightedSNV",
     "XOutlierFilter",
     "YOutlierFilter",
+    "manifest",
     "method_class",
     "method_info",
 ]

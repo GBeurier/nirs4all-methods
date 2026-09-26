@@ -249,7 +249,13 @@ def role_methods(manifest: dict) -> list[dict]:
 def render_init(manifest: dict) -> str:
     names = sorted((class_name(m) for m in role_methods(manifest)), key=import_key)
     base_exports = sorted(
-        [*ROLE_BASES.values(), "NativeEstimator", "method_class", "method_info"],
+        [
+            *ROLE_BASES.values(),
+            "NativeEstimator",
+            "manifest",
+            "method_class",
+            "method_info",
+        ],
         key=import_key,
     )
     out = [

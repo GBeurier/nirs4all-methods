@@ -376,6 +376,7 @@ SYMBOLS = (
     ("n4m_method_count", (POINTER(c_int32),), c_int),
     ("n4m_method_find", (c_char_p, POINTER(c_int32)), c_int),
     ("n4m_method_info_v1", (c_int32, c_void_p), c_int),
+    ("n4m_method_manifest_json", (c_char_p, c_size_t, POINTER(c_size_t)), c_int),
     ("n4m_method_param_default_double", (c_int32, c_int32, POINTER(c_double), c_int64, POINTER(c_int64)), c_int),
     ("n4m_method_param_default_int", (c_int32, c_int32, POINTER(c_int64), c_int64, POINTER(c_int64)), c_int),
     ("n4m_method_param_info_v1", (c_int32, c_int32, c_void_p), c_int),

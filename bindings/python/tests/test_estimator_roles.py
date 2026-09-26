@@ -1035,3 +1035,11 @@ def test_generic_procedure_returns_named_outputs():
     np.testing.assert_allclose(rmse, [0.1], rtol=1e-12)
     with pytest.raises(N4MError):
         roles.RegressionMetrics().run(pred.reshape(-1, 1))  # y is required
+
+
+def test_manifest_lists_every_generated_class():
+    doc = roles.manifest()
+    assert doc["abi"].startswith("2.13")
+    assert {m["method_id"] for m in doc["methods"]} == set(_REGISTRY)
+    for m in doc["methods"]:
+        assert roles.method_class(m["method_id"])._method_id == m["method_id"]
