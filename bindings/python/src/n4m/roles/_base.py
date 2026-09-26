@@ -53,6 +53,28 @@ class _Context:
             raise N4MError(status, f"{where}: {text}" if text else where)
 
 
+# Order of n4m_fit_input_t (n4m/estimator.h); X_target is the target domain.
+_FIT_INPUT_NAMES = (
+    "y",
+    "labels",
+    "sample_weight",
+    "groups",
+    "feature_groups",
+    "blocks",
+    "axis",
+    "X_target",
+    "fold_ids",
+)
+
+
+def estimator_class(method_id: str) -> type[NativeEstimator]:
+    """The :mod:`n4m.roles` class of a catalog method id."""
+    try:
+        return _REGISTRY[method_id]
+    except KeyError:
+        raise ValueError(f"no n4m role class for {method_id!r}") from None
+
+
 def method_info(method_id: str) -> MethodInfoV1:
     """Native manifest entry of ``method_id``."""
     index = ctypes.c_int32()
@@ -96,6 +118,22 @@ class NativeEstimator(BaseEstimator):
         super().__init_subclass__(**kwargs)
         if cls._method_id:
             _REGISTRY[cls._method_id] = cls
+        # Generated classes are public as n4m.roles.<Name>: that path is the
+        # stable operator token pipelines serialize.
+        if cls.__module__ == "n4m.roles._generated":
+            cls.__module__ = "n4m.roles"
+
+    @classmethod
+    def input_requirements(cls) -> dict[str, str]:
+        """Fit input name -> "required" / "optional" / "none", from the manifest."""
+        levels = ("none", "optional", "required")
+        info = method_info(cls._method_id)
+        return {name: levels[info.inputs[i]] for i, name in enumerate(_FIT_INPUT_NAMES)}
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.target_tags.required = self.input_requirements()["y"] == "required"
+        return tags
 
     # -- construction -------------------------------------------------------
 
@@ -634,5 +672,6 @@ __all__ = [
     "NativeSampleFilter",
     "NativeSelector",
     "NativeTransformer",
+    "estimator_class",
     "method_info",
 ]

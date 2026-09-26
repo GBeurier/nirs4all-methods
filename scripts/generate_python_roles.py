@@ -227,7 +227,8 @@ def estimators(manifest: dict) -> list[dict]:
 def render_init(manifest: dict) -> str:
     names = sorted((class_name(m) for m in estimators(manifest)), key=import_key)
     base_exports = sorted(
-        [*ROLE_BASES.values(), "NativeEstimator", "method_info"], key=import_key
+        [*ROLE_BASES.values(), "NativeEstimator", "estimator_class", "method_info"],
+        key=import_key,
     )
     out = [
         "# SPDX-License-Identifier: CECILL-2.1",

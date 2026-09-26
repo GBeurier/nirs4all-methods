@@ -15,6 +15,7 @@ from ._base import (
     NativeSampleFilter,
     NativeSelector,
     NativeTransformer,
+    estimator_class,
     method_info,
 )
 from ._generated import (
@@ -259,5 +260,6 @@ __all__ = [
     "WeightedSNV",
     "XOutlierFilter",
     "YOutlierFilter",
+    "estimator_class",
     "method_info",
 ]

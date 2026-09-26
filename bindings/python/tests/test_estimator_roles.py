@@ -905,3 +905,21 @@ def test_sample_filter_roles_and_inputs(data):
     est = pickle.loads(pickle.dumps(roles.HighLeverageFilter().fit(X)))
     np.testing.assert_array_equal(est.get_mask(X_test), mask)
     assert roles.HighLeverageFilter().get_params()["absolute_threshold"] is None
+
+
+def test_public_class_lookup_token_and_tags():
+    """Controllers resolve a class by method id; pipelines serialize n4m.roles.<Name>."""
+    from sklearn.utils import get_tags
+
+    import n4m.roles as public
+
+    cls = roles.estimator_class("models.pls.cppls")
+    assert cls is roles.CPPLS and cls.__module__ == "n4m.roles"
+    assert getattr(public, cls.__qualname__) is cls
+    with pytest.raises(ValueError, match="no n4m role class"):
+        roles.estimator_class("models.pls.missing")
+    assert get_tags(roles.CPPLS()).target_tags.required
+    assert not get_tags(roles.SNV()).target_tags.required
+    assert roles.Resampler.input_requirements()["axis"] == "required"
+    assert roles.DIPLS.input_requirements()["X_target"] == "required"
+    assert roles.PLSLDA.input_requirements()["labels"] == "required"
