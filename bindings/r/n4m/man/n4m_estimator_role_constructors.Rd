@@ -22,6 +22,36 @@
 \alias{n4m_ecr}
 \alias{n4m_tensor_pls}
 \alias{n4m_di_pls}
+\alias{n4m_airpls}
+\alias{n4m_arpls}
+\alias{n4m_asls}
+\alias{n4m_beads}
+\alias{n4m_detrend}
+\alias{n4m_iasls}
+\alias{n4m_imodpoly}
+\alias{n4m_modpoly}
+\alias{n4m_rolling_ball}
+\alias{n4m_snip}
+\alias{n4m_first_derivative}
+\alias{n4m_norris_williams}
+\alias{n4m_savitzky_golay}
+\alias{n4m_second_derivative}
+\alias{n4m_crop}
+\alias{n4m_resample_transformer}
+\alias{n4m_area_normalization}
+\alias{n4m_local_snv}
+\alias{n4m_robust_snv}
+\alias{n4m_snv}
+\alias{n4m_fraction_to_percent}
+\alias{n4m_from_absorbance}
+\alias{n4m_kubelka_munk}
+\alias{n4m_percent_to_fraction}
+\alias{n4m_to_absorbance}
+\alias{n4m_gaussian}
+\alias{n4m_haar}
+\alias{n4m_wavelet}
+\alias{n4m_wavelet_denoise}
+\alias{n4m_wavelet_features}
 \alias{n4m_bipls}
 \alias{n4m_bve}
 \alias{n4m_cars}
@@ -70,6 +100,36 @@ n4m_sparse_simpls(n_components = 2L, sparsity_lambda = 0.05)
 n4m_ecr(n_components = 2L, alpha = 0.5)
 n4m_tensor_pls(n_components = 2L, mode_j = NULL, mode_k = NULL)
 n4m_di_pls(n_components = 2L, di_lambda = 1.0)
+n4m_airpls(lam = 1000000.0, max_iter = 50L, tol = 0.001)
+n4m_arpls(lam = 100000.0, max_iter = 50L, tol = 0.001)
+n4m_asls(lam = 1000000.0, p = 0.01, max_iter = 50L, tol = 0.001)
+n4m_beads(lam_0 = 100.0, lam_1 = 0.5, lam_2 = 0.5, max_iter = 50L, tol = 0.001)
+n4m_detrend(polyorder = 1L)
+n4m_iasls(lam = 1000000.0, p = 0.01, lam_1 = 0.0001, polyorder = 2L, diff_order = 2L, max_iter = 50L, tol = 0.001)
+n4m_imodpoly(polyorder = 2L, max_iter = 250L, tol = 0.001)
+n4m_modpoly(polyorder = 2L, max_iter = 250L, tol = 0.001)
+n4m_rolling_ball(half_window = 20L, smooth_half_window = 0L)
+n4m_snip(max_half_window = 20L)
+n4m_first_derivative(delta = 1.0, edge_order = 2L)
+n4m_norris_williams(segment = 5L, gap = 5L, derivative_order = 1L, delta = 1.0)
+n4m_savitzky_golay(window_length = 5L, polyorder = 2L, deriv = 0L, delta = 1.0, mode = "mirror", cval = 0.0)
+n4m_second_derivative(delta = 1.0, edge_order = 2L)
+n4m_crop(start = NULL, end = NULL)
+n4m_resample_transformer(num_samples = NULL)
+n4m_area_normalization(method = "sum")
+n4m_local_snv(window = 11L, pad_mode = "reflect", constant_value = 0.0)
+n4m_robust_snv(with_center = TRUE, with_scale = TRUE, k = 1.4826)
+n4m_snv(with_mean = TRUE, with_std = TRUE, ddof = 0L)
+n4m_fraction_to_percent()
+n4m_from_absorbance(is_percent = FALSE)
+n4m_kubelka_munk(is_percent = FALSE, epsilon = 1e-10)
+n4m_percent_to_fraction()
+n4m_to_absorbance(is_percent = FALSE, epsilon = 1e-10, clip_negative = TRUE)
+n4m_gaussian(sigma = 1.0, order = 0L, mode = "reflect", cval = 0.0, truncate = 4.0)
+n4m_haar()
+n4m_wavelet(family = "haar", mode = "periodization")
+n4m_wavelet_denoise(family = "db4", mode = "periodization", level = 3L, threshold_mode = "soft", noise_estimator = "median")
+n4m_wavelet_features(family = "haar", mode = "periodization", max_level = 3L, entropy = "energy")
 n4m_bipls(n_components = 2L, interval_width = 10L, min_intervals = 2L, cv = 3L)
 n4m_bve(n_components = 2L, n_steps = 10L, min_features = 0L, cv = 3L)
 n4m_cars(n_components = 2L, n_iterations = 50L, min_features = 0L, cv = 3L)
@@ -103,29 +163,56 @@ n4m_wvc_threshold(n_components = 2L, normalize = TRUE, score_threshold = 0.0, th
 \item{c2}{Native parameter (double); defaults come from the n4m manifest.}
 \item{center_x}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{center_y}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{clip_negative}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{combination_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{constant_value}{Native parameter (double); defaults come from the n4m manifest.}
 \item{cv}{Native parameter (int); defaults come from the n4m manifest.}
+\item{cval}{Native parameter (double); defaults come from the n4m manifest.}
 \item{damping}{Native parameter (double); defaults come from the n4m manifest.}
+\item{ddof}{Native parameter (int); defaults come from the n4m manifest.}
+\item{delta}{Native parameter (double); defaults come from the n4m manifest.}
+\item{deriv}{Native parameter (int); defaults come from the n4m manifest.}
+\item{derivative_order}{Native parameter (int); defaults come from the n4m manifest.}
 \item{di_lambda}{Native parameter (double); defaults come from the n4m manifest.}
+\item{diff_order}{Native parameter (int); defaults come from the n4m manifest.}
+\item{edge_order}{Native parameter (int); defaults come from the n4m manifest.}
+\item{end}{Native parameter (int); defaults come from the n4m manifest.}
+\item{entropy}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{epsilon}{Native parameter (double); defaults come from the n4m manifest.}
+\item{family}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{features_per_subspace}{Native parameter (int); defaults come from the n4m manifest.}
 \item{floor_probability}{Native parameter (double); defaults come from the n4m manifest.}
 \item{fusion_lambda}{Native parameter (double); defaults come from the n4m manifest.}
 \item{gamma}{Native parameter (double); defaults come from the n4m manifest.}
+\item{gap}{Native parameter (int); defaults come from the n4m manifest.}
 \item{group_lambda}{Native parameter (double); defaults come from the n4m manifest.}
+\item{half_window}{Native parameter (int); defaults come from the n4m manifest.}
 \item{huber_k}{Native parameter (double); defaults come from the n4m manifest.}
 \item{initial_intervals}{Native parameter (int); defaults come from the n4m manifest.}
 \item{initial_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{interval_width}{Native parameter (int); defaults come from the n4m manifest.}
+\item{is_percent}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{k}{Native parameter (double); defaults come from the n4m manifest.}
 \item{l1_lambda}{Native parameter (double); defaults come from the n4m manifest.}
+\item{lam}{Native parameter (double); defaults come from the n4m manifest.}
+\item{lam_0}{Native parameter (double); defaults come from the n4m manifest.}
+\item{lam_1}{Native parameter (double); defaults come from the n4m manifest.}
+\item{lam_2}{Native parameter (double); defaults come from the n4m manifest.}
 \item{learning_rate}{Native parameter (double); defaults come from the n4m manifest.}
+\item{level}{Native parameter (int); defaults come from the n4m manifest.}
 \item{max_features}{Native parameter (int); defaults come from the n4m manifest.}
+\item{max_half_window}{Native parameter (int); defaults come from the n4m manifest.}
 \item{max_irls_iter}{Native parameter (int); defaults come from the n4m manifest.}
+\item{max_iter}{Native parameter (int); defaults come from the n4m manifest.}
+\item{max_level}{Native parameter (int); defaults come from the n4m manifest.}
 \item{max_rounds}{Native parameter (int); defaults come from the n4m manifest.}
 \item{max_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{method}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{min_features}{Native parameter (int); defaults come from the n4m manifest.}
 \item{min_intervals}{Native parameter (int); defaults come from the n4m manifest.}
 \item{min_selected}{Native parameter (int); defaults come from the n4m manifest.}
 \item{min_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{mode}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{mode_j}{Native parameter (int); defaults come from the n4m manifest.}
 \item{mode_k}{Native parameter (int); defaults come from the n4m manifest.}
 \item{mutation_rate}{Native parameter (double); defaults come from the n4m manifest.}
@@ -141,9 +228,15 @@ n4m_wvc_threshold(n_components = 2L, normalize = TRUE, score_threshold = 0.0, th
 \item{n_swarm}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_x_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_y_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}
+\item{noise_estimator}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{noise_features}{Native parameter (int); defaults come from the n4m manifest.}
 \item{noise_seed}{Native parameter (int); defaults come from the n4m manifest.}
 \item{normalize}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{num_samples}{Native parameter (int); defaults come from the n4m manifest.}
+\item{order}{Native parameter (int); defaults come from the n4m manifest.}
+\item{p}{Native parameter (double); defaults come from the n4m manifest.}
+\item{pad_mode}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{polyorder}{Native parameter (int); defaults come from the n4m manifest.}
 \item{population_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{randomization_seed}{Native parameter (int); defaults come from the n4m manifest.}
 \item{rank_method}{Native parameter (enum); defaults come from the n4m manifest.}
@@ -155,20 +248,33 @@ n4m_wvc_threshold(n_components = 2L, normalize = TRUE, score_threshold = 0.0, th
 \item{scale_y}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{score_threshold}{Native parameter (double); defaults come from the n4m manifest.}
 \item{seed}{Native parameter (int); defaults come from the n4m manifest.}
+\item{segment}{Native parameter (int); defaults come from the n4m manifest.}
 \item{shave_fraction}{Native parameter (double); defaults come from the n4m manifest.}
+\item{sigma}{Native parameter (double); defaults come from the n4m manifest.}
+\item{smooth_half_window}{Native parameter (int); defaults come from the n4m manifest.}
 \item{solver}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{sparsity_lambda}{Native parameter (double); defaults come from the n4m manifest.}
+\item{start}{Native parameter (int); defaults come from the n4m manifest.}
 \item{tau}{Native parameter (double); defaults come from the n4m manifest.}
 \item{threshold}{Native parameter (double); defaults come from the n4m manifest.}
 \item{threshold_factor}{Native parameter (double); defaults come from the n4m manifest.}
+\item{threshold_mode}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{thresholds}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{tol}{Native parameter (double); defaults come from the n4m manifest.}
 \item{top_k}{Native parameter (int); defaults come from the n4m manifest.}
+\item{truncate}{Native parameter (double); defaults come from the n4m manifest.}
 \item{v_max}{Native parameter (double); defaults come from the n4m manifest.}
 \item{vip_threshold}{Native parameter (double); defaults come from the n4m manifest.}
 \item{vote_threshold}{Native parameter (double); defaults come from the n4m manifest.}
 \item{w}{Native parameter (double); defaults come from the n4m manifest.}
 \item{weight_floor}{Native parameter (double); defaults come from the n4m manifest.}
+\item{window}{Native parameter (int); defaults come from the n4m manifest.}
+\item{window_length}{Native parameter (int); defaults come from the n4m manifest.}
 \item{window_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{with_center}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{with_mean}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{with_scale}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{with_std}{Native parameter (bool); defaults come from the n4m manifest.}
 }
 \value{An unfitted estimator whose classes are its role interfaces;
 fit it with \code{\link{n4m_estimator_fit}}.}
@@ -196,6 +302,36 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_ecr}: \code{models.specialized.ecr} (regressor)
 \item \code{n4m_tensor_pls}: \code{models.specialized.tensor_pls} (regressor)
 \item \code{n4m_di_pls}: \code{models.transfer.di_pls} (regressor)
+\item \code{n4m_airpls}: \code{preprocessing.baselines.airpls} (transformer)
+\item \code{n4m_arpls}: \code{preprocessing.baselines.arpls} (transformer)
+\item \code{n4m_asls}: \code{preprocessing.baselines.asls} (transformer)
+\item \code{n4m_beads}: \code{preprocessing.baselines.beads} (transformer)
+\item \code{n4m_detrend}: \code{preprocessing.baselines.detrend} (transformer)
+\item \code{n4m_iasls}: \code{preprocessing.baselines.iasls} (transformer)
+\item \code{n4m_imodpoly}: \code{preprocessing.baselines.imodpoly} (transformer)
+\item \code{n4m_modpoly}: \code{preprocessing.baselines.modpoly} (transformer)
+\item \code{n4m_rolling_ball}: \code{preprocessing.baselines.rolling_ball} (transformer)
+\item \code{n4m_snip}: \code{preprocessing.baselines.snip} (transformer)
+\item \code{n4m_first_derivative}: \code{preprocessing.derivatives.first_derivative} (transformer)
+\item \code{n4m_norris_williams}: \code{preprocessing.derivatives.norris_williams} (transformer)
+\item \code{n4m_savitzky_golay}: \code{preprocessing.derivatives.savitzky_golay} (transformer)
+\item \code{n4m_second_derivative}: \code{preprocessing.derivatives.second_derivative} (transformer)
+\item \code{n4m_crop}: \code{preprocessing.resampling.crop} (transformer)
+\item \code{n4m_resample_transformer}: \code{preprocessing.resampling.resample_transformer} (transformer)
+\item \code{n4m_area_normalization}: \code{preprocessing.scatter.area_normalization} (transformer)
+\item \code{n4m_local_snv}: \code{preprocessing.scatter.local_snv} (transformer)
+\item \code{n4m_robust_snv}: \code{preprocessing.scatter.robust_snv} (transformer)
+\item \code{n4m_snv}: \code{preprocessing.scatter.snv} (transformer)
+\item \code{n4m_fraction_to_percent}: \code{preprocessing.signal_conversion.fraction_to_percent} (transformer)
+\item \code{n4m_from_absorbance}: \code{preprocessing.signal_conversion.from_absorbance} (transformer)
+\item \code{n4m_kubelka_munk}: \code{preprocessing.signal_conversion.kubelka_munk} (transformer)
+\item \code{n4m_percent_to_fraction}: \code{preprocessing.signal_conversion.percent_to_fraction} (transformer)
+\item \code{n4m_to_absorbance}: \code{preprocessing.signal_conversion.to_absorbance} (transformer)
+\item \code{n4m_gaussian}: \code{preprocessing.smoothing.gaussian} (transformer)
+\item \code{n4m_haar}: \code{preprocessing.wavelets.haar} (transformer)
+\item \code{n4m_wavelet}: \code{preprocessing.wavelets.wavelet} (transformer)
+\item \code{n4m_wavelet_denoise}: \code{preprocessing.wavelets.wavelet_denoise} (transformer)
+\item \code{n4m_wavelet_features}: \code{preprocessing.wavelets.wavelet_features} (transformer)
 \item \code{n4m_bipls}: \code{selection.bipls} (selector)
 \item \code{n4m_bve}: \code{selection.bve} (selector)
 \item \code{n4m_cars}: \code{selection.cars} (selector)

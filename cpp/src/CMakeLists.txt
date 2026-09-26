@@ -53,6 +53,7 @@ add_library(n4m_core OBJECT
     core/estimator/linear_adapters.cpp
     core/estimator/n4me.cpp
     core/estimator/selector_adapters.cpp
+    core/estimator/transform_adapters.cpp
     core/cross_validation.cpp
     core/mb_pls.cpp
     core/metrics.cpp

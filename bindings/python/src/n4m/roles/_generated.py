@@ -506,6 +506,716 @@ class DIPLS(NativeRegressor):
         self.di_lambda = di_lambda
 
 
+class AirPLS(NativeTransformer):
+    """Native ``preprocessing.baselines.airpls`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.airpls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "lam": "double",
+        "max_iter": "int",
+        "tol": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        lam=1000000,
+        max_iter=50,
+        tol=0.001,
+    ) -> None:
+        self.lam = lam
+        self.max_iter = max_iter
+        self.tol = tol
+
+
+class ArPLS(NativeTransformer):
+    """Native ``preprocessing.baselines.arpls`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.arpls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "lam": "double",
+        "max_iter": "int",
+        "tol": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        lam=100000,
+        max_iter=50,
+        tol=0.001,
+    ) -> None:
+        self.lam = lam
+        self.max_iter = max_iter
+        self.tol = tol
+
+
+class AsLS(NativeTransformer):
+    """Native ``preprocessing.baselines.asls`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.asls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "lam": "double",
+        "p": "double",
+        "max_iter": "int",
+        "tol": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        lam=1000000,
+        p=0.01,
+        max_iter=50,
+        tol=0.001,
+    ) -> None:
+        self.lam = lam
+        self.p = p
+        self.max_iter = max_iter
+        self.tol = tol
+
+
+class BEADS(NativeTransformer):
+    """Native ``preprocessing.baselines.beads`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.beads"
+    _param_types: ClassVar[dict[str, str]] = {
+        "lam_0": "double",
+        "lam_1": "double",
+        "lam_2": "double",
+        "max_iter": "int",
+        "tol": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        lam_0=100,
+        lam_1=0.5,
+        lam_2=0.5,
+        max_iter=50,
+        tol=0.001,
+    ) -> None:
+        self.lam_0 = lam_0
+        self.lam_1 = lam_1
+        self.lam_2 = lam_2
+        self.max_iter = max_iter
+        self.tol = tol
+
+
+class Detrend(NativeTransformer):
+    """Native ``preprocessing.baselines.detrend`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.detrend"
+    _param_types: ClassVar[dict[str, str]] = {
+        "polyorder": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        polyorder=1,
+    ) -> None:
+        self.polyorder = polyorder
+
+
+class IAsLS(NativeTransformer):
+    """Native ``preprocessing.baselines.iasls`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.iasls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "lam": "double",
+        "p": "double",
+        "lam_1": "double",
+        "polyorder": "int",
+        "diff_order": "int",
+        "max_iter": "int",
+        "tol": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        lam=1000000,
+        p=0.01,
+        lam_1=0.0001,
+        polyorder=2,
+        diff_order=2,
+        max_iter=50,
+        tol=0.001,
+    ) -> None:
+        self.lam = lam
+        self.p = p
+        self.lam_1 = lam_1
+        self.polyorder = polyorder
+        self.diff_order = diff_order
+        self.max_iter = max_iter
+        self.tol = tol
+
+
+class IModPoly(NativeTransformer):
+    """Native ``preprocessing.baselines.imodpoly`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.imodpoly"
+    _param_types: ClassVar[dict[str, str]] = {
+        "polyorder": "int",
+        "max_iter": "int",
+        "tol": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        polyorder=2,
+        max_iter=250,
+        tol=0.001,
+    ) -> None:
+        self.polyorder = polyorder
+        self.max_iter = max_iter
+        self.tol = tol
+
+
+class ModPoly(NativeTransformer):
+    """Native ``preprocessing.baselines.modpoly`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.modpoly"
+    _param_types: ClassVar[dict[str, str]] = {
+        "polyorder": "int",
+        "max_iter": "int",
+        "tol": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        polyorder=2,
+        max_iter=250,
+        tol=0.001,
+    ) -> None:
+        self.polyorder = polyorder
+        self.max_iter = max_iter
+        self.tol = tol
+
+
+class RollingBall(NativeTransformer):
+    """Native ``preprocessing.baselines.rolling_ball`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.rolling_ball"
+    _param_types: ClassVar[dict[str, str]] = {
+        "half_window": "int",
+        "smooth_half_window": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        half_window=20,
+        smooth_half_window=0,
+    ) -> None:
+        self.half_window = half_window
+        self.smooth_half_window = smooth_half_window
+
+
+class SNIP(NativeTransformer):
+    """Native ``preprocessing.baselines.snip`` (transformer)."""
+
+    _method_id = "preprocessing.baselines.snip"
+    _param_types: ClassVar[dict[str, str]] = {
+        "max_half_window": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        max_half_window=20,
+    ) -> None:
+        self.max_half_window = max_half_window
+
+
+class FirstDerivative(NativeTransformer):
+    """Native ``preprocessing.derivatives.first_derivative`` (transformer)."""
+
+    _method_id = "preprocessing.derivatives.first_derivative"
+    _param_types: ClassVar[dict[str, str]] = {
+        "delta": "double",
+        "edge_order": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        delta=1,
+        edge_order=2,
+    ) -> None:
+        self.delta = delta
+        self.edge_order = edge_order
+
+
+class NorrisWilliams(NativeTransformer):
+    """Native ``preprocessing.derivatives.norris_williams`` (transformer)."""
+
+    _method_id = "preprocessing.derivatives.norris_williams"
+    _param_types: ClassVar[dict[str, str]] = {
+        "segment": "int",
+        "gap": "int",
+        "derivative_order": "int",
+        "delta": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        segment=5,
+        gap=5,
+        derivative_order=1,
+        delta=1,
+    ) -> None:
+        self.segment = segment
+        self.gap = gap
+        self.derivative_order = derivative_order
+        self.delta = delta
+
+
+class SavitzkyGolay(NativeTransformer):
+    """Native ``preprocessing.derivatives.savitzky_golay`` (transformer)."""
+
+    _method_id = "preprocessing.derivatives.savitzky_golay"
+    _param_types: ClassVar[dict[str, str]] = {
+        "window_length": "int",
+        "polyorder": "int",
+        "deriv": "int",
+        "delta": "double",
+        "mode": "enum",
+        "cval": "double",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "mode": (
+            "mirror",
+            "constant",
+            "nearest",
+            "wrap",
+            "interp",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        window_length=5,
+        polyorder=2,
+        deriv=0,
+        delta=1,
+        mode="mirror",
+        cval=0,
+    ) -> None:
+        self.window_length = window_length
+        self.polyorder = polyorder
+        self.deriv = deriv
+        self.delta = delta
+        self.mode = mode
+        self.cval = cval
+
+
+class SecondDerivative(NativeTransformer):
+    """Native ``preprocessing.derivatives.second_derivative`` (transformer)."""
+
+    _method_id = "preprocessing.derivatives.second_derivative"
+    _param_types: ClassVar[dict[str, str]] = {
+        "delta": "double",
+        "edge_order": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        delta=1,
+        edge_order=2,
+    ) -> None:
+        self.delta = delta
+        self.edge_order = edge_order
+
+
+class CropTransformer(NativeTransformer):
+    """Native ``preprocessing.resampling.crop`` (transformer)."""
+
+    _method_id = "preprocessing.resampling.crop"
+    _param_types: ClassVar[dict[str, str]] = {
+        "start": "int",
+        "end": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        start=None,
+        end=None,
+    ) -> None:
+        self.start = start
+        self.end = end
+
+
+class ResampleTransformer(NativeTransformer):
+    """Native ``preprocessing.resampling.resample_transformer`` (transformer)."""
+
+    _method_id = "preprocessing.resampling.resample_transformer"
+    _param_types: ClassVar[dict[str, str]] = {
+        "num_samples": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        num_samples=None,
+    ) -> None:
+        self.num_samples = num_samples
+
+
+class AreaNormalization(NativeTransformer):
+    """Native ``preprocessing.scatter.area_normalization`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.area_normalization"
+    _param_types: ClassVar[dict[str, str]] = {
+        "method": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "method": (
+            "sum",
+            "abs_sum",
+            "trapz",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        method="sum",
+    ) -> None:
+        self.method = method
+
+
+class LSNV(NativeTransformer):
+    """Native ``preprocessing.scatter.local_snv`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.local_snv"
+    _param_types: ClassVar[dict[str, str]] = {
+        "window": "int",
+        "pad_mode": "enum",
+        "constant_value": "double",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "pad_mode": (
+            "reflect",
+            "edge",
+            "constant",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        window=11,
+        pad_mode="reflect",
+        constant_value=0,
+    ) -> None:
+        self.window = window
+        self.pad_mode = pad_mode
+        self.constant_value = constant_value
+
+
+class RNV(NativeTransformer):
+    """Native ``preprocessing.scatter.robust_snv`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.robust_snv"
+    _param_types: ClassVar[dict[str, str]] = {
+        "with_center": "bool",
+        "with_scale": "bool",
+        "k": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        with_center=True,
+        with_scale=True,
+        k=1.4826,
+    ) -> None:
+        self.with_center = with_center
+        self.with_scale = with_scale
+        self.k = k
+
+
+class SNV(NativeTransformer):
+    """Native ``preprocessing.scatter.snv`` (transformer)."""
+
+    _method_id = "preprocessing.scatter.snv"
+    _param_types: ClassVar[dict[str, str]] = {
+        "with_mean": "bool",
+        "with_std": "bool",
+        "ddof": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        with_mean=True,
+        with_std=True,
+        ddof=0,
+    ) -> None:
+        self.with_mean = with_mean
+        self.with_std = with_std
+        self.ddof = ddof
+
+
+class FractionToPercent(NativeTransformer):
+    """Native ``preprocessing.signal_conversion.fraction_to_percent`` (transformer)."""
+
+    _method_id = "preprocessing.signal_conversion.fraction_to_percent"
+    _param_types: ClassVar[dict[str, str]] = {
+    }
+
+    def __init__(self) -> None:
+        pass
+
+
+class FromAbsorbance(NativeTransformer):
+    """Native ``preprocessing.signal_conversion.from_absorbance`` (transformer)."""
+
+    _method_id = "preprocessing.signal_conversion.from_absorbance"
+    _param_types: ClassVar[dict[str, str]] = {
+        "is_percent": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        is_percent=False,
+    ) -> None:
+        self.is_percent = is_percent
+
+
+class KubelkaMunk(NativeTransformer):
+    """Native ``preprocessing.signal_conversion.kubelka_munk`` (transformer)."""
+
+    _method_id = "preprocessing.signal_conversion.kubelka_munk"
+    _param_types: ClassVar[dict[str, str]] = {
+        "is_percent": "bool",
+        "epsilon": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        is_percent=False,
+        epsilon=1e-10,
+    ) -> None:
+        self.is_percent = is_percent
+        self.epsilon = epsilon
+
+
+class PercentToFraction(NativeTransformer):
+    """Native ``preprocessing.signal_conversion.percent_to_fraction`` (transformer)."""
+
+    _method_id = "preprocessing.signal_conversion.percent_to_fraction"
+    _param_types: ClassVar[dict[str, str]] = {
+    }
+
+    def __init__(self) -> None:
+        pass
+
+
+class ToAbsorbance(NativeTransformer):
+    """Native ``preprocessing.signal_conversion.to_absorbance`` (transformer)."""
+
+    _method_id = "preprocessing.signal_conversion.to_absorbance"
+    _param_types: ClassVar[dict[str, str]] = {
+        "is_percent": "bool",
+        "epsilon": "double",
+        "clip_negative": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        is_percent=False,
+        epsilon=1e-10,
+        clip_negative=True,
+    ) -> None:
+        self.is_percent = is_percent
+        self.epsilon = epsilon
+        self.clip_negative = clip_negative
+
+
+class Gaussian(NativeTransformer):
+    """Native ``preprocessing.smoothing.gaussian`` (transformer)."""
+
+    _method_id = "preprocessing.smoothing.gaussian"
+    _param_types: ClassVar[dict[str, str]] = {
+        "sigma": "double",
+        "order": "int",
+        "mode": "enum",
+        "cval": "double",
+        "truncate": "double",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "mode": (
+            "reflect",
+            "constant",
+            "nearest",
+            "mirror",
+            "wrap",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        sigma=1,
+        order=0,
+        mode="reflect",
+        cval=0,
+        truncate=4,
+    ) -> None:
+        self.sigma = sigma
+        self.order = order
+        self.mode = mode
+        self.cval = cval
+        self.truncate = truncate
+
+
+class Haar(NativeTransformer):
+    """Native ``preprocessing.wavelets.haar`` (transformer)."""
+
+    _method_id = "preprocessing.wavelets.haar"
+    _param_types: ClassVar[dict[str, str]] = {
+    }
+
+    def __init__(self) -> None:
+        pass
+
+
+class Wavelet(NativeTransformer):
+    """Native ``preprocessing.wavelets.wavelet`` (transformer)."""
+
+    _method_id = "preprocessing.wavelets.wavelet"
+    _param_types: ClassVar[dict[str, str]] = {
+        "family": "enum",
+        "mode": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "family": (
+            "haar",
+            "db4",
+            "sym4",
+            "coif1",
+        ),
+        "mode": (
+            "periodization",
+            "symmetric",
+            "zero",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        family="haar",
+        mode="periodization",
+    ) -> None:
+        self.family = family
+        self.mode = mode
+
+
+class WaveletDenoise(NativeTransformer):
+    """Native ``preprocessing.wavelets.wavelet_denoise`` (transformer)."""
+
+    _method_id = "preprocessing.wavelets.wavelet_denoise"
+    _param_types: ClassVar[dict[str, str]] = {
+        "family": "enum",
+        "mode": "enum",
+        "level": "int",
+        "threshold_mode": "enum",
+        "noise_estimator": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "family": (
+            "haar",
+            "db4",
+            "sym4",
+            "coif1",
+        ),
+        "mode": (
+            "periodization",
+            "symmetric",
+            "zero",
+        ),
+        "threshold_mode": (
+            "soft",
+            "hard",
+        ),
+        "noise_estimator": (
+            "median",
+            "std",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        family="db4",
+        mode="periodization",
+        level=3,
+        threshold_mode="soft",
+        noise_estimator="median",
+    ) -> None:
+        self.family = family
+        self.mode = mode
+        self.level = level
+        self.threshold_mode = threshold_mode
+        self.noise_estimator = noise_estimator
+
+
+class WaveletFeatures(NativeTransformer):
+    """Native ``preprocessing.wavelets.wavelet_features`` (transformer)."""
+
+    _method_id = "preprocessing.wavelets.wavelet_features"
+    _param_types: ClassVar[dict[str, str]] = {
+        "family": "enum",
+        "mode": "enum",
+        "max_level": "int",
+        "entropy": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "family": (
+            "haar",
+            "db4",
+            "sym4",
+            "coif1",
+        ),
+        "mode": (
+            "periodization",
+            "symmetric",
+            "zero",
+        ),
+        "entropy": (
+            "energy",
+            "histogram",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        family="haar",
+        mode="periodization",
+        max_level=3,
+        entropy="energy",
+    ) -> None:
+        self.family = family
+        self.mode = mode
+        self.max_level = max_level
+        self.entropy = entropy
+
+
 class BiPLS(NativeSelector):
     """Native ``selection.bipls`` (selector)."""
 
@@ -1211,6 +1921,7 @@ class WVCThreshold(NativeSelector):
 
 
 __all__ = [
+    "BEADS",
     "BVE",
     "CARS",
     "CPPLS",
@@ -1221,6 +1932,7 @@ __all__ = [
     "IPW",
     "IRF",
     "IRIV",
+    "LSNV",
     "MBPLS",
     "MIRPLS",
     "NPLS",
@@ -1228,7 +1940,10 @@ __all__ = [
     "PCR",
     "PSO",
     "REP",
+    "RNV",
     "SCARS",
+    "SNIP",
+    "SNV",
     "SPA",
     "ST",
     "T2",
@@ -1236,25 +1951,50 @@ __all__ = [
     "VIPSPA",
     "VISSA",
     "WVC",
+    "AirPLS",
+    "ArPLS",
+    "AreaNormalization",
+    "AsLS",
     "BaggingPLS",
     "BiPLS",
     "BoostingPLS",
     "ContinuumRegression",
+    "CropTransformer",
+    "Detrend",
+    "FirstDerivative",
+    "FractionToPercent",
+    "FromAbsorbance",
     "FusedSparsePLS",
+    "Gaussian",
     "GroupSparsePLS",
+    "Haar",
+    "IAsLS",
+    "IModPoly",
+    "KubelkaMunk",
+    "ModPoly",
+    "NorrisWilliams",
     "PLSRegression",
+    "PercentToFraction",
     "RandomFrog",
     "RandomSubspacePLS",
     "Randomization",
+    "ResampleTransformer",
     "Ridge",
     "RidgePLS",
     "RobustPLS",
+    "RollingBall",
+    "SavitzkyGolay",
+    "SecondDerivative",
     "Shaving",
     "SiPLS",
     "SimplePLS",
     "SparseSIMPLS",
     "Stability",
+    "ToAbsorbance",
     "VariableSelect",
     "WVCThreshold",
+    "Wavelet",
+    "WaveletDenoise",
+    "WaveletFeatures",
     "WeightedPLS",
 ]

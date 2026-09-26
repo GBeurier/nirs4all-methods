@@ -37,6 +37,13 @@ c_surface:
   - "n4m_transform_fraction_to_percent_create"
   - "n4m_transform_fraction_to_percent_destroy"
   - "n4m_transform_fraction_to_percent_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_fraction_to_percent"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
 fq_name: "n4m.transform.signal_conversion.fraction_to_percent"
 leaf: "fraction_to_percent"
 legacy_ids:

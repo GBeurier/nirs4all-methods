@@ -176,6 +176,232 @@ const ParamSpec kParams_models_transfer_di_pls[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_transfer_di_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"di_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_transfer_di_pls_di_lambda, 1, 0.0, kNaN, nullptr, 0},
 };
+const double kDefault_preprocessing_baselines_airpls_lam[] = {1000000.0};
+const std::int64_t kDefault_preprocessing_baselines_airpls_max_iter[] = {50};
+const double kDefault_preprocessing_baselines_airpls_tol[] = {0.001};
+const ParamSpec kParams_preprocessing_baselines_airpls[] = {
+    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_airpls_lam, 1, 0.0, kNaN, nullptr, 0},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_airpls_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_airpls_tol, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_preprocessing_baselines_arpls_lam[] = {100000.0};
+const std::int64_t kDefault_preprocessing_baselines_arpls_max_iter[] = {50};
+const double kDefault_preprocessing_baselines_arpls_tol[] = {0.001};
+const ParamSpec kParams_preprocessing_baselines_arpls[] = {
+    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_arpls_lam, 1, 0.0, kNaN, nullptr, 0},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_arpls_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_arpls_tol, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_preprocessing_baselines_asls_lam[] = {1000000.0};
+const double kDefault_preprocessing_baselines_asls_p[] = {0.01};
+const std::int64_t kDefault_preprocessing_baselines_asls_max_iter[] = {50};
+const double kDefault_preprocessing_baselines_asls_tol[] = {0.001};
+const ParamSpec kParams_preprocessing_baselines_asls[] = {
+    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_asls_lam, 1, 0.0, kNaN, nullptr, 0},
+    {"p", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_asls_p, 1, 0.0, 1.0, nullptr, 0},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_asls_max_iter, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_asls_tol, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_preprocessing_baselines_beads_lam_0[] = {100.0};
+const double kDefault_preprocessing_baselines_beads_lam_1[] = {0.5};
+const double kDefault_preprocessing_baselines_beads_lam_2[] = {0.5};
+const std::int64_t kDefault_preprocessing_baselines_beads_max_iter[] = {50};
+const double kDefault_preprocessing_baselines_beads_tol[] = {0.001};
+const ParamSpec kParams_preprocessing_baselines_beads[] = {
+    {"lam_0", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_lam_0, 1, 0.0, kNaN, nullptr, 0},
+    {"lam_1", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_lam_1, 1, 0.0, kNaN, nullptr, 0},
+    {"lam_2", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_lam_2, 1, 0.0, kNaN, nullptr, 0},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_beads_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_tol, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_baselines_detrend_polyorder[] = {1};
+const ParamSpec kParams_preprocessing_baselines_detrend[] = {
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_detrend_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_preprocessing_baselines_iasls_lam[] = {1000000.0};
+const double kDefault_preprocessing_baselines_iasls_p[] = {0.01};
+const double kDefault_preprocessing_baselines_iasls_lam_1[] = {0.0001};
+const std::int64_t kDefault_preprocessing_baselines_iasls_polyorder[] = {2};
+const std::int64_t kDefault_preprocessing_baselines_iasls_diff_order[] = {2};
+const std::int64_t kDefault_preprocessing_baselines_iasls_max_iter[] = {50};
+const double kDefault_preprocessing_baselines_iasls_tol[] = {0.001};
+const ParamSpec kParams_preprocessing_baselines_iasls[] = {
+    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_lam, 1, 0.0, kNaN, nullptr, 0},
+    {"p", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_p, 1, 0.0, 1.0, nullptr, 0},
+    {"lam_1", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_lam_1, 1, 0.0, kNaN, nullptr, 0},
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_iasls_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"diff_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_iasls_diff_order, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_iasls_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_tol, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_baselines_imodpoly_polyorder[] = {2};
+const std::int64_t kDefault_preprocessing_baselines_imodpoly_max_iter[] = {250};
+const double kDefault_preprocessing_baselines_imodpoly_tol[] = {0.001};
+const ParamSpec kParams_preprocessing_baselines_imodpoly[] = {
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_imodpoly_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_imodpoly_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_imodpoly_tol, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_baselines_modpoly_polyorder[] = {2};
+const std::int64_t kDefault_preprocessing_baselines_modpoly_max_iter[] = {250};
+const double kDefault_preprocessing_baselines_modpoly_tol[] = {0.001};
+const ParamSpec kParams_preprocessing_baselines_modpoly[] = {
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_modpoly_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_modpoly_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_modpoly_tol, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_baselines_rolling_ball_half_window[] = {20};
+const std::int64_t kDefault_preprocessing_baselines_rolling_ball_smooth_half_window[] = {0};
+const ParamSpec kParams_preprocessing_baselines_rolling_ball[] = {
+    {"half_window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_rolling_ball_half_window, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"smooth_half_window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_rolling_ball_smooth_half_window, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_baselines_snip_max_half_window[] = {20};
+const ParamSpec kParams_preprocessing_baselines_snip[] = {
+    {"max_half_window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_snip_max_half_window, nullptr, 1, 1.0, kNaN, nullptr, 0},
+};
+const double kDefault_preprocessing_derivatives_first_derivative_delta[] = {1.0};
+const std::int64_t kDefault_preprocessing_derivatives_first_derivative_edge_order[] = {2};
+const ParamSpec kParams_preprocessing_derivatives_first_derivative[] = {
+    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_first_derivative_delta, 1, kNaN, kNaN, nullptr, 0},
+    {"edge_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_first_derivative_edge_order, nullptr, 1, 1.0, 2.0, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_derivatives_norris_williams_segment[] = {5};
+const std::int64_t kDefault_preprocessing_derivatives_norris_williams_gap[] = {5};
+const std::int64_t kDefault_preprocessing_derivatives_norris_williams_derivative_order[] = {1};
+const double kDefault_preprocessing_derivatives_norris_williams_delta[] = {1.0};
+const ParamSpec kParams_preprocessing_derivatives_norris_williams[] = {
+    {"segment", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_norris_williams_segment, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"gap", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_norris_williams_gap, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"derivative_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_norris_williams_derivative_order, nullptr, 1, 0.0, 2.0, nullptr, 0},
+    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_norris_williams_delta, 1, kNaN, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_derivatives_savitzky_golay_window_length[] = {5};
+const std::int64_t kDefault_preprocessing_derivatives_savitzky_golay_polyorder[] = {2};
+const std::int64_t kDefault_preprocessing_derivatives_savitzky_golay_deriv[] = {0};
+const double kDefault_preprocessing_derivatives_savitzky_golay_delta[] = {1.0};
+const std::int64_t kDefault_preprocessing_derivatives_savitzky_golay_mode[] = {0};
+const char* const kChoices_preprocessing_derivatives_savitzky_golay_mode[] = {"mirror", "constant", "nearest", "wrap", "interp"};
+const double kDefault_preprocessing_derivatives_savitzky_golay_cval[] = {0.0};
+const ParamSpec kParams_preprocessing_derivatives_savitzky_golay[] = {
+    {"window_length", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_savitzky_golay_window_length, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_savitzky_golay_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"deriv", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_savitzky_golay_deriv, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_savitzky_golay_delta, 1, kNaN, kNaN, nullptr, 0},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_derivatives_savitzky_golay_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_derivatives_savitzky_golay_mode, 5},
+    {"cval", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_savitzky_golay_cval, 1, kNaN, kNaN, nullptr, 0},
+};
+const double kDefault_preprocessing_derivatives_second_derivative_delta[] = {1.0};
+const std::int64_t kDefault_preprocessing_derivatives_second_derivative_edge_order[] = {2};
+const ParamSpec kParams_preprocessing_derivatives_second_derivative[] = {
+    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_second_derivative_delta, 1, kNaN, kNaN, nullptr, 0},
+    {"edge_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_second_derivative_edge_order, nullptr, 1, 1.0, 2.0, nullptr, 0},
+};
+const ParamSpec kParams_preprocessing_resampling_crop[] = {
+    {"start", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0},
+    {"end", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, -1.0, kNaN, nullptr, 0},
+};
+const ParamSpec kParams_preprocessing_resampling_resample_transformer[] = {
+    {"num_samples", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, -1.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_scatter_area_normalization_method[] = {0};
+const char* const kChoices_preprocessing_scatter_area_normalization_method[] = {"sum", "abs_sum", "trapz"};
+const ParamSpec kParams_preprocessing_scatter_area_normalization[] = {
+    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_scatter_area_normalization_method, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_scatter_area_normalization_method, 3},
+};
+const std::int64_t kDefault_preprocessing_scatter_local_snv_window[] = {11};
+const std::int64_t kDefault_preprocessing_scatter_local_snv_pad_mode[] = {0};
+const char* const kChoices_preprocessing_scatter_local_snv_pad_mode[] = {"reflect", "edge", "constant"};
+const double kDefault_preprocessing_scatter_local_snv_constant_value[] = {0.0};
+const ParamSpec kParams_preprocessing_scatter_local_snv[] = {
+    {"window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_local_snv_window, nullptr, 1, 3.0, kNaN, nullptr, 0},
+    {"pad_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_scatter_local_snv_pad_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_scatter_local_snv_pad_mode, 3},
+    {"constant_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_local_snv_constant_value, 1, kNaN, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_scatter_robust_snv_with_center[] = {1};
+const std::int64_t kDefault_preprocessing_scatter_robust_snv_with_scale[] = {1};
+const double kDefault_preprocessing_scatter_robust_snv_k[] = {1.4826};
+const ParamSpec kParams_preprocessing_scatter_robust_snv[] = {
+    {"with_center", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_robust_snv_with_center, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"with_scale", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_robust_snv_with_scale, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"k", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_robust_snv_k, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_scatter_snv_with_mean[] = {1};
+const std::int64_t kDefault_preprocessing_scatter_snv_with_std[] = {1};
+const std::int64_t kDefault_preprocessing_scatter_snv_ddof[] = {0};
+const ParamSpec kParams_preprocessing_scatter_snv[] = {
+    {"with_mean", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_snv_with_mean, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"with_std", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_snv_with_std, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"ddof", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_snv_ddof, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_signal_conversion_from_absorbance_is_percent[] = {0};
+const ParamSpec kParams_preprocessing_signal_conversion_from_absorbance[] = {
+    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_from_absorbance_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_signal_conversion_kubelka_munk_is_percent[] = {0};
+const double kDefault_preprocessing_signal_conversion_kubelka_munk_epsilon[] = {1e-10};
+const ParamSpec kParams_preprocessing_signal_conversion_kubelka_munk[] = {
+    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_kubelka_munk_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"epsilon", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_signal_conversion_kubelka_munk_epsilon, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_signal_conversion_to_absorbance_is_percent[] = {0};
+const double kDefault_preprocessing_signal_conversion_to_absorbance_epsilon[] = {1e-10};
+const std::int64_t kDefault_preprocessing_signal_conversion_to_absorbance_clip_negative[] = {1};
+const ParamSpec kParams_preprocessing_signal_conversion_to_absorbance[] = {
+    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_to_absorbance_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"epsilon", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_signal_conversion_to_absorbance_epsilon, 1, 0.0, kNaN, nullptr, 0},
+    {"clip_negative", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_to_absorbance_clip_negative, nullptr, 1, kNaN, kNaN, nullptr, 0},
+};
+const double kDefault_preprocessing_smoothing_gaussian_sigma[] = {1.0};
+const std::int64_t kDefault_preprocessing_smoothing_gaussian_order[] = {0};
+const std::int64_t kDefault_preprocessing_smoothing_gaussian_mode[] = {0};
+const char* const kChoices_preprocessing_smoothing_gaussian_mode[] = {"reflect", "constant", "nearest", "mirror", "wrap"};
+const double kDefault_preprocessing_smoothing_gaussian_cval[] = {0.0};
+const double kDefault_preprocessing_smoothing_gaussian_truncate[] = {4.0};
+const ParamSpec kParams_preprocessing_smoothing_gaussian[] = {
+    {"sigma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_smoothing_gaussian_sigma, 1, 0.0, kNaN, nullptr, 0},
+    {"order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_smoothing_gaussian_order, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_smoothing_gaussian_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_smoothing_gaussian_mode, 5},
+    {"cval", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_smoothing_gaussian_cval, 1, kNaN, kNaN, nullptr, 0},
+    {"truncate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_smoothing_gaussian_truncate, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_family[] = {0};
+const char* const kChoices_preprocessing_wavelets_wavelet_family[] = {"haar", "db4", "sym4", "coif1"};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_mode[] = {0};
+const char* const kChoices_preprocessing_wavelets_wavelet_mode[] = {"periodization", "symmetric", "zero"};
+const ParamSpec kParams_preprocessing_wavelets_wavelet[] = {
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_family, 4},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_mode, 3},
+};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_denoise_family[] = {1};
+const char* const kChoices_preprocessing_wavelets_wavelet_denoise_family[] = {"haar", "db4", "sym4", "coif1"};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_denoise_mode[] = {0};
+const char* const kChoices_preprocessing_wavelets_wavelet_denoise_mode[] = {"periodization", "symmetric", "zero"};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_denoise_level[] = {3};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_denoise_threshold_mode[] = {0};
+const char* const kChoices_preprocessing_wavelets_wavelet_denoise_threshold_mode[] = {"soft", "hard"};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_denoise_noise_estimator[] = {0};
+const char* const kChoices_preprocessing_wavelets_wavelet_denoise_noise_estimator[] = {"median", "std"};
+const ParamSpec kParams_preprocessing_wavelets_wavelet_denoise[] = {
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_family, 4},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_mode, 3},
+    {"level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_denoise_level, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"threshold_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_threshold_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_threshold_mode, 2},
+    {"noise_estimator", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_noise_estimator, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_noise_estimator, 2},
+};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_features_family[] = {0};
+const char* const kChoices_preprocessing_wavelets_wavelet_features_family[] = {"haar", "db4", "sym4", "coif1"};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_features_mode[] = {0};
+const char* const kChoices_preprocessing_wavelets_wavelet_features_mode[] = {"periodization", "symmetric", "zero"};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_features_max_level[] = {3};
+const std::int64_t kDefault_preprocessing_wavelets_wavelet_features_entropy[] = {0};
+const char* const kChoices_preprocessing_wavelets_wavelet_features_entropy[] = {"energy", "histogram"};
+const ParamSpec kParams_preprocessing_wavelets_wavelet_features[] = {
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_features_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_features_family, 4},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_features_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_features_mode, 3},
+    {"max_level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_features_max_level, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"entropy", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_features_entropy, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_features_entropy, 2},
+};
 const std::int64_t kDefault_selection_bipls_n_components[] = {2};
 const std::int64_t kDefault_selection_bipls_interval_width[] = {10};
 const std::int64_t kDefault_selection_bipls_min_intervals[] = {2};
@@ -488,6 +714,36 @@ const MethodSpec kMethods[] = {
     {"models.specialized.ecr", "n4m.estimators.regression.latent.ecr", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_specialized_ecr, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_ecr},
     {"models.specialized.tensor_pls", "n4m.estimators.regression.tensor.n_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_specialized_tensor_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_n_pls},
     {"models.transfer.di_pls", "n4m.domain_adaptation.invariant.di_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_transfer_di_pls, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "n4mm", &make_affine_di_pls},
+    {"preprocessing.baselines.airpls", "n4m.transform.baseline.airpls", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_airpls, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_airpls},
+    {"preprocessing.baselines.arpls", "n4m.transform.baseline.arpls", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_arpls, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_arpls},
+    {"preprocessing.baselines.asls", "n4m.transform.baseline.asls", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_asls, 4, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_asls},
+    {"preprocessing.baselines.beads", "n4m.transform.baseline.beads", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_beads, 5, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_beads},
+    {"preprocessing.baselines.detrend", "n4m.transform.baseline.detrend", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_detrend, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_detrend},
+    {"preprocessing.baselines.iasls", "n4m.transform.baseline.iasls", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_iasls, 7, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_iasls},
+    {"preprocessing.baselines.imodpoly", "n4m.transform.baseline.imodpoly", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_imodpoly, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_imodpoly},
+    {"preprocessing.baselines.modpoly", "n4m.transform.baseline.modpoly", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_modpoly, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_modpoly},
+    {"preprocessing.baselines.rolling_ball", "n4m.transform.baseline.rolling_ball", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_rolling_ball, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_rolling_ball},
+    {"preprocessing.baselines.snip", "n4m.transform.baseline.snip", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_baselines_snip, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_snip},
+    {"preprocessing.derivatives.first_derivative", "n4m.transform.smoothing.first_derivative", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_derivatives_first_derivative, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_first_derivative},
+    {"preprocessing.derivatives.norris_williams", "n4m.transform.smoothing.norris_williams", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_derivatives_norris_williams, 4, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_norris_williams},
+    {"preprocessing.derivatives.savitzky_golay", "n4m.transform.smoothing.savitzky_golay", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_derivatives_savitzky_golay, 6, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_savitzky_golay},
+    {"preprocessing.derivatives.second_derivative", "n4m.transform.smoothing.second_derivative", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_derivatives_second_derivative, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_second_derivative},
+    {"preprocessing.resampling.crop", "n4m.transform.resampling.crop", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_crop, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_crop},
+    {"preprocessing.resampling.resample_transformer", "n4m.transform.resampling.resample_transformer", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_resample_transformer, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_resample},
+    {"preprocessing.scatter.area_normalization", "n4m.transform.scatter.area_normalization", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_area_normalization, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_area_normalization},
+    {"preprocessing.scatter.local_snv", "n4m.transform.scatter.local_snv", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_local_snv, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_local_snv},
+    {"preprocessing.scatter.robust_snv", "n4m.transform.scatter.robust_snv", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_robust_snv, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_robust_snv},
+    {"preprocessing.scatter.snv", "n4m.transform.scatter.snv", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_snv, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_snv},
+    {"preprocessing.signal_conversion.fraction_to_percent", "n4m.transform.signal_conversion.fraction_to_percent", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_fraction_to_percent},
+    {"preprocessing.signal_conversion.from_absorbance", "n4m.transform.signal_conversion.from_absorbance", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_signal_conversion_from_absorbance, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_from_absorbance},
+    {"preprocessing.signal_conversion.kubelka_munk", "n4m.transform.signal_conversion.kubelka_munk", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_signal_conversion_kubelka_munk, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_kubelka_munk},
+    {"preprocessing.signal_conversion.percent_to_fraction", "n4m.transform.signal_conversion.percent_to_fraction", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_percent_to_fraction},
+    {"preprocessing.signal_conversion.to_absorbance", "n4m.transform.signal_conversion.to_absorbance", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_signal_conversion_to_absorbance, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_to_absorbance},
+    {"preprocessing.smoothing.gaussian", "n4m.transform.smoothing.gaussian", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_smoothing_gaussian, 5, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_gaussian},
+    {"preprocessing.wavelets.haar", "n4m.transform.wavelet.haar", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_haar},
+    {"preprocessing.wavelets.wavelet", "n4m.transform.wavelet.wavelet", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_wavelets_wavelet, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_wavelet},
+    {"preprocessing.wavelets.wavelet_denoise", "n4m.transform.wavelet.wavelet_denoise", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_wavelets_wavelet_denoise, 5, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_wavelet_denoise},
+    {"preprocessing.wavelets.wavelet_features", "n4m.transform.wavelet.wavelet_features", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_wavelets_wavelet_features, 4, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_wavelet_features},
     {"selection.bipls", "n4m.feature_selection.wrapper.bipls", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_bipls, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_bipls},
     {"selection.bve", "n4m.feature_selection.wrapper.bve", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_bve, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_bve},
     {"selection.cars", "n4m.feature_selection.wrapper.cars", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_cars, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "selection", &make_select_cars},

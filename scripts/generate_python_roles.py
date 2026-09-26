@@ -55,6 +55,18 @@ CLASS_NAMES = {
     "models.pls.pls_fit_simple": "SimplePLS",
     "selection.bipls": "BiPLS",
     "selection.sipls": "SiPLS",
+    "preprocessing.baselines.airpls": "AirPLS",
+    "preprocessing.baselines.arpls": "ArPLS",
+    "preprocessing.baselines.asls": "AsLS",
+    "preprocessing.baselines.beads": "BEADS",
+    "preprocessing.baselines.iasls": "IAsLS",
+    "preprocessing.baselines.imodpoly": "IModPoly",
+    "preprocessing.baselines.modpoly": "ModPoly",
+    "preprocessing.baselines.snip": "SNIP",
+    "preprocessing.resampling.crop": "CropTransformer",
+    "preprocessing.scatter.local_snv": "LSNV",
+    "preprocessing.scatter.robust_snv": "RNV",
+    "preprocessing.scatter.snv": "SNV",
 }
 # Role interface -> Python role base class (docs/abi/estimator_roles_design.md, D0b).
 ROLE_BASES = {

@@ -58,6 +58,10 @@ for (case in fx$cases) {
         testthat::expect_equal(n4m_selected_indices(fitted), case$selected_indices + 1)
         testthat::expect_identical(n4m_selected_indices(restored), n4m_selected_indices(fitted))
       }
+      if (!is.null(case$transform)) {
+        testthat::expect_equal(n4m_estimator_transform(fitted, fx$x_test), case$transform,
+                               tolerance = 1e-9)
+      }
     })
   })
 }

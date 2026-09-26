@@ -37,6 +37,21 @@ c_surface:
   - "n4m_transform_kubelka_munk_create"
   - "n4m_transform_kubelka_munk_destroy"
   - "n4m_transform_kubelka_munk_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_kubelka_munk"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "is_percent"
+      type: "bool"
+      default: false
+    - name: "epsilon"
+      type: "double"
+      default: 1e-10
+      min: 0.0
 fq_name: "n4m.transform.signal_conversion.kubelka_munk"
 leaf: "kubelka_munk"
 legacy_ids:

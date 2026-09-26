@@ -37,6 +37,33 @@ c_surface:
   - "n4m_transform_gaussian_create"
   - "n4m_transform_gaussian_destroy"
   - "n4m_transform_gaussian_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_gaussian"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "sigma"
+      type: "double"
+      default: 1.0
+      min: 0.0
+    - name: "order"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "mode"
+      type: "enum"
+      choices: "[reflect, constant, nearest, mirror, wrap]"
+      default: "reflect"
+    - name: "cval"
+      type: "double"
+      default: 0.0
+    - name: "truncate"
+      type: "double"
+      default: 4.0
+      min: 0.0
 fq_name: "n4m.transform.smoothing.gaussian"
 leaf: "gaussian"
 legacy_ids:

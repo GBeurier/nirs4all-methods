@@ -37,6 +37,24 @@ c_surface:
   - "n4m_transform_snv_create"
   - "n4m_transform_snv_destroy"
   - "n4m_transform_snv_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_snv"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "with_mean"
+      type: "bool"
+      default: true
+    - name: "with_std"
+      type: "bool"
+      default: true
+    - name: "ddof"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.transform.scatter.snv"
 leaf: "snv"
 legacy_ids:
