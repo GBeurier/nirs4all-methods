@@ -399,3 +399,18 @@ def test_mb_pls_wrapper_predict_matches_in_sample(regression_data):
     # Python predict must therefore agree bit-exactly with the in-sample
     # C predictions.
     assert np.allclose(preds_wrapper, preds_raw, atol=1e-10, rtol=1e-10)
+
+
+def test_mb_pls_unscaled_wrapper_matches_portable_native_heldout():
+    samples = np.arange(1, 22, dtype=np.float64)[:, None]
+    bands = np.arange(1, 13, dtype=np.float64)[None, :]
+    X = np.sin(samples * bands / 9) + np.cos(samples + bands / 7) + samples * bands / 100
+    y = 1.3 + 0.7 * X[:, 1] - 0.4 * X[:, 5]
+    heldout = X[[1, 7, 16], :] + 0.031
+    fitted = MBPLSRegression(n_components=2, block_sizes=[4, 4, 4],
+                             scale_x=False, scale_y=False).fit(X, y)
+    np.testing.assert_allclose(
+        fitted.predict(heldout),
+        [1.3614391588922699, 2.033212108151359, 0.7661914180346159],
+        rtol=0, atol=1e-10,
+    )
