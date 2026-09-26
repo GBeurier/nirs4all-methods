@@ -58,6 +58,27 @@ keeping the first one; the cubic resampler no longer shares transform scratch
 space across calls; a resampler crop that keeps a single source point is
 refused instead of reading past the axis.
 
+Procedures, the catalog entries without reusable state, run through one call,
+`n4m_procedure_run(ctx, method_index, params, inputs, &result)`, with the
+same manifest, named parameters (seeds included) and `n4m_fit_inputs_v1_t`
+checks as the estimators. A procedure declares one role, published by the
+manifest with its DAG-ML node kind: `N4M_ROLE_SPLITTER` (`split`; every fold
+in the result, read with `n4m_method_result_get_n_folds` /
+`n4m_method_result_get_fold`, zero-based rows of X), `N4M_ROLE_AUGMENTER`
+(`augmentation`; the augmented rows as matrix `"X"`, train-only) or
+`N4M_ROLE_GENERIC` (no node; the named outputs of the method's C function).
+The earlier `n4m_split_run` / `n4m_augment_run` proposal is dropped. 51
+entries are procedures: the 9 splitters (over `n4m_splitter_run`), 31
+augmenters (the 22 of `n4m_augmentation_run`, `poly_drift`, and eight
+axis-dependent kinds whose kernels work in the axis' own units), the 5
+diagnostics and the 6 utilities; each equals its direct C entry point
+bitwise. PLS diagnostics and monitoring fit their PLS model from X/y;
+monitoring and transfer metrics take their second matrix as
+`target_domain`. Left out: `mixup`/`local_mixup` (no paired Y), five
+augmenters with nanometre constants, and `stray_light` (its C entry point
+requires an axis it never reads). N4ME import now refuses a payload naming
+a procedure.
+
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (unreleased)
 
 `n4m_sample_filter_*` and `n4m_feature_filter_*` add two shared fit/apply

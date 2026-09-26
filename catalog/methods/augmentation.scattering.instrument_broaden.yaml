@@ -37,6 +37,36 @@ c_surface:
   - "n4m_augmentation_instrument_broaden_apply"
   - "n4m_augmentation_instrument_broaden_create"
   - "n4m_augmentation_instrument_broaden_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_instrument_broaden"
+  roles: "[augmenter]"
+  inputs:
+    axis: "optional"
+  params:
+    - name: "fwhm"
+      type: "double"
+      default: 5.0
+      min: 0.0
+    - name: "use_fwhm_range"
+      type: "bool"
+      default: false
+    - name: "fwhm_low"
+      type: "double"
+      default: 3.0
+      min: 0.0
+    - name: "fwhm_high"
+      type: "double"
+      default: 8.0
+      min: 0.0
+    - name: "variation_scope"
+      type: "enum"
+      default: "sample"
+      choices: "[sample, batch]"
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.scattering.instrument_broaden"
 leaf: "instrument_broaden"
 legacy_ids:

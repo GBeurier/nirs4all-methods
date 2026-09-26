@@ -12,6 +12,7 @@
 
 #include "core/common/context.hpp"
 #include "core/estimator/spec.hpp"
+#include "core/method_result.hpp"
 #include "n4m/estimator.h"
 
 using n4m::estimator::FitInputs;
@@ -250,7 +251,7 @@ N4M_API n4m_status_t n4m_method_info_v1(int32_t index, n4m_method_info_v1_t* out
         info.fq_name = spec->fq_name;
         info.roles = spec->roles;
         info.n_params = spec->n_params;
-        info.capabilities = spec->factory(*spec)->capabilities();
+        info.capabilities = spec->factory != nullptr ? spec->factory(*spec)->capabilities() : 0;
         info.state_format = spec->state_format;
         for (int k = 0; k < N4M_FIT_INPUT_COUNT; ++k) info.inputs[k] = spec->inputs[k];
         return write_descriptor(out, sizeof(n4m_method_info_v1_t), info);
@@ -590,6 +591,85 @@ N4M_API n4m_status_t n4m_estimator_fit_result(const n4m_estimator_t* est,
     if (!est->fitted) return N4M_ERR_NOT_FITTED;
     *out_borrowed = est->adapter->fit_result();
     return *out_borrowed != nullptr ? N4M_OK : N4M_ERR_UNSUPPORTED;
+}
+
+/* ---- Procedures ---------------------------------------------------- */
+
+N4M_API n4m_status_t n4m_procedure_run(n4m_context_t* ctx, int32_t method_index,
+                                       const n4m_params_t* params,
+                                       const n4m_fit_inputs_v1_t* inputs,
+                                       n4m_method_result_t** out) {
+    if (out == nullptr) {
+        set_error(ctx, "null pointer in n4m_procedure_run");
+        return N4M_ERR_NULL_POINTER;
+    }
+    *out = nullptr;
+    const MethodSpec* spec = n4m::estimator::method_at(method_index);
+    if (spec == nullptr) {
+        set_error(ctx, "unknown method index");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (spec->kind != N4M_METHOD_PROCEDURE) {
+        set_error_named(ctx, "method is an estimator, not a procedure", spec->method_id);
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (params != nullptr && &params->params.spec() != spec) {
+        set_error(ctx, "params were created for another method");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    return guarded(ctx, [&]() {
+        const Params defaults(*spec);
+        const Params& resolved = params != nullptr ? params->params : defaults;
+        if (const char* missing = resolved.missing_required()) {
+            set_error_named(ctx, "missing required parameter", missing);
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        FitInputs in;
+        const n4m_status_t st = normalize_inputs(ctx, *spec, inputs, in);
+        if (st != N4M_OK) return st;
+        return spec->run(ctx, resolved, in, out);
+    });
+}
+
+namespace {
+const std::vector<std::int64_t>* int64_array(const n4m_method_result_t* result,
+                                             const char* name) {
+    const auto it = result->int64_arrays.find(name);
+    return it != result->int64_arrays.end() ? &it->second : nullptr;
+}
+}  // namespace
+
+N4M_API n4m_status_t n4m_method_result_get_n_folds(const n4m_method_result_t* result,
+                                                   int32_t* out_n_folds) {
+    if (result == nullptr || out_n_folds == nullptr) return N4M_ERR_NULL_POINTER;
+    const auto* offsets = int64_array(result, n4m::estimator::kFoldTrainOffsets);
+    if (offsets == nullptr || offsets->size() < 2) return N4M_ERR_INVALID_ARGUMENT;
+    *out_n_folds = static_cast<int32_t>(offsets->size() - 1);
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_method_result_get_fold(const n4m_method_result_t* result, int32_t fold,
+                                                const int64_t** out_train, int64_t* out_n_train,
+                                                const int64_t** out_test, int64_t* out_n_test) {
+    if (result == nullptr || out_train == nullptr || out_n_train == nullptr ||
+        out_test == nullptr || out_n_test == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    const auto* train = int64_array(result, n4m::estimator::kFoldTrain);
+    const auto* test = int64_array(result, n4m::estimator::kFoldTest);
+    const auto* train_off = int64_array(result, n4m::estimator::kFoldTrainOffsets);
+    const auto* test_off = int64_array(result, n4m::estimator::kFoldTestOffsets);
+    if (train == nullptr || test == nullptr || train_off == nullptr || test_off == nullptr ||
+        train_off->size() != test_off->size() || fold < 0 ||
+        static_cast<std::size_t>(fold) + 1 >= train_off->size()) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const auto k = static_cast<std::size_t>(fold);
+    *out_train = train->data() + (*train_off)[k];
+    *out_n_train = (*train_off)[k + 1] - (*train_off)[k];
+    *out_test = test->data() + (*test_off)[k];
+    *out_n_test = (*test_off)[k + 1] - (*test_off)[k];
+    return N4M_OK;
 }
 
 /* ---- N4ME ------------------------------------------------------------ */

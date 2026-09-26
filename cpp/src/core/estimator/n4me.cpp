@@ -190,8 +190,8 @@ n4m_status_t decode_state(n4m_context_t* ctx, const unsigned char* bytes, std::s
     std::string method_id;
     if (!r.str(method_id, kMaxName)) return corrupt(ctx, "truncated N4ME method id");
     const std::int32_t index = method_index(method_id.c_str());
-    if (index < 0) {
-        set_error_named(ctx, "N4ME payload names an unknown method", method_id.c_str());
+    if (index < 0 || method_at(index)->kind != N4M_METHOD_ESTIMATOR) {
+        set_error_named(ctx, "N4ME payload names no estimator", method_id.c_str());
         return N4M_ERR_UNSUPPORTED;
     }
     const MethodSpec& spec = *method_at(index);

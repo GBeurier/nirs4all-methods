@@ -37,6 +37,21 @@ c_surface:
   - "n4m_augmentation_poly_drift_apply"
   - "n4m_augmentation_poly_drift_create"
   - "n4m_augmentation_poly_drift_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_poly_drift"
+  roles: "[augmenter]"
+  params:
+    - name: "coeff_min"
+      type: "double_array"
+      default: "[-0.01, -0.01, -0.01]"
+    - name: "coeff_max"
+      type: "double_array"
+      default: "[0.01, 0.01, 0.01]"
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.drift.poly_drift"
 leaf: "poly_drift"
 legacy_ids:

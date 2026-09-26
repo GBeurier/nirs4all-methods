@@ -33,6 +33,17 @@ publications: []
 notes: "Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
 c_surface:
   - "n4m_metrics_approximate_press_compute"
+estimator:
+  kind: "procedure"
+  adapter: "approximate_press"
+  roles: "[generic]"
+  inputs:
+    y: "required"
+  params:
+    - name: "max_components"
+      type: "int"
+      default: 10
+      min: 1
 fq_name: "n4m.metrics.scoring.approximate_press"
 leaf: "approximate_press"
 legacy_ids:
