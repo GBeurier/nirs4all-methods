@@ -391,13 +391,15 @@ static int n4m_wasm_model_fit_tier_b(
         kind == MK_CPPLS || kind == MK_SPARSE_SIMPLS || kind == MK_ECR ||
         kind == MK_CONTINUUM || kind == MK_MIR_PLS || kind == MK_FUSED_SPARSE_PLS ||
         kind == MK_BAGGING_PLS || kind == MK_BOOSTING_PLS ||
-        kind == MK_RANDOM_SUBSPACE_PLS || kind == MK_O2PLS || kind == MK_N_PLS) {
+        kind == MK_RANDOM_SUBSPACE_PLS || kind == MK_O2PLS || kind == MK_N_PLS ||
+        kind == MK_MB_PLS) {
         s = n4m_config_set_center_x(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_center_y(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_scale_x(cfg, 0);
         if (s == N4M_OK) s = n4m_config_set_scale_y(cfg, 0);
         if (s == N4M_OK) {
-            s = n4m_config_set_solver(cfg, kind == MK_RIDGE_PLS || kind == MK_CPPLS
+            s = n4m_config_set_solver(cfg, kind == MK_RIDGE_PLS || kind == MK_CPPLS ||
+                                               kind == MK_MB_PLS
                                                ? N4M_SOLVER_NIPALS : N4M_SOLVER_SIMPLS);
         }
         if (s != N4M_OK) {
@@ -488,13 +490,30 @@ static int n4m_wasm_model_fit_tier_b(
             break;
         }
         case MK_MB_PLS: {
-            /* Block-weighted multi-block PLS over a SINGLE block (all p
-             * features). It returns input-space coefficients PLUS a genuine
-             * affine intercept (and x_scale), so it predicts on RAW X via
-             * intercept + x.B — the same explicit-intercept path as Ridge. */
-            int64_t block_sizes[1];
-            block_sizes[0] = (int64_t)p;
-            s = n4m_estimators_mb_pls_fit(ctx, cfg, &xv, &yv, block_sizes, 1, &res);
+            /* The shared R/Python recipe declares at least two real blocks.
+             * Preserve their boundaries; treating all p features as one block
+             * changes the numerical method. The result has input-space
+             * coefficients and a genuine intercept for raw-X prediction. */
+            if (n_params < 2 || n_params > p) { s = N4M_ERR_INVALID_ARGUMENT; break; }
+            int64_t* block_sizes = (int64_t*)malloc((size_t)n_params * sizeof(int64_t));
+            if (block_sizes == NULL) { s = N4M_ERR_OUT_OF_MEMORY; break; }
+            int64_t total = 0;
+            for (int i = 0; i < n_params; ++i) {
+                const double value = params[i];
+                if (!isfinite(value) || value != floor(value) || value < 1.0 ||
+                    value > 2147483647.0) {
+                    s = N4M_ERR_INVALID_ARGUMENT;
+                    break;
+                }
+                block_sizes[i] = (int64_t)value;
+                total += block_sizes[i];
+            }
+            if (s == N4M_OK && total != p) s = N4M_ERR_SHAPE_MISMATCH;
+            if (s == N4M_OK) {
+                s = n4m_estimators_mb_pls_fit(ctx, cfg, &xv, &yv,
+                                               block_sizes, n_params, &res);
+            }
+            free(block_sizes);
             break;
         }
         case MK_MISSING_NIPALS: {
@@ -570,16 +589,23 @@ static int n4m_wasm_model_fit_tier_b(
     const double* coefficients = NULL;
     const double* x_mean = NULL;
     const double* y_mean = NULL;
+    const double* affine_intercept = NULL;
     if (!required_result_matrix(res, "coefficients", p, q, &coefficients) ||
         !required_result_matrix(res, "x_mean", 1, p, &x_mean) ||
-        !required_result_matrix(res, "y_mean", 1, q, &y_mean)) {
+        (kind == MK_MB_PLS
+            ? !required_result_matrix(res, "intercept", 1, q, &affine_intercept)
+            : !required_result_matrix(res, "y_mean", 1, q, &y_mean))) {
         n4m_method_result_destroy(res);
         n4m_context_destroy(ctx);
         return N4M_ERR_INTERNAL;
     }
     memcpy(coefficients_out, coefficients, (size_t)p * (size_t)q * sizeof(double));
     memcpy(x_mean_out, x_mean, (size_t)p * sizeof(double));
-    memcpy(y_mean_out, y_mean, (size_t)q * sizeof(double));
+    if (kind == MK_MB_PLS) {
+        for (int t = 0; t < q; ++t) y_mean_out[t] = 0.0;
+    } else {
+        memcpy(y_mean_out, y_mean, (size_t)q * sizeof(double));
+    }
     /* Only the standalone fits that emit a genuine affine "intercept" matrix
      * (currently just Ridge: intercept = y_mean - x_mean.B_descaled) set the
      * has_intercept flag. The PLS-based Tier-B fits expose only the centred

@@ -63,6 +63,35 @@ const o2Pred = n4m.predictModel(o2, X)
 const o2FirstTarget = Array.from({ length: n }, (_, i) => o2Pred.data[3 * i])
 ok(finite(o2Pred.data) && corr(o2FirstTarget) > 0.1, `O2PLS predictions are nondegenerate (r=${corr(o2FirstTarget).toFixed(3)})`)
 
+// MB-PLS must preserve the declared block partition. This fixture is the
+// independent R/Python n4m held-out oracle, not an in-sample fit check.
+const mbN = 21, mbP = 12
+const mbXData = new Float64Array(mbN * mbP)
+const mbYData = new Float64Array(mbN)
+for (let i = 0; i < mbN; i++) {
+  for (let j = 0; j < mbP; j++) {
+    mbXData[i * mbP + j] = Math.sin((i + 1) * (j + 1) / 9)
+      + Math.cos((i + 1) + (j + 1) / 7) + (i + 1) * (j + 1) / 100
+  }
+  mbYData[i] = 1.3 + 0.7 * mbXData[i * mbP + 1] - 0.4 * mbXData[i * mbP + 5]
+}
+const mbX = { data: mbXData, rows: mbN, cols: mbP }
+const mbY = { data: mbYData, rows: mbN, cols: 1 }
+const mbHeldData = new Float64Array(3 * mbP)
+for (const [row, source] of [1, 7, 16].entries()) {
+  for (let j = 0; j < mbP; j++) mbHeldData[row * mbP + j] = mbXData[source * mbP + j] + 0.031
+}
+const mb = n4m.fitModel('MBPLS', mbX, mbY, 2, [4, 4, 4])
+const mbPred = n4m.predictModel(mb, { data: mbHeldData, rows: 3, cols: mbP }).data
+const mbOracle = [1.3614391588922699, 2.033212108151359, 0.7661914180346159]
+ok(mb.intercept !== null && mbPred.every((value, i) => Math.abs(value - mbOracle[i]) < 1e-10),
+   'MBPLS block-aware held-out predictions match R/Python n4m')
+for (const blocks of [[], [12], [4, 4, 5]]) {
+  let rejected = false
+  try { n4m.fitModel('MBPLS', mbX, mbY, 2, blocks) } catch { rejected = true }
+  ok(rejected, `MBPLS rejects invalid block_sizes ${JSON.stringify(blocks)}`)
+}
+
 // ---- AOM-Ridge blender + AOM operator-PLS stack ----
 const ridge = n4m.fitAomRidge(X, Y, { cv: 4 })
 ok(finite(ridge.coefficients) && finite(ridge.intercept), 'AOM-Ridge coeffs + intercept finite')
