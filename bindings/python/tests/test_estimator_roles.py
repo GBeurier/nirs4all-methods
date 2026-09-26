@@ -249,6 +249,11 @@ def test_weighted_pls_matches_n4m_reference(data):
     )
 
 
+# Fixture outputs come from Linux x86-64; iterative kernels drift by a few ulps
+# on other platforms, so replays compare at 1e-9.
+REPLAY_TOL = 1e-9
+
+
 def test_cross_language_fixture_states_replay():
     """The shared N4ME fixture (also replayed by R and JS) still predicts identically."""
     import base64
@@ -273,7 +278,7 @@ def test_cross_language_fixture_states_replay():
         est = roles.NativeEstimator.from_n4me(payload)
         if "predict" in case:
             np.testing.assert_allclose(
-                est.predict(X_test), case["predict"], rtol=1e-12, atol=1e-12
+                est.predict(X_test), case["predict"], rtol=REPLAY_TOL, atol=REPLAY_TOL
             )
         if "selected_indices" in case:
             np.testing.assert_array_equal(
@@ -281,7 +286,7 @@ def test_cross_language_fixture_states_replay():
             )
         if "transform" in case:
             np.testing.assert_allclose(
-                est.transform(X_test), case["transform"], rtol=1e-12, atol=1e-12
+                est.transform(X_test), case["transform"], rtol=REPLAY_TOL, atol=REPLAY_TOL
             )
         if "mask" in case:
             np.testing.assert_array_equal(
@@ -293,16 +298,16 @@ def test_cross_language_fixture_states_replay():
             np.testing.assert_allclose(
                 est.decision_function(X_test),
                 case["decision_function"],
-                rtol=1e-12,
-                atol=1e-12,
+                rtol=REPLAY_TOL,
+                atol=REPLAY_TOL,
             )
             assert hasattr(est, "predict_proba") == ("predict_proba" in case)
             if "predict_proba" in case:
                 np.testing.assert_allclose(
                     est.predict_proba(X_test),
                     case["predict_proba"],
-                    rtol=1e-12,
-                    atol=1e-12,
+                    rtol=REPLAY_TOL,
+                    atol=REPLAY_TOL,
                 )
         assert est.to_n4me(allow_training_rows=True) == payload
 

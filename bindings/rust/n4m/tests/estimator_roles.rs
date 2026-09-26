@@ -63,6 +63,10 @@ fn ints(value: &Value) -> Vec<i64> {
         .map(|v| v.as_i64().expect("int"))
         .collect()
 }
+/// Fixture outputs were computed on Linux x86-64; iterative kernels drift by a
+/// few ulps elsewhere (FMA contraction), so replays compare at 1e-9.
+const REPLAY_TOL: f64 = 1e-9;
+
 fn close(actual: &[f64], expected: &[f64], tol: f64, label: &str) {
     assert_eq!(actual.len(), expected.len(), "{label}: length");
     for (i, (a, e)) in actual.iter().zip(expected).enumerate() {
@@ -555,7 +559,7 @@ fn replays_the_cross_language_fixture() {
         let payload = STANDARD.decode(encoded).unwrap();
         let est = Estimator::from_n4me(&ctx, &payload).unwrap();
         assert_eq!(est.method_id().unwrap(), method_id);
-        check(&est, case, 1e-12, method_id);
+        check(&est, case, REPLAY_TOL, method_id);
         assert_eq!(
             est.to_n4me(&ctx, true).unwrap(),
             payload,
@@ -600,7 +604,7 @@ fn replays_the_cross_language_fixture() {
         if let Some(expected) = case.get("X") {
             let got = result.double_matrix("X").unwrap();
             assert_eq!((got.rows, got.cols), (x.rows(), x.cols()));
-            close(&got.data, &floats(expected), 1e-12, method_id);
+            close(&got.data, &floats(expected), REPLAY_TOL, method_id);
             augmented += 1;
         }
         if let Some(expected) = case.get("outputs") {

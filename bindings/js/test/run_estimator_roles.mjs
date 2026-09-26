@@ -14,6 +14,9 @@ const fixture = JSON.parse(readFileSync(
 const matrix = (rows) => ({
     data: Float64Array.from(rows.flat()), rows: rows.length, cols: rows[0].length,
 });
+// Fixture outputs come from Linux x86-64; iterative kernels drift by a few
+// ulps on other platforms, so replays compare at 1e-9.
+const REPLAY_TOL = 1e-9;
 const close = (actual, expected, tol, label) => {
     assert.equal(actual.length, expected.length, label);
     for (let i = 0; i < expected.length; ++i) {
@@ -66,15 +69,15 @@ for (const c of fixture.cases) {
     const est = n4m.NativeEstimator.fromN4me(payload);
     assert.equal(est.methodId, c.method_id);
     if (c.predict) {
-        close(est.predict(xTest).data, c.predict, 1e-12, `${c.method_id} predict`);
+        close(est.predict(xTest).data, c.predict, REPLAY_TOL, `${c.method_id} predict`);
     } else {
         assert.equal(typeof est.predict, "undefined", `${c.method_id} must not predict`);
     }
     if (c.selected_indices) assert.deepEqual(est.selectedIndices(), c.selected_indices);
-    if (c.classes) checkClassifier(est, c, 1e-12, c.method_id);
+    if (c.classes) checkClassifier(est, c, REPLAY_TOL, c.method_id);
     checkMask(est, c, c.method_id);
     if (c.transform) {
-        close(est.transform(xTest).data, c.transform.flat(), 1e-12, `${c.method_id} transform`);
+        close(est.transform(xTest).data, c.transform.flat(), REPLAY_TOL, `${c.method_id} transform`);
     } else {
         assert.equal(typeof est.transform, "undefined", `${c.method_id} must not transform`);
     }
@@ -111,10 +114,10 @@ for (const c of fixture.procedures) {
         const axis = c.inputs.includes("axis") ? fixture.axis : undefined;
         if (c.Y) {
             const out = proc.augment(X, y, axis);
-            close(out.X.data, c.X.flat(), 1e-12, `${c.method_id} augment`);
-            close(out.Y.data, c.Y, 1e-12, `${c.method_id} augment targets`);
+            close(out.X.data, c.X.flat(), REPLAY_TOL, `${c.method_id} augment`);
+            close(out.Y.data, c.Y, REPLAY_TOL, `${c.method_id} augment targets`);
         } else {
-            close(proc.augment(X, axis).data, c.X.flat(), 1e-12, `${c.method_id} augment`);
+            close(proc.augment(X, axis).data, c.X.flat(), REPLAY_TOL, `${c.method_id} augment`);
         }
     }
     if (c.outputs) {
