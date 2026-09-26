@@ -17,7 +17,7 @@ Stratified split using K equal-width or quantile bins of ``y``.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_model_selection_kbins_stratified_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L94) · [`n4m_model_selection_kbins_stratified_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L98) · [`n4m_model_selection_kbins_stratified_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L99). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_kbins_stratified_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L134) · [`n4m_model_selection_kbins_stratified_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L138) · [`n4m_model_selection_kbins_stratified_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L139). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

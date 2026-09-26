@@ -4,7 +4,7 @@ _Namespace_: **`n4m.model_selection.aom_search`** · _Fully-qualified_: `n4m.mod
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_model_selection_robust_hpo_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L429). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_robust_hpo_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L469). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.model_selection.aom_search import aom_robust_hpo`
 

@@ -15,7 +15,7 @@ Systematic circular split over sorted or ordered targets.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_model_selection_systematic_circular_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L122) · [`n4m_model_selection_systematic_circular_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L124) · [`n4m_model_selection_systematic_circular_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L126). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_systematic_circular_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L162) · [`n4m_model_selection_systematic_circular_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L164) · [`n4m_model_selection_systematic_circular_split`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L166). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
