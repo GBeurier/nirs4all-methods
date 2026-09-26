@@ -695,6 +695,25 @@ const ParamSpec kParams_models_ensembles_random_subspace_pls[] = {
     {"features_per_subspace", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_features_per_subspace, nullptr, 1, 1.0, kNaN, nullptr, 0},
     {"seed", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
+const std::int64_t kDefault_models_heads_pls_cox_n_components[] = {2};
+const std::int64_t kDefault_models_heads_pls_cox_max_iter[] = {50};
+const double kDefault_models_heads_pls_cox_tol[] = {1e-10};
+const ParamSpec kParams_models_heads_pls_cox[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_cox_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_cox_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_heads_pls_cox_tol, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_models_heads_pls_glm_n_components[] = {2};
+const std::int64_t kDefault_models_heads_pls_glm_family[] = {0};
+const char* const kChoices_models_heads_pls_glm_family[] = {"gaussian", "poisson", "binomial"};
+const std::int64_t kDefault_models_heads_pls_glm_max_iter[] = {100};
+const double kDefault_models_heads_pls_glm_tol[] = {1e-10};
+const ParamSpec kParams_models_heads_pls_glm[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_glm_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_models_heads_pls_glm_family, nullptr, 1, kNaN, kNaN, kChoices_models_heads_pls_glm_family, 3},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_glm_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_heads_pls_glm_tol, 1, 0.0, kNaN, nullptr, 0},
+};
 const std::int64_t kDefault_models_local_lw_pls_n_components[] = {2};
 const std::int64_t kDefault_models_local_lw_pls_mode[] = {0};
 const char* const kChoices_models_local_lw_pls_mode[] = {"weighted", "knn"};
@@ -1803,6 +1822,8 @@ const MethodSpec kMethods[] = {
     {"models.ensembles.bagging_pls", "n4m.ensemble.bagging_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_bagging_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_bagging_pls, nullptr},
     {"models.ensembles.boosting_pls", "n4m.ensemble.boosting_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_boosting_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_boosting_pls, nullptr},
     {"models.ensembles.random_subspace_pls", "n4m.ensemble.random_subspace_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_ensembles_random_subspace_pls, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_random_subspace_pls, nullptr},
+    {"models.heads.pls_cox", "n4m.estimators.survival.pls_cox", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_heads_pls_cox, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "pls_cox", &make_pls_cox, nullptr},
+    {"models.heads.pls_glm", "n4m.estimators.regression.glm.pls_glm", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_heads_pls_glm, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "pls_glm", &make_pls_glm, nullptr},
     {"models.local.lw_pls", "n4m.estimators.regression.local.lw_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_local_lw_pls, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "training_rows", &make_lw_pls, nullptr},
     {"models.multiblock.mb_pls", "n4m.estimators.multiblock.mb_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_mb_pls, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_mb_pls, nullptr},
     {"models.multiblock.mir_pls", "n4m.estimators.multiblock.mir_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_mir_pls, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_mir_pls, nullptr},

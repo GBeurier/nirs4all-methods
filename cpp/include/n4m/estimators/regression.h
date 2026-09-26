@@ -295,12 +295,17 @@ N4M_API n4m_status_t n4m_estimators_pls_fit(
     double* y_mean_out,
     double* predictions_out);
 
-/* PLS-GLM (§5), legacy single-pass kernel: a centered SIMPLS regression
- * of Y on X. `poisson` is recorded but no GLM link is fitted (the
- * plsRglm algorithm is not native). The result contains:
- *   "coefficients"  (n_features x n_classes)
- *   "intercept"     (1 x n_classes); predictions = X @ coefficients + intercept
- *   "predictions"   (n_samples x n_classes)
+/* PLS-GLM (§5): PLS generalized linear regression (Bastien, Esposito
+ * Vinzi & Tenenhaus 2005, plsRglm with scaleX = FALSE), one model per Y
+ * column: Gaussian identity link, or Poisson log link when `poisson` is
+ * nonzero (Y >= 0). `cfg` supplies n_components; IRLS runs at most 100
+ * steps with tolerance 1e-10 (the estimator role `models.heads.pls_glm`
+ * also offers the binomial logit family and both settings). The result
+ * contains:
+ *   "coefficients"  (n_features x n_targets) linear-predictor coefficients
+ *   "intercept"     (1 x n_targets)
+ *   "predictions"   (n_samples x n_targets) mean response
+ *                   g^-1(X @ coefficients + intercept)
  *   scalars "rmse", "poisson" (0 or 1), "n_components"
  */
 N4M_API n4m_status_t n4m_estimators_pls_glm_fit(

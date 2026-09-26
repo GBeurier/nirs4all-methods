@@ -2221,11 +2221,9 @@ def _pls_glm_pls4all(ctx, cfg, X, Y, *, n_components, poisson,
     fit independently and stacked, matching the R reference's per-target
     loop.
 
-    Opt-in legacy path (``legacy=True``) routes through the original
-    ``n4m_pls_glm_fit`` C kernel (centred SIMPLS coefficients with the
-    column-mean intercept). Kept for downstream code that depends on the
-    historical "PLS-then-link" semantics; not parity-equivalent to
-    ``plsRglm``.
+    Opt-in path (``legacy=True``) routes through the
+    ``n4m_estimators_pls_glm_fit`` C kernel, which runs the same algorithm
+    natively (ABI 2.13).
     """
     if legacy:
         import pls4all
@@ -2522,11 +2520,9 @@ def _pls_cox_pls4all(ctx, cfg, X, Y, *, n_components,
     predictors). This matches the ``_PlsCoxNumpyReference`` adapter
     bit-for-bit so the parity gate hits ``max_abs < 1e-6``.
 
-    Opt-in legacy path (``legacy=True``) routes through the original
-    ``n4m_pls_cox_fit`` C kernel (SIMPLS PLS on a log-time pseudo-response
-    + Breslow baseline hazard). Useful for downstream code that depends
-    on the historical numerical convention; not parity-equivalent to the
-    R/Python references.
+    Opt-in path (``legacy=True``) routes through the
+    ``n4m_estimators_pls_cox_fit`` C kernel, which runs the same algorithm
+    natively (ABI 2.13; Breslow risk sets for tied times).
     """
     import pls4all
     times = kwargs.get("sample_weights")
@@ -6621,9 +6617,8 @@ class _PlsRglmReference(RAdapter):
     library_version = "1.5.1"
     notes = ("R `plsRglm::plsRglm` (Bastien, Vinzi & Tenenhaus 2005) "
              "with the `pls-glm-gaussian` / `pls-glm-poisson` family. "
-             "pls4all implements a simpler PLS-then-link variant so "
-             "predictions diverge substantially; the parity check is a "
-             "presence flag for the external reference.")
+             "The native n4m kernel implements the same algorithm "
+             "(ABI 2.13).")
 
     def __init__(self, n_components: int, poisson: bool) -> None:
         super().__init__()
@@ -8454,8 +8449,8 @@ class _PlsCoxNumpyReference(ReferenceAdapter):
              "gate is bit-for-bit (max_abs < 1e-6). R `plsRcox::"
              "coxsplsDR` is the published algorithmic counterpart but "
              "differs at the 1e-3 level due to Efron ties + scaling "
-             "conventions; the legacy single-pass C++ kernel (SIMPLS "
-             "on log-time pseudo-response) is opt-in via ``legacy=True``.")
+             "conventions; the native C++ kernel (``legacy=True``) runs "
+             "the same algorithm.")
 
     def __init__(self, n_components: int) -> None:
         self._k = int(n_components)
@@ -9261,8 +9256,8 @@ METHODS: list[MethodSpec] = [
                "plsRglm algorithm exactly: per-component partial-regression "
                "weights (Gaussian-identity uses closed-form OLS; Poisson-log "
                "uses IRLS), score-space GLM coefficients, and per-target "
-               "stacking. The legacy single-pass C++ kernel (centred SIMPLS "
-               "+ column-mean intercept) is opt-in via ``legacy=True``."),
+               "stacking. The native C++ kernel (``legacy=True``) runs the "
+               "same algorithm."),
     ),
     MethodSpec(
         name="pls_qda",
@@ -9299,9 +9294,8 @@ METHODS: list[MethodSpec] = [
                "scale X, deviance residuals from a null Cox PH, NIPALS "
                "PLS, Breslow Cox NR on the scores. pls4all's default "
                "wrapper calls the same routine, so the gate is "
-               "bit-for-bit. The legacy single-pass C++ kernel (SIMPLS "
-               "on log-time pseudo-response) is opt-in via "
-               "``legacy=True``. R `plsRcox::coxsplsDR` is the published "
+               "bit-for-bit. The native C++ kernel (``legacy=True``) runs "
+               "the same algorithm. R `plsRcox::coxsplsDR` is the published "
                "counterpart; see ``_PlsCoxRReference`` for the archived "
                "adapter."),
     ),

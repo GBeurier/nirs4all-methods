@@ -8,7 +8,7 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**192 of 213 catalog entries covered.**
+**194 of 213 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
@@ -16,7 +16,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | augmentation | 31 | 39 |
 | diagnostics | 5 | 5 |
 | filters | 6 | 7 |
-| models | 35 | 38 |
+| models | 37 | 38 |
 | preprocessing | 62 | 62 |
 | selection | 26 | 26 |
 | splitters | 9 | 9 |
@@ -103,8 +103,8 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `models.ensembles.boosting_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.ensembles.moment_stack` | not yet | - | - |
 | `models.ensembles.random_subspace_pls` | estimator | regressor | Python, R, JS/WASM |
-| `models.heads.pls_cox` | not yet | - | - |
-| `models.heads.pls_glm` | not yet | - | - |
+| `models.heads.pls_cox` | estimator | regressor | manifest only |
+| `models.heads.pls_glm` | estimator | regressor | manifest only |
 | `models.local.lw_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.multiblock.mb_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.multiblock.mir_pls` | estimator | regressor | Python, R, JS/WASM |

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // Estimator adapters whose fitted state is a core kernel struct rather than
-// an N4MM model: the non-affine regressors (kernel PLS, GPR-on-PLS, LW-PLS),
-// missing-aware NIPALS, the OnPLS joint-score transformer and the DS / PDS
-// calibration-transfer maps. Fit, predict and transform run the core
+// an N4MM model: the non-affine regressors (kernel PLS, GPR-on-PLS, LW-PLS,
+// PLS-GLM), PLS-Cox, missing-aware NIPALS, the OnPLS joint-score
+// transformer and the DS / PDS calibration-transfer maps. Fit, predict and transform run the core
 // kernels; the adapters only frame their state for N4ME.
 
 #include <cstddef>
@@ -87,7 +87,7 @@ class CoreRegressor : public Adapter {
         const n4m_status_t st = fit_kernel(*ctx, params, in);
         if (st != N4M_OK) return st;
         n_features_ = in.X->cols;
-        n_outputs_ = in.Y->cols;
+        n_outputs_ = fitted_outputs(in);
         return N4M_OK;
     }
 
@@ -129,6 +129,7 @@ class CoreRegressor : public Adapter {
     }
 
   protected:
+    virtual std::int64_t fitted_outputs(const FitInputs& in) const { return in.Y->cols; }
     virtual n4m_status_t fit_kernel(core::Context& ctx, const Params& params,
                                     const FitInputs& in) = 0;
     virtual n4m_status_t predict_kernel(core::Context& ctx, const n4m_matrix_view_t& X,
@@ -345,6 +346,98 @@ class MissingAwareNipalsRegressor final : public CoreRegressor {
     core::WeightedPlsResult model_;
 };
 
+// PLS-GLM: the linear predictor on the input scale and the family's inverse
+// link. The family is kept in the state and must match the parameters.
+class PlsGlmRegressor final : public CoreRegressor {
+  public:
+    PlsGlmRegressor() : CoreRegressor(0) {}
+
+  protected:
+    n4m_status_t fit_kernel(core::Context& ctx, const Params& params,
+                            const FitInputs& in) override {
+        return core::fit_pls_glm(ctx, to_i32(params.get_int("n_components")),
+                                 static_cast<core::GlmFamily>(params.get_int("family")),
+                                 to_i32(params.get_int("max_iter")), params.get_double("tol"),
+                                 *in.X, *in.Y, model_);
+    }
+    n4m_status_t predict_kernel(core::Context&, const n4m_matrix_view_t& X,
+                                std::vector<double>& out) const override {
+        core::predict_pls_glm(model_, X, out);
+        return N4M_OK;
+    }
+    void save_kernel(n4m_state_writer_t* w) const override {
+        n4m_state_write_i64(w, static_cast<std::int64_t>(model_.family));
+        write_f64s(w, model_.coefficients);
+        write_f64s(w, model_.intercept);
+    }
+    bool load_kernel(const Params& params, n4m_state_reader_t* r, std::int64_t p,
+                     std::int64_t q) override {
+        model_ = core::PlsGlmResult{};
+        std::int64_t family = -1;
+        if (!n4m_state_read_i64(r, &family) || family != params.get_int("family")) return false;
+        model_.family = static_cast<core::GlmFamily>(family);
+        model_.n_features = static_cast<std::int32_t>(p);
+        model_.n_targets = static_cast<std::int32_t>(q);
+        return read_f64s(r, p * q, model_.coefficients) && read_f64s(r, q, model_.intercept);
+    }
+
+  private:
+    core::PlsGlmResult model_;
+};
+
+// PLS-Cox: Y holds the survival time (column 0) and the event indicator
+// (column 1, 1 = event, 0 = censored); predict returns the risk score.
+class PlsCoxRegressor final : public CoreRegressor {
+  public:
+    PlsCoxRegressor() : CoreRegressor(0) {}
+
+  protected:
+    std::int64_t fitted_outputs(const FitInputs&) const override { return 1; }
+    n4m_status_t fit_kernel(core::Context& ctx, const Params& params,
+                            const FitInputs& in) override {
+        const n4m_matrix_view_t& Y = *in.Y;
+        if (Y.cols != 2) {
+            ctx.set_error("PLS-Cox needs Y with two columns: time, event (0 or 1)");
+            return N4M_ERR_SHAPE_MISMATCH;
+        }
+        const auto n = static_cast<std::size_t>(Y.rows);
+        const auto* y = static_cast<const double*>(Y.data);
+        std::vector<double> times(n);
+        std::vector<std::int32_t> events(n);
+        for (std::size_t i = 0; i < n; ++i) {
+            const double* row = y + static_cast<std::int64_t>(i) * Y.row_stride;
+            const double e = row[Y.col_stride];
+            if (e != 0.0 && e != 1.0) {
+                ctx.set_error("PLS-Cox event indicators (Y column 1) must be 0 or 1");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+            times[i] = row[0];
+            events[i] = e == 1.0 ? 1 : 0;
+        }
+        return core::fit_pls_cox(ctx, to_i32(params.get_int("n_components")),
+                                 to_i32(params.get_int("max_iter")), params.get_double("tol"),
+                                 *in.X, times, events, model_);
+    }
+    n4m_status_t predict_kernel(core::Context&, const n4m_matrix_view_t& X,
+                                std::vector<double>& out) const override {
+        core::predict_pls_cox(model_, X, out);
+        return N4M_OK;
+    }
+    void save_kernel(n4m_state_writer_t* w) const override {
+        write_f64s(w, model_.coefficients);
+        write_f64s(w, model_.x_mean);
+    }
+    bool load_kernel(const Params&, n4m_state_reader_t* r, std::int64_t p,
+                     std::int64_t q) override {
+        model_ = core::PlsCoxResult{};
+        model_.n_features = static_cast<std::int32_t>(p);
+        return q == 1 && read_f64s(r, p, model_.coefficients) && read_f64s(r, p, model_.x_mean);
+    }
+
+  private:
+    core::PlsCoxResult model_;
+};
+
 // OnPLS as a transformer: the joint scores of every block, concatenated in
 // block order (n × n_blocks·n_joint).
 class OnPlsTransformer final : public Adapter {
@@ -509,6 +602,14 @@ std::unique_ptr<Adapter> make_lw_pls(const MethodSpec&) {
 
 std::unique_ptr<Adapter> make_missing_aware_nipals(const MethodSpec&) {
     return std::make_unique<MissingAwareNipalsRegressor>();
+}
+
+std::unique_ptr<Adapter> make_pls_glm(const MethodSpec&) {
+    return std::make_unique<PlsGlmRegressor>();
+}
+
+std::unique_ptr<Adapter> make_pls_cox(const MethodSpec&) {
+    return std::make_unique<PlsCoxRegressor>();
 }
 
 std::unique_ptr<Adapter> make_tr_on_pls(const MethodSpec&) {

@@ -186,13 +186,13 @@ _ANNOTATIONS: dict[str, tuple[str, str, str]] = {
         _src("cpp/src/core/pls_logistic.cpp"),
     ),
     "pls_glm": (
-        "Compatibility experiments requiring the public PLS-GLM entry point with continuous responses.",
-        "Current code only centers Y and runs one SIMPLS fit; the Poisson flag is stored but does not change fitting, and no link or IRLS is implemented.",
+        "Generalized linear regression of continuous (Gaussian), count (Poisson) or proportion (binomial) responses on many collinear spectral predictors.",
+        "Weights come from one GLM fit per column and component, so the Poisson and binomial fits cost p IRLS solves per component; X is not scaled (plsRglm scaleX = FALSE), and separable binomial data make the logit coefficients diverge.",
         _src("cpp/src/core/extra_pls.cpp"),
     ),
     "pls_cox": (
-        "Exploratory survival ranking through the shipped log-time pseudo-response approximation.",
-        "This is not a Cox partial-likelihood fit: censored log-times are replaced by an event-time mean before SIMPLS, then coefficients are negated.",
+        "Risk scores for right-censored survival times from high-dimensional spectra, where a direct Cox model is not identifiable.",
+        "Only the linear predictor is predicted; the Breslow baseline hazard is reported by the C function but not kept by the estimator state. Ties use Breslow risk sets, where plsRcox defaults to Efron.",
         _src("cpp/src/core/extra_pls.cpp"),
     ),
     "missing_aware_nipals": (
@@ -647,18 +647,25 @@ _OVERRIDES: dict[str, dict[str, str]] = {'approximate_press': {'implementation':
                   'regression*. Chemometrics and Intelligent Laboratory Systems 18(3), 251--263. '
                   'DOI '
                   '[10.1016/0169-7439(93)85002-X](https://doi.org/10.1016/0169-7439(93)85002-X).'},
- 'pls_cox': {'implementation': 'No Cox partial likelihood or deviance-residual iteration is '
-                               'optimized. The mean imputation for censored times can bias risk '
-                               'scores; treat results as an exploratory library-specific '
-                               'approximation.',
-             'paper': 'Implementation-specific approximation inspired by PLS survival modelling; '
-                      'it is not a Cox partial-likelihood estimator.',
-             'principle': 'The implementation takes log event times, replaces each censored '
-                          'log-time with the mean log-time among events, fits SIMPLS to that '
-                          'pseudo-response, and negates its coefficients to form a risk score. A '
-                          'Breslow-like cumulative hazard is then assembled from event times and '
-                          'those scores.',
-             'title': 'PLS survival pseudo-response approximation'},
+ 'pls_cox': {'implementation': 'X is standardized with the population standard deviation, the '
+                               'null-model deviance residuals are centred and regressed on it by '
+                               'NIPALS PLS1, and the Breslow partial likelihood is maximized on the '
+                               'scores by Newton-Raphson (at most `max_iter` steps, tolerance '
+                               '`tol`). The estimator role takes Y = (time, event) and keeps '
+                               'input-scale coefficients and the X mean.',
+             'paper': 'Bastien, P. (2008). *Deviance residuals based PLS regression for '
+                      'censored data in high dimensional setting*. Chemometrics and Intelligent '
+                      'Laboratory Systems 91(1), 78--86. DOI '
+                      '[10.1016/j.chemolab.2007.09.009](https://doi.org/10.1016/j.chemolab.2007.09.009).',
+             'principle': 'The deviance residuals $d_i$ of the null Cox model (Breslow cumulative '
+                          'hazard $\\hat H_0$, martingale residual $m_i=\\delta_i-\\hat H_0(t_i)$) '
+                          'summarize the censored response. PLS components $\\mathbf T=\\mathbf X_s'
+                          '\\mathbf W(\\mathbf P^\\top\\mathbf W)^{-1}$ are extracted from the '
+                          'standardized predictors against $d$, and a Cox model '
+                          '$\\lambda(t\\mid\\mathbf t)=\\lambda_0(t)\\exp(\\mathbf t^\\top'
+                          '\\boldsymbol\\beta)$ is fitted on the scores. The risk score of a new '
+                          'row is its linear predictor.',
+             'title': 'Deviance-residual PLS-Cox regression'},
  'pls_diagnostic_dmodx': {'implementation': 'Valid degrees of freedom require p>a and, for '
                                             'reference scaling, n_ref>a+1. With no reference '
                                             'residuals the implementation sets sigma to one rather '
@@ -680,17 +687,23 @@ _OVERRIDES: dict[str, dict[str, str]] = {'approximate_press': {'implementation':
  'pls_diagnostic_t2': {'paper': "Hotelling, H. (1931). *The generalization of Student's ratio*. "
                                 'Annals of Mathematical Statistics 2(3), 360--378. DOI '
                                 '[10.1214/aoms/1177732979](https://doi.org/10.1214/aoms/1177732979).'},
- 'pls_glm': {'implementation': 'Outputs must be interpreted as linear PLS predictions. In '
-                               'particular, they are not constrained positive and are not fitted '
-                               'by a Poisson likelihood; use of this entry point for count '
-                               'inference would be misleading.',
-             'paper': 'No canonical paper validates the shipped SIMPLS compatibility path as a '
-                      'Poisson/generalized-linear model; it is not attributed to a GLM solver.',
-             'principle': 'The shipped routine centres Y once and fits ordinary SIMPLS. It does '
-                          'not construct GLM working responses, apply an inverse link, or iterate '
-                          'reweighted least squares. The stored Poisson flag does not alter the '
-                          'numerical fit.',
-             'title': 'PLS-GLM compatibility entry point'},
+ 'pls_glm': {'implementation': 'One model per response column, as plsRglm with scaleX = '
+                               'FALSE: Gaussian weights use the closed-form partial regression, '
+                               'Poisson and binomial weights and the final score model use IRLS '
+                               '(at most `max_iter` steps, tolerance `tol`). Predictions are the '
+                               'mean response $g^{-1}(\\mathbf X\\mathbf B+b_0)$.',
+             'paper': 'Bastien, P., Esposito Vinzi, V. & Tenenhaus, M. (2005). *PLS generalised '
+                      'linear regression*. Computational Statistics & Data Analysis 48(1), '
+                      '17--46. DOI '
+                      '[10.1016/j.csda.2004.02.005](https://doi.org/10.1016/j.csda.2004.02.005).',
+             'principle': 'Component $k$ weights column $j$ by the coefficient of the deflated '
+                          '$\\mathbf X_j$ in the GLM of $y$ on $(1,\\mathbf t_1,\\dots,'
+                          '\\mathbf t_{k-1},\\mathbf X_j)$; the normalized weights give the '
+                          'score $\\mathbf t_k$ and $\\mathbf X$ is deflated on it. A final GLM '
+                          'of $y$ on $(1,\\mathbf T)$ with the identity, log or logit link is '
+                          'folded back to the input scale through $\\mathbf W(\\mathbf P^\\top'
+                          '\\mathbf W)^{-1}$.',
+             'title': 'PLS generalized linear regression'},
  'pls_lda': {'paper': 'Barker, M. & Rayens, W. (2003). *Partial least squares for discrimination*. '
                       'Journal of Chemometrics 17(3), 166--173. DOI '
                       '[10.1002/cem.785](https://doi.org/10.1002/cem.785).'},
