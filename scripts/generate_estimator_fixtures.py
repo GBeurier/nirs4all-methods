@@ -50,6 +50,14 @@ EXPLICIT_PARAMS = {
 DATA_INPUTS = {"feature_groups": 4, "blocks": 5, "axis": 6, "X_target": 7}
 AXIS = (1000.0 + 2.0 * np.arange(N_FEATURES)).tolist()
 CAP_SERIALIZABLE = 1 << 7
+# Procedure inputs -> fixture data; procedures reading another X.
+INPUT_DATA = {
+    "y": "y_train",
+    "groups": "groups",
+    "axis": "axis",
+    "X_target": "x_target",
+}
+PROCEDURE_X = {"diagnostics.regression_metrics": "x_predictions"}
 
 
 def dataset():
@@ -92,12 +100,51 @@ def fit_inputs(cls, X_target):
     return {n: values[n] for n, i in DATA_INPUTS.items() if info.inputs[i] == 2}
 
 
+def procedure_case(cls, data: dict) -> dict:
+    """Default-parameter run of a procedure on the fixture data."""
+    method_id = cls._method_id
+    need = cls.input_requirements()
+    names = [n for n in ("y", "groups", "axis", "X_target") if need[n] == "required"]
+    x_name = PROCEDURE_X.get(method_id, "x_train")
+    X = np.asarray(data[x_name])
+    kw = {n: np.asarray(data[INPUT_DATA[n]]) for n in names}
+    case = {"method_id": method_id, "x": x_name, "inputs": names}
+    if issubclass(cls, roles.NativeSplitter):
+        folds = cls().split(X, kw.get("y"), kw.get("groups"))
+        case["folds"] = [[tr.tolist(), te.tolist()] for tr, te in folds]
+    elif issubclass(cls, roles.NativeAugmenter):
+        case["X"] = cls().augment(X, axis=kw.get("axis")).tolist()
+    else:
+        y = kw.pop("y", None)
+        out = cls().run(X, y, **kw)
+        case["outputs"] = {
+            k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in out.items()
+        }
+    return case
+
+
 def main() -> None:
     X, y, X_test, X_target, y_test = dataset()
     labels = class_labels(y)
+    data = {
+        "x_train": X,
+        "y_train": y,
+        "groups": np.arange(X.shape[0]) % 18,
+        "axis": AXIS,
+        "x_target": X_target,
+        # Regression metrics read a prediction column against y.
+        "x_predictions": (y + 0.1 * np.sin(np.arange(y.size))).reshape(-1, 1),
+    }
+    procedures = [
+        procedure_case(cls, data)
+        for _, cls in sorted(_REGISTRY.items())
+        if not issubclass(cls, roles.NativeEstimator)
+    ]
     cases = []
     for method_id in sorted(_REGISTRY):
         cls = _REGISTRY[method_id]
+        if not issubclass(cls, roles.NativeEstimator):
+            continue  # procedures have no fitted state
         params = explicit_params(cls)
         target = labels if issubclass(cls, roles.NativeClassifier) else y
         est = cls(**params).fit(X, target, **fit_inputs(cls, X_target))
@@ -137,12 +184,16 @@ def main() -> None:
         "axis": AXIS,
         "x_test": X_test.tolist(),
         "y_test": y_test.tolist(),
+        "groups": data["groups"].tolist(),
+        "x_predictions": data["x_predictions"].tolist(),
         "cases": cases,
+        "procedures": procedures,
     }
     OUTPUT.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
     R_OUTPUT.write_text(render_r(doc), encoding="utf-8")
     print(
-        f"wrote {OUTPUT.relative_to(REPO)} and {R_OUTPUT.relative_to(REPO)} ({len(cases)} estimators)"
+        f"wrote {OUTPUT.relative_to(REPO)} and {R_OUTPUT.relative_to(REPO)} "
+        f"({len(cases)} estimators, {len(procedures)} procedures)"
     )
 
 
@@ -174,6 +225,8 @@ def render_r(doc: dict) -> str:
         f"  blocks = {r_vector(doc['blocks'])},",
         f"  axis = {r_vector(doc['axis'])},",
         f"  x_test = {r_matrix(doc['x_test'])},",
+        f"  groups = {r_vector(doc['groups'])},",
+        f"  x_predictions = {r_matrix(doc['x_predictions'])},",
         f"  y_test = {r_vector(doc['y_test'])},",
         "  cases = list(",
     ]
@@ -207,8 +260,53 @@ def render_r(doc: dict) -> str:
             if name in case:
                 fields.append(f"    {name} = {r_matrix(case[name])}")
         cases.append("   list(\n" + ",\n".join(fields) + ")")
-    out += [",\n".join(cases), "  )", ")", ""]
+    procedures = []
+    for case in doc["procedures"]:
+        inputs = ", ".join(f'"{n}"' for n in case["inputs"])
+        fields = [
+            f'    method_id = "{case["method_id"]}"',
+            f'    x = "{case["x"]}"',
+            f"    inputs = c({inputs})",
+        ]
+        if "folds" in case:
+            folds = ", ".join(
+                f"list({r_int_vector(tr)}, {r_int_vector(te)})"
+                for tr, te in case["folds"]
+            )
+            fields.append(f"    folds = list({folds})")
+        if "X" in case:
+            fields.append(f"    X = {r_matrix(case['X'])}")
+        if "outputs" in case:
+            outputs = ", ".join(
+                f"`{k}` = {r_output(v)}" for k, v in case["outputs"].items()
+            )
+            fields.append(f"    outputs = list({outputs})")
+        procedures.append("   list(\n" + ",\n".join(fields) + ")")
+    out += [
+        ",\n".join(cases),
+        "  ),",
+        "  procedures = list(",
+        ",\n".join(procedures),
+        "  )",
+        ")",
+        "",
+    ]
     return "\n".join(out)
+
+
+def r_int_vector(values) -> str:
+    return (
+        "c(" + ", ".join(f"{int(v)}" for v in values) + ")" if values else "numeric(0)"
+    )
+
+
+def r_output(value) -> str:
+    """A native output: matrix (nested list), vector or scalar."""
+    if isinstance(value, list):
+        if value and isinstance(value[0], list):
+            return r_matrix(value)
+        return r_vector(value) if value else "numeric(0)"
+    return repr(float(value))
 
 
 if __name__ == "__main__":

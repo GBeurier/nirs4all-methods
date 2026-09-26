@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: CECILL-2.1
-"""scikit-learn facade over the generic native estimator roles (ABI 2.13).
+"""scikit-learn facade over the generic native roles (ABI 2.13).
 
-Every class in :mod:`n4m.roles` is a thin, generated subclass of
-:class:`NativeEstimator`: parameters, defaults, required fit inputs, fitting,
-prediction, transformation and the N4ME fitted state all live in libn4m.
-This module only translates Python objects to ``n4m_estimator_*`` calls.
+Every class in :mod:`n4m.roles` is a thin, generated subclass of a role base:
+estimators (:class:`NativeEstimator` roles) with a fitted N4ME state, and
+procedures (:class:`NativeSplitter`, :class:`NativeAugmenter`,
+:class:`NativeProcedure`) that run once. Parameters, defaults, required
+inputs and all numerics live in libn4m; this module only translates Python
+objects to ``n4m_estimator_*`` / ``n4m_procedure_run`` calls.
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ CAP_TRANSFORM = 1 << 0
 CAP_PREDICT = 1 << 1
 CAP_PREDICT_PROBA = 1 << 2
 
-_REGISTRY: dict[str, type[NativeEstimator]] = {}
+_REGISTRY: dict[str, type[_NativeMethod]] = {}
 
 
 class _Context:
@@ -67,7 +69,7 @@ _FIT_INPUT_NAMES = (
 )
 
 
-def estimator_class(method_id: str) -> type[NativeEstimator]:
+def method_class(method_id: str) -> type[_NativeMethod]:
     """The :mod:`n4m.roles` class of a catalog method id."""
     try:
         return _REGISTRY[method_id]
@@ -95,19 +97,69 @@ def _as_int64(values, name: str) -> np.ndarray:
     return arr
 
 
-class NativeEstimator(BaseEstimator):
-    """Shared life cycle of the generated :mod:`n4m.roles` estimators.
+def _fit_inputs(
+    keep: list[Any],
+    X,
+    y=None,
+    *,
+    labels=None,
+    sample_weight=None,
+    groups=None,
+    feature_groups=None,
+    blocks=None,
+    axis=None,
+    X_target=None,
+    fold_ids=None,
+) -> FitInputsV1:
+    """``n4m_fit_inputs_v1_t`` over the given data; ``keep`` holds the buffers."""
+    X_arr = as_f64_2d(X)
+    X_view = numpy_to_view(X_arr)
+    keep += [X_arr, X_view]
+    inputs = FitInputsV1()
+    inputs.struct_size = ctypes.sizeof(FitInputsV1)
+    inputs.X = ctypes.addressof(X_view)
+    if labels is not None:
+        keep.append(labels)
+        inputs.labels, inputs.n_labels = labels.ctypes.data, labels.size
+    if y is not None:
+        y_arr = np.ascontiguousarray(
+            np.asarray(y, dtype=np.float64).reshape(X_arr.shape[0], -1)
+        )
+        y_view = numpy_to_view(y_arr)
+        keep += [y_arr, y_view]
+        inputs.Y = ctypes.addressof(y_view)
+    if sample_weight is not None:
+        w = np.ascontiguousarray(sample_weight, dtype=np.float64).reshape(-1)
+        keep.append(w)
+        inputs.sample_weight, inputs.n_sample_weight = w.ctypes.data, w.size
+    for name, value, ptr_field, len_field in (
+        ("groups", groups, "groups", "n_groups"),
+        ("feature_groups", feature_groups, "feature_groups", "n_feature_groups"),
+        ("blocks", blocks, "block_sizes", "n_blocks"),
+        ("fold_ids", fold_ids, "fold_ids", "n_fold_ids"),
+    ):
+        if value is not None:
+            arr = _as_int64(value, name)
+            keep.append(arr)
+            setattr(inputs, ptr_field, arr.ctypes.data)
+            setattr(inputs, len_field, arr.size)
+    if axis is not None:
+        a = np.ascontiguousarray(axis, dtype=np.float64).reshape(-1)
+        keep.append(a)
+        inputs.axis, inputs.n_axis = a.ctypes.data, a.size
+    if X_target is not None:
+        t_arr = as_f64_2d(X_target)
+        t_view = numpy_to_view(t_arr)
+        keep += [t_arr, t_view]
+        inputs.X_target = ctypes.addressof(t_view)
+    return inputs
 
-    It owns parameters, fitting and the N4ME state only. Operations belong to
-    typed role interfaces (:class:`NativeRegressor`, :class:`NativeTransformer`,
-    ...); a generated class inherits exactly the roles its native method
-    declares, so a pure regressor has no ``transform`` and vice versa.
+
+class _NativeMethod(BaseEstimator):
+    """Parameters and manifest of one catalog method.
 
     Subclasses declare ``_method_id`` and ``_param_types`` (parameter name to
     manifest type) and an explicit ``__init__`` so scikit-learn can clone them.
-    Optional fit inputs (``feature_groups``, ``blocks``, ``X_target``,
-    ``sample_weight``, ``groups``, ``axis``, ``fold_ids``) are fit keywords, as
-    they are data, not hyperparameters.
     """
 
     _method_id: ClassVar[str] = ""
@@ -194,7 +246,18 @@ class NativeEstimator(BaseEstimator):
             raise
         return params
 
-    # -- fit ----------------------------------------------------------------
+
+class NativeEstimator(_NativeMethod):
+    """Shared life cycle of the generated :mod:`n4m.roles` estimators.
+
+    It owns parameters, fitting and the N4ME state only. Operations belong to
+    typed role interfaces (:class:`NativeRegressor`, :class:`NativeTransformer`,
+    ...); a generated class inherits exactly the roles its native method
+    declares, so a pure regressor has no ``transform`` and vice versa.
+    Optional fit inputs (``feature_groups``, ``blocks``, ``X_target``,
+    ``sample_weight``, ``groups``, ``axis``, ``fold_ids``) are fit keywords, as
+    they are data, not hyperparameters.
+    """
 
     def fit(
         self,
@@ -210,50 +273,24 @@ class NativeEstimator(BaseEstimator):
         fold_ids=None,
     ):
         """Fit the native estimator; unused inputs are refused by the core."""
-        X_arr = as_f64_2d(X)
-        keep: list[Any] = [X_arr]
-        inputs = FitInputsV1()
-        inputs.struct_size = ctypes.sizeof(FitInputsV1)
-        X_view = numpy_to_view(X_arr)
-        inputs.X = ctypes.addressof(X_view)
-        self._y_1d_ = False
+        labels = None
         if y is not None and isinstance(self, NativeClassifier):
-            codes = self._encode_labels(y)
-            keep.append(codes)
-            inputs.labels, inputs.n_labels = codes.ctypes.data, codes.size
-            y = None
-        if y is not None:
-            y_arr = np.asarray(y, dtype=np.float64)
-            self._y_1d_ = y_arr.ndim == 1
-            y_arr = np.ascontiguousarray(y_arr.reshape(X_arr.shape[0], -1))
-            y_view = numpy_to_view(y_arr)
-            keep += [y_arr, y_view]
-            inputs.Y = ctypes.addressof(y_view)
-        if sample_weight is not None:
-            w = np.ascontiguousarray(sample_weight, dtype=np.float64).reshape(-1)
-            keep.append(w)
-            inputs.sample_weight, inputs.n_sample_weight = w.ctypes.data, w.size
-        for name, value, ptr_field, len_field in (
-            ("groups", groups, "groups", "n_groups"),
-            ("feature_groups", feature_groups, "feature_groups", "n_feature_groups"),
-            ("blocks", blocks, "block_sizes", "n_blocks"),
-            ("fold_ids", fold_ids, "fold_ids", "n_fold_ids"),
-        ):
-            if value is not None:
-                arr = _as_int64(value, name)
-                keep.append(arr)
-                setattr(inputs, ptr_field, arr.ctypes.data)
-                setattr(inputs, len_field, arr.size)
-        if axis is not None:
-            a = np.ascontiguousarray(axis, dtype=np.float64).reshape(-1)
-            keep.append(a)
-            inputs.axis, inputs.n_axis = a.ctypes.data, a.size
-        if X_target is not None:
-            t_arr = as_f64_2d(X_target)
-            t_view = numpy_to_view(t_arr)
-            keep += [t_arr, t_view]
-            inputs.X_target = ctypes.addressof(t_view)
-
+            labels, y = self._encode_labels(y), None
+        self._y_1d_ = y is not None and np.ndim(y) == 1
+        keep: list[Any] = []
+        inputs = _fit_inputs(
+            keep,
+            X,
+            y,
+            labels=labels,
+            sample_weight=sample_weight,
+            groups=groups,
+            feature_groups=feature_groups,
+            blocks=blocks,
+            axis=axis,
+            X_target=X_target,
+            fold_ids=fold_ids,
+        )
         with _Context() as ctx:
             params = self._native_params(ctx)
             handle = ctypes.c_void_p()
@@ -665,13 +702,190 @@ class NativeClassifier(ClassifierMixin, NativeEstimator):
         return self._matrix_call("n4m_estimator_predict_proba", X, self._n_outputs())
 
 
+class _ProcedureBase(_NativeMethod):
+    """A catalog procedure: one native run, no fitted state."""
+
+    def _call(self, read, X, y=None, **inputs):
+        """Run the procedure and hand the native result to ``read``."""
+        keep: list[Any] = []
+        fit_inputs = _fit_inputs(keep, X, y, **inputs)
+        index = ctypes.c_int32()
+        check(
+            lib.n4m_method_find(self._method_id.encode(), ctypes.byref(index)),
+            self._method_id,
+        )
+        result = ctypes.c_void_p()
+        with _Context() as ctx:
+            params = self._native_params(ctx)
+            try:
+                ctx.check(
+                    lib.n4m_procedure_run(
+                        ctx.handle,
+                        index,
+                        params,
+                        ctypes.addressof(fit_inputs),
+                        ctypes.byref(result),
+                    ),
+                    type(self).__name__,
+                )
+            finally:
+                lib.n4m_params_destroy(params)
+        del keep
+        try:
+            return read(result)
+        finally:
+            lib.n4m_method_result_destroy(result)
+
+
+def _result_entry(result: ctypes.c_void_p, name: bytes, kind: int):
+    if kind == 0:
+        data = ctypes.POINTER(ctypes.c_double)()
+        rows, cols = ctypes.c_int64(), ctypes.c_int64()
+        check(
+            lib.n4m_method_result_get_double_matrix(
+                result, name, ctypes.byref(data), ctypes.byref(rows), ctypes.byref(cols)
+            ),
+            name.decode(),
+        )
+        return (
+            np.ctypeslib.as_array(data, (rows.value * cols.value,))
+            .reshape(rows.value, cols.value)
+            .copy()
+        )
+    if kind == 3:
+        value = ctypes.c_double()
+        check(
+            lib.n4m_method_result_get_scalar(result, name, ctypes.byref(value)),
+            name.decode(),
+        )
+        return value.value
+    if kind == 1:
+        data32 = ctypes.POINTER(ctypes.c_int32)()
+        n32 = ctypes.c_int32()
+        check(
+            lib.n4m_method_result_get_int_vector(
+                result, name, ctypes.byref(data32), ctypes.byref(n32)
+            ),
+            name.decode(),
+        )
+        return (
+            np.ctypeslib.as_array(data32, (n32.value,)).copy()
+            if n32.value
+            else np.empty(0, np.int32)
+        )
+    data64 = ctypes.POINTER(ctypes.c_int64)()
+    n64 = ctypes.c_int64()
+    check(
+        lib.n4m_method_result_get_int64_vector(
+            result, name, ctypes.byref(data64), ctypes.byref(n64)
+        ),
+        name.decode(),
+    )
+    return (
+        np.ctypeslib.as_array(data64, (n64.value,)).copy()
+        if n64.value
+        else np.empty(0, np.int64)
+    )
+
+
+def _result_dict(result: ctypes.c_void_p) -> dict[str, Any]:
+    count = ctypes.c_int32()
+    check(lib.n4m_method_result_entry_count(result, ctypes.byref(count)), "entry_count")
+    out: dict[str, Any] = {}
+    for i in range(count.value):
+        name = ctypes.c_char_p()
+        kind = ctypes.c_int32()
+        check(
+            lib.n4m_method_result_entry(
+                result, i, ctypes.byref(name), ctypes.byref(kind)
+            ),
+            "entry",
+        )
+        out[name.value.decode()] = _result_entry(result, name.value, kind.value)
+    return out
+
+
+class NativeProcedure(_ProcedureBase):
+    """Generic procedure (diagnostics, utilities): inputs -> named outputs."""
+
+    def run(self, X, y=None, **inputs) -> dict[str, Any]:
+        """Named outputs of the native function (arrays or floats)."""
+        return self._call(_result_dict, X, y, **inputs)
+
+
+class NativeSplitter(_ProcedureBase):
+    """Splitter role: Data[n, p] (+ Target, groups) -> folds of row indices.
+
+    A scikit-learn cross-validator: ``split`` yields ``(train, test)`` index
+    arrays, so an instance can be passed as ``cv=``.
+    """
+
+    def _folds(self, X, y=None, groups=None) -> list[tuple[np.ndarray, np.ndarray]]:
+        inputs = {} if groups is None else {"groups": groups}
+
+        def read(result):
+            n = ctypes.c_int32()
+            check(lib.n4m_method_result_get_n_folds(result, ctypes.byref(n)), "n_folds")
+            folds = []
+            for k in range(n.value):
+                tr, te = (
+                    ctypes.POINTER(ctypes.c_int64)(),
+                    ctypes.POINTER(ctypes.c_int64)(),
+                )
+                ntr, nte = ctypes.c_int64(), ctypes.c_int64()
+                check(
+                    lib.n4m_method_result_get_fold(
+                        result,
+                        k,
+                        ctypes.byref(tr),
+                        ctypes.byref(ntr),
+                        ctypes.byref(te),
+                        ctypes.byref(nte),
+                    ),
+                    "fold",
+                )
+                folds.append(
+                    tuple(
+                        np.ctypeslib.as_array(p, (m.value,)).copy()
+                        if m.value
+                        else np.empty(0, np.int64)
+                        for p, m in ((tr, ntr), (te, nte))
+                    )
+                )
+            return folds
+
+        return self._call(read, X, y, **inputs)
+
+    def split(self, X, y=None, groups=None):
+        """Yield ``(train, test)`` zero-based row indices for each fold."""
+        yield from self._folds(X, y, groups)
+
+    def get_n_splits(self, X=None, y=None, groups=None) -> int:
+        """Number of folds for this data (the native splitter decides)."""
+        if X is None:
+            raise ValueError(f"{type(self).__name__}.get_n_splits needs X")
+        return len(self._folds(X, y, groups))
+
+
+class NativeAugmenter(_ProcedureBase):
+    """Augmenter role: Data[n, p] -> augmented Data[n, p], train only."""
+
+    def augment(self, X, *, axis=None) -> np.ndarray:
+        """Augmented rows; seeds are parameters, so a run is reproducible."""
+        inputs = {} if axis is None else {"axis": axis}
+        return self._call(lambda r: _result_entry(r, b"X", 0), X, **inputs)
+
+
 __all__ = [
+    "NativeAugmenter",
     "NativeClassifier",
     "NativeEstimator",
+    "NativeProcedure",
     "NativeRegressor",
     "NativeSampleFilter",
     "NativeSelector",
+    "NativeSplitter",
     "NativeTransformer",
-    "estimator_class",
+    "method_class",
     "method_info",
 ]

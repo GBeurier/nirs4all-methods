@@ -15,7 +15,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from generate_python_roles import class_name, estimators
+from generate_python_roles import class_name, role_methods
 
 REPO = Path(__file__).resolve().parents[1]
 OUTPUT = REPO / "bindings" / "js" / "src" / "estimatorRolesGenerated.ts"
@@ -27,6 +27,27 @@ ROLE_METHODS = {
     "transformer": ("Transformer", "transform", "transformMatrix"),
     "selector": ("Selector", "transform", "transformMatrix"),
     "sample_filter": ("SampleFilter", "getMask", "maskArray"),
+}
+# Procedure role -> (TypeScript interface, method signature, body).
+PROCEDURE_METHODS = {
+    "splitter": (
+        "Splitter",
+        "split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[]",
+        "return this.splitFolds(X, y, groups);",
+    ),
+    "augmenter": (
+        "Augmenter",
+        "augment(X: Matrix, axis?: Float64Array | number[]): Matrix",
+        "return this.augmentMatrix(X, axis);",
+    ),
+    "generic": (
+        "Procedure",
+        (
+            "run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}):"
+            " Record<string, ProcedureOutput>"
+        ),
+        "return this.runOutputs(X, y, inputs);",
+    ),
 }
 TS_TYPES = {
     "int": "number",
@@ -50,18 +71,29 @@ def render(manifest: dict) -> str:
         f"// Native ABI {manifest['abi']}.",
         "",
         "import {",
+        "    type Augmenter,",
         "    type Classifier,",
+        "    type FitInputs,",
+        "    type Fold,",
         "    NativeEstimator,",
+        "    NativeMethod,",
+        "    NativeProcedure,",
         "    type ProbabilisticClassifier,",
+        "    type Procedure,",
+        "    type ProcedureOutput,",
         "    type Regressor,",
         "    type SampleFilter,",
         "    type Selector,",
+        "    type Splitter,",
         "    type Transformer,",
         '} from "./estimatorRoles.js";',
         'import type { Matrix } from "./types.js";',
     ]
-    for m in estimators(manifest):
+    for m in role_methods(manifest):
         name = class_name(m)
+        if m["kind"] == "procedure":
+            out += render_procedure(m, name)
+            continue
         roles = [
             ROLE_METHODS[r]
             for r in (
@@ -83,19 +115,7 @@ def render(manifest: dict) -> str:
             "ProbabilisticClassifier" if r[0] == "Classifier" and proba else r[0]
             for r in roles
         )
-        out += [
-            "",
-            f"/** Parameters of {name}; unset values take the native defaults. */",
-        ]
-        out.append(f"export interface {name}Params {{")
-        for p in m["params"]:
-            default = (
-                "" if p["default"] is None else f" Default {json.dumps(p['default'])}."
-            )
-            required = " Required." if p["required"] else ""
-            out.append(f"    /**{required}{default} */")
-            out.append(f"    {p['name']}?: {ts_type(p)};")
-        out.append("}")
+        out += params_interface(m, name)
         needed = [k for k, v in m["inputs"].items() if v == "required" and k != "y"]
         doc = f"Native `{m['method_id']}` ({', '.join(m['roles'])})."
         if needed:
@@ -105,7 +125,7 @@ def render(manifest: dict) -> str:
             f"/** {doc} */",
             f"export class {name} extends NativeEstimator implements {implements} {{",
             f"    readonly methodId = {json.dumps(m['method_id'])};",
-            "    protected readonly paramTypes = {",
+            "    readonly paramTypes = {",
         ]
         out += [f"        {p['name']}: {json.dumps(p['type'])}," for p in m["params"]]
         out += ["    } as const;"]
@@ -158,9 +178,54 @@ def render(manifest: dict) -> str:
                 "        return this.selectedIndexArray();",
                 "    }",
             ]
-        out += ["}", f"NativeEstimator.register({json.dumps(m['method_id'])}, {name});"]
+        out += ["}", f"NativeMethod.register({json.dumps(m['method_id'])}, {name});"]
     out.append("")
     return "\n".join(out)
+
+
+def params_interface(m: dict, name: str) -> list[str]:
+    out = ["", f"/** Parameters of {name}; unset values take the native defaults. */"]
+    out.append(f"export interface {name}Params {{")
+    for p in m["params"]:
+        default = (
+            "" if p["default"] is None else f" Default {json.dumps(p['default'])}."
+        )
+        required = " Required." if p["required"] else ""
+        out.append(f"    /**{required}{default} */")
+        out.append(f"    {p['name']}?: {ts_type(p)};")
+    out.append("}")
+    return out
+
+
+def render_procedure(m: dict, name: str) -> list[str]:
+    (role,) = m["roles"]
+    iface, signature, body = PROCEDURE_METHODS[role]
+    needed = [k for k, v in m["inputs"].items() if v == "required"]
+    doc = f"Native `{m['method_id']}` ({role})."
+    if needed:
+        doc += f" Required inputs: {', '.join(needed)}."
+    out = params_interface(m, name)
+    out += [
+        "",
+        f"/** {doc} */",
+        f"export class {name} extends NativeProcedure implements {iface} {{",
+        f"    readonly methodId = {json.dumps(m['method_id'])};",
+        "    readonly paramTypes = {",
+        *[f"        {p['name']}: {json.dumps(p['type'])}," for p in m["params"]],
+        "    } as const;",
+        "",
+        f"    constructor(params: {name}Params = {{}}) {{",
+        "        super();",
+        "        this.params = { ...params };",
+        "    }",
+        "",
+        f"    {signature} {{",
+        f"        {body}",
+        "    }",
+        "}",
+        f"NativeMethod.register({json.dumps(m['method_id'])}, {name});",
+    ]
+    return out
 
 
 def main() -> int:

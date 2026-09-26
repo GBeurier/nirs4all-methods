@@ -92,12 +92,22 @@ CLASS_NAMES = {
     "filters.spectral_quality": "SpectralQualityFilter",
     "filters.variance": "VarianceFilter",
     "filters.correlation": "CorrelationFilter",
+    "splitters.binned_strat_group_kfold": "BinnedStratifiedGroupKFold",
+    "splitters.kbins_stratified": "KBinsStratified",
+    "splitters.kmeans": "KMeans",
+    "splitters.split_splitter": "SPlitSplitter",
+    "splitters.spxy": "SPXY",
+    "splitters.spxy_fold": "SPXYFold",
+    "splitters.spxy_g_fold": "SPXYGroupFold",
 }
 # Role interface -> Python role base class (docs/abi/estimator_roles_design.md, D0b).
 ROLE_BASES = {
     "classifier": "NativeClassifier",
     "regressor": "NativeRegressor",
     "sample_filter": "NativeSampleFilter",
+    "splitter": "NativeSplitter",
+    "augmenter": "NativeAugmenter",
+    "generic": "NativeProcedure",
     "selector": "NativeSelector",
     "transformer": "NativeTransformer",
 }
@@ -151,7 +161,7 @@ def render(manifest: dict) -> str:
     ]
     names = []
     used_bases: set[str] = set()
-    for m in estimators(manifest):
+    for m in role_methods(manifest):
         name = class_name(m)
         names.append(name)
         role_bases = [ROLE_BASES[r] for r in ROLE_BASES if r in m["roles"]]
@@ -219,15 +229,15 @@ def import_key(name: str) -> tuple[int, str, str]:
     return (0 if name.isupper() else 1 if name[0].isupper() else 2, name.lower(), name)
 
 
-def estimators(manifest: dict) -> list[dict]:
-    methods = [m for m in manifest["methods"] if m["kind"] == "estimator"]
-    return sorted(methods, key=lambda m: m["method_id"])
+def role_methods(manifest: dict) -> list[dict]:
+    """Every manifest method (estimators and procedures), by method id."""
+    return sorted(manifest["methods"], key=lambda m: m["method_id"])
 
 
 def render_init(manifest: dict) -> str:
-    names = sorted((class_name(m) for m in estimators(manifest)), key=import_key)
+    names = sorted((class_name(m) for m in role_methods(manifest)), key=import_key)
     base_exports = sorted(
-        [*ROLE_BASES.values(), "NativeEstimator", "estimator_class", "method_info"],
+        [*ROLE_BASES.values(), "NativeEstimator", "method_class", "method_info"],
         key=import_key,
     )
     out = [

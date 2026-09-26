@@ -8,14 +8,17 @@
 
 .n4m_role_classes <- c(regressor = "n4m_regressor", classifier = "n4m_classifier",
                        transformer = "n4m_transformer", selector = "n4m_selector",
-                       sample_filter = "n4m_sample_filter")
+                       sample_filter = "n4m_sample_filter", splitter = "n4m_splitter",
+                       augmenter = "n4m_augmenter", generic = "n4m_procedure")
+.n4m_procedure_roles <- c("splitter", "augmenter", "generic")
 
 .n4m_cap_serializable <- 128L  # N4M_CAP_SERIALIZABLE
 
 .n4m_estimator <- function(method_id, roles, params) {
   structure(
     list(method_id = method_id, params = params, state = NULL),
-    class = c(unname(.n4m_role_classes[roles]), "n4m_estimator")
+    class = c(unname(.n4m_role_classes[roles]),
+              if (!any(roles %in% .n4m_procedure_roles)) "n4m_estimator", "n4m_method")
   )
 }
 
@@ -216,9 +219,71 @@ n4m_estimator_import <- function(bytes) {
 }
 
 #' @export
-print.n4m_estimator <- function(x, ...) {
-  roles <- sub("^n4m_", "", setdiff(class(x), "n4m_estimator"))
-  cat("<n4m ", x$method_id, " (", paste(roles, collapse = ", "), ")",
-      if (is.null(x$state)) ", unfitted" else ", fitted", ">\n", sep = "")
+print.n4m_method <- function(x, ...) {
+  roles <- sub("^n4m_", "", setdiff(class(x), c("n4m_estimator", "n4m_method")))
+  state <- if (!inherits(x, "n4m_estimator")) "" else if (is.null(x$state)) ", unfitted" else ", fitted"
+  cat("<n4m ", x$method_id, " (", paste(roles, collapse = ", "), ")", state, ">\n", sep = "")
   invisible(x)
+}
+
+.n4m_procedure_run <- function(object, X, y = NULL, inputs = list()) {
+  X <- .n4m_as_matrix(X)
+  y_matrix <- if (is.null(y)) NULL else matrix(as.double(y), nrow = nrow(X))
+  inputs <- inputs[!vapply(inputs, is.null, logical(1))]
+  if (!is.null(inputs$X_target)) inputs$X_target <- .n4m_as_matrix(inputs$X_target, "X_target")
+  params <- object$params[!vapply(object$params, is.null, logical(1))]
+  .Call("r_n4m_procedure_run", object$method_id, params, X, y_matrix, inputs, PACKAGE = "n4m")
+}
+
+#' Generic native procedures
+#'
+#' Constructors such as \code{n4m_kennard_stone()}, \code{n4m_gaussian_noise()}
+#' or \code{n4m_regression_metrics()} return a procedure: a catalog method run
+#' once, without fitted state. Its class is its role:
+#' \code{n4m_splitter} (\code{n4m_split}), \code{n4m_augmenter}
+#' (\code{n4m_augment}, train-only) or \code{n4m_procedure}
+#' (\code{n4m_run}). Parameters, seeds included, are native and shared with
+#' the Python and JS/WASM bindings.
+#'
+#' @param object A procedure from one of the generated constructors.
+#' @param X Numeric matrix (rows are samples).
+#' @param y Optional target vector or matrix, when the method uses it.
+#' @param groups Optional sample groups for group-aware splitters.
+#' @param axis Optional spectral axis for axis-dependent augmenters.
+#' @param ... Further named inputs (\code{X_target}, \code{fold_ids}, ...).
+#' @return \code{n4m_split()} a list of folds, each \code{list(train, test)}
+#'   of 1-based row indices; \code{n4m_augment()} the augmented matrix;
+#'   \code{n4m_run()} a named list of the native outputs.
+#' @name n4m_procedures
+NULL
+
+#' @rdname n4m_procedures
+#' @export
+n4m_split <- function(object, X, y = NULL, groups = NULL) UseMethod("n4m_split")
+
+#' @rdname n4m_procedures
+#' @export
+n4m_split.n4m_splitter <- function(object, X, y = NULL, groups = NULL) {
+  out <- .n4m_procedure_run(object, X, y, list(groups = groups))
+  lapply(out[[".folds"]], function(f) list(train = f[[1L]] + 1, test = f[[2L]] + 1))
+}
+
+#' @rdname n4m_procedures
+#' @export
+n4m_augment <- function(object, X, axis = NULL) UseMethod("n4m_augment")
+
+#' @rdname n4m_procedures
+#' @export
+n4m_augment.n4m_augmenter <- function(object, X, axis = NULL) {
+  .n4m_procedure_run(object, X, inputs = list(axis = axis))[["X"]]
+}
+
+#' @rdname n4m_procedures
+#' @export
+n4m_run <- function(object, X, y = NULL, ...) UseMethod("n4m_run")
+
+#' @rdname n4m_procedures
+#' @export
+n4m_run.n4m_procedure <- function(object, X, y = NULL, ...) {
+  .n4m_procedure_run(object, X, y, list(...))
 }

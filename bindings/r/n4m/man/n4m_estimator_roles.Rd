@@ -15,7 +15,7 @@
 \alias{n4m_selected_indices.n4m_selector}
 \alias{n4m_estimator_export}
 \alias{n4m_estimator_import}
-\alias{print.n4m_estimator}
+\alias{print.n4m_method}
 \title{Generic native estimator roles}
 \usage{
 n4m_estimator_fit(object, X, y = NULL, ...)
@@ -50,7 +50,7 @@ n4m_estimator_export(object)
 
 n4m_estimator_import(bytes)
 
-\method{print}{n4m_estimator}(x, ...)
+\method{print}{n4m_method}(x, ...)
 }
 \arguments{
 \item{object}{An estimator from one of the generated constructors

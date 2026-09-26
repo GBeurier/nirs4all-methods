@@ -38,7 +38,7 @@ def data():
     return X[:36], y[:36], X[36:], X_target, y[36:]
 
 
-def manifest_estimators() -> set[str]:
+def manifest_methods() -> set[str]:
     count = ctypes.c_int32()
     assert lib.n4m_method_count(ctypes.byref(count)) == 0
     ids = set()
@@ -46,8 +46,7 @@ def manifest_estimators() -> set[str]:
         info = MethodInfoV1()
         info.struct_size = ctypes.sizeof(info)
         assert lib.n4m_method_info_v1(i, ctypes.addressof(info)) == 0
-        if info.kind == 1:
-            ids.add(info.method_id.decode())
+        ids.add(info.method_id.decode())
     return ids
 
 
@@ -87,7 +86,7 @@ PURE_TRANSFORMERS = [
 
 
 def test_generated_classes_match_native_manifest():
-    assert set(_REGISTRY) == manifest_estimators()
+    assert set(_REGISTRY) == manifest_methods()
 
 
 ROLE_BIT = {
@@ -234,7 +233,9 @@ def test_cross_language_fixture_states_replay():
     )
     doc = json.loads(fixture.read_text(encoding="utf-8"))
     X_test = np.asarray(doc["x_test"])
-    assert {case["method_id"] for case in doc["cases"]} == set(_REGISTRY)
+    assert {case["method_id"] for case in doc["cases"]} == {
+        m for m, c in _REGISTRY.items() if issubclass(c, roles.NativeEstimator)
+    }
     for case in doc["cases"]:
         if case["n4me_base64"] is None:
             continue  # train-only filter without a serializable state
@@ -913,13 +914,96 @@ def test_public_class_lookup_token_and_tags():
 
     import n4m.roles as public
 
-    cls = roles.estimator_class("models.pls.cppls")
+    cls = roles.method_class("models.pls.cppls")
     assert cls is roles.CPPLS and cls.__module__ == "n4m.roles"
     assert getattr(public, cls.__qualname__) is cls
     with pytest.raises(ValueError, match="no n4m role class"):
-        roles.estimator_class("models.pls.missing")
+        roles.method_class("models.pls.missing")
     assert get_tags(roles.CPPLS()).target_tags.required
     assert not get_tags(roles.SNV()).target_tags.required
     assert roles.Resampler.input_requirements()["axis"] == "required"
     assert roles.DIPLS.input_requirements()["X_target"] == "required"
     assert roles.PLSLDA.input_requirements()["labels"] == "required"
+
+
+# Procedures -----------------------------------------------------------------
+
+SPLITTERS = [c for c in ALL if issubclass(c, roles.NativeSplitter)]
+AUGMENTERS = [c for c in ALL if issubclass(c, roles.NativeAugmenter)]
+
+
+def _procedure_data():
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(40, 8))
+    y = X[:, 0] + 0.1 * rng.normal(size=40)
+    return X, y, np.arange(40) % 20
+
+
+@pytest.mark.parametrize("cls", SPLITTERS, ids=lambda c: c.__name__)
+def test_splitter_matches_n4m_reference(cls):
+    """Folds equal the n4m reference splitters, fold by fold."""
+    import inspect
+
+    import n4m.model_selection.splitters as reference
+
+    X, y, groups = _procedure_data()
+    needs = cls.input_requirements()
+    est = cls()
+    folds = list(
+        est.split(
+            X,
+            y if needs["y"] != "none" else None,
+            groups if needs["groups"] != "none" else None,
+        )
+    )
+    assert est.get_n_splits(
+        X,
+        y if needs["y"] != "none" else None,
+        groups if needs["groups"] != "none" else None,
+    ) == len(folds)
+    for train, test in folds:
+        assert np.intersect1d(train, test).size == 0
+        assert train.size and test.size and max(train.max(), test.max()) < X.shape[0]
+    ref = getattr(reference, cls.__name__)()
+    data = {
+        "X": X,
+        "y": y.reshape(-1, 1),
+        "groups": groups,
+    }  # references take y as a column
+    out = ref.split(*(data[a] for a in inspect.signature(ref.split).parameters))
+    ref_folds = [out] if isinstance(out, tuple) else list(out)
+    assert len(ref_folds) == len(folds)
+    for (a_tr, a_te), (b_tr, b_te) in zip(folds, ref_folds, strict=True):
+        np.testing.assert_array_equal(a_tr, b_tr)
+        np.testing.assert_array_equal(a_te, b_te)
+    assert not hasattr(est, "fit") and not hasattr(est, "transform")
+
+
+def test_splitter_is_a_scikit_learn_cv():
+    X, y, _ = _procedure_data()
+    scores = cross_val_score(
+        roles.PLSRegression(n_components=2), X, y, cv=roles.SPXYFold(n_splits=4)
+    )
+    assert scores.shape == (4,)
+
+
+@pytest.mark.parametrize("cls", AUGMENTERS, ids=lambda c: c.__name__)
+def test_augmenter_is_seeded_and_shape_preserving(cls):
+    X, _, _ = _procedure_data()
+    X = np.abs(X) + 1.0  # positive, spectrum-like rows
+    needs = cls.input_requirements()
+    axis = 1000.0 + 2.0 * np.arange(X.shape[1]) if needs["axis"] == "required" else None
+    out = cls().augment(X, axis=axis)
+    assert out.shape == X.shape and np.all(np.isfinite(out))
+    np.testing.assert_array_equal(cls().augment(X, axis=axis), out)
+
+
+def test_generic_procedure_returns_named_outputs():
+    _, y, _ = _procedure_data()
+    pred = y + 0.1
+    out = roles.RegressionMetrics().run(pred.reshape(-1, 1), y)
+    assert out  # every named output of the native function
+    rmse = [v for k, v in out.items() if k.lower() == "rmse"]
+    np.testing.assert_allclose(rmse, [0.1], rtol=1e-12)
+    with pytest.raises(N4MError):
+        roles.RegressionMetrics().run(pred.reshape(-1, 1))  # y is required

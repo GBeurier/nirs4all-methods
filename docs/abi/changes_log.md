@@ -85,6 +85,13 @@ augmenters with nanometre constants, and `stray_light` (its C entry point
 requires an axis it never reads). N4ME import now refuses a payload naming
 a procedure.
 
+`n4m_method_result_entry_count` / `n4m_method_result_entry` enumerate a
+result's named outputs (sorted by name, with their kind), so bindings read any
+procedure result without per-method name lists. The Python, R and JS/WASM
+facades expose splitters (`split`, a scikit-learn cross-validator in Python),
+augmenters (`augment`) and generic procedures (`run`, the named outputs); the
+shared fixture replays every procedure's default run in the three bindings.
+
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (superseded, never released)
 
 A draft `n4m_sample_filter_*` / `n4m_feature_filter_*` surface was added on a

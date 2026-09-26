@@ -9,12 +9,966 @@ from __future__ import annotations
 from typing import ClassVar
 
 from ._base import (
+    NativeAugmenter,
     NativeClassifier,
+    NativeProcedure,
     NativeRegressor,
     NativeSampleFilter,
     NativeSelector,
+    NativeSplitter,
     NativeTransformer,
 )
+
+
+class LinearDrift(NativeAugmenter):
+    """Native ``augmentation.drift.linear_drift`` (augmenter)."""
+
+    _method_id = "augmentation.drift.linear_drift"
+    _param_types: ClassVar[dict[str, str]] = {
+        "offset_min": "double",
+        "offset_max": "double",
+        "slope_min": "double",
+        "slope_max": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        offset_min=-0.05,
+        offset_max=0.05,
+        slope_min=-0.01,
+        slope_max=0.01,
+        seed=0,
+    ) -> None:
+        self.offset_min = offset_min
+        self.offset_max = offset_max
+        self.slope_min = slope_min
+        self.slope_max = slope_max
+        self.seed = seed
+
+
+class PathLength(NativeAugmenter):
+    """Native ``augmentation.drift.path_length`` (augmenter)."""
+
+    _method_id = "augmentation.drift.path_length"
+    _param_types: ClassVar[dict[str, str]] = {
+        "path_length_std": "double",
+        "min_path_length": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        path_length_std=0.05,
+        min_path_length=0.1,
+        seed=0,
+    ) -> None:
+        self.path_length_std = path_length_std
+        self.min_path_length = min_path_length
+        self.seed = seed
+
+
+class PolyDrift(NativeAugmenter):
+    """Native ``augmentation.drift.poly_drift`` (augmenter)."""
+
+    _method_id = "augmentation.drift.poly_drift"
+    _param_types: ClassVar[dict[str, str]] = {
+        "coeff_min": "double_array",
+        "coeff_max": "double_array",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        coeff_min=(-0.01, -0.01, -0.01),
+        coeff_max=(0.01, 0.01, 0.01),
+        seed=0,
+    ) -> None:
+        self.coeff_min = coeff_min
+        self.coeff_max = coeff_max
+        self.seed = seed
+
+
+class EdgeCurvature(NativeAugmenter):
+    """Native ``augmentation.edge_artifacts.edge_curvature`` (augmenter).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "augmentation.edge_artifacts.edge_curvature"
+    _param_types: ClassVar[dict[str, str]] = {
+        "curvature_strength": "double",
+        "curvature_type": "enum",
+        "asymmetry": "double",
+        "edge_focus": "double",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "curvature_type": (
+            "random",
+            "smile",
+            "frown",
+            "asymmetric",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        curvature_strength=0.02,
+        curvature_type="random",
+        asymmetry=0,
+        edge_focus=0.7,
+        seed=0,
+    ) -> None:
+        self.curvature_strength = curvature_strength
+        self.curvature_type = curvature_type
+        self.asymmetry = asymmetry
+        self.edge_focus = edge_focus
+        self.seed = seed
+
+
+class TruncatedPeak(NativeAugmenter):
+    """Native ``augmentation.edge_artifacts.truncated_peak`` (augmenter).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "augmentation.edge_artifacts.truncated_peak"
+    _param_types: ClassVar[dict[str, str]] = {
+        "peak_probability": "double",
+        "amplitude_min": "double",
+        "amplitude_max": "double",
+        "width_min": "double",
+        "width_max": "double",
+        "left_edge": "bool",
+        "right_edge": "bool",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        peak_probability=0.5,
+        amplitude_min=0.01,
+        amplitude_max=0.1,
+        width_min=50,
+        width_max=200,
+        left_edge=True,
+        right_edge=True,
+        seed=0,
+    ) -> None:
+        self.peak_probability = peak_probability
+        self.amplitude_min = amplitude_min
+        self.amplitude_max = amplitude_max
+        self.width_min = width_min
+        self.width_max = width_max
+        self.left_edge = left_edge
+        self.right_edge = right_edge
+        self.seed = seed
+
+
+class GaussianNoise(NativeAugmenter):
+    """Native ``augmentation.noise.gaussian_noise`` (augmenter)."""
+
+    _method_id = "augmentation.noise.gaussian_noise"
+    _param_types: ClassVar[dict[str, str]] = {
+        "sigma": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        sigma=0.01,
+        seed=0,
+    ) -> None:
+        self.sigma = sigma
+        self.seed = seed
+
+
+class HeteroNoise(NativeAugmenter):
+    """Native ``augmentation.noise.hetero_noise`` (augmenter)."""
+
+    _method_id = "augmentation.noise.hetero_noise"
+    _param_types: ClassVar[dict[str, str]] = {
+        "noise_base": "double",
+        "noise_signal_dep": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        noise_base=0.001,
+        noise_signal_dep=0.01,
+        seed=0,
+    ) -> None:
+        self.noise_base = noise_base
+        self.noise_signal_dep = noise_signal_dep
+        self.seed = seed
+
+
+class MultiplicativeNoise(NativeAugmenter):
+    """Native ``augmentation.noise.multiplicative_noise`` (augmenter)."""
+
+    _method_id = "augmentation.noise.multiplicative_noise"
+    _param_types: ClassVar[dict[str, str]] = {
+        "sigma_gain": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        sigma_gain=0.01,
+        seed=0,
+    ) -> None:
+        self.sigma_gain = sigma_gain
+        self.seed = seed
+
+
+class SpikeNoise(NativeAugmenter):
+    """Native ``augmentation.noise.spike_noise`` (augmenter)."""
+
+    _method_id = "augmentation.noise.spike_noise"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_spikes_min": "int",
+        "n_spikes_max": "int",
+        "amplitude_min": "double",
+        "amplitude_max": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_spikes_min=1,
+        n_spikes_max=3,
+        amplitude_min=-0.1,
+        amplitude_max=0.1,
+        seed=0,
+    ) -> None:
+        self.n_spikes_min = n_spikes_min
+        self.n_spikes_max = n_spikes_max
+        self.amplitude_min = amplitude_min
+        self.amplitude_max = amplitude_max
+        self.seed = seed
+
+
+class RandomXOp(NativeAugmenter):
+    """Native ``augmentation.random.random_x_op`` (augmenter)."""
+
+    _method_id = "augmentation.random.random_x_op"
+    _param_types: ClassVar[dict[str, str]] = {
+        "op_kind": "enum",
+        "operator_range_min": "double",
+        "operator_range_max": "double",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "op_kind": (
+            "multiply",
+            "add",
+            "subtract",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        op_kind="multiply",
+        operator_range_min=0.97,
+        operator_range_max=1.03,
+        seed=0,
+    ) -> None:
+        self.op_kind = op_kind
+        self.operator_range_min = operator_range_min
+        self.operator_range_max = operator_range_max
+        self.seed = seed
+
+
+class RotateTranslate(NativeAugmenter):
+    """Native ``augmentation.random.rotate_translate`` (augmenter)."""
+
+    _method_id = "augmentation.random.rotate_translate"
+    _param_types: ClassVar[dict[str, str]] = {
+        "p_range": "double",
+        "y_factor": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        p_range=2,
+        y_factor=3,
+        seed=0,
+    ) -> None:
+        self.p_range = p_range
+        self.y_factor = y_factor
+        self.seed = seed
+
+
+class BatchEffect(NativeAugmenter):
+    """Native ``augmentation.scattering.batch_effect`` (augmenter)."""
+
+    _method_id = "augmentation.scattering.batch_effect"
+    _param_types: ClassVar[dict[str, str]] = {
+        "offset_std": "double",
+        "slope_std": "double",
+        "gain_std": "double",
+        "variation_scope": "enum",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "variation_scope": (
+            "sample",
+            "batch",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        offset_std=0,
+        slope_std=0,
+        gain_std=0,
+        variation_scope="sample",
+        seed=0,
+    ) -> None:
+        self.offset_std = offset_std
+        self.slope_std = slope_std
+        self.gain_std = gain_std
+        self.variation_scope = variation_scope
+        self.seed = seed
+
+
+class DeadBand(NativeAugmenter):
+    """Native ``augmentation.scattering.dead_band`` (augmenter)."""
+
+    _method_id = "augmentation.scattering.dead_band"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_bands": "int",
+        "width_low": "int",
+        "width_high": "int",
+        "noise_std": "double",
+        "probability": "double",
+        "variation_scope": "enum",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "variation_scope": (
+            "sample",
+            "batch",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        n_bands=1,
+        width_low=5,
+        width_high=10,
+        noise_std=0.05,
+        probability=0,
+        variation_scope="sample",
+        seed=0,
+    ) -> None:
+        self.n_bands = n_bands
+        self.width_low = width_low
+        self.width_high = width_high
+        self.noise_std = noise_std
+        self.probability = probability
+        self.variation_scope = variation_scope
+        self.seed = seed
+
+
+class EMSCDistort(NativeAugmenter):
+    """Native ``augmentation.scattering.emsc_distort`` (augmenter).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "augmentation.scattering.emsc_distort"
+    _param_types: ClassVar[dict[str, str]] = {
+        "mult_low": "double",
+        "mult_high": "double",
+        "add_low": "double",
+        "add_high": "double",
+        "polynomial_order": "int",
+        "polynomial_strength": "double",
+        "correlation": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        mult_low=0.9,
+        mult_high=1.1,
+        add_low=-0.05,
+        add_high=0.05,
+        polynomial_order=2,
+        polynomial_strength=0.02,
+        correlation=0.3,
+        seed=0,
+    ) -> None:
+        self.mult_low = mult_low
+        self.mult_high = mult_high
+        self.add_low = add_low
+        self.add_high = add_high
+        self.polynomial_order = polynomial_order
+        self.polynomial_strength = polynomial_strength
+        self.correlation = correlation
+        self.seed = seed
+
+
+class InstrumentBroaden(NativeAugmenter):
+    """Native ``augmentation.scattering.instrument_broaden`` (augmenter)."""
+
+    _method_id = "augmentation.scattering.instrument_broaden"
+    _param_types: ClassVar[dict[str, str]] = {
+        "fwhm": "double",
+        "use_fwhm_range": "bool",
+        "fwhm_low": "double",
+        "fwhm_high": "double",
+        "variation_scope": "enum",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "variation_scope": (
+            "sample",
+            "batch",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        fwhm=5,
+        use_fwhm_range=False,
+        fwhm_low=3,
+        fwhm_high=8,
+        variation_scope="sample",
+        seed=0,
+    ) -> None:
+        self.fwhm = fwhm
+        self.use_fwhm_range = use_fwhm_range
+        self.fwhm_low = fwhm_low
+        self.fwhm_high = fwhm_high
+        self.variation_scope = variation_scope
+        self.seed = seed
+
+
+class ScatterSimMSC(NativeAugmenter):
+    """Native ``augmentation.scattering.scatter_sim_msc`` (augmenter)."""
+
+    _method_id = "augmentation.scattering.scatter_sim_msc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "a_low": "double",
+        "a_high": "double",
+        "b_low": "double",
+        "b_high": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        a_low=-0.05,
+        a_high=0.05,
+        b_low=0.9,
+        b_high=1.1,
+        seed=0,
+    ) -> None:
+        self.a_low = a_low
+        self.a_high = a_high
+        self.b_low = b_low
+        self.b_high = b_high
+        self.seed = seed
+
+
+class BandMask(NativeAugmenter):
+    """Native ``augmentation.spectral.band_mask`` (augmenter)."""
+
+    _method_id = "augmentation.spectral.band_mask"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_bands_lo": "int",
+        "n_bands_hi": "int",
+        "bw_lo": "int",
+        "bw_hi": "int",
+        "mode": "enum",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "mode": (
+            "zero",
+            "interp",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        n_bands_lo=1,
+        n_bands_hi=3,
+        bw_lo=5,
+        bw_hi=15,
+        mode="zero",
+        seed=0,
+    ) -> None:
+        self.n_bands_lo = n_bands_lo
+        self.n_bands_hi = n_bands_hi
+        self.bw_lo = bw_lo
+        self.bw_hi = bw_hi
+        self.mode = mode
+        self.seed = seed
+
+
+class BandPerturb(NativeAugmenter):
+    """Native ``augmentation.spectral.band_perturb`` (augmenter)."""
+
+    _method_id = "augmentation.spectral.band_perturb"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_bands": "int",
+        "bw_lo": "int",
+        "bw_hi": "int",
+        "gain_lo": "double",
+        "gain_hi": "double",
+        "offset_lo": "double",
+        "offset_hi": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_bands=3,
+        bw_lo=5,
+        bw_hi=15,
+        gain_lo=0.9,
+        gain_hi=1.1,
+        offset_lo=-0.01,
+        offset_hi=0.01,
+        seed=0,
+    ) -> None:
+        self.n_bands = n_bands
+        self.bw_lo = bw_lo
+        self.bw_hi = bw_hi
+        self.gain_lo = gain_lo
+        self.gain_hi = gain_hi
+        self.offset_lo = offset_lo
+        self.offset_hi = offset_hi
+        self.seed = seed
+
+
+class ChannelDropout(NativeAugmenter):
+    """Native ``augmentation.spectral.channel_dropout`` (augmenter)."""
+
+    _method_id = "augmentation.spectral.channel_dropout"
+    _param_types: ClassVar[dict[str, str]] = {
+        "dropout_prob": "double",
+        "mode": "enum",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "mode": (
+            "zero",
+            "interp",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        dropout_prob=0.05,
+        mode="zero",
+        seed=0,
+    ) -> None:
+        self.dropout_prob = dropout_prob
+        self.mode = mode
+        self.seed = seed
+
+
+class GaussJitter(NativeAugmenter):
+    """Native ``augmentation.spectral.gauss_jitter`` (augmenter)."""
+
+    _method_id = "augmentation.spectral.gauss_jitter"
+    _param_types: ClassVar[dict[str, str]] = {
+        "sigma_lo": "double",
+        "sigma_hi": "double",
+        "kernel_width": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        sigma_lo=0.5,
+        sigma_hi=1.5,
+        kernel_width=9,
+        seed=0,
+    ) -> None:
+        self.sigma_lo = sigma_lo
+        self.sigma_hi = sigma_hi
+        self.kernel_width = kernel_width
+        self.seed = seed
+
+
+class LocalClip(NativeAugmenter):
+    """Native ``augmentation.spectral.local_clip`` (augmenter)."""
+
+    _method_id = "augmentation.spectral.local_clip"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_regions": "int",
+        "width_lo": "int",
+        "width_hi": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_regions=1,
+        width_lo=5,
+        width_hi=15,
+        seed=0,
+    ) -> None:
+        self.n_regions = n_regions
+        self.width_lo = width_lo
+        self.width_hi = width_hi
+        self.seed = seed
+
+
+class MagnitudeWarp(NativeAugmenter):
+    """Native ``augmentation.spectral.magnitude_warp`` (augmenter)."""
+
+    _method_id = "augmentation.spectral.magnitude_warp"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_control_points": "int",
+        "gain_lo": "double",
+        "gain_hi": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_control_points=5,
+        gain_lo=0.9,
+        gain_hi=1.1,
+        seed=0,
+    ) -> None:
+        self.n_control_points = n_control_points
+        self.gain_lo = gain_lo
+        self.gain_hi = gain_hi
+        self.seed = seed
+
+
+class UnsharpMask(NativeAugmenter):
+    """Native ``augmentation.spectral.unsharp_mask`` (augmenter)."""
+
+    _method_id = "augmentation.spectral.unsharp_mask"
+    _param_types: ClassVar[dict[str, str]] = {
+        "amount_lo": "double",
+        "amount_hi": "double",
+        "sigma": "double",
+        "kernel_width": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        amount_lo=0.1,
+        amount_hi=0.5,
+        sigma=1,
+        kernel_width=11,
+        seed=0,
+    ) -> None:
+        self.amount_lo = amount_lo
+        self.amount_hi = amount_hi
+        self.sigma = sigma
+        self.kernel_width = kernel_width
+        self.seed = seed
+
+
+class SplineCurveSimplification(NativeAugmenter):
+    """Native ``augmentation.splines.spline_curve_simplification`` (augmenter)."""
+
+    _method_id = "augmentation.splines.spline_curve_simplification"
+    _param_types: ClassVar[dict[str, str]] = {
+        "spline_points": "int",
+        "uniform": "bool",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        spline_points=-1,
+        uniform=False,
+        seed=0,
+    ) -> None:
+        self.spline_points = spline_points
+        self.uniform = uniform
+        self.seed = seed
+
+
+class SplineSmoothing(NativeAugmenter):
+    """Native ``augmentation.splines.spline_smoothing`` (augmenter)."""
+
+    _method_id = "augmentation.splines.spline_smoothing"
+    _param_types: ClassVar[dict[str, str]] = {
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        seed=0,
+    ) -> None:
+        self.seed = seed
+
+
+class SplineXPerturbations(NativeAugmenter):
+    """Native ``augmentation.splines.spline_x_perturbations`` (augmenter)."""
+
+    _method_id = "augmentation.splines.spline_x_perturbations"
+    _param_types: ClassVar[dict[str, str]] = {
+        "spline_degree": "int",
+        "perturbation_density": "double",
+        "perturbation_range_min": "double",
+        "perturbation_range_max": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        spline_degree=3,
+        perturbation_density=0.05,
+        perturbation_range_min=-0.1,
+        perturbation_range_max=0.1,
+        seed=0,
+    ) -> None:
+        self.spline_degree = spline_degree
+        self.perturbation_density = perturbation_density
+        self.perturbation_range_min = perturbation_range_min
+        self.perturbation_range_max = perturbation_range_max
+        self.seed = seed
+
+
+class SplineXSimplification(NativeAugmenter):
+    """Native ``augmentation.splines.spline_x_simplification`` (augmenter)."""
+
+    _method_id = "augmentation.splines.spline_x_simplification"
+    _param_types: ClassVar[dict[str, str]] = {
+        "spline_points": "int",
+        "uniform": "bool",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        spline_points=-1,
+        uniform=False,
+        seed=0,
+    ) -> None:
+        self.spline_points = spline_points
+        self.uniform = uniform
+        self.seed = seed
+
+
+class SplineYPerturbations(NativeAugmenter):
+    """Native ``augmentation.splines.spline_y_perturbations`` (augmenter)."""
+
+    _method_id = "augmentation.splines.spline_y_perturbations"
+    _param_types: ClassVar[dict[str, str]] = {
+        "spline_points": "int",
+        "perturbation_intensity": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        spline_points=-1,
+        perturbation_intensity=0.005,
+        seed=0,
+    ) -> None:
+        self.spline_points = spline_points
+        self.perturbation_intensity = perturbation_intensity
+        self.seed = seed
+
+
+class LocalWarp(NativeAugmenter):
+    """Native ``augmentation.wavelength.local_warp`` (augmenter)."""
+
+    _method_id = "augmentation.wavelength.local_warp"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_control_points": "int",
+        "max_shift": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_control_points=5,
+        max_shift=1,
+        seed=0,
+    ) -> None:
+        self.n_control_points = n_control_points
+        self.max_shift = max_shift
+        self.seed = seed
+
+
+class WavelengthShift(NativeAugmenter):
+    """Native ``augmentation.wavelength.wavelength_shift`` (augmenter)."""
+
+    _method_id = "augmentation.wavelength.wavelength_shift"
+    _param_types: ClassVar[dict[str, str]] = {
+        "shift_lo": "double",
+        "shift_hi": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        shift_lo=-1,
+        shift_hi=1,
+        seed=0,
+    ) -> None:
+        self.shift_lo = shift_lo
+        self.shift_hi = shift_hi
+        self.seed = seed
+
+
+class WavelengthStretch(NativeAugmenter):
+    """Native ``augmentation.wavelength.wavelength_stretch`` (augmenter)."""
+
+    _method_id = "augmentation.wavelength.wavelength_stretch"
+    _param_types: ClassVar[dict[str, str]] = {
+        "stretch_lo": "double",
+        "stretch_hi": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        stretch_lo=0.99,
+        stretch_hi=1.01,
+        seed=0,
+    ) -> None:
+        self.stretch_lo = stretch_lo
+        self.stretch_hi = stretch_hi
+        self.seed = seed
+
+
+class ApproximatePress(NativeProcedure):
+    """Native ``diagnostics.approximate_press`` (generic)."""
+
+    _method_id = "diagnostics.approximate_press"
+    _param_types: ClassVar[dict[str, str]] = {
+        "max_components": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        max_components=10,
+    ) -> None:
+        self.max_components = max_components
+
+
+class ModelSelection(NativeProcedure):
+    """Native ``diagnostics.model_selection`` (generic)."""
+
+    _method_id = "diagnostics.model_selection"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
+
+
+class PLSDiagnostics(NativeProcedure):
+    """Native ``diagnostics.pls_diagnostics`` (generic)."""
+
+    _method_id = "diagnostics.pls_diagnostics"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+    ) -> None:
+        self.n_components = n_components
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+
+class PLSMonitoring(NativeProcedure):
+    """Native ``diagnostics.pls_monitoring`` (generic).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "diagnostics.pls_monitoring"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+        "alpha": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+        alpha=0.05,
+    ) -> None:
+        self.n_components = n_components
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+        self.alpha = alpha
+
+
+class RegressionMetrics(NativeProcedure):
+    """Native ``diagnostics.regression_metrics`` (generic)."""
+
+    _method_id = "diagnostics.regression_metrics"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
 
 
 class CorrelationFilter(NativeSelector):
@@ -2839,6 +3793,361 @@ class WVCThreshold(NativeSelector):
         self.min_selected = min_selected
 
 
+class BinnedStratifiedGroupKFold(NativeSplitter):
+    """Native ``splitters.binned_strat_group_kfold`` (splitter).
+
+    Required fit inputs: groups.
+    """
+
+    _method_id = "splitters.binned_strat_group_kfold"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_splits": "int",
+        "n_bins": "int",
+        "strategy": "enum",
+        "shuffle": "bool",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "strategy": (
+            "uniform",
+            "quantile",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        n_splits=5,
+        n_bins=5,
+        strategy="uniform",
+        shuffle=True,
+        seed=0,
+    ) -> None:
+        self.n_splits = n_splits
+        self.n_bins = n_bins
+        self.strategy = strategy
+        self.shuffle = shuffle
+        self.seed = seed
+
+
+class KBinsStratified(NativeSplitter):
+    """Native ``splitters.kbins_stratified`` (splitter)."""
+
+    _method_id = "splitters.kbins_stratified"
+    _param_types: ClassVar[dict[str, str]] = {
+        "test_size": "double",
+        "seed": "int",
+        "n_bins": "int",
+        "strategy": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "strategy": (
+            "uniform",
+            "quantile",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        test_size=0.25,
+        seed=0,
+        n_bins=5,
+        strategy="uniform",
+    ) -> None:
+        self.test_size = test_size
+        self.seed = seed
+        self.n_bins = n_bins
+        self.strategy = strategy
+
+
+class KennardStone(NativeSplitter):
+    """Native ``splitters.kennard_stone`` (splitter)."""
+
+    _method_id = "splitters.kennard_stone"
+    _param_types: ClassVar[dict[str, str]] = {
+        "test_size": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        test_size=0.25,
+    ) -> None:
+        self.test_size = test_size
+
+
+class KMeans(NativeSplitter):
+    """Native ``splitters.kmeans`` (splitter)."""
+
+    _method_id = "splitters.kmeans"
+    _param_types: ClassVar[dict[str, str]] = {
+        "test_size": "double",
+        "seed": "int",
+        "max_iter": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        test_size=0.25,
+        seed=0,
+        max_iter=100,
+    ) -> None:
+        self.test_size = test_size
+        self.seed = seed
+        self.max_iter = max_iter
+
+
+class SPlitSplitter(NativeSplitter):
+    """Native ``splitters.split_splitter`` (splitter)."""
+
+    _method_id = "splitters.split_splitter"
+    _param_types: ClassVar[dict[str, str]] = {
+        "test_size": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        test_size=0.25,
+        seed=0,
+    ) -> None:
+        self.test_size = test_size
+        self.seed = seed
+
+
+class SPXY(NativeSplitter):
+    """Native ``splitters.spxy`` (splitter)."""
+
+    _method_id = "splitters.spxy"
+    _param_types: ClassVar[dict[str, str]] = {
+        "test_size": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        test_size=0.25,
+    ) -> None:
+        self.test_size = test_size
+
+
+class SPXYFold(NativeSplitter):
+    """Native ``splitters.spxy_fold`` (splitter)."""
+
+    _method_id = "splitters.spxy_fold"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_splits": "int",
+        "y_metric": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "y_metric": (
+            "x_only",
+            "euclidean",
+            "hamming",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        n_splits=5,
+        y_metric="euclidean",
+    ) -> None:
+        self.n_splits = n_splits
+        self.y_metric = y_metric
+
+
+class SPXYGroupFold(NativeSplitter):
+    """Native ``splitters.spxy_g_fold`` (splitter).
+
+    Required fit inputs: groups.
+    """
+
+    _method_id = "splitters.spxy_g_fold"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_splits": "int",
+        "y_metric": "enum",
+        "aggregation": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "y_metric": (
+            "x_only",
+            "euclidean",
+            "hamming",
+        ),
+        "aggregation": (
+            "mean",
+            "median",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        n_splits=5,
+        y_metric="euclidean",
+        aggregation="mean",
+    ) -> None:
+        self.n_splits = n_splits
+        self.y_metric = y_metric
+        self.aggregation = aggregation
+
+
+class SystematicCircular(NativeSplitter):
+    """Native ``splitters.systematic_circular`` (splitter)."""
+
+    _method_id = "splitters.systematic_circular"
+    _param_types: ClassVar[dict[str, str]] = {
+        "test_size": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        test_size=0.25,
+        seed=0,
+    ) -> None:
+        self.test_size = test_size
+        self.seed = seed
+
+
+class HotellingT2(NativeProcedure):
+    """Native ``utilities.hotelling_t2`` (generic)."""
+
+    _method_id = "utilities.hotelling_t2"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "alpha": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=5,
+        alpha=0.05,
+    ) -> None:
+        self.n_components = n_components
+        self.alpha = alpha
+
+
+class Moments(NativeProcedure):
+    """Native ``utilities.moments`` (generic)."""
+
+    _method_id = "utilities.moments"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
+
+
+class QResiduals(NativeProcedure):
+    """Native ``utilities.q_residuals`` (generic)."""
+
+    _method_id = "utilities.q_residuals"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "alpha": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=5,
+        alpha=0.05,
+    ) -> None:
+        self.n_components = n_components
+        self.alpha = alpha
+
+
+class SignalTypeDetector(NativeProcedure):
+    """Native ``utilities.signal_type_detector`` (generic)."""
+
+    _method_id = "utilities.signal_type_detector"
+    _param_types: ClassVar[dict[str, str]] = {
+        "confidence_threshold": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        confidence_threshold=0.7,
+    ) -> None:
+        self.confidence_threshold = confidence_threshold
+
+
+class Sweep(NativeProcedure):
+    """Native ``utilities.sweep`` (generic)."""
+
+    _method_id = "utilities.sweep"
+    _param_types: ClassVar[dict[str, str]] = {
+        "cv": "int",
+        "ridge_lambdas": "double_array",
+        "pls_components": "int_array",
+        "heads": "enum",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "heads": (
+            "ridge",
+            "pls",
+            "ridge_pls",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        cv=5,
+        ridge_lambdas=(0.01, 0.1, 1, 10),
+        pls_components=(1, 2, 3, 4, 5),
+        heads="ridge",
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+    ) -> None:
+        self.cv = cv
+        self.ridge_lambdas = ridge_lambdas
+        self.pls_components = pls_components
+        self.heads = heads
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+
+class TransferMetrics(NativeProcedure):
+    """Native ``utilities.transfer_metrics`` (generic).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "utilities.transfer_metrics"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "k_neighbors": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=10,
+        k_neighbors=10,
+        seed=0,
+    ) -> None:
+        self.n_components = n_components
+        self.k_neighbors = k_neighbors
+        self.seed = seed
+
+
 __all__ = [
     "BEADS",
     "BVE",
@@ -2869,6 +4178,7 @@ __all__ = [
     "SNIP",
     "SNV",
     "SPA",
+    "SPXY",
     "ST",
     "T2",
     "UVE",
@@ -2876,22 +4186,31 @@ __all__ = [
     "VISSA",
     "WVC",
     "AirPLS",
+    "ApproximatePress",
     "ArPLS",
     "AreaNormalization",
     "AsLS",
     "BaggingPLS",
+    "BandMask",
+    "BandPerturb",
     "BaselineCenter",
+    "BatchEffect",
     "BiPLS",
+    "BinnedStratifiedGroupKFold",
     "BoostingPLS",
+    "ChannelDropout",
     "ContinuumRegression",
     "CorrelationFilter",
     "CorrelationOptimizedWarping",
     "CropTransformer",
     "CrossCorrelationAlignment",
+    "DeadBand",
     "Derivate",
     "Detrend",
     "DirectStandardization",
     "DynamicTimeWarpingAlignment",
+    "EMSCDistort",
+    "EdgeCurvature",
     "FCKStaticTransformer",
     "FirstDerivative",
     "FlexiblePCA",
@@ -2899,31 +4218,53 @@ __all__ = [
     "FractionToPercent",
     "FromAbsorbance",
     "FusedSparsePLS",
+    "GaussJitter",
     "Gaussian",
+    "GaussianNoise",
     "GroupSparsePLS",
     "Haar",
+    "HeteroNoise",
     "HighLeverageFilter",
+    "HotellingT2",
     "IAsLS",
     "IModPoly",
     "IcoshiftAlignment",
+    "InstrumentBroaden",
     "IntegerKBinsDiscretizer",
+    "KBinsStratified",
+    "KMeans",
+    "KennardStone",
     "KubelkaMunk",
+    "LinearDrift",
     "LocalCentering",
+    "LocalClip",
+    "LocalWarp",
     "LocalizedMSC",
     "LogTransform",
+    "MagnitudeWarp",
     "ModPoly",
+    "ModelSelection",
+    "Moments",
+    "MultiplicativeNoise",
     "Normalize",
     "NorrisWilliams",
+    "PLSDiagnostics",
     "PLSLogistic",
+    "PLSMonitoring",
     "PLSRegression",
+    "PathLength",
     "PercentToFraction",
     "PiecewiseDirectStandardization",
     "PiecewiseMSC",
     "PiecewiseSNV",
+    "PolyDrift",
+    "QResiduals",
     "RandomFrog",
     "RandomSubspacePLS",
+    "RandomXOp",
     "Randomization",
     "RangeDiscretizer",
+    "RegressionMetrics",
     "ResampleTransformer",
     "Resampler",
     "Ridge",
@@ -2931,22 +4272,41 @@ __all__ = [
     "RobustDirectStandardization",
     "RobustPLS",
     "RollingBall",
+    "RotateTranslate",
+    "SPXYFold",
+    "SPXYGroupFold",
+    "SPlitSplitter",
     "SavitzkyGolay",
+    "ScatterSimMSC",
     "ScoreAugmentedProjectionStandardization",
     "SecondDerivative",
     "Shaving",
     "SiPLS",
+    "SignalTypeDetector",
     "SimplePLS",
     "SimpleScale",
     "SparsePLSDA",
     "SparseSIMPLS",
     "SpectralQualityFilter",
+    "SpikeNoise",
+    "SplineCurveSimplification",
+    "SplineSmoothing",
+    "SplineXPerturbations",
+    "SplineXSimplification",
+    "SplineYPerturbations",
     "Stability",
+    "Sweep",
+    "SystematicCircular",
     "ToAbsorbance",
+    "TransferMetrics",
+    "TruncatedPeak",
+    "UnsharpMask",
     "VariableSelect",
     "VariableSortingNormalization",
     "VarianceFilter",
     "WVCThreshold",
+    "WavelengthShift",
+    "WavelengthStretch",
     "Wavelet",
     "WaveletDenoise",
     "WaveletFeatures",

@@ -32,7 +32,8 @@ fit_inputs <- function(names) {
 testthat::test_that("every manifest estimator has a generated R constructor", {
   testthat::expect_setequal(names(constructors), names(n4m:::.n4m_method_roles))
   testthat::expect_setequal(names(constructors),
-                            vapply(fx$cases, `[[`, "", "method_id"))
+                            c(vapply(fx$cases, `[[`, "", "method_id"),
+                              vapply(fx$procedures, `[[`, "", "method_id")))
 })
 
 for (case in fx$cases) {
@@ -125,3 +126,38 @@ testthat::test_that("classifiers encode factor and character labels", {
   testthat::expect_identical(as.character(pred), colnames(proba)[max.col(proba, "first")])
   testthat::expect_error(n4m_estimator_fit(n4m_pls_lda(), fx$x_train), "labels")
 })
+
+for (case in fx$procedures) {
+  local({
+    case <- case
+    testthat::test_that(paste("R procedure reproduces the Python run:", case$method_id), {
+      spec <- constructors[[case$method_id]]()
+      testthat::expect_false(inherits(spec, "n4m_estimator"))
+      X <- fx[[case[["x"]]]]
+      y <- if ("y" %in% case$inputs) fx$y_train
+      groups <- if ("groups" %in% case$inputs) fx$groups
+      axis <- if ("axis" %in% case$inputs) fx$axis
+      if (!is.null(case$folds)) {
+        folds <- n4m_split(spec, X, y, groups)
+        testthat::expect_length(folds, length(case$folds))
+        for (i in seq_along(folds)) {
+          testthat::expect_equal(folds[[i]]$train, case$folds[[i]][[1L]] + 1)
+          testthat::expect_equal(folds[[i]]$test, case$folds[[i]][[2L]] + 1)
+        }
+      }
+      if (!is.null(case[["X"]])) {
+        testthat::expect_equal(n4m_augment(spec, X, axis), case[["X"]], tolerance = 1e-12)
+      }
+      if (!is.null(case$outputs)) {
+        args <- list(spec, X, y)
+        if ("X_target" %in% case$inputs) args$X_target <- fx$x_target
+        out <- do.call(n4m_run, args)
+        testthat::expect_setequal(names(out), names(case$outputs))
+        for (name in names(case$outputs)) {
+          testthat::expect_equal(unname(out[[name]]), case$outputs[[name]], tolerance = 1e-9,
+                                 label = name)
+        }
+      }
+    })
+  })
+}

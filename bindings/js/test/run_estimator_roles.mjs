@@ -93,10 +93,42 @@ for (const c of fixture.cases) {
     fitted.dispose();
 }
 
+// Procedures: the same parameters give the Python run's folds, augmented rows
+// and named outputs.
+const data = {
+    x_train: xTrain, x_predictions: matrix(fixture.x_predictions),
+};
+for (const c of fixture.procedures) {
+    const proc = new (n4m.methodClass(c.method_id))();
+    assert.ok(proc instanceof n4m.NativeProcedure, c.method_id);
+    const X = data[c.x];
+    const y = c.inputs.includes("y") ? yTrain : undefined;
+    if (c.folds) {
+        const folds = proc.split(X, y, c.inputs.includes("groups") ? fixture.groups : undefined);
+        assert.deepEqual(folds.map((f) => [f.train, f.test]), c.folds, `${c.method_id} folds`);
+    }
+    if (c.X) {
+        const axis = c.inputs.includes("axis") ? fixture.axis : undefined;
+        close(proc.augment(X, axis).data, c.X.flat(), 1e-12, `${c.method_id} augment`);
+    }
+    if (c.outputs) {
+        const inputs = c.inputs.includes("X_target") ? { XTarget: matrix(fixture.x_target) } : {};
+        const out = proc.run(X, y, inputs);
+        assert.deepEqual(Object.keys(out).sort(), Object.keys(c.outputs).sort(), c.method_id);
+        for (const [name, expected] of Object.entries(c.outputs)) {
+            const got = out[name];
+            if (typeof expected === "number") close([got], [expected], 1e-9, `${c.method_id}.${name}`);
+            else if (Array.isArray(expected[0])) close(got.data, expected.flat(), 1e-9, `${c.method_id}.${name}`);
+            else close(got, expected, 1e-9, `${c.method_id}.${name}`);
+        }
+    }
+}
+assert.throws(() => n4m.methodClass("models.pls.missing"), /no n4m role class/);
+
 assert.throws(() => new n4m.GroupSparsePLS().fit(xTrain, yTrain), /feature_groups/);
 assert.throws(() => new n4m.CPPLS().fit(xTrain, yTrain, { groups: new Array(xTrain.rows).fill(1) }),
               /not used/);
 assert.throws(() => new n4m.PLSRegression({ solver: "bogus" }).fit(xTrain, yTrain), /solver/);
 assert.throws(() => new n4m.PLSLDA().fit(xTrain), /labels/);
 
-console.log(`estimator roles: ${fixture.cases.length} N4ME states replayed and refitted in JS/WASM`);
+console.log(`estimator roles: ${fixture.cases.length} estimators and ${fixture.procedures.length} procedures reproduced in JS/WASM`);
