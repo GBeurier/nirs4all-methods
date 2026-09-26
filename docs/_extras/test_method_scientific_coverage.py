@@ -540,9 +540,10 @@ def test_runtime_science_overlays_preserve_corrected_algorithm_claims() -> None:
     assert "replayable" in weighted and "coefficient" in weighted
 
     glm = records["pls_glm"]["principle"] + " " + records["pls_glm"]["implementation"]
-    assert "does not construct GLM working responses" in glm
-    assert "reweighted least squares" in glm
-    assert "not fitted by a Poisson likelihood" in glm
+    assert "coefficient of the deflated" in glm and "IRLS" in glm
+
+    cox = records["pls_cox"]["principle"] + " " + records["pls_cox"]["implementation"]
+    assert "deviance residuals" in cox and "Breslow partial likelihood" in cox
 
 
 def test_clean_catalog_corpus_has_complete_science_and_current_bindings(

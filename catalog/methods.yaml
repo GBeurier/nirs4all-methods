@@ -10066,7 +10066,7 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+    notes: "Deviance-residual PLS-Cox (Bastien 2008; plsRcox::coxplsDR with Breslow ties): standardized X, NIPALS PLS1 on the null-model deviance residuals, Breslow Cox Newton-Raphson on the scores. Estimator role: Y has two columns, survival time then event indicator (1 = event, 0 = censored); predict returns the risk score (x - x_mean) . coefficients; state = coefficients + x_mean."
     namespace: "estimators.survival"
     leaf: "pls_cox"
     fq_name: "n4m.estimators.survival.pls_cox"
@@ -10074,6 +10074,26 @@ methods:
       - "n4m_estimators_pls_cox_fit"
     legacy_ids:
       - "models.heads.pls_cox"
+    estimator:
+      kind: estimator
+      adapter: pls_cox
+      roles: [regressor]
+      state: pls_cox
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: max_iter
+          type: int
+          default: 50
+          min: 1
+        - name: tol
+          type: double
+          default: 1e-10
+          min: 0.0
   - method_id: "models.heads.pls_glm"
     family: "models.heads"
     category: "models"
@@ -10103,7 +10123,7 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+    notes: "PLS generalized linear regression (Bastien, Esposito Vinzi & Tenenhaus 2005) as plsRglm runs it with scaleX = FALSE, one model per Y column; gaussian identity, poisson log or binomial logit link. Estimator role: predict returns the mean response g^-1(X B + b); state = input-scale coefficients + intercept + family."
     namespace: "estimators.regression.glm"
     leaf: "pls_glm"
     fq_name: "n4m.estimators.regression.glm.pls_glm"
@@ -10111,6 +10131,30 @@ methods:
       - "n4m_estimators_pls_glm_fit"
     legacy_ids:
       - "models.heads.pls_glm"
+    estimator:
+      kind: estimator
+      adapter: pls_glm
+      roles: [regressor]
+      state: pls_glm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: family
+          type: enum
+          choices: [gaussian, poisson, binomial]
+          default: gaussian
+        - name: max_iter
+          type: int
+          default: 100
+          min: 1
+        - name: tol
+          type: double
+          default: 1e-10
+          min: 0.0
   - method_id: "models.multiblock.o2pls"
     family: "models.multiblock"
     category: "models"

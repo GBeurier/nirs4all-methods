@@ -30,9 +30,29 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+notes: "Deviance-residual PLS-Cox (Bastien 2008; plsRcox::coxplsDR with Breslow ties): standardized X, NIPALS PLS1 on the null-model deviance residuals, Breslow Cox Newton-Raphson on the scores. Estimator role: Y has two columns, survival time then event indicator (1 = event, 0 = censored); predict returns the risk score (x - x_mean) . coefficients; state = coefficients + x_mean."
 c_surface:
   - "n4m_estimators_pls_cox_fit"
+estimator:
+  kind: "estimator"
+  adapter: "pls_cox"
+  roles: "[regressor]"
+  state: "pls_cox"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "max_iter"
+      type: "int"
+      default: 50
+      min: 1
+    - name: "tol"
+      type: "double"
+      default: 1e-10
+      min: 0.0
 fq_name: "n4m.estimators.survival.pls_cox"
 leaf: "pls_cox"
 legacy_ids:

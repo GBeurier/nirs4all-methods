@@ -46,7 +46,7 @@ Current implementation: [cpp/src/core/ecr.cpp](https://github.com/GBeurier/nirs4
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_estimators_ecr_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/regression.h#L364). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_estimators_ecr_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/regression.h#L369). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

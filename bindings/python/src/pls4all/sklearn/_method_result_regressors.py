@@ -459,11 +459,9 @@ class KernelPLSRegression(BaseEstimator, RegressorMixin):
 class PLSGLMRegressor(_MethodResultRegressor):
     """PLS + Generalised Linear Model head (Bastien 2005).
 
-    Currently supports Gaussian (default) and Poisson families via the
-    `poisson` flag. The C result carries `coefficients` and a scalar
-    `intercept`; predict uses `X @ coef + intercept` then applies the
-    link inverse implicitly (the C side returns the response-scale
-    coefficients).
+    Supports Gaussian (default) and Poisson families via the `poisson`
+    flag. The C result carries linear-predictor `coefficients` and
+    `intercept`; predict applies the inverse link to `X @ coef + intercept`.
     """
 
     def __init__(self, n_components: int = 2, *, poisson: bool = False) -> None:
@@ -504,6 +502,8 @@ class PLSGLMRegressor(_MethodResultRegressor):
             preds = X_arr @ self.coef_ + self.intercept_
         else:
             preds = X_arr @ self.coef_.T + self.intercept_
+        if self.poisson:
+            preds = np.exp(preds)
         if (getattr(self, "_y_ndim_", 2) == 1 and preds.ndim == 2
                 and preds.shape[1] == 1):
             preds = preds.ravel()

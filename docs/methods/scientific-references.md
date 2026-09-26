@@ -11,7 +11,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/methods_bibliography.py` — SHA-256 `140554600e9d2f835e1d11a383d9d389c730d86c5205a5f742ea8465824e6d30`
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `a32c7074bf922c3dcaad3923f9e2bc985c96d5efb4bf14dea04abbff62a7e76d`
-- `docs/_extras/scientific_legacy.py` — SHA-256 `b1f2a131fe74b33659a0d29b9480bef356efefa2f1d1bf5e453de1daaaedb87d`
+- `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
 - `docs/_extras/scientific_remaining.py` — SHA-256 `9b9d58596371dcc1fd96d0c1976a3058e640f405a5a6e4e5da49e07ea892b75d`
 
 ## References by documentation page
@@ -646,9 +646,9 @@ de Jong, S. (1993). *SIMPLS: an alternative approach to partial least squares re
 
 **Provenance:** Current implementation: [cpp/src/core/model.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/model.cpp).
 
-### [`pls_cox`](pls_cox.md) — PLS survival pseudo-response approximation
+### [`pls_cox`](pls_cox.md) — Deviance-residual PLS-Cox regression
 
-Implementation-specific approximation inspired by PLS survival modelling; it is not a Cox partial-likelihood estimator.
+Bastien, P. (2008). *Deviance residuals based PLS regression for censored data in high dimensional setting*. Chemometrics and Intelligent Laboratory Systems 91(1), 78--86. DOI [10.1016/j.chemolab.2007.09.009](https://doi.org/10.1016/j.chemolab.2007.09.009).
 
 **Provenance:** Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp).
 
@@ -670,9 +670,9 @@ Hotelling, H. (1931). *The generalization of Student's ratio*. Annals of Mathema
 
 **Provenance:** Current implementation: [cpp/src/core/pls_diagnostics.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pls_diagnostics.cpp).
 
-### [`pls_glm`](pls_glm.md) — PLS-GLM compatibility entry point
+### [`pls_glm`](pls_glm.md) — PLS generalized linear regression
 
-No canonical paper validates the shipped SIMPLS compatibility path as a Poisson/generalized-linear model; it is not attributed to a GLM solver.
+Bastien, P., Esposito Vinzi, V. & Tenenhaus, M. (2005). *PLS generalised linear regression*. Computational Statistics & Data Analysis 48(1), 17--46. DOI [10.1016/j.csda.2004.02.005](https://doi.org/10.1016/j.csda.2004.02.005).
 
 **Provenance:** Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp).
 

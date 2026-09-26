@@ -143,23 +143,38 @@ struct WeightedPlsResult {
 
 // ---- §13 classifier / GLM heads ----------------------------------------
 
+enum class GlmFamily : std::int32_t { Gaussian = 0, Poisson = 1, Binomial = 2 };
+
 struct PlsGlmResult {
+    GlmFamily family{GlmFamily::Gaussian};
     std::int32_t n_features{0};
-    std::int32_t n_classes{0};
-    std::vector<double> coefficients;       // p × n_classes
-    std::vector<double> intercept;          // n_classes
-    std::int32_t n_components{0};
-    bool poisson{false};
+    std::int32_t n_targets{0};
+    std::int32_t n_components{0};           // min(n_components, n - 1, p)
+    std::vector<double> coefficients;       // p × q, linear-predictor scale
+    std::vector<double> intercept;          // q
 };
 
-// PLS-GLM: PLS-reduced design feeding a softmax / Poisson IRLS.
+// PLS generalized linear regression (Bastien, Esposito Vinzi & Tenenhaus
+// 2005), as plsRglm runs it with scaleX = FALSE, one model per Y column.
+// Component k takes as weight of column j the coefficient of the deflated
+// X_j in the GLM of y on (1, t_1..t_{k-1}, X_j) (Gaussian: closed-form
+// partial regression; Poisson log / binomial logit: IRLS), normalized;
+// X is deflated on each score. The final GLM on (1, T) is folded back to
+// the input scale through W (P'W)^{-1}. IRLS stops after `max_iter` steps
+// or when no coefficient moves by `tol`.
 [[nodiscard]] n4m_status_t fit_pls_glm(
     Context& ctx,
-    const Config& cfg,
+    std::int32_t n_components,
+    GlmFamily family,
+    std::int32_t max_iter,
+    double tol,
     const n4m_matrix_view_t& X,
-    const n4m_matrix_view_t& Y,           // n × q (count or one-hot)
-    bool poisson,
+    const n4m_matrix_view_t& Y,           // n × q; Poisson >= 0, binomial in [0, 1]
     PlsGlmResult& out);
+
+// Mean response g^{-1}(X B + b), row-major n × q.
+void predict_pls_glm(const PlsGlmResult& model, const n4m_matrix_view_t& X,
+                     std::vector<double>& out);
 
 struct PlsQdaResult {
     std::int32_t n_classes{0};
@@ -192,19 +207,31 @@ struct PlsQdaResult {
 struct PlsCoxResult {
     std::int32_t n_features{0};
     std::int32_t n_components{0};
-    std::vector<double> coefficients;       // p (linear predictor coefficient)
-    std::vector<double> baseline_hazard;    // n_unique_event_times
-    std::vector<double> event_times;
+    std::vector<double> coefficients;       // p, risk score (x - x_mean) . coefficients
     std::vector<double> x_mean;
+    std::vector<double> event_times;        // distinct event times, ascending
+    std::vector<double> baseline_hazard;    // Breslow increments at event_times
 };
 
+// Deviance-residual PLS-Cox (Bastien 2008; plsRcox::coxplsDR): X is
+// standardized (population sd), the deviance residuals of the null Cox
+// model are regressed on it by NIPALS PLS1, and a Breslow Cox model is
+// fitted on the scores by Newton-Raphson (at most `max_iter` steps, stopping
+// when no coefficient moves by `tol`). Ties use the Breslow risk sets.
+// `event_indicators` is nonzero for an observed event, 0 for censoring.
 [[nodiscard]] n4m_status_t fit_pls_cox(
     Context& ctx,
-    const Config& cfg,
+    std::int32_t n_components,
+    std::int32_t max_iter,
+    double tol,
     const n4m_matrix_view_t& X,
     const std::vector<double>& survival_times,
     const std::vector<std::int32_t>& event_indicators,
     PlsCoxResult& out);
+
+// Risk scores (linear predictors) of new rows.
+void predict_pls_cox(const PlsCoxResult& model, const n4m_matrix_view_t& X,
+                     std::vector<double>& out);
 
 // ---- Calibration transfer + MIR-PLS + missing-aware NIPALS -------------
 

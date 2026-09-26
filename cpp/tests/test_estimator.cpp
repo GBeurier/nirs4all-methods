@@ -64,12 +64,20 @@ struct Data {
 
 struct Inputs {
     Data data;
-    n4m_matrix_view_t X{}, Y{}, Xt{};
+    n4m_matrix_view_t X{}, Y{}, Xt{}, Ysurv{};
     std::vector<int64_t> feature_groups, blocks, labels;
-    std::vector<double> axis;
+    std::vector<double> axis, surv;
     Inputs() {
         X = view(data.x_train.data(), kTrain, kCols);
         Y = view(data.y_train.data(), kTrain, 1);
+        // PLS-Cox: (time, event) rows, the hazard rising with y, every
+        // fourth row censored.
+        for (int64_t i = 0; i < kTrain; ++i) {
+            surv.push_back(std::exp(-0.5 * data.y_train[static_cast<size_t>(i)]) *
+                           (1.0 + 0.01 * static_cast<double>(i)));
+            surv.push_back(i % 4 == 3 ? 0.0 : 1.0);
+        }
+        Ysurv = view(surv.data(), kTrain, 2);
         Xt = view(data.x_target.data(), kTrain, kCols);
         for (int64_t j = 0; j < kCols; ++j) feature_groups.push_back(j / 4);
         for (int64_t j = 0; j < kCols; ++j) axis.push_back(1000.0 + 2.0 * static_cast<double>(j));
@@ -91,7 +99,9 @@ struct Inputs {
             in.labels = labels.data();
             in.n_labels = kTrain;
         }
-        if (wants(N4M_FIT_INPUT_Y)) in.Y = &Y;
+        if (wants(N4M_FIT_INPUT_Y)) {
+            in.Y = std::strcmp(info.method_id, "models.heads.pls_cox") == 0 ? &Ysurv : &Y;
+        }
         if (wants(N4M_FIT_INPUT_FEATURE_GROUPS)) {
             in.feature_groups = feature_groups.data();
             in.n_feature_groups = kCols;
@@ -601,6 +611,8 @@ void test_in_sample_equivalence(n4m_context_t* ctx, Inputs& in) {
         // In-sample SO-PLS / ROSA accumulate scores; predict is the affine map.
         {"models.multiblock.so_pls", 1e-10, N4M_OK, nullptr},
         {"models.multiblock.rosa", 1e-10, N4M_OK, nullptr},
+        {"models.heads.pls_glm", 0.0, N4M_OK, nullptr},
+        {"models.heads.pls_cox", 0.0, N4M_OK, nullptr},
     };
     cases[0].status = n4m_estimators_kernel_pls_fit(ctx, cfg, 1, 0.0, 1.0, 3, &in.X, &in.Y,
                                                     &cases[0].result);
@@ -613,6 +625,15 @@ void test_in_sample_equivalence(n4m_context_t* ctx, Inputs& in) {
                                                 &cases[4].result);
     cases[5].status =
         n4m_estimators_rosa_fit(ctx, cfg, blocks.data(), 3, &in.Y, 2, &cases[5].result);
+    cases[6].status = n4m_estimators_pls_glm_fit(ctx, cfg, &in.X, &in.Y, 0, &cases[6].result);
+    std::vector<double> times;
+    std::vector<int32_t> events;
+    for (int64_t i = 0; i < kTrain; ++i) {
+        times.push_back(in.surv[static_cast<size_t>(2 * i)]);
+        events.push_back(static_cast<int32_t>(in.surv[static_cast<size_t>(2 * i + 1)]));
+    }
+    cases[7].status = n4m_estimators_pls_cox_fit(ctx, cfg, &in.X, times.data(), kTrain,
+                                                 events.data(), kTrain, &cases[7].result);
     n4m_config_destroy(cfg);
     for (Case& c : cases) {
         current_ = std::string(c.method_id) + " in-sample equivalence";

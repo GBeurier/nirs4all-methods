@@ -1,4 +1,4 @@
-# `pls_cox` — PLS survival pseudo-response approximation
+# `pls_cox` — Deviance-residual PLS-Cox regression
 
 _Group_: **Classification & GLM** · _Registry tolerance_: `1e-06`
 
@@ -6,7 +6,7 @@ _Group_: **Classification & GLM** · _Registry tolerance_: `1e-06`
 
 PLS-Cox (§5) — Cox PH on PLS scores
 
-> **Registry note** — Bastien 2008 deviance-residual PLS-Cox (NumPy port): scale X, deviance residuals from a null Cox PH, NIPALS PLS, Breslow Cox NR on the scores. pls4all's default wrapper calls the same routine, so the gate is bit-for-bit. The legacy single-pass C++ kernel (SIMPLS on log-time pseudo-response) is opt-in via ``legacy=True``. R `plsRcox::coxsplsDR` is the published counterpart; see ``_PlsCoxRReference`` for the archived adapter.
+> **Registry note** — Bastien 2008 deviance-residual PLS-Cox (NumPy port): scale X, deviance residuals from a null Cox PH, NIPALS PLS, Breslow Cox NR on the scores. pls4all's default wrapper calls the same routine, so the gate is bit-for-bit. The native C++ kernel (``legacy=True``) runs the same algorithm. R `plsRcox::coxsplsDR` is the published counterpart; see ``_PlsCoxRReference`` for the archived adapter.
 
 ### Parameters
 
@@ -19,23 +19,23 @@ PLS-Cox (§5) — Cox PH on PLS scores
 
 ### Bibliographic source
 
-Implementation-specific approximation inspired by PLS survival modelling; it is not a Cox partial-likelihood estimator.
+Bastien, P. (2008). *Deviance residuals based PLS regression for censored data in high dimensional setting*. Chemometrics and Intelligent Laboratory Systems 91(1), 78--86. DOI [10.1016/j.chemolab.2007.09.009](https://doi.org/10.1016/j.chemolab.2007.09.009).
 
 ### Mathematical principle
 
-The implementation takes log event times, replaces each censored log-time with the mean log-time among events, fits SIMPLS to that pseudo-response, and negates its coefficients to form a risk score. A Breslow-like cumulative hazard is then assembled from event times and those scores.
+The deviance residuals $d_i$ of the null Cox model (Breslow cumulative hazard $\hat H_0$, martingale residual $m_i=\delta_i-\hat H_0(t_i)$) summarize the censored response. PLS components $\mathbf T=\mathbf X_s\mathbf W(\mathbf P^\top\mathbf W)^{-1}$ are extracted from the standardized predictors against $d$, and a Cox model $\lambda(t\mid\mathbf t)=\lambda_0(t)\exp(\mathbf t^\top\boldsymbol\beta)$ is fitted on the scores. The risk score of a new row is its linear predictor.
 
 ### Appropriate uses
 
-Exploratory survival ranking through the shipped log-time pseudo-response approximation.
+Risk scores for right-censored survival times from high-dimensional spectra, where a direct Cox model is not identifiable.
 
 ### Limits and validation
 
-This is not a Cox partial-likelihood fit: censored log-times are replaced by an event-time mean before SIMPLS, then coefficients are negated.
+Only the linear predictor is predicted; the Breslow baseline hazard is reported by the C function but not kept by the estimator state. Ties use Breslow risk sets, where plsRcox defaults to Efron.
 
 ### Implementation
 
-No Cox partial likelihood or deviance-residual iteration is optimized. The mean imputation for censored times can bias risk scores; treat results as an exploratory library-specific approximation.
+X is standardized with the population standard deviation, the null-model deviance residuals are centred and regressed on it by NIPALS PLS1, and the Breslow partial likelihood is maximized on the scores by Newton-Raphson (at most `max_iter` steps, tolerance `tol`). The estimator role takes Y = (time, event) and keeps input-scale coefficients and the X mean.
 
 ### Sources and provenance
 
@@ -44,7 +44,7 @@ Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_estimators_pls_cox_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/survival.h#L20). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_estimators_pls_cox_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/survival.h#L25). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
@@ -61,7 +61,7 @@ The source signature has additional required inputs, so no example call is fabri
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.python_numpy`** (python · python) — `numpy` in-tree · strict (rmse_rel ≤ 1e-06) — In-tree NumPy port of Bastien 2008 PLS-Cox (deviance residuals + NIPALS PLS + Breslow Cox PH). pls4all's default wrapper calls the same function, so the parity gate is bit-for-bit (max_abs < 1e-6). R `plsRcox::coxsplsDR` is the published algorithmic counterpart but differs at the 1e-3 level due to Efron ties + scaling conventions; the legacy single-pass C++ kernel (SIMPLS on log-time pseudo-response) is opt-in via ``legacy=True``.
+- 📐 **`ref.python_numpy`** (python · python) — `numpy` in-tree · strict (rmse_rel ≤ 1e-06) — In-tree NumPy port of Bastien 2008 PLS-Cox (deviance residuals + NIPALS PLS + Breslow Cox PH). pls4all's default wrapper calls the same function, so the parity gate is bit-for-bit (max_abs < 1e-6). R `plsRcox::coxsplsDR` is the published algorithmic counterpart but differs at the 1e-3 level due to Efron ties + scaling conventions; the native C++ kernel (``legacy=True``) runs the same algorithm.
 
 :::
 

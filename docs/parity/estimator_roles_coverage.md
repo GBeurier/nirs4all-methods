@@ -8,15 +8,15 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**200 of 213 catalog entries covered.**
+**194 of 213 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
 | aom_pop | 12 | 21 |
-| augmentation | 39 | 39 |
+| augmentation | 31 | 39 |
 | diagnostics | 5 | 5 |
 | filters | 6 | 7 |
-| models | 35 | 38 |
+| models | 37 | 38 |
 | preprocessing | 62 | 62 |
 | selection | 26 | 26 |
 | splitters | 9 | 9 |
@@ -48,15 +48,15 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `augmentation.drift.linear_drift` | procedure | augmenter | manifest only |
 | `augmentation.drift.path_length` | procedure | augmenter | manifest only |
 | `augmentation.drift.poly_drift` | procedure | augmenter | manifest only |
-| `augmentation.edge_artifacts.detector_rolloff` | procedure | augmenter | manifest only |
-| `augmentation.edge_artifacts.edge_artifacts` | procedure | augmenter | manifest only |
+| `augmentation.edge_artifacts.detector_rolloff` | not yet | - | - |
+| `augmentation.edge_artifacts.edge_artifacts` | not yet | - | - |
 | `augmentation.edge_artifacts.edge_curvature` | procedure | augmenter | manifest only |
-| `augmentation.edge_artifacts.stray_light` | procedure | augmenter | manifest only |
+| `augmentation.edge_artifacts.stray_light` | not yet | - | - |
 | `augmentation.edge_artifacts.truncated_peak` | procedure | augmenter | manifest only |
-| `augmentation.environmental.moisture` | procedure | augmenter | manifest only |
-| `augmentation.environmental.temperature` | procedure | augmenter | manifest only |
-| `augmentation.mixup.local_mixup` | procedure | augmenter | manifest only |
-| `augmentation.mixup.mixup` | procedure | augmenter | manifest only |
+| `augmentation.environmental.moisture` | not yet | - | - |
+| `augmentation.environmental.temperature` | not yet | - | - |
+| `augmentation.mixup.local_mixup` | not yet | - | - |
+| `augmentation.mixup.mixup` | not yet | - | - |
 | `augmentation.noise.gaussian_noise` | procedure | augmenter | manifest only |
 | `augmentation.noise.hetero_noise` | procedure | augmenter | manifest only |
 | `augmentation.noise.multiplicative_noise` | procedure | augmenter | manifest only |
@@ -67,7 +67,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `augmentation.scattering.dead_band` | procedure | augmenter | manifest only |
 | `augmentation.scattering.emsc_distort` | procedure | augmenter | manifest only |
 | `augmentation.scattering.instrument_broaden` | procedure | augmenter | manifest only |
-| `augmentation.scattering.particle_size` | procedure | augmenter | manifest only |
+| `augmentation.scattering.particle_size` | not yet | - | - |
 | `augmentation.scattering.scatter_sim_msc` | procedure | augmenter | manifest only |
 | `augmentation.spectral.band_mask` | procedure | augmenter | manifest only |
 | `augmentation.spectral.band_perturb` | procedure | augmenter | manifest only |
@@ -103,8 +103,8 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `models.ensembles.boosting_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.ensembles.moment_stack` | not yet | - | - |
 | `models.ensembles.random_subspace_pls` | estimator | regressor | Python, R, JS/WASM |
-| `models.heads.pls_cox` | not yet | - | - |
-| `models.heads.pls_glm` | not yet | - | - |
+| `models.heads.pls_cox` | estimator | regressor | manifest only |
+| `models.heads.pls_glm` | estimator | regressor | manifest only |
 | `models.local.lw_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.multiblock.mb_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.multiblock.mir_pls` | estimator | regressor | Python, R, JS/WASM |

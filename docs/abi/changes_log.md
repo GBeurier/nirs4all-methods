@@ -131,8 +131,7 @@ mean, LW-PLS and OnPLS scores for new rows, DS/PDS maps. Behaviour changes:
 predictor (`coefficients`, `x_mean`, `affine_predictor`) and
 `block_coefficients_<b>` are now its per-block rows (SO-PLS reported
 orthogonalized-space coefficients, ROSA summed `w q'` ignoring score
-orthogonalization and deflation); `n4m_estimators_pls_glm_fit` folds the X
-centering into `intercept`, so `predictions` no longer miss `x_mean @ B`;
+orthogonalization and deflation);
 `n4m_estimators_missing_aware_nipals_fit` in-sample predictions impute
 missing X entries instead of returning NaN.
 The AOM calibration kernel reports a numerically infeasible candidate path
@@ -162,6 +161,36 @@ covered kernels). No kernel changes. Python facade fixes: results holding an
 empty (0 x 0) matrix, such as the fixed-chain fit's out-of-fold predictions,
 are read as empty arrays instead of raising, and an imported estimator reports
 array parameters as tuples, like the generated defaults.
+
+PLS-GLM and PLS-Cox roles: `models.heads.pls_glm` is a regressor (params
+`n_components` 2, `family` gaussian / poisson / binomial, `max_iter` 100, `tol`
+1e-10) whose prediction is the mean response g^-1(X B + b); its state keeps the
+input-scale coefficients, intercepts and family. `models.heads.pls_cox` is a
+regressor (`n_components` 2, `max_iter` 50, `tol` 1e-10) fitted on a
+two-column Y, survival time then event indicator (1 = event, 0 = censored),
+whose prediction is the risk score (x - x_mean) . coefficients; its state
+keeps the coefficients and x_mean. No fit-input field is added. Both kernels
+are new native implementations. PLS-GLM is the Bastien, Esposito Vinzi &
+Tenenhaus (2005) algorithm as plsRglm runs it with scaleX = FALSE (per-column
+GLM weights, X deflation, final GLM on the scores; Gaussian partial
+regression, IRLS for Poisson log and binomial logit), one model per Y column.
+PLS-Cox is the deviance-residual algorithm (Bastien 2008, plsRcox::coxplsDR):
+standardized X, NIPALS PLS1 on the null-model deviance residuals, Breslow Cox
+Newton-Raphson on the scores. They match the n4m references and R plsRglm /
+plsRcox (ties = "breslow") to 1e-12. Deviations: tied times use the Breslow
+risk sets (the Python reference depended on the order of tied rows); a column
+whose GLM weight design is rank deficient gets weight 0; PLS-Cox keeps only
+the components it extracts instead of returning zero coefficients when
+NIPALS stops early. Behaviour changes: `n4m_estimators_pls_glm_fit` now fits
+this model (it ran a plain SIMPLS regression and ignored `poisson`):
+`coefficients` / `intercept` are on the linear-predictor scale and
+`predictions` are mean responses; Poisson Y must be >= 0.
+`n4m_estimators_pls_cox_fit` now fits the deviance-residual model (it ran
+SIMPLS on a log-time pseudo-response): `predictions` are its risk scores,
+`event_times` / `baseline_hazard` hold one Breslow increment per distinct
+event time, times need only be finite, and at least one event is required.
+The Poisson predictions of the Python `pls4all` `PLSGLMRegressor`, R
+`pls_glm()` and MATLAB `n4m.GlmRegression` apply the inverse link.
 
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (superseded, never released)
 
