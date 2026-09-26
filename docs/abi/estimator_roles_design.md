@@ -438,6 +438,13 @@ unlock:
 The final claim is per entry: estimator or procedure, languages, operations,
 oracle result — never a bare 212/212.
 
+Status (2026-09-27): S0 and S1 are implemented for 46 methods (21 regressors,
+25 selectors) with Python, R and JS/WASM facades generated from the manifest.
+The shared fixture `parity/fixtures/estimator_roles_n4me.json` is replayed by
+the three bindings (predictions, transforms and selected columns at 1e-12,
+byte-identical re-export) and every binding's own fit reproduces the Python
+fit; the selectors reproduce the n4m reference selections exactly.
+
 ## 5. Tests
 
 - **Conformance suite (C++), generated from the manifest**: for every method,
