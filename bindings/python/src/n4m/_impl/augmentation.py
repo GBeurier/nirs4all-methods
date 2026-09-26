@@ -1010,18 +1010,20 @@ class DetectorRollOffAugmenter(_AugmenterBase):
 
 
 class StrayLightAugmenter(_AugmenterBase):
-    """Stray-light edge artifact (the edge profile depends on the channel count)."""
+    """Stray-light edge artifact."""
 
     _C_PREFIX = "n4m_augmentation_stray_light"
+    _APPLY_WAVELENGTHS = True
 
     def __init__(self, stray_light_fraction: float = 0.001,
                  edge_enhancement: float = 2.0, edge_width: float = 0.1,
                  include_peak_truncation: bool = True,
-                 rng: Optional[PCG64] = None, seed: int = 0):
+                 wavelengths=None, rng: Optional[PCG64] = None, seed: int = 0):
         self.stray_light_fraction = float(stray_light_fraction)
         self.edge_enhancement = float(edge_enhancement)
         self.edge_width = float(edge_width)
         self.include_peak_truncation = bool(include_peak_truncation)
+        self._setup_wavelengths(wavelengths)
         self._setup_rng(rng, seed)
 
     def _create_args(self):

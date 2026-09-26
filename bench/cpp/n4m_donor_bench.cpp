@@ -363,7 +363,7 @@ const DonorOp kOps[] = {
      [](n4m_rng_pcg64_state_t* r, int64_t, int64_t) -> void* {
          n4m_aug_stray_light_handle_t* h = nullptr;
          return n4m_augmentation_stray_light_create(&h, r, 0.001, 2.0, 0.1, 1) == N4M_OK ? h : nullptr; },
-     RUN_APPLY(n4m_augmentation_stray_light_apply, n4m_aug_stray_light_handle_t),
+     RUN_APPLY_WL(n4m_augmentation_stray_light_apply, n4m_aug_stray_light_handle_t),
      DESTROY(n4m_augmentation_stray_light_destroy, n4m_aug_stray_light_handle_t)},
 
     {"aug_edge_curve",
