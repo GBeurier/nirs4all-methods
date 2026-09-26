@@ -184,6 +184,7 @@ jobs:
           python3 scripts/generate_python_roles.py --cli build/ci-linux-gcc12-release/cpp/cli/n4m_cli --check
           python3 scripts/generate_r_roles.py --cli build/ci-linux-gcc12-release/cpp/cli/n4m_cli --check
           python3 scripts/generate_js_roles.py --cli build/ci-linux-gcc12-release/cpp/cli/n4m_cli --check
+          python3 scripts/generate_role_coverage.py --cli build/ci-linux-gcc12-release/cpp/cli/n4m_cli --check
 
       - name: Unit-test package smoke helpers
         run: python3 -m pytest bindings/python/tests/test_installed_nirs4all_methods_smoke.py -q
