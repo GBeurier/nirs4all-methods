@@ -461,8 +461,8 @@ unlock:
 The final claim is per entry: estimator or procedure, languages, operations,
 oracle result — never a bare 212/212.
 
-Status (2026-09-26): 192 of 213 catalog entries reach the generic surface —
-140 estimators (regressors incl. 10 AOM/POP ones, 4 classifiers, selectors,
+Status (2026-09-27): 198 of 213 catalog entries reach the generic surface —
+146 estimators (regressors incl. 16 AOM/POP ones, 4 classifiers, selectors,
 transformers, 4 sample filters) and 52 procedures (9 splitters, 31
 augmenters, 12 generic); the generated per-entry record is
 `docs/parity/estimator_roles_coverage.md`. Python, R, JS/WASM and Rust
@@ -471,8 +471,7 @@ facades are generated from or driven by the manifest. The shared fixture
 estimator states at 1e-12 with byte-identical re-export, each binding's own
 fit reproducing the Python fit, and every procedure's default run. Each role
 class also matches its n4m reference (bitwise where the same kernel runs).
-Not covered: the five AOM superblocks and the AOM chain Ridge-PLS (numerics
-still in Python), three AOM orchestrations (screen/refit, staged campaign,
+Not covered: three AOM orchestrations (screen/refit, staged campaign,
 linear Ridge stack: DAG-ML composition), PLS-GLM (the kernel fits no link),
 PLS-Cox (no survival inputs in `n4m_fit_inputs_v1_t`), the Python-only moment
 stack, the composite filter, mixup / local_mixup (no paired Y) and six

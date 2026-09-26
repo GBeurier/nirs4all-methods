@@ -8,7 +8,7 @@ subcategory: "aom"
 since_abi: "1.21.0"
 abi_symbols: []
 tu:
-  - "cpp/src/core/aom_preprocessing.cpp"
+  - "cpp/src/core/aom_superblock.cpp"
   - "cpp/src/core/ridge.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
@@ -39,8 +39,51 @@ bindings:
     class: "aom_ridge_mkl_superblock"
     legacy_aliases: []
 publications: []
-notes: "Python-backed donor-style AOM Ridge MKL-light superblock constrained to strict-linear single-operator AOM views. It learns non-negative train-only KTA weights over operator blocks inside every alpha-CV fold, refits weights on the full calibration set, fits native Ridge on the equivalent weighted superblock, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, row-reference-dependent preprocessing, nonlinear kernels and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU weighted-superblock grinder."
+notes: "Native AOM Ridge MKL-light superblock over strict-linear single-operator AOM views (core fit_aom_superblock). It learns non-negative train-only kernel-target-alignment weights over the top operator blocks inside every alpha-CV fold, refits the weights on all rows, fits Ridge on the equivalent weighted superblock, and folds the final coefficients back to original-input input_coefficients plus intercept (affine N4MM state). It excludes donor branch_global, row-reference-dependent preprocessing, nonlinear kernels and nonlinear AOM Ridge modes."
 c_surface: "none"
+estimator:
+  kind: "estimator"
+  adapter: "aom_ridge_mkl_superblock"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+    fold_ids: "optional"
+  params:
+    - name: "op_kinds"
+      type: "int_array"
+      default: "[0, 7, 7, 8, 8, 9, 9, 10, 15]"
+      min: 0
+      max: 18
+    - name: "param_offsets"
+      type: "int_array"
+      default: "[0, 0, 1, 2, 4, 6, 9, 12, 15, 16]"
+      min: 0
+    - name: "op_params"
+      type: "double_array"
+      default: "[1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]"
+    - name: "alphas"
+      type: "double_array"
+      default: "[0.0001, 0.01, 1.0, 100.0]"
+      min: 0.0
+    - name: "cv"
+      type: "int"
+      default: 5
+      min: 2
+    - name: "mkl_top_k"
+      type: "int"
+      default: 6
+      min: 1
+    - name: "block_scaling"
+      type: "enum"
+      default: "none"
+      choices: "[rms, none]"
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
 fq_name: "n4m.compose.aom_superblock.ridge_mkl_superblock"
 leaf: "ridge_mkl_superblock"
 legacy_ids:

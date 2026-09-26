@@ -8,7 +8,7 @@ subcategory: "aom"
 since_abi: "1.21.0"
 abi_symbols: []
 tu:
-  - "cpp/src/core/aom_preprocessing.cpp"
+  - "cpp/src/core/aom_superblock.cpp"
   - "cpp/src/core/ridge.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
@@ -39,8 +39,47 @@ bindings:
     class: "aom_ridge_superblock"
     legacy_aliases: []
 publications: []
-notes: "Python-backed donor-style AOM Ridge superblock constrained to strict-linear single-operator AOM views. It builds operator outputs through native aom_preprocess, selects/fits Ridge alphas fold-locally through the native Ridge binding, applies train-fold centering and optional block RMS scaling to validation folds, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU superblock grinder."
+notes: "Native AOM Ridge superblock over strict-linear single-operator AOM views (core fit_aom_superblock). It concatenates the operator outputs, centers the columns and optionally scales each block to unit RMS with train-fold statistics, selects the Ridge alpha by train-fold CV, and folds the final superblock coefficients back to original-input input_coefficients plus intercept, so the role state is an affine N4MM predictor. It excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes."
 c_surface: "none"
+estimator:
+  kind: "estimator"
+  adapter: "aom_ridge_superblock"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+    fold_ids: "optional"
+  params:
+    - name: "op_kinds"
+      type: "int_array"
+      default: "[0, 7, 7, 8, 8, 9, 9, 10, 15]"
+      min: 0
+      max: 18
+    - name: "param_offsets"
+      type: "int_array"
+      default: "[0, 0, 1, 2, 4, 6, 9, 12, 15, 16]"
+      min: 0
+    - name: "op_params"
+      type: "double_array"
+      default: "[1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]"
+    - name: "alphas"
+      type: "double_array"
+      default: "[0.0001, 0.01, 1.0, 100.0]"
+      min: 0.0
+    - name: "cv"
+      type: "int"
+      default: 5
+      min: 2
+    - name: "block_scaling"
+      type: "enum"
+      default: "rms"
+      choices: "[rms, none]"
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
 fq_name: "n4m.compose.aom_superblock.ridge_superblock"
 leaf: "ridge_superblock"
 legacy_ids:

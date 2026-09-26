@@ -8,11 +8,11 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**192 of 213 catalog entries covered.**
+**198 of 213 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
-| aom_pop | 12 | 21 |
+| aom_pop | 18 | 21 |
 | augmentation | 31 | 39 |
 | diagnostics | 5 | 5 |
 | filters | 6 | 7 |
@@ -25,13 +25,13 @@ three bindings and each binding's own fit reproduces the Python fit.
 | Method | Kind | Roles | Validated in |
 |---|---|---|---|
 | `aom_pop.aom_chain_fixed_fit` | estimator | regressor | Python, R, JS/WASM |
-| `aom_pop.aom_chain_ridge_pls` | not yet | - | - |
+| `aom_pop.aom_chain_ridge_pls` | estimator | regressor | manifest only |
 | `aom_pop.aom_chain_screen_refit` | not yet | - | - |
 | `aom_pop.aom_chain_sweep` | estimator | regressor | Python, R, JS/WASM |
 | `aom_pop.aom_pls` | estimator | regressor | Python, R, JS/WASM |
-| `aom_pop.aom_pls_superblock` | not yet | - | - |
+| `aom_pop.aom_pls_superblock` | estimator | regressor | manifest only |
 | `aom_pop.aom_preprocessing` | estimator | transformer | Python, R, JS/WASM |
-| `aom_pop.aom_ridge_pls_superblock` | not yet | - | - |
+| `aom_pop.aom_ridge_pls_superblock` | estimator | regressor | manifest only |
 | `aom_pop.aom_staged_chain_campaign` | not yet | - | - |
 | `aom_pop.aom_sweep` | estimator | regressor | Python, R, JS/WASM |
 | `aom_pop.calibration` | estimator | regressor | Python, R, JS/WASM |
@@ -39,11 +39,11 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `aom_pop.linear_stack_compress` | procedure | generic | manifest only |
 | `aom_pop.operator_pls_stack` | estimator | regressor | Python, R, JS/WASM |
 | `aom_pop.pop_pls` | estimator | regressor | Python, R, JS/WASM |
-| `aom_pop.ridge_active_superblock` | not yet | - | - |
+| `aom_pop.ridge_active_superblock` | estimator | regressor | manifest only |
 | `aom_pop.ridge_blender` | estimator | regressor | Python, R, JS/WASM |
 | `aom_pop.ridge_global` | estimator | regressor | Python, R, JS/WASM |
-| `aom_pop.ridge_mkl_superblock` | not yet | - | - |
-| `aom_pop.ridge_superblock` | not yet | - | - |
+| `aom_pop.ridge_mkl_superblock` | estimator | regressor | manifest only |
+| `aom_pop.ridge_superblock` | estimator | regressor | manifest only |
 | `aom_pop.robust_hpo` | estimator | regressor | Python, R, JS/WASM |
 | `augmentation.drift.linear_drift` | procedure | augmenter | manifest only |
 | `augmentation.drift.path_length` | procedure | augmenter | manifest only |
