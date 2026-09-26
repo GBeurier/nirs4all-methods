@@ -37,6 +37,7 @@ INPUTS = [
     "blocks",
     "axis",
     "target_domain",
+    "fold_ids",
 ]
 REQUIREMENTS = {
     "none": "N4M_INPUT_NONE",

@@ -6919,6 +6919,26 @@ methods:
       - "n4m_estimators_o2pls_fit"
     legacy_ids:
       - "models.multiblock.o2pls"
+    estimator:
+      kind: estimator
+      adapter: affine_o2pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_predictive
+          type: int
+          default: 2
+          min: 1
+        - name: n_x_orthogonal
+          type: int
+          default: 1
+          min: 0
+        - name: n_y_orthogonal
+          type: int
+          default: 1
+          min: 0
   - method_id: "models.multiblock.on_pls"
     family: "models.multiblock"
     category: "models"
@@ -7262,6 +7282,31 @@ methods:
       - "n4m_estimators_weighted_pls_fit"
     legacy_ids:
       - "models.regularized.weighted_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_weighted_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        sample_weight: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: center_x
+          type: bool
+          default: true
+        - name: scale_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
+        - name: scale_y
+          type: bool
+          default: true
   - method_id: "models.regularized.continuum_regression"
     family: "models.regularized"
     category: "models"

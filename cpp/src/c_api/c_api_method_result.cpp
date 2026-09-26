@@ -1459,6 +1459,7 @@ N4M_API n4m_status_t n4m_estimators_weighted_pls_fit(
 
         auto handle = std::make_unique<n4m_method_result_s>();
         pack_weighted_result(*handle, res, *X, *Y);
+        handle->set_scalar("affine_predictor", 1.0);
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {
@@ -1806,6 +1807,7 @@ N4M_API n4m_status_t n4m_estimators_o2pls_fit(
         handle->set_double_matrix("predictions", std::move(predictions),
                                    pred_rows, pred_cols);
         handle->set_scalar("rmse", rmse);
+        handle->set_scalar("affine_predictor", 1.0);
 
         *out_result = handle.release();
         return N4M_OK;

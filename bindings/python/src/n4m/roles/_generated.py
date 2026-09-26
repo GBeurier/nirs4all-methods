@@ -109,6 +109,28 @@ class MIRPLS(NativeRegressor):
         self.n_components = n_components
 
 
+class O2PLS(NativeRegressor):
+    """Native ``models.multiblock.o2pls`` (regressor)."""
+
+    _method_id = "models.multiblock.o2pls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_predictive": "int",
+        "n_x_orthogonal": "int",
+        "n_y_orthogonal": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_predictive=2,
+        n_x_orthogonal=1,
+        n_y_orthogonal=1,
+    ) -> None:
+        self.n_predictive = n_predictive
+        self.n_x_orthogonal = n_x_orthogonal
+        self.n_y_orthogonal = n_y_orthogonal
+
+
 class CPPLS(NativeRegressor):
     """Native ``models.pls.cppls`` (regressor)."""
 
@@ -324,6 +346,34 @@ class RobustPLS(NativeRegressor):
         self.scale_y = scale_y
 
 
+class WeightedPLS(NativeRegressor):
+    """Native ``models.regularized.weighted_pls`` (regressor)."""
+
+    _method_id = "models.regularized.weighted_pls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+    ) -> None:
+        self.n_components = n_components
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+
 class FusedSparsePLS(NativeRegressor):
     """Native ``models.sparse.fused_sparse_pls`` (regressor)."""
 
@@ -457,6 +507,7 @@ __all__ = [
     "MBPLS",
     "MIRPLS",
     "NPLS",
+    "O2PLS",
     "PCR",
     "BaggingPLS",
     "BoostingPLS",
@@ -470,4 +521,5 @@ __all__ = [
     "RobustPLS",
     "SimplePLS",
     "SparseSIMPLS",
+    "WeightedPLS",
 ]

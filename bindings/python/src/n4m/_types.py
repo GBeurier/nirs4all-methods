@@ -286,11 +286,13 @@ class FitInputsV1(Structure):
         ("axis", c_void_p),
         ("n_axis", c_int64),
         ("X_target", c_void_p),
+        ("fold_ids", c_void_p),
+        ("n_fold_ids", c_int64),
         ("seed", c_uint64),
     ]
 
 
-FIT_INPUT_COUNT = 8
+FIT_INPUT_COUNT = 9
 
 
 class MethodInfoV1(Structure):

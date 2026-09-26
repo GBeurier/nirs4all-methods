@@ -65,7 +65,8 @@ typedef enum n4m_fit_input_t {
     N4M_FIT_INPUT_BLOCKS = 5,
     N4M_FIT_INPUT_AXIS = 6,
     N4M_FIT_INPUT_TARGET_DOMAIN = 7,
-    N4M_FIT_INPUT_COUNT = 8
+    N4M_FIT_INPUT_FOLD_IDS = 8,
+    N4M_FIT_INPUT_COUNT = 9
 } n4m_fit_input_t;
 
 typedef enum n4m_method_param_type_t {
@@ -163,6 +164,8 @@ typedef struct n4m_fit_inputs_v1_t {
     const double* axis;                      /* spectral axis, one per column */
     int64_t n_axis;
     const n4m_matrix_view_t* X_target;       /* target-domain / slave spectra */
+    const int64_t* fold_ids;                 /* internal-CV test fold per row */
+    int64_t n_fold_ids;
     uint64_t seed;
 } n4m_fit_inputs_v1_t;
 

@@ -202,8 +202,9 @@ int cmd_manifest_json() {
                                         "decision_function", "predict_labels",
                                         "selected_indices", "apply_mask", "serializable",
                                         "affine", "retains_training_rows"};
-    static const char* const kInputs[] = {"y", "labels", "sample_weight", "groups",
-                                          "feature_groups", "blocks", "axis", "target_domain"};
+    static const char* const kInputs[] = {"y",      "labels", "sample_weight",
+                                          "groups", "feature_groups", "blocks",
+                                          "axis",   "target_domain",  "fold_ids"};
     static const char* const kReq[] = {"none", "optional", "required"};
     int32_t count = 0;
     if (n4m_method_count(&count) != N4M_OK) return 1;
