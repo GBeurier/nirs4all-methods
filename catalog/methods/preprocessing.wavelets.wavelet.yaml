@@ -39,6 +39,22 @@ c_surface:
   - "n4m_transform_wavelet_destroy"
   - "n4m_transform_wavelet_output_cols"
   - "n4m_transform_wavelet_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_wavelet"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "family"
+      type: "enum"
+      choices: "[haar, db4, sym4, coif1]"
+      default: "haar"
+    - name: "mode"
+      type: "enum"
+      choices: "[periodization, symmetric, zero]"
+      default: "periodization"
 fq_name: "n4m.transform.wavelet.wavelet"
 leaf: "wavelet"
 legacy_ids:

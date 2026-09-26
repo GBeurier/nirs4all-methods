@@ -110,6 +110,12 @@ void fill_required(int32_t index, n4m_params_t* params) {
             CHECK(n4m_params_set_int(params, pi.name, 4) == N4M_OK);
         } else if (std::strcmp(pi.name, "top_k") == 0) {
             CHECK(n4m_params_set_int(params, pi.name, 4) == N4M_OK);
+        } else if (std::strcmp(pi.name, "start") == 0) {
+            CHECK(n4m_params_set_int(params, pi.name, 2) == N4M_OK);
+        } else if (std::strcmp(pi.name, "end") == 0) {
+            CHECK(n4m_params_set_int(params, pi.name, 10) == N4M_OK);
+        } else if (std::strcmp(pi.name, "num_samples") == 0) {
+            CHECK(n4m_params_set_int(params, pi.name, 8) == N4M_OK);
         } else if (std::strcmp(pi.name, "thresholds") == 0) {
             const double v[] = {0.05, 0.1, 0.3};
             CHECK(n4m_params_set_double_array(params, pi.name, v, 3) == N4M_OK);
@@ -138,7 +144,8 @@ std::vector<unsigned char> export_bytes(n4m_context_t* ctx, const n4m_estimator_
 void conformance_transform_only(n4m_context_t* ctx, const n4m_estimator_t* est, Inputs& in,
                                 const n4m_method_info_v1_t& info) {
     int64_t cols = 0;
-    CHECK(n4m_estimator_transform_cols(est, &cols) == N4M_OK && cols > 0 && cols <= kCols);
+    CHECK(n4m_estimator_transform_cols(est, &cols) == N4M_OK && cols > 0);
+    CHECK((info.roles & N4M_ROLE_SELECTOR) == 0 || cols <= kCols);
     std::vector<double> out(static_cast<size_t>(kTest * cols)), out2(out.size());
     auto X_test = view(in.data.x_test.data(), kTest, kCols);
     auto O = view(out.data(), kTest, cols);

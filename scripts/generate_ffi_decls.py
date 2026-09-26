@@ -20,6 +20,7 @@ Usage::
     python scripts/generate_ffi_decls.py            # regenerate in place
     python scripts/generate_ffi_decls.py --check     # fail (exit 1) on drift
 """
+
 from __future__ import annotations
 
 import argparse
@@ -150,7 +151,9 @@ def _base_type(decl: str) -> tuple[str, int]:
         pointer_level += 1
     decl = re.sub(r"\[\s*\d*\s*\]", " ", decl)
     decl = decl.replace("*", " ")
-    tokens = [t for t in decl.split() if t not in ("const", "struct", "enum", "restrict")]
+    tokens = [
+        t for t in decl.split() if t not in ("const", "struct", "enum", "restrict")
+    ]
     if not tokens:
         raise GeneratorError(f"could not parse type from decl {decl!r}")
     # Heuristic: the last token may be a parameter name; the type is the run of
@@ -276,7 +279,7 @@ def _parse_prototypes(headers: list[Path]) -> list[tuple[str, list[str], str]]:
                 continue
             name = name_match.group(1)
             ret_decl = head[: name_match.start()].strip()
-            args = body[open_paren + 1:].strip()
+            args = body[open_paren + 1 :].strip()
             if name in seen:
                 raise GeneratorError(f"duplicate prototype for {name} in {header}")
             seen.add(name)
@@ -391,7 +394,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     OUTPUT.write_text(rendered)
-    sys.stdout.write(f"wrote {OUTPUT.relative_to(REPO_ROOT)} ({len(rendered.splitlines())} lines)\n")
+    sys.stdout.write(
+        f"wrote {OUTPUT.relative_to(REPO_ROOT)} ({len(rendered.splitlines())} lines)\n"
+    )
     return 0
 
 

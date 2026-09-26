@@ -67,28 +67,40 @@ REPO = Path(__file__).resolve().parents[1]
 # Order matters: more-specific patterns must run before more-general ones.
 REPLACEMENTS: list[tuple[re.Pattern[str], str, str]] = [
     # CMake target names (most specific)
-    (re.compile(r"\bpls4all_c_static\b"),  "n4m_c_static",   "CMake target rename"),
-    (re.compile(r"\bpls4all_core\b"),      "n4m_core",       "CMake target rename"),
-    (re.compile(r"\bpls4all_tests\b"),     "n4m_tests",      "CMake target rename"),
-    (re.compile(r"\bpls4all_cli\b"),       "n4m_cli",        "CMake target rename"),
-    (re.compile(r"\bpls4all_c\b"),         "n4m_c",          "CMake target rename"),
+    (re.compile(r"\bpls4all_c_static\b"), "n4m_c_static", "CMake target rename"),
+    (re.compile(r"\bpls4all_core\b"), "n4m_core", "CMake target rename"),
+    (re.compile(r"\bpls4all_tests\b"), "n4m_tests", "CMake target rename"),
+    (re.compile(r"\bpls4all_cli\b"), "n4m_cli", "CMake target rename"),
+    (re.compile(r"\bpls4all_c\b"), "n4m_c", "CMake target rename"),
     # Include paths (must run before bare pls4all:: substitutions to avoid breaking)
-    (re.compile(r'"pls4all/p4a_export\.h"'), '"n4m/n4m_export.h"',  "include path"),
+    (re.compile(r'"pls4all/p4a_export\.h"'), '"n4m/n4m_export.h"', "include path"),
     (re.compile(r'"pls4all/p4a_version\.h"'), '"n4m/n4m_version.h"', "include path"),
-    (re.compile(r'"pls4all/p4a\.h"'),       '"n4m/n4m.h"',         "include path"),
-    (re.compile(r"<pls4all/p4a_export\.h>"), "<n4m/n4m_export.h>",  "include path (angle)"),
-    (re.compile(r"<pls4all/p4a_version\.h>"), "<n4m/n4m_version.h>", "include path (angle)"),
-    (re.compile(r"<pls4all/p4a\.h>"),       "<n4m/n4m.h>",         "include path (angle)"),
+    (re.compile(r'"pls4all/p4a\.h"'), '"n4m/n4m.h"', "include path"),
+    (
+        re.compile(r"<pls4all/p4a_export\.h>"),
+        "<n4m/n4m_export.h>",
+        "include path (angle)",
+    ),
+    (
+        re.compile(r"<pls4all/p4a_version\.h>"),
+        "<n4m/n4m_version.h>",
+        "include path (angle)",
+    ),
+    (re.compile(r"<pls4all/p4a\.h>"), "<n4m/n4m.h>", "include path (angle)"),
     # Library names
-    (re.compile(r"\blibp4a\b"),            "libn4m",         "library name"),
+    (re.compile(r"\blibp4a\b"), "libn4m", "library name"),
     # C++ namespace
-    (re.compile(r"\bpls4all::core\b"),     "n4m::core",      "C++ namespace ref"),
-    (re.compile(r"\bpls4all::cuda_dispatch\b"), "n4m::cuda_dispatch", "C++ namespace ref"),
-    (re.compile(r"\b::pls4all::"),         "::n4m::",        "C++ fully qualified"),
+    (re.compile(r"\bpls4all::core\b"), "n4m::core", "C++ namespace ref"),
+    (
+        re.compile(r"\bpls4all::cuda_dispatch\b"),
+        "n4m::cuda_dispatch",
+        "C++ namespace ref",
+    ),
+    (re.compile(r"\b::pls4all::"), "::n4m::", "C++ fully qualified"),
     (re.compile(r"\bnamespace\s+pls4all\b"), "namespace n4m", "namespace declaration"),
     # Token-level renames
-    (re.compile(r"\bp4a_"),                "n4m_",           "function / type / variable prefix"),
-    (re.compile(r"\bP4A_"),                "N4M_",           "macro / enum constant prefix"),
+    (re.compile(r"\bp4a_"), "n4m_", "function / type / variable prefix"),
+    (re.compile(r"\bP4A_"), "N4M_", "macro / enum constant prefix"),
 ]
 
 STAGE_PATHS = {
@@ -125,31 +137,62 @@ SKIP_FILES = {
 # Patterns to skip directory-wise (e.g. don't touch the catalog YAMLs that
 # intentionally reference the slim 'pls4all' package).
 SKIP_DIRS = {
-    "_donor",   # already empty post-M3; we never rename anything still under here
+    "_donor",  # already empty post-M3; we never rename anything still under here
     "build",
     ".git",
     "__pycache__",
     "node_modules",
-    ".reference_oracles",   # generated artifacts
-    ".x_target",            # generated artifacts
-    ".predictions",         # generated artifacts
+    ".reference_oracles",  # generated artifacts
+    ".x_target",  # generated artifacts
+    ".predictions",  # generated artifacts
     ".ruff_cache",
 }
 
 # File extensions we consider text-source for token replacement.
 TEXT_EXTS = {
-    ".c", ".cc", ".cpp", ".cxx", ".h", ".hpp", ".hxx", ".in",
-    ".py", ".pyi",
-    ".r", ".R", ".Rd",
+    ".c",
+    ".cc",
+    ".cpp",
+    ".cxx",
+    ".h",
+    ".hpp",
+    ".hxx",
+    ".in",
+    ".py",
+    ".pyi",
+    ".r",
+    ".R",
+    ".Rd",
     ".m",  # matlab/octave
     ".jl",
-    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-    ".go", ".rs", ".cs", ".rb", ".lua", ".nim",
-    ".java", ".kt", ".swift",
-    ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg",
-    ".cmake", ".txt", ".md",
-    ".sh", ".ps1",
-    ".def", ".ld",
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".mjs",
+    ".cjs",
+    ".go",
+    ".rs",
+    ".cs",
+    ".rb",
+    ".lua",
+    ".nim",
+    ".java",
+    ".kt",
+    ".swift",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".cmake",
+    ".txt",
+    ".md",
+    ".sh",
+    ".ps1",
+    ".def",
+    ".ld",
 }
 
 
@@ -205,12 +248,22 @@ def walk(roots: list[Path]) -> list[Path]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--dry-run", action="store_true", help="Show what would change without writing.")
+    ap.add_argument(
+        "--dry-run", action="store_true", help="Show what would change without writing."
+    )
     ap.add_argument("--apply", action="store_true", help="Actually rewrite files.")
-    ap.add_argument("--stage", choices=list(STAGE_PATHS) + ["all"], default="core",
-                    help="Which subtree to rename in this run (default: core).")
-    ap.add_argument("--path", action="append", default=[],
-                    help="Additional path(s) to include (relative to repo root or absolute).")
+    ap.add_argument(
+        "--stage",
+        choices=list(STAGE_PATHS) + ["all"],
+        default="core",
+        help="Which subtree to rename in this run (default: core).",
+    )
+    ap.add_argument(
+        "--path",
+        action="append",
+        default=[],
+        help="Additional path(s) to include (relative to repo root or absolute).",
+    )
     args = ap.parse_args(argv)
 
     if not (args.dry_run or args.apply):
@@ -230,7 +283,9 @@ def main(argv: list[str] | None = None) -> int:
         roots.append(p)
 
     print(f"stage: {args.stage} | dry-run: {args.dry_run} | apply: {args.apply}")
-    print(f"roots: {[str(p.relative_to(REPO)) for p in roots if p.is_relative_to(REPO)]}")
+    print(
+        f"roots: {[str(p.relative_to(REPO)) for p in roots if p.is_relative_to(REPO)]}"
+    )
 
     files = walk(roots)
     print(f"text files matched: {len(files)}")

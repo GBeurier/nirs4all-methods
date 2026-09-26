@@ -37,6 +37,34 @@ c_surface:
   - "n4m_transform_wavelet_denoise_create"
   - "n4m_transform_wavelet_denoise_destroy"
   - "n4m_transform_wavelet_denoise_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_wavelet_denoise"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "family"
+      type: "enum"
+      choices: "[haar, db4, sym4, coif1]"
+      default: "db4"
+    - name: "mode"
+      type: "enum"
+      choices: "[periodization, symmetric, zero]"
+      default: "periodization"
+    - name: "level"
+      type: "int"
+      default: 3
+      min: 0
+    - name: "threshold_mode"
+      type: "enum"
+      choices: "[soft, hard]"
+      default: "soft"
+    - name: "noise_estimator"
+      type: "enum"
+      choices: "[median, std]"
+      default: "median"
 fq_name: "n4m.transform.wavelet.wavelet_denoise"
 leaf: "wavelet_denoise"
 legacy_ids:

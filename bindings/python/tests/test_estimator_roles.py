@@ -66,6 +66,12 @@ def fit_kwargs(cls, X_target):
 ALL = sorted(_REGISTRY.values(), key=lambda c: c._method_id)
 REGRESSORS = [c for c in ALL if issubclass(c, roles.NativeRegressor)]
 SELECTORS = [c for c in ALL if issubclass(c, roles.NativeSelector)]
+PURE_TRANSFORMERS = [
+    c
+    for c in ALL
+    if issubclass(c, roles.NativeTransformer)
+    and not issubclass(c, roles.NativeRegressor)
+]
 
 
 def test_generated_classes_match_native_manifest():
@@ -309,3 +315,64 @@ def test_selector_matches_n4m_reference(cls, data):
     np.testing.assert_array_equal(
         est.selected_indices_, np.asarray(ref.selected_indices_)
     )
+
+
+# Transformer role --------------------------------------------------------
+
+TRANSFORMER_PARAMS = {"start": 2, "end": 10, "num_samples": 8}
+
+
+def transformer(cls):
+    return cls(**{k: v for k, v in TRANSFORMER_PARAMS.items() if k in cls._param_types})
+
+
+def positive_spectra(data):
+    """Strictly positive, reflectance-like rows (valid for every conversion)."""
+    X, y, X_test, _, _ = data
+    shift = 1.0 - min(X.min(), X_test.min())
+    return (X + shift) / (2 * shift), y, (X_test + shift) / (2 * shift)
+
+
+@pytest.mark.parametrize("cls", PURE_TRANSFORMERS, ids=lambda c: c.__name__)
+def test_transformer_roundtrip(cls, data):
+    X, y, X_test = positive_spectra(data)
+    est = transformer(cls).fit(X, y)
+    out = est.transform(X_test)
+    assert out.shape[0] == X_test.shape[0] and np.all(np.isfinite(out))
+    restored = roles.NativeEstimator.from_n4me(est.to_n4me())
+    assert type(restored) is cls
+    np.testing.assert_array_equal(restored.transform(X_test), out)
+    np.testing.assert_array_equal(
+        pickle.loads(pickle.dumps(est)).transform(X_test), out
+    )
+    assert not hasattr(est, "predict")
+
+
+def reference_transformer(cls, est):
+    """The n4m reference transformer class with the same parameters."""
+    import importlib
+    import inspect
+
+    for module in (
+        "baseline",
+        "smoothing",
+        "resampling",
+        "scatter",
+        "signal_conversion",
+        "wavelet",
+    ):
+        ref_cls = getattr(
+            importlib.import_module(f"n4m.transform.{module}"), cls.__name__, None
+        )
+        if ref_cls is not None:
+            break
+    accepted = inspect.signature(ref_cls.__init__).parameters
+    return ref_cls(**{k: v for k, v in est.get_params().items() if k in accepted})
+
+
+@pytest.mark.parametrize("cls", PURE_TRANSFORMERS, ids=lambda c: c.__name__)
+def test_transformer_matches_n4m_reference(cls, data):
+    X, y, X_test = positive_spectra(data)
+    est = transformer(cls).fit(X, y)
+    ref = reference_transformer(cls, est).fit(X, y)
+    np.testing.assert_array_equal(est.transform(X_test), ref.transform(X_test))

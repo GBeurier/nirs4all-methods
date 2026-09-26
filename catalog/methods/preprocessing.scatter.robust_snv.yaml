@@ -37,6 +37,24 @@ c_surface:
   - "n4m_transform_robust_snv_create"
   - "n4m_transform_robust_snv_destroy"
   - "n4m_transform_robust_snv_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_robust_snv"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "with_center"
+      type: "bool"
+      default: true
+    - name: "with_scale"
+      type: "bool"
+      default: true
+    - name: "k"
+      type: "double"
+      default: 1.4826
+      min: 0.0
 fq_name: "n4m.transform.scatter.robust_snv"
 leaf: "robust_snv"
 legacy_ids:

@@ -24,6 +24,36 @@
   "models.specialized.ecr" = c("regressor"),
   "models.specialized.tensor_pls" = c("regressor"),
   "models.transfer.di_pls" = c("regressor"),
+  "preprocessing.baselines.airpls" = c("transformer"),
+  "preprocessing.baselines.arpls" = c("transformer"),
+  "preprocessing.baselines.asls" = c("transformer"),
+  "preprocessing.baselines.beads" = c("transformer"),
+  "preprocessing.baselines.detrend" = c("transformer"),
+  "preprocessing.baselines.iasls" = c("transformer"),
+  "preprocessing.baselines.imodpoly" = c("transformer"),
+  "preprocessing.baselines.modpoly" = c("transformer"),
+  "preprocessing.baselines.rolling_ball" = c("transformer"),
+  "preprocessing.baselines.snip" = c("transformer"),
+  "preprocessing.derivatives.first_derivative" = c("transformer"),
+  "preprocessing.derivatives.norris_williams" = c("transformer"),
+  "preprocessing.derivatives.savitzky_golay" = c("transformer"),
+  "preprocessing.derivatives.second_derivative" = c("transformer"),
+  "preprocessing.resampling.crop" = c("transformer"),
+  "preprocessing.resampling.resample_transformer" = c("transformer"),
+  "preprocessing.scatter.area_normalization" = c("transformer"),
+  "preprocessing.scatter.local_snv" = c("transformer"),
+  "preprocessing.scatter.robust_snv" = c("transformer"),
+  "preprocessing.scatter.snv" = c("transformer"),
+  "preprocessing.signal_conversion.fraction_to_percent" = c("transformer"),
+  "preprocessing.signal_conversion.from_absorbance" = c("transformer"),
+  "preprocessing.signal_conversion.kubelka_munk" = c("transformer"),
+  "preprocessing.signal_conversion.percent_to_fraction" = c("transformer"),
+  "preprocessing.signal_conversion.to_absorbance" = c("transformer"),
+  "preprocessing.smoothing.gaussian" = c("transformer"),
+  "preprocessing.wavelets.haar" = c("transformer"),
+  "preprocessing.wavelets.wavelet" = c("transformer"),
+  "preprocessing.wavelets.wavelet_denoise" = c("transformer"),
+  "preprocessing.wavelets.wavelet_features" = c("transformer"),
   "selection.bipls" = c("selector"),
   "selection.bve" = c("selector"),
   "selection.cars" = c("selector"),
@@ -73,6 +103,36 @@
   "models.specialized.ecr" = "n4m_ecr",
   "models.specialized.tensor_pls" = "n4m_tensor_pls",
   "models.transfer.di_pls" = "n4m_di_pls",
+  "preprocessing.baselines.airpls" = "n4m_airpls",
+  "preprocessing.baselines.arpls" = "n4m_arpls",
+  "preprocessing.baselines.asls" = "n4m_asls",
+  "preprocessing.baselines.beads" = "n4m_beads",
+  "preprocessing.baselines.detrend" = "n4m_detrend",
+  "preprocessing.baselines.iasls" = "n4m_iasls",
+  "preprocessing.baselines.imodpoly" = "n4m_imodpoly",
+  "preprocessing.baselines.modpoly" = "n4m_modpoly",
+  "preprocessing.baselines.rolling_ball" = "n4m_rolling_ball",
+  "preprocessing.baselines.snip" = "n4m_snip",
+  "preprocessing.derivatives.first_derivative" = "n4m_first_derivative",
+  "preprocessing.derivatives.norris_williams" = "n4m_norris_williams",
+  "preprocessing.derivatives.savitzky_golay" = "n4m_savitzky_golay",
+  "preprocessing.derivatives.second_derivative" = "n4m_second_derivative",
+  "preprocessing.resampling.crop" = "n4m_crop",
+  "preprocessing.resampling.resample_transformer" = "n4m_resample_transformer",
+  "preprocessing.scatter.area_normalization" = "n4m_area_normalization",
+  "preprocessing.scatter.local_snv" = "n4m_local_snv",
+  "preprocessing.scatter.robust_snv" = "n4m_robust_snv",
+  "preprocessing.scatter.snv" = "n4m_snv",
+  "preprocessing.signal_conversion.fraction_to_percent" = "n4m_fraction_to_percent",
+  "preprocessing.signal_conversion.from_absorbance" = "n4m_from_absorbance",
+  "preprocessing.signal_conversion.kubelka_munk" = "n4m_kubelka_munk",
+  "preprocessing.signal_conversion.percent_to_fraction" = "n4m_percent_to_fraction",
+  "preprocessing.signal_conversion.to_absorbance" = "n4m_to_absorbance",
+  "preprocessing.smoothing.gaussian" = "n4m_gaussian",
+  "preprocessing.wavelets.haar" = "n4m_haar",
+  "preprocessing.wavelets.wavelet" = "n4m_wavelet",
+  "preprocessing.wavelets.wavelet_denoise" = "n4m_wavelet_denoise",
+  "preprocessing.wavelets.wavelet_features" = "n4m_wavelet_features",
   "selection.bipls" = "n4m_bipls",
   "selection.bve" = "n4m_bve",
   "selection.cars" = "n4m_cars",
@@ -224,6 +284,186 @@ n4m_tensor_pls <- function(n_components = 2L, mode_j = NULL, mode_k = NULL) {
 #' @export
 n4m_di_pls <- function(n_components = 2L, di_lambda = 1.0) {
   .n4m_estimator("models.transfer.di_pls", c("regressor"), list(n_components = n_components, di_lambda = di_lambda))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_airpls <- function(lam = 1000000.0, max_iter = 50L, tol = 0.001) {
+  .n4m_estimator("preprocessing.baselines.airpls", c("transformer"), list(lam = lam, max_iter = max_iter, tol = tol))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_arpls <- function(lam = 100000.0, max_iter = 50L, tol = 0.001) {
+  .n4m_estimator("preprocessing.baselines.arpls", c("transformer"), list(lam = lam, max_iter = max_iter, tol = tol))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_asls <- function(lam = 1000000.0, p = 0.01, max_iter = 50L, tol = 0.001) {
+  .n4m_estimator("preprocessing.baselines.asls", c("transformer"), list(lam = lam, p = p, max_iter = max_iter, tol = tol))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_beads <- function(lam_0 = 100.0, lam_1 = 0.5, lam_2 = 0.5, max_iter = 50L, tol = 0.001) {
+  .n4m_estimator("preprocessing.baselines.beads", c("transformer"), list(lam_0 = lam_0, lam_1 = lam_1, lam_2 = lam_2, max_iter = max_iter, tol = tol))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_detrend <- function(polyorder = 1L) {
+  .n4m_estimator("preprocessing.baselines.detrend", c("transformer"), list(polyorder = polyorder))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_iasls <- function(lam = 1000000.0, p = 0.01, lam_1 = 0.0001, polyorder = 2L, diff_order = 2L, max_iter = 50L, tol = 0.001) {
+  .n4m_estimator("preprocessing.baselines.iasls", c("transformer"), list(lam = lam, p = p, lam_1 = lam_1, polyorder = polyorder, diff_order = diff_order, max_iter = max_iter, tol = tol))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_imodpoly <- function(polyorder = 2L, max_iter = 250L, tol = 0.001) {
+  .n4m_estimator("preprocessing.baselines.imodpoly", c("transformer"), list(polyorder = polyorder, max_iter = max_iter, tol = tol))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_modpoly <- function(polyorder = 2L, max_iter = 250L, tol = 0.001) {
+  .n4m_estimator("preprocessing.baselines.modpoly", c("transformer"), list(polyorder = polyorder, max_iter = max_iter, tol = tol))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_rolling_ball <- function(half_window = 20L, smooth_half_window = 0L) {
+  .n4m_estimator("preprocessing.baselines.rolling_ball", c("transformer"), list(half_window = half_window, smooth_half_window = smooth_half_window))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_snip <- function(max_half_window = 20L) {
+  .n4m_estimator("preprocessing.baselines.snip", c("transformer"), list(max_half_window = max_half_window))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_first_derivative <- function(delta = 1.0, edge_order = 2L) {
+  .n4m_estimator("preprocessing.derivatives.first_derivative", c("transformer"), list(delta = delta, edge_order = edge_order))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_norris_williams <- function(segment = 5L, gap = 5L, derivative_order = 1L, delta = 1.0) {
+  .n4m_estimator("preprocessing.derivatives.norris_williams", c("transformer"), list(segment = segment, gap = gap, derivative_order = derivative_order, delta = delta))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_savitzky_golay <- function(window_length = 5L, polyorder = 2L, deriv = 0L, delta = 1.0, mode = "mirror", cval = 0.0) {
+  .n4m_estimator("preprocessing.derivatives.savitzky_golay", c("transformer"), list(window_length = window_length, polyorder = polyorder, deriv = deriv, delta = delta, mode = mode, cval = cval))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_second_derivative <- function(delta = 1.0, edge_order = 2L) {
+  .n4m_estimator("preprocessing.derivatives.second_derivative", c("transformer"), list(delta = delta, edge_order = edge_order))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_crop <- function(start = NULL, end = NULL) {
+  .n4m_estimator("preprocessing.resampling.crop", c("transformer"), list(start = start, end = end))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_resample_transformer <- function(num_samples = NULL) {
+  .n4m_estimator("preprocessing.resampling.resample_transformer", c("transformer"), list(num_samples = num_samples))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_area_normalization <- function(method = "sum") {
+  .n4m_estimator("preprocessing.scatter.area_normalization", c("transformer"), list(method = method))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_local_snv <- function(window = 11L, pad_mode = "reflect", constant_value = 0.0) {
+  .n4m_estimator("preprocessing.scatter.local_snv", c("transformer"), list(window = window, pad_mode = pad_mode, constant_value = constant_value))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_robust_snv <- function(with_center = TRUE, with_scale = TRUE, k = 1.4826) {
+  .n4m_estimator("preprocessing.scatter.robust_snv", c("transformer"), list(with_center = with_center, with_scale = with_scale, k = k))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_snv <- function(with_mean = TRUE, with_std = TRUE, ddof = 0L) {
+  .n4m_estimator("preprocessing.scatter.snv", c("transformer"), list(with_mean = with_mean, with_std = with_std, ddof = ddof))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_fraction_to_percent <- function() {
+  .n4m_estimator("preprocessing.signal_conversion.fraction_to_percent", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_from_absorbance <- function(is_percent = FALSE) {
+  .n4m_estimator("preprocessing.signal_conversion.from_absorbance", c("transformer"), list(is_percent = is_percent))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_kubelka_munk <- function(is_percent = FALSE, epsilon = 1e-10) {
+  .n4m_estimator("preprocessing.signal_conversion.kubelka_munk", c("transformer"), list(is_percent = is_percent, epsilon = epsilon))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_percent_to_fraction <- function() {
+  .n4m_estimator("preprocessing.signal_conversion.percent_to_fraction", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_to_absorbance <- function(is_percent = FALSE, epsilon = 1e-10, clip_negative = TRUE) {
+  .n4m_estimator("preprocessing.signal_conversion.to_absorbance", c("transformer"), list(is_percent = is_percent, epsilon = epsilon, clip_negative = clip_negative))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_gaussian <- function(sigma = 1.0, order = 0L, mode = "reflect", cval = 0.0, truncate = 4.0) {
+  .n4m_estimator("preprocessing.smoothing.gaussian", c("transformer"), list(sigma = sigma, order = order, mode = mode, cval = cval, truncate = truncate))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_haar <- function() {
+  .n4m_estimator("preprocessing.wavelets.haar", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_wavelet <- function(family = "haar", mode = "periodization") {
+  .n4m_estimator("preprocessing.wavelets.wavelet", c("transformer"), list(family = family, mode = mode))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_wavelet_denoise <- function(family = "db4", mode = "periodization", level = 3L, threshold_mode = "soft", noise_estimator = "median") {
+  .n4m_estimator("preprocessing.wavelets.wavelet_denoise", c("transformer"), list(family = family, mode = mode, level = level, threshold_mode = threshold_mode, noise_estimator = noise_estimator))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_wavelet_features <- function(family = "haar", mode = "periodization", max_level = 3L, entropy = "energy") {
+  .n4m_estimator("preprocessing.wavelets.wavelet_features", c("transformer"), list(family = family, mode = mode, max_level = max_level, entropy = entropy))
 }
 
 #' @rdname n4m_estimator_role_constructors

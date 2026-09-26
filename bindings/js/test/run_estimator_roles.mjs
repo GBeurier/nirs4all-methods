@@ -61,6 +61,7 @@ for (const c of fixture.cases) {
     if (c.selected_indices) {
         assert.deepEqual(fitted.selectedIndices(), c.selected_indices, `${c.method_id} JS fit`);
     }
+    if (c.transform) close(fitted.transform(xTest).data, c.transform.flat(), 1e-9, `${c.method_id} JS fit`);
     fitted.dispose();
 }
 

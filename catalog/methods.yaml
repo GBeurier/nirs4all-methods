@@ -2800,6 +2800,26 @@ methods:
       - "n4m_transform_airpls_transform"
     legacy_ids:
       - "preprocessing.baselines.airpls"
+    estimator:
+      kind: estimator
+      adapter: tr_airpls
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: lam
+          type: double
+          default: 1000000.0
+          min: 0.0
+        - name: max_iter
+          type: int
+          default: 50
+          min: 1
+        - name: tol
+          type: double
+          default: 0.001
+          min: 0.0
   - method_id: "preprocessing.baselines.arpls"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -2840,6 +2860,26 @@ methods:
       - "n4m_transform_arpls_transform"
     legacy_ids:
       - "preprocessing.baselines.arpls"
+    estimator:
+      kind: estimator
+      adapter: tr_arpls
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: lam
+          type: double
+          default: 100000.0
+          min: 0.0
+        - name: max_iter
+          type: int
+          default: 50
+          min: 1
+        - name: tol
+          type: double
+          default: 0.001
+          min: 0.0
   - method_id: "preprocessing.baselines.asls"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -2880,6 +2920,31 @@ methods:
       - "n4m_transform_asls_transform"
     legacy_ids:
       - "preprocessing.baselines.asls"
+    estimator:
+      kind: estimator
+      adapter: tr_asls
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: lam
+          type: double
+          default: 1000000.0
+          min: 0.0
+        - name: p
+          type: double
+          default: 0.01
+          min: 0.0
+          max: 1.0
+        - name: max_iter
+          type: int
+          default: 50
+          min: 0
+        - name: tol
+          type: double
+          default: 0.001
+          min: 0.0
   - method_id: "preprocessing.baselines.beads"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -2920,6 +2985,34 @@ methods:
       - "n4m_transform_beads_transform"
     legacy_ids:
       - "preprocessing.baselines.beads"
+    estimator:
+      kind: estimator
+      adapter: tr_beads
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: lam_0
+          type: double
+          default: 100.0
+          min: 0.0
+        - name: lam_1
+          type: double
+          default: 0.5
+          min: 0.0
+        - name: lam_2
+          type: double
+          default: 0.5
+          min: 0.0
+        - name: max_iter
+          type: int
+          default: 50
+          min: 1
+        - name: tol
+          type: double
+          default: 0.001
+          min: 0.0
   - method_id: "preprocessing.baselines.detrend"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -2960,6 +3053,18 @@ methods:
       - "n4m_transform_detrend_transform"
     legacy_ids:
       - "preprocessing.baselines.detrend"
+    estimator:
+      kind: estimator
+      adapter: tr_detrend
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: polyorder
+          type: int
+          default: 1
+          min: 0
   - method_id: "preprocessing.baselines.iasls"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -3002,6 +3107,43 @@ methods:
       - "n4m_transform_iasls_transform"
     legacy_ids:
       - "preprocessing.baselines.iasls"
+    estimator:
+      kind: estimator
+      adapter: tr_iasls
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: lam
+          type: double
+          default: 1000000.0
+          min: 0.0
+        - name: p
+          type: double
+          default: 0.01
+          min: 0.0
+          max: 1.0
+        - name: lam_1
+          type: double
+          default: 0.0001
+          min: 0.0
+        - name: polyorder
+          type: int
+          default: 2
+          min: 0
+        - name: diff_order
+          type: int
+          default: 2
+          min: 1
+        - name: max_iter
+          type: int
+          default: 50
+          min: 1
+        - name: tol
+          type: double
+          default: 0.001
+          min: 0.0
   - method_id: "preprocessing.baselines.imodpoly"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -3042,6 +3184,26 @@ methods:
       - "n4m_transform_imodpoly_transform"
     legacy_ids:
       - "preprocessing.baselines.imodpoly"
+    estimator:
+      kind: estimator
+      adapter: tr_imodpoly
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: polyorder
+          type: int
+          default: 2
+          min: 0
+        - name: max_iter
+          type: int
+          default: 250
+          min: 1
+        - name: tol
+          type: double
+          default: 0.001
+          min: 0.0
   - method_id: "preprocessing.baselines.modpoly"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -3082,6 +3244,26 @@ methods:
       - "n4m_transform_modpoly_transform"
     legacy_ids:
       - "preprocessing.baselines.modpoly"
+    estimator:
+      kind: estimator
+      adapter: tr_modpoly
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: polyorder
+          type: int
+          default: 2
+          min: 0
+        - name: max_iter
+          type: int
+          default: 250
+          min: 1
+        - name: tol
+          type: double
+          default: 0.001
+          min: 0.0
   - method_id: "preprocessing.baselines.rolling_ball"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -3122,6 +3304,22 @@ methods:
       - "n4m_transform_rolling_ball_transform"
     legacy_ids:
       - "preprocessing.baselines.rolling_ball"
+    estimator:
+      kind: estimator
+      adapter: tr_rolling_ball
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: half_window
+          type: int
+          default: 20
+          min: 1
+        - name: smooth_half_window
+          type: int
+          default: 0
+          min: 0
   - method_id: "preprocessing.baselines.snip"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -3162,6 +3360,18 @@ methods:
       - "n4m_transform_snip_transform"
     legacy_ids:
       - "preprocessing.baselines.snip"
+    estimator:
+      kind: estimator
+      adapter: tr_snip
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: max_half_window
+          type: int
+          default: 20
+          min: 1
   - method_id: "preprocessing.derivatives.derivate"
     family: "preprocessing.derivatives"
     category: "preprocessing"
@@ -3246,6 +3456,22 @@ methods:
       - "n4m_transform_first_derivative_transform"
     legacy_ids:
       - "preprocessing.derivatives.first_derivative"
+    estimator:
+      kind: estimator
+      adapter: tr_first_derivative
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: delta
+          type: double
+          default: 1.0
+        - name: edge_order
+          type: int
+          default: 2
+          min: 1
+          max: 2
   - method_id: "preprocessing.derivatives.norris_williams"
     family: "preprocessing.derivatives"
     category: "preprocessing"
@@ -3286,6 +3512,30 @@ methods:
       - "n4m_transform_norris_williams_transform"
     legacy_ids:
       - "preprocessing.derivatives.norris_williams"
+    estimator:
+      kind: estimator
+      adapter: tr_norris_williams
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: segment
+          type: int
+          default: 5
+          min: 1
+        - name: gap
+          type: int
+          default: 5
+          min: 1
+        - name: derivative_order
+          type: int
+          default: 1
+          min: 0
+          max: 2
+        - name: delta
+          type: double
+          default: 1.0
   - method_id: "preprocessing.derivatives.savitzky_golay"
     family: "preprocessing.derivatives"
     category: "preprocessing"
@@ -3326,6 +3576,36 @@ methods:
       - "n4m_transform_savitzky_golay_transform"
     legacy_ids:
       - "preprocessing.derivatives.savitzky_golay"
+    estimator:
+      kind: estimator
+      adapter: tr_savitzky_golay
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: window_length
+          type: int
+          default: 5
+          min: 1
+        - name: polyorder
+          type: int
+          default: 2
+          min: 0
+        - name: deriv
+          type: int
+          default: 0
+          min: 0
+        - name: delta
+          type: double
+          default: 1.0
+        - name: mode
+          type: enum
+          choices: [mirror, constant, nearest, wrap, interp]
+          default: mirror
+        - name: cval
+          type: double
+          default: 0.0
   - method_id: "preprocessing.derivatives.second_derivative"
     family: "preprocessing.derivatives"
     category: "preprocessing"
@@ -3366,6 +3646,22 @@ methods:
       - "n4m_transform_second_derivative_transform"
     legacy_ids:
       - "preprocessing.derivatives.second_derivative"
+    estimator:
+      kind: estimator
+      adapter: tr_second_derivative
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: delta
+          type: double
+          default: 1.0
+        - name: edge_order
+          type: int
+          default: 2
+          min: 1
+          max: 2
   - method_id: "preprocessing.feature_selection.flexible_pca"
     family: "preprocessing.feature_selection"
     category: "preprocessing"
@@ -3594,6 +3890,20 @@ methods:
       - "n4m_transform_crop_transform"
     legacy_ids:
       - "preprocessing.resampling.crop"
+    estimator:
+      kind: estimator
+      adapter: tr_crop
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: start
+          type: int
+          min: 0
+        - name: end
+          type: int
+          min: -1
   - method_id: "preprocessing.resampling.kbins_discretizer"
     family: "preprocessing.resampling"
     category: "preprocessing"
@@ -3720,6 +4030,17 @@ methods:
       - "n4m_transform_resample_transformer_transform"
     legacy_ids:
       - "preprocessing.resampling.resample_transformer"
+    estimator:
+      kind: estimator
+      adapter: tr_resample
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: num_samples
+          type: int
+          min: -1
   - method_id: "preprocessing.resampling.resampler"
     family: "preprocessing.resampling"
     category: "preprocessing"
@@ -3976,6 +4297,18 @@ methods:
       - "n4m_transform_area_normalization_transform"
     legacy_ids:
       - "preprocessing.scatter.area_normalization"
+    estimator:
+      kind: estimator
+      adapter: tr_area_normalization
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: method
+          type: enum
+          choices: [sum, abs_sum, trapz]
+          default: sum
   - method_id: "preprocessing.scatter.emsc"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -4066,6 +4399,25 @@ methods:
       - "n4m_transform_local_snv_transform"
     legacy_ids:
       - "preprocessing.scatter.local_snv"
+    estimator:
+      kind: estimator
+      adapter: tr_local_snv
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: window
+          type: int
+          default: 11
+          min: 3
+        - name: pad_mode
+          type: enum
+          choices: [reflect, edge, constant]
+          default: reflect
+        - name: constant_value
+          type: double
+          default: 0.0
   - method_id: "preprocessing.scatter.msc"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -4158,6 +4510,24 @@ methods:
       - "n4m_transform_robust_snv_transform"
     legacy_ids:
       - "preprocessing.scatter.robust_snv"
+    estimator:
+      kind: estimator
+      adapter: tr_robust_snv
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: with_center
+          type: bool
+          default: true
+        - name: with_scale
+          type: bool
+          default: true
+        - name: k
+          type: double
+          default: 1.4826
+          min: 0.0
   - method_id: "preprocessing.scatter.snv"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -4198,6 +4568,24 @@ methods:
       - "n4m_transform_snv_transform"
     legacy_ids:
       - "preprocessing.scatter.snv"
+    estimator:
+      kind: estimator
+      adapter: tr_snv
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: with_mean
+          type: bool
+          default: true
+        - name: with_std
+          type: bool
+          default: true
+        - name: ddof
+          type: int
+          default: 0
+          min: 0
   - method_id: "preprocessing.signal_conversion.fraction_to_percent"
     family: "preprocessing.signal_conversion"
     category: "preprocessing"
@@ -4238,6 +4626,13 @@ methods:
       - "n4m_transform_fraction_to_percent_transform"
     legacy_ids:
       - "preprocessing.signal_conversion.fraction_to_percent"
+    estimator:
+      kind: estimator
+      adapter: tr_fraction_to_percent
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
   - method_id: "preprocessing.signal_conversion.from_absorbance"
     family: "preprocessing.signal_conversion"
     category: "preprocessing"
@@ -4278,6 +4673,17 @@ methods:
       - "n4m_transform_from_absorbance_transform"
     legacy_ids:
       - "preprocessing.signal_conversion.from_absorbance"
+    estimator:
+      kind: estimator
+      adapter: tr_from_absorbance
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: is_percent
+          type: bool
+          default: false
   - method_id: "preprocessing.signal_conversion.kubelka_munk"
     family: "preprocessing.signal_conversion"
     category: "preprocessing"
@@ -4318,6 +4724,21 @@ methods:
       - "n4m_transform_kubelka_munk_transform"
     legacy_ids:
       - "preprocessing.signal_conversion.kubelka_munk"
+    estimator:
+      kind: estimator
+      adapter: tr_kubelka_munk
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: is_percent
+          type: bool
+          default: false
+        - name: epsilon
+          type: double
+          default: 1e-10
+          min: 0.0
   - method_id: "preprocessing.signal_conversion.percent_to_fraction"
     family: "preprocessing.signal_conversion"
     category: "preprocessing"
@@ -4358,6 +4779,13 @@ methods:
       - "n4m_transform_percent_to_fraction_transform"
     legacy_ids:
       - "preprocessing.signal_conversion.percent_to_fraction"
+    estimator:
+      kind: estimator
+      adapter: tr_percent_to_fraction
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
   - method_id: "preprocessing.signal_conversion.to_absorbance"
     family: "preprocessing.signal_conversion"
     category: "preprocessing"
@@ -4398,6 +4826,24 @@ methods:
       - "n4m_transform_to_absorbance_transform"
     legacy_ids:
       - "preprocessing.signal_conversion.to_absorbance"
+    estimator:
+      kind: estimator
+      adapter: tr_to_absorbance
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: is_percent
+          type: bool
+          default: false
+        - name: epsilon
+          type: double
+          default: 1e-10
+          min: 0.0
+        - name: clip_negative
+          type: bool
+          default: true
   - method_id: "preprocessing.smoothing.gaussian"
     family: "preprocessing.smoothing"
     category: "preprocessing"
@@ -4438,6 +4884,33 @@ methods:
       - "n4m_transform_gaussian_transform"
     legacy_ids:
       - "preprocessing.smoothing.gaussian"
+    estimator:
+      kind: estimator
+      adapter: tr_gaussian
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: sigma
+          type: double
+          default: 1.0
+          min: 0.0
+        - name: order
+          type: int
+          default: 0
+          min: 0
+        - name: mode
+          type: enum
+          choices: [reflect, constant, nearest, mirror, wrap]
+          default: reflect
+        - name: cval
+          type: double
+          default: 0.0
+        - name: truncate
+          type: double
+          default: 4.0
+          min: 0.0
   - method_id: "preprocessing.specialized.fck_static"
     family: "preprocessing.specialized"
     category: "preprocessing"
@@ -4522,6 +4995,13 @@ methods:
       - "n4m_transform_haar_transform"
     legacy_ids:
       - "preprocessing.wavelets.haar"
+    estimator:
+      kind: estimator
+      adapter: tr_haar
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
   - method_id: "preprocessing.wavelets.wavelet"
     family: "preprocessing.wavelets"
     category: "preprocessing"
@@ -4564,6 +5044,22 @@ methods:
       - "n4m_transform_wavelet_transform"
     legacy_ids:
       - "preprocessing.wavelets.wavelet"
+    estimator:
+      kind: estimator
+      adapter: tr_wavelet
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: family
+          type: enum
+          choices: [haar, db4, sym4, coif1]
+          default: haar
+        - name: mode
+          type: enum
+          choices: [periodization, symmetric, zero]
+          default: periodization
   - method_id: "preprocessing.wavelets.wavelet_denoise"
     family: "preprocessing.wavelets"
     category: "preprocessing"
@@ -4604,6 +5100,34 @@ methods:
       - "n4m_transform_wavelet_denoise_transform"
     legacy_ids:
       - "preprocessing.wavelets.wavelet_denoise"
+    estimator:
+      kind: estimator
+      adapter: tr_wavelet_denoise
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: family
+          type: enum
+          choices: [haar, db4, sym4, coif1]
+          default: db4
+        - name: mode
+          type: enum
+          choices: [periodization, symmetric, zero]
+          default: periodization
+        - name: level
+          type: int
+          default: 3
+          min: 0
+        - name: threshold_mode
+          type: enum
+          choices: [soft, hard]
+          default: soft
+        - name: noise_estimator
+          type: enum
+          choices: [median, std]
+          default: median
   - method_id: "preprocessing.wavelets.wavelet_features"
     family: "preprocessing.wavelets"
     category: "preprocessing"
@@ -4648,6 +5172,30 @@ methods:
       - "n4m_transform_wavelet_features_transform"
     legacy_ids:
       - "preprocessing.wavelets.wavelet_features"
+    estimator:
+      kind: estimator
+      adapter: tr_wavelet_features
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: family
+          type: enum
+          choices: [haar, db4, sym4, coif1]
+          default: haar
+        - name: mode
+          type: enum
+          choices: [periodization, symmetric, zero]
+          default: periodization
+        - name: max_level
+          type: int
+          default: 3
+          min: 1
+        - name: entropy
+          type: enum
+          choices: [energy, histogram]
+          default: energy
   - method_id: "preprocessing.wavelets.wavelet_pca"
     family: "preprocessing.wavelets"
     category: "preprocessing"

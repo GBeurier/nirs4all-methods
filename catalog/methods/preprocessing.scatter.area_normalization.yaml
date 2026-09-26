@@ -37,6 +37,18 @@ c_surface:
   - "n4m_transform_area_normalization_create"
   - "n4m_transform_area_normalization_destroy"
   - "n4m_transform_area_normalization_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_area_normalization"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "method"
+      type: "enum"
+      choices: "[sum, abs_sum, trapz]"
+      default: "sum"
 fq_name: "n4m.transform.scatter.area_normalization"
 leaf: "area_normalization"
 legacy_ids:

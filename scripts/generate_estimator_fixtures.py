@@ -37,6 +37,9 @@ EXPLICIT_PARAMS = {
     "top_k": 4,
     "thresholds": [0.05, 0.1, 0.3],
     "alpha_thresholds": [0.95, 0.99],
+    "start": 2,
+    "end": 10,
+    "num_samples": 8,
 }
 
 
@@ -47,6 +50,9 @@ def dataset():
     X = scores @ loadings + 0.1 * rng.normal(size=(48, N_FEATURES))
     y = scores[:, 0] - 0.5 * scores[:, 1] + 0.05 * rng.normal(size=48)
     X_target = rng.normal(size=(30, 2)) @ loadings + 0.3
+    # Strictly positive, reflectance-like values keep every conversion defined.
+    shift = 1.0 - min(X.min(), X_target.min())
+    X, X_target = (X + shift) / (2 * shift), (X_target + shift) / (2 * shift)
     return X[:36], y[:36], X[36:], X_target
 
 
@@ -54,6 +60,8 @@ def explicit_params(cls) -> dict:
     params = {k: v for k, v in EXPLICIT_PARAMS.items() if k in cls._param_types}
     if cls is roles.RandomFrog:
         params["initial_size"] = 6
+    if cls is roles.EMCUVE:
+        params["noise_features"] = 12  # 50 noise columns swamp 12 real ones
     return params
 
 

@@ -26,7 +26,9 @@ def crate_identity() -> tuple[str, str]:
     name = fields.get("name")
     version = fields.get("version")
     if name != "n4m" or version is None:
-        raise SystemExit("bindings/rust/n4m/Cargo.toml must declare package n4m with a version")
+        raise SystemExit(
+            "bindings/rust/n4m/Cargo.toml must declare package n4m with a version"
+        )
     if re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", version) is None:
         raise SystemExit(f"n4m crate version is not strict semver X.Y.Z: {version!r}")
 
@@ -37,9 +39,13 @@ def crate_identity() -> tuple[str, str]:
         lock_fields = dict(
             re.findall(r'^([a-z-]+)\s*=\s*"([^"]+)"\s*$', entry, re.MULTILINE)
         )
-        matches += lock_fields.get("name") == name and lock_fields.get("version") == version
+        matches += (
+            lock_fields.get("name") == name and lock_fields.get("version") == version
+        )
     if matches != 1:
-        raise SystemExit(f"Cargo.lock must contain exactly one {name} {version} package entry")
+        raise SystemExit(
+            f"Cargo.lock must contain exactly one {name} {version} package entry"
+        )
     return name, version
 
 
@@ -62,9 +68,13 @@ def validate_workflow_contract() -> None:
     )
     missing = [fragment for fragment in required if fragment not in workflow]
     if missing:
-        raise SystemExit("n4m release workflow contract is missing: " + ", ".join(missing))
+        raise SystemExit(
+            "n4m release workflow contract is missing: " + ", ".join(missing)
+        )
     if workflow.count("cargo publish") != 1:
-        raise SystemExit("n4m release workflow must contain exactly one cargo publish command")
+        raise SystemExit(
+            "n4m release workflow must contain exactly one cargo publish command"
+        )
     if "workflow_dispatch:\n" in workflow and "workflow_dispatch: {}" not in workflow:
         raise SystemExit("workflow_dispatch must remain input-free and dry-run only")
 

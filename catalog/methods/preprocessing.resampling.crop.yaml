@@ -39,6 +39,20 @@ c_surface:
   - "n4m_transform_crop_destroy"
   - "n4m_transform_crop_output_cols"
   - "n4m_transform_crop_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_crop"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "start"
+      type: "int"
+      min: 0
+    - name: "end"
+      type: "int"
+      min: -1
 fq_name: "n4m.transform.resampling.crop"
 leaf: "crop"
 legacy_ids:
