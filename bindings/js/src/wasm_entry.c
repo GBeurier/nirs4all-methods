@@ -607,8 +607,8 @@ static int n4m_wasm_model_fit_tier_b(
         memcpy(y_mean_out, y_mean, (size_t)q * sizeof(double));
     }
     /* Only the standalone fits that emit a genuine affine "intercept" matrix
-     * (currently just Ridge: intercept = y_mean - x_mean.B_descaled) set the
-     * has_intercept flag. The PLS-based Tier-B fits expose only the centred
+     * (Ridge and MBPLS) set the
+     * has_intercept flag. Other PLS-based Tier-B fits expose only the centred
      * triple, so intercept_out is zero-filled for shape and the flag stays 0. */
     int has_intercept = 0;
     if (intercept_out != NULL) {
@@ -637,9 +637,9 @@ static int n4m_wasm_model_fit_tier_b(
  * has_intercept_out (1 when the model produced a genuine affine intercept,
  * 0 for the centred PLS/PCR family), and predictions_out (n*q).
  *
- * Intercept contract: only models with a real constant term (currently Ridge)
+ * Intercept contract: only models with a real constant term (Ridge and MBPLS)
  * set has_intercept_out=1 and a meaningful intercept_out. The PLS/PCR family
- * (Tier A) and the PLS-based Tier-B fits predict via the centred form
+ * (Tier A) and most PLS-based Tier-B fits predict via the centred form
  * y_mean + (x - x_mean).B and have NO affine intercept — their intercept_out is
  * zero-filled and has_intercept_out=0, so a caller must not add it to x.B.
  *
@@ -695,8 +695,8 @@ int n4m_wasm_model_fit(const char* model,
  *
  * For Ridge the two forms agree numerically because its intercept is
  * y_mean - x_mean.B (on the de-scaled coefficient scale); for the centred-only
- * models passing a non-NULL intercept would double-count the constant, so the
- * generic JS path always uses the centred form (intercept = NULL). */
+ * models passing a non-NULL intercept would double-count the constant. The
+ * JS path uses the affine form only when the fit returned a real intercept. */
 __attribute__((used))
 int n4m_wasm_model_predict_from_coeffs(const double* coefficients,
                                        const double* x_mean,
