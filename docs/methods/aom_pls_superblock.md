@@ -60,7 +60,7 @@ https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_
 
 ## Catalog note
 
-Python-backed donor-style AOM-PLS superblock constrained to strict-linear single-operator AOM views. It builds concatenated native aom_preprocess operator outputs, selects the PLS component count by train CV over the superblock, fits through the native PLS binding, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes row-reference-dependent preprocessing, nonlinear lifts and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU PLS superblock grinder.
+Native AOM-PLS superblock over strict-linear single-operator AOM views (core fit_aom_superblock). It concatenates the operator outputs with train-fold centering and optional block RMS scaling, selects the PLS component count by train-fold CV, fits the native moment/materialized PLS final fit, and folds the final superblock coefficients back to original-input input_coefficients plus intercept (affine N4MM state). It excludes row-reference-dependent preprocessing, nonlinear lifts and dataset/source routing.
 
 _Timing benchmark_: `benchmarks/cross_binding/bench_aom_pls_superblock_timing.py`
 

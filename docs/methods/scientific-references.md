@@ -10,7 +10,7 @@ This generated index covers the scientific records rendered in the method pages.
 
 - `docs/_extras/methods_bibliography.py` — SHA-256 `140554600e9d2f835e1d11a383d9d389c730d86c5205a5f742ea8465824e6d30`
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
-- `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `a32c7074bf922c3dcaad3923f9e2bc985c96d5efb4bf14dea04abbff62a7e76d`
+- `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
 - `docs/_extras/scientific_remaining.py` — SHA-256 `9b9d58596371dcc1fd96d0c1976a3058e640f405a5a6e4e5da49e07ea892b75d`
 
