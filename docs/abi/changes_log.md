@@ -1,5 +1,17 @@
 # ABI — Changes Log
 
+## 2026-09-26 — ABI 2.10.0: fitted native preprocessing wire (release pending)
+
+Five additive C functions export/import a bounded, versioned N4MP byte stream
+for a fitted linear preprocessing pipeline and inspect its fitted feature width
+and ordered original operator plan. The C++ decoder validates the checksum,
+operator kinds, parameters, dimensions and learned state before constructing
+a handle; the 15 supported pipeline kinds and mixed chains have held-out
+roundtrip tests. Bindings may transport the same bytes without reimplementing
+preprocessing. N4MP is separate from N4MM model bytes and does not serialize
+product DAG branches, selectors, or retraining data. This ABI change is not a
+package release by itself.
+
 ## 2026-09-26 — ABI 2.9.0: affine MethodResult promotion (release pending)
 
 `n4m_model_from_method_result` copies a natively marked affine MethodResult
