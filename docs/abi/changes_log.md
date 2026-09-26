@@ -30,13 +30,22 @@ SIMPLS, PCR, CPPLS, robust/ridge/continuum/weighted PLS, Ridge,
 sparse/fused/group-sparse PLS, O2PLS, MIR-PLS, MB-PLS, ECR, N-PLS, DI-PLS,
 bagging/boosting/random-subspace PLS) and 25 selectors (SPA, VIP-SPA, CARS,
 SCARS, UVE, EMCUVE, random frog, GA, PSO, VISSA, shaving, BVE, REP, IPW, ST,
-T2, BiPLS, SiPLS, IRIV, IRF, WVC, stability, randomization, variable ranking).
-`models.pls.pls_regression` is a new catalog entry for the general PLS
+T2, BiPLS, SiPLS, IRIV, IRF, WVC, stability, randomization, variable ranking),
+32 transformers (the stateless spectral transforms, MSC and EMSC) and 4
+classifiers (PLS-LDA, PLS-QDA, PLS-logistic, sparse PLS-DA; labels are integer
+class ids remapped internally, probabilities only where the method defines
+them). `docs/parity/estimator_roles_coverage.md` is the generated per-method
+record. `models.pls.pls_regression` is a new catalog entry for the general PLS
 estimator. The per-method C functions are unchanged. Behaviour changes:
 WeightedPLS and O2PLS results are marked affine predictors; bagging and
 random-subspace PLS now draw samples with portable rejection sampling and
 Fisher-Yates on mt19937_64 (std distributions differed between standard
 libraries), so their fits change once and become platform independent.
+`n4m_estimators_pls_qda_fit` now returns the quadratic discriminant (per-class
+covariance, log determinant and prior) as `predictions`; it previously
+ignored the fitted covariances. The sparse PLS-DA `sparsity_lambda` parameter
+reaches the kernel through the estimator role (the pls4all wrapper never
+passed it to C).
 
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (unreleased)
 

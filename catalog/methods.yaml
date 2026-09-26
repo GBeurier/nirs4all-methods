@@ -1525,6 +1525,18 @@ methods:
       - "n4m_estimators_pls_lda_fit"
     legacy_ids:
       - "models.classification.pls_lda"
+    estimator:
+      kind: estimator
+      adapter: cls_pls_lda
+      roles: [classifier]
+      state: classifier
+      inputs:
+        labels: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
   - method_id: "models.classification.pls_logistic"
     family: "models.classification"
     category: "models"
@@ -1561,6 +1573,22 @@ methods:
       - "n4m_estimators_pls_logistic_fit"
     legacy_ids:
       - "models.classification.pls_logistic"
+    estimator:
+      kind: estimator
+      adapter: cls_pls_logistic
+      roles: [classifier]
+      state: classifier
+      inputs:
+        labels: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: max_iter
+          type: int
+          default: 500
+          min: 1
   - method_id: "diagnostics.pls_monitoring"
     family: "diagnostics.pls"
     category: "diagnostics"
@@ -8081,6 +8109,18 @@ methods:
       - "n4m_estimators_pls_qda_fit"
     legacy_ids:
       - "models.classification.pls_qda"
+    estimator:
+      kind: estimator
+      adapter: cls_pls_qda
+      roles: [classifier]
+      state: classifier
+      inputs:
+        labels: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
   - method_id: "models.heads.pls_cox"
     family: "models.heads"
     category: "models"
@@ -9061,6 +9101,22 @@ methods:
       - "n4m_estimators_sparse_pls_da_fit"
     legacy_ids:
       - "models.sparse.sparse_pls_da"
+    estimator:
+      kind: estimator
+      adapter: cls_sparse_pls_da
+      roles: [classifier]
+      state: classifier
+      inputs:
+        labels: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: sparsity_lambda
+          type: double
+          default: 0.05
+          min: 0.0
   - method_id: "models.specialized.missing_aware_nipals"
     family: "models.specialized"
     category: "models"

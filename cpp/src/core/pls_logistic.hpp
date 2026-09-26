@@ -26,6 +26,29 @@ struct PlsLogisticResult {
     std::vector<double> coefficients;    // row-major (n_classes - 1) x n_components
 };
 
+// Fits the baseline-logit head on row-major PLS scores (n x n_components)
+// and 0-based labels; fills intercepts and coefficients of `out`.
+[[nodiscard]] n4m_status_t fit_pls_logistic_head(Context& ctx,
+                                                 const std::vector<double>& scores,
+                                                 const std::vector<std::int32_t>& labels,
+                                                 std::int64_t n_samples,
+                                                 std::int32_t n_components,
+                                                 std::int32_t n_classes,
+                                                 std::int32_t max_iter,
+                                                 PlsLogisticResult& out);
+
+// Decision logits and probabilities (row-major n x n_classes) of the fitted
+// baseline-logit head for row-major PLS scores (n x n_components), computed
+// exactly as fit_predict_pls_logistic computes its in-sample outputs.
+void pls_logistic_predict(const std::vector<double>& intercepts,
+                          const std::vector<double>& coefficients,
+                          std::int32_t n_classes,
+                          std::int32_t n_components,
+                          const double* scores,
+                          std::int64_t n_samples,
+                          double* decision,
+                          double* probabilities);
+
 [[nodiscard]] n4m_status_t fit_predict_pls_logistic(
     Context& ctx,
     const Config& cfg,

@@ -94,6 +94,10 @@ SEXP r_n4m_estimator_import(SEXP);
 SEXP r_n4m_estimator_alive(SEXP);
 SEXP r_n4m_estimator_info(SEXP);
 SEXP r_n4m_estimator_selected_indices(SEXP);
+SEXP r_n4m_estimator_decision_function(SEXP, SEXP);
+SEXP r_n4m_estimator_predict_proba(SEXP, SEXP);
+SEXP r_n4m_estimator_predict_labels(SEXP, SEXP);
+SEXP r_n4m_estimator_classes(SEXP);
 
 static const R_CallMethodDef callMethods[] = {
     /* core */
@@ -167,6 +171,10 @@ static const R_CallMethodDef callMethods[] = {
     {"r_n4m_estimator_alive", (DL_FUNC)&r_n4m_estimator_alive, 1},
     {"r_n4m_estimator_info", (DL_FUNC)&r_n4m_estimator_info, 1},
     {"r_n4m_estimator_selected_indices", (DL_FUNC)&r_n4m_estimator_selected_indices, 1},
+    {"r_n4m_estimator_decision_function", (DL_FUNC)&r_n4m_estimator_decision_function, 2},
+    {"r_n4m_estimator_predict_proba", (DL_FUNC)&r_n4m_estimator_predict_proba, 2},
+    {"r_n4m_estimator_predict_labels", (DL_FUNC)&r_n4m_estimator_predict_labels, 2},
+    {"r_n4m_estimator_classes", (DL_FUNC)&r_n4m_estimator_classes, 1},
 
     {NULL, NULL, 0},
 };

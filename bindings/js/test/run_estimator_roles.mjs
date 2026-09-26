@@ -26,6 +26,16 @@ const close = (actual, expected, tol, label) => {
 const xTest = matrix(fixture.x_test);
 const xTrain = matrix(fixture.x_train);
 const yTrain = Float64Array.from(fixture.y_train);
+const checkClassifier = (est, c, tol, label) => {
+    assert.deepEqual(est.classes(), c.classes, `${label} classes`);
+    assert.deepEqual(est.predictLabels(xTest), c.predict_labels, `${label} labels`);
+    close(est.decisionFunction(xTest).data, c.decision_function.flat(), tol, `${label} decision`);
+    if (c.predict_proba) {
+        close(est.predictProba(xTest).data, c.predict_proba.flat(), tol, `${label} proba`);
+    } else {
+        assert.equal(typeof est.predictProba, "undefined", `${label} must not define probabilities`);
+    }
+};
 const inputsFor = (names) => ({
     ...(names.includes("feature_groups") ? { featureGroups: fixture.feature_groups } : {}),
     ...(names.includes("blocks") ? { blocks: fixture.blocks } : {}),
@@ -47,6 +57,7 @@ for (const c of fixture.cases) {
         assert.equal(typeof est.predict, "undefined", `${c.method_id} must not predict`);
     }
     if (c.selected_indices) assert.deepEqual(est.selectedIndices(), c.selected_indices);
+    if (c.classes) checkClassifier(est, c, 1e-12, c.method_id);
     if (c.transform) {
         close(est.transform(xTest).data, c.transform.flat(), 1e-12, `${c.method_id} transform`);
     } else {
@@ -56,7 +67,9 @@ for (const c of fixture.cases) {
     est.dispose();
 
     const Cls = byMethod.get(c.method_id);
-    const fitted = new Cls(c.params).fit(xTrain, yTrain, inputsFor(c.fit_inputs));
+    const target = c.classes ? fixture.labels_train : yTrain;
+    const fitted = new Cls(c.params).fit(xTrain, target, inputsFor(c.fit_inputs));
+    if (c.classes) checkClassifier(fitted, c, 1e-9, `${c.method_id} JS fit`);
     if (c.predict) close(fitted.predict(xTest).data, c.predict, 1e-9, `${c.method_id} JS fit`);
     if (c.selected_indices) {
         assert.deepEqual(fitted.selectedIndices(), c.selected_indices, `${c.method_id} JS fit`);
@@ -69,5 +82,6 @@ assert.throws(() => new n4m.GroupSparsePLS().fit(xTrain, yTrain), /feature_group
 assert.throws(() => new n4m.CPPLS().fit(xTrain, yTrain, { groups: new Array(xTrain.rows).fill(1) }),
               /not used/);
 assert.throws(() => new n4m.PLSRegression({ solver: "bogus" }).fit(xTrain, yTrain), /solver/);
+assert.throws(() => new n4m.PLSLDA().fit(xTrain), /labels/);
 
 console.log(`estimator roles: ${fixture.cases.length} N4ME states replayed and refitted in JS/WASM`);

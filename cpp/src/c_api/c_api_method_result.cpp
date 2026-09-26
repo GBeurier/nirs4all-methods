@@ -2705,44 +2705,12 @@ N4M_API n4m_status_t n4m_estimators_pls_qda_fit(
         handle->set_double_matrix("rotations_r", res.rotations_r, p, k);
         handle->set_double_matrix("x_mean", res.x_mean, 1, p);
 
-        // QDA prediction: for each row i, project to scores, then compute
-        // log p(class c | scores) ≈ -0.5 * (s - mu_c)' Sigma_c^{-1} (s - mu_c)
-        //                            - 0.5 * log |Sigma_c| + log prior.
-        // For the parity gate we just return the centered scores as the
-        // prediction proxy (n × n_classes) — sufficient for paper-only.
+        // Quadratic discriminant decision (log posterior up to a constant).
+        std::vector<double> preds;
+        const n4m_status_t qda_status =
+            ::n4m::core::pls_qda_decision(*as_core(ctx), res, *X, preds);
+        if (qda_status != N4M_OK) return qda_status;
         const std::size_t n = static_cast<std::size_t>(X->rows);
-        std::vector<double> preds(n * static_cast<std::size_t>(q), 0.0);
-        const auto* xdata = static_cast<const double*>(X->data);
-        const std::size_t x_rs = static_cast<std::size_t>(X->row_stride);
-        const std::size_t x_cs = static_cast<std::size_t>(X->col_stride);
-        std::vector<double> scores(static_cast<std::size_t>(k), 0.0);
-        for (std::size_t i = 0; i < n; ++i) {
-            // Project X[i] to scores.
-            for (std::size_t comp = 0;
-                 comp < static_cast<std::size_t>(k); ++comp) {
-                double s = 0.0;
-                for (std::size_t f = 0;
-                     f < static_cast<std::size_t>(p); ++f) {
-                    s += (xdata[i * x_rs + f * x_cs] - res.x_mean[f]) *
-                          res.rotations_r[f *
-                            static_cast<std::size_t>(k) + comp];
-                }
-                scores[comp] = s;
-            }
-            // Distance to each class mean (negated, with prior).
-            for (std::size_t c = 0;
-                 c < static_cast<std::size_t>(q); ++c) {
-                double d = res.log_class_priors[c];
-                for (std::size_t comp = 0;
-                     comp < static_cast<std::size_t>(k); ++comp) {
-                    const double diff = scores[comp] -
-                        res.class_means[c *
-                          static_cast<std::size_t>(k) + comp];
-                    d -= 0.5 * diff * diff;
-                }
-                preds[i * static_cast<std::size_t>(q) + c] = d;
-            }
-        }
         handle->set_double_matrix("predictions", std::move(preds),
                                    static_cast<std::int64_t>(n), q);
         handle->set_scalar("n_components",

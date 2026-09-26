@@ -3,7 +3,8 @@
 
 Every estimator of the native manifest is fitted once on a fixed synthetic
 dataset; the fixture stores its N4ME bytes, the held-out rows and the native
-outputs of its roles (predictions, transformed rows, selected columns). The R
+outputs of its roles (predictions, transformed rows, selected columns, class
+labels, decision scores and probabilities). The R
 and JS/WASM suites import the same bytes and must reproduce these outputs
 (Level 2, trained-state portability), then refit and match the Python fit.
 
@@ -56,6 +57,11 @@ def dataset():
     return X[:36], y[:36], X[36:], X_target
 
 
+def class_labels(y) -> np.ndarray:
+    """Three classes cut from the response; non-contiguous ids exercise the remap."""
+    return 10 * (1 + np.digitize(y, np.quantile(y, [1 / 3, 2 / 3])))
+
+
 def explicit_params(cls) -> dict:
     params = {k: v for k, v in EXPLICIT_PARAMS.items() if k in cls._param_types}
     if cls is roles.RandomFrog:
@@ -75,11 +81,13 @@ def fit_inputs(cls, X_target):
 
 def main() -> None:
     X, y, X_test, X_target = dataset()
+    labels = class_labels(y)
     cases = []
     for method_id in sorted(_REGISTRY):
         cls = _REGISTRY[method_id]
         params = explicit_params(cls)
-        est = cls(**params).fit(X, y, **fit_inputs(cls, X_target))
+        target = labels if issubclass(cls, roles.NativeClassifier) else y
+        est = cls(**params).fit(X, target, **fit_inputs(cls, X_target))
         case = {
             "method_id": method_id,
             "fit_inputs": sorted(fit_inputs(cls, X_target)),
@@ -92,11 +100,18 @@ def main() -> None:
             case["transform"] = est.transform(X_test).tolist()
         if isinstance(est, roles.NativeSelector):
             case["selected_indices"] = est.selected_indices_.tolist()
+        if isinstance(est, roles.NativeClassifier):
+            case["classes"] = est.classes_.tolist()
+            case["predict_labels"] = est.predict(X_test).tolist()
+            case["decision_function"] = est.decision_function(X_test).tolist()
+            if hasattr(est, "predict_proba"):
+                case["predict_proba"] = est.predict_proba(X_test).tolist()
         cases.append(case)
     doc = {
         "abi": ".".join(map(str, n4m.abi_version())),
         "x_train": X.tolist(),
         "y_train": y.tolist(),
+        "labels_train": labels.tolist(),
         "x_target": X_target.tolist(),
         "feature_groups": (np.arange(N_FEATURES) // 4).tolist(),
         "blocks": [4, 4, 4],
@@ -132,6 +147,7 @@ def render_r(doc: dict) -> str:
         "estimator_roles_fixture <- list(",
         f"  x_train = {r_matrix(doc['x_train'])},",
         f"  y_train = {r_vector(doc['y_train'])},",
+        f"  labels_train = {r_vector(doc['labels_train'])},",
         f"  x_target = {r_matrix(doc['x_target'])},",
         f"  feature_groups = {r_vector(doc['feature_groups'])},",
         f"  blocks = {r_vector(doc['blocks'])},",
@@ -157,6 +173,12 @@ def render_r(doc: dict) -> str:
             )
         if "transform" in case:
             fields.append(f"    transform = {r_matrix(case['transform'])}")
+        for name in ("classes", "predict_labels"):
+            if name in case:
+                fields.append(f"    {name} = {r_vector(case[name])}")
+        for name in ("decision_function", "predict_proba"):
+            if name in case:
+                fields.append(f"    {name} = {r_matrix(case[name])}")
         cases.append("   list(\n" + ",\n".join(fields) + ")")
     out += [",\n".join(cases), "  )", ")", ""]
     return "\n".join(out)

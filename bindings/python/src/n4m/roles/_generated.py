@@ -8,7 +8,67 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from ._base import NativeRegressor, NativeSelector, NativeTransformer
+from ._base import NativeClassifier, NativeRegressor, NativeSelector, NativeTransformer
+
+
+class PLSLDA(NativeClassifier):
+    """Native ``models.classification.pls_lda`` (classifier).
+
+    Required fit inputs: labels.
+    """
+
+    _method_id = "models.classification.pls_lda"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+    ) -> None:
+        self.n_components = n_components
+
+
+class PLSLogistic(NativeClassifier):
+    """Native ``models.classification.pls_logistic`` (classifier).
+
+    Required fit inputs: labels.
+    """
+
+    _method_id = "models.classification.pls_logistic"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "max_iter": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        max_iter=500,
+    ) -> None:
+        self.n_components = n_components
+        self.max_iter = max_iter
+
+
+class PLSQDA(NativeClassifier):
+    """Native ``models.classification.pls_qda`` (classifier).
+
+    Required fit inputs: labels.
+    """
+
+    _method_id = "models.classification.pls_qda"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+    ) -> None:
+        self.n_components = n_components
 
 
 class BaggingPLS(NativeRegressor):
@@ -422,6 +482,28 @@ class GroupSparsePLS(NativeRegressor):
     ) -> None:
         self.n_components = n_components
         self.group_lambda = group_lambda
+
+
+class SparsePLSDA(NativeClassifier):
+    """Native ``models.sparse.sparse_pls_da`` (classifier).
+
+    Required fit inputs: labels.
+    """
+
+    _method_id = "models.sparse.sparse_pls_da"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "sparsity_lambda": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        sparsity_lambda=0.05,
+    ) -> None:
+        self.n_components = n_components
+        self.sparsity_lambda = sparsity_lambda
 
 
 class SparseSIMPLS(NativeRegressor):
@@ -942,8 +1024,7 @@ class MSC(NativeTransformer):
     """Native ``preprocessing.scatter.msc`` (transformer)."""
 
     _method_id = "preprocessing.scatter.msc"
-    _param_types: ClassVar[dict[str, str]] = {
-    }
+    _param_types: ClassVar[dict[str, str]] = {}
 
     def __init__(self) -> None:
         pass
@@ -997,8 +1078,7 @@ class FractionToPercent(NativeTransformer):
     """Native ``preprocessing.signal_conversion.fraction_to_percent`` (transformer)."""
 
     _method_id = "preprocessing.signal_conversion.fraction_to_percent"
-    _param_types: ClassVar[dict[str, str]] = {
-    }
+    _param_types: ClassVar[dict[str, str]] = {}
 
     def __init__(self) -> None:
         pass
@@ -1043,8 +1123,7 @@ class PercentToFraction(NativeTransformer):
     """Native ``preprocessing.signal_conversion.percent_to_fraction`` (transformer)."""
 
     _method_id = "preprocessing.signal_conversion.percent_to_fraction"
-    _param_types: ClassVar[dict[str, str]] = {
-    }
+    _param_types: ClassVar[dict[str, str]] = {}
 
     def __init__(self) -> None:
         pass
@@ -1113,8 +1192,7 @@ class Haar(NativeTransformer):
     """Native ``preprocessing.wavelets.haar`` (transformer)."""
 
     _method_id = "preprocessing.wavelets.haar"
-    _param_types: ClassVar[dict[str, str]] = {
-    }
+    _param_types: ClassVar[dict[str, str]] = {}
 
     def __init__(self) -> None:
         pass
@@ -1967,6 +2045,8 @@ __all__ = [
     "NPLS",
     "O2PLS",
     "PCR",
+    "PLSLDA",
+    "PLSQDA",
     "PSO",
     "REP",
     "RNV",
@@ -2002,6 +2082,7 @@ __all__ = [
     "KubelkaMunk",
     "ModPoly",
     "NorrisWilliams",
+    "PLSLogistic",
     "PLSRegression",
     "PercentToFraction",
     "RandomFrog",
@@ -2017,6 +2098,7 @@ __all__ = [
     "Shaving",
     "SiPLS",
     "SimplePLS",
+    "SparsePLSDA",
     "SparseSIMPLS",
     "Stability",
     "ToAbsorbance",

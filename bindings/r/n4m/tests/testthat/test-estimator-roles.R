@@ -8,6 +8,21 @@ hex_to_raw <- function(hex) {
   as.raw(strtoi(substring(hex, seq(1, nchar(hex), 2), seq(2, nchar(hex), 2)), 16L))
 }
 
+check_classifier <- function(est, case, tolerance) {
+  testthat::expect_s3_class(est, "n4m_classifier")
+  testthat::expect_equal(n4m_classes(est), case$classes)
+  testthat::expect_equal(predict(est, fx$x_test), case$predict_labels)
+  decision <- predict(est, fx$x_test, type = "decision")
+  testthat::expect_equal(unname(decision), case$decision_function, tolerance = tolerance)
+  testthat::expect_identical(colnames(decision), as.character(case$classes))
+  if (is.null(case$predict_proba)) {
+    testthat::expect_error(predict(est, fx$x_test, type = "prob"), "unsupported")
+  } else {
+    testthat::expect_equal(unname(predict(est, fx$x_test, type = "prob")), case$predict_proba,
+                           tolerance = tolerance)
+  }
+}
+
 fit_inputs <- function(names) {
   all <- list(feature_groups = fx$feature_groups, blocks = fx$blocks,
               X_target = fx$x_target)
@@ -26,9 +41,9 @@ for (case in fx$cases) {
     testthat::test_that(paste("Python N4ME state predicts identically in R:", case$method_id), {
       bytes <- hex_to_raw(case$n4me)
       est <- n4m_estimator_import(bytes)
-      testthat::expect_equal(inherits(est, "n4m_regressor"), !is.null(case$predict))
-      if (!is.null(case$predict)) {
-        testthat::expect_equal(predict(est, fx$x_test), case$predict, tolerance = 1e-12)
+      testthat::expect_equal(inherits(est, "n4m_regressor"), !is.null(case[["predict"]]))
+      if (!is.null(case[["predict"]])) {
+        testthat::expect_equal(predict(est, fx$x_test), case[["predict"]], tolerance = 1e-12)
       }
       if (!is.null(case$selected_indices)) {
         testthat::expect_s3_class(est, "n4m_selector")
@@ -40,18 +55,20 @@ for (case in fx$cases) {
       } else {
         testthat::expect_false(inherits(est, "n4m_transformer"))
       }
+      if (!is.null(case$classes)) check_classifier(est, case, 1e-12)
       testthat::expect_identical(n4m_estimator_export(est), bytes)
     })
 
     testthat::test_that(paste("R fit reproduces the Python fit:", case$method_id), {
       spec <- do.call(constructors[[case$method_id]], case$params)
-      fitted <- do.call(n4m_estimator_fit, c(list(spec, fx$x_train, fx$y_train),
+      target <- if (is.null(case$classes)) fx$y_train else fx$labels_train
+      fitted <- do.call(n4m_estimator_fit, c(list(spec, fx$x_train, target),
                                              fit_inputs(case$fit_inputs)))
       path <- tempfile(fileext = ".rds")
       saveRDS(fitted, path)
       restored <- readRDS(path)
-      if (!is.null(case$predict)) {
-        testthat::expect_equal(predict(fitted, fx$x_test), case$predict, tolerance = 1e-9)
+      if (!is.null(case[["predict"]])) {
+        testthat::expect_equal(predict(fitted, fx$x_test), case[["predict"]], tolerance = 1e-9)
         testthat::expect_identical(predict(restored, fx$x_test), predict(fitted, fx$x_test))
       }
       if (!is.null(case$selected_indices)) {
@@ -61,6 +78,11 @@ for (case in fx$cases) {
       if (!is.null(case$transform)) {
         testthat::expect_equal(n4m_estimator_transform(fitted, fx$x_test), case$transform,
                                tolerance = 1e-9)
+      }
+      if (!is.null(case$classes)) {
+        check_classifier(fitted, case, 1e-9)
+        testthat::expect_identical(predict(restored, fx$x_test, type = "decision"),
+                                   predict(fitted, fx$x_test, type = "decision"))
       }
     })
   })
@@ -78,4 +100,20 @@ testthat::test_that("roles and inputs are enforced natively", {
                                            fx$x_train, fx$y_train), "solver")
   testthat::expect_error(n4m_estimator_fit(n4m_tensor_pls(), fx$x_train, fx$y_train),
                          "mode_j")
+})
+
+testthat::test_that("classifiers encode factor and character labels", {
+  names <- c("high", "low", "mid")[fx$labels_train / 10]
+  est <- n4m_estimator_fit(n4m_pls_qda(), fx$x_train, names)
+  testthat::expect_identical(n4m_classes(est), c("high", "low", "mid"))
+  pred <- predict(est, fx$x_test)
+  testthat::expect_s3_class(pred, "factor")
+  testthat::expect_identical(levels(pred), c("high", "low", "mid"))
+  by_factor <- n4m_estimator_fit(n4m_pls_qda(), fx$x_train, factor(names))
+  testthat::expect_identical(predict(by_factor, fx$x_test), pred)
+  proba <- predict(est, fx$x_test, type = "prob")
+  testthat::expect_identical(colnames(proba), c("high", "low", "mid"))
+  testthat::expect_equal(unname(rowSums(proba)), rep(1, nrow(fx$x_test)), tolerance = 1e-12)
+  testthat::expect_identical(as.character(pred), colnames(proba)[max.col(proba, "first")])
+  testthat::expect_error(n4m_estimator_fit(n4m_pls_lda(), fx$x_train), "labels")
 })

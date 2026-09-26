@@ -8,7 +8,7 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**78 of 213 catalog entries covered.**
+**82 of 213 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
@@ -16,7 +16,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | augmentation | 0 | 39 |
 | diagnostics | 0 | 5 |
 | filters | 0 | 7 |
-| models | 21 | 38 |
+| models | 25 | 38 |
 | preprocessing | 32 | 62 |
 | selection | 25 | 26 |
 | splitters | 0 | 9 |
@@ -96,9 +96,9 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `filters.variance` | not yet | - | - |
 | `filters.x_outlier` | not yet | - | - |
 | `filters.y_outlier` | not yet | - | - |
-| `models.classification.pls_lda` | not yet | - | - |
-| `models.classification.pls_logistic` | not yet | - | - |
-| `models.classification.pls_qda` | not yet | - | - |
+| `models.classification.pls_lda` | estimator | classifier | Python, R, JS/WASM |
+| `models.classification.pls_logistic` | estimator | classifier | Python, R, JS/WASM |
+| `models.classification.pls_qda` | estimator | classifier | Python, R, JS/WASM |
 | `models.ensembles.bagging_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.ensembles.boosting_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.ensembles.moment_stack` | not yet | - | - |
@@ -124,7 +124,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `models.regularized.weighted_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.sparse.fused_sparse_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.sparse.group_sparse_pls` | estimator | regressor | Python, R, JS/WASM |
-| `models.sparse.sparse_pls_da` | not yet | - | - |
+| `models.sparse.sparse_pls_da` | estimator | classifier | Python, R, JS/WASM |
 | `models.sparse.sparse_simpls` | estimator | regressor | Python, R, JS/WASM |
 | `models.specialized.ecr` | estimator | regressor | Python, R, JS/WASM |
 | `models.specialized.gpr_pls` | not yet | - | - |

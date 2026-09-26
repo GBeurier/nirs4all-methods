@@ -33,6 +33,22 @@ publications: []
 notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
 c_surface:
   - "n4m_estimators_sparse_pls_da_fit"
+estimator:
+  kind: "estimator"
+  adapter: "cls_sparse_pls_da"
+  roles: "[classifier]"
+  state: "classifier"
+  inputs:
+    labels: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "sparsity_lambda"
+      type: "double"
+      default: 0.05
+      min: 0.0
 fq_name: "n4m.estimators.classification.sparse_pls_da"
 leaf: "sparse_pls_da"
 legacy_ids:

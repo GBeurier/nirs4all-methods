@@ -184,6 +184,95 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
 
 namespace n4m::core {
 
+n4m_status_t fit_pls_lda_head(Context& ctx,
+                              const std::vector<double>& scores,
+                              const std::vector<std::int32_t>& labels,
+                              std::int64_t n_samples,
+                              std::int32_t n_components,
+                              std::int32_t n_classes,
+                              PlsLdaHead& out) {
+    const auto n = static_cast<std::size_t>(n_samples);
+    const auto k = static_cast<std::size_t>(n_components);
+    const auto c = static_cast<std::size_t>(n_classes);
+    std::vector<std::int64_t> class_counts(c, 0);
+    for (std::size_t row = 0; row < n; ++row) {
+        class_counts[static_cast<std::size_t>(labels[row])] += 1;
+    }
+
+    std::vector<double> means(c * k, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        const auto cls = static_cast<std::size_t>(labels[row]);
+        for (std::size_t comp = 0; comp < k; ++comp) {
+            means[idx(cls, k, comp)] += scores[idx(row, k, comp)];
+        }
+    }
+    for (std::size_t cls = 0; cls < c; ++cls) {
+        const double denom = static_cast<double>(class_counts[cls]);
+        for (std::size_t comp = 0; comp < k; ++comp) {
+            means[idx(cls, k, comp)] /= denom;
+        }
+    }
+
+    std::vector<double> covariance(k * k, 0.0);
+    for (std::size_t row = 0; row < n; ++row) {
+        const auto cls = static_cast<std::size_t>(labels[row]);
+        for (std::size_t a = 0; a < k; ++a) {
+            const double da = scores[idx(row, k, a)] - means[idx(cls, k, a)];
+            for (std::size_t b = 0; b < k; ++b) {
+                const double db = scores[idx(row, k, b)] - means[idx(cls, k, b)];
+                covariance[idx(a, k, b)] += da * db;
+            }
+        }
+    }
+    const double cov_denom = static_cast<double>(n_samples - static_cast<std::int64_t>(n_classes));
+    for (double& value : covariance) {
+        value /= cov_denom;
+    }
+
+    std::vector<double> covariance_inv;
+    if (!invert_square(covariance, k, covariance_inv)) {
+        ctx.set_error("failed to invert PLS-LDA pooled covariance");
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+
+    out.n_classes = n_classes;
+    out.n_components = n_components;
+    out.inv_means.assign(c * k, 0.0);
+    out.constants.assign(c, 0.0);
+    for (std::size_t cls = 0; cls < c; ++cls) {
+        for (std::size_t a = 0; a < k; ++a) {
+            double sum = 0.0;
+            for (std::size_t b = 0; b < k; ++b) {
+                sum += covariance_inv[idx(a, k, b)] * means[idx(cls, k, b)];
+            }
+            out.inv_means[idx(cls, k, a)] = sum;
+        }
+        double quad = 0.0;
+        for (std::size_t a = 0; a < k; ++a) {
+            quad += means[idx(cls, k, a)] * out.inv_means[idx(cls, k, a)];
+        }
+        out.constants[cls] = -0.5 * quad +
+            std::log(static_cast<double>(class_counts[cls]) / static_cast<double>(n));
+    }
+    return N4M_OK;
+}
+
+void pls_lda_decision(const PlsLdaHead& head, const double* scores, std::int64_t n_samples,
+                      double* decision) {
+    const auto n = static_cast<std::size_t>(n_samples);
+    const auto k = static_cast<std::size_t>(head.n_components);
+    const auto c = static_cast<std::size_t>(head.n_classes);
+    for (std::size_t row = 0; row < n; ++row) {
+        for (std::size_t cls = 0; cls < c; ++cls) {
+            double score = head.constants[cls];
+            for (std::size_t comp = 0; comp < k; ++comp) {
+                score += scores[idx(row, k, comp)] * head.inv_means[idx(cls, k, comp)];
+            }
+            decision[idx(row, c, cls)] = score;
+        }
+    }
+}
+
 n4m_status_t fit_predict_pls_lda(Context& ctx,
                                 const Config& cfg,
                                 const n4m_matrix_view_t& X,
@@ -272,58 +361,10 @@ n4m_status_t fit_predict_pls_lda(Context& ctx,
             return status;
         }
 
-        std::vector<double> means(c_times_k, 0.0);
-        for (std::size_t row = 0; row < n; ++row) {
-            const auto cls = static_cast<std::size_t>(y_labels[row]);
-            for (std::size_t comp = 0; comp < k; ++comp) {
-                means[idx(cls, k, comp)] += scores[idx(row, k, comp)];
-            }
-        }
-        for (std::size_t cls = 0; cls < c; ++cls) {
-            const double denom = static_cast<double>(class_counts[cls]);
-            for (std::size_t comp = 0; comp < k; ++comp) {
-                means[idx(cls, k, comp)] /= denom;
-            }
-        }
-
-        std::vector<double> covariance(k_times_k, 0.0);
-        for (std::size_t row = 0; row < n; ++row) {
-            const auto cls = static_cast<std::size_t>(y_labels[row]);
-            for (std::size_t a = 0; a < k; ++a) {
-                const double da = scores[idx(row, k, a)] - means[idx(cls, k, a)];
-                for (std::size_t b = 0; b < k; ++b) {
-                    const double db = scores[idx(row, k, b)] - means[idx(cls, k, b)];
-                    covariance[idx(a, k, b)] += da * db;
-                }
-            }
-        }
-        const double cov_denom = static_cast<double>(X.rows - static_cast<std::int64_t>(n_classes));
-        for (double& value : covariance) {
-            value /= cov_denom;
-        }
-
-        std::vector<double> covariance_inv;
-        if (!invert_square(covariance, k, covariance_inv)) {
-            ctx.set_error("failed to invert PLS-LDA pooled covariance");
-            return N4M_ERR_NUMERICAL_FAILURE;
-        }
-
-        std::vector<double> inv_means(c_times_k, 0.0);
-        std::vector<double> constants(c, 0.0);
-        for (std::size_t cls = 0; cls < c; ++cls) {
-            for (std::size_t a = 0; a < k; ++a) {
-                double sum = 0.0;
-                for (std::size_t b = 0; b < k; ++b) {
-                    sum += covariance_inv[idx(a, k, b)] * means[idx(cls, k, b)];
-                }
-                inv_means[idx(cls, k, a)] = sum;
-            }
-            double quad = 0.0;
-            for (std::size_t a = 0; a < k; ++a) {
-                quad += means[idx(cls, k, a)] * inv_means[idx(cls, k, a)];
-            }
-            constants[cls] = -0.5 * quad +
-                std::log(static_cast<double>(class_counts[cls]) / static_cast<double>(n));
+        PlsLdaHead head;
+        status = fit_pls_lda_head(ctx, scores, y_labels, X.rows, cfg.n_components, n_classes, head);
+        if (status != N4M_OK) {
+            return status;
         }
 
         out.n_samples = X.rows;
@@ -331,17 +372,13 @@ n4m_status_t fit_predict_pls_lda(Context& ctx,
         out.n_components = cfg.n_components;
         out.predictions.assign(n, 0);
         out.decision_scores.assign(n_times_c, 0.0);
+        pls_lda_decision(head, scores.data(), X.rows, out.decision_scores.data());
         for (std::size_t row = 0; row < n; ++row) {
             std::size_t best_cls = 0;
             double best_score = -std::numeric_limits<double>::infinity();
             for (std::size_t cls = 0; cls < c; ++cls) {
-                double score = constants[cls];
-                for (std::size_t comp = 0; comp < k; ++comp) {
-                    score += scores[idx(row, k, comp)] * inv_means[idx(cls, k, comp)];
-                }
-                out.decision_scores[idx(row, c, cls)] = score;
-                if (score > best_score) {
-                    best_score = score;
+                if (out.decision_scores[idx(row, c, cls)] > best_score) {
+                    best_score = out.decision_scores[idx(row, c, cls)];
                     best_cls = cls;
                 }
             }

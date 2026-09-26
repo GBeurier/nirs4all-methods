@@ -8,14 +8,15 @@ import pickle
 
 import numpy as np
 import pytest
+from sklearn.base import clone
+from sklearn.model_selection import cross_val_score
+
 from n4m import roles
 from n4m._errors import N4MError
 from n4m._ffi import lib
 from n4m._impl import native
 from n4m._types import MethodInfoV1
 from n4m.roles._base import _REGISTRY
-from sklearn.base import clone
-from sklearn.model_selection import cross_val_score
 
 N_FEATURES = 12
 
@@ -66,6 +67,7 @@ def fit_kwargs(cls, X_target):
 ALL = sorted(_REGISTRY.values(), key=lambda c: c._method_id)
 REGRESSORS = [c for c in ALL if issubclass(c, roles.NativeRegressor)]
 SELECTORS = [c for c in ALL if issubclass(c, roles.NativeSelector)]
+CLASSIFIERS = [c for c in ALL if issubclass(c, roles.NativeClassifier)]
 PURE_TRANSFORMERS = [
     c
     for c in ALL
@@ -81,6 +83,7 @@ def test_generated_classes_match_native_manifest():
 ROLE_BIT = {
     roles.NativeTransformer: 1 << 0,
     roles.NativeRegressor: 1 << 1,
+    roles.NativeClassifier: 1 << 2,
     roles.NativeSelector: 1 << 3,
 }
 
@@ -92,7 +95,7 @@ def test_classes_expose_exactly_their_role_interfaces(cls):
         assert issubclass(cls, base) == bool(declared & bit)
     if not issubclass(cls, (roles.NativeTransformer, roles.NativeSelector)):
         assert not hasattr(cls, "transform")
-    if not issubclass(cls, roles.NativeRegressor):
+    if not issubclass(cls, (roles.NativeRegressor, roles.NativeClassifier)):
         assert not hasattr(cls, "predict")
 
 
@@ -236,6 +239,23 @@ def test_cross_language_fixture_states_replay():
             np.testing.assert_allclose(
                 est.transform(X_test), case["transform"], rtol=1e-12, atol=1e-12
             )
+        if "classes" in case:
+            np.testing.assert_array_equal(est.classes_, case["classes"])
+            np.testing.assert_array_equal(est.predict(X_test), case["predict_labels"])
+            np.testing.assert_allclose(
+                est.decision_function(X_test),
+                case["decision_function"],
+                rtol=1e-12,
+                atol=1e-12,
+            )
+            assert hasattr(est, "predict_proba") == ("predict_proba" in case)
+            if "predict_proba" in case:
+                np.testing.assert_allclose(
+                    est.predict_proba(X_test),
+                    case["predict_proba"],
+                    rtol=1e-12,
+                    atol=1e-12,
+                )
         assert est.to_n4me() == payload
 
 
@@ -376,3 +396,112 @@ def test_transformer_matches_n4m_reference(cls, data):
     est = transformer(cls).fit(X, y)
     ref = reference_transformer(cls, est).fit(X, y)
     np.testing.assert_array_equal(est.transform(X_test), ref.transform(X_test))
+
+
+# Classifier role ---------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def labelled(data):
+    """Three classes cut from the latent response, as string labels."""
+    X, y, X_test, _, y_test = data
+    cuts = np.quantile(y, [1 / 3, 2 / 3])
+    names = np.array(["high", "low", "mid"])
+    to_names = lambda v: names[[1, 2, 0]][np.digitize(v, cuts)]
+    return X, to_names(y), X_test, to_names(y_test)
+
+
+@pytest.mark.parametrize("cls", CLASSIFIERS, ids=lambda c: c.__name__)
+def test_classifier_roundtrip(cls, labelled):
+    X, labels, X_test, labels_test = labelled
+    est = cls().fit(X, labels)
+    np.testing.assert_array_equal(est.classes_, ["high", "low", "mid"])
+    pred = est.predict(X_test)
+    assert pred.dtype.kind == "U" and np.mean(pred == labels_test) > 0.6
+    decision = est.decision_function(X_test)
+    assert decision.shape == (X_test.shape[0], 3)
+    np.testing.assert_array_equal(est.classes_[decision.argmax(axis=1)], pred)
+    if hasattr(est, "predict_proba"):
+        proba = est.predict_proba(X_test)
+        np.testing.assert_allclose(proba.sum(axis=1), 1.0, rtol=1e-12)
+        np.testing.assert_array_equal(est.classes_[proba.argmax(axis=1)], pred)
+    assert est.score(X, labels) > 0.6
+
+    restored = roles.NativeEstimator.from_n4me(est.to_n4me())
+    assert type(restored) is cls
+    np.testing.assert_array_equal(restored.decision_function(X_test), decision)
+    assert restored.to_n4me() == est.to_n4me()
+    unpickled = pickle.loads(pickle.dumps(est))
+    np.testing.assert_array_equal(unpickled.predict(X_test), pred)
+
+
+def test_classifier_integer_labels_and_proba_capability(labelled):
+    X, labels, X_test, _ = labelled
+    codes = np.unique(labels, return_inverse=True)[1] * 10 + 10
+    est = roles.PLSQDA().fit(X, codes)
+    np.testing.assert_array_equal(est.classes_, [10, 20, 30])
+    assert set(est.predict(X_test)) <= {10, 20, 30}
+    assert hasattr(est, "predict_proba")
+    assert not hasattr(roles.PLSLDA().fit(X, codes), "predict_proba")
+    with pytest.raises(N4MError, match="labels"):
+        roles.PLSLDA().fit(X, None)
+
+
+def pls4all_classifier_config():
+    """The PLS projection the classifier roles fit: SIMPLS, centred, unscaled."""
+    import pls4all
+
+    cfg = pls4all.Config()
+    cfg.n_components = 2
+    cfg.solver = pls4all.Solver.SIMPLS
+    cfg.scale_x = False
+    cfg.scale_y = False
+    return pls4all.Context(), cfg
+
+
+def test_classifiers_match_n4m_kernels(labelled):
+    """In-sample scores equal the historical fit-predict kernels."""
+    from pls4all import _methods as kernels
+
+    X, labels, _, _ = labelled
+    codes = np.unique(labels, return_inverse=True)[1]
+    ctx, cfg = pls4all_classifier_config()
+    lda = kernels.pls_lda_fit(ctx, cfg, X, codes, 3)
+    np.testing.assert_array_equal(
+        roles.PLSLDA().fit(X, codes).decision_function(X), lda.matrix("decision_scores")
+    )
+    logistic = kernels.pls_logistic_fit(ctx, cfg, X, codes, 3)
+    est = roles.PLSLogistic().fit(X, codes)
+    np.testing.assert_array_equal(
+        est.decision_function(X), logistic.matrix("decision_scores")
+    )
+    np.testing.assert_array_equal(
+        est.predict_proba(X), logistic.matrix("probabilities")
+    )
+    qda = kernels.pls_qda_fit(ctx, cfg, X, codes)
+    np.testing.assert_array_equal(
+        roles.PLSQDA().fit(X, codes).decision_function(X), qda.matrix("predictions")
+    )
+    sparse = kernels.sparse_pls_da_fit(ctx, cfg, X, codes)
+    decision = roles.SparsePLSDA(sparsity_lambda=0.0).fit(X, codes).decision_function(X)
+    reference = (X - sparse.matrix("x_mean")) @ sparse.matrix(
+        "coefficients"
+    ) + sparse.matrix("y_mean")
+    np.testing.assert_allclose(decision, reference, rtol=1e-12, atol=1e-12)
+
+
+def test_pls_qda_is_quadratic_discriminant_on_scores(labelled):
+    """PLSQDA equals scikit-learn QDA fitted on the PLS scores."""
+    from sklearn.cross_decomposition import PLSRegression
+    from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+
+    X, labels, X_test, _ = labelled
+    codes = np.unique(labels, return_inverse=True)[1]
+    est = roles.PLSQDA().fit(X, codes)
+    pls = PLSRegression(n_components=2, scale=False).fit(X, np.eye(3)[codes])
+    qda = QuadraticDiscriminantAnalysis(store_covariance=True).fit(
+        pls.transform(X), codes
+    )
+    np.testing.assert_array_equal(
+        est.predict(X_test), qda.predict(pls.transform(X_test))
+    )

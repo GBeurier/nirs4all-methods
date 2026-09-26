@@ -65,13 +65,19 @@ struct Data {
 struct Inputs {
     Data data;
     n4m_matrix_view_t X{}, Y{}, Xt{};
-    std::vector<int64_t> feature_groups, blocks;
+    std::vector<int64_t> feature_groups, blocks, labels;
     Inputs() {
         X = view(data.x_train.data(), kTrain, kCols);
         Y = view(data.y_train.data(), kTrain, 1);
         Xt = view(data.x_target.data(), kTrain, kCols);
         for (int64_t j = 0; j < kCols; ++j) feature_groups.push_back(j / 4);
         blocks = {4, 4, 4};
+        // Three classes with non-contiguous ids, balanced by response terciles.
+        std::vector<double> sorted(data.y_train);
+        std::sort(sorted.begin(), sorted.end());
+        for (double v : data.y_train) {
+            labels.push_back(v < sorted[kTrain / 3] ? 10 : v < sorted[2 * kTrain / 3] ? 20 : 30);
+        }
     }
     // Inputs the method requires, plus Y.
     n4m_fit_inputs_v1_t for_method(const n4m_method_info_v1_t& info) {
@@ -79,6 +85,10 @@ struct Inputs {
         in.struct_size = sizeof(in);
         in.X = &X;
         auto wants = [&](n4m_fit_input_t k) { return info.inputs[k] != N4M_INPUT_NONE; };
+        if (wants(N4M_FIT_INPUT_LABELS)) {
+            in.labels = labels.data();
+            in.n_labels = kTrain;
+        }
         if (wants(N4M_FIT_INPUT_Y)) in.Y = &Y;
         if (wants(N4M_FIT_INPUT_FEATURE_GROUPS)) {
             in.feature_groups = feature_groups.data();
@@ -137,6 +147,51 @@ std::vector<unsigned char> export_bytes(n4m_context_t* ctx, const n4m_estimator_
     CHECK(n4m_estimator_export_to_buffer(ctx, est, 0, bytes.data(), size, &written) == N4M_OK);
     CHECK(written == size);
     return bytes;
+}
+
+// Classifiers: labels from the fitted classes, decision width, probabilities
+// summing to one when defined, bitwise N4ME round trip.
+void conformance_classifier(n4m_context_t* ctx, const n4m_estimator_t* est, Inputs& in) {
+    int64_t n_classes = 0, count = 0;
+    CHECK(n4m_estimator_n_outputs(est, &n_classes) == N4M_OK && n_classes == 3);
+    std::vector<int64_t> classes(3);
+    CHECK(n4m_estimator_classes(est, classes.data(), 3, &count) == N4M_OK && count == 3);
+    CHECK((classes == std::vector<int64_t>{10, 20, 30}));
+    auto X_test = view(in.data.x_test.data(), kTest, kCols);
+    std::vector<int64_t> labels(kTest), labels2(kTest);
+    CHECK(n4m_estimator_predict_labels(ctx, est, &X_test, labels.data(), kTest) == N4M_OK);
+    for (int64_t v : labels) CHECK(v == 10 || v == 20 || v == 30);
+    std::vector<double> decision(static_cast<size_t>(kTest * 3)), decision2(decision.size());
+    auto D = view(decision.data(), kTest, 3);
+    CHECK(n4m_estimator_decision_function(ctx, est, &X_test, &D) == N4M_OK);
+    std::vector<double> proba(decision.size());
+    auto P = view(proba.data(), kTest, 3);
+    int32_t idx = -1;
+    uint64_t caps = 0;
+    CHECK(n4m_estimator_info(est, &idx, &caps) == N4M_OK);
+    if ((caps & N4M_CAP_PREDICT_PROBA) != 0) {
+        CHECK(n4m_estimator_predict_proba(ctx, est, &X_test, &P) == N4M_OK);
+        for (int64_t i = 0; i < kTest; ++i) {
+            double sum = 0.0;
+            for (int64_t c = 0; c < 3; ++c) sum += proba[static_cast<size_t>(i * 3 + c)];
+            CHECK(std::fabs(sum - 1.0) < 1e-12);
+        }
+    } else {
+        CHECK(n4m_estimator_predict_proba(ctx, est, &X_test, &P) == N4M_ERR_UNSUPPORTED);
+    }
+    std::vector<double> pred(kTest);
+    auto Pr = view(pred.data(), kTest, 1);
+    CHECK(n4m_estimator_predict(ctx, est, &X_test, &Pr) == N4M_ERR_UNSUPPORTED);
+    const auto bytes = export_bytes(ctx, est);
+    n4m_estimator_t* back = nullptr;
+    CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) == N4M_OK);
+    CHECK(n4m_estimator_predict_labels(ctx, back, &X_test, labels2.data(), kTest) == N4M_OK);
+    CHECK(labels == labels2);
+    auto D2 = view(decision2.data(), kTest, 3);
+    CHECK(n4m_estimator_decision_function(ctx, back, &X_test, &D2) == N4M_OK);
+    CHECK(decision == decision2);
+    CHECK(export_bytes(ctx, back) == bytes);
+    n4m_estimator_destroy(back);
 }
 
 // Selectors and pure transformers: out-of-sample transform, selected columns,
@@ -206,6 +261,7 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
         if (k == N4M_FIT_INPUT_FEATURE_GROUPS) missing.feature_groups = nullptr;
         if (k == N4M_FIT_INPUT_BLOCKS) missing.block_sizes = nullptr;
         if (k == N4M_FIT_INPUT_TARGET_DOMAIN) missing.X_target = nullptr;
+        if (k == N4M_FIT_INPUT_LABELS) missing.labels = nullptr;
         CHECK(n4m_estimator_fit(ctx, est, &missing) == N4M_ERR_INVALID_ARGUMENT);
     }
     if (info.inputs[N4M_FIT_INPUT_GROUPS] == N4M_INPUT_NONE) {
@@ -223,7 +279,7 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
     CHECK(n4m_estimator_info(est, &idx, &caps) == N4M_OK && idx == index);
     CHECK(caps == info.capabilities);
     // Role interfaces and fitted capabilities agree both ways.
-    const bool predicts = (info.roles & (N4M_ROLE_REGRESSOR | N4M_ROLE_CLASSIFIER)) != 0;
+    const bool predicts = (info.roles & N4M_ROLE_REGRESSOR) != 0;
     const bool transforms = (info.roles & (N4M_ROLE_TRANSFORMER | N4M_ROLE_SELECTOR)) != 0;
     CHECK(predicts == ((caps & N4M_CAP_PREDICT) != 0));
     CHECK(transforms == ((caps & N4M_CAP_TRANSFORM) != 0));
@@ -232,6 +288,11 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
     CHECK(((info.roles & N4M_ROLE_SAMPLE_FILTER) != 0) == ((caps & N4M_CAP_APPLY_MASK) != 0));
     int64_t n_in = 0, n_out = 0;
     CHECK(n4m_estimator_n_features_in(est, &n_in) == N4M_OK && n_in == kCols);
+    if ((info.roles & N4M_ROLE_CLASSIFIER) != 0) {
+        conformance_classifier(ctx, est, in);
+        n4m_estimator_destroy(est);
+        return;
+    }
     CHECK(n4m_estimator_n_outputs(est, &n_out) == N4M_OK && n_out == (predicts ? 1 : 0));
 
     if (!predicts) {

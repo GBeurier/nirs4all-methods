@@ -428,6 +428,56 @@ void compute_row_probabilities(const std::vector<double>& beta,
 
 namespace n4m::core {
 
+n4m_status_t fit_pls_logistic_head(Context& ctx,
+                                   const std::vector<double>& scores,
+                                   const std::vector<std::int32_t>& labels,
+                                   std::int64_t n_samples,
+                                   std::int32_t n_components,
+                                   std::int32_t n_classes,
+                                   std::int32_t max_iter,
+                                   PlsLogisticResult& out) {
+    out = PlsLogisticResult{};
+    out.n_samples = n_samples;
+    out.n_classes = n_classes;
+    out.n_components = n_components;
+    return fit_baseline_logistic(ctx, scores, labels, static_cast<std::size_t>(n_samples),
+                                 static_cast<std::size_t>(n_components),
+                                 static_cast<std::size_t>(n_classes), max_iter, out);
+}
+
+void pls_logistic_predict(const std::vector<double>& intercepts,
+                          const std::vector<double>& coefficients,
+                          std::int32_t n_classes,
+                          std::int32_t n_components,
+                          const double* scores,
+                          std::int64_t n_samples,
+                          double* decision,
+                          double* probabilities) {
+    const auto c = static_cast<std::size_t>(n_classes);
+    const auto k = static_cast<std::size_t>(n_components);
+    const std::size_t n_terms = k + 1U;
+    std::vector<double> beta((c - 1U) * n_terms, 0.0);
+    for (std::size_t cls = 0; cls + 1U < c; ++cls) {
+        beta[param_idx(cls, n_terms, 0)] = intercepts[cls];
+        for (std::size_t comp = 0; comp < k; ++comp) {
+            beta[param_idx(cls, n_terms, comp + 1U)] = coefficients[idx(cls, k, comp)];
+        }
+    }
+    std::vector<double> design(n_terms, 1.0);
+    std::vector<double> logits;
+    std::vector<double> row_probabilities;
+    for (std::size_t row = 0; row < static_cast<std::size_t>(n_samples); ++row) {
+        for (std::size_t comp = 0; comp < k; ++comp) {
+            design[comp + 1U] = scores[idx(row, k, comp)];
+        }
+        compute_row_probabilities(beta, design, 0, n_terms, c, logits, row_probabilities);
+        for (std::size_t cls = 0; cls < c; ++cls) {
+            decision[idx(row, c, cls)] = logits[cls];
+            probabilities[idx(row, c, cls)] = row_probabilities[cls];
+        }
+    }
+}
+
 n4m_status_t fit_predict_pls_logistic(Context& ctx,
                                      const Config& cfg,
                                      const n4m_matrix_view_t& X,
