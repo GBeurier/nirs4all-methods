@@ -567,7 +567,7 @@ static SEXP dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
                          SEXP n_components_sexp, SEXP params,
                          SEXP center_x_sexp, SEXP scale_x_sexp,
                          SEXP center_y_sexp, SEXP scale_y_sexp,
-                         int affine_model) {
+                         int affine_model, int formula_legacy) {
     /* Early validation BEFORE ctx/cfg allocation: pass NULL for both. */
     if (TYPEOF(algo_sexp) != STRSXP) cleanup_err(NULL, NULL, "algo must be character");
     const char* algo = CHAR(STRING_ELT(algo_sexp, 0));
@@ -640,7 +640,7 @@ static SEXP dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         double g = get_double(params, "gamma", 0.5);
         /* Match the C ABI/Python default CPPLS convention (NIPALS PLS1).
          * The dispatcher-wide SIMPLS default is a different, legacy recipe. */
-        n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
+        if (!formula_legacy) n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
         st = n4m_estimators_cppls_fit(ctx, cfg, &Xv, &Yv, g, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ecr") == 0) {
@@ -973,7 +973,7 @@ static SEXP dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             cleanup_err(ctx, cfg,
                          "sum(block_sizes)=%lld must equal ncol(X)=%d",
                          (long long)bsum, p);
-        n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
+        if (!formula_legacy) n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
         st = n4m_estimators_mb_pls_fit(ctx, cfg, &Xv, &Yv, bsv, bsn, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
@@ -1359,7 +1359,13 @@ static SEXP dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         UNPROTECT(2);
         r_throw(algo, st, ctx);
     }
-    if (affine_model) {
+    double affine_marker = 0.0;
+    int promote = affine_model == 1 ||
+        (affine_model == 2 && mr != NULL &&
+         n4m_method_result_get_scalar(mr, "affine_predictor",
+                                      &affine_marker) == N4M_OK &&
+         affine_marker == 1.0);
+    if (promote) {
         if (mr == NULL || out == R_NilValue) {
             UNPROTECT(2);
             r_throw("affine MethodResult", N4M_ERR_INVALID_ARGUMENT, ctx);
@@ -1402,12 +1408,28 @@ SEXP r_n4m_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
                          SEXP params, SEXP center_x, SEXP scale_x,
                          SEXP center_y, SEXP scale_y) {
     return dispatch_fit(algo, X, Y, n_components, params,
-                        center_x, scale_x, center_y, scale_y, 0);
+                        center_x, scale_x, center_y, scale_y, 0, 0);
 }
 
 SEXP r_n4m_affine_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
                                 SEXP params, SEXP center_x, SEXP scale_x,
                                 SEXP center_y, SEXP scale_y) {
     return dispatch_fit(algo, X, Y, n_components, params,
-                        center_x, scale_x, center_y, scale_y, 1);
+                        center_x, scale_x, center_y, scale_y, 1, 0);
+}
+
+/* Formula wrappers retain their historical SIMPLS configuration for CPPLS
+ * and MB-PLS while attaching a native model only for marked producers. */
+SEXP r_n4m_formula_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                                 SEXP params, SEXP center_x, SEXP scale_x,
+                                 SEXP center_y, SEXP scale_y) {
+    return dispatch_fit(algo, X, Y, n_components, params,
+                        center_x, scale_x, center_y, scale_y, 2, 1);
+}
+
+/* A serialized external pointer loses its address. R code keeps the N4MM
+ * bytes and reimports on demand; never dereference a stale pointer. */
+SEXP r_n4m_model_pointer_alive(SEXP ptr) {
+    return Rf_ScalarLogical(TYPEOF(ptr) == EXTPTRSXP &&
+                            R_ExternalPtrAddr(ptr) != NULL);
 }

@@ -16,6 +16,17 @@
   di_pls = c("X_target", "di_lambda"),
   group_sparse_pls = c("group_assignment", "group_lambda"))
 
+# Serialized external pointers cannot retain a C address. Every promoted fit
+# also stores native N4MM bytes, so readRDS() can rehydrate for prediction.
+.n4m_persistent_model <- function(pointer, bytes) {
+  if (isTRUE(.Call("r_n4m_model_pointer_alive", pointer, PACKAGE = "n4m")))
+    return(pointer)
+  if (!is.raw(bytes) || !length(bytes))
+    stop("fitted native model is unavailable and has no N4MM bytes",
+         call. = FALSE)
+  n4m_model_import(bytes)
+}
+
 #' Native MethodResult methods currently marked for affine model conversion
 #'
 #' The native converter rejects unmarked results. This list lets product
@@ -118,13 +129,15 @@ n4m_affine_fit <- function(method, X, Y, n_components = 2L, params = list()) {
         any(!is.finite(result$intercept)))))
     stop("n4m method returned an unsupported affine regression result",
          call. = FALSE)
+  model_bytes <- n4m_model_export(result$native_model)
   structure(list(method = method, n_components = as.integer(n_components),
     params = params, coefficients = coefficients, x_mean = x_mean,
     y_mean = y_mean, intercept = if (direct_intercept)
       as.numeric(result$intercept) else NULL,
     n_features_in = ncol(X), n_targets = ncol(Y_matrix),
     feature_names = colnames(X), source_training_samples = nrow(X),
-    native_model = result$native_model), class = "n4m_affine_fit")
+    native_model = result$native_model, native_model_bytes = model_bytes),
+    class = "n4m_affine_fit")
 }
 
 #' Predict from a fitted native affine MethodResult regressor
@@ -143,7 +156,9 @@ predict.n4m_affine_fit <- function(object, newdata, ...) {
       !identical(colnames(newdata), object$feature_names))
     stop("newdata feature names or order differ from the fitted X",
          call. = FALSE)
-  predictions <- n4m_predict(object$native_model, newdata)
+  model <- .n4m_persistent_model(object$native_model,
+                                 object$native_model_bytes)
+  predictions <- n4m_predict(model, newdata)
   if (object$n_targets == 1L) as.numeric(predictions) else predictions
 }
 
@@ -154,5 +169,7 @@ predict.n4m_affine_fit <- function(object, newdata, ...) {
 n4m_affine_model_export <- function(object) {
   if (!inherits(object, "n4m_affine_fit"))
     stop("object must be an n4m_affine_fit", call. = FALSE)
+  if (is.raw(object$native_model_bytes) && length(object$native_model_bytes))
+    return(object$native_model_bytes)
   n4m_model_export(object$native_model)
 }
