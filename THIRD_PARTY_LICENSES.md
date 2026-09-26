@@ -4,7 +4,7 @@
 
 **Upstream**: https://github.com/scipy/scipy/tree/main/scipy/interpolate/fitpack
 **Vendored at**: `cpp/src/core/common/_vendored/fitpack`
-**Notes**: Vendored from SciPy's interpolate/fitpack/. Fortran spline kernels. CECILL-2.1 carrier is compatible because BSD-3 is permissive.
+**Notes**: C translation of SciPy's interpolate/fitpack/ Fortran spline kernels (curfit/splev path). CECILL-2.1 carrier is compatible because BSD-3 is permissive.
 
 ```
 Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.

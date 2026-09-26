@@ -4,14 +4,9 @@
 # ships (populated on Unix by ./configure, shipped inside the tarball). Rtools'
 # make is GNU make and Rtools provides `find`, so the $(shell find ...) recursion
 # matches src/Makevars exactly.
-#
-# Fortran-free build: N4M_HAVE_FITPACK=0 selects the pure-C Reinsch cubic
-# smoothing-spline fallback in spline_smoothing.c. The tarball ships no .f
-# sources, so nothing here compiles Fortran (no gfortran, no -std=legacy).
-# n4m_aug_spline_smooth still performs real smoothing.
 
 PKG_CPPFLAGS = -Ivendor/cpp/include -Ivendor/cpp/src -Ivendor/generated \
-               -DN4M_STATIC=1 -DN4M_HAVE_FITPACK=0
+               -DN4M_STATIC=1
 
 CXX_STD = CXX17
 

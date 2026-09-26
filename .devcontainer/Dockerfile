@@ -27,7 +27,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential gcc-12 g++-12 clang-16 lld-16 \
         cmake ninja-build make pkg-config \
         libopenblas-dev liblapacke-dev \
-        gfortran \
         python3.12 python3.12-venv python3.12-dev python3-pip \
         r-base r-base-dev libxml2-dev libssl-dev libcurl4-openssl-dev \
         libfontconfig1-dev libharfbuzz-dev libfribidi-dev \

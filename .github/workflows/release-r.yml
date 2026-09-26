@@ -5,9 +5,9 @@
 # - workflow_dispatch → on-demand R CMD check + tarball build.
 #
 # The package builds standalone via the vendored configure mode (N4M_R_VENDOR=1,
-# set below): ./configure copies the full libn4m C/C++/Fortran core + the static
+# set below): ./configure copies the full libn4m C/C++ core + the static
 # n4m_export.h into src/vendor/ and compiles it into a self-contained n4m.so (no
-# external libn4m). Verified locally: 221 TUs + Fortran build, test_parity.R
+# external libn4m). Verified locally: 221 TUs, test_parity.R
 # rmse_rel ~9.4e-18, ldd shows no external libn4m. Kept manual (workflow_dispatch)
 # because the --as-cran matrix + 221-TU compile is heavy; the fast prebuilt-link
 # R build runs on every push via cross-binding-parity.yml.
@@ -159,7 +159,7 @@ jobs:
         working-directory: bindings/r/${{ matrix.pkg }}
         env:
           N4M_R_VENDOR: "1"
-        # ./configure copies the full C/C++/Fortran core + the static export
+        # ./configure copies the full C/C++ core + the static export
         # header from the checkout into src/vendor/, so the source tarball is
         # self-contained (no external libn4m; CRAN's farm compiles from source).
         run: ./configure

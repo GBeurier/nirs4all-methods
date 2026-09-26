@@ -180,7 +180,7 @@
     "feature_flags": {
       "type": "array",
       "items": {"type": "string", "pattern": "^N4M_[A-Z0-9_]+$"},
-      "description": "CMake feature flags gating this method (e.g. N4M_ENABLE_BLAS, N4M_ENABLE_OPENMP, N4M_HAVE_FITPACK)."
+      "description": "CMake feature flags gating this method (e.g. N4M_ENABLE_BLAS, N4M_ENABLE_OPENMP)."
     },
     "vendored_licenses": {
       "type": "array",
