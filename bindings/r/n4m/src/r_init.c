@@ -85,6 +85,15 @@ SEXP r_n4m_preprocess_export(SEXP ptr);
 SEXP r_n4m_preprocess_import(SEXP bytes);
 SEXP r_n4m_preprocess_plan(SEXP ptr);
 
+/* generic estimator roles (ABI 2.13) */
+SEXP r_n4m_estimator_fit(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP r_n4m_estimator_predict(SEXP, SEXP);
+SEXP r_n4m_estimator_transform(SEXP, SEXP);
+SEXP r_n4m_estimator_export(SEXP);
+SEXP r_n4m_estimator_import(SEXP);
+SEXP r_n4m_estimator_alive(SEXP);
+SEXP r_n4m_estimator_info(SEXP);
+
 static const R_CallMethodDef callMethods[] = {
     /* core */
     {"r_n4m_version",     (DL_FUNC)&r_n4m_version,     0},
@@ -148,6 +157,14 @@ static const R_CallMethodDef callMethods[] = {
     {"r_n4m_preprocess_export", (DL_FUNC)&r_n4m_preprocess_export, 1},
     {"r_n4m_preprocess_import", (DL_FUNC)&r_n4m_preprocess_import, 1},
     {"r_n4m_preprocess_plan", (DL_FUNC)&r_n4m_preprocess_plan, 1},
+
+    {"r_n4m_estimator_fit", (DL_FUNC)&r_n4m_estimator_fit, 6},
+    {"r_n4m_estimator_predict", (DL_FUNC)&r_n4m_estimator_predict, 2},
+    {"r_n4m_estimator_transform", (DL_FUNC)&r_n4m_estimator_transform, 2},
+    {"r_n4m_estimator_export", (DL_FUNC)&r_n4m_estimator_export, 1},
+    {"r_n4m_estimator_import", (DL_FUNC)&r_n4m_estimator_import, 1},
+    {"r_n4m_estimator_alive", (DL_FUNC)&r_n4m_estimator_alive, 1},
+    {"r_n4m_estimator_info", (DL_FUNC)&r_n4m_estimator_info, 1},
 
     {NULL, NULL, 0},
 };

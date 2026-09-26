@@ -192,3 +192,31 @@ def test_weighted_pls_matches_n4m_reference(data):
         rtol=1e-10,
         atol=1e-10,
     )
+
+
+def test_cross_language_fixture_states_replay():
+    """The shared N4ME fixture (also replayed by R and JS) still predicts identically."""
+    import base64
+    import json
+    from pathlib import Path
+
+    fixture = (
+        Path(__file__).resolve().parents[3]
+        / "parity"
+        / "fixtures"
+        / "estimator_roles_n4me.json"
+    )
+    doc = json.loads(fixture.read_text(encoding="utf-8"))
+    X_test = np.asarray(doc["x_test"])
+    assert {case["method_id"] for case in doc["cases"]} == set(_REGISTRY)
+    for case in doc["cases"]:
+        payload = base64.b64decode(case["n4me_base64"])
+        est = roles.NativeEstimator.from_n4me(payload)
+        np.testing.assert_allclose(
+            est.predict(X_test), case["predict"], rtol=1e-12, atol=1e-12
+        )
+        if "transform" in case:
+            np.testing.assert_allclose(
+                est.transform(X_test), case["transform"], rtol=1e-12, atol=1e-12
+            )
+        assert est.to_n4me() == payload
