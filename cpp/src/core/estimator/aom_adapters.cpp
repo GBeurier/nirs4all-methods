@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // Estimator adapters of the AOM / POP family. The sweeps, the AOM / POP-PLS
-// selectors, the Ridge blender, the operator PLS stack and the robust-HPO
-// screen fold their selected preprocessing into the input space, so their
-// fitted state is that affine predictor (N4MM). The branch calibration keeps
+// selectors, the Ridge blender, the operator PLS stack, the robust-HPO
+// screen, the operator superblocks and the chain Ridge-PLS fold their
+// selected preprocessing into the input space, so their fitted state is that
+// affine predictor (N4MM). The branch calibration keeps
 // its coefficient state and predicts through its own kernel (its SNV / MSC
 // branches are not affine); AOM preprocessing is a stateless transformer.
 // Fit and predict run the AOM kernels; the adapters map parameters to their
@@ -16,9 +17,11 @@
 #include <string>
 #include <vector>
 
+#include "core/aom_superblock.hpp"
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/state_io.hpp"
 #include "core/method_result.hpp"
+#include "core/operator_bank.hpp"
 
 namespace n4m::estimator {
 
@@ -288,6 +291,122 @@ n4m_status_t fit_aom_operator_pls_stack(n4m_context_t* ctx, n4m_config_t* cfg,
         size_of(f.ids), data_or_null(components), size_of(components), data_or_null(alphas),
         size_of(alphas), params.get_double("std_penalty"), params.get_double("gap_penalty"),
         out);
+}
+
+// ---- Operator superblocks and the chain Ridge-PLS --------------------------
+
+n4m_status_t fit_superblock(n4m_context_t* ctx, const Params& params, const FitInputs& in,
+                            core::SuperblockOptions options, n4m_method_result_t** out) {
+    BankPtr bank;
+    std::vector<std::int32_t> ids;
+    std::int32_t k = 0;
+    n4m_status_t st = operator_bank(ctx, params, bank);
+    if (st == N4M_OK) st = fold_ids(ctx, params, in, ids, k);
+    if (st != N4M_OK) return st;
+    options.rms_scaling = params.get_int("block_scaling") == 0;
+    options.center_x = params.get_bool("center_x");
+    auto result = std::make_unique<n4m_method_result_s>();
+    st = core::fit_aom_superblock(*ctx, bank->entries(), *in.X, *in.Y, ids, options, *result);
+    if (st == N4M_OK) *out = result.release();
+    return st;
+}
+
+n4m_status_t fit_ridge_superblock(n4m_context_t* ctx, n4m_config_t*, const Params& params,
+                                  const FitInputs& in, n4m_method_result_t** out) {
+    core::SuperblockOptions o;
+    o.lambdas = params.get_doubles("alphas");
+    o.center_y = params.get_bool("center_y");
+    return fit_superblock(ctx, params, in, std::move(o), out);
+}
+
+n4m_status_t fit_ridge_mkl_superblock(n4m_context_t* ctx, n4m_config_t*, const Params& params,
+                                      const FitInputs& in, n4m_method_result_t** out) {
+    core::SuperblockOptions o;
+    o.selection = core::BlockSelection::kMkl;
+    o.lambdas = params.get_doubles("alphas");
+    o.center_y = params.get_bool("center_y");
+    o.mkl_top_k = to_i32(params.get_int("mkl_top_k"));
+    return fit_superblock(ctx, params, in, std::move(o), out);
+}
+
+n4m_status_t fit_ridge_active_superblock(n4m_context_t* ctx, n4m_config_t*, const Params& params,
+                                         const FitInputs& in, n4m_method_result_t** out) {
+    core::SuperblockOptions o;
+    o.selection = core::BlockSelection::kActive;
+    o.lambdas = params.get_doubles("alphas");
+    o.center_y = params.get_bool("center_y");
+    o.active_top_m = to_i32(params.get_int("active_top_m"));
+    o.active_diversity_threshold = params.get_double("active_diversity_threshold");
+    o.active_score = static_cast<core::ActiveScore>(to_i32(params.get_int("active_score_method")));
+    o.active_max_per_family = to_i32(params.get_int("active_max_per_family"));
+    o.keep_identity = params.get_bool("keep_identity");
+    return fit_superblock(ctx, params, in, std::move(o), out);
+}
+
+n4m_status_t fit_pls_superblock(n4m_context_t* ctx, n4m_config_t*, const Params& params,
+                                const FitInputs& in, n4m_method_result_t** out) {
+    core::SuperblockOptions o;
+    o.head = core::SuperblockHead::kPls;
+    o.components = i32s(params.get_ints("pls_components"));
+    o.center_y = params.get_bool("center_y");
+    return fit_superblock(ctx, params, in, std::move(o), out);
+}
+
+n4m_status_t fit_ridge_pls_superblock(n4m_context_t* ctx, n4m_config_t*, const Params& params,
+                                      const FitInputs& in, n4m_method_result_t** out) {
+    core::SuperblockOptions o;
+    o.head = core::SuperblockHead::kRidgePls;
+    o.components = i32s(params.get_ints("pls_components"));
+    o.lambdas = params.get_doubles("ridge_lambdas");
+    return fit_superblock(ctx, params, in, std::move(o), out);
+}
+
+// Chains from the flat descriptor: chain c holds the operators
+// chain_offsets[c] .. chain_offsets[c + 1] of the operator list.
+n4m_status_t chains_of(n4m_context_t* ctx, const Params& params,
+                       std::vector<std::vector<core::OperatorEntry>>& out) {
+    const std::vector<std::int32_t> chains = i32s(params.get_ints("chain_offsets"));
+    const Operators ops = operators_of(params, "chain_params");
+    const std::size_t n = ops.kinds.size();
+    bool valid = chains.size() >= 2 && chains.front() == 0 && chains.back() == size_of(ops.kinds) &&
+                 ops.offsets.size() == n + 1 && ops.offsets.front() == 0 &&
+                 ops.offsets.back() == size_of(ops.values);
+    for (std::size_t c = 0; valid && c + 1 < chains.size(); ++c) valid = chains[c] < chains[c + 1];
+    for (std::size_t i = 0; valid && i < n; ++i) valid = ops.offsets[i] <= ops.offsets[i + 1];
+    if (!valid) {
+        set_error(ctx, "chain_offsets, op_kinds, param_offsets and chain_params do not describe "
+                       "non-empty operator chains");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    out.assign(chains.size() - 1, {});
+    for (std::size_t c = 0; c + 1 < chains.size(); ++c) {
+        const auto end = static_cast<std::size_t>(chains[c + 1]);
+        for (auto i = static_cast<std::size_t>(chains[c]); i < end; ++i) {
+            const std::int32_t count = ops.offsets[i + 1] - ops.offsets[i];
+            out[c].emplace_back(static_cast<n4m_operator_kind_t>(ops.kinds[i]),
+                                count > 0 ? ops.values.data() + ops.offsets[i] : nullptr, count);
+        }
+    }
+    return N4M_OK;
+}
+
+n4m_status_t fit_chain_ridge_pls(n4m_context_t* ctx, n4m_config_t*, const Params& params,
+                                 const FitInputs& in, n4m_method_result_t** out) {
+    std::vector<std::vector<core::OperatorEntry>> chains;
+    std::vector<std::int32_t> ids;
+    std::int32_t k = 0;
+    n4m_status_t st = chains_of(ctx, params, chains);
+    if (st == N4M_OK) st = fold_ids(ctx, params, in, ids, k);
+    if (st != N4M_OK) return st;
+    core::ChainRidgePlsOptions o;
+    o.components = i32s(params.get_ints("pls_components"));
+    o.lambdas = params.get_doubles("ridge_lambdas");
+    o.center_x = params.get_bool("center_x");
+    o.center_y = params.get_bool("center_y");
+    auto result = std::make_unique<n4m_method_result_s>();
+    st = core::fit_aom_chain_ridge_pls(*ctx, chains, *in.X, *in.Y, ids, o, *result);
+    if (st == N4M_OK) *out = result.release();
+    return st;
 }
 
 // AOM / POP-PLS selectors return their own result handles; their outputs are
@@ -772,6 +891,30 @@ std::unique_ptr<Adapter> make_aom_ridge_blender(const MethodSpec&) {
 
 std::unique_ptr<Adapter> make_aom_operator_pls_stack(const MethodSpec&) {
     return input_affine(fit_aom_operator_pls_stack, "input_intercept");
+}
+
+std::unique_ptr<Adapter> make_aom_ridge_superblock(const MethodSpec&) {
+    return input_affine(fit_ridge_superblock, "intercept");
+}
+
+std::unique_ptr<Adapter> make_aom_ridge_mkl_superblock(const MethodSpec&) {
+    return input_affine(fit_ridge_mkl_superblock, "intercept");
+}
+
+std::unique_ptr<Adapter> make_aom_ridge_active_superblock(const MethodSpec&) {
+    return input_affine(fit_ridge_active_superblock, "intercept");
+}
+
+std::unique_ptr<Adapter> make_aom_pls_superblock(const MethodSpec&) {
+    return input_affine(fit_pls_superblock, "intercept");
+}
+
+std::unique_ptr<Adapter> make_aom_ridge_pls_superblock(const MethodSpec&) {
+    return input_affine(fit_ridge_pls_superblock, "intercept");
+}
+
+std::unique_ptr<Adapter> make_aom_chain_ridge_pls(const MethodSpec&) {
+    return input_affine(fit_chain_ridge_pls, "intercept");
 }
 
 std::unique_ptr<Adapter> make_aom_pls(const MethodSpec&) {
