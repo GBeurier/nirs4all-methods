@@ -44,6 +44,48 @@ publications: []
 notes: "Native final-only reusable fit for one already-selected caller-provided strict-linear AOM chain/head/parameter. This is the individual winner reuse surface behind `NativeAOMFixedCandidateRegressor(fit_mode=\"final_only\")` and the final model-building step of `NativeAOMScreenRefitRegressor`: it fits the selected Ridge lambda or PLS component count on all training rows, folds transformed coefficients back into original input space, and returns final predictions, input_coefficients and intercept without running CV. It is not a ranking endpoint: OOF/fold outputs are empty and CV score fields are NaN unless a higher-level wrapper injects an exact-CV score that was already verified by `aom_refit_candidates`."
 c_surface:
   - "n4m_model_selection_aom_chain_fixed_fit_run"
+estimator:
+  kind: "estimator"
+  adapter: "aom_chain_fixed_fit"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "op_kinds"
+      type: "int_array"
+      min: 0
+      max: 18
+    - name: "param_offsets"
+      type: "int_array"
+      min: 0
+    - name: "chain_params"
+      type: "double_array"
+      default: []
+    - name: "head"
+      type: "enum"
+      default: "ridge"
+      choices: "[ridge, pls]"
+    - name: "param"
+      type: "double"
+      default: 0.1
+      min: 0.0
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
+    - name: "scale_y"
+      type: "bool"
+      default: true
+    - name: "moment_policy"
+      type: "enum"
+      default: "auto"
+      choices: "[auto, materialized, force]"
 fq_name: "n4m.model_selection.aom_search.aom_chain_fixed_fit"
 leaf: "aom_chain_fixed_fit"
 legacy_ids:

@@ -42,6 +42,51 @@ publications: []
 notes: "Native strict-linear AOM operator PLS1 score stack over compact/wide operator banks with a Ridge head. Compact has 12 operators; wide has 31 strict-linear operators, including Gaussian, FCK and Whittaker variants. Single-target only. It returns fold scores, final stack features, Ridge-head coefficients for audit, and folded input_coefficients plus input_intercept for replay through NativeAOMOperatorPLSStackRegressor; native v1 builds in CUDA-enabled configurations but is not yet a fused batched GPU stack."
 c_surface:
   - "n4m_ensemble_aom_operator_pls_stack_fit"
+estimator:
+  kind: "estimator"
+  adapter: "aom_operator_pls_stack"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+    fold_ids: "optional"
+  params:
+    - name: "profile"
+      type: "enum"
+      default: "compact"
+      choices: "[compact, wide]"
+    - name: "cv"
+      type: "int"
+      default: 5
+      min: 2
+    - name: "components"
+      type: "int_array"
+      default: "[2, 4, 8]"
+      min: 1
+    - name: "alphas"
+      type: "double_array"
+      default: "[0.001, 0.01, 0.1, 1.0, 10.0, 100.0]"
+      min: 0.0
+    - name: "std_penalty"
+      type: "double"
+      default: 0.0
+      min: 0.0
+    - name: "gap_penalty"
+      type: "double"
+      default: 0.0
+      min: 0.0
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
+    - name: "scale_y"
+      type: "bool"
+      default: true
 fq_name: "n4m.ensemble.aom_operator_pls_stack"
 leaf: "aom_operator_pls_stack"
 legacy_ids:

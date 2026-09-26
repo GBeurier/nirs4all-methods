@@ -37,6 +37,30 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Python binding refined during AOM/moment product integration."
 c_surface:
   - "n4m_model_selection_aom_preprocessing_fit"
+estimator:
+  kind: "estimator"
+  adapter: "aom_preprocessing"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "op_kinds"
+      type: "int_array"
+      default: "[0, 7, 7, 8, 8, 9, 9, 10, 15]"
+      min: 0
+      max: 18
+    - name: "param_offsets"
+      type: "int_array"
+      default: "[0, 0, 1, 2, 4, 6, 9, 12, 15, 16]"
+      min: 0
+    - name: "op_params"
+      type: "double_array"
+      default: "[1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]"
+    - name: "gating_mode"
+      type: "enum"
+      default: "soft"
+      choices: "[hard, soft]"
 fq_name: "n4m.model_selection.aom_search.aom_preprocessing"
 leaf: "aom_preprocessing"
 legacy_ids:

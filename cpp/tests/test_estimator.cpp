@@ -153,6 +153,18 @@ void fill_required(int32_t index, n4m_params_t* params) {
             CHECK(n4m_params_set_int(params, pi.name, 10) == N4M_OK);
         } else if (std::strcmp(pi.name, "window_size") == 0) {
             CHECK(n4m_params_set_int(params, pi.name, 12) == N4M_OK);
+        } else if (std::strcmp(pi.name, "chain_offsets") == 0) {
+            // AOM chains: identity, then a first-order detrend (chain_params {1}).
+            const int64_t v[] = {0, 1, 2};
+            CHECK(n4m_params_set_int_array(params, pi.name, v, 3) == N4M_OK);
+        } else if (std::strcmp(pi.name, "op_kinds") == 0) {
+            const int64_t v[] = {N4M_OP_IDENTITY, N4M_OP_DETREND_POLY};
+            CHECK(n4m_params_set_int_array(params, pi.name, v, 2) == N4M_OK);
+        } else if (std::strcmp(pi.name, "param_offsets") == 0) {
+            const int64_t v[] = {0, 0, 1};
+            CHECK(n4m_params_set_int_array(params, pi.name, v, 3) == N4M_OK);
+            const double order = 1.0;
+            CHECK(n4m_params_set_double_array(params, "chain_params", &order, 1) == N4M_OK);
         } else if (std::strcmp(pi.name, "n_components_per_block") == 0 ||
                    std::strcmp(pi.name, "n_unique_per_block") == 0) {
             // One per test block (3 blocks of 4 columns).
@@ -340,6 +352,10 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
     // Random frog's default initial subset (20) exceeds the 12 test columns.
     if (std::strcmp(info.method_id, "selection.random_frog") == 0) {
         CHECK(n4m_params_set_int(params, "initial_size", 6) == N4M_OK);
+    }
+    // The test spectra have rank 4; the calibration's PLS paths stop there.
+    if (std::strcmp(info.method_id, "aom_pop.calibration") == 0) {
+        CHECK(n4m_params_set_int(params, "max_components", 4) == N4M_OK);
     }
     CHECK(n4m_params_validate(ctx, params) == N4M_OK);
     n4m_estimator_t* est = nullptr;
@@ -632,6 +648,49 @@ void test_in_sample_equivalence(n4m_context_t* ctx, Inputs& in) {
     }
 }
 
+// The AOM regressors predict new rows from their selected model folded into
+// the input space; on the training rows that reproduces the kernel's own
+// (transformed-space) in-sample predictions.
+void test_aom_in_sample(n4m_context_t* ctx, Inputs& in) {
+    int32_t count = 0;
+    CHECK(n4m_method_count(&count) == N4M_OK);
+    for (int32_t index = 0; index < count; ++index) {
+        n4m_method_info_v1_t info{};
+        info.struct_size = sizeof(info);
+        CHECK(n4m_method_info_v1(index, &info) == N4M_OK);
+        // The calibration result keeps CV scores, not in-sample predictions.
+        if (std::strncmp(info.method_id, "aom_pop.", 8) != 0 ||
+            (info.roles & N4M_ROLE_REGRESSOR) == 0 ||
+            std::strcmp(info.method_id, "aom_pop.calibration") == 0) {
+            continue;
+        }
+        current_ = std::string(info.method_id) + " in-sample equivalence";
+        n4m_params_t* params = nullptr;
+        CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+        fill_required(index, params);
+        n4m_estimator_t* est = nullptr;
+        CHECK(n4m_estimator_create(ctx, info.method_id, params, &est) == N4M_OK);
+        n4m_params_destroy(params);
+        n4m_fit_inputs_v1_t inputs = in.for_method(info);
+        CHECK(n4m_estimator_fit(ctx, est, &inputs) == N4M_OK);
+        const n4m_method_result_t* result = nullptr;
+        CHECK(n4m_estimator_fit_result(est, &result) == N4M_OK);
+        const double* ref = nullptr;
+        int64_t rows = 0, cols = 0;
+        CHECK(n4m_method_result_get_double_matrix(result, "predictions", &ref, &rows, &cols) ==
+              N4M_OK);
+        CHECK(rows == kTrain && cols == 1);
+        std::vector<double> pred(kTrain);
+        auto P = view(pred.data(), kTrain, 1);
+        CHECK(n4m_estimator_predict(ctx, est, &in.X, &P) == N4M_OK);
+        for (int64_t i = 0; i < kTrain; ++i) {
+            CHECK(std::fabs(ref[i] - pred[static_cast<size_t>(i)]) <=
+                  1e-10 * (1.0 + std::fabs(ref[i])));
+        }
+        n4m_estimator_destroy(est);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -651,6 +710,7 @@ int main() {
     run([&] { test_introspection_and_params(ctx); });
     run([&] { test_pls_fit_simple_equivalence(ctx, in); });
     run([&] { test_in_sample_equivalence(ctx, in); });
+    run([&] { test_aom_in_sample(ctx, in); });
     int32_t count = 0;
     n4m_method_count(&count);
     for (int32_t i = 0; i < count; ++i) {

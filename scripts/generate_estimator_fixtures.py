@@ -48,6 +48,16 @@ EXPLICIT_PARAMS = {
     "n_neighbors": 10,
     "n_components_per_block": [1, 1, 1],
     "n_unique_per_block": [1, 1, 1],
+    # AOM chains and operator banks: identity, then a first-order detrend.
+    "chain_offsets": [0, 1, 2],
+    "op_kinds": [0, 7],
+    "param_offsets": [0, 0, 1],
+    "chain_params": [1.0],
+    "op_params": [1.0],
+    # Linear stack compression of the 12 X columns (base outputs), one target.
+    "base_intercepts": [0.1 * j - 0.5 for j in range(N_FEATURES)],
+    "meta_weights": [0.05 * j + 0.1 for j in range(N_FEATURES)],
+    "meta_intercept": [0.5],
 }
 # Fit input name -> n4m_fit_input_t index (n4m/estimator.h).
 DATA_INPUTS = {"feature_groups": 4, "blocks": 5, "axis": 6, "X_target": 7}
@@ -90,6 +100,8 @@ def explicit_params(cls) -> dict:
         params["window_size"] = 20  # IRF also has a window_size
     if cls is roles.EMCUVE:
         params["noise_features"] = 12  # 50 noise columns swamp 12 real ones
+    if cls._method_id.startswith("aom_pop."):
+        params.pop("alphas", None)  # the AOM Ridge grids keep their defaults
     return params
 
 
@@ -113,15 +125,17 @@ def procedure_case(cls, data: dict) -> dict:
     x_name = PROCEDURE_X.get(method_id, "x_train")
     X = np.asarray(data[x_name])
     kw = {n: np.asarray(data[INPUT_DATA[n]]) for n in names}
-    case = {"method_id": method_id, "x": x_name, "inputs": names}
+    params = explicit_params(cls)
+    proc = cls(**params)
+    case = {"method_id": method_id, "x": x_name, "inputs": names, "params": params}
     if issubclass(cls, roles.NativeSplitter):
-        folds = cls().split(X, kw.get("y"), kw.get("groups"))
+        folds = proc.split(X, kw.get("y"), kw.get("groups"))
         case["folds"] = [[tr.tolist(), te.tolist()] for tr, te in folds]
     elif issubclass(cls, roles.NativeAugmenter):
-        case["X"] = cls().augment(X, axis=kw.get("axis")).tolist()
+        case["X"] = proc.augment(X, axis=kw.get("axis")).tolist()
     else:
         y = kw.pop("y", None)
-        out = cls().run(X, y, **kw)
+        out = proc.run(X, y, **kw)
         case["outputs"] = {
             k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in out.items()
         }
@@ -270,10 +284,12 @@ def render_r(doc: dict) -> str:
     procedures = []
     for case in doc["procedures"]:
         inputs = ", ".join(f'"{n}"' for n in case["inputs"])
+        params = ", ".join(f"{k} = {r_value(v)}" for k, v in case["params"].items())
         fields = [
             f'    method_id = "{case["method_id"]}"',
             f'    x = "{case["x"]}"',
             f"    inputs = c({inputs})",
+            f"    params = list({params})",
         ]
         if "folds" in case:
             folds = ", ".join(

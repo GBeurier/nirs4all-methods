@@ -50,16 +50,22 @@ def manifest_methods() -> set[str]:
     return ids
 
 
-# Values the test data needs: required parameters, and a linear kernel for
-# kernel PLS (the linear-response data).
+# Values the test data needs: required parameters, a linear kernel for
+# kernel PLS (the linear-response data), and one AOM operator list (identity,
+# then a first-order detrend) for chains and operator banks alike.
 REQUIRED_MODEL_PARAMS = {
     "kernel": "linear",
+    "chain_offsets": (0, 1, 2),
+    "op_kinds": (0, 7),
+    "param_offsets": (0, 0, 1),
+    "chain_params": (1.0,),
+    "op_params": (1.0,),
     "mode_j": 3,
     "mode_k": 4,
     "n_neighbors": 10,
     "window_size": 20,
-    "n_components_per_block": [1, 1, 1],
-    "n_unique_per_block": [1, 1, 1],
+    "n_components_per_block": (1, 1, 1),
+    "n_unique_per_block": (1, 1, 1),
 }
 
 
@@ -748,7 +754,12 @@ def reference_transformer(cls, est):
 
 @pytest.mark.parametrize(
     "cls",
-    [c for c in PURE_TRANSFORMERS if c.__name__ not in FITTED_REFERENCE_CLASSES],
+    [
+        c
+        for c in PURE_TRANSFORMERS
+        if c.__name__ not in FITTED_REFERENCE_CLASSES
+        and not c._method_id.startswith("aom_pop.")
+    ],
     ids=lambda c: c.__name__,
 )
 def test_transformer_matches_n4m_reference(cls, data):
@@ -756,6 +767,84 @@ def test_transformer_matches_n4m_reference(cls, data):
     est = transformer(cls).fit(X, y, **fit_kwargs(cls, X_target))
     ref = reference_transformer(cls, est).fit(X, y)
     np.testing.assert_array_equal(est.transform(X_test), ref.transform(X_test))
+
+
+# AOM / POP roles --------------------------------------------------------
+
+
+def _aom_references():
+    from n4m.ensemble import AOMOperatorPLSStackRegressor, AOMRidgeBlenderRegressor
+    from n4m.model_selection import aom_calibration, aom_search
+
+    chain = [("detrend_poly", [1]), ("savgol_derivative", [7, 2, 1])]
+    return {
+        "aom_pop.aom_sweep": ({}, aom_search.AOMSweepRegressor()),
+        "aom_pop.aom_chain_sweep": (
+            {
+                "chain_offsets": (0, 1, 3),
+                "op_kinds": (0, 7, 9),
+                "param_offsets": (0, 0, 1, 4),
+                "chain_params": (1.0, 7.0, 2.0, 1.0),
+            },
+            aom_search.AOMChainSweepRegressor(["identity", chain]),
+        ),
+        "aom_pop.aom_chain_fixed_fit": (
+            {
+                "op_kinds": (7, 9),
+                "param_offsets": (0, 1, 4),
+                "chain_params": (1.0, 7.0, 2.0, 1.0),
+            },
+            aom_search.AOMFixedCandidateRegressor(chain, fit_mode="final_only"),
+        ),
+        "aom_pop.ridge_global": ({}, aom_search.AOMRidgeGlobalRegressor()),
+        "aom_pop.aom_pls": ({}, aom_search.AOMPLSRegressor()),
+        "aom_pop.pop_pls": ({}, aom_search.POPPLSRegressor()),
+        "aom_pop.robust_hpo": ({}, aom_search.AOMRobustHPOSweepRegressor()),
+        "aom_pop.ridge_blender": ({}, AOMRidgeBlenderRegressor()),
+        "aom_pop.operator_pls_stack": ({}, AOMOperatorPLSStackRegressor()),
+        "aom_pop.calibration": ({}, aom_calibration.AOMPLSRegressor()),
+    }
+
+
+@pytest.mark.parametrize("method_id", sorted(_aom_references()))
+def test_aom_regressor_matches_n4m_reference(method_id, data):
+    """Same kernel fit as the n4m reference; new rows predicted from N4ME state."""
+    X, y, X_test, _, _ = data
+    params, ref = _aom_references()[method_id]
+    est = roles.method_class(method_id)(**params).fit(X, y)
+    ref.fit(X, y)
+    for rows in (X, X_test):
+        np.testing.assert_allclose(
+            est.predict(rows), ref.predict(rows), rtol=1e-12, atol=1e-12
+        )
+
+
+def test_aom_preprocessing_matches_n4m_reference(data):
+    from n4m.model_selection.aom_search import aom_preprocess
+
+    X, y, X_test, _, _ = data
+    for gating in ("soft", "hard"):
+        est = roles.method_class("aom_pop.aom_preprocessing")(gating_mode=gating).fit(X)
+        for rows in (X, X_test):
+            np.testing.assert_array_equal(
+                est.transform(rows),
+                aom_preprocess(rows, gating_mode=gating)["transformed"],
+            )
+
+
+def test_linear_stack_compress_matches_n4m_reference():
+    from n4m.ensemble import compress_linear_stack
+
+    rng = np.random.default_rng(5)
+    base, bias = rng.normal(size=(12, 3)), rng.normal(size=3)
+    weights, meta = rng.normal(size=(3, 2)), rng.normal(size=2)
+    proc = roles.method_class("aom_pop.linear_stack_compress")(
+        base_intercepts=bias, meta_weights=weights.ravel(), meta_intercept=meta
+    )
+    out = proc.run(base)
+    ref = compress_linear_stack(base, bias, weights, meta)
+    np.testing.assert_array_equal(out["coefficients"], ref.coef_)
+    np.testing.assert_array_equal(out["intercept"].ravel(), ref.intercept_)
 
 
 # Classifier role ---------------------------------------------------------
