@@ -2790,10 +2790,10 @@ def _group_sparse_pls_pls4all(ctx, cfg, X, Y, *, n_components,
     the parity gate against the in-tree NumPy port is bit-exact
     (``max_abs < 1e-6``).
 
-    Opt-in legacy path (``legacy=True``) routes through the original
-    ``n4m_group_sparse_pls_fit`` C kernel (SIMPLS + soft-threshold-on-
-    weights with ``group_lambda``). Kept for users who depend on the
-    historical penalty parametrisation.
+    Opt-in native path (``legacy=True``) routes through the
+    ``n4m_group_sparse_pls_fit`` C kernel (SIMPLS followed by groupwise
+    proximal shrinkage of predictive coefficients). This differs from
+    the published sgPLS reference and the earlier ineffective penalty.
     """
     import pls4all
     groups = kwargs["group_assignment"]
@@ -8358,12 +8358,10 @@ class _GroupSparseNumpyReference(ReferenceAdapter):
     library_version = "in-tree"
     language = "python"
     notes = ("In-tree NumPy port of Liquet et al. 2016 group sparse PLS "
-             "(R `sgPLS::gPLS`, regression mode, scale=TRUE). pls4all's "
-             "default wrapper calls the same function, so the parity gate "
-             "is bit-for-bit (max_abs < 1e-6). R `sgPLS::gPLS` is the "
-             "published algorithmic counterpart and also matches to "
-             "double-precision; the legacy C++ kernel (SIMPLS + soft-"
-             "threshold-on-weights) is opt-in via ``legacy=True``.")
+             "(R `sgPLS::gPLS`, regression mode, scale=TRUE). The archived "
+             "default Python reference uses that port. The opt-in native "
+             "route uses post-SIMPLS coefficient shrinkage and is not "
+             "numerically equivalent to sgPLS::gPLS.")
 
     def __init__(self, n_components: int) -> None:
         self._k = int(n_components)

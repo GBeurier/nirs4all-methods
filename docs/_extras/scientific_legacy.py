@@ -51,13 +51,13 @@ _ANNOTATIONS: dict[str, tuple[str, str, str]] = {
         _src("cpp/src/core/model.cpp"),
     ),
     "group_sparse_pls": (
-        "Diagnostic experiments with predefined wavelength groups and group-thresholded latent weights.",
-        "Current code thresholds copied weights after fitting but returns the original SIMPLS coefficients, so group_lambda does not change predictions.",
+        "Exploratory group selection with predefined wavelength groups when post-fit coefficient shrinkage is acceptable.",
+        "The penalty now shrinks predictive coefficient groups and affects predictions, but does not refit the latent directions or implement sgPLS::gPLS.",
         _src("cpp/src/core/extra_pls.cpp"),
     ),
     "fused_sparse_pls": (
         "Exploratory smoothing of adjacent regression coefficients for ordered spectral variables.",
-        "This is four fixed neighbour-averaging passes, not a fused-lasso/total-variation optimizer; l1_lambda currently has no effective influence through the delegated group step.",
+        "This is four fixed neighbour-averaging passes, not a fused-lasso/total-variation optimizer; l1_lambda uses post-SIMPLS group shrinkage.",
         _src("cpp/src/core/extra_pls.cpp"),
     ),
     "sparse_pls_da": (
@@ -504,11 +504,10 @@ _OVERRIDES: dict[str, dict[str, str]] = {'approximate_press': {'implementation':
                       'takes its dominant eigenvector, computes the corresponding scores and '
                       'loadings, and sequentially deflates X and Y. alpha therefore interpolates '
                       'the implemented variance and squared-covariance criteria.'},
- 'fused_sparse_pls': {'implementation': 'Because the delegated group threshold does not feed the '
-                                        'returned coefficients, `l1_lambda` currently has no '
-                                        'effective influence. `fused_lambda` controls the strength '
-                                        'of a fixed smoothing heuristic, not a converged convex '
-                                        'penalty solution.',
+ 'fused_sparse_pls': {'implementation': '`l1_lambda` shrinks the full predictive coefficient matrix '
+                                        'as one group before four neighbour-averaging passes. '
+                                        '`fusion_lambda` controls a smoothing heuristic, not a '
+                                        'converged fused-lasso solution.',
                       'paper': 'Implementation-specific heuristic inspired by fused sparsity; no '
                                'canonical fused-lasso solver is implemented.',
                       'principle': 'The routine delegates to the current group-sparse path with '
@@ -533,22 +532,18 @@ _OVERRIDES: dict[str, dict[str, str]] = {'approximate_press': {'implementation':
                           'caller-supplied length scale, and caller-supplied diagonal noise level. '
                           'Posterior means follow the usual kernel solve for those fixed '
                           'hyperparameters.'},
- 'group_sparse_pls': {'implementation': '`group_lambda` can change the temporary thresholded '
-                                        'weights but not the returned SIMPLS coefficients. Do not '
-                                        'claim group selection or compare lambda values through '
-                                        'predictions until the coefficient refit is implemented.',
+ 'group_sparse_pls': {'implementation': '`group_lambda` applies group-lasso proximal shrinkage '
+                                        'to the returned SIMPLS predictive coefficients. This '
+                                        'changes predictions but is not a latent-direction refit '
+                                        'or a numerical implementation of sgPLS::gPLS.',
                       'paper': 'Liquet, B., de Micheaux, P. L., Hejblum, B. P. & Thiébaut, R. '
                                '(2016). *Group and sparse group partial least squares approaches '
                                'applied in genomics context*. Bioinformatics 32(1), 35–42. '
                                'Verified primary link: '
                                '[https://doi.org/10.1093/bioinformatics/btv535](https://doi.org/10.1093/bioinformatics/btv535).',
-                      'principle': 'The routine first fits ordinary SIMPLS, copies each component '
-                                   'weight vector, and applies groupwise thresholding to that '
-                                   'copy. In the current source the thresholded weights are not '
-                                   'used to recompute the coefficient matrix returned for '
-                                   'prediction. It must therefore be treated as an incomplete '
-                                   'diagnostic implementation rather than a fitted group-lasso PLS '
-                                   'estimator.'},
+                      'principle': 'The routine fits ordinary SIMPLS and applies groupwise proximal '
+                                   'shrinkage to its predictive coefficients. Entire groups can '
+                                   'be zeroed, but the latent directions are not refitted.'},
  'interval_select': {'paper': 'Nørgaard, L., Saudland, A., Wagner, J., Nielsen, J. P., Munck, L. & '
                               'Engelsen, S. B. (2000). *Interval partial least-squares regression '
                               '(iPLS): a comparative chemometric study with an example from '
