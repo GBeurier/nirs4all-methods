@@ -399,4 +399,13 @@ n4m_status_t kernel_load(n4m_pp_osc_handle_t* h, n4m_state_reader_t* r,
     return n4m_pp_osc_state_load(h->state, r, n_features);
 }
 
+n4m_status_t kernel_save(const n4m_pp_epo_handle_t* h, n4m_state_writer_t* w) {
+    return n4m_pp_epo_state_save(h->state, w);
+}
+
+n4m_status_t kernel_load(n4m_pp_epo_handle_t* h, n4m_state_reader_t* r,
+                         std::int64_t n_features) {
+    return n4m_pp_epo_state_load(h->state, r, n_features);
+}
+
 }  // namespace n4m::estimator

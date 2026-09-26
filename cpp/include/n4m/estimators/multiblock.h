@@ -35,11 +35,15 @@ N4M_API n4m_status_t n4m_estimators_o2pls_fit(
  * predicting one Y. `X_blocks` is an array of `n_blocks`
  * n4m_matrix_view_t structs (all sharing X.rows = Y.rows).
  * `n_components_per_block` is a length-n_blocks int32 array.
- * The result contains:
- *   "predictions" (n_samples x n_targets)
- *   "y_mean"      (1 x n_targets)
- *   For each block b: "block_coefficients_<b>" of shape (p_b x n_targets)
- *   scalar "n_blocks"
+ * The result is an affine predictor over the concatenated blocks
+ * (n4m_model_from_method_result): y = y_mean + (x - x_mean) coefficients.
+ * It contains:
+ *   "predictions"  (n_samples x n_targets)
+ *   "coefficients" (sum p_b x n_targets), "x_mean" (1 x sum p_b)
+ *   "y_mean"       (1 x n_targets)
+ *   For each block b: "block_coefficients_<b>" (p_b x n_targets), the rows
+ *   of "coefficients" for block b
+ *   scalars "n_blocks", "affine_predictor" (1)
  */
 N4M_API n4m_status_t n4m_estimators_so_pls_fit(
     n4m_context_t* ctx,
@@ -70,12 +74,14 @@ N4M_API n4m_status_t n4m_estimators_on_pls_fit(
 /* ROSA (§19). Response-Oriented Sequential Alternation: at each
  * component, picks the block whose latent direction yields the highest
  * correlation with the current Y residual.
- * Result contains:
+ * The result is an affine predictor over the concatenated blocks, like
+ * SO-PLS. It contains:
  *   "predictions"                  (n_samples x n_targets)
- *   "y_mean"
+ *   "coefficients" (sum p_b x n_targets), "x_mean" (1 x sum p_b), "y_mean"
  *   "selected_block_per_component" int vector
- *   For each block b: "block_coefficients_<b>"
- *   scalar "n_components"
+ *   For each block b: "block_coefficients_<b>" (p_b x n_targets), the rows
+ *   of "coefficients" for block b
+ *   scalars "n_components", "affine_predictor" (1)
  */
 N4M_API n4m_status_t n4m_estimators_rosa_fit(
     n4m_context_t* ctx,

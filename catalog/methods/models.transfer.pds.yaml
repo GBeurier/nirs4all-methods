@@ -33,6 +33,19 @@ publications: []
 notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
 c_surface:
   - "n4m_domain_adaptation_pds_fit"
+estimator:
+  kind: "estimator"
+  adapter: "tr_pds"
+  roles: "[transformer]"
+  state: "coef"
+  inputs:
+    y: "optional"
+    target_domain: "required"
+  params:
+    - name: "window_half_width"
+      type: "int"
+      default: 2
+      min: 0
 fq_name: "n4m.domain_adaptation.standardization.pds"
 leaf: "pds"
 legacy_ids:

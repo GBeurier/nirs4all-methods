@@ -45,6 +45,9 @@ EXPLICIT_PARAMS = {
     "kernel_size": 5,
     "alphas": [0.0, 1.0],
     "sigmas": [1.0, 2.0],
+    "n_neighbors": 10,
+    "n_components_per_block": [1, 1, 1],
+    "n_unique_per_block": [1, 1, 1],
 }
 # Fit input name -> n4m_fit_input_t index (n4m/estimator.h).
 DATA_INPUTS = {"feature_groups": 4, "blocks": 5, "axis": 6, "X_target": 7}
@@ -83,6 +86,8 @@ def explicit_params(cls) -> dict:
     params = {k: v for k, v in EXPLICIT_PARAMS.items() if k in cls._param_types}
     if cls is roles.RandomFrog:
         params["initial_size"] = 6
+    if cls is roles.RecursivePLS:
+        params["window_size"] = 20  # IRF also has a window_size
     if cls is roles.EMCUVE:
         params["noise_features"] = 12  # 50 noise columns swamp 12 real ones
     return params
@@ -155,7 +160,9 @@ def main() -> None:
             "params": params,
             # Filters are train-only; the X-outlier state is not serializable.
             "n4me_base64": (
-                base64.b64encode(est.to_n4me()).decode() if serializable else None
+                base64.b64encode(est.to_n4me(allow_training_rows=True)).decode()
+                if serializable
+                else None
             ),
         }
         if isinstance(est, roles.NativeRegressor):

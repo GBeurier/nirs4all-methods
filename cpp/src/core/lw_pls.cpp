@@ -112,15 +112,17 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
                                                     const std::vector<double>& X,
                                                     std::size_t rows,
                                                     std::size_t cols,
-                                                    std::vector<double>& Xs) {
+                                                    std::vector<double>& Xs,
+                                                    std::vector<double>& mean,
+                                                    std::vector<double>& scale) {
     std::size_t total = 0;
     if (!checked_mul_size(rows, cols, total)) {
         ctx.set_error("LW-PLS distance matrix size overflows size_t");
         return N4M_ERR_INVALID_ARGUMENT;
     }
     resize_fill(Xs, total, 0.0);
-    std::vector<double> mean(cols, 0.0);
-    std::vector<double> scale(cols, 1.0);
+    mean.assign(cols, 0.0);
+    scale.assign(cols, 1.0);
     for (std::size_t col = 0; col < cols; ++col) {
         double sum = 0.0;
         for (std::size_t row = 0; row < rows; ++row) {
@@ -163,16 +165,16 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
 //     prediction is then the accumulated `t_q * q_a` contribution after
 //     `n_components` components.
 // ---------------------------------------------------------------------------
-[[nodiscard]] n4m_status_t fit_predict_lw_pls_weighted(
-    ::n4m::core::Context& /*ctx*/,
-    const ::n4m::core::Config& cfg,
-    const std::vector<double>& x_values,
-    const std::vector<double>& y_values,
-    std::size_t rows,
-    std::size_t cols,
-    std::size_t targets,
-    std::int32_t n_neighbors,
-    ::n4m::core::LwPlsResult& out) {
+void predict_lw_pls_weighted(const ::n4m::core::Config& cfg,
+                             const std::vector<double>& x_values,
+                             const std::vector<double>& y_values,
+                             std::size_t rows,
+                             std::size_t cols,
+                             std::size_t targets,
+                             const std::vector<double>& queries,
+                             std::size_t n_queries,
+                             std::int32_t n_neighbors,
+                             std::vector<double>& predictions) {
     const auto n_components = static_cast<std::size_t>(cfg.n_components);
     const double lambda = std::max(
         1.0, 0.5 * static_cast<double>(n_neighbors));
@@ -189,13 +191,13 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     std::vector<double> t_a(rows, 0.0);
     std::vector<double> p_a(cols, 0.0);
 
-    for (std::size_t row = 0; row < rows; ++row) {
-        // 1. Distances and Gaussian weights based on the query x_values[row].
+    for (std::size_t row = 0; row < n_queries; ++row) {
+        // 1. Distances and Gaussian weights based on the query queries[row].
         for (std::size_t other = 0; other < rows; ++other) {
             double d = 0.0;
             for (std::size_t col = 0; col < cols; ++col) {
                 const double delta = x_values[idx(other, cols, col)] -
-                                     x_values[idx(row, cols, col)];
+                                     queries[idx(row, cols, col)];
                 d += delta * delta;
             }
             distances[other] = std::sqrt(d);
@@ -267,7 +269,7 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
             }
             for (std::size_t col = 0; col < cols; ++col) {
                 centered_query[col] =
-                    x_values[idx(row, cols, col)] - x_w[col];
+                    queries[idx(row, cols, col)] - x_w[col];
             }
 
             // Prediction starts at the weighted mean.
@@ -351,11 +353,9 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
                 }
             }
 
-            out.predictions[idx(row, targets, tcol)] = prediction;
+            predictions[idx(row, targets, tcol)] = prediction;
         }
     }
-
-    return N4M_OK;
 }
 
 // ---------------------------------------------------------------------------
@@ -363,23 +363,26 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
 // flag set elsewhere — we keep the implementation guard-free here and let the
 // caller request it explicitly through the new dispatch logic).
 // ---------------------------------------------------------------------------
-[[nodiscard]] n4m_status_t fit_predict_lw_pls_knn(::n4m::core::Context& ctx,
-                                                  const ::n4m::core::Config& cfg,
-                                                  const std::vector<double>& x_values,
-                                                  const std::vector<double>& y_values,
-                                                  std::size_t rows,
-                                                  std::size_t cols,
-                                                  std::size_t targets,
-                                                  const n4m_matrix_view_t& X_view,
-                                                  const n4m_matrix_view_t& Y_view,
-                                                  std::int32_t n_neighbors,
-                                                  ::n4m::core::LwPlsResult& out) {
+[[nodiscard]] n4m_status_t predict_lw_pls_knn(::n4m::core::Context& ctx,
+                                              const ::n4m::core::Config& cfg,
+                                              const std::vector<double>& x_values,
+                                              const std::vector<double>& y_values,
+                                              std::size_t rows,
+                                              std::size_t cols,
+                                              std::size_t targets,
+                                              const std::vector<double>& queries,
+                                              std::size_t n_queries,
+                                              std::int32_t n_neighbors,
+                                              std::vector<double>& predictions,
+                                              std::vector<std::int64_t>* neighbor_indices) {
     const auto neighbors = static_cast<std::size_t>(n_neighbors);
-    std::vector<double> standardized;
-    const n4m_status_t status = standardize_for_distance(ctx, x_values, rows, cols, standardized);
+    std::vector<double> standardized, mean, scale;
+    const n4m_status_t status =
+        standardize_for_distance(ctx, x_values, rows, cols, standardized, mean, scale);
     if (status != N4M_OK) {
         return status;
     }
+    std::vector<double> standardized_query(cols, 0.0);
 
     std::vector<std::pair<double, std::int64_t>> order(rows);
     std::vector<double> local_x(neighbors * cols, 0.0);
@@ -395,13 +398,15 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     local_cfg.center_y = 1;
     local_cfg.scale_y = 1;
 
-    for (std::size_t row = 0; row < rows; ++row) {
+    for (std::size_t row = 0; row < n_queries; ++row) {
+        for (std::size_t col = 0; col < cols; ++col) {
+            standardized_query[col] = (queries[idx(row, cols, col)] - mean[col]) / scale[col];
+        }
         for (std::size_t other = 0; other < rows; ++other) {
             double distance = 0.0;
             for (std::size_t col = 0; col < cols; ++col) {
                 const double delta =
-                    standardized[idx(other, cols, col)] -
-                    standardized[idx(row, cols, col)];
+                    standardized[idx(other, cols, col)] - standardized_query[col];
                 distance += delta * delta;
             }
             order[other] = {distance, static_cast<std::int64_t>(other)};
@@ -409,7 +414,9 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
         std::sort(order.begin(), order.end());
         for (std::size_t nidx = 0; nidx < neighbors; ++nidx) {
             const auto selected = static_cast<std::size_t>(order[nidx].second);
-            out.neighbor_indices[idx(row, neighbors, nidx)] = order[nidx].second;
+            if (neighbor_indices != nullptr) {
+                (*neighbor_indices)[idx(row, neighbors, nidx)] = order[nidx].second;
+            }
             for (std::size_t col = 0; col < cols; ++col) {
                 local_x[idx(nidx, cols, col)] = x_values[idx(selected, cols, col)];
             }
@@ -419,28 +426,54 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
             }
         }
         for (std::size_t col = 0; col < cols; ++col) {
-            query[col] = x_values[idx(row, cols, col)];
+            query[col] = queries[idx(row, cols, col)];
         }
 
+        const auto p = static_cast<std::int64_t>(cols);
+        const auto q = static_cast<std::int64_t>(targets);
         n4m_matrix_view_t local_x_view =
-            rowmajor_f64_view(local_x, static_cast<std::int64_t>(neighbors), X_view.cols);
+            rowmajor_f64_view(local_x, static_cast<std::int64_t>(neighbors), p);
         n4m_matrix_view_t local_y_view =
-            rowmajor_f64_view(local_y, static_cast<std::int64_t>(neighbors), Y_view.cols);
+            rowmajor_f64_view(local_y, static_cast<std::int64_t>(neighbors), q);
         std::unique_ptr<::n4m::core::Model> model;
         n4m_status_t fit_status = ::n4m::core::fit_model(ctx, local_cfg, local_x_view, local_y_view, model);
         if (fit_status != N4M_OK) {
             return fit_status;
         }
-        n4m_matrix_view_t query_view = rowmajor_f64_view(query, 1, X_view.cols);
-        n4m_matrix_view_t pred_view = rowmajor_f64_view(query_pred, 1, Y_view.cols);
+        n4m_matrix_view_t query_view = rowmajor_f64_view(query, 1, p);
+        n4m_matrix_view_t pred_view = rowmajor_f64_view(query_pred, 1, q);
         fit_status = ::n4m::core::predict_into(ctx, *model, query_view, pred_view);
         if (fit_status != N4M_OK) {
             return fit_status;
         }
         for (std::size_t target = 0; target < targets; ++target) {
-            out.predictions[idx(row, targets, target)] = query_pred[target];
+            predictions[idx(row, targets, target)] = query_pred[target];
         }
     }
+    return N4M_OK;
+}
+
+// Both modes on query rows; the k-NN cutoff variant is selected with
+// cfg.solver == N4M_SOLVER_SIMPLS (see fit_predict_lw_pls).
+[[nodiscard]] n4m_status_t predict_queries(::n4m::core::Context& ctx,
+                                           const ::n4m::core::Config& cfg,
+                                           const std::vector<double>& x_values,
+                                           const std::vector<double>& y_values,
+                                           std::size_t rows,
+                                           std::size_t cols,
+                                           std::size_t targets,
+                                           const std::vector<double>& queries,
+                                           std::size_t n_queries,
+                                           std::int32_t n_neighbors,
+                                           std::vector<double>& predictions,
+                                           std::vector<std::int64_t>* neighbor_indices) {
+    predictions.assign(n_queries * targets, 0.0);
+    if (cfg.solver == N4M_SOLVER_SIMPLS) {
+        return predict_lw_pls_knn(ctx, cfg, x_values, y_values, rows, cols, targets, queries,
+                                  n_queries, n_neighbors, predictions, neighbor_indices);
+    }
+    predict_lw_pls_weighted(cfg, x_values, y_values, rows, cols, targets, queries, n_queries,
+                            n_neighbors, predictions);
     return N4M_OK;
 }
 
@@ -509,7 +542,6 @@ n4m_status_t fit_predict_lw_pls(Context& ctx,
             return status;
         }
 
-        out.predictions.assign(pred_size, 0.0);
         out.neighbor_indices.assign(neighbor_size, 0);
 
         // Default to the Gaussian-weighted local PLS that matches the nirs4all
@@ -518,11 +550,7 @@ n4m_status_t fit_predict_lw_pls(Context& ctx,
         // NIPALS-style weighted recurrence, so SIMPLS is the only solver flag
         // we can repurpose without growing the C ABI surface).
         const bool use_knn = (cfg.solver == N4M_SOLVER_SIMPLS);
-        if (use_knn) {
-            status = fit_predict_lw_pls_knn(
-                ctx, cfg, x_values, y_values, rows, cols, targets,
-                X, Y, n_neighbors, out);
-        } else {
+        if (!use_knn) {
             // In the weighted mode we still expose the requested neighbor
             // count via the result so downstream code (and the C ABI handle)
             // keeps a stable shape; the indices are simply the rows sorted by
@@ -546,10 +574,10 @@ n4m_status_t fit_predict_lw_pls(Context& ctx,
                         order[nidx].second;
                 }
             }
-            status = fit_predict_lw_pls_weighted(
-                ctx, cfg, x_values, y_values, rows, cols, targets,
-                n_neighbors, out);
         }
+        status = predict_queries(ctx, cfg, x_values, y_values, rows, cols, targets, x_values,
+                                 rows, n_neighbors, out.predictions,
+                                 use_knn ? &out.neighbor_indices : nullptr);
         if (status != N4M_OK) {
             out = LwPlsResult{};
             return status;
@@ -570,6 +598,39 @@ n4m_status_t fit_predict_lw_pls(Context& ctx,
         ctx.set_error("unexpected exception while fitting LW-PLS");
         out = LwPlsResult{};
         return N4M_ERR_INTERNAL;
+    }
+}
+
+n4m_status_t predict_lw_pls(Context& ctx,
+                           const Config& cfg,
+                           const std::vector<double>& x_train,
+                           const std::vector<double>& y_train,
+                           std::int64_t n_train,
+                           std::int32_t n_neighbors,
+                           const n4m_matrix_view_t& X,
+                           std::vector<double>& predictions) {
+    try {
+        n4m_status_t status = validate_float_view(ctx, X, "X");
+        if (status != N4M_OK) {
+            return status;
+        }
+        const auto rows = static_cast<std::size_t>(n_train);
+        const auto cols = static_cast<std::size_t>(X.cols);
+        if (rows == 0 || x_train.size() != rows * cols || y_train.size() % rows != 0) {
+            ctx.set_error("X width does not match the LW-PLS training set");
+            return N4M_ERR_SHAPE_MISMATCH;
+        }
+        std::vector<double> queries;
+        status = copy_float_matrix(ctx, X, "X", queries);
+        if (status != N4M_OK) {
+            return status;
+        }
+        return predict_queries(ctx, cfg, x_train, y_train, rows, cols, y_train.size() / rows,
+                               queries, static_cast<std::size_t>(X.rows), n_neighbors,
+                               predictions, nullptr);
+    } catch (const std::bad_alloc&) {
+        ctx.set_error("out of memory while predicting LW-PLS");
+        return N4M_ERR_OUT_OF_MEMORY;
     }
 }
 

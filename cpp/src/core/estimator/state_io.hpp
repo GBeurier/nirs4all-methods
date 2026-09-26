@@ -53,6 +53,11 @@ n4m_matrix_view_t contiguous_view(const n4m_matrix_view_t& X, std::vector<double
 
 std::int32_t to_i32(std::int64_t v);
 
+// Column views of X over the multiblock partition `sizes` (defined in
+// model_adapters.cpp).
+std::vector<n4m_matrix_view_t> block_views(const n4m_matrix_view_t& X,
+                                           const std::vector<std::int64_t>& sizes);
+
 // A transformer kernel with a fitted state: create from parameters, fit,
 // transform, destroy, output width, and state save / load.
 template <typename H>

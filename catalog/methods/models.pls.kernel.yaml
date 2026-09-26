@@ -33,6 +33,33 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_estimators_kernel_pls_fit"
+estimator:
+  kind: "estimator"
+  adapter: "kernel_pls"
+  roles: "[regressor]"
+  state: "kernel_pls"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "kernel"
+      type: "enum"
+      choices: "[linear, rbf, polynomial, sigmoid]"
+      default: "rbf"
+    - name: "gamma"
+      type: "double"
+      default: 0.0
+      min: 0.0
+    - name: "coef0"
+      type: "double"
+      default: 1.0
+    - name: "degree"
+      type: "int"
+      default: 3
+      min: 1
 fq_name: "n4m.estimators.regression.kernel.kernel_pls"
 leaf: "kernel_pls"
 legacy_ids:
