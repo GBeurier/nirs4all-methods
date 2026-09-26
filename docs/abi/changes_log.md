@@ -10,7 +10,12 @@ standalone N4MM payload with unknown training-row provenance (`0`). Results
 without the explicit `affine_predictor=1` capability are rejected. Marked
 producers in this batch are GroupSparsePLS, FusedSparsePLS, RobustPLS,
 RidgePLS, ContinuumRegression, BaggingPLS, BoostingPLS, and
-RandomSubspacePLS; their held-out oracles confirm the affine convention.
+RandomSubspacePLS, direct Ridge, CPPLS, SparseSIMPLS, ECR, MIRPLS, N-PLS,
+MB-PLS, and DI-PLS; their held-out oracles confirm the affine convention.
+N-PLS consumes flattened feature rows after the caller supplies a valid
+mode-J/mode-K shape, MB-PLS uses its exported direct intercept, and DI-PLS
+still requires an independent target-domain cohort during fit. Promotion
+does not recreate those fit inputs or claim latent transform support.
 This batch does not publish a package or change a package version number.
 
 ## 2026-09-03 — ABI 2.5.0: typed N4MM pipeline inspection

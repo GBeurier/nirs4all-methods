@@ -292,8 +292,7 @@ def test_npls_rejects_invalid_tensor_shape(regression_data, mode_j, mode_k):
 
 
 def test_sparse_simpls_wrapper_bitexact(regression_data):
-    """Wrapper.predict(X) must be bit-exact with the C predict math
-    applied to tier 1's MethodResult."""
+    """The native model agrees with the legacy coefficient formula to roundoff."""
     import pls4all
     X, y, _ = regression_data
     wrapper = SparseSimplsRegression(n_components=5, sparsity_lambda=0.05)
@@ -301,7 +300,7 @@ def test_sparse_simpls_wrapper_bitexact(regression_data):
     preds_wrapper = wrapper.predict(X)
     preds_raw = _raw_method_result_predict(
         pls4all.sparse_simpls_fit, 5, X, y, sparsity_lambda=0.05)
-    assert np.array_equal(preds_wrapper, preds_raw)
+    np.testing.assert_allclose(preds_wrapper, preds_raw, rtol=0, atol=1e-10)
 
 
 def test_ec_regression_wrapper_bitexact(regression_data):
@@ -311,7 +310,7 @@ def test_ec_regression_wrapper_bitexact(regression_data):
     preds_wrapper = wrapper.predict(X)
     preds_raw = _raw_method_result_predict(
         pls4all.ecr_fit, 5, X, y, alpha=0.5)
-    assert np.array_equal(preds_wrapper, preds_raw)
+    np.testing.assert_allclose(preds_wrapper, preds_raw, rtol=0, atol=1e-10)
 
 
 def test_mir_pls_wrapper_bitexact(regression_data):
@@ -321,7 +320,7 @@ def test_mir_pls_wrapper_bitexact(regression_data):
     preds_wrapper = wrapper.predict(X)
     preds_raw = _raw_method_result_predict(
         pls4all.mir_pls_fit, 5, X, y)
-    assert np.array_equal(preds_wrapper, preds_raw)
+    np.testing.assert_allclose(preds_wrapper, preds_raw, rtol=0, atol=1e-10)
 
 
 @pytest.mark.parametrize(

@@ -1,8 +1,11 @@
 """pls4all.sklearn — scikit-learn-compatible wrappers over the pls4all C ABI.
 
 Optional sub-module. Requires `scikit-learn` at runtime. Wrappers are
-**thin reformatters** — no numerical logic lives here. The C kernel under
-the binding is the source of truth; the wrapper exists only to honour
+compatibility adapters around libn4m. Verified affine MethodResult regressors
+use a native predict-only N4MM model. Unmarked legacy wrappers may still
+replay exported coefficients in NumPy; this module does not imply that every
+sklearn-compatible class has a portable native fitted model. The C kernel
+under the binding is the source of truth; the wrapper exists to honour
 the sklearn estimator contract (`fit/predict/score`, `get_params/set_params`,
 `Pipeline`, `GridSearchCV`).
 
@@ -15,7 +18,7 @@ Persistence strategy per family:
   `n4m_model_import_from_buffer`). This raw payload has no canonical filename
   extension and is not a nirs4all `.n4a` pipeline bundle. State survives
   pickle bit-exactly.
-* **MethodResult-based regressors** that carry coefficients
+* **Verified affine MethodResult-based regressors**
   (`SparseSimplsRegression`, `CPPLSRegression`, `ECRegression`,
   `DIPLSRegression`, `MIRPLSRegression`, `MBPLSRegression`,
   `NPLSRegression`, `O2PLSRegression`, `PLSGLMRegressor`,
@@ -23,7 +26,8 @@ Persistence strategy per family:
   `FusedSparsePLSRegression`, `BaggingPLSRegression`,
   `GroupSparsePLSRegression`,
   `BoostingPLSRegression`, `RandomSubspacePLSRegression`)
-  serialize their (coef, x_mean, y_mean) state as plain NumPy.
+  persist a native predict-only N4MM model for held-out prediction. Other
+  MethodResult wrappers retain their documented legacy contracts.
 * **In-sample-only regressors** (`WeightedPLSRegression`,
   `RecursivePLSRegression`, `LWPLSRegression`,
   `MissingAwareNipalsRegression`,
