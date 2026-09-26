@@ -10,9 +10,9 @@ testthat::test_that("abi version is a three-element integer vector", {
   testthat::expect_length(abi, 3)
 })
 
-testthat::test_that("abi major/minor includes generic native filter roles", {
+testthat::test_that("abi major/minor includes generic estimator roles", {
   abi <- n4m::n4m_abi_version()
-  testthat::expect_equal(abi[1:2], c(2L, 12L))
+  testthat::expect_equal(abi[1:2], c(2L, 13L))
 })
 
 testthat::test_that("locked role-name aliases are exported", {

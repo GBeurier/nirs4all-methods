@@ -1144,6 +1144,7 @@ N4M_API n4m_status_t n4m_pls_cross_validate(
 #include "n4m/domain_adaptation.h"
 #include "n4m/outlier_detection.h"
 #include "n4m/filter_role.h"
+#include "n4m/estimator.h"
 #include "n4m/ensemble.h"
 #include "n4m/compose.h"
 #include "n4m/metrics.h"

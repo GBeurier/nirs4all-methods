@@ -40,6 +40,27 @@ publications: []
 notes: "Direct closed-form Ridge regression head with primal/dual handling in the native core. This is the reusable linear head used by the moment and AOM Ridge screens."
 c_surface:
   - "n4m_estimators_ridge_fit"
+estimator:
+  kind: "estimator"
+  adapter: "affine_ridge"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "alpha"
+      type: "double"
+      default: 1.0
+      min: 0.0
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
 fq_name: "n4m.estimators.regression.regularized.ridge"
 leaf: "ridge"
 legacy_ids:

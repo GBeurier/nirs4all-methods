@@ -39,6 +39,30 @@ publications:
 notes: "Direct native Principal Components Regression MethodResult ABI. Added during AOM/moment product integration so PCR follows the same n4m.python and sklearn wrapper pattern as Ridge/CPPLS/continuum/ECR."
 c_surface:
   - "n4m_estimators_pcr_fit"
+estimator:
+  kind: "estimator"
+  adapter: "pcr"
+  roles: "[regressor, transformer]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
+    - name: "scale_y"
+      type: "bool"
+      default: false
 fq_name: "n4m.estimators.regression.latent.pcr"
 leaf: "pcr"
 legacy_ids:

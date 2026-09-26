@@ -126,6 +126,35 @@
         }
       }
     },
+    "estimator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "adapter"],
+      "description": "Generic role contract (docs/abi/estimator_roles_design.md), compiled into the native manifest by catalog/scripts/generate_estimator_manifest.py.",
+      "properties": {
+        "kind": {"type": "string", "enum": ["estimator", "procedure"]},
+        "adapter": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "roles": {"type": "string", "description": "Inline list, e.g. [regressor, transformer]."},
+        "state": {"type": "string"},
+        "inputs": {"type": "object", "additionalProperties": {"type": "string", "enum": ["none", "optional", "required"]}},
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "type"],
+            "properties": {
+              "name": {"type": "string"},
+              "type": {"type": "string", "enum": ["int", "double", "bool", "enum", "int_array", "double_array"]},
+              "default": {},
+              "min": {"type": "number"},
+              "max": {"type": "number"},
+              "choices": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
     "bench": {
       "type": "object",
       "additionalProperties": false,

@@ -33,6 +33,23 @@ publications: []
 notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
 c_surface:
   - "n4m_domain_adaptation_di_pls_fit"
+estimator:
+  kind: "estimator"
+  adapter: "affine_di_pls"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+    target_domain: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "di_lambda"
+      type: "double"
+      default: 1.0
+      min: 0.0
 fq_name: "n4m.domain_adaptation.invariant.di_pls"
 leaf: "di_pls"
 legacy_ids:

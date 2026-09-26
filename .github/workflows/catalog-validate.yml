@@ -59,6 +59,8 @@ jobs:
         run: python catalog/scripts/validate.py --strict-abi --check-references
       - name: Check split catalog
         run: python catalog/scripts/split_legacy_methods.py --check
+      - name: Check generated estimator manifest
+        run: python catalog/scripts/generate_estimator_manifest.py --check
       - name: Catalog parser self-test
         run: python catalog/scripts/selftest.py
       - name: Migrate bibliography from recorded source blobs

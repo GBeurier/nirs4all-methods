@@ -33,6 +33,24 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_estimators_n_pls_fit"
+estimator:
+  kind: "estimator"
+  adapter: "affine_n_pls"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "mode_j"
+      type: "int"
+      min: 1
+    - name: "mode_k"
+      type: "int"
+      min: 1
 fq_name: "n4m.estimators.regression.tensor.n_pls"
 leaf: "n_pls"
 legacy_ids:

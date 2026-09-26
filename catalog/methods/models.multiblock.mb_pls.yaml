@@ -33,6 +33,19 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_estimators_mb_pls_fit"
+estimator:
+  kind: "estimator"
+  adapter: "affine_mb_pls"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+    blocks: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
 fq_name: "n4m.estimators.multiblock.mb_pls"
 leaf: "mb_pls"
 legacy_ids:

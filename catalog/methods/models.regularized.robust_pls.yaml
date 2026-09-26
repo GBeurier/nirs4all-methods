@@ -37,6 +37,38 @@ publications: []
 notes: "Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md). Python binding refined during AOM/moment product integration as a function-only linear PLS variant."
 c_surface:
   - "n4m_estimators_robust_pls_fit"
+estimator:
+  kind: "estimator"
+  adapter: "affine_robust_pls"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "huber_k"
+      type: "double"
+      default: 1.345
+      min: 0.0
+    - name: "max_irls_iter"
+      type: "int"
+      default: 5
+      min: 1
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
+    - name: "scale_y"
+      type: "bool"
+      default: true
 fq_name: "n4m.estimators.regression.robust.robust_pls"
 leaf: "robust_pls"
 legacy_ids:

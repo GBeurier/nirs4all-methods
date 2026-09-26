@@ -1,0 +1,152 @@
+# SPDX-License-Identifier: CECILL-2.1
+"""Generic estimator roles (ABI 2.13): Python facade over n4m_estimator_*."""
+
+from __future__ import annotations
+
+import ctypes
+import pickle
+
+import numpy as np
+import pytest
+from sklearn.base import clone
+from sklearn.model_selection import cross_val_score
+
+import n4m.roles as roles
+from n4m._errors import N4MError
+from n4m._ffi import lib
+from n4m._impl import native
+from n4m._types import MethodInfoV1
+from n4m.roles._base import _REGISTRY
+
+N_FEATURES = 12
+
+
+@pytest.fixture(scope="module")
+def data():
+    # Two dominant latent factors carry the response, as in spectra.
+    rng = np.random.default_rng(3)
+    scores = rng.normal(size=(48, 2)) * np.array([3.0, 2.0])
+    loadings = rng.normal(size=(2, N_FEATURES))
+    X = scores @ loadings + 0.1 * rng.normal(size=(48, N_FEATURES))
+    y = scores[:, 0] - 0.5 * scores[:, 1] + 0.05 * rng.normal(size=48)
+    X_target = rng.normal(size=(30, 2)) @ loadings + 0.3 + 0.1 * rng.normal(size=(30, N_FEATURES))
+    return X[:36], y[:36], X[36:], X_target, y[36:]
+
+
+def manifest_estimators() -> set[str]:
+    count = ctypes.c_int32()
+    assert lib.n4m_method_count(ctypes.byref(count)) == 0
+    ids = set()
+    for i in range(count.value):
+        info = MethodInfoV1()
+        info.struct_size = ctypes.sizeof(info)
+        assert lib.n4m_method_info_v1(i, ctypes.addressof(info)) == 0
+        if info.kind == 1:
+            ids.add(info.method_id.decode())
+    return ids
+
+
+def build(cls):
+    """Instance plus the fit inputs its method requires."""
+    params = {"mode_j": 3, "mode_k": 4} if cls is roles.NPLS else {}
+    return cls(**params)
+
+
+def fit_kwargs(cls, X_target):
+    return {
+        roles.GroupSparsePLS: {"feature_groups": np.arange(N_FEATURES) // 4},
+        roles.MBPLS: {"blocks": [4, 4, 4]},
+        roles.DIPLS: {"X_target": X_target},
+    }.get(cls, {})
+
+
+ALL = sorted(_REGISTRY.values(), key=lambda c: c._method_id)
+
+
+def test_generated_classes_match_native_manifest():
+    assert set(_REGISTRY) == manifest_estimators()
+
+
+@pytest.mark.parametrize("cls", ALL, ids=lambda c: c.__name__)
+def test_fit_predict_roundtrip(cls, data):
+    X, y, X_test, X_target, y_test = data
+    est = build(cls).fit(X, y, **fit_kwargs(cls, X_target))
+    pred = est.predict(X_test)
+    assert pred.shape == (X_test.shape[0],)
+    assert np.all(np.isfinite(pred))
+    assert np.corrcoef(pred, y_test)[0, 1] > 0.9
+
+    restored = roles.NativeEstimator.from_n4me(est.to_n4me())
+    assert type(restored) is cls
+    assert restored.get_params() == est.get_params()
+    np.testing.assert_array_equal(restored.predict(X_test), pred)
+    assert restored.to_n4me() == est.to_n4me()
+
+    np.testing.assert_array_equal(pickle.loads(pickle.dumps(est)).predict(X_test), pred)
+    assert clone(est).get_params() == est.get_params()
+    if "transform" in dir(est) and est.capabilities_ & 1:
+        scores = est.transform(X_test)
+        assert scores.shape[0] == X_test.shape[0]
+
+
+@pytest.mark.parametrize("cls", ALL, ids=lambda c: c.__name__)
+def test_unused_and_missing_inputs_are_refused(cls, data):
+    X, y, _, X_target, _ = data
+    with pytest.raises(N4MError, match="not used by this method"):
+        build(cls).fit(X, y, groups=np.zeros(X.shape[0]), **fit_kwargs(cls, X_target))
+    if fit_kwargs(cls, X_target):
+        with pytest.raises(N4MError, match="missing required fit input"):
+            build(cls).fit(X, y)
+
+
+def test_sklearn_cross_validation(data):
+    X, y, _, _, _ = data
+    scores = cross_val_score(roles.PLSRegression(n_components=3), X, y, cv=3)
+    assert np.all(scores > 0.9)
+
+
+def test_invalid_parameters_are_refused(data):
+    X, y, _, _, _ = data
+    with pytest.raises(ValueError, match="solver"):
+        roles.PLSRegression(solver="bogus").fit(X, y)
+    with pytest.raises(ValueError, match="n_components"):
+        roles.CPPLS(n_components=0).fit(X, y)
+    with pytest.raises(N4MError, match="mode_j"):
+        roles.NPLS().fit(X, y)
+    with pytest.raises(N4MError):
+        roles.PLSRegression().predict(X)
+
+
+def affine_reference(result: dict, X: np.ndarray) -> np.ndarray:
+    coef = np.asarray(result["coefficients"])
+    if "intercept" in result:
+        return (X @ coef + np.asarray(result["intercept"]).reshape(1, -1)).ravel()
+    return ((X - np.asarray(result["x_mean"]).reshape(1, -1)) @ coef + np.asarray(result["y_mean"]).reshape(1, -1)).ravel()
+
+
+# The generic estimators reproduce the existing n4m Python entry points with
+# the same (manifest) defaults.
+REFERENCES = [
+    (roles.CPPLS, lambda X, y, t: native.cppls(X, y)),
+    (roles.RobustPLS, lambda X, y, t: native.robust_pls(X, y)),
+    (roles.RidgePLS, lambda X, y, t: native.ridge_pls(X, y)),
+    (roles.ContinuumRegression, lambda X, y, t: native.continuum_regression(X, y)),
+    (roles.ECR, lambda X, y, t: native.ecr(X, y)),
+    (roles.Ridge, lambda X, y, t: native.ridge(X, y)),
+    (roles.DIPLS, lambda X, y, t: native.di_pls(X, y, X_target=t)),
+]
+
+
+@pytest.mark.parametrize("cls,reference", REFERENCES, ids=lambda v: getattr(v, "__name__", ""))
+def test_matches_n4m_reference(cls, reference, data):
+    X, y, X_test, X_target, y_test = data
+    est = cls().fit(X, y, **fit_kwargs(cls, X_target))
+    expected = affine_reference(reference(X, y, X_target), X_test)
+    np.testing.assert_allclose(est.predict(X_test), expected, rtol=1e-10, atol=1e-10)
+
+
+def test_pcr_matches_n4m_reference(data):
+    X, y, X_test, _, _ = data
+    est = roles.PCR(n_components=3).fit(X, y)
+    ref = native.pcr(X, y, n_components=3)
+    np.testing.assert_allclose(est.predict(X_test), affine_reference(ref, X_test), rtol=1e-10, atol=1e-10)

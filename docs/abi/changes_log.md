@@ -1,5 +1,30 @@
 # ABI — Changes Log
 
+## 2026-09-27 — ABI 2.13.0: generic estimator roles (unreleased)
+
+Adds one life cycle for catalog methods with reusable fitted state
+(`n4m/estimator.h`, design in `docs/abi/estimator_roles_design.md`):
+
+- a native manifest compiled from the catalog `estimator` blocks, exposed by
+  `n4m_method_count/find/info_v1/param_info_v1/param_default_*`;
+- named, typed parameters (`n4m_params_*`) whose defaults are owned by the
+  core, so one `{method_id, params}` recipe builds the same estimator in every
+  binding;
+- `n4m_estimator_*`: create, fit with a versioned `n4m_fit_inputs_v1_t`
+  (required/unused inputs checked against the manifest), transform, predict,
+  decision function, probabilities, labels, classes, selected indices, masks,
+  borrowed fit diagnostics;
+- the N4ME v1 fitted-state format (`n4m_estimator_export_*`,
+  `n4m_estimator_import_from_buffer`, `n4m_context_set_max_state_bytes`),
+  which stores resolved parameters and embeds N4MM where the method has one.
+
+First slice: 19 regressors (PLS regression with selectable solver, SIMPLS,
+PCR, CPPLS, robust/ridge/continuum PLS, Ridge, sparse/fused/group-sparse PLS,
+MIR-PLS, MB-PLS, ECR, N-PLS, DI-PLS, bagging/boosting/random-subspace PLS).
+`models.pls.pls_regression` is a new catalog entry for the general PLS
+estimator. Adapters call the existing kernels; no numerical change. The
+per-method C functions are unchanged.
+
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (unreleased)
 
 `n4m_sample_filter_*` and `n4m_feature_filter_*` add two shared fit/apply
