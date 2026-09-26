@@ -3,7 +3,7 @@
 # Formula+S3 tier-2 wrappers for the MethodResult-based tier-1 fits in
 # methods.R. Each algorithm gets its own constructor function returning
 # an S3 object of class `n4m_method_fit`. Predict is a single
-# generic that applies the model's stored coefficients / centering.
+# generic that uses the native model when the producer is marked affine.
 #
 # C ABI prediction convention (cpp/src/core/model.cpp::fill_prediction):
 #   Y_pred = (X - x_mean) @ coef + y_mean
@@ -34,6 +34,19 @@
          response_name = deparse(formula[[2L]]))
 }
 
+# One native fit, with the legacy formula solver settings. The dispatcher
+# attaches a native model only when the MethodResult advertises the affine
+# prediction capability; unmarked methods retain their historical result.
+.n4m_formula_dispatch_fit <- function(method, design, ncomp, params = list()) {
+    X <- design$X
+    Y <- design$y
+    storage.mode(X) <- "double"
+    if (is.null(dim(Y))) Y <- matrix(as.numeric(Y), ncol = 1L)
+    storage.mode(Y) <- "double"
+    .Call("r_n4m_formula_dispatch_fit", method, X, Y, as.integer(ncomp),
+          params, 1L, 0L, 1L, 0L, PACKAGE = "n4m")
+}
+
 # Internal: build an S3 fit object from a MethodResult list.
 # `method` describes the algorithm for print / summary; `extra` lets the
 # caller store algorithm-specific state (e.g. block_sizes for MB-PLS).
@@ -57,6 +70,9 @@
         intercept      = res$intercept,  # MB-PLS / GLM
         rmse           = res$rmse,
         block_weights  = res$block_weights,
+        native_model   = res$native_model,
+        native_model_bytes = if (!is.null(res$native_model))
+            n4m_model_export(res$native_model) else NULL,
         use_intercept  = isTRUE(use_intercept),
         extra          = extra
     )
@@ -91,8 +107,8 @@ sparse_pls <- function(formula, data, ncomp = 2L, sparsity_lambda = 0.05,
                         na.action = stats::na.omit) {
     cl <- match.call()
     d <- .n4m_method_design(formula, data, na.action)
-    res <- sparse_simpls_fit(d$X, d$y, n_components = ncomp,
-                              sparsity_lambda = sparsity_lambda)
+    res <- .n4m_formula_dispatch_fit("sparse_simpls", d, ncomp,
+                                     list(sparsity_lambda = sparsity_lambda))
     .n4m_method_fit_object(formula, cl, d, res, ncomp,
                                 method = "sparse_simpls",
                                 extra = list(sparsity_lambda = sparsity_lambda))
@@ -111,7 +127,8 @@ cppls <- function(formula, data, ncomp = 2L, gamma = 0.5,
                    na.action = stats::na.omit) {
     cl <- match.call()
     d <- .n4m_method_design(formula, data, na.action)
-    res <- cppls_fit(d$X, d$y, n_components = ncomp, gamma = gamma)
+    res <- .n4m_formula_dispatch_fit("cppls", d, ncomp,
+                                     list(gamma = gamma))
     .n4m_method_fit_object(formula, cl, d, res, ncomp,
                                 method = "cppls",
                                 extra = list(gamma = gamma))
@@ -128,8 +145,9 @@ di_pls <- function(formula, data, ncomp = 2L, X_target,
     if (missing(X_target))
         stop("di_pls() requires an `X_target` matrix argument")
     d <- .n4m_method_design(formula, data, na.action)
-    res <- di_pls_fit(d$X, d$y, n_components = ncomp,
-                       X_target = X_target, di_lambda = di_lambda)
+    res <- .n4m_formula_dispatch_fit("di_pls", d, ncomp,
+                                     list(X_target = as.matrix(X_target),
+                                          di_lambda = di_lambda))
     .n4m_method_fit_object(formula, cl, d, res, ncomp,
                                 method = "di_pls",
                                 extra = list(di_lambda = di_lambda))
@@ -148,8 +166,8 @@ weighted_pls <- function(formula, data, ncomp = 2L, weights,
     if (length(weights) != nrow(d$X))
         stop(sprintf("length(weights) (%d) must equal nrow(data) after na.action (%d)",
                       length(weights), nrow(d$X)))
-    res <- weighted_pls_fit(d$X, d$y, n_components = ncomp,
-                             sample_weights = weights)
+    res <- .n4m_formula_dispatch_fit("weighted_pls", d, ncomp,
+                                     list(sample_weights = as.numeric(weights)))
     .n4m_method_fit_object(formula, cl, d, res, ncomp,
                                 method = "weighted_pls",
                                 extra = list(weights = weights))
@@ -165,8 +183,8 @@ mb_pls <- function(formula, data, ncomp = 2L, block_sizes,
     if (missing(block_sizes))
         stop("mb_pls() requires a `block_sizes` integer vector argument")
     d <- .n4m_method_design(formula, data, na.action)
-    res <- mb_pls_fit(d$X, d$y, n_components = ncomp,
-                       block_sizes = block_sizes)
+    res <- .n4m_formula_dispatch_fit("mb_pls", d, ncomp,
+                                     list(block_sizes = as.integer(block_sizes)))
     .n4m_method_fit_object(formula, cl, d, res, ncomp,
                                 method = "mb_pls",
                                 extra = list(block_sizes = block_sizes),
@@ -188,8 +206,9 @@ pls_glm <- function(formula, data, ncomp = 2L, family = "gaussian",
     cl <- match.call()
     family <- match.arg(family, c("gaussian", "poisson"))
     d <- .n4m_method_design(formula, data, na.action)
-    res <- pls_glm_fit(d$X, d$y, n_components = ncomp,
-                        poisson = identical(family, "poisson"))
+    res <- .n4m_formula_dispatch_fit("pls_glm", d, ncomp,
+                                     list(poisson = as.integer(
+                                       identical(family, "poisson"))))
     .n4m_method_fit_object(formula, cl, d, res, ncomp,
                                 method = paste0("pls_glm_", family),
                                 extra = list(family = family),
@@ -208,7 +227,7 @@ mir_pls <- function(formula, data, ncomp = 2L,
                      na.action = stats::na.omit) {
     cl <- match.call()
     d <- .n4m_method_design(formula, data, na.action)
-    res <- mir_pls_fit(d$X, d$y, n_components = ncomp)
+    res <- .n4m_formula_dispatch_fit("mir_pls", d, ncomp)
     .n4m_method_fit_object(formula, cl, d, res, ncomp,
                                 method = "mir_pls")
 }
@@ -224,6 +243,15 @@ predict.n4m_method_fit <- function(object, newdata = NULL, ...) {
     if (is.null(newdata))
         stop("predict.n4m_method_fit requires newdata.")
     X <- .n4m_method_newdata(object, newdata)
+    if (!is.null(object$native_model)) {
+        model <- .n4m_persistent_model(object$native_model,
+                                       object$native_model_bytes)
+        preds <- n4m_predict(model, X)
+        rownames(preds) <- rownames(X)
+        colnames(preds) <- colnames(object$coefficients)
+        if (ncol(preds) == 1L) return(preds[, 1L])
+        return(preds)
+    }
     coef <- object$coefficients   # (p, q)
     if (object$use_intercept) {
         # MB-PLS / PLS-GLM: coefficients are in ORIGINAL X scale,
