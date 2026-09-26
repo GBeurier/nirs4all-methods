@@ -13,7 +13,7 @@ import ctypes
 from typing import Any, ClassVar, Self
 
 import numpy as np
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin
 
 from .._errors import N4MError, check
 from .._ffi import lib
@@ -65,7 +65,12 @@ def _as_int64(values, name: str) -> np.ndarray:
 
 
 class NativeEstimator(BaseEstimator):
-    """Base class of the generated :mod:`n4m.roles` estimators.
+    """Shared life cycle of the generated :mod:`n4m.roles` estimators.
+
+    It owns parameters, fitting and the N4ME state only. Operations belong to
+    typed role interfaces (:class:`NativeRegressor`, :class:`NativeTransformer`,
+    ...); a generated class inherits exactly the roles its native method
+    declares, so a pure regressor has no ``transform`` and vice versa.
 
     Subclasses declare ``_method_id`` and ``_param_types`` (parameter name to
     manifest type) and an explicit ``__init__`` so scikit-learn can clone them.
@@ -270,22 +275,6 @@ class NativeEstimator(BaseEstimator):
             )
         return out
 
-    def predict(self, X) -> np.ndarray:
-        """Native out-of-sample prediction."""
-        out = self._matrix_call("n4m_estimator_predict", X, self._n_outputs())
-        return (
-            out.ravel() if getattr(self, "_y_1d_", False) and out.shape[1] == 1 else out
-        )
-
-    def transform(self, X) -> np.ndarray:
-        """Native transform (latent scores or transformed features)."""
-        cols = ctypes.c_int64()
-        check(
-            lib.n4m_estimator_transform_cols(self._handle(), ctypes.byref(cols)),
-            "n4m_estimator_transform_cols",
-        )
-        return self._matrix_call("n4m_estimator_transform", X, int(cols.value))
-
     def _n_outputs(self) -> int:
         n = ctypes.c_int64()
         check(
@@ -388,6 +377,30 @@ class NativeEstimator(BaseEstimator):
         self._release()
 
 
+class NativeRegressor(RegressorMixin, NativeEstimator):
+    """Regressor role: Data[n, p] + Target[n, q] -> Prediction[n, q]."""
+
+    def predict(self, X) -> np.ndarray:
+        """Native out-of-sample prediction."""
+        out = self._matrix_call("n4m_estimator_predict", X, self._n_outputs())
+        return (
+            out.ravel() if getattr(self, "_y_1d_", False) and out.shape[1] == 1 else out
+        )
+
+
+class NativeTransformer(TransformerMixin, NativeEstimator):
+    """Transformer role: Data[n, p] (+ Target) -> Data[n, k]."""
+
+    def transform(self, X) -> np.ndarray:
+        """Native out-of-sample transform (for PLS-like methods, latent scores)."""
+        cols = ctypes.c_int64()
+        check(
+            lib.n4m_estimator_transform_cols(self._handle(), ctypes.byref(cols)),
+            "n4m_estimator_transform_cols",
+        )
+        return self._matrix_call("n4m_estimator_transform", X, int(cols.value))
+
+
 def _native_param_values(
     handle: ctypes.c_void_p, cls: type[NativeEstimator]
 ) -> dict[str, Any]:
@@ -444,4 +457,4 @@ def _native_param_values(
         lib.n4m_params_destroy(params)
 
 
-__all__ = ["NativeEstimator", "method_info"]
+__all__ = ["NativeEstimator", "NativeRegressor", "NativeTransformer", "method_info"]

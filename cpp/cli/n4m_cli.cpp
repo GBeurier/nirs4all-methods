@@ -225,6 +225,20 @@ int cmd_manifest_json() {
             printf("%s\"%s\"", first ? "" : ",", kRoles[r]);
             first = false;
         }
+        printf("],\"node_kinds\":[");
+        // Role interface -> DAG-ML node kind (docs/abi/estimator_roles_design.md, D0b).
+        first = true;
+        if ((info.roles & (N4M_ROLE_REGRESSOR | N4M_ROLE_CLASSIFIER)) != 0) {
+            printf("\"model\"");
+            first = false;
+        }
+        if ((info.roles & (N4M_ROLE_TRANSFORMER | N4M_ROLE_SELECTOR)) != 0) {
+            printf("%s\"transform\"", first ? "" : ",");
+            first = false;
+        }
+        if ((info.roles & N4M_ROLE_SAMPLE_FILTER) != 0) {
+            printf("%s\"exclude\"", first ? "" : ",");
+        }
         printf("],\"capabilities\":[");
         first = true;
         for (uint32_t c = 0; c < 10; ++c) {

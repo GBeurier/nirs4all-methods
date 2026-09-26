@@ -8,15 +8,14 @@ import pickle
 
 import numpy as np
 import pytest
-from sklearn.base import clone
-from sklearn.model_selection import cross_val_score
-
-import n4m.roles as roles
+from n4m import roles
 from n4m._errors import N4MError
 from n4m._ffi import lib
 from n4m._impl import native
 from n4m._types import MethodInfoV1
 from n4m.roles._base import _REGISTRY
+from sklearn.base import clone
+from sklearn.model_selection import cross_val_score
 
 N_FEATURES = 12
 
@@ -29,7 +28,11 @@ def data():
     loadings = rng.normal(size=(2, N_FEATURES))
     X = scores @ loadings + 0.1 * rng.normal(size=(48, N_FEATURES))
     y = scores[:, 0] - 0.5 * scores[:, 1] + 0.05 * rng.normal(size=48)
-    X_target = rng.normal(size=(30, 2)) @ loadings + 0.3 + 0.1 * rng.normal(size=(30, N_FEATURES))
+    X_target = (
+        rng.normal(size=(30, 2)) @ loadings
+        + 0.3
+        + 0.1 * rng.normal(size=(30, N_FEATURES))
+    )
     return X[:36], y[:36], X[36:], X_target, y[36:]
 
 
@@ -67,6 +70,20 @@ def test_generated_classes_match_native_manifest():
     assert set(_REGISTRY) == manifest_estimators()
 
 
+ROLE_BIT = {roles.NativeTransformer: 1 << 0, roles.NativeRegressor: 1 << 1}
+
+
+@pytest.mark.parametrize("cls", ALL, ids=lambda c: c.__name__)
+def test_classes_expose_exactly_their_role_interfaces(cls):
+    declared = roles.method_info(cls._method_id).roles
+    for base, bit in ROLE_BIT.items():
+        assert issubclass(cls, base) == bool(declared & bit)
+    if not issubclass(cls, roles.NativeTransformer):
+        assert not hasattr(cls, "transform")
+    if not issubclass(cls, roles.NativeRegressor):
+        assert not hasattr(cls, "predict")
+
+
 @pytest.mark.parametrize("cls", ALL, ids=lambda c: c.__name__)
 def test_fit_predict_roundtrip(cls, data):
     X, y, X_test, X_target, y_test = data
@@ -84,9 +101,10 @@ def test_fit_predict_roundtrip(cls, data):
 
     np.testing.assert_array_equal(pickle.loads(pickle.dumps(est)).predict(X_test), pred)
     assert clone(est).get_params() == est.get_params()
-    if "transform" in dir(est) and est.capabilities_ & 1:
+    if isinstance(est, roles.NativeTransformer):
         scores = est.transform(X_test)
         assert scores.shape[0] == X_test.shape[0]
+        np.testing.assert_array_equal(restored.transform(X_test), scores)
 
 
 @pytest.mark.parametrize("cls", ALL, ids=lambda c: c.__name__)
@@ -121,7 +139,10 @@ def affine_reference(result: dict, X: np.ndarray) -> np.ndarray:
     coef = np.asarray(result["coefficients"])
     if "intercept" in result:
         return (X @ coef + np.asarray(result["intercept"]).reshape(1, -1)).ravel()
-    return ((X - np.asarray(result["x_mean"]).reshape(1, -1)) @ coef + np.asarray(result["y_mean"]).reshape(1, -1)).ravel()
+    return (
+        (X - np.asarray(result["x_mean"]).reshape(1, -1)) @ coef
+        + np.asarray(result["y_mean"]).reshape(1, -1)
+    ).ravel()
 
 
 # The generic estimators reproduce the existing n4m Python entry points with
@@ -137,9 +158,11 @@ REFERENCES = [
 ]
 
 
-@pytest.mark.parametrize("cls,reference", REFERENCES, ids=lambda v: getattr(v, "__name__", ""))
+@pytest.mark.parametrize(
+    "cls,reference", REFERENCES, ids=lambda v: getattr(v, "__name__", "")
+)
 def test_matches_n4m_reference(cls, reference, data):
-    X, y, X_test, X_target, y_test = data
+    X, y, X_test, X_target, _ = data
     est = cls().fit(X, y, **fit_kwargs(cls, X_target))
     expected = affine_reference(reference(X, y, X_target), X_test)
     np.testing.assert_allclose(est.predict(X_test), expected, rtol=1e-10, atol=1e-10)
@@ -149,4 +172,6 @@ def test_pcr_matches_n4m_reference(data):
     X, y, X_test, _, _ = data
     est = roles.PCR(n_components=3).fit(X, y)
     ref = native.pcr(X, y, n_components=3)
-    np.testing.assert_allclose(est.predict(X_test), affine_reference(ref, X_test), rtol=1e-10, atol=1e-10)
+    np.testing.assert_allclose(
+        est.predict(X_test), affine_reference(ref, X_test), rtol=1e-10, atol=1e-10
+    )

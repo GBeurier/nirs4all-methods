@@ -27,10 +27,10 @@ CLASS_NAMES = {
     "models.specialized.tensor_pls": "NPLS",
     "models.pls.pls_fit_simple": "SimplePLS",
 }
-MIXINS = {
-    "classifier": "ClassifierMixin",
-    "regressor": "RegressorMixin",
-    "transformer": "TransformerMixin",
+# Role interface -> Python role base class (docs/abi/estimator_roles_design.md, D0b).
+ROLE_BASES = {
+    "regressor": "NativeRegressor",
+    "transformer": "NativeTransformer",
 }
 
 
@@ -73,22 +73,21 @@ def render(manifest: dict) -> str:
         "",
         "from typing import ClassVar",
         "",
-        "from sklearn.base import {mixins}",
-        "",
-        "from ._base import NativeEstimator",
+        "from ._base import {bases}",
     ]
     names = []
-    used_mixins: set[str] = set()
+    used_bases: set[str] = set()
     for m in estimators(manifest):
         name = class_name(m)
         names.append(name)
-        mixins = [
-            MIXINS[r]
-            for r in ("classifier", "regressor", "transformer")
-            if r in m["roles"]
-        ]
-        used_mixins.update(mixins)
-        bases = ", ".join([*mixins, "NativeEstimator"])
+        role_bases = [ROLE_BASES[r] for r in ROLE_BASES if r in m["roles"]]
+        missing = set(m["roles"]) - set(ROLE_BASES)
+        if missing:
+            raise SystemExit(
+                f"{m['method_id']}: no Python role base for {sorted(missing)}"
+            )
+        used_bases.update(role_bases)
+        bases = ", ".join(role_bases)
         params = m["params"]
 
         needed = [k for k, v in m["inputs"].items() if v == "required" and k != "y"]
@@ -126,7 +125,7 @@ def render(manifest: dict) -> str:
         + [f"    {literal(n)}," for n in sorted(names, key=isort_key)]
         + ["]", ""]
     )
-    return "\n".join(out).replace("{mixins}", ", ".join(sorted(used_mixins)))
+    return "\n".join(out).replace("{bases}", ", ".join(sorted(used_bases)))
 
 
 def isort_key(name: str) -> tuple[int, str]:
@@ -152,7 +151,7 @@ def render_init(manifest: dict) -> str:
         "R and JS/WASM bindings read unchanged.",
         '"""',
         "",
-        "from ._base import NativeEstimator, method_info",
+        "from ._base import NativeEstimator, NativeRegressor, NativeTransformer, method_info",
         "from ._generated import (",
         *[f"    {n}," for n in names],
         ")",
@@ -160,7 +159,16 @@ def render_init(manifest: dict) -> str:
         "__all__ = [",
         *[
             f"    {literal(n)},"
-            for n in sorted([*names, "NativeEstimator", "method_info"], key=isort_key)
+            for n in sorted(
+                [
+                    *names,
+                    "NativeEstimator",
+                    "NativeRegressor",
+                    "NativeTransformer",
+                    "method_info",
+                ],
+                key=isort_key,
+            )
         ],
         "]",
         "",
