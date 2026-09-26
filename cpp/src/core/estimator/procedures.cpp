@@ -618,8 +618,11 @@ n4m_status_t run_linear_stack_compress(n4m_context_t* ctx, const Params& params,
     if (st == N4M_OK) {
         st = n4m_matrix_view_init_rowmajor(&icpt, intercept.data(), 1, q, N4M_DTYPE_F64);
     }
+    // One row-major copy: the result does not depend on the input layout.
+    std::vector<double> storage;
+    const n4m_matrix_view_t base = contiguous_view(*in.X, storage);
     if (st == N4M_OK) {
-        st = n4m_ensemble_linear_stack_compress(in.X, &bias, &weights, &meta, &coef, &icpt);
+        st = n4m_ensemble_linear_stack_compress(&base, &bias, &weights, &meta, &coef, &icpt);
     }
     if (st != N4M_OK) return failed(ctx, params, st);
     auto result = std::make_unique<n4m_method_result_s>();
