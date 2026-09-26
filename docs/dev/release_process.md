@@ -85,7 +85,7 @@ on the `pls4all` name is structurally impossible:
   matches the wheel). Repairs use auditwheel / delocate / delvewheel
   `--analyze-existing`. Publishes via Trusted Publishing.
 - **CRAN (both `n4m` and `pls4all`)** — `release-r.yml` (`workflow_dispatch`,
-  also attaches on tag push) vendors the full libn4m C/C++/Fortran core +
+  also attaches on tag push) vendors the full libn4m C/C++ core +
   static `n4m_export.h` into `src/vendor/` via `N4M_R_VENDOR=1 ./configure`,
   then runs `R CMD check --as-cran` across the `{pkg: n4m, pls4all} ×
   {linux-release, linux-devel, macos-arm64-release, windows-release}` matrix
@@ -322,7 +322,7 @@ where these notes go:
 New submission.
 
 n4m <version> — a portable Partial Least Squares (PLS) and Near-Infrared
-Spectroscopy (NIRS) engine. The C++17/C/Fortran numerical core (233 vendored
+Spectroscopy (NIRS) engine. The C++17/C numerical core (233 vendored
 translation units under src/vendor/) is compiled from source at install time;
 no external system library is required. License: CeCILL-2.1 (a GPL-compatible
 French free-software license, in R's license database). Imports: stats only.
@@ -355,7 +355,7 @@ New submission.
 
 pls4all <version> — a portable Partial Least Squares engine for chemometrics: the
 slim, PLS-focused distribution carved from the nirs4all-methods library. The
-C++17/C/Fortran numerical core (233 vendored translation units under src/vendor/)
+C++17/C numerical core (233 vendored translation units under src/vendor/)
 is compiled from source at install time; no external system library is required.
 License: CeCILL-2.1 (a GPL-compatible French free-software license, in R's
 license database). Imports: stats only.

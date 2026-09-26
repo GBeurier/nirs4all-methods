@@ -37,7 +37,7 @@ Reinsch (1967), *Smoothing by spline functions*, Numerische Mathematik 10, 177â€
 
 ### Mathematical principle
 
-Fit a natural cubic smoothing spline independently to each row on the channel grid and evaluate it on that same grid. The shipped parity target corresponds to a fixed smoothing budget $s=1/p$ for $p$ channels; the RNG and `seed` are accepted by the common wrapper but unused.
+Fit a cubic smoothing spline independently to each row on the channel grid and evaluate it on that same grid, exactly as `scipy.interpolate.UnivariateSpline(x, y, k=3, s=1/p)` for $p$ channels: FITPACK `curfit` knot selection and smoothing followed by `splev`. The RNG and `seed` are accepted by the common wrapper but unused.
 
 ### Appropriate uses
 

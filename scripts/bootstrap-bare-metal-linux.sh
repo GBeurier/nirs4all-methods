@@ -43,7 +43,7 @@ ${SUDO} env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recom
     git jq tree less ripgrep fd-find \
     build-essential gcc-12 g++-12 \
     cmake ninja-build make pkg-config \
-    libopenblas-dev liblapacke-dev gfortran \
+    libopenblas-dev liblapacke-dev \
     python3.12 python3.12-venv python3.12-dev python3-pip \
     r-base r-base-dev libxml2-dev libssl-dev libcurl4-openssl-dev \
     libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
