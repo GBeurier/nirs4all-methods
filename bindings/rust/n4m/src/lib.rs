@@ -168,6 +168,60 @@ struct OptimizerOptionsRaw {
     reduction_factor: i32,
     reserved: [u8; 56],
 }
+#[repr(C)]
+struct ParamsRaw {
+    _private: [u8; 0],
+}
+#[repr(C)]
+struct EstimatorRaw {
+    _private: [u8; 0],
+}
+#[repr(C)]
+struct FitInputsV1Raw {
+    struct_size: u32,
+    x: *const MatrixView,
+    y: *const MatrixView,
+    labels: *const i64,
+    n_labels: i64,
+    sample_weight: *const f64,
+    n_sample_weight: i64,
+    groups: *const i64,
+    n_groups: i64,
+    feature_groups: *const i64,
+    n_feature_groups: i64,
+    block_sizes: *const i64,
+    n_blocks: i64,
+    axis: *const f64,
+    n_axis: i64,
+    x_target: *const MatrixView,
+    fold_ids: *const i64,
+    n_fold_ids: i64,
+}
+const FIT_INPUT_COUNT: usize = 9;
+#[repr(C)]
+struct MethodInfoV1Raw {
+    struct_size: u32,
+    kind: i32,
+    method_id: *const c_char,
+    fq_name: *const c_char,
+    roles: u32,
+    n_params: i32,
+    capabilities: u64,
+    state_format: *const c_char,
+    inputs: [i32; FIT_INPUT_COUNT],
+}
+#[repr(C)]
+struct ParamInfoV1Raw {
+    struct_size: u32,
+    param_type: i32,
+    name: *const c_char,
+    has_default: i32,
+    n_choices: i32,
+    default_length: i64,
+    min_value: f64,
+    max_value: f64,
+    choices: *const *const c_char,
+}
 const _: () = assert!(mem::size_of::<MatrixView>() == 48);
 const _: () = assert!(mem::align_of::<MatrixView>() == 8);
 const _: () = assert!(mem::size_of::<LinearPredictorSpecRaw>() == 32);
@@ -182,6 +236,17 @@ const _: () = assert!(mem::offset_of!(SerializedPipelineInfoV1Raw, fingerprint) 
 const _: () = assert!(mem::offset_of!(SerializedPipelineInfoV1Raw, savgol_cval) == 88);
 const _: () = assert!(mem::size_of::<OptimizerOptionsRaw>() == 120);
 const _: () = assert!(mem::offset_of!(OptimizerOptionsRaw, seed) == 40);
+const _: () = assert!(mem::size_of::<FitInputsV1Raw>() == 144);
+const _: () = assert!(mem::offset_of!(FitInputsV1Raw, x) == 8);
+const _: () = assert!(mem::offset_of!(FitInputsV1Raw, block_sizes) == 88);
+const _: () = assert!(mem::offset_of!(FitInputsV1Raw, x_target) == 120);
+const _: () = assert!(mem::offset_of!(FitInputsV1Raw, n_fold_ids) == 136);
+const _: () = assert!(mem::size_of::<MethodInfoV1Raw>() == 88);
+const _: () = assert!(mem::offset_of!(MethodInfoV1Raw, capabilities) == 32);
+const _: () = assert!(mem::offset_of!(MethodInfoV1Raw, inputs) == 48);
+const _: () = assert!(mem::size_of::<ParamInfoV1Raw>() == 56);
+const _: () = assert!(mem::offset_of!(ParamInfoV1Raw, default_length) == 24);
+const _: () = assert!(mem::offset_of!(ParamInfoV1Raw, choices) == 48);
 
 #[cfg(all(feature = "linked", not(feature = "dynamic")))]
 #[link(name = "n4m")]
@@ -446,6 +511,183 @@ extern "C" {
         n_trials: i32,
         out_result: *mut *mut MethodResultRaw,
     ) -> i32;
+    fn n4m_method_result_get_n_folds(result: *const MethodResultRaw, out_n_folds: *mut i32) -> i32;
+    fn n4m_method_result_get_fold(
+        result: *const MethodResultRaw,
+        fold: i32,
+        out_train: *mut *const i64,
+        out_n_train: *mut i64,
+        out_test: *mut *const i64,
+        out_n_test: *mut i64,
+    ) -> i32;
+    fn n4m_method_result_entry_count(result: *const MethodResultRaw, out_count: *mut i32) -> i32;
+    fn n4m_method_result_entry(
+        result: *const MethodResultRaw,
+        index: i32,
+        out_name: *mut *const c_char,
+        out_kind: *mut i32,
+    ) -> i32;
+    fn n4m_method_count(out_count: *mut i32) -> i32;
+    fn n4m_method_manifest_json(out: *mut c_char, capacity: usize, out_size: *mut usize) -> i32;
+    fn n4m_method_find(method_id: *const c_char, out_index: *mut i32) -> i32;
+    fn n4m_method_info_v1(index: i32, out: *mut MethodInfoV1Raw) -> i32;
+    fn n4m_method_param_info_v1(index: i32, param: i32, out: *mut ParamInfoV1Raw) -> i32;
+    fn n4m_method_param_default_int(
+        index: i32,
+        param: i32,
+        out: *mut i64,
+        capacity: i64,
+        out_count: *mut i64,
+    ) -> i32;
+    fn n4m_method_param_default_double(
+        index: i32,
+        param: i32,
+        out: *mut f64,
+        capacity: i64,
+        out_count: *mut i64,
+    ) -> i32;
+    fn n4m_params_create(ctx: *mut ContextRaw, method_index: i32, out: *mut *mut ParamsRaw) -> i32;
+    fn n4m_params_destroy(params: *mut ParamsRaw);
+    fn n4m_params_set_int(params: *mut ParamsRaw, name: *const c_char, value: i64) -> i32;
+    fn n4m_params_set_double(params: *mut ParamsRaw, name: *const c_char, value: f64) -> i32;
+    fn n4m_params_set_bool(params: *mut ParamsRaw, name: *const c_char, value: i32) -> i32;
+    fn n4m_params_set_enum(
+        params: *mut ParamsRaw,
+        name: *const c_char,
+        choice: *const c_char,
+    ) -> i32;
+    fn n4m_params_set_int_array(
+        params: *mut ParamsRaw,
+        name: *const c_char,
+        values: *const i64,
+        n: i64,
+    ) -> i32;
+    fn n4m_params_set_double_array(
+        params: *mut ParamsRaw,
+        name: *const c_char,
+        values: *const f64,
+        n: i64,
+    ) -> i32;
+    fn n4m_params_validate(ctx: *mut ContextRaw, params: *const ParamsRaw) -> i32;
+    fn n4m_params_get_int(
+        params: *const ParamsRaw,
+        name: *const c_char,
+        out: *mut i64,
+        capacity: i64,
+        out_count: *mut i64,
+    ) -> i32;
+    fn n4m_params_get_double(
+        params: *const ParamsRaw,
+        name: *const c_char,
+        out: *mut f64,
+        capacity: i64,
+        out_count: *mut i64,
+    ) -> i32;
+    fn n4m_estimator_create(
+        ctx: *mut ContextRaw,
+        method_id: *const c_char,
+        params: *const ParamsRaw,
+        out: *mut *mut EstimatorRaw,
+    ) -> i32;
+    fn n4m_estimator_destroy(est: *mut EstimatorRaw);
+    fn n4m_estimator_fit(
+        ctx: *mut ContextRaw,
+        est: *mut EstimatorRaw,
+        inputs: *const FitInputsV1Raw,
+    ) -> i32;
+    fn n4m_estimator_is_fitted(est: *const EstimatorRaw, out: *mut i32) -> i32;
+    fn n4m_estimator_info(
+        est: *const EstimatorRaw,
+        out_method_index: *mut i32,
+        out_capabilities: *mut u64,
+    ) -> i32;
+    fn n4m_estimator_get_params(
+        ctx: *mut ContextRaw,
+        est: *const EstimatorRaw,
+        out_copy: *mut *mut ParamsRaw,
+    ) -> i32;
+    fn n4m_estimator_n_features_in(est: *const EstimatorRaw, out: *mut i64) -> i32;
+    fn n4m_estimator_transform_cols(est: *const EstimatorRaw, out: *mut i64) -> i32;
+    fn n4m_estimator_n_outputs(est: *const EstimatorRaw, out: *mut i64) -> i32;
+    fn n4m_estimator_transform(
+        ctx: *mut ContextRaw,
+        est: *const EstimatorRaw,
+        x: *const MatrixView,
+        out: *mut MatrixView,
+    ) -> i32;
+    fn n4m_estimator_predict(
+        ctx: *mut ContextRaw,
+        est: *const EstimatorRaw,
+        x: *const MatrixView,
+        out: *mut MatrixView,
+    ) -> i32;
+    fn n4m_estimator_decision_function(
+        ctx: *mut ContextRaw,
+        est: *const EstimatorRaw,
+        x: *const MatrixView,
+        out: *mut MatrixView,
+    ) -> i32;
+    fn n4m_estimator_predict_proba(
+        ctx: *mut ContextRaw,
+        est: *const EstimatorRaw,
+        x: *const MatrixView,
+        out: *mut MatrixView,
+    ) -> i32;
+    fn n4m_estimator_predict_labels(
+        ctx: *mut ContextRaw,
+        est: *const EstimatorRaw,
+        x: *const MatrixView,
+        out: *mut i64,
+        n: i64,
+    ) -> i32;
+    fn n4m_estimator_classes(
+        est: *const EstimatorRaw,
+        out: *mut i64,
+        capacity: i64,
+        out_count: *mut i64,
+    ) -> i32;
+    fn n4m_estimator_selected_indices(
+        est: *const EstimatorRaw,
+        out: *mut i64,
+        capacity: i64,
+        out_count: *mut i64,
+    ) -> i32;
+    fn n4m_estimator_apply_mask(
+        ctx: *mut ContextRaw,
+        est: *const EstimatorRaw,
+        x: *const MatrixView,
+        y: *const MatrixView,
+        mask: *mut u8,
+        n: i64,
+    ) -> i32;
+    fn n4m_procedure_run(
+        ctx: *mut ContextRaw,
+        method_index: i32,
+        params: *const ParamsRaw,
+        inputs: *const FitInputsV1Raw,
+        out: *mut *mut MethodResultRaw,
+    ) -> i32;
+    fn n4m_context_set_max_state_bytes(ctx: *mut ContextRaw, max_bytes: u64) -> i32;
+    fn n4m_estimator_export_size(
+        ctx: *mut ContextRaw,
+        est: *const EstimatorRaw,
+        flags: u32,
+        out_size: *mut usize,
+    ) -> i32;
+    fn n4m_estimator_export_to_buffer(
+        ctx: *mut ContextRaw,
+        est: *const EstimatorRaw,
+        flags: u32,
+        buffer: *mut c_void,
+        buffer_size: usize,
+        out_written: *mut usize,
+    ) -> i32;
+    fn n4m_estimator_import_from_buffer(
+        ctx: *mut ContextRaw,
+        buffer: *const c_void,
+        buffer_size: usize,
+        out: *mut *mut EstimatorRaw,
+    ) -> i32;
 }
 
 #[cfg(feature = "dynamic")]
@@ -605,6 +847,8 @@ c_enum!(Metric { Rmse=0, Mse=1, Mae=2, R2=3, Accuracy=16, BalancedAccuracy=17, F
 c_enum!(Liar { None=0, Min=1, Mean=2, Max=3 });
 c_enum!(TrialStatus { Running=0, Completed=1, Pruned=2, Failed=3, Cancelled=4 });
 
+pub mod roles;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Category {
     Str(String),
@@ -707,14 +951,20 @@ pub struct Context {
     raw: NonNull<ContextRaw>,
     _thread_bound: PhantomData<*mut ()>,
 }
+/// Selects the dynamic runtime when needed and checks its ABI against the
+/// headers this crate was written for.
+fn ensure_abi() -> Result<(), Error> {
+    #[cfg(feature = "dynamic")]
+    dynamic::ensure_runtime()?;
+    check(
+        unsafe { n4m_check_abi_compatibility(ABI_MAJOR, ABI_MINOR) },
+        None,
+    )
+}
+
 impl Context {
     pub fn new() -> Result<Self, Error> {
-        #[cfg(feature = "dynamic")]
-        dynamic::ensure_runtime()?;
-        check(
-            unsafe { n4m_check_abi_compatibility(ABI_MAJOR, ABI_MINOR) },
-            None,
-        )?;
+        ensure_abi()?;
         let mut raw = ptr::null_mut();
         check(unsafe { n4m_context_create(&mut raw) }, None)?;
         Ok(Self {
@@ -1001,12 +1251,14 @@ impl Drop for Config {
     }
 }
 
-/// Borrowed row-major `f64` input accepted by the native matrix ABI.
+/// Borrowed `f64` input accepted by the stride-aware native matrix ABI.
 #[derive(Debug, Clone, Copy)]
 pub struct MatrixRef<'a> {
     data: &'a [f64],
     rows: usize,
     cols: usize,
+    row_stride: usize,
+    col_stride: usize,
 }
 impl<'a> MatrixRef<'a> {
     pub fn row_major(data: &'a [f64], rows: usize, cols: usize) -> Result<Self, Error> {
@@ -1018,9 +1270,44 @@ impl<'a> MatrixRef<'a> {
                 "row-major matrix data length does not match dimensions",
             ));
         }
-        i64::try_from(rows).map_err(|_| invalid("matrix rows exceed C ABI range"))?;
-        i64::try_from(cols).map_err(|_| invalid("matrix cols exceed C ABI range"))?;
-        Ok(Self { data, rows, cols })
+        Self::strided(data, rows, cols, cols, 1)
+    }
+    /// View whose element `(i, j)` is `data[i * row_stride + j * col_stride]`
+    /// (strides in elements): column-major storage is `row_stride = 1,
+    /// col_stride = rows`; transposes and slices need no copy.
+    pub fn strided(
+        data: &'a [f64],
+        rows: usize,
+        cols: usize,
+        row_stride: usize,
+        col_stride: usize,
+    ) -> Result<Self, Error> {
+        if rows > 0 && cols > 0 {
+            let last = (rows - 1)
+                .checked_mul(row_stride)
+                .zip((cols - 1).checked_mul(col_stride))
+                .and_then(|(r, c)| r.checked_add(c))
+                .ok_or_else(|| invalid("matrix view span overflows"))?;
+            if last >= data.len() {
+                return Err(invalid("matrix view exceeds its data"));
+            }
+        }
+        for (value, what) in [
+            (rows, "rows"),
+            (cols, "cols"),
+            (row_stride, "row stride"),
+            (col_stride, "col stride"),
+        ] {
+            i64::try_from(value)
+                .map_err(|_| invalid(format!("matrix {what} exceed C ABI range")))?;
+        }
+        Ok(Self {
+            data,
+            rows,
+            cols,
+            row_stride,
+            col_stride,
+        })
     }
     pub fn rows(self) -> usize {
         self.rows
@@ -1033,8 +1320,8 @@ impl<'a> MatrixRef<'a> {
             data: self.data.as_ptr().cast_mut().cast(),
             rows: self.rows as i64,
             cols: self.cols as i64,
-            row_stride: self.cols as i64,
-            col_stride: 1,
+            row_stride: self.row_stride as i64,
+            col_stride: self.col_stride as i64,
             dtype: 1,
             reserved0: 0,
         }
