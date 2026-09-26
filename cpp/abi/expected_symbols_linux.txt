@@ -353,6 +353,7 @@ n4m_model_destroy
 n4m_model_export_size
 n4m_model_export_to_buffer
 n4m_model_fit
+n4m_model_from_method_result
 n4m_model_get_array
 n4m_model_get_n_components
 n4m_model_get_n_features

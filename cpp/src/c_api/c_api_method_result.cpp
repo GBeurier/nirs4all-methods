@@ -1491,6 +1491,7 @@ N4M_API n4m_status_t n4m_estimators_robust_pls_fit(
         auto handle = std::make_unique<n4m_method_result_s>();
         pack_weighted_result(*handle, res, *X, *Y);
         handle->set_scalar("huber_k", huber_k);
+        handle->set_scalar("affine_predictor", 1.0);
 
         *out_result = handle.release();
         return N4M_OK;
@@ -1525,6 +1526,7 @@ N4M_API n4m_status_t n4m_estimators_ridge_pls_fit(
         auto handle = std::make_unique<n4m_method_result_s>();
         pack_weighted_result(*handle, res, *X, *Y);
         handle->set_scalar("ridge_lambda", ridge_lambda);
+        handle->set_scalar("affine_predictor", 1.0);
 
         *out_result = handle.release();
         return N4M_OK;
@@ -1559,6 +1561,7 @@ N4M_API n4m_status_t n4m_estimators_continuum_regression_fit(
         auto handle = std::make_unique<n4m_method_result_s>();
         pack_weighted_result(*handle, res, *X, *Y);
         handle->set_scalar("tau", tau);
+        handle->set_scalar("affine_predictor", 1.0);
 
         *out_result = handle.release();
         return N4M_OK;
@@ -1920,6 +1923,7 @@ void pack_group_sparse_result(
                               pred_rows, pred_cols);
     handle.set_scalar("rmse", rmse);
     handle.set_scalar("n_groups", static_cast<double>(res.n_groups));
+    handle.set_scalar("affine_predictor", 1.0);
 }
 
 }  // namespace
@@ -2031,6 +2035,7 @@ void pack_ensemble_result(n4m_method_result_s& handle,
                        static_cast<double>(res.n_estimators));
     handle.set_scalar("n_components",
                        static_cast<double>(res.n_components));
+    handle.set_scalar("affine_predictor", 1.0);
 }
 
 }  // namespace

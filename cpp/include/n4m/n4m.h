@@ -780,6 +780,19 @@ N4M_API n4m_status_t n4m_model_import_linear_predictor(
     const n4m_linear_predictor_spec_t* spec,
     n4m_model_t** out_model);
 
+/* Promote an affine MethodResult to a standalone, predict-only N4MM model.
+ * Requires the explicit scalar `affine_predictor=1`, finite `coefficients`
+ * (features x targets) and either a finite
+ * `intercept` (1 x targets) or both `x_mean` (1 x features) and `y_mean`
+ * (1 x targets). The core computes the intercept when needed and copies all
+ * state; the caller may destroy `result` immediately after this call.
+ * Incompatible or malformed results return N4M_ERR_INVALID_ARGUMENT.
+ */
+N4M_API n4m_status_t n4m_model_from_method_result(
+    n4m_context_t* ctx,
+    const n4m_method_result_t* result,
+    n4m_model_t** out_model);
+
 N4M_API void         n4m_model_destroy(n4m_model_t* model);
 
 /* ---- Predict / transform (caller-provided output buffer) ---- */

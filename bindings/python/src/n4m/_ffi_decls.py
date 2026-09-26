@@ -371,6 +371,7 @@ SYMBOLS = (
     ("n4m_model_export_size", (c_void_p, POINTER(c_size_t)), c_int),
     ("n4m_model_export_to_buffer", (c_void_p, c_void_p, c_size_t, POINTER(c_size_t)), c_int),
     ("n4m_model_fit", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_void_p)), c_int),
+    ("n4m_model_from_method_result", (c_void_p, c_void_p, POINTER(c_void_p)), c_int),
     ("n4m_model_get_array", (c_void_p, c_void_p, c_int, POINTER(c_void_p)), c_int),
     ("n4m_model_get_n_components", (c_void_p, POINTER(c_int32)), c_int),
     ("n4m_model_get_n_features", (c_void_p, POINTER(c_int32)), c_int),
