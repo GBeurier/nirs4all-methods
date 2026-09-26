@@ -69,11 +69,12 @@ test_that("all 15 implemented operator kinds use native fit and transform", {
         expect_equal(dim(result), dim(held_out), info = kind)
         expect_true(all(is.finite(result)), info = kind)
         bytes <- n4m_preprocess_export(fitted)
-        expect_type(bytes, "raw", info = kind)
+        expect_equal(typeof(bytes), "raw", info = kind)
         imported <- n4m_preprocess_import(bytes)
+        expect_equal(n4m_preprocess_plan(imported), list(step), info = kind)
         expect_equal(n4m_preprocess_transform(imported, held_out), result,
                      tolerance = 1e-12, info = kind)
-        expect_identical(n4m_preprocess_export(imported), bytes, info = kind)
+        expect_equal(n4m_preprocess_export(imported), bytes, info = kind)
     }
 })
 
@@ -94,4 +95,15 @@ test_that("portable fitted preprocessing rejects corruption and width mismatch",
     tampered[1L] <- as.raw(bitwXor(as.integer(tampered[1L]), 255L))
     expect_error(n4m_preprocess_import(tampered), "pipeline import")
     expect_error(n4m_preprocess_import(integer()), "raw vector")
+})
+
+test_that("N4MP preserves the ordered original parameter plan", {
+    x <- outer(1:20, 1:21, function(i, j) sin(i * j / 31) + i / 20)
+    steps <- list(n4m_preprocess_step("snv"),
+                  n4m_preprocess_step("savgol_derivative", c(7, 3, 1, 1)),
+                  n4m_preprocess_step("center"))
+    fitted <- n4m_preprocess_fit(x, steps)
+    imported <- n4m_preprocess_import(n4m_preprocess_export(fitted))
+    expect_equal(n4m_preprocess_plan(imported), steps)
+    expect_equal(imported$steps, steps)
 })
