@@ -147,7 +147,10 @@ export interface FittedModel {
  * @param X row-major (n × p) input matrix.
  * @param Y row-major (n × q) target matrix.
  * @param n_components number of latent components (used by the PLS family).
- * @param params positional hyper-parameter vector for the model.
+ * @param params positional hyper-parameter vector for the model. For
+ *   GroupSparsePLS this is `[group_lambda, ...group_assignment]`, with exactly
+ *   one non-negative integer group ID per input feature; no implicit grouping
+ *   is applied.
  */
 export function fitModel(model: string, X: Matrix, Y: Matrix,
                           n_components: number, params: number[] = []

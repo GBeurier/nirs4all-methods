@@ -392,7 +392,7 @@ static int n4m_wasm_model_fit_tier_b(
         kind == MK_CONTINUUM || kind == MK_MIR_PLS || kind == MK_FUSED_SPARSE_PLS ||
         kind == MK_BAGGING_PLS || kind == MK_BOOSTING_PLS ||
         kind == MK_RANDOM_SUBSPACE_PLS || kind == MK_O2PLS || kind == MK_N_PLS ||
-        kind == MK_MB_PLS) {
+        kind == MK_MB_PLS || kind == MK_GROUP_SPARSE_PLS) {
         s = n4m_config_set_center_x(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_center_y(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_scale_x(cfg, 0);
@@ -445,14 +445,26 @@ static int n4m_wasm_model_fit_tier_b(
             break;
         }
         case MK_GROUP_SPARSE_PLS: {
-            double group_lambda = n_params >= 1 ? params[0] : 0.0;
-            /* No group ids over this scalar surface — one group covers all
-             * features (group_assignment all-zero). */
-            int32_t* groups = (int32_t*)calloc((size_t)(p > 0 ? p : 1),
-                                                sizeof(int32_t));
+            /* The numeric JS surface carries [lambda, group_id_for_each_feature].
+             * Never silently replace the caller's partition with one group. */
+            if (n_params != p + 1 || !isfinite(params[0]) || params[0] < 0.0) {
+                s = N4M_ERR_INVALID_ARGUMENT;
+                break;
+            }
+            int32_t* groups = (int32_t*)malloc((size_t)p * sizeof(int32_t));
             if (groups == NULL) { s = N4M_ERR_OUT_OF_MEMORY; break; }
+            for (int j = 0; j < p; ++j) {
+                const double value = params[j + 1];
+                if (!isfinite(value) || value != floor(value) ||
+                    value < 0.0 || value > 2147483647.0) {
+                    s = N4M_ERR_INVALID_ARGUMENT;
+                    break;
+                }
+                groups[j] = (int32_t)value;
+            }
+            if (s != N4M_OK) { free(groups); break; }
             s = n4m_estimators_group_sparse_pls_fit(ctx, cfg, &xv, &yv, groups, p,
-                                         group_lambda, &res);
+                                         params[0], &res);
             free(groups);
             break;
         }
