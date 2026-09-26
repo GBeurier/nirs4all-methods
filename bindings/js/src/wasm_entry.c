@@ -181,7 +181,7 @@ enum n4m_wasm_model_kind {
     /* Tier B extension — additional coeff-triple fits */
     MK_MIR_PLS, MK_MB_PLS, MK_MISSING_NIPALS,
     /* Tier B extension 2 — ECR (alpha PCR↔PLS) + O2PLS (orthogonal PLS) */
-    MK_ECR, MK_O2PLS
+    MK_ECR, MK_O2PLS, MK_N_PLS
 };
 
 static int model_kind_for(const char* model) {
@@ -208,6 +208,7 @@ static int model_kind_for(const char* model) {
     if (strcmp(model, "MissingAwareNIPALS") == 0) return MK_MISSING_NIPALS;
     if (strcmp(model, "ECR") == 0) return MK_ECR;
     if (strcmp(model, "O2PLS") == 0) return MK_O2PLS;
+    if (strcmp(model, "NPLS") == 0) return MK_N_PLS;
     return MK_NONE;
 }
 
@@ -329,6 +330,22 @@ static int copy_result_matrix(const n4m_method_result_t* r, const char* name,
     return 0;
 }
 
+/* Require the exact matrix shape before publishing a fitted predictor.
+ * A product-only check would accept a transposed coefficient matrix when
+ * p != q, silently changing the interpretation of the same bytes. */
+static int required_result_matrix(const n4m_method_result_t* r,
+                                  const char* name, int64_t expect_rows,
+                                  int64_t expect_cols, const double** out) {
+    int64_t rows = 0, cols = 0;
+    const double* data = NULL;
+    if (n4m_method_result_get_double_matrix(r, name, &data, &rows, &cols) != N4M_OK ||
+        data == NULL || rows != expect_rows || cols != expect_cols) {
+        return 0;
+    }
+    *out = data;
+    return 1;
+}
+
 /* Tier B — call the standalone fit for `kind`, then read the coeff triple
  * (+ intercept for Ridge) out of the returned method-result.
  *
@@ -367,6 +384,30 @@ static int n4m_wasm_model_fit_tier_b(
             return s;
         }
     }
+    /* The portable affine fits, O2PLS, and NPLS use centred, unscaled data in the
+     * R/Python bindings. R selects SIMPLS except for canonical CPPLS and
+     * RidgePLS, which select NIPALS. Preserve the other shim models' config. */
+    if (kind == MK_RIDGE || kind == MK_RIDGE_PLS || kind == MK_ROBUST_PLS ||
+        kind == MK_CPPLS || kind == MK_SPARSE_SIMPLS || kind == MK_ECR ||
+        kind == MK_CONTINUUM || kind == MK_MIR_PLS || kind == MK_FUSED_SPARSE_PLS ||
+        kind == MK_BAGGING_PLS || kind == MK_BOOSTING_PLS ||
+        kind == MK_RANDOM_SUBSPACE_PLS || kind == MK_O2PLS || kind == MK_N_PLS ||
+        kind == MK_MB_PLS) {
+        s = n4m_config_set_center_x(cfg, 1);
+        if (s == N4M_OK) s = n4m_config_set_center_y(cfg, 1);
+        if (s == N4M_OK) s = n4m_config_set_scale_x(cfg, 0);
+        if (s == N4M_OK) s = n4m_config_set_scale_y(cfg, 0);
+        if (s == N4M_OK) {
+            s = n4m_config_set_solver(cfg, kind == MK_RIDGE_PLS || kind == MK_CPPLS ||
+                                               kind == MK_MB_PLS
+                                               ? N4M_SOLVER_NIPALS : N4M_SOLVER_SIMPLS);
+        }
+        if (s != N4M_OK) {
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
+            return s;
+        }
+    }
 
     n4m_method_result_t* res = NULL;
     switch (kind) {
@@ -389,7 +430,7 @@ static int n4m_wasm_model_fit_tier_b(
         }
         case MK_ROBUST_PLS: {
             double huber_k = n_params >= 1 ? params[0] : 1.345;
-            int max_irls = n_params >= 2 ? (int)params[1] : 5;
+            int max_irls = n_params >= 2 ? (int)params[1] : 20;
             s = n4m_estimators_robust_pls_fit(ctx, cfg, &xv, &yv, huber_k, max_irls, &res);
             break;
         }
@@ -399,7 +440,7 @@ static int n4m_wasm_model_fit_tier_b(
             break;
         }
         case MK_SPARSE_SIMPLS: {
-            double sparsity = n_params >= 1 ? params[0] : 0.0;
+            double sparsity = n_params >= 1 ? params[0] : 0.05;
             s = n4m_estimators_sparse_simpls_fit(ctx, cfg, &xv, &yv, sparsity, &res);
             break;
         }
@@ -416,26 +457,26 @@ static int n4m_wasm_model_fit_tier_b(
             break;
         }
         case MK_FUSED_SPARSE_PLS: {
-            double l1 = n_params >= 1 ? params[0] : 0.0;
-            double fusion = n_params >= 2 ? params[1] : 0.0;
+            double l1 = n_params >= 1 ? params[0] : 0.05;
+            double fusion = n_params >= 2 ? params[1] : 0.05;
             s = n4m_estimators_fused_sparse_pls_fit(ctx, cfg, &xv, &yv, l1, fusion, &res);
             break;
         }
         case MK_BAGGING_PLS: {
-            int n_estimators = n_params >= 1 ? (int)params[0] : 10;
+            int n_estimators = n_params >= 1 ? (int)params[0] : 50;
             uint64_t seed = n_params >= 2 ? (uint64_t)params[1] : 0;
             s = n4m_ensemble_bagging_pls_fit(ctx, cfg, &xv, &yv, n_estimators, seed, &res);
             break;
         }
         case MK_BOOSTING_PLS: {
-            int n_estimators = n_params >= 1 ? (int)params[0] : 10;
+            int n_estimators = n_params >= 1 ? (int)params[0] : 50;
             double lr = n_params >= 2 ? params[1] : 0.1;
             s = n4m_ensemble_boosting_pls_fit(ctx, cfg, &xv, &yv, n_estimators, lr, &res);
             break;
         }
         case MK_RANDOM_SUBSPACE_PLS: {
-            int n_estimators = n_params >= 1 ? (int)params[0] : 10;
-            int feats = n_params >= 2 ? (int)params[1] : (p > 1 ? p / 2 : 1);
+            int n_estimators = n_params >= 1 ? (int)params[0] : 50;
+            int feats = n_params >= 2 ? (int)params[1] : 10;
             uint64_t seed = n_params >= 3 ? (uint64_t)params[2] : 0;
             s = n4m_ensemble_random_subspace_pls_fit(ctx, cfg, &xv, &yv, n_estimators,
                                             feats, seed, &res);
@@ -449,13 +490,30 @@ static int n4m_wasm_model_fit_tier_b(
             break;
         }
         case MK_MB_PLS: {
-            /* Block-weighted multi-block PLS over a SINGLE block (all p
-             * features). It returns input-space coefficients PLUS a genuine
-             * affine intercept (and x_scale), so it predicts on RAW X via
-             * intercept + x.B — the same explicit-intercept path as Ridge. */
-            int64_t block_sizes[1];
-            block_sizes[0] = (int64_t)p;
-            s = n4m_estimators_mb_pls_fit(ctx, cfg, &xv, &yv, block_sizes, 1, &res);
+            /* The shared R/Python recipe declares at least two real blocks.
+             * Preserve their boundaries; treating all p features as one block
+             * changes the numerical method. The result has input-space
+             * coefficients and a genuine intercept for raw-X prediction. */
+            if (n_params < 2 || n_params > p) { s = N4M_ERR_INVALID_ARGUMENT; break; }
+            int64_t* block_sizes = (int64_t*)malloc((size_t)n_params * sizeof(int64_t));
+            if (block_sizes == NULL) { s = N4M_ERR_OUT_OF_MEMORY; break; }
+            int64_t total = 0;
+            for (int i = 0; i < n_params; ++i) {
+                const double value = params[i];
+                if (!isfinite(value) || value != floor(value) || value < 1.0 ||
+                    value > 2147483647.0) {
+                    s = N4M_ERR_INVALID_ARGUMENT;
+                    break;
+                }
+                block_sizes[i] = (int64_t)value;
+                total += block_sizes[i];
+            }
+            if (s == N4M_OK && total != p) s = N4M_ERR_SHAPE_MISMATCH;
+            if (s == N4M_OK) {
+                s = n4m_estimators_mb_pls_fit(ctx, cfg, &xv, &yv,
+                                               block_sizes, n_params, &res);
+            }
+            free(block_sizes);
             break;
         }
         case MK_MISSING_NIPALS: {
@@ -472,16 +530,46 @@ static int n4m_wasm_model_fit_tier_b(
             break;
         }
         case MK_O2PLS: {
-            /* Bidirectional orthogonal PLS (Trygg & Wold). Takes its own
-             * component counts (NOT cfg.n_components); emits the centred
-             * coefficient triple. params = [n_predictive, n_x_orth, n_y_orth]. */
-            int32_t n_pred = n_params >= 1 ? (int32_t)params[0] : 2;
-            int32_t n_xo = n_params >= 2 ? (int32_t)params[1] : 1;
-            int32_t n_yo = n_params >= 3 ? (int32_t)params[2] : 1;
-            if (n_pred < 1) n_pred = 1;
-            if (n_xo < 0) n_xo = 0;
-            if (n_yo < 0) n_yo = 0;
+            /* Canonical R/Python O2PLS uses SIMPLS, selecting the OmicsPLS
+             * branch. params = [n_predictive, n_x_orth, n_y_orth]; unlike
+             * the legacy path, invalid component counts must not be clamped. */
+            if (n_params > 3) { s = N4M_ERR_INVALID_ARGUMENT; break; }
+            int32_t counts[3] = {n_components, 1, 1};
+            for (int i = 0; i < n_params; ++i) {
+                const double value = params[i];
+                if (!isfinite(value) || value != floor(value) || value < 0.0 ||
+                    value > 2147483647.0 || (i == 0 && value < 1.0)) {
+                    s = N4M_ERR_INVALID_ARGUMENT;
+                    break;
+                }
+                counts[i] = (int32_t)value;
+            }
+            if (s != N4M_OK) break;
+            const int32_t n_pred = counts[0], n_xo = counts[1], n_yo = counts[2];
             s = n4m_estimators_o2pls_fit(ctx, cfg, &xv, &yv, n_pred, n_xo, n_yo, &res);
+            break;
+        }
+        case MK_N_PLS: {
+            /* Flattened tensor X is n × (mode_j * mode_k). The C result
+             * exports the original-input coefficient triple used by
+             * predict_n_pls; dimensions are required, not inferred. */
+            if (n_params != 2) { s = N4M_ERR_INVALID_ARGUMENT; break; }
+            int32_t dims[2] = {0, 0};
+            for (int i = 0; i < 2; ++i) {
+                const double value = params[i];
+                if (!isfinite(value) || value != floor(value) || value < 1.0 ||
+                    value > 2147483647.0) {
+                    s = N4M_ERR_INVALID_ARGUMENT;
+                    break;
+                }
+                dims[i] = (int32_t)value;
+            }
+            if (s != N4M_OK) break;
+            if ((int64_t)dims[0] * dims[1] != p) {
+                s = N4M_ERR_SHAPE_MISMATCH;
+                break;
+            }
+            s = n4m_estimators_n_pls_fit(ctx, cfg, &xv, dims[0], dims[1], &yv, &res);
             break;
         }
         default:
@@ -495,13 +583,32 @@ static int n4m_wasm_model_fit_tier_b(
         return s != N4M_OK ? s : N4M_ERR_INVALID_ARGUMENT;
     }
 
-    copy_result_matrix(res, "coefficients", coefficients_out,
-                       (size_t)p * (size_t)q);
-    copy_result_matrix(res, "x_mean", x_mean_out, (size_t)p);
-    copy_result_matrix(res, "y_mean", y_mean_out, (size_t)q);
+    /* Validate the complete predictor before writing any caller buffer. A
+     * successful fit with an incomplete MethodResult must not be mistaken
+     * for a usable model, nor leave a partly written coefficient triple. */
+    const double* coefficients = NULL;
+    const double* x_mean = NULL;
+    const double* y_mean = NULL;
+    const double* affine_intercept = NULL;
+    if (!required_result_matrix(res, "coefficients", p, q, &coefficients) ||
+        !required_result_matrix(res, "x_mean", 1, p, &x_mean) ||
+        (kind == MK_MB_PLS
+            ? !required_result_matrix(res, "intercept", 1, q, &affine_intercept)
+            : !required_result_matrix(res, "y_mean", 1, q, &y_mean))) {
+        n4m_method_result_destroy(res);
+        n4m_context_destroy(ctx);
+        return N4M_ERR_INTERNAL;
+    }
+    memcpy(coefficients_out, coefficients, (size_t)p * (size_t)q * sizeof(double));
+    memcpy(x_mean_out, x_mean, (size_t)p * sizeof(double));
+    if (kind == MK_MB_PLS) {
+        for (int t = 0; t < q; ++t) y_mean_out[t] = 0.0;
+    } else {
+        memcpy(y_mean_out, y_mean, (size_t)q * sizeof(double));
+    }
     /* Only the standalone fits that emit a genuine affine "intercept" matrix
-     * (currently just Ridge: intercept = y_mean - x_mean.B_descaled) set the
-     * has_intercept flag. The PLS-based Tier-B fits expose only the centred
+     * (Ridge and MBPLS) set the
+     * has_intercept flag. Other PLS-based Tier-B fits expose only the centred
      * triple, so intercept_out is zero-filled for shape and the flag stays 0. */
     int has_intercept = 0;
     if (intercept_out != NULL) {
@@ -530,9 +637,9 @@ static int n4m_wasm_model_fit_tier_b(
  * has_intercept_out (1 when the model produced a genuine affine intercept,
  * 0 for the centred PLS/PCR family), and predictions_out (n*q).
  *
- * Intercept contract: only models with a real constant term (currently Ridge)
+ * Intercept contract: only models with a real constant term (Ridge and MBPLS)
  * set has_intercept_out=1 and a meaningful intercept_out. The PLS/PCR family
- * (Tier A) and the PLS-based Tier-B fits predict via the centred form
+ * (Tier A) and most PLS-based Tier-B fits predict via the centred form
  * y_mean + (x - x_mean).B and have NO affine intercept — their intercept_out is
  * zero-filled and has_intercept_out=0, so a caller must not add it to x.B.
  *
@@ -588,8 +695,8 @@ int n4m_wasm_model_fit(const char* model,
  *
  * For Ridge the two forms agree numerically because its intercept is
  * y_mean - x_mean.B (on the de-scaled coefficient scale); for the centred-only
- * models passing a non-NULL intercept would double-count the constant, so the
- * generic JS path always uses the centred form (intercept = NULL). */
+ * models passing a non-NULL intercept would double-count the constant. The
+ * JS path uses the affine form only when the fit returned a real intercept. */
 __attribute__((used))
 int n4m_wasm_model_predict_from_coeffs(const double* coefficients,
                                        const double* x_mean,

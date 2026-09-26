@@ -46,12 +46,51 @@ ok(finite(ecr.coefficients), 'ECR coefficients finite')
 const ecrPred = n4m.predictModel(ecr, X)
 ok(finite(ecrPred.data) && corr(ecrPred.data) > 0.8, `ECR predictions correlate (r=${corr(ecrPred.data).toFixed(3)})`)
 
-const o2 = n4m.fitModel('O2PLS', X, Y, 6, [2, 1, 1])
+// Canonical OmicsPLS requires a genuinely multivariate Y for two predictive
+// and one Y-orthogonal component; a one-column regression is not this case.
+const YmultiData = new Float64Array(n * 3)
+for (let i = 0; i < n; i++) {
+  YmultiData[3 * i] = Yd[i]
+  YmultiData[3 * i + 1] = 0.3 + 0.5 * Xd[i * p + 2] - 0.2 * Xd[i * p + 6]
+  YmultiData[3 * i + 2] = -0.7 + 0.4 * Xd[i * p + 3] + 0.6 * Xd[i * p + 9]
+}
+const o2 = n4m.fitModel('O2PLS', X, { data: YmultiData, rows: n, cols: 3 }, 2, [2, 1, 1])
 ok(finite(o2.coefficients), 'O2PLS coefficients finite')
 const o2Pred = n4m.predictModel(o2, X)
-// O2PLS removes orthogonal variation, so with few predictive components it
-// legitimately tracks the signal less tightly than plain PLS — assert positive.
-ok(finite(o2Pred.data) && corr(o2Pred.data) > 0.5, `O2PLS predictions correlate (r=${corr(o2Pred.data).toFixed(3)})`)
+// OmicsPLS estimates joint structure rather than optimising first-target
+// regression accuracy. This smoke only guards against a degenerate output;
+// the native O2PLS parity test checks its numerical contract directly.
+const o2FirstTarget = Array.from({ length: n }, (_, i) => o2Pred.data[3 * i])
+ok(finite(o2Pred.data) && corr(o2FirstTarget) > 0.1, `O2PLS predictions are nondegenerate (r=${corr(o2FirstTarget).toFixed(3)})`)
+
+// MB-PLS must preserve the declared block partition. This fixture is the
+// independent R/Python n4m held-out oracle, not an in-sample fit check.
+const mbN = 21, mbP = 12
+const mbXData = new Float64Array(mbN * mbP)
+const mbYData = new Float64Array(mbN)
+for (let i = 0; i < mbN; i++) {
+  for (let j = 0; j < mbP; j++) {
+    mbXData[i * mbP + j] = Math.sin((i + 1) * (j + 1) / 9)
+      + Math.cos((i + 1) + (j + 1) / 7) + (i + 1) * (j + 1) / 100
+  }
+  mbYData[i] = 1.3 + 0.7 * mbXData[i * mbP + 1] - 0.4 * mbXData[i * mbP + 5]
+}
+const mbX = { data: mbXData, rows: mbN, cols: mbP }
+const mbY = { data: mbYData, rows: mbN, cols: 1 }
+const mbHeldData = new Float64Array(3 * mbP)
+for (const [row, source] of [1, 7, 16].entries()) {
+  for (let j = 0; j < mbP; j++) mbHeldData[row * mbP + j] = mbXData[source * mbP + j] + 0.031
+}
+const mb = n4m.fitModel('MBPLS', mbX, mbY, 2, [4, 4, 4])
+const mbPred = n4m.predictModel(mb, { data: mbHeldData, rows: 3, cols: mbP }).data
+const mbOracle = [1.3614391588922699, 2.033212108151359, 0.7661914180346159]
+ok(mb.intercept !== null && mbPred.every((value, i) => Math.abs(value - mbOracle[i]) < 1e-10),
+   'MBPLS block-aware held-out predictions match R/Python n4m')
+for (const blocks of [[], [12], [4, 4, 5]]) {
+  let rejected = false
+  try { n4m.fitModel('MBPLS', mbX, mbY, 2, blocks) } catch { rejected = true }
+  ok(rejected, `MBPLS rejects invalid block_sizes ${JSON.stringify(blocks)}`)
+}
 
 // ---- AOM-Ridge blender + AOM operator-PLS stack ----
 const ridge = n4m.fitAomRidge(X, Y, { cv: 4 })

@@ -43,15 +43,17 @@ Low-level n4m method dispatcher.
 \details{
 Supported algorithm names:
 
-MethodResult fits (33): "sparse_simpls" "cppls" "ecr" "di_pls"
+Fit/producer branches (37; not all support out-of-sample prediction):
+  "sparse_simpls" "cppls" "ecr" "di_pls"
   "weighted_pls" "robust_pls" "ridge_pls" "continuum_regression"
   "recursive_pls" "n_pls" "kernel_pls" "o2pls" "sparse_pls_da"
   "group_sparse_pls" "fused_sparse_pls" "so_pls" "on_pls" "rosa"
   "bagging_pls" "boosting_pls" "random_subspace_pls" "gpr_pls"
   "pls_glm" "pls_qda" "pls_cox" "pds" "ds" "mir_pls"
   "missing_aware_nipals" "mb_pls" "lw_pls" "pls_lda" "pls_logistic"
+  "ridge" "aom_preprocess" "aom_pls" "pop_pls"
 
-Selectors (24): "spa_select" "cars_select" "interval_select"
+Selectors (25): "spa_select" "cars_select" "interval_select"
   "stability_select" "uve_select" "random_frog_select" "scars_select"
   "ga_select" "pso_select" "vissa_select" "shaving_select"
   "bve_select" "t2_select" "wvc_select" "wvc_threshold_select"
@@ -59,6 +61,6 @@ Selectors (24): "spa_select" "cars_select" "interval_select"
   "sipls_select" "rep_select" "ipw_select" "st_select" "iriv_select"
   "irf_select" "vip_spa_select"
 
-Diagnostics (2 via dispatcher; the other 2 stay in r_methods.c):
+Diagnostics (2 via dispatcher):
   "approximate_press_compute" "one_se_rule_compute"
 }

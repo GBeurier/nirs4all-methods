@@ -1,20 +1,20 @@
-"""Sklearn-compatible wrappers for methods without reusable prediction state.
+"""Sklearn-compatible wrappers for additional native PLS methods.
 
-The C ABI for these kernels intentionally captures only what was
-computed during the fit (often a moving window, an ensemble vote, a
-local refit, or a non-linear basis without a global coefficient
-matrix). Predict-on-arbitrary-new-X would require either:
+Several C kernels capture only what was computed during the fit (often a
+moving window, local refit, or non-linear basis without a global coefficient
+matrix). Predict-on-arbitrary-new-X for those methods would require either:
 
 * a coefficient export in the C ABI (planned follow-up), or
 * re-fitting on (X_train, y_train) + X_new at predict time (which the
   user can do explicitly via tier 1).
 
-Until then we expose the methods without coefficients as **fit-only sklearn
-estimators**. Robust PLS, Ridge-PLS, and Continuum Regression live in this
-module for API compatibility, but now use the shared coefficient-backed
-MethodResult predictor.
+Methods without coefficients remain **fit-only sklearn estimators**. Robust
+PLS, Ridge-PLS, Continuum Regression, Fused Sparse PLS, Bagging PLS, Boosting
+PLS, and Random Subspace PLS live in this module for API compatibility and
+use the shared coefficient-backed MethodResult predictor on held-out rows.
 
-* ``fit(X, y)`` runs the C kernel, stores ``self.predictions_`` (1-D
+For fit-only estimators, ``fit(X, y)`` runs the C kernel and stores
+``self.predictions_`` (1-D
   or 2-D, matching the y shape on the way in).
 * ``predict(X)`` returns ``self.predictions_`` iff X has the same values as
   the training matrix. Otherwise it raises an
@@ -269,7 +269,7 @@ class GroupSparsePLSRegression(_InSampleOnlyRegressor):
             cfg.close()
 
 
-class FusedSparsePLSRegression(_InSampleOnlyRegressor):
+class FusedSparsePLSRegression(_MethodResultRegressor):
     """Fused-sparse PLS — L1 + adjacent-coef smoothing."""
 
     def __init__(self, n_components: int = 2,
@@ -279,7 +279,7 @@ class FusedSparsePLSRegression(_InSampleOnlyRegressor):
         self.l1_lambda = l1_lambda
         self.fusion_lambda = fusion_lambda
 
-    def _run_fit(self, ctx, X, y):
+    def _fit_method_result(self, ctx, X, y):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.fused_sparse_pls_fit(
@@ -294,7 +294,7 @@ class FusedSparsePLSRegression(_InSampleOnlyRegressor):
 # Ensemble regressors (need n_estimators)
 # ----------------------------------------------------------------------
 
-class BaggingPLSRegression(_InSampleOnlyRegressor):
+class BaggingPLSRegression(_MethodResultRegressor):
     """Bagged PLS (Breiman 1996)."""
 
     def __init__(self, n_components: int = 2,
@@ -303,7 +303,7 @@ class BaggingPLSRegression(_InSampleOnlyRegressor):
         self.n_estimators = n_estimators
         self.seed = seed
 
-    def _run_fit(self, ctx, X, y):
+    def _fit_method_result(self, ctx, X, y):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.bagging_pls_fit(
@@ -339,7 +339,7 @@ class GPRPLSRegression(_InSampleOnlyRegressor):
             cfg.close()
 
 
-class BoostingPLSRegression(_InSampleOnlyRegressor):
+class BoostingPLSRegression(_MethodResultRegressor):
     """Boosted PLS regression."""
 
     def __init__(self, n_components: int = 2,
@@ -349,7 +349,9 @@ class BoostingPLSRegression(_InSampleOnlyRegressor):
         self.n_estimators = n_estimators
         self.learning_rate = learning_rate
 
-    def _run_fit(self, ctx, X, y):
+    def _fit_method_result(self, ctx, X, y):
+        if not np.isfinite(self.learning_rate) or not 0 < self.learning_rate <= 1:
+            raise ValueError("learning_rate must be in (0, 1]")
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.boosting_pls_fit(
@@ -360,7 +362,7 @@ class BoostingPLSRegression(_InSampleOnlyRegressor):
             cfg.close()
 
 
-class RandomSubspacePLSRegression(_InSampleOnlyRegressor):
+class RandomSubspacePLSRegression(_MethodResultRegressor):
     """Random-subspace PLS — Ho 1998."""
 
     def __init__(self, n_components: int = 2,
@@ -372,7 +374,7 @@ class RandomSubspacePLSRegression(_InSampleOnlyRegressor):
         self.features_per_subspace = features_per_subspace
         self.seed = seed
 
-    def _run_fit(self, ctx, X, y):
+    def _fit_method_result(self, ctx, X, y):
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.random_subspace_pls_fit(
