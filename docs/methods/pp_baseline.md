@@ -20,7 +20,7 @@ _No constructor parameters._
 from n4m.transform.scaling import BaselineCenter
 ```
 
-Source signature: [`BaselineCenter()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L231).
+Source signature: [`BaselineCenter()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L328).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

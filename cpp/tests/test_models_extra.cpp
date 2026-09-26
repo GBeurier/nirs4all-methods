@@ -29,6 +29,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -247,6 +248,118 @@ void test_lw_pls() {
     }
 }
 
+void test_group_sparse_penalty() {
+    // Two targets and non-contiguous group ids exercise the actual C ABI
+    // output, including prediction from the penalized coefficient matrix.
+    double x_data[] = {
+        1, 0, 2, 3,  2, 1, 0, 2,  3, 2, 1, 0,  4, 1, 3, 1,
+        5, 3, 2, 4,  6, 2, 4, 2,  7, 4, 1, 5,  8, 3, 5, 3};
+    double y_data[16]{};
+    for (std::size_t i = 0; i < 8; ++i) {
+        y_data[2 * i] = 2 * x_data[4 * i] + 0.3 * x_data[4 * i + 1] -
+                        x_data[4 * i + 2] + 1;
+        y_data[2 * i + 1] = -x_data[4 * i] + 0.5 * x_data[4 * i + 2] +
+                            0.7 * x_data[4 * i + 3] - 2;
+    }
+    n4m_matrix_view_t X{}, Y{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&X, x_data, 8, 4, N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Y, y_data, 8, 2, N4M_DTYPE_F64) == N4M_OK);
+    n4m_context_t* ctx = nullptr;
+    n4m_config_t* cfg = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, 2) == N4M_OK);
+    const std::int32_t groups[] = {2, 2, 9, 9};
+    auto fit = [&](double lambda) {
+        n4m_method_result_t* result = nullptr;
+        N4M_TEST_REQUIRE(n4m_estimators_group_sparse_pls_fit(
+            ctx, cfg, &X, &Y, groups, 4, lambda, &result) == N4M_OK);
+        N4M_TEST_REQUIRE(result != nullptr);
+        return result;
+    };
+    n4m_method_result_t* baseline = fit(0.0);
+    n4m_method_result_t* shrunk = fit(0.2);
+    n4m_method_result_t* zero = fit(1e6);
+    auto matrix = [](n4m_method_result_t* result, const char* key) {
+        const double* data = nullptr;
+        std::int64_t rows = 0, cols = 0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_double_matrix(
+            result, key, &data, &rows, &cols) == N4M_OK);
+        return std::vector<double>(data, data + rows * cols);
+    };
+    const auto b0 = matrix(baseline, "coefficients");
+    const auto b1 = matrix(shrunk, "coefficients");
+    const auto bz = matrix(zero, "coefficients");
+    const auto p0 = matrix(baseline, "predictions");
+    const auto p1 = matrix(shrunk, "predictions");
+    const auto pz = matrix(zero, "predictions");
+    const auto xm = matrix(shrunk, "x_mean");
+    const auto ym = matrix(shrunk, "y_mean");
+    double n_groups = 0;
+    N4M_TEST_REQUIRE(n4m_method_result_get_scalar(shrunk, "n_groups", &n_groups) == N4M_OK);
+    N4M_TEST_REQUIRE(n_groups == 2.0);
+    double max_change = 0.0;
+    double max_prediction_change = 0.0;
+    for (std::size_t g = 0; g < 2; ++g) {
+        double norm_sq = 0.0;
+        for (std::size_t f = 2 * g; f < 2 * g + 2; ++f)
+            for (std::size_t t = 0; t < 2; ++t)
+                norm_sq += b0[f * 2 + t] * b0[f * 2 + t];
+        const double norm = std::sqrt(norm_sq);
+        const double factor = norm > 0.2 ? 1.0 - 0.2 / norm : 0.0;
+        for (std::size_t f = 2 * g; f < 2 * g + 2; ++f) {
+            for (std::size_t t = 0; t < 2; ++t) {
+                const auto k = f * 2 + t;
+                N4M_TEST_REQUIRE(std::fabs(b1[k] - b0[k] * factor) < 1e-10);
+                N4M_TEST_REQUIRE(bz[k] == 0.0);
+                max_change = std::max(max_change, std::fabs(b1[k] - b0[k]));
+            }
+        }
+    }
+    for (std::size_t i = 0; i < 8; ++i) {
+        for (std::size_t t = 0; t < 2; ++t) {
+            double expected = ym[t];
+            for (std::size_t f = 0; f < 4; ++f)
+                expected += (x_data[i * 4 + f] - xm[f]) * b1[f * 2 + t];
+            const auto k = i * 2 + t;
+            N4M_TEST_REQUIRE(std::fabs(p1[k] - expected) < 1e-10);
+            N4M_TEST_REQUIRE(std::fabs(pz[k] - ym[t]) < 1e-10);
+            max_prediction_change = std::max(max_prediction_change, std::fabs(p1[k] - p0[k]));
+        }
+    }
+    N4M_TEST_REQUIRE(max_change > 1e-6);
+    N4M_TEST_REQUIRE(max_prediction_change > 1e-6);
+    n4m_method_result_t* fused_raw = nullptr;
+    n4m_method_result_t* fused_shrunk = nullptr;
+    N4M_TEST_REQUIRE(n4m_estimators_fused_sparse_pls_fit(
+        ctx, cfg, &X, &Y, 0.0, 0.0, &fused_raw) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_estimators_fused_sparse_pls_fit(
+        ctx, cfg, &X, &Y, 0.2, 0.0, &fused_shrunk) == N4M_OK);
+    const auto fused_b0 = matrix(fused_raw, "coefficients");
+    const auto fused_b1 = matrix(fused_shrunk, "coefficients");
+    double fused_change = 0.0;
+    for (std::size_t k = 0; k < fused_b0.size(); ++k)
+        fused_change = std::max(fused_change, std::fabs(fused_b1[k] - fused_b0[k]));
+    N4M_TEST_REQUIRE(fused_change > 1e-6);
+    n4m_method_result_t* invalid = nullptr;
+    N4M_TEST_REQUIRE(n4m_estimators_group_sparse_pls_fit(
+        ctx, cfg, &X, &Y, groups, 4, -0.1, &invalid) == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(invalid == nullptr);
+    N4M_TEST_REQUIRE(n4m_estimators_group_sparse_pls_fit(
+        ctx, cfg, &X, &Y, groups, 4, std::numeric_limits<double>::quiet_NaN(),
+        &invalid) == N4M_ERR_INVALID_ARGUMENT);
+    const std::int32_t bad_groups[] = {2, -1, 9, 9};
+    N4M_TEST_REQUIRE(n4m_estimators_group_sparse_pls_fit(
+        ctx, cfg, &X, &Y, bad_groups, 4, 0.2, &invalid) == N4M_ERR_INVALID_ARGUMENT);
+    n4m_method_result_destroy(zero);
+    n4m_method_result_destroy(shrunk);
+    n4m_method_result_destroy(baseline);
+    n4m_method_result_destroy(fused_shrunk);
+    n4m_method_result_destroy(fused_raw);
+    n4m_config_destroy(cfg);
+    n4m_context_destroy(ctx);
+}
+
 }  // namespace
 
 void register_models_extra_tests(n4m_testing::Runner& r) {
@@ -254,4 +367,5 @@ void register_models_extra_tests(n4m_testing::Runner& r) {
     r.run("models_extra/pls_lda",      test_pls_lda);
     r.run("models_extra/pls_logistic", test_pls_logistic);
     r.run("models_extra/lw_pls",       test_lw_pls);
+    r.run("models_extra/group_sparse_penalty", test_group_sparse_penalty);
 }

@@ -8,7 +8,7 @@ _Namespace_: **`n4m.ensemble`** · _Fully-qualified_: `n4m.ensemble.aom_operator
 
 **Python (verified public re-export):** `from n4m.ensemble import aom_operator_pls_stack`
 
-**Signature:** [`aom_operator_pls_stack(X, y, *, profile: str | int = 'compact', cv: int = 5, fold_ids = None, components = (2, 4, 8), alphas = (0.001, 0.01, 0.1, 1.0, 10.0, 100.0), std_penalty: float = 0.0, gap_penalty: float = 0.0, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8368)
+**Signature:** [`aom_operator_pls_stack(X, y, *, profile: str | int = 'compact', cv: int = 5, fold_ids = None, components = (2, 4, 8), alphas = (0.001, 0.01, 0.1, 1.0, 10.0, 100.0), std_penalty: float = 0.0, gap_penalty: float = 0.0, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8374)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

@@ -22,9 +22,14 @@ Per-row area normalisation.
 from n4m.transform.scatter import AreaNormalization
 ```
 
-Source signature: [`AreaNormalization(method: str = 'sum')`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L99).
+Source signature: [`AreaNormalization(method: str = 'sum')`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L104).
 
-**R:** no current source-verified entry point was found for this catalog method.
+**R (source-verified):** [`area_normalization_transform(X, method = "sum")`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
+
+```r
+library(n4m)
+result <- area_normalization_transform(X)
+```
 
 **MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 

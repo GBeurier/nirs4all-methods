@@ -25,7 +25,7 @@ Element-wise logarithm with optional fit-time auto-offset.
 from n4m.transform.scaling import LogTransform
 ```
 
-Source signature: [`LogTransform(base: float = 0.0, offset: float = 0.0, auto_offset: bool = True, min_value: float = 1e-08)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L161).
+Source signature: [`LogTransform(base: float = 0.0, offset: float = 0.0, auto_offset: bool = True, min_value: float = 1e-08)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L170).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

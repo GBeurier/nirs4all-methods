@@ -24,7 +24,7 @@ A = -log10(max(R, epsilon)). Optional %-scaling.
 from n4m.transform.signal_conversion import ToAbsorbance
 ```
 
-Source signature: [`ToAbsorbance(is_percent: bool = False, epsilon: float = 1e-10, clip_negative: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L439).
+Source signature: [`ToAbsorbance(is_percent: bool = False, epsilon: float = 1e-10, clip_negative: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L547).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

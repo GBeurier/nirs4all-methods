@@ -24,9 +24,14 @@ Robust SNV using median + k * MAD.
 from n4m.transform.scatter import RNV
 ```
 
-Source signature: [`RNV(with_center: bool = True, with_scale: bool = True, k: float = 1.4826)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L73).
+Source signature: [`RNV(with_center: bool = True, with_scale: bool = True, k: float = 1.4826)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L77).
 
-**R:** no current source-verified entry point was found for this catalog method.
+**R (source-verified):** [`robust_snv_transform(X, with_center = TRUE, with_scale = TRUE, k = 1.4826)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
+
+```r
+library(n4m)
+result <- robust_snv_transform(X)
+```
 
 **MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 

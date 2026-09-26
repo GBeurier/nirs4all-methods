@@ -80,7 +80,7 @@ from n4m.model_selection.aom_search import aom_per_component_select
 result = aom_per_component_select(X, y)
 ```
 
-Source signature: `aom_per_component_select(X, y, *, max_components: int = 3, operators = None, cv: int = 3, fold_ids = None, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6115)).
+Source signature: `aom_per_component_select(X, y, *, max_components: int = 3, operators = None, cv: int = 3, fold_ids = None, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6121)).
 
 **R (source-verified):** [`pop_pls(X, Y, max_components = 3L, n_operators = 9L, cv = 3L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

@@ -14,7 +14,7 @@ Extended Multiplicative Scatter Correction (polynomial).
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_emsc_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L118) · [`n4m_transform_emsc_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L120) · [`n4m_transform_emsc_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L121) · [`n4m_transform_emsc_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L126) · [`n4m_transform_emsc_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L123). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_emsc_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L128) · [`n4m_transform_emsc_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L130) · [`n4m_transform_emsc_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L131) · [`n4m_transform_emsc_get_reference`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L140) · [`n4m_transform_emsc_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L136) · [`n4m_transform_emsc_reference_size`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L138) · [`n4m_transform_emsc_set_reference`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L142) · [`n4m_transform_emsc_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L133). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
@@ -22,9 +22,14 @@ Extended Multiplicative Scatter Correction (polynomial).
 from n4m.transform.scatter import EMSC
 ```
 
-Source signature: [`EMSC(degree: int = 2)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L213).
+Source signature: [`EMSC(degree: int = 2)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L265).
 
-**R:** no current source-verified entry point was found for this catalog method.
+**R (source-verified):** [`emsc_fit(X, degree = 2L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
+
+```r
+library(n4m)
+result <- emsc_fit(X)
+```
 
 **MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
 

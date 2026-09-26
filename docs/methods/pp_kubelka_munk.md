@@ -23,7 +23,7 @@ KM = (1 - R)^2 / (2 R), with R guarded by epsilon.
 from n4m.transform.signal_conversion import KubelkaMunk
 ```
 
-Source signature: [`KubelkaMunk(is_percent: bool = False, epsilon: float = 1e-10)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L519).
+Source signature: [`KubelkaMunk(is_percent: bool = False, epsilon: float = 1e-10)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L631).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

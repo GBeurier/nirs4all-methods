@@ -24,7 +24,7 @@ PDS: local regressions mapping source windows to target wavelengths.
 from n4m.domain_adaptation.standardization import piecewise_direct_standardization
 ```
 
-Source signature: [`piecewise_direct_standardization(X_source, X_target, X = None, window_size: int = 5, fit_intercept: bool = True, ridge: float = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L9685).
+Source signature: [`piecewise_direct_standardization(X_source, X_target, X = None, window_size: int = 5, fit_intercept: bool = True, ridge: float = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L9692).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

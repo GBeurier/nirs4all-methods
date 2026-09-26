@@ -25,7 +25,7 @@ Segment smoothing followed by gap finite differences.
 from n4m.transform.smoothing import NorrisWilliams
 ```
 
-Source signature: [`NorrisWilliams(segment: int = 5, gap: int = 5, derivative_order: int = 1, delta: float = 1.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L320).
+Source signature: [`NorrisWilliams(segment: int = 5, gap: int = 5, derivative_order: int = 1, delta: float = 1.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L428).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

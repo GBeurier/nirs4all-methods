@@ -6,7 +6,7 @@ _Group_: **Sparse** · _Registry tolerance_: `1e-08`
 
 Group sparse PLS (§7)
 
-> **Registry note** — R `sgPLS::gPLS` (Liquet et al. 2016, regression mode, scale=TRUE). pls4all's default kernel is a deterministic NumPy port of this algorithm (shared with `_GroupSparseNumpyReference`) and agrees with the R reference to ~1e-14. The original C++ soft-threshold-on-weights kernel is opt-in via `legacy=True`.
+> **Registry note** — R `sgPLS::gPLS` (Liquet et al. 2016, regression mode, scale=TRUE). The archived benchmark's default Python reference is a deterministic NumPy port of that algorithm. Its `legacy=True` route invokes the native C ABI, which uses post-SIMPLS coefficient shrinkage; these are distinct estimators, not numerical equivalents.
 
 ### Parameters
 
@@ -23,19 +23,19 @@ Liquet, B., de Micheaux, P. L., Hejblum, B. P. & Thiébaut, R. (2016). *Group an
 
 ### Mathematical principle
 
-The routine first fits ordinary SIMPLS, copies each component weight vector, and applies groupwise thresholding to that copy. In the current source the thresholded weights are not used to recompute the coefficient matrix returned for prediction. It must therefore be treated as an incomplete diagnostic implementation rather than a fitted group-lasso PLS estimator.
+The routine fits ordinary SIMPLS, then applies the proximal map `B_g <- max(0, 1 - group_lambda / ||B_g||_F) B_g` to each group of predictive coefficient rows. Entire groups can be zeroed, but latent directions are not refitted.
 
 ### Appropriate uses
 
-Diagnostic experiments with predefined wavelength groups and group-thresholded latent weights.
+Exploratory group selection with predefined wavelength groups when post-fit coefficient shrinkage is acceptable.
 
 ### Limits and validation
 
-Current code thresholds copied weights after fitting but returns the original SIMPLS coefficients, so group_lambda does not change predictions.
+The penalty shrinks predictive coefficient groups and affects predictions, but does not refit latent directions or implement sgPLS::gPLS. Its units depend on raw-X and target scaling; select it using held-out data.
 
 ### Implementation
 
-`group_lambda` can change the temporary thresholded weights but not the returned SIMPLS coefficients. Do not claim group selection or compare lambda values through predictions until the coefficient refit is implemented.
+`group_lambda` applies group-lasso proximal shrinkage to the returned SIMPLS predictive coefficients. This changes predictions but is not a latent-direction refit or a numerical implementation of sgPLS::gPLS.
 
 ### Sources and provenance
 
@@ -61,7 +61,7 @@ The source signature has additional required inputs, so no example call is fabri
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.python_numpy`** (python · python) — `numpy` in-tree · strict (rmse_rel ≤ 1e-08) — In-tree NumPy port of Liquet et al. 2016 group sparse PLS (R `sgPLS::gPLS`, regression mode, scale=TRUE). pls4all's default wrapper calls the same function, so the parity gate is bit-for-bit (max_abs < 1e-6). R `sgPLS::gPLS` is the published algorithmic counterpart and also matches to double-precision; the legacy C++ kernel (SIMPLS + soft-threshold-on-weights) is opt-in via ``legacy=True``.
+- 📐 **`ref.python_numpy`** (python · python) — `numpy` in-tree · strict (rmse_rel ≤ 1e-08) — In-tree NumPy port of Liquet et al. 2016 group sparse PLS (R `sgPLS::gPLS`, regression mode, scale=TRUE). The archived default Python reference uses that port. The opt-in native route uses post-SIMPLS coefficient shrinkage and is not numerically equivalent to sgPLS::gPLS.
 
 - 📐 **`ref.r_sgpls`** (R · r) — `sgPLS` 1.8.1 · strict (rmse_rel ≤ 1e-08) — R `sgPLS::gPLS(X, Y, ncomp, ind.block.x, keepX=length(bnd))` (regression, scale=TRUE). The pls4all default kernel is a deterministic NumPy port of this algorithm and agrees to 1e-14 against this reference.
 
