@@ -12,6 +12,7 @@
 #include <random>
 #include <vector>
 
+#include "core/common/linalg.h"
 #include "core/common/matrix_view.hpp"
 #include "core/model.hpp"
 
@@ -2454,51 +2455,300 @@ n4m_status_t fit_continuum_regression(Context& ctx,
 
 // ---- PLS-GLM ----------------------------------------------------------
 
+namespace {
+
+// min ||A b - y|| by Householder QR; A (n x m row-major, n >= m) and y are
+// overwritten. False when A is numerically rank deficient.
+bool least_squares(std::vector<double>& A, std::size_t n, std::size_t m,
+                   std::vector<double>& y, std::vector<double>& beta) {
+    const auto rows = static_cast<std::int64_t>(n);
+    const auto cols = static_cast<std::int64_t>(m);
+    std::vector<double> tau(m, 0.0);
+    beta.assign(m, 0.0);
+    return n4m_householder_qr(A.data(), rows, cols, tau.data()) == N4M_OK &&
+           n4m_apply_qt(A.data(), rows, cols, tau.data(), y.data()) == N4M_OK &&
+           n4m_back_solve_R(A.data(), rows, cols, y.data(), beta.data()) == N4M_OK;
+}
+
+// Solves the square system A x = b (A m x m, row-major).
+bool solve_square(std::vector<double> A, std::vector<double> b, std::size_t m,
+                  std::vector<double>& x) {
+    return least_squares(A, m, m, b, x);
+}
+
+double glm_mean(GlmFamily family, double eta) {
+    switch (family) {
+        case GlmFamily::Poisson:
+            return std::exp(eta);
+        case GlmFamily::Binomial:
+            return 1.0 / (1.0 + std::exp(-eta));
+        case GlmFamily::Gaussian:
+            break;
+    }
+    return eta;
+}
+
+// GLM coefficients of y on `design` (n x m row-major, intercept column
+// first): one least-squares solve for the Gaussian identity link, IRLS for
+// Poisson log and binomial logit, started as the n4m reference (Poisson) and
+// R glm (binomial) start. False when a weighted design is rank deficient.
+bool glm_fit(GlmFamily family, const std::vector<double>& design, std::size_t n, std::size_t m,
+             const double* y, std::int32_t max_iter, double tol, std::vector<double>& beta) {
+    if (family == GlmFamily::Gaussian) {
+        std::vector<double> A = design;
+        std::vector<double> b(y, y + n);
+        return least_squares(A, n, m, b, beta);
+    }
+    constexpr double kMuFloor = 1e-12;
+    const bool poisson = family == GlmFamily::Poisson;
+    double y_mean = 0.0;
+    for (std::size_t i = 0; i < n; ++i) y_mean += y[i];
+    y_mean /= static_cast<double>(n);
+    std::vector<double> mu(n), eta(n);
+    for (std::size_t i = 0; i < n; ++i) {
+        mu[i] = poisson ? std::max((std::max(y[i], 0.0) + y_mean) / 2.0, kMuFloor)
+                        : (y[i] + 0.5) / 2.0;
+        eta[i] = poisson ? std::log(mu[i]) : std::log(mu[i] / (1.0 - mu[i]));
+    }
+    beta.assign(m, 0.0);
+    std::vector<double> A(n * m), z(n), next;
+    for (std::int32_t it = 0; it < max_iter; ++it) {
+        for (std::size_t i = 0; i < n; ++i) {
+            const double w = poisson ? mu[i] : mu[i] * (1.0 - mu[i]);
+            const double sw = std::sqrt(w);
+            z[i] = (eta[i] + (y[i] - mu[i]) / w) * sw;
+            for (std::size_t c = 0; c < m; ++c) A[i * m + c] = design[i * m + c] * sw;
+        }
+        if (!least_squares(A, n, m, z, next)) return false;
+        double step = 0.0;
+        for (std::size_t c = 0; c < m; ++c) step = std::max(step, std::fabs(next[c] - beta[c]));
+        beta.swap(next);
+        if (step < tol) break;
+        for (std::size_t i = 0; i < n; ++i) {
+            double e = 0.0;
+            for (std::size_t c = 0; c < m; ++c) e += design[i * m + c] * beta[c];
+            eta[i] = e;
+            mu[i] = poisson ? std::max(glm_mean(family, e), kMuFloor)
+                            : std::min(std::max(glm_mean(family, e), kMuFloor), 1.0 - kMuFloor);
+        }
+    }
+    return true;
+}
+
+// Weights of component k (after the scores T[0..k)) for the Gaussian family:
+// the coefficient of each deflated column in the OLS of y on (1, T, X_j),
+// by partial regression on an orthonormal basis of (1, T).
+void gaussian_weights(const std::vector<double>& resid, std::size_t n, std::size_t p,
+                      const std::vector<double>& T, std::size_t k, const std::vector<double>& y,
+                      std::vector<double>& ww) {
+    std::vector<std::vector<double>> basis;
+    for (std::size_t c = 0; c <= k; ++c) {
+        std::vector<double> b(n, 1.0);
+        if (c > 0) b.assign(T.begin() + static_cast<std::ptrdiff_t>((c - 1) * n),
+                            T.begin() + static_cast<std::ptrdiff_t>(c * n));
+        for (const auto& q : basis) {
+            double d = 0.0;
+            for (std::size_t i = 0; i < n; ++i) d += q[i] * b[i];
+            for (std::size_t i = 0; i < n; ++i) b[i] -= d * q[i];
+        }
+        const double norm = std::sqrt(squared_norm(b));
+        if (norm <= 0.0) continue;
+        for (double& v : b) v /= norm;
+        basis.push_back(std::move(b));
+    }
+    auto project_out = [&](std::vector<double>& v) {
+        for (const auto& q : basis) {
+            double d = 0.0;
+            for (std::size_t i = 0; i < n; ++i) d += q[i] * v[i];
+            for (std::size_t i = 0; i < n; ++i) v[i] -= d * q[i];
+        }
+    };
+    std::vector<double> y_perp = y;
+    project_out(y_perp);
+    std::vector<double> x(n);
+    for (std::size_t j = 0; j < p; ++j) {
+        for (std::size_t i = 0; i < n; ++i) x[i] = resid[i * p + j];
+        project_out(x);
+        double numer = 0.0, denom = 0.0;
+        for (std::size_t i = 0; i < n; ++i) {
+            numer += x[i] * y_perp[i];
+            denom += x[i] * x[i];
+        }
+        ww[j] = numer / (denom > 1e-30 ? denom : 1.0);
+    }
+}
+
+// One plsRglm model of the response y: input-scale coefficients and
+// intercept. The weight of a column whose GLM design is rank deficient is 0.
+n4m_status_t fit_glm_response(Context& ctx, const std::vector<double>& X, std::size_t n,
+                              std::size_t p, std::size_t nt, GlmFamily family,
+                              std::int32_t max_iter, double tol, const std::vector<double>& y,
+                              std::vector<double>& coef, double& intercept) {
+    std::vector<double> resid = X;
+    std::vector<double> W, P, T;  // component-major: W[k * p + f], T[k * n + i]
+    std::vector<double> ww(p), design, beta, t(n), pl(p);
+    std::size_t k = 0;
+    for (; k < nt; ++k) {
+        if (family == GlmFamily::Gaussian) {
+            gaussian_weights(resid, n, p, T, k, y, ww);
+        } else {
+            const std::size_t m = k + 2;
+            design.assign(n * m, 1.0);
+            for (std::size_t i = 0; i < n; ++i) {
+                for (std::size_t c = 0; c < k; ++c) design[i * m + 1 + c] = T[c * n + i];
+            }
+            for (std::size_t j = 0; j < p; ++j) {
+                for (std::size_t i = 0; i < n; ++i) design[i * m + k + 1] = resid[i * p + j];
+                ww[j] = glm_fit(family, design, n, m, y.data(), max_iter, tol, beta) ? beta[k + 1]
+                                                                                       : 0.0;
+            }
+        }
+        const double norm = std::sqrt(squared_norm(ww));
+        if (norm < 1e-12) break;
+        for (double& v : ww) v /= norm;
+        double tt = 0.0;
+        for (std::size_t i = 0; i < n; ++i) {
+            double s = 0.0;
+            for (std::size_t f = 0; f < p; ++f) s += resid[i * p + f] * ww[f];
+            t[i] = s;
+            tt += s * s;
+        }
+        if (tt < 1e-30) break;
+        std::fill(pl.begin(), pl.end(), 0.0);
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t f = 0; f < p; ++f) pl[f] += resid[i * p + f] * t[i];
+        }
+        for (double& v : pl) v /= tt;
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t f = 0; f < p; ++f) resid[i * p + f] -= t[i] * pl[f];
+        }
+        W.insert(W.end(), ww.begin(), ww.end());
+        P.insert(P.end(), pl.begin(), pl.end());
+        T.insert(T.end(), t.begin(), t.end());
+    }
+    const std::size_t m = k + 1;
+    design.assign(n * m, 1.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t c = 0; c < k; ++c) design[i * m + 1 + c] = T[c * n + i];
+    }
+    if (!glm_fit(family, design, n, m, y.data(), max_iter, tol, beta)) {
+        ctx.set_error("PLS-GLM score model is rank deficient");
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    intercept = beta[0];
+    coef.assign(p, 0.0);
+    if (k == 0) return N4M_OK;
+    std::vector<double> PtW(k * k, 0.0), c(beta.begin() + 1, beta.end()), v;
+    for (std::size_t a = 0; a < k; ++a) {
+        for (std::size_t b = 0; b < k; ++b) {
+            double s = 0.0;
+            for (std::size_t f = 0; f < p; ++f) s += P[a * p + f] * W[b * p + f];
+            PtW[a * k + b] = s;
+        }
+    }
+    if (!solve_square(PtW, c, k, v)) {
+        ctx.set_error("PLS-GLM loadings are singular");
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    for (std::size_t f = 0; f < p; ++f) {
+        double s = 0.0;
+        for (std::size_t a = 0; a < k; ++a) s += W[a * p + f] * v[a];
+        coef[f] = s;
+    }
+    return N4M_OK;
+}
+
+}  // namespace
+
 n4m_status_t fit_pls_glm(Context& ctx,
-                         const Config& cfg,
+                         std::int32_t n_components,
+                         GlmFamily family,
+                         std::int32_t max_iter,
+                         double tol,
                          const n4m_matrix_view_t& X,
                          const n4m_matrix_view_t& Y,
-                         bool poisson,
                          PlsGlmResult& out) {
     out = PlsGlmResult{};
-    out.poisson = poisson;
+    if (X.rows != Y.rows) {
+        ctx.set_error("X and Y must have the same number of rows");
+        return N4M_ERR_SHAPE_MISMATCH;
+    }
+    if (X.rows < 2 || X.cols < 1 || Y.cols < 1 || n_components < 1 || max_iter < 1 ||
+        !(tol >= 0.0)) {
+        ctx.set_error("PLS-GLM needs 2+ rows, n_components >= 1, max_iter >= 1 and tol >= 0");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
     std::vector<double> X_buf, Y_buf;
     n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
     if (status != N4M_OK) return status;
     status = copy_matrix(ctx, Y, "Y", Y_buf);
     if (status != N4M_OK) return status;
+    for (double v : X_buf) {
+        if (!std::isfinite(v)) {
+            ctx.set_error("X must be finite");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+    }
+    for (double v : Y_buf) {
+        const bool ok = std::isfinite(v) &&
+                        (family != GlmFamily::Poisson || v >= 0.0) &&
+                        (family != GlmFamily::Binomial || (v >= 0.0 && v <= 1.0));
+        if (!ok) {
+            ctx.set_error(family == GlmFamily::Poisson    ? "Poisson PLS-GLM needs finite Y >= 0"
+                          : family == GlmFamily::Binomial ? "binomial PLS-GLM needs Y in [0, 1]"
+                                                          : "Y must be finite");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+    }
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(X.cols);
     const std::size_t q = static_cast<std::size_t>(Y.cols);
-    std::vector<double> x_mean;
-    column_means(X_buf, n, p, x_mean);
-    subtract_means(X_buf, n, p, x_mean);
-    const std::size_t a = std::min<std::size_t>(
-        static_cast<std::size_t>(cfg.n_components),
-        std::min(n - 1, p));
-    // Step 1: PLS regression on Y as continuous (logistic ≈ identity link
-    // for the latent space).
-    std::vector<double> Y_centered = Y_buf;
-    std::vector<double> y_mean(q, 0.0);
-    column_means(Y_centered, n, q, y_mean);
-    subtract_means(Y_centered, n, q, y_mean);
-    std::vector<double> coefs;
-    simple_simpls(X_buf, Y_centered, n, p, q, a, coefs, nullptr);
-    // The coefficients apply to centered X; fold the centering into the
-    // intercept so that predictions are X @ coefficients + intercept.
-    std::vector<double> intercept(q, 0.0);
-    for (std::size_t target = 0; target < q; ++target) {
-        double v = y_mean[target];
-        for (std::size_t f = 0; f < p; ++f) v -= x_mean[f] * coefs[f * q + target];
-        intercept[target] = v;
+    const std::size_t nt =
+        std::min(static_cast<std::size_t>(n_components), std::min(n - 1, p));
+    out.coefficients.assign(p * q, 0.0);
+    out.intercept.assign(q, 0.0);
+    std::vector<double> y(n), coef;
+    for (std::size_t j = 0; j < q; ++j) {
+        for (std::size_t i = 0; i < n; ++i) y[i] = Y_buf[i * q + j];
+        status = fit_glm_response(ctx, X_buf, n, p, nt, family, max_iter, tol, y, coef,
+                                  out.intercept[j]);
+        if (status != N4M_OK) return status;
+        for (std::size_t f = 0; f < p; ++f) out.coefficients[f * q + j] = coef[f];
     }
-    out.coefficients = std::move(coefs);
-    out.intercept = std::move(intercept);
+    bool finite = true;
+    for (double v : out.coefficients) finite = finite && std::isfinite(v);
+    for (double v : out.intercept) finite = finite && std::isfinite(v);
+    if (!finite) {
+        out = PlsGlmResult{};
+        ctx.set_error("PLS-GLM coefficients diverged");
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    out.family = family;
     out.n_features = static_cast<std::int32_t>(p);
-    out.n_classes = static_cast<std::int32_t>(q);
-    out.n_components = static_cast<std::int32_t>(a);
+    out.n_targets = static_cast<std::int32_t>(q);
+    out.n_components = static_cast<std::int32_t>(nt);
     ctx.clear_error();
     return N4M_OK;
+}
+
+void predict_pls_glm(const PlsGlmResult& model, const n4m_matrix_view_t& X,
+                     std::vector<double>& out) {
+    const auto n = static_cast<std::size_t>(X.rows);
+    const auto p = static_cast<std::size_t>(model.n_features);
+    const auto q = static_cast<std::size_t>(model.n_targets);
+    const auto* x = static_cast<const double*>(X.data);
+    out.assign(n * q, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        const double* row = x + static_cast<std::int64_t>(i) * X.row_stride;
+        for (std::size_t j = 0; j < q; ++j) {
+            double eta = model.intercept[j];
+            for (std::size_t f = 0; f < p; ++f) {
+                eta += row[static_cast<std::int64_t>(f) * X.col_stride] *
+                       model.coefficients[f * q + j];
+            }
+            out[i * q + j] = glm_mean(model.family, eta);
+        }
+    }
 }
 
 // ---- PLS-QDA -----------------------------------------------------------
@@ -2667,87 +2917,274 @@ n4m_status_t fit_pls_qda(Context& ctx,
 
 // ---- PLS-Cox ----------------------------------------------------------
 
+namespace {
+
+// End (exclusive) of the tie group starting at sorted position g.
+std::size_t tie_end(const std::vector<double>& times, const std::vector<std::size_t>& order,
+                    std::size_t g) {
+    std::size_t end = g + 1;
+    while (end < order.size() && times[order[end]] == times[order[g]]) ++end;
+    return end;
+}
+
+// Deviance residuals of the null Cox model (Breslow cumulative hazard).
+std::vector<double> cox_null_deviance(const std::vector<double>& times,
+                                      const std::vector<std::int32_t>& events,
+                                      const std::vector<std::size_t>& order) {
+    const std::size_t n = order.size();
+    std::vector<double> dev(n, 0.0);
+    double hazard = 0.0;
+    for (std::size_t g = 0; g < n;) {
+        const std::size_t end = tie_end(times, order, g);
+        double d = 0.0;
+        for (std::size_t r = g; r < end; ++r) d += events[order[r]] != 0 ? 1.0 : 0.0;
+        hazard += d / static_cast<double>(n - g);
+        for (std::size_t r = g; r < end; ++r) {
+            const std::size_t i = order[r];
+            const double e = events[i] != 0 ? 1.0 : 0.0;
+            const double m = e - hazard;
+            const double inside = -2.0 * (m + (e > 0.0 ? std::log(e - m) : 0.0));
+            dev[i] = (m > 0.0 ? 1.0 : (m < 0.0 ? -1.0 : 0.0)) * std::sqrt(std::max(inside, 0.0));
+        }
+        g = end;
+    }
+    return dev;
+}
+
+// Breslow partial-likelihood Newton-Raphson on the scores T (n x k,
+// row-major); a step that fails or leaves finite values ends the iteration
+// on the last finite coefficients.
+std::vector<double> cox_newton(const std::vector<double>& T, std::size_t k,
+                               const std::vector<double>& times,
+                               const std::vector<std::int32_t>& events,
+                               const std::vector<std::size_t>& order, std::int32_t max_iter,
+                               double tol) {
+    const std::size_t n = order.size();
+    std::vector<double> beta(k, 0.0), risk(n), s1(k), s2(k * k), grad(k), info(k * k), delta;
+    for (std::int32_t it = 0; it < max_iter; ++it) {
+        bool finite = true;
+        for (std::size_t i = 0; i < n; ++i) {
+            double eta = 0.0;
+            for (std::size_t a = 0; a < k; ++a) eta += T[i * k + a] * beta[a];
+            risk[i] = std::exp(eta);
+            finite = finite && std::isfinite(risk[i]);
+        }
+        if (!finite) break;
+        double s0 = 0.0;
+        std::fill(s1.begin(), s1.end(), 0.0);
+        std::fill(s2.begin(), s2.end(), 0.0);
+        std::fill(grad.begin(), grad.end(), 0.0);
+        std::fill(info.begin(), info.end(), 0.0);
+        // Risk sets are the rows with time >= t: accumulate the tie groups
+        // from the latest time, then add the group's events.
+        for (std::size_t end = n; end > 0;) {
+            std::size_t start = end - 1;
+            while (start > 0 && times[order[start - 1]] == times[order[end - 1]]) --start;
+            for (std::size_t r = start; r < end; ++r) {
+                const std::size_t i = order[r];
+                s0 += risk[i];
+                for (std::size_t a = 0; a < k; ++a) {
+                    s1[a] += risk[i] * T[i * k + a];
+                    for (std::size_t b = 0; b < k; ++b) {
+                        s2[a * k + b] += risk[i] * T[i * k + a] * T[i * k + b];
+                    }
+                }
+            }
+            for (std::size_t r = start; r < end; ++r) {
+                const std::size_t i = order[r];
+                if (events[i] == 0) continue;
+                for (std::size_t a = 0; a < k; ++a) {
+                    grad[a] += T[i * k + a] - s1[a] / s0;
+                    for (std::size_t b = 0; b < k; ++b) {
+                        info[a * k + b] += s2[a * k + b] / s0 - (s1[a] / s0) * (s1[b] / s0);
+                    }
+                }
+            }
+            end = start;
+        }
+        for (double v : grad) finite = finite && std::isfinite(v);
+        for (double v : info) finite = finite && std::isfinite(v);
+        if (!finite || !solve_square(info, grad, k, delta)) break;
+        double step = 0.0;
+        for (std::size_t a = 0; a < k; ++a) {
+            finite = finite && std::isfinite(beta[a] + delta[a]);
+            step = std::max(step, std::fabs(delta[a]));
+        }
+        if (!finite) break;
+        for (std::size_t a = 0; a < k; ++a) beta[a] += delta[a];
+        if (step < tol) break;
+    }
+    return beta;
+}
+
+}  // namespace
+
 n4m_status_t fit_pls_cox(Context& ctx,
-                          const Config& cfg,
-                          const n4m_matrix_view_t& X,
-                          const std::vector<double>& survival_times,
-                          const std::vector<std::int32_t>& event_indicators,
-                          PlsCoxResult& out) {
+                         std::int32_t n_components,
+                         std::int32_t max_iter,
+                         double tol,
+                         const n4m_matrix_view_t& X,
+                         const std::vector<double>& survival_times,
+                         const std::vector<std::int32_t>& event_indicators,
+                         PlsCoxResult& out) {
     out = PlsCoxResult{};
     const std::size_t n = static_cast<std::size_t>(X.rows);
     if (survival_times.size() != n || event_indicators.size() != n) {
         ctx.set_error("survival_times and event_indicators must match X.rows");
         return N4M_ERR_SHAPE_MISMATCH;
     }
-    for (double t : survival_times) {
-        if (!(t > 0.0) || !std::isfinite(t)) {
-            ctx.set_error("survival times must be positive and finite");
+    if (n < 2 || X.cols < 1 || n_components < 1 || max_iter < 1 || !(tol >= 0.0)) {
+        ctx.set_error("PLS-Cox needs 2+ rows, n_components >= 1, max_iter >= 1 and tol >= 0");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    bool any_event = false;
+    for (std::size_t i = 0; i < n; ++i) {
+        if (!std::isfinite(survival_times[i])) {
+            ctx.set_error("survival times must be finite");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        any_event = any_event || event_indicators[i] != 0;
+    }
+    if (!any_event) {
+        ctx.set_error("PLS-Cox needs at least one observed event");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    std::vector<double> Xs;
+    n4m_status_t status = copy_matrix(ctx, X, "X", Xs);
+    if (status != N4M_OK) return status;
+    for (double v : Xs) {
+        if (!std::isfinite(v)) {
+            ctx.set_error("X must be finite");
             return N4M_ERR_INVALID_ARGUMENT;
         }
     }
-    std::vector<double> X_buf;
-    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
-    if (status != N4M_OK) return status;
     const std::size_t p = static_cast<std::size_t>(X.cols);
-    column_means(X_buf, n, p, out.x_mean);
-    subtract_means(X_buf, n, p, out.x_mean);
-    // Pseudo-response: log(survival_times) for non-censored, current
-    // baseline (mean log time) for censored. Run plain PLS regression on
-    // this pseudo-response.
-    std::vector<double> Yv(n, 0.0);
-    double mean_log_t = 0.0;
-    std::size_t n_event = 0;
+    std::vector<double> mean, sd(p, 0.0);
+    column_means(Xs, n, p, mean);
+    subtract_means(Xs, n, p, mean);
     for (std::size_t i = 0; i < n; ++i) {
-        if (event_indicators[i] != 0) {
-            mean_log_t += std::log(survival_times[i]);
-            ++n_event;
+        for (std::size_t f = 0; f < p; ++f) sd[f] += Xs[i * p + f] * Xs[i * p + f];
+    }
+    for (double& s : sd) {
+        s = std::sqrt(s / static_cast<double>(n));
+        if (!(s > 0.0)) s = 1.0;
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t f = 0; f < p; ++f) Xs[i * p + f] /= sd[f];
+    }
+
+    std::vector<std::size_t> order(n);
+    for (std::size_t i = 0; i < n; ++i) order[i] = i;
+    std::stable_sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
+        return survival_times[a] < survival_times[b];
+    });
+    std::vector<double> y = cox_null_deviance(survival_times, event_indicators, order);
+    double y_mean = 0.0;
+    for (double v : y) y_mean += v;
+    y_mean /= static_cast<double>(n);
+    for (double& v : y) v -= y_mean;
+
+    // NIPALS PLS1 of the deviance residuals on the standardized X.
+    const std::size_t a_max = std::min(static_cast<std::size_t>(n_components), std::min(n - 1, p));
+    std::vector<double> W, P, Tcols, w(p), t(n), pl(p);
+    std::size_t k = 0;
+    for (; k < a_max; ++k) {
+        std::fill(w.begin(), w.end(), 0.0);
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t f = 0; f < p; ++f) w[f] += Xs[i * p + f] * y[i];
         }
+        const double nw = std::sqrt(squared_norm(w));
+        if (nw < 1e-12) break;
+        for (double& v : w) v /= nw;
+        double tt = 0.0;
+        for (std::size_t i = 0; i < n; ++i) {
+            double s = 0.0;
+            for (std::size_t f = 0; f < p; ++f) s += Xs[i * p + f] * w[f];
+            t[i] = s;
+            tt += s * s;
+        }
+        if (tt < 1e-24) break;
+        std::fill(pl.begin(), pl.end(), 0.0);
+        double qa = 0.0;
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t f = 0; f < p; ++f) pl[f] += Xs[i * p + f] * t[i];
+            qa += y[i] * t[i];
+        }
+        for (double& v : pl) v /= tt;
+        qa /= tt;
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t f = 0; f < p; ++f) Xs[i * p + f] -= t[i] * pl[f];
+            y[i] -= qa * t[i];
+        }
+        W.insert(W.end(), w.begin(), w.end());
+        P.insert(P.end(), pl.begin(), pl.end());
+        Tcols.insert(Tcols.end(), t.begin(), t.end());
     }
-    if (n_event > 0) mean_log_t /= static_cast<double>(n_event);
-    for (std::size_t i = 0; i < n; ++i) {
-        Yv[i] = (event_indicators[i] != 0)
-            ? std::log(survival_times[i])
-            : mean_log_t;
-    }
-    const std::size_t a = std::min<std::size_t>(
-        static_cast<std::size_t>(cfg.n_components),
-        std::min(n - 1, p));
-    std::vector<double> coefs;
-    simple_simpls(X_buf, Yv, n, p, 1, a, coefs, nullptr);
+
     out.coefficients.assign(p, 0.0);
-    for (std::size_t f = 0; f < p; ++f) out.coefficients[f] = -coefs[f];
-    // Empirical baseline hazard at each unique event time using Breslow.
-    std::vector<std::pair<double, std::int32_t>> sorted;
-    sorted.reserve(n);
-    for (std::size_t i = 0; i < n; ++i) {
-        sorted.emplace_back(survival_times[i], event_indicators[i]);
-    }
-    std::sort(sorted.begin(), sorted.end(),
-              [](const auto& lhs, const auto& rhs) {
-                  return lhs.first < rhs.first;
-              });
-    std::vector<double> linear_pred(n, 0.0);
-    for (std::size_t i = 0; i < n; ++i) {
-        double s = 0.0;
+    if (k > 0) {
+        std::vector<double> T(n * k);
+        for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t a = 0; a < k; ++a) T[i * k + a] = Tcols[a * n + i];
+        }
+        const std::vector<double> beta =
+            cox_newton(T, k, survival_times, event_indicators, order, max_iter, tol);
+        // Scores of new rows are ((x - mean) / sd) W (P'W)^{-1}.
+        std::vector<double> PtW(k * k, 0.0), v;
+        for (std::size_t a = 0; a < k; ++a) {
+            for (std::size_t b = 0; b < k; ++b) {
+                double s = 0.0;
+                for (std::size_t f = 0; f < p; ++f) s += P[a * p + f] * W[b * p + f];
+                PtW[a * k + b] = s;
+            }
+        }
+        if (!solve_square(PtW, beta, k, v)) {
+            ctx.set_error("PLS-Cox loadings are singular");
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
         for (std::size_t f = 0; f < p; ++f) {
-            s += X_buf[i * p + f] * out.coefficients[f];
+            double s = 0.0;
+            for (std::size_t a = 0; a < k; ++a) s += W[a * p + f] * v[a];
+            out.coefficients[f] = s / sd[f];
         }
-        linear_pred[i] = std::exp(s);
     }
-    for (std::size_t i = 0; i < n; ++i) {
-        if (sorted[i].second == 0) continue;
-        double risk = 0.0;
-        for (std::size_t j = 0; j < n; ++j) {
-            if (survival_times[j] >= sorted[i].first) risk += linear_pred[j];
-        }
-        if (risk < kEps) continue;
-        out.event_times.push_back(sorted[i].first);
-        out.baseline_hazard.push_back(1.0 / risk);
-    }
+    out.x_mean = std::move(mean);
     out.n_features = static_cast<std::int32_t>(p);
-    out.n_components = static_cast<std::int32_t>(a);
+    out.n_components = static_cast<std::int32_t>(k);
+
+    std::vector<double> lp;
+    predict_pls_cox(out, X, lp);
+    std::vector<double> risk_after(n + 1, 0.0);  // sum of exp(lp) over sorted rows >= r
+    for (std::size_t r = n; r > 0; --r) risk_after[r - 1] = risk_after[r] + std::exp(lp[order[r - 1]]);
+    for (std::size_t g = 0; g < n;) {
+        const std::size_t end = tie_end(survival_times, order, g);
+        double d = 0.0;
+        for (std::size_t r = g; r < end; ++r) d += event_indicators[order[r]] != 0 ? 1.0 : 0.0;
+        if (d > 0.0) {
+            out.event_times.push_back(survival_times[order[g]]);
+            out.baseline_hazard.push_back(d / risk_after[g]);
+        }
+        g = end;
+    }
     ctx.clear_error();
     return N4M_OK;
+}
+
+void predict_pls_cox(const PlsCoxResult& model, const n4m_matrix_view_t& X,
+                     std::vector<double>& out) {
+    const auto n = static_cast<std::size_t>(X.rows);
+    const auto p = static_cast<std::size_t>(model.n_features);
+    const auto* x = static_cast<const double*>(X.data);
+    out.assign(n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        const double* row = x + static_cast<std::int64_t>(i) * X.row_stride;
+        double s = 0.0;
+        for (std::size_t f = 0; f < p; ++f) {
+            s += (row[static_cast<std::int64_t>(f) * X.col_stride] - model.x_mean[f]) *
+                 model.coefficients[f];
+        }
+        out[i] = s;
+    }
 }
 
 // ---- PDS / DS / MIR-PLS / missing-aware NIPALS -------------------------

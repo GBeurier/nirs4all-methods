@@ -2666,41 +2666,23 @@ N4M_API n4m_status_t n4m_estimators_pls_glm_fit(
     try {
         ::n4m::core::PlsGlmResult res;
         const n4m_status_t status = ::n4m::core::fit_pls_glm(
-            *as_core(ctx), *as_core(cfg), *X, *Y,
-            poisson != 0, res);
+            *as_core(ctx), as_core(cfg)->n_components,
+            poisson != 0 ? ::n4m::core::GlmFamily::Poisson
+                         : ::n4m::core::GlmFamily::Gaussian,
+            100, 1e-10, *X, *Y, res);
         if (status != N4M_OK) return status;
 
         auto handle = std::make_unique<n4m_method_result_s>();
         const auto p = static_cast<std::int64_t>(res.n_features);
-        const auto q = static_cast<std::int64_t>(res.n_classes);
+        const auto q = static_cast<std::int64_t>(res.n_targets);
         handle->set_double_matrix("coefficients", res.coefficients, p, q);
         handle->set_double_matrix("intercept", res.intercept, 1, q);
-
-        // Predicted = (X - x_mean is implicit, but coefs include shift
-        // via intercept). Compute Yhat = X @ coefs + intercept.
-        const std::size_t n = static_cast<std::size_t>(X->rows);
-        std::vector<double> preds(n * static_cast<std::size_t>(q), 0.0);
-        const auto* xdata = static_cast<const double*>(X->data);
-        const std::size_t x_rs = static_cast<std::size_t>(X->row_stride);
-        const std::size_t x_cs = static_cast<std::size_t>(X->col_stride);
-        for (std::size_t i = 0; i < n; ++i) {
-            for (std::size_t j = 0; j < static_cast<std::size_t>(q); ++j) {
-                double s = res.intercept[j];
-                for (std::size_t f = 0;
-                     f < static_cast<std::size_t>(p); ++f) {
-                    s += xdata[i * x_rs + f * x_cs] *
-                          res.coefficients[f *
-                            static_cast<std::size_t>(q) + j];
-                }
-                preds[i * static_cast<std::size_t>(q) + j] = s;
-            }
-        }
+        std::vector<double> preds;
+        ::n4m::core::predict_pls_glm(res, *X, preds);
         const double rmse = in_sample_rmse(preds, *Y);
-        handle->set_double_matrix("predictions", std::move(preds),
-                                   static_cast<std::int64_t>(n), q);
+        handle->set_double_matrix("predictions", std::move(preds), X->rows, q);
         handle->set_scalar("rmse", rmse);
-        handle->set_scalar("poisson",
-                            static_cast<double>(res.poisson ? 1 : 0));
+        handle->set_scalar("poisson", poisson != 0 ? 1.0 : 0.0);
         handle->set_scalar("n_components",
                             static_cast<double>(res.n_components));
 
@@ -2805,7 +2787,8 @@ N4M_API n4m_status_t n4m_estimators_pls_cox_fit(
             event_indicators + static_cast<std::size_t>(event_indicators_size));
         ::n4m::core::PlsCoxResult res;
         const n4m_status_t status = ::n4m::core::fit_pls_cox(
-            *as_core(ctx), *as_core(cfg), *X, times, events, res);
+            *as_core(ctx), as_core(cfg)->n_components, 50, 1e-10, *X, times,
+            events, res);
         if (status != N4M_OK) return status;
 
         auto handle = std::make_unique<n4m_method_result_s>();
@@ -2816,24 +2799,9 @@ N4M_API n4m_status_t n4m_estimators_pls_cox_fit(
                                    res.baseline_hazard, 1, ne);
         handle->set_double_matrix("event_times", res.event_times, 1, ne);
         handle->set_double_matrix("x_mean", res.x_mean, 1, p);
-
-        // Predictions: linear predictor scores = (X - x_mean) @ coefs.
-        const std::size_t n = static_cast<std::size_t>(X->rows);
-        std::vector<double> preds(n, 0.0);
-        const auto* xdata = static_cast<const double*>(X->data);
-        const std::size_t x_rs = static_cast<std::size_t>(X->row_stride);
-        const std::size_t x_cs = static_cast<std::size_t>(X->col_stride);
-        for (std::size_t i = 0; i < n; ++i) {
-            double s = 0.0;
-            for (std::size_t f = 0;
-                 f < static_cast<std::size_t>(p); ++f) {
-                s += (xdata[i * x_rs + f * x_cs] - res.x_mean[f]) *
-                      res.coefficients[f];
-            }
-            preds[i] = s;
-        }
-        handle->set_double_matrix("predictions", std::move(preds),
-                                   static_cast<std::int64_t>(n), 1);
+        std::vector<double> preds;
+        ::n4m::core::predict_pls_cox(res, *X, preds);
+        handle->set_double_matrix("predictions", std::move(preds), X->rows, 1);
         handle->set_scalar("n_components",
                             static_cast<double>(res.n_components));
 

@@ -255,7 +255,8 @@ predict.n4m_method_fit <- function(object, newdata = NULL, ...) {
     coef <- object$coefficients   # (p, q)
     if (object$use_intercept) {
         # MB-PLS / PLS-GLM: coefficients are in ORIGINAL X scale,
-        # `intercept` already folds in y_mean - x_mean @ coef.
+        # `intercept` already folds in y_mean - x_mean @ coef (PLS-GLM:
+        # the linear predictor, mapped through the inverse link below).
         intercept <- object$intercept
         if (length(intercept) == 1L) {
             preds <- X %*% coef + as.numeric(intercept)
@@ -272,6 +273,7 @@ predict.n4m_method_fit <- function(object, newdata = NULL, ...) {
             preds <- sweep(Xc %*% coef, 2L, ym, "+")
         }
     }
+    if (identical(object$extra$family, "poisson")) preds <- exp(preds)
     if (ncol(preds) == 1L) preds <- preds[, 1L]
     preds
 }

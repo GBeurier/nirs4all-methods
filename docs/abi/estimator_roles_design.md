@@ -470,21 +470,22 @@ unlock:
 The final claim is per entry: estimator or procedure, languages, operations,
 oracle result — never a bare 212/212.
 
-Status (2026-09-27): 200 of 213 catalog entries reach the generic surface —
-140 estimators (regressors incl. 10 AOM/POP ones, 4 classifiers, selectors,
-transformers, 4 sample filters) and 60 procedures (9 splitters, 39
-augmenters, 12 generic); the generated per-entry record is
+Status (2026-09-27): 208 of 213 catalog entries reach the generic surface —
+148 estimators (regressors incl. 16 AOM/POP ones, PLS-GLM and PLS-Cox, 4
+classifiers, selectors, transformers, 4 sample filters) and 60 procedures (9
+splitters, 39 augmenters, 12 generic); the generated per-entry record is
 `docs/parity/estimator_roles_coverage.md`. Python, R, JS/WASM and Rust
 facades are generated from or driven by the manifest. The shared fixture
 `parity/fixtures/estimator_roles_n4me.json` is replayed by the four bindings:
 estimator states at 1e-12 with byte-identical re-export, each binding's own
 fit reproducing the Python fit, and every procedure's default run. Each role
 class also matches its n4m reference (bitwise where the same kernel runs).
-Not covered: the five AOM superblocks and the AOM chain Ridge-PLS (numerics
-still in Python), three AOM orchestrations (screen/refit, staged campaign,
-linear Ridge stack: DAG-ML composition), PLS-GLM (the kernel fits no link),
-PLS-Cox (no survival inputs in `n4m_fit_inputs_v1_t`), the Python-only moment
-stack and the composite filter.
+PLS-Cox takes its survival response in the existing inputs: Y has two
+columns, time then event indicator (1 = event, 0 = censored), and predict
+returns one column, the risk score.
+Not covered: three AOM orchestrations (screen/refit, staged campaign,
+linear Ridge stack: DAG-ML composition), the Python-only moment stack and the
+composite filter (a composition of filters).
 
 ## 5. Tests
 
