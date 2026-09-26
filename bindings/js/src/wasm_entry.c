@@ -367,6 +367,26 @@ static int n4m_wasm_model_fit_tier_b(
             return s;
         }
     }
+    /* The eight portable affine fits use centred, unscaled data in the
+     * R/Python bindings. R selects SIMPLS except for canonical CPPLS and
+     * RidgePLS, which select NIPALS. Preserve the other shim models' config. */
+    if (kind == MK_RIDGE || kind == MK_RIDGE_PLS || kind == MK_ROBUST_PLS ||
+        kind == MK_CPPLS || kind == MK_SPARSE_SIMPLS || kind == MK_ECR ||
+        kind == MK_CONTINUUM || kind == MK_MIR_PLS) {
+        s = n4m_config_set_center_x(cfg, 1);
+        if (s == N4M_OK) s = n4m_config_set_center_y(cfg, 1);
+        if (s == N4M_OK) s = n4m_config_set_scale_x(cfg, 0);
+        if (s == N4M_OK) s = n4m_config_set_scale_y(cfg, 0);
+        if (s == N4M_OK) {
+            s = n4m_config_set_solver(cfg, kind == MK_RIDGE_PLS || kind == MK_CPPLS
+                                               ? N4M_SOLVER_NIPALS : N4M_SOLVER_SIMPLS);
+        }
+        if (s != N4M_OK) {
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
+            return s;
+        }
+    }
 
     n4m_method_result_t* res = NULL;
     switch (kind) {
@@ -389,7 +409,7 @@ static int n4m_wasm_model_fit_tier_b(
         }
         case MK_ROBUST_PLS: {
             double huber_k = n_params >= 1 ? params[0] : 1.345;
-            int max_irls = n_params >= 2 ? (int)params[1] : 5;
+            int max_irls = n_params >= 2 ? (int)params[1] : 20;
             s = n4m_estimators_robust_pls_fit(ctx, cfg, &xv, &yv, huber_k, max_irls, &res);
             break;
         }
@@ -399,7 +419,7 @@ static int n4m_wasm_model_fit_tier_b(
             break;
         }
         case MK_SPARSE_SIMPLS: {
-            double sparsity = n_params >= 1 ? params[0] : 0.0;
+            double sparsity = n_params >= 1 ? params[0] : 0.05;
             s = n4m_estimators_sparse_simpls_fit(ctx, cfg, &xv, &yv, sparsity, &res);
             break;
         }
