@@ -66,6 +66,15 @@ int main(void) {
             fprintf(stderr, "%s direct fit failed: %d\n", names[k], status);
             return 1;
         }
+        if (k == 2) {
+            n4m_method_result_t* rejected = NULL;
+            status = n4m_ensemble_boosting_pls_fit(ctx, cfg, &xv, &yv,
+                                                   50, 1.2, &rejected);
+            if (status != N4M_ERR_INVALID_ARGUMENT || rejected != NULL) {
+                fprintf(stderr, "BoostingPLS accepted learning_rate=1.2: %d\n", status);
+                return 1;
+            }
+        }
         double coefficients[P], x_mean[P], y_mean[1], intercept[1], predictions[N];
         int has_intercept = -1;
         status = n4m_wasm_model_fit(names[k], NULL, 0, x, y, N, P, 1, 2,
