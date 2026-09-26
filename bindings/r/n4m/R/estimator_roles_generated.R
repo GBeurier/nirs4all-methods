@@ -18,8 +18,15 @@
   "augmentation.drift.linear_drift" = c("augmenter"),
   "augmentation.drift.path_length" = c("augmenter"),
   "augmentation.drift.poly_drift" = c("augmenter"),
+  "augmentation.edge_artifacts.detector_rolloff" = c("augmenter"),
+  "augmentation.edge_artifacts.edge_artifacts" = c("augmenter"),
   "augmentation.edge_artifacts.edge_curvature" = c("augmenter"),
+  "augmentation.edge_artifacts.stray_light" = c("augmenter"),
   "augmentation.edge_artifacts.truncated_peak" = c("augmenter"),
+  "augmentation.environmental.moisture" = c("augmenter"),
+  "augmentation.environmental.temperature" = c("augmenter"),
+  "augmentation.mixup.local_mixup" = c("augmenter"),
+  "augmentation.mixup.mixup" = c("augmenter"),
   "augmentation.noise.gaussian_noise" = c("augmenter"),
   "augmentation.noise.hetero_noise" = c("augmenter"),
   "augmentation.noise.multiplicative_noise" = c("augmenter"),
@@ -30,6 +37,7 @@
   "augmentation.scattering.dead_band" = c("augmenter"),
   "augmentation.scattering.emsc_distort" = c("augmenter"),
   "augmentation.scattering.instrument_broaden" = c("augmenter"),
+  "augmentation.scattering.particle_size" = c("augmenter"),
   "augmentation.scattering.scatter_sim_msc" = c("augmenter"),
   "augmentation.spectral.band_mask" = c("augmenter"),
   "augmentation.spectral.band_perturb" = c("augmenter"),
@@ -213,8 +221,15 @@
   "augmentation.drift.linear_drift" = "n4m_linear_drift",
   "augmentation.drift.path_length" = "n4m_path_length",
   "augmentation.drift.poly_drift" = "n4m_poly_drift",
+  "augmentation.edge_artifacts.detector_rolloff" = "n4m_detector_rolloff",
+  "augmentation.edge_artifacts.edge_artifacts" = "n4m_edge_artifacts",
   "augmentation.edge_artifacts.edge_curvature" = "n4m_edge_curvature",
+  "augmentation.edge_artifacts.stray_light" = "n4m_stray_light",
   "augmentation.edge_artifacts.truncated_peak" = "n4m_truncated_peak",
+  "augmentation.environmental.moisture" = "n4m_moisture",
+  "augmentation.environmental.temperature" = "n4m_temperature",
+  "augmentation.mixup.local_mixup" = "n4m_local_mixup",
+  "augmentation.mixup.mixup" = "n4m_mixup",
   "augmentation.noise.gaussian_noise" = "n4m_gaussian_noise",
   "augmentation.noise.hetero_noise" = "n4m_hetero_noise",
   "augmentation.noise.multiplicative_noise" = "n4m_multiplicative_noise",
@@ -225,6 +240,7 @@
   "augmentation.scattering.dead_band" = "n4m_dead_band",
   "augmentation.scattering.emsc_distort" = "n4m_emsc_distort",
   "augmentation.scattering.instrument_broaden" = "n4m_instrument_broaden",
+  "augmentation.scattering.particle_size" = "n4m_particle_size",
   "augmentation.scattering.scatter_sim_msc" = "n4m_scatter_sim_msc",
   "augmentation.spectral.band_mask" = "n4m_band_mask",
   "augmentation.spectral.band_perturb" = "n4m_band_perturb",
@@ -484,14 +500,56 @@ n4m_poly_drift <- function(coeff_min = c(-0.01, -0.01, -0.01), coeff_max = c(0.0
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_detector_rolloff <- function(detector_model = "generic_nir", effect_strength = 1.0, noise_amplification = 0.02, include_baseline_distortion = TRUE, seed = 0L) {
+  .n4m_estimator("augmentation.edge_artifacts.detector_rolloff", c("augmenter"), list(detector_model = detector_model, effect_strength = effect_strength, noise_amplification = noise_amplification, include_baseline_distortion = include_baseline_distortion, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_edge_artifacts <- function(detector_roll_off = TRUE, stray_light = TRUE, edge_curvature = TRUE, truncated_peaks = TRUE, overall_strength = 1.0, detector_model = "generic_nir", seed = 0L) {
+  .n4m_estimator("augmentation.edge_artifacts.edge_artifacts", c("augmenter"), list(detector_roll_off = detector_roll_off, stray_light = stray_light, edge_curvature = edge_curvature, truncated_peaks = truncated_peaks, overall_strength = overall_strength, detector_model = detector_model, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_edge_curvature <- function(curvature_strength = 0.02, curvature_type = "random", asymmetry = 0.0, edge_focus = 0.7, seed = 0L) {
   .n4m_estimator("augmentation.edge_artifacts.edge_curvature", c("augmenter"), list(curvature_strength = curvature_strength, curvature_type = curvature_type, asymmetry = asymmetry, edge_focus = edge_focus, seed = seed))
 }
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_stray_light <- function(stray_light_fraction = 0.001, edge_enhancement = 2.0, edge_width = 0.1, include_peak_truncation = TRUE, seed = 0L) {
+  .n4m_estimator("augmentation.edge_artifacts.stray_light", c("augmenter"), list(stray_light_fraction = stray_light_fraction, edge_enhancement = edge_enhancement, edge_width = edge_width, include_peak_truncation = include_peak_truncation, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_truncated_peak <- function(peak_probability = 0.5, amplitude_min = 0.01, amplitude_max = 0.1, width_min = 50.0, width_max = 200.0, left_edge = TRUE, right_edge = TRUE, seed = 0L) {
   .n4m_estimator("augmentation.edge_artifacts.truncated_peak", c("augmenter"), list(peak_probability = peak_probability, amplitude_min = amplitude_min, amplitude_max = amplitude_max, width_min = width_min, width_max = width_max, left_edge = left_edge, right_edge = right_edge, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_moisture <- function(water_activity_delta = 0.0, use_aw_range = FALSE, aw_low = 0.0, aw_high = 1.0, reference_water_activity = 0.5, free_water_fraction = 0.3, bound_water_shift = 25.0, moisture_content = 0.1, enable_shift = TRUE, enable_intensity = TRUE, seed = 0L) {
+  .n4m_estimator("augmentation.environmental.moisture", c("augmenter"), list(water_activity_delta = water_activity_delta, use_aw_range = use_aw_range, aw_low = aw_low, aw_high = aw_high, reference_water_activity = reference_water_activity, free_water_fraction = free_water_fraction, bound_water_shift = bound_water_shift, moisture_content = moisture_content, enable_shift = enable_shift, enable_intensity = enable_intensity, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_temperature <- function(temperature_delta = 0.0, use_temp_range = FALSE, temp_low = -5.0, temp_high = 5.0, enable_shift = TRUE, enable_intensity = TRUE, enable_broadening = TRUE, region_specific = TRUE, seed = 0L) {
+  .n4m_estimator("augmentation.environmental.temperature", c("augmenter"), list(temperature_delta = temperature_delta, use_temp_range = use_temp_range, temp_low = temp_low, temp_high = temp_high, enable_shift = enable_shift, enable_intensity = enable_intensity, enable_broadening = enable_broadening, region_specific = region_specific, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_local_mixup <- function(alpha = 0.2, k_neighbors = 5L, seed = 0L) {
+  .n4m_estimator("augmentation.mixup.local_mixup", c("augmenter"), list(alpha = alpha, k_neighbors = k_neighbors, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_mixup <- function(alpha = 0.2, seed = 0L) {
+  .n4m_estimator("augmentation.mixup.mixup", c("augmenter"), list(alpha = alpha, seed = seed))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -552,6 +610,12 @@ n4m_emsc_distort <- function(mult_low = 0.9, mult_high = 1.1, add_low = -0.05, a
 #' @export
 n4m_instrument_broaden <- function(fwhm = 5.0, use_fwhm_range = FALSE, fwhm_low = 3.0, fwhm_high = 8.0, variation_scope = "sample", seed = 0L) {
   .n4m_estimator("augmentation.scattering.instrument_broaden", c("augmenter"), list(fwhm = fwhm, use_fwhm_range = use_fwhm_range, fwhm_low = fwhm_low, fwhm_high = fwhm_high, variation_scope = variation_scope, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_particle_size <- function(mean_size_um = 50.0, size_variation_um = 15.0, use_size_range = FALSE, size_range_low_um = 5.0, size_range_high_um = 500.0, reference_size_um = 50.0, wavelength_exponent = 1.5, size_effect_strength = 0.1, include_path_length = TRUE, path_length_sensitivity = 0.5, seed = 0L) {
+  .n4m_estimator("augmentation.scattering.particle_size", c("augmenter"), list(mean_size_um = mean_size_um, size_variation_um = size_variation_um, use_size_range = use_size_range, size_range_low_um = size_range_low_um, size_range_high_um = size_range_high_um, reference_size_um = reference_size_um, wavelength_exponent = wavelength_exponent, size_effect_strength = size_effect_strength, include_path_length = include_path_length, path_length_sensitivity = path_length_sensitivity, seed = seed))
 }
 
 #' @rdname n4m_estimator_role_constructors

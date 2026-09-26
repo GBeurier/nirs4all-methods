@@ -43,10 +43,8 @@ n4m_status_t n4m_aug_stray_light_state_apply(
     const n4m_aug_stray_light_state_t* state,
     void* rng_void,
     const double* X, int64_t rows, int64_t cols,
-    const double* wavelengths,
     double* out) {
-    if (state == NULL || X == NULL || wavelengths == NULL || out == NULL ||
-        rng_void == NULL) {
+    if (state == NULL || X == NULL || out == NULL || rng_void == NULL) {
         return N4M_ERR_NULL_POINTER;
     }
     if (rows < 0 || cols < 0) return N4M_ERR_INVALID_ARGUMENT;

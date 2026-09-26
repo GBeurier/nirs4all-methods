@@ -32,11 +32,53 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Procedure input axis: wavelengths in nanometres, finite and strictly increasing (the kernel holds band positions or detector ranges in nm, as the n4m reference does)."
 c_surface:
   - "n4m_augmentation_particle_size_apply"
   - "n4m_augmentation_particle_size_create"
   - "n4m_augmentation_particle_size_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_particle_size"
+  roles: "[augmenter]"
+  inputs:
+    axis: "required"
+  params:
+    - name: "mean_size_um"
+      type: "double"
+      default: 50.0
+    - name: "size_variation_um"
+      type: "double"
+      default: 15.0
+      min: 0.0
+    - name: "use_size_range"
+      type: "bool"
+      default: false
+    - name: "size_range_low_um"
+      type: "double"
+      default: 5.0
+    - name: "size_range_high_um"
+      type: "double"
+      default: 500.0
+    - name: "reference_size_um"
+      type: "double"
+      default: 50.0
+    - name: "wavelength_exponent"
+      type: "double"
+      default: 1.5
+    - name: "size_effect_strength"
+      type: "double"
+      default: 0.1
+    - name: "include_path_length"
+      type: "bool"
+      default: true
+    - name: "path_length_sensitivity"
+      type: "double"
+      default: 0.5
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.scattering.particle_size"
 leaf: "particle_size"
 legacy_ids:

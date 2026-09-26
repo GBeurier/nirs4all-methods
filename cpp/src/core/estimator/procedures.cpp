@@ -2,17 +2,22 @@
 //
 // Procedure runners (n4m_procedure_run): one-shot methods without reusable
 // state. Splitters go through n4m_splitter_run fold by fold, the ABI 2.11
-// augmentations through n4m_augmentation_run, and every other procedure
-// through its own C function; the runners only map named parameters and
-// normalized inputs onto those calls and pack a MethodResult. Axis-dependent
-// augmenters are procedures only when their kernel works in the axis' units.
+// augmentations through n4m_augmentation_run, the mixups through their
+// kernels (one draw mixes X and y), and every other procedure through its own
+// C function; the runners only map named parameters and normalized inputs
+// onto those calls and pack a MethodResult. Augmenters whose kernels hold
+// band positions or detector ranges take the axis in nanometres.
 
+#include <cmath>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <stdexcept>
 #include <vector>
 
+#include "core/augmentation/mixup/local_mixup.h"
+#include "core/augmentation/mixup/mixup.h"
+#include "core/common/rng_pcg64.h"
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/state_io.hpp"
 #include "core/method_result.hpp"
@@ -198,6 +203,51 @@ n4m_status_t seeded_apply(const Params& params, Create create, Apply apply, void
     return apply(handle.get(), X, out);
 }
 
+// The axis of the augmenters with nanometre constants: wavelengths in nm,
+// finite and strictly increasing.
+n4m_status_t nanometre_axis(n4m_context_t* ctx, const FitInputs& in) {
+    for (std::int64_t j = 0; j < in.n_axis; ++j) {
+        if (!std::isfinite(in.axis[j]) || (j > 0 && !(in.axis[j] > in.axis[j - 1]))) {
+            set_error(ctx, "axis must hold finite, strictly increasing wavelengths in nm");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+    }
+    return N4M_OK;
+}
+
+// The axis as the (1 x n) view the edge-artifact apply functions take.
+n4m_status_t axis_view(const FitInputs& in, n4m_matrix_view_t& axis) {
+    return n4m_matrix_view_init_rowmajor(&axis, const_cast<double*>(in.axis), 1, in.n_axis,
+                                         N4M_DTYPE_F64);
+}
+
+using MixKernel = std::function<n4m_status_t(n4m_rng_pcg64*, const n4m_matrix_view_t&,
+                                             const n4m_matrix_view_t&, double*, double*)>;
+
+// Runs a target-mixing kernel on row-major copies of the training rows and
+// targets; returns the mixed rows as "X" and the mixed targets as "Y", both in
+// the row order of the input.
+n4m_status_t augment_with_targets(n4m_context_t* ctx, const Params& params, const FitInputs& in,
+                                  n4m_method_result_t** out, const MixKernel& kernel) {
+    std::vector<double> x_rows, y_rows;
+    n4m_matrix_view_t X{}, Y{};
+    n4m_status_t st = row_major_f64(ctx, *in.X, "X", x_rows, X);
+    if (st == N4M_OK) st = row_major_f64(ctx, *in.Y, "y", y_rows, Y);
+    if (st != N4M_OK) return st;
+    std::vector<double> x_mixed(static_cast<std::size_t>(X.rows * X.cols));
+    std::vector<double> y_mixed(static_cast<std::size_t>(Y.rows * Y.cols));
+    n4m_rng_pcg64 rng{};
+    n4m_pcg64_engine_seed(&rng, seed_of(params));
+    st = kernel(&rng, X, Y, x_mixed.data(), y_mixed.data());
+    if (st != N4M_OK) return failed(ctx, params, st);
+    auto result = std::make_unique<n4m_method_result_s>();
+    result->set_double_matrix("X", std::move(x_mixed), X.rows, X.cols);
+    result->set_double_matrix("Y", std::move(y_mixed), Y.rows, Y.cols);
+    return finish(std::move(result), out);
+}
+
+const double* f64(const n4m_matrix_view_t& v) { return static_cast<const double*>(v.data); }
+
 }  // namespace
 
 n4m_status_t run_splitter(n4m_context_t* ctx, const Params& params, const FitInputs& in,
@@ -355,8 +405,7 @@ n4m_status_t run_aug_emsc_distort(n4m_context_t* ctx, const Params& params, cons
 n4m_status_t run_aug_edge_curvature(n4m_context_t* ctx, const Params& params, const FitInputs& in,
                                     n4m_method_result_t** out) {
     n4m_matrix_view_t axis{};
-    const n4m_status_t st = n4m_matrix_view_init_rowmajor(
-        &axis, const_cast<double*>(in.axis), 1, in.n_axis, N4M_DTYPE_F64);
+    const n4m_status_t st = axis_view(in, axis);
     if (st != N4M_OK) return st;
     return augment(ctx, params, in, out, [&](n4m_matrix_view_t X, n4m_matrix_view_t o) {
         return seeded_apply<n4m_aug_edge_curve_handle_t>(
@@ -393,8 +442,7 @@ n4m_status_t run_aug_instrument_broaden(n4m_context_t* ctx, const Params& params
 n4m_status_t run_aug_truncated_peak(n4m_context_t* ctx, const Params& params, const FitInputs& in,
                                     n4m_method_result_t** out) {
     n4m_matrix_view_t axis{};
-    const n4m_status_t st = n4m_matrix_view_init_rowmajor(
-        &axis, const_cast<double*>(in.axis), 1, in.n_axis, N4M_DTYPE_F64);
+    const n4m_status_t st = axis_view(in, axis);
     if (st != N4M_OK) return st;
     return augment(ctx, params, in, out, [&](n4m_matrix_view_t X, n4m_matrix_view_t o) {
         return seeded_apply<n4m_aug_truncated_peak_handle_t>(
@@ -409,6 +457,174 @@ n4m_status_t run_aug_truncated_peak(n4m_context_t* ctx, const Params& params, co
             [&](const n4m_aug_truncated_peak_handle_t* h, n4m_matrix_view_t x,
                 n4m_matrix_view_t y) { return n4m_augmentation_truncated_peak_apply(h, x, axis, y); },
             n4m_augmentation_truncated_peak_destroy, X, o);
+    });
+}
+
+n4m_status_t run_aug_mixup(n4m_context_t* ctx, const Params& params, const FitInputs& in,
+                           n4m_method_result_t** out) {
+    return augment_with_targets(
+        ctx, params, in, out,
+        [&](n4m_rng_pcg64* rng, const n4m_matrix_view_t& X, const n4m_matrix_view_t& Y,
+            double* x_mixed, double* y_mixed) {
+            const std::unique_ptr<n4m_aug_mixup_state_t, void (*)(n4m_aug_mixup_state_t*)> state(
+                n4m_aug_mixup_state_new(params.get_double("alpha")), n4m_aug_mixup_state_free);
+            if (!state) return N4M_ERR_INVALID_ARGUMENT;
+            return n4m_aug_mixup_apply_impl(state.get(), rng, f64(X), X.rows, X.cols, f64(Y),
+                                            Y.cols, x_mixed, y_mixed);
+        });
+}
+
+n4m_status_t run_aug_local_mixup(n4m_context_t* ctx, const Params& params, const FitInputs& in,
+                                 n4m_method_result_t** out) {
+    return augment_with_targets(
+        ctx, params, in, out,
+        [&](n4m_rng_pcg64* rng, const n4m_matrix_view_t& X, const n4m_matrix_view_t& Y,
+            double* x_mixed, double* y_mixed) {
+            const std::unique_ptr<n4m_aug_local_mixup_state_t,
+                                  void (*)(n4m_aug_local_mixup_state_t*)>
+                state(n4m_aug_local_mixup_state_new(params.get_double("alpha"),
+                                                    to_i32(params.get_int("k_neighbors"))),
+                      n4m_aug_local_mixup_state_free);
+            if (!state) return N4M_ERR_INVALID_ARGUMENT;
+            return n4m_aug_local_mixup_apply_impl(state.get(), rng, f64(X), X.rows, X.cols,
+                                                  f64(Y), Y.cols, x_mixed, y_mixed);
+        });
+}
+
+n4m_status_t run_aug_temperature(n4m_context_t* ctx, const Params& params, const FitInputs& in,
+                                 n4m_method_result_t** out) {
+    const n4m_status_t st = nanometre_axis(ctx, in);
+    if (st != N4M_OK) return st;
+    return augment(ctx, params, in, out, [&](n4m_matrix_view_t X, n4m_matrix_view_t o) {
+        return seeded_apply<n4m_aug_temperature_handle_t>(
+            params,
+            [&](n4m_aug_temperature_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_temperature_create(
+                    h, rng, params.get_double("temperature_delta"),
+                    params.get_bool("use_temp_range") ? 1 : 0, params.get_double("temp_low"),
+                    params.get_double("temp_high"), params.get_bool("enable_shift") ? 1 : 0,
+                    params.get_bool("enable_intensity") ? 1 : 0,
+                    params.get_bool("enable_broadening") ? 1 : 0,
+                    params.get_bool("region_specific") ? 1 : 0, in.axis, in.n_axis);
+            },
+            n4m_augmentation_temperature_apply, n4m_augmentation_temperature_destroy, X, o);
+    });
+}
+
+n4m_status_t run_aug_moisture(n4m_context_t* ctx, const Params& params, const FitInputs& in,
+                              n4m_method_result_t** out) {
+    const n4m_status_t st = nanometre_axis(ctx, in);
+    if (st != N4M_OK) return st;
+    return augment(ctx, params, in, out, [&](n4m_matrix_view_t X, n4m_matrix_view_t o) {
+        return seeded_apply<n4m_aug_moisture_handle_t>(
+            params,
+            [&](n4m_aug_moisture_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_moisture_create(
+                    h, rng, params.get_double("water_activity_delta"),
+                    params.get_bool("use_aw_range") ? 1 : 0, params.get_double("aw_low"),
+                    params.get_double("aw_high"), params.get_double("reference_water_activity"),
+                    params.get_double("free_water_fraction"),
+                    params.get_double("bound_water_shift"), params.get_double("moisture_content"),
+                    params.get_bool("enable_shift") ? 1 : 0,
+                    params.get_bool("enable_intensity") ? 1 : 0, in.axis, in.n_axis);
+            },
+            n4m_augmentation_moisture_apply, n4m_augmentation_moisture_destroy, X, o);
+    });
+}
+
+n4m_status_t run_aug_particle_size(n4m_context_t* ctx, const Params& params, const FitInputs& in,
+                                   n4m_method_result_t** out) {
+    const n4m_status_t st = nanometre_axis(ctx, in);
+    if (st != N4M_OK) return st;
+    return augment(ctx, params, in, out, [&](n4m_matrix_view_t X, n4m_matrix_view_t o) {
+        return seeded_apply<n4m_aug_particle_size_handle_t>(
+            params,
+            [&](n4m_aug_particle_size_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_particle_size_create(
+                    h, rng, params.get_double("mean_size_um"),
+                    params.get_double("size_variation_um"),
+                    params.get_bool("use_size_range") ? 1 : 0,
+                    params.get_double("size_range_low_um"),
+                    params.get_double("size_range_high_um"),
+                    params.get_double("reference_size_um"),
+                    params.get_double("wavelength_exponent"),
+                    params.get_double("size_effect_strength"),
+                    params.get_bool("include_path_length") ? 1 : 0,
+                    params.get_double("path_length_sensitivity"), in.axis, in.n_axis);
+            },
+            n4m_augmentation_particle_size_apply, n4m_augmentation_particle_size_destroy, X, o);
+    });
+}
+
+n4m_status_t run_aug_detector_rolloff(n4m_context_t* ctx, const Params& params,
+                                      const FitInputs& in, n4m_method_result_t** out) {
+    n4m_matrix_view_t axis{};
+    n4m_status_t st = nanometre_axis(ctx, in);
+    if (st == N4M_OK) st = axis_view(in, axis);
+    if (st != N4M_OK) return st;
+    return augment(ctx, params, in, out, [&](n4m_matrix_view_t X, n4m_matrix_view_t o) {
+        return seeded_apply<n4m_aug_detector_rolloff_handle_t>(
+            params,
+            [&](n4m_aug_detector_rolloff_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_detector_rolloff_create(
+                    h, rng, to_i32(params.get_int("detector_model")),
+                    params.get_double("effect_strength"), params.get_double("noise_amplification"),
+                    params.get_bool("include_baseline_distortion") ? 1 : 0);
+            },
+            [&](const n4m_aug_detector_rolloff_handle_t* h, n4m_matrix_view_t x,
+                n4m_matrix_view_t y) { return n4m_augmentation_detector_rolloff_apply(h, x, axis, y); },
+            n4m_augmentation_detector_rolloff_destroy, X, o);
+    });
+}
+
+n4m_status_t run_aug_stray_light(n4m_context_t* ctx, const Params& params, const FitInputs& in,
+                                 n4m_method_result_t** out) {
+    return augment(ctx, params, in, out, [&](n4m_matrix_view_t X, n4m_matrix_view_t o) {
+        return seeded_apply<n4m_aug_stray_light_handle_t>(
+            params,
+            [&](n4m_aug_stray_light_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_stray_light_create(
+                    h, rng, params.get_double("stray_light_fraction"),
+                    params.get_double("edge_enhancement"), params.get_double("edge_width"),
+                    params.get_bool("include_peak_truncation") ? 1 : 0);
+            },
+            [](const n4m_aug_stray_light_handle_t* h, n4m_matrix_view_t x,
+               n4m_matrix_view_t y_out) {
+                // The released entry point takes a wavelength view it only
+                // checks for width; the profile uses the channel count.
+                std::vector<double> channels(static_cast<std::size_t>(x.cols));
+                for (std::size_t j = 0; j < channels.size(); ++j) channels[j] = static_cast<double>(j);
+                n4m_matrix_view_t wl{};
+                const n4m_status_t st = n4m_matrix_view_init_rowmajor(
+                    &wl, channels.data(), 1, x.cols, N4M_DTYPE_F64);
+                return st != N4M_OK ? st : n4m_augmentation_stray_light_apply(h, x, wl, y_out);
+            },
+            n4m_augmentation_stray_light_destroy, X, o);
+    });
+}
+
+n4m_status_t run_aug_edge_artifacts(n4m_context_t* ctx, const Params& params,
+                                    const FitInputs& in, n4m_method_result_t** out) {
+    n4m_matrix_view_t axis{};
+    n4m_status_t st = nanometre_axis(ctx, in);
+    if (st == N4M_OK) st = axis_view(in, axis);
+    if (st != N4M_OK) return st;
+    const std::int32_t flags =
+        (params.get_bool("detector_roll_off") ? N4M_AUG_EDGE_ARTIFACTS_DETECTOR_ROLL_OFF : 0) |
+        (params.get_bool("stray_light") ? N4M_AUG_EDGE_ARTIFACTS_STRAY_LIGHT : 0) |
+        (params.get_bool("edge_curvature") ? N4M_AUG_EDGE_ARTIFACTS_EDGE_CURVATURE : 0) |
+        (params.get_bool("truncated_peaks") ? N4M_AUG_EDGE_ARTIFACTS_TRUNCATED_PEAKS : 0);
+    return augment(ctx, params, in, out, [&](n4m_matrix_view_t X, n4m_matrix_view_t o) {
+        return seeded_apply<n4m_aug_edge_artifacts_handle_t>(
+            params,
+            [&](n4m_aug_edge_artifacts_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_edge_artifacts_create(
+                    h, rng, flags, params.get_double("overall_strength"),
+                    to_i32(params.get_int("detector_model")));
+            },
+            [&](const n4m_aug_edge_artifacts_handle_t* h, n4m_matrix_view_t x,
+                n4m_matrix_view_t y) { return n4m_augmentation_edge_artifacts_apply(h, x, axis, y); },
+            n4m_augmentation_edge_artifacts_destroy, X, o);
     });
 }
 

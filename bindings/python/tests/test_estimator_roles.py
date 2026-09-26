@@ -1106,13 +1106,49 @@ def test_splitter_is_a_scikit_learn_cv():
 
 @pytest.mark.parametrize("cls", AUGMENTERS, ids=lambda c: c.__name__)
 def test_augmenter_is_seeded_and_shape_preserving(cls):
-    X, _, _ = _procedure_data()
+    X, y, _ = _procedure_data()
     X = np.abs(X) + 1.0  # positive, spectrum-like rows
     needs = cls.input_requirements()
-    axis = 1000.0 + 2.0 * np.arange(X.shape[1]) if needs["axis"] == "required" else None
-    out = cls().augment(X, axis=axis)
+    axis = (
+        1000.0 + 150.0 * np.arange(X.shape[1]) if needs["axis"] == "required" else None
+    )
+    if needs["y"] == "required":  # target-mixing: (X, y) augmented together
+        out, y_out = cls().augment(X, y, axis=axis)
+        assert y_out.shape == y.shape and np.all(np.isfinite(y_out))
+        again, y_again = cls().augment(X, y, axis=axis)
+        np.testing.assert_array_equal(y_again, y_out)
+    else:
+        out, again = cls().augment(X, axis=axis), cls().augment(X, axis=axis)
     assert out.shape == X.shape and np.all(np.isfinite(out))
-    np.testing.assert_array_equal(cls().augment(X, axis=axis), out)
+    np.testing.assert_array_equal(again, out)
+
+
+@pytest.mark.parametrize(
+    "cls", [roles.Mixup, roles.LocalMixup], ids=lambda c: c.__name__
+)
+def test_mixup_mixes_targets_with_the_draw_of_x(cls):
+    X, _, _ = _procedure_data()
+    X_out, y_out = cls(seed=3).augment(X, X[:, :2])
+    np.testing.assert_array_equal(y_out, X_out[:, :2])
+    with pytest.raises(N4MError):
+        cls().augment(X)
+
+
+def test_nanometre_augmenters_check_the_axis():
+    X, _, _ = _procedure_data()
+    axis = 1000.0 + 150.0 * np.arange(X.shape[1])
+    assert roles.StrayLight.input_requirements()["axis"] == "none"
+    for cls in (
+        roles.Temperature,
+        roles.Moisture,
+        roles.ParticleSize,
+        roles.DetectorRolloff,
+        roles.EdgeArtifacts,
+    ):
+        assert cls.input_requirements()["axis"] == "required"
+        cls().augment(X, axis=axis)
+        with pytest.raises(N4MError, match="nm"):
+            cls().augment(X, axis=axis[::-1])
 
 
 def test_generic_procedure_returns_named_outputs():

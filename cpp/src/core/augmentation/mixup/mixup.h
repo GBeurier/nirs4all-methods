@@ -11,6 +11,7 @@
  *   indices = rng.permutation(n_samples)           # shuffled row indices
  *   lam     = rng.beta(alpha, alpha, size=(n_samples, 1))
  *   out[i]  = lam[i] * X[i] + (1 - lam[i]) * X[indices[i]]
+ *   out_y[i] = lam[i] * Y[i] + (1 - lam[i]) * Y[indices[i]]   (when Y is given)
  *
  * MixupAugmenter combines TWO samples within the same batch — the output
  * has the same number of rows as the input, and every output row is a
@@ -36,10 +37,19 @@ typedef struct n4m_aug_mixup_state_t n4m_aug_mixup_state_t;
 n4m_aug_mixup_state_t* n4m_aug_mixup_state_new(double alpha);
 void                   n4m_aug_mixup_state_free(n4m_aug_mixup_state_t* state);
 
+/* Y (rows x y_cols, row-major) is optional: with Y == NULL, y_cols and out_y
+ * are ignored. The same draw mixes X and Y; out may alias X, out_y may alias
+ * Y. */
 n4m_status_t n4m_aug_mixup_apply_impl(const n4m_aug_mixup_state_t* state,
                                       n4m_rng_pcg64* rng,
                                       const double* X, int64_t rows, int64_t cols,
-                                      double* out);
+                                      const double* Y, int64_t y_cols,
+                                      double* out, double* out_y);
+
+/* dst[i] = lam[i] * src[i] + (1 - lam[i]) * src[partner[i]] over row-major
+ * rows x cols; dst may alias src. */
+n4m_status_t n4m_aug_mix_rows(const double* src, int64_t rows, int64_t cols,
+                              const int64_t* partner, const double* lam, double* dst);
 
 #ifdef __cplusplus
 }  /* extern "C" */

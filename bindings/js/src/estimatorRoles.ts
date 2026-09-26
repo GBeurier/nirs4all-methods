@@ -511,6 +511,12 @@ export interface Augmenter {
     augment(X: Matrix, axis?: Float64Array | number[]): Matrix;
 }
 
+/** Augmenter that mixes rows (mixup): the targets are mixed with the same draw, row for row. */
+export interface TargetMixingAugmenter {
+    augment(X: Matrix, y: Matrix | Float64Array | ArrayLike<number>,
+            axis?: Float64Array | number[]): { X: Matrix; Y: Matrix };
+}
+
 /** Generic procedure (diagnostics, utilities): inputs -> named outputs. */
 export interface Procedure {
     run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs?: FitInputs): Record<string, ProcedureOutput>;
@@ -582,6 +588,14 @@ export abstract class NativeProcedure extends NativeMethod {
 
     protected augmentMatrix(X: Matrix, axis?: Float64Array | number[]): Matrix {
         return this.runRaw(X, undefined, axis ? { axis } : {}, (result) => readEntry(result, "X", 0) as Matrix);
+    }
+
+    protected augmentWithTargets(X: Matrix, y: Matrix | Float64Array | ArrayLike<number>,
+                                 axis?: Float64Array | number[]): { X: Matrix; Y: Matrix } {
+        return this.runRaw(X, y, axis ? { axis } : {}, (result) => ({
+            X: readEntry(result, "X", 0) as Matrix,
+            Y: readEntry(result, "Y", 0) as Matrix,
+        }));
     }
 
     protected runOutputs(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>,

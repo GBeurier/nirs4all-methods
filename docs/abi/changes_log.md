@@ -73,17 +73,33 @@ in the result, read with `n4m_method_result_get_n_folds` /
 `n4m_method_result_get_fold`, zero-based rows of X), `N4M_ROLE_AUGMENTER`
 (`augmentation`; the augmented rows as matrix `"X"`, train-only) or
 `N4M_ROLE_GENERIC` (no node; the named outputs of the method's C function).
-The earlier `n4m_split_run` / `n4m_augment_run` proposal is dropped. 51
-entries are procedures: the 9 splitters (over `n4m_splitter_run`), 31
-augmenters (the 22 of `n4m_augmentation_run`, `poly_drift`, and eight
-axis-dependent kinds whose kernels work in the axis' own units), the 5
-diagnostics and the 6 utilities; each equals its direct C entry point
-bitwise. PLS diagnostics and monitoring fit their PLS model from X/y;
-monitoring and transfer metrics take their second matrix as
-`target_domain`. Left out: `mixup`/`local_mixup` (no paired Y), five
-augmenters with nanometre constants, and `stray_light` (its C entry point
-requires an axis it never reads). N4ME import now refuses a payload naming
-a procedure.
+The earlier `n4m_split_run` / `n4m_augment_run` proposal is dropped. 59
+entries are procedures: the 9 splitters (over `n4m_splitter_run`), 39
+augmenters, the 5 diagnostics and the 6 utilities; each equals its direct C
+entry point bitwise. The augmenters are the 22 of `n4m_augmentation_run`,
+`poly_drift`, `stray_light`, eight axis-dependent kinds whose kernels work
+in the axis' own units, five whose kernels hold nanometre constants
+(`temperature`, `moisture`, `particle_size`, `detector_rolloff`, the combined
+`edge_artifacts`: band positions, the 1500 nm scattering reference, detector
+ranges), which require `axis` as wavelengths in nanometres, finite and
+strictly increasing (refused otherwise, as their n4m references assume), and
+the two row-mixing `mixup` / `local_mixup`. Row-mixing augmenters require
+`y` and return, besides `"X"`, the double matrix `"Y"`: the targets mixed
+with the same draw (partner row and weight of row *i* of `"X"`), with the
+shape of the input `y`; no other augmenter returns `"Y"`. Their kernels now
+draw every row's partner and weight once and apply them to X and y; the
+per-method `n4m_augmentation_mixup_*` / `_local_mixup_*` functions still
+return X only, unchanged bitwise. The combined edge artifacts take four
+booleans (`detector_roll_off`, `stray_light`, `edge_curvature`,
+`truncated_peaks`) for the kernel's flag mask, and detector models are enum
+names. Signature change: `n4m_augmentation_stray_light_apply(handle, X,
+out)` drops the wavelength view it validated but never read (the reference
+profile depends on the channel count only); callers pass one argument
+fewer, the output is unchanged, and the Python `StrayLightAugmenter` /
+`aug_stray_light` no longer take `wavelengths`. PLS diagnostics and
+monitoring fit their PLS model from X/y; monitoring and transfer metrics
+take their second matrix as `target_domain`. N4ME import now refuses a
+payload naming a procedure.
 
 `n4m_method_manifest_json` renders the whole manifest (roles, DAG-ML node
 kinds, capabilities, fit inputs, typed parameters with defaults) in the
@@ -96,8 +112,11 @@ lookup from method id to generated class (`method_class`, `n4m_constructor`,
 result's named outputs (sorted by name, with their kind), so bindings read any
 procedure result without per-method name lists. The Python, R and JS/WASM
 facades expose splitters (`split`, a scikit-learn cross-validator in Python),
-augmenters (`augment`) and generic procedures (`run`, the named outputs); the
-shared fixture replays every procedure's default run in the three bindings.
+augmenters (`augment`; for the row-mixing ones `augment(X, y)` returns
+`(X, Y)` in Python, `list(X, Y)` in R and `{X, Y}` in JS, the typed
+`TargetMixingAugmenter`) and generic procedures (`run`, the named outputs);
+the shared fixture replays every procedure's default run, mixed targets
+included, in the three bindings.
 
 Model roles (S4): kernel PLS, GPR-on-PLS and LW-PLS regressors predict new
 rows from states that retain training rows (exported only with
