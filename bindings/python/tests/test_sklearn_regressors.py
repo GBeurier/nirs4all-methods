@@ -249,6 +249,12 @@ def test_affine_extra_multi_target_heldout_and_n4mm(
                                    estimator.predict(X_heldout), rtol=0, atol=1e-12)
 
 
+def test_boosting_pls_refuses_rate_above_native_bound(regression_data):
+    X, y, _ = regression_data
+    with pytest.raises(ValueError, match="learning_rate"):
+        BoostingPLSRegression(learning_rate=1.2).fit(X, y)
+
+
 def test_sparse_simpls_wrapper_bitexact(regression_data):
     """Wrapper.predict(X) must be bit-exact with the C predict math
     applied to tier 1's MethodResult."""
