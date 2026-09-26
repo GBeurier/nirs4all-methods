@@ -35,6 +35,7 @@ from pls4all.sklearn import (
     FusedSparsePLSRegression,
     MBPLSRegression,
     MIRPLSRegression,
+    NPLSRegression,
     OPLSRegression,
     PLSCanonical,
     PLSRegression,
@@ -253,6 +254,41 @@ def test_boosting_pls_refuses_rate_above_native_bound(regression_data):
     X, y, _ = regression_data
     with pytest.raises(ValueError, match="learning_rate"):
         BoostingPLSRegression(learning_rate=1.2).fit(X, y)
+
+
+@pytest.mark.parametrize("multi_target", [False, True])
+def test_npls_tensor_heldout_matches_native_coefficients_and_n4mm(
+        regression_data, multi_target: bool):
+    import pls4all
+    from pls4all.migration import export_linear_predictor_n4mm
+
+    X, y, Y = regression_data
+    target = Y if multi_target else y
+    X_heldout = X[:7] + 0.031
+    estimator = NPLSRegression(n_components=3, mode_j=5, mode_k=6).fit(X, target)
+    native_expected = _raw_method_result_predict(
+        lambda ctx, cfg, values, labels: pls4all.n_pls_fit(
+            ctx, cfg, values, 5, 6, labels),
+        3, X, target, X_predict=X_heldout)
+    np.testing.assert_allclose(estimator.predict(X_heldout), native_expected,
+                               rtol=0, atol=1e-12)
+    coefficients = np.asarray(estimator.coef_, dtype=np.float64)
+    if coefficients.ndim == 1:
+        coefficients = coefficients.reshape(1, -1)
+    intercept = np.asarray(estimator.intercept_, dtype=np.float64).reshape(-1)
+    payload = export_linear_predictor_n4mm(
+        coefficients.T.tolist(), intercept.tolist(), source_training_samples=len(X))
+    with pls4all.Context() as context, pls4all.Model.from_bytes(context, payload) as model:
+        expected = np.asarray(estimator.predict(X_heldout)).reshape(len(X_heldout), -1)
+        np.testing.assert_allclose(model.predict(context, X_heldout),
+                                   expected, rtol=0, atol=1e-12)
+
+
+@pytest.mark.parametrize("mode_j,mode_k", [(0, 6), (5, -1), (5, 7), (5.0, 6), (True, 6)])
+def test_npls_rejects_invalid_tensor_shape(regression_data, mode_j, mode_k):
+    X, y, _ = regression_data
+    with pytest.raises(ValueError, match="mode_j and mode_k"):
+        NPLSRegression(mode_j=mode_j, mode_k=mode_k).fit(X, y)
 
 
 def test_sparse_simpls_wrapper_bitexact(regression_data):

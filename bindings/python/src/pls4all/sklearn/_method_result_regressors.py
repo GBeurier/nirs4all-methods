@@ -293,6 +293,11 @@ class NPLSRegression(_MethodResultRegressor):
         self.mode_k = mode_k
 
     def _fit_method_result(self, ctx, X, y):
+        if (type(self.mode_j) is not int or type(self.mode_k) is not int
+                or not 1 <= self.mode_j <= 2**31 - 1
+                or not 1 <= self.mode_k <= 2**31 - 1
+                or self.mode_j * self.mode_k != X.shape[1]):
+            raise ValueError("mode_j and mode_k must be positive integers whose product equals n_features")
         with _ManagedConfig(int(self.n_components)) as cfg:
             return _methods.n_pls_fit(
                 ctx, cfg,
