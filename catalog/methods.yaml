@@ -1417,6 +1417,12 @@ methods:
       - "n4m_metrics_regression_metrics_sep"
     legacy_ids:
       - "diagnostics.regression_metrics"
+    estimator:
+      kind: procedure
+      adapter: regression_metrics
+      roles: [generic]
+      inputs:
+        y: required
   - method_id: "diagnostics.model_selection"
     family: "diagnostics.validation"
     category: "diagnostics"
@@ -1453,6 +1459,10 @@ methods:
       - "n4m_metrics_one_se_rule_compute"
     legacy_ids:
       - "diagnostics.model_selection"
+    estimator:
+      kind: procedure
+      adapter: one_se_rule
+      roles: [generic]
   - method_id: "diagnostics.pls_diagnostics"
     family: "diagnostics.pls"
     category: "diagnostics"
@@ -1489,6 +1499,29 @@ methods:
       - "n4m_metrics_pls_diagnostics_compute"
     legacy_ids:
       - "diagnostics.pls_diagnostics"
+    estimator:
+      kind: procedure
+      adapter: pls_diagnostics
+      roles: [generic]
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: center_x
+          type: bool
+          default: true
+        - name: scale_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
+        - name: scale_y
+          type: bool
+          default: true
   - method_id: "models.classification.pls_lda"
     family: "models.classification"
     category: "models"
@@ -1625,6 +1658,35 @@ methods:
       - "n4m_metrics_pls_monitoring_run"
     legacy_ids:
       - "diagnostics.pls_monitoring"
+    estimator:
+      kind: procedure
+      adapter: pls_monitoring
+      roles: [generic]
+      inputs:
+        y: required
+        target_domain: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: center_x
+          type: bool
+          default: true
+        - name: scale_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
+        - name: scale_y
+          type: bool
+          default: true
+        - name: alpha
+          type: double
+          default: 0.05
+          min: 0.0
+          max: 1.0
   - method_id: "selection.pso"
     family: "selection.wrapper"
     category: "selection"
@@ -5612,6 +5674,27 @@ methods:
       - "n4m_augmentation_linear_drift_destroy"
     legacy_ids:
       - "augmentation.drift.linear_drift"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: offset_min
+          type: double
+          default: -0.05
+        - name: offset_max
+          type: double
+          default: 0.05
+        - name: slope_min
+          type: double
+          default: -0.01
+        - name: slope_max
+          type: double
+          default: 0.01
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.drift.path_length"
     family: "augmentation.drift"
     category: "augmentation"
@@ -5652,6 +5735,23 @@ methods:
       - "n4m_augmentation_path_length_destroy"
     legacy_ids:
       - "augmentation.drift.path_length"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: path_length_std
+          type: double
+          default: 0.05
+          min: 0.0
+        - name: min_path_length
+          type: double
+          default: 0.1
+          min: 0.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.drift.poly_drift"
     family: "augmentation.drift"
     category: "augmentation"
@@ -5692,6 +5792,21 @@ methods:
       - "n4m_augmentation_poly_drift_destroy"
     legacy_ids:
       - "augmentation.drift.poly_drift"
+    estimator:
+      kind: procedure
+      adapter: aug_poly_drift
+      roles: [augmenter]
+      params:
+        - name: coeff_min
+          type: double_array
+          default: [-0.01, -0.01, -0.01]
+        - name: coeff_max
+          type: double_array
+          default: [0.01, 0.01, 0.01]
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.edge_artifacts.detector_rolloff"
     family: "augmentation.edge_artifacts"
     category: "augmentation"
@@ -5772,6 +5887,31 @@ methods:
       - "n4m_augmentation_edge_curvature_destroy"
     legacy_ids:
       - "augmentation.edge_artifacts.edge_curvature"
+    estimator:
+      kind: procedure
+      adapter: aug_edge_curvature
+      roles: [augmenter]
+      inputs:
+        axis: required
+      params:
+        - name: curvature_strength
+          type: double
+          default: 0.02
+          min: 0.0
+        - name: curvature_type
+          type: enum
+          default: random
+          choices: [random, smile, frown, asymmetric]
+        - name: asymmetry
+          type: double
+          default: 0.0
+        - name: edge_focus
+          type: double
+          default: 0.7
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.edge_artifacts.stray_light"
     family: "augmentation.edge_artifacts"
     category: "augmentation"
@@ -5852,6 +5992,42 @@ methods:
       - "n4m_augmentation_truncated_peak_destroy"
     legacy_ids:
       - "augmentation.edge_artifacts.truncated_peak"
+    estimator:
+      kind: procedure
+      adapter: aug_truncated_peak
+      roles: [augmenter]
+      inputs:
+        axis: required
+      params:
+        - name: peak_probability
+          type: double
+          default: 0.5
+          min: 0.0
+          max: 1.0
+        - name: amplitude_min
+          type: double
+          default: 0.01
+        - name: amplitude_max
+          type: double
+          default: 0.1
+        - name: width_min
+          type: double
+          default: 50.0
+          min: 0.0
+        - name: width_max
+          type: double
+          default: 200.0
+          min: 0.0
+        - name: left_edge
+          type: bool
+          default: true
+        - name: right_edge
+          type: bool
+          default: true
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.environmental.moisture"
     family: "augmentation.environmental"
     category: "augmentation"
@@ -6052,6 +6228,19 @@ methods:
       - "n4m_augmentation_gaussian_noise_destroy"
     legacy_ids:
       - "augmentation.noise.gaussian_noise"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: sigma
+          type: double
+          default: 0.01
+          min: 0.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.noise.hetero_noise"
     family: "augmentation.noise"
     category: "augmentation"
@@ -6092,6 +6281,23 @@ methods:
       - "n4m_augmentation_hetero_noise_destroy"
     legacy_ids:
       - "augmentation.noise.hetero_noise"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: noise_base
+          type: double
+          default: 0.001
+          min: 0.0
+        - name: noise_signal_dep
+          type: double
+          default: 0.01
+          min: 0.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.noise.multiplicative_noise"
     family: "augmentation.noise"
     category: "augmentation"
@@ -6132,6 +6338,19 @@ methods:
       - "n4m_augmentation_multiplicative_noise_destroy"
     legacy_ids:
       - "augmentation.noise.multiplicative_noise"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: sigma_gain
+          type: double
+          default: 0.01
+          min: 0.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.noise.spike_noise"
     family: "augmentation.noise"
     category: "augmentation"
@@ -6172,6 +6391,29 @@ methods:
       - "n4m_augmentation_spike_noise_destroy"
     legacy_ids:
       - "augmentation.noise.spike_noise"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: n_spikes_min
+          type: int
+          default: 1
+          min: 0
+        - name: n_spikes_max
+          type: int
+          default: 3
+          min: 0
+        - name: amplitude_min
+          type: double
+          default: -0.1
+        - name: amplitude_max
+          type: double
+          default: 0.1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.random.random_x_op"
     family: "augmentation.random"
     category: "augmentation"
@@ -6212,6 +6454,25 @@ methods:
       - "n4m_augmentation_random_x_op_destroy"
     legacy_ids:
       - "augmentation.random.random_x_op"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: op_kind
+          type: enum
+          default: multiply
+          choices: [multiply, add, subtract]
+        - name: operator_range_min
+          type: double
+          default: 0.97
+        - name: operator_range_max
+          type: double
+          default: 1.03
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.random.rotate_translate"
     family: "augmentation.random"
     category: "augmentation"
@@ -6252,6 +6513,21 @@ methods:
       - "n4m_augmentation_rotate_translate_destroy"
     legacy_ids:
       - "augmentation.random.rotate_translate"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: p_range
+          type: double
+          default: 2.0
+        - name: y_factor
+          type: double
+          default: 3.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.scattering.batch_effect"
     family: "augmentation.scattering"
     category: "augmentation"
@@ -6292,6 +6568,31 @@ methods:
       - "n4m_augmentation_batch_effect_destroy"
     legacy_ids:
       - "augmentation.scattering.batch_effect"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: offset_std
+          type: double
+          default: 0.0
+          min: 0.0
+        - name: slope_std
+          type: double
+          default: 0.0
+          min: 0.0
+        - name: gain_std
+          type: double
+          default: 0.0
+          min: 0.0
+        - name: variation_scope
+          type: enum
+          default: sample
+          choices: [sample, batch]
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.scattering.dead_band"
     family: "augmentation.scattering"
     category: "augmentation"
@@ -6332,6 +6633,40 @@ methods:
       - "n4m_augmentation_dead_band_destroy"
     legacy_ids:
       - "augmentation.scattering.dead_band"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: n_bands
+          type: int
+          default: 1
+          min: 0
+        - name: width_low
+          type: int
+          default: 5
+          min: 1
+        - name: width_high
+          type: int
+          default: 10
+          min: 1
+        - name: noise_std
+          type: double
+          default: 0.05
+          min: 0.0
+        - name: probability
+          type: double
+          default: 0.0
+          min: 0.0
+          max: 1.0
+        - name: variation_scope
+          type: enum
+          default: sample
+          choices: [sample, batch]
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.scattering.emsc_distort"
     family: "augmentation.scattering"
     category: "augmentation"
@@ -6372,6 +6707,40 @@ methods:
       - "n4m_augmentation_emsc_distort_destroy"
     legacy_ids:
       - "augmentation.scattering.emsc_distort"
+    estimator:
+      kind: procedure
+      adapter: aug_emsc_distort
+      roles: [augmenter]
+      inputs:
+        axis: required
+      params:
+        - name: mult_low
+          type: double
+          default: 0.9
+        - name: mult_high
+          type: double
+          default: 1.1
+        - name: add_low
+          type: double
+          default: -0.05
+        - name: add_high
+          type: double
+          default: 0.05
+        - name: polynomial_order
+          type: int
+          default: 2
+          min: 0
+        - name: polynomial_strength
+          type: double
+          default: 0.02
+          min: 0.0
+        - name: correlation
+          type: double
+          default: 0.3
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.scattering.instrument_broaden"
     family: "augmentation.scattering"
     category: "augmentation"
@@ -6412,6 +6781,36 @@ methods:
       - "n4m_augmentation_instrument_broaden_destroy"
     legacy_ids:
       - "augmentation.scattering.instrument_broaden"
+    estimator:
+      kind: procedure
+      adapter: aug_instrument_broaden
+      roles: [augmenter]
+      inputs:
+        axis: optional
+      params:
+        - name: fwhm
+          type: double
+          default: 5.0
+          min: 0.0
+        - name: use_fwhm_range
+          type: bool
+          default: false
+        - name: fwhm_low
+          type: double
+          default: 3.0
+          min: 0.0
+        - name: fwhm_high
+          type: double
+          default: 8.0
+          min: 0.0
+        - name: variation_scope
+          type: enum
+          default: sample
+          choices: [sample, batch]
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.scattering.particle_size"
     family: "augmentation.scattering"
     category: "augmentation"
@@ -6492,6 +6891,27 @@ methods:
       - "n4m_augmentation_scatter_sim_msc_destroy"
     legacy_ids:
       - "augmentation.scattering.scatter_sim_msc"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: a_low
+          type: double
+          default: -0.05
+        - name: a_high
+          type: double
+          default: 0.05
+        - name: b_low
+          type: double
+          default: 0.9
+        - name: b_high
+          type: double
+          default: 1.1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.spectral.band_mask"
     family: "augmentation.spectral"
     category: "augmentation"
@@ -6532,6 +6952,35 @@ methods:
       - "n4m_augmentation_band_mask_destroy"
     legacy_ids:
       - "augmentation.spectral.band_mask"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: n_bands_lo
+          type: int
+          default: 1
+          min: 0
+        - name: n_bands_hi
+          type: int
+          default: 3
+          min: 0
+        - name: bw_lo
+          type: int
+          default: 5
+          min: 1
+        - name: bw_hi
+          type: int
+          default: 15
+          min: 1
+        - name: mode
+          type: enum
+          default: zero
+          choices: [zero, interp]
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.spectral.band_perturb"
     family: "augmentation.spectral"
     category: "augmentation"
@@ -6572,6 +7021,39 @@ methods:
       - "n4m_augmentation_band_perturb_destroy"
     legacy_ids:
       - "augmentation.spectral.band_perturb"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: n_bands
+          type: int
+          default: 3
+          min: 0
+        - name: bw_lo
+          type: int
+          default: 5
+          min: 1
+        - name: bw_hi
+          type: int
+          default: 15
+          min: 1
+        - name: gain_lo
+          type: double
+          default: 0.9
+        - name: gain_hi
+          type: double
+          default: 1.1
+        - name: offset_lo
+          type: double
+          default: -0.01
+        - name: offset_hi
+          type: double
+          default: 0.01
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.spectral.channel_dropout"
     family: "augmentation.spectral"
     category: "augmentation"
@@ -6612,6 +7094,24 @@ methods:
       - "n4m_augmentation_channel_dropout_destroy"
     legacy_ids:
       - "augmentation.spectral.channel_dropout"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: dropout_prob
+          type: double
+          default: 0.05
+          min: 0.0
+          max: 1.0
+        - name: mode
+          type: enum
+          default: zero
+          choices: [zero, interp]
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.spectral.gauss_jitter"
     family: "augmentation.spectral"
     category: "augmentation"
@@ -6652,6 +7152,27 @@ methods:
       - "n4m_augmentation_gauss_jitter_destroy"
     legacy_ids:
       - "augmentation.spectral.gauss_jitter"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: sigma_lo
+          type: double
+          default: 0.5
+          min: 0.0
+        - name: sigma_hi
+          type: double
+          default: 1.5
+          min: 0.0
+        - name: kernel_width
+          type: int
+          default: 9
+          min: 1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.spectral.local_clip"
     family: "augmentation.spectral"
     category: "augmentation"
@@ -6692,6 +7213,27 @@ methods:
       - "n4m_augmentation_local_clip_destroy"
     legacy_ids:
       - "augmentation.spectral.local_clip"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: n_regions
+          type: int
+          default: 1
+          min: 0
+        - name: width_lo
+          type: int
+          default: 5
+          min: 1
+        - name: width_hi
+          type: int
+          default: 15
+          min: 1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.spectral.magnitude_warp"
     family: "augmentation.spectral"
     category: "augmentation"
@@ -6732,6 +7274,27 @@ methods:
       - "n4m_augmentation_magnitude_warp_destroy"
     legacy_ids:
       - "augmentation.spectral.magnitude_warp"
+    estimator:
+      kind: procedure
+      adapter: aug_magnitude_warp
+      roles: [augmenter]
+      inputs:
+        axis: optional
+      params:
+        - name: n_control_points
+          type: int
+          default: 5
+          min: 1
+        - name: gain_lo
+          type: double
+          default: 0.9
+        - name: gain_hi
+          type: double
+          default: 1.1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.spectral.unsharp_mask"
     family: "augmentation.spectral"
     category: "augmentation"
@@ -6772,6 +7335,29 @@ methods:
       - "n4m_augmentation_unsharp_mask_destroy"
     legacy_ids:
       - "augmentation.spectral.unsharp_mask"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: amount_lo
+          type: double
+          default: 0.1
+        - name: amount_hi
+          type: double
+          default: 0.5
+        - name: sigma
+          type: double
+          default: 1.0
+          min: 0.0
+        - name: kernel_width
+          type: int
+          default: 11
+          min: 1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.splines.spline_curve_simplification"
     family: "augmentation.splines"
     category: "augmentation"
@@ -6814,6 +7400,21 @@ methods:
       - "n4m_augmentation_spline_curve_simplification_destroy"
     legacy_ids:
       - "augmentation.splines.spline_curve_simplification"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: spline_points
+          type: int
+          default: -1
+        - name: uniform
+          type: bool
+          default: false
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.splines.spline_smoothing"
     family: "augmentation.splines"
     category: "augmentation"
@@ -6854,6 +7455,15 @@ methods:
       - "n4m_augmentation_spline_smoothing_destroy"
     legacy_ids:
       - "augmentation.splines.spline_smoothing"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.splines.spline_x_perturbations"
     family: "augmentation.splines"
     category: "augmentation"
@@ -6894,6 +7504,29 @@ methods:
       - "n4m_augmentation_spline_x_perturbations_destroy"
     legacy_ids:
       - "augmentation.splines.spline_x_perturbations"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: spline_degree
+          type: int
+          default: 3
+          min: 1
+        - name: perturbation_density
+          type: double
+          default: 0.05
+          min: 0.0
+        - name: perturbation_range_min
+          type: double
+          default: -0.1
+        - name: perturbation_range_max
+          type: double
+          default: 0.1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.splines.spline_x_simplification"
     family: "augmentation.splines"
     category: "augmentation"
@@ -6936,6 +7569,21 @@ methods:
       - "n4m_augmentation_spline_x_simplification_destroy"
     legacy_ids:
       - "augmentation.splines.spline_x_simplification"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: spline_points
+          type: int
+          default: -1
+        - name: uniform
+          type: bool
+          default: false
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.splines.spline_y_perturbations"
     family: "augmentation.splines"
     category: "augmentation"
@@ -6976,6 +7624,22 @@ methods:
       - "n4m_augmentation_spline_y_perturbations_destroy"
     legacy_ids:
       - "augmentation.splines.spline_y_perturbations"
+    estimator:
+      kind: procedure
+      adapter: augmentation_dispatch
+      roles: [augmenter]
+      params:
+        - name: spline_points
+          type: int
+          default: -1
+        - name: perturbation_intensity
+          type: double
+          default: 0.005
+          min: 0.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.wavelength.local_warp"
     family: "augmentation.wavelength"
     category: "augmentation"
@@ -7016,6 +7680,25 @@ methods:
       - "n4m_augmentation_local_warp_destroy"
     legacy_ids:
       - "augmentation.wavelength.local_warp"
+    estimator:
+      kind: procedure
+      adapter: aug_local_warp
+      roles: [augmenter]
+      inputs:
+        axis: optional
+      params:
+        - name: n_control_points
+          type: int
+          default: 5
+          min: 1
+        - name: max_shift
+          type: double
+          default: 1.0
+          min: 0.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.wavelength.wavelength_shift"
     family: "augmentation.wavelength"
     category: "augmentation"
@@ -7056,6 +7739,23 @@ methods:
       - "n4m_augmentation_wavelength_shift_destroy"
     legacy_ids:
       - "augmentation.wavelength.wavelength_shift"
+    estimator:
+      kind: procedure
+      adapter: aug_wavelength_shift
+      roles: [augmenter]
+      inputs:
+        axis: optional
+      params:
+        - name: shift_lo
+          type: double
+          default: -1.0
+        - name: shift_hi
+          type: double
+          default: 1.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "augmentation.wavelength.wavelength_stretch"
     family: "augmentation.wavelength"
     category: "augmentation"
@@ -7096,6 +7796,23 @@ methods:
       - "n4m_augmentation_wavelength_stretch_destroy"
     legacy_ids:
       - "augmentation.wavelength.wavelength_stretch"
+    estimator:
+      kind: procedure
+      adapter: aug_wavelength_stretch
+      roles: [augmenter]
+      inputs:
+        axis: optional
+      params:
+        - name: stretch_lo
+          type: double
+          default: 0.99
+        - name: stretch_hi
+          type: double
+          default: 1.01
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "splitters.binned_strat_group_kfold"
     family: "splitters"
     category: "splitters"
@@ -7138,6 +7855,33 @@ methods:
       - "n4m_model_selection_binned_strat_group_kfold_split_fold"
     legacy_ids:
       - "splitters.binned_strat_group_kfold"
+    estimator:
+      kind: procedure
+      adapter: splitter
+      roles: [splitter]
+      inputs:
+        y: required
+        groups: required
+      params:
+        - name: n_splits
+          type: int
+          default: 5
+          min: 2
+        - name: n_bins
+          type: int
+          default: 5
+          min: 1
+        - name: strategy
+          type: enum
+          default: uniform
+          choices: [uniform, quantile]
+        - name: shuffle
+          type: bool
+          default: true
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "splitters.kbins_stratified"
     family: "splitters"
     category: "splitters"
@@ -7178,6 +7922,30 @@ methods:
       - "n4m_model_selection_kbins_stratified_split"
     legacy_ids:
       - "splitters.kbins_stratified"
+    estimator:
+      kind: procedure
+      adapter: splitter
+      roles: [splitter]
+      inputs:
+        y: required
+      params:
+        - name: test_size
+          type: double
+          default: 0.25
+          min: 0.0
+          max: 1.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
+        - name: n_bins
+          type: int
+          default: 5
+          min: 1
+        - name: strategy
+          type: enum
+          default: uniform
+          choices: [uniform, quantile]
   - method_id: "splitters.kennard_stone"
     family: "splitters"
     category: "splitters"
@@ -7218,6 +7986,16 @@ methods:
       - "n4m_model_selection_kennard_stone_split"
     legacy_ids:
       - "splitters.kennard_stone"
+    estimator:
+      kind: procedure
+      adapter: splitter
+      roles: [splitter]
+      params:
+        - name: test_size
+          type: double
+          default: 0.25
+          min: 0.0
+          max: 1.0
   - method_id: "splitters.kmeans"
     family: "splitters"
     category: "splitters"
@@ -7258,6 +8036,24 @@ methods:
       - "n4m_model_selection_kmeans_split"
     legacy_ids:
       - "splitters.kmeans"
+    estimator:
+      kind: procedure
+      adapter: splitter
+      roles: [splitter]
+      params:
+        - name: test_size
+          type: double
+          default: 0.25
+          min: 0.0
+          max: 1.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
+        - name: max_iter
+          type: int
+          default: 100
+          min: 1
   - method_id: "splitters.split_splitter"
     family: "splitters"
     category: "splitters"
@@ -7298,6 +8094,20 @@ methods:
       - "n4m_model_selection_data_twinning_split"
     legacy_ids:
       - "splitters.split_splitter"
+    estimator:
+      kind: procedure
+      adapter: splitter
+      roles: [splitter]
+      params:
+        - name: test_size
+          type: double
+          default: 0.25
+          min: 0.0
+          max: 1.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "splitters.spxy"
     family: "splitters"
     category: "splitters"
@@ -7338,6 +8148,18 @@ methods:
       - "n4m_model_selection_spxy_split"
     legacy_ids:
       - "splitters.spxy"
+    estimator:
+      kind: procedure
+      adapter: splitter
+      roles: [splitter]
+      inputs:
+        y: required
+      params:
+        - name: test_size
+          type: double
+          default: 0.25
+          min: 0.0
+          max: 1.0
   - method_id: "splitters.spxy_fold"
     family: "splitters"
     category: "splitters"
@@ -7380,6 +8202,21 @@ methods:
       - "n4m_model_selection_spxy_fold_split_fold"
     legacy_ids:
       - "splitters.spxy_fold"
+    estimator:
+      kind: procedure
+      adapter: splitter
+      roles: [splitter]
+      inputs:
+        y: required
+      params:
+        - name: n_splits
+          type: int
+          default: 5
+          min: 2
+        - name: y_metric
+          type: enum
+          default: euclidean
+          choices: [x_only, euclidean, hamming]
   - method_id: "splitters.spxy_g_fold"
     family: "splitters"
     category: "splitters"
@@ -7422,6 +8259,26 @@ methods:
       - "n4m_model_selection_spxy_g_fold_split_fold"
     legacy_ids:
       - "splitters.spxy_g_fold"
+    estimator:
+      kind: procedure
+      adapter: splitter
+      roles: [splitter]
+      inputs:
+        y: required
+        groups: required
+      params:
+        - name: n_splits
+          type: int
+          default: 5
+          min: 2
+        - name: y_metric
+          type: enum
+          default: euclidean
+          choices: [x_only, euclidean, hamming]
+        - name: aggregation
+          type: enum
+          default: mean
+          choices: [mean, median]
   - method_id: "splitters.systematic_circular"
     family: "splitters"
     category: "splitters"
@@ -7462,6 +8319,22 @@ methods:
       - "n4m_model_selection_systematic_circular_split"
     legacy_ids:
       - "splitters.systematic_circular"
+    estimator:
+      kind: procedure
+      adapter: splitter
+      roles: [splitter]
+      inputs:
+        y: required
+      params:
+        - name: test_size
+          type: double
+          default: 0.25
+          min: 0.0
+          max: 1.0
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "filters.composite"
     family: "filters"
     category: "filters"
@@ -7716,6 +8589,20 @@ methods:
       - "n4m_outlier_detection_hotelling_t2"
     legacy_ids:
       - "utilities.hotelling_t2"
+    estimator:
+      kind: procedure
+      adapter: hotelling_t2
+      roles: [generic]
+      params:
+        - name: n_components
+          type: int
+          default: 5
+          min: 1
+        - name: alpha
+          type: double
+          default: 0.05
+          min: 0.0
+          max: 1.0
   - method_id: "utilities.q_residuals"
     family: "utilities"
     category: "utilities"
@@ -7752,6 +8639,20 @@ methods:
       - "n4m_outlier_detection_q_residuals"
     legacy_ids:
       - "utilities.q_residuals"
+    estimator:
+      kind: procedure
+      adapter: q_residuals
+      roles: [generic]
+      params:
+        - name: n_components
+          type: int
+          default: 5
+          min: 1
+        - name: alpha
+          type: double
+          default: 0.05
+          min: 0.0
+          max: 1.0
   - method_id: "utilities.signal_type_detector"
     family: "utilities"
     category: "utilities"
@@ -7788,6 +8689,18 @@ methods:
       - "n4m_transform_signal_type_detector"
     legacy_ids:
       - "utilities.signal_type_detector"
+    estimator:
+      kind: procedure
+      adapter: signal_type
+      roles: [generic]
+      inputs:
+        axis: optional
+      params:
+        - name: confidence_threshold
+          type: double
+          default: 0.7
+          min: 0.0
+          max: 1.0
   - method_id: "utilities.transfer_metrics"
     family: "utilities"
     category: "utilities"
@@ -7824,6 +8737,25 @@ methods:
       - "n4m_domain_adaptation_transfer_metrics_compute"
     legacy_ids:
       - "utilities.transfer_metrics"
+    estimator:
+      kind: procedure
+      adapter: transfer_metrics
+      roles: [generic]
+      inputs:
+        target_domain: required
+      params:
+        - name: n_components
+          type: int
+          default: 10
+          min: 1
+        - name: k_neighbors
+          type: int
+          default: 10
+          min: 1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "aom_pop.pop_pls"
     family: "aom_pop.aom"
     category: "aom_pop"
@@ -7970,6 +8902,17 @@ methods:
       - "n4m_metrics_approximate_press_compute"
     legacy_ids:
       - "diagnostics.approximate_press"
+    estimator:
+      kind: procedure
+      adapter: approximate_press
+      roles: [generic]
+      inputs:
+        y: required
+      params:
+        - name: max_components
+          type: int
+          default: 10
+          min: 1
   - method_id: "filters.correlation"
     family: "filters.feature"
     category: "filters"
@@ -10788,6 +11731,12 @@ methods:
       - "n4m_lowlevel_moments_subtract"
     legacy_ids:
       - "utilities.moments"
+    estimator:
+      kind: procedure
+      adapter: moments
+      roles: [generic]
+      inputs:
+        y: required
   - method_id: "utilities.sweep"
     family: "utilities.sweep"
     category: "utilities"
@@ -10834,6 +11783,42 @@ methods:
       - "n4m_model_selection_sweep_run"
     legacy_ids:
       - "utilities.sweep"
+    estimator:
+      kind: procedure
+      adapter: sweep
+      roles: [generic]
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: cv
+          type: int
+          default: 5
+          min: 2
+        - name: ridge_lambdas
+          type: double_array
+          default: [0.01, 0.1, 1.0, 10.0]
+          min: 0.0
+        - name: pls_components
+          type: int_array
+          default: [1, 2, 3, 4, 5]
+          min: 1
+        - name: heads
+          type: enum
+          default: ridge
+          choices: [ridge, pls, ridge_pls]
+        - name: center_x
+          type: bool
+          default: true
+        - name: scale_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
+        - name: scale_y
+          type: bool
+          default: true
   - method_id: aom_pop.calibration
     family: aom_pop.aom
     category: aom_pop

@@ -47,6 +47,12 @@ c_surface:
   - "n4m_metrics_regression_metrics_rpd"
   - "n4m_metrics_regression_metrics_rpiq"
   - "n4m_metrics_regression_metrics_sep"
+estimator:
+  kind: "procedure"
+  adapter: "regression_metrics"
+  roles: "[generic]"
+  inputs:
+    y: "required"
 fq_name: "n4m.metrics.scoring.regression_metrics"
 leaf: "regression_metrics"
 legacy_ids:

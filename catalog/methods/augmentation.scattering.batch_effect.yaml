@@ -37,6 +37,31 @@ c_surface:
   - "n4m_augmentation_batch_effect_apply"
   - "n4m_augmentation_batch_effect_create"
   - "n4m_augmentation_batch_effect_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "augmentation_dispatch"
+  roles: "[augmenter]"
+  params:
+    - name: "offset_std"
+      type: "double"
+      default: 0.0
+      min: 0.0
+    - name: "slope_std"
+      type: "double"
+      default: 0.0
+      min: 0.0
+    - name: "gain_std"
+      type: "double"
+      default: 0.0
+      min: 0.0
+    - name: "variation_scope"
+      type: "enum"
+      default: "sample"
+      choices: "[sample, batch]"
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.scattering.batch_effect"
 leaf: "batch_effect"
 legacy_ids:

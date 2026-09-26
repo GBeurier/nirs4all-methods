@@ -37,6 +37,27 @@ c_surface:
   - "n4m_augmentation_linear_drift_apply"
   - "n4m_augmentation_linear_drift_create"
   - "n4m_augmentation_linear_drift_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "augmentation_dispatch"
+  roles: "[augmenter]"
+  params:
+    - name: "offset_min"
+      type: "double"
+      default: -0.05
+    - name: "offset_max"
+      type: "double"
+      default: 0.05
+    - name: "slope_min"
+      type: "double"
+      default: -0.01
+    - name: "slope_max"
+      type: "double"
+      default: 0.01
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.drift.linear_drift"
 leaf: "linear_drift"
 legacy_ids:

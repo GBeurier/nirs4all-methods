@@ -8,19 +8,19 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**110 of 213 catalog entries covered.**
+**161 of 213 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
 | aom_pop | 0 | 21 |
-| augmentation | 0 | 39 |
-| diagnostics | 0 | 5 |
+| augmentation | 31 | 39 |
+| diagnostics | 5 | 5 |
 | filters | 0 | 7 |
 | models | 25 | 38 |
 | preprocessing | 60 | 62 |
 | selection | 25 | 26 |
-| splitters | 0 | 9 |
-| utilities | 0 | 6 |
+| splitters | 9 | 9 |
+| utilities | 6 | 6 |
 
 | Method | Kind | Roles | Validated in |
 |---|---|---|---|
@@ -45,50 +45,50 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `aom_pop.ridge_mkl_superblock` | not yet | - | - |
 | `aom_pop.ridge_superblock` | not yet | - | - |
 | `aom_pop.robust_hpo` | not yet | - | - |
-| `augmentation.drift.linear_drift` | not yet | - | - |
-| `augmentation.drift.path_length` | not yet | - | - |
-| `augmentation.drift.poly_drift` | not yet | - | - |
+| `augmentation.drift.linear_drift` | procedure | augmenter | manifest only |
+| `augmentation.drift.path_length` | procedure | augmenter | manifest only |
+| `augmentation.drift.poly_drift` | procedure | augmenter | manifest only |
 | `augmentation.edge_artifacts.detector_rolloff` | not yet | - | - |
 | `augmentation.edge_artifacts.edge_artifacts` | not yet | - | - |
-| `augmentation.edge_artifacts.edge_curvature` | not yet | - | - |
+| `augmentation.edge_artifacts.edge_curvature` | procedure | augmenter | manifest only |
 | `augmentation.edge_artifacts.stray_light` | not yet | - | - |
-| `augmentation.edge_artifacts.truncated_peak` | not yet | - | - |
+| `augmentation.edge_artifacts.truncated_peak` | procedure | augmenter | manifest only |
 | `augmentation.environmental.moisture` | not yet | - | - |
 | `augmentation.environmental.temperature` | not yet | - | - |
 | `augmentation.mixup.local_mixup` | not yet | - | - |
 | `augmentation.mixup.mixup` | not yet | - | - |
-| `augmentation.noise.gaussian_noise` | not yet | - | - |
-| `augmentation.noise.hetero_noise` | not yet | - | - |
-| `augmentation.noise.multiplicative_noise` | not yet | - | - |
-| `augmentation.noise.spike_noise` | not yet | - | - |
-| `augmentation.random.random_x_op` | not yet | - | - |
-| `augmentation.random.rotate_translate` | not yet | - | - |
-| `augmentation.scattering.batch_effect` | not yet | - | - |
-| `augmentation.scattering.dead_band` | not yet | - | - |
-| `augmentation.scattering.emsc_distort` | not yet | - | - |
-| `augmentation.scattering.instrument_broaden` | not yet | - | - |
+| `augmentation.noise.gaussian_noise` | procedure | augmenter | manifest only |
+| `augmentation.noise.hetero_noise` | procedure | augmenter | manifest only |
+| `augmentation.noise.multiplicative_noise` | procedure | augmenter | manifest only |
+| `augmentation.noise.spike_noise` | procedure | augmenter | manifest only |
+| `augmentation.random.random_x_op` | procedure | augmenter | manifest only |
+| `augmentation.random.rotate_translate` | procedure | augmenter | manifest only |
+| `augmentation.scattering.batch_effect` | procedure | augmenter | manifest only |
+| `augmentation.scattering.dead_band` | procedure | augmenter | manifest only |
+| `augmentation.scattering.emsc_distort` | procedure | augmenter | manifest only |
+| `augmentation.scattering.instrument_broaden` | procedure | augmenter | manifest only |
 | `augmentation.scattering.particle_size` | not yet | - | - |
-| `augmentation.scattering.scatter_sim_msc` | not yet | - | - |
-| `augmentation.spectral.band_mask` | not yet | - | - |
-| `augmentation.spectral.band_perturb` | not yet | - | - |
-| `augmentation.spectral.channel_dropout` | not yet | - | - |
-| `augmentation.spectral.gauss_jitter` | not yet | - | - |
-| `augmentation.spectral.local_clip` | not yet | - | - |
-| `augmentation.spectral.magnitude_warp` | not yet | - | - |
-| `augmentation.spectral.unsharp_mask` | not yet | - | - |
-| `augmentation.splines.spline_curve_simplification` | not yet | - | - |
-| `augmentation.splines.spline_smoothing` | not yet | - | - |
-| `augmentation.splines.spline_x_perturbations` | not yet | - | - |
-| `augmentation.splines.spline_x_simplification` | not yet | - | - |
-| `augmentation.splines.spline_y_perturbations` | not yet | - | - |
-| `augmentation.wavelength.local_warp` | not yet | - | - |
-| `augmentation.wavelength.wavelength_shift` | not yet | - | - |
-| `augmentation.wavelength.wavelength_stretch` | not yet | - | - |
-| `diagnostics.approximate_press` | not yet | - | - |
-| `diagnostics.model_selection` | not yet | - | - |
-| `diagnostics.pls_diagnostics` | not yet | - | - |
-| `diagnostics.pls_monitoring` | not yet | - | - |
-| `diagnostics.regression_metrics` | not yet | - | - |
+| `augmentation.scattering.scatter_sim_msc` | procedure | augmenter | manifest only |
+| `augmentation.spectral.band_mask` | procedure | augmenter | manifest only |
+| `augmentation.spectral.band_perturb` | procedure | augmenter | manifest only |
+| `augmentation.spectral.channel_dropout` | procedure | augmenter | manifest only |
+| `augmentation.spectral.gauss_jitter` | procedure | augmenter | manifest only |
+| `augmentation.spectral.local_clip` | procedure | augmenter | manifest only |
+| `augmentation.spectral.magnitude_warp` | procedure | augmenter | manifest only |
+| `augmentation.spectral.unsharp_mask` | procedure | augmenter | manifest only |
+| `augmentation.splines.spline_curve_simplification` | procedure | augmenter | manifest only |
+| `augmentation.splines.spline_smoothing` | procedure | augmenter | manifest only |
+| `augmentation.splines.spline_x_perturbations` | procedure | augmenter | manifest only |
+| `augmentation.splines.spline_x_simplification` | procedure | augmenter | manifest only |
+| `augmentation.splines.spline_y_perturbations` | procedure | augmenter | manifest only |
+| `augmentation.wavelength.local_warp` | procedure | augmenter | manifest only |
+| `augmentation.wavelength.wavelength_shift` | procedure | augmenter | manifest only |
+| `augmentation.wavelength.wavelength_stretch` | procedure | augmenter | manifest only |
+| `diagnostics.approximate_press` | procedure | generic | manifest only |
+| `diagnostics.model_selection` | procedure | generic | manifest only |
+| `diagnostics.pls_diagnostics` | procedure | generic | manifest only |
+| `diagnostics.pls_monitoring` | procedure | generic | manifest only |
+| `diagnostics.regression_metrics` | procedure | generic | manifest only |
 | `filters.composite` | not yet | - | - |
 | `filters.correlation` | not yet | - | - |
 | `filters.high_leverage` | not yet | - | - |
@@ -222,18 +222,18 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `selection.vissa` | estimator | selector | Python, R, JS/WASM |
 | `selection.wvc` | estimator | selector | Python, R, JS/WASM |
 | `selection.wvc_threshold` | estimator | selector | Python, R, JS/WASM |
-| `splitters.binned_strat_group_kfold` | not yet | - | - |
-| `splitters.kbins_stratified` | not yet | - | - |
-| `splitters.kennard_stone` | not yet | - | - |
-| `splitters.kmeans` | not yet | - | - |
-| `splitters.split_splitter` | not yet | - | - |
-| `splitters.spxy` | not yet | - | - |
-| `splitters.spxy_fold` | not yet | - | - |
-| `splitters.spxy_g_fold` | not yet | - | - |
-| `splitters.systematic_circular` | not yet | - | - |
-| `utilities.hotelling_t2` | not yet | - | - |
-| `utilities.moments` | not yet | - | - |
-| `utilities.q_residuals` | not yet | - | - |
-| `utilities.signal_type_detector` | not yet | - | - |
-| `utilities.sweep` | not yet | - | - |
-| `utilities.transfer_metrics` | not yet | - | - |
+| `splitters.binned_strat_group_kfold` | procedure | splitter | manifest only |
+| `splitters.kbins_stratified` | procedure | splitter | manifest only |
+| `splitters.kennard_stone` | procedure | splitter | manifest only |
+| `splitters.kmeans` | procedure | splitter | manifest only |
+| `splitters.split_splitter` | procedure | splitter | manifest only |
+| `splitters.spxy` | procedure | splitter | manifest only |
+| `splitters.spxy_fold` | procedure | splitter | manifest only |
+| `splitters.spxy_g_fold` | procedure | splitter | manifest only |
+| `splitters.systematic_circular` | procedure | splitter | manifest only |
+| `utilities.hotelling_t2` | procedure | generic | manifest only |
+| `utilities.moments` | procedure | generic | manifest only |
+| `utilities.q_residuals` | procedure | generic | manifest only |
+| `utilities.signal_type_detector` | procedure | generic | manifest only |
+| `utilities.sweep` | procedure | generic | manifest only |
+| `utilities.transfer_metrics` | procedure | generic | manifest only |

@@ -37,6 +37,23 @@ c_surface:
   - "n4m_augmentation_path_length_apply"
   - "n4m_augmentation_path_length_create"
   - "n4m_augmentation_path_length_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "augmentation_dispatch"
+  roles: "[augmenter]"
+  params:
+    - name: "path_length_std"
+      type: "double"
+      default: 0.05
+      min: 0.0
+    - name: "min_path_length"
+      type: "double"
+      default: 0.1
+      min: 0.0
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.drift.path_length"
 leaf: "path_length"
 legacy_ids:

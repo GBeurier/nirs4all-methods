@@ -80,6 +80,12 @@ add_test(NAME n4m_filter_role_tests COMMAND n4m_filter_role_tests)
 add_executable(n4m_estimator_tests test_estimator.cpp)
 target_link_libraries(n4m_estimator_tests PRIVATE n4m_c)
 add_test(NAME n4m_estimator_tests COMMAND n4m_estimator_tests)
+# Procedure results are compared field by field through the internal
+# MethodResult layout.
+add_executable(n4m_procedure_tests test_procedure.cpp)
+target_link_libraries(n4m_procedure_tests PRIVATE n4m_c)
+target_include_directories(n4m_procedure_tests PRIVATE ${CMAKE_SOURCE_DIR}/cpp/src)
+add_test(NAME n4m_procedure_tests COMMAND n4m_procedure_tests)
 set_tests_properties(n4m_tests PROPERTIES
     LABELS "smoke;abi;parity"
     TIMEOUT 60)

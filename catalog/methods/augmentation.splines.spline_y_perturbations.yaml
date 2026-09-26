@@ -37,6 +37,22 @@ c_surface:
   - "n4m_augmentation_spline_y_perturbations_apply"
   - "n4m_augmentation_spline_y_perturbations_create"
   - "n4m_augmentation_spline_y_perturbations_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "augmentation_dispatch"
+  roles: "[augmenter]"
+  params:
+    - name: "spline_points"
+      type: "int"
+      default: -1
+    - name: "perturbation_intensity"
+      type: "double"
+      default: 0.005
+      min: 0.0
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.splines.spline_y_perturbations"
 leaf: "spline_y_perturbations"
 legacy_ids:

@@ -37,6 +37,19 @@ c_surface:
   - "n4m_augmentation_multiplicative_noise_apply"
   - "n4m_augmentation_multiplicative_noise_create"
   - "n4m_augmentation_multiplicative_noise_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "augmentation_dispatch"
+  roles: "[augmenter]"
+  params:
+    - name: "sigma_gain"
+      type: "double"
+      default: 0.01
+      min: 0.0
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.noise.multiplicative_noise"
 leaf: "multiplicative_noise"
 legacy_ids:

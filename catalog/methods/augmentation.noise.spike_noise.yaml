@@ -37,6 +37,29 @@ c_surface:
   - "n4m_augmentation_spike_noise_apply"
   - "n4m_augmentation_spike_noise_create"
   - "n4m_augmentation_spike_noise_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "augmentation_dispatch"
+  roles: "[augmenter]"
+  params:
+    - name: "n_spikes_min"
+      type: "int"
+      default: 1
+      min: 0
+    - name: "n_spikes_max"
+      type: "int"
+      default: 3
+      min: 0
+    - name: "amplitude_min"
+      type: "double"
+      default: -0.1
+    - name: "amplitude_max"
+      type: "double"
+      default: 0.1
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.noise.spike_noise"
 leaf: "spike_noise"
 legacy_ids:

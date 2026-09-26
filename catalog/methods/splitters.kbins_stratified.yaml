@@ -37,6 +37,30 @@ c_surface:
   - "n4m_model_selection_kbins_stratified_create"
   - "n4m_model_selection_kbins_stratified_destroy"
   - "n4m_model_selection_kbins_stratified_split"
+estimator:
+  kind: "procedure"
+  adapter: "splitter"
+  roles: "[splitter]"
+  inputs:
+    y: "required"
+  params:
+    - name: "test_size"
+      type: "double"
+      default: 0.25
+      min: 0.0
+      max: 1.0
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "n_bins"
+      type: "int"
+      default: 5
+      min: 1
+    - name: "strategy"
+      type: "enum"
+      default: "uniform"
+      choices: "[uniform, quantile]"
 fq_name: "n4m.model_selection.splitters.kbins_stratified"
 leaf: "kbins_stratified"
 legacy_ids:
