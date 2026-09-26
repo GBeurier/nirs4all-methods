@@ -37,6 +37,21 @@ c_surface:
   - "n4m_augmentation_mixup_apply"
   - "n4m_augmentation_mixup_create"
   - "n4m_augmentation_mixup_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_mixup"
+  roles: "[augmenter]"
+  inputs:
+    y: "required"
+  params:
+    - name: "alpha"
+      type: "double"
+      default: 0.2
+      min: 0.0
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.mixup.mixup"
 leaf: "mixup"
 legacy_ids:

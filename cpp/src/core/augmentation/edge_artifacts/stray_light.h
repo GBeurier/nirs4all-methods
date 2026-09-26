@@ -2,8 +2,9 @@
 /*
  * StrayLight edge-artifact augmenter — internal engine.
  *
- * Models a wavelength-dependent stray-light profile (base value enhanced at
- * spectral edges via a sigmoid) and applies the observed-transmittance
+ * Models a stray-light profile over the channels (base value enhanced over
+ * the first and last edge_width fraction of them via a sigmoid; like the
+ * reference, the profile depends on the channel count, not on the axis) and applies the observed-transmittance
  * stray-light equation
  *
  *     T_obs = (T_true + s) / (1 + s),       T_true = 10^(-A_true)
@@ -39,7 +40,6 @@ n4m_status_t n4m_aug_stray_light_state_apply(
     const n4m_aug_stray_light_state_t* state,
     void* rng,
     const double* X, int64_t rows, int64_t cols,
-    const double* wavelengths,
     double* out);
 
 #ifdef __cplusplus

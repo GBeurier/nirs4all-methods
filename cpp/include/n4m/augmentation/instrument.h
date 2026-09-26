@@ -70,10 +70,10 @@ N4M_API n4m_status_t n4m_augmentation_stray_light_create(
     double edge_enhancement,
     double edge_width,
     int32_t include_peak_truncation);
+/* The stray-light profile depends on the channel count, not on an axis. */
 N4M_API n4m_status_t n4m_augmentation_stray_light_apply(
     const n4m_aug_stray_light_handle_t* handle,
     n4m_matrix_view_t X,
-    n4m_matrix_view_t wavelengths,
     n4m_matrix_view_t out);
 N4M_API void n4m_augmentation_stray_light_destroy(
     n4m_aug_stray_light_handle_t* handle);

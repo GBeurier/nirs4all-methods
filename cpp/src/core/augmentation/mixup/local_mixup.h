@@ -12,6 +12,7 @@
  *        neighbor_idx = uniform_choice(neighbors_of_i excluding self)
  *        lam          = Beta(alpha, alpha)
  *        out[i]       = lam * X[i] + (1 - lam) * X[neighbor_idx]
+ *        out_y[i]     = lam * Y[i] + (1 - lam) * Y[neighbor_idx]  (when Y is given)
  *
  * The neighbor search reference (sklearn NearestNeighbors with default
  * settings) uses an exact brute-force algorithm for small arrays, which
@@ -35,11 +36,14 @@ n4m_aug_local_mixup_state_t* n4m_aug_local_mixup_state_new(double alpha,
                                                             int32_t k_neighbors);
 void n4m_aug_local_mixup_state_free(n4m_aug_local_mixup_state_t* state);
 
+/* Y (rows x y_cols, row-major) is optional: with Y == NULL, y_cols and out_y
+ * are ignored. Neighbours are searched in X; the same draw mixes X and Y. */
 n4m_status_t n4m_aug_local_mixup_apply_impl(
     const n4m_aug_local_mixup_state_t* state,
     n4m_rng_pcg64* rng,
     const double* X, int64_t rows, int64_t cols,
-    double* out);
+    const double* Y, int64_t y_cols,
+    double* out, double* out_y);
 
 #ifdef __cplusplus
 }

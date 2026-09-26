@@ -109,7 +109,13 @@ for (const c of fixture.procedures) {
     }
     if (c.X) {
         const axis = c.inputs.includes("axis") ? fixture.axis : undefined;
-        close(proc.augment(X, axis).data, c.X.flat(), 1e-12, `${c.method_id} augment`);
+        if (c.Y) {
+            const out = proc.augment(X, y, axis);
+            close(out.X.data, c.X.flat(), 1e-12, `${c.method_id} augment`);
+            close(out.Y.data, c.Y, 1e-12, `${c.method_id} augment targets`);
+        } else {
+            close(proc.augment(X, axis).data, c.X.flat(), 1e-12, `${c.method_id} augment`);
+        }
     }
     if (c.outputs) {
         const inputs = c.inputs.includes("X_target") ? { XTarget: matrix(fixture.x_target) } : {};

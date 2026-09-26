@@ -9,12 +9,14 @@
  *   out[i]  = lam[i] * X[i] + (1 - lam[i]) * X[indices[i]]
  *
  * The output has the SAME shape as the input — every output row is a mix
- * of two input rows from the same batch.
+ * of two input rows from the same batch. Targets given with X are mixed
+ * with the same partners and weights.
  */
 
 #include "mixup.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "core/augmentation/aug_rng_utils.h"
 #include "core/augmentation/spectral/spectral_common.h"
@@ -66,14 +68,44 @@ static int64_t mixup_permutation_index(n4m_aug_randint_state_t* state,
     }
 }
 
+n4m_status_t n4m_aug_mix_rows(const double* src, int64_t rows, int64_t cols,
+                              const int64_t* partner, const double* lam, double* dst) {
+    /* Stage through a buffer when dst aliases src: later rows read partners
+     * that earlier rows would have overwritten. */
+    double* staged = dst;
+    if (dst == src) {
+        staged = (double*)malloc((size_t)rows * (size_t)cols * sizeof(double));
+        if (staged == NULL) {
+            return N4M_ERR_OUT_OF_MEMORY;
+        }
+    }
+    for (int64_t i = 0; i < rows; ++i) {
+        const double l = lam[i];
+        const double cl = 1.0 - l;
+        const double* a = src + (size_t)i * (size_t)cols;
+        const double* b = src + (size_t)partner[i] * (size_t)cols;
+        double*       o = staged + (size_t)i * (size_t)cols;
+        for (int64_t j = 0; j < cols; ++j) {
+            o[j] = l * a[j] + cl * b[j];
+        }
+    }
+    if (staged != dst) {
+        memcpy(dst, staged, (size_t)rows * (size_t)cols * sizeof(double));
+        free(staged);
+    }
+    return N4M_OK;
+}
+
 n4m_status_t n4m_aug_mixup_apply_impl(const n4m_aug_mixup_state_t* state,
                                       n4m_rng_pcg64* rng,
                                       const double* X, int64_t rows, int64_t cols,
-                                      double* out) {
-    if (state == NULL || rng == NULL || X == NULL || out == NULL) {
+                                      const double* Y, int64_t y_cols,
+                                      double* out, double* out_y) {
+    if (state == NULL || rng == NULL || X == NULL || out == NULL ||
+        (Y != NULL && out_y == NULL)) {
         return N4M_ERR_NULL_POINTER;
     }
-    if (rows < 0 || cols < 0) {
+    if (rows < 0 || cols < 0 || (Y != NULL && y_cols < 0)) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
     if (rows == 0 || cols == 0) {
@@ -103,44 +135,11 @@ n4m_status_t n4m_aug_mixup_apply_impl(const n4m_aug_mixup_state_t* state,
         lam[i] = n4m_aug_rng_beta(rng, state->alpha, state->alpha);
     }
 
-    /* Two-source convex combination. The result must be computed into a
-     * separate buffer first to avoid clobbering rows that are referenced
-     * by indices[*] later in the loop when out == X. */
-    if (out != X) {
-        for (int64_t i = 0; i < rows; ++i) {
-            const double l = lam[i];
-            const double cl = 1.0 - l;
-            const double* a = X + (size_t)i * (size_t)cols;
-            const double* b = X + (size_t)indices[i] * (size_t)cols;
-            double*       o = out + (size_t)i * (size_t)cols;
-            for (int64_t j = 0; j < cols; ++j) {
-                o[j] = l * a[j] + cl * b[j];
-            }
-        }
-    } else {
-        /* in-place: stage to a tmp buffer */
-        double* tmp = (double*)malloc((size_t)rows * (size_t)cols * sizeof(double));
-        if (tmp == NULL) {
-            free(indices); free(lam);
-            return N4M_ERR_OUT_OF_MEMORY;
-        }
-        for (int64_t i = 0; i < rows; ++i) {
-            const double l = lam[i];
-            const double cl = 1.0 - l;
-            const double* a = X + (size_t)i * (size_t)cols;
-            const double* b = X + (size_t)indices[i] * (size_t)cols;
-            double*       t = tmp + (size_t)i * (size_t)cols;
-            for (int64_t j = 0; j < cols; ++j) {
-                t[j] = l * a[j] + cl * b[j];
-            }
-        }
-        for (size_t k = 0, n = (size_t)rows * (size_t)cols; k < n; ++k) {
-            out[k] = tmp[k];
-        }
-        free(tmp);
+    n4m_status_t st = n4m_aug_mix_rows(X, rows, cols, indices, lam, out);
+    if (st == N4M_OK && Y != NULL && y_cols > 0) {
+        st = n4m_aug_mix_rows(Y, rows, y_cols, indices, lam, out_y);
     }
-
     free(indices);
     free(lam);
-    return N4M_OK;
+    return st;
 }

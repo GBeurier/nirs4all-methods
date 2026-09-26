@@ -32,11 +32,35 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
+notes: "Procedure input axis: wavelengths in nanometres, finite and strictly increasing (the kernel holds band positions or detector ranges in nm, as the n4m reference does)."
 c_surface:
   - "n4m_augmentation_detector_rolloff_apply"
   - "n4m_augmentation_detector_rolloff_create"
   - "n4m_augmentation_detector_rolloff_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_detector_rolloff"
+  roles: "[augmenter]"
+  inputs:
+    axis: "required"
+  params:
+    - name: "detector_model"
+      type: "enum"
+      default: "generic_nir"
+      choices: "[ingaas_standard, ingaas_extended, pbs, silicon_ccd, generic_nir]"
+    - name: "effect_strength"
+      type: "double"
+      default: 1.0
+    - name: "noise_amplification"
+      type: "double"
+      default: 0.02
+    - name: "include_baseline_distortion"
+      type: "bool"
+      default: true
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.instrument.detector_rolloff"
 leaf: "detector_rolloff"
 legacy_ids:

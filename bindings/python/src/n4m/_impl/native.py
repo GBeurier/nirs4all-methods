@@ -11312,7 +11312,7 @@ def aug_detector_rolloff(X, wavelengths=None, seed: int = 0):
     )
 
 
-def aug_stray_light(X, wavelengths=None, seed: int = 0):
+def aug_stray_light(X, seed: int = 0):
     return _aug_apply(
         "n4m_augmentation_stray_light",
         X,
@@ -11321,8 +11321,6 @@ def aug_stray_light(X, wavelengths=None, seed: int = 0):
         ctypes.c_double(0.1),
         ctypes.c_int32(1),
         seed=seed,
-        wavelengths=wavelengths,
-        apply_wavelengths=True,
     )
 
 

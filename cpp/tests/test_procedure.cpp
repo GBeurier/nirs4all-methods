@@ -6,8 +6,11 @@
 // column-major X, refuses missing or unused inputs and unknown or foreign
 // parameters, and reproduces its direct C entry point bitwise: splitters
 // n4m_splitter_run, the ABI 2.11 augmentations n4m_augmentation_run, the
-// other procedures their own C functions.
+// other procedures their own C functions. Target-mixing augmenters also
+// return "Y", mixed with the same draw as "X"; augmenters with nanometre
+// constants refuse an axis that is not finite and strictly increasing.
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -81,7 +84,9 @@ struct Data {
         for (int64_t i = 0; i < kTargetRows; ++i) {
             for (int64_t j = 0; j < kCols; ++j) x_target.push_back(spectrum(i + 101, j) * 1.1);
         }
-        for (int64_t j = 0; j < kCols; ++j) axis.push_back(1000.0 + 4.0 * static_cast<double>(j));
+        // A NIR axis in nm, 1000-2380: covers the water and C-H bands and the
+        // detector roll-off ranges of the augmenters with nanometre constants.
+        for (int64_t j = 0; j < kCols; ++j) axis.push_back(1000.0 + 60.0 * static_cast<double>(j));
         for (int64_t k = 0; k < kComponents; ++k) {
             for (int64_t f = 0; f < kFolds; ++f) {
                 fold_rmse.push_back(1.0 / static_cast<double>(k + 1) + 0.05 * static_cast<double>(k) +
@@ -469,12 +474,104 @@ std::vector<double> direct_augmentation(const n4m_params_t* params,
                 return n4m_augmentation_truncated_peak_apply(h, x, wl, o);
             },
             n4m_augmentation_truncated_peak_destroy, X, O);
+    } else if (current_ == "augmentation.mixup.mixup") {
+        direct_apply<n4m_aug_mixup_handle_t>(
+            params,
+            [&](n4m_aug_mixup_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_mixup_create(h, rng, pdbl(params, "alpha"));
+            },
+            n4m_augmentation_mixup_apply, n4m_augmentation_mixup_destroy, X, O);
+    } else if (current_ == "augmentation.mixup.local_mixup") {
+        direct_apply<n4m_aug_local_mixup_handle_t>(
+            params,
+            [&](n4m_aug_local_mixup_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_local_mixup_create(h, rng, pdbl(params, "alpha"),
+                                                           pi32(params, "k_neighbors"));
+            },
+            n4m_augmentation_local_mixup_apply, n4m_augmentation_local_mixup_destroy, X, O);
+    } else if (current_ == "augmentation.environmental.temperature") {
+        direct_apply<n4m_aug_temperature_handle_t>(
+            params,
+            [&](n4m_aug_temperature_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_temperature_create(
+                    h, rng, pdbl(params, "temperature_delta"), pi32(params, "use_temp_range"),
+                    pdbl(params, "temp_low"), pdbl(params, "temp_high"),
+                    pi32(params, "enable_shift"), pi32(params, "enable_intensity"),
+                    pi32(params, "enable_broadening"), pi32(params, "region_specific"), axis,
+                    n_axis);
+            },
+            n4m_augmentation_temperature_apply, n4m_augmentation_temperature_destroy, X, O);
+    } else if (current_ == "augmentation.environmental.moisture") {
+        direct_apply<n4m_aug_moisture_handle_t>(
+            params,
+            [&](n4m_aug_moisture_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_moisture_create(
+                    h, rng, pdbl(params, "water_activity_delta"), pi32(params, "use_aw_range"),
+                    pdbl(params, "aw_low"), pdbl(params, "aw_high"),
+                    pdbl(params, "reference_water_activity"), pdbl(params, "free_water_fraction"),
+                    pdbl(params, "bound_water_shift"), pdbl(params, "moisture_content"),
+                    pi32(params, "enable_shift"), pi32(params, "enable_intensity"), axis, n_axis);
+            },
+            n4m_augmentation_moisture_apply, n4m_augmentation_moisture_destroy, X, O);
+    } else if (current_ == "augmentation.scattering.particle_size") {
+        direct_apply<n4m_aug_particle_size_handle_t>(
+            params,
+            [&](n4m_aug_particle_size_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_particle_size_create(
+                    h, rng, pdbl(params, "mean_size_um"), pdbl(params, "size_variation_um"),
+                    pi32(params, "use_size_range"), pdbl(params, "size_range_low_um"),
+                    pdbl(params, "size_range_high_um"), pdbl(params, "reference_size_um"),
+                    pdbl(params, "wavelength_exponent"), pdbl(params, "size_effect_strength"),
+                    pi32(params, "include_path_length"), pdbl(params, "path_length_sensitivity"),
+                    axis, n_axis);
+            },
+            n4m_augmentation_particle_size_apply, n4m_augmentation_particle_size_destroy, X, O);
+    } else if (current_ == "augmentation.edge_artifacts.detector_rolloff") {
+        const n4m_matrix_view_t wl = view(axis, 1, n_axis);
+        direct_apply<n4m_aug_detector_rolloff_handle_t>(
+            params,
+            [&](n4m_aug_detector_rolloff_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_detector_rolloff_create(
+                    h, rng, pi32(params, "detector_model"), pdbl(params, "effect_strength"),
+                    pdbl(params, "noise_amplification"),
+                    pi32(params, "include_baseline_distortion"));
+            },
+            [&](const n4m_aug_detector_rolloff_handle_t* h, n4m_matrix_view_t x,
+                n4m_matrix_view_t o) { return n4m_augmentation_detector_rolloff_apply(h, x, wl, o); },
+            n4m_augmentation_detector_rolloff_destroy, X, O);
+    } else if (current_ == "augmentation.edge_artifacts.stray_light") {
+        direct_apply<n4m_aug_stray_light_handle_t>(
+            params,
+            [&](n4m_aug_stray_light_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_stray_light_create(
+                    h, rng, pdbl(params, "stray_light_fraction"), pdbl(params, "edge_enhancement"),
+                    pdbl(params, "edge_width"), pi32(params, "include_peak_truncation"));
+            },
+            n4m_augmentation_stray_light_apply, n4m_augmentation_stray_light_destroy, X, O);
+    } else if (current_ == "augmentation.edge_artifacts.edge_artifacts") {
+        const n4m_matrix_view_t wl = view(axis, 1, n_axis);
+        const int32_t flags = (pint(params, "detector_roll_off") != 0 ? 0x1 : 0) |
+                              (pint(params, "stray_light") != 0 ? 0x2 : 0) |
+                              (pint(params, "edge_curvature") != 0 ? 0x4 : 0) |
+                              (pint(params, "truncated_peaks") != 0 ? 0x8 : 0);
+        direct_apply<n4m_aug_edge_artifacts_handle_t>(
+            params,
+            [&](n4m_aug_edge_artifacts_handle_t** h, n4m_rng_pcg64_state_t* rng) {
+                return n4m_augmentation_edge_artifacts_create(
+                    h, rng, flags, pdbl(params, "overall_strength"), pi32(params, "detector_model"));
+            },
+            [&](const n4m_aug_edge_artifacts_handle_t* h, n4m_matrix_view_t x, n4m_matrix_view_t o) {
+                return n4m_augmentation_edge_artifacts_apply(h, x, wl, o);
+            },
+            n4m_augmentation_edge_artifacts_destroy, X, O);
     } else {
         throw std::runtime_error("no direct entry point for augmenter @" + current_);
     }
     return out;
 }
 
+// "X": the augmented rows, equal to the direct entry point's; "Y" exactly
+// when the method mixes targets (y given), with the rows of "X".
 void check_augmenter(const n4m_params_t* params, const n4m_fit_inputs_v1_t& in,
                      const n4m_method_result_t* result) {
     const double* data = nullptr;
@@ -486,6 +583,64 @@ void check_augmenter(const n4m_params_t* params, const n4m_fit_inputs_v1_t& in,
     CHECK(n4m_method_result_get_n_folds(result, &n_folds) == N4M_ERR_INVALID_ARGUMENT);
     const std::vector<double> direct = direct_augmentation(params, in);
     CHECK(same_bits(direct.data(), data, direct.size()));
+    int32_t entries = 0;
+    CHECK(n4m_method_result_entry_count(result, &entries) == N4M_OK);
+    const double* y = nullptr;
+    const n4m_status_t has_y = n4m_method_result_get_double_matrix(result, "Y", &y, &rows, &cols);
+    if (in.Y == nullptr) {
+        CHECK(entries == 1 && has_y != N4M_OK);
+        return;
+    }
+    CHECK(entries == 2 && has_y == N4M_OK && rows == kRows && cols == in.Y->cols);
+    for (int64_t i = 0; i < rows * cols; ++i) CHECK(std::isfinite(y[i]));
+}
+
+// Target mixing uses the draw that mixes X: with y := X, "Y" equals "X"
+// bitwise, row for row.
+void check_target_mixing(n4m_context_t* ctx, int32_t index, const n4m_params_t* params,
+                         const n4m_fit_inputs_v1_t& in) {
+    n4m_fit_inputs_v1_t paired = in;
+    paired.Y = in.X;
+    ResultPtr r;
+    CHECK(n4m_procedure_run(ctx, index, params, &paired, &r.p) == N4M_OK);
+    const double *x = nullptr, *y = nullptr;
+    int64_t xr = 0, xc = 0, yr = 0, yc = 0;
+    CHECK(n4m_method_result_get_double_matrix(r.p, "X", &x, &xr, &xc) == N4M_OK);
+    CHECK(n4m_method_result_get_double_matrix(r.p, "Y", &y, &yr, &yc) == N4M_OK);
+    CHECK(xr == yr && xc == yc && same_bits(x, y, static_cast<size_t>(xr * xc)));
+    // Mixed targets are convex combinations of two input targets.
+    const n4m_matrix_view_t& Y = *in.Y;
+    ResultPtr own;
+    CHECK(n4m_procedure_run(ctx, index, params, &in, &own.p) == N4M_OK);
+    CHECK(n4m_method_result_get_double_matrix(own.p, "Y", &y, &yr, &yc) == N4M_OK);
+    const auto* targets = static_cast<const double*>(Y.data);
+    const auto [lo, hi] = std::minmax_element(targets, targets + Y.rows * Y.cols);
+    for (int64_t i = 0; i < yr * yc; ++i) CHECK(y[i] >= *lo - 1e-12 && y[i] <= *hi + 1e-12);
+}
+
+// Augmenters whose kernels hold nanometre constants: the axis must be a
+// finite, strictly increasing wavelength grid.
+const std::set<std::string> kNanometreAugmenters = {
+    "augmentation.environmental.temperature", "augmentation.environmental.moisture",
+    "augmentation.scattering.particle_size", "augmentation.edge_artifacts.detector_rolloff",
+    "augmentation.edge_artifacts.edge_artifacts"};
+
+void check_nanometre_axis(n4m_context_t* ctx, int32_t index, const n4m_params_t* params,
+                          const n4m_fit_inputs_v1_t& in) {
+    std::vector<double> decreasing(in.axis, in.axis + in.n_axis);
+    std::reverse(decreasing.begin(), decreasing.end());
+    std::vector<double> repeated(in.axis, in.axis + in.n_axis);
+    repeated.at(5) = repeated.at(4);
+    std::vector<double> not_finite(in.axis, in.axis + in.n_axis);
+    not_finite.at(3) = std::nan("");
+    for (const auto* axis : {&decreasing, &repeated, &not_finite}) {
+        n4m_fit_inputs_v1_t bad = in;
+        bad.axis = axis->data();
+        ResultPtr r;
+        CHECK(n4m_procedure_run(ctx, index, params, &bad, &r.p) == N4M_ERR_INVALID_ARGUMENT);
+        CHECK(std::strstr(n4m_context_last_error(ctx), "nm") != nullptr);
+        CHECK(r.p == nullptr);
+    }
 }
 
 // ---- Generic procedures ----------------------------------------------------
@@ -729,7 +884,7 @@ n4m_status_t run(n4m_context_t* ctx, int32_t index, const n4m_params_t* params,
 }
 
 struct Counts {
-    int splitters = 0, augmenters = 0, generic = 0;
+    int splitters = 0, augmenters = 0, generic = 0, target_mixing = 0, nanometre = 0;
 };
 
 void conformance(n4m_context_t* ctx, const Inputs& inputs, int32_t index, int32_t estimator_index,
@@ -756,6 +911,13 @@ void conformance(n4m_context_t* ctx, const Inputs& inputs, int32_t index, int32_
     // Seeds are parameters: a non-default one must reach the kernel.
     if (role == N4M_ROLE_AUGMENTER) CHECK(has_param(params, "seed"));
     if (has_param(params, "seed")) CHECK(n4m_params_set_int(params, "seed", 7) == N4M_OK);
+    // Drawn temperature / water-activity deltas instead of the no-op defaults.
+    if (current_ == "augmentation.environmental.temperature") {
+        CHECK(n4m_params_set_bool(params, "use_temp_range", 1) == N4M_OK);
+    }
+    if (current_ == "augmentation.environmental.moisture") {
+        CHECK(n4m_params_set_bool(params, "use_aw_range", 1) == N4M_OK);
+    }
     CHECK(n4m_params_set_int(params, "no_such_param", 1) == N4M_ERR_INVALID_ARGUMENT);
     const bool requires_params = fill_required(index, params);
     CHECK(n4m_params_validate(ctx, params) == N4M_OK);
@@ -841,6 +1003,14 @@ void conformance(n4m_context_t* ctx, const Inputs& inputs, int32_t index, int32_
         }
     };
     check_role(in, first.p);
+    if (role == N4M_ROLE_AUGMENTER && info.inputs[N4M_FIT_INPUT_Y] == N4M_INPUT_REQUIRED) {
+        check_target_mixing(ctx, index, params, in);
+        ++counts.target_mixing;
+    }
+    if (kNanometreAugmenters.count(current_) != 0) {
+        check_nanometre_axis(ctx, index, params, in);
+        ++counts.nanometre;
+    }
     // Optional inputs may be left out.
     if (info.inputs[N4M_FIT_INPUT_AXIS] == N4M_INPUT_OPTIONAL) {
         n4m_fit_inputs_v1_t without = in;
@@ -903,7 +1073,14 @@ int main() {
         guarded([&] { conformance(ctx, inputs, i, estimator_index, counts); });
     }
     n4m_context_destroy(ctx);
-    std::printf("n4m_procedure_tests: %d splitters, %d augmenters, %d generic, %d failures\n",
-                counts.splitters, counts.augmenters, counts.generic, failures);
+    if (counts.target_mixing != 2 ||
+        counts.nanometre != static_cast<int>(kNanometreAugmenters.size())) {
+        std::fprintf(stderr, "FAIL target-mixing or nanometre augmenters missing from the manifest\n");
+        ++failures;
+    }
+    std::printf("n4m_procedure_tests: %d splitters, %d augmenters (%d target-mixing, %d in nm), "
+                "%d generic, %d failures\n",
+                counts.splitters, counts.augmenters, counts.target_mixing, counts.nanometre,
+                counts.generic, failures);
     return failures == 0 ? 0 : 1;
 }

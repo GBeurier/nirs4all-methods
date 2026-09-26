@@ -253,6 +253,36 @@ const ParamSpec kParams_augmentation_drift_poly_drift[] = {
     {"coeff_max", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_augmentation_drift_poly_drift_coeff_max, 3, kNaN, kNaN, nullptr, 0},
     {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_drift_poly_drift_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
+const std::int64_t kDefault_augmentation_edge_artifacts_detector_rolloff_detector_model[] = {4};
+const char* const kChoices_augmentation_edge_artifacts_detector_rolloff_detector_model[] = {"ingaas_standard", "ingaas_extended", "pbs", "silicon_ccd", "generic_nir"};
+const double kDefault_augmentation_edge_artifacts_detector_rolloff_effect_strength[] = {1.0};
+const double kDefault_augmentation_edge_artifacts_detector_rolloff_noise_amplification[] = {0.02};
+const std::int64_t kDefault_augmentation_edge_artifacts_detector_rolloff_include_baseline_distortion[] = {1};
+const std::int64_t kDefault_augmentation_edge_artifacts_detector_rolloff_seed[] = {0};
+const ParamSpec kParams_augmentation_edge_artifacts_detector_rolloff[] = {
+    {"detector_model", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_edge_artifacts_detector_rolloff_detector_model, nullptr, 1, kNaN, kNaN, kChoices_augmentation_edge_artifacts_detector_rolloff_detector_model, 5},
+    {"effect_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_detector_rolloff_effect_strength, 1, kNaN, kNaN, nullptr, 0},
+    {"noise_amplification", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_detector_rolloff_noise_amplification, 1, kNaN, kNaN, nullptr, 0},
+    {"include_baseline_distortion", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_detector_rolloff_include_baseline_distortion, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_detector_rolloff_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_detector_roll_off[] = {1};
+const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_stray_light[] = {1};
+const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_edge_curvature[] = {1};
+const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_truncated_peaks[] = {1};
+const double kDefault_augmentation_edge_artifacts_edge_artifacts_overall_strength[] = {1.0};
+const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_detector_model[] = {4};
+const char* const kChoices_augmentation_edge_artifacts_edge_artifacts_detector_model[] = {"ingaas_standard", "ingaas_extended", "pbs", "silicon_ccd", "generic_nir"};
+const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_seed[] = {0};
+const ParamSpec kParams_augmentation_edge_artifacts_edge_artifacts[] = {
+    {"detector_roll_off", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_detector_roll_off, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"stray_light", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_stray_light, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"edge_curvature", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_edge_curvature, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"truncated_peaks", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_truncated_peaks, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"overall_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_artifacts_overall_strength, 1, kNaN, kNaN, nullptr, 0},
+    {"detector_model", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_edge_artifacts_edge_artifacts_detector_model, nullptr, 1, kNaN, kNaN, kChoices_augmentation_edge_artifacts_edge_artifacts_detector_model, 5},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_edge_artifacts_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
 const double kDefault_augmentation_edge_artifacts_edge_curvature_curvature_strength[] = {0.02};
 const std::int64_t kDefault_augmentation_edge_artifacts_edge_curvature_curvature_type[] = {0};
 const char* const kChoices_augmentation_edge_artifacts_edge_curvature_curvature_type[] = {"random", "smile", "frown", "asymmetric"};
@@ -265,6 +295,18 @@ const ParamSpec kParams_augmentation_edge_artifacts_edge_curvature[] = {
     {"asymmetry", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_curvature_asymmetry, 1, kNaN, kNaN, nullptr, 0},
     {"edge_focus", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_curvature_edge_focus, 1, kNaN, kNaN, nullptr, 0},
     {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_edge_curvature_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_augmentation_edge_artifacts_stray_light_stray_light_fraction[] = {0.001};
+const double kDefault_augmentation_edge_artifacts_stray_light_edge_enhancement[] = {2.0};
+const double kDefault_augmentation_edge_artifacts_stray_light_edge_width[] = {0.1};
+const std::int64_t kDefault_augmentation_edge_artifacts_stray_light_include_peak_truncation[] = {1};
+const std::int64_t kDefault_augmentation_edge_artifacts_stray_light_seed[] = {0};
+const ParamSpec kParams_augmentation_edge_artifacts_stray_light[] = {
+    {"stray_light_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_stray_light_stray_light_fraction, 1, 0.0, kNaN, nullptr, 0},
+    {"edge_enhancement", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_stray_light_edge_enhancement, 1, kNaN, kNaN, nullptr, 0},
+    {"edge_width", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_stray_light_edge_width, 1, 0.0, 0.5, nullptr, 0},
+    {"include_peak_truncation", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_stray_light_include_peak_truncation, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_stray_light_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
 const double kDefault_augmentation_edge_artifacts_truncated_peak_peak_probability[] = {0.5};
 const double kDefault_augmentation_edge_artifacts_truncated_peak_amplitude_min[] = {0.01};
@@ -283,6 +325,64 @@ const ParamSpec kParams_augmentation_edge_artifacts_truncated_peak[] = {
     {"left_edge", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_truncated_peak_left_edge, nullptr, 1, kNaN, kNaN, nullptr, 0},
     {"right_edge", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_truncated_peak_right_edge, nullptr, 1, kNaN, kNaN, nullptr, 0},
     {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_truncated_peak_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_augmentation_environmental_moisture_water_activity_delta[] = {0.0};
+const std::int64_t kDefault_augmentation_environmental_moisture_use_aw_range[] = {0};
+const double kDefault_augmentation_environmental_moisture_aw_low[] = {0.0};
+const double kDefault_augmentation_environmental_moisture_aw_high[] = {1.0};
+const double kDefault_augmentation_environmental_moisture_reference_water_activity[] = {0.5};
+const double kDefault_augmentation_environmental_moisture_free_water_fraction[] = {0.3};
+const double kDefault_augmentation_environmental_moisture_bound_water_shift[] = {25.0};
+const double kDefault_augmentation_environmental_moisture_moisture_content[] = {0.1};
+const std::int64_t kDefault_augmentation_environmental_moisture_enable_shift[] = {1};
+const std::int64_t kDefault_augmentation_environmental_moisture_enable_intensity[] = {1};
+const std::int64_t kDefault_augmentation_environmental_moisture_seed[] = {0};
+const ParamSpec kParams_augmentation_environmental_moisture[] = {
+    {"water_activity_delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_water_activity_delta, 1, kNaN, kNaN, nullptr, 0},
+    {"use_aw_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_moisture_use_aw_range, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"aw_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_aw_low, 1, kNaN, kNaN, nullptr, 0},
+    {"aw_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_aw_high, 1, kNaN, kNaN, nullptr, 0},
+    {"reference_water_activity", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_reference_water_activity, 1, kNaN, kNaN, nullptr, 0},
+    {"free_water_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_free_water_fraction, 1, kNaN, kNaN, nullptr, 0},
+    {"bound_water_shift", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_bound_water_shift, 1, kNaN, kNaN, nullptr, 0},
+    {"moisture_content", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_moisture_content, 1, kNaN, kNaN, nullptr, 0},
+    {"enable_shift", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_moisture_enable_shift, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"enable_intensity", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_moisture_enable_intensity, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_environmental_moisture_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_augmentation_environmental_temperature_temperature_delta[] = {0.0};
+const std::int64_t kDefault_augmentation_environmental_temperature_use_temp_range[] = {0};
+const double kDefault_augmentation_environmental_temperature_temp_low[] = {-5.0};
+const double kDefault_augmentation_environmental_temperature_temp_high[] = {5.0};
+const std::int64_t kDefault_augmentation_environmental_temperature_enable_shift[] = {1};
+const std::int64_t kDefault_augmentation_environmental_temperature_enable_intensity[] = {1};
+const std::int64_t kDefault_augmentation_environmental_temperature_enable_broadening[] = {1};
+const std::int64_t kDefault_augmentation_environmental_temperature_region_specific[] = {1};
+const std::int64_t kDefault_augmentation_environmental_temperature_seed[] = {0};
+const ParamSpec kParams_augmentation_environmental_temperature[] = {
+    {"temperature_delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_temperature_temperature_delta, 1, kNaN, kNaN, nullptr, 0},
+    {"use_temp_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_use_temp_range, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"temp_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_temperature_temp_low, 1, kNaN, kNaN, nullptr, 0},
+    {"temp_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_temperature_temp_high, 1, kNaN, kNaN, nullptr, 0},
+    {"enable_shift", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_enable_shift, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"enable_intensity", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_enable_intensity, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"enable_broadening", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_enable_broadening, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"region_specific", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_region_specific, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_environmental_temperature_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_augmentation_mixup_local_mixup_alpha[] = {0.2};
+const std::int64_t kDefault_augmentation_mixup_local_mixup_k_neighbors[] = {5};
+const std::int64_t kDefault_augmentation_mixup_local_mixup_seed[] = {0};
+const ParamSpec kParams_augmentation_mixup_local_mixup[] = {
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_mixup_local_mixup_alpha, 1, 0.0, kNaN, nullptr, 0},
+    {"k_neighbors", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_mixup_local_mixup_k_neighbors, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_mixup_local_mixup_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_augmentation_mixup_mixup_alpha[] = {0.2};
+const std::int64_t kDefault_augmentation_mixup_mixup_seed[] = {0};
+const ParamSpec kParams_augmentation_mixup_mixup[] = {
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_mixup_mixup_alpha, 1, 0.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_mixup_mixup_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
 const double kDefault_augmentation_noise_gaussian_noise_sigma[] = {0.01};
 const std::int64_t kDefault_augmentation_noise_gaussian_noise_seed[] = {0};
@@ -397,6 +497,30 @@ const ParamSpec kParams_augmentation_scattering_instrument_broaden[] = {
     {"fwhm_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_instrument_broaden_fwhm_high, 1, 0.0, kNaN, nullptr, 0},
     {"variation_scope", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_scattering_instrument_broaden_variation_scope, nullptr, 1, kNaN, kNaN, kChoices_augmentation_scattering_instrument_broaden_variation_scope, 2},
     {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_instrument_broaden_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+};
+const double kDefault_augmentation_scattering_particle_size_mean_size_um[] = {50.0};
+const double kDefault_augmentation_scattering_particle_size_size_variation_um[] = {15.0};
+const std::int64_t kDefault_augmentation_scattering_particle_size_use_size_range[] = {0};
+const double kDefault_augmentation_scattering_particle_size_size_range_low_um[] = {5.0};
+const double kDefault_augmentation_scattering_particle_size_size_range_high_um[] = {500.0};
+const double kDefault_augmentation_scattering_particle_size_reference_size_um[] = {50.0};
+const double kDefault_augmentation_scattering_particle_size_wavelength_exponent[] = {1.5};
+const double kDefault_augmentation_scattering_particle_size_size_effect_strength[] = {0.1};
+const std::int64_t kDefault_augmentation_scattering_particle_size_include_path_length[] = {1};
+const double kDefault_augmentation_scattering_particle_size_path_length_sensitivity[] = {0.5};
+const std::int64_t kDefault_augmentation_scattering_particle_size_seed[] = {0};
+const ParamSpec kParams_augmentation_scattering_particle_size[] = {
+    {"mean_size_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_mean_size_um, 1, kNaN, kNaN, nullptr, 0},
+    {"size_variation_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_variation_um, 1, 0.0, kNaN, nullptr, 0},
+    {"use_size_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_scattering_particle_size_use_size_range, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"size_range_low_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_range_low_um, 1, kNaN, kNaN, nullptr, 0},
+    {"size_range_high_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_range_high_um, 1, kNaN, kNaN, nullptr, 0},
+    {"reference_size_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_reference_size_um, 1, kNaN, kNaN, nullptr, 0},
+    {"wavelength_exponent", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_wavelength_exponent, 1, kNaN, kNaN, nullptr, 0},
+    {"size_effect_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_effect_strength, 1, kNaN, kNaN, nullptr, 0},
+    {"include_path_length", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_scattering_particle_size_include_path_length, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"path_length_sensitivity", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_path_length_sensitivity, 1, kNaN, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_particle_size_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
 };
 const double kDefault_augmentation_scattering_scatter_sim_msc_a_low[] = {-0.05};
 const double kDefault_augmentation_scattering_scatter_sim_msc_a_high[] = {0.05};
@@ -1758,8 +1882,15 @@ const MethodSpec kMethods[] = {
     {"augmentation.drift.linear_drift", "n4m.augmentation.drift.linear_drift", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_drift_linear_drift, 5, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
     {"augmentation.drift.path_length", "n4m.augmentation.drift.path_length", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_drift_path_length, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
     {"augmentation.drift.poly_drift", "n4m.augmentation.drift.poly_drift", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_drift_poly_drift, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_poly_drift},
+    {"augmentation.edge_artifacts.detector_rolloff", "n4m.augmentation.instrument.detector_rolloff", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_edge_artifacts_detector_rolloff, 5, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_detector_rolloff},
+    {"augmentation.edge_artifacts.edge_artifacts", "n4m.augmentation.instrument.edge_artifacts", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_edge_artifacts_edge_artifacts, 7, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_edge_artifacts},
     {"augmentation.edge_artifacts.edge_curvature", "n4m.augmentation.instrument.edge_curvature", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_edge_artifacts_edge_curvature, 5, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_edge_curvature},
+    {"augmentation.edge_artifacts.stray_light", "n4m.augmentation.instrument.stray_light", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_edge_artifacts_stray_light, 5, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_stray_light},
     {"augmentation.edge_artifacts.truncated_peak", "n4m.augmentation.instrument.truncated_peak", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_edge_artifacts_truncated_peak, 8, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_truncated_peak},
+    {"augmentation.environmental.moisture", "n4m.augmentation.instrument.moisture", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_environmental_moisture, 11, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_moisture},
+    {"augmentation.environmental.temperature", "n4m.augmentation.instrument.temperature", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_environmental_temperature, 9, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_temperature},
+    {"augmentation.mixup.local_mixup", "n4m.augmentation.mixup.local_mixup", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_mixup_local_mixup, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_local_mixup},
+    {"augmentation.mixup.mixup", "n4m.augmentation.mixup.mixup", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_mixup_mixup, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_mixup},
     {"augmentation.noise.gaussian_noise", "n4m.augmentation.noise.gaussian_noise", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_noise_gaussian_noise, 2, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
     {"augmentation.noise.hetero_noise", "n4m.augmentation.noise.hetero_noise", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_noise_hetero_noise, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
     {"augmentation.noise.multiplicative_noise", "n4m.augmentation.noise.multiplicative_noise", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_noise_multiplicative_noise, 2, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
@@ -1770,6 +1901,7 @@ const MethodSpec kMethods[] = {
     {"augmentation.scattering.dead_band", "n4m.augmentation.scattering.dead_band", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_scattering_dead_band, 7, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
     {"augmentation.scattering.emsc_distort", "n4m.augmentation.scattering.emsc_distort", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_scattering_emsc_distort, 8, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_emsc_distort},
     {"augmentation.scattering.instrument_broaden", "n4m.augmentation.scattering.instrument_broaden", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_scattering_instrument_broaden, 6, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_instrument_broaden},
+    {"augmentation.scattering.particle_size", "n4m.augmentation.scattering.particle_size", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_scattering_particle_size, 11, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_particle_size},
     {"augmentation.scattering.scatter_sim_msc", "n4m.augmentation.scattering.scatter_sim_msc", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_scattering_scatter_sim_msc, 5, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
     {"augmentation.spectral.band_mask", "n4m.augmentation.spectral.band_mask", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_spectral_band_mask, 6, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
     {"augmentation.spectral.band_perturb", "n4m.augmentation.spectral.band_perturb", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_spectral_band_perturb, 8, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
