@@ -8,7 +8,7 @@ subcategory: "aom"
 since_abi: "1.21.0"
 abi_symbols: []
 tu:
-  - "cpp/src/core/aom_preprocessing.cpp"
+  - "cpp/src/core/aom_superblock.cpp"
   - "cpp/src/core/extra_pls.cpp"
   - "cpp/src/c_api/c_api_method_result.cpp"
 headers:
@@ -40,8 +40,48 @@ bindings:
     class: "aom_ridge_pls_superblock"
     legacy_aliases: []
 publications: []
-notes: "Python-backed donor-style AOM Ridge-PLS superblock constrained to strict-linear single-operator AOM views. It builds concatenated native aom_preprocess operator outputs, selects the PLS component count and Ridge-PLS lambda by train CV over the superblock, fits through the native ridge_pls binding, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes row-reference-dependent preprocessing, nonlinear lifts, MKL/kernel modes and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU Ridge-PLS superblock grinder."
+notes: "Native AOM Ridge-PLS superblock over strict-linear single-operator AOM views (core fit_aom_superblock). It concatenates the operator outputs with train-fold centering and optional block RMS scaling, selects the component count and Ridge-PLS lambda by train-fold CV, fits the native ridge-augmented SIMPLS, and folds the final superblock coefficients back to original-input input_coefficients plus intercept (affine N4MM state). It excludes row-reference-dependent preprocessing, nonlinear lifts, MKL/kernel modes and dataset/source routing."
 c_surface: "none"
+estimator:
+  kind: "estimator"
+  adapter: "aom_ridge_pls_superblock"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+    fold_ids: "optional"
+  params:
+    - name: "op_kinds"
+      type: "int_array"
+      default: "[0, 7, 7, 8, 8, 9, 9, 10, 15]"
+      min: 0
+      max: 18
+    - name: "param_offsets"
+      type: "int_array"
+      default: "[0, 0, 1, 2, 4, 6, 9, 12, 15, 16]"
+      min: 0
+    - name: "op_params"
+      type: "double_array"
+      default: "[1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]"
+    - name: "pls_components"
+      type: "int_array"
+      default: "[2]"
+      min: 1
+    - name: "ridge_lambdas"
+      type: "double_array"
+      default: "[0.0, 0.1, 1.0, 10.0]"
+      min: 0.0
+    - name: "cv"
+      type: "int"
+      default: 5
+      min: 2
+    - name: "block_scaling"
+      type: "enum"
+      default: "rms"
+      choices: "[rms, none]"
+    - name: "center_x"
+      type: "bool"
+      default: true
 fq_name: "n4m.compose.aom_superblock.aom_ridge_pls_superblock"
 leaf: "aom_ridge_pls_superblock"
 legacy_ids:

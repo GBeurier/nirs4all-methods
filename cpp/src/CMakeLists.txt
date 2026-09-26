@@ -30,6 +30,7 @@ add_library(n4m_core OBJECT
     core/aom_sweep.cpp
     core/aom_selection.cpp
     core/aom_calibration.cpp
+    core/aom_superblock.cpp
     core/linear_stack.cpp
     core/bipls_selection.cpp
     core/bve_selection.cpp

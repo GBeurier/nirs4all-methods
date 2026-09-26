@@ -121,7 +121,7 @@ through its status instead of an exception, so WASM builds (compiled without
 exception catching) no longer abort on such candidates; results are
 unchanged.
 
-AOM / POP roles: ten regressors, one transformer and one procedure. The AOM
+AOM / POP roles: sixteen regressors, one transformer and one procedure. The AOM
 and chain sweeps, the fixed-chain fit, the Ridge global selector (one operator
 per chain, Ridge head), AOM-PLS and POP-PLS, the robust-HPO screen, the Ridge
 simplex blender and the operator PLS stack predict new rows from their
@@ -136,10 +136,20 @@ and chains are parameters in the kernels' flat descriptor form (`op_kinds`,
 to the n4m reference banks; `fold_ids` replace the balanced `cv` plan.
 `aom_pop.linear_stack_compress` is a generic procedure (X holds the base
 coefficients; intercepts and meta weights are parameters). Coefficients equal
-the n4m reference fits bitwise. Not covered: the superblocks and chain
-Ridge-PLS (their numerics are the Python reference's), the screen/refit and
-staged campaigns and the linear Ridge stack (Python orchestration over the
-covered kernels). No kernel changes. Python facade fixes: results holding an
+the n4m reference fits bitwise. The five operator superblocks (Ridge, MKL
+Ridge, active Ridge, PLS, Ridge-PLS) and the chain Ridge-PLS selector, whose
+fits existed only as numpy code in the Python reference, are ported to a core
+kernel (`core/aom_superblock.cpp`: operator outputs, train-fold centering and
+block RMS scaling, kernel-target-alignment block weights, active signature
+screen, fold-local CV over the head grid, folding back to the input space)
+over the existing operator, Ridge, moment-PLS and Ridge-PLS kernels; they are
+affine regressors like the others (six more, sixteen in all). They match the
+reference at <= 1e-11 relative on training and held-out predictions (bitwise
+selection; the residual is the reference's BLAS summation order in the
+coefficient folding and, for MKL, its Gram and Frobenius norms). Not covered:
+the screen/refit and staged campaigns and the linear Ridge stack (Python
+orchestration over the covered kernels). No change to existing kernels.
+Python facade fixes: results holding an
 empty (0 x 0) matrix, such as the fixed-chain fit's out-of-fold predictions,
 are read as empty arrays instead of raising, and an imported estimator reports
 array parameters as tuples, like the generated defaults.
