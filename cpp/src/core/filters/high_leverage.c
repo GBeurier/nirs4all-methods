@@ -579,3 +579,77 @@ n4m_status_t n4m_filter_leverage_state_apply(
     free(Xc); free(lev);
     return N4M_OK;
 }
+
+n4m_status_t n4m_filter_leverage_state_save(const n4m_filter_leverage_state_t* state,
+                                            n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    const int64_t cols = state->fit_cols;
+    n4m_state_write_i64(w, state->effective_method);
+    n4m_state_write_i64(w, state->k);
+    n4m_state_write_f64_array(w, state->mean, cols);
+    if (state->effective_method == N4M_FILTER_LEVERAGE_METHOD_HAT) {
+        n4m_state_write_f64_array(w, state->M_qr, cols * cols);
+        n4m_state_write_f64_array(w, state->tau, cols);
+    } else {
+        n4m_state_write_f64_array(w, state->components, (int64_t)state->k * cols);
+        n4m_state_write_f64_array(w, state->inv_eigvals, state->k);
+    }
+    n4m_state_write_f64(w, state->threshold);
+    return N4M_OK;
+}
+
+n4m_status_t n4m_filter_leverage_state_load(n4m_filter_leverage_state_t* state,
+                                            n4m_state_reader_t* r, int64_t n_features) {
+    int64_t method = -1;
+    int64_t k = 0;
+    if (!n4m_state_read_i64(r, &method) || !n4m_state_read_i64(r, &k) ||
+        (method != N4M_FILTER_LEVERAGE_METHOD_HAT && method != N4M_FILTER_LEVERAGE_METHOD_PCA) ||
+        k < 1 || k > n_features ||
+        (method == N4M_FILTER_LEVERAGE_METHOD_HAT && k != n_features)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    double* mean = NULL;
+    double* a = NULL;
+    double* b = NULL;
+    double threshold = 0.0;
+    n4m_status_t st = n4m_state_read_f64_array_new(r, n_features, &mean);
+    if (st == N4M_OK) {
+        st = method == N4M_FILTER_LEVERAGE_METHOD_HAT
+            ? n4m_state_read_f64_array_new(r, n_features * n_features, &a)
+            : n4m_state_read_f64_array_new(r, k * n_features, &a);
+    }
+    if (st == N4M_OK) {
+        st = n4m_state_read_f64_array_new(r, method == N4M_FILTER_LEVERAGE_METHOD_HAT ? n_features : k,
+                                          &b);
+    }
+    if (st == N4M_OK && (!n4m_state_read_f64(r, &threshold) || !isfinite(threshold))) {
+        st = N4M_ERR_CORRUPT_BUFFER;
+    }
+    if (st != N4M_OK) {
+        free(mean); free(a); free(b);
+        return st;
+    }
+    free(state->mean);
+    free(state->M_qr);
+    free(state->tau);
+    free(state->components);
+    free(state->inv_eigvals);
+    state->mean = mean;
+    state->M_qr = NULL;
+    state->tau = NULL;
+    state->components = NULL;
+    state->inv_eigvals = NULL;
+    if (method == N4M_FILTER_LEVERAGE_METHOD_HAT) {
+        state->M_qr = a;
+        state->tau = b;
+    } else {
+        state->components = a;
+        state->inv_eigvals = b;
+    }
+    state->effective_method = (int)method;
+    state->k = (int32_t)k;
+    state->fit_cols = n_features;
+    state->threshold = threshold;
+    state->fitted = 1;
+    return N4M_OK;
+}

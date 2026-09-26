@@ -33,6 +33,7 @@
 #include <stdint.h>
 
 #include "n4m/n4m.h"
+#include "core/estimator/state_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,6 +89,13 @@ n4m_status_t n4m_filter_y_outlier_state_apply(
  * into *out. Returns N4M_ERR_NULL_POINTER if either argument is NULL. */
 n4m_status_t n4m_filter_y_outlier_state_is_fitted(
     const n4m_filter_y_outlier_state_t* state, int* out);
+
+/* Fitted state (the learned bounds) for the estimator role's N4ME payload.
+ * Save requires a fitted state; load marks the state fitted. */
+n4m_status_t n4m_filter_y_outlier_state_save(
+    const n4m_filter_y_outlier_state_t* state, n4m_state_writer_t* w);
+n4m_status_t n4m_filter_y_outlier_state_load(
+    n4m_filter_y_outlier_state_t* state, n4m_state_reader_t* r);
 
 #ifdef __cplusplus
 }  /* extern "C" */

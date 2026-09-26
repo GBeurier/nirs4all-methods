@@ -7,7 +7,10 @@
 # are native; this file only marshals R objects.
 
 .n4m_role_classes <- c(regressor = "n4m_regressor", classifier = "n4m_classifier",
-                       transformer = "n4m_transformer", selector = "n4m_selector")
+                       transformer = "n4m_transformer", selector = "n4m_selector",
+                       sample_filter = "n4m_sample_filter")
+
+.n4m_cap_serializable <- 128L  # N4M_CAP_SERIALIZABLE
 
 .n4m_estimator <- function(method_id, roles, params) {
   structure(
@@ -28,6 +31,10 @@
   state <- object$state
   if (is.null(state)) stop("n4m estimator is not fitted", call. = FALSE)
   if (!isTRUE(.Call("r_n4m_estimator_alive", state$pointer, PACKAGE = "n4m"))) {
+    if (is.null(state$n4me)) {
+      stop("this estimator's state is not serializable; refit it after readRDS()",
+           call. = FALSE)
+    }
     state$pointer <- .Call("r_n4m_estimator_import", state$n4me, PACKAGE = "n4m")
   }
   state$pointer
@@ -41,7 +48,8 @@
 #' (\code{predict} with \code{type = "class"}, \code{"prob"} or
 #' \code{"decision"}, \code{n4m_classes}), \code{n4m_transformer}
 #' (\code{n4m_estimator_transform}) and \code{n4m_selector}
-#' (\code{n4m_estimator_transform}, \code{n4m_selected_indices}). Fit with
+#' (\code{n4m_estimator_transform}, \code{n4m_selected_indices}) and
+#' \code{n4m_sample_filter} (\code{n4m_sample_mask}, train-only). Fit with
 #' \code{n4m_estimator_fit()}. The fitted state is kept
 #' as portable N4ME bytes, so \code{saveRDS()}/\code{readRDS()} and the Python
 #' and JS/WASM bindings reuse it without refitting.
@@ -96,9 +104,11 @@ n4m_estimator_fit.n4m_estimator <- function(object, X, y = NULL, sample_weight =
   params <- object$params[!vapply(object$params, is.null, logical(1))]
   pointer <- .Call("r_n4m_estimator_fit", object$method_id, params, X, y_matrix,
                    inputs, PACKAGE = "n4m")
+  caps <- .Call("r_n4m_estimator_info", pointer, PACKAGE = "n4m")$capabilities
+  serializable <- bitwAnd(as.integer(caps), .n4m_cap_serializable) != 0
   object$state <- list2env(list(
     pointer = pointer,
-    n4me = .Call("r_n4m_estimator_export", pointer, PACKAGE = "n4m"),
+    n4me = if (serializable) .Call("r_n4m_estimator_export", pointer, PACKAGE = "n4m"),
     y_vector = !is.null(y) && is.null(dim(y)),
     levels = levels
   ))
@@ -130,6 +140,18 @@ predict.n4m_classifier <- function(object, newdata, type = c("class", "prob", "d
   out <- .Call(entry, pointer, X, PACKAGE = "n4m")
   colnames(out) <- as.character(n4m_classes(object))
   out
+}
+
+#' @rdname n4m_estimator_roles
+#' @export
+n4m_sample_mask <- function(object, X, y = NULL) UseMethod("n4m_sample_mask")
+
+#' @rdname n4m_estimator_roles
+#' @export
+n4m_sample_mask.n4m_sample_filter <- function(object, X, y = NULL) {
+  X <- .n4m_as_matrix(X)
+  y_matrix <- if (is.null(y)) NULL else matrix(as.double(y), nrow = nrow(X))
+  .Call("r_n4m_estimator_apply_mask", .n4m_pointer(object), X, y_matrix, PACKAGE = "n4m")
 }
 
 #' @rdname n4m_estimator_roles
@@ -174,6 +196,9 @@ n4m_selected_indices.n4m_selector <- function(object) {
 #' @export
 n4m_estimator_export <- function(object) {
   if (is.null(object$state)) stop("n4m estimator is not fitted", call. = FALSE)
+  if (is.null(object$state$n4me)) {
+    stop("this estimator's state is not serializable", call. = FALSE)
+  }
   object$state$n4me
 }
 

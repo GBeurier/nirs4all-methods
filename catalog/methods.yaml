@@ -7552,6 +7552,31 @@ methods:
       - "n4m_outlier_detection_high_leverage_threshold"
     legacy_ids:
       - "filters.high_leverage"
+    estimator:
+      kind: estimator
+      adapter: filter_high_leverage
+      roles: [sample_filter]
+      state: leverage_model
+      inputs:
+        y: optional
+      params:
+        - name: method
+          type: enum
+          choices: [hat, pca]
+          default: hat
+        - name: threshold_multiplier
+          type: double
+          default: 2.0
+        - name: absolute_threshold
+          type: double
+          default: nan
+        - name: n_components
+          type: int
+          default: 0
+          min: 0
+        - name: center
+          type: bool
+          default: true
   - method_id: "filters.spectral_quality"
     family: "filters"
     category: "filters"
@@ -7592,6 +7617,37 @@ methods:
       - "n4m_outlier_detection_spectral_quality_destroy"
     legacy_ids:
       - "filters.spectral_quality"
+    estimator:
+      kind: estimator
+      adapter: filter_spectral_quality
+      roles: [sample_filter]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: max_nan_ratio
+          type: double
+          default: 0.1
+          min: 0.0
+          max: 1.0
+        - name: max_zero_ratio
+          type: double
+          default: 0.5
+          min: 0.0
+          max: 1.0
+        - name: min_variance
+          type: double
+          default: 1e-8
+          min: 0.0
+        - name: max_value
+          type: double
+          default: nan
+        - name: min_value
+          type: double
+          default: nan
+        - name: check_inf
+          type: bool
+          default: true
   - method_id: "filters.x_outlier"
     family: "filters"
     category: "filters"
@@ -7636,6 +7692,40 @@ methods:
       - "n4m_outlier_detection_x_outlier_is_fitted"
     legacy_ids:
       - "filters.x_outlier"
+    estimator:
+      kind: estimator
+      adapter: filter_x_outlier
+      roles: [sample_filter]
+      state: not_serializable
+      inputs:
+        y: optional
+      params:
+        - name: method
+          type: enum
+          choices: [mahalanobis, robust_mahalanobis, pca_residual, pca_leverage, isolation_forest, lof]
+          default: mahalanobis
+        - name: threshold
+          type: double
+          default: nan
+        - name: n_components
+          type: int
+          default: 0
+          min: 0
+        - name: contamination
+          type: double
+          default: 0.1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
+        - name: n_estimators
+          type: int
+          default: 100
+          min: 1
+        - name: max_samples
+          type: int
+          default: 256
+          min: 1
   - method_id: "filters.y_outlier"
     family: "filters"
     category: "filters"
@@ -7680,6 +7770,31 @@ methods:
       - "n4m_outlier_detection_y_outlier_is_fitted"
     legacy_ids:
       - "filters.y_outlier"
+    estimator:
+      kind: estimator
+      adapter: filter_y_outlier
+      roles: [sample_filter]
+      state: target_bounds
+      inputs:
+        y: required
+      params:
+        - name: method
+          type: enum
+          choices: [iqr, zscore, percentile, mad]
+          default: iqr
+        - name: threshold
+          type: double
+          default: 1.5
+        - name: lower_percentile
+          type: double
+          default: 1.0
+          min: 0.0
+          max: 100.0
+        - name: upper_percentile
+          type: double
+          default: 99.0
+          min: 0.0
+          max: 100.0
   - method_id: "utilities.hotelling_t2"
     family: "utilities"
     category: "utilities"
@@ -8017,6 +8132,21 @@ methods:
       - "n4m_feature_selection_correlation_transform"
     legacy_ids:
       - "filters.correlation"
+    estimator:
+      kind: estimator
+      adapter: select_correlation
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+      params:
+        - name: threshold
+          type: double
+          default: 0.0
+        - name: top_k
+          type: int
+          default: -1
+          min: -1
   - method_id: "filters.variance"
     family: "filters.feature"
     category: "filters"
@@ -8064,6 +8194,21 @@ methods:
       - "n4m_feature_selection_variance_transform"
     legacy_ids:
       - "filters.variance"
+    estimator:
+      kind: estimator
+      adapter: select_variance
+      roles: [selector]
+      state: selection
+      inputs:
+        y: optional
+      params:
+        - name: threshold
+          type: double
+          default: 0.0
+        - name: top_k
+          type: int
+          default: -1
+          min: -1
   - method_id: "models.pls.cppls"
     family: "models.pls"
     category: "models"

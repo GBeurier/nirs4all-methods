@@ -33,6 +33,11 @@ bool in_bounds(const ParamSpec& p, double v) noexcept {
     return std::isfinite(v) && (std::isnan(p.min_value) || v >= p.min_value) &&
            (std::isnan(p.max_value) || v <= p.max_value);
 }
+// A NaN default marks an optional value as unused; NaN is then accepted.
+bool unset_marker(const ParamSpec& p, double v) noexcept {
+    return std::isnan(v) && p.type == N4M_METHOD_PARAM_DOUBLE && p.has_default &&
+           std::isnan(p.default_double[0]);
+}
 }  // namespace
 
 std::int32_t method_count() noexcept { return kMethodCount; }
@@ -104,7 +109,7 @@ n4m_status_t Params::set_doubles(const char* name, n4m_method_param_type_t type,
         return N4M_ERR_INVALID_ARGUMENT;
     }
     for (std::int64_t k = 0; k < n; ++k) {
-        if (!in_bounds(p, v[k])) return N4M_ERR_INVALID_ARGUMENT;
+        if (!in_bounds(p, v[k]) && !unset_marker(p, v[k])) return N4M_ERR_INVALID_ARGUMENT;
     }
     ParamValue& value = values_[static_cast<std::size_t>(i)];
     value.doubles.assign(v, v + n);

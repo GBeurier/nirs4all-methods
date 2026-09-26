@@ -43,6 +43,21 @@ c_surface:
   - "n4m_feature_selection_correlation_is_fitted"
   - "n4m_feature_selection_correlation_output_cols"
   - "n4m_feature_selection_correlation_transform"
+estimator:
+  kind: "estimator"
+  adapter: "select_correlation"
+  roles: "[selector]"
+  state: "selection"
+  inputs:
+    y: "required"
+  params:
+    - name: "threshold"
+      type: "double"
+      default: 0.0
+    - name: "top_k"
+      type: "int"
+      default: -1
+      min: -1
 fq_name: "n4m.feature_selection.filter.correlation"
 leaf: "correlation"
 legacy_ids:

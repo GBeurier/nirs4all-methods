@@ -10,6 +10,7 @@ This module only translates Python objects to ``n4m_estimator_*`` calls.
 from __future__ import annotations
 
 import ctypes
+import math
 from typing import Any, ClassVar, Self
 
 import numpy as np
@@ -463,11 +464,49 @@ def _native_param_values(
                 values[name] = cls._enum_choices[name][vals[0]]
             elif kind.endswith("_array"):
                 values[name] = vals
+            elif kind == "double" and math.isnan(vals[0]):
+                values[name] = None  # NaN marks an unused optional value
             else:
                 values[name] = vals[0]
         return values
     finally:
         lib.n4m_params_destroy(params)
+
+
+class NativeSampleFilter(NativeEstimator):
+    """Sample-filter role: Data[n, p] (+ Target) -> keep mask[n], train only.
+
+    ``get_mask`` follows the nirs4all ``SampleFilter`` contract (True keeps
+    the row). Filters on the target read ``y`` at fit and in ``get_mask``;
+    the others ignore it.
+    """
+
+    def get_mask(self, X, y=None) -> np.ndarray:
+        """Boolean keep mask of the rows of ``X``."""
+        handle = self._handle()
+        X_arr = as_f64_2d(X)
+        X_view = numpy_to_view(X_arr)
+        y_ref = None
+        if y is not None:
+            y_arr = np.ascontiguousarray(
+                np.asarray(y, dtype=np.float64).reshape(X_arr.shape[0], -1)
+            )
+            y_view = numpy_to_view(y_arr)
+            y_ref = ctypes.byref(y_view)
+        out = np.empty(X_arr.shape[0], dtype=np.uint8)
+        with _Context() as ctx:
+            ctx.check(
+                lib.n4m_estimator_apply_mask(
+                    ctx.handle,
+                    handle,
+                    ctypes.byref(X_view),
+                    y_ref,
+                    out.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)),
+                    ctypes.c_int64(out.size),
+                ),
+                "n4m_estimator_apply_mask",
+            )
+        return out.astype(bool)
 
 
 class NativeSelector(SelectorMixin, NativeEstimator):
@@ -592,6 +631,7 @@ __all__ = [
     "NativeClassifier",
     "NativeEstimator",
     "NativeRegressor",
+    "NativeSampleFilter",
     "NativeSelector",
     "NativeTransformer",
     "method_info",

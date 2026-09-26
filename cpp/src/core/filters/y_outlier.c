@@ -332,3 +332,25 @@ n4m_status_t n4m_filter_y_outlier_state_is_fitted(
     *out = state->fitted ? 1 : 0;
     return N4M_OK;
 }
+
+n4m_status_t n4m_filter_y_outlier_state_save(
+    const n4m_filter_y_outlier_state_t* state, n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    n4m_state_write_f64(w, state->lower_bound);
+    n4m_state_write_f64(w, state->upper_bound);
+    return N4M_OK;
+}
+
+n4m_status_t n4m_filter_y_outlier_state_load(
+    n4m_filter_y_outlier_state_t* state, n4m_state_reader_t* r) {
+    double lower = 0.0;
+    double upper = 0.0;
+    if (!n4m_state_read_f64(r, &lower) || !n4m_state_read_f64(r, &upper) ||
+        !(lower <= upper)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    state->lower_bound = lower;
+    state->upper_bound = upper;
+    state->fitted = 1;
+    return N4M_OK;
+}

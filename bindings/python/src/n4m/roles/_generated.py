@@ -8,7 +8,193 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from ._base import NativeClassifier, NativeRegressor, NativeSelector, NativeTransformer
+from ._base import (
+    NativeClassifier,
+    NativeRegressor,
+    NativeSampleFilter,
+    NativeSelector,
+    NativeTransformer,
+)
+
+
+class CorrelationFilter(NativeSelector):
+    """Native ``filters.correlation`` (selector)."""
+
+    _method_id = "filters.correlation"
+    _param_types: ClassVar[dict[str, str]] = {
+        "threshold": "double",
+        "top_k": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        threshold=0,
+        top_k=-1,
+    ) -> None:
+        self.threshold = threshold
+        self.top_k = top_k
+
+
+class HighLeverageFilter(NativeSampleFilter):
+    """Native ``filters.high_leverage`` (sample_filter)."""
+
+    _method_id = "filters.high_leverage"
+    _param_types: ClassVar[dict[str, str]] = {
+        "method": "enum",
+        "threshold_multiplier": "double",
+        "absolute_threshold": "double",
+        "n_components": "int",
+        "center": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "method": (
+            "hat",
+            "pca",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        method="hat",
+        threshold_multiplier=2,
+        absolute_threshold=None,
+        n_components=0,
+        center=True,
+    ) -> None:
+        self.method = method
+        self.threshold_multiplier = threshold_multiplier
+        self.absolute_threshold = absolute_threshold
+        self.n_components = n_components
+        self.center = center
+
+
+class SpectralQualityFilter(NativeSampleFilter):
+    """Native ``filters.spectral_quality`` (sample_filter)."""
+
+    _method_id = "filters.spectral_quality"
+    _param_types: ClassVar[dict[str, str]] = {
+        "max_nan_ratio": "double",
+        "max_zero_ratio": "double",
+        "min_variance": "double",
+        "max_value": "double",
+        "min_value": "double",
+        "check_inf": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        max_nan_ratio=0.1,
+        max_zero_ratio=0.5,
+        min_variance=1e-08,
+        max_value=None,
+        min_value=None,
+        check_inf=True,
+    ) -> None:
+        self.max_nan_ratio = max_nan_ratio
+        self.max_zero_ratio = max_zero_ratio
+        self.min_variance = min_variance
+        self.max_value = max_value
+        self.min_value = min_value
+        self.check_inf = check_inf
+
+
+class VarianceFilter(NativeSelector):
+    """Native ``filters.variance`` (selector)."""
+
+    _method_id = "filters.variance"
+    _param_types: ClassVar[dict[str, str]] = {
+        "threshold": "double",
+        "top_k": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        threshold=0,
+        top_k=-1,
+    ) -> None:
+        self.threshold = threshold
+        self.top_k = top_k
+
+
+class XOutlierFilter(NativeSampleFilter):
+    """Native ``filters.x_outlier`` (sample_filter)."""
+
+    _method_id = "filters.x_outlier"
+    _param_types: ClassVar[dict[str, str]] = {
+        "method": "enum",
+        "threshold": "double",
+        "n_components": "int",
+        "contamination": "double",
+        "seed": "int",
+        "n_estimators": "int",
+        "max_samples": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "method": (
+            "mahalanobis",
+            "robust_mahalanobis",
+            "pca_residual",
+            "pca_leverage",
+            "isolation_forest",
+            "lof",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        method="mahalanobis",
+        threshold=None,
+        n_components=0,
+        contamination=0.1,
+        seed=0,
+        n_estimators=100,
+        max_samples=256,
+    ) -> None:
+        self.method = method
+        self.threshold = threshold
+        self.n_components = n_components
+        self.contamination = contamination
+        self.seed = seed
+        self.n_estimators = n_estimators
+        self.max_samples = max_samples
+
+
+class YOutlierFilter(NativeSampleFilter):
+    """Native ``filters.y_outlier`` (sample_filter)."""
+
+    _method_id = "filters.y_outlier"
+    _param_types: ClassVar[dict[str, str]] = {
+        "method": "enum",
+        "threshold": "double",
+        "lower_percentile": "double",
+        "upper_percentile": "double",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "method": (
+            "iqr",
+            "zscore",
+            "percentile",
+            "mad",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        method="iqr",
+        threshold=1.5,
+        lower_percentile=1,
+        upper_percentile=99,
+    ) -> None:
+        self.method = method
+        self.threshold = threshold
+        self.lower_percentile = lower_percentile
+        self.upper_percentile = upper_percentile
 
 
 class PLSLDA(NativeClassifier):
@@ -601,7 +787,7 @@ class CorrelationOptimizedWarping(NativeTransformer):
     def __init__(
         self,
         *,
-        reference=[],
+        reference=(),
         interval_size=32,
         max_shift=5,
     ) -> None:
@@ -621,7 +807,7 @@ class DynamicTimeWarpingAlignment(NativeTransformer):
     def __init__(
         self,
         *,
-        reference=[],
+        reference=(),
     ) -> None:
         self.reference = reference
 
@@ -639,7 +825,7 @@ class IcoshiftAlignment(NativeTransformer):
     def __init__(
         self,
         *,
-        reference=[],
+        reference=(),
         interval_size=32,
         max_shift=5,
     ) -> None:
@@ -660,7 +846,7 @@ class CrossCorrelationAlignment(NativeTransformer):
     def __init__(
         self,
         *,
-        reference=[],
+        reference=(),
         max_shift=5,
     ) -> None:
         self.reference = reference
@@ -1201,7 +1387,7 @@ class Resampler(NativeTransformer):
     def __init__(
         self,
         *,
-        target_wavelengths=[],
+        target_wavelengths=(),
         method="linear",
         crop_min=0,
         crop_max=0,
@@ -1385,7 +1571,7 @@ class LocalizedMSC(NativeTransformer):
         self,
         *,
         window_size=32,
-        reference=[],
+        reference=(),
         eps=1e-12,
     ) -> None:
         self.window_size = window_size
@@ -1417,7 +1603,7 @@ class PiecewiseMSC(NativeTransformer):
         self,
         *,
         window_size=32,
-        reference=[],
+        reference=(),
         eps=1e-12,
     ) -> None:
         self.window_size = window_size
@@ -1520,7 +1706,7 @@ class WeightedSNV(NativeTransformer):
     def __init__(
         self,
         *,
-        weights=[],
+        weights=(),
         ddof=0,
         eps=1e-12,
     ) -> None:
@@ -2698,6 +2884,7 @@ __all__ = [
     "BiPLS",
     "BoostingPLS",
     "ContinuumRegression",
+    "CorrelationFilter",
     "CorrelationOptimizedWarping",
     "CropTransformer",
     "CrossCorrelationAlignment",
@@ -2715,6 +2902,7 @@ __all__ = [
     "Gaussian",
     "GroupSparsePLS",
     "Haar",
+    "HighLeverageFilter",
     "IAsLS",
     "IModPoly",
     "IcoshiftAlignment",
@@ -2752,10 +2940,12 @@ __all__ = [
     "SimpleScale",
     "SparsePLSDA",
     "SparseSIMPLS",
+    "SpectralQualityFilter",
     "Stability",
     "ToAbsorbance",
     "VariableSelect",
     "VariableSortingNormalization",
+    "VarianceFilter",
     "WVCThreshold",
     "Wavelet",
     "WaveletDenoise",
@@ -2764,4 +2954,6 @@ __all__ = [
     "WaveletSVD",
     "WeightedPLS",
     "WeightedSNV",
+    "XOutlierFilter",
+    "YOutlierFilter",
 ]

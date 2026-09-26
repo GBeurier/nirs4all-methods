@@ -7,10 +7,223 @@ import {
     NativeEstimator,
     type ProbabilisticClassifier,
     type Regressor,
+    type SampleFilter,
     type Selector,
     type Transformer,
 } from "./estimatorRoles.js";
 import type { Matrix } from "./types.js";
+
+/** Parameters of CorrelationFilter; unset values take the native defaults. */
+export interface CorrelationFilterParams {
+    /** Default 0. */
+    threshold?: number;
+    /** Default -1. */
+    top_k?: number;
+}
+
+/** Native `filters.correlation` (selector). */
+export class CorrelationFilter extends NativeEstimator implements Selector {
+    readonly methodId = "filters.correlation";
+    protected readonly paramTypes = {
+        threshold: "double",
+        top_k: "int",
+    } as const;
+
+    constructor(params: CorrelationFilterParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+
+    selectedIndices(): number[] {
+        return this.selectedIndexArray();
+    }
+}
+NativeEstimator.register("filters.correlation", CorrelationFilter);
+
+/** Parameters of HighLeverageFilter; unset values take the native defaults. */
+export interface HighLeverageFilterParams {
+    /** Default "hat". */
+    method?: "hat" | "pca";
+    /** Default 2. */
+    threshold_multiplier?: number;
+    /** */
+    absolute_threshold?: number;
+    /** Default 0. */
+    n_components?: number;
+    /** Default true. */
+    center?: boolean;
+}
+
+/** Native `filters.high_leverage` (sample_filter). */
+export class HighLeverageFilter extends NativeEstimator implements SampleFilter {
+    readonly methodId = "filters.high_leverage";
+    protected readonly paramTypes = {
+        method: "enum",
+        threshold_multiplier: "double",
+        absolute_threshold: "double",
+        n_components: "int",
+        center: "bool",
+    } as const;
+
+    constructor(params: HighLeverageFilterParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    getMask(X: Matrix, y?: Float64Array | ArrayLike<number>): boolean[] {
+        return this.maskArray(X, y);
+    }
+}
+NativeEstimator.register("filters.high_leverage", HighLeverageFilter);
+
+/** Parameters of SpectralQualityFilter; unset values take the native defaults. */
+export interface SpectralQualityFilterParams {
+    /** Default 0.1. */
+    max_nan_ratio?: number;
+    /** Default 0.5. */
+    max_zero_ratio?: number;
+    /** Default 1e-08. */
+    min_variance?: number;
+    /** */
+    max_value?: number;
+    /** */
+    min_value?: number;
+    /** Default true. */
+    check_inf?: boolean;
+}
+
+/** Native `filters.spectral_quality` (sample_filter). */
+export class SpectralQualityFilter extends NativeEstimator implements SampleFilter {
+    readonly methodId = "filters.spectral_quality";
+    protected readonly paramTypes = {
+        max_nan_ratio: "double",
+        max_zero_ratio: "double",
+        min_variance: "double",
+        max_value: "double",
+        min_value: "double",
+        check_inf: "bool",
+    } as const;
+
+    constructor(params: SpectralQualityFilterParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    getMask(X: Matrix, y?: Float64Array | ArrayLike<number>): boolean[] {
+        return this.maskArray(X, y);
+    }
+}
+NativeEstimator.register("filters.spectral_quality", SpectralQualityFilter);
+
+/** Parameters of VarianceFilter; unset values take the native defaults. */
+export interface VarianceFilterParams {
+    /** Default 0. */
+    threshold?: number;
+    /** Default -1. */
+    top_k?: number;
+}
+
+/** Native `filters.variance` (selector). */
+export class VarianceFilter extends NativeEstimator implements Selector {
+    readonly methodId = "filters.variance";
+    protected readonly paramTypes = {
+        threshold: "double",
+        top_k: "int",
+    } as const;
+
+    constructor(params: VarianceFilterParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+
+    selectedIndices(): number[] {
+        return this.selectedIndexArray();
+    }
+}
+NativeEstimator.register("filters.variance", VarianceFilter);
+
+/** Parameters of XOutlierFilter; unset values take the native defaults. */
+export interface XOutlierFilterParams {
+    /** Default "mahalanobis". */
+    method?: "mahalanobis" | "robust_mahalanobis" | "pca_residual" | "pca_leverage" | "isolation_forest" | "lof";
+    /** */
+    threshold?: number;
+    /** Default 0. */
+    n_components?: number;
+    /** Default 0.1. */
+    contamination?: number;
+    /** Default 0. */
+    seed?: number;
+    /** Default 100. */
+    n_estimators?: number;
+    /** Default 256. */
+    max_samples?: number;
+}
+
+/** Native `filters.x_outlier` (sample_filter). */
+export class XOutlierFilter extends NativeEstimator implements SampleFilter {
+    readonly methodId = "filters.x_outlier";
+    protected readonly paramTypes = {
+        method: "enum",
+        threshold: "double",
+        n_components: "int",
+        contamination: "double",
+        seed: "int",
+        n_estimators: "int",
+        max_samples: "int",
+    } as const;
+
+    constructor(params: XOutlierFilterParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    getMask(X: Matrix, y?: Float64Array | ArrayLike<number>): boolean[] {
+        return this.maskArray(X, y);
+    }
+}
+NativeEstimator.register("filters.x_outlier", XOutlierFilter);
+
+/** Parameters of YOutlierFilter; unset values take the native defaults. */
+export interface YOutlierFilterParams {
+    /** Default "iqr". */
+    method?: "iqr" | "zscore" | "percentile" | "mad";
+    /** Default 1.5. */
+    threshold?: number;
+    /** Default 1. */
+    lower_percentile?: number;
+    /** Default 99. */
+    upper_percentile?: number;
+}
+
+/** Native `filters.y_outlier` (sample_filter). */
+export class YOutlierFilter extends NativeEstimator implements SampleFilter {
+    readonly methodId = "filters.y_outlier";
+    protected readonly paramTypes = {
+        method: "enum",
+        threshold: "double",
+        lower_percentile: "double",
+        upper_percentile: "double",
+    } as const;
+
+    constructor(params: YOutlierFilterParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    getMask(X: Matrix, y?: Float64Array | ArrayLike<number>): boolean[] {
+        return this.maskArray(X, y);
+    }
+}
+NativeEstimator.register("filters.y_outlier", YOutlierFilter);
 
 /** Parameters of PLSLDA; unset values take the native defaults. */
 export interface PLSLDAParams {

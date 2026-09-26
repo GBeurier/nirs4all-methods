@@ -37,6 +37,37 @@ c_surface:
   - "n4m_outlier_detection_spectral_quality_apply"
   - "n4m_outlier_detection_spectral_quality_create"
   - "n4m_outlier_detection_spectral_quality_destroy"
+estimator:
+  kind: "estimator"
+  adapter: "filter_spectral_quality"
+  roles: "[sample_filter]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "max_nan_ratio"
+      type: "double"
+      default: 0.1
+      min: 0.0
+      max: 1.0
+    - name: "max_zero_ratio"
+      type: "double"
+      default: 0.5
+      min: 0.0
+      max: 1.0
+    - name: "min_variance"
+      type: "double"
+      default: 1e-08
+      min: 0.0
+    - name: "max_value"
+      type: "double"
+      default: nan
+    - name: "min_value"
+      type: "double"
+      default: nan
+    - name: "check_inf"
+      type: "bool"
+      default: true
 fq_name: "n4m.outlier_detection.spectral_quality"
 leaf: "spectral_quality"
 legacy_ids:

@@ -36,7 +36,10 @@ localized/piecewise MSC, piecewise/weighted SNV, VSN, local centering, OSC,
 flexible and wavelet PCA/SVD, k-bins and range discretizers, FCK static,
 baseline centring, log transform, derivative, resampler with a native target
 grid, normalize and simple scale; the four alignments; direct, robust,
-piecewise and score-augmented standardization on a paired target domain) and 4
+piecewise and score-augmented standardization on a paired target domain), the
+variance and correlation filters as selectors, 4 sample filters (Y-outlier,
+X-outlier, high leverage, spectral quality; train-only keep masks, the
+X-outlier state is not serializable) and 4
 classifiers (PLS-LDA, PLS-QDA, PLS-logistic, sparse PLS-DA; labels are integer
 class ids remapped internally, probabilities only where the method defines
 them). `docs/parity/estimator_roles_coverage.md` is the generated per-method
@@ -51,25 +54,21 @@ covariance, log determinant and prior) as `predictions`; it previously
 ignored the fitted covariances. The sparse PLS-DA `sparsity_lambda` parameter
 reaches the kernel through the estimator role (the pls4all wrapper never
 passed it to C).
-The fitted Normalize and SimpleScale roles learn column statistics at fit and
+A double parameter whose default is NaN is optional: NaN (`None`/`NULL`
+in the bindings) means unused, and it is the only non-finite value accepted.
+The composite outlier filter is not a role: composing filters is DAG-ML's
+job. The fitted Normalize and SimpleScale roles learn column statistics at fit and
 apply them to new rows (the stateless functions keep per-batch statistics).
 Fixed while adding roles: alignment refits relearn the reference instead of
 keeping the first one; the cubic resampler no longer shares transform scratch
 space across calls; a resampler crop that keeps a single source point is
 refused instead of reading past the axis.
 
-## 2026-09-26 — ABI 2.12.0: closed native filter roles (unreleased)
+## 2026-09-26 — ABI 2.12.0: closed native filter roles (superseded, never released)
 
-`n4m_sample_filter_*` and `n4m_feature_filter_*` add two shared fit/apply
-contracts over seven existing native filters. The row-mask role covers
-Y-outlier, X-outlier, high leverage, spectral quality and composite filters;
-the column role covers variance and correlation filters. Composite handles own
-their native children and destroy the borrowing composite first. Correlation
-and Y-outlier require a one-column Y aligned to X rows. The column role returns
-the original zero-based selected indices from native fitted state. No kernel,
-RNG, or numerical convention changes; these handles do not export fitted state.
-The additive ABI minor change does not change package versions or publish an
-artifact by itself.
+A draft `n4m_sample_filter_*` / `n4m_feature_filter_*` surface was added on a
+development branch and never distributed. ABI 2.13 replaces it with the
+`SAMPLE_FILTER` and `SELECTOR` estimator roles; the draft symbols are removed.
 
 ## 2026-09-26 — ABI 2.11.0: common native sample-splitter dispatch (release pending)
 

@@ -35,6 +35,10 @@ ROLE_METHODS = {
         "export(n4m_classes)",
     ],
     "transformer": ["S3method(n4m_estimator_transform, n4m_transformer)"],
+    "sample_filter": [
+        "S3method(n4m_sample_mask, n4m_sample_filter)",
+        "export(n4m_sample_mask)",
+    ],
     "selector": [
         "S3method(n4m_estimator_transform, n4m_selector)",
         "S3method(n4m_selected_indices, n4m_selector)",

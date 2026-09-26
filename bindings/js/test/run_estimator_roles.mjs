@@ -48,7 +48,20 @@ const classes = Object.values(n4m).filter(
 const byMethod = new Map(classes.map((c) => [new c().methodId, c]));
 assert.deepEqual([...byMethod.keys()].sort(), fixture.cases.map((c) => c.method_id).sort());
 
+const yTest = Float64Array.from(fixture.y_test);
+const checkMask = (est, c, label) => {
+    if (c.mask) assert.deepEqual(est.getMask(xTest, yTest), c.mask.map((v) => v === 1), `${label} mask`);
+};
+
 for (const c of fixture.cases) {
+    const Cls = byMethod.get(c.method_id);
+    if (c.n4me_base64 === null) {
+        // Train-only filter without a serializable state: refit only.
+        const fitted = new Cls(c.params).fit(xTrain, yTrain, inputsFor(c.fit_inputs));
+        checkMask(fitted, c, `${c.method_id} JS fit`);
+        fitted.dispose();
+        continue;
+    }
     const payload = Uint8Array.from(Buffer.from(c.n4me_base64, "base64"));
     const est = n4m.NativeEstimator.fromN4me(payload);
     assert.equal(est.methodId, c.method_id);
@@ -59,6 +72,7 @@ for (const c of fixture.cases) {
     }
     if (c.selected_indices) assert.deepEqual(est.selectedIndices(), c.selected_indices);
     if (c.classes) checkClassifier(est, c, 1e-12, c.method_id);
+    checkMask(est, c, c.method_id);
     if (c.transform) {
         close(est.transform(xTest).data, c.transform.flat(), 1e-12, `${c.method_id} transform`);
     } else {
@@ -67,10 +81,10 @@ for (const c of fixture.cases) {
     assert.deepEqual(est.toN4me(), payload, `${c.method_id} re-export`);
     est.dispose();
 
-    const Cls = byMethod.get(c.method_id);
     const target = c.classes ? fixture.labels_train : yTrain;
     const fitted = new Cls(c.params).fit(xTrain, target, inputsFor(c.fit_inputs));
     if (c.classes) checkClassifier(fitted, c, 1e-9, `${c.method_id} JS fit`);
+    checkMask(fitted, c, `${c.method_id} JS fit`);
     if (c.predict) close(fitted.predict(xTest).data, c.predict, 1e-9, `${c.method_id} JS fit`);
     if (c.selected_indices) {
         assert.deepEqual(fitted.selectedIndices(), c.selected_indices, `${c.method_id} JS fit`);

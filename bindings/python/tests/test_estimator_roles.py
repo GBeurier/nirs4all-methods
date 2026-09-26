@@ -95,6 +95,7 @@ ROLE_BIT = {
     roles.NativeRegressor: 1 << 1,
     roles.NativeClassifier: 1 << 2,
     roles.NativeSelector: 1 << 3,
+    roles.NativeSampleFilter: 1 << 4,
 }
 
 
@@ -235,6 +236,8 @@ def test_cross_language_fixture_states_replay():
     X_test = np.asarray(doc["x_test"])
     assert {case["method_id"] for case in doc["cases"]} == set(_REGISTRY)
     for case in doc["cases"]:
+        if case["n4me_base64"] is None:
+            continue  # train-only filter without a serializable state
         payload = base64.b64decode(case["n4me_base64"])
         est = roles.NativeEstimator.from_n4me(payload)
         if "predict" in case:
@@ -248,6 +251,10 @@ def test_cross_language_fixture_states_replay():
         if "transform" in case:
             np.testing.assert_allclose(
                 est.transform(X_test), case["transform"], rtol=1e-12, atol=1e-12
+            )
+        if "mask" in case:
+            np.testing.assert_array_equal(
+                est.get_mask(X_test, doc["y_test"]), np.asarray(case["mask"], bool)
             )
         if "classes" in case:
             np.testing.assert_array_equal(est.classes_, case["classes"])
@@ -306,9 +313,13 @@ def test_selector_roundtrip(cls, data):
 
 def reference_selector(cls, est):
     """The n4m reference class with the same effective parameters."""
-    from n4m.feature_selection import ranking, wrapper
+    from n4m.feature_selection import filter, ranking, wrapper
 
-    ref_cls = getattr(wrapper, cls.__name__, None) or getattr(ranking, cls.__name__)
+    ref_cls = next(
+        getattr(m, cls.__name__)
+        for m in (wrapper, ranking, filter)
+        if hasattr(m, cls.__name__)
+    )
     import inspect
 
     accepted = inspect.signature(ref_cls.__init__).parameters
@@ -342,9 +353,12 @@ def test_selector_matches_n4m_reference(cls, data):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         ref = reference_selector(cls, est).fit(X, y)
-    np.testing.assert_array_equal(
-        est.selected_indices_, np.asarray(ref.selected_indices_)
-    )
+    if hasattr(ref, "selected_indices_"):
+        np.testing.assert_array_equal(
+            est.selected_indices_, np.asarray(ref.selected_indices_)
+        )
+    else:  # variance / correlation filters expose the columns in selection order
+        np.testing.assert_array_equal(X[:, est.selected_indices_], ref.transform(X))
 
 
 # Fitted transformers ------------------------------------------------------
@@ -822,3 +836,72 @@ def test_pls_qda_is_quadratic_discriminant_on_scores(labelled):
     np.testing.assert_array_equal(
         est.predict(X_test), qda.predict(pls.transform(X_test))
     )
+
+
+# Sample-filter role -------------------------------------------------------
+
+SAMPLE_FILTER_CASES = [
+    ("YOutlierFilter", {"method": "iqr", "threshold": 0.5}),
+    ("YOutlierFilter", {"method": "zscore", "threshold": 1.0}),
+    (
+        "YOutlierFilter",
+        {"method": "percentile", "lower_percentile": 10.0, "upper_percentile": 90.0},
+    ),
+    ("YOutlierFilter", {"method": "mad", "threshold": 1.0}),
+    ("XOutlierFilter", {"method": "mahalanobis", "n_components": 3}),
+    ("XOutlierFilter", {"method": "pca_residual", "n_components": 2}),
+    ("XOutlierFilter", {"method": "isolation_forest", "seed": 5, "n_estimators": 20}),
+    ("XOutlierFilter", {"method": "lof", "contamination": 0.2}),
+    ("HighLeverageFilter", {"method": "hat", "threshold_multiplier": 1.5}),
+    ("HighLeverageFilter", {"method": "pca", "n_components": 2}),
+    ("HighLeverageFilter", {"absolute_threshold": 0.3}),
+    ("SpectralQualityFilter", {"max_value": 3.0}),
+    ("SpectralQualityFilter", {"min_value": -1.0, "min_variance": 0.5}),
+]
+
+
+@pytest.mark.parametrize(
+    "name,params",
+    SAMPLE_FILTER_CASES,
+    ids=[f"{c[0]}-{i}" for i, c in enumerate(SAMPLE_FILTER_CASES)],
+)
+def test_sample_filter_matches_n4m_reference(name, params, data):
+    """Keep masks equal the n4m reference filters on training and new rows."""
+    from n4m import outlier_detection
+
+    X, y, X_test, _, y_test = data
+    role = getattr(roles, name)(**params)
+    ref = getattr(outlier_detection, name)(**params)
+    reads_y = name == "YOutlierFilter"
+    role.fit(X, y)
+    if reads_y:
+        ref.fit(y)
+    elif hasattr(ref, "fit"):
+        ref.fit(X)
+    for rows, target in ((X, y), (X_test, y_test)):
+        expected = ref.apply(target if reads_y else rows)[0].astype(bool)
+        np.testing.assert_array_equal(role.get_mask(rows, target), expected)
+    if roles.method_info(role._method_id).capabilities & (1 << 7):
+        back = roles.NativeEstimator.from_n4me(role.to_n4me())
+        assert type(back) is type(role) and back.get_params() == role.get_params()
+        np.testing.assert_array_equal(
+            back.get_mask(X_test, y_test), role.get_mask(X_test, y_test)
+        )
+    else:
+        with pytest.raises(N4MError):
+            role.to_n4me()
+
+
+def test_sample_filter_roles_and_inputs(data):
+    X, y, X_test, _, _ = data
+    est = roles.YOutlierFilter().fit(X, y)
+    assert not hasattr(est, "transform") and not hasattr(est, "predict")
+    with pytest.raises(N4MError):
+        est.get_mask(X_test)  # the target filter needs y
+    with pytest.raises(N4MError, match="missing required fit input"):
+        roles.YOutlierFilter().fit(X)
+    mask = roles.HighLeverageFilter().fit(X).get_mask(X_test)
+    assert mask.dtype == bool and mask.shape == (X_test.shape[0],)
+    est = pickle.loads(pickle.dumps(roles.HighLeverageFilter().fit(X)))
+    np.testing.assert_array_equal(est.get_mask(X_test), mask)
+    assert roles.HighLeverageFilter().get_params()["absolute_threshold"] is None

@@ -41,6 +41,31 @@ c_surface:
   - "n4m_outlier_detection_y_outlier_destroy"
   - "n4m_outlier_detection_y_outlier_fit"
   - "n4m_outlier_detection_y_outlier_is_fitted"
+estimator:
+  kind: "estimator"
+  adapter: "filter_y_outlier"
+  roles: "[sample_filter]"
+  state: "target_bounds"
+  inputs:
+    y: "required"
+  params:
+    - name: "method"
+      type: "enum"
+      choices: "[iqr, zscore, percentile, mad]"
+      default: "iqr"
+    - name: "threshold"
+      type: "double"
+      default: 1.5
+    - name: "lower_percentile"
+      type: "double"
+      default: 1.0
+      min: 0.0
+      max: 100.0
+    - name: "upper_percentile"
+      type: "double"
+      default: 99.0
+      min: 0.0
+      max: 100.0
 fq_name: "n4m.outlier_detection.y_outlier"
 leaf: "y_outlier"
 legacy_ids:
