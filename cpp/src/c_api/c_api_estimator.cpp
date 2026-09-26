@@ -23,7 +23,8 @@ using n4m::estimator::set_error_named;
 namespace {
 
 constexpr const char* kInputNames[N4M_FIT_INPUT_COUNT] = {
-    "y", "labels", "sample_weight", "groups", "feature_groups", "blocks", "axis", "target_domain"};
+    "y",    "labels",        "sample_weight", "groups",  "feature_groups",
+    "blocks", "axis", "target_domain", "fold_ids"};
 
 template <typename Fn>
 n4m_status_t guarded(n4m_context_t* ctx, Fn&& fn) noexcept {
@@ -113,12 +114,14 @@ n4m_status_t normalize_inputs(n4m_context_t* ctx, const MethodSpec& spec,
     in.axis = v.axis;
     in.n_axis = v.axis != nullptr ? v.n_axis : 0;
     in.X_target = v.X_target;
+    in.fold_ids = v.fold_ids;
+    in.n_fold_ids = v.fold_ids != nullptr ? v.n_fold_ids : 0;
     in.seed = v.seed;
 
     const bool present[N4M_FIT_INPUT_COUNT] = {
         in.Y != nullptr,          in.labels != nullptr,         in.sample_weight != nullptr,
         in.groups != nullptr,     in.feature_groups != nullptr, in.block_sizes != nullptr,
-        in.axis != nullptr,       in.X_target != nullptr};
+        in.axis != nullptr,       in.X_target != nullptr,       in.fold_ids != nullptr};
     for (int k = 0; k < N4M_FIT_INPUT_COUNT; ++k) {
         if (spec.inputs[k] == N4M_INPUT_REQUIRED && !present[k]) {
             set_error_named(ctx, "missing required fit input", kInputNames[k]);
@@ -142,6 +145,12 @@ n4m_status_t normalize_inputs(n4m_context_t* ctx, const MethodSpec& spec,
     if (in.feature_groups != nullptr && in.n_feature_groups != cols) return fail("feature_groups");
     if (in.axis != nullptr && in.n_axis != cols) return fail("axis");
     if (in.X_target != nullptr && in.X_target->cols != cols) return fail("target_domain");
+    if (in.fold_ids != nullptr) {
+        if (in.n_fold_ids != rows) return fail("fold_ids");
+        for (std::int64_t i = 0; i < rows; ++i) {
+            if (in.fold_ids[i] < 0) return fail("fold_ids");
+        }
+    }
     if (in.block_sizes != nullptr) {
         std::int64_t total = 0;
         for (std::int64_t b = 0; b < in.n_blocks; ++b) {

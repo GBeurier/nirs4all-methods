@@ -113,6 +113,8 @@ struct FitInputs {
     const double* axis = nullptr;
     std::int64_t n_axis = 0;
     const n4m_matrix_view_t* X_target = nullptr;
+    const std::int64_t* fold_ids = nullptr;
+    std::int64_t n_fold_ids = 0;
     std::uint64_t seed = 0;
 };
 

@@ -175,3 +175,20 @@ def test_pcr_matches_n4m_reference(data):
     np.testing.assert_allclose(
         est.predict(X_test), affine_reference(ref, X_test), rtol=1e-10, atol=1e-10
     )
+
+
+def test_weighted_pls_matches_n4m_reference(data):
+    X, y, X_test, _, _ = data
+    weights = np.linspace(0.5, 2.0, X.shape[0])
+    est = roles.WeightedPLS().fit(X, y, sample_weight=weights)
+    ref = native.weighted_pls(X, y, sample_weights=weights)
+    np.testing.assert_allclose(
+        est.predict(X_test), affine_reference(ref, X_test), rtol=1e-10, atol=1e-10
+    )
+    unweighted = roles.WeightedPLS().fit(X, y)
+    np.testing.assert_allclose(
+        unweighted.predict(X_test),
+        affine_reference(native.weighted_pls(X, y), X_test),
+        rtol=1e-10,
+        atol=1e-10,
+    )

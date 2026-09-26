@@ -75,8 +75,8 @@ class NativeEstimator(BaseEstimator):
     Subclasses declare ``_method_id`` and ``_param_types`` (parameter name to
     manifest type) and an explicit ``__init__`` so scikit-learn can clone them.
     Optional fit inputs (``feature_groups``, ``blocks``, ``X_target``,
-    ``sample_weight``, ``groups``, ``axis``) are fit keywords, as they are data,
-    not hyperparameters.
+    ``sample_weight``, ``groups``, ``axis``, ``fold_ids``) are fit keywords, as
+    they are data, not hyperparameters.
     """
 
     _method_id: ClassVar[str] = ""
@@ -160,6 +160,7 @@ class NativeEstimator(BaseEstimator):
         blocks=None,
         axis=None,
         X_target=None,
+        fold_ids=None,
         seed: int = 0,
     ):
         """Fit the native estimator; unused inputs are refused by the core."""
@@ -185,6 +186,7 @@ class NativeEstimator(BaseEstimator):
             ("groups", groups, "groups", "n_groups"),
             ("feature_groups", feature_groups, "feature_groups", "n_feature_groups"),
             ("blocks", blocks, "block_sizes", "n_blocks"),
+            ("fold_ids", fold_ids, "fold_ids", "n_fold_ids"),
         ):
             if value is not None:
                 arr = _as_int64(value, name)

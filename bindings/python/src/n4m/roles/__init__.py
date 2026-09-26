@@ -16,6 +16,7 @@ from ._generated import (
     MBPLS,
     MIRPLS,
     NPLS,
+    O2PLS,
     PCR,
     BaggingPLS,
     BoostingPLS,
@@ -29,6 +30,7 @@ from ._generated import (
     RobustPLS,
     SimplePLS,
     SparseSIMPLS,
+    WeightedPLS,
 )
 
 __all__ = [
@@ -38,6 +40,7 @@ __all__ = [
     "MBPLS",
     "MIRPLS",
     "NPLS",
+    "O2PLS",
     "PCR",
     "BaggingPLS",
     "BoostingPLS",
@@ -54,5 +57,6 @@ __all__ = [
     "RobustPLS",
     "SimplePLS",
     "SparseSIMPLS",
+    "WeightedPLS",
     "method_info",
 ]

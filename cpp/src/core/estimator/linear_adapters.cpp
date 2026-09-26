@@ -316,6 +316,29 @@ std::unique_ptr<Adapter> make_affine_group_sparse_pls(const MethodSpec&) {
     });
 }
 
+// Unit weights when the caller gives none, as the n4m reference does.
+std::unique_ptr<Adapter> make_affine_weighted_pls(const MethodSpec&) {
+    return affine([](auto ctx, auto cfg, const Params&, const FitInputs& in, auto out) {
+        std::vector<double> ones;
+        const double* w = in.sample_weight;
+        std::int64_t n = in.n_sample_weight;
+        if (w == nullptr) {
+            ones.assign(static_cast<std::size_t>(in.X->rows), 1.0);
+            w = ones.data();
+            n = in.X->rows;
+        }
+        return n4m_estimators_weighted_pls_fit(ctx, cfg, in.X, in.Y, w, n, out);
+    });
+}
+
+std::unique_ptr<Adapter> make_affine_o2pls(const MethodSpec&) {
+    return affine([](auto ctx, auto cfg, const Params& p, const FitInputs& in, auto out) {
+        return n4m_estimators_o2pls_fit(ctx, cfg, in.X, in.Y, narrow(p.get_int("n_predictive")),
+                                        narrow(p.get_int("n_x_orthogonal")),
+                                        narrow(p.get_int("n_y_orthogonal")), out);
+    });
+}
+
 std::unique_ptr<Adapter> make_affine_mir_pls(const MethodSpec&) {
     return affine([](auto ctx, auto cfg, const Params&, const FitInputs& in, auto out) {
         return n4m_estimators_mir_pls_fit(ctx, cfg, in.X, in.Y, out);

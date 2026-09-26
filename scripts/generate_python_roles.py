@@ -22,7 +22,7 @@ ROLES = REPO / "bindings" / "python" / "src" / "n4m" / "roles"
 OUTPUT = ROLES / "_generated.py"
 INIT = ROLES / "__init__.py"
 
-ACRONYMS = {"pls", "pcr", "cppls", "mb", "mir", "ecr", "di", "simpls"}
+ACRONYMS = {"pls", "pcr", "cppls", "mb", "mir", "ecr", "di", "simpls", "o2pls"}
 CLASS_NAMES = {
     "models.specialized.tensor_pls": "NPLS",
     "models.pls.pls_fit_simple": "SimplePLS",
