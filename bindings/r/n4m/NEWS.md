@@ -1,3 +1,12 @@
+# n4m 1.0.21.9006
+
+- Added native dispatch for nine sample splitters and 22 seeded, train-only
+  X-to-X augmentations. The augmentation contract preserves sample order and
+  feature width; it does not transform targets or serialize fitted state.
+- This development package carries libn4m ABI 2.11. The `pls4all` R subset is
+  also versioned 1.0.21.9006 so R-universe does not reuse an ABI-2.10 package
+  version for a newly built binary.
+
 # n4m 1.0.21.9005
 
 - Affine `MethodResult` regressors can be promoted by the C++ core to a
