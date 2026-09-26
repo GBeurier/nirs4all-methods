@@ -23,6 +23,26 @@ const ParamSpec kParams_aom_pop_aom_chain_fixed_fit[] = {
     {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_fixed_fit_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
     {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_chain_fixed_fit_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_chain_fixed_fit_moment_policy, 3},
 };
+const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_chain_offsets[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 15};
+const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15, 7, 9, 7, 10, 8, 15};
+const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16, 17, 20, 21, 24, 26, 27};
+const double kDefault_aom_pop_aom_chain_ridge_pls_chain_params[] = {1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0, 1.0, 7.0, 2.0, 1.0, 1.0, 5.0, 5.0, 1.0, 5.0, 2.0, 1.0};
+const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_pls_components[] = {2};
+const double kDefault_aom_pop_aom_chain_ridge_pls_ridge_lambdas[] = {0.0, 0.1, 1.0, 10.0};
+const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_cv[] = {5};
+const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_center_x[] = {1};
+const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_center_y[] = {1};
+const ParamSpec kParams_aom_pop_aom_chain_ridge_pls[] = {
+    {"chain_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_chain_offsets, nullptr, 13, 0.0, kNaN, nullptr, 0},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_op_kinds, nullptr, 15, 0.0, 18.0, nullptr, 0},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_param_offsets, nullptr, 16, 0.0, kNaN, nullptr, 0},
+    {"chain_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_ridge_pls_chain_params, 27, kNaN, kNaN, nullptr, 0},
+    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_pls_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_ridge_pls_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_chain_ridge_pls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_ridge_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_ridge_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+};
 const double kDefault_aom_pop_aom_chain_sweep_chain_params[] = {0};
 const std::int64_t kDefault_aom_pop_aom_chain_sweep_cv[] = {5};
 const double kDefault_aom_pop_aom_chain_sweep_ridge_lambdas[] = {0.01, 0.1, 1.0, 10.0};
@@ -70,6 +90,25 @@ const ParamSpec kParams_aom_pop_aom_pls[] = {
     {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
     {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
 };
+const std::int64_t kDefault_aom_pop_aom_pls_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
+const std::int64_t kDefault_aom_pop_aom_pls_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
+const double kDefault_aom_pop_aom_pls_superblock_op_params[] = {1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0};
+const std::int64_t kDefault_aom_pop_aom_pls_superblock_pls_components[] = {2};
+const std::int64_t kDefault_aom_pop_aom_pls_superblock_cv[] = {5};
+const std::int64_t kDefault_aom_pop_aom_pls_superblock_block_scaling[] = {0};
+const char* const kChoices_aom_pop_aom_pls_superblock_block_scaling[] = {"rms", "none"};
+const std::int64_t kDefault_aom_pop_aom_pls_superblock_center_x[] = {1};
+const std::int64_t kDefault_aom_pop_aom_pls_superblock_center_y[] = {1};
+const ParamSpec kParams_aom_pop_aom_pls_superblock[] = {
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_pls_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
+    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_superblock_pls_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_pls_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_pls_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_pls_superblock_block_scaling, 2},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+};
 const std::int64_t kDefault_aom_pop_aom_preprocessing_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
 const std::int64_t kDefault_aom_pop_aom_preprocessing_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
 const double kDefault_aom_pop_aom_preprocessing_op_params[] = {1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0};
@@ -80,6 +119,25 @@ const ParamSpec kParams_aom_pop_aom_preprocessing[] = {
     {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_preprocessing_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
     {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_preprocessing_op_params, 16, kNaN, kNaN, nullptr, 0},
     {"gating_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_preprocessing_gating_mode, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_preprocessing_gating_mode, 2},
+};
+const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
+const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
+const double kDefault_aom_pop_aom_ridge_pls_superblock_op_params[] = {1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0};
+const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_pls_components[] = {2};
+const double kDefault_aom_pop_aom_ridge_pls_superblock_ridge_lambdas[] = {0.0, 0.1, 1.0, 10.0};
+const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_cv[] = {5};
+const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_block_scaling[] = {0};
+const char* const kChoices_aom_pop_aom_ridge_pls_superblock_block_scaling[] = {"rms", "none"};
+const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_center_x[] = {1};
+const ParamSpec kParams_aom_pop_aom_ridge_pls_superblock[] = {
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_ridge_pls_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_ridge_pls_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_ridge_pls_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
+    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_ridge_pls_superblock_pls_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_ridge_pls_superblock_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_ridge_pls_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_ridge_pls_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_ridge_pls_superblock_block_scaling, 2},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_ridge_pls_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
 };
 const std::int64_t kDefault_aom_pop_aom_sweep_profile[] = {0};
 const char* const kChoices_aom_pop_aom_sweep_profile[] = {"compact", "wide"};
@@ -173,6 +231,36 @@ const ParamSpec kParams_aom_pop_pop_pls[] = {
     {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
     {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
 };
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
+const double kDefault_aom_pop_ridge_active_superblock_op_params[] = {1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0};
+const double kDefault_aom_pop_ridge_active_superblock_alphas[] = {0.0001, 0.01, 1.0, 100.0};
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_cv[] = {5};
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_active_top_m[] = {20};
+const double kDefault_aom_pop_ridge_active_superblock_active_diversity_threshold[] = {0.98};
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_active_score_method[] = {0};
+const char* const kChoices_aom_pop_ridge_active_superblock_active_score_method[] = {"norm", "kta", "blend"};
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_active_max_per_family[] = {0};
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_keep_identity[] = {1};
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_block_scaling[] = {0};
+const char* const kChoices_aom_pop_ridge_active_superblock_block_scaling[] = {"rms", "none"};
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_center_x[] = {1};
+const std::int64_t kDefault_aom_pop_ridge_active_superblock_center_y[] = {1};
+const ParamSpec kParams_aom_pop_ridge_active_superblock[] = {
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_active_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_active_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_active_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
+    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_active_superblock_alphas, 4, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_active_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"active_top_m", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_active_superblock_active_top_m, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"active_diversity_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_ridge_active_superblock_active_diversity_threshold, 1, 0.0, 1.0, nullptr, 0},
+    {"active_score_method", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_active_superblock_active_score_method, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_active_superblock_active_score_method, 3},
+    {"active_max_per_family", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_active_superblock_active_max_per_family, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"keep_identity", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_active_superblock_keep_identity, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_active_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_active_superblock_block_scaling, 2},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_active_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_active_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+};
 const std::int64_t kDefault_aom_pop_ridge_blender_profile[] = {0};
 const char* const kChoices_aom_pop_ridge_blender_profile[] = {"compact", "wide"};
 const std::int64_t kDefault_aom_pop_ridge_blender_cv[] = {5};
@@ -214,6 +302,46 @@ const ParamSpec kParams_aom_pop_ridge_global[] = {
     {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
     {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
     {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_global_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_global_moment_policy, 3},
+};
+const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
+const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
+const double kDefault_aom_pop_ridge_mkl_superblock_op_params[] = {1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0};
+const double kDefault_aom_pop_ridge_mkl_superblock_alphas[] = {0.0001, 0.01, 1.0, 100.0};
+const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_cv[] = {5};
+const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_mkl_top_k[] = {6};
+const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_block_scaling[] = {1};
+const char* const kChoices_aom_pop_ridge_mkl_superblock_block_scaling[] = {"rms", "none"};
+const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_center_x[] = {1};
+const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_center_y[] = {1};
+const ParamSpec kParams_aom_pop_ridge_mkl_superblock[] = {
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_mkl_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_mkl_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_mkl_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
+    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_mkl_superblock_alphas, 4, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_mkl_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"mkl_top_k", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_mkl_superblock_mkl_top_k, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_mkl_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_mkl_superblock_block_scaling, 2},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_mkl_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_mkl_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+};
+const std::int64_t kDefault_aom_pop_ridge_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
+const std::int64_t kDefault_aom_pop_ridge_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
+const double kDefault_aom_pop_ridge_superblock_op_params[] = {1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0};
+const double kDefault_aom_pop_ridge_superblock_alphas[] = {0.0001, 0.01, 1.0, 100.0};
+const std::int64_t kDefault_aom_pop_ridge_superblock_cv[] = {5};
+const std::int64_t kDefault_aom_pop_ridge_superblock_block_scaling[] = {0};
+const char* const kChoices_aom_pop_ridge_superblock_block_scaling[] = {"rms", "none"};
+const std::int64_t kDefault_aom_pop_ridge_superblock_center_x[] = {1};
+const std::int64_t kDefault_aom_pop_ridge_superblock_center_y[] = {1};
+const ParamSpec kParams_aom_pop_ridge_superblock[] = {
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
+    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_superblock_alphas, 4, 0.0, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_superblock_block_scaling, 2},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
 };
 const std::int64_t kDefault_aom_pop_robust_hpo_profile[] = {0};
 const char* const kChoices_aom_pop_robust_hpo_profile[] = {"compact", "wide"};
@@ -1887,16 +2015,22 @@ const ParamSpec kParams_utilities_transfer_metrics[] = {
 
 const MethodSpec kMethods[] = {
     {"aom_pop.aom_chain_fixed_fit", "n4m.model_selection.aom_search.aom_chain_fixed_fit", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_aom_chain_fixed_fit, 10, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_aom_chain_fixed_fit, nullptr},
+    {"aom_pop.aom_chain_ridge_pls", "n4m.model_selection.aom_search.aom_chain_ridge_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_aom_chain_ridge_pls, 9, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_chain_ridge_pls, nullptr},
     {"aom_pop.aom_chain_sweep", "n4m.model_selection.aom_search.aom_chain_sweep", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_aom_chain_sweep, 13, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_chain_sweep, nullptr},
     {"aom_pop.aom_pls", "n4m.model_selection.aom_search.aom_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_aom_pls, 9, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_pls, nullptr},
+    {"aom_pop.aom_pls_superblock", "n4m.compose.aom_superblock.aom_pls_superblock", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_aom_pls_superblock, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_pls_superblock, nullptr},
     {"aom_pop.aom_preprocessing", "n4m.model_selection.aom_search.aom_preprocessing", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_aom_pop_aom_preprocessing, 4, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_aom_preprocessing, nullptr},
+    {"aom_pop.aom_ridge_pls_superblock", "n4m.compose.aom_superblock.aom_ridge_pls_superblock", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_aom_ridge_pls_superblock, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_ridge_pls_superblock, nullptr},
     {"aom_pop.aom_sweep", "n4m.model_selection.aom_search.aom_sweep", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_aom_sweep, 10, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_sweep, nullptr},
     {"aom_pop.calibration", "n4m.model_selection.aom_calibration.calibration", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_calibration, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "aom_calibration", &make_aom_calibration, nullptr},
     {"aom_pop.linear_stack_compress", "n4m.ensemble.linear_stack_compress", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_aom_pop_linear_stack_compress, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_linear_stack_compress},
     {"aom_pop.operator_pls_stack", "n4m.ensemble.aom_operator_pls_stack", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_operator_pls_stack, 10, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_operator_pls_stack, nullptr},
     {"aom_pop.pop_pls", "n4m.model_selection.aom_search.pop_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_pop_pls, 9, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_pop_pls, nullptr},
+    {"aom_pop.ridge_active_superblock", "n4m.compose.aom_superblock.ridge_active_superblock", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_ridge_active_superblock, 13, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_ridge_active_superblock, nullptr},
     {"aom_pop.ridge_blender", "n4m.ensemble.aom_ridge_blender", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_ridge_blender, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_ridge_blender, nullptr},
     {"aom_pop.ridge_global", "n4m.model_selection.aom_search.ridge_global", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_ridge_global, 10, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_ridge_global, nullptr},
+    {"aom_pop.ridge_mkl_superblock", "n4m.compose.aom_superblock.ridge_mkl_superblock", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_ridge_mkl_superblock, 9, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_ridge_mkl_superblock, nullptr},
+    {"aom_pop.ridge_superblock", "n4m.compose.aom_superblock.ridge_superblock", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_ridge_superblock, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "n4mm", &make_aom_ridge_superblock, nullptr},
     {"aom_pop.robust_hpo", "n4m.model_selection.aom_search.robust_hpo", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_aom_pop_robust_hpo, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_aom_robust_hpo, nullptr},
     {"augmentation.drift.linear_drift", "n4m.augmentation.drift.linear_drift", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_drift_linear_drift, 5, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},
     {"augmentation.drift.path_length", "n4m.augmentation.drift.path_length", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_drift_path_length, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_augmentation_dispatch},

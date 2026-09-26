@@ -419,7 +419,7 @@ methods:
     since_abi: "1.21.0"
     abi_symbols: []
     tu:
-      - "cpp/src/core/aom_preprocessing.cpp"
+      - "cpp/src/core/aom_superblock.cpp"
       - "cpp/src/core/ridge.cpp"
       - "cpp/src/c_api/c_api_method_result.cpp"
     headers:
@@ -450,13 +450,52 @@ methods:
         class: "aom_ridge_superblock"
         legacy_aliases: []
     publications: []
-    notes: "Python-backed donor-style AOM Ridge superblock constrained to strict-linear single-operator AOM views. It builds operator outputs through native aom_preprocess, selects/fits Ridge alphas fold-locally through the native Ridge binding, applies train-fold centering and optional block RMS scaling to validation folds, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU superblock grinder."
+    notes: "Native AOM Ridge superblock over strict-linear single-operator AOM views (core fit_aom_superblock). It concatenates the operator outputs, centers the columns and optionally scales each block to unit RMS with train-fold statistics, selects the Ridge alpha by train-fold CV, and folds the final superblock coefficients back to original-input input_coefficients plus intercept, so the role state is an affine N4MM predictor. It excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes."
     namespace: "compose.aom_superblock"
     leaf: "ridge_superblock"
     fq_name: "n4m.compose.aom_superblock.ridge_superblock"
     c_surface: "none"
     legacy_ids:
       - "aom_pop.ridge_superblock"
+    estimator:
+      kind: estimator
+      adapter: aom_ridge_superblock
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: op_kinds
+          type: int_array
+          default: [0, 7, 7, 8, 8, 9, 9, 10, 15]
+          min: 0
+          max: 18
+        - name: param_offsets
+          type: int_array
+          default: [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]
+          min: 0
+        - name: op_params
+          type: double_array
+          default: [1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]
+        - name: alphas
+          type: double_array
+          default: [0.0001, 0.01, 1.0, 100.0]
+          min: 0.0
+        - name: cv
+          type: int
+          default: 5
+          min: 2
+        - name: block_scaling
+          type: enum
+          default: rms
+          choices: [rms, none]
+        - name: center_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
   - method_id: "aom_pop.ridge_active_superblock"
     family: "aom_pop.aom"
     category: "aom_pop"
@@ -464,7 +503,7 @@ methods:
     since_abi: "1.21.0"
     abi_symbols: []
     tu:
-      - "cpp/src/core/aom_preprocessing.cpp"
+      - "cpp/src/core/aom_superblock.cpp"
       - "cpp/src/core/ridge.cpp"
       - "cpp/src/c_api/c_api_method_result.cpp"
     headers:
@@ -495,13 +534,72 @@ methods:
         class: "aom_ridge_active_superblock"
         legacy_aliases: []
     publications: []
-    notes: "Python-backed donor-style AOM Ridge active-superblock constrained to strict-linear single-operator AOM views. It screens operators fold-locally during alpha CV using response signatures computed from native aom_preprocess outputs, refits the active subset on the full calibration set, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU active-superblock grinder."
+    notes: "Native AOM Ridge active superblock over strict-linear single-operator AOM views (core fit_aom_superblock). Inside every alpha-CV fold it screens operators by response signatures of the actual operator outputs (norm, KTA or blend score, diversity threshold, optional per-family cap, identity kept first), fits Ridge on the active superblock, refits the screen on all rows, and folds the final coefficients back to original-input input_coefficients plus intercept (affine N4MM state). It excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes."
     namespace: "compose.aom_superblock"
     leaf: "ridge_active_superblock"
     fq_name: "n4m.compose.aom_superblock.ridge_active_superblock"
     c_surface: "none"
     legacy_ids:
       - "aom_pop.ridge_active_superblock"
+    estimator:
+      kind: estimator
+      adapter: aom_ridge_active_superblock
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: op_kinds
+          type: int_array
+          default: [0, 7, 7, 8, 8, 9, 9, 10, 15]
+          min: 0
+          max: 18
+        - name: param_offsets
+          type: int_array
+          default: [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]
+          min: 0
+        - name: op_params
+          type: double_array
+          default: [1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]
+        - name: alphas
+          type: double_array
+          default: [0.0001, 0.01, 1.0, 100.0]
+          min: 0.0
+        - name: cv
+          type: int
+          default: 5
+          min: 2
+        - name: active_top_m
+          type: int
+          default: 20
+          min: 1
+        - name: active_diversity_threshold
+          type: double
+          default: 0.98
+          min: 0.0
+          max: 1.0
+        - name: active_score_method
+          type: enum
+          default: norm
+          choices: [norm, kta, blend]
+        - name: active_max_per_family
+          type: int
+          default: 0
+          min: 0
+        - name: keep_identity
+          type: bool
+          default: true
+        - name: block_scaling
+          type: enum
+          default: rms
+          choices: [rms, none]
+        - name: center_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
   - method_id: "aom_pop.ridge_mkl_superblock"
     family: "aom_pop.aom"
     category: "aom_pop"
@@ -509,7 +607,7 @@ methods:
     since_abi: "1.21.0"
     abi_symbols: []
     tu:
-      - "cpp/src/core/aom_preprocessing.cpp"
+      - "cpp/src/core/aom_superblock.cpp"
       - "cpp/src/core/ridge.cpp"
       - "cpp/src/c_api/c_api_method_result.cpp"
     headers:
@@ -540,13 +638,56 @@ methods:
         class: "aom_ridge_mkl_superblock"
         legacy_aliases: []
     publications: []
-    notes: "Python-backed donor-style AOM Ridge MKL-light superblock constrained to strict-linear single-operator AOM views. It learns non-negative train-only KTA weights over operator blocks inside every alpha-CV fold, refits weights on the full calibration set, fits native Ridge on the equivalent weighted superblock, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, row-reference-dependent preprocessing, nonlinear kernels and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU weighted-superblock grinder."
+    notes: "Native AOM Ridge MKL-light superblock over strict-linear single-operator AOM views (core fit_aom_superblock). It learns non-negative train-only kernel-target-alignment weights over the top operator blocks inside every alpha-CV fold, refits the weights on all rows, fits Ridge on the equivalent weighted superblock, and folds the final coefficients back to original-input input_coefficients plus intercept (affine N4MM state). It excludes donor branch_global, row-reference-dependent preprocessing, nonlinear kernels and nonlinear AOM Ridge modes."
     namespace: "compose.aom_superblock"
     leaf: "ridge_mkl_superblock"
     fq_name: "n4m.compose.aom_superblock.ridge_mkl_superblock"
     c_surface: "none"
     legacy_ids:
       - "aom_pop.ridge_mkl_superblock"
+    estimator:
+      kind: estimator
+      adapter: aom_ridge_mkl_superblock
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: op_kinds
+          type: int_array
+          default: [0, 7, 7, 8, 8, 9, 9, 10, 15]
+          min: 0
+          max: 18
+        - name: param_offsets
+          type: int_array
+          default: [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]
+          min: 0
+        - name: op_params
+          type: double_array
+          default: [1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]
+        - name: alphas
+          type: double_array
+          default: [0.0001, 0.01, 1.0, 100.0]
+          min: 0.0
+        - name: cv
+          type: int
+          default: 5
+          min: 2
+        - name: mkl_top_k
+          type: int
+          default: 6
+          min: 1
+        - name: block_scaling
+          type: enum
+          default: none
+          choices: [rms, none]
+        - name: center_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
   - method_id: "aom_pop.aom_pls_superblock"
     family: "aom_pop.aom"
     category: "aom_pop"
@@ -554,7 +695,7 @@ methods:
     since_abi: "1.21.0"
     abi_symbols: []
     tu:
-      - "cpp/src/core/aom_preprocessing.cpp"
+      - "cpp/src/core/aom_superblock.cpp"
       - "cpp/src/core/sweep.cpp"
       - "cpp/src/c_api/c_api_method_result.cpp"
     headers:
@@ -586,13 +727,52 @@ methods:
         class: "aom_pls_superblock"
         legacy_aliases: []
     publications: []
-    notes: "Python-backed donor-style AOM-PLS superblock constrained to strict-linear single-operator AOM views. It builds concatenated native aom_preprocess operator outputs, selects the PLS component count by train CV over the superblock, fits through the native PLS binding, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes row-reference-dependent preprocessing, nonlinear lifts and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU PLS superblock grinder."
+    notes: "Native AOM-PLS superblock over strict-linear single-operator AOM views (core fit_aom_superblock). It concatenates the operator outputs with train-fold centering and optional block RMS scaling, selects the PLS component count by train-fold CV, fits the native moment/materialized PLS final fit, and folds the final superblock coefficients back to original-input input_coefficients plus intercept (affine N4MM state). It excludes row-reference-dependent preprocessing, nonlinear lifts and dataset/source routing."
     namespace: "compose.aom_superblock"
     leaf: "aom_pls_superblock"
     fq_name: "n4m.compose.aom_superblock.aom_pls_superblock"
     c_surface: "none"
     legacy_ids:
       - "aom_pop.aom_pls_superblock"
+    estimator:
+      kind: estimator
+      adapter: aom_pls_superblock
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: op_kinds
+          type: int_array
+          default: [0, 7, 7, 8, 8, 9, 9, 10, 15]
+          min: 0
+          max: 18
+        - name: param_offsets
+          type: int_array
+          default: [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]
+          min: 0
+        - name: op_params
+          type: double_array
+          default: [1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]
+        - name: pls_components
+          type: int_array
+          default: [2]
+          min: 1
+        - name: cv
+          type: int
+          default: 5
+          min: 2
+        - name: block_scaling
+          type: enum
+          default: rms
+          choices: [rms, none]
+        - name: center_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
   - method_id: "aom_pop.aom_ridge_pls_superblock"
     family: "aom_pop.aom"
     category: "aom_pop"
@@ -600,7 +780,7 @@ methods:
     since_abi: "1.21.0"
     abi_symbols: []
     tu:
-      - "cpp/src/core/aom_preprocessing.cpp"
+      - "cpp/src/core/aom_superblock.cpp"
       - "cpp/src/core/extra_pls.cpp"
       - "cpp/src/c_api/c_api_method_result.cpp"
     headers:
@@ -632,13 +812,53 @@ methods:
         class: "aom_ridge_pls_superblock"
         legacy_aliases: []
     publications: []
-    notes: "Python-backed donor-style AOM Ridge-PLS superblock constrained to strict-linear single-operator AOM views. It builds concatenated native aom_preprocess operator outputs, selects the PLS component count and Ridge-PLS lambda by train CV over the superblock, fits through the native ridge_pls binding, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes row-reference-dependent preprocessing, nonlinear lifts, MKL/kernel modes and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU Ridge-PLS superblock grinder."
+    notes: "Native AOM Ridge-PLS superblock over strict-linear single-operator AOM views (core fit_aom_superblock). It concatenates the operator outputs with train-fold centering and optional block RMS scaling, selects the component count and Ridge-PLS lambda by train-fold CV, fits the native ridge-augmented SIMPLS, and folds the final superblock coefficients back to original-input input_coefficients plus intercept (affine N4MM state). It excludes row-reference-dependent preprocessing, nonlinear lifts, MKL/kernel modes and dataset/source routing."
     namespace: "compose.aom_superblock"
     leaf: "aom_ridge_pls_superblock"
     fq_name: "n4m.compose.aom_superblock.aom_ridge_pls_superblock"
     c_surface: "none"
     legacy_ids:
       - "aom_pop.aom_ridge_pls_superblock"
+    estimator:
+      kind: estimator
+      adapter: aom_ridge_pls_superblock
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: op_kinds
+          type: int_array
+          default: [0, 7, 7, 8, 8, 9, 9, 10, 15]
+          min: 0
+          max: 18
+        - name: param_offsets
+          type: int_array
+          default: [0, 0, 1, 2, 4, 6, 9, 12, 15, 16]
+          min: 0
+        - name: op_params
+          type: double_array
+          default: [1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]
+        - name: pls_components
+          type: int_array
+          default: [2]
+          min: 1
+        - name: ridge_lambdas
+          type: double_array
+          default: [0.0, 0.1, 1.0, 10.0]
+          min: 0.0
+        - name: cv
+          type: int
+          default: 5
+          min: 2
+        - name: block_scaling
+          type: enum
+          default: rms
+          choices: [rms, none]
+        - name: center_x
+          type: bool
+          default: true
   - method_id: "aom_pop.aom_chain_ridge_pls"
     family: "aom_pop.aom"
     category: "aom_pop"
@@ -646,7 +866,7 @@ methods:
     since_abi: "1.21.0"
     abi_symbols: []
     tu:
-      - "cpp/src/core/aom_preprocessing.cpp"
+      - "cpp/src/core/aom_superblock.cpp"
       - "cpp/src/core/extra_pls.cpp"
       - "cpp/src/c_api/c_api_method_result.cpp"
     headers:
@@ -678,13 +898,56 @@ methods:
         class: "aom_chain_ridge_pls"
         legacy_aliases: []
     publications: []
-    notes: "Native L2-augmented-design Ridge-PLS on strict/raw-base chains, distinct from donor Ridge-on-PLS-scores SingleChainPLSRidge; not a parity port. It applies strict-linear AOM chains sequentially, selects one chain plus PLS component count and Ridge-PLS lambda by train CV, fits through the native ridge_pls binding, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not a fused many-chain GPU Ridge-PLS grinder."
+    notes: "Native L2-augmented-design Ridge-PLS on strict/raw-base chains (core fit_aom_chain_ridge_pls), distinct from donor Ridge-on-PLS-scores SingleChainPLSRidge; not a parity port. It applies each strict-linear AOM chain sequentially (default: the compact native chain bank), selects one chain plus PLS component count and Ridge-PLS lambda by train-fold CV, fits the native ridge-augmented SIMPLS, and folds the final coefficients back to original-input input_coefficients plus intercept (affine N4MM state). It excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing."
     namespace: "model_selection.aom_search"
     leaf: "aom_chain_ridge_pls"
     fq_name: "n4m.model_selection.aom_search.aom_chain_ridge_pls"
     c_surface: "none"
     legacy_ids:
       - "aom_pop.aom_chain_ridge_pls"
+    estimator:
+      kind: estimator
+      adapter: aom_chain_ridge_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: chain_offsets
+          type: int_array
+          default: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 15]
+          min: 0
+        - name: op_kinds
+          type: int_array
+          default: [0, 7, 7, 8, 8, 9, 9, 10, 15, 7, 9, 7, 10, 8, 15]
+          min: 0
+          max: 18
+        - name: param_offsets
+          type: int_array
+          default: [0, 0, 1, 2, 4, 6, 9, 12, 15, 16, 17, 20, 21, 24, 26, 27]
+          min: 0
+        - name: chain_params
+          type: double_array
+          default: [1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0, 1.0, 7.0, 2.0, 1.0, 1.0, 5.0, 5.0, 1.0, 5.0, 2.0, 1.0]
+        - name: pls_components
+          type: int_array
+          default: [2]
+          min: 1
+        - name: ridge_lambdas
+          type: double_array
+          default: [0.0, 0.1, 1.0, 10.0]
+          min: 0.0
+        - name: cv
+          type: int
+          default: 5
+          min: 2
+        - name: center_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
   - method_id: "aom_pop.operator_pls_stack"
     family: "aom_pop.aom"
     category: "aom_pop"
