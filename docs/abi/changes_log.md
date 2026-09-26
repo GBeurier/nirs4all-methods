@@ -6,7 +6,9 @@
 into a predict-only `N4M_ALGO_IMPORTED_LINEAR_PREDICTOR` model. It validates
 finite coefficients and either a direct intercept or both X/Y means with
 exact shapes, derives the intercept in C++ when necessary, and exports a
-standalone N4MM payload with unknown training-row provenance (`0`). Results
+standalone N4MM payload. A finite, shape-consistent `predictions` matrix
+supplies the source training-row count; absent predictions leave provenance
+unknown (`0`). This metadata does not retain training rows. Results
 without the explicit `affine_predictor=1` capability are rejected. Marked
 producers in this batch are GroupSparsePLS, FusedSparsePLS, RobustPLS,
 RidgePLS, ContinuumRegression, BaggingPLS, BoostingPLS, and

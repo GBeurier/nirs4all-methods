@@ -361,7 +361,7 @@ void test_group_sparse_penalty() {
     N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
         payload.data(), written, &info) == N4M_OK);
     N4M_TEST_REQUIRE(info.algorithm == N4M_ALGO_IMPORTED_LINEAR_PREDICTOR);
-    N4M_TEST_REQUIRE(info.training_samples == 0);
+    N4M_TEST_REQUIRE(info.training_samples == 8);
     N4M_TEST_REQUIRE(info.n_components == 0);
     N4M_TEST_REQUIRE(info.capabilities ==
                      (N4M_SERIALIZED_MODEL_CAPABILITY_PREDICT |
@@ -437,7 +437,40 @@ void test_affine_method_result_validation() {
     N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Y, output, 1, 1, N4M_DTYPE_F64) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_model_predict(ctx, model, &X, &Y) == N4M_OK);
     N4M_TEST_REQUIRE(output[0] == 7.0);
+    // A result without predictions has unknown training-row provenance.
+    std::size_t size = 0;
+    N4M_TEST_REQUIRE(n4m_model_export_size(model, &size) == N4M_OK);
+    std::vector<unsigned char> bytes(size);
+    std::size_t written = 0;
+    N4M_TEST_REQUIRE(n4m_model_export_to_buffer(
+        model, bytes.data(), bytes.size(), &written) == N4M_OK);
+    n4m_serialized_model_info_v1_t info{};
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+        bytes.data(), written, &info) == N4M_OK);
+    N4M_TEST_REQUIRE(info.training_samples == 0);
     n4m_model_destroy(model);
+    result.set_double_matrix("predictions", {1.0, 2.0, 3.0}, 3, 1);
+    N4M_TEST_REQUIRE(n4m_model_from_method_result(ctx, &result, &model) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_model_export_size(model, &size) == N4M_OK);
+    bytes.resize(size);
+    N4M_TEST_REQUIRE(n4m_model_export_to_buffer(
+        model, bytes.data(), bytes.size(), &written) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+        bytes.data(), written, &info) == N4M_OK);
+    N4M_TEST_REQUIRE(info.training_samples == 3);
+    n4m_model_destroy(model);
+    result.set_double_matrix("predictions", {1.0, 2.0, 3.0}, 3, 2);
+    N4M_TEST_REQUIRE(n4m_model_from_method_result(ctx, &result, &model) ==
+                     N4M_ERR_INVALID_ARGUMENT);
+    result.set_double_matrix("predictions", {1.0, 2.0}, 3, 1);
+    N4M_TEST_REQUIRE(n4m_model_from_method_result(ctx, &result, &model) ==
+                     N4M_ERR_INVALID_ARGUMENT);
+    result.set_double_matrix("predictions", {std::numeric_limits<double>::infinity()}, 1, 1);
+    N4M_TEST_REQUIRE(n4m_model_from_method_result(ctx, &result, &model) ==
+                     N4M_ERR_INVALID_ARGUMENT);
+    result.set_double_matrix("predictions", {}, 0, 1);
+    N4M_TEST_REQUIRE(n4m_model_from_method_result(ctx, &result, &model) ==
+                     N4M_ERR_INVALID_ARGUMENT);
     n4m_context_destroy(ctx);
 }
 
