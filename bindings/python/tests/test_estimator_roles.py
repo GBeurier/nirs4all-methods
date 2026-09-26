@@ -286,7 +286,10 @@ def test_cross_language_fixture_states_replay():
             )
         if "transform" in case:
             np.testing.assert_allclose(
-                est.transform(X_test), case["transform"], rtol=REPLAY_TOL, atol=REPLAY_TOL
+                est.transform(X_test),
+                case["transform"],
+                rtol=REPLAY_TOL,
+                atol=REPLAY_TOL,
             )
         if "mask" in case:
             np.testing.assert_array_equal(
