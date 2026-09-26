@@ -8,26 +8,27 @@ export interface Matrix {
     cols: number;
 }
 
-/** Mirror of the C enum n4m_status_t. */
+/** Mirror of the C enum n4m_status_t (cpp/include/n4m/n4m.h). */
 export enum Status {
     OK = 0,
     ERR_INVALID_ARGUMENT = 1,
     ERR_NULL_POINTER = 2,
-    ERR_OUT_OF_MEMORY = 3,
+    ERR_SHAPE_MISMATCH = 3,
     ERR_DTYPE_MISMATCH = 4,
-    ERR_SHAPE_MISMATCH = 5,
-    ERR_DIM_MISMATCH = 6,
+    ERR_STRIDE_INVALID = 5,
+    ERR_NOT_FITTED = 6,
     ERR_NUMERICAL_FAILURE = 7,
-    ERR_NOT_FITTED = 8,
-    ERR_INTERNAL = 9,
-    ERR_ABI_MISMATCH = 10,
-    ERR_VERSION_INCOMPATIBLE = 11,
-    ERR_BACKEND_UNAVAILABLE = 12,
+    ERR_CONVERGENCE_FAILED = 8,
+    ERR_OUT_OF_MEMORY = 9,
+    ERR_UNSUPPORTED = 10,
+    ERR_NOT_IMPLEMENTED = 11,
+    ERR_ABI_MISMATCH = 12,
     ERR_IO = 13,
-    ERR_PERMISSION = 14,
-    ERR_NOT_IMPLEMENTED = 15,
-    ERR_TIMEOUT = 16,
-    ERR_CANCELED = 17,
+    ERR_CORRUPT_BUFFER = 14,
+    ERR_VERSION_INCOMPATIBLE = 15,
+    ERR_BACKEND_UNAVAILABLE = 16,
+    ERR_CANCELLED = 17,
+    ERR_INTERNAL = 255,
 }
 
 /** Mirror of n4m_dtype_t (cpp/include/n4m/n4m.h §2). */
