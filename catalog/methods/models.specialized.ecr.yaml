@@ -37,6 +37,23 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Python binding refined during AOM/moment product integration."
 c_surface:
   - "n4m_estimators_ecr_fit"
+estimator:
+  kind: "estimator"
+  adapter: "affine_ecr"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "alpha"
+      type: "double"
+      default: 0.5
+      min: 0.0
+      max: 1.0
 fq_name: "n4m.estimators.regression.latent.ecr"
 leaf: "ecr"
 legacy_ids:

@@ -152,7 +152,7 @@ typedef struct n4m_method_info_v1_t {
 typedef struct n4m_param_info_v1_t {
     uint32_t struct_size;
     const char* name;
-    int32_t type;               /* N4M_PARAM_INT|DOUBLE|BOOL|ENUM|INT_ARRAY|DOUBLE_ARRAY */
+    int32_t type;               /* N4M_METHOD_PARAM_INT|DOUBLE|BOOL|ENUM|INT_ARRAY|DOUBLE_ARRAY */
     int32_t has_default;        /* 0 = required parameter */
     int64_t default_length;     /* 1 for scalars, n for array defaults */
     double min_value, max_value;/* NaN when unbounded */

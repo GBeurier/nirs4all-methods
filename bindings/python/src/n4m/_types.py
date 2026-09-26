@@ -14,6 +14,7 @@ import ctypes
 from ctypes import (
     POINTER,
     Structure,
+    c_char_p,
     c_double,
     c_int,
     c_int32,
@@ -23,7 +24,6 @@ from ctypes import (
     c_uint64,
     c_void_p,
 )
-
 
 # ---------------------------------------------------------------------------
 # Status codes
@@ -266,11 +266,57 @@ if ctypes.sizeof(c_void_p) == 8:
         )
 
 
+class FitInputsV1(Structure):
+    """``n4m_fit_inputs_v1_t`` (``n4m/estimator.h``)."""
+
+    _fields_ = [
+        ("struct_size", c_uint32),
+        ("X", c_void_p),
+        ("Y", c_void_p),
+        ("labels", c_void_p),
+        ("n_labels", c_int64),
+        ("sample_weight", c_void_p),
+        ("n_sample_weight", c_int64),
+        ("groups", c_void_p),
+        ("n_groups", c_int64),
+        ("feature_groups", c_void_p),
+        ("n_feature_groups", c_int64),
+        ("block_sizes", c_void_p),
+        ("n_blocks", c_int64),
+        ("axis", c_void_p),
+        ("n_axis", c_int64),
+        ("X_target", c_void_p),
+        ("seed", c_uint64),
+    ]
+
+
+FIT_INPUT_COUNT = 8
+
+
+class MethodInfoV1(Structure):
+    """``n4m_method_info_v1_t`` (``n4m/estimator.h``)."""
+
+    _fields_ = [
+        ("struct_size", c_uint32),
+        ("kind", c_int32),
+        ("method_id", c_char_p),
+        ("fq_name", c_char_p),
+        ("roles", c_uint32),
+        ("n_params", c_int32),
+        ("capabilities", c_uint64),
+        ("state_format", c_char_p),
+        ("inputs", c_int32 * FIT_INPUT_COUNT),
+    ]
+
+
 __all__ = [
+    "FIT_INPUT_COUNT",
     "Dtype",
     "FilterStats",
+    "FitInputsV1",
     "LinearPredictorSpec",
     "MatrixView",
+    "MethodInfoV1",
     "OptimizerOptions",
     "SerializedModelInfoV1",
     "SerializedPipelineInfoV1",

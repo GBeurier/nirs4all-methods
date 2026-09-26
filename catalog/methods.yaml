@@ -712,6 +712,23 @@ methods:
       - "n4m_estimators_ecr_fit"
     legacy_ids:
       - "models.specialized.ecr"
+    estimator:
+      kind: estimator
+      adapter: affine_ecr
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: alpha
+          type: double
+          default: 0.5
+          min: 0.0
+          max: 1.0
   - method_id: "selection.emcuve"
     family: "selection.wrapper"
     category: "selection"
@@ -1092,6 +1109,19 @@ methods:
       - "n4m_estimators_mb_pls_fit"
     legacy_ids:
       - "models.multiblock.mb_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_mb_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        blocks: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
   - method_id: "diagnostics.regression_metrics"
     family: "diagnostics.validation"
     category: "diagnostics"
@@ -1790,6 +1820,24 @@ methods:
       - "n4m_estimators_n_pls_fit"
     legacy_ids:
       - "models.specialized.tensor_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_n_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: mode_j
+          type: int
+          min: 1
+        - name: mode_k
+          type: int
+          min: 1
   - method_id: "selection.uve"
     family: "selection.wrapper"
     category: "selection"
@@ -6519,6 +6567,90 @@ methods:
       - "n4m_estimators_cppls_fit"
     legacy_ids:
       - "models.pls.cppls"
+    estimator:
+      kind: estimator
+      adapter: affine_cppls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: gamma
+          type: double
+          default: 0.5
+          min: 0.0
+          max: 1.0
+  - method_id: "models.pls.pls_regression"
+    family: "models.pls"
+    category: "models"
+    subcategory: "pls"
+    since_abi: "2.13.0"
+    abi_symbols:
+      - "n4m_model_fit"
+    tu:
+      - "cpp/src/core/model.cpp"
+      - "cpp/src/c_api/c_api_model.cpp"
+    headers:
+      - "cpp/include/n4m/n4m.h"
+    carry_along_tu:
+      - "cpp/src/core/common/context.cpp"
+      - "cpp/src/core/common/status.cpp"
+      - "cpp/src/core/common/matrix_view.cpp"
+      - "cpp/src/core/common/version.cpp"
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: "models.pls.pls_regression"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings: {}
+    publications:
+      - "Wold, S., Sjostrom, M., Eriksson, L. (2001). PLS-regression: a basic tool of chemometrics."
+    notes: "PLS regression through the N4MM model life cycle (n4m_model_fit) with a selectable solver; the general PLS estimator of the generic role surface."
+    namespace: "estimators.regression.latent"
+    leaf: "pls_regression"
+    fq_name: "n4m.estimators.regression.latent.pls_regression"
+    legacy_ids:
+      - "models.pls.pls_regression"
+    c_surface:
+      - "n4m_model_fit"
+    estimator:
+      kind: estimator
+      adapter: pls_regression
+      roles: [regressor, transformer]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: solver
+          type: enum
+          choices: [nipals, simpls, orthogonal_scores, kernel_algorithm, wide_kernel, svd, power, randomized_svd]
+          default: nipals
+        - name: center_x
+          type: bool
+          default: true
+        - name: scale_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
+        - name: scale_y
+          type: bool
+          default: true
   - method_id: "models.pls.pcr"
     family: "models.pls"
     category: "models"
@@ -6562,6 +6694,30 @@ methods:
       - "n4m_estimators_pcr_fit"
     legacy_ids:
       - "models.pls.pcr"
+    estimator:
+      kind: estimator
+      adapter: pcr
+      roles: [regressor, transformer]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: center_x
+          type: bool
+          default: true
+        - name: scale_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
+        - name: scale_y
+          type: bool
+          default: false
   - method_id: "models.pls.pls_fit_simple"
     family: "models.pls"
     category: "models"
@@ -6603,6 +6759,18 @@ methods:
       - "n4m_estimators_pls_fit"
     legacy_ids:
       - "models.pls.pls_fit_simple"
+    estimator:
+      kind: estimator
+      adapter: pls_fit_simple
+      roles: [regressor, transformer]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
   - method_id: "models.classification.pls_qda"
     family: "models.classification"
     category: "models"
@@ -6862,6 +7030,18 @@ methods:
       - "n4m_estimators_mir_pls_fit"
     legacy_ids:
       - "models.multiblock.mir_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_mir_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
   - method_id: "models.multiblock.rosa"
     family: "models.multiblock"
     category: "models"
@@ -6940,6 +7120,34 @@ methods:
       - "n4m_estimators_ridge_pls_fit"
     legacy_ids:
       - "models.regularized.ridge_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_ridge_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: ridge_lambda
+          type: double
+          default: 0.1
+          min: 0.0
+        - name: center_x
+          type: bool
+          default: true
+        - name: scale_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
+        - name: scale_y
+          type: bool
+          default: true
   - method_id: "models.regularized.robust_pls"
     family: "models.regularized"
     category: "models"
@@ -6981,6 +7189,38 @@ methods:
       - "n4m_estimators_robust_pls_fit"
     legacy_ids:
       - "models.regularized.robust_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_robust_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: huber_k
+          type: double
+          default: 1.345
+          min: 0.0
+        - name: max_irls_iter
+          type: int
+          default: 5
+          min: 1
+        - name: center_x
+          type: bool
+          default: true
+        - name: scale_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
+        - name: scale_y
+          type: bool
+          default: true
   - method_id: "models.regularized.weighted_pls"
     family: "models.regularized"
     category: "models"
@@ -7063,6 +7303,23 @@ methods:
       - "n4m_estimators_continuum_regression_fit"
     legacy_ids:
       - "models.regularized.continuum_regression"
+    estimator:
+      kind: estimator
+      adapter: affine_continuum_regression
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: tau
+          type: double
+          default: 0.5
+          min: 0.0
+          max: 1.0
   - method_id: "models.ensembles.bagging_pls"
     family: "models.ensembles"
     category: "models"
@@ -7100,6 +7357,22 @@ methods:
       - "n4m_ensemble_bagging_pls_fit"
     legacy_ids:
       - "models.ensembles.bagging_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_bagging_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_estimators
+          type: int
+          default: 50
+          min: 1
   - method_id: "models.ensembles.boosting_pls"
     family: "models.ensembles"
     category: "models"
@@ -7137,6 +7410,27 @@ methods:
       - "n4m_ensemble_boosting_pls_fit"
     legacy_ids:
       - "models.ensembles.boosting_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_boosting_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_estimators
+          type: int
+          default: 50
+          min: 1
+        - name: learning_rate
+          type: double
+          default: 0.1
+          min: 0.0
+          max: 1.0
   - method_id: "models.ensembles.random_subspace_pls"
     family: "models.ensembles"
     category: "models"
@@ -7174,6 +7468,26 @@ methods:
       - "n4m_ensemble_random_subspace_pls_fit"
     legacy_ids:
       - "models.ensembles.random_subspace_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_random_subspace_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_estimators
+          type: int
+          default: 50
+          min: 1
+        - name: features_per_subspace
+          type: int
+          default: 10
+          min: 1
   - method_id: "models.ensembles.moment_stack"
     family: "models.ensembles"
     category: "models"
@@ -7255,6 +7569,26 @@ methods:
       - "n4m_estimators_fused_sparse_pls_fit"
     legacy_ids:
       - "models.sparse.fused_sparse_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_fused_sparse_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: l1_lambda
+          type: double
+          default: 0.05
+          min: 0.0
+        - name: fusion_lambda
+          type: double
+          default: 0.05
+          min: 0.0
   - method_id: "models.sparse.group_sparse_pls"
     family: "models.sparse"
     category: "models"
@@ -7292,6 +7626,23 @@ methods:
       - "n4m_estimators_group_sparse_pls_fit"
     legacy_ids:
       - "models.sparse.group_sparse_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_group_sparse_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        feature_groups: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: group_lambda
+          type: double
+          default: 0.05
+          min: 0.0
   - method_id: "models.sparse.sparse_simpls"
     family: "models.sparse"
     category: "models"
@@ -7329,6 +7680,22 @@ methods:
       - "n4m_estimators_sparse_simpls_fit"
     legacy_ids:
       - "models.sparse.sparse_simpls"
+    estimator:
+      kind: estimator
+      adapter: affine_sparse_simpls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: sparsity_lambda
+          type: double
+          default: 0.05
+          min: 0.0
   - method_id: "models.sparse.sparse_pls_da"
     family: "models.sparse"
     category: "models"
@@ -7440,6 +7807,23 @@ methods:
       - "n4m_domain_adaptation_di_pls_fit"
     legacy_ids:
       - "models.transfer.di_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_di_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        target_domain: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: di_lambda
+          type: double
+          default: 1.0
+          min: 0.0
   - method_id: "models.transfer.ds"
     family: "models.transfer"
     category: "models"
@@ -8469,6 +8853,27 @@ methods:
       - "n4m_estimators_ridge_fit"
     legacy_ids:
       - "models.regularized.ridge"
+    estimator:
+      kind: estimator
+      adapter: affine_ridge
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: alpha
+          type: double
+          default: 1.0
+          min: 0.0
+        - name: center_x
+          type: bool
+          default: true
+        - name: scale_x
+          type: bool
+          default: true
+        - name: center_y
+          type: bool
+          default: true
   - method_id: "utilities.moments"
     family: "utilities.moments"
     category: "utilities"

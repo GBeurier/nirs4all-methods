@@ -1,18 +1,18 @@
 # Auto-generated from catalog/methods.yaml during the Phase B transition.
 # Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
 catalog_version: 1
-method_id: "models.pls.pcr"
+method_id: "models.pls.pls_regression"
 family: "models.pls"
 category: "models"
 subcategory: "pls"
-since_abi: "1.21.0"
+since_abi: "2.13.0"
 abi_symbols:
-  - "n4m_estimators_pcr_fit"
+  - "n4m_model_fit"
 tu:
   - "cpp/src/core/model.cpp"
-  - "cpp/src/c_api/c_api_method_result.cpp"
+  - "cpp/src/c_api/c_api_model.cpp"
 headers:
-  - "cpp/include/n4m/estimators/regression.h"
+  - "cpp/include/n4m/n4m.h"
 carry_along_tu:
   - "cpp/src/core/common/context.cpp"
   - "cpp/src/core/common/status.cpp"
@@ -25,23 +25,19 @@ parity:
   references: []
   tolerances: []
 bench:
-  bench_id: "models.pls.pcr"
-  registry_entry: "benchmarks/cross_binding/bench_direct_moment_heads_timing.py"
+  bench_id: "models.pls.pls_regression"
+  registry_entry: null
 feature_flags: []
 vendored_licenses: []
-bindings:
-  python:
-    module: "n4m.estimators.regression.latent"
-    class: "pcr"
-    legacy_aliases: []
+bindings: {}
 publications:
-  - "Massy, W. F. (1965). Principal Components Regression in Exploratory Statistical Research."
-notes: "Direct native Principal Components Regression MethodResult ABI. Added during AOM/moment product integration so PCR follows the same n4m.python and sklearn wrapper pattern as Ridge/CPPLS/continuum/ECR."
+  - "Wold, S., Sjostrom, M., Eriksson, L. (2001). PLS-regression: a basic tool of chemometrics."
+notes: "PLS regression through the N4MM model life cycle (n4m_model_fit) with a selectable solver; the general PLS estimator of the generic role surface."
 c_surface:
-  - "n4m_estimators_pcr_fit"
+  - "n4m_model_fit"
 estimator:
   kind: "estimator"
-  adapter: "pcr"
+  adapter: "pls_regression"
   roles: "[regressor, transformer]"
   state: "n4mm"
   inputs:
@@ -51,6 +47,10 @@ estimator:
       type: "int"
       default: 2
       min: 1
+    - name: "solver"
+      type: "enum"
+      choices: "[nipals, simpls, orthogonal_scores, kernel_algorithm, wide_kernel, svd, power, randomized_svd]"
+      default: "nipals"
     - name: "center_x"
       type: "bool"
       default: true
@@ -62,9 +62,9 @@ estimator:
       default: true
     - name: "scale_y"
       type: "bool"
-      default: false
-fq_name: "n4m.estimators.regression.latent.pcr"
-leaf: "pcr"
+      default: true
+fq_name: "n4m.estimators.regression.latent.pls_regression"
+leaf: "pls_regression"
 legacy_ids:
-  - "models.pls.pcr"
+  - "models.pls.pls_regression"
 namespace: "estimators.regression.latent"
