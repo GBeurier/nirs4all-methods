@@ -16,12 +16,11 @@ Methods deliberately NOT wrapped here:
 * ``recursive_pls_run`` / ``so_pls_fit`` / ``rosa_fit`` / ``lw_pls_fit``
   — return predictions only; locally-fitted models with no global
   coefficient export.
-* ``bagging_pls_fit`` / ``boosting_pls_fit`` /
-  ``random_subspace_pls_fit`` — ensembles without exposed per-member
-  state; deferred until the ABI grows an export hook.
-* ``group_sparse_pls_fit`` / ``fused_sparse_pls_fit`` /
-  ``on_pls_fit`` / ``o2pls_fit`` — decomposition only; no
-  predict-on-new-X path yet.
+* ``on_pls_fit`` — decomposition only; no global predict-on-new-X path yet.
+  Fused Sparse PLS, Bagging PLS, Boosting PLS, and Random Subspace PLS
+  expose aggregate affine coefficients and predict via wrappers in
+  ``_in_sample``. Group Sparse PLS also exposes coefficients in the ABI,
+  but its Python wrapper has not yet been promoted.
 * ``missing_aware_nipals_fit`` / ``kernel_pls_fit`` — special preds
   paths (kernel needs alpha + kernel matrix); deferred to dedicated
   wrappers.
@@ -152,9 +151,12 @@ class MBPLSRegression(_MethodResultRegressor):
     # mb_pls_fit doesn't expose y_mean; it materializes intercept_ directly.
     # Override _extract_state to honour that.
 
-    def __init__(self, n_components: int = 2, *, block_sizes=None) -> None:
+    def __init__(self, n_components: int = 2, *, block_sizes=None,
+                 scale_x: bool = True, scale_y: bool = True) -> None:
         self.n_components = n_components
         self.block_sizes = block_sizes
+        self.scale_x = scale_x
+        self.scale_y = scale_y
 
     def fit(self, X, y):
         if not self.block_sizes:
@@ -179,8 +181,8 @@ class MBPLSRegression(_MethodResultRegressor):
             cfg.solver = Solver.NIPALS  # mb_pls_fit expects NIPALS
             # Match the direct Config defaults used by the C MB-PLS entry
             # point and by the parity test.
-            cfg.scale_x = True
-            cfg.scale_y = True
+            cfg.scale_x = bool(self.scale_x)
+            cfg.scale_y = bool(self.scale_y)
             return _methods.mb_pls_fit(ctx, cfg, X, y, block_sizes)
 
     def _extract_state(self, result) -> None:
@@ -294,6 +296,11 @@ class NPLSRegression(_MethodResultRegressor):
         self.mode_k = mode_k
 
     def _fit_method_result(self, ctx, X, y):
+        if (type(self.mode_j) is not int or type(self.mode_k) is not int
+                or not 1 <= self.mode_j <= 2**31 - 1
+                or not 1 <= self.mode_k <= 2**31 - 1
+                or self.mode_j * self.mode_k != X.shape[1]):
+            raise ValueError("mode_j and mode_k must be positive integers whose product equals n_features")
         with _ManagedConfig(int(self.n_components)) as cfg:
             return _methods.n_pls_fit(
                 ctx, cfg,

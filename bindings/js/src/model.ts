@@ -179,7 +179,7 @@ export function fitModel(model: string, X: Matrix, Y: Matrix,
              coefsBuf.ptr, xmBuf.ptr, ymBuf.ptr, interBuf.ptr,
              hasInterBuf, 0]) as number;
         checkStatus(status);
-        // Only models with a genuine affine intercept (currently Ridge) report
+        // Only models with a genuine affine intercept (Ridge and MBPLS) report
         // has_intercept=1; the PLS/PCR family and the PLS-based Tier-B fits
         // predict via the centred form and carry no intercept (kept null so a
         // caller never adds a misleading zero/y_mean term to x.B).
@@ -221,7 +221,7 @@ export function predictModel(model: FittedModel, X_new: Matrix): Matrix {
     // AOM-PLS (and any future affine model) carries input-space coefficients +
     // a genuine intercept and zero means — it predicts on RAW X via the
     // explicit-intercept form  pred = intercept + x.B. Every centred model
-    // (PLS family + the Tier-B fits, including Ridge) carries intercept = null
+    // (PLS family + centred Tier-B fits) carries intercept = null
     // and predicts via  pred = y_mean + (x - x_mean).B. The C helper picks the
     // form from whether the intercept pointer is non-NULL.
     const useIntercept = model.intercept !== null;
