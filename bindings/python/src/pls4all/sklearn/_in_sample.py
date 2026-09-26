@@ -350,6 +350,8 @@ class BoostingPLSRegression(_MethodResultRegressor):
         self.learning_rate = learning_rate
 
     def _fit_method_result(self, ctx, X, y):
+        if not np.isfinite(self.learning_rate) or not 0 < self.learning_rate <= 1:
+            raise ValueError("learning_rate must be in (0, 1]")
         cfg = _basic_cfg(self.n_components)
         try:
             return _methods.boosting_pls_fit(
