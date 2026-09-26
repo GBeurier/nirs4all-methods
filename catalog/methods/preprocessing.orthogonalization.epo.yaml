@@ -45,6 +45,17 @@ c_surface:
   - "n4m_domain_adaptation_epo_is_fitted"
   - "n4m_domain_adaptation_epo_transform"
   - "n4m_domain_adaptation_epo_transform_with_d"
+estimator:
+  kind: "estimator"
+  adapter: "tr_epo"
+  roles: "[transformer]"
+  state: "epo"
+  inputs:
+    y: "required"
+  params:
+    - name: "scale"
+      type: "bool"
+      default: true
 fq_name: "n4m.domain_adaptation.orthogonalization.epo"
 leaf: "epo"
 legacy_ids:

@@ -106,6 +106,37 @@ void trsv_upper(const double* L, const double* b, double* x,
     return N4M_OK;
 }
 
+// PLS scores T = (X - x_mean) @ R (rows x k) of a view.
+[[nodiscard]] n4m_status_t centered_scores(Context& ctx,
+                                           const n4m_matrix_view_t& X,
+                                           const std::vector<double>& x_mean,
+                                           const std::vector<double>& rotation,
+                                           std::size_t k,
+                                           std::vector<double>& T) {
+    std::vector<double> X_buf;
+    const n4m_status_t st = copy_view(ctx, X, "X", X_buf);
+    if (st != N4M_OK) {
+        return st;
+    }
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t p = x_mean.size();
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = 0; j < p; ++j) {
+            X_buf[i * p + j] -= x_mean[j];
+        }
+    }
+    T.assign(n * k, 0.0);
+    n4m::linalg::gemm(
+        n4m::linalg::Trans_No, n4m::linalg::Trans_No,
+        n, k, p,
+        1.0,
+        X_buf.data(), p,
+        rotation.data(), k,
+        0.0,
+        T.data(), k);
+    return N4M_OK;
+}
+
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -258,7 +289,6 @@ n4m_status_t fit_gpr_pls(
     }
 
     const std::size_t n = static_cast<std::size_t>(n_in);
-    const std::size_t p = static_cast<std::size_t>(p_in);
     const std::size_t k = static_cast<std::size_t>(k_in);
 
     out.n_features = p_in;
@@ -270,25 +300,11 @@ n4m_status_t fit_gpr_pls(
     out.x_mean = model->x_mean;
 
     // Stage 2a: compute training scores T = (X - x_mean) @ R (n x k).
-    std::vector<double> X_buf;
-    n4m_status_t st = copy_view(ctx, X, "X", X_buf);
+    std::vector<double> T;
+    n4m_status_t st = centered_scores(ctx, X, out.x_mean, out.rotation_r, k, T);
     if (st != N4M_OK) {
         return st;
     }
-    for (std::size_t i = 0; i < n; ++i) {
-        for (std::size_t j = 0; j < p; ++j) {
-            X_buf[i * p + j] -= out.x_mean[j];
-        }
-    }
-    std::vector<double> T(n * k, 0.0);
-    n4m::linalg::gemm(
-        n4m::linalg::Trans_No, n4m::linalg::Trans_No,
-        n, k, p,
-        1.0,
-        X_buf.data(), p,
-        out.rotation_r.data(), k,
-        0.0,
-        T.data(), k);
 
     // Stage 2b: centre y. The PLS model has y_mean[0]; use it for consistency
     // with sklearn `Y.ravel().mean()`.
@@ -348,6 +364,39 @@ n4m_status_t fit_gpr_pls(
         out.predictive_variance[i] = (var > 0.0) ? var : 0.0;
     }
 
+    return N4M_OK;
+}
+
+n4m_status_t predict_gpr_pls(Context& ctx,
+                             const GprPlsResult& model,
+                             const n4m_matrix_view_t& X,
+                             std::vector<double>& out) {
+    if (X.cols != model.n_features) {
+        ctx.set_error("predict_gpr_pls: X width does not match the model");
+        return N4M_ERR_SHAPE_MISMATCH;
+    }
+    const std::size_t k = static_cast<std::size_t>(model.n_components);
+    std::vector<double> T;
+    const n4m_status_t st = centered_scores(ctx, X, model.x_mean, model.rotation_r, k, T);
+    if (st != N4M_OK) {
+        return st;
+    }
+    const std::size_t n = static_cast<std::size_t>(X.rows);
+    const std::size_t n_train = static_cast<std::size_t>(model.gp.n_train);
+    const double inv_2sq = 1.0 / (2.0 * model.length_scale * model.length_scale);
+    out.assign(n, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        double mean = model.gp.y_mean_scalar;
+        for (std::size_t j = 0; j < n_train; ++j) {
+            double sq = 0.0;
+            for (std::size_t c = 0; c < k; ++c) {
+                const double d = T[i * k + c] - model.gp.T_train[j * k + c];
+                sq += d * d;
+            }
+            mean += std::exp(-sq * inv_2sq) * model.gp.alpha[j];
+        }
+        out[i] = mean;
+    }
     return N4M_OK;
 }
 

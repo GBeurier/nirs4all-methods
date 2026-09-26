@@ -43,6 +43,7 @@
 #include <stdint.h>
 
 #include "n4m/n4m.h"
+#include "core/estimator/state_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -100,6 +101,13 @@ n4m_status_t n4m_pp_epo_state_apply_with_d(const n4m_pp_epo_state_t* state,
                                             const double* d,
                                             int64_t rows, int64_t cols,
                                             double* out);
+
+/* Fitted-state serialization (core/estimator/state_io.h): the column mean,
+ * the external-parameter mean and the projection B. */
+n4m_status_t n4m_pp_epo_state_save(const n4m_pp_epo_state_t* state,
+                                   n4m_state_writer_t* w);
+n4m_status_t n4m_pp_epo_state_load(n4m_pp_epo_state_t* state,
+                                   n4m_state_reader_t* r, int64_t n_features);
 
 #ifdef __cplusplus
 }  /* extern "C" */

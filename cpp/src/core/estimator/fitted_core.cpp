@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CECILL-2.1
 //
 // Transformer role adapters whose fitted state lives in the core kernels
-// (cpp/src/core/preprocessing/**): OSC, flexible and wavelet PCA/SVD, the
+// (cpp/src/core/preprocessing/**): OSC, EPO, flexible and wavelet PCA/SVD, the
 // discretizers, baseline centring, log transform, derivative, resampler and
 // the fitted Normalize / SimpleScale. The kernel state is serialized by the
 // kernels' own <kernel>_state_save / _state_load, reached from the public
@@ -112,6 +112,27 @@ std::unique_ptr<Adapter> make_tr_osc(const MethodSpec&) {
                                           static_cast<const double*>(y.data), y.rows);
          },
          n4m_transform_osc_transform, n4m_transform_osc_destroy, {}, {}, {}}));
+}
+
+// EPO: the external parameter d comes through y (one continuous value per
+// row). Without d for new rows the EPO transform is its calibration-only
+// form (centering and uncentering at the calibration mean of d).
+std::unique_ptr<Adapter> make_tr_epo(const MethodSpec&) {
+    return fitted(with_core_state<n4m_pp_epo_handle_t>(
+        {[](n4m_pp_epo_handle_t** h, const Params& p) {
+             return n4m_domain_adaptation_epo_create(h, p.get_bool("scale") ? 1 : 0);
+         },
+         [](n4m_context_t* ctx, n4m_pp_epo_handle_t* h, const FitInputs& in) {
+             if (in.Y->cols != 1) {
+                 set_error(ctx, "EPO needs a univariate external parameter d (y)");
+                 return N4M_ERR_SHAPE_MISMATCH;
+             }
+             std::vector<double> x_storage, y_storage;
+             const n4m_matrix_view_t d = contiguous_view(*in.Y, y_storage);
+             return n4m_domain_adaptation_epo_fit(h, contiguous_view(*in.X, x_storage),
+                                                  static_cast<const double*>(d.data), d.rows);
+         },
+         n4m_domain_adaptation_epo_transform, n4m_domain_adaptation_epo_destroy, {}, {}, {}}));
 }
 
 // ---- projections -----------------------------------------------------------

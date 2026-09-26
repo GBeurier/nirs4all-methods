@@ -33,6 +33,21 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_estimators_recursive_pls_run"
+estimator:
+  kind: "estimator"
+  adapter: "recursive_pls"
+  roles: "[regressor, transformer]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "window_size"
+      type: "int"
+      min: 2
 fq_name: "n4m.estimators.regression.online.recursive_pls"
 leaf: "recursive_pls"
 legacy_ids:

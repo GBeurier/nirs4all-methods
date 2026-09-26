@@ -41,6 +41,13 @@ c_surface:
   - "n4m_domain_adaptation_slope_bias_fit"
   - "n4m_domain_adaptation_slope_bias_is_fitted"
   - "n4m_domain_adaptation_slope_bias_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_slope_bias"
+  roles: "[transformer]"
+  state: "coef"
+  inputs:
+    y: "required"
 fq_name: "n4m.domain_adaptation.standardization.slope_bias"
 leaf: "slope_bias"
 legacy_ids:

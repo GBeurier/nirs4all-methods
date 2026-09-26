@@ -220,6 +220,13 @@ struct PdsResult {
     std::int32_t window_half_width,
     PdsResult& out);
 
+// Maps source rows to the target space: X @ transformation' (n × p_target).
+// N4M_ERR_SHAPE_MISMATCH when X does not have the source width.
+[[nodiscard]] n4m_status_t apply_pds(
+    const PdsResult& model,
+    const n4m_matrix_view_t& X,
+    std::vector<double>& out);
+
 struct DsResult {
     std::vector<double> transformation;     // p_source × p_target
     std::vector<double> bias;               // p_target
@@ -230,6 +237,13 @@ struct DsResult {
     const n4m_matrix_view_t& X_source,
     const n4m_matrix_view_t& X_target,
     DsResult& out);
+
+// Maps source rows to the target space: X @ transformation + bias.
+// N4M_ERR_SHAPE_MISMATCH when X does not have the source width.
+[[nodiscard]] n4m_status_t apply_ds(
+    const DsResult& model,
+    const n4m_matrix_view_t& X,
+    std::vector<double>& out);
 
 struct MirPlsResult {
     std::vector<double> coefficients;       // p × q  (X → Y mapping)
@@ -245,13 +259,21 @@ struct MirPlsResult {
     MirPlsResult& out);
 
 // Missing-aware NIPALS: same shape as a regular PLS regression model but
-// tolerates NaN entries in X (replaced with current iterate during NIPALS).
+// tolerates NaN entries in X: they are imputed with the column means of the
+// observed values before the SIMPLS fit.
 [[nodiscard]] n4m_status_t fit_missing_aware_nipals(
     Context& ctx,
     const Config& cfg,
     const n4m_matrix_view_t& X,
     const n4m_matrix_view_t& Y,
     WeightedPlsResult& out);
+
+// Predictions with the fit's imputation: a non-finite entry of X is replaced
+// by its column mean, so it contributes nothing to y_mean + (x - x_mean) B.
+void predict_missing_aware_nipals(
+    const WeightedPlsResult& model,
+    const n4m_matrix_view_t& X,
+    std::vector<double>& out);
 
 // ---- §18 approximate-PRESS / Bayesian rules ----------------------------
 

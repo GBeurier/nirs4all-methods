@@ -33,6 +33,26 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_estimators_gpr_pls_fit"
+estimator:
+  kind: "estimator"
+  adapter: "gpr_pls"
+  roles: "[regressor]"
+  state: "gpr_pls"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "length_scale"
+      type: "double"
+      default: 1.0
+      min: 0.0
+    - name: "noise_level"
+      type: "double"
+      default: 0.001
+      min: 0.0
 fq_name: "n4m.estimators.regression.kernel.gpr_pls"
 leaf: "gpr_pls"
 legacy_ids:
