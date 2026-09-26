@@ -175,7 +175,11 @@ struct Path {
     Vec coefficients;
     int count;
 };
-Path pls_path(Context& ctx, Vec z, Vec y, std::size_t n, std::size_t p, int count) {
+// Candidate paths report numerical failure as a status, not an exception, so
+// a failed candidate stays invalid without aborting WASM (built without
+// exception catching).
+n4m_status_t pls_path(Context& ctx, Vec z, Vec y, std::size_t n, std::size_t p, int count,
+                      Path& out) {
     Config cfg;
     cfg.solver = N4M_SOLVER_SIMPLS;
     cfg.center_x = cfg.center_y = 0;
@@ -186,14 +190,19 @@ Path pls_path(Context& ctx, Vec z, Vec y, std::size_t n, std::size_t p, int coun
     std::unique_ptr<Model> model;
     auto xv = view(z, n, p);
     auto yv = view(y, n, 1);
-    require(fit_model(ctx, cfg, xv, yv, model));
+    if (const n4m_status_t st = fit_model(ctx, cfg, xv, yv, model); st != N4M_OK)
+        return st;
     Path result;
     result.count = model->n_components;
-    require(compute_regression_coefficients_by_component(ctx, *model, result.coefficients));
-    return result;
+    if (const n4m_status_t st =
+            compute_regression_coefficients_by_component(ctx, *model, result.coefficients);
+        st != N4M_OK)
+        return st;
+    out = std::move(result);
+    return N4M_OK;
 }
-Path ridge_path(
-    const Vec& z, const Vec& y, std::size_t n, std::size_t p, const double* alphas, int count) {
+n4m_status_t ridge_path(const Vec& z, const Vec& y, std::size_t n, std::size_t p,
+                        const double* alphas, int count, Path& out) {
     bool primal = n > p;
     std::size_t d = primal ? p : n;
     Vec zt = transpose(z, n, p);
@@ -201,7 +210,7 @@ Path ridge_path(
     Vec values(d), vectors(d * d);
 #if defined(N4M_AOM_USE_LAPACKE)
     if (d > static_cast<std::size_t>(std::numeric_limits<lapack_int>::max()))
-        throw Failure{N4M_ERR_INVALID_ARGUMENT};
+        return N4M_ERR_INVALID_ARGUMENT;
     vectors = gram;
     const auto eigen_status = LAPACKE_dsyevd(LAPACK_ROW_MAJOR,
                                              'V',
@@ -231,14 +240,18 @@ Path ridge_path(
         result.coefficients.reserve(static_cast<std::size_t>(count) * p);
         for (int a = 0; a < count; ++a) {
             RidgeResult fit;
-            require(fit_ridge(
-                fallback_context, config, xv, yv, alphas[a], RidgeSolver::kAuto, false, fit));
+            if (const n4m_status_t st = fit_ridge(
+                    fallback_context, config, xv, yv, alphas[a], RidgeSolver::kAuto, false, fit);
+                st != N4M_OK)
+                return st;
             result.coefficients.insert(
                 result.coefficients.end(), fit.coefficients.begin(), fit.coefficients.end());
         }
-        return result;
+        out = std::move(result);
+        return N4M_OK;
     }
-    require(eigen_status);
+    if (eigen_status != N4M_OK)
+        return eigen_status;
     Vec rhs = primal ? product(zt, y, p, n, 1) : y;
     Vec projected = product(transpose(vectors, d, d), rhs, d, d, 1);
     Vec map = primal ? vectors : product(zt, vectors, p, n, n);
@@ -253,7 +266,8 @@ Path ridge_path(
         const auto offset = static_cast<Vec::difference_type>(static_cast<std::size_t>(a) * p);
         std::copy(beta.begin(), beta.end(), result.coefficients.begin() + offset);
     }
-    return result;
+    out = std::move(result);
+    return N4M_OK;
 }
 std::pair<std::size_t, std::size_t> screen(Context& ctx,
                                            const std::vector<Branch>& branches,
@@ -419,15 +433,15 @@ n4m_status_t fit_aom_calibration(Context& ctx,
                     Vec z = transform(ctx, branches[b].train, yt.size(), p, bank, offsets, c);
                     Vec zv = transform(ctx, branches[b].valid, yv.size(), p, bank, offsets, c);
                     Path path{{}, 0};
-                    try {
-                        path = head == 0 ? pls_path(ctx, z, yt, yt.size(), p, np)
-                                         : ridge_path(z, yt, yt.size(), p, alphas, np);
-                    } catch (const Failure& failure) {
-                        if (failure.status != N4M_ERR_NUMERICAL_FAILURE)
-                            throw;
-                        // A failed candidate is invalid in this fold; never average
-                        // its score over fewer folds or abort other valid candidates.
-                    }
+                    const n4m_status_t path_status =
+                        head == 0 ? pls_path(ctx, z, yt, yt.size(), p, np, path)
+                                  : ridge_path(z, yt, yt.size(), p, alphas, np, path);
+                    // A failed candidate is invalid in this fold; never average its
+                    // score over fewer folds or abort other valid candidates.
+                    if (path_status == N4M_ERR_NUMERICAL_FAILURE)
+                        path = Path{{}, 0};
+                    else
+                        require(path_status);
                     for (std::size_t a = 0; a < parameter_count; ++a) {
                         const std::size_t cell =
                             fast ? a : (b * chain_count + c) * parameter_count + a;
@@ -474,8 +488,9 @@ n4m_status_t fit_aom_calibration(Context& ctx,
         auto& branch = branches[static_cast<std::size_t>(out.branch)];
         Vec z =
             transform(ctx, branch.train, n, p, bank, offsets, static_cast<std::size_t>(out.chain));
-        Path path = head == 0 ? pls_path(ctx, z, y, n, p, out.parameter + 1)
-                              : ridge_path(z, y, n, p, alphas + out.parameter, 1);
+        Path path;
+        require(head == 0 ? pls_path(ctx, z, y, n, p, out.parameter + 1, path)
+                          : ridge_path(z, y, n, p, alphas + out.parameter, 1, path));
         const auto a = head == 0 ? static_cast<std::size_t>(out.parameter) : 0U;
         if (a >= static_cast<std::size_t>(path.count))
             return N4M_ERR_NUMERICAL_FAILURE;

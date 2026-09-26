@@ -111,6 +111,17 @@ CLASS_NAMES = {
     "preprocessing.transfer.slope_bias": "SlopeBiasCorrection",
     "preprocessing.orthogonalization.epo": "EPO",
     "selection.interval": "IntervalGenerator",
+    "aom_pop.aom_sweep": "AOMSweep",
+    "aom_pop.aom_chain_sweep": "AOMChainSweep",
+    "aom_pop.aom_chain_fixed_fit": "AOMFixedCandidate",
+    "aom_pop.ridge_global": "AOMRidgeGlobal",
+    "aom_pop.aom_pls": "AOMPLS",
+    "aom_pop.pop_pls": "POPPLS",
+    "aom_pop.robust_hpo": "AOMRobustHPO",
+    "aom_pop.ridge_blender": "AOMRidgeBlender",
+    "aom_pop.operator_pls_stack": "AOMOperatorPLSStack",
+    "aom_pop.calibration": "AOMCalibration",
+    "aom_pop.aom_preprocessing": "AOMPreprocessing",
 }
 # Role interface -> Python role base class (docs/abi/estimator_roles_design.md, D0b).
 ROLE_BASES = {

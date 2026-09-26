@@ -61,6 +61,7 @@ add_library(n4m_core OBJECT
     core/estimator/fitted_core.cpp
     core/estimator/filter_adapters.cpp
     core/estimator/procedures.cpp
+    core/estimator/aom_adapters.cpp
     core/estimator/model_adapters.cpp
     core/cross_validation.cpp
     core/mb_pls.cpp

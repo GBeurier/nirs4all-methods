@@ -131,7 +131,7 @@ for (case in fx$procedures) {
   local({
     case <- case
     testthat::test_that(paste("R procedure reproduces the Python run:", case$method_id), {
-      spec <- constructors[[case$method_id]]()
+      spec <- do.call(constructors[[case$method_id]], case$params)
       testthat::expect_false(inherits(spec, "n4m_estimator"))
       X <- fx[[case[["x"]]]]
       y <- if ("y" %in% case$inputs) fx$y_train

@@ -64,6 +64,47 @@ c_surface:
   - "n4m_model_selection_aom_pls_result_get_selected_n_components"
   - "n4m_model_selection_aom_pls_result_get_selected_operator_index"
   - "n4m_model_selection_aom_pls_select"
+estimator:
+  kind: "estimator"
+  adapter: "aom_pls"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+    fold_ids: "optional"
+  params:
+    - name: "max_components"
+      type: "int"
+      default: 3
+      min: 1
+    - name: "op_kinds"
+      type: "int_array"
+      default: "[0, 7, 7, 8, 8, 9, 9, 10, 15]"
+      min: 0
+      max: 18
+    - name: "param_offsets"
+      type: "int_array"
+      default: "[0, 0, 1, 2, 4, 6, 9, 12, 15, 16]"
+      min: 0
+    - name: "op_params"
+      type: "double_array"
+      default: "[1.0, 2.0, 5.0, 2.0, 7.0, 2.0, 7.0, 2.0, 1.0, 11.0, 2.0, 2.0, 5.0, 5.0, 1.0, 1.0]"
+    - name: "cv"
+      type: "int"
+      default: 3
+      min: 2
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
+    - name: "scale_y"
+      type: "bool"
+      default: true
 fq_name: "n4m.model_selection.aom_search.aom_pls"
 leaf: "aom_pls"
 legacy_ids:

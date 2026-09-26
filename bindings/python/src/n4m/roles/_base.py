@@ -549,7 +549,7 @@ def _native_param_values(
             elif kind == "enum":
                 values[name] = cls._enum_choices[name][vals[0]]
             elif kind.endswith("_array"):
-                values[name] = vals
+                values[name] = tuple(vals)  # as the generated array defaults
             elif kind == "double" and math.isnan(vals[0]):
                 values[name] = None  # NaN marks an unused optional value
             else:
@@ -758,6 +758,8 @@ def _result_entry(result: ctypes.c_void_p, name: bytes, kind: int):
             ),
             name.decode(),
         )
+        if rows.value * cols.value == 0:
+            return np.empty((rows.value, cols.value))
         return (
             np.ctypeslib.as_array(data, (rows.value * cols.value,))
             .reshape(rows.value, cols.value)

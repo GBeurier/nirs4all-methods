@@ -35,6 +35,17 @@ publications: []
 notes: "Native affine coefficient/intercept composition, including multiple outputs. No fitting or prediction changes; fully affine inputs required."
 c_surface:
   - "n4m_ensemble_linear_stack_compress"
+estimator:
+  kind: "procedure"
+  adapter: "linear_stack_compress"
+  roles: "[generic]"
+  params:
+    - name: "base_intercepts"
+      type: "double_array"
+    - name: "meta_weights"
+      type: "double_array"
+    - name: "meta_intercept"
+      type: "double_array"
 fq_name: "n4m.ensemble.linear_stack_compress"
 leaf: "linear_stack_compress"
 legacy_ids:
