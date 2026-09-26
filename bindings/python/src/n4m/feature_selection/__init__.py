@@ -7,8 +7,11 @@ from . import (
     ranking,
     wrapper,
 )
+from .generic import SELECTOR_METHODS, Selector
 
 __all__ = [
+    "SELECTOR_METHODS",
+    "Selector",
     "filter",
     "interval",
     "ranking",
