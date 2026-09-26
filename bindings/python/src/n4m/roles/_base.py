@@ -34,7 +34,7 @@ CAP_TRANSFORM = 1 << 0
 CAP_PREDICT = 1 << 1
 CAP_PREDICT_PROBA = 1 << 2
 
-_REGISTRY: dict[str, type[_NativeMethod]] = {}
+_REGISTRY: dict[str, type[NativeMethod]] = {}
 
 
 class _Context:
@@ -69,7 +69,7 @@ _FIT_INPUT_NAMES = (
 )
 
 
-def method_class(method_id: str) -> type[_NativeMethod]:
+def method_class(method_id: str) -> type[NativeMethod]:
     """The :mod:`n4m.roles` class of a catalog method id."""
     try:
         return _REGISTRY[method_id]
@@ -166,8 +166,8 @@ def _fit_inputs(
     return inputs
 
 
-class _NativeMethod(BaseEstimator):
-    """Parameters and manifest of one catalog method.
+class NativeMethod(BaseEstimator):
+    """Parameters and manifest of one catalog method (estimator or procedure).
 
     Subclasses declare ``_method_id`` and ``_param_types`` (parameter name to
     manifest type) and an explicit ``__init__`` so scikit-learn can clone them.
@@ -258,7 +258,7 @@ class _NativeMethod(BaseEstimator):
         return params
 
 
-class NativeEstimator(_NativeMethod):
+class NativeEstimator(NativeMethod):
     """Shared life cycle of the generated :mod:`n4m.roles` estimators.
 
     It owns parameters, fitting and the N4ME state only. Operations belong to
@@ -713,7 +713,7 @@ class NativeClassifier(ClassifierMixin, NativeEstimator):
         return self._matrix_call("n4m_estimator_predict_proba", X, self._n_outputs())
 
 
-class _ProcedureBase(_NativeMethod):
+class _ProcedureBase(NativeMethod):
     """A catalog procedure: one native run, no fitted state."""
 
     def _call(self, read, X, y=None, **inputs):
@@ -893,6 +893,7 @@ __all__ = [
     "NativeAugmenter",
     "NativeClassifier",
     "NativeEstimator",
+    "NativeMethod",
     "NativeProcedure",
     "NativeRegressor",
     "NativeSampleFilter",
