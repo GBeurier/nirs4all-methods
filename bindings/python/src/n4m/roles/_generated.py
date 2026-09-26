@@ -8,12 +8,10 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from sklearn.base import RegressorMixin, TransformerMixin
-
-from ._base import NativeEstimator
+from ._base import NativeRegressor, NativeTransformer
 
 
-class BaggingPLS(RegressorMixin, NativeEstimator):
+class BaggingPLS(NativeRegressor):
     """Native ``models.ensembles.bagging_pls`` (regressor)."""
 
     _method_id = "models.ensembles.bagging_pls"
@@ -32,7 +30,7 @@ class BaggingPLS(RegressorMixin, NativeEstimator):
         self.n_estimators = n_estimators
 
 
-class BoostingPLS(RegressorMixin, NativeEstimator):
+class BoostingPLS(NativeRegressor):
     """Native ``models.ensembles.boosting_pls`` (regressor)."""
 
     _method_id = "models.ensembles.boosting_pls"
@@ -54,7 +52,7 @@ class BoostingPLS(RegressorMixin, NativeEstimator):
         self.learning_rate = learning_rate
 
 
-class RandomSubspacePLS(RegressorMixin, NativeEstimator):
+class RandomSubspacePLS(NativeRegressor):
     """Native ``models.ensembles.random_subspace_pls`` (regressor)."""
 
     _method_id = "models.ensembles.random_subspace_pls"
@@ -76,7 +74,7 @@ class RandomSubspacePLS(RegressorMixin, NativeEstimator):
         self.features_per_subspace = features_per_subspace
 
 
-class MBPLS(RegressorMixin, NativeEstimator):
+class MBPLS(NativeRegressor):
     """Native ``models.multiblock.mb_pls`` (regressor).
 
     Required fit inputs: blocks.
@@ -95,7 +93,7 @@ class MBPLS(RegressorMixin, NativeEstimator):
         self.n_components = n_components
 
 
-class MIRPLS(RegressorMixin, NativeEstimator):
+class MIRPLS(NativeRegressor):
     """Native ``models.multiblock.mir_pls`` (regressor)."""
 
     _method_id = "models.multiblock.mir_pls"
@@ -111,7 +109,7 @@ class MIRPLS(RegressorMixin, NativeEstimator):
         self.n_components = n_components
 
 
-class CPPLS(RegressorMixin, NativeEstimator):
+class CPPLS(NativeRegressor):
     """Native ``models.pls.cppls`` (regressor)."""
 
     _method_id = "models.pls.cppls"
@@ -130,7 +128,7 @@ class CPPLS(RegressorMixin, NativeEstimator):
         self.gamma = gamma
 
 
-class PCR(RegressorMixin, TransformerMixin, NativeEstimator):
+class PCR(NativeRegressor, NativeTransformer):
     """Native ``models.pls.pcr`` (transformer, regressor)."""
 
     _method_id = "models.pls.pcr"
@@ -158,7 +156,7 @@ class PCR(RegressorMixin, TransformerMixin, NativeEstimator):
         self.scale_y = scale_y
 
 
-class SimplePLS(RegressorMixin, TransformerMixin, NativeEstimator):
+class SimplePLS(NativeRegressor, NativeTransformer):
     """Native ``models.pls.pls_fit_simple`` (transformer, regressor)."""
 
     _method_id = "models.pls.pls_fit_simple"
@@ -174,7 +172,7 @@ class SimplePLS(RegressorMixin, TransformerMixin, NativeEstimator):
         self.n_components = n_components
 
 
-class PLSRegression(RegressorMixin, TransformerMixin, NativeEstimator):
+class PLSRegression(NativeRegressor, NativeTransformer):
     """Native ``models.pls.pls_regression`` (transformer, regressor)."""
 
     _method_id = "models.pls.pls_regression"
@@ -217,7 +215,7 @@ class PLSRegression(RegressorMixin, TransformerMixin, NativeEstimator):
         self.scale_y = scale_y
 
 
-class ContinuumRegression(RegressorMixin, NativeEstimator):
+class ContinuumRegression(NativeRegressor):
     """Native ``models.regularized.continuum_regression`` (regressor)."""
 
     _method_id = "models.regularized.continuum_regression"
@@ -236,7 +234,7 @@ class ContinuumRegression(RegressorMixin, NativeEstimator):
         self.tau = tau
 
 
-class Ridge(RegressorMixin, NativeEstimator):
+class Ridge(NativeRegressor):
     """Native ``models.regularized.ridge`` (regressor)."""
 
     _method_id = "models.regularized.ridge"
@@ -261,7 +259,7 @@ class Ridge(RegressorMixin, NativeEstimator):
         self.center_y = center_y
 
 
-class RidgePLS(RegressorMixin, NativeEstimator):
+class RidgePLS(NativeRegressor):
     """Native ``models.regularized.ridge_pls`` (regressor)."""
 
     _method_id = "models.regularized.ridge_pls"
@@ -292,7 +290,7 @@ class RidgePLS(RegressorMixin, NativeEstimator):
         self.scale_y = scale_y
 
 
-class RobustPLS(RegressorMixin, NativeEstimator):
+class RobustPLS(NativeRegressor):
     """Native ``models.regularized.robust_pls`` (regressor)."""
 
     _method_id = "models.regularized.robust_pls"
@@ -326,7 +324,7 @@ class RobustPLS(RegressorMixin, NativeEstimator):
         self.scale_y = scale_y
 
 
-class FusedSparsePLS(RegressorMixin, NativeEstimator):
+class FusedSparsePLS(NativeRegressor):
     """Native ``models.sparse.fused_sparse_pls`` (regressor)."""
 
     _method_id = "models.sparse.fused_sparse_pls"
@@ -348,7 +346,7 @@ class FusedSparsePLS(RegressorMixin, NativeEstimator):
         self.fusion_lambda = fusion_lambda
 
 
-class GroupSparsePLS(RegressorMixin, NativeEstimator):
+class GroupSparsePLS(NativeRegressor):
     """Native ``models.sparse.group_sparse_pls`` (regressor).
 
     Required fit inputs: feature_groups.
@@ -370,7 +368,7 @@ class GroupSparsePLS(RegressorMixin, NativeEstimator):
         self.group_lambda = group_lambda
 
 
-class SparseSIMPLS(RegressorMixin, NativeEstimator):
+class SparseSIMPLS(NativeRegressor):
     """Native ``models.sparse.sparse_simpls`` (regressor)."""
 
     _method_id = "models.sparse.sparse_simpls"
@@ -389,7 +387,7 @@ class SparseSIMPLS(RegressorMixin, NativeEstimator):
         self.sparsity_lambda = sparsity_lambda
 
 
-class ECR(RegressorMixin, NativeEstimator):
+class ECR(NativeRegressor):
     """Native ``models.specialized.ecr`` (regressor)."""
 
     _method_id = "models.specialized.ecr"
@@ -408,7 +406,7 @@ class ECR(RegressorMixin, NativeEstimator):
         self.alpha = alpha
 
 
-class NPLS(RegressorMixin, NativeEstimator):
+class NPLS(NativeRegressor):
     """Native ``models.specialized.tensor_pls`` (regressor)."""
 
     _method_id = "models.specialized.tensor_pls"
@@ -430,7 +428,7 @@ class NPLS(RegressorMixin, NativeEstimator):
         self.mode_k = mode_k
 
 
-class DIPLS(RegressorMixin, NativeEstimator):
+class DIPLS(NativeRegressor):
     """Native ``models.transfer.di_pls`` (regressor).
 
     Required fit inputs: target_domain.

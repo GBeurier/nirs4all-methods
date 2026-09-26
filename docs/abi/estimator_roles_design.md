@@ -55,6 +55,36 @@ Each catalog entry declares `kind: estimator` or `kind: procedure`.
 through the estimator life cycle and every procedure through the procedure
 call, both driven by the same manifest. No entry is exempt.
 
+### D0b — Typed role interfaces, not one catch-all interface
+
+The surface is a set of **typed interfaces**, in the scikit-learn / torch
+spirit: each role has its own operations and an input/output signature, and
+that signature is what types the nirs4all / DAG-ML controllers and therefore
+the Studio and Web nodes. A method implements one or more roles (PLS is both a
+regressor and a transformer); it never exposes operations of a role it does not
+declare.
+
+| Role | Analogy | Operations | Signature (ports) | DAG-ML node |
+|---|---|---|---|---|
+| transformer | `TransformerMixin` / `nn.Module` X→X | fit, transform, export | Data[n,p] (+Target if supervised) → Data[n,k] | `transform` |
+| selector | `SelectorMixin` | fit, selected_indices, transform (column subset), export | Data[n,p] (+Target) → Data[n,k⊆p] | `transform` (shape changing) |
+| regressor | `RegressorMixin` | fit, predict, export | Data[n,p] + Target[n,q] → Prediction[n,q] | `model` |
+| classifier | `ClassifierMixin` | fit, predict_labels, decision_function, predict_proba (when defined), classes, export | Data + Labels[n] → Prediction labels[n] / scores[n,c] | `model` |
+| sample filter | outlier detector (`fit_predict` mask) | fit, apply_mask, export | Data (+Target) → keep mask[n], train only | `exclude` |
+| splitter (procedure) | `BaseCrossValidator` | split | Data (+Target, groups) → folds | `split` |
+| augmenter (procedure) | train-only sampler | augment | Data (+Target) → Data', train only | `augmentation` |
+| generic procedure | function | run | inputs → MethodResult | none (diagnostics, sweeps) |
+
+In C the stateful roles share one opaque `n4m_estimator_t`, because ownership,
+parameters and N4ME serialization are identical; the role is part of the
+method identity (`roles` mask), each operation checks it, and the manifest
+publishes the role, its signature and the DAG-ML node kind. Typing lives in
+the contract, not in the handle: bindings expose one base class per role
+(`NativeTransformer`, `NativeSelector`, `NativeRegressor`,
+`NativeClassifier`, `NativeSampleFilter`, `NativeSplitter`,
+`NativeAugmenter`), multi-role methods inherit several, and controller
+manifests are derived from the same role → node-kind mapping.
+
 ### D1 — One estimator handle over a closed, compiled adapter table
 
 Add one opaque handle, `n4m_estimator_t`, created from a `method_id`. Internally

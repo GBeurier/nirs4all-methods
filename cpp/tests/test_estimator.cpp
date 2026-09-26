@@ -170,6 +170,14 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
     CHECK(n4m_estimator_is_fitted(est, &fitted) == N4M_OK && fitted == 1);
     CHECK(n4m_estimator_info(est, &idx, &caps) == N4M_OK && idx == index);
     CHECK(caps == info.capabilities);
+    // Role interfaces and fitted capabilities agree both ways.
+    const bool predicts = (info.roles & (N4M_ROLE_REGRESSOR | N4M_ROLE_CLASSIFIER)) != 0;
+    const bool transforms = (info.roles & (N4M_ROLE_TRANSFORMER | N4M_ROLE_SELECTOR)) != 0;
+    CHECK(predicts == ((caps & N4M_CAP_PREDICT) != 0));
+    CHECK(transforms == ((caps & N4M_CAP_TRANSFORM) != 0));
+    CHECK(((info.roles & N4M_ROLE_CLASSIFIER) != 0) == ((caps & N4M_CAP_PREDICT_LABELS) != 0));
+    CHECK(((info.roles & N4M_ROLE_SELECTOR) != 0) == ((caps & N4M_CAP_SELECTED_INDICES) != 0));
+    CHECK(((info.roles & N4M_ROLE_SAMPLE_FILTER) != 0) == ((caps & N4M_CAP_APPLY_MASK) != 0));
     int64_t n_in = 0, n_out = 0;
     CHECK(n4m_estimator_n_features_in(est, &n_in) == N4M_OK && n_in == kCols);
     CHECK(n4m_estimator_n_outputs(est, &n_out) == N4M_OK && n_out == 1);

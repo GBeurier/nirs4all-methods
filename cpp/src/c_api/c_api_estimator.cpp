@@ -182,9 +182,20 @@ using MatrixOp = n4m_status_t (n4m::estimator::Adapter::*)(n4m_context_t*,
                                                            const n4m_matrix_view_t&,
                                                            n4m_matrix_view_t&) const;
 
+// An operation belongs to role interfaces; a method exposes it only when it
+// declares one of those roles and its fitted state supports it.
+n4m_status_t check_operation(n4m_context_t* ctx, const n4m_estimator_t* est, std::uint32_t roles,
+                             std::uint64_t cap) {
+    if ((est->params.spec().roles & roles) == 0 || (est->adapter->capabilities() & cap) == 0) {
+        set_error(ctx, "operation is not part of this method's role interfaces");
+        return N4M_ERR_UNSUPPORTED;
+    }
+    return N4M_OK;
+}
+
 n4m_status_t matrix_op(n4m_context_t* ctx, const n4m_estimator_t* est,
-                       const n4m_matrix_view_t* X, n4m_matrix_view_t* out, std::uint64_t cap,
-                       MatrixOp op) {
+                       const n4m_matrix_view_t* X, n4m_matrix_view_t* out, std::uint32_t roles,
+                       std::uint64_t cap, MatrixOp op) {
     return guarded(ctx, [&]() {
         n4m_status_t st = check_fitted(ctx, est);
         if (st != N4M_OK) return st;
@@ -192,10 +203,8 @@ n4m_status_t matrix_op(n4m_context_t* ctx, const n4m_estimator_t* est,
             set_error(ctx, "output view is NULL");
             return N4M_ERR_NULL_POINTER;
         }
-        if ((est->adapter->capabilities() & cap) == 0) {
-            set_error(ctx, "operation is not supported by this estimator");
-            return N4M_ERR_UNSUPPORTED;
-        }
+        st = check_operation(ctx, est, roles, cap);
+        if (st != N4M_OK) return st;
         st = check_rows(ctx, est, X, out->rows);
         if (st != N4M_OK) return st;
         return ((*est->adapter).*op)(ctx, *X, *out);
@@ -473,7 +482,10 @@ N4M_API n4m_status_t n4m_estimator_n_features_in(const n4m_estimator_t* est, int
 N4M_API n4m_status_t n4m_estimator_transform_cols(const n4m_estimator_t* est, int64_t* out) {
     if (est == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     if (!est->fitted) return N4M_ERR_NOT_FITTED;
-    if ((est->adapter->capabilities() & N4M_CAP_TRANSFORM) == 0) return N4M_ERR_UNSUPPORTED;
+    if ((est->params.spec().roles & (N4M_ROLE_TRANSFORMER | N4M_ROLE_SELECTOR)) == 0 ||
+        (est->adapter->capabilities() & N4M_CAP_TRANSFORM) == 0) {
+        return N4M_ERR_UNSUPPORTED;
+    }
     *out = est->adapter->transform_cols();
     return N4M_OK;
 }
@@ -488,26 +500,28 @@ N4M_API n4m_status_t n4m_estimator_n_outputs(const n4m_estimator_t* est, int64_t
 N4M_API n4m_status_t n4m_estimator_transform(n4m_context_t* ctx, const n4m_estimator_t* est,
                                              const n4m_matrix_view_t* X,
                                              n4m_matrix_view_t* out) {
-    return matrix_op(ctx, est, X, out, N4M_CAP_TRANSFORM, &n4m::estimator::Adapter::transform);
+    return matrix_op(ctx, est, X, out, N4M_ROLE_TRANSFORMER | N4M_ROLE_SELECTOR, N4M_CAP_TRANSFORM,
+                     &n4m::estimator::Adapter::transform);
 }
 
 N4M_API n4m_status_t n4m_estimator_predict(n4m_context_t* ctx, const n4m_estimator_t* est,
                                            const n4m_matrix_view_t* X, n4m_matrix_view_t* out) {
-    return matrix_op(ctx, est, X, out, N4M_CAP_PREDICT, &n4m::estimator::Adapter::predict);
+    return matrix_op(ctx, est, X, out, N4M_ROLE_REGRESSOR | N4M_ROLE_CLASSIFIER, N4M_CAP_PREDICT,
+                     &n4m::estimator::Adapter::predict);
 }
 
 N4M_API n4m_status_t n4m_estimator_decision_function(n4m_context_t* ctx,
                                                      const n4m_estimator_t* est,
                                                      const n4m_matrix_view_t* X,
                                                      n4m_matrix_view_t* out) {
-    return matrix_op(ctx, est, X, out, N4M_CAP_DECISION_FUNCTION,
+    return matrix_op(ctx, est, X, out, N4M_ROLE_CLASSIFIER, N4M_CAP_DECISION_FUNCTION,
                      &n4m::estimator::Adapter::decision_function);
 }
 
 N4M_API n4m_status_t n4m_estimator_predict_proba(n4m_context_t* ctx, const n4m_estimator_t* est,
                                                  const n4m_matrix_view_t* X,
                                                  n4m_matrix_view_t* out) {
-    return matrix_op(ctx, est, X, out, N4M_CAP_PREDICT_PROBA,
+    return matrix_op(ctx, est, X, out, N4M_ROLE_CLASSIFIER, N4M_CAP_PREDICT_PROBA,
                      &n4m::estimator::Adapter::predict_proba);
 }
 
@@ -519,11 +533,8 @@ N4M_API n4m_status_t n4m_estimator_predict_labels(n4m_context_t* ctx,
         n4m_status_t st = check_fitted(ctx, est);
         if (st != N4M_OK) return st;
         if (out == nullptr) return N4M_ERR_NULL_POINTER;
-        if ((est->adapter->capabilities() & N4M_CAP_PREDICT_LABELS) == 0) {
-            set_error(ctx, "operation is not supported by this estimator");
-            return N4M_ERR_UNSUPPORTED;
-        }
-        st = check_rows(ctx, est, X, n);
+        st = check_operation(ctx, est, N4M_ROLE_CLASSIFIER, N4M_CAP_PREDICT_LABELS);
+        if (st == N4M_OK) st = check_rows(ctx, est, X, n);
         return st != N4M_OK ? st : est->adapter->predict_labels(ctx, *X, out);
     });
 }
@@ -532,6 +543,7 @@ N4M_API n4m_status_t n4m_estimator_classes(const n4m_estimator_t* est, int64_t* 
                                            int64_t capacity, int64_t* out_count) {
     if (est == nullptr) return N4M_ERR_NULL_POINTER;
     if (!est->fitted) return N4M_ERR_NOT_FITTED;
+    if ((est->params.spec().roles & N4M_ROLE_CLASSIFIER) == 0) return N4M_ERR_UNSUPPORTED;
     const auto* classes = est->adapter->classes();
     if (classes == nullptr) return N4M_ERR_UNSUPPORTED;
     return copy_array(classes->data(), static_cast<std::int64_t>(classes->size()), out, capacity,
@@ -542,6 +554,7 @@ N4M_API n4m_status_t n4m_estimator_selected_indices(const n4m_estimator_t* est, 
                                                     int64_t capacity, int64_t* out_count) {
     if (est == nullptr) return N4M_ERR_NULL_POINTER;
     if (!est->fitted) return N4M_ERR_NOT_FITTED;
+    if ((est->params.spec().roles & N4M_ROLE_SELECTOR) == 0) return N4M_ERR_UNSUPPORTED;
     const auto* selected = est->adapter->selected_indices();
     if (selected == nullptr) return N4M_ERR_UNSUPPORTED;
     return copy_array(selected->data(), static_cast<std::int64_t>(selected->size()), out,
@@ -556,11 +569,8 @@ N4M_API n4m_status_t n4m_estimator_apply_mask(n4m_context_t* ctx, const n4m_esti
         n4m_status_t st = check_fitted(ctx, est);
         if (st != N4M_OK) return st;
         if (mask == nullptr) return N4M_ERR_NULL_POINTER;
-        if ((est->adapter->capabilities() & N4M_CAP_APPLY_MASK) == 0) {
-            set_error(ctx, "operation is not supported by this estimator");
-            return N4M_ERR_UNSUPPORTED;
-        }
-        st = check_rows(ctx, est, X, n);
+        st = check_operation(ctx, est, N4M_ROLE_SAMPLE_FILTER, N4M_CAP_APPLY_MASK);
+        if (st == N4M_OK) st = check_rows(ctx, est, X, n);
         return st != N4M_OK ? st : est->adapter->apply_mask(ctx, *X, Y, mask);
     });
 }

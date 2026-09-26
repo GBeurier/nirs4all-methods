@@ -8,7 +8,7 @@ life cycle: fit, out-of-sample transform/predict, and a portable fitted state
 R and JS/WASM bindings read unchanged.
 """
 
-from ._base import NativeEstimator, method_info
+from ._base import NativeEstimator, NativeRegressor, NativeTransformer, method_info
 from ._generated import (
     CPPLS,
     DIPLS,
@@ -45,6 +45,8 @@ __all__ = [
     "FusedSparsePLS",
     "GroupSparsePLS",
     "NativeEstimator",
+    "NativeRegressor",
+    "NativeTransformer",
     "PLSRegression",
     "RandomSubspacePLS",
     "Ridge",
