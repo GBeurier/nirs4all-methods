@@ -8,7 +8,7 @@ _Namespace_: **`n4m.compose.aom_superblock`** · _Fully-qualified_: `n4m.compose
 
 **Python (verified public re-export):** `from n4m.compose.aom_superblock import aom_ridge_mkl_superblock`
 
-**Signature:** [`aom_ridge_mkl_superblock(X, y, *, operators = None, alpha: float | None = None, alphas: Sequence[float] = (0.0001, 0.01, 1.0, 100.0), cv: int = 5, fold_ids = None, mkl_top_k: int = 6, block_scaling: str = 'none', center_x: bool = True, center_y: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L7378)
+**Signature:** [`aom_ridge_mkl_superblock(X, y, *, operators = None, alpha: float | None = None, alphas: Sequence[float] = (0.0001, 0.01, 1.0, 100.0), cv: int = 5, fold_ids = None, mkl_top_k: int = 6, block_scaling: str = 'none', center_x: bool = True, center_y: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L7414)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

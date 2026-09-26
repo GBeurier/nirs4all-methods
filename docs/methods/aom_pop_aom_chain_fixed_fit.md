@@ -8,7 +8,7 @@ _Namespace_: **`n4m.model_selection.aom_search`** · _Fully-qualified_: `n4m.mod
 
 **Python (verified public re-export):** `from n4m.model_selection.aom_search import aom_chain_fixed_fit_run`
 
-**Signature:** [`aom_chain_fixed_fit_run(X, y, chain, *, head: str | int = 'ridge', param: float = 0.1, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None, moment_policy: str | int = 'auto', cuda_pls_parallel_folds: bool | None = None, cuda_pls_min_device_features: int | None = None, cuda_pls_many_batched: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6626)
+**Signature:** [`aom_chain_fixed_fit_run(X, y, chain, *, head: str | int = 'ridge', param: float = 0.1, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None, moment_policy: str | int = 'auto', cuda_pls_parallel_folds: bool | None = None, cuda_pls_min_device_features: int | None = None, cuda_pls_many_batched: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6662)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

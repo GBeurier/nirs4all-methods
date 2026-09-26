@@ -59,7 +59,7 @@ from n4m.estimators.regression.robust import weighted_pls
 result = weighted_pls(X, y)
 ```
 
-Source signature: `weighted_pls(X, y, *, sample_weights = None, n_components: int = 2, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8712)).
+Source signature: `weighted_pls(X, y, *, sample_weights = None, n_components: int = 2, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8748)).
 
 **R (source-verified):** [`weighted_pls(formula, data, ncomp = 2L, weights, na.action = stats::na.omit)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn_methods.R).
 

@@ -8,7 +8,7 @@ _Namespace_: **`n4m.compose.aom_superblock`** · _Fully-qualified_: `n4m.compose
 
 **Python (verified public re-export):** `from n4m.compose.aom_superblock import aom_ridge_active_superblock`
 
-**Signature:** [`aom_ridge_active_superblock(X, y, *, operators = None, alpha: float | None = None, alphas: Sequence[float] = (0.0001, 0.01, 1.0, 100.0), cv: int = 5, fold_ids = None, active_top_m: int = 20, active_diversity_threshold: float = 0.98, active_score_method: str = 'norm', active_max_per_family: int | None = None, keep_identity: bool = True, block_scaling: str = 'rms', center_x: bool = True, center_y: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L7582)
+**Signature:** [`aom_ridge_active_superblock(X, y, *, operators = None, alpha: float | None = None, alphas: Sequence[float] = (0.0001, 0.01, 1.0, 100.0), cv: int = 5, fold_ids = None, active_top_m: int = 20, active_diversity_threshold: float = 0.98, active_score_method: str = 'norm', active_max_per_family: int | None = None, keep_identity: bool = True, block_scaling: str = 'rms', center_x: bool = True, center_y: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L7618)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

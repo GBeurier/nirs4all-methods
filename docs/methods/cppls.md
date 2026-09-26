@@ -55,7 +55,7 @@ from n4m.estimators.regression.latent import cppls
 result = cppls(X, y)
 ```
 
-Source signature: `cppls(X, y, *, gamma: float = 0.5, n_components: int = 2)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8621)).
+Source signature: `cppls(X, y, *, gamma: float = 0.5, n_components: int = 2)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8657)).
 
 **R (source-verified):** [`cppls(formula, data, ncomp = 2L, gamma = 0.5, na.action = stats::na.omit)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn_methods.R).
 
