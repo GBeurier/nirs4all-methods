@@ -37,6 +37,7 @@
 #include "core/preprocessing/wavelets/wavelet_features.h"
 #include "core/preprocessing/wavelets/wavelet_pca.h"
 #include "core/preprocessing/wavelets/wavelet_svd.h"
+#include "core/estimator/core_state.hpp"
 
 // ---------------------------------------------------------------------------
 // Public opaque types wrapping the internal C engine states.
@@ -602,3 +603,29 @@ N4M_API n4m_status_t n4m_transform_wavelet_svd_output_cols(
 }
 
 }  // extern "C"
+
+// ---------------------------------------------------------------------------
+// Fitted-state access for the estimator adapters (core/estimator/core_state.hpp)
+// ---------------------------------------------------------------------------
+
+namespace n4m::estimator {
+
+n4m_status_t kernel_save(const n4m_pp_wavelet_pca_handle_t* h, n4m_state_writer_t* w) {
+    return n4m_pp_wavelet_pca_state_save(h->state, w);
+}
+
+n4m_status_t kernel_load(n4m_pp_wavelet_pca_handle_t* h, n4m_state_reader_t* r,
+                         std::int64_t n_features) {
+    return n4m_pp_wavelet_pca_state_load(h->state, r, n_features);
+}
+
+n4m_status_t kernel_save(const n4m_pp_wavelet_svd_handle_t* h, n4m_state_writer_t* w) {
+    return n4m_pp_wavelet_svd_state_save(h->state, w);
+}
+
+n4m_status_t kernel_load(n4m_pp_wavelet_svd_handle_t* h, n4m_state_reader_t* r,
+                         std::int64_t n_features) {
+    return n4m_pp_wavelet_svd_state_load(h->state, r, n_features);
+}
+
+}  // namespace n4m::estimator

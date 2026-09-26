@@ -66,11 +66,13 @@ struct Inputs {
     Data data;
     n4m_matrix_view_t X{}, Y{}, Xt{};
     std::vector<int64_t> feature_groups, blocks, labels;
+    std::vector<double> axis;
     Inputs() {
         X = view(data.x_train.data(), kTrain, kCols);
         Y = view(data.y_train.data(), kTrain, 1);
         Xt = view(data.x_target.data(), kTrain, kCols);
         for (int64_t j = 0; j < kCols; ++j) feature_groups.push_back(j / 4);
+        for (int64_t j = 0; j < kCols; ++j) axis.push_back(1000.0 + 2.0 * static_cast<double>(j));
         blocks = {4, 4, 4};
         // Three classes with non-contiguous ids, balanced by response terciles.
         std::vector<double> sorted(data.y_train);
@@ -97,6 +99,10 @@ struct Inputs {
         if (wants(N4M_FIT_INPUT_BLOCKS)) {
             in.block_sizes = blocks.data();
             in.n_blocks = static_cast<int64_t>(blocks.size());
+        }
+        if (wants(N4M_FIT_INPUT_AXIS)) {
+            in.axis = axis.data();
+            in.n_axis = kCols;
         }
         if (wants(N4M_FIT_INPUT_TARGET_DOMAIN)) in.X_target = &Xt;
         return in;
@@ -131,6 +137,17 @@ void fill_required(int32_t index, n4m_params_t* params) {
             CHECK(n4m_params_set_double_array(params, pi.name, v, 3) == N4M_OK);
         } else if (std::strcmp(pi.name, "alpha_thresholds") == 0) {
             const double v[] = {0.95, 0.99};
+            CHECK(n4m_params_set_double_array(params, pi.name, v, 2) == N4M_OK);
+        } else if (std::strcmp(pi.name, "edges") == 0) {
+            const double v[] = {-0.5, 0.0, 0.5};
+            CHECK(n4m_params_set_double_array(params, pi.name, v, 3) == N4M_OK);
+        } else if (std::strcmp(pi.name, "kernel_size") == 0) {
+            CHECK(n4m_params_set_int(params, pi.name, 5) == N4M_OK);
+        } else if (std::strcmp(pi.name, "alphas") == 0) {
+            const double v[] = {0.0, 1.0};
+            CHECK(n4m_params_set_double_array(params, pi.name, v, 2) == N4M_OK);
+        } else if (std::strcmp(pi.name, "sigmas") == 0) {
+            const double v[] = {1.0, 2.0};
             CHECK(n4m_params_set_double_array(params, pi.name, v, 2) == N4M_OK);
         } else {
             throw std::runtime_error(std::string("no test value for required parameter ") +
@@ -218,6 +235,26 @@ void conformance_transform_only(n4m_context_t* ctx, const n4m_estimator_t* est, 
             }
         }
     }
+    // Column-major (R/MATLAB layout) input and output give identical values.
+    {
+        std::vector<double> x_cm(static_cast<size_t>(kTest * kCols)), o_cm(out.size());
+        for (int64_t i = 0; i < kTest; ++i) {
+            for (int64_t j = 0; j < kCols; ++j) {
+                x_cm[static_cast<size_t>(j * kTest + i)] =
+                    in.data.x_test[static_cast<size_t>(i * kCols + j)];
+            }
+        }
+        n4m_matrix_view_t Xc{}, Oc{};
+        CHECK(n4m_matrix_view_init_colmajor(&Xc, x_cm.data(), kTest, kCols, N4M_DTYPE_F64) == N4M_OK);
+        CHECK(n4m_matrix_view_init_colmajor(&Oc, o_cm.data(), kTest, cols, N4M_DTYPE_F64) == N4M_OK);
+        CHECK(n4m_estimator_transform(ctx, est, &Xc, &Oc) == N4M_OK);
+        for (int64_t i = 0; i < kTest; ++i) {
+            for (int64_t j = 0; j < cols; ++j) {
+                CHECK(std::memcmp(&o_cm[static_cast<size_t>(j * kTest + i)],
+                                  &out[static_cast<size_t>(i * cols + j)], sizeof(double)) == 0);
+            }
+        }
+    }
     const auto bytes = export_bytes(ctx, est);
     n4m_estimator_t* back = nullptr;
     CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) == N4M_OK);
@@ -260,6 +297,7 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
         n4m_fit_inputs_v1_t missing = inputs;
         if (k == N4M_FIT_INPUT_FEATURE_GROUPS) missing.feature_groups = nullptr;
         if (k == N4M_FIT_INPUT_BLOCKS) missing.block_sizes = nullptr;
+        if (k == N4M_FIT_INPUT_AXIS) missing.axis = nullptr;
         if (k == N4M_FIT_INPUT_TARGET_DOMAIN) missing.X_target = nullptr;
         if (k == N4M_FIT_INPUT_LABELS) missing.labels = nullptr;
         CHECK(n4m_estimator_fit(ctx, est, &missing) == N4M_ERR_INVALID_ARGUMENT);

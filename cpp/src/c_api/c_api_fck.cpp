@@ -24,6 +24,7 @@
 
 #include "core/common/matrix_view.hpp"
 #include "core/preprocessing/specialized/fck_static.h"
+#include "core/estimator/core_state.hpp"
 
 // ---------------------------------------------------------------------------
 // Opaque public handle.
@@ -200,3 +201,15 @@ N4M_API n4m_status_t n4m_transform_fck_static_output_cols(int32_t n_kernels,
 }
 
 }  // extern "C"
+
+// ---------------------------------------------------------------------------
+// Fitted-state access for the estimator adapters (core/estimator/core_state.hpp)
+// ---------------------------------------------------------------------------
+
+namespace n4m::estimator {
+
+std::int64_t kernel_output_cols(const n4m_pp_fck_static_handle_t* h, std::int64_t input_cols) {
+    return n4m_pp_fck_static_state_n_kernels(h->state) * input_cols;
+}
+
+}  // namespace n4m::estimator

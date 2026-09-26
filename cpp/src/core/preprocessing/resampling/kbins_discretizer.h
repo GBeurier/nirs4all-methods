@@ -29,6 +29,7 @@
 #define N4M_CORE_PP_RESAMPLING_KBINS_DISCRETIZER_H
 
 #include "n4m/n4m.h"
+#include "core/estimator/state_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,6 +60,13 @@ n4m_status_t n4m_pp_kbins_disc_state_apply(
     const double* X,
     int64_t rows, int64_t cols,
     int32_t* out);
+
+/* Fitted-state serialization (core/estimator/state_io.h): the per-column
+ * bin edges (ragged, after the width dedup). */
+n4m_status_t n4m_pp_kbins_disc_state_save(const n4m_pp_kbins_disc_state_t* state,
+                                          n4m_state_writer_t* w);
+n4m_status_t n4m_pp_kbins_disc_state_load(n4m_pp_kbins_disc_state_t* state,
+                                          n4m_state_reader_t* r, int64_t n_features);
 
 #ifdef __cplusplus
 }

@@ -251,3 +251,42 @@ n4m_status_t n4m_pp_kbins_disc_state_apply(
     }
     return N4M_OK;
 }
+
+n4m_status_t n4m_pp_kbins_disc_state_save(const n4m_pp_kbins_disc_state_t* state,
+                                          n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    for (int64_t j = 0; j < state->cols; ++j) {
+        n4m_state_write_f64_array(w, state->edges[j], state->n_edges[j]);
+    }
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_kbins_disc_state_load(n4m_pp_kbins_disc_state_t* state,
+                                          n4m_state_reader_t* r, int64_t n_features) {
+    free_edges(state);
+    state->fitted  = 0;
+    state->cols    = n_features;
+    state->n_edges = (int32_t*)malloc((size_t)n_features * sizeof(int32_t));
+    state->edges   = (double**)calloc((size_t)n_features, sizeof(double*));
+    if (state->n_edges == NULL || state->edges == NULL) {
+        free_edges(state);
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+    for (int64_t j = 0; j < n_features; ++j) {
+        /* Fit keeps between 1 and n_bins + 1 strictly increasing edges. */
+        int64_t n = 0;
+        n4m_status_t st = n4m_state_peek_array_length(r, state->n_bins + 1, &n)
+                              ? n4m_state_read_f64_array_new(r, n, &state->edges[j])
+                              : N4M_ERR_CORRUPT_BUFFER;
+        for (int64_t k = 1; st == N4M_OK && k < n; ++k) {
+            if (!(state->edges[j][k] > state->edges[j][k - 1])) st = N4M_ERR_CORRUPT_BUFFER;
+        }
+        if (st != N4M_OK) {
+            free_edges(state);
+            return st;
+        }
+        state->n_edges[j] = (int32_t)n;
+    }
+    state->fitted = 1;
+    return N4M_OK;
+}

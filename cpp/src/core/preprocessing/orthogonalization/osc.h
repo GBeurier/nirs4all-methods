@@ -57,6 +57,7 @@
 #include <stdint.h>
 
 #include "n4m/n4m.h"
+#include "core/estimator/state_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,6 +106,14 @@ n4m_status_t n4m_pp_osc_state_apply(const n4m_pp_osc_state_t* state,
                                      const double* X,
                                      int64_t rows, int64_t cols,
                                      double* out);
+
+/* Fitted-state serialization (core/estimator/state_io.h): the column mean
+ * and scale, and the extracted orthogonal weights and loadings (y_mean and
+ * y_std are not used by transform). */
+n4m_status_t n4m_pp_osc_state_save(const n4m_pp_osc_state_t* state,
+                                   n4m_state_writer_t* w);
+n4m_status_t n4m_pp_osc_state_load(n4m_pp_osc_state_t* state,
+                                   n4m_state_reader_t* r, int64_t n_features);
 
 #ifdef __cplusplus
 }  /* extern "C" */

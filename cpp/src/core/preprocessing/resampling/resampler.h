@@ -33,6 +33,7 @@
 #define N4M_CORE_PP_RESAMPLING_RESAMPLER_H
 
 #include "n4m/n4m.h"
+#include "core/estimator/state_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,6 +85,14 @@ n4m_status_t n4m_pp_resampler_state_apply(
     int64_t rows, int64_t cols,
     int64_t out_cols,
     double* out);
+
+/* Fitted-state serialization (core/estimator/state_io.h): the post-crop
+ * source axis and, when cropping, its indices into the raw input. The
+ * bracketing tables are rebuilt on load as fit builds them. */
+n4m_status_t n4m_pp_resampler_state_save(const n4m_pp_resampler_state_t* state,
+                                         n4m_state_writer_t* w);
+n4m_status_t n4m_pp_resampler_state_load(n4m_pp_resampler_state_t* state,
+                                         n4m_state_reader_t* r, int64_t n_features);
 
 #ifdef __cplusplus
 }

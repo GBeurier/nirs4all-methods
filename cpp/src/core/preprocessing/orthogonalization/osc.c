@@ -371,3 +371,66 @@ n4m_status_t n4m_pp_osc_state_apply(const n4m_pp_osc_state_t* state,
     }
     return N4M_OK;
 }
+
+n4m_status_t n4m_pp_osc_state_save(const n4m_pp_osc_state_t* state,
+                                   n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    const int64_t cols = state->cols;
+    const int64_t nc = state->n_components_actual;
+    const int64_t stride = state->n_components_storage;
+    n4m_state_write_f64_array(w, state->X_mean, cols);
+    n4m_state_write_f64_array(w, state->X_std, cols);
+    n4m_state_write_i64(w, nc);
+    /* W_ortho / P_ortho packed as (cols x nc), dropping unused storage. */
+    const double* src[2] = {state->W_ortho, state->P_ortho};
+    for (int m = 0; m < 2; ++m) {
+        n4m_state_write_i64(w, cols * nc);
+        for (int64_t j = 0; j < cols; ++j) {
+            for (int64_t k = 0; k < nc; ++k) {
+                n4m_state_write_f64(w, src[m][(size_t)(j * stride + k)]);
+            }
+        }
+    }
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_osc_state_load(n4m_pp_osc_state_t* state,
+                                   n4m_state_reader_t* r, int64_t n_features) {
+    double* X_mean = NULL;
+    double* X_std = NULL;
+    double* W_ortho = NULL;
+    double* P_ortho = NULL;
+    int64_t nc = -1;
+    n4m_status_t st = n4m_state_read_f64_array_new(r, n_features, &X_mean);
+    if (st == N4M_OK) st = n4m_state_read_f64_array_new(r, n_features, &X_std);
+    if (st == N4M_OK && (!n4m_state_read_i64(r, &nc) || nc < 0 ||
+                         nc > state->n_components_request || nc > n_features - 1)) {
+        st = N4M_ERR_CORRUPT_BUFFER;
+    }
+    if (st == N4M_OK && nc > 0) {
+        st = n4m_state_read_f64_array_new(r, n_features * nc, &W_ortho);
+        if (st == N4M_OK) st = n4m_state_read_f64_array_new(r, n_features * nc, &P_ortho);
+    } else if (st == N4M_OK && (!n4m_state_read_f64_array(r, NULL, 0) ||
+                                !n4m_state_read_f64_array(r, NULL, 0))) {
+        st = N4M_ERR_CORRUPT_BUFFER;
+    }
+    if (st != N4M_OK) {
+        free(X_mean); free(X_std); free(W_ortho); free(P_ortho);
+        return st;
+    }
+    free(state->X_mean);
+    free(state->X_std);
+    free(state->W_ortho);
+    free(state->P_ortho);
+    state->cols = n_features;
+    state->X_mean = X_mean;
+    state->X_std = X_std;
+    state->y_mean = 0.0;
+    state->y_std = 1.0;
+    state->n_components_actual = (int32_t)nc;
+    state->n_components_storage = (int32_t)nc;
+    state->W_ortho = W_ortho;
+    state->P_ortho = P_ortho;
+    state->fitted = 1;
+    return N4M_OK;
+}

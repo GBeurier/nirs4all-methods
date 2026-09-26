@@ -43,6 +43,18 @@ c_surface:
   - "n4m_decomposition_flexible_svd_is_fitted"
   - "n4m_decomposition_flexible_svd_output_cols"
   - "n4m_decomposition_flexible_svd_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_flexible_svd"
+  roles: "[transformer]"
+  state: "components"
+  inputs:
+    y: "optional"
+  params:
+    - name: "n_components"
+      type: "double"
+      default: 5.0
+      min: 0.0
 fq_name: "n4m.decomposition.flexible_svd"
 leaf: "flexible_svd"
 legacy_ids:

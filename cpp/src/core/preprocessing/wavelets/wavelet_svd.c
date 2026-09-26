@@ -257,3 +257,44 @@ n4m_status_t n4m_pp_wavelet_svd_state_apply(
     free(flat); free(coef_lengths); free(offsets);
     return N4M_OK;
 }
+
+n4m_status_t n4m_pp_wavelet_svd_state_save(
+    const n4m_pp_wavelet_svd_state_t* state, n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    n4m_state_write_i64(w, state->n_components);
+    n4m_state_write_f64_array(w, state->components,
+                              state->n_components * state->flat_dim);
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_wavelet_svd_state_load(
+    n4m_pp_wavelet_svd_state_t* state, n4m_state_reader_t* r, int64_t n_features) {
+    /* Level and flattened width, as fit derives them from the input width. */
+    const int32_t max_lvl = n4m_wavelet_dwt_max_level(n_features, state->family);
+    const int32_t level   = (state->max_level < max_lvl) ? state->max_level
+                                                          : max_lvl;
+    int64_t* coef_lengths = (int64_t*)malloc((size_t)(level + 1) * sizeof(int64_t));
+    if (coef_lengths == NULL) return N4M_ERR_OUT_OF_MEMORY;
+    int64_t flat_dim = 0;
+    n4m_status_t st = n4m_wavelet_wavedec_lengths(
+        n_features, state->family, state->mode, level, &flat_dim, coef_lengths);
+    free(coef_lengths);
+    if (st != N4M_OK || flat_dim < 1) return N4M_ERR_CORRUPT_BUFFER;
+
+    double* components = NULL;
+    int64_t k = 0;
+    st = (n4m_state_read_i64(r, &k) && k >= 1 && k <= flat_dim)
+             ? n4m_state_read_f64_array_new(r, k * flat_dim, &components)
+             : N4M_ERR_CORRUPT_BUFFER;
+    if (st != N4M_OK) {
+        return st;
+    }
+    free(state->components);
+    state->actual_level  = level;
+    state->flat_dim      = flat_dim;
+    state->n_components  = k;
+    state->n_features_in = n_features;
+    state->components    = components;
+    state->fitted        = 1;
+    return N4M_OK;
+}

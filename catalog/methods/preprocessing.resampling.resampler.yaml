@@ -43,6 +43,50 @@ c_surface:
   - "n4m_transform_resampler_is_fitted"
   - "n4m_transform_resampler_output_cols"
   - "n4m_transform_resampler_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_resampler"
+  roles: "[transformer]"
+  state: "source_axis"
+  inputs:
+    y: "optional"
+    axis: "required"
+  params:
+    - name: "target_wavelengths"
+      type: "double_array"
+      default: []
+    - name: "method"
+      type: "enum"
+      choices: "[linear, nearest, cubic]"
+      default: "linear"
+    - name: "crop_min"
+      type: "double"
+      default: 0.0
+    - name: "crop_max"
+      type: "double"
+      default: 0.0
+    - name: "use_crop"
+      type: "bool"
+      default: false
+    - name: "fill_value"
+      type: "double"
+      default: 0.0
+    - name: "bounds_error"
+      type: "bool"
+      default: false
+    - name: "extrapolate"
+      type: "bool"
+      default: false
+    - name: "tgt_min"
+      type: "double"
+      default: 0.0
+    - name: "tgt_step"
+      type: "double"
+      default: 1.0
+    - name: "tgt_n"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.transform.resampling.resampler"
 leaf: "resampler"
 legacy_ids:

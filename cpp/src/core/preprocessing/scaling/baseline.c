@@ -126,3 +126,22 @@ n4m_status_t n4m_pp_baseline_state_inverse_apply(
     }
     return N4M_OK;
 }
+
+n4m_status_t n4m_pp_baseline_state_save(const n4m_pp_baseline_state_t* state,
+                                        n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    n4m_state_write_f64_array(w, state->mean, state->cols);
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_baseline_state_load(n4m_pp_baseline_state_t* state,
+                                        n4m_state_reader_t* r, int64_t n_features) {
+    double* mean = NULL;
+    const n4m_status_t st = n4m_state_read_f64_array_new(r, n_features, &mean);
+    if (st != N4M_OK) return st;
+    free(state->mean);
+    state->cols   = n_features;
+    state->mean   = mean;
+    state->fitted = 1;
+    return N4M_OK;
+}

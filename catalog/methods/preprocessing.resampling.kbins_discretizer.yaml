@@ -41,6 +41,22 @@ c_surface:
   - "n4m_transform_kbins_discretizer_fit"
   - "n4m_transform_kbins_discretizer_is_fitted"
   - "n4m_transform_kbins_discretizer_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_kbins_discretizer"
+  roles: "[transformer]"
+  state: "bin_edges"
+  inputs:
+    y: "optional"
+  params:
+    - name: "n_bins"
+      type: "int"
+      default: 5
+      min: 2
+    - name: "strategy"
+      type: "enum"
+      choices: "[uniform, quantile]"
+      default: "uniform"
 fq_name: "n4m.transform.resampling.kbins_discretizer"
 leaf: "kbins_discretizer"
 legacy_ids:
