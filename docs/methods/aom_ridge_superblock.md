@@ -57,7 +57,7 @@ https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_
 
 ## Catalog note
 
-Python-backed donor-style AOM Ridge superblock constrained to strict-linear single-operator AOM views. It builds operator outputs through native aom_preprocess, selects/fits Ridge alphas fold-locally through the native Ridge binding, applies train-fold centering and optional block RMS scaling to validation folds, and folds final superblock coefficients back to original-input input_coefficients plus intercept. It intentionally excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes; native v1 builds in CUDA-enabled configurations but this is not yet a fused GPU superblock grinder.
+Native AOM Ridge superblock over strict-linear single-operator AOM views (core fit_aom_superblock). It concatenates the operator outputs, centers the columns and optionally scales each block to unit RMS with train-fold statistics, selects the Ridge alpha by train-fold CV, and folds the final superblock coefficients back to original-input input_coefficients plus intercept, so the role state is an affine N4MM predictor. It excludes donor branch_global, MKL/kernel, row-reference-dependent preprocessing and nonlinear AOM Ridge modes.
 
 _Timing benchmark_: `benchmarks/cross_binding/bench_aom_ridge_superblock_timing.py`
 

@@ -62,7 +62,7 @@ https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/aom_chain_ri
 
 ## Catalog note
 
-Native L2-augmented-design Ridge-PLS on strict/raw-base chains, distinct from donor Ridge-on-PLS-scores SingleChainPLSRidge; not a parity port. It applies strict-linear AOM chains sequentially, selects one chain plus PLS component count and Ridge-PLS lambda by train CV, fits through the native ridge_pls binding, and folds final coefficients back to original-input input_coefficients plus intercept. It intentionally excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing; native v1 builds in CUDA-enabled configurations but this is not a fused many-chain GPU Ridge-PLS grinder.
+Native L2-augmented-design Ridge-PLS on strict/raw-base chains (core fit_aom_chain_ridge_pls), distinct from donor Ridge-on-PLS-scores SingleChainPLSRidge; not a parity port. It applies each strict-linear AOM chain sequentially (default: the compact native chain bank), selects one chain plus PLS component count and Ridge-PLS lambda by train-fold CV, fits the native ridge-augmented SIMPLS, and folds the final coefficients back to original-input input_coefficients plus intercept (affine N4MM state). It excludes SNV, MSC, EMSC, OSC, row-reference-dependent preprocessing, nonlinear lifts, kernels and dataset/source routing.
 
 _Timing benchmark_: `benchmarks/cross_binding/bench_aom_chain_ridge_pls_timing.py`
 
