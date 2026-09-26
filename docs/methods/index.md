@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **212**. Additional Python reference
+_Total catalogued native methods_: **213**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -143,6 +143,7 @@ Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-b
 | [`missing_aware_nipals`](missing_aware_nipals.md) | `n4m.estimators.regression.latent.missing_aware_nipals` | `n4m.estimators.regression.latent` | C |
 | [`pcr`](pcr.md) | `n4m.estimators.regression.latent.pcr` | `n4m.estimators.regression.latent` | C, Py |
 | [`pls`](pls.md) | `n4m.estimators.regression.latent.pls` | `n4m.estimators.regression.latent` | C, Py |
+| [`pls_regression`](models_pls_pls_regression.md) | `n4m.estimators.regression.latent.pls_regression` | `n4m.estimators.regression.latent` | C |
 | [`lw_pls`](lw_pls.md) | `n4m.estimators.regression.local.lw_pls` | `n4m.estimators.regression.local` | C |
 | [`recursive_pls`](recursive_pls.md) | `n4m.estimators.regression.online.recursive_pls` | `n4m.estimators.regression.online` | C |
 | [`ridge`](models_regularized_ridge.md) | `n4m.estimators.regression.regularized.ridge` | `n4m.estimators.regression.regularized` | C, Py |
