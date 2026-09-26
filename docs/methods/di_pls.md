@@ -61,7 +61,7 @@ Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier
 from n4m.domain_adaptation.invariant import di_pls
 ```
 
-Source signature: `di_pls(X_source, y_source, *, X_target, n_components: int = 2, di_lambda: float = 1.0)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8640)).
+Source signature: `di_pls(X_source, y_source, *, X_target, n_components: int = 2, di_lambda: float = 1.0)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8676)).
 
 The scikit-learn-compatible `n4m.domain_adaptation.invariant.DIPLS` estimator accepts `fit(X_source, y_source, X_target=X_target)` and predicts fresh spectra from native input-space coefficients. The unlabeled target cohort contributes to training and must be chosen within each validation fold; it is not stored in the fitted estimator. Cross-language retraining therefore still requires the original target cohort.
 

@@ -12,8 +12,11 @@ Group sparse PLS (§7)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `4` | registry benchmark cell value |
-| `group_lambda` | `float` | `0.1` | registry benchmark cell value |
+| `X` | `Any` | `required` | current public binding signature |
+| `y` | `Any` | `required` | current public binding signature |
+| `n_components` | `int` | `2` | current public binding signature |
+| `group_assignment` | `Any` | `required` | current public binding signature |
+| `group_lambda` | `float` | `0.05` | current public binding signature |
 
 ## Explanations
 
@@ -46,7 +49,13 @@ Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier
 
 **C ABI (ABI 2):** [`n4m_estimators_group_sparse_pls_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/regression.h#L209). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
+**Python (verified public re-export):**
+
+```python
+from n4m.estimators.regression.sparse import group_sparse_pls
+```
+
+Source signature: `group_sparse_pls(X: Any, y: Any, *, n_components: int = 2, group_assignment: Any, group_lambda: float = 0.05)` ([`n4m/estimators/regression/sparse.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/estimators/regression/sparse.py#L43)).
 
 **R (source-verified):** [`group_sparse_pls_fit(X, Y, n_components, group_assignment, group_lambda = 0.05)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

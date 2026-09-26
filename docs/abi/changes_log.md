@@ -1,5 +1,37 @@
 # ABI — Changes Log
 
+## 2026-09-26 — ABI 2.10.0: fitted native preprocessing wire (release pending)
+
+Five additive C functions export/import a bounded, versioned N4MP byte stream
+for a fitted linear preprocessing pipeline and inspect its fitted feature width
+and ordered original operator plan. The C++ decoder validates the checksum,
+operator kinds, parameters, dimensions and learned state before constructing
+a handle; the 15 supported pipeline kinds and mixed chains have held-out
+roundtrip tests. Bindings may transport the same bytes without reimplementing
+preprocessing. N4MP is separate from N4MM model bytes and does not serialize
+product DAG branches, selectors, or retraining data. This ABI change is not a
+package release by itself.
+
+## 2026-09-26 — ABI 2.9.0: affine MethodResult promotion (release pending)
+
+`n4m_model_from_method_result` copies a natively marked affine MethodResult
+into a predict-only `N4M_ALGO_IMPORTED_LINEAR_PREDICTOR` model. It validates
+finite coefficients and either a direct intercept or both X/Y means with
+exact shapes, derives the intercept in C++ when necessary, and exports a
+standalone N4MM payload. A finite, shape-consistent `predictions` matrix
+supplies the source training-row count; absent predictions leave provenance
+unknown (`0`). This metadata does not retain training rows. Results
+without the explicit `affine_predictor=1` capability are rejected. Marked
+producers in this batch are GroupSparsePLS, FusedSparsePLS, RobustPLS,
+RidgePLS, ContinuumRegression, BaggingPLS, BoostingPLS, and
+RandomSubspacePLS, direct Ridge, CPPLS, SparseSIMPLS, ECR, MIRPLS, N-PLS,
+MB-PLS, and DI-PLS; their held-out oracles confirm the affine convention.
+N-PLS consumes flattened feature rows after the caller supplies a valid
+mode-J/mode-K shape, MB-PLS uses its exported direct intercept, and DI-PLS
+still requires an independent target-domain cohort during fit. Promotion
+does not recreate those fit inputs or claim latent transform support.
+This batch does not publish a package or change a package version number.
+
 ## 2026-09-03 — ABI 2.5.0: typed N4MM pipeline inspection
 
 Additive MINOR change: `n4m_serialization_inspect_pipeline_v1` returns the

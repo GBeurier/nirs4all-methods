@@ -1132,6 +1132,7 @@ N4M_API n4m_status_t n4m_estimators_sparse_simpls_fit(
         if (status != N4M_OK) return status;
 
         auto handle = std::make_unique<n4m_method_result_s>();
+        handle->set_scalar("affine_predictor", 1.0);
         const auto p = static_cast<std::int64_t>(model->n_features);
         const auto q = static_cast<std::int64_t>(model->n_targets);
         const auto k = static_cast<std::int64_t>(model->n_components);
@@ -1257,6 +1258,7 @@ N4M_API n4m_status_t n4m_domain_adaptation_di_pls_fit(
         if (status != N4M_OK) return status;
 
         auto handle = std::make_unique<n4m_method_result_s>();
+        handle->set_scalar("affine_predictor", 1.0);
         const auto p = static_cast<std::int64_t>(model->n_features);
         const auto q = static_cast<std::int64_t>(model->n_targets);
         const auto k = static_cast<std::int64_t>(model->n_components);
@@ -1414,6 +1416,7 @@ N4M_API n4m_status_t n4m_estimators_cppls_fit(
                                    pred_rows, pred_cols);
         handle->set_scalar("rmse", rmse);
         handle->set_scalar("gamma", res.gamma);
+        handle->set_scalar("affine_predictor", 1.0);
 
         *out_result = handle.release();
         return N4M_OK;
@@ -1491,6 +1494,7 @@ N4M_API n4m_status_t n4m_estimators_robust_pls_fit(
         auto handle = std::make_unique<n4m_method_result_s>();
         pack_weighted_result(*handle, res, *X, *Y);
         handle->set_scalar("huber_k", huber_k);
+        handle->set_scalar("affine_predictor", 1.0);
 
         *out_result = handle.release();
         return N4M_OK;
@@ -1525,6 +1529,7 @@ N4M_API n4m_status_t n4m_estimators_ridge_pls_fit(
         auto handle = std::make_unique<n4m_method_result_s>();
         pack_weighted_result(*handle, res, *X, *Y);
         handle->set_scalar("ridge_lambda", ridge_lambda);
+        handle->set_scalar("affine_predictor", 1.0);
 
         *out_result = handle.release();
         return N4M_OK;
@@ -1559,6 +1564,7 @@ N4M_API n4m_status_t n4m_estimators_continuum_regression_fit(
         auto handle = std::make_unique<n4m_method_result_s>();
         pack_weighted_result(*handle, res, *X, *Y);
         handle->set_scalar("tau", tau);
+        handle->set_scalar("affine_predictor", 1.0);
 
         *out_result = handle.release();
         return N4M_OK;
@@ -1619,6 +1625,7 @@ N4M_API n4m_status_t n4m_estimators_ridge_fit(
         handle->set_double_matrix("predictions", res.predictions, nn, q);
         handle->set_scalar("rmse", res.rmse);
         handle->set_scalar("lambda", res.lambda);
+        handle->set_scalar("affine_predictor", 1.0);
 
         *out_result = handle.release();
         return N4M_OK;
@@ -1716,6 +1723,7 @@ N4M_API n4m_status_t n4m_estimators_n_pls_fit(
         if (status != N4M_OK) return status;
 
         auto handle = std::make_unique<n4m_method_result_s>();
+        handle->set_scalar("affine_predictor", 1.0);
         const auto J = static_cast<std::int64_t>(res.mode_j);
         const auto K = static_cast<std::int64_t>(res.mode_k);
         const auto jk = J * K;
@@ -1920,6 +1928,7 @@ void pack_group_sparse_result(
                               pred_rows, pred_cols);
     handle.set_scalar("rmse", rmse);
     handle.set_scalar("n_groups", static_cast<double>(res.n_groups));
+    handle.set_scalar("affine_predictor", 1.0);
 }
 
 }  // namespace
@@ -2031,6 +2040,7 @@ void pack_ensemble_result(n4m_method_result_s& handle,
                        static_cast<double>(res.n_estimators));
     handle.set_scalar("n_components",
                        static_cast<double>(res.n_components));
+    handle.set_scalar("affine_predictor", 1.0);
 }
 
 }  // namespace
@@ -2961,6 +2971,7 @@ N4M_API n4m_status_t n4m_estimators_mir_pls_fit(
         if (status != N4M_OK) return status;
 
         auto handle = std::make_unique<n4m_method_result_s>();
+        handle->set_scalar("affine_predictor", 1.0);
         const auto p = static_cast<std::int64_t>(X->cols);
         const auto q = static_cast<std::int64_t>(Y->cols);
         handle->set_double_matrix("coefficients", res.coefficients, p, q);
@@ -3204,6 +3215,7 @@ N4M_API n4m_status_t n4m_estimators_mb_pls_fit(
         if (status != N4M_OK) return status;
 
         auto handle = std::make_unique<n4m_method_result_s>();
+        handle->set_scalar("affine_predictor", 1.0);
         const auto n = static_cast<std::int64_t>(res.n_samples);
         const auto p = static_cast<std::int64_t>(res.n_features);
         const auto q = static_cast<std::int64_t>(res.n_targets);
@@ -4994,6 +5006,7 @@ N4M_API n4m_status_t n4m_estimators_ecr_fit(
         if (status != N4M_OK) return status;
 
         auto handle = std::make_unique<n4m_method_result_s>();
+        handle->set_scalar("affine_predictor", 1.0);
         const auto n = static_cast<std::int64_t>(res.n_samples);
         const auto p = static_cast<std::int64_t>(res.n_features);
         const auto q = static_cast<std::int64_t>(res.n_targets);

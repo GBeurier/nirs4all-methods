@@ -8,7 +8,7 @@ _Namespace_: **`n4m.estimators.regression.regularized`** · _Fully-qualified_: `
 
 **Python (verified public re-export):** `from n4m.estimators.regression.regularized import ridge`
 
-**Signature:** [`ridge(X, y, *, alpha: float = 1.0, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8501)
+**Signature:** [`ridge(X, y, *, alpha: float = 1.0, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8537)
 
 **R (source-verified):** [`ridge_fit(X, Y, n_components = 1L, ridge_lambda = 1.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

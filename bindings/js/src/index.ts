@@ -26,6 +26,12 @@ export {
     type PpOperator,
 } from "./preprocessing.js";
 export { MethodResult } from "./methodResult.js";
+export { NativeModel } from "./nativeModel.js";
+export {
+    NativePreprocessingPipeline,
+    PipelineOperatorKind,
+    type PipelineStep,
+} from "./nativePreprocessingPipeline.js";
 export { selectSpa, selectVariables, selectorMethods } from "./selection.js";
 export {
     inspectN4mm,

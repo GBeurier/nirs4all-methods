@@ -55,7 +55,7 @@ from n4m.estimators.regression.latent import continuum_regression
 result = continuum_regression(X, y)
 ```
 
-Source signature: `continuum_regression(X, y, *, tau: float = 0.5, n_components: int = 2)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8809)).
+Source signature: `continuum_regression(X, y, *, tau: float = 0.5, n_components: int = 2)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8845)).
 
 **R (source-verified):** [`continuum_regression(formula, data, ncomp = 2L, tau = 0.5, na.action = stats::na.omit)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn_extra.R).
 

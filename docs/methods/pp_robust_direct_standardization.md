@@ -25,7 +25,7 @@ Direct standardization with iterative residual trimming.
 from n4m.domain_adaptation.standardization import robust_direct_standardization
 ```
 
-Source signature: [`robust_direct_standardization(X_source, X_target, X = None, fit_intercept: bool = True, ridge: float = 0.0, trim_quantile: float = 0.9, max_iter: int = 3)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L9743).
+Source signature: [`robust_direct_standardization(X_source, X_target, X = None, fit_intercept: bool = True, ridge: float = 0.0, trim_quantile: float = 0.9, max_iter: int = 3)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L9779).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

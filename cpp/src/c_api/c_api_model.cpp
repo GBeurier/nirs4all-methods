@@ -17,6 +17,7 @@
 #include "n4m/n4m_version.h"
 
 #include "core/common/context.hpp"
+#include "core/method_result.hpp"
 #include "core/model.hpp"
 
 namespace {
@@ -932,6 +933,141 @@ N4M_API n4m_status_t n4m_model_import_linear_predictor(
         return N4M_ERR_OUT_OF_MEMORY;
     } catch (...) {
         set_error(ctx, "internal error in n4m_model_import_linear_predictor");
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_model_from_method_result(
+    n4m_context_t* ctx,
+    const n4m_method_result_t* result,
+    n4m_model_t** out_model) {
+    if (out_model != nullptr) {
+        *out_model = nullptr;
+    }
+    if (ctx == nullptr || result == nullptr || out_model == nullptr) {
+        set_error(ctx, "null pointer in n4m_model_from_method_result");
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        const auto capability_it = result->scalars.find("affine_predictor");
+        if (capability_it == result->scalars.end() || capability_it->second != 1.0) {
+            set_error(ctx, "MethodResult is not marked as an affine predictor");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        const auto coef_it = result->double_arrays.find("coefficients");
+        const auto coef_shape_it = result->double_shapes.find("coefficients");
+        if (coef_it == result->double_arrays.end() ||
+            coef_shape_it == result->double_shapes.end()) {
+            set_error(ctx, "MethodResult lacks affine coefficients");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        const auto [p, q] = coef_shape_it->second;
+        if (p <= 0 || q <= 0 || p > std::numeric_limits<std::int32_t>::max() ||
+            q > std::numeric_limits<std::int32_t>::max() ||
+            static_cast<std::uint64_t>(p) >
+                std::numeric_limits<std::size_t>::max() / static_cast<std::uint64_t>(q) ||
+            coef_it->second.size() != static_cast<std::size_t>(p) * static_cast<std::size_t>(q)) {
+            set_error(ctx, "MethodResult has incompatible affine matrix shapes");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        const auto& coefficients = coef_it->second;
+        for (double value : coefficients) {
+            if (!std::isfinite(value)) {
+                set_error(ctx, "MethodResult coefficients must be finite");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+        }
+        std::vector<double> intercept(static_cast<std::size_t>(q));
+        const auto direct_it = result->double_arrays.find("intercept");
+        const auto direct_shape_it = result->double_shapes.find("intercept");
+        if (direct_it != result->double_arrays.end() ||
+            direct_shape_it != result->double_shapes.end()) {
+            if (direct_it == result->double_arrays.end() ||
+                direct_shape_it == result->double_shapes.end() ||
+                direct_shape_it->second != std::make_pair(std::int64_t{1}, q) ||
+                direct_it->second.size() != static_cast<std::size_t>(q)) {
+                set_error(ctx, "MethodResult intercept has incompatible shape");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+            intercept = direct_it->second;
+        } else {
+            const auto x_mean_it = result->double_arrays.find("x_mean");
+            const auto y_mean_it = result->double_arrays.find("y_mean");
+            const auto x_shape_it = result->double_shapes.find("x_mean");
+            const auto y_shape_it = result->double_shapes.find("y_mean");
+            if (x_mean_it == result->double_arrays.end() ||
+                y_mean_it == result->double_arrays.end() ||
+                x_shape_it == result->double_shapes.end() ||
+                y_shape_it == result->double_shapes.end() ||
+                x_shape_it->second != std::make_pair(std::int64_t{1}, p) ||
+                y_shape_it->second != std::make_pair(std::int64_t{1}, q) ||
+                x_mean_it->second.size() != static_cast<std::size_t>(p) ||
+                y_mean_it->second.size() != static_cast<std::size_t>(q)) {
+                set_error(ctx, "MethodResult lacks compatible affine means");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+            const auto& x_mean = x_mean_it->second;
+            const auto& y_mean = y_mean_it->second;
+            for (double value : x_mean) {
+                if (!std::isfinite(value)) {
+                    set_error(ctx, "MethodResult x_mean must be finite");
+                    return N4M_ERR_INVALID_ARGUMENT;
+                }
+            }
+            for (std::int64_t target = 0; target < q; ++target) {
+                double value = y_mean[static_cast<std::size_t>(target)];
+                for (std::int64_t feature = 0; feature < p; ++feature) {
+                    value -= x_mean[static_cast<std::size_t>(feature)] *
+                             coefficients[static_cast<std::size_t>(feature * q + target)];
+                }
+                intercept[static_cast<std::size_t>(target)] = value;
+            }
+        }
+        for (double value : intercept) {
+            if (!std::isfinite(value)) {
+                set_error(ctx, "MethodResult affine intercept must be finite");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+        }
+        std::int64_t source_training_samples = 0;
+        const auto predictions_it = result->double_arrays.find("predictions");
+        const auto predictions_shape_it = result->double_shapes.find("predictions");
+        if (predictions_it != result->double_arrays.end() ||
+            predictions_shape_it != result->double_shapes.end()) {
+            if (predictions_it == result->double_arrays.end() ||
+                predictions_shape_it == result->double_shapes.end()) {
+                set_error(ctx, "MethodResult predictions lack a matching shape");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+            const auto [rows, targets] = predictions_shape_it->second;
+            if (rows <= 0 || targets != q ||
+                static_cast<std::uint64_t>(rows) >
+                    std::numeric_limits<std::size_t>::max() / static_cast<std::uint64_t>(q) ||
+                predictions_it->second.size() !=
+                    static_cast<std::size_t>(rows) * static_cast<std::size_t>(q)) {
+                set_error(ctx, "MethodResult predictions have incompatible shape");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+            for (double value : predictions_it->second) {
+                if (!std::isfinite(value)) {
+                    set_error(ctx, "MethodResult predictions must be finite");
+                    return N4M_ERR_INVALID_ARGUMENT;
+                }
+            }
+            source_training_samples = rows;
+        }
+        n4m_linear_predictor_spec_t spec{};
+        spec.source_training_samples = source_training_samples;
+        spec.n_features = static_cast<std::int32_t>(p);
+        spec.n_targets = static_cast<std::int32_t>(q);
+        spec.coefficients = coefficients.data();
+        spec.intercept = intercept.data();
+        return n4m_model_import_linear_predictor(ctx, &spec, out_model);
+    } catch (const std::bad_alloc&) {
+        set_error(ctx, "out of memory in n4m_model_from_method_result");
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        set_error(ctx, "internal error in n4m_model_from_method_result");
         return N4M_ERR_INTERNAL;
     }
 }

@@ -19,8 +19,8 @@ Methods deliberately NOT wrapped here:
 * ``on_pls_fit`` — decomposition only; no global predict-on-new-X path yet.
   Fused Sparse PLS, Bagging PLS, Boosting PLS, and Random Subspace PLS
   expose aggregate affine coefficients and predict via wrappers in
-  ``_in_sample``. Group Sparse PLS also exposes coefficients in the ABI,
-  but its Python wrapper has not yet been promoted.
+  ``_in_sample``. Group Sparse PLS is also promoted through a native
+  predict-only affine model.
 * ``missing_aware_nipals_fit`` / ``kernel_pls_fit`` — special preds
   paths (kernel needs alpha + kernel matrix); deferred to dedicated
   wrappers.
@@ -43,6 +43,8 @@ class SparseSimplsRegression(_MethodResultRegressor):
     dedicated ``sparse_simpls_fit`` C entry-point, which exposes weights
     + predictions alongside coefficients for downstream inspection.
     """
+
+    _native_affine_model = True
 
     def __init__(self, n_components: int = 2,
                   *, sparsity_lambda: float = 0.05) -> None:
@@ -67,6 +69,8 @@ class CPPLSRegression(_MethodResultRegressor):
     ``solver=pls4all.Solver.SIMPLS``.
     """
 
+    _native_affine_model = True
+
     def __init__(self, n_components: int = 2, *, gamma: float = 0.5,
                  solver=None) -> None:
         self.n_components = n_components
@@ -84,6 +88,8 @@ class CPPLSRegression(_MethodResultRegressor):
 class ECRegression(_MethodResultRegressor):
     """Elastic Component Regression (Liu 2013) — interpolates PCR (α=0)
     and PLS (α=1)."""
+
+    _native_affine_model = True
 
     def __init__(self, n_components: int = 2, *, alpha: float = 0.5) -> None:
         self.n_components = n_components
@@ -107,6 +113,8 @@ class DIPLSRegression(_MethodResultRegressor):
     stored after fit; fitted coefficients support prediction on fresh X,
     but do not reproduce the target-dependent training recipe.
     """
+
+    _native_affine_model = True
 
     def __init__(self, n_components: int = 2,
                   *, di_lambda: float = 1.0) -> None:
@@ -150,14 +158,7 @@ class DIPLSRegression(_MethodResultRegressor):
             result = _methods.di_pls_fit(
                 ctx, cfg, X_arr, y_arr, target,
                 di_lambda=float(self.di_lambda))
-        self._extract_state(result)
-        self.n_features_in_ = int(X_arr.shape[1])
-        self._y_ndim_ = y_ndim
-        if hasattr(X, "columns"):
-            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
-        elif hasattr(self, "feature_names_in_"):
-            del self.feature_names_in_
-        return self
+            return self._bind_result(ctx, result, X, X_arr, y_ndim)
 
     def predict(self, X):
         if (hasattr(self, "feature_names_in_") and hasattr(X, "columns") and
@@ -174,6 +175,8 @@ class MIRPLSRegression(_MethodResultRegressor):
     pattern.
     """
 
+    _native_affine_model = True
+
     def __init__(self, n_components: int = 2) -> None:
         self.n_components = n_components
 
@@ -188,6 +191,8 @@ class MBPLSRegression(_MethodResultRegressor):
     Concatenates per-block X (block-balanced via x_scale_) and fits a
     SIMPLS regression. Block boundaries declared via ``block_sizes``.
     """
+
+    _native_affine_model = True
 
     # mb_pls_fit doesn't expose y_mean; it materializes intercept_ directly.
     # Override _extract_state to honour that.
@@ -226,7 +231,7 @@ class MBPLSRegression(_MethodResultRegressor):
             cfg.scale_y = bool(self.scale_y)
             return _methods.mb_pls_fit(ctx, cfg, X, y, block_sizes)
 
-    def _extract_state(self, result) -> None:
+    def _extract_state(self, result, *, intercept_override=None) -> None:
         coef = np.asarray(result.matrix("coefficients"), dtype=np.float64)
         coef_T = coef.T.copy()
         if coef_T.shape[0] == 1:
@@ -236,7 +241,8 @@ class MBPLSRegression(_MethodResultRegressor):
         x_scale = np.asarray(
             result.matrix("x_scale"), dtype=np.float64).ravel()
         intercept_arr = np.asarray(
-            result.matrix("intercept"), dtype=np.float64).ravel()
+            result.matrix("intercept") if intercept_override is None else intercept_override,
+            dtype=np.float64).ravel()
         block_weights = np.asarray(
             result.matrix("block_weights"), dtype=np.float64).ravel()
         fit_predictions = np.asarray(
@@ -253,6 +259,8 @@ class MBPLSRegression(_MethodResultRegressor):
         self._fit_predictions_ = fit_predictions
 
     def predict(self, X):
+        if self._native_affine_model:
+            return super().predict(X)
         from sklearn.utils.validation import check_is_fitted
         from ._base import _check_X_p4a
         check_is_fitted(self)
@@ -329,6 +337,8 @@ class NPLSRegression(_MethodResultRegressor):
     kernel knows how to refold. Predict-on-new-X uses the standard
     coefficient path.
     """
+
+    _native_affine_model = True
 
     def __init__(self, n_components: int = 2,
                   *, mode_j: int, mode_k: int) -> None:
