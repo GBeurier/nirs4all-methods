@@ -1327,6 +1327,11 @@ struct n4m_pp_dtw_align_handle_t { AlignState s; };
 struct n4m_pp_cow_align_handle_t { AlignState s; };
 struct n4m_filter_variance_handle_t { SelectorState s; };
 struct n4m_filter_correlation_handle_t { SelectorState s; };
+struct n4m_feature_filter_t {
+    int32_t kind = -1;
+    n4m_filter_variance_handle_t* variance = nullptr;
+    n4m_filter_correlation_handle_t* correlation = nullptr;
+};
 struct n4m_interval_generator_handle_t { IntervalState s; };
 
 extern "C" N4M_API n4m_status_t n4m_domain_adaptation_direct_standardization_create(
@@ -1728,6 +1733,101 @@ DEFINE_SELECTOR_CREATE(n4m_feature_selection_correlation, n4m_filter_correlation
 extern "C" N4M_API n4m_status_t n4m_feature_selection_correlation_fit(n4m_filter_correlation_handle_t* h,
     n4m_matrix_view_t x, const double* y, int64_t n_y) {
     return call_status([&] { return h ? variance_fit(h->s, x, y, n_y) : N4M_ERR_NULL_POINTER; });
+}
+
+namespace {
+const SelectorState* feature_state(const n4m_feature_filter_t* h) noexcept {
+    if (h == nullptr) return nullptr;
+    return h->kind == N4M_FEATURE_FILTER_VARIANCE ? &h->variance->s : &h->correlation->s;
+}
+
+n4m_status_t feature_views(const n4m_matrix_view_t* x,
+                           const n4m_matrix_view_t* y, bool needs_y) noexcept {
+    if (x == nullptr) return N4M_ERR_NULL_POINTER;
+    MatrixIn xv;
+    n4m_status_t st = require_f64_rowmajor(*x, xv);
+    if (st != N4M_OK) return st;
+    if (!needs_y) return y == nullptr ? N4M_OK : N4M_ERR_INVALID_ARGUMENT;
+    if (y == nullptr) return N4M_ERR_NULL_POINTER;
+    MatrixIn yv;
+    st = require_f64_rowmajor(*y, yv);
+    if (st != N4M_OK) return st;
+    return yv.rows == xv.rows && yv.cols == 1 ? N4M_OK : N4M_ERR_SHAPE_MISMATCH;
+}
+}  // namespace
+
+extern "C" N4M_API n4m_status_t n4m_feature_filter_create(
+    int32_t kind, double threshold, int32_t top_k, n4m_feature_filter_t** out) {
+    if (out == nullptr) return N4M_ERR_NULL_POINTER;
+    *out = nullptr;
+    if ((kind != N4M_FEATURE_FILTER_VARIANCE && kind != N4M_FEATURE_FILTER_CORRELATION) ||
+        !std::isfinite(threshold) || top_k < -1) return N4M_ERR_INVALID_ARGUMENT;
+    return call_status([&] {
+        auto* h = new n4m_feature_filter_t;
+        h->kind = kind;
+        const n4m_status_t st = kind == N4M_FEATURE_FILTER_VARIANCE
+            ? n4m_feature_selection_variance_create(&h->variance, threshold, top_k)
+            : n4m_feature_selection_correlation_create(&h->correlation, threshold, top_k);
+        if (st != N4M_OK) { delete h; return st; }
+        *out = h;
+        return N4M_OK;
+    });
+}
+
+extern "C" N4M_API void n4m_feature_filter_destroy(n4m_feature_filter_t* h) {
+    if (h == nullptr) return;
+    n4m_feature_selection_variance_destroy(h->variance);
+    n4m_feature_selection_correlation_destroy(h->correlation);
+    delete h;
+}
+
+extern "C" N4M_API n4m_status_t n4m_feature_filter_fit(
+    n4m_feature_filter_t* h, const n4m_matrix_view_t* x, const n4m_matrix_view_t* y) {
+    if (h == nullptr) return N4M_ERR_NULL_POINTER;
+    n4m_status_t st = feature_views(x, y, h->kind == N4M_FEATURE_FILTER_CORRELATION);
+    if (st != N4M_OK) return st;
+    return h->kind == N4M_FEATURE_FILTER_VARIANCE
+        ? n4m_feature_selection_variance_fit(h->variance, *x)
+        : n4m_feature_selection_correlation_fit(
+              h->correlation, *x, static_cast<const double*>(y->data), y->rows);
+}
+
+extern "C" N4M_API n4m_status_t n4m_feature_filter_output_cols(
+    const n4m_feature_filter_t* h, int64_t* out) {
+    if (h == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
+    *out = 0;
+    return h->kind == N4M_FEATURE_FILTER_VARIANCE
+        ? n4m_feature_selection_variance_output_cols(h->variance, out)
+        : n4m_feature_selection_correlation_output_cols(h->correlation, out);
+}
+
+extern "C" N4M_API n4m_status_t n4m_feature_filter_selected_indices(
+    const n4m_feature_filter_t* h, int64_t* out, int64_t capacity, int64_t* count) {
+    if (h == nullptr || count == nullptr) return N4M_ERR_NULL_POINTER;
+    *count = 0;
+    const SelectorState* s = feature_state(h);
+    if (!s->fitted) return N4M_ERR_NOT_FITTED;
+    if (capacity < 0 || (out == nullptr && capacity != 0)) return N4M_ERR_INVALID_ARGUMENT;
+    *count = static_cast<int64_t>(s->indices.size());
+    if (out == nullptr) return N4M_OK;
+    if (capacity < *count) return N4M_ERR_INVALID_ARGUMENT;
+    std::copy(s->indices.begin(), s->indices.end(), out);
+    return N4M_OK;
+}
+
+extern "C" N4M_API n4m_status_t n4m_feature_filter_transform(
+    const n4m_feature_filter_t* h, const n4m_matrix_view_t* x, n4m_matrix_view_t* out) {
+    if (h == nullptr || x == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
+    return h->kind == N4M_FEATURE_FILTER_VARIANCE
+        ? n4m_feature_selection_variance_transform(h->variance, *x, *out)
+        : n4m_feature_selection_correlation_transform(h->correlation, *x, *out);
+}
+
+extern "C" N4M_API n4m_status_t n4m_feature_filter_is_fitted(
+    const n4m_feature_filter_t* h, int* out) {
+    if (h == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
+    *out = feature_state(h)->fitted ? 1 : 0;
+    return N4M_OK;
 }
 
 extern "C" N4M_API n4m_status_t n4m_feature_selection_interval_generator_create(

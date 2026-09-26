@@ -56,6 +56,13 @@ INFRA_PREFIXES = (
 
 # Exact reserved/support symbols whose prefix is otherwise method-owned.
 INFRA_SYMBOLS = {
+    "n4m_feature_filter_create", "n4m_feature_filter_destroy",
+    "n4m_feature_filter_fit", "n4m_feature_filter_is_fitted",
+    "n4m_feature_filter_output_cols", "n4m_feature_filter_selected_indices",
+    "n4m_feature_filter_transform", "n4m_sample_filter_add_child",
+    "n4m_sample_filter_apply", "n4m_sample_filter_create",
+    "n4m_sample_filter_destroy", "n4m_sample_filter_fit",
+    "n4m_sample_filter_is_fitted",
     "n4m_augmentation_run",  # shared dispatcher for supported X-only augmentations
     "n4m_pls_cross_validate",  # reserved fused/batched PLS CV ABI, not a production method
     "n4m_splitter_run",  # shared dispatcher for nine catalogued splitters

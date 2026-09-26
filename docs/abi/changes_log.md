@@ -1,5 +1,18 @@
 # ABI — Changes Log
 
+## 2026-09-26 — ABI 2.12.0: closed native filter roles (unreleased)
+
+`n4m_sample_filter_*` and `n4m_feature_filter_*` add two shared fit/apply
+contracts over seven existing native filters. The row-mask role covers
+Y-outlier, X-outlier, high leverage, spectral quality and composite filters;
+the column role covers variance and correlation filters. Composite handles own
+their native children and destroy the borrowing composite first. Correlation
+and Y-outlier require a one-column Y aligned to X rows. The column role returns
+the original zero-based selected indices from native fitted state. No kernel,
+RNG, or numerical convention changes; these handles do not export fitted state.
+The additive ABI minor change does not change package versions or publish an
+artifact by itself.
+
 ## 2026-09-26 — ABI 2.11.0: common native sample-splitter dispatch (release pending)
 
 `n4m_splitter_run` adds a closed, typed one-shot interface for the nine existing
