@@ -50,7 +50,7 @@ def _float_matrix(value: Any, name: str, *, target: bool = False) -> np.ndarray:
 def _operator(value: Any) -> tuple[int, np.ndarray]:
     if isinstance(value, PreprocessingOperatorSpec):
         kind, params = value.kind, value.params
-    elif isinstance(value, str):
+    elif isinstance(value, (str, Integral)):
         kind, params = value, ()
     elif isinstance(value, (tuple, list)) and len(value) == 2:
         kind, params = value
