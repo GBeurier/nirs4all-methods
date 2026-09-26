@@ -33,6 +33,20 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_outlier_detection_q_residuals"
+estimator:
+  kind: "procedure"
+  adapter: "q_residuals"
+  roles: "[generic]"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 5
+      min: 1
+    - name: "alpha"
+      type: "double"
+      default: 0.05
+      min: 0.0
+      max: 1.0
 fq_name: "n4m.outlier_detection.q_residuals"
 leaf: "q_residuals"
 legacy_ids:

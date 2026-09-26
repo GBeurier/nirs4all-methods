@@ -30,8 +30,13 @@ struct ParamSpec {
 };
 
 class Adapter;
+class Params;
 struct MethodSpec;
+struct FitInputs;
 using AdapterFactory = std::unique_ptr<Adapter> (*)(const MethodSpec&);
+// One-shot procedure: validated params and inputs in, owned result out.
+using ProcedureRunner = n4m_status_t (*)(n4m_context_t*, const Params&, const FitInputs&,
+                                         n4m_method_result_t**);
 
 struct MethodSpec {
     const char* method_id;
@@ -42,7 +47,8 @@ struct MethodSpec {
     std::int32_t n_params;
     n4m_input_requirement_t inputs[N4M_FIT_INPUT_COUNT];
     const char* state_format;
-    AdapterFactory factory;
+    AdapterFactory factory;  // estimators
+    ProcedureRunner run;     // procedures
 };
 
 // Registry over the generated table.
@@ -169,8 +175,18 @@ class Adapter {
                                     const std::vector<StateBlock>& blocks) = 0;
 };
 
+// Splitter procedure results: the indices of every fold concatenated, with
+// n_folds + 1 offsets per side (read by n4m_method_result_get_fold).
+constexpr const char* kFoldTrain = "train_indices";
+constexpr const char* kFoldTest = "test_indices";
+constexpr const char* kFoldTrainOffsets = "train_offsets";
+constexpr const char* kFoldTestOffsets = "test_offsets";
+
 // Shared helpers for adapters.
 void set_error(n4m_context_t* ctx, const char* message) noexcept;
+// Applies the PLS settings the method declares (n_components, center_x,
+// scale_x, center_y, scale_y) to a config; the others keep their defaults.
+n4m_status_t apply_config_params(const Params& params, n4m_config_t* cfg);
 // Message "<what> '<name>'".
 void set_error_named(n4m_context_t* ctx, const char* what, const char* name) noexcept;
 

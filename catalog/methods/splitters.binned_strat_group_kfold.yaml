@@ -39,6 +39,33 @@ c_surface:
   - "n4m_model_selection_binned_strat_group_kfold_destroy"
   - "n4m_model_selection_binned_strat_group_kfold_n_splits"
   - "n4m_model_selection_binned_strat_group_kfold_split_fold"
+estimator:
+  kind: "procedure"
+  adapter: "splitter"
+  roles: "[splitter]"
+  inputs:
+    y: "required"
+    groups: "required"
+  params:
+    - name: "n_splits"
+      type: "int"
+      default: 5
+      min: 2
+    - name: "n_bins"
+      type: "int"
+      default: 5
+      min: 1
+    - name: "strategy"
+      type: "enum"
+      default: "uniform"
+      choices: "[uniform, quantile]"
+    - name: "shuffle"
+      type: "bool"
+      default: true
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.model_selection.splitters.binned_strat_group_kfold"
 leaf: "binned_strat_group_kfold"
 legacy_ids:

@@ -33,6 +33,10 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_metrics_one_se_rule_compute"
+estimator:
+  kind: "procedure"
+  adapter: "one_se_rule"
+  roles: "[generic]"
 fq_name: "n4m.metrics.scoring.one_se_rule"
 leaf: "one_se_rule"
 legacy_ids:

@@ -37,6 +37,27 @@ c_surface:
   - "n4m_augmentation_scatter_sim_msc_apply"
   - "n4m_augmentation_scatter_sim_msc_create"
   - "n4m_augmentation_scatter_sim_msc_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "augmentation_dispatch"
+  roles: "[augmenter]"
+  params:
+    - name: "a_low"
+      type: "double"
+      default: -0.05
+    - name: "a_high"
+      type: "double"
+      default: 0.05
+    - name: "b_low"
+      type: "double"
+      default: 0.9
+    - name: "b_high"
+      type: "double"
+      default: 1.1
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.scattering.scatter_sim_msc"
 leaf: "scatter_sim_msc"
 legacy_ids:

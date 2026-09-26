@@ -53,8 +53,9 @@ INFRA_PREFIXES = (
     "n4m_model_",         # the generic trained-model handle (fit/predict/transform/export/import)
     "n4m_split_result_",  # the shared splitter result handle
     # Generic estimator roles (ABI 2.13): manifest introspection, typed
-    # params and the estimator life cycle shared by every catalog method.
-    "n4m_method_", "n4m_params_", "n4m_estimator_",
+    # params, the estimator life cycle and the procedure call shared by every
+    # catalog method.
+    "n4m_method_", "n4m_params_", "n4m_estimator_", "n4m_procedure_",
 )
 
 # Exact reserved/support symbols whose prefix is otherwise method-owned.

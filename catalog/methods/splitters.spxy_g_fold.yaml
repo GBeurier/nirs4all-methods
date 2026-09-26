@@ -39,6 +39,26 @@ c_surface:
   - "n4m_model_selection_spxy_g_fold_destroy"
   - "n4m_model_selection_spxy_g_fold_n_splits"
   - "n4m_model_selection_spxy_g_fold_split_fold"
+estimator:
+  kind: "procedure"
+  adapter: "splitter"
+  roles: "[splitter]"
+  inputs:
+    y: "required"
+    groups: "required"
+  params:
+    - name: "n_splits"
+      type: "int"
+      default: 5
+      min: 2
+    - name: "y_metric"
+      type: "enum"
+      default: "euclidean"
+      choices: "[x_only, euclidean, hamming]"
+    - name: "aggregation"
+      type: "enum"
+      default: "mean"
+      choices: "[mean, median]"
 fq_name: "n4m.model_selection.splitters.spxy_g_fold"
 leaf: "spxy_g_fold"
 legacy_ids:

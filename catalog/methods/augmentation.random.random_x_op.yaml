@@ -37,6 +37,25 @@ c_surface:
   - "n4m_augmentation_random_x_op_apply"
   - "n4m_augmentation_random_x_op_create"
   - "n4m_augmentation_random_x_op_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "augmentation_dispatch"
+  roles: "[augmenter]"
+  params:
+    - name: "op_kind"
+      type: "enum"
+      default: "multiply"
+      choices: "[multiply, add, subtract]"
+    - name: "operator_range_min"
+      type: "double"
+      default: 0.97
+    - name: "operator_range_max"
+      type: "double"
+      default: 1.03
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.mixup.random_x_op"
 leaf: "random_x_op"
 legacy_ids:

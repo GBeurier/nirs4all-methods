@@ -18,6 +18,32 @@
 
 namespace n4m::estimator {
 
+n4m_status_t apply_config_params(const Params& params, n4m_config_t* cfg) {
+    const MethodSpec& spec = params.spec();
+    auto has = [&](const char* name) { return param_index(spec, name) >= 0; };
+    n4m_status_t st = N4M_OK;
+    if (has("n_components")) {
+        const std::int64_t n = params.get_int("n_components");
+        if (n > std::numeric_limits<std::int32_t>::max()) return N4M_ERR_INVALID_ARGUMENT;
+        st = n4m_config_set_n_components(cfg, static_cast<std::int32_t>(n));
+        if (st != N4M_OK) return st;
+    }
+    struct Flag {
+        const char* name;
+        n4m_status_t (*setter)(n4m_config_t*, std::int32_t);
+    };
+    const Flag flags[] = {{"center_x", n4m_config_set_center_x},
+                          {"scale_x", n4m_config_set_scale_x},
+                          {"center_y", n4m_config_set_center_y},
+                          {"scale_y", n4m_config_set_scale_y}};
+    for (const Flag& f : flags) {
+        if (!has(f.name)) continue;
+        st = f.setter(cfg, params.get_bool(f.name) ? 1 : 0);
+        if (st != N4M_OK) return st;
+    }
+    return N4M_OK;
+}
+
 namespace {
 
 constexpr std::uint32_t kTagN4MM = 0x4D4D344Eu;  // "N4MM"
@@ -39,31 +65,10 @@ using ResultPtr = std::unique_ptr<n4m_method_result_t, ResultDeleter>;
 // settings keep the n4m_config defaults.
 n4m_status_t make_config(const Params& params, ConfigPtr& out) {
     n4m_config_t* raw = nullptr;
-    n4m_status_t st = n4m_config_create(&raw);
+    const n4m_status_t st = n4m_config_create(&raw);
     if (st != N4M_OK) return st;
     out.reset(raw);
-    const MethodSpec& spec = params.spec();
-    auto has = [&](const char* name) { return param_index(spec, name) >= 0; };
-    if (has("n_components")) {
-        const std::int64_t n = params.get_int("n_components");
-        if (n > std::numeric_limits<std::int32_t>::max()) return N4M_ERR_INVALID_ARGUMENT;
-        st = n4m_config_set_n_components(raw, static_cast<std::int32_t>(n));
-        if (st != N4M_OK) return st;
-    }
-    struct Flag {
-        const char* name;
-        n4m_status_t (*setter)(n4m_config_t*, std::int32_t);
-    };
-    const Flag flags[] = {{"center_x", n4m_config_set_center_x},
-                          {"scale_x", n4m_config_set_scale_x},
-                          {"center_y", n4m_config_set_center_y},
-                          {"scale_y", n4m_config_set_scale_y}};
-    for (const Flag& f : flags) {
-        if (!has(f.name)) continue;
-        st = f.setter(raw, params.get_bool(f.name) ? 1 : 0);
-        if (st != N4M_OK) return st;
-    }
-    return N4M_OK;
+    return apply_config_params(params, raw);
 }
 
 n4m_status_t export_model(const n4m_model_t* model, std::vector<StateBlock>& out) {

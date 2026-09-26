@@ -37,6 +37,40 @@ c_surface:
   - "n4m_augmentation_emsc_distort_apply"
   - "n4m_augmentation_emsc_distort_create"
   - "n4m_augmentation_emsc_distort_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_emsc_distort"
+  roles: "[augmenter]"
+  inputs:
+    axis: "required"
+  params:
+    - name: "mult_low"
+      type: "double"
+      default: 0.9
+    - name: "mult_high"
+      type: "double"
+      default: 1.1
+    - name: "add_low"
+      type: "double"
+      default: -0.05
+    - name: "add_high"
+      type: "double"
+      default: 0.05
+    - name: "polynomial_order"
+      type: "int"
+      default: 2
+      min: 0
+    - name: "polynomial_strength"
+      type: "double"
+      default: 0.02
+      min: 0.0
+    - name: "correlation"
+      type: "double"
+      default: 0.3
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.scattering.emsc_distort"
 leaf: "emsc_distort"
 legacy_ids:

@@ -5,8 +5,8 @@
 //   --abi-info     print ABI / backend / dtype metadata
 //   --selfcheck    exercise context + matrix_view lifecycle, exit non-zero on
 //                  any ABI inconsistency
-//   --manifest-json  print the native method manifest (generic estimator
-//                  roles) as JSON; bindings generate their facades from it
+//   --manifest-json  print the native method manifest (estimator roles and
+//                  procedures) as JSON; bindings generate their facades from it
 //
 // Subsequent phases extend --selfcheck and add a --bench subcommand.
 // No third-party CLI parser is used — keep runtime dependencies aligned with
@@ -196,8 +196,9 @@ void json_default(int32_t method, int32_t param, const n4m_param_info_v1_t& pi) 
 }
 
 int cmd_manifest_json() {
-    static const char* const kRoles[] = {"transformer", "regressor", "classifier", "selector",
-                                         "sample_filter"};
+    static const char* const kRoles[] = {"transformer", "regressor",  "classifier",
+                                         "selector",    "sample_filter", "splitter",
+                                         "augmenter",   "generic"};
     static const char* const kCaps[] = {"transform", "predict", "predict_proba",
                                         "decision_function", "predict_labels",
                                         "selected_indices", "apply_mask", "serializable",
@@ -221,7 +222,7 @@ int cmd_manifest_json() {
         printf(",\"kind\":\"%s\",\"roles\":[",
                info.kind == N4M_METHOD_ESTIMATOR ? "estimator" : "procedure");
         bool first = true;
-        for (uint32_t r = 0; r < 5; ++r) {
+        for (uint32_t r = 0; r < 8; ++r) {
             if ((info.roles & (1u << r)) == 0) continue;
             printf("%s\"%s\"", first ? "" : ",", kRoles[r]);
             first = false;
@@ -240,6 +241,9 @@ int cmd_manifest_json() {
         if ((info.roles & N4M_ROLE_SAMPLE_FILTER) != 0) {
             printf("%s\"exclude\"", first ? "" : ",");
         }
+        // Procedures: generic ones map to no node kind.
+        if ((info.roles & N4M_ROLE_SPLITTER) != 0) printf("\"split\"");
+        if ((info.roles & N4M_ROLE_AUGMENTER) != 0) printf("\"augmentation\"");
         printf("],\"capabilities\":[");
         first = true;
         for (uint32_t c = 0; c < 10; ++c) {

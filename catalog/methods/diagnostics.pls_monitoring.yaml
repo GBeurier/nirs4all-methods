@@ -33,6 +33,35 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_metrics_pls_monitoring_run"
+estimator:
+  kind: "procedure"
+  adapter: "pls_monitoring"
+  roles: "[generic]"
+  inputs:
+    y: "required"
+    target_domain: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "center_x"
+      type: "bool"
+      default: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+    - name: "center_y"
+      type: "bool"
+      default: true
+    - name: "scale_y"
+      type: "bool"
+      default: true
+    - name: "alpha"
+      type: "double"
+      default: 0.05
+      min: 0.0
+      max: 1.0
 fq_name: "n4m.metrics.diagnostics.pls_monitoring"
 leaf: "pls_monitoring"
 legacy_ids:
