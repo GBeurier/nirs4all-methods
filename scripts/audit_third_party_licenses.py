@@ -6,7 +6,7 @@ that ships embedded with the library. Emits a structured report at
 NOTICE.md + THIRD_PARTY_LICENSES.md.
 
 Scope:
-  - cpp/src/core/common/_vendored/   — FITPACK Fortran (CECILL-compat? GPL?)
+  - cpp/src/core/common/_vendored/   — FITPACK C translation (BSD-3)
   - cpp/src/core/filters/_vendored/   — IsolationForest / LOF / MCD (likely
                                          scikit-learn-derived under BSD-3)
   - parity/donor_imports/             — references PyWavelets coefficient
@@ -43,7 +43,7 @@ VENDORED = [
         "upstream": "https://github.com/scipy/scipy/tree/main/scipy/interpolate/fitpack",
         "spdx": "BSD-3-Clause",
         "license_file": "LICENSE.scipy.txt",
-        "notes": "Vendored from SciPy's interpolate/fitpack/. Fortran spline kernels. CECILL-2.1 carrier is compatible because BSD-3 is permissive.",
+        "notes": "C translation of SciPy's interpolate/fitpack/ Fortran spline kernels (curfit/splev path). CECILL-2.1 carrier is compatible because BSD-3 is permissive.",
     },
     {
         "path": "cpp/src/core/filters/_vendored",

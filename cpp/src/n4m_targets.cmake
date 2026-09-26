@@ -42,31 +42,6 @@ file(GLOB _N4M_DONOR_CORE_CPP
     "${CMAKE_CURRENT_SOURCE_DIR}/core/common/status.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/core/common/version.cpp"
 )
-# FITPACK vendored Fortran .c files are gated under their own flag below.
-list(FILTER _N4M_DONOR_CORE_C EXCLUDE REGEX "_vendored/fitpack")
-
-# Optional FITPACK Fortran sources
-file(GLOB _N4M_FITPACK_FORTRAN
-    CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/core/common/_vendored/fitpack/*.f"
-)
-
-set(_N4M_FITPACK_ENABLED OFF)
-# NOT EMSCRIPTEN: emscripten/WASM has no Fortran compiler, but check_language()
-# would still find a HOST gfortran on the runner and wrongly enable FITPACK —
-# the host Fortran objects aren't WASM, so the WASM link fails with undefined
-# curfit_/splev_. The same problem occurs on Windows when an MSVC or UCRT
-# MinGW C/C++ toolchain sees a gfortran from a different MinGW root on PATH:
-# CMake mixes CRT/linker libraries. Keep the portable C fallback for every
-# Windows build; FITPACK remains enabled for native Unix GCC/Clang builds.
-if(_N4M_FITPACK_FORTRAN AND NOT EMSCRIPTEN AND NOT WIN32)
-    include(CheckLanguage)
-    check_language(Fortran)
-    if(CMAKE_Fortran_COMPILER)
-        enable_language(Fortran)
-        set(_N4M_FITPACK_ENABLED ON)
-    endif()
-endif()
 
 # Merge donor sources into n4m_core (defined by cpp/src/CMakeLists.txt
 # before this file is included).
@@ -76,14 +51,6 @@ if(TARGET n4m_core)
         C_STANDARD 11
         C_STANDARD_REQUIRED ON
     )
-    if(_N4M_FITPACK_ENABLED)
-        add_library(n4m_fitpack OBJECT ${_N4M_FITPACK_FORTRAN})
-        target_compile_options(n4m_fitpack PRIVATE -std=legacy)
-        set_target_properties(n4m_fitpack PROPERTIES POSITION_INDEPENDENT_CODE ON)
-        target_compile_definitions(n4m_core PRIVATE N4M_HAVE_FITPACK=1)
-    else()
-        target_compile_definitions(n4m_core PRIVATE N4M_HAVE_FITPACK=0)
-    endif()
 endif()
 
 # ---------------------------------------------------------------------------
@@ -94,12 +61,7 @@ file(GLOB _N4M_C_API_CPP
     "${CMAKE_SOURCE_DIR}/cpp/src/c_api/*.cpp"
 )
 
-set(_N4M_LINK_OBJS $<TARGET_OBJECTS:n4m_core>)
-if(_N4M_FITPACK_ENABLED)
-    list(APPEND _N4M_LINK_OBJS $<TARGET_OBJECTS:n4m_fitpack>)
-endif()
-
-add_library(n4m_c SHARED ${_N4M_C_API_CPP} ${_N4M_LINK_OBJS})
+add_library(n4m_c SHARED ${_N4M_C_API_CPP} $<TARGET_OBJECTS:n4m_core>)
 target_include_directories(n4m_c
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/cpp/include>
@@ -126,10 +88,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "${CMAKE_SOURCE_DIR}/cpp/src/c_
         -Wl,--version-script=${CMAKE_SOURCE_DIR}/cpp/src/c_api/n4m_linux.map)
 endif()
 n4m_add_warnings(n4m_c)
-
-if(_N4M_FITPACK_ENABLED)
-    target_link_libraries(n4m_c PRIVATE ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
-endif()
 
 # OBJECT-library transitive link deps don't propagate through TARGET_OBJECTS,
 # so the consuming shared library has to re-link OpenMP / BLAS / CUDA itself.
