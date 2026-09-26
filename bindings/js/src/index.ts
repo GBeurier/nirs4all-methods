@@ -26,6 +26,7 @@ export {
     type PpOperator,
 } from "./preprocessing.js";
 export { MethodResult } from "./methodResult.js";
+export { selectSpa } from "./selection.js";
 export {
     inspectN4mm,
     SERIALIZED_MODEL_INFO_SCHEMA_V1,

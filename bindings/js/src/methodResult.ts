@@ -75,7 +75,7 @@ export class MethodResult {
                 ["number", "number", "number", "number", "number"],
                 [this._ptr, namePtr, dataPtrPtr, rowsPtr, colsPtr]) as number;
             checkStatus(status);
-            const dataPtr = m.getValue(dataPtrPtr, "i32");
+            const dataPtr = m.getValue(dataPtrPtr, "i32") >>> 0;
             // i64 lo/hi pair — WASM_BIGINT=1 returns BigInt; use HEAP32 instead.
             const rows = m.getValue(rowsPtr, "i64") as unknown as number;
             const cols = m.getValue(colsPtr, "i64") as unknown as number;
@@ -113,6 +113,40 @@ export class MethodResult {
             if (size > 0) {
                 out.set(m.HEAP32.subarray(dataPtr / 4, dataPtr / 4 + size));
             }
+            return out;
+        } finally {
+            m._free(namePtr);
+            m._free(dataPtrPtr);
+            m._free(sizePtr);
+        }
+    }
+
+    /** Read a named int64 vector without narrowing its elements to JS numbers. */
+    vectorInt64(name: string): BigInt64Array {
+        const m = getModule();
+        const nameBytes = m.lengthBytesUTF8(name);
+        const namePtr = m._malloc(nameBytes + 1);
+        const dataPtrPtr = m._malloc(4);
+        const sizePtr = m._malloc(8);
+        try {
+            m.stringToUTF8(name, namePtr, nameBytes + 1);
+            const status = m.ccall(
+                "n4m_method_result_get_int64_vector", "number",
+                ["number", "number", "number", "number"],
+                [this._ptr, namePtr, dataPtrPtr, sizePtr]) as number;
+            checkStatus(status);
+            const dataPtr = m.getValue(dataPtrPtr, "i32") >>> 0;
+            const size64 = BigInt(m.getValue(sizePtr, "i64"));
+            if (size64 < 0n || size64 > BigInt(Number.MAX_SAFE_INTEGER)) {
+                throw new RangeError(`Invalid int64 vector length for '${name}'.`);
+            }
+            const size = Number(size64);
+            if (dataPtr < 0 || size > Math.floor((m.HEAPU8.byteLength - dataPtr) / 8)) {
+                throw new RangeError(`Invalid int64 vector buffer for '${name}'.`);
+            }
+            const out = new BigInt64Array(size);
+            const view = new DataView(m.HEAPU8.buffer, m.HEAPU8.byteOffset + dataPtr, size * 8);
+            for (let i = 0; i < size; i += 1) out[i] = view.getBigInt64(i * 8, true);
             return out;
         } finally {
             m._free(namePtr);

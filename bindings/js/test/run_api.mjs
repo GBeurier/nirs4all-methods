@@ -8,6 +8,7 @@ import {
     computeSplit,
     computeSplitIndices,
     loadModule,
+    selectSpa,
 } from "../dist/index.js";
 
 await loadModule();
@@ -36,3 +37,13 @@ assert.deepEqual(
 );
 
 console.log("JS API split indices smoke OK");
+
+const y = Float64Array.from({ length: rows }, (_, row) =>
+    2 * data[row * cols] - data[row * cols + 2]);
+const selected = selectSpa(X, { data: y, rows, cols: 1 }, 2, 1);
+assert.ok(selected instanceof BigInt64Array);
+assert.equal(selected.length, 2);
+assert.equal(new Set(selected).size, 2);
+assert.ok(Array.from(selected).every((index) => index >= 0n && index < BigInt(cols)));
+assert.throws(() => selectSpa(X, { data: y, rows, cols: 1 }, cols + 1), /topK/);
+console.log("JS API SPA int64 selection smoke OK");
