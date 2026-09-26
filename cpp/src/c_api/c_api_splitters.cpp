@@ -109,6 +109,21 @@ n4m_status_t require_y_view(const n4m_matrix_view_t& v, std::int64_t expected_ro
     return N4M_OK;
 }
 
+template <typename Handle, typename Create, typename Split, typename Destroy>
+n4m_status_t run_splitter_handle(Create create, Split split, Destroy destroy) {
+    Handle* handle = nullptr;
+    const n4m_status_t created = create(&handle);
+    if (created != N4M_OK) return created;
+    try {
+        const n4m_status_t result = split(handle);
+        destroy(handle);
+        return result;
+    } catch (...) {
+        destroy(handle);
+        return N4M_ERR_INTERNAL;
+    }
+}
+
 }  // namespace
 
 extern "C" {
@@ -598,6 +613,105 @@ N4M_API n4m_status_t n4m_model_selection_data_twinning_split(
         n4m_split_result_clear(out);
         return n4m_split_splt_apply(h->state, xp, xr, xc, out);
     } catch (...) { return N4M_ERR_INTERNAL; }
+}
+
+N4M_API n4m_status_t n4m_splitter_run(const n4m_splitter_spec_t* spec,
+                                      const n4m_matrix_view_t* X,
+                                      const n4m_matrix_view_t* Y,
+                                      const int64_t* groups,
+                                      int64_t groups_len,
+                                      int32_t fold_index,
+                                      n4m_split_result_t* out) {
+    if (spec == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
+    if (groups_len < 0 || fold_index < 0) return N4M_ERR_INVALID_ARGUMENT;
+    const bool needs_groups = spec->kind == N4M_SPLITTER_SPXY_GROUP_FOLD ||
+                              spec->kind == N4M_SPLITTER_BINNED_STRAT_GROUP_FOLD;
+    if (needs_groups && (groups == nullptr || groups_len == 0)) return N4M_ERR_NULL_POINTER;
+    if (!needs_groups && (groups != nullptr || groups_len != 0)) return N4M_ERR_INVALID_ARGUMENT;
+    const bool needs_x = spec->kind == N4M_SPLITTER_KENNARD_STONE ||
+                         spec->kind == N4M_SPLITTER_SPXY ||
+                         spec->kind == N4M_SPLITTER_SPXY_FOLD ||
+                         spec->kind == N4M_SPLITTER_SPXY_GROUP_FOLD ||
+                         spec->kind == N4M_SPLITTER_KMEANS ||
+                         spec->kind == N4M_SPLITTER_DATA_TWINNING;
+    const bool needs_y = spec->kind == N4M_SPLITTER_SPXY ||
+                         spec->kind == N4M_SPLITTER_SPXY_FOLD ||
+                         spec->kind == N4M_SPLITTER_SPXY_GROUP_FOLD ||
+                         spec->kind == N4M_SPLITTER_KBINS_STRATIFIED ||
+                         spec->kind == N4M_SPLITTER_BINNED_STRAT_GROUP_FOLD ||
+                         spec->kind == N4M_SPLITTER_SYSTEMATIC_CIRCULAR;
+    if ((needs_x && X == nullptr) || (needs_y && Y == nullptr)) return N4M_ERR_NULL_POINTER;
+    if ((!needs_x && X != nullptr) || (!needs_y && Y != nullptr)) return N4M_ERR_INVALID_ARGUMENT;
+    if (needs_groups && groups_len != (X != nullptr ? X->rows : Y->rows)) {
+        return N4M_ERR_SHAPE_MISMATCH;
+    }
+    const bool fold_kind = spec->kind == N4M_SPLITTER_SPXY_FOLD ||
+                           spec->kind == N4M_SPLITTER_SPXY_GROUP_FOLD ||
+                           spec->kind == N4M_SPLITTER_BINNED_STRAT_GROUP_FOLD;
+    if (!fold_kind && fold_index != 0) return N4M_ERR_INVALID_ARGUMENT;
+    if (fold_kind && (spec->n_splits < 2 || fold_index >= spec->n_splits)) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
+    switch (spec->kind) {
+        case N4M_SPLITTER_KENNARD_STONE:
+            return run_splitter_handle<n4m_split_kennard_stone_handle_t>(
+                [&](auto** h) { return n4m_model_selection_kennard_stone_create(h, spec->test_size); },
+                [&](auto* h) { return n4m_model_selection_kennard_stone_split(h, *X, out); },
+                n4m_model_selection_kennard_stone_destroy);
+        case N4M_SPLITTER_SPXY:
+            return run_splitter_handle<n4m_split_spxy_handle_t>(
+                [&](auto** h) { return n4m_model_selection_spxy_create(h, spec->test_size); },
+                [&](auto* h) { return n4m_model_selection_spxy_split(h, *X, *Y, out); },
+                n4m_model_selection_spxy_destroy);
+        case N4M_SPLITTER_SPXY_FOLD:
+            return run_splitter_handle<n4m_split_spxy_fold_handle_t>(
+                [&](auto** h) { return n4m_model_selection_spxy_fold_create(
+                    h, spec->n_splits, spec->y_metric); },
+                [&](auto* h) { return n4m_model_selection_spxy_fold_split_fold(
+                    h, *X, *Y, fold_index, out); },
+                n4m_model_selection_spxy_fold_destroy);
+        case N4M_SPLITTER_SPXY_GROUP_FOLD:
+            return run_splitter_handle<n4m_split_spxy_g_fold_handle_t>(
+                [&](auto** h) { return n4m_model_selection_spxy_g_fold_create(
+                    h, spec->n_splits, spec->y_metric, spec->aggregation); },
+                [&](auto* h) { return n4m_model_selection_spxy_g_fold_split_fold(
+                    h, *X, *Y, groups, groups_len, fold_index, out); },
+                n4m_model_selection_spxy_g_fold_destroy);
+        case N4M_SPLITTER_KMEANS:
+            return run_splitter_handle<n4m_split_kmeans_handle_t>(
+                [&](auto** h) { return n4m_model_selection_kmeans_create(
+                    h, spec->test_size, spec->seed, spec->max_iter); },
+                [&](auto* h) { return n4m_model_selection_kmeans_split(h, *X, out); },
+                n4m_model_selection_kmeans_destroy);
+        case N4M_SPLITTER_KBINS_STRATIFIED:
+            return run_splitter_handle<n4m_split_kbins_stratified_handle_t>(
+                [&](auto** h) { return n4m_model_selection_kbins_stratified_create(
+                    h, spec->test_size, spec->seed, spec->n_bins, spec->strategy); },
+                [&](auto* h) { return n4m_model_selection_kbins_stratified_split(h, *Y, out); },
+                n4m_model_selection_kbins_stratified_destroy);
+        case N4M_SPLITTER_BINNED_STRAT_GROUP_FOLD:
+            return run_splitter_handle<n4m_split_binned_strat_group_kfold_handle_t>(
+                [&](auto** h) { return n4m_model_selection_binned_strat_group_kfold_create(
+                    h, spec->n_splits, spec->n_bins, spec->strategy, spec->shuffle, spec->seed); },
+                [&](auto* h) { return n4m_model_selection_binned_strat_group_kfold_split_fold(
+                    h, *Y, groups, groups_len, fold_index, out); },
+                n4m_model_selection_binned_strat_group_kfold_destroy);
+        case N4M_SPLITTER_SYSTEMATIC_CIRCULAR:
+            return run_splitter_handle<n4m_split_systematic_circular_handle_t>(
+                [&](auto** h) { return n4m_model_selection_systematic_circular_create(
+                    h, spec->test_size, spec->seed); },
+                [&](auto* h) { return n4m_model_selection_systematic_circular_split(h, *Y, out); },
+                n4m_model_selection_systematic_circular_destroy);
+        case N4M_SPLITTER_DATA_TWINNING:
+            return run_splitter_handle<n4m_split_split_splitter_handle_t>(
+                [&](auto** h) { return n4m_model_selection_data_twinning_create(
+                    h, spec->test_size, spec->seed); },
+                [&](auto* h) { return n4m_model_selection_data_twinning_split(h, *X, out); },
+                n4m_model_selection_data_twinning_destroy);
+        default:
+            return N4M_ERR_INVALID_ARGUMENT;
+    }
 }
 
 }  // extern "C"

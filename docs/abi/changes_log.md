@@ -1,5 +1,15 @@
 # ABI — Changes Log
 
+## 2026-09-26 — ABI 2.11.0: common native sample-splitter dispatch (release pending)
+
+`n4m_splitter_run` adds a closed, typed one-shot interface for the nine existing
+native sample splitters. It creates and destroys each existing method handle,
+returns the unchanged owning `n4m_split_result_t`, and requires exact X/Y/group
+inputs and zero-based fold indices. No partitioning kernel or output convention
+changes. Bindings can share one marshalling path while retaining method-specific
+parameter validation and held-out/group oracle tests. This is an additive C ABI
+change only; package versions are not changed by this commit.
+
 ## 2026-09-26 — ABI 2.10.0: fitted native preprocessing wire (release pending)
 
 Five additive C functions export/import a bounded, versioned N4MP byte stream

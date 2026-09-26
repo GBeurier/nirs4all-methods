@@ -49,8 +49,8 @@ isolated band (achieved ~1e-16).
 import * as n4m from "@nirs4all/methods";
 
 await n4m.loadModule();
-console.log(n4m.version());     // "1.0.21+abi.2.10.0"
-console.log(n4m.abiVersion());  // [2, 10, 0]
+console.log(n4m.version());     // "1.0.21+abi.2.11.0"
+console.log(n4m.abiVersion());  // [2, 11, 0]
 
 const rows = 40, cols = 6;
 const X = new Float64Array(rows * cols);   // row-major
@@ -63,6 +63,12 @@ const preds = n4m.predictPls(model, { data: X, rows, cols });
 
 const split = n4m.computeSplitIndices("KennardStone", { data: X, rows, cols }, null);
 // `computeSplit()` remains available when a compact train/test mask is enough.
+
+// One native route also covers all nine splitter kinds, including fold kinds.
+const ordered = n4m.splitNative("SPXYFold", { data: X, rows, cols },
+                                { data: y, rows, cols: 1 },
+                                { nSplits: 3, foldIndex: 0 });
+// ordered.trainIndices / ordered.testIndices are zero-based Int32Array values.
 ```
 
 `Context` / `Config` / `MethodResult` are also exported for the lower-level

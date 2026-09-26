@@ -8,6 +8,46 @@
 extern "C" {
 #endif
 
+/* Closed, one-shot dispatch over the nine native sample splitters. No fitted
+ * state exists: the dispatcher creates the underlying method handle, splits,
+ * and destroys the handle. The caller owns `out` via n4m_split_result_destroy.
+ * X/Y are optional only as specified by kind; group-aware kinds require one
+ * int64 group ID per row. fold_index is zero-based and must be zero for
+ * non-fold kinds. Unused spec fields are ignored. */
+typedef enum n4m_splitter_kind_t {
+    N4M_SPLITTER_KENNARD_STONE = 0,
+    N4M_SPLITTER_SPXY = 1,
+    N4M_SPLITTER_SPXY_FOLD = 2,
+    N4M_SPLITTER_SPXY_GROUP_FOLD = 3,
+    N4M_SPLITTER_KMEANS = 4,
+    N4M_SPLITTER_KBINS_STRATIFIED = 5,
+    N4M_SPLITTER_BINNED_STRAT_GROUP_FOLD = 6,
+    N4M_SPLITTER_SYSTEMATIC_CIRCULAR = 7,
+    N4M_SPLITTER_DATA_TWINNING = 8
+} n4m_splitter_kind_t;
+
+typedef struct n4m_splitter_spec_t {
+    int32_t kind;
+    int32_t n_splits;
+    int32_t y_metric;
+    int32_t aggregation;
+    int32_t n_bins;
+    int32_t strategy;
+    int32_t shuffle;
+    int32_t max_iter;
+    double test_size;
+    uint64_t seed;
+} n4m_splitter_spec_t;
+
+N4M_API n4m_status_t n4m_splitter_run(
+    const n4m_splitter_spec_t* spec,
+    const n4m_matrix_view_t* X,
+    const n4m_matrix_view_t* Y,
+    const int64_t* groups,
+    int64_t groups_len,
+    int32_t fold_index,
+    n4m_split_result_t* out);
+
 /* ---------- Splitter enums (passed as int32_t through the create API) -- */
 /* Bin-edge strategy for KBinsStratified + BinnedStratifiedGroupKFold. */
 typedef enum n4m_split_kbins_strategy_t {
