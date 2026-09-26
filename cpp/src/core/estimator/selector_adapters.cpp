@@ -191,6 +191,10 @@ class SelectorAdapter final : public Adapter {
   private:
     static n4m_status_t validate(n4m_context_t* ctx, const std::vector<std::int64_t>& selected,
                                  std::int64_t p) {
+        if (selected.empty()) {
+            set_error(ctx, "selector selected no column");
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
         std::vector<std::int64_t> sorted(selected);
         std::sort(sorted.begin(), sorted.end());
         if (sorted.front() < 0 || sorted.back() >= p ||

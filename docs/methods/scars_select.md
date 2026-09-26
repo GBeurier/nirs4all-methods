@@ -12,11 +12,12 @@ SCARS stability + CARS (§18 Phase 5h)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `4` | registry benchmark cell value |
-| `n_iterations` | `int` | `8` | registry benchmark cell value |
-| `min_features` | `int` | `5` | registry benchmark cell value |
-| `sample_fraction` | `float` | `0.5` | registry benchmark cell value |
-| `seed` | `int` | `11` | registry benchmark cell value |
+| `n_components` | `int` | `2` | current public binding signature |
+| `n_iterations` | `int` | `50` | current public binding signature |
+| `min_features` | `int \| None` | `None` | current public binding signature |
+| `sample_fraction` | `float` | `0.8` | current public binding signature |
+| `n_folds` | `int` | `3` | current public binding signature |
+| `seed` | `int` | `0` | current public binding signature |
 
 ## Explanations
 
@@ -51,7 +52,13 @@ Current implementation: [cpp/src/core/scars_selection.cpp](https://github.com/GB
 
 **C ABI (ABI 2):** [`n4m_feature_selection_scars_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L134). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
+**Python (verified public re-export):**
+
+```python
+from n4m.feature_selection.wrapper import SCARS
+```
+
+Source signature: `SCARS(*, n_components: int = 2, n_iterations: int = 50, min_features: int | None = None, sample_fraction: float = 0.8, n_folds: int = 3, seed: int = 0)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L259)).
 
 **R (source-verified):** [`scars_select(X, Y, n_components, n_iterations = 50L, min_features = 5L, sample_fraction = 0.8, seed = 0L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

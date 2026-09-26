@@ -12,14 +12,15 @@ PSO-PLS — Binary Particle Swarm variable selection (§48)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `3` | registry benchmark cell value |
-| `n_swarm` | `int` | `10` | registry benchmark cell value |
-| `n_iterations` | `int` | `12` | registry benchmark cell value |
-| `w` | `float` | `0.729` | registry benchmark cell value |
-| `c1` | `float` | `1.494` | registry benchmark cell value |
-| `c2` | `float` | `1.494` | registry benchmark cell value |
-| `v_max` | `float` | `4.0` | registry benchmark cell value |
-| `seed` | `int` | `42` | registry benchmark cell value |
+| `n_components` | `int` | `2` | current public binding signature |
+| `n_swarm` | `int` | `30` | current public binding signature |
+| `n_iterations` | `int` | `50` | current public binding signature |
+| `w` | `float` | `0.729` | current public binding signature |
+| `c1` | `float` | `1.494` | current public binding signature |
+| `c2` | `float` | `1.494` | current public binding signature |
+| `v_max` | `float` | `4.0` | current public binding signature |
+| `n_folds` | `int` | `3` | current public binding signature |
+| `seed` | `int` | `0` | current public binding signature |
 
 ## Explanations
 
@@ -56,7 +57,13 @@ Current implementation: [cpp/src/core/pso_selection.cpp](https://github.com/GBeu
 
 **C ABI (ABI 2):** [`n4m_feature_selection_pso_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L178). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
+**Python (verified public re-export):**
+
+```python
+from n4m.feature_selection.wrapper import PSO
+```
+
+Source signature: `PSO(*, n_components: int = 2, n_swarm: int = 30, n_iterations: int = 50, w: float = 0.729, c1: float = 1.494, c2: float = 1.494, v_max: float = 4.0, n_folds: int = 3, seed: int = 0)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L329)).
 
 **R (source-verified):** [`pso_select(X, Y, n_components, n_swarm = 30L, n_iterations = 50L, w = 0.729, c1 = 1.494, c2 = 1.494, v_max = 4.0, seed = 0L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

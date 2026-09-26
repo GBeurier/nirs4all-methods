@@ -8,7 +8,13 @@ ST-PLS soft-thresholded sparse PLS (§18 Phase 5u)
 
 > **Registry note** — R `plsVarSel::stpls` (Sæbø et al. 2008 ST-PLS, J. Chemom. 20, 54-62) with the shrink-ladder sweep (0.1, 0.3, 0.5, 0.7, 0.9) picking the most-shrunk model that still has >= min_selected non-zero coefs. Default `_st_select_pls4all` path mirrors the same R call with seed=11, giving bit-exact mask parity. The C++ absolute-threshold kernel is opt-in via `legacy=True`.
 
-_No tunable parameters declared at the binding level._
+### Parameters
+
+| Name | Type | Default | Notes |
+|------|------|---------|-------|
+| `thresholds` | `—` | `required` | current public binding signature |
+| `n_components` | `int` | `2` | current public binding signature |
+| `min_selected` | `int \| None` | `None` | current public binding signature |
 
 ## Explanations
 
@@ -43,7 +49,13 @@ Current implementation: [cpp/src/core/st_selection.cpp](https://github.com/GBeur
 
 **C ABI (ABI 2):** [`n4m_feature_selection_st_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L361). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
+**Python (verified public re-export):**
+
+```python
+from n4m.feature_selection.wrapper import ST
+```
+
+Source signature: `ST(thresholds, *, n_components: int = 2, min_selected: int | None = None)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L512)).
 
 **R (source-verified):** [`st_select(X, Y, n_components, thresholds, min_selected = NULL)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 
