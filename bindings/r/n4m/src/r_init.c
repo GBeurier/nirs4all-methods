@@ -92,6 +92,7 @@ SEXP r_n4m_estimator_predict_labels(SEXP, SEXP);
 SEXP r_n4m_estimator_classes(SEXP);
 SEXP r_n4m_estimator_apply_mask(SEXP, SEXP, SEXP);
 SEXP r_n4m_procedure_run(SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP r_n4m_manifest_json(void);
 
 static const R_CallMethodDef callMethods[] = {
     /* core */
@@ -163,6 +164,7 @@ static const R_CallMethodDef callMethods[] = {
     {"r_n4m_estimator_classes", (DL_FUNC)&r_n4m_estimator_classes, 1},
     {"r_n4m_estimator_apply_mask", (DL_FUNC)&r_n4m_estimator_apply_mask, 3},
     {"r_n4m_procedure_run", (DL_FUNC)&r_n4m_procedure_run, 5},
+    {"r_n4m_manifest_json", (DL_FUNC)&r_n4m_manifest_json, 0},
 
     {NULL, NULL, 0},
 };

@@ -357,6 +357,7 @@ n4m_matrix_view_validate
 n4m_method_count
 n4m_method_find
 n4m_method_info_v1
+n4m_method_manifest_json
 n4m_method_param_default_double
 n4m_method_param_default_int
 n4m_method_param_info_v1

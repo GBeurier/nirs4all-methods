@@ -77,6 +77,17 @@ def method_class(method_id: str) -> type[_NativeMethod]:
         raise ValueError(f"no n4m role class for {method_id!r}") from None
 
 
+def manifest() -> dict[str, Any]:
+    """The native manifest: every method's roles, node kinds, inputs and typed parameters."""
+    import json
+
+    size = ctypes.c_size_t()
+    check(lib.n4m_method_manifest_json(None, 0, ctypes.byref(size)), "manifest")
+    buf = ctypes.create_string_buffer(size.value)
+    check(lib.n4m_method_manifest_json(buf, size, ctypes.byref(size)), "manifest")
+    return json.loads(buf.raw[: size.value])
+
+
 def method_info(method_id: str) -> MethodInfoV1:
     """Native manifest entry of ``method_id``."""
     index = ctypes.c_int32()
@@ -886,6 +897,7 @@ __all__ = [
     "NativeSelector",
     "NativeSplitter",
     "NativeTransformer",
+    "manifest",
     "method_class",
     "method_info",
 ]

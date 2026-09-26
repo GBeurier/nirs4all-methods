@@ -112,6 +112,11 @@ typedef struct n4m_param_info_v1_t {
 } n4m_param_info_v1_t;
 
 N4M_API n4m_status_t n4m_method_count(int32_t* out_count);
+/* The whole manifest as JSON (UTF-8, no NUL): per method its id, kind,
+ * roles, DAG-ML node kinds, capabilities, fit inputs and typed parameters
+ * with defaults (NaN written as null). With out == NULL only *out_size is
+ * set; otherwise capacity must be at least that size. */
+N4M_API n4m_status_t n4m_method_manifest_json(char* out, size_t capacity, size_t* out_size);
 /* N4M_ERR_INVALID_ARGUMENT when the id is unknown; *out_index is then -1. */
 N4M_API n4m_status_t n4m_method_find(const char* method_id, int32_t* out_index);
 N4M_API n4m_status_t n4m_method_info_v1(int32_t index, n4m_method_info_v1_t* out);

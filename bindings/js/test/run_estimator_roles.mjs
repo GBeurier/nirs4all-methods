@@ -124,6 +124,9 @@ for (const c of fixture.procedures) {
     }
 }
 assert.throws(() => n4m.methodClass("models.pls.missing"), /no n4m role class/);
+const native = n4m.manifest();
+assert.equal(native.methods.length, fixture.cases.length + fixture.procedures.length);
+for (const m of native.methods) assert.ok(n4m.methodClass(m.method_id), m.method_id);
 
 assert.throws(() => new n4m.GroupSparsePLS().fit(xTrain, yTrain), /feature_groups/);
 assert.throws(() => new n4m.CPPLS().fit(xTrain, yTrain, { groups: new Array(xTrain.rows).fill(1) }),

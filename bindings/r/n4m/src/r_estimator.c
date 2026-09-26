@@ -419,6 +419,16 @@ SEXP r_n4m_estimator_apply_mask(SEXP ptr, SEXP X, SEXP Y) {
     return out;
 }
 
+/* The native manifest as a JSON string. */
+SEXP r_n4m_manifest_json(void) {
+    size_t size = 0;
+    if (n4m_method_manifest_json(NULL, 0, &size) != N4M_OK) Rf_error("n4m manifest unavailable");
+    char* buf = R_alloc(size + 1, 1);
+    if (n4m_method_manifest_json(buf, size, &size) != N4M_OK) Rf_error("n4m manifest unavailable");
+    buf[size] = '\0';
+    return Rf_mkString(buf);
+}
+
 /* Fitted class ids, sorted. */
 SEXP r_n4m_estimator_classes(SEXP ptr) {
     n4m_estimator_t* est = r_est_get(ptr);

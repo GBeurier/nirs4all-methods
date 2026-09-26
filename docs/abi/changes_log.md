@@ -85,6 +85,13 @@ augmenters with nanometre constants, and `stray_light` (its C entry point
 requires an axis it never reads). N4ME import now refuses a payload naming
 a procedure.
 
+`n4m_method_manifest_json` renders the whole manifest (roles, DAG-ML node
+kinds, capabilities, fit inputs, typed parameters with defaults) in the
+library; `n4m_cli --manifest-json` prints it, and the bindings expose it
+(`n4m.roles.manifest()`, R `n4m_manifest_json()`, JS `manifest()`) with a
+lookup from method id to generated class (`method_class`, `n4m_constructor`,
+`methodClass`) for node and controller generators.
+
 `n4m_method_result_entry_count` / `n4m_method_result_entry` enumerate a
 result's named outputs (sorted by name, with their kind), so bindings read any
 procedure result without per-method name lists. The Python, R and JS/WASM
