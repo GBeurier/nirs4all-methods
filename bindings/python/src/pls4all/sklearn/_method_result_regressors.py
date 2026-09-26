@@ -101,6 +101,11 @@ class DIPLSRegression(_MethodResultRegressor):
     `fit` requires the target-domain X via the ``X_target`` keyword.
     Sklearn pattern: ``DIPLSRegression(...).fit(X_source, y_source,
     X_target=X_t)``.
+
+    The unlabeled target cohort participates in fitting: in CV, pass a
+    cohort chosen independently of the held-out source fold. It is not
+    stored after fit; fitted coefficients support prediction on fresh X,
+    but do not reproduce the target-dependent training recipe.
     """
 
     def __init__(self, n_components: int = 2,
@@ -114,15 +119,51 @@ class DIPLSRegression(_MethodResultRegressor):
                 "DIPLSRegression.fit requires a `X_target` keyword "
                 "(target-domain feature matrix)"
             )
-        # Defer to base; we need to plumb X_target through.
-        self._X_target_ = np.ascontiguousarray(X_target, dtype=np.float64)
-        return super().fit(X, y)
+        from sklearn.utils.validation import check_array
 
-    def _fit_method_result(self, ctx, X, y):
-        with _ManagedConfig(int(self.n_components)) as cfg:
-            return _methods.di_pls_fit(
-                ctx, cfg, X, y, self._X_target_,
+        from ._base import _validate_X_y_no_mutate
+
+        X_arr, y_arr, y_ndim = _validate_X_y_no_mutate(X, y)
+        if y_arr.shape[1] != 1:
+            raise ValueError("DI-PLS currently supports exactly one response")
+        target = check_array(X_target, dtype=np.float64, ensure_2d=True,
+                             ensure_all_finite=True)
+        if target.shape[0] < 2 or target.shape[1] < 2:
+            raise ValueError("X_target must have at least two rows and columns")
+        if target.shape[1] != X_arr.shape[1]:
+            raise ValueError("X_target feature count must match X_source")
+        if hasattr(X, "columns") or hasattr(X_target, "columns"):
+            source_names = getattr(X, "columns", None)
+            target_names = getattr(X_target, "columns", None)
+            if (source_names is None or target_names is None or
+                    tuple(source_names) != tuple(target_names)):
+                raise ValueError("X_target feature names and order must match X_source")
+        if (isinstance(self.di_lambda, (bool, np.bool_)) or
+                not isinstance(self.di_lambda, (int, float, np.integer, np.floating)) or
+                not np.isfinite(self.di_lambda) or self.di_lambda < 0):
+            raise ValueError("di_lambda must be finite and non-negative")
+        if (isinstance(self.n_components, (bool, np.bool_)) or
+                not isinstance(self.n_components, (int, np.integer)) or
+                self.n_components < 1):
+            raise ValueError("n_components must be a positive integer")
+        with Context() as ctx, _ManagedConfig(int(self.n_components)) as cfg:
+            result = _methods.di_pls_fit(
+                ctx, cfg, X_arr, y_arr, target,
                 di_lambda=float(self.di_lambda))
+        self._extract_state(result)
+        self.n_features_in_ = int(X_arr.shape[1])
+        self._y_ndim_ = y_ndim
+        if hasattr(X, "columns"):
+            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        elif hasattr(self, "feature_names_in_"):
+            del self.feature_names_in_
+        return self
+
+    def predict(self, X):
+        if (hasattr(self, "feature_names_in_") and hasattr(X, "columns") and
+                tuple(X.columns) != tuple(self.feature_names_in_)):
+            raise ValueError("X feature names and order differ from fit")
+        return super().predict(X)
 
 
 class MIRPLSRegression(_MethodResultRegressor):

@@ -8,7 +8,7 @@ _Namespace_: **`n4m.domain_adaptation.metrics`** · _Fully-qualified_: `n4m.doma
 
 **Python (verified public re-export):** `from n4m.domain_adaptation.metrics import transfer_metrics`
 
-**Signature:** [`transfer_metrics(X_source, X_target, n_components: int = 10, k_neighbors: int = 10, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L10675)
+**Signature:** [`transfer_metrics(X_source, X_target, n_components: int = 10, k_neighbors: int = 10, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L10747)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

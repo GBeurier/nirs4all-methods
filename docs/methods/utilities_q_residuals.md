@@ -8,7 +8,7 @@ _Namespace_: **`n4m.outlier_detection`** · _Fully-qualified_: `n4m.outlier_dete
 
 **Python (verified public re-export):** `from n4m.outlier_detection import q_residuals`
 
-**Signature:** [`q_residuals(X, n_components: int = 5, alpha: float = 0.05)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L10607)
+**Signature:** [`q_residuals(X, n_components: int = 5, alpha: float = 0.05)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L10679)
 
 **R:** no current source-verified entry point was found for this catalog method.
 
