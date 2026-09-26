@@ -79,8 +79,10 @@ def dataset():
     loadings = rng.normal(size=(2, N_FEATURES))
     X = scores @ loadings + 0.1 * rng.normal(size=(48, N_FEATURES))
     y = scores[:, 0] - 0.5 * scores[:, 1] + 0.05 * rng.normal(size=48)
-    # Paired transfer methods need one target row per training row.
-    X_target = rng.normal(size=(36, 2)) @ loadings + 0.3
+    # Paired transfer methods need one target row per training row. The noise
+    # keeps it full rank: subspace metrics on a rank-2 target would compare
+    # null-space directions that rounding alone decides.
+    X_target = rng.normal(size=(36, 2)) @ loadings + 0.3 + 0.05 * rng.normal(size=(36, N_FEATURES))
     # Strictly positive, reflectance-like values keep every conversion defined.
     shift = 1.0 - min(X.min(), X_target.min())
     X, X_target = (X + shift) / (2 * shift), (X_target + shift) / (2 * shift)
