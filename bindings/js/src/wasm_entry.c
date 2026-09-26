@@ -383,14 +383,14 @@ static int n4m_wasm_model_fit_tier_b(
             return s;
         }
     }
-    /* The portable affine fits use centred, unscaled data in the
+    /* The portable affine fits and canonical O2PLS use centred, unscaled data in the
      * R/Python bindings. R selects SIMPLS except for canonical CPPLS and
      * RidgePLS, which select NIPALS. Preserve the other shim models' config. */
     if (kind == MK_RIDGE || kind == MK_RIDGE_PLS || kind == MK_ROBUST_PLS ||
         kind == MK_CPPLS || kind == MK_SPARSE_SIMPLS || kind == MK_ECR ||
         kind == MK_CONTINUUM || kind == MK_MIR_PLS || kind == MK_FUSED_SPARSE_PLS ||
         kind == MK_BAGGING_PLS || kind == MK_BOOSTING_PLS ||
-        kind == MK_RANDOM_SUBSPACE_PLS) {
+        kind == MK_RANDOM_SUBSPACE_PLS || kind == MK_O2PLS) {
         s = n4m_config_set_center_x(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_center_y(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_scale_x(cfg, 0);
@@ -510,15 +510,22 @@ static int n4m_wasm_model_fit_tier_b(
             break;
         }
         case MK_O2PLS: {
-            /* Bidirectional orthogonal PLS (Trygg & Wold). Takes its own
-             * component counts (NOT cfg.n_components); emits the centred
-             * coefficient triple. params = [n_predictive, n_x_orth, n_y_orth]. */
-            int32_t n_pred = n_params >= 1 ? (int32_t)params[0] : 2;
-            int32_t n_xo = n_params >= 2 ? (int32_t)params[1] : 1;
-            int32_t n_yo = n_params >= 3 ? (int32_t)params[2] : 1;
-            if (n_pred < 1) n_pred = 1;
-            if (n_xo < 0) n_xo = 0;
-            if (n_yo < 0) n_yo = 0;
+            /* Canonical R/Python O2PLS uses SIMPLS, selecting the OmicsPLS
+             * branch. params = [n_predictive, n_x_orth, n_y_orth]; unlike
+             * the legacy path, invalid component counts must not be clamped. */
+            if (n_params > 3) { s = N4M_ERR_INVALID_ARGUMENT; break; }
+            int32_t counts[3] = {n_components, 1, 1};
+            for (int i = 0; i < n_params; ++i) {
+                const double value = params[i];
+                if (!isfinite(value) || value != floor(value) || value < 0.0 ||
+                    value > 2147483647.0 || (i == 0 && value < 1.0)) {
+                    s = N4M_ERR_INVALID_ARGUMENT;
+                    break;
+                }
+                counts[i] = (int32_t)value;
+            }
+            if (s != N4M_OK) break;
+            const int32_t n_pred = counts[0], n_xo = counts[1], n_yo = counts[2];
             s = n4m_estimators_o2pls_fit(ctx, cfg, &xv, &yv, n_pred, n_xo, n_yo, &res);
             break;
         }
