@@ -129,10 +129,8 @@ def test_di_pls_rejects_invalid_target(domains, target_change, message):
         DIPLSRegression().fit(source, y, X_target=target_change(target))
 
 
-def test_di_pls_rejects_invalid_penalty_multivariate_y_and_feature_order(domains):
-    import pandas as pd
-
-    source, target, held, y = domains
+def test_di_pls_rejects_invalid_penalty_and_multivariate_y(domains):
+    source, target, _, y = domains
     for penalty in (-0.1, np.inf, np.nan):
         with pytest.raises(ValueError, match="di_lambda"):
             DIPLS(di_lambda=penalty).fit(source, y, X_target=target)
@@ -140,6 +138,11 @@ def test_di_pls_rejects_invalid_penalty_multivariate_y_and_feature_order(domains
             DIPLSRegression(di_lambda=penalty).fit(source, y, X_target=target)
     with pytest.raises(ValueError, match="one response"):
         DIPLS().fit(source, np.column_stack((y, y)), X_target=target)
+
+
+def test_di_pls_rejects_reordered_named_features(domains):
+    pd = pytest.importorskip("pandas")
+    source, target, held, y = domains
     columns = [f"wl{i}" for i in range(source.shape[1])]
     named_source = pd.DataFrame(source, columns=columns)
     named_target = pd.DataFrame(target, columns=columns[::-1])
