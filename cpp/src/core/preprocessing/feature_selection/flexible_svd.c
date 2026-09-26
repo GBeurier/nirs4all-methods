@@ -361,3 +361,30 @@ n4m_status_t n4m_pp_flex_svd_state_apply(const n4m_pp_flex_svd_state_t* state,
     }
     return N4M_OK;
 }
+
+n4m_status_t n4m_pp_flex_svd_state_save(const n4m_pp_flex_svd_state_t* state,
+                                        n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    n4m_state_write_i64(w, state->n_components);
+    n4m_state_write_f64_array(w, state->components,
+                              state->n_components * state->n_features_in);
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_flex_svd_state_load(n4m_pp_flex_svd_state_t* state,
+                                        n4m_state_reader_t* r, int64_t n_features) {
+    double* components = NULL;
+    int64_t k = 0;
+    n4m_status_t st = (n4m_state_read_i64(r, &k) && k >= 1 && k <= n_features)
+                          ? n4m_state_read_f64_array_new(r, k * n_features, &components)
+                          : N4M_ERR_CORRUPT_BUFFER;
+    if (st != N4M_OK) {
+        return st;
+    }
+    free(state->components);
+    state->n_features_in = n_features;
+    state->n_components  = k;
+    state->components    = components;
+    state->fitted        = 1;
+    return N4M_OK;
+}

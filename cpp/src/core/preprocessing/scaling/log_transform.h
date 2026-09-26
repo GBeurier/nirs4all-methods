@@ -26,6 +26,7 @@
 #define N4M_CORE_PP_SCALING_LOG_TRANSFORM_H
 
 #include "n4m/n4m.h"
+#include "core/estimator/state_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -61,6 +62,13 @@ n4m_status_t n4m_pp_log_apply(const n4m_pp_log_state_t* state,
  * has been fitted (or 0 / 1 with auto_offset == 0 — the stateless path).
  * Never NULL-deref's; returns 0 for a NULL state. */
 int n4m_pp_log_state_is_fitted(const n4m_pp_log_state_t* state);
+
+/* Fitted-state serialization (core/estimator/state_io.h): the fitted
+ * offset (the configured offset when auto_offset is off). */
+n4m_status_t n4m_pp_log_state_save(const n4m_pp_log_state_t* state,
+                                   n4m_state_writer_t* w);
+n4m_status_t n4m_pp_log_state_load(n4m_pp_log_state_t* state,
+                                   n4m_state_reader_t* r, int64_t n_features);
 
 #ifdef __cplusplus
 }

@@ -19,6 +19,7 @@
 #define N4M_CORE_PP_DERIVATIVES_DERIVATE_H
 
 #include "n4m/n4m.h"
+#include "core/estimator/state_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,6 +53,17 @@ n4m_status_t n4m_pp_derivate_state_apply(const n4m_pp_derivate_state_t* state,
 /* Returns the output column count for a given (order, input_cols).
  * Returns 0 when order >= input_cols or input_cols <= 0. */
 int64_t n4m_pp_derivate_output_cols_helper(int32_t order, int64_t input_cols);
+
+/* Fitted-state serialization (core/estimator/state_io.h): only the input
+ * width is learned, so the payload is empty. */
+n4m_status_t n4m_pp_derivate_state_save(const n4m_pp_derivate_state_t* state,
+                                        n4m_state_writer_t* w);
+n4m_status_t n4m_pp_derivate_state_load(n4m_pp_derivate_state_t* state,
+                                        n4m_state_reader_t* r, int64_t n_features);
+
+/* Output width of the configured order for `input_cols` (0 when none). */
+int64_t n4m_pp_derivate_state_output_cols(const n4m_pp_derivate_state_t* state,
+                                          int64_t input_cols);
 
 #ifdef __cplusplus
 }

@@ -39,6 +39,21 @@ c_surface:
   - "n4m_transform_fck_static_destroy"
   - "n4m_transform_fck_static_output_cols"
   - "n4m_transform_fck_static_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_fck_static"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "kernel_size"
+      type: "int"
+      min: 3
+    - name: "alphas"
+      type: "double_array"
+    - name: "sigmas"
+      type: "double_array"
 fq_name: "n4m.transform.specialized.fck_static"
 leaf: "fck_static"
 legacy_ids:

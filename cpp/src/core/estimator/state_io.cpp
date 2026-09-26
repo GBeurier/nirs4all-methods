@@ -4,6 +4,7 @@
 
 #include "core/estimator/state_io.h"
 
+#include <cstdlib>
 #include <cstring>
 
 #include "core/estimator/state_io.hpp"
@@ -18,6 +19,24 @@ std::uint64_t f64_bits(double v) {
     std::uint64_t bits = 0;
     std::memcpy(&bits, &v, 8);
     return bits;
+}
+
+template <typename T>
+n4m_status_t read_array_new(n4m_state_reader_t* r, int64_t expected, T** out,
+                            int (*read)(n4m_state_reader_t*, T*, int64_t)) {
+    *out = nullptr;
+    int64_t n = 0;
+    if (expected < 1 || !n4m_state_peek_array_length(r, expected, &n) || n != expected) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    auto* v = static_cast<T*>(std::malloc(sizeof(T) * static_cast<std::size_t>(n)));
+    if (v == nullptr) return N4M_ERR_OUT_OF_MEMORY;
+    if (!read(r, v, n)) {
+        std::free(v);
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    *out = v;
+    return N4M_OK;
 }
 
 }  // namespace
@@ -79,6 +98,16 @@ int n4m_state_peek_array_length(n4m_state_reader_t* r, int64_t max_len, int64_t*
     if (n < 0 || n > max_len || static_cast<std::uint64_t>(n) > r->remaining() / 8) return 0;
     *out = n;
     return 1;
+}
+
+n4m_status_t n4m_state_read_f64_array_new(n4m_state_reader_t* r, int64_t expected,
+                                          double** out) {
+    return read_array_new(r, expected, out, n4m_state_read_f64_array);
+}
+
+n4m_status_t n4m_state_read_i64_array_new(n4m_state_reader_t* r, int64_t expected,
+                                          int64_t** out) {
+    return read_array_new(r, expected, out, n4m_state_read_i64_array);
 }
 
 }  // extern "C"

@@ -31,6 +31,7 @@
 #include "core/common/matrix_view.hpp"
 #include "core/preprocessing/feature_selection/flexible_pca.h"
 #include "core/preprocessing/feature_selection/flexible_svd.h"
+#include "core/estimator/core_state.hpp"
 
 // ---------------------------------------------------------------------------
 // Public opaque types and entry points. These declarations are colocated with
@@ -369,3 +370,29 @@ N4M_API n4m_status_t n4m_decomposition_flexible_svd_output_cols(
 }
 
 }  // extern "C"
+
+// ---------------------------------------------------------------------------
+// Fitted-state access for the estimator adapters (core/estimator/core_state.hpp)
+// ---------------------------------------------------------------------------
+
+namespace n4m::estimator {
+
+n4m_status_t kernel_save(const n4m_pp_flex_pca_handle_t* h, n4m_state_writer_t* w) {
+    return n4m_pp_flex_pca_state_save(h->state, w);
+}
+
+n4m_status_t kernel_load(n4m_pp_flex_pca_handle_t* h, n4m_state_reader_t* r,
+                         std::int64_t n_features) {
+    return n4m_pp_flex_pca_state_load(h->state, r, n_features);
+}
+
+n4m_status_t kernel_save(const n4m_pp_flex_svd_handle_t* h, n4m_state_writer_t* w) {
+    return n4m_pp_flex_svd_state_save(h->state, w);
+}
+
+n4m_status_t kernel_load(n4m_pp_flex_svd_handle_t* h, n4m_state_reader_t* r,
+                         std::int64_t n_features) {
+    return n4m_pp_flex_svd_state_load(h->state, r, n_features);
+}
+
+}  // namespace n4m::estimator

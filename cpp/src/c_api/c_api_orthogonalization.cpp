@@ -24,6 +24,7 @@
 #include "core/common/matrix_view.hpp"
 #include "core/preprocessing/orthogonalization/epo.h"
 #include "core/preprocessing/orthogonalization/osc.h"
+#include "core/estimator/core_state.hpp"
 
 // ---------------------------------------------------------------------------
 // Opaque public handle typedefs (will live in n4m.h §16 after central
@@ -382,3 +383,20 @@ N4M_API n4m_status_t n4m_domain_adaptation_epo_is_fitted(const n4m_pp_epo_handle
         return N4M_ERR_INTERNAL;
     }
 }
+
+// ---------------------------------------------------------------------------
+// Fitted-state access for the estimator adapters (core/estimator/core_state.hpp)
+// ---------------------------------------------------------------------------
+
+namespace n4m::estimator {
+
+n4m_status_t kernel_save(const n4m_pp_osc_handle_t* h, n4m_state_writer_t* w) {
+    return n4m_pp_osc_state_save(h->state, w);
+}
+
+n4m_status_t kernel_load(n4m_pp_osc_handle_t* h, n4m_state_reader_t* r,
+                         std::int64_t n_features) {
+    return n4m_pp_osc_state_load(h->state, r, n_features);
+}
+
+}  // namespace n4m::estimator
