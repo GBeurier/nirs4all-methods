@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import json
+
 from catalog_loader import load_legacy_methods, normalize_method, render_method
 from validate_catalog import parse_yaml
 
@@ -10,7 +12,9 @@ from validate_catalog import parse_yaml
 def assert_round_trip(method: dict) -> None:
     expected = normalize_method(method)
     parsed = parse_yaml(render_method(method))
-    if parsed != expected:
+    # Compared as JSON: NaN defaults (unused optional values) are not equal to
+    # themselves as floats.
+    if json.dumps(parsed, sort_keys=True) != json.dumps(expected, sort_keys=True):
         method_id = method.get("method_id", "<unknown>")
         raise AssertionError(f"{method_id}: render/parse round-trip drift")
 
