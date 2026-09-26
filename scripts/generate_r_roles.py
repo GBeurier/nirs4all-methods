@@ -30,6 +30,11 @@ END = "# END generated estimator roles"
 ROLE_METHODS = {
     "regressor": ["S3method(predict, n4m_regressor)"],
     "transformer": ["S3method(n4m_estimator_transform, n4m_transformer)"],
+    "selector": [
+        "S3method(n4m_estimator_transform, n4m_selector)",
+        "S3method(n4m_selected_indices, n4m_selector)",
+        "export(n4m_selected_indices)",
+    ],
 }
 COMMON_EXPORTS = [
     "export(n4m_estimator_export)",

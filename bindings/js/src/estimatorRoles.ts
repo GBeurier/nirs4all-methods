@@ -19,6 +19,14 @@ export interface Transformer {
     transform(X: Matrix): Matrix;
 }
 
+/** Selector role: Data[n, p] (+ Target) -> the k selected input columns. */
+export interface Selector {
+    /** Selected columns in ascending input order. */
+    transform(X: Matrix): Matrix;
+    /** Selected input columns (0-based) in native selection order. */
+    selectedIndices(): number[];
+}
+
 /** Native parameter types, as published by the manifest. */
 export type ParamType = "int" | "double" | "bool" | "enum" | "int_array" | "double_array";
 export type ParamValue = number | boolean | string | number[];
@@ -32,16 +40,15 @@ export interface FitInputs {
     axis?: Float64Array | number[];
     XTarget?: Matrix;
     foldIds?: number[];
-    seed?: number;
 }
 
 // n4m_fit_inputs_v1_t on wasm32 (pointers 4 bytes, int64 8-aligned); checked
 // against offsetof() of the C header when the layout was written.
-const FIT_INPUTS_SIZE = 128;
+const FIT_INPUTS_SIZE = 120;
 const OFF = {
     X: 4, Y: 8, sampleWeight: 24, nSampleWeight: 32, groups: 40, nGroups: 48,
     featureGroups: 56, nFeatureGroups: 64, blocks: 72, nBlocks: 80, axis: 88,
-    nAxis: 96, XTarget: 104, foldIds: 108, nFoldIds: 112, seed: 120,
+    nAxis: 96, XTarget: 104, foldIds: 108, nFoldIds: 112,
 } as const;
 
 /** Runs `fn` with a fresh native context, destroyed afterwards. */
@@ -137,7 +144,6 @@ export abstract class NativeEstimator {
                 allocs.push({ ptr: tv.viewPtr, free: tv.free });
                 m.setValue(struct + OFF.XTarget, tv.viewPtr, "i32");
             }
-            m.setValue(struct + OFF.seed, BigInt(inputs.seed ?? 0) as unknown as number, "i64");
 
             const est = withContext((ctx) => {
                 const params = this.nativeParams(ctx);
@@ -235,6 +241,27 @@ export abstract class NativeEstimator {
 
     protected transformMatrix(X: Matrix): Matrix {
         return this.matrixOp("n4m_estimator_transform", "n4m_estimator_transform_cols", X);
+    }
+
+    protected selectedIndexArray(): number[] {
+        const m = getModule();
+        const handle = this.handle();
+        const countPtr = m._malloc(8);
+        try {
+            checkStatus(m.ccall("n4m_estimator_selected_indices", "number",
+                ["number", "number", "i64", "number"], [handle, 0, BigInt(0), countPtr]) as number);
+            const count = readI64(countPtr);
+            const buf = m._malloc(Math.max(1, count) * 8);
+            try {
+                checkStatus(m.ccall("n4m_estimator_selected_indices", "number",
+                    ["number", "number", "i64", "number"], [handle, buf, BigInt(count), countPtr]) as number);
+                return Array.from({ length: count }, (_, i) => readI64(buf + 8 * i));
+            } finally {
+                m._free(buf);
+            }
+        } finally {
+            m._free(countPtr);
+        }
     }
 
     private matrixOp(symbol: string, widthSymbol: string, X: Matrix): Matrix {

@@ -23,7 +23,32 @@
   "models.sparse.sparse_simpls" = c("regressor"),
   "models.specialized.ecr" = c("regressor"),
   "models.specialized.tensor_pls" = c("regressor"),
-  "models.transfer.di_pls" = c("regressor")
+  "models.transfer.di_pls" = c("regressor"),
+  "selection.bipls" = c("selector"),
+  "selection.bve" = c("selector"),
+  "selection.cars" = c("selector"),
+  "selection.emcuve" = c("selector"),
+  "selection.ga" = c("selector"),
+  "selection.ipw" = c("selector"),
+  "selection.irf" = c("selector"),
+  "selection.iriv" = c("selector"),
+  "selection.pso" = c("selector"),
+  "selection.random_frog" = c("selector"),
+  "selection.randomization" = c("selector"),
+  "selection.rep" = c("selector"),
+  "selection.scars" = c("selector"),
+  "selection.shaving" = c("selector"),
+  "selection.sipls" = c("selector"),
+  "selection.spa" = c("selector"),
+  "selection.st" = c("selector"),
+  "selection.stability" = c("selector"),
+  "selection.t2" = c("selector"),
+  "selection.uve" = c("selector"),
+  "selection.variable_select" = c("selector"),
+  "selection.vip_spa" = c("selector"),
+  "selection.vissa" = c("selector"),
+  "selection.wvc" = c("selector"),
+  "selection.wvc_threshold" = c("selector")
 )
 
 .n4m_method_constructors <- c(
@@ -47,13 +72,38 @@
   "models.sparse.sparse_simpls" = "n4m_sparse_simpls",
   "models.specialized.ecr" = "n4m_ecr",
   "models.specialized.tensor_pls" = "n4m_tensor_pls",
-  "models.transfer.di_pls" = "n4m_di_pls"
+  "models.transfer.di_pls" = "n4m_di_pls",
+  "selection.bipls" = "n4m_bipls",
+  "selection.bve" = "n4m_bve",
+  "selection.cars" = "n4m_cars",
+  "selection.emcuve" = "n4m_emcuve",
+  "selection.ga" = "n4m_ga",
+  "selection.ipw" = "n4m_ipw",
+  "selection.irf" = "n4m_irf",
+  "selection.iriv" = "n4m_iriv",
+  "selection.pso" = "n4m_pso",
+  "selection.random_frog" = "n4m_random_frog",
+  "selection.randomization" = "n4m_randomization",
+  "selection.rep" = "n4m_rep",
+  "selection.scars" = "n4m_scars",
+  "selection.shaving" = "n4m_shaving",
+  "selection.sipls" = "n4m_sipls",
+  "selection.spa" = "n4m_spa",
+  "selection.st" = "n4m_st",
+  "selection.stability" = "n4m_stability",
+  "selection.t2" = "n4m_t2",
+  "selection.uve" = "n4m_uve",
+  "selection.variable_select" = "n4m_variable_select",
+  "selection.vip_spa" = "n4m_vip_spa",
+  "selection.vissa" = "n4m_vissa",
+  "selection.wvc" = "n4m_wvc",
+  "selection.wvc_threshold" = "n4m_wvc_threshold"
 )
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
-n4m_bagging_pls <- function(n_components = 2L, n_estimators = 50L) {
-  .n4m_estimator("models.ensembles.bagging_pls", c("regressor"), list(n_components = n_components, n_estimators = n_estimators))
+n4m_bagging_pls <- function(n_components = 2L, n_estimators = 50L, seed = 0L) {
+  .n4m_estimator("models.ensembles.bagging_pls", c("regressor"), list(n_components = n_components, n_estimators = n_estimators, seed = seed))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -64,8 +114,8 @@ n4m_boosting_pls <- function(n_components = 2L, n_estimators = 50L, learning_rat
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
-n4m_random_subspace_pls <- function(n_components = 2L, n_estimators = 50L, features_per_subspace = 10L) {
-  .n4m_estimator("models.ensembles.random_subspace_pls", c("regressor"), list(n_components = n_components, n_estimators = n_estimators, features_per_subspace = features_per_subspace))
+n4m_random_subspace_pls <- function(n_components = 2L, n_estimators = 50L, features_per_subspace = 10L, seed = 0L) {
+  .n4m_estimator("models.ensembles.random_subspace_pls", c("regressor"), list(n_components = n_components, n_estimators = n_estimators, features_per_subspace = features_per_subspace, seed = seed))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -174,4 +224,154 @@ n4m_tensor_pls <- function(n_components = 2L, mode_j = NULL, mode_k = NULL) {
 #' @export
 n4m_di_pls <- function(n_components = 2L, di_lambda = 1.0) {
   .n4m_estimator("models.transfer.di_pls", c("regressor"), list(n_components = n_components, di_lambda = di_lambda))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_bipls <- function(n_components = 2L, interval_width = 10L, min_intervals = 2L, cv = 3L) {
+  .n4m_estimator("selection.bipls", c("selector"), list(n_components = n_components, interval_width = interval_width, min_intervals = min_intervals, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_bve <- function(n_components = 2L, n_steps = 10L, min_features = 0L, cv = 3L) {
+  .n4m_estimator("selection.bve", c("selector"), list(n_components = n_components, n_steps = n_steps, min_features = min_features, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_cars <- function(n_components = 2L, n_iterations = 50L, min_features = 0L, cv = 3L) {
+  .n4m_estimator("selection.cars", c("selector"), list(n_components = n_components, n_iterations = n_iterations, min_features = min_features, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_emcuve <- function(n_components = 2L, noise_features = 50L, noise_seed = 0L, n_ensembles = 10L, vote_threshold = 0.5, cv = 3L) {
+  .n4m_estimator("selection.emcuve", c("selector"), list(n_components = n_components, noise_features = noise_features, noise_seed = noise_seed, n_ensembles = n_ensembles, vote_threshold = vote_threshold, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_ga <- function(n_components = 2L, n_generations = 30L, population_size = 40L, min_features = 0L, max_features = 0L, mutation_rate = 0.05, cv = 3L, seed = 0L) {
+  .n4m_estimator("selection.ga", c("selector"), list(n_components = n_components, n_generations = n_generations, population_size = population_size, min_features = min_features, max_features = max_features, mutation_rate = mutation_rate, cv = cv, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_ipw <- function(top_k = NULL, n_components = 2L, n_iterations = 20L, damping = 0.5, weight_floor = 1e-06, cv = 3L) {
+  .n4m_estimator("selection.ipw", c("selector"), list(top_k = top_k, n_components = n_components, n_iterations = n_iterations, damping = damping, weight_floor = weight_floor, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_irf <- function(top_k = NULL, n_components = 2L, n_iterations = 100L, window_size = 5L, initial_intervals = 5L, cv = 3L, seed = 0L) {
+  .n4m_estimator("selection.irf", c("selector"), list(top_k = top_k, n_components = n_components, n_iterations = n_iterations, window_size = window_size, initial_intervals = initial_intervals, cv = cv, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_iriv <- function(n_components = 2L, max_rounds = 5L, cv = 5L, seed = 0L) {
+  .n4m_estimator("selection.iriv", c("selector"), list(n_components = n_components, max_rounds = max_rounds, cv = cv, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pso <- function(n_components = 2L, n_swarm = 30L, n_iterations = 50L, w = 0.729, c1 = 1.494, c2 = 1.494, v_max = 4.0, cv = 3L, seed = 0L) {
+  .n4m_estimator("selection.pso", c("selector"), list(n_components = n_components, n_swarm = n_swarm, n_iterations = n_iterations, w = w, c1 = c1, c2 = c2, v_max = v_max, cv = cv, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_random_frog <- function(top_k = NULL, n_components = 2L, n_iterations = 100L, initial_size = 20L, min_size = 0L, max_size = 0L, cv = 3L, seed = 0L) {
+  .n4m_estimator("selection.random_frog", c("selector"), list(top_k = top_k, n_components = n_components, n_iterations = n_iterations, initial_size = initial_size, min_size = min_size, max_size = max_size, cv = cv, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_randomization <- function(n_components = 2L, n_permutations = 200L, randomization_seed = 0L, alpha = 0.05) {
+  .n4m_estimator("selection.randomization", c("selector"), list(n_components = n_components, n_permutations = n_permutations, randomization_seed = randomization_seed, alpha = alpha))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_rep <- function(n_components = 2L, n_steps = 10L, min_features = 0L, remove_count = 1L, cv = 3L) {
+  .n4m_estimator("selection.rep", c("selector"), list(n_components = n_components, n_steps = n_steps, min_features = min_features, remove_count = remove_count, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_scars <- function(n_components = 2L, n_iterations = 50L, min_features = 0L, sample_fraction = 0.8, cv = 3L, seed = 0L) {
+  .n4m_estimator("selection.scars", c("selector"), list(n_components = n_components, n_iterations = n_iterations, min_features = min_features, sample_fraction = sample_fraction, cv = cv, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_shaving <- function(n_components = 2L, n_steps = 10L, min_features = 0L, shave_fraction = 0.2, cv = 3L) {
+  .n4m_estimator("selection.shaving", c("selector"), list(n_components = n_components, n_steps = n_steps, min_features = min_features, shave_fraction = shave_fraction, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_sipls <- function(n_components = 2L, interval_width = 10L, combination_size = 2L, cv = 3L) {
+  .n4m_estimator("selection.sipls", c("selector"), list(n_components = n_components, interval_width = interval_width, combination_size = combination_size, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spa <- function(top_k = NULL, n_components = 2L) {
+  .n4m_estimator("selection.spa", c("selector"), list(top_k = top_k, n_components = n_components))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_st <- function(thresholds = NULL, n_components = 2L, min_selected = 0L, cv = 3L) {
+  .n4m_estimator("selection.st", c("selector"), list(thresholds = thresholds, n_components = n_components, min_selected = min_selected, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_stability <- function(top_k = NULL, n_components = 2L, cv = 3L) {
+  .n4m_estimator("selection.stability", c("selector"), list(top_k = top_k, n_components = n_components, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_t2 <- function(alpha_thresholds = NULL, n_components = 2L, min_selected = 0L, cv = 3L) {
+  .n4m_estimator("selection.t2", c("selector"), list(alpha_thresholds = alpha_thresholds, n_components = n_components, min_selected = min_selected, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_uve <- function(n_components = 2L, noise_features = 50L, noise_seed = 0L, min_features = -1L, cv = 3L) {
+  .n4m_estimator("selection.uve", c("selector"), list(n_components = n_components, noise_features = noise_features, noise_seed = noise_seed, min_features = min_features, cv = cv))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_variable_select <- function(top_k = NULL, n_components = 2L, rank_method = "vip") {
+  .n4m_estimator("selection.variable_select", c("selector"), list(top_k = top_k, n_components = n_components, rank_method = rank_method))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_vip_spa <- function(top_k = NULL, n_components = 2L, vip_threshold = 0.3) {
+  .n4m_estimator("selection.vip_spa", c("selector"), list(top_k = top_k, n_components = n_components, vip_threshold = vip_threshold))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_vissa <- function(n_components = 2L, n_iterations = 10L, n_submodels = 60L, ratio_kept = 0.1, threshold = 0.5, floor_probability = 0.05, cv = 3L, seed = 0L) {
+  .n4m_estimator("selection.vissa", c("selector"), list(n_components = n_components, n_iterations = n_iterations, n_submodels = n_submodels, ratio_kept = ratio_kept, threshold = threshold, floor_probability = floor_probability, cv = cv, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_wvc <- function(top_k = NULL, n_components = 2L, normalize = TRUE) {
+  .n4m_estimator("selection.wvc", c("selector"), list(top_k = top_k, n_components = n_components, normalize = normalize))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_wvc_threshold <- function(n_components = 2L, normalize = TRUE, score_threshold = 0.0, threshold_factor = 1.0, min_selected = 0L) {
+  .n4m_estimator("selection.wvc_threshold", c("selector"), list(n_components = n_components, normalize = normalize, score_threshold = score_threshold, threshold_factor = threshold_factor, min_selected = min_selected))
 }

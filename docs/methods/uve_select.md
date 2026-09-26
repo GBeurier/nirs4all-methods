@@ -12,10 +12,9 @@ UVE noise-thresholded selection (§18 Phase 5d)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `2` | current public binding signature |
-| `noise_features` | `int` | `50` | current public binding signature |
-| `noise_seed` | `int` | `0` | current public binding signature |
-| `min_features` | `int \| None` | `None` | current public binding signature |
+| `n_components` | `int` | `4` | registry benchmark cell value |
+| `noise_features` | `int` | `5` | registry benchmark cell value |
+| `noise_seed` | `int` | `11` | registry benchmark cell value |
 
 ## Explanations
 
@@ -50,13 +49,7 @@ Current implementation: [cpp/src/core/uve_selection.cpp](https://github.com/GBeu
 
 **C ABI (ABI 2):** [`n4m_feature_selection_uve_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L88). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import UVE
-```
-
-Source signature: `UVE(*, n_components: int = 2, noise_features: int = 50, noise_seed: int = 0, min_features: int | None = None)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L154)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`uve_select(X, Y, n_components, noise_features = NULL, noise_seed = 0L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

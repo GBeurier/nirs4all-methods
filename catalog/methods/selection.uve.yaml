@@ -33,6 +33,35 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_feature_selection_uve_select"
+estimator:
+  kind: "estimator"
+  adapter: "select_uve"
+  roles: "[selector]"
+  state: "selection"
+  inputs:
+    y: "required"
+    fold_ids: "optional"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "noise_features"
+      type: "int"
+      default: 50
+      min: 1
+    - name: "noise_seed"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "min_features"
+      type: "int"
+      default: -1
+      min: -1
+    - name: "cv"
+      type: "int"
+      default: 3
+      min: 2
 fq_name: "n4m.feature_selection.wrapper.uve"
 leaf: "uve"
 legacy_ids:

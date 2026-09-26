@@ -33,6 +33,31 @@ publications: []
 notes: "Auto-discovered from source tree in M2. Refine in subsequent phases (fixtures, references, bindings, publications)."
 c_surface:
   - "n4m_feature_selection_randomization_select"
+estimator:
+  kind: "estimator"
+  adapter: "select_randomization"
+  roles: "[selector]"
+  state: "selection"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+    - name: "n_permutations"
+      type: "int"
+      default: 200
+      min: 1
+    - name: "randomization_seed"
+      type: "int"
+      default: 0
+      min: 0
+    - name: "alpha"
+      type: "double"
+      default: 0.05
+      min: 0.0
+      max: 1.0
 fq_name: "n4m.feature_selection.wrapper.randomization"
 leaf: "randomization"
 legacy_ids:

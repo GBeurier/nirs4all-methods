@@ -6,7 +6,8 @@
 # Parameters, defaults, required inputs, fitting and the N4ME fitted state
 # are native; this file only marshals R objects.
 
-.n4m_role_classes <- c(regressor = "n4m_regressor", transformer = "n4m_transformer")
+.n4m_role_classes <- c(regressor = "n4m_regressor", transformer = "n4m_transformer",
+                       selector = "n4m_selector")
 
 .n4m_estimator <- function(method_id, roles, params) {
   structure(
@@ -47,7 +48,6 @@
 #' @param sample_weight,groups,feature_groups,blocks,axis,X_target,fold_ids
 #'   Optional fit inputs; each method declares which ones it requires and the
 #'   native core refuses the others.
-#' @param seed Seed for stochastic methods.
 #' @param newdata Numeric matrix of new samples.
 #' @param bytes Raw vector produced by \code{n4m_estimator_export()}.
 #' @param ... Unused.
@@ -65,7 +65,7 @@ n4m_estimator_fit <- function(object, X, y = NULL, ...) UseMethod("n4m_estimator
 #' @export
 n4m_estimator_fit.n4m_estimator <- function(object, X, y = NULL, sample_weight = NULL, groups = NULL,
                                   feature_groups = NULL, blocks = NULL, axis = NULL,
-                                  X_target = NULL, fold_ids = NULL, seed = 0, ...) {
+                                  X_target = NULL, fold_ids = NULL, ...) {
   X <- .n4m_as_matrix(X)
   y_matrix <- if (is.null(y)) NULL else matrix(as.double(y), nrow = nrow(X))
   inputs <- list(sample_weight = sample_weight, groups = groups,
@@ -75,7 +75,7 @@ n4m_estimator_fit.n4m_estimator <- function(object, X, y = NULL, sample_weight =
   inputs <- inputs[!vapply(inputs, is.null, logical(1))]
   params <- object$params[!vapply(object$params, is.null, logical(1))]
   pointer <- .Call("r_n4m_estimator_fit", object$method_id, params, X, y_matrix,
-                   inputs, as.double(seed), PACKAGE = "n4m")
+                   inputs, PACKAGE = "n4m")
   object$state <- list2env(list(
     pointer = pointer,
     n4me = .Call("r_n4m_estimator_export", pointer, PACKAGE = "n4m"),
@@ -100,6 +100,22 @@ n4m_estimator_transform <- function(object, X, ...) UseMethod("n4m_estimator_tra
 #' @export
 n4m_estimator_transform.n4m_transformer <- function(object, X, ...) {
   .Call("r_n4m_estimator_transform", .n4m_pointer(object), .n4m_as_matrix(X), PACKAGE = "n4m")
+}
+
+#' @rdname n4m_estimator_roles
+#' @export
+n4m_estimator_transform.n4m_selector <- function(object, X, ...) {
+  .Call("r_n4m_estimator_transform", .n4m_pointer(object), .n4m_as_matrix(X), PACKAGE = "n4m")
+}
+
+#' @rdname n4m_estimator_roles
+#' @export
+n4m_selected_indices <- function(object) UseMethod("n4m_selected_indices")
+
+#' @rdname n4m_estimator_roles
+#' @export
+n4m_selected_indices.n4m_selector <- function(object) {
+  .Call("r_n4m_estimator_selected_indices", .n4m_pointer(object), PACKAGE = "n4m") + 1
 }
 
 #' @rdname n4m_estimator_roles

@@ -245,10 +245,18 @@ typedef struct n4m_fit_inputs_v1_t {
     const int32_t* block_sizes; int32_t n_blocks;        /* multiblock column partition */
     const double* axis; int64_t n_axis;                   /* wavelengths */
     const n4m_matrix_view_t* X_target;      /* target-domain / slave spectra */
-    const n4m_matrix_view_t* Y_target;
-    const n4m_validation_plan_t* plan;      /* folds for internal CV (selectors, AOM) */
-    uint64_t seed;
+    const int64_t* fold_ids; int64_t n_fold_ids; /* internal-CV folds (selectors, AOM) */
 } n4m_fit_inputs_v1_t;
+```
+
+Seeds are hyperparameters (`seed`, `noise_seed`, ...), as `random_state` is
+in scikit-learn and as the n4m references take them: they belong to the
+parameters, so a recipe `{method_id, params}` fixes every random draw.
+Internal-CV methods take a `cv` parameter; when `fold_ids` are absent the core
+builds the canonical contiguous plan (fold size n/k, last fold absorbs the
+remainder).
+
+```c
 ```
 
 Classifiers receive integer class IDs; the state stores the sorted unique IDs

@@ -154,12 +154,11 @@ static double* r_est_double(SEXP v) {
     return out;
 }
 
-/* fit(method_id, params, X, y, inputs, seed) -> external pointer.
+/* fit(method_id, params, X, y, inputs) -> external pointer.
  * `inputs` is a named list among sample_weight, groups, feature_groups,
  * blocks, axis, X_target, fold_ids (R 1-based ids are not used: groups and
  * fold ids are opaque labels, feature groups are labels, blocks are sizes). */
-SEXP r_n4m_estimator_fit(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP inputs,
-                         SEXP seed) {
+SEXP r_n4m_estimator_fit(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP inputs) {
     const char* id = CHAR(STRING_ELT(method_id, 0));
     int32_t index = -1;
     if (n4m_method_find(id, &index) != N4M_OK) Rf_error("unknown n4m method '%s'", id);
@@ -205,7 +204,6 @@ SEXP r_n4m_estimator_fit(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP input
             Rf_error("unknown fit input '%s'", name);
         }
     }
-    in.seed = (uint64_t)Rf_asReal(seed);
 
     n4m_context_t* ctx = r_est_context();
     n4m_params_t* params = NULL;
@@ -253,6 +251,21 @@ static SEXP r_est_matrix_op(SEXP ptr, SEXP X, int transform) {
 SEXP r_n4m_estimator_predict(SEXP ptr, SEXP X) { return r_est_matrix_op(ptr, X, 0); }
 
 SEXP r_n4m_estimator_transform(SEXP ptr, SEXP X) { return r_est_matrix_op(ptr, X, 1); }
+
+/* Selected input columns (0-based, native selection order). */
+SEXP r_n4m_estimator_selected_indices(SEXP ptr) {
+    n4m_estimator_t* est = r_est_get(ptr);
+    int64_t count = 0;
+    n4m_status_t st = n4m_estimator_selected_indices(est, NULL, 0, &count);
+    if (st != N4M_OK) r_est_fail("n4m_estimator_selected_indices", st, NULL, NULL, NULL);
+    int64_t* buf = (int64_t*)R_alloc((size_t)(count > 0 ? count : 1), sizeof(int64_t));
+    st = n4m_estimator_selected_indices(est, buf, count, &count);
+    if (st != N4M_OK) r_est_fail("n4m_estimator_selected_indices", st, NULL, NULL, NULL);
+    SEXP out = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)count));
+    for (int64_t k = 0; k < count; ++k) REAL(out)[k] = (double)buf[k];
+    UNPROTECT(1);
+    return out;
+}
 
 SEXP r_n4m_estimator_export(SEXP ptr) {
     n4m_estimator_t* est = r_est_get(ptr);

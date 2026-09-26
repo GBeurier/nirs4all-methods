@@ -12,12 +12,12 @@ Interval Random Frog (Phase 52)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `top_k` | `int` | `required` | current public binding signature |
-| `n_components` | `int` | `2` | current public binding signature |
-| `n_iterations` | `int` | `100` | current public binding signature |
-| `window_size` | `int` | `5` | current public binding signature |
-| `initial_intervals` | `int` | `5` | current public binding signature |
-| `seed` | `int` | `0` | current public binding signature |
+| `n_components` | `int` | `3` | registry benchmark cell value |
+| `n_iterations` | `int` | `30` | registry benchmark cell value |
+| `window_size` | `int` | `4` | registry benchmark cell value |
+| `initial_intervals` | `int` | `5` | registry benchmark cell value |
+| `top_k` | `int` | `5` | registry benchmark cell value |
+| `seed` | `int` | `11` | registry benchmark cell value |
 
 ## Explanations
 
@@ -50,13 +50,7 @@ Current implementation: [cpp/src/core/irf_selection.cpp](https://github.com/GBeu
 
 **C ABI (ABI 2):** [`n4m_feature_selection_irf_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L414). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import IRF
-```
-
-Source signature: `IRF(top_k: int, *, n_components: int = 2, n_iterations: int = 100, window_size: int = 5, initial_intervals: int = 5, seed: int = 0)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L752)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`irf_select(X, Y, n_components, n_iterations = 100L, window_size = 10L, initial_intervals = 10L, top_k = 5L, seed = 0L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

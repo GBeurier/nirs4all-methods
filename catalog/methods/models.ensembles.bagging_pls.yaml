@@ -49,6 +49,10 @@ estimator:
       type: "int"
       default: 50
       min: 1
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.ensemble.bagging_pls"
 leaf: "bagging_pls"
 legacy_ids:

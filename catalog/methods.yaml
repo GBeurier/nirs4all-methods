@@ -600,6 +600,31 @@ methods:
       - "n4m_feature_selection_bipls_select"
     legacy_ids:
       - "selection.bipls"
+    estimator:
+      kind: estimator
+      adapter: select_bipls
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: interval_width
+          type: int
+          default: 10
+          min: 1
+        - name: min_intervals
+          type: int
+          default: 2
+          min: 1
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.bve"
     family: "selection.wrapper"
     category: "selection"
@@ -636,6 +661,31 @@ methods:
       - "n4m_feature_selection_bve_select"
     legacy_ids:
       - "selection.bve"
+    estimator:
+      kind: estimator
+      adapter: select_bve
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_steps
+          type: int
+          default: 10
+          min: 1
+        - name: min_features
+          type: int
+          default: 0
+          min: 0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.cars"
     family: "selection.wrapper"
     category: "selection"
@@ -672,6 +722,31 @@ methods:
       - "n4m_feature_selection_cars_select"
     legacy_ids:
       - "selection.cars"
+    estimator:
+      kind: estimator
+      adapter: select_cars
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_iterations
+          type: int
+          default: 50
+          min: 1
+        - name: min_features
+          type: int
+          default: 0
+          min: 0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "models.specialized.ecr"
     family: "models.specialized"
     category: "models"
@@ -765,6 +840,40 @@ methods:
       - "n4m_feature_selection_emcuve_select"
     legacy_ids:
       - "selection.emcuve"
+    estimator:
+      kind: estimator
+      adapter: select_emcuve
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: noise_features
+          type: int
+          default: 50
+          min: 1
+        - name: noise_seed
+          type: int
+          default: 0
+          min: 0
+        - name: n_ensembles
+          type: int
+          default: 10
+          min: 1
+        - name: vote_threshold
+          type: double
+          default: 0.5
+          min: 0.0
+          max: 1.0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.ga"
     family: "selection.wrapper"
     category: "selection"
@@ -801,6 +910,48 @@ methods:
       - "n4m_feature_selection_ga_select"
     legacy_ids:
       - "selection.ga"
+    estimator:
+      kind: estimator
+      adapter: select_ga
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_generations
+          type: int
+          default: 30
+          min: 1
+        - name: population_size
+          type: int
+          default: 40
+          min: 2
+        - name: min_features
+          type: int
+          default: 0
+          min: 0
+        - name: max_features
+          type: int
+          default: 0
+          min: 0
+        - name: mutation_rate
+          type: double
+          default: 0.05
+          min: 0.0
+          max: 1.0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "models.specialized.gpr_pls"
     family: "models.specialized"
     category: "models"
@@ -921,6 +1072,39 @@ methods:
       - "n4m_feature_selection_ipw_select"
     legacy_ids:
       - "selection.ipw"
+    estimator:
+      kind: estimator
+      adapter: select_ipw
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: top_k
+          type: int
+          min: 1
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_iterations
+          type: int
+          default: 20
+          min: 1
+        - name: damping
+          type: double
+          default: 0.5
+          min: 0.0
+          max: 1.0
+        - name: weight_floor
+          type: double
+          default: 1e-06
+          min: 0.0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.irf"
     family: "selection.wrapper"
     category: "selection"
@@ -957,6 +1141,42 @@ methods:
       - "n4m_feature_selection_irf_select"
     legacy_ids:
       - "selection.irf"
+    estimator:
+      kind: estimator
+      adapter: select_irf
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: top_k
+          type: int
+          min: 1
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_iterations
+          type: int
+          default: 100
+          min: 1
+        - name: window_size
+          type: int
+          default: 5
+          min: 1
+        - name: initial_intervals
+          type: int
+          default: 5
+          min: 1
+        - name: cv
+          type: int
+          default: 3
+          min: 2
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "selection.iriv"
     family: "selection.wrapper"
     category: "selection"
@@ -993,6 +1213,31 @@ methods:
       - "n4m_feature_selection_iriv_select"
     legacy_ids:
       - "selection.iriv"
+    estimator:
+      kind: estimator
+      adapter: select_iriv
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: max_rounds
+          type: int
+          default: 5
+          min: 1
+        - name: cv
+          type: int
+          default: 5
+          min: 2
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "models.pls.kernel"
     family: "models.pls"
     category: "models"
@@ -1388,6 +1633,48 @@ methods:
       - "n4m_feature_selection_pso_select"
     legacy_ids:
       - "selection.pso"
+    estimator:
+      kind: estimator
+      adapter: select_pso
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_swarm
+          type: int
+          default: 30
+          min: 1
+        - name: n_iterations
+          type: int
+          default: 50
+          min: 1
+        - name: w
+          type: double
+          default: 0.729
+        - name: c1
+          type: double
+          default: 1.494
+        - name: c2
+          type: double
+          default: 1.494
+        - name: v_max
+          type: double
+          default: 4.0
+          min: 0.0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "selection.random_frog"
     family: "selection.wrapper"
     category: "selection"
@@ -1424,6 +1711,46 @@ methods:
       - "n4m_feature_selection_random_frog_select"
     legacy_ids:
       - "selection.random_frog"
+    estimator:
+      kind: estimator
+      adapter: select_random_frog
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: top_k
+          type: int
+          min: 1
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_iterations
+          type: int
+          default: 100
+          min: 1
+        - name: initial_size
+          type: int
+          default: 20
+          min: 1
+        - name: min_size
+          type: int
+          default: 0
+          min: 0
+        - name: max_size
+          type: int
+          default: 0
+          min: 0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "selection.randomization"
     family: "selection.wrapper"
     category: "selection"
@@ -1460,6 +1787,31 @@ methods:
       - "n4m_feature_selection_randomization_select"
     legacy_ids:
       - "selection.randomization"
+    estimator:
+      kind: estimator
+      adapter: select_randomization
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_permutations
+          type: int
+          default: 200
+          min: 1
+        - name: randomization_seed
+          type: int
+          default: 0
+          min: 0
+        - name: alpha
+          type: double
+          default: 0.05
+          min: 0.0
+          max: 1.0
   - method_id: "models.specialized.recursive"
     family: "models.specialized"
     category: "models"
@@ -1532,6 +1884,35 @@ methods:
       - "n4m_feature_selection_rep_select"
     legacy_ids:
       - "selection.rep"
+    estimator:
+      kind: estimator
+      adapter: select_rep
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_steps
+          type: int
+          default: 10
+          min: 1
+        - name: min_features
+          type: int
+          default: 0
+          min: 0
+        - name: remove_count
+          type: int
+          default: 1
+          min: 1
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.scars"
     family: "selection.wrapper"
     category: "selection"
@@ -1568,6 +1949,40 @@ methods:
       - "n4m_feature_selection_scars_select"
     legacy_ids:
       - "selection.scars"
+    estimator:
+      kind: estimator
+      adapter: select_scars
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_iterations
+          type: int
+          default: 50
+          min: 1
+        - name: min_features
+          type: int
+          default: 0
+          min: 0
+        - name: sample_fraction
+          type: double
+          default: 0.8
+          min: 0.0
+          max: 1.0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "selection.shaving"
     family: "selection.wrapper"
     category: "selection"
@@ -1604,6 +2019,36 @@ methods:
       - "n4m_feature_selection_shaving_select"
     legacy_ids:
       - "selection.shaving"
+    estimator:
+      kind: estimator
+      adapter: select_shaving
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_steps
+          type: int
+          default: 10
+          min: 1
+        - name: min_features
+          type: int
+          default: 0
+          min: 0
+        - name: shave_fraction
+          type: double
+          default: 0.2
+          min: 0.0
+          max: 1.0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.sipls"
     family: "selection.wrapper"
     category: "selection"
@@ -1640,6 +2085,31 @@ methods:
       - "n4m_feature_selection_sipls_select"
     legacy_ids:
       - "selection.sipls"
+    estimator:
+      kind: estimator
+      adapter: select_sipls
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: interval_width
+          type: int
+          default: 10
+          min: 1
+        - name: combination_size
+          type: int
+          default: 2
+          min: 1
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.spa"
     family: "selection.wrapper"
     category: "selection"
@@ -1676,6 +2146,21 @@ methods:
       - "n4m_feature_selection_spa_select"
     legacy_ids:
       - "selection.spa"
+    estimator:
+      kind: estimator
+      adapter: select_spa
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+      params:
+        - name: top_k
+          type: int
+          min: 1
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
   - method_id: "selection.st"
     family: "selection.wrapper"
     category: "selection"
@@ -1712,6 +2197,29 @@ methods:
       - "n4m_feature_selection_st_select"
     legacy_ids:
       - "selection.st"
+    estimator:
+      kind: estimator
+      adapter: select_st
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: thresholds
+          type: double_array
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: min_selected
+          type: int
+          default: 0
+          min: 0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.stability"
     family: "selection.wrapper"
     category: "selection"
@@ -1748,6 +2256,26 @@ methods:
       - "n4m_feature_selection_stability_select"
     legacy_ids:
       - "selection.stability"
+    estimator:
+      kind: estimator
+      adapter: select_stability
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: top_k
+          type: int
+          min: 1
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.t2"
     family: "selection.wrapper"
     category: "selection"
@@ -1784,6 +2312,29 @@ methods:
       - "n4m_feature_selection_t2_select"
     legacy_ids:
       - "selection.t2"
+    estimator:
+      kind: estimator
+      adapter: select_t2
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: alpha_thresholds
+          type: double_array
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: min_selected
+          type: int
+          default: 0
+          min: 0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "models.specialized.tensor_pls"
     family: "models.specialized"
     category: "models"
@@ -1874,6 +2425,35 @@ methods:
       - "n4m_feature_selection_uve_select"
     legacy_ids:
       - "selection.uve"
+    estimator:
+      kind: estimator
+      adapter: select_uve
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: noise_features
+          type: int
+          default: 50
+          min: 1
+        - name: noise_seed
+          type: int
+          default: 0
+          min: 0
+        - name: min_features
+          type: int
+          default: -1
+          min: -1
+        - name: cv
+          type: int
+          default: 3
+          min: 2
   - method_id: "selection.variable_select"
     family: "selection.ranker"
     category: "selection"
@@ -1910,6 +2490,25 @@ methods:
       - "n4m_feature_selection_variable_select_rank"
     legacy_ids:
       - "selection.variable_select"
+    estimator:
+      kind: estimator
+      adapter: select_variable_rank
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+      params:
+        - name: top_k
+          type: int
+          min: 1
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: rank_method
+          type: enum
+          choices: [vip, coefficient, selectivity_ratio]
+          default: vip
   - method_id: "selection.vip_spa"
     family: "selection.wrapper"
     category: "selection"
@@ -1946,6 +2545,25 @@ methods:
       - "n4m_feature_selection_vip_spa_select"
     legacy_ids:
       - "selection.vip_spa"
+    estimator:
+      kind: estimator
+      adapter: select_vip_spa
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+      params:
+        - name: top_k
+          type: int
+          min: 1
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: vip_threshold
+          type: double
+          default: 0.3
+          min: 0.0
   - method_id: "selection.vissa"
     family: "selection.wrapper"
     category: "selection"
@@ -1982,6 +2600,50 @@ methods:
       - "n4m_feature_selection_vissa_select"
     legacy_ids:
       - "selection.vissa"
+    estimator:
+      kind: estimator
+      adapter: select_vissa
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+        fold_ids: optional
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_iterations
+          type: int
+          default: 10
+          min: 1
+        - name: n_submodels
+          type: int
+          default: 60
+          min: 1
+        - name: ratio_kept
+          type: double
+          default: 0.1
+          min: 0.0
+          max: 1.0
+        - name: threshold
+          type: double
+          default: 0.5
+          min: 0.0
+          max: 1.0
+        - name: floor_probability
+          type: double
+          default: 0.05
+          min: 0.0
+          max: 1.0
+        - name: cv
+          type: int
+          default: 3
+          min: 2
+        - name: seed
+          type: int
+          default: 0
+          min: 0
   - method_id: "selection.wvc"
     family: "selection.wrapper"
     category: "selection"
@@ -2018,6 +2680,24 @@ methods:
       - "n4m_feature_selection_wvc_select"
     legacy_ids:
       - "selection.wvc"
+    estimator:
+      kind: estimator
+      adapter: select_wvc
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+      params:
+        - name: top_k
+          type: int
+          min: 1
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: normalize
+          type: bool
+          default: true
   - method_id: "selection.wvc_threshold"
     family: "selection.wrapper"
     category: "selection"
@@ -2054,6 +2734,32 @@ methods:
       - "n4m_feature_selection_wvc_threshold_select"
     legacy_ids:
       - "selection.wvc"
+    estimator:
+      kind: estimator
+      adapter: select_wvc_threshold
+      roles: [selector]
+      state: selection
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: normalize
+          type: bool
+          default: true
+        - name: score_threshold
+          type: double
+          default: 0.0
+        - name: threshold_factor
+          type: double
+          default: 1.0
+          min: 0.0
+        - name: min_selected
+          type: int
+          default: 0
+          min: 0
   - method_id: "preprocessing.baselines.airpls"
     family: "preprocessing.baselines"
     category: "preprocessing"
@@ -7418,6 +8124,11 @@ methods:
           type: int
           default: 50
           min: 1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
+
   - method_id: "models.ensembles.boosting_pls"
     family: "models.ensembles"
     category: "models"
@@ -7533,6 +8244,11 @@ methods:
           type: int
           default: 10
           min: 1
+        - name: seed
+          type: int
+          default: 0
+          min: 0
+
   - method_id: "models.ensembles.moment_stack"
     family: "models.ensembles"
     category: "models"

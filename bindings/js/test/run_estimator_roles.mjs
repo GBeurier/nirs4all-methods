@@ -41,7 +41,12 @@ for (const c of fixture.cases) {
     const payload = Uint8Array.from(Buffer.from(c.n4me_base64, "base64"));
     const est = n4m.NativeEstimator.fromN4me(payload);
     assert.equal(est.methodId, c.method_id);
-    close(est.predict(xTest).data, c.predict, 1e-12, `${c.method_id} predict`);
+    if (c.predict) {
+        close(est.predict(xTest).data, c.predict, 1e-12, `${c.method_id} predict`);
+    } else {
+        assert.equal(typeof est.predict, "undefined", `${c.method_id} must not predict`);
+    }
+    if (c.selected_indices) assert.deepEqual(est.selectedIndices(), c.selected_indices);
     if (c.transform) {
         close(est.transform(xTest).data, c.transform.flat(), 1e-12, `${c.method_id} transform`);
     } else {
@@ -51,8 +56,11 @@ for (const c of fixture.cases) {
     est.dispose();
 
     const Cls = byMethod.get(c.method_id);
-    const fitted = new Cls(c.int_params).fit(xTrain, yTrain, inputsFor(c.fit_inputs));
-    close(fitted.predict(xTest).data, c.predict, 1e-9, `${c.method_id} JS fit`);
+    const fitted = new Cls(c.params).fit(xTrain, yTrain, inputsFor(c.fit_inputs));
+    if (c.predict) close(fitted.predict(xTest).data, c.predict, 1e-9, `${c.method_id} JS fit`);
+    if (c.selected_indices) {
+        assert.deepEqual(fitted.selectedIndices(), c.selected_indices, `${c.method_id} JS fit`);
+    }
     fitted.dispose();
 }
 

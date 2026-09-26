@@ -14,6 +14,7 @@ from typing import Any, ClassVar, Self
 
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin
+from sklearn.feature_selection import SelectorMixin
 
 from .._errors import N4MError, check
 from .._ffi import lib
@@ -161,7 +162,6 @@ class NativeEstimator(BaseEstimator):
         axis=None,
         X_target=None,
         fold_ids=None,
-        seed: int = 0,
     ):
         """Fit the native estimator; unused inputs are refused by the core."""
         X_arr = as_f64_2d(X)
@@ -202,7 +202,6 @@ class NativeEstimator(BaseEstimator):
             t_view = numpy_to_view(t_arr)
             keep += [t_arr, t_view]
             inputs.X_target = ctypes.addressof(t_view)
-        inputs.seed = int(seed)
 
         with _Context() as ctx:
             params = self._native_params(ctx)
@@ -459,4 +458,53 @@ def _native_param_values(
         lib.n4m_params_destroy(params)
 
 
-__all__ = ["NativeEstimator", "NativeRegressor", "NativeTransformer", "method_info"]
+class NativeSelector(SelectorMixin, NativeEstimator):
+    """Selector role: Data[n, p] (+ Target) -> Data[n, k] with k selected input columns.
+
+    ``selected_indices_`` keeps the native selection order (rank or pick
+    order); ``transform`` returns the selected columns in ascending input
+    order, as every n4m binding does.
+    """
+
+    @property
+    def selected_indices_(self) -> np.ndarray:
+        handle = self._handle()
+        count = ctypes.c_int64()
+        check(
+            lib.n4m_estimator_selected_indices(handle, None, 0, ctypes.byref(count)),
+            "selected_indices",
+        )
+        out = np.empty(count.value, dtype=np.int64)
+        check(
+            lib.n4m_estimator_selected_indices(
+                handle,
+                out.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                count,
+                ctypes.byref(count),
+            ),
+            "selected_indices",
+        )
+        return out
+
+    def _get_support_mask(self) -> np.ndarray:
+        mask = np.zeros(self.n_features_in_, dtype=bool)
+        mask[self.selected_indices_] = True
+        return mask
+
+    def transform(self, X) -> np.ndarray:
+        """Selected columns, computed natively."""
+        cols = ctypes.c_int64()
+        check(
+            lib.n4m_estimator_transform_cols(self._handle(), ctypes.byref(cols)),
+            "n4m_estimator_transform_cols",
+        )
+        return self._matrix_call("n4m_estimator_transform", X, int(cols.value))
+
+
+__all__ = [
+    "NativeEstimator",
+    "NativeRegressor",
+    "NativeSelector",
+    "NativeTransformer",
+    "method_info",
+]

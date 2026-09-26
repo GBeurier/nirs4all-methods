@@ -147,22 +147,26 @@ bool Params::resolved(std::int32_t index, std::vector<std::int64_t>* ints,
     return true;
 }
 
-const std::vector<std::int64_t>& Params::get_ints(const char* name) const {
+std::vector<std::int64_t> Params::get_ints(const char* name) const {
     std::int32_t i = 0;
     const ParamSpec& p = checked(name, &i);
-    if (!is_int_type(p.type) || !resolved(i, &scratch_ints_, &scratch_doubles_)) {
+    std::vector<std::int64_t> ints;
+    std::vector<double> doubles;
+    if (!is_int_type(p.type) || !resolved(i, &ints, &doubles)) {
         throw std::logic_error("estimator parameter is not an integer or has no value");
     }
-    return scratch_ints_;
+    return ints;
 }
 
-const std::vector<double>& Params::get_doubles(const char* name) const {
+std::vector<double> Params::get_doubles(const char* name) const {
     std::int32_t i = 0;
     const ParamSpec& p = checked(name, &i);
-    if (is_int_type(p.type) || !resolved(i, &scratch_ints_, &scratch_doubles_)) {
+    std::vector<std::int64_t> ints;
+    std::vector<double> doubles;
+    if (is_int_type(p.type) || !resolved(i, &ints, &doubles)) {
         throw std::logic_error("estimator parameter is not a double or has no value");
     }
-    return scratch_doubles_;
+    return doubles;
 }
 
 std::int64_t Params::get_int(const char* name) const { return get_ints(name).at(0); }

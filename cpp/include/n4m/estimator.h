@@ -166,7 +166,6 @@ typedef struct n4m_fit_inputs_v1_t {
     const n4m_matrix_view_t* X_target;       /* target-domain / slave spectra */
     const int64_t* fold_ids;                 /* internal-CV test fold per row */
     int64_t n_fold_ids;
-    uint64_t seed;
 } n4m_fit_inputs_v1_t;
 
 /* ---- Estimator life cycle ------------------------------------------- */

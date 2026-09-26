@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from ._base import NativeRegressor, NativeTransformer
+from ._base import NativeRegressor, NativeSelector, NativeTransformer
 
 
 class BaggingPLS(NativeRegressor):
@@ -18,6 +18,7 @@ class BaggingPLS(NativeRegressor):
     _param_types: ClassVar[dict[str, str]] = {
         "n_components": "int",
         "n_estimators": "int",
+        "seed": "int",
     }
 
     def __init__(
@@ -25,9 +26,11 @@ class BaggingPLS(NativeRegressor):
         *,
         n_components=2,
         n_estimators=50,
+        seed=0,
     ) -> None:
         self.n_components = n_components
         self.n_estimators = n_estimators
+        self.seed = seed
 
 
 class BoostingPLS(NativeRegressor):
@@ -60,6 +63,7 @@ class RandomSubspacePLS(NativeRegressor):
         "n_components": "int",
         "n_estimators": "int",
         "features_per_subspace": "int",
+        "seed": "int",
     }
 
     def __init__(
@@ -68,10 +72,12 @@ class RandomSubspacePLS(NativeRegressor):
         n_components=2,
         n_estimators=50,
         features_per_subspace=10,
+        seed=0,
     ) -> None:
         self.n_components = n_components
         self.n_estimators = n_estimators
         self.features_per_subspace = features_per_subspace
+        self.seed = seed
 
 
 class MBPLS(NativeRegressor):
@@ -500,26 +506,755 @@ class DIPLS(NativeRegressor):
         self.di_lambda = di_lambda
 
 
+class BiPLS(NativeSelector):
+    """Native ``selection.bipls`` (selector)."""
+
+    _method_id = "selection.bipls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "interval_width": "int",
+        "min_intervals": "int",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        interval_width=10,
+        min_intervals=2,
+        cv=3,
+    ) -> None:
+        self.n_components = n_components
+        self.interval_width = interval_width
+        self.min_intervals = min_intervals
+        self.cv = cv
+
+
+class BVE(NativeSelector):
+    """Native ``selection.bve`` (selector)."""
+
+    _method_id = "selection.bve"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_steps": "int",
+        "min_features": "int",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_steps=10,
+        min_features=0,
+        cv=3,
+    ) -> None:
+        self.n_components = n_components
+        self.n_steps = n_steps
+        self.min_features = min_features
+        self.cv = cv
+
+
+class CARS(NativeSelector):
+    """Native ``selection.cars`` (selector)."""
+
+    _method_id = "selection.cars"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_iterations": "int",
+        "min_features": "int",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_iterations=50,
+        min_features=0,
+        cv=3,
+    ) -> None:
+        self.n_components = n_components
+        self.n_iterations = n_iterations
+        self.min_features = min_features
+        self.cv = cv
+
+
+class EMCUVE(NativeSelector):
+    """Native ``selection.emcuve`` (selector)."""
+
+    _method_id = "selection.emcuve"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "noise_features": "int",
+        "noise_seed": "int",
+        "n_ensembles": "int",
+        "vote_threshold": "double",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        noise_features=50,
+        noise_seed=0,
+        n_ensembles=10,
+        vote_threshold=0.5,
+        cv=3,
+    ) -> None:
+        self.n_components = n_components
+        self.noise_features = noise_features
+        self.noise_seed = noise_seed
+        self.n_ensembles = n_ensembles
+        self.vote_threshold = vote_threshold
+        self.cv = cv
+
+
+class GA(NativeSelector):
+    """Native ``selection.ga`` (selector)."""
+
+    _method_id = "selection.ga"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_generations": "int",
+        "population_size": "int",
+        "min_features": "int",
+        "max_features": "int",
+        "mutation_rate": "double",
+        "cv": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_generations=30,
+        population_size=40,
+        min_features=0,
+        max_features=0,
+        mutation_rate=0.05,
+        cv=3,
+        seed=0,
+    ) -> None:
+        self.n_components = n_components
+        self.n_generations = n_generations
+        self.population_size = population_size
+        self.min_features = min_features
+        self.max_features = max_features
+        self.mutation_rate = mutation_rate
+        self.cv = cv
+        self.seed = seed
+
+
+class IPW(NativeSelector):
+    """Native ``selection.ipw`` (selector)."""
+
+    _method_id = "selection.ipw"
+    _param_types: ClassVar[dict[str, str]] = {
+        "top_k": "int",
+        "n_components": "int",
+        "n_iterations": "int",
+        "damping": "double",
+        "weight_floor": "double",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        top_k=None,
+        n_components=2,
+        n_iterations=20,
+        damping=0.5,
+        weight_floor=1e-06,
+        cv=3,
+    ) -> None:
+        self.top_k = top_k
+        self.n_components = n_components
+        self.n_iterations = n_iterations
+        self.damping = damping
+        self.weight_floor = weight_floor
+        self.cv = cv
+
+
+class IRF(NativeSelector):
+    """Native ``selection.irf`` (selector)."""
+
+    _method_id = "selection.irf"
+    _param_types: ClassVar[dict[str, str]] = {
+        "top_k": "int",
+        "n_components": "int",
+        "n_iterations": "int",
+        "window_size": "int",
+        "initial_intervals": "int",
+        "cv": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        top_k=None,
+        n_components=2,
+        n_iterations=100,
+        window_size=5,
+        initial_intervals=5,
+        cv=3,
+        seed=0,
+    ) -> None:
+        self.top_k = top_k
+        self.n_components = n_components
+        self.n_iterations = n_iterations
+        self.window_size = window_size
+        self.initial_intervals = initial_intervals
+        self.cv = cv
+        self.seed = seed
+
+
+class IRIV(NativeSelector):
+    """Native ``selection.iriv`` (selector)."""
+
+    _method_id = "selection.iriv"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "max_rounds": "int",
+        "cv": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        max_rounds=5,
+        cv=5,
+        seed=0,
+    ) -> None:
+        self.n_components = n_components
+        self.max_rounds = max_rounds
+        self.cv = cv
+        self.seed = seed
+
+
+class PSO(NativeSelector):
+    """Native ``selection.pso`` (selector)."""
+
+    _method_id = "selection.pso"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_swarm": "int",
+        "n_iterations": "int",
+        "w": "double",
+        "c1": "double",
+        "c2": "double",
+        "v_max": "double",
+        "cv": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_swarm=30,
+        n_iterations=50,
+        w=0.729,
+        c1=1.494,
+        c2=1.494,
+        v_max=4,
+        cv=3,
+        seed=0,
+    ) -> None:
+        self.n_components = n_components
+        self.n_swarm = n_swarm
+        self.n_iterations = n_iterations
+        self.w = w
+        self.c1 = c1
+        self.c2 = c2
+        self.v_max = v_max
+        self.cv = cv
+        self.seed = seed
+
+
+class RandomFrog(NativeSelector):
+    """Native ``selection.random_frog`` (selector)."""
+
+    _method_id = "selection.random_frog"
+    _param_types: ClassVar[dict[str, str]] = {
+        "top_k": "int",
+        "n_components": "int",
+        "n_iterations": "int",
+        "initial_size": "int",
+        "min_size": "int",
+        "max_size": "int",
+        "cv": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        top_k=None,
+        n_components=2,
+        n_iterations=100,
+        initial_size=20,
+        min_size=0,
+        max_size=0,
+        cv=3,
+        seed=0,
+    ) -> None:
+        self.top_k = top_k
+        self.n_components = n_components
+        self.n_iterations = n_iterations
+        self.initial_size = initial_size
+        self.min_size = min_size
+        self.max_size = max_size
+        self.cv = cv
+        self.seed = seed
+
+
+class Randomization(NativeSelector):
+    """Native ``selection.randomization`` (selector)."""
+
+    _method_id = "selection.randomization"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_permutations": "int",
+        "randomization_seed": "int",
+        "alpha": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_permutations=200,
+        randomization_seed=0,
+        alpha=0.05,
+    ) -> None:
+        self.n_components = n_components
+        self.n_permutations = n_permutations
+        self.randomization_seed = randomization_seed
+        self.alpha = alpha
+
+
+class REP(NativeSelector):
+    """Native ``selection.rep`` (selector)."""
+
+    _method_id = "selection.rep"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_steps": "int",
+        "min_features": "int",
+        "remove_count": "int",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_steps=10,
+        min_features=0,
+        remove_count=1,
+        cv=3,
+    ) -> None:
+        self.n_components = n_components
+        self.n_steps = n_steps
+        self.min_features = min_features
+        self.remove_count = remove_count
+        self.cv = cv
+
+
+class SCARS(NativeSelector):
+    """Native ``selection.scars`` (selector)."""
+
+    _method_id = "selection.scars"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_iterations": "int",
+        "min_features": "int",
+        "sample_fraction": "double",
+        "cv": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_iterations=50,
+        min_features=0,
+        sample_fraction=0.8,
+        cv=3,
+        seed=0,
+    ) -> None:
+        self.n_components = n_components
+        self.n_iterations = n_iterations
+        self.min_features = min_features
+        self.sample_fraction = sample_fraction
+        self.cv = cv
+        self.seed = seed
+
+
+class Shaving(NativeSelector):
+    """Native ``selection.shaving`` (selector)."""
+
+    _method_id = "selection.shaving"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_steps": "int",
+        "min_features": "int",
+        "shave_fraction": "double",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_steps=10,
+        min_features=0,
+        shave_fraction=0.2,
+        cv=3,
+    ) -> None:
+        self.n_components = n_components
+        self.n_steps = n_steps
+        self.min_features = min_features
+        self.shave_fraction = shave_fraction
+        self.cv = cv
+
+
+class SiPLS(NativeSelector):
+    """Native ``selection.sipls`` (selector)."""
+
+    _method_id = "selection.sipls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "interval_width": "int",
+        "combination_size": "int",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        interval_width=10,
+        combination_size=2,
+        cv=3,
+    ) -> None:
+        self.n_components = n_components
+        self.interval_width = interval_width
+        self.combination_size = combination_size
+        self.cv = cv
+
+
+class SPA(NativeSelector):
+    """Native ``selection.spa`` (selector)."""
+
+    _method_id = "selection.spa"
+    _param_types: ClassVar[dict[str, str]] = {
+        "top_k": "int",
+        "n_components": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        top_k=None,
+        n_components=2,
+    ) -> None:
+        self.top_k = top_k
+        self.n_components = n_components
+
+
+class ST(NativeSelector):
+    """Native ``selection.st`` (selector)."""
+
+    _method_id = "selection.st"
+    _param_types: ClassVar[dict[str, str]] = {
+        "thresholds": "double_array",
+        "n_components": "int",
+        "min_selected": "int",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        thresholds=None,
+        n_components=2,
+        min_selected=0,
+        cv=3,
+    ) -> None:
+        self.thresholds = thresholds
+        self.n_components = n_components
+        self.min_selected = min_selected
+        self.cv = cv
+
+
+class Stability(NativeSelector):
+    """Native ``selection.stability`` (selector)."""
+
+    _method_id = "selection.stability"
+    _param_types: ClassVar[dict[str, str]] = {
+        "top_k": "int",
+        "n_components": "int",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        top_k=None,
+        n_components=2,
+        cv=3,
+    ) -> None:
+        self.top_k = top_k
+        self.n_components = n_components
+        self.cv = cv
+
+
+class T2(NativeSelector):
+    """Native ``selection.t2`` (selector)."""
+
+    _method_id = "selection.t2"
+    _param_types: ClassVar[dict[str, str]] = {
+        "alpha_thresholds": "double_array",
+        "n_components": "int",
+        "min_selected": "int",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        alpha_thresholds=None,
+        n_components=2,
+        min_selected=0,
+        cv=3,
+    ) -> None:
+        self.alpha_thresholds = alpha_thresholds
+        self.n_components = n_components
+        self.min_selected = min_selected
+        self.cv = cv
+
+
+class UVE(NativeSelector):
+    """Native ``selection.uve`` (selector)."""
+
+    _method_id = "selection.uve"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "noise_features": "int",
+        "noise_seed": "int",
+        "min_features": "int",
+        "cv": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        noise_features=50,
+        noise_seed=0,
+        min_features=-1,
+        cv=3,
+    ) -> None:
+        self.n_components = n_components
+        self.noise_features = noise_features
+        self.noise_seed = noise_seed
+        self.min_features = min_features
+        self.cv = cv
+
+
+class VariableSelect(NativeSelector):
+    """Native ``selection.variable_select`` (selector)."""
+
+    _method_id = "selection.variable_select"
+    _param_types: ClassVar[dict[str, str]] = {
+        "top_k": "int",
+        "n_components": "int",
+        "rank_method": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "rank_method": (
+            "vip",
+            "coefficient",
+            "selectivity_ratio",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        top_k=None,
+        n_components=2,
+        rank_method="vip",
+    ) -> None:
+        self.top_k = top_k
+        self.n_components = n_components
+        self.rank_method = rank_method
+
+
+class VIPSPA(NativeSelector):
+    """Native ``selection.vip_spa`` (selector)."""
+
+    _method_id = "selection.vip_spa"
+    _param_types: ClassVar[dict[str, str]] = {
+        "top_k": "int",
+        "n_components": "int",
+        "vip_threshold": "double",
+    }
+
+    def __init__(
+        self,
+        *,
+        top_k=None,
+        n_components=2,
+        vip_threshold=0.3,
+    ) -> None:
+        self.top_k = top_k
+        self.n_components = n_components
+        self.vip_threshold = vip_threshold
+
+
+class VISSA(NativeSelector):
+    """Native ``selection.vissa`` (selector)."""
+
+    _method_id = "selection.vissa"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "n_iterations": "int",
+        "n_submodels": "int",
+        "ratio_kept": "double",
+        "threshold": "double",
+        "floor_probability": "double",
+        "cv": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        n_iterations=10,
+        n_submodels=60,
+        ratio_kept=0.1,
+        threshold=0.5,
+        floor_probability=0.05,
+        cv=3,
+        seed=0,
+    ) -> None:
+        self.n_components = n_components
+        self.n_iterations = n_iterations
+        self.n_submodels = n_submodels
+        self.ratio_kept = ratio_kept
+        self.threshold = threshold
+        self.floor_probability = floor_probability
+        self.cv = cv
+        self.seed = seed
+
+
+class WVC(NativeSelector):
+    """Native ``selection.wvc`` (selector)."""
+
+    _method_id = "selection.wvc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "top_k": "int",
+        "n_components": "int",
+        "normalize": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        top_k=None,
+        n_components=2,
+        normalize=True,
+    ) -> None:
+        self.top_k = top_k
+        self.n_components = n_components
+        self.normalize = normalize
+
+
+class WVCThreshold(NativeSelector):
+    """Native ``selection.wvc_threshold`` (selector)."""
+
+    _method_id = "selection.wvc_threshold"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "normalize": "bool",
+        "score_threshold": "double",
+        "threshold_factor": "double",
+        "min_selected": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        normalize=True,
+        score_threshold=0,
+        threshold_factor=1,
+        min_selected=0,
+    ) -> None:
+        self.n_components = n_components
+        self.normalize = normalize
+        self.score_threshold = score_threshold
+        self.threshold_factor = threshold_factor
+        self.min_selected = min_selected
+
+
 __all__ = [
+    "BVE",
+    "CARS",
     "CPPLS",
     "DIPLS",
     "ECR",
+    "EMCUVE",
+    "GA",
+    "IPW",
+    "IRF",
+    "IRIV",
     "MBPLS",
     "MIRPLS",
     "NPLS",
     "O2PLS",
     "PCR",
+    "PSO",
+    "REP",
+    "SCARS",
+    "SPA",
+    "ST",
+    "T2",
+    "UVE",
+    "VIPSPA",
+    "VISSA",
+    "WVC",
     "BaggingPLS",
+    "BiPLS",
     "BoostingPLS",
     "ContinuumRegression",
     "FusedSparsePLS",
     "GroupSparsePLS",
     "PLSRegression",
+    "RandomFrog",
     "RandomSubspacePLS",
+    "Randomization",
     "Ridge",
     "RidgePLS",
     "RobustPLS",
+    "Shaving",
+    "SiPLS",
     "SimplePLS",
     "SparseSIMPLS",
+    "Stability",
+    "VariableSelect",
+    "WVCThreshold",
     "WeightedPLS",
 ]

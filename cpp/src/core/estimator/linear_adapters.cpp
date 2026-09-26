@@ -382,7 +382,8 @@ std::unique_ptr<Adapter> make_affine_di_pls(const MethodSpec&) {
 std::unique_ptr<Adapter> make_affine_bagging_pls(const MethodSpec&) {
     return affine([](auto ctx, auto cfg, const Params& p, const FitInputs& in, auto out) {
         return n4m_ensemble_bagging_pls_fit(ctx, cfg, in.X, in.Y,
-                                            narrow(p.get_int("n_estimators")), in.seed, out);
+                                            narrow(p.get_int("n_estimators")),
+                                            static_cast<std::uint64_t>(p.get_int("seed")), out);
     });
 }
 
@@ -398,7 +399,8 @@ std::unique_ptr<Adapter> make_affine_random_subspace_pls(const MethodSpec&) {
     return affine([](auto ctx, auto cfg, const Params& p, const FitInputs& in, auto out) {
         return n4m_ensemble_random_subspace_pls_fit(
             ctx, cfg, in.X, in.Y, narrow(p.get_int("n_estimators")),
-            narrow(p.get_int("features_per_subspace")), in.seed, out);
+            narrow(p.get_int("features_per_subspace")),
+            static_cast<std::uint64_t>(p.get_int("seed")), out);
     });
 }
 

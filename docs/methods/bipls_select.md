@@ -12,10 +12,9 @@ biPLS backward interval elimination (§18 Phase 5p)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `2` | current public binding signature |
-| `interval_width` | `int` | `10` | current public binding signature |
-| `min_intervals` | `int` | `2` | current public binding signature |
-| `n_folds` | `int` | `3` | current public binding signature |
+| `n_components` | `int` | `4` | registry benchmark cell value |
+| `interval_width` | `int` | `5` | registry benchmark cell value |
+| `min_intervals` | `int` | `2` | registry benchmark cell value |
 
 ## Explanations
 
@@ -52,13 +51,7 @@ Current implementation: [cpp/src/core/bipls_selection.cpp](https://github.com/GB
 
 **C ABI (ABI 2):** [`n4m_feature_selection_bipls_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L313). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import BiPLS
-```
-
-Source signature: `BiPLS(*, n_components: int = 2, interval_width: int = 10, min_intervals: int = 2, n_folds: int = 3)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L541)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`bipls_select(X, Y, n_components, interval_width = 10L, min_intervals = 1L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

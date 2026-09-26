@@ -3,8 +3,9 @@
 
 Every estimator of the native manifest is fitted once on a fixed synthetic
 dataset; the fixture stores its N4ME bytes, the held-out rows and the native
-outputs. The R and JS/WASM suites import the same bytes and must reproduce the
-outputs, which is the Level 2 (trained-state) portability check.
+outputs of its roles (predictions, transformed rows, selected columns). The R
+and JS/WASM suites import the same bytes and must reproduce these outputs
+(Level 2, trained-state portability), then refit and match the Python fit.
 
     N4M_LIB_PATH=... PYTHONPATH=bindings/python/src python scripts/generate_estimator_fixtures.py
 """
@@ -28,6 +29,16 @@ R_OUTPUT = (
 )
 N_FEATURES = 12
 
+# Values for parameters the test data needs (required ones, or defaults too
+# large for 12 columns).
+EXPLICIT_PARAMS = {
+    "mode_j": 3,
+    "mode_k": 4,
+    "top_k": 4,
+    "thresholds": [0.05, 0.1, 0.3],
+    "alpha_thresholds": [0.95, 0.99],
+}
+
 
 def dataset():
     rng = np.random.default_rng(20260927)
@@ -37,6 +48,13 @@ def dataset():
     y = scores[:, 0] - 0.5 * scores[:, 1] + 0.05 * rng.normal(size=48)
     X_target = rng.normal(size=(30, 2)) @ loadings + 0.3
     return X[:36], y[:36], X[36:], X_target
+
+
+def explicit_params(cls) -> dict:
+    params = {k: v for k, v in EXPLICIT_PARAMS.items() if k in cls._param_types}
+    if cls is roles.RandomFrog:
+        params["initial_size"] = 6
+    return params
 
 
 def fit_inputs(cls, X_target):
@@ -52,23 +70,20 @@ def main() -> None:
     cases = []
     for method_id in sorted(_REGISTRY):
         cls = _REGISTRY[method_id]
-        est = (cls(mode_j=3, mode_k=4) if cls is roles.NPLS else cls()).fit(
-            X, y, **fit_inputs(cls, X_target)
-        )
-        params = {
-            k: v for k, v in est.get_params().items() if cls._param_types[k] != "enum"
-        }
+        params = explicit_params(cls)
+        est = cls(**params).fit(X, y, **fit_inputs(cls, X_target))
         case = {
             "method_id": method_id,
             "fit_inputs": sorted(fit_inputs(cls, X_target)),
-            "int_params": {
-                k: v for k, v in params.items() if cls._param_types[k] == "int"
-            },
+            "params": params,
             "n4me_base64": base64.b64encode(est.to_n4me()).decode(),
-            "predict": est.predict(X_test).tolist(),
         }
-        if isinstance(est, roles.NativeTransformer):
+        if isinstance(est, roles.NativeRegressor):
+            case["predict"] = est.predict(X_test).tolist()
+        if isinstance(est, (roles.NativeTransformer, roles.NativeSelector)):
             case["transform"] = est.transform(X_test).tolist()
+        if isinstance(est, roles.NativeSelector):
+            case["selected_indices"] = est.selected_indices_.tolist()
         cases.append(case)
     doc = {
         "abi": ".".join(map(str, n4m.abi_version())),
@@ -85,6 +100,12 @@ def main() -> None:
     print(
         f"wrote {OUTPUT.relative_to(REPO)} and {R_OUTPUT.relative_to(REPO)} ({len(cases)} estimators)"
     )
+
+
+def r_value(value) -> str:
+    if isinstance(value, list):
+        return r_vector(value)
+    return f"{value}L" if isinstance(value, int) else repr(float(value))
 
 
 def r_vector(values) -> str:
@@ -112,17 +133,20 @@ def render_r(doc: dict) -> str:
     cases = []
     for case in doc["cases"]:
         hexa = base64.b64decode(case["n4me_base64"]).hex()
+        inputs = ", ".join(f'"{n}"' for n in case["fit_inputs"])
+        params = ", ".join(f"{k} = {r_value(v)}" for k, v in case["params"].items())
         fields = [
             f'    method_id = "{case["method_id"]}"',
             f'    n4me = "{hexa}"',
-            "    fit_inputs = c("
-            + ", ".join(f'"{n}"' for n in case["fit_inputs"])
-            + ")",
-            "    int_params = list("
-            + ", ".join(f"{k} = {v}L" for k, v in case["int_params"].items())
-            + ")",
-            f"    predict = {r_vector(case['predict'])}",
+            f"    fit_inputs = c({inputs})",
+            f"    params = list({params})",
         ]
+        if "predict" in case:
+            fields.append(f"    predict = {r_vector(case['predict'])}")
+        if "selected_indices" in case:
+            fields.append(
+                f"    selected_indices = {r_vector(case['selected_indices'])}"
+            )
         if "transform" in case:
             fields.append(f"    transform = {r_matrix(case['transform'])}")
         cases.append("   list(\n" + ",\n".join(fields) + ")")

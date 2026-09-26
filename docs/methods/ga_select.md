@@ -12,14 +12,13 @@ GA-PLS genetic algorithm selection
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `2` | current public binding signature |
-| `n_generations` | `int` | `30` | current public binding signature |
-| `population_size` | `int` | `40` | current public binding signature |
-| `min_features` | `int \| None` | `None` | current public binding signature |
-| `max_features` | `int \| None` | `None` | current public binding signature |
-| `mutation_rate` | `float` | `0.05` | current public binding signature |
-| `n_folds` | `int` | `3` | current public binding signature |
-| `seed` | `int` | `0` | current public binding signature |
+| `n_components` | `int` | `4` | registry benchmark cell value |
+| `n_generations` | `int` | `5` | registry benchmark cell value |
+| `population_size` | `int` | `12` | registry benchmark cell value |
+| `min_features` | `int` | `5` | registry benchmark cell value |
+| `max_features` | `int` | `20` | registry benchmark cell value |
+| `mutation_rate` | `float` | `0.1` | registry benchmark cell value |
+| `seed` | `int` | `11` | registry benchmark cell value |
 
 ## Explanations
 
@@ -56,13 +55,7 @@ Current implementation: [cpp/src/core/ga_selection.cpp](https://github.com/GBeur
 
 **C ABI (ABI 2):** [`n4m_feature_selection_ga_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L147). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import GA
-```
-
-Source signature: `GA(*, n_components: int = 2, n_generations: int = 30, population_size: int = 40, min_features: int | None = None, max_features: int | None = None, mutation_rate: float = 0.05, n_folds: int = 3, seed: int = 0)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L292)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`ga_select(X, Y, n_components, n_generations = 50L, population_size = 50L, min_features = NULL, max_features = NULL, mutation_rate = 0.01, seed = 0L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

@@ -5,6 +5,7 @@
 // predicts held-out rows, round-trips through N4ME with bitwise-identical
 // outputs, and refuses missing or unused inputs.
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -77,7 +78,6 @@ struct Inputs {
         n4m_fit_inputs_v1_t in{};
         in.struct_size = sizeof(in);
         in.X = &X;
-        in.seed = 7;
         auto wants = [&](n4m_fit_input_t k) { return info.inputs[k] != N4M_INPUT_NONE; };
         if (wants(N4M_FIT_INPUT_Y)) in.Y = &Y;
         if (wants(N4M_FIT_INPUT_FEATURE_GROUPS)) {
@@ -108,6 +108,14 @@ void fill_required(int32_t index, n4m_params_t* params) {
             CHECK(n4m_params_set_int(params, pi.name, 3) == N4M_OK);
         } else if (std::strcmp(pi.name, "mode_k") == 0) {
             CHECK(n4m_params_set_int(params, pi.name, 4) == N4M_OK);
+        } else if (std::strcmp(pi.name, "top_k") == 0) {
+            CHECK(n4m_params_set_int(params, pi.name, 4) == N4M_OK);
+        } else if (std::strcmp(pi.name, "thresholds") == 0) {
+            const double v[] = {0.05, 0.1, 0.3};
+            CHECK(n4m_params_set_double_array(params, pi.name, v, 3) == N4M_OK);
+        } else if (std::strcmp(pi.name, "alpha_thresholds") == 0) {
+            const double v[] = {0.95, 0.99};
+            CHECK(n4m_params_set_double_array(params, pi.name, v, 2) == N4M_OK);
         } else {
             throw std::runtime_error(std::string("no test value for required parameter ") +
                                      pi.name + " @" + current_);
@@ -125,6 +133,39 @@ std::vector<unsigned char> export_bytes(n4m_context_t* ctx, const n4m_estimator_
     return bytes;
 }
 
+// Selectors and pure transformers: out-of-sample transform, selected columns,
+// and bitwise N4ME round trip.
+void conformance_transform_only(n4m_context_t* ctx, const n4m_estimator_t* est, Inputs& in,
+                                const n4m_method_info_v1_t& info) {
+    int64_t cols = 0;
+    CHECK(n4m_estimator_transform_cols(est, &cols) == N4M_OK && cols > 0 && cols <= kCols);
+    std::vector<double> out(static_cast<size_t>(kTest * cols)), out2(out.size());
+    auto X_test = view(in.data.x_test.data(), kTest, kCols);
+    auto O = view(out.data(), kTest, cols);
+    CHECK(n4m_estimator_transform(ctx, est, &X_test, &O) == N4M_OK);
+    if ((info.roles & N4M_ROLE_SELECTOR) != 0) {
+        std::vector<int64_t> idx(static_cast<size_t>(cols));
+        int64_t count = 0;
+        CHECK(n4m_estimator_selected_indices(est, idx.data(), cols, &count) == N4M_OK);
+        CHECK(count == cols);
+        std::sort(idx.begin(), idx.end());
+        for (int64_t i = 0; i < kTest; ++i) {
+            for (int64_t j = 0; j < cols; ++j) {
+                CHECK(out[static_cast<size_t>(i * cols + j)] ==
+                      in.data.x_test[static_cast<size_t>(i * kCols + idx[static_cast<size_t>(j)])]);
+            }
+        }
+    }
+    const auto bytes = export_bytes(ctx, est);
+    n4m_estimator_t* back = nullptr;
+    CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) == N4M_OK);
+    auto O2 = view(out2.data(), kTest, cols);
+    CHECK(n4m_estimator_transform(ctx, back, &X_test, &O2) == N4M_OK);
+    CHECK(out == out2);
+    CHECK(export_bytes(ctx, back) == bytes);
+    n4m_estimator_destroy(back);
+}
+
 void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
     n4m_method_info_v1_t info{};
     info.struct_size = sizeof(info);
@@ -135,6 +176,10 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
     n4m_params_t* params = nullptr;
     CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
     fill_required(index, params);
+    // Random frog's default initial subset (20) exceeds the 12 test columns.
+    if (std::strcmp(info.method_id, "selection.random_frog") == 0) {
+        CHECK(n4m_params_set_int(params, "initial_size", 6) == N4M_OK);
+    }
     CHECK(n4m_params_validate(ctx, params) == N4M_OK);
     n4m_estimator_t* est = nullptr;
     CHECK(n4m_estimator_create(ctx, info.method_id, params, &est) == N4M_OK);
@@ -180,10 +225,16 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
     CHECK(((info.roles & N4M_ROLE_SAMPLE_FILTER) != 0) == ((caps & N4M_CAP_APPLY_MASK) != 0));
     int64_t n_in = 0, n_out = 0;
     CHECK(n4m_estimator_n_features_in(est, &n_in) == N4M_OK && n_in == kCols);
-    CHECK(n4m_estimator_n_outputs(est, &n_out) == N4M_OK && n_out == 1);
+    CHECK(n4m_estimator_n_outputs(est, &n_out) == N4M_OK && n_out == (predicts ? 1 : 0));
+
+    if (!predicts) {
+        CHECK(n4m_estimator_predict(ctx, est, &X_test, &P) == N4M_ERR_UNSUPPORTED);
+        conformance_transform_only(ctx, est, in, info);
+        n4m_estimator_destroy(est);
+        return;
+    }
 
     // Out-of-sample predictions are finite and informative.
-    CHECK((caps & N4M_CAP_PREDICT) != 0);
     CHECK(n4m_estimator_predict(ctx, est, &X_test, &P) == N4M_OK);
     double spread = 0.0;
     for (double v : pred) {

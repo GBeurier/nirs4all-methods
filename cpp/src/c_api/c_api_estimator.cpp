@@ -116,7 +116,6 @@ n4m_status_t normalize_inputs(n4m_context_t* ctx, const MethodSpec& spec,
     in.X_target = v.X_target;
     in.fold_ids = v.fold_ids;
     in.n_fold_ids = v.fold_ids != nullptr ? v.n_fold_ids : 0;
-    in.seed = v.seed;
 
     const bool present[N4M_FIT_INPUT_COUNT] = {
         in.Y != nullptr,          in.labels != nullptr,         in.sample_weight != nullptr,

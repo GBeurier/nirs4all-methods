@@ -64,13 +64,19 @@ def fit_kwargs(cls, X_target):
 
 
 ALL = sorted(_REGISTRY.values(), key=lambda c: c._method_id)
+REGRESSORS = [c for c in ALL if issubclass(c, roles.NativeRegressor)]
+SELECTORS = [c for c in ALL if issubclass(c, roles.NativeSelector)]
 
 
 def test_generated_classes_match_native_manifest():
     assert set(_REGISTRY) == manifest_estimators()
 
 
-ROLE_BIT = {roles.NativeTransformer: 1 << 0, roles.NativeRegressor: 1 << 1}
+ROLE_BIT = {
+    roles.NativeTransformer: 1 << 0,
+    roles.NativeRegressor: 1 << 1,
+    roles.NativeSelector: 1 << 3,
+}
 
 
 @pytest.mark.parametrize("cls", ALL, ids=lambda c: c.__name__)
@@ -78,13 +84,13 @@ def test_classes_expose_exactly_their_role_interfaces(cls):
     declared = roles.method_info(cls._method_id).roles
     for base, bit in ROLE_BIT.items():
         assert issubclass(cls, base) == bool(declared & bit)
-    if not issubclass(cls, roles.NativeTransformer):
+    if not issubclass(cls, (roles.NativeTransformer, roles.NativeSelector)):
         assert not hasattr(cls, "transform")
     if not issubclass(cls, roles.NativeRegressor):
         assert not hasattr(cls, "predict")
 
 
-@pytest.mark.parametrize("cls", ALL, ids=lambda c: c.__name__)
+@pytest.mark.parametrize("cls", REGRESSORS, ids=lambda c: c.__name__)
 def test_fit_predict_roundtrip(cls, data):
     X, y, X_test, X_target, y_test = data
     est = build(cls).fit(X, y, **fit_kwargs(cls, X_target))
@@ -107,7 +113,7 @@ def test_fit_predict_roundtrip(cls, data):
         np.testing.assert_array_equal(restored.transform(X_test), scores)
 
 
-@pytest.mark.parametrize("cls", ALL, ids=lambda c: c.__name__)
+@pytest.mark.parametrize("cls", REGRESSORS, ids=lambda c: c.__name__)
 def test_unused_and_missing_inputs_are_refused(cls, data):
     X, y, _, X_target, _ = data
     with pytest.raises(N4MError, match="not used by this method"):
@@ -212,11 +218,94 @@ def test_cross_language_fixture_states_replay():
     for case in doc["cases"]:
         payload = base64.b64decode(case["n4me_base64"])
         est = roles.NativeEstimator.from_n4me(payload)
-        np.testing.assert_allclose(
-            est.predict(X_test), case["predict"], rtol=1e-12, atol=1e-12
-        )
+        if "predict" in case:
+            np.testing.assert_allclose(
+                est.predict(X_test), case["predict"], rtol=1e-12, atol=1e-12
+            )
+        if "selected_indices" in case:
+            np.testing.assert_array_equal(
+                est.selected_indices_, case["selected_indices"]
+            )
         if "transform" in case:
             np.testing.assert_allclose(
                 est.transform(X_test), case["transform"], rtol=1e-12, atol=1e-12
             )
         assert est.to_n4me() == payload
+
+
+# Selector role -------------------------------------------------------------
+
+REQUIRED_SELECTOR_PARAMS = {
+    "top_k": 4,
+    "thresholds": [0.05, 0.1, 0.3],
+    "alpha_thresholds": [0.95, 0.99],
+}
+
+
+def selector(cls):
+    params = {
+        k: v for k, v in REQUIRED_SELECTOR_PARAMS.items() if k in cls._param_types
+    }
+    if cls is roles.RandomFrog:
+        params["initial_size"] = 6
+    return cls(**params)
+
+
+@pytest.mark.parametrize("cls", SELECTORS, ids=lambda c: c.__name__)
+def test_selector_roundtrip(cls, data):
+    X, y, X_test, _, _ = data
+    est = selector(cls).fit(X, y)
+    idx = est.selected_indices_
+    assert len(set(idx.tolist())) == idx.size > 0
+    np.testing.assert_array_equal(est.get_support(indices=True), np.sort(idx))
+    np.testing.assert_array_equal(est.transform(X_test), X_test[:, np.sort(idx)])
+    restored = roles.NativeEstimator.from_n4me(est.to_n4me())
+    assert type(restored) is cls
+    np.testing.assert_array_equal(restored.selected_indices_, idx)
+    np.testing.assert_array_equal(
+        pickle.loads(pickle.dumps(est)).transform(X_test), est.transform(X_test)
+    )
+    assert not hasattr(est, "predict")
+
+
+def reference_selector(cls, est):
+    """The n4m reference class with the same effective parameters."""
+    from n4m.feature_selection import ranking, wrapper
+
+    ref_cls = getattr(wrapper, cls.__name__, None) or getattr(ranking, cls.__name__)
+    import inspect
+
+    accepted = inspect.signature(ref_cls.__init__).parameters
+    kwargs = {}
+    for name, value in est.get_params().items():
+        if name == "cv":
+            if "n_folds" in accepted:
+                kwargs["n_folds"] = value
+            continue
+        if name == "rank_method":
+            value = ("vip", "coefficient", "selectivity_ratio").index(value)
+        if name in {
+            "min_features",
+            "min_size",
+            "max_size",
+            "max_features",
+            "min_selected",
+        } and value in (0, -1):
+            value = None
+        if name in accepted:
+            kwargs[name] = value
+    return ref_cls(**kwargs)
+
+
+@pytest.mark.parametrize("cls", SELECTORS, ids=lambda c: c.__name__)
+def test_selector_matches_n4m_reference(cls, data):
+    import warnings
+
+    X, y, _, _, _ = data
+    est = selector(cls).fit(X, y)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        ref = reference_selector(cls, est).fit(X, y)
+    np.testing.assert_array_equal(
+        est.selected_indices_, np.asarray(ref.selected_indices_)
+    )

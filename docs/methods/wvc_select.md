@@ -12,9 +12,8 @@ WVC weighted-variable-component top-k
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `top_k` | `int` | `required` | current public binding signature |
-| `n_components` | `int` | `2` | current public binding signature |
-| `normalize` | `bool` | `True` | current public binding signature |
+| `n_components` | `int` | `4` | registry benchmark cell value |
+| `top_k` | `int` | `10` | registry benchmark cell value |
 
 ## Explanations
 
@@ -47,13 +46,7 @@ Current implementation: [cpp/src/core/wvc_selection.cpp](https://github.com/GBeu
 
 **C ABI (ABI 2):** [`n4m_feature_selection_wvc_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L267). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import WVC
-```
-
-Source signature: `WVC(top_k: int, *, n_components: int = 2, normalize: bool = True)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L619)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`wvc_select(X, Y, n_components, top_k = 10L, normalize = TRUE)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

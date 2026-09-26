@@ -12,11 +12,10 @@ Shaving iterative variable trimming
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `2` | current public binding signature |
-| `n_steps` | `int` | `10` | current public binding signature |
-| `min_features` | `int \| None` | `None` | current public binding signature |
-| `shave_fraction` | `float` | `0.2` | current public binding signature |
-| `n_folds` | `int` | `3` | current public binding signature |
+| `n_components` | `int` | `3` | registry benchmark cell value |
+| `n_steps` | `int` | `12` | registry benchmark cell value |
+| `min_features` | `int` | `3` | registry benchmark cell value |
+| `shave_fraction` | `float` | `0.2` | registry benchmark cell value |
 
 ## Explanations
 
@@ -51,13 +50,7 @@ Current implementation: [cpp/src/core/shaving_selection.cpp](https://github.com/
 
 **C ABI (ABI 2):** [`n4m_feature_selection_shaving_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L231). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python (verified public re-export):**
-
-```python
-from n4m.feature_selection.wrapper import Shaving
-```
-
-Source signature: `Shaving(*, n_components: int = 2, n_steps: int = 10, min_features: int | None = None, shave_fraction: float = 0.2, n_folds: int = 3)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L399)).
+**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
 **R (source-verified):** [`shaving_select(X, Y, n_components, n_steps = 10L, min_features = 5L, shave_fraction = 0.1)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

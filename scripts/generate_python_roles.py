@@ -22,14 +22,44 @@ ROLES = REPO / "bindings" / "python" / "src" / "n4m" / "roles"
 OUTPUT = ROLES / "_generated.py"
 INIT = ROLES / "__init__.py"
 
-ACRONYMS = {"pls", "pcr", "cppls", "mb", "mir", "ecr", "di", "simpls", "o2pls"}
+ACRONYMS = {
+    "pls",
+    "pcr",
+    "cppls",
+    "mb",
+    "mir",
+    "ecr",
+    "di",
+    "simpls",
+    "o2pls",
+    "spa",
+    "vip",
+    "uve",
+    "cars",
+    "scars",
+    "ga",
+    "pso",
+    "vissa",
+    "bve",
+    "rep",
+    "ipw",
+    "st",
+    "t2",
+    "wvc",
+    "emcuve",
+    "iriv",
+    "irf",
+}
 CLASS_NAMES = {
     "models.specialized.tensor_pls": "NPLS",
     "models.pls.pls_fit_simple": "SimplePLS",
+    "selection.bipls": "BiPLS",
+    "selection.sipls": "SiPLS",
 }
 # Role interface -> Python role base class (docs/abi/estimator_roles_design.md, D0b).
 ROLE_BASES = {
     "regressor": "NativeRegressor",
+    "selector": "NativeSelector",
     "transformer": "NativeTransformer",
 }
 
@@ -151,7 +181,7 @@ def render_init(manifest: dict) -> str:
         "R and JS/WASM bindings read unchanged.",
         '"""',
         "",
-        "from ._base import NativeEstimator, NativeRegressor, NativeTransformer, method_info",
+        "from ._base import NativeEstimator, NativeRegressor, NativeSelector, NativeTransformer, method_info",
         "from ._generated import (",
         *[f"    {n}," for n in names],
         ")",
@@ -164,6 +194,7 @@ def render_init(manifest: dict) -> str:
                     *names,
                     "NativeEstimator",
                     "NativeRegressor",
+                    "NativeSelector",
                     "NativeTransformer",
                     "method_info",
                 ],
