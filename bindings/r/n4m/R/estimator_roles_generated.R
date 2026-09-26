@@ -41,7 +41,9 @@
   "preprocessing.resampling.crop" = c("transformer"),
   "preprocessing.resampling.resample_transformer" = c("transformer"),
   "preprocessing.scatter.area_normalization" = c("transformer"),
+  "preprocessing.scatter.emsc" = c("transformer"),
   "preprocessing.scatter.local_snv" = c("transformer"),
+  "preprocessing.scatter.msc" = c("transformer"),
   "preprocessing.scatter.robust_snv" = c("transformer"),
   "preprocessing.scatter.snv" = c("transformer"),
   "preprocessing.signal_conversion.fraction_to_percent" = c("transformer"),
@@ -120,7 +122,9 @@
   "preprocessing.resampling.crop" = "n4m_crop",
   "preprocessing.resampling.resample_transformer" = "n4m_resample_transformer",
   "preprocessing.scatter.area_normalization" = "n4m_area_normalization",
+  "preprocessing.scatter.emsc" = "n4m_emsc",
   "preprocessing.scatter.local_snv" = "n4m_local_snv",
+  "preprocessing.scatter.msc" = "n4m_msc",
   "preprocessing.scatter.robust_snv" = "n4m_robust_snv",
   "preprocessing.scatter.snv" = "n4m_snv",
   "preprocessing.signal_conversion.fraction_to_percent" = "n4m_fraction_to_percent",
@@ -390,8 +394,20 @@ n4m_area_normalization <- function(method = "sum") {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_emsc <- function(degree = 2L) {
+  .n4m_estimator("preprocessing.scatter.emsc", c("transformer"), list(degree = degree))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_local_snv <- function(window = 11L, pad_mode = "reflect", constant_value = 0.0) {
   .n4m_estimator("preprocessing.scatter.local_snv", c("transformer"), list(window = window, pad_mode = pad_mode, constant_value = constant_value))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_msc <- function() {
+  .n4m_estimator("preprocessing.scatter.msc", c("transformer"), list())
 }
 
 #' @rdname n4m_estimator_role_constructors

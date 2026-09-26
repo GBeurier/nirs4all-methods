@@ -1166,6 +1166,30 @@ export class AreaNormalization extends NativeEstimator implements Transformer {
 }
 NativeEstimator.register("preprocessing.scatter.area_normalization", AreaNormalization);
 
+/** Parameters of EMSC; unset values take the native defaults. */
+export interface EMSCParams {
+    /** Default 2. */
+    degree?: number;
+}
+
+/** Native `preprocessing.scatter.emsc` (transformer). */
+export class EMSC extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scatter.emsc";
+    protected readonly paramTypes = {
+        degree: "int",
+    } as const;
+
+    constructor(params: EMSCParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scatter.emsc", EMSC);
+
 /** Parameters of LSNV; unset values take the native defaults. */
 export interface LSNVParams {
     /** Default 11. */
@@ -1195,6 +1219,27 @@ export class LSNV extends NativeEstimator implements Transformer {
     }
 }
 NativeEstimator.register("preprocessing.scatter.local_snv", LSNV);
+
+/** Parameters of MSC; unset values take the native defaults. */
+export interface MSCParams {
+}
+
+/** Native `preprocessing.scatter.msc` (transformer). */
+export class MSC extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scatter.msc";
+    protected readonly paramTypes = {
+    } as const;
+
+    constructor(params: MSCParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scatter.msc", MSC);
 
 /** Parameters of RNV; unset values take the native defaults. */
 export interface RNVParams {

@@ -49,6 +49,13 @@ c_surface:
   - "n4m_transform_msc_reference_size"
   - "n4m_transform_msc_set_reference"
   - "n4m_transform_msc_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_msc"
+  roles: "[transformer]"
+  state: "reference"
+  inputs:
+    y: "optional"
 fq_name: "n4m.transform.scatter.msc"
 leaf: "msc"
 legacy_ids:

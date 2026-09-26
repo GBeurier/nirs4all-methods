@@ -39,7 +39,9 @@
 \alias{n4m_crop}
 \alias{n4m_resample_transformer}
 \alias{n4m_area_normalization}
+\alias{n4m_emsc}
 \alias{n4m_local_snv}
+\alias{n4m_msc}
 \alias{n4m_robust_snv}
 \alias{n4m_snv}
 \alias{n4m_fraction_to_percent}
@@ -117,7 +119,9 @@ n4m_second_derivative(delta = 1.0, edge_order = 2L)
 n4m_crop(start = NULL, end = NULL)
 n4m_resample_transformer(num_samples = NULL)
 n4m_area_normalization(method = "sum")
+n4m_emsc(degree = 2L)
 n4m_local_snv(window = 11L, pad_mode = "reflect", constant_value = 0.0)
+n4m_msc()
 n4m_robust_snv(with_center = TRUE, with_scale = TRUE, k = 1.4826)
 n4m_snv(with_mean = TRUE, with_std = TRUE, ddof = 0L)
 n4m_fraction_to_percent()
@@ -170,6 +174,7 @@ n4m_wvc_threshold(n_components = 2L, normalize = TRUE, score_threshold = 0.0, th
 \item{cval}{Native parameter (double); defaults come from the n4m manifest.}
 \item{damping}{Native parameter (double); defaults come from the n4m manifest.}
 \item{ddof}{Native parameter (int); defaults come from the n4m manifest.}
+\item{degree}{Native parameter (int); defaults come from the n4m manifest.}
 \item{delta}{Native parameter (double); defaults come from the n4m manifest.}
 \item{deriv}{Native parameter (int); defaults come from the n4m manifest.}
 \item{derivative_order}{Native parameter (int); defaults come from the n4m manifest.}
@@ -319,7 +324,9 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_crop}: \code{preprocessing.resampling.crop} (transformer)
 \item \code{n4m_resample_transformer}: \code{preprocessing.resampling.resample_transformer} (transformer)
 \item \code{n4m_area_normalization}: \code{preprocessing.scatter.area_normalization} (transformer)
+\item \code{n4m_emsc}: \code{preprocessing.scatter.emsc} (transformer)
 \item \code{n4m_local_snv}: \code{preprocessing.scatter.local_snv} (transformer)
+\item \code{n4m_msc}: \code{preprocessing.scatter.msc} (transformer)
 \item \code{n4m_robust_snv}: \code{preprocessing.scatter.robust_snv} (transformer)
 \item \code{n4m_snv}: \code{preprocessing.scatter.snv} (transformer)
 \item \code{n4m_fraction_to_percent}: \code{preprocessing.signal_conversion.fraction_to_percent} (transformer)

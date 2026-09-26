@@ -8,7 +8,7 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**76 of 213 catalog entries covered.**
+**78 of 213 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
@@ -17,7 +17,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | diagnostics | 0 | 5 |
 | filters | 0 | 7 |
 | models | 21 | 38 |
-| preprocessing | 30 | 62 |
+| preprocessing | 32 | 62 |
 | selection | 25 | 26 |
 | splitters | 0 | 9 |
 | utilities | 0 | 6 |
@@ -168,11 +168,11 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `preprocessing.scaling.normalize` | not yet | - | - |
 | `preprocessing.scaling.simple_scale` | not yet | - | - |
 | `preprocessing.scatter.area_normalization` | estimator | transformer | Python, R, JS/WASM |
-| `preprocessing.scatter.emsc` | not yet | - | - |
+| `preprocessing.scatter.emsc` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scatter.local_centering` | not yet | - | - |
 | `preprocessing.scatter.local_snv` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scatter.localized_msc` | not yet | - | - |
-| `preprocessing.scatter.msc` | not yet | - | - |
+| `preprocessing.scatter.msc` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scatter.piecewise_msc` | not yet | - | - |
 | `preprocessing.scatter.piecewise_snv` | not yet | - | - |
 | `preprocessing.scatter.robust_snv` | estimator | transformer | Python, R, JS/WASM |
