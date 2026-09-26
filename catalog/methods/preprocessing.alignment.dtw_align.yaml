@@ -41,6 +41,17 @@ c_surface:
   - "n4m_transform_dtw_align_fit"
   - "n4m_transform_dtw_align_is_fitted"
   - "n4m_transform_dtw_align_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_dtw_align"
+  roles: "[transformer]"
+  state: "reference"
+  inputs:
+    y: "optional"
+  params:
+    - name: "reference"
+      type: "double_array"
+      default: []
 fq_name: "n4m.transform.alignment.dtw_align"
 leaf: "dtw_align"
 legacy_ids:

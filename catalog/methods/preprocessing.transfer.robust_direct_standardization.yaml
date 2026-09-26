@@ -41,6 +41,31 @@ c_surface:
   - "n4m_domain_adaptation_robust_direct_standardization_fit"
   - "n4m_domain_adaptation_robust_direct_standardization_is_fitted"
   - "n4m_domain_adaptation_robust_direct_standardization_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_robust_direct_standardization"
+  roles: "[transformer]"
+  state: "coef"
+  inputs:
+    y: "optional"
+    target_domain: "required"
+  params:
+    - name: "fit_intercept"
+      type: "bool"
+      default: true
+    - name: "ridge"
+      type: "double"
+      default: 0.0
+      min: 0.0
+    - name: "trim_quantile"
+      type: "double"
+      default: 0.9
+      min: 0.0
+      max: 1.0
+    - name: "max_iter"
+      type: "int"
+      default: 3
+      min: 1
 fq_name: "n4m.domain_adaptation.standardization.robust_direct_standardization"
 leaf: "robust_direct_standardization"
 legacy_ids:
