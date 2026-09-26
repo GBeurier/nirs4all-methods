@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: CECILL-2.1 */
 /*
- * R .Call gateway for the generic estimator roles (n4m/estimator.h).
+ * R .Call gateway for the generic estimator roles and procedures
+ * (n4m/estimator.h).
  *
  * Translation only: R matrices are passed as column-major views (no copy),
  * named R parameter lists are set through the typed n4m_params_* setters
@@ -154,62 +155,62 @@ static double* r_est_double(SEXP v) {
     return out;
 }
 
-/* fit(method_id, params, X, y, inputs) -> external pointer.
- * `inputs` is a named list among labels, sample_weight, groups,
- * feature_groups, blocks, axis, X_target, fold_ids (R 1-based ids are not
- * used: class labels, groups and fold ids are opaque integers, feature
- * groups are labels, blocks are sizes). */
-SEXP r_n4m_estimator_fit(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP inputs) {
-    const char* id = CHAR(STRING_ELT(method_id, 0));
-    int32_t index = -1;
-    if (n4m_method_find(id, &index) != N4M_OK) Rf_error("unknown n4m method '%s'", id);
-
+/* Fit / procedure inputs over R objects. `inputs` is a named list among
+ * labels, sample_weight, groups, feature_groups, blocks, axis, X_target,
+ * fold_ids (R 1-based ids are not used: class labels, groups and fold ids are
+ * opaque integers, feature groups are labels, blocks are sizes). */
+typedef struct {
     n4m_fit_inputs_v1_t in;
-    memset(&in, 0, sizeof(in));
-    in.struct_size = sizeof(in);
-    n4m_matrix_view_t Xv = r_est_view(X, "X");
-    in.X = &Xv;
-    n4m_matrix_view_t Yv;
+    n4m_matrix_view_t X, Y, T;
+} r_est_inputs_t;
+
+static void r_est_inputs(r_est_inputs_t* s, SEXP X, SEXP y, SEXP inputs) {
+    memset(s, 0, sizeof(*s));
+    s->in.struct_size = sizeof(s->in);
+    s->X = r_est_view(X, "X");
+    s->in.X = &s->X;
     if (!Rf_isNull(y)) {
-        Yv = r_est_view(y, "y");
-        in.Y = &Yv;
+        s->Y = r_est_view(y, "y");
+        s->in.Y = &s->Y;
     }
-    n4m_matrix_view_t Tv;
     SEXP names = Rf_getAttrib(inputs, R_NamesSymbol);
     for (R_xlen_t i = 0; i < XLENGTH(inputs); ++i) {
         const char* name = CHAR(STRING_ELT(names, i));
         SEXP v = VECTOR_ELT(inputs, i);
         int64_t n = (int64_t)XLENGTH(v);
         if (strcmp(name, "labels") == 0) {
-            in.labels = r_est_int64(v, name);
-            in.n_labels = n;
+            s->in.labels = r_est_int64(v, name);
+            s->in.n_labels = n;
         } else if (strcmp(name, "sample_weight") == 0) {
-            in.sample_weight = r_est_double(v);
-            in.n_sample_weight = n;
+            s->in.sample_weight = r_est_double(v);
+            s->in.n_sample_weight = n;
         } else if (strcmp(name, "axis") == 0) {
-            in.axis = r_est_double(v);
-            in.n_axis = n;
+            s->in.axis = r_est_double(v);
+            s->in.n_axis = n;
         } else if (strcmp(name, "groups") == 0) {
-            in.groups = r_est_int64(v, name);
-            in.n_groups = n;
+            s->in.groups = r_est_int64(v, name);
+            s->in.n_groups = n;
         } else if (strcmp(name, "feature_groups") == 0) {
-            in.feature_groups = r_est_int64(v, name);
-            in.n_feature_groups = n;
+            s->in.feature_groups = r_est_int64(v, name);
+            s->in.n_feature_groups = n;
         } else if (strcmp(name, "blocks") == 0) {
-            in.block_sizes = r_est_int64(v, name);
-            in.n_blocks = n;
+            s->in.block_sizes = r_est_int64(v, name);
+            s->in.n_blocks = n;
         } else if (strcmp(name, "fold_ids") == 0) {
-            in.fold_ids = r_est_int64(v, name);
-            in.n_fold_ids = n;
+            s->in.fold_ids = r_est_int64(v, name);
+            s->in.n_fold_ids = n;
         } else if (strcmp(name, "X_target") == 0) {
-            Tv = r_est_view(v, "X_target");
-            in.X_target = &Tv;
+            s->T = r_est_view(v, "X_target");
+            s->in.X_target = &s->T;
         } else {
             Rf_error("unknown fit input '%s'", name);
         }
     }
+}
 
-    n4m_context_t* ctx = r_est_context();
+/* Validated native parameters of method `index` from a named R list. */
+static n4m_params_t* r_est_params(n4m_context_t* ctx, int32_t index, SEXP values,
+                                  const char* id) {
     n4m_params_t* params = NULL;
     n4m_status_t st = n4m_params_create(ctx, index, &params);
     if (st != N4M_OK) r_est_fail("n4m_params_create", st, ctx, NULL, NULL);
@@ -220,14 +221,123 @@ SEXP r_n4m_estimator_fit(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP input
         n4m_params_destroy(params);
         Rf_error("invalid value for parameter '%s' of %s", bad, id);
     }
+    return params;
+}
+
+static int32_t r_est_find(SEXP method_id, const char** id) {
+    *id = CHAR(STRING_ELT(method_id, 0));
+    int32_t index = -1;
+    if (n4m_method_find(*id, &index) != N4M_OK) Rf_error("unknown n4m method '%s'", *id);
+    return index;
+}
+
+/* fit(method_id, params, X, y, inputs) -> external pointer. */
+SEXP r_n4m_estimator_fit(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP inputs) {
+    const char* id = NULL;
+    const int32_t index = r_est_find(method_id, &id);
+    r_est_inputs_t s;
+    r_est_inputs(&s, X, y, inputs);
+    n4m_context_t* ctx = r_est_context();
+    n4m_params_t* params = r_est_params(ctx, index, values, id);
     n4m_estimator_t* est = NULL;
-    st = n4m_estimator_create(ctx, id, params, &est);
+    n4m_status_t st = n4m_estimator_create(ctx, id, params, &est);
     if (st != N4M_OK) r_est_fail("n4m_estimator_create", st, ctx, params, NULL);
     n4m_params_destroy(params);
-    st = n4m_estimator_fit(ctx, est, &in);
+    st = n4m_estimator_fit(ctx, est, &s.in);
     if (st != N4M_OK) r_est_fail("n4m_estimator_fit", st, ctx, NULL, est);
     n4m_context_destroy(ctx);
     return r_est_wrap(est);
+}
+
+/* One named result entry as an R value (matrices column-major). */
+static SEXP r_est_entry(const n4m_method_result_t* res, const char* name, int32_t kind) {
+    SEXP out = R_NilValue;
+    if (kind == N4M_RESULT_DOUBLE_MATRIX) {
+        const double* d = NULL;
+        int64_t rows = 0, cols = 0;
+        n4m_method_result_get_double_matrix(res, name, &d, &rows, &cols);
+        out = PROTECT(Rf_allocMatrix(REALSXP, (int)rows, (int)cols));
+        for (int64_t i = 0; i < rows; ++i) {
+            for (int64_t j = 0; j < cols; ++j) REAL(out)[j * rows + i] = d[i * cols + j];
+        }
+    } else if (kind == N4M_RESULT_INT_VECTOR) {
+        const int32_t* d = NULL;
+        int32_t n = 0;
+        n4m_method_result_get_int_vector(res, name, &d, &n);
+        out = PROTECT(Rf_allocVector(REALSXP, n));
+        for (int32_t k = 0; k < n; ++k) REAL(out)[k] = (double)d[k];
+    } else if (kind == N4M_RESULT_INT64_VECTOR) {
+        const int64_t* d = NULL;
+        int64_t n = 0;
+        n4m_method_result_get_int64_vector(res, name, &d, &n);
+        out = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)n));
+        for (int64_t k = 0; k < n; ++k) REAL(out)[k] = (double)d[k];
+    } else {
+        double v = 0.0;
+        n4m_method_result_get_scalar(res, name, &v);
+        out = PROTECT(Rf_ScalarReal(v));
+    }
+    UNPROTECT(1);
+    return out;
+}
+
+static SEXP r_est_int64_vector(const int64_t* d, int64_t n) {
+    SEXP out = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)n));
+    for (int64_t k = 0; k < n; ++k) REAL(out)[k] = (double)d[k];
+    UNPROTECT(1);
+    return out;
+}
+
+/* procedure(method_id, params, X, y, inputs) -> named list of the result
+ * entries; a splitter result adds `.folds`, a list of (train, test) 0-based
+ * row indices. */
+SEXP r_n4m_procedure_run(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP inputs) {
+    const char* id = NULL;
+    const int32_t index = r_est_find(method_id, &id);
+    r_est_inputs_t s;
+    r_est_inputs(&s, X, y, inputs);
+    n4m_context_t* ctx = r_est_context();
+    n4m_params_t* params = r_est_params(ctx, index, values, id);
+    n4m_method_result_t* res = NULL;
+    n4m_status_t st = n4m_procedure_run(ctx, index, params, &s.in, &res);
+    if (st != N4M_OK) r_est_fail("n4m_procedure_run", st, ctx, params, NULL);
+    n4m_params_destroy(params);
+    n4m_context_destroy(ctx);
+
+    int32_t count = 0;
+    n4m_method_result_entry_count(res, &count);
+    int32_t n_folds = 0;
+    const int has_folds = n4m_method_result_get_n_folds(res, &n_folds) == N4M_OK;
+    const int32_t n = count + (has_folds ? 1 : 0);
+    SEXP out = PROTECT(Rf_allocVector(VECSXP, n));
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, n));
+    for (int32_t i = 0; i < count; ++i) {
+        const char* name = NULL;
+        int32_t kind = 0;
+        n4m_method_result_entry(res, i, &name, &kind);
+        SET_STRING_ELT(names, i, Rf_mkChar(name));
+        SET_VECTOR_ELT(out, i, r_est_entry(res, name, kind));
+    }
+    if (has_folds) {
+        SEXP folds = PROTECT(Rf_allocVector(VECSXP, n_folds));
+        for (int32_t f = 0; f < n_folds; ++f) {
+            const int64_t *train = NULL, *test = NULL;
+            int64_t n_train = 0, n_test = 0;
+            n4m_method_result_get_fold(res, f, &train, &n_train, &test, &n_test);
+            SEXP fold = PROTECT(Rf_allocVector(VECSXP, 2));
+            SET_VECTOR_ELT(fold, 0, r_est_int64_vector(train, n_train));
+            SET_VECTOR_ELT(fold, 1, r_est_int64_vector(test, n_test));
+            SET_VECTOR_ELT(folds, f, fold);
+            UNPROTECT(1);
+        }
+        SET_STRING_ELT(names, count, Rf_mkChar(".folds"));
+        SET_VECTOR_ELT(out, count, folds);
+        UNPROTECT(1);
+    }
+    n4m_method_result_destroy(res);
+    Rf_setAttrib(out, R_NamesSymbol, names);
+    UNPROTECT(2);
+    return out;
 }
 
 typedef n4m_status_t (*r_est_matrix_fn)(n4m_context_t*, const n4m_estimator_t*,

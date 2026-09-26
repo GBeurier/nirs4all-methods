@@ -1091,6 +1091,21 @@ N4M_API n4m_status_t n4m_method_result_get_scalar(
     const char* name,
     double* out_value);
 
+/* Kind of a named result entry, read with the matching getter above. */
+typedef enum n4m_method_result_entry_kind_t {
+    N4M_RESULT_DOUBLE_MATRIX = 0,
+    N4M_RESULT_INT_VECTOR = 1,
+    N4M_RESULT_INT64_VECTOR = 2,
+    N4M_RESULT_SCALAR = 3
+} n4m_method_result_entry_kind_t;
+
+/* Enumerate the named entries, sorted by name. `*out_name` is borrowed from
+ * the result and valid until it is destroyed. */
+N4M_API n4m_status_t n4m_method_result_entry_count(const n4m_method_result_t* result,
+                                                   int32_t* out_count);
+N4M_API n4m_status_t n4m_method_result_entry(const n4m_method_result_t* result, int32_t index,
+                                             const char** out_name, int32_t* out_kind);
+
 /* PLS-only cross-validation surface.
  *
  * ABI 1.22 provides a stable reference endpoint for exact PLS CV. The current

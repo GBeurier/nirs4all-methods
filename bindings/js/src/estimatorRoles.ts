@@ -118,24 +118,145 @@ function allocI64(values: number[]): Alloc {
     return { ptr, free: () => m._free(ptr) };
 }
 
-const registry = new Map<string, new () => NativeEstimator>();
+const registry = new Map<string, new () => NativeMethod>();
 
-/** Base of every generated estimator: parameters, fit and N4ME state. */
-export abstract class NativeEstimator {
+function cString(s: string): Alloc {
+    const m = getModule();
+    const n = m.lengthBytesUTF8(s) + 1;
+    const ptr = m._malloc(n);
+    m.stringToUTF8(s, ptr, n);
+    return { ptr, free: () => m._free(ptr) };
+}
+
+/** Validated native parameters of a method; the caller destroys them. */
+function nativeParams(ctx: number, method: NativeMethod): number {
+    const m = getModule();
+    const indexPtr = m._malloc(4);
+    const out = m._malloc(4);
+    const allocs: Alloc[] = [];
+    const id = cString(method.methodId);
+    allocs.push(id);
+    try {
+        checkStatus(m.ccall("n4m_method_find", "number", ["number", "number"], [id.ptr, indexPtr]) as number);
+        m.setValue(out, 0, "i32");
+        checkStatus(m.ccall("n4m_params_create", "number", ["number", "number", "number"],
+            [ctx, m.getValue(indexPtr, "i32"), out]) as number, ctx);
+        const params = m.getValue(out, "i32");
+        try {
+            for (const [name, value] of Object.entries(method.params)) {
+                if (value === undefined) continue;
+                const type = method.paramTypes[name];
+                if (type === undefined) throw new Error(`${method.methodId}: unknown parameter '${name}'`);
+                const key = cString(name);
+                allocs.push(key);
+                let status: number;
+                if (type === "int") {
+                    status = m.ccall("n4m_params_set_int", "number", ["number", "number", "i64"], [params, key.ptr, BigInt(value as number)]) as number;
+                } else if (type === "double") {
+                    status = m.ccall("n4m_params_set_double", "number", ["number", "number", "number"], [params, key.ptr, value]) as number;
+                } else if (type === "bool") {
+                    status = m.ccall("n4m_params_set_bool", "number", ["number", "number", "number"], [params, key.ptr, value ? 1 : 0]) as number;
+                } else if (type === "enum") {
+                    const choice = cString(String(value));
+                    allocs.push(choice);
+                    status = m.ccall("n4m_params_set_enum", "number", ["number", "number", "number"], [params, key.ptr, choice.ptr]) as number;
+                } else if (type === "int_array") {
+                    const arr = allocI64(value as number[]);
+                    allocs.push(arr);
+                    status = m.ccall("n4m_params_set_int_array", "number", ["number", "number", "number", "i64"], [params, key.ptr, arr.ptr, BigInt((value as number[]).length)]) as number;
+                } else {
+                    const arr = allocF64(value as number[]);
+                    allocs.push(arr);
+                    status = m.ccall("n4m_params_set_double_array", "number", ["number", "number", "number", "i64"], [params, key.ptr, arr.ptr, BigInt((value as number[]).length)]) as number;
+                }
+                if (status !== 0) throw new Error(`${method.methodId}: invalid value for parameter '${name}'`);
+            }
+            checkStatus(m.ccall("n4m_params_validate", "number", ["number", "number"], [ctx, params]) as number, ctx);
+            return params;
+        } catch (error) {
+            m.ccall("n4m_params_destroy", null, ["number"], [params]);
+            throw error;
+        }
+    } finally {
+        allocs.forEach((a) => a.free());
+        m._free(indexPtr);
+        m._free(out);
+    }
+}
+
+/** Runs `fn` over an n4m_fit_inputs_v1_t built from the given data. */
+function withFitInputs<T>(X: Matrix, y: Matrix | Float64Array | ArrayLike<number> | undefined,
+                          labels: boolean, inputs: FitInputs,
+                          fn: (struct: number, hold: (a: Alloc) => number) => T): T {
+    const m = getModule();
+    const allocs: Alloc[] = [];
+    const hold = (a: Alloc) => (allocs.push(a), a.ptr);
+    const struct = m._malloc(FIT_INPUTS_SIZE);
+    try {
+        m.HEAPU8.fill(0, struct, struct + FIT_INPUTS_SIZE);
+        m.setValue(struct, FIT_INPUTS_SIZE, "i32");
+        const xv = makeMatrixView(X.data, X.rows, X.cols);
+        allocs.push({ ptr: xv.viewPtr, free: xv.free });
+        m.setValue(struct + OFF.X, xv.viewPtr, "i32");
+        const setArray = (ptrOff: number, lenOff: number, a: Alloc, n: number) => {
+            m.setValue(struct + ptrOff, hold(a), "i32");
+            m.setValue(struct + lenOff, BigInt(n) as unknown as number, "i64");
+        };
+        if (y !== undefined && labels) {
+            const ids = Array.from(y as ArrayLike<number>);
+            setArray(OFF.labels, OFF.nLabels, allocI64(ids), ids.length);
+        } else if (y !== undefined) {
+            const ym: Matrix = "data" in y ? (y as Matrix)
+                : { data: Float64Array.from(y as ArrayLike<number>), rows: (y as ArrayLike<number>).length, cols: 1 };
+            const yv = makeMatrixView(ym.data, ym.rows, ym.cols);
+            allocs.push({ ptr: yv.viewPtr, free: yv.free });
+            m.setValue(struct + OFF.Y, yv.viewPtr, "i32");
+        }
+        if (inputs.sampleWeight) setArray(OFF.sampleWeight, OFF.nSampleWeight, allocF64(inputs.sampleWeight), inputs.sampleWeight.length);
+        if (inputs.groups) setArray(OFF.groups, OFF.nGroups, allocI64(inputs.groups), inputs.groups.length);
+        if (inputs.featureGroups) setArray(OFF.featureGroups, OFF.nFeatureGroups, allocI64(inputs.featureGroups), inputs.featureGroups.length);
+        if (inputs.blocks) setArray(OFF.blocks, OFF.nBlocks, allocI64(inputs.blocks), inputs.blocks.length);
+        if (inputs.axis) setArray(OFF.axis, OFF.nAxis, allocF64(inputs.axis), inputs.axis.length);
+        if (inputs.foldIds) setArray(OFF.foldIds, OFF.nFoldIds, allocI64(inputs.foldIds), inputs.foldIds.length);
+        if (inputs.XTarget) {
+            const tv = makeMatrixView(inputs.XTarget.data, inputs.XTarget.rows, inputs.XTarget.cols);
+            allocs.push({ ptr: tv.viewPtr, free: tv.free });
+            m.setValue(struct + OFF.XTarget, tv.viewPtr, "i32");
+        }
+        return fn(struct, hold);
+    } finally {
+        allocs.forEach((a) => a.free());
+        m._free(struct);
+    }
+}
+
+/** Parameters of one catalog method (estimator or procedure). */
+export abstract class NativeMethod {
     /** Catalog method id, for example "models.pls.pls_regression". */
     abstract readonly methodId: string;
     /** Parameter name -> native type. */
-    protected abstract readonly paramTypes: Readonly<Record<string, ParamType>>;
-    /** True when the fit target is class labels (classifiers). */
-    protected readonly labelTarget: boolean = false;
+    abstract readonly paramTypes: Readonly<Record<string, ParamType>>;
     /** Explicit parameter values (unset ones take the native default). */
     params: Record<string, ParamValue | undefined> = {};
-    private ptr = 0;
 
-    /** Registers a generated class so fromN4me() can rebuild it. */
-    static register(methodId: string, cls: new () => NativeEstimator): void {
+    /** Registers a generated class so fromN4me() and methodClass() find it. */
+    static register(methodId: string, cls: new () => NativeMethod): void {
         registry.set(methodId, cls);
     }
+}
+
+/** The generated class of a catalog method id. */
+export function methodClass(methodId: string): new () => NativeMethod {
+    const cls = registry.get(methodId);
+    if (cls === undefined) throw new Error(`no n4m role class for '${methodId}'`);
+    return cls;
+}
+
+/** Base of every generated estimator: parameters, fit and N4ME state. */
+export abstract class NativeEstimator extends NativeMethod {
+    /** True when the fit target is class labels (classifiers). */
+    protected readonly labelTarget: boolean = false;
+    private ptr = 0;
 
     get fitted(): boolean {
         return this.ptr !== 0;
@@ -147,69 +268,30 @@ export abstract class NativeEstimator {
      */
     fit(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): this {
         const m = getModule();
-        const allocs: Alloc[] = [];
-        const hold = (a: Alloc) => (allocs.push(a), a.ptr);
-        const struct = m._malloc(FIT_INPUTS_SIZE);
-        try {
-            m.HEAPU8.fill(0, struct, struct + FIT_INPUTS_SIZE);
-            m.setValue(struct, FIT_INPUTS_SIZE, "i32");
-            const xv = makeMatrixView(X.data, X.rows, X.cols);
-            allocs.push({ ptr: xv.viewPtr, free: xv.free });
-            m.setValue(struct + OFF.X, xv.viewPtr, "i32");
-            const setArray = (ptrOff: number, lenOff: number, a: Alloc, n: number) => {
-                m.setValue(struct + ptrOff, hold(a), "i32");
-                m.setValue(struct + lenOff, BigInt(n) as unknown as number, "i64");
-            };
-            if (y !== undefined && this.labelTarget) {
-                const labels = Array.from(y as ArrayLike<number>);
-                setArray(OFF.labels, OFF.nLabels, allocI64(labels), labels.length);
-            } else if (y !== undefined) {
-                const ym: Matrix = "data" in y ? (y as Matrix)
-                    : { data: Float64Array.from(y as ArrayLike<number>), rows: (y as ArrayLike<number>).length, cols: 1 };
-                const yv = makeMatrixView(ym.data, ym.rows, ym.cols);
-                allocs.push({ ptr: yv.viewPtr, free: yv.free });
-                m.setValue(struct + OFF.Y, yv.viewPtr, "i32");
-            }
-            if (inputs.sampleWeight) setArray(OFF.sampleWeight, OFF.nSampleWeight, allocF64(inputs.sampleWeight), inputs.sampleWeight.length);
-            if (inputs.groups) setArray(OFF.groups, OFF.nGroups, allocI64(inputs.groups), inputs.groups.length);
-            if (inputs.featureGroups) setArray(OFF.featureGroups, OFF.nFeatureGroups, allocI64(inputs.featureGroups), inputs.featureGroups.length);
-            if (inputs.blocks) setArray(OFF.blocks, OFF.nBlocks, allocI64(inputs.blocks), inputs.blocks.length);
-            if (inputs.axis) setArray(OFF.axis, OFF.nAxis, allocF64(inputs.axis), inputs.axis.length);
-            if (inputs.foldIds) setArray(OFF.foldIds, OFF.nFoldIds, allocI64(inputs.foldIds), inputs.foldIds.length);
-            if (inputs.XTarget) {
-                const tv = makeMatrixView(inputs.XTarget.data, inputs.XTarget.rows, inputs.XTarget.cols);
-                allocs.push({ ptr: tv.viewPtr, free: tv.free });
-                m.setValue(struct + OFF.XTarget, tv.viewPtr, "i32");
-            }
-
-            const est = withContext((ctx) => {
-                const params = this.nativeParams(ctx);
-                const out = m._malloc(4);
-                try {
-                    m.setValue(out, 0, "i32");
-                    const idPtr = hold(this.cString(this.methodId));
-                    checkStatus(m.ccall("n4m_estimator_create", "number",
-                        ["number", "number", "number", "number"], [ctx, idPtr, params, out]) as number, ctx);
-                    const handle = m.getValue(out, "i32");
-                    const status = m.ccall("n4m_estimator_fit", "number",
-                        ["number", "number", "number"], [ctx, handle, struct]) as number;
-                    if (status !== 0) {
-                        m.ccall("n4m_estimator_destroy", null, ["number"], [handle]);
-                        checkStatus(status, ctx);
-                    }
-                    return handle;
-                } finally {
-                    m._free(out);
-                    m.ccall("n4m_params_destroy", null, ["number"], [params]);
+        const est = withFitInputs(X, y, this.labelTarget, inputs, (struct, hold) => withContext((ctx) => {
+            const params = nativeParams(ctx, this);
+            const out = m._malloc(4);
+            try {
+                m.setValue(out, 0, "i32");
+                const idPtr = hold(cString(this.methodId));
+                checkStatus(m.ccall("n4m_estimator_create", "number",
+                    ["number", "number", "number", "number"], [ctx, idPtr, params, out]) as number, ctx);
+                const handle = m.getValue(out, "i32");
+                const status = m.ccall("n4m_estimator_fit", "number",
+                    ["number", "number", "number"], [ctx, handle, struct]) as number;
+                if (status !== 0) {
+                    m.ccall("n4m_estimator_destroy", null, ["number"], [handle]);
+                    checkStatus(status, ctx);
                 }
-            });
-            this.dispose();
-            this.ptr = est;
-            return this;
-        } finally {
-            allocs.forEach((a) => a.free());
-            m._free(struct);
-        }
+                return handle;
+            } finally {
+                m._free(out);
+                m.ccall("n4m_params_destroy", null, ["number"], [params]);
+            }
+        }));
+        this.dispose();
+        this.ptr = est;
+        return this;
     }
 
     /** Portable fitted state (N4ME bytes), readable by every n4m binding. */
@@ -251,11 +333,11 @@ export abstract class NativeEstimator {
                 return m.getValue(out, "i32");
             });
             const cls = registry.get(NativeEstimator.methodIdOf(handle));
-            if (cls === undefined) {
+            if (cls === undefined || !(cls.prototype instanceof NativeEstimator)) {
                 m.ccall("n4m_estimator_destroy", null, ["number"], [handle]);
                 throw new Error("no JS class registered for this N4ME method");
             }
-            const est = new cls();
+            const est = new cls() as NativeEstimator;
             est.ptr = handle;
             return est;
         } finally {
@@ -379,69 +461,6 @@ export abstract class NativeEstimator {
         return this.ptr;
     }
 
-    private cString(s: string): Alloc {
-        const m = getModule();
-        const n = m.lengthBytesUTF8(s) + 1;
-        const ptr = m._malloc(n);
-        m.stringToUTF8(s, ptr, n);
-        return { ptr, free: () => m._free(ptr) };
-    }
-
-    private nativeParams(ctx: number): number {
-        const m = getModule();
-        const indexPtr = m._malloc(4);
-        const out = m._malloc(4);
-        const allocs: Alloc[] = [];
-        const id = this.cString(this.methodId);
-        allocs.push(id);
-        try {
-            checkStatus(m.ccall("n4m_method_find", "number", ["number", "number"], [id.ptr, indexPtr]) as number);
-            m.setValue(out, 0, "i32");
-            checkStatus(m.ccall("n4m_params_create", "number", ["number", "number", "number"],
-                [ctx, m.getValue(indexPtr, "i32"), out]) as number, ctx);
-            const params = m.getValue(out, "i32");
-            try {
-                for (const [name, value] of Object.entries(this.params)) {
-                    if (value === undefined) continue;
-                    const type = this.paramTypes[name];
-                    if (type === undefined) throw new Error(`${this.methodId}: unknown parameter '${name}'`);
-                    const key = this.cString(name);
-                    allocs.push(key);
-                    let status: number;
-                    if (type === "int") {
-                        status = m.ccall("n4m_params_set_int", "number", ["number", "number", "i64"], [params, key.ptr, BigInt(value as number)]) as number;
-                    } else if (type === "double") {
-                        status = m.ccall("n4m_params_set_double", "number", ["number", "number", "number"], [params, key.ptr, value]) as number;
-                    } else if (type === "bool") {
-                        status = m.ccall("n4m_params_set_bool", "number", ["number", "number", "number"], [params, key.ptr, value ? 1 : 0]) as number;
-                    } else if (type === "enum") {
-                        const choice = this.cString(String(value));
-                        allocs.push(choice);
-                        status = m.ccall("n4m_params_set_enum", "number", ["number", "number", "number"], [params, key.ptr, choice.ptr]) as number;
-                    } else if (type === "int_array") {
-                        const arr = allocI64(value as number[]);
-                        allocs.push(arr);
-                        status = m.ccall("n4m_params_set_int_array", "number", ["number", "number", "number", "i64"], [params, key.ptr, arr.ptr, BigInt((value as number[]).length)]) as number;
-                    } else {
-                        const arr = allocF64(value as number[]);
-                        allocs.push(arr);
-                        status = m.ccall("n4m_params_set_double_array", "number", ["number", "number", "number", "i64"], [params, key.ptr, arr.ptr, BigInt((value as number[]).length)]) as number;
-                    }
-                    if (status !== 0) throw new Error(`${this.methodId}: invalid value for parameter '${name}'`);
-                }
-                checkStatus(m.ccall("n4m_params_validate", "number", ["number", "number"], [ctx, params]) as number, ctx);
-                return params;
-            } catch (error) {
-                m.ccall("n4m_params_destroy", null, ["number"], [params]);
-                throw error;
-            }
-        } finally {
-            allocs.forEach((a) => a.free());
-            m._free(indexPtr);
-            m._free(out);
-        }
-    }
-
     private static methodIdOf(handle: number): string {
         const m = getModule();
         const indexPtr = m._malloc(4);
@@ -458,5 +477,148 @@ export abstract class NativeEstimator {
             m._free(capsPtr);
             m._free(info);
         }
+    }
+}
+
+/** Splitter role: Data[n, p] (+ Target, groups) -> folds of 0-based row indices. */
+export interface Splitter {
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[];
+}
+
+/** Augmenter role: Data[n, p] -> augmented Data[n, p], train only. */
+export interface Augmenter {
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix;
+}
+
+/** Generic procedure (diagnostics, utilities): inputs -> named outputs. */
+export interface Procedure {
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs?: FitInputs): Record<string, ProcedureOutput>;
+}
+
+export interface Fold {
+    train: number[];
+    test: number[];
+}
+
+/** A named output: a matrix, an integer vector or a scalar. */
+export type ProcedureOutput = Matrix | number[] | number;
+
+/** Base of the generated procedures: one native run, no fitted state. */
+export abstract class NativeProcedure extends NativeMethod {
+    protected runRaw<T>(X: Matrix, y: Matrix | Float64Array | ArrayLike<number> | undefined,
+                        inputs: FitInputs, read: (result: number) => T): T {
+        const m = getModule();
+        const result = withFitInputs(X, y, false, inputs, (struct, hold) => withContext((ctx) => {
+            const indexPtr = m._malloc(4);
+            const out = m._malloc(4);
+            const params = nativeParams(ctx, this);
+            try {
+                checkStatus(m.ccall("n4m_method_find", "number", ["number", "number"],
+                    [hold(cString(this.methodId)), indexPtr]) as number);
+                m.setValue(out, 0, "i32");
+                checkStatus(m.ccall("n4m_procedure_run", "number",
+                    ["number", "number", "number", "number", "number"],
+                    [ctx, m.getValue(indexPtr, "i32"), params, struct, out]) as number, ctx);
+                return m.getValue(out, "i32");
+            } finally {
+                m.ccall("n4m_params_destroy", null, ["number"], [params]);
+                m._free(indexPtr);
+                m._free(out);
+            }
+        }));
+        try {
+            return read(result);
+        } finally {
+            m.ccall("n4m_method_result_destroy", null, ["number"], [result]);
+        }
+    }
+
+    protected splitFolds(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.runRaw(X, y, groups ? { groups } : {}, (result) => {
+            const m = getModule();
+            const scratch = m._malloc(32);
+            try {
+                checkStatus(m.ccall("n4m_method_result_get_n_folds", "number", ["number", "number"],
+                    [result, scratch]) as number);
+                const n = m.getValue(scratch, "i32");
+                const folds: Fold[] = [];
+                for (let f = 0; f < n; ++f) {
+                    checkStatus(m.ccall("n4m_method_result_get_fold", "number",
+                        ["number", "number", "number", "number", "number", "number"],
+                        [result, f, scratch, scratch + 8, scratch + 16, scratch + 24]) as number);
+                    const take = (ptrAt: number, lenAt: number) => {
+                        const base = m.getValue(ptrAt, "i32");
+                        return Array.from({ length: readI64(lenAt) }, (_, i) => readI64(base + 8 * i));
+                    };
+                    folds.push({ train: take(scratch, scratch + 8), test: take(scratch + 16, scratch + 24) });
+                }
+                return folds;
+            } finally {
+                m._free(scratch);
+            }
+        });
+    }
+
+    protected augmentMatrix(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.runRaw(X, undefined, axis ? { axis } : {}, (result) => readEntry(result, "X", 0) as Matrix);
+    }
+
+    protected runOutputs(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>,
+                         inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runRaw(X, y, inputs, (result) => {
+            const m = getModule();
+            const scratch = m._malloc(8);
+            try {
+                checkStatus(m.ccall("n4m_method_result_entry_count", "number", ["number", "number"],
+                    [result, scratch]) as number);
+                const count = m.getValue(scratch, "i32");
+                const out: Record<string, ProcedureOutput> = {};
+                for (let i = 0; i < count; ++i) {
+                    checkStatus(m.ccall("n4m_method_result_entry", "number",
+                        ["number", "number", "number", "number"], [result, i, scratch, scratch + 4]) as number);
+                    const name = m.UTF8ToString(m.getValue(scratch, "i32"));
+                    out[name] = readEntry(result, name, m.getValue(scratch + 4, "i32"));
+                }
+                return out;
+            } finally {
+                m._free(scratch);
+            }
+        });
+    }
+}
+
+/** One named result entry (kinds of n4m_method_result_entry_kind_t). */
+function readEntry(result: number, name: string, kind: number): ProcedureOutput {
+    const m = getModule();
+    const key = cString(name);
+    const scratch = m._malloc(24);
+    try {
+        if (kind === 0) {
+            checkStatus(m.ccall("n4m_method_result_get_double_matrix", "number",
+                ["number", "number", "number", "number", "number"],
+                [result, key.ptr, scratch, scratch + 8, scratch + 16]) as number);
+            const rows = readI64(scratch + 8);
+            const cols = readI64(scratch + 16);
+            const data = m.getValue(scratch, "i32") / 8;
+            return { data: m.HEAPF64.slice(data, data + rows * cols), rows, cols };
+        }
+        if (kind === 3) {
+            checkStatus(m.ccall("n4m_method_result_get_scalar", "number", ["number", "number", "number"],
+                [result, key.ptr, scratch]) as number);
+            return m.getValue(scratch, "double");
+        }
+        if (kind === 1) {
+            checkStatus(m.ccall("n4m_method_result_get_int_vector", "number",
+                ["number", "number", "number", "number"], [result, key.ptr, scratch, scratch + 8]) as number);
+            const base = m.getValue(scratch, "i32");
+            return Array.from({ length: m.getValue(scratch + 8, "i32") }, (_, i) => m.getValue(base + 4 * i, "i32"));
+        }
+        checkStatus(m.ccall("n4m_method_result_get_int64_vector", "number",
+            ["number", "number", "number", "number"], [result, key.ptr, scratch, scratch + 8]) as number);
+        const base = m.getValue(scratch, "i32");
+        return Array.from({ length: readI64(scratch + 8) }, (_, i) => readI64(base + 8 * i));
+    } finally {
+        key.free();
+        m._free(scratch);
     }
 }

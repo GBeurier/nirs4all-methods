@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <exception>
@@ -612,6 +613,20 @@ n4m_status_t unpack_moment_stats(n4m_context_t* ctx,
 
 }  // namespace
 
+namespace {
+// Named entries sorted by name (the maps are unordered).
+std::vector<std::pair<const std::string*, int32_t>> result_entries(const n4m_method_result_t& r) {
+    std::vector<std::pair<const std::string*, int32_t>> out;
+    for (const auto& kv : r.double_arrays) out.emplace_back(&kv.first, N4M_RESULT_DOUBLE_MATRIX);
+    for (const auto& kv : r.int_arrays) out.emplace_back(&kv.first, N4M_RESULT_INT_VECTOR);
+    for (const auto& kv : r.int64_arrays) out.emplace_back(&kv.first, N4M_RESULT_INT64_VECTOR);
+    for (const auto& kv : r.scalars) out.emplace_back(&kv.first, N4M_RESULT_SCALAR);
+    std::sort(out.begin(), out.end(),
+              [](const auto& a, const auto& b) { return *a.first < *b.first; });
+    return out;
+}
+}  // namespace
+
 extern "C" {
 
 /* ---- universal result accessors ---- */
@@ -709,6 +724,33 @@ N4M_API n4m_status_t n4m_method_result_get_scalar(
             return N4M_ERR_INVALID_ARGUMENT;
         }
         *out_value = iter->second;
+        return N4M_OK;
+    } catch (...) {
+        return N4M_ERR_INTERNAL;
+    }
+}
+
+N4M_API n4m_status_t n4m_method_result_entry_count(const n4m_method_result_t* result,
+                                                   int32_t* out_count) {
+    if (result == nullptr || out_count == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_count = static_cast<int32_t>(result->double_arrays.size() + result->int_arrays.size() +
+                                      result->int64_arrays.size() + result->scalars.size());
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_method_result_entry(const n4m_method_result_t* result, int32_t index,
+                                             const char** out_name, int32_t* out_kind) {
+    if (result == nullptr || out_name == nullptr || out_kind == nullptr) {
+        return N4M_ERR_NULL_POINTER;
+    }
+    try {
+        const auto entries = result_entries(*result);
+        if (index < 0 || static_cast<std::size_t>(index) >= entries.size()) {
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+        const auto& e = entries[static_cast<std::size_t>(index)];
+        *out_name = e.first->c_str();
+        *out_kind = e.second;
         return N4M_OK;
     } catch (...) {
         return N4M_ERR_INTERNAL;

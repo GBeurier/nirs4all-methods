@@ -3,6 +3,42 @@
 # Native ABI 2.13.0.
 
 .n4m_method_roles <- list(
+  "augmentation.drift.linear_drift" = c("augmenter"),
+  "augmentation.drift.path_length" = c("augmenter"),
+  "augmentation.drift.poly_drift" = c("augmenter"),
+  "augmentation.edge_artifacts.edge_curvature" = c("augmenter"),
+  "augmentation.edge_artifacts.truncated_peak" = c("augmenter"),
+  "augmentation.noise.gaussian_noise" = c("augmenter"),
+  "augmentation.noise.hetero_noise" = c("augmenter"),
+  "augmentation.noise.multiplicative_noise" = c("augmenter"),
+  "augmentation.noise.spike_noise" = c("augmenter"),
+  "augmentation.random.random_x_op" = c("augmenter"),
+  "augmentation.random.rotate_translate" = c("augmenter"),
+  "augmentation.scattering.batch_effect" = c("augmenter"),
+  "augmentation.scattering.dead_band" = c("augmenter"),
+  "augmentation.scattering.emsc_distort" = c("augmenter"),
+  "augmentation.scattering.instrument_broaden" = c("augmenter"),
+  "augmentation.scattering.scatter_sim_msc" = c("augmenter"),
+  "augmentation.spectral.band_mask" = c("augmenter"),
+  "augmentation.spectral.band_perturb" = c("augmenter"),
+  "augmentation.spectral.channel_dropout" = c("augmenter"),
+  "augmentation.spectral.gauss_jitter" = c("augmenter"),
+  "augmentation.spectral.local_clip" = c("augmenter"),
+  "augmentation.spectral.magnitude_warp" = c("augmenter"),
+  "augmentation.spectral.unsharp_mask" = c("augmenter"),
+  "augmentation.splines.spline_curve_simplification" = c("augmenter"),
+  "augmentation.splines.spline_smoothing" = c("augmenter"),
+  "augmentation.splines.spline_x_perturbations" = c("augmenter"),
+  "augmentation.splines.spline_x_simplification" = c("augmenter"),
+  "augmentation.splines.spline_y_perturbations" = c("augmenter"),
+  "augmentation.wavelength.local_warp" = c("augmenter"),
+  "augmentation.wavelength.wavelength_shift" = c("augmenter"),
+  "augmentation.wavelength.wavelength_stretch" = c("augmenter"),
+  "diagnostics.approximate_press" = c("generic"),
+  "diagnostics.model_selection" = c("generic"),
+  "diagnostics.pls_diagnostics" = c("generic"),
+  "diagnostics.pls_monitoring" = c("generic"),
+  "diagnostics.regression_metrics" = c("generic"),
   "filters.correlation" = c("selector"),
   "filters.high_leverage" = c("sample_filter"),
   "filters.spectral_quality" = c("sample_filter"),
@@ -118,10 +154,61 @@
   "selection.vip_spa" = c("selector"),
   "selection.vissa" = c("selector"),
   "selection.wvc" = c("selector"),
-  "selection.wvc_threshold" = c("selector")
+  "selection.wvc_threshold" = c("selector"),
+  "splitters.binned_strat_group_kfold" = c("splitter"),
+  "splitters.kbins_stratified" = c("splitter"),
+  "splitters.kennard_stone" = c("splitter"),
+  "splitters.kmeans" = c("splitter"),
+  "splitters.split_splitter" = c("splitter"),
+  "splitters.spxy" = c("splitter"),
+  "splitters.spxy_fold" = c("splitter"),
+  "splitters.spxy_g_fold" = c("splitter"),
+  "splitters.systematic_circular" = c("splitter"),
+  "utilities.hotelling_t2" = c("generic"),
+  "utilities.moments" = c("generic"),
+  "utilities.q_residuals" = c("generic"),
+  "utilities.signal_type_detector" = c("generic"),
+  "utilities.sweep" = c("generic"),
+  "utilities.transfer_metrics" = c("generic")
 )
 
 .n4m_method_constructors <- c(
+  "augmentation.drift.linear_drift" = "n4m_linear_drift",
+  "augmentation.drift.path_length" = "n4m_path_length",
+  "augmentation.drift.poly_drift" = "n4m_poly_drift",
+  "augmentation.edge_artifacts.edge_curvature" = "n4m_edge_curvature",
+  "augmentation.edge_artifacts.truncated_peak" = "n4m_truncated_peak",
+  "augmentation.noise.gaussian_noise" = "n4m_gaussian_noise",
+  "augmentation.noise.hetero_noise" = "n4m_hetero_noise",
+  "augmentation.noise.multiplicative_noise" = "n4m_multiplicative_noise",
+  "augmentation.noise.spike_noise" = "n4m_spike_noise",
+  "augmentation.random.random_x_op" = "n4m_random_x_op",
+  "augmentation.random.rotate_translate" = "n4m_rotate_translate",
+  "augmentation.scattering.batch_effect" = "n4m_batch_effect",
+  "augmentation.scattering.dead_band" = "n4m_dead_band",
+  "augmentation.scattering.emsc_distort" = "n4m_emsc_distort",
+  "augmentation.scattering.instrument_broaden" = "n4m_instrument_broaden",
+  "augmentation.scattering.scatter_sim_msc" = "n4m_scatter_sim_msc",
+  "augmentation.spectral.band_mask" = "n4m_band_mask",
+  "augmentation.spectral.band_perturb" = "n4m_band_perturb",
+  "augmentation.spectral.channel_dropout" = "n4m_channel_dropout",
+  "augmentation.spectral.gauss_jitter" = "n4m_gauss_jitter",
+  "augmentation.spectral.local_clip" = "n4m_local_clip",
+  "augmentation.spectral.magnitude_warp" = "n4m_magnitude_warp",
+  "augmentation.spectral.unsharp_mask" = "n4m_unsharp_mask",
+  "augmentation.splines.spline_curve_simplification" = "n4m_spline_curve_simplification",
+  "augmentation.splines.spline_smoothing" = "n4m_spline_smoothing",
+  "augmentation.splines.spline_x_perturbations" = "n4m_spline_x_perturbations",
+  "augmentation.splines.spline_x_simplification" = "n4m_spline_x_simplification",
+  "augmentation.splines.spline_y_perturbations" = "n4m_spline_y_perturbations",
+  "augmentation.wavelength.local_warp" = "n4m_local_warp",
+  "augmentation.wavelength.wavelength_shift" = "n4m_wavelength_shift",
+  "augmentation.wavelength.wavelength_stretch" = "n4m_wavelength_stretch",
+  "diagnostics.approximate_press" = "n4m_approximate_press",
+  "diagnostics.model_selection" = "n4m_model_selection",
+  "diagnostics.pls_diagnostics" = "n4m_pls_diagnostics",
+  "diagnostics.pls_monitoring" = "n4m_pls_monitoring",
+  "diagnostics.regression_metrics" = "n4m_regression_metrics",
   "filters.correlation" = "n4m_correlation",
   "filters.high_leverage" = "n4m_high_leverage",
   "filters.spectral_quality" = "n4m_spectral_quality",
@@ -237,8 +324,239 @@
   "selection.vip_spa" = "n4m_vip_spa",
   "selection.vissa" = "n4m_vissa",
   "selection.wvc" = "n4m_wvc",
-  "selection.wvc_threshold" = "n4m_wvc_threshold"
+  "selection.wvc_threshold" = "n4m_wvc_threshold",
+  "splitters.binned_strat_group_kfold" = "n4m_binned_strat_group_kfold",
+  "splitters.kbins_stratified" = "n4m_kbins_stratified",
+  "splitters.kennard_stone" = "n4m_kennard_stone",
+  "splitters.kmeans" = "n4m_kmeans",
+  "splitters.split_splitter" = "n4m_split_splitter",
+  "splitters.spxy" = "n4m_spxy",
+  "splitters.spxy_fold" = "n4m_spxy_fold",
+  "splitters.spxy_g_fold" = "n4m_spxy_g_fold",
+  "splitters.systematic_circular" = "n4m_systematic_circular",
+  "utilities.hotelling_t2" = "n4m_hotelling_t2",
+  "utilities.moments" = "n4m_moments",
+  "utilities.q_residuals" = "n4m_q_residuals",
+  "utilities.signal_type_detector" = "n4m_signal_type_detector",
+  "utilities.sweep" = "n4m_sweep",
+  "utilities.transfer_metrics" = "n4m_transfer_metrics"
 )
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_linear_drift <- function(offset_min = -0.05, offset_max = 0.05, slope_min = -0.01, slope_max = 0.01, seed = 0L) {
+  .n4m_estimator("augmentation.drift.linear_drift", c("augmenter"), list(offset_min = offset_min, offset_max = offset_max, slope_min = slope_min, slope_max = slope_max, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_path_length <- function(path_length_std = 0.05, min_path_length = 0.1, seed = 0L) {
+  .n4m_estimator("augmentation.drift.path_length", c("augmenter"), list(path_length_std = path_length_std, min_path_length = min_path_length, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_poly_drift <- function(coeff_min = c(-0.01, -0.01, -0.01), coeff_max = c(0.01, 0.01, 0.01), seed = 0L) {
+  .n4m_estimator("augmentation.drift.poly_drift", c("augmenter"), list(coeff_min = coeff_min, coeff_max = coeff_max, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_edge_curvature <- function(curvature_strength = 0.02, curvature_type = "random", asymmetry = 0.0, edge_focus = 0.7, seed = 0L) {
+  .n4m_estimator("augmentation.edge_artifacts.edge_curvature", c("augmenter"), list(curvature_strength = curvature_strength, curvature_type = curvature_type, asymmetry = asymmetry, edge_focus = edge_focus, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_truncated_peak <- function(peak_probability = 0.5, amplitude_min = 0.01, amplitude_max = 0.1, width_min = 50.0, width_max = 200.0, left_edge = TRUE, right_edge = TRUE, seed = 0L) {
+  .n4m_estimator("augmentation.edge_artifacts.truncated_peak", c("augmenter"), list(peak_probability = peak_probability, amplitude_min = amplitude_min, amplitude_max = amplitude_max, width_min = width_min, width_max = width_max, left_edge = left_edge, right_edge = right_edge, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_gaussian_noise <- function(sigma = 0.01, seed = 0L) {
+  .n4m_estimator("augmentation.noise.gaussian_noise", c("augmenter"), list(sigma = sigma, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_hetero_noise <- function(noise_base = 0.001, noise_signal_dep = 0.01, seed = 0L) {
+  .n4m_estimator("augmentation.noise.hetero_noise", c("augmenter"), list(noise_base = noise_base, noise_signal_dep = noise_signal_dep, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_multiplicative_noise <- function(sigma_gain = 0.01, seed = 0L) {
+  .n4m_estimator("augmentation.noise.multiplicative_noise", c("augmenter"), list(sigma_gain = sigma_gain, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spike_noise <- function(n_spikes_min = 1L, n_spikes_max = 3L, amplitude_min = -0.1, amplitude_max = 0.1, seed = 0L) {
+  .n4m_estimator("augmentation.noise.spike_noise", c("augmenter"), list(n_spikes_min = n_spikes_min, n_spikes_max = n_spikes_max, amplitude_min = amplitude_min, amplitude_max = amplitude_max, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_random_x_op <- function(op_kind = "multiply", operator_range_min = 0.97, operator_range_max = 1.03, seed = 0L) {
+  .n4m_estimator("augmentation.random.random_x_op", c("augmenter"), list(op_kind = op_kind, operator_range_min = operator_range_min, operator_range_max = operator_range_max, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_rotate_translate <- function(p_range = 2.0, y_factor = 3.0, seed = 0L) {
+  .n4m_estimator("augmentation.random.rotate_translate", c("augmenter"), list(p_range = p_range, y_factor = y_factor, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_batch_effect <- function(offset_std = 0.0, slope_std = 0.0, gain_std = 0.0, variation_scope = "sample", seed = 0L) {
+  .n4m_estimator("augmentation.scattering.batch_effect", c("augmenter"), list(offset_std = offset_std, slope_std = slope_std, gain_std = gain_std, variation_scope = variation_scope, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_dead_band <- function(n_bands = 1L, width_low = 5L, width_high = 10L, noise_std = 0.05, probability = 0.0, variation_scope = "sample", seed = 0L) {
+  .n4m_estimator("augmentation.scattering.dead_band", c("augmenter"), list(n_bands = n_bands, width_low = width_low, width_high = width_high, noise_std = noise_std, probability = probability, variation_scope = variation_scope, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_emsc_distort <- function(mult_low = 0.9, mult_high = 1.1, add_low = -0.05, add_high = 0.05, polynomial_order = 2L, polynomial_strength = 0.02, correlation = 0.3, seed = 0L) {
+  .n4m_estimator("augmentation.scattering.emsc_distort", c("augmenter"), list(mult_low = mult_low, mult_high = mult_high, add_low = add_low, add_high = add_high, polynomial_order = polynomial_order, polynomial_strength = polynomial_strength, correlation = correlation, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_instrument_broaden <- function(fwhm = 5.0, use_fwhm_range = FALSE, fwhm_low = 3.0, fwhm_high = 8.0, variation_scope = "sample", seed = 0L) {
+  .n4m_estimator("augmentation.scattering.instrument_broaden", c("augmenter"), list(fwhm = fwhm, use_fwhm_range = use_fwhm_range, fwhm_low = fwhm_low, fwhm_high = fwhm_high, variation_scope = variation_scope, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_scatter_sim_msc <- function(a_low = -0.05, a_high = 0.05, b_low = 0.9, b_high = 1.1, seed = 0L) {
+  .n4m_estimator("augmentation.scattering.scatter_sim_msc", c("augmenter"), list(a_low = a_low, a_high = a_high, b_low = b_low, b_high = b_high, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_band_mask <- function(n_bands_lo = 1L, n_bands_hi = 3L, bw_lo = 5L, bw_hi = 15L, mode = "zero", seed = 0L) {
+  .n4m_estimator("augmentation.spectral.band_mask", c("augmenter"), list(n_bands_lo = n_bands_lo, n_bands_hi = n_bands_hi, bw_lo = bw_lo, bw_hi = bw_hi, mode = mode, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_band_perturb <- function(n_bands = 3L, bw_lo = 5L, bw_hi = 15L, gain_lo = 0.9, gain_hi = 1.1, offset_lo = -0.01, offset_hi = 0.01, seed = 0L) {
+  .n4m_estimator("augmentation.spectral.band_perturb", c("augmenter"), list(n_bands = n_bands, bw_lo = bw_lo, bw_hi = bw_hi, gain_lo = gain_lo, gain_hi = gain_hi, offset_lo = offset_lo, offset_hi = offset_hi, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_channel_dropout <- function(dropout_prob = 0.05, mode = "zero", seed = 0L) {
+  .n4m_estimator("augmentation.spectral.channel_dropout", c("augmenter"), list(dropout_prob = dropout_prob, mode = mode, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_gauss_jitter <- function(sigma_lo = 0.5, sigma_hi = 1.5, kernel_width = 9L, seed = 0L) {
+  .n4m_estimator("augmentation.spectral.gauss_jitter", c("augmenter"), list(sigma_lo = sigma_lo, sigma_hi = sigma_hi, kernel_width = kernel_width, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_local_clip <- function(n_regions = 1L, width_lo = 5L, width_hi = 15L, seed = 0L) {
+  .n4m_estimator("augmentation.spectral.local_clip", c("augmenter"), list(n_regions = n_regions, width_lo = width_lo, width_hi = width_hi, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_magnitude_warp <- function(n_control_points = 5L, gain_lo = 0.9, gain_hi = 1.1, seed = 0L) {
+  .n4m_estimator("augmentation.spectral.magnitude_warp", c("augmenter"), list(n_control_points = n_control_points, gain_lo = gain_lo, gain_hi = gain_hi, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_unsharp_mask <- function(amount_lo = 0.1, amount_hi = 0.5, sigma = 1.0, kernel_width = 11L, seed = 0L) {
+  .n4m_estimator("augmentation.spectral.unsharp_mask", c("augmenter"), list(amount_lo = amount_lo, amount_hi = amount_hi, sigma = sigma, kernel_width = kernel_width, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spline_curve_simplification <- function(spline_points = -1L, uniform = FALSE, seed = 0L) {
+  .n4m_estimator("augmentation.splines.spline_curve_simplification", c("augmenter"), list(spline_points = spline_points, uniform = uniform, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spline_smoothing <- function(seed = 0L) {
+  .n4m_estimator("augmentation.splines.spline_smoothing", c("augmenter"), list(seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spline_x_perturbations <- function(spline_degree = 3L, perturbation_density = 0.05, perturbation_range_min = -0.1, perturbation_range_max = 0.1, seed = 0L) {
+  .n4m_estimator("augmentation.splines.spline_x_perturbations", c("augmenter"), list(spline_degree = spline_degree, perturbation_density = perturbation_density, perturbation_range_min = perturbation_range_min, perturbation_range_max = perturbation_range_max, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spline_x_simplification <- function(spline_points = -1L, uniform = FALSE, seed = 0L) {
+  .n4m_estimator("augmentation.splines.spline_x_simplification", c("augmenter"), list(spline_points = spline_points, uniform = uniform, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spline_y_perturbations <- function(spline_points = -1L, perturbation_intensity = 0.005, seed = 0L) {
+  .n4m_estimator("augmentation.splines.spline_y_perturbations", c("augmenter"), list(spline_points = spline_points, perturbation_intensity = perturbation_intensity, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_local_warp <- function(n_control_points = 5L, max_shift = 1.0, seed = 0L) {
+  .n4m_estimator("augmentation.wavelength.local_warp", c("augmenter"), list(n_control_points = n_control_points, max_shift = max_shift, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_wavelength_shift <- function(shift_lo = -1.0, shift_hi = 1.0, seed = 0L) {
+  .n4m_estimator("augmentation.wavelength.wavelength_shift", c("augmenter"), list(shift_lo = shift_lo, shift_hi = shift_hi, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_wavelength_stretch <- function(stretch_lo = 0.99, stretch_hi = 1.01, seed = 0L) {
+  .n4m_estimator("augmentation.wavelength.wavelength_stretch", c("augmenter"), list(stretch_lo = stretch_lo, stretch_hi = stretch_hi, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_approximate_press <- function(max_components = 10L) {
+  .n4m_estimator("diagnostics.approximate_press", c("generic"), list(max_components = max_components))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_model_selection <- function() {
+  .n4m_estimator("diagnostics.model_selection", c("generic"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pls_diagnostics <- function(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE) {
+  .n4m_estimator("diagnostics.pls_diagnostics", c("generic"), list(n_components = n_components, center_x = center_x, scale_x = scale_x, center_y = center_y, scale_y = scale_y))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pls_monitoring <- function(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE, alpha = 0.05) {
+  .n4m_estimator("diagnostics.pls_monitoring", c("generic"), list(n_components = n_components, center_x = center_x, scale_x = scale_x, center_y = center_y, scale_y = scale_y, alpha = alpha))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_regression_metrics <- function() {
+  .n4m_estimator("diagnostics.regression_metrics", c("generic"), list())
+}
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
@@ -934,4 +1252,94 @@ n4m_wvc <- function(top_k = NULL, n_components = 2L, normalize = TRUE) {
 #' @export
 n4m_wvc_threshold <- function(n_components = 2L, normalize = TRUE, score_threshold = 0.0, threshold_factor = 1.0, min_selected = 0L) {
   .n4m_estimator("selection.wvc_threshold", c("selector"), list(n_components = n_components, normalize = normalize, score_threshold = score_threshold, threshold_factor = threshold_factor, min_selected = min_selected))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_binned_strat_group_kfold <- function(n_splits = 5L, n_bins = 5L, strategy = "uniform", shuffle = TRUE, seed = 0L) {
+  .n4m_estimator("splitters.binned_strat_group_kfold", c("splitter"), list(n_splits = n_splits, n_bins = n_bins, strategy = strategy, shuffle = shuffle, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_kbins_stratified <- function(test_size = 0.25, seed = 0L, n_bins = 5L, strategy = "uniform") {
+  .n4m_estimator("splitters.kbins_stratified", c("splitter"), list(test_size = test_size, seed = seed, n_bins = n_bins, strategy = strategy))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_kennard_stone <- function(test_size = 0.25) {
+  .n4m_estimator("splitters.kennard_stone", c("splitter"), list(test_size = test_size))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_kmeans <- function(test_size = 0.25, seed = 0L, max_iter = 100L) {
+  .n4m_estimator("splitters.kmeans", c("splitter"), list(test_size = test_size, seed = seed, max_iter = max_iter))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_split_splitter <- function(test_size = 0.25, seed = 0L) {
+  .n4m_estimator("splitters.split_splitter", c("splitter"), list(test_size = test_size, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spxy <- function(test_size = 0.25) {
+  .n4m_estimator("splitters.spxy", c("splitter"), list(test_size = test_size))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spxy_fold <- function(n_splits = 5L, y_metric = "euclidean") {
+  .n4m_estimator("splitters.spxy_fold", c("splitter"), list(n_splits = n_splits, y_metric = y_metric))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spxy_g_fold <- function(n_splits = 5L, y_metric = "euclidean", aggregation = "mean") {
+  .n4m_estimator("splitters.spxy_g_fold", c("splitter"), list(n_splits = n_splits, y_metric = y_metric, aggregation = aggregation))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_systematic_circular <- function(test_size = 0.25, seed = 0L) {
+  .n4m_estimator("splitters.systematic_circular", c("splitter"), list(test_size = test_size, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_hotelling_t2 <- function(n_components = 5L, alpha = 0.05) {
+  .n4m_estimator("utilities.hotelling_t2", c("generic"), list(n_components = n_components, alpha = alpha))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_moments <- function() {
+  .n4m_estimator("utilities.moments", c("generic"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_q_residuals <- function(n_components = 5L, alpha = 0.05) {
+  .n4m_estimator("utilities.q_residuals", c("generic"), list(n_components = n_components, alpha = alpha))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_signal_type_detector <- function(confidence_threshold = 0.7) {
+  .n4m_estimator("utilities.signal_type_detector", c("generic"), list(confidence_threshold = confidence_threshold))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_sweep <- function(cv = 5L, ridge_lambdas = c(0.01, 0.1, 1.0, 10.0), pls_components = c(1L, 2L, 3L, 4L, 5L), heads = "ridge", center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE) {
+  .n4m_estimator("utilities.sweep", c("generic"), list(cv = cv, ridge_lambdas = ridge_lambdas, pls_components = pls_components, heads = heads, center_x = center_x, scale_x = scale_x, center_y = center_y, scale_y = scale_y))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_transfer_metrics <- function(n_components = 10L, k_neighbors = 10L, seed = 0L) {
+  .n4m_estimator("utilities.transfer_metrics", c("generic"), list(n_components = n_components, k_neighbors = k_neighbors, seed = seed))
 }

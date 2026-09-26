@@ -380,6 +380,8 @@ SYMBOLS = (
     ("n4m_method_param_default_int", (c_int32, c_int32, POINTER(c_int64), c_int64, POINTER(c_int64)), c_int),
     ("n4m_method_param_info_v1", (c_int32, c_int32, c_void_p), c_int),
     ("n4m_method_result_destroy", (c_void_p,), None),
+    ("n4m_method_result_entry", (c_void_p, c_int32, POINTER(c_char_p), POINTER(c_int32)), c_int),
+    ("n4m_method_result_entry_count", (c_void_p, POINTER(c_int32)), c_int),
     ("n4m_method_result_get_double_matrix", (c_void_p, c_char_p, POINTER(POINTER(c_double)), POINTER(c_int64), POINTER(c_int64)), c_int),
     ("n4m_method_result_get_fold", (c_void_p, c_int32, POINTER(POINTER(c_int64)), POINTER(c_int64), POINTER(POINTER(c_int64)), POINTER(c_int64)), c_int),
     ("n4m_method_result_get_int64_vector", (c_void_p, c_char_p, POINTER(POINTER(c_int64)), POINTER(c_int64)), c_int),

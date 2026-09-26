@@ -3,15 +3,1211 @@
 // Native ABI 2.13.0.
 
 import {
+    type Augmenter,
     type Classifier,
+    type FitInputs,
+    type Fold,
     NativeEstimator,
+    NativeMethod,
+    NativeProcedure,
     type ProbabilisticClassifier,
+    type Procedure,
+    type ProcedureOutput,
     type Regressor,
     type SampleFilter,
     type Selector,
+    type Splitter,
     type Transformer,
 } from "./estimatorRoles.js";
 import type { Matrix } from "./types.js";
+
+/** Parameters of LinearDrift; unset values take the native defaults. */
+export interface LinearDriftParams {
+    /** Default -0.05. */
+    offset_min?: number;
+    /** Default 0.05. */
+    offset_max?: number;
+    /** Default -0.01. */
+    slope_min?: number;
+    /** Default 0.01. */
+    slope_max?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.drift.linear_drift` (augmenter). */
+export class LinearDrift extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.drift.linear_drift";
+    readonly paramTypes = {
+        offset_min: "double",
+        offset_max: "double",
+        slope_min: "double",
+        slope_max: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: LinearDriftParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.drift.linear_drift", LinearDrift);
+
+/** Parameters of PathLength; unset values take the native defaults. */
+export interface PathLengthParams {
+    /** Default 0.05. */
+    path_length_std?: number;
+    /** Default 0.1. */
+    min_path_length?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.drift.path_length` (augmenter). */
+export class PathLength extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.drift.path_length";
+    readonly paramTypes = {
+        path_length_std: "double",
+        min_path_length: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: PathLengthParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.drift.path_length", PathLength);
+
+/** Parameters of PolyDrift; unset values take the native defaults. */
+export interface PolyDriftParams {
+    /** Default [-0.01, -0.01, -0.01]. */
+    coeff_min?: number[];
+    /** Default [0.01, 0.01, 0.01]. */
+    coeff_max?: number[];
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.drift.poly_drift` (augmenter). */
+export class PolyDrift extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.drift.poly_drift";
+    readonly paramTypes = {
+        coeff_min: "double_array",
+        coeff_max: "double_array",
+        seed: "int",
+    } as const;
+
+    constructor(params: PolyDriftParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.drift.poly_drift", PolyDrift);
+
+/** Parameters of EdgeCurvature; unset values take the native defaults. */
+export interface EdgeCurvatureParams {
+    /** Default 0.02. */
+    curvature_strength?: number;
+    /** Default "random". */
+    curvature_type?: "random" | "smile" | "frown" | "asymmetric";
+    /** Default 0. */
+    asymmetry?: number;
+    /** Default 0.7. */
+    edge_focus?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.edge_artifacts.edge_curvature` (augmenter). Required inputs: axis. */
+export class EdgeCurvature extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.edge_artifacts.edge_curvature";
+    readonly paramTypes = {
+        curvature_strength: "double",
+        curvature_type: "enum",
+        asymmetry: "double",
+        edge_focus: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: EdgeCurvatureParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.edge_artifacts.edge_curvature", EdgeCurvature);
+
+/** Parameters of TruncatedPeak; unset values take the native defaults. */
+export interface TruncatedPeakParams {
+    /** Default 0.5. */
+    peak_probability?: number;
+    /** Default 0.01. */
+    amplitude_min?: number;
+    /** Default 0.1. */
+    amplitude_max?: number;
+    /** Default 50. */
+    width_min?: number;
+    /** Default 200. */
+    width_max?: number;
+    /** Default true. */
+    left_edge?: boolean;
+    /** Default true. */
+    right_edge?: boolean;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.edge_artifacts.truncated_peak` (augmenter). Required inputs: axis. */
+export class TruncatedPeak extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.edge_artifacts.truncated_peak";
+    readonly paramTypes = {
+        peak_probability: "double",
+        amplitude_min: "double",
+        amplitude_max: "double",
+        width_min: "double",
+        width_max: "double",
+        left_edge: "bool",
+        right_edge: "bool",
+        seed: "int",
+    } as const;
+
+    constructor(params: TruncatedPeakParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.edge_artifacts.truncated_peak", TruncatedPeak);
+
+/** Parameters of GaussianNoise; unset values take the native defaults. */
+export interface GaussianNoiseParams {
+    /** Default 0.01. */
+    sigma?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.noise.gaussian_noise` (augmenter). */
+export class GaussianNoise extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.noise.gaussian_noise";
+    readonly paramTypes = {
+        sigma: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: GaussianNoiseParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.noise.gaussian_noise", GaussianNoise);
+
+/** Parameters of HeteroNoise; unset values take the native defaults. */
+export interface HeteroNoiseParams {
+    /** Default 0.001. */
+    noise_base?: number;
+    /** Default 0.01. */
+    noise_signal_dep?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.noise.hetero_noise` (augmenter). */
+export class HeteroNoise extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.noise.hetero_noise";
+    readonly paramTypes = {
+        noise_base: "double",
+        noise_signal_dep: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: HeteroNoiseParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.noise.hetero_noise", HeteroNoise);
+
+/** Parameters of MultiplicativeNoise; unset values take the native defaults. */
+export interface MultiplicativeNoiseParams {
+    /** Default 0.01. */
+    sigma_gain?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.noise.multiplicative_noise` (augmenter). */
+export class MultiplicativeNoise extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.noise.multiplicative_noise";
+    readonly paramTypes = {
+        sigma_gain: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: MultiplicativeNoiseParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.noise.multiplicative_noise", MultiplicativeNoise);
+
+/** Parameters of SpikeNoise; unset values take the native defaults. */
+export interface SpikeNoiseParams {
+    /** Default 1. */
+    n_spikes_min?: number;
+    /** Default 3. */
+    n_spikes_max?: number;
+    /** Default -0.1. */
+    amplitude_min?: number;
+    /** Default 0.1. */
+    amplitude_max?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.noise.spike_noise` (augmenter). */
+export class SpikeNoise extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.noise.spike_noise";
+    readonly paramTypes = {
+        n_spikes_min: "int",
+        n_spikes_max: "int",
+        amplitude_min: "double",
+        amplitude_max: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: SpikeNoiseParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.noise.spike_noise", SpikeNoise);
+
+/** Parameters of RandomXOp; unset values take the native defaults. */
+export interface RandomXOpParams {
+    /** Default "multiply". */
+    op_kind?: "multiply" | "add" | "subtract";
+    /** Default 0.97. */
+    operator_range_min?: number;
+    /** Default 1.03. */
+    operator_range_max?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.random.random_x_op` (augmenter). */
+export class RandomXOp extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.random.random_x_op";
+    readonly paramTypes = {
+        op_kind: "enum",
+        operator_range_min: "double",
+        operator_range_max: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: RandomXOpParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.random.random_x_op", RandomXOp);
+
+/** Parameters of RotateTranslate; unset values take the native defaults. */
+export interface RotateTranslateParams {
+    /** Default 2. */
+    p_range?: number;
+    /** Default 3. */
+    y_factor?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.random.rotate_translate` (augmenter). */
+export class RotateTranslate extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.random.rotate_translate";
+    readonly paramTypes = {
+        p_range: "double",
+        y_factor: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: RotateTranslateParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.random.rotate_translate", RotateTranslate);
+
+/** Parameters of BatchEffect; unset values take the native defaults. */
+export interface BatchEffectParams {
+    /** Default 0. */
+    offset_std?: number;
+    /** Default 0. */
+    slope_std?: number;
+    /** Default 0. */
+    gain_std?: number;
+    /** Default "sample". */
+    variation_scope?: "sample" | "batch";
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.scattering.batch_effect` (augmenter). */
+export class BatchEffect extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.scattering.batch_effect";
+    readonly paramTypes = {
+        offset_std: "double",
+        slope_std: "double",
+        gain_std: "double",
+        variation_scope: "enum",
+        seed: "int",
+    } as const;
+
+    constructor(params: BatchEffectParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.scattering.batch_effect", BatchEffect);
+
+/** Parameters of DeadBand; unset values take the native defaults. */
+export interface DeadBandParams {
+    /** Default 1. */
+    n_bands?: number;
+    /** Default 5. */
+    width_low?: number;
+    /** Default 10. */
+    width_high?: number;
+    /** Default 0.05. */
+    noise_std?: number;
+    /** Default 0. */
+    probability?: number;
+    /** Default "sample". */
+    variation_scope?: "sample" | "batch";
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.scattering.dead_band` (augmenter). */
+export class DeadBand extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.scattering.dead_band";
+    readonly paramTypes = {
+        n_bands: "int",
+        width_low: "int",
+        width_high: "int",
+        noise_std: "double",
+        probability: "double",
+        variation_scope: "enum",
+        seed: "int",
+    } as const;
+
+    constructor(params: DeadBandParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.scattering.dead_band", DeadBand);
+
+/** Parameters of EMSCDistort; unset values take the native defaults. */
+export interface EMSCDistortParams {
+    /** Default 0.9. */
+    mult_low?: number;
+    /** Default 1.1. */
+    mult_high?: number;
+    /** Default -0.05. */
+    add_low?: number;
+    /** Default 0.05. */
+    add_high?: number;
+    /** Default 2. */
+    polynomial_order?: number;
+    /** Default 0.02. */
+    polynomial_strength?: number;
+    /** Default 0.3. */
+    correlation?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.scattering.emsc_distort` (augmenter). Required inputs: axis. */
+export class EMSCDistort extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.scattering.emsc_distort";
+    readonly paramTypes = {
+        mult_low: "double",
+        mult_high: "double",
+        add_low: "double",
+        add_high: "double",
+        polynomial_order: "int",
+        polynomial_strength: "double",
+        correlation: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: EMSCDistortParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.scattering.emsc_distort", EMSCDistort);
+
+/** Parameters of InstrumentBroaden; unset values take the native defaults. */
+export interface InstrumentBroadenParams {
+    /** Default 5. */
+    fwhm?: number;
+    /** Default false. */
+    use_fwhm_range?: boolean;
+    /** Default 3. */
+    fwhm_low?: number;
+    /** Default 8. */
+    fwhm_high?: number;
+    /** Default "sample". */
+    variation_scope?: "sample" | "batch";
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.scattering.instrument_broaden` (augmenter). */
+export class InstrumentBroaden extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.scattering.instrument_broaden";
+    readonly paramTypes = {
+        fwhm: "double",
+        use_fwhm_range: "bool",
+        fwhm_low: "double",
+        fwhm_high: "double",
+        variation_scope: "enum",
+        seed: "int",
+    } as const;
+
+    constructor(params: InstrumentBroadenParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.scattering.instrument_broaden", InstrumentBroaden);
+
+/** Parameters of ScatterSimMSC; unset values take the native defaults. */
+export interface ScatterSimMSCParams {
+    /** Default -0.05. */
+    a_low?: number;
+    /** Default 0.05. */
+    a_high?: number;
+    /** Default 0.9. */
+    b_low?: number;
+    /** Default 1.1. */
+    b_high?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.scattering.scatter_sim_msc` (augmenter). */
+export class ScatterSimMSC extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.scattering.scatter_sim_msc";
+    readonly paramTypes = {
+        a_low: "double",
+        a_high: "double",
+        b_low: "double",
+        b_high: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: ScatterSimMSCParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.scattering.scatter_sim_msc", ScatterSimMSC);
+
+/** Parameters of BandMask; unset values take the native defaults. */
+export interface BandMaskParams {
+    /** Default 1. */
+    n_bands_lo?: number;
+    /** Default 3. */
+    n_bands_hi?: number;
+    /** Default 5. */
+    bw_lo?: number;
+    /** Default 15. */
+    bw_hi?: number;
+    /** Default "zero". */
+    mode?: "zero" | "interp";
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.spectral.band_mask` (augmenter). */
+export class BandMask extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.spectral.band_mask";
+    readonly paramTypes = {
+        n_bands_lo: "int",
+        n_bands_hi: "int",
+        bw_lo: "int",
+        bw_hi: "int",
+        mode: "enum",
+        seed: "int",
+    } as const;
+
+    constructor(params: BandMaskParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.spectral.band_mask", BandMask);
+
+/** Parameters of BandPerturb; unset values take the native defaults. */
+export interface BandPerturbParams {
+    /** Default 3. */
+    n_bands?: number;
+    /** Default 5. */
+    bw_lo?: number;
+    /** Default 15. */
+    bw_hi?: number;
+    /** Default 0.9. */
+    gain_lo?: number;
+    /** Default 1.1. */
+    gain_hi?: number;
+    /** Default -0.01. */
+    offset_lo?: number;
+    /** Default 0.01. */
+    offset_hi?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.spectral.band_perturb` (augmenter). */
+export class BandPerturb extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.spectral.band_perturb";
+    readonly paramTypes = {
+        n_bands: "int",
+        bw_lo: "int",
+        bw_hi: "int",
+        gain_lo: "double",
+        gain_hi: "double",
+        offset_lo: "double",
+        offset_hi: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: BandPerturbParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.spectral.band_perturb", BandPerturb);
+
+/** Parameters of ChannelDropout; unset values take the native defaults. */
+export interface ChannelDropoutParams {
+    /** Default 0.05. */
+    dropout_prob?: number;
+    /** Default "zero". */
+    mode?: "zero" | "interp";
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.spectral.channel_dropout` (augmenter). */
+export class ChannelDropout extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.spectral.channel_dropout";
+    readonly paramTypes = {
+        dropout_prob: "double",
+        mode: "enum",
+        seed: "int",
+    } as const;
+
+    constructor(params: ChannelDropoutParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.spectral.channel_dropout", ChannelDropout);
+
+/** Parameters of GaussJitter; unset values take the native defaults. */
+export interface GaussJitterParams {
+    /** Default 0.5. */
+    sigma_lo?: number;
+    /** Default 1.5. */
+    sigma_hi?: number;
+    /** Default 9. */
+    kernel_width?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.spectral.gauss_jitter` (augmenter). */
+export class GaussJitter extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.spectral.gauss_jitter";
+    readonly paramTypes = {
+        sigma_lo: "double",
+        sigma_hi: "double",
+        kernel_width: "int",
+        seed: "int",
+    } as const;
+
+    constructor(params: GaussJitterParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.spectral.gauss_jitter", GaussJitter);
+
+/** Parameters of LocalClip; unset values take the native defaults. */
+export interface LocalClipParams {
+    /** Default 1. */
+    n_regions?: number;
+    /** Default 5. */
+    width_lo?: number;
+    /** Default 15. */
+    width_hi?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.spectral.local_clip` (augmenter). */
+export class LocalClip extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.spectral.local_clip";
+    readonly paramTypes = {
+        n_regions: "int",
+        width_lo: "int",
+        width_hi: "int",
+        seed: "int",
+    } as const;
+
+    constructor(params: LocalClipParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.spectral.local_clip", LocalClip);
+
+/** Parameters of MagnitudeWarp; unset values take the native defaults. */
+export interface MagnitudeWarpParams {
+    /** Default 5. */
+    n_control_points?: number;
+    /** Default 0.9. */
+    gain_lo?: number;
+    /** Default 1.1. */
+    gain_hi?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.spectral.magnitude_warp` (augmenter). */
+export class MagnitudeWarp extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.spectral.magnitude_warp";
+    readonly paramTypes = {
+        n_control_points: "int",
+        gain_lo: "double",
+        gain_hi: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: MagnitudeWarpParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.spectral.magnitude_warp", MagnitudeWarp);
+
+/** Parameters of UnsharpMask; unset values take the native defaults. */
+export interface UnsharpMaskParams {
+    /** Default 0.1. */
+    amount_lo?: number;
+    /** Default 0.5. */
+    amount_hi?: number;
+    /** Default 1. */
+    sigma?: number;
+    /** Default 11. */
+    kernel_width?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.spectral.unsharp_mask` (augmenter). */
+export class UnsharpMask extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.spectral.unsharp_mask";
+    readonly paramTypes = {
+        amount_lo: "double",
+        amount_hi: "double",
+        sigma: "double",
+        kernel_width: "int",
+        seed: "int",
+    } as const;
+
+    constructor(params: UnsharpMaskParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.spectral.unsharp_mask", UnsharpMask);
+
+/** Parameters of SplineCurveSimplification; unset values take the native defaults. */
+export interface SplineCurveSimplificationParams {
+    /** Default -1. */
+    spline_points?: number;
+    /** Default false. */
+    uniform?: boolean;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.splines.spline_curve_simplification` (augmenter). */
+export class SplineCurveSimplification extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.splines.spline_curve_simplification";
+    readonly paramTypes = {
+        spline_points: "int",
+        uniform: "bool",
+        seed: "int",
+    } as const;
+
+    constructor(params: SplineCurveSimplificationParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.splines.spline_curve_simplification", SplineCurveSimplification);
+
+/** Parameters of SplineSmoothing; unset values take the native defaults. */
+export interface SplineSmoothingParams {
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.splines.spline_smoothing` (augmenter). */
+export class SplineSmoothing extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.splines.spline_smoothing";
+    readonly paramTypes = {
+        seed: "int",
+    } as const;
+
+    constructor(params: SplineSmoothingParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.splines.spline_smoothing", SplineSmoothing);
+
+/** Parameters of SplineXPerturbations; unset values take the native defaults. */
+export interface SplineXPerturbationsParams {
+    /** Default 3. */
+    spline_degree?: number;
+    /** Default 0.05. */
+    perturbation_density?: number;
+    /** Default -0.1. */
+    perturbation_range_min?: number;
+    /** Default 0.1. */
+    perturbation_range_max?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.splines.spline_x_perturbations` (augmenter). */
+export class SplineXPerturbations extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.splines.spline_x_perturbations";
+    readonly paramTypes = {
+        spline_degree: "int",
+        perturbation_density: "double",
+        perturbation_range_min: "double",
+        perturbation_range_max: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: SplineXPerturbationsParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.splines.spline_x_perturbations", SplineXPerturbations);
+
+/** Parameters of SplineXSimplification; unset values take the native defaults. */
+export interface SplineXSimplificationParams {
+    /** Default -1. */
+    spline_points?: number;
+    /** Default false. */
+    uniform?: boolean;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.splines.spline_x_simplification` (augmenter). */
+export class SplineXSimplification extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.splines.spline_x_simplification";
+    readonly paramTypes = {
+        spline_points: "int",
+        uniform: "bool",
+        seed: "int",
+    } as const;
+
+    constructor(params: SplineXSimplificationParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.splines.spline_x_simplification", SplineXSimplification);
+
+/** Parameters of SplineYPerturbations; unset values take the native defaults. */
+export interface SplineYPerturbationsParams {
+    /** Default -1. */
+    spline_points?: number;
+    /** Default 0.005. */
+    perturbation_intensity?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.splines.spline_y_perturbations` (augmenter). */
+export class SplineYPerturbations extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.splines.spline_y_perturbations";
+    readonly paramTypes = {
+        spline_points: "int",
+        perturbation_intensity: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: SplineYPerturbationsParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.splines.spline_y_perturbations", SplineYPerturbations);
+
+/** Parameters of LocalWarp; unset values take the native defaults. */
+export interface LocalWarpParams {
+    /** Default 5. */
+    n_control_points?: number;
+    /** Default 1. */
+    max_shift?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.wavelength.local_warp` (augmenter). */
+export class LocalWarp extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.wavelength.local_warp";
+    readonly paramTypes = {
+        n_control_points: "int",
+        max_shift: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: LocalWarpParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.wavelength.local_warp", LocalWarp);
+
+/** Parameters of WavelengthShift; unset values take the native defaults. */
+export interface WavelengthShiftParams {
+    /** Default -1. */
+    shift_lo?: number;
+    /** Default 1. */
+    shift_hi?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.wavelength.wavelength_shift` (augmenter). */
+export class WavelengthShift extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.wavelength.wavelength_shift";
+    readonly paramTypes = {
+        shift_lo: "double",
+        shift_hi: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: WavelengthShiftParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.wavelength.wavelength_shift", WavelengthShift);
+
+/** Parameters of WavelengthStretch; unset values take the native defaults. */
+export interface WavelengthStretchParams {
+    /** Default 0.99. */
+    stretch_lo?: number;
+    /** Default 1.01. */
+    stretch_hi?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `augmentation.wavelength.wavelength_stretch` (augmenter). */
+export class WavelengthStretch extends NativeProcedure implements Augmenter {
+    readonly methodId = "augmentation.wavelength.wavelength_stretch";
+    readonly paramTypes = {
+        stretch_lo: "double",
+        stretch_hi: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: WavelengthStretchParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    augment(X: Matrix, axis?: Float64Array | number[]): Matrix {
+        return this.augmentMatrix(X, axis);
+    }
+}
+NativeMethod.register("augmentation.wavelength.wavelength_stretch", WavelengthStretch);
+
+/** Parameters of ApproximatePress; unset values take the native defaults. */
+export interface ApproximatePressParams {
+    /** Default 10. */
+    max_components?: number;
+}
+
+/** Native `diagnostics.approximate_press` (generic). Required inputs: y. */
+export class ApproximatePress extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.approximate_press";
+    readonly paramTypes = {
+        max_components: "int",
+    } as const;
+
+    constructor(params: ApproximatePressParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.approximate_press", ApproximatePress);
+
+/** Parameters of ModelSelection; unset values take the native defaults. */
+export interface ModelSelectionParams {
+}
+
+/** Native `diagnostics.model_selection` (generic). */
+export class ModelSelection extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.model_selection";
+    readonly paramTypes = {
+    } as const;
+
+    constructor(params: ModelSelectionParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.model_selection", ModelSelection);
+
+/** Parameters of PLSDiagnostics; unset values take the native defaults. */
+export interface PLSDiagnosticsParams {
+    /** Default 2. */
+    n_components?: number;
+    /** Default true. */
+    center_x?: boolean;
+    /** Default true. */
+    scale_x?: boolean;
+    /** Default true. */
+    center_y?: boolean;
+    /** Default true. */
+    scale_y?: boolean;
+}
+
+/** Native `diagnostics.pls_diagnostics` (generic). Required inputs: y. */
+export class PLSDiagnostics extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.pls_diagnostics";
+    readonly paramTypes = {
+        n_components: "int",
+        center_x: "bool",
+        scale_x: "bool",
+        center_y: "bool",
+        scale_y: "bool",
+    } as const;
+
+    constructor(params: PLSDiagnosticsParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.pls_diagnostics", PLSDiagnostics);
+
+/** Parameters of PLSMonitoring; unset values take the native defaults. */
+export interface PLSMonitoringParams {
+    /** Default 2. */
+    n_components?: number;
+    /** Default true. */
+    center_x?: boolean;
+    /** Default true. */
+    scale_x?: boolean;
+    /** Default true. */
+    center_y?: boolean;
+    /** Default true. */
+    scale_y?: boolean;
+    /** Default 0.05. */
+    alpha?: number;
+}
+
+/** Native `diagnostics.pls_monitoring` (generic). Required inputs: y, target_domain. */
+export class PLSMonitoring extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.pls_monitoring";
+    readonly paramTypes = {
+        n_components: "int",
+        center_x: "bool",
+        scale_x: "bool",
+        center_y: "bool",
+        scale_y: "bool",
+        alpha: "double",
+    } as const;
+
+    constructor(params: PLSMonitoringParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.pls_monitoring", PLSMonitoring);
+
+/** Parameters of RegressionMetrics; unset values take the native defaults. */
+export interface RegressionMetricsParams {
+}
+
+/** Native `diagnostics.regression_metrics` (generic). Required inputs: y. */
+export class RegressionMetrics extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.regression_metrics";
+    readonly paramTypes = {
+    } as const;
+
+    constructor(params: RegressionMetricsParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.regression_metrics", RegressionMetrics);
 
 /** Parameters of CorrelationFilter; unset values take the native defaults. */
 export interface CorrelationFilterParams {
@@ -24,7 +1220,7 @@ export interface CorrelationFilterParams {
 /** Native `filters.correlation` (selector). */
 export class CorrelationFilter extends NativeEstimator implements Selector {
     readonly methodId = "filters.correlation";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         threshold: "double",
         top_k: "int",
     } as const;
@@ -42,7 +1238,7 @@ export class CorrelationFilter extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("filters.correlation", CorrelationFilter);
+NativeMethod.register("filters.correlation", CorrelationFilter);
 
 /** Parameters of HighLeverageFilter; unset values take the native defaults. */
 export interface HighLeverageFilterParams {
@@ -61,7 +1257,7 @@ export interface HighLeverageFilterParams {
 /** Native `filters.high_leverage` (sample_filter). */
 export class HighLeverageFilter extends NativeEstimator implements SampleFilter {
     readonly methodId = "filters.high_leverage";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         method: "enum",
         threshold_multiplier: "double",
         absolute_threshold: "double",
@@ -78,7 +1274,7 @@ export class HighLeverageFilter extends NativeEstimator implements SampleFilter 
         return this.maskArray(X, y);
     }
 }
-NativeEstimator.register("filters.high_leverage", HighLeverageFilter);
+NativeMethod.register("filters.high_leverage", HighLeverageFilter);
 
 /** Parameters of SpectralQualityFilter; unset values take the native defaults. */
 export interface SpectralQualityFilterParams {
@@ -99,7 +1295,7 @@ export interface SpectralQualityFilterParams {
 /** Native `filters.spectral_quality` (sample_filter). */
 export class SpectralQualityFilter extends NativeEstimator implements SampleFilter {
     readonly methodId = "filters.spectral_quality";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         max_nan_ratio: "double",
         max_zero_ratio: "double",
         min_variance: "double",
@@ -117,7 +1313,7 @@ export class SpectralQualityFilter extends NativeEstimator implements SampleFilt
         return this.maskArray(X, y);
     }
 }
-NativeEstimator.register("filters.spectral_quality", SpectralQualityFilter);
+NativeMethod.register("filters.spectral_quality", SpectralQualityFilter);
 
 /** Parameters of VarianceFilter; unset values take the native defaults. */
 export interface VarianceFilterParams {
@@ -130,7 +1326,7 @@ export interface VarianceFilterParams {
 /** Native `filters.variance` (selector). */
 export class VarianceFilter extends NativeEstimator implements Selector {
     readonly methodId = "filters.variance";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         threshold: "double",
         top_k: "int",
     } as const;
@@ -148,7 +1344,7 @@ export class VarianceFilter extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("filters.variance", VarianceFilter);
+NativeMethod.register("filters.variance", VarianceFilter);
 
 /** Parameters of XOutlierFilter; unset values take the native defaults. */
 export interface XOutlierFilterParams {
@@ -171,7 +1367,7 @@ export interface XOutlierFilterParams {
 /** Native `filters.x_outlier` (sample_filter). */
 export class XOutlierFilter extends NativeEstimator implements SampleFilter {
     readonly methodId = "filters.x_outlier";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         method: "enum",
         threshold: "double",
         n_components: "int",
@@ -190,7 +1386,7 @@ export class XOutlierFilter extends NativeEstimator implements SampleFilter {
         return this.maskArray(X, y);
     }
 }
-NativeEstimator.register("filters.x_outlier", XOutlierFilter);
+NativeMethod.register("filters.x_outlier", XOutlierFilter);
 
 /** Parameters of YOutlierFilter; unset values take the native defaults. */
 export interface YOutlierFilterParams {
@@ -207,7 +1403,7 @@ export interface YOutlierFilterParams {
 /** Native `filters.y_outlier` (sample_filter). */
 export class YOutlierFilter extends NativeEstimator implements SampleFilter {
     readonly methodId = "filters.y_outlier";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         method: "enum",
         threshold: "double",
         lower_percentile: "double",
@@ -223,7 +1419,7 @@ export class YOutlierFilter extends NativeEstimator implements SampleFilter {
         return this.maskArray(X, y);
     }
 }
-NativeEstimator.register("filters.y_outlier", YOutlierFilter);
+NativeMethod.register("filters.y_outlier", YOutlierFilter);
 
 /** Parameters of PLSLDA; unset values take the native defaults. */
 export interface PLSLDAParams {
@@ -234,7 +1430,7 @@ export interface PLSLDAParams {
 /** Native `models.classification.pls_lda` (classifier). Required fit inputs: labels. */
 export class PLSLDA extends NativeEstimator implements Classifier {
     readonly methodId = "models.classification.pls_lda";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
     } as const;
     protected readonly labelTarget = true;
@@ -256,7 +1452,7 @@ export class PLSLDA extends NativeEstimator implements Classifier {
         return this.classArray();
     }
 }
-NativeEstimator.register("models.classification.pls_lda", PLSLDA);
+NativeMethod.register("models.classification.pls_lda", PLSLDA);
 
 /** Parameters of PLSLogistic; unset values take the native defaults. */
 export interface PLSLogisticParams {
@@ -269,7 +1465,7 @@ export interface PLSLogisticParams {
 /** Native `models.classification.pls_logistic` (classifier). Required fit inputs: labels. */
 export class PLSLogistic extends NativeEstimator implements ProbabilisticClassifier {
     readonly methodId = "models.classification.pls_logistic";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         max_iter: "int",
     } as const;
@@ -296,7 +1492,7 @@ export class PLSLogistic extends NativeEstimator implements ProbabilisticClassif
         return this.probaMatrix(X);
     }
 }
-NativeEstimator.register("models.classification.pls_logistic", PLSLogistic);
+NativeMethod.register("models.classification.pls_logistic", PLSLogistic);
 
 /** Parameters of PLSQDA; unset values take the native defaults. */
 export interface PLSQDAParams {
@@ -307,7 +1503,7 @@ export interface PLSQDAParams {
 /** Native `models.classification.pls_qda` (classifier). Required fit inputs: labels. */
 export class PLSQDA extends NativeEstimator implements ProbabilisticClassifier {
     readonly methodId = "models.classification.pls_qda";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
     } as const;
     protected readonly labelTarget = true;
@@ -333,7 +1529,7 @@ export class PLSQDA extends NativeEstimator implements ProbabilisticClassifier {
         return this.probaMatrix(X);
     }
 }
-NativeEstimator.register("models.classification.pls_qda", PLSQDA);
+NativeMethod.register("models.classification.pls_qda", PLSQDA);
 
 /** Parameters of BaggingPLS; unset values take the native defaults. */
 export interface BaggingPLSParams {
@@ -348,7 +1544,7 @@ export interface BaggingPLSParams {
 /** Native `models.ensembles.bagging_pls` (regressor). */
 export class BaggingPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.ensembles.bagging_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_estimators: "int",
         seed: "int",
@@ -363,7 +1559,7 @@ export class BaggingPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.ensembles.bagging_pls", BaggingPLS);
+NativeMethod.register("models.ensembles.bagging_pls", BaggingPLS);
 
 /** Parameters of BoostingPLS; unset values take the native defaults. */
 export interface BoostingPLSParams {
@@ -378,7 +1574,7 @@ export interface BoostingPLSParams {
 /** Native `models.ensembles.boosting_pls` (regressor). */
 export class BoostingPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.ensembles.boosting_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_estimators: "int",
         learning_rate: "double",
@@ -393,7 +1589,7 @@ export class BoostingPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.ensembles.boosting_pls", BoostingPLS);
+NativeMethod.register("models.ensembles.boosting_pls", BoostingPLS);
 
 /** Parameters of RandomSubspacePLS; unset values take the native defaults. */
 export interface RandomSubspacePLSParams {
@@ -410,7 +1606,7 @@ export interface RandomSubspacePLSParams {
 /** Native `models.ensembles.random_subspace_pls` (regressor). */
 export class RandomSubspacePLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.ensembles.random_subspace_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_estimators: "int",
         features_per_subspace: "int",
@@ -426,7 +1622,7 @@ export class RandomSubspacePLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.ensembles.random_subspace_pls", RandomSubspacePLS);
+NativeMethod.register("models.ensembles.random_subspace_pls", RandomSubspacePLS);
 
 /** Parameters of MBPLS; unset values take the native defaults. */
 export interface MBPLSParams {
@@ -437,7 +1633,7 @@ export interface MBPLSParams {
 /** Native `models.multiblock.mb_pls` (regressor). Required fit inputs: blocks. */
 export class MBPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.multiblock.mb_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
     } as const;
 
@@ -450,7 +1646,7 @@ export class MBPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.multiblock.mb_pls", MBPLS);
+NativeMethod.register("models.multiblock.mb_pls", MBPLS);
 
 /** Parameters of MIRPLS; unset values take the native defaults. */
 export interface MIRPLSParams {
@@ -461,7 +1657,7 @@ export interface MIRPLSParams {
 /** Native `models.multiblock.mir_pls` (regressor). */
 export class MIRPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.multiblock.mir_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
     } as const;
 
@@ -474,7 +1670,7 @@ export class MIRPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.multiblock.mir_pls", MIRPLS);
+NativeMethod.register("models.multiblock.mir_pls", MIRPLS);
 
 /** Parameters of O2PLS; unset values take the native defaults. */
 export interface O2PLSParams {
@@ -489,7 +1685,7 @@ export interface O2PLSParams {
 /** Native `models.multiblock.o2pls` (regressor). */
 export class O2PLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.multiblock.o2pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_predictive: "int",
         n_x_orthogonal: "int",
         n_y_orthogonal: "int",
@@ -504,7 +1700,7 @@ export class O2PLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.multiblock.o2pls", O2PLS);
+NativeMethod.register("models.multiblock.o2pls", O2PLS);
 
 /** Parameters of CPPLS; unset values take the native defaults. */
 export interface CPPLSParams {
@@ -517,7 +1713,7 @@ export interface CPPLSParams {
 /** Native `models.pls.cppls` (regressor). */
 export class CPPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.pls.cppls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         gamma: "double",
     } as const;
@@ -531,7 +1727,7 @@ export class CPPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.pls.cppls", CPPLS);
+NativeMethod.register("models.pls.cppls", CPPLS);
 
 /** Parameters of PCR; unset values take the native defaults. */
 export interface PCRParams {
@@ -550,7 +1746,7 @@ export interface PCRParams {
 /** Native `models.pls.pcr` (transformer, regressor). */
 export class PCR extends NativeEstimator implements Regressor, Transformer {
     readonly methodId = "models.pls.pcr";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         center_x: "bool",
         scale_x: "bool",
@@ -571,7 +1767,7 @@ export class PCR extends NativeEstimator implements Regressor, Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("models.pls.pcr", PCR);
+NativeMethod.register("models.pls.pcr", PCR);
 
 /** Parameters of SimplePLS; unset values take the native defaults. */
 export interface SimplePLSParams {
@@ -582,7 +1778,7 @@ export interface SimplePLSParams {
 /** Native `models.pls.pls_fit_simple` (transformer, regressor). */
 export class SimplePLS extends NativeEstimator implements Regressor, Transformer {
     readonly methodId = "models.pls.pls_fit_simple";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
     } as const;
 
@@ -599,7 +1795,7 @@ export class SimplePLS extends NativeEstimator implements Regressor, Transformer
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("models.pls.pls_fit_simple", SimplePLS);
+NativeMethod.register("models.pls.pls_fit_simple", SimplePLS);
 
 /** Parameters of PLSRegression; unset values take the native defaults. */
 export interface PLSRegressionParams {
@@ -620,7 +1816,7 @@ export interface PLSRegressionParams {
 /** Native `models.pls.pls_regression` (transformer, regressor). */
 export class PLSRegression extends NativeEstimator implements Regressor, Transformer {
     readonly methodId = "models.pls.pls_regression";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         solver: "enum",
         center_x: "bool",
@@ -642,7 +1838,7 @@ export class PLSRegression extends NativeEstimator implements Regressor, Transfo
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("models.pls.pls_regression", PLSRegression);
+NativeMethod.register("models.pls.pls_regression", PLSRegression);
 
 /** Parameters of ContinuumRegression; unset values take the native defaults. */
 export interface ContinuumRegressionParams {
@@ -655,7 +1851,7 @@ export interface ContinuumRegressionParams {
 /** Native `models.regularized.continuum_regression` (regressor). */
 export class ContinuumRegression extends NativeEstimator implements Regressor {
     readonly methodId = "models.regularized.continuum_regression";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         tau: "double",
     } as const;
@@ -669,7 +1865,7 @@ export class ContinuumRegression extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.regularized.continuum_regression", ContinuumRegression);
+NativeMethod.register("models.regularized.continuum_regression", ContinuumRegression);
 
 /** Parameters of Ridge; unset values take the native defaults. */
 export interface RidgeParams {
@@ -686,7 +1882,7 @@ export interface RidgeParams {
 /** Native `models.regularized.ridge` (regressor). */
 export class Ridge extends NativeEstimator implements Regressor {
     readonly methodId = "models.regularized.ridge";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         alpha: "double",
         center_x: "bool",
         scale_x: "bool",
@@ -702,7 +1898,7 @@ export class Ridge extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.regularized.ridge", Ridge);
+NativeMethod.register("models.regularized.ridge", Ridge);
 
 /** Parameters of RidgePLS; unset values take the native defaults. */
 export interface RidgePLSParams {
@@ -723,7 +1919,7 @@ export interface RidgePLSParams {
 /** Native `models.regularized.ridge_pls` (regressor). */
 export class RidgePLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.regularized.ridge_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         ridge_lambda: "double",
         center_x: "bool",
@@ -741,7 +1937,7 @@ export class RidgePLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.regularized.ridge_pls", RidgePLS);
+NativeMethod.register("models.regularized.ridge_pls", RidgePLS);
 
 /** Parameters of RobustPLS; unset values take the native defaults. */
 export interface RobustPLSParams {
@@ -764,7 +1960,7 @@ export interface RobustPLSParams {
 /** Native `models.regularized.robust_pls` (regressor). */
 export class RobustPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.regularized.robust_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         huber_k: "double",
         max_irls_iter: "int",
@@ -783,7 +1979,7 @@ export class RobustPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.regularized.robust_pls", RobustPLS);
+NativeMethod.register("models.regularized.robust_pls", RobustPLS);
 
 /** Parameters of WeightedPLS; unset values take the native defaults. */
 export interface WeightedPLSParams {
@@ -802,7 +1998,7 @@ export interface WeightedPLSParams {
 /** Native `models.regularized.weighted_pls` (regressor). */
 export class WeightedPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.regularized.weighted_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         center_x: "bool",
         scale_x: "bool",
@@ -819,7 +2015,7 @@ export class WeightedPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.regularized.weighted_pls", WeightedPLS);
+NativeMethod.register("models.regularized.weighted_pls", WeightedPLS);
 
 /** Parameters of FusedSparsePLS; unset values take the native defaults. */
 export interface FusedSparsePLSParams {
@@ -834,7 +2030,7 @@ export interface FusedSparsePLSParams {
 /** Native `models.sparse.fused_sparse_pls` (regressor). */
 export class FusedSparsePLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.sparse.fused_sparse_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         l1_lambda: "double",
         fusion_lambda: "double",
@@ -849,7 +2045,7 @@ export class FusedSparsePLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.sparse.fused_sparse_pls", FusedSparsePLS);
+NativeMethod.register("models.sparse.fused_sparse_pls", FusedSparsePLS);
 
 /** Parameters of GroupSparsePLS; unset values take the native defaults. */
 export interface GroupSparsePLSParams {
@@ -862,7 +2058,7 @@ export interface GroupSparsePLSParams {
 /** Native `models.sparse.group_sparse_pls` (regressor). Required fit inputs: feature_groups. */
 export class GroupSparsePLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.sparse.group_sparse_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         group_lambda: "double",
     } as const;
@@ -876,7 +2072,7 @@ export class GroupSparsePLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.sparse.group_sparse_pls", GroupSparsePLS);
+NativeMethod.register("models.sparse.group_sparse_pls", GroupSparsePLS);
 
 /** Parameters of SparsePLSDA; unset values take the native defaults. */
 export interface SparsePLSDAParams {
@@ -889,7 +2085,7 @@ export interface SparsePLSDAParams {
 /** Native `models.sparse.sparse_pls_da` (classifier). Required fit inputs: labels. */
 export class SparsePLSDA extends NativeEstimator implements Classifier {
     readonly methodId = "models.sparse.sparse_pls_da";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         sparsity_lambda: "double",
     } as const;
@@ -912,7 +2108,7 @@ export class SparsePLSDA extends NativeEstimator implements Classifier {
         return this.classArray();
     }
 }
-NativeEstimator.register("models.sparse.sparse_pls_da", SparsePLSDA);
+NativeMethod.register("models.sparse.sparse_pls_da", SparsePLSDA);
 
 /** Parameters of SparseSIMPLS; unset values take the native defaults. */
 export interface SparseSIMPLSParams {
@@ -925,7 +2121,7 @@ export interface SparseSIMPLSParams {
 /** Native `models.sparse.sparse_simpls` (regressor). */
 export class SparseSIMPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.sparse.sparse_simpls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         sparsity_lambda: "double",
     } as const;
@@ -939,7 +2135,7 @@ export class SparseSIMPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.sparse.sparse_simpls", SparseSIMPLS);
+NativeMethod.register("models.sparse.sparse_simpls", SparseSIMPLS);
 
 /** Parameters of ECR; unset values take the native defaults. */
 export interface ECRParams {
@@ -952,7 +2148,7 @@ export interface ECRParams {
 /** Native `models.specialized.ecr` (regressor). */
 export class ECR extends NativeEstimator implements Regressor {
     readonly methodId = "models.specialized.ecr";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         alpha: "double",
     } as const;
@@ -966,7 +2162,7 @@ export class ECR extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.specialized.ecr", ECR);
+NativeMethod.register("models.specialized.ecr", ECR);
 
 /** Parameters of NPLS; unset values take the native defaults. */
 export interface NPLSParams {
@@ -981,7 +2177,7 @@ export interface NPLSParams {
 /** Native `models.specialized.tensor_pls` (regressor). */
 export class NPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.specialized.tensor_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         mode_j: "int",
         mode_k: "int",
@@ -996,7 +2192,7 @@ export class NPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.specialized.tensor_pls", NPLS);
+NativeMethod.register("models.specialized.tensor_pls", NPLS);
 
 /** Parameters of DIPLS; unset values take the native defaults. */
 export interface DIPLSParams {
@@ -1009,7 +2205,7 @@ export interface DIPLSParams {
 /** Native `models.transfer.di_pls` (regressor). Required fit inputs: target_domain. */
 export class DIPLS extends NativeEstimator implements Regressor {
     readonly methodId = "models.transfer.di_pls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         di_lambda: "double",
     } as const;
@@ -1023,7 +2219,7 @@ export class DIPLS extends NativeEstimator implements Regressor {
         return this.predictMatrix(X);
     }
 }
-NativeEstimator.register("models.transfer.di_pls", DIPLS);
+NativeMethod.register("models.transfer.di_pls", DIPLS);
 
 /** Parameters of CorrelationOptimizedWarping; unset values take the native defaults. */
 export interface CorrelationOptimizedWarpingParams {
@@ -1038,7 +2234,7 @@ export interface CorrelationOptimizedWarpingParams {
 /** Native `preprocessing.alignment.cow_align` (transformer). */
 export class CorrelationOptimizedWarping extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.alignment.cow_align";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         reference: "double_array",
         interval_size: "int",
         max_shift: "int",
@@ -1053,7 +2249,7 @@ export class CorrelationOptimizedWarping extends NativeEstimator implements Tran
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.alignment.cow_align", CorrelationOptimizedWarping);
+NativeMethod.register("preprocessing.alignment.cow_align", CorrelationOptimizedWarping);
 
 /** Parameters of DynamicTimeWarpingAlignment; unset values take the native defaults. */
 export interface DynamicTimeWarpingAlignmentParams {
@@ -1064,7 +2260,7 @@ export interface DynamicTimeWarpingAlignmentParams {
 /** Native `preprocessing.alignment.dtw_align` (transformer). */
 export class DynamicTimeWarpingAlignment extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.alignment.dtw_align";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         reference: "double_array",
     } as const;
 
@@ -1077,7 +2273,7 @@ export class DynamicTimeWarpingAlignment extends NativeEstimator implements Tran
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.alignment.dtw_align", DynamicTimeWarpingAlignment);
+NativeMethod.register("preprocessing.alignment.dtw_align", DynamicTimeWarpingAlignment);
 
 /** Parameters of IcoshiftAlignment; unset values take the native defaults. */
 export interface IcoshiftAlignmentParams {
@@ -1092,7 +2288,7 @@ export interface IcoshiftAlignmentParams {
 /** Native `preprocessing.alignment.icoshift_align` (transformer). */
 export class IcoshiftAlignment extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.alignment.icoshift_align";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         reference: "double_array",
         interval_size: "int",
         max_shift: "int",
@@ -1107,7 +2303,7 @@ export class IcoshiftAlignment extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.alignment.icoshift_align", IcoshiftAlignment);
+NativeMethod.register("preprocessing.alignment.icoshift_align", IcoshiftAlignment);
 
 /** Parameters of CrossCorrelationAlignment; unset values take the native defaults. */
 export interface CrossCorrelationAlignmentParams {
@@ -1120,7 +2316,7 @@ export interface CrossCorrelationAlignmentParams {
 /** Native `preprocessing.alignment.xcorr_align` (transformer). */
 export class CrossCorrelationAlignment extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.alignment.xcorr_align";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         reference: "double_array",
         max_shift: "int",
     } as const;
@@ -1134,7 +2330,7 @@ export class CrossCorrelationAlignment extends NativeEstimator implements Transf
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.alignment.xcorr_align", CrossCorrelationAlignment);
+NativeMethod.register("preprocessing.alignment.xcorr_align", CrossCorrelationAlignment);
 
 /** Parameters of AirPLS; unset values take the native defaults. */
 export interface AirPLSParams {
@@ -1149,7 +2345,7 @@ export interface AirPLSParams {
 /** Native `preprocessing.baselines.airpls` (transformer). */
 export class AirPLS extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.airpls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         lam: "double",
         max_iter: "int",
         tol: "double",
@@ -1164,7 +2360,7 @@ export class AirPLS extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.airpls", AirPLS);
+NativeMethod.register("preprocessing.baselines.airpls", AirPLS);
 
 /** Parameters of ArPLS; unset values take the native defaults. */
 export interface ArPLSParams {
@@ -1179,7 +2375,7 @@ export interface ArPLSParams {
 /** Native `preprocessing.baselines.arpls` (transformer). */
 export class ArPLS extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.arpls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         lam: "double",
         max_iter: "int",
         tol: "double",
@@ -1194,7 +2390,7 @@ export class ArPLS extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.arpls", ArPLS);
+NativeMethod.register("preprocessing.baselines.arpls", ArPLS);
 
 /** Parameters of AsLS; unset values take the native defaults. */
 export interface AsLSParams {
@@ -1211,7 +2407,7 @@ export interface AsLSParams {
 /** Native `preprocessing.baselines.asls` (transformer). */
 export class AsLS extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.asls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         lam: "double",
         p: "double",
         max_iter: "int",
@@ -1227,7 +2423,7 @@ export class AsLS extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.asls", AsLS);
+NativeMethod.register("preprocessing.baselines.asls", AsLS);
 
 /** Parameters of BEADS; unset values take the native defaults. */
 export interface BEADSParams {
@@ -1246,7 +2442,7 @@ export interface BEADSParams {
 /** Native `preprocessing.baselines.beads` (transformer). */
 export class BEADS extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.beads";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         lam_0: "double",
         lam_1: "double",
         lam_2: "double",
@@ -1263,7 +2459,7 @@ export class BEADS extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.beads", BEADS);
+NativeMethod.register("preprocessing.baselines.beads", BEADS);
 
 /** Parameters of Detrend; unset values take the native defaults. */
 export interface DetrendParams {
@@ -1274,7 +2470,7 @@ export interface DetrendParams {
 /** Native `preprocessing.baselines.detrend` (transformer). */
 export class Detrend extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.detrend";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         polyorder: "int",
     } as const;
 
@@ -1287,7 +2483,7 @@ export class Detrend extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.detrend", Detrend);
+NativeMethod.register("preprocessing.baselines.detrend", Detrend);
 
 /** Parameters of IAsLS; unset values take the native defaults. */
 export interface IAsLSParams {
@@ -1310,7 +2506,7 @@ export interface IAsLSParams {
 /** Native `preprocessing.baselines.iasls` (transformer). */
 export class IAsLS extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.iasls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         lam: "double",
         p: "double",
         lam_1: "double",
@@ -1329,7 +2525,7 @@ export class IAsLS extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.iasls", IAsLS);
+NativeMethod.register("preprocessing.baselines.iasls", IAsLS);
 
 /** Parameters of IModPoly; unset values take the native defaults. */
 export interface IModPolyParams {
@@ -1344,7 +2540,7 @@ export interface IModPolyParams {
 /** Native `preprocessing.baselines.imodpoly` (transformer). */
 export class IModPoly extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.imodpoly";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         polyorder: "int",
         max_iter: "int",
         tol: "double",
@@ -1359,7 +2555,7 @@ export class IModPoly extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.imodpoly", IModPoly);
+NativeMethod.register("preprocessing.baselines.imodpoly", IModPoly);
 
 /** Parameters of ModPoly; unset values take the native defaults. */
 export interface ModPolyParams {
@@ -1374,7 +2570,7 @@ export interface ModPolyParams {
 /** Native `preprocessing.baselines.modpoly` (transformer). */
 export class ModPoly extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.modpoly";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         polyorder: "int",
         max_iter: "int",
         tol: "double",
@@ -1389,7 +2585,7 @@ export class ModPoly extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.modpoly", ModPoly);
+NativeMethod.register("preprocessing.baselines.modpoly", ModPoly);
 
 /** Parameters of RollingBall; unset values take the native defaults. */
 export interface RollingBallParams {
@@ -1402,7 +2598,7 @@ export interface RollingBallParams {
 /** Native `preprocessing.baselines.rolling_ball` (transformer). */
 export class RollingBall extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.rolling_ball";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         half_window: "int",
         smooth_half_window: "int",
     } as const;
@@ -1416,7 +2612,7 @@ export class RollingBall extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.rolling_ball", RollingBall);
+NativeMethod.register("preprocessing.baselines.rolling_ball", RollingBall);
 
 /** Parameters of ScoreAugmentedProjectionStandardization; unset values take the native defaults. */
 export interface ScoreAugmentedProjectionStandardizationParams {
@@ -1433,7 +2629,7 @@ export interface ScoreAugmentedProjectionStandardizationParams {
 /** Native `preprocessing.baselines.saps` (transformer). Required fit inputs: target_domain. */
 export class ScoreAugmentedProjectionStandardization extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.saps";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         score_weight: "double",
         fit_intercept: "bool",
@@ -1449,7 +2645,7 @@ export class ScoreAugmentedProjectionStandardization extends NativeEstimator imp
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.saps", ScoreAugmentedProjectionStandardization);
+NativeMethod.register("preprocessing.baselines.saps", ScoreAugmentedProjectionStandardization);
 
 /** Parameters of SNIP; unset values take the native defaults. */
 export interface SNIPParams {
@@ -1460,7 +2656,7 @@ export interface SNIPParams {
 /** Native `preprocessing.baselines.snip` (transformer). */
 export class SNIP extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.baselines.snip";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         max_half_window: "int",
     } as const;
 
@@ -1473,7 +2669,7 @@ export class SNIP extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.baselines.snip", SNIP);
+NativeMethod.register("preprocessing.baselines.snip", SNIP);
 
 /** Parameters of Derivate; unset values take the native defaults. */
 export interface DerivateParams {
@@ -1486,7 +2682,7 @@ export interface DerivateParams {
 /** Native `preprocessing.derivatives.derivate` (transformer). */
 export class Derivate extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.derivatives.derivate";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         order: "int",
         delta: "double",
     } as const;
@@ -1500,7 +2696,7 @@ export class Derivate extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.derivatives.derivate", Derivate);
+NativeMethod.register("preprocessing.derivatives.derivate", Derivate);
 
 /** Parameters of FirstDerivative; unset values take the native defaults. */
 export interface FirstDerivativeParams {
@@ -1513,7 +2709,7 @@ export interface FirstDerivativeParams {
 /** Native `preprocessing.derivatives.first_derivative` (transformer). */
 export class FirstDerivative extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.derivatives.first_derivative";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         delta: "double",
         edge_order: "int",
     } as const;
@@ -1527,7 +2723,7 @@ export class FirstDerivative extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.derivatives.first_derivative", FirstDerivative);
+NativeMethod.register("preprocessing.derivatives.first_derivative", FirstDerivative);
 
 /** Parameters of NorrisWilliams; unset values take the native defaults. */
 export interface NorrisWilliamsParams {
@@ -1544,7 +2740,7 @@ export interface NorrisWilliamsParams {
 /** Native `preprocessing.derivatives.norris_williams` (transformer). */
 export class NorrisWilliams extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.derivatives.norris_williams";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         segment: "int",
         gap: "int",
         derivative_order: "int",
@@ -1560,7 +2756,7 @@ export class NorrisWilliams extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.derivatives.norris_williams", NorrisWilliams);
+NativeMethod.register("preprocessing.derivatives.norris_williams", NorrisWilliams);
 
 /** Parameters of SavitzkyGolay; unset values take the native defaults. */
 export interface SavitzkyGolayParams {
@@ -1581,7 +2777,7 @@ export interface SavitzkyGolayParams {
 /** Native `preprocessing.derivatives.savitzky_golay` (transformer). */
 export class SavitzkyGolay extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.derivatives.savitzky_golay";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         window_length: "int",
         polyorder: "int",
         deriv: "int",
@@ -1599,7 +2795,7 @@ export class SavitzkyGolay extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.derivatives.savitzky_golay", SavitzkyGolay);
+NativeMethod.register("preprocessing.derivatives.savitzky_golay", SavitzkyGolay);
 
 /** Parameters of SecondDerivative; unset values take the native defaults. */
 export interface SecondDerivativeParams {
@@ -1612,7 +2808,7 @@ export interface SecondDerivativeParams {
 /** Native `preprocessing.derivatives.second_derivative` (transformer). */
 export class SecondDerivative extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.derivatives.second_derivative";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         delta: "double",
         edge_order: "int",
     } as const;
@@ -1626,7 +2822,7 @@ export class SecondDerivative extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.derivatives.second_derivative", SecondDerivative);
+NativeMethod.register("preprocessing.derivatives.second_derivative", SecondDerivative);
 
 /** Parameters of FlexiblePCA; unset values take the native defaults. */
 export interface FlexiblePCAParams {
@@ -1637,7 +2833,7 @@ export interface FlexiblePCAParams {
 /** Native `preprocessing.feature_selection.flexible_pca` (transformer). */
 export class FlexiblePCA extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.feature_selection.flexible_pca";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "double",
     } as const;
 
@@ -1650,7 +2846,7 @@ export class FlexiblePCA extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.feature_selection.flexible_pca", FlexiblePCA);
+NativeMethod.register("preprocessing.feature_selection.flexible_pca", FlexiblePCA);
 
 /** Parameters of FlexibleSVD; unset values take the native defaults. */
 export interface FlexibleSVDParams {
@@ -1661,7 +2857,7 @@ export interface FlexibleSVDParams {
 /** Native `preprocessing.feature_selection.flexible_svd` (transformer). */
 export class FlexibleSVD extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.feature_selection.flexible_svd";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "double",
     } as const;
 
@@ -1674,7 +2870,7 @@ export class FlexibleSVD extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.feature_selection.flexible_svd", FlexibleSVD);
+NativeMethod.register("preprocessing.feature_selection.flexible_svd", FlexibleSVD);
 
 /** Parameters of OSC; unset values take the native defaults. */
 export interface OSCParams {
@@ -1687,7 +2883,7 @@ export interface OSCParams {
 /** Native `preprocessing.orthogonalization.osc` (transformer). */
 export class OSC extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.orthogonalization.osc";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         scale: "bool",
     } as const;
@@ -1701,7 +2897,7 @@ export class OSC extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.orthogonalization.osc", OSC);
+NativeMethod.register("preprocessing.orthogonalization.osc", OSC);
 
 /** Parameters of CropTransformer; unset values take the native defaults. */
 export interface CropTransformerParams {
@@ -1714,7 +2910,7 @@ export interface CropTransformerParams {
 /** Native `preprocessing.resampling.crop` (transformer). */
 export class CropTransformer extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.resampling.crop";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         start: "int",
         end: "int",
     } as const;
@@ -1728,7 +2924,7 @@ export class CropTransformer extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.resampling.crop", CropTransformer);
+NativeMethod.register("preprocessing.resampling.crop", CropTransformer);
 
 /** Parameters of IntegerKBinsDiscretizer; unset values take the native defaults. */
 export interface IntegerKBinsDiscretizerParams {
@@ -1741,7 +2937,7 @@ export interface IntegerKBinsDiscretizerParams {
 /** Native `preprocessing.resampling.kbins_discretizer` (transformer). */
 export class IntegerKBinsDiscretizer extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.resampling.kbins_discretizer";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_bins: "int",
         strategy: "enum",
     } as const;
@@ -1755,7 +2951,7 @@ export class IntegerKBinsDiscretizer extends NativeEstimator implements Transfor
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.resampling.kbins_discretizer", IntegerKBinsDiscretizer);
+NativeMethod.register("preprocessing.resampling.kbins_discretizer", IntegerKBinsDiscretizer);
 
 /** Parameters of RangeDiscretizer; unset values take the native defaults. */
 export interface RangeDiscretizerParams {
@@ -1766,7 +2962,7 @@ export interface RangeDiscretizerParams {
 /** Native `preprocessing.resampling.range_discretizer` (transformer). */
 export class RangeDiscretizer extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.resampling.range_discretizer";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         edges: "double_array",
     } as const;
 
@@ -1779,7 +2975,7 @@ export class RangeDiscretizer extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.resampling.range_discretizer", RangeDiscretizer);
+NativeMethod.register("preprocessing.resampling.range_discretizer", RangeDiscretizer);
 
 /** Parameters of ResampleTransformer; unset values take the native defaults. */
 export interface ResampleTransformerParams {
@@ -1790,7 +2986,7 @@ export interface ResampleTransformerParams {
 /** Native `preprocessing.resampling.resample_transformer` (transformer). */
 export class ResampleTransformer extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.resampling.resample_transformer";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         num_samples: "int",
     } as const;
 
@@ -1803,7 +2999,7 @@ export class ResampleTransformer extends NativeEstimator implements Transformer 
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.resampling.resample_transformer", ResampleTransformer);
+NativeMethod.register("preprocessing.resampling.resample_transformer", ResampleTransformer);
 
 /** Parameters of Resampler; unset values take the native defaults. */
 export interface ResamplerParams {
@@ -1834,7 +3030,7 @@ export interface ResamplerParams {
 /** Native `preprocessing.resampling.resampler` (transformer). Required fit inputs: axis. */
 export class Resampler extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.resampling.resampler";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         target_wavelengths: "double_array",
         method: "enum",
         crop_min: "double",
@@ -1857,7 +3053,7 @@ export class Resampler extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.resampling.resampler", Resampler);
+NativeMethod.register("preprocessing.resampling.resampler", Resampler);
 
 /** Parameters of BaselineCenter; unset values take the native defaults. */
 export interface BaselineCenterParams {
@@ -1866,7 +3062,7 @@ export interface BaselineCenterParams {
 /** Native `preprocessing.scaling.baseline` (transformer). */
 export class BaselineCenter extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scaling.baseline";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
     } as const;
 
     constructor(params: BaselineCenterParams = {}) {
@@ -1878,7 +3074,7 @@ export class BaselineCenter extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scaling.baseline", BaselineCenter);
+NativeMethod.register("preprocessing.scaling.baseline", BaselineCenter);
 
 /** Parameters of LogTransform; unset values take the native defaults. */
 export interface LogTransformParams {
@@ -1895,7 +3091,7 @@ export interface LogTransformParams {
 /** Native `preprocessing.scaling.log_transform` (transformer). */
 export class LogTransform extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scaling.log_transform";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         base: "double",
         offset: "double",
         auto_offset: "bool",
@@ -1911,7 +3107,7 @@ export class LogTransform extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scaling.log_transform", LogTransform);
+NativeMethod.register("preprocessing.scaling.log_transform", LogTransform);
 
 /** Parameters of Normalize; unset values take the native defaults. */
 export interface NormalizeParams {
@@ -1924,7 +3120,7 @@ export interface NormalizeParams {
 /** Native `preprocessing.scaling.normalize` (transformer). */
 export class Normalize extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scaling.normalize";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         feature_min: "double",
         feature_max: "double",
     } as const;
@@ -1938,7 +3134,7 @@ export class Normalize extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scaling.normalize", Normalize);
+NativeMethod.register("preprocessing.scaling.normalize", Normalize);
 
 /** Parameters of SimpleScale; unset values take the native defaults. */
 export interface SimpleScaleParams {
@@ -1947,7 +3143,7 @@ export interface SimpleScaleParams {
 /** Native `preprocessing.scaling.simple_scale` (transformer). */
 export class SimpleScale extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scaling.simple_scale";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
     } as const;
 
     constructor(params: SimpleScaleParams = {}) {
@@ -1959,7 +3155,7 @@ export class SimpleScale extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scaling.simple_scale", SimpleScale);
+NativeMethod.register("preprocessing.scaling.simple_scale", SimpleScale);
 
 /** Parameters of AreaNormalization; unset values take the native defaults. */
 export interface AreaNormalizationParams {
@@ -1970,7 +3166,7 @@ export interface AreaNormalizationParams {
 /** Native `preprocessing.scatter.area_normalization` (transformer). */
 export class AreaNormalization extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.area_normalization";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         method: "enum",
     } as const;
 
@@ -1983,7 +3179,7 @@ export class AreaNormalization extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.area_normalization", AreaNormalization);
+NativeMethod.register("preprocessing.scatter.area_normalization", AreaNormalization);
 
 /** Parameters of EMSC; unset values take the native defaults. */
 export interface EMSCParams {
@@ -1994,7 +3190,7 @@ export interface EMSCParams {
 /** Native `preprocessing.scatter.emsc` (transformer). */
 export class EMSC extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.emsc";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         degree: "int",
     } as const;
 
@@ -2007,7 +3203,7 @@ export class EMSC extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.emsc", EMSC);
+NativeMethod.register("preprocessing.scatter.emsc", EMSC);
 
 /** Parameters of LocalCentering; unset values take the native defaults. */
 export interface LocalCenteringParams {
@@ -2016,7 +3212,7 @@ export interface LocalCenteringParams {
 /** Native `preprocessing.scatter.local_centering` (transformer). Required fit inputs: target_domain. */
 export class LocalCentering extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.local_centering";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
     } as const;
 
     constructor(params: LocalCenteringParams = {}) {
@@ -2028,7 +3224,7 @@ export class LocalCentering extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.local_centering", LocalCentering);
+NativeMethod.register("preprocessing.scatter.local_centering", LocalCentering);
 
 /** Parameters of LSNV; unset values take the native defaults. */
 export interface LSNVParams {
@@ -2043,7 +3239,7 @@ export interface LSNVParams {
 /** Native `preprocessing.scatter.local_snv` (transformer). */
 export class LSNV extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.local_snv";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         window: "int",
         pad_mode: "enum",
         constant_value: "double",
@@ -2058,7 +3254,7 @@ export class LSNV extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.local_snv", LSNV);
+NativeMethod.register("preprocessing.scatter.local_snv", LSNV);
 
 /** Parameters of LocalizedMSC; unset values take the native defaults. */
 export interface LocalizedMSCParams {
@@ -2073,7 +3269,7 @@ export interface LocalizedMSCParams {
 /** Native `preprocessing.scatter.localized_msc` (transformer). */
 export class LocalizedMSC extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.localized_msc";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         window_size: "int",
         reference: "double_array",
         eps: "double",
@@ -2088,7 +3284,7 @@ export class LocalizedMSC extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.localized_msc", LocalizedMSC);
+NativeMethod.register("preprocessing.scatter.localized_msc", LocalizedMSC);
 
 /** Parameters of MSC; unset values take the native defaults. */
 export interface MSCParams {
@@ -2097,7 +3293,7 @@ export interface MSCParams {
 /** Native `preprocessing.scatter.msc` (transformer). */
 export class MSC extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.msc";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
     } as const;
 
     constructor(params: MSCParams = {}) {
@@ -2109,7 +3305,7 @@ export class MSC extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.msc", MSC);
+NativeMethod.register("preprocessing.scatter.msc", MSC);
 
 /** Parameters of PiecewiseMSC; unset values take the native defaults. */
 export interface PiecewiseMSCParams {
@@ -2124,7 +3320,7 @@ export interface PiecewiseMSCParams {
 /** Native `preprocessing.scatter.piecewise_msc` (transformer). */
 export class PiecewiseMSC extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.piecewise_msc";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         window_size: "int",
         reference: "double_array",
         eps: "double",
@@ -2139,7 +3335,7 @@ export class PiecewiseMSC extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.piecewise_msc", PiecewiseMSC);
+NativeMethod.register("preprocessing.scatter.piecewise_msc", PiecewiseMSC);
 
 /** Parameters of PiecewiseSNV; unset values take the native defaults. */
 export interface PiecewiseSNVParams {
@@ -2154,7 +3350,7 @@ export interface PiecewiseSNVParams {
 /** Native `preprocessing.scatter.piecewise_snv` (transformer). */
 export class PiecewiseSNV extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.piecewise_snv";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         window_size: "int",
         ddof: "int",
         eps: "double",
@@ -2169,7 +3365,7 @@ export class PiecewiseSNV extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.piecewise_snv", PiecewiseSNV);
+NativeMethod.register("preprocessing.scatter.piecewise_snv", PiecewiseSNV);
 
 /** Parameters of RNV; unset values take the native defaults. */
 export interface RNVParams {
@@ -2184,7 +3380,7 @@ export interface RNVParams {
 /** Native `preprocessing.scatter.robust_snv` (transformer). */
 export class RNV extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.robust_snv";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         with_center: "bool",
         with_scale: "bool",
         k: "double",
@@ -2199,7 +3395,7 @@ export class RNV extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.robust_snv", RNV);
+NativeMethod.register("preprocessing.scatter.robust_snv", RNV);
 
 /** Parameters of SNV; unset values take the native defaults. */
 export interface SNVParams {
@@ -2214,7 +3410,7 @@ export interface SNVParams {
 /** Native `preprocessing.scatter.snv` (transformer). */
 export class SNV extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.snv";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         with_mean: "bool",
         with_std: "bool",
         ddof: "int",
@@ -2229,7 +3425,7 @@ export class SNV extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.snv", SNV);
+NativeMethod.register("preprocessing.scatter.snv", SNV);
 
 /** Parameters of VariableSortingNormalization; unset values take the native defaults. */
 export interface VariableSortingNormalizationParams {
@@ -2240,7 +3436,7 @@ export interface VariableSortingNormalizationParams {
 /** Native `preprocessing.scatter.vsn` (transformer). */
 export class VariableSortingNormalization extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.vsn";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         eps: "double",
     } as const;
 
@@ -2253,7 +3449,7 @@ export class VariableSortingNormalization extends NativeEstimator implements Tra
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.vsn", VariableSortingNormalization);
+NativeMethod.register("preprocessing.scatter.vsn", VariableSortingNormalization);
 
 /** Parameters of WeightedSNV; unset values take the native defaults. */
 export interface WeightedSNVParams {
@@ -2268,7 +3464,7 @@ export interface WeightedSNVParams {
 /** Native `preprocessing.scatter.weighted_snv` (transformer). */
 export class WeightedSNV extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.scatter.weighted_snv";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         weights: "double_array",
         ddof: "int",
         eps: "double",
@@ -2283,7 +3479,7 @@ export class WeightedSNV extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.scatter.weighted_snv", WeightedSNV);
+NativeMethod.register("preprocessing.scatter.weighted_snv", WeightedSNV);
 
 /** Parameters of FractionToPercent; unset values take the native defaults. */
 export interface FractionToPercentParams {
@@ -2292,7 +3488,7 @@ export interface FractionToPercentParams {
 /** Native `preprocessing.signal_conversion.fraction_to_percent` (transformer). */
 export class FractionToPercent extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.signal_conversion.fraction_to_percent";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
     } as const;
 
     constructor(params: FractionToPercentParams = {}) {
@@ -2304,7 +3500,7 @@ export class FractionToPercent extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.signal_conversion.fraction_to_percent", FractionToPercent);
+NativeMethod.register("preprocessing.signal_conversion.fraction_to_percent", FractionToPercent);
 
 /** Parameters of FromAbsorbance; unset values take the native defaults. */
 export interface FromAbsorbanceParams {
@@ -2315,7 +3511,7 @@ export interface FromAbsorbanceParams {
 /** Native `preprocessing.signal_conversion.from_absorbance` (transformer). */
 export class FromAbsorbance extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.signal_conversion.from_absorbance";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         is_percent: "bool",
     } as const;
 
@@ -2328,7 +3524,7 @@ export class FromAbsorbance extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.signal_conversion.from_absorbance", FromAbsorbance);
+NativeMethod.register("preprocessing.signal_conversion.from_absorbance", FromAbsorbance);
 
 /** Parameters of KubelkaMunk; unset values take the native defaults. */
 export interface KubelkaMunkParams {
@@ -2341,7 +3537,7 @@ export interface KubelkaMunkParams {
 /** Native `preprocessing.signal_conversion.kubelka_munk` (transformer). */
 export class KubelkaMunk extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.signal_conversion.kubelka_munk";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         is_percent: "bool",
         epsilon: "double",
     } as const;
@@ -2355,7 +3551,7 @@ export class KubelkaMunk extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.signal_conversion.kubelka_munk", KubelkaMunk);
+NativeMethod.register("preprocessing.signal_conversion.kubelka_munk", KubelkaMunk);
 
 /** Parameters of PercentToFraction; unset values take the native defaults. */
 export interface PercentToFractionParams {
@@ -2364,7 +3560,7 @@ export interface PercentToFractionParams {
 /** Native `preprocessing.signal_conversion.percent_to_fraction` (transformer). */
 export class PercentToFraction extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.signal_conversion.percent_to_fraction";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
     } as const;
 
     constructor(params: PercentToFractionParams = {}) {
@@ -2376,7 +3572,7 @@ export class PercentToFraction extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.signal_conversion.percent_to_fraction", PercentToFraction);
+NativeMethod.register("preprocessing.signal_conversion.percent_to_fraction", PercentToFraction);
 
 /** Parameters of ToAbsorbance; unset values take the native defaults. */
 export interface ToAbsorbanceParams {
@@ -2391,7 +3587,7 @@ export interface ToAbsorbanceParams {
 /** Native `preprocessing.signal_conversion.to_absorbance` (transformer). */
 export class ToAbsorbance extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.signal_conversion.to_absorbance";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         is_percent: "bool",
         epsilon: "double",
         clip_negative: "bool",
@@ -2406,7 +3602,7 @@ export class ToAbsorbance extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.signal_conversion.to_absorbance", ToAbsorbance);
+NativeMethod.register("preprocessing.signal_conversion.to_absorbance", ToAbsorbance);
 
 /** Parameters of Gaussian; unset values take the native defaults. */
 export interface GaussianParams {
@@ -2425,7 +3621,7 @@ export interface GaussianParams {
 /** Native `preprocessing.smoothing.gaussian` (transformer). */
 export class Gaussian extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.smoothing.gaussian";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         sigma: "double",
         order: "int",
         mode: "enum",
@@ -2442,7 +3638,7 @@ export class Gaussian extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.smoothing.gaussian", Gaussian);
+NativeMethod.register("preprocessing.smoothing.gaussian", Gaussian);
 
 /** Parameters of FCKStaticTransformer; unset values take the native defaults. */
 export interface FCKStaticTransformerParams {
@@ -2457,7 +3653,7 @@ export interface FCKStaticTransformerParams {
 /** Native `preprocessing.specialized.fck_static` (transformer). */
 export class FCKStaticTransformer extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.specialized.fck_static";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         kernel_size: "int",
         alphas: "double_array",
         sigmas: "double_array",
@@ -2472,7 +3668,7 @@ export class FCKStaticTransformer extends NativeEstimator implements Transformer
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.specialized.fck_static", FCKStaticTransformer);
+NativeMethod.register("preprocessing.specialized.fck_static", FCKStaticTransformer);
 
 /** Parameters of DirectStandardization; unset values take the native defaults. */
 export interface DirectStandardizationParams {
@@ -2485,7 +3681,7 @@ export interface DirectStandardizationParams {
 /** Native `preprocessing.transfer.direct_standardization` (transformer). Required fit inputs: target_domain. */
 export class DirectStandardization extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.transfer.direct_standardization";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         fit_intercept: "bool",
         ridge: "double",
     } as const;
@@ -2499,7 +3695,7 @@ export class DirectStandardization extends NativeEstimator implements Transforme
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.transfer.direct_standardization", DirectStandardization);
+NativeMethod.register("preprocessing.transfer.direct_standardization", DirectStandardization);
 
 /** Parameters of PiecewiseDirectStandardization; unset values take the native defaults. */
 export interface PiecewiseDirectStandardizationParams {
@@ -2514,7 +3710,7 @@ export interface PiecewiseDirectStandardizationParams {
 /** Native `preprocessing.transfer.piecewise_direct_standardization` (transformer). Required fit inputs: target_domain. */
 export class PiecewiseDirectStandardization extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.transfer.piecewise_direct_standardization";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         window_size: "int",
         fit_intercept: "bool",
         ridge: "double",
@@ -2529,7 +3725,7 @@ export class PiecewiseDirectStandardization extends NativeEstimator implements T
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.transfer.piecewise_direct_standardization", PiecewiseDirectStandardization);
+NativeMethod.register("preprocessing.transfer.piecewise_direct_standardization", PiecewiseDirectStandardization);
 
 /** Parameters of RobustDirectStandardization; unset values take the native defaults. */
 export interface RobustDirectStandardizationParams {
@@ -2546,7 +3742,7 @@ export interface RobustDirectStandardizationParams {
 /** Native `preprocessing.transfer.robust_direct_standardization` (transformer). Required fit inputs: target_domain. */
 export class RobustDirectStandardization extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.transfer.robust_direct_standardization";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         fit_intercept: "bool",
         ridge: "double",
         trim_quantile: "double",
@@ -2562,7 +3758,7 @@ export class RobustDirectStandardization extends NativeEstimator implements Tran
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.transfer.robust_direct_standardization", RobustDirectStandardization);
+NativeMethod.register("preprocessing.transfer.robust_direct_standardization", RobustDirectStandardization);
 
 /** Parameters of Haar; unset values take the native defaults. */
 export interface HaarParams {
@@ -2571,7 +3767,7 @@ export interface HaarParams {
 /** Native `preprocessing.wavelets.haar` (transformer). */
 export class Haar extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.wavelets.haar";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
     } as const;
 
     constructor(params: HaarParams = {}) {
@@ -2583,7 +3779,7 @@ export class Haar extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.wavelets.haar", Haar);
+NativeMethod.register("preprocessing.wavelets.haar", Haar);
 
 /** Parameters of Wavelet; unset values take the native defaults. */
 export interface WaveletParams {
@@ -2596,7 +3792,7 @@ export interface WaveletParams {
 /** Native `preprocessing.wavelets.wavelet` (transformer). */
 export class Wavelet extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.wavelets.wavelet";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         family: "enum",
         mode: "enum",
     } as const;
@@ -2610,7 +3806,7 @@ export class Wavelet extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.wavelets.wavelet", Wavelet);
+NativeMethod.register("preprocessing.wavelets.wavelet", Wavelet);
 
 /** Parameters of WaveletDenoise; unset values take the native defaults. */
 export interface WaveletDenoiseParams {
@@ -2629,7 +3825,7 @@ export interface WaveletDenoiseParams {
 /** Native `preprocessing.wavelets.wavelet_denoise` (transformer). */
 export class WaveletDenoise extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.wavelets.wavelet_denoise";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         family: "enum",
         mode: "enum",
         level: "int",
@@ -2646,7 +3842,7 @@ export class WaveletDenoise extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.wavelets.wavelet_denoise", WaveletDenoise);
+NativeMethod.register("preprocessing.wavelets.wavelet_denoise", WaveletDenoise);
 
 /** Parameters of WaveletFeatures; unset values take the native defaults. */
 export interface WaveletFeaturesParams {
@@ -2663,7 +3859,7 @@ export interface WaveletFeaturesParams {
 /** Native `preprocessing.wavelets.wavelet_features` (transformer). */
 export class WaveletFeatures extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.wavelets.wavelet_features";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         family: "enum",
         mode: "enum",
         max_level: "int",
@@ -2679,7 +3875,7 @@ export class WaveletFeatures extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.wavelets.wavelet_features", WaveletFeatures);
+NativeMethod.register("preprocessing.wavelets.wavelet_features", WaveletFeatures);
 
 /** Parameters of WaveletPCA; unset values take the native defaults. */
 export interface WaveletPCAParams {
@@ -2696,7 +3892,7 @@ export interface WaveletPCAParams {
 /** Native `preprocessing.wavelets.wavelet_pca` (transformer). */
 export class WaveletPCA extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.wavelets.wavelet_pca";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         family: "enum",
         mode: "enum",
         max_level: "int",
@@ -2712,7 +3908,7 @@ export class WaveletPCA extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.wavelets.wavelet_pca", WaveletPCA);
+NativeMethod.register("preprocessing.wavelets.wavelet_pca", WaveletPCA);
 
 /** Parameters of WaveletSVD; unset values take the native defaults. */
 export interface WaveletSVDParams {
@@ -2729,7 +3925,7 @@ export interface WaveletSVDParams {
 /** Native `preprocessing.wavelets.wavelet_svd` (transformer). */
 export class WaveletSVD extends NativeEstimator implements Transformer {
     readonly methodId = "preprocessing.wavelets.wavelet_svd";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         family: "enum",
         mode: "enum",
         max_level: "int",
@@ -2745,7 +3941,7 @@ export class WaveletSVD extends NativeEstimator implements Transformer {
         return this.transformMatrix(X);
     }
 }
-NativeEstimator.register("preprocessing.wavelets.wavelet_svd", WaveletSVD);
+NativeMethod.register("preprocessing.wavelets.wavelet_svd", WaveletSVD);
 
 /** Parameters of BiPLS; unset values take the native defaults. */
 export interface BiPLSParams {
@@ -2762,7 +3958,7 @@ export interface BiPLSParams {
 /** Native `selection.bipls` (selector). */
 export class BiPLS extends NativeEstimator implements Selector {
     readonly methodId = "selection.bipls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         interval_width: "int",
         min_intervals: "int",
@@ -2782,7 +3978,7 @@ export class BiPLS extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.bipls", BiPLS);
+NativeMethod.register("selection.bipls", BiPLS);
 
 /** Parameters of BVE; unset values take the native defaults. */
 export interface BVEParams {
@@ -2799,7 +3995,7 @@ export interface BVEParams {
 /** Native `selection.bve` (selector). */
 export class BVE extends NativeEstimator implements Selector {
     readonly methodId = "selection.bve";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_steps: "int",
         min_features: "int",
@@ -2819,7 +4015,7 @@ export class BVE extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.bve", BVE);
+NativeMethod.register("selection.bve", BVE);
 
 /** Parameters of CARS; unset values take the native defaults. */
 export interface CARSParams {
@@ -2836,7 +4032,7 @@ export interface CARSParams {
 /** Native `selection.cars` (selector). */
 export class CARS extends NativeEstimator implements Selector {
     readonly methodId = "selection.cars";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_iterations: "int",
         min_features: "int",
@@ -2856,7 +4052,7 @@ export class CARS extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.cars", CARS);
+NativeMethod.register("selection.cars", CARS);
 
 /** Parameters of EMCUVE; unset values take the native defaults. */
 export interface EMCUVEParams {
@@ -2877,7 +4073,7 @@ export interface EMCUVEParams {
 /** Native `selection.emcuve` (selector). */
 export class EMCUVE extends NativeEstimator implements Selector {
     readonly methodId = "selection.emcuve";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         noise_features: "int",
         noise_seed: "int",
@@ -2899,7 +4095,7 @@ export class EMCUVE extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.emcuve", EMCUVE);
+NativeMethod.register("selection.emcuve", EMCUVE);
 
 /** Parameters of GA; unset values take the native defaults. */
 export interface GAParams {
@@ -2924,7 +4120,7 @@ export interface GAParams {
 /** Native `selection.ga` (selector). */
 export class GA extends NativeEstimator implements Selector {
     readonly methodId = "selection.ga";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_generations: "int",
         population_size: "int",
@@ -2948,7 +4144,7 @@ export class GA extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.ga", GA);
+NativeMethod.register("selection.ga", GA);
 
 /** Parameters of IPW; unset values take the native defaults. */
 export interface IPWParams {
@@ -2969,7 +4165,7 @@ export interface IPWParams {
 /** Native `selection.ipw` (selector). */
 export class IPW extends NativeEstimator implements Selector {
     readonly methodId = "selection.ipw";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         top_k: "int",
         n_components: "int",
         n_iterations: "int",
@@ -2991,7 +4187,7 @@ export class IPW extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.ipw", IPW);
+NativeMethod.register("selection.ipw", IPW);
 
 /** Parameters of IRF; unset values take the native defaults. */
 export interface IRFParams {
@@ -3014,7 +4210,7 @@ export interface IRFParams {
 /** Native `selection.irf` (selector). */
 export class IRF extends NativeEstimator implements Selector {
     readonly methodId = "selection.irf";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         top_k: "int",
         n_components: "int",
         n_iterations: "int",
@@ -3037,7 +4233,7 @@ export class IRF extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.irf", IRF);
+NativeMethod.register("selection.irf", IRF);
 
 /** Parameters of IRIV; unset values take the native defaults. */
 export interface IRIVParams {
@@ -3054,7 +4250,7 @@ export interface IRIVParams {
 /** Native `selection.iriv` (selector). */
 export class IRIV extends NativeEstimator implements Selector {
     readonly methodId = "selection.iriv";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         max_rounds: "int",
         cv: "int",
@@ -3074,7 +4270,7 @@ export class IRIV extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.iriv", IRIV);
+NativeMethod.register("selection.iriv", IRIV);
 
 /** Parameters of PSO; unset values take the native defaults. */
 export interface PSOParams {
@@ -3101,7 +4297,7 @@ export interface PSOParams {
 /** Native `selection.pso` (selector). */
 export class PSO extends NativeEstimator implements Selector {
     readonly methodId = "selection.pso";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_swarm: "int",
         n_iterations: "int",
@@ -3126,7 +4322,7 @@ export class PSO extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.pso", PSO);
+NativeMethod.register("selection.pso", PSO);
 
 /** Parameters of RandomFrog; unset values take the native defaults. */
 export interface RandomFrogParams {
@@ -3151,7 +4347,7 @@ export interface RandomFrogParams {
 /** Native `selection.random_frog` (selector). */
 export class RandomFrog extends NativeEstimator implements Selector {
     readonly methodId = "selection.random_frog";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         top_k: "int",
         n_components: "int",
         n_iterations: "int",
@@ -3175,7 +4371,7 @@ export class RandomFrog extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.random_frog", RandomFrog);
+NativeMethod.register("selection.random_frog", RandomFrog);
 
 /** Parameters of Randomization; unset values take the native defaults. */
 export interface RandomizationParams {
@@ -3192,7 +4388,7 @@ export interface RandomizationParams {
 /** Native `selection.randomization` (selector). */
 export class Randomization extends NativeEstimator implements Selector {
     readonly methodId = "selection.randomization";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_permutations: "int",
         randomization_seed: "int",
@@ -3212,7 +4408,7 @@ export class Randomization extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.randomization", Randomization);
+NativeMethod.register("selection.randomization", Randomization);
 
 /** Parameters of REP; unset values take the native defaults. */
 export interface REPParams {
@@ -3231,7 +4427,7 @@ export interface REPParams {
 /** Native `selection.rep` (selector). */
 export class REP extends NativeEstimator implements Selector {
     readonly methodId = "selection.rep";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_steps: "int",
         min_features: "int",
@@ -3252,7 +4448,7 @@ export class REP extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.rep", REP);
+NativeMethod.register("selection.rep", REP);
 
 /** Parameters of SCARS; unset values take the native defaults. */
 export interface SCARSParams {
@@ -3273,7 +4469,7 @@ export interface SCARSParams {
 /** Native `selection.scars` (selector). */
 export class SCARS extends NativeEstimator implements Selector {
     readonly methodId = "selection.scars";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_iterations: "int",
         min_features: "int",
@@ -3295,7 +4491,7 @@ export class SCARS extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.scars", SCARS);
+NativeMethod.register("selection.scars", SCARS);
 
 /** Parameters of Shaving; unset values take the native defaults. */
 export interface ShavingParams {
@@ -3314,7 +4510,7 @@ export interface ShavingParams {
 /** Native `selection.shaving` (selector). */
 export class Shaving extends NativeEstimator implements Selector {
     readonly methodId = "selection.shaving";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_steps: "int",
         min_features: "int",
@@ -3335,7 +4531,7 @@ export class Shaving extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.shaving", Shaving);
+NativeMethod.register("selection.shaving", Shaving);
 
 /** Parameters of SiPLS; unset values take the native defaults. */
 export interface SiPLSParams {
@@ -3352,7 +4548,7 @@ export interface SiPLSParams {
 /** Native `selection.sipls` (selector). */
 export class SiPLS extends NativeEstimator implements Selector {
     readonly methodId = "selection.sipls";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         interval_width: "int",
         combination_size: "int",
@@ -3372,7 +4568,7 @@ export class SiPLS extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.sipls", SiPLS);
+NativeMethod.register("selection.sipls", SiPLS);
 
 /** Parameters of SPA; unset values take the native defaults. */
 export interface SPAParams {
@@ -3385,7 +4581,7 @@ export interface SPAParams {
 /** Native `selection.spa` (selector). */
 export class SPA extends NativeEstimator implements Selector {
     readonly methodId = "selection.spa";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         top_k: "int",
         n_components: "int",
     } as const;
@@ -3403,7 +4599,7 @@ export class SPA extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.spa", SPA);
+NativeMethod.register("selection.spa", SPA);
 
 /** Parameters of ST; unset values take the native defaults. */
 export interface STParams {
@@ -3420,7 +4616,7 @@ export interface STParams {
 /** Native `selection.st` (selector). */
 export class ST extends NativeEstimator implements Selector {
     readonly methodId = "selection.st";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         thresholds: "double_array",
         n_components: "int",
         min_selected: "int",
@@ -3440,7 +4636,7 @@ export class ST extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.st", ST);
+NativeMethod.register("selection.st", ST);
 
 /** Parameters of Stability; unset values take the native defaults. */
 export interface StabilityParams {
@@ -3455,7 +4651,7 @@ export interface StabilityParams {
 /** Native `selection.stability` (selector). */
 export class Stability extends NativeEstimator implements Selector {
     readonly methodId = "selection.stability";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         top_k: "int",
         n_components: "int",
         cv: "int",
@@ -3474,7 +4670,7 @@ export class Stability extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.stability", Stability);
+NativeMethod.register("selection.stability", Stability);
 
 /** Parameters of T2; unset values take the native defaults. */
 export interface T2Params {
@@ -3491,7 +4687,7 @@ export interface T2Params {
 /** Native `selection.t2` (selector). */
 export class T2 extends NativeEstimator implements Selector {
     readonly methodId = "selection.t2";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         alpha_thresholds: "double_array",
         n_components: "int",
         min_selected: "int",
@@ -3511,7 +4707,7 @@ export class T2 extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.t2", T2);
+NativeMethod.register("selection.t2", T2);
 
 /** Parameters of UVE; unset values take the native defaults. */
 export interface UVEParams {
@@ -3530,7 +4726,7 @@ export interface UVEParams {
 /** Native `selection.uve` (selector). */
 export class UVE extends NativeEstimator implements Selector {
     readonly methodId = "selection.uve";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         noise_features: "int",
         noise_seed: "int",
@@ -3551,7 +4747,7 @@ export class UVE extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.uve", UVE);
+NativeMethod.register("selection.uve", UVE);
 
 /** Parameters of VariableSelect; unset values take the native defaults. */
 export interface VariableSelectParams {
@@ -3566,7 +4762,7 @@ export interface VariableSelectParams {
 /** Native `selection.variable_select` (selector). */
 export class VariableSelect extends NativeEstimator implements Selector {
     readonly methodId = "selection.variable_select";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         top_k: "int",
         n_components: "int",
         rank_method: "enum",
@@ -3585,7 +4781,7 @@ export class VariableSelect extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.variable_select", VariableSelect);
+NativeMethod.register("selection.variable_select", VariableSelect);
 
 /** Parameters of VIPSPA; unset values take the native defaults. */
 export interface VIPSPAParams {
@@ -3600,7 +4796,7 @@ export interface VIPSPAParams {
 /** Native `selection.vip_spa` (selector). */
 export class VIPSPA extends NativeEstimator implements Selector {
     readonly methodId = "selection.vip_spa";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         top_k: "int",
         n_components: "int",
         vip_threshold: "double",
@@ -3619,7 +4815,7 @@ export class VIPSPA extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.vip_spa", VIPSPA);
+NativeMethod.register("selection.vip_spa", VIPSPA);
 
 /** Parameters of VISSA; unset values take the native defaults. */
 export interface VISSAParams {
@@ -3644,7 +4840,7 @@ export interface VISSAParams {
 /** Native `selection.vissa` (selector). */
 export class VISSA extends NativeEstimator implements Selector {
     readonly methodId = "selection.vissa";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         n_iterations: "int",
         n_submodels: "int",
@@ -3668,7 +4864,7 @@ export class VISSA extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.vissa", VISSA);
+NativeMethod.register("selection.vissa", VISSA);
 
 /** Parameters of WVC; unset values take the native defaults. */
 export interface WVCParams {
@@ -3683,7 +4879,7 @@ export interface WVCParams {
 /** Native `selection.wvc` (selector). */
 export class WVC extends NativeEstimator implements Selector {
     readonly methodId = "selection.wvc";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         top_k: "int",
         n_components: "int",
         normalize: "bool",
@@ -3702,7 +4898,7 @@ export class WVC extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.wvc", WVC);
+NativeMethod.register("selection.wvc", WVC);
 
 /** Parameters of WVCThreshold; unset values take the native defaults. */
 export interface WVCThresholdParams {
@@ -3721,7 +4917,7 @@ export interface WVCThresholdParams {
 /** Native `selection.wvc_threshold` (selector). */
 export class WVCThreshold extends NativeEstimator implements Selector {
     readonly methodId = "selection.wvc_threshold";
-    protected readonly paramTypes = {
+    readonly paramTypes = {
         n_components: "int",
         normalize: "bool",
         score_threshold: "double",
@@ -3742,4 +4938,436 @@ export class WVCThreshold extends NativeEstimator implements Selector {
         return this.selectedIndexArray();
     }
 }
-NativeEstimator.register("selection.wvc_threshold", WVCThreshold);
+NativeMethod.register("selection.wvc_threshold", WVCThreshold);
+
+/** Parameters of BinnedStratifiedGroupKFold; unset values take the native defaults. */
+export interface BinnedStratifiedGroupKFoldParams {
+    /** Default 5. */
+    n_splits?: number;
+    /** Default 5. */
+    n_bins?: number;
+    /** Default "uniform". */
+    strategy?: "uniform" | "quantile";
+    /** Default true. */
+    shuffle?: boolean;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `splitters.binned_strat_group_kfold` (splitter). Required inputs: y, groups. */
+export class BinnedStratifiedGroupKFold extends NativeProcedure implements Splitter {
+    readonly methodId = "splitters.binned_strat_group_kfold";
+    readonly paramTypes = {
+        n_splits: "int",
+        n_bins: "int",
+        strategy: "enum",
+        shuffle: "bool",
+        seed: "int",
+    } as const;
+
+    constructor(params: BinnedStratifiedGroupKFoldParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.splitFolds(X, y, groups);
+    }
+}
+NativeMethod.register("splitters.binned_strat_group_kfold", BinnedStratifiedGroupKFold);
+
+/** Parameters of KBinsStratified; unset values take the native defaults. */
+export interface KBinsStratifiedParams {
+    /** Default 0.25. */
+    test_size?: number;
+    /** Default 0. */
+    seed?: number;
+    /** Default 5. */
+    n_bins?: number;
+    /** Default "uniform". */
+    strategy?: "uniform" | "quantile";
+}
+
+/** Native `splitters.kbins_stratified` (splitter). Required inputs: y. */
+export class KBinsStratified extends NativeProcedure implements Splitter {
+    readonly methodId = "splitters.kbins_stratified";
+    readonly paramTypes = {
+        test_size: "double",
+        seed: "int",
+        n_bins: "int",
+        strategy: "enum",
+    } as const;
+
+    constructor(params: KBinsStratifiedParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.splitFolds(X, y, groups);
+    }
+}
+NativeMethod.register("splitters.kbins_stratified", KBinsStratified);
+
+/** Parameters of KennardStone; unset values take the native defaults. */
+export interface KennardStoneParams {
+    /** Default 0.25. */
+    test_size?: number;
+}
+
+/** Native `splitters.kennard_stone` (splitter). */
+export class KennardStone extends NativeProcedure implements Splitter {
+    readonly methodId = "splitters.kennard_stone";
+    readonly paramTypes = {
+        test_size: "double",
+    } as const;
+
+    constructor(params: KennardStoneParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.splitFolds(X, y, groups);
+    }
+}
+NativeMethod.register("splitters.kennard_stone", KennardStone);
+
+/** Parameters of KMeans; unset values take the native defaults. */
+export interface KMeansParams {
+    /** Default 0.25. */
+    test_size?: number;
+    /** Default 0. */
+    seed?: number;
+    /** Default 100. */
+    max_iter?: number;
+}
+
+/** Native `splitters.kmeans` (splitter). */
+export class KMeans extends NativeProcedure implements Splitter {
+    readonly methodId = "splitters.kmeans";
+    readonly paramTypes = {
+        test_size: "double",
+        seed: "int",
+        max_iter: "int",
+    } as const;
+
+    constructor(params: KMeansParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.splitFolds(X, y, groups);
+    }
+}
+NativeMethod.register("splitters.kmeans", KMeans);
+
+/** Parameters of SPlitSplitter; unset values take the native defaults. */
+export interface SPlitSplitterParams {
+    /** Default 0.25. */
+    test_size?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `splitters.split_splitter` (splitter). */
+export class SPlitSplitter extends NativeProcedure implements Splitter {
+    readonly methodId = "splitters.split_splitter";
+    readonly paramTypes = {
+        test_size: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: SPlitSplitterParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.splitFolds(X, y, groups);
+    }
+}
+NativeMethod.register("splitters.split_splitter", SPlitSplitter);
+
+/** Parameters of SPXY; unset values take the native defaults. */
+export interface SPXYParams {
+    /** Default 0.25. */
+    test_size?: number;
+}
+
+/** Native `splitters.spxy` (splitter). Required inputs: y. */
+export class SPXY extends NativeProcedure implements Splitter {
+    readonly methodId = "splitters.spxy";
+    readonly paramTypes = {
+        test_size: "double",
+    } as const;
+
+    constructor(params: SPXYParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.splitFolds(X, y, groups);
+    }
+}
+NativeMethod.register("splitters.spxy", SPXY);
+
+/** Parameters of SPXYFold; unset values take the native defaults. */
+export interface SPXYFoldParams {
+    /** Default 5. */
+    n_splits?: number;
+    /** Default "euclidean". */
+    y_metric?: "x_only" | "euclidean" | "hamming";
+}
+
+/** Native `splitters.spxy_fold` (splitter). Required inputs: y. */
+export class SPXYFold extends NativeProcedure implements Splitter {
+    readonly methodId = "splitters.spxy_fold";
+    readonly paramTypes = {
+        n_splits: "int",
+        y_metric: "enum",
+    } as const;
+
+    constructor(params: SPXYFoldParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.splitFolds(X, y, groups);
+    }
+}
+NativeMethod.register("splitters.spxy_fold", SPXYFold);
+
+/** Parameters of SPXYGroupFold; unset values take the native defaults. */
+export interface SPXYGroupFoldParams {
+    /** Default 5. */
+    n_splits?: number;
+    /** Default "euclidean". */
+    y_metric?: "x_only" | "euclidean" | "hamming";
+    /** Default "mean". */
+    aggregation?: "mean" | "median";
+}
+
+/** Native `splitters.spxy_g_fold` (splitter). Required inputs: y, groups. */
+export class SPXYGroupFold extends NativeProcedure implements Splitter {
+    readonly methodId = "splitters.spxy_g_fold";
+    readonly paramTypes = {
+        n_splits: "int",
+        y_metric: "enum",
+        aggregation: "enum",
+    } as const;
+
+    constructor(params: SPXYGroupFoldParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.splitFolds(X, y, groups);
+    }
+}
+NativeMethod.register("splitters.spxy_g_fold", SPXYGroupFold);
+
+/** Parameters of SystematicCircular; unset values take the native defaults. */
+export interface SystematicCircularParams {
+    /** Default 0.25. */
+    test_size?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `splitters.systematic_circular` (splitter). Required inputs: y. */
+export class SystematicCircular extends NativeProcedure implements Splitter {
+    readonly methodId = "splitters.systematic_circular";
+    readonly paramTypes = {
+        test_size: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: SystematicCircularParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    split(X: Matrix, y?: Float64Array | ArrayLike<number>, groups?: number[]): Fold[] {
+        return this.splitFolds(X, y, groups);
+    }
+}
+NativeMethod.register("splitters.systematic_circular", SystematicCircular);
+
+/** Parameters of HotellingT2; unset values take the native defaults. */
+export interface HotellingT2Params {
+    /** Default 5. */
+    n_components?: number;
+    /** Default 0.05. */
+    alpha?: number;
+}
+
+/** Native `utilities.hotelling_t2` (generic). */
+export class HotellingT2 extends NativeProcedure implements Procedure {
+    readonly methodId = "utilities.hotelling_t2";
+    readonly paramTypes = {
+        n_components: "int",
+        alpha: "double",
+    } as const;
+
+    constructor(params: HotellingT2Params = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("utilities.hotelling_t2", HotellingT2);
+
+/** Parameters of Moments; unset values take the native defaults. */
+export interface MomentsParams {
+}
+
+/** Native `utilities.moments` (generic). Required inputs: y. */
+export class Moments extends NativeProcedure implements Procedure {
+    readonly methodId = "utilities.moments";
+    readonly paramTypes = {
+    } as const;
+
+    constructor(params: MomentsParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("utilities.moments", Moments);
+
+/** Parameters of QResiduals; unset values take the native defaults. */
+export interface QResidualsParams {
+    /** Default 5. */
+    n_components?: number;
+    /** Default 0.05. */
+    alpha?: number;
+}
+
+/** Native `utilities.q_residuals` (generic). */
+export class QResiduals extends NativeProcedure implements Procedure {
+    readonly methodId = "utilities.q_residuals";
+    readonly paramTypes = {
+        n_components: "int",
+        alpha: "double",
+    } as const;
+
+    constructor(params: QResidualsParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("utilities.q_residuals", QResiduals);
+
+/** Parameters of SignalTypeDetector; unset values take the native defaults. */
+export interface SignalTypeDetectorParams {
+    /** Default 0.7. */
+    confidence_threshold?: number;
+}
+
+/** Native `utilities.signal_type_detector` (generic). */
+export class SignalTypeDetector extends NativeProcedure implements Procedure {
+    readonly methodId = "utilities.signal_type_detector";
+    readonly paramTypes = {
+        confidence_threshold: "double",
+    } as const;
+
+    constructor(params: SignalTypeDetectorParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("utilities.signal_type_detector", SignalTypeDetector);
+
+/** Parameters of Sweep; unset values take the native defaults. */
+export interface SweepParams {
+    /** Default 5. */
+    cv?: number;
+    /** Default [0.01, 0.1, 1, 10]. */
+    ridge_lambdas?: number[];
+    /** Default [1, 2, 3, 4, 5]. */
+    pls_components?: number[];
+    /** Default "ridge". */
+    heads?: "ridge" | "pls" | "ridge_pls";
+    /** Default true. */
+    center_x?: boolean;
+    /** Default true. */
+    scale_x?: boolean;
+    /** Default true. */
+    center_y?: boolean;
+    /** Default true. */
+    scale_y?: boolean;
+}
+
+/** Native `utilities.sweep` (generic). Required inputs: y. */
+export class Sweep extends NativeProcedure implements Procedure {
+    readonly methodId = "utilities.sweep";
+    readonly paramTypes = {
+        cv: "int",
+        ridge_lambdas: "double_array",
+        pls_components: "int_array",
+        heads: "enum",
+        center_x: "bool",
+        scale_x: "bool",
+        center_y: "bool",
+        scale_y: "bool",
+    } as const;
+
+    constructor(params: SweepParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("utilities.sweep", Sweep);
+
+/** Parameters of TransferMetrics; unset values take the native defaults. */
+export interface TransferMetricsParams {
+    /** Default 10. */
+    n_components?: number;
+    /** Default 10. */
+    k_neighbors?: number;
+    /** Default 0. */
+    seed?: number;
+}
+
+/** Native `utilities.transfer_metrics` (generic). Required inputs: target_domain. */
+export class TransferMetrics extends NativeProcedure implements Procedure {
+    readonly methodId = "utilities.transfer_metrics";
+    readonly paramTypes = {
+        n_components: "int",
+        k_neighbors: "int",
+        seed: "int",
+    } as const;
+
+    constructor(params: TransferMetricsParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("utilities.transfer_metrics", TransferMetrics);

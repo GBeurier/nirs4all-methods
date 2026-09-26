@@ -130,6 +130,8 @@ infra_abi_symbols:
   - n4m_matrix_view_init_strided
   - n4m_matrix_view_validate
   - n4m_method_result_destroy
+  - n4m_method_result_entry
+  - n4m_method_result_entry_count
   - n4m_method_result_get_double_matrix
   - n4m_method_result_get_fold
   - n4m_method_result_get_int64_vector
