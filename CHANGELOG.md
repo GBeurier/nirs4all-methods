@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-27
+
 ### Added
 
 - ABI 2.13: generic typed role interfaces for the catalog methods
@@ -20,7 +22,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   generated from or driven by the manifest; a shared fixture replays every
   fitted state and procedure identically in the four bindings. See
   `docs/abi/estimator_roles_design.md` and
-  `docs/parity/estimator_roles_coverage.md`.
+  `docs/parity/estimator_roles_coverage.md`. 208 of the 213 catalog entries
+  are covered (148 estimators, 60 procedures); the other five are
+  compositions (AOM screen/refit, staged campaign, linear Ridge stack, moment
+  stack, composite filter) that belong to DAG-ML.
+- Native kernels for methods that were Python-only: the six AOM superblock
+  regressors (Ridge, MKL, active, PLS, Ridge-PLS, chain Ridge-PLS), PLS-GLM
+  (plsRglm algorithm; Gaussian, Poisson, binomial) and PLS-Cox (deviance
+  residuals, Breslow ties; Y = time, event). All match their references to
+  1e-12.
+- Rust crate `n4m` 0.2.0 with the `n4m::roles` module.
 
 ### Changed
 
@@ -28,12 +39,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   never released, is replaced by the sample-filter and selector roles.
 - Kernel fixes found while adding roles: PLS-QDA now applies the fitted
   covariances; sparse PLS-DA honours `sparsity_lambda`; SO-PLS / ROSA return
-  affine predictors on raw blocks; PLS-GLM folds the X centering into its
-  intercept; missing-aware NIPALS imputes in-sample; bagging / random-subspace
+  affine predictors on raw blocks; `n4m_estimators_pls_glm_fit` and
+  `n4m_estimators_pls_cox_fit` now fit the real PLS-GLM / PLS-Cox models
+  (they ran plain SIMPLS); missing-aware NIPALS imputes in-sample; bagging / random-subspace
   PLS draw portably (fits change once); alignment refits relearn their
   reference; the cubic resampler no longer shares scratch space; the AOM
   calibration kernel reports infeasible candidates by status (WASM builds
   have no exception catching). Details in `docs/abi/changes_log.md`.
+- `augmentation.splines.spline_smoothing` runs a C translation of the FITPACK
+  routines on every platform, equal bitwise to the former Fortran build and
+  to scipy's `UnivariateSpline`; Windows, WASM and CRAN R builds no longer
+  fall back to the Reinsch approximation, and gfortran is no longer needed.
 
 - Expose native domain-invariant PLS as `n4m.domain_adaptation.invariant.di_pls`
   and the scikit-learn-compatible `DIPLS` estimator. Both require an explicit
