@@ -23,7 +23,7 @@ _Group_: **Preprocessing** · _C ABI_: `n4m_transform_first_derivative_*`
 from n4m.transform.smoothing import FirstDerivative
 ```
 
-Source signature: [`FirstDerivative(delta: float = 1.0, edge_order: int = 2)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L393).
+Source signature: [`FirstDerivative(delta: float = 1.0, edge_order: int = 2)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L501).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

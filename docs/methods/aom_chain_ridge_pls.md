@@ -8,7 +8,7 @@ _Namespace_: **`n4m.model_selection.aom_search`** · _Fully-qualified_: `n4m.mod
 
 **Python (verified public re-export):** `from n4m.model_selection.aom_search import aom_chain_ridge_pls`
 
-**Signature:** [`aom_chain_ridge_pls(X, y, chains = None, *, profile: str = 'compact', families: dict | None = None, templates: Sequence[Sequence[str]] | None = None, max_chains: int | None = None, n_components: int = 2, pls_components: Sequence[int] | None = None, ridge_lambda: float | None = None, ridge_lambdas: Sequence[float] = (0.0, 0.1, 1.0, 10.0), cv: int = 5, fold_ids = None, center_x: bool = True, center_y: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8177)
+**Signature:** [`aom_chain_ridge_pls(X, y, chains = None, *, profile: str = 'compact', families: dict | None = None, templates: Sequence[Sequence[str]] | None = None, max_chains: int | None = None, n_components: int = 2, pls_components: Sequence[int] | None = None, ridge_lambda: float | None = None, ridge_lambdas: Sequence[float] = (0.0, 0.1, 1.0, 10.0), cv: int = 5, fold_ids = None, center_x: bool = True, center_y: bool = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8183)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

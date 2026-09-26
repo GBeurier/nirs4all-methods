@@ -9406,11 +9406,11 @@ METHODS: list[MethodSpec] = [
         needs_group_assignment=True,
         rmse_rel_tol=1e-8,
         notes=("R `sgPLS::gPLS` (Liquet et al. 2016, regression mode, "
-               "scale=TRUE). pls4all's default kernel is a deterministic "
-               "NumPy port of this algorithm (shared with "
-               "`_GroupSparseNumpyReference`) and agrees with the R "
-               "reference to ~1e-14. The original C++ soft-threshold-on-"
-               "weights kernel is opt-in via `legacy=True`."),
+               "scale=TRUE). The archived benchmark's default Python "
+               "reference is a deterministic NumPy port of that algorithm. "
+               "Its `legacy=True` route invokes the native C ABI, which "
+               "uses post-SIMPLS coefficient shrinkage; these are distinct "
+               "estimators, not numerical equivalents."),
     ),
     MethodSpec(
         name="fused_sparse_pls",

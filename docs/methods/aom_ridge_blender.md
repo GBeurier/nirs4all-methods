@@ -8,7 +8,7 @@ _Namespace_: **`n4m.ensemble`** · _Fully-qualified_: `n4m.ensemble.aom_ridge_bl
 
 **Python (verified public re-export):** `from n4m.ensemble import aom_ridge_blender`
 
-**Signature:** [`aom_ridge_blender(X, y, *, profile: str | int = 'compact', cv: int = 5, fold_ids = None, ridge_lambdas = (0.0001, 0.01, 1.0, 100.0), regularizer: float = 0.01, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6770)
+**Signature:** [`aom_ridge_blender(X, y, *, profile: str | int = 'compact', cv: int = 5, fold_ids = None, ridge_lambdas = (0.0001, 0.01, 1.0, 100.0), regularizer: float = 0.01, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L6776)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

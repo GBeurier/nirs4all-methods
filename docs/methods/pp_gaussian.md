@@ -26,7 +26,7 @@ SciPy-compatible 1-D Gaussian filter along the wavelength axis.
 from n4m.transform.smoothing import Gaussian
 ```
 
-Source signature: [`Gaussian(sigma: float = 1.0, order: int = 0, mode: str = 'reflect', cval: float = 0.0, truncate: float = 4.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L353).
+Source signature: [`Gaussian(sigma: float = 1.0, order: int = 0, mode: str = 'reflect', cval: float = 0.0, truncate: float = 4.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L461).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

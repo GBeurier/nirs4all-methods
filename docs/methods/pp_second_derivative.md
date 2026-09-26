@@ -23,7 +23,7 @@ Two passes of ``np.gradient`` (shape-preserving).
 from n4m.transform.smoothing import SecondDerivative
 ```
 
-Source signature: [`SecondDerivative(delta: float = 1.0, edge_order: int = 2)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L416).
+Source signature: [`SecondDerivative(delta: float = 1.0, edge_order: int = 2)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L524).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

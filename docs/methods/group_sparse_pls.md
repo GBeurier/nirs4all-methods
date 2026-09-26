@@ -6,7 +6,7 @@ _Group_: **Sparse** · _Registry tolerance_: `1e-08`
 
 Group sparse PLS (§7)
 
-> **Registry note** — R `sgPLS::gPLS` (Liquet et al. 2016, regression mode, scale=TRUE). The archived benchmark's default Python reference is a deterministic NumPy port of this algorithm. Its `legacy=True` route invokes the native C ABI, which now uses post-SIMPLS coefficient shrinkage; the two routes are different estimators and must not be claimed numerically equivalent.
+> **Registry note** — R `sgPLS::gPLS` (Liquet et al. 2016, regression mode, scale=TRUE). The archived benchmark's default Python reference is a deterministic NumPy port of that algorithm. Its `legacy=True` route invokes the native C ABI, which uses post-SIMPLS coefficient shrinkage; these are distinct estimators, not numerical equivalents.
 
 ### Parameters
 
@@ -23,19 +23,19 @@ Liquet, B., de Micheaux, P. L., Hejblum, B. P. & Thiébaut, R. (2016). *Group an
 
 ### Mathematical principle
 
-The native routine first fits ordinary SIMPLS. It then applies a group-lasso proximal shrinkage to each group's predictive coefficient submatrix: `B_g <- max(0, 1 - group_lambda / ||B_g||_F) B_g`. The same shrunken coefficients are used for prediction. This is a **post-SIMPLS approximation**, not a latent-direction refit or the published `sgPLS::gPLS` estimator. The `group_lambda` scale is the norm of raw-X predictive coefficients, so it depends on feature and target units.
+The routine fits ordinary SIMPLS, then applies the proximal map `B_g <- max(0, 1 - group_lambda / ||B_g||_F) B_g` to each group of predictive coefficient rows. Entire groups can be zeroed, but latent directions are not refitted.
 
 ### Appropriate uses
 
-Exploratory group selection with predefined wavelength groups when the post-fit coefficient shrinkage is acceptable; tune the penalty on held-out data.
+Exploratory group selection with predefined wavelength groups when post-fit coefficient shrinkage is acceptable.
 
 ### Limits and validation
 
-The penalty changes predictions and can zero entire groups, but the latent directions are not refitted after shrinkage. It should not be reported as numerical parity with Liquet et al. (2016) or `sgPLS::gPLS`. A zero penalty recovers the ordinary SIMPLS coefficients. Negative or non-finite penalties and negative group ids are rejected; non-contiguous non-negative ids are accepted.
+The penalty shrinks predictive coefficient groups and affects predictions, but does not refit latent directions or implement sgPLS::gPLS. Its units depend on raw-X and target scaling; select it using held-out data.
 
 ### Implementation
 
-The native C ABI applies the stated groupwise proximal map to the returned coefficients. This fixes the earlier no-op penalty while retaining an explicit distinction from a jointly optimized group-sparse PLS fit.
+`group_lambda` applies group-lasso proximal shrinkage to the returned SIMPLS predictive coefficients. This changes predictions but is not a latent-direction refit or a numerical implementation of sgPLS::gPLS.
 
 ### Sources and provenance
 
@@ -61,7 +61,7 @@ The source signature has additional required inputs, so no example call is fabri
 :::{card}
 :class-card: external-refs
 
-- 📐 **`ref.python_numpy`** (python · python) — `numpy` in-tree · strict (rmse_rel ≤ 1e-08) — In-tree NumPy port of Liquet et al. 2016 group sparse PLS (R `sgPLS::gPLS`, regression mode, scale=TRUE). This reference does not attest parity of the distinct native post-SIMPLS coefficient-shrinkage path.
+- 📐 **`ref.python_numpy`** (python · python) — `numpy` in-tree · strict (rmse_rel ≤ 1e-08) — In-tree NumPy port of Liquet et al. 2016 group sparse PLS (R `sgPLS::gPLS`, regression mode, scale=TRUE). The archived default Python reference uses that port. The opt-in native route uses post-SIMPLS coefficient shrinkage and is not numerically equivalent to sgPLS::gPLS.
 
 - 📐 **`ref.r_sgpls`** (R · r) — `sgPLS` 1.8.1 · strict (rmse_rel ≤ 1e-08) — R `sgPLS::gPLS(X, Y, ncomp, ind.block.x, keepX=length(bnd))` (regression, scale=TRUE). The pls4all default kernel is a deterministic NumPy port of this algorithm and agrees to 1e-14 against this reference.
 
