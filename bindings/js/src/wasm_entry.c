@@ -383,12 +383,14 @@ static int n4m_wasm_model_fit_tier_b(
             return s;
         }
     }
-    /* The eight portable affine fits use centred, unscaled data in the
+    /* The portable affine fits use centred, unscaled data in the
      * R/Python bindings. R selects SIMPLS except for canonical CPPLS and
      * RidgePLS, which select NIPALS. Preserve the other shim models' config. */
     if (kind == MK_RIDGE || kind == MK_RIDGE_PLS || kind == MK_ROBUST_PLS ||
         kind == MK_CPPLS || kind == MK_SPARSE_SIMPLS || kind == MK_ECR ||
-        kind == MK_CONTINUUM || kind == MK_MIR_PLS) {
+        kind == MK_CONTINUUM || kind == MK_MIR_PLS || kind == MK_FUSED_SPARSE_PLS ||
+        kind == MK_BAGGING_PLS || kind == MK_BOOSTING_PLS ||
+        kind == MK_RANDOM_SUBSPACE_PLS) {
         s = n4m_config_set_center_x(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_center_y(cfg, 1);
         if (s == N4M_OK) s = n4m_config_set_scale_x(cfg, 0);
@@ -452,26 +454,26 @@ static int n4m_wasm_model_fit_tier_b(
             break;
         }
         case MK_FUSED_SPARSE_PLS: {
-            double l1 = n_params >= 1 ? params[0] : 0.0;
-            double fusion = n_params >= 2 ? params[1] : 0.0;
+            double l1 = n_params >= 1 ? params[0] : 0.05;
+            double fusion = n_params >= 2 ? params[1] : 0.05;
             s = n4m_estimators_fused_sparse_pls_fit(ctx, cfg, &xv, &yv, l1, fusion, &res);
             break;
         }
         case MK_BAGGING_PLS: {
-            int n_estimators = n_params >= 1 ? (int)params[0] : 10;
+            int n_estimators = n_params >= 1 ? (int)params[0] : 50;
             uint64_t seed = n_params >= 2 ? (uint64_t)params[1] : 0;
             s = n4m_ensemble_bagging_pls_fit(ctx, cfg, &xv, &yv, n_estimators, seed, &res);
             break;
         }
         case MK_BOOSTING_PLS: {
-            int n_estimators = n_params >= 1 ? (int)params[0] : 10;
+            int n_estimators = n_params >= 1 ? (int)params[0] : 50;
             double lr = n_params >= 2 ? params[1] : 0.1;
             s = n4m_ensemble_boosting_pls_fit(ctx, cfg, &xv, &yv, n_estimators, lr, &res);
             break;
         }
         case MK_RANDOM_SUBSPACE_PLS: {
-            int n_estimators = n_params >= 1 ? (int)params[0] : 10;
-            int feats = n_params >= 2 ? (int)params[1] : (p > 1 ? p / 2 : 1);
+            int n_estimators = n_params >= 1 ? (int)params[0] : 50;
+            int feats = n_params >= 2 ? (int)params[1] : 10;
             uint64_t seed = n_params >= 3 ? (uint64_t)params[2] : 0;
             s = n4m_ensemble_random_subspace_pls_fit(ctx, cfg, &xv, &yv, n_estimators,
                                             feats, seed, &res);
