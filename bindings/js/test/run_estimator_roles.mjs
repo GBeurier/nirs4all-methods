@@ -39,6 +39,7 @@ const checkClassifier = (est, c, tol, label) => {
 const inputsFor = (names) => ({
     ...(names.includes("feature_groups") ? { featureGroups: fixture.feature_groups } : {}),
     ...(names.includes("blocks") ? { blocks: fixture.blocks } : {}),
+    ...(names.includes("axis") ? { axis: fixture.axis } : {}),
     ...(names.includes("X_target") ? { XTarget: matrix(fixture.x_target) } : {}),
 });
 

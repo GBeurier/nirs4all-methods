@@ -812,6 +812,117 @@ export class DIPLS extends NativeEstimator implements Regressor {
 }
 NativeEstimator.register("models.transfer.di_pls", DIPLS);
 
+/** Parameters of CorrelationOptimizedWarping; unset values take the native defaults. */
+export interface CorrelationOptimizedWarpingParams {
+    /** Default []. */
+    reference?: number[];
+    /** Default 32. */
+    interval_size?: number;
+    /** Default 5. */
+    max_shift?: number;
+}
+
+/** Native `preprocessing.alignment.cow_align` (transformer). */
+export class CorrelationOptimizedWarping extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.alignment.cow_align";
+    protected readonly paramTypes = {
+        reference: "double_array",
+        interval_size: "int",
+        max_shift: "int",
+    } as const;
+
+    constructor(params: CorrelationOptimizedWarpingParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.alignment.cow_align", CorrelationOptimizedWarping);
+
+/** Parameters of DynamicTimeWarpingAlignment; unset values take the native defaults. */
+export interface DynamicTimeWarpingAlignmentParams {
+    /** Default []. */
+    reference?: number[];
+}
+
+/** Native `preprocessing.alignment.dtw_align` (transformer). */
+export class DynamicTimeWarpingAlignment extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.alignment.dtw_align";
+    protected readonly paramTypes = {
+        reference: "double_array",
+    } as const;
+
+    constructor(params: DynamicTimeWarpingAlignmentParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.alignment.dtw_align", DynamicTimeWarpingAlignment);
+
+/** Parameters of IcoshiftAlignment; unset values take the native defaults. */
+export interface IcoshiftAlignmentParams {
+    /** Default []. */
+    reference?: number[];
+    /** Default 32. */
+    interval_size?: number;
+    /** Default 5. */
+    max_shift?: number;
+}
+
+/** Native `preprocessing.alignment.icoshift_align` (transformer). */
+export class IcoshiftAlignment extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.alignment.icoshift_align";
+    protected readonly paramTypes = {
+        reference: "double_array",
+        interval_size: "int",
+        max_shift: "int",
+    } as const;
+
+    constructor(params: IcoshiftAlignmentParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.alignment.icoshift_align", IcoshiftAlignment);
+
+/** Parameters of CrossCorrelationAlignment; unset values take the native defaults. */
+export interface CrossCorrelationAlignmentParams {
+    /** Default []. */
+    reference?: number[];
+    /** Default 5. */
+    max_shift?: number;
+}
+
+/** Native `preprocessing.alignment.xcorr_align` (transformer). */
+export class CrossCorrelationAlignment extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.alignment.xcorr_align";
+    protected readonly paramTypes = {
+        reference: "double_array",
+        max_shift: "int",
+    } as const;
+
+    constructor(params: CrossCorrelationAlignmentParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.alignment.xcorr_align", CrossCorrelationAlignment);
+
 /** Parameters of AirPLS; unset values take the native defaults. */
 export interface AirPLSParams {
     /** Default 1000000. */
@@ -1094,6 +1205,39 @@ export class RollingBall extends NativeEstimator implements Transformer {
 }
 NativeEstimator.register("preprocessing.baselines.rolling_ball", RollingBall);
 
+/** Parameters of ScoreAugmentedProjectionStandardization; unset values take the native defaults. */
+export interface ScoreAugmentedProjectionStandardizationParams {
+    /** Default 5. */
+    n_components?: number;
+    /** Default 1. */
+    score_weight?: number;
+    /** Default true. */
+    fit_intercept?: boolean;
+    /** Default 0. */
+    ridge?: number;
+}
+
+/** Native `preprocessing.baselines.saps` (transformer). Required fit inputs: target_domain. */
+export class ScoreAugmentedProjectionStandardization extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.baselines.saps";
+    protected readonly paramTypes = {
+        n_components: "int",
+        score_weight: "double",
+        fit_intercept: "bool",
+        ridge: "double",
+    } as const;
+
+    constructor(params: ScoreAugmentedProjectionStandardizationParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.baselines.saps", ScoreAugmentedProjectionStandardization);
+
 /** Parameters of SNIP; unset values take the native defaults. */
 export interface SNIPParams {
     /** Default 20. */
@@ -1117,6 +1261,33 @@ export class SNIP extends NativeEstimator implements Transformer {
     }
 }
 NativeEstimator.register("preprocessing.baselines.snip", SNIP);
+
+/** Parameters of Derivate; unset values take the native defaults. */
+export interface DerivateParams {
+    /** Default 1. */
+    order?: number;
+    /** Default 1. */
+    delta?: number;
+}
+
+/** Native `preprocessing.derivatives.derivate` (transformer). */
+export class Derivate extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.derivatives.derivate";
+    protected readonly paramTypes = {
+        order: "int",
+        delta: "double",
+    } as const;
+
+    constructor(params: DerivateParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.derivatives.derivate", Derivate);
 
 /** Parameters of FirstDerivative; unset values take the native defaults. */
 export interface FirstDerivativeParams {
@@ -1244,6 +1415,81 @@ export class SecondDerivative extends NativeEstimator implements Transformer {
 }
 NativeEstimator.register("preprocessing.derivatives.second_derivative", SecondDerivative);
 
+/** Parameters of FlexiblePCA; unset values take the native defaults. */
+export interface FlexiblePCAParams {
+    /** Default 5. */
+    n_components?: number;
+}
+
+/** Native `preprocessing.feature_selection.flexible_pca` (transformer). */
+export class FlexiblePCA extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.feature_selection.flexible_pca";
+    protected readonly paramTypes = {
+        n_components: "double",
+    } as const;
+
+    constructor(params: FlexiblePCAParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.feature_selection.flexible_pca", FlexiblePCA);
+
+/** Parameters of FlexibleSVD; unset values take the native defaults. */
+export interface FlexibleSVDParams {
+    /** Default 5. */
+    n_components?: number;
+}
+
+/** Native `preprocessing.feature_selection.flexible_svd` (transformer). */
+export class FlexibleSVD extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.feature_selection.flexible_svd";
+    protected readonly paramTypes = {
+        n_components: "double",
+    } as const;
+
+    constructor(params: FlexibleSVDParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.feature_selection.flexible_svd", FlexibleSVD);
+
+/** Parameters of OSC; unset values take the native defaults. */
+export interface OSCParams {
+    /** Default 1. */
+    n_components?: number;
+    /** Default true. */
+    scale?: boolean;
+}
+
+/** Native `preprocessing.orthogonalization.osc` (transformer). */
+export class OSC extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.orthogonalization.osc";
+    protected readonly paramTypes = {
+        n_components: "int",
+        scale: "bool",
+    } as const;
+
+    constructor(params: OSCParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.orthogonalization.osc", OSC);
+
 /** Parameters of CropTransformer; unset values take the native defaults. */
 export interface CropTransformerParams {
     /** Required. */
@@ -1271,6 +1517,57 @@ export class CropTransformer extends NativeEstimator implements Transformer {
 }
 NativeEstimator.register("preprocessing.resampling.crop", CropTransformer);
 
+/** Parameters of IntegerKBinsDiscretizer; unset values take the native defaults. */
+export interface IntegerKBinsDiscretizerParams {
+    /** Default 5. */
+    n_bins?: number;
+    /** Default "uniform". */
+    strategy?: "uniform" | "quantile";
+}
+
+/** Native `preprocessing.resampling.kbins_discretizer` (transformer). */
+export class IntegerKBinsDiscretizer extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.resampling.kbins_discretizer";
+    protected readonly paramTypes = {
+        n_bins: "int",
+        strategy: "enum",
+    } as const;
+
+    constructor(params: IntegerKBinsDiscretizerParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.resampling.kbins_discretizer", IntegerKBinsDiscretizer);
+
+/** Parameters of RangeDiscretizer; unset values take the native defaults. */
+export interface RangeDiscretizerParams {
+    /** Required. */
+    edges?: number[];
+}
+
+/** Native `preprocessing.resampling.range_discretizer` (transformer). */
+export class RangeDiscretizer extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.resampling.range_discretizer";
+    protected readonly paramTypes = {
+        edges: "double_array",
+    } as const;
+
+    constructor(params: RangeDiscretizerParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.resampling.range_discretizer", RangeDiscretizer);
+
 /** Parameters of ResampleTransformer; unset values take the native defaults. */
 export interface ResampleTransformerParams {
     /** Required. */
@@ -1294,6 +1591,162 @@ export class ResampleTransformer extends NativeEstimator implements Transformer 
     }
 }
 NativeEstimator.register("preprocessing.resampling.resample_transformer", ResampleTransformer);
+
+/** Parameters of Resampler; unset values take the native defaults. */
+export interface ResamplerParams {
+    /** Default []. */
+    target_wavelengths?: number[];
+    /** Default "linear". */
+    method?: "linear" | "nearest" | "cubic";
+    /** Default 0. */
+    crop_min?: number;
+    /** Default 0. */
+    crop_max?: number;
+    /** Default false. */
+    use_crop?: boolean;
+    /** Default 0. */
+    fill_value?: number;
+    /** Default false. */
+    bounds_error?: boolean;
+    /** Default false. */
+    extrapolate?: boolean;
+    /** Default 0. */
+    tgt_min?: number;
+    /** Default 1. */
+    tgt_step?: number;
+    /** Default 0. */
+    tgt_n?: number;
+}
+
+/** Native `preprocessing.resampling.resampler` (transformer). Required fit inputs: axis. */
+export class Resampler extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.resampling.resampler";
+    protected readonly paramTypes = {
+        target_wavelengths: "double_array",
+        method: "enum",
+        crop_min: "double",
+        crop_max: "double",
+        use_crop: "bool",
+        fill_value: "double",
+        bounds_error: "bool",
+        extrapolate: "bool",
+        tgt_min: "double",
+        tgt_step: "double",
+        tgt_n: "int",
+    } as const;
+
+    constructor(params: ResamplerParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.resampling.resampler", Resampler);
+
+/** Parameters of BaselineCenter; unset values take the native defaults. */
+export interface BaselineCenterParams {
+}
+
+/** Native `preprocessing.scaling.baseline` (transformer). */
+export class BaselineCenter extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scaling.baseline";
+    protected readonly paramTypes = {
+    } as const;
+
+    constructor(params: BaselineCenterParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scaling.baseline", BaselineCenter);
+
+/** Parameters of LogTransform; unset values take the native defaults. */
+export interface LogTransformParams {
+    /** Default 0. */
+    base?: number;
+    /** Default 0. */
+    offset?: number;
+    /** Default true. */
+    auto_offset?: boolean;
+    /** Default 1e-08. */
+    min_value?: number;
+}
+
+/** Native `preprocessing.scaling.log_transform` (transformer). */
+export class LogTransform extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scaling.log_transform";
+    protected readonly paramTypes = {
+        base: "double",
+        offset: "double",
+        auto_offset: "bool",
+        min_value: "double",
+    } as const;
+
+    constructor(params: LogTransformParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scaling.log_transform", LogTransform);
+
+/** Parameters of Normalize; unset values take the native defaults. */
+export interface NormalizeParams {
+    /** Default -1. */
+    feature_min?: number;
+    /** Default 1. */
+    feature_max?: number;
+}
+
+/** Native `preprocessing.scaling.normalize` (transformer). */
+export class Normalize extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scaling.normalize";
+    protected readonly paramTypes = {
+        feature_min: "double",
+        feature_max: "double",
+    } as const;
+
+    constructor(params: NormalizeParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scaling.normalize", Normalize);
+
+/** Parameters of SimpleScale; unset values take the native defaults. */
+export interface SimpleScaleParams {
+}
+
+/** Native `preprocessing.scaling.simple_scale` (transformer). */
+export class SimpleScale extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scaling.simple_scale";
+    protected readonly paramTypes = {
+    } as const;
+
+    constructor(params: SimpleScaleParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scaling.simple_scale", SimpleScale);
 
 /** Parameters of AreaNormalization; unset values take the native defaults. */
 export interface AreaNormalizationParams {
@@ -1343,6 +1796,27 @@ export class EMSC extends NativeEstimator implements Transformer {
 }
 NativeEstimator.register("preprocessing.scatter.emsc", EMSC);
 
+/** Parameters of LocalCentering; unset values take the native defaults. */
+export interface LocalCenteringParams {
+}
+
+/** Native `preprocessing.scatter.local_centering` (transformer). Required fit inputs: target_domain. */
+export class LocalCentering extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scatter.local_centering";
+    protected readonly paramTypes = {
+    } as const;
+
+    constructor(params: LocalCenteringParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scatter.local_centering", LocalCentering);
+
 /** Parameters of LSNV; unset values take the native defaults. */
 export interface LSNVParams {
     /** Default 11. */
@@ -1373,6 +1847,36 @@ export class LSNV extends NativeEstimator implements Transformer {
 }
 NativeEstimator.register("preprocessing.scatter.local_snv", LSNV);
 
+/** Parameters of LocalizedMSC; unset values take the native defaults. */
+export interface LocalizedMSCParams {
+    /** Default 32. */
+    window_size?: number;
+    /** Default []. */
+    reference?: number[];
+    /** Default 1e-12. */
+    eps?: number;
+}
+
+/** Native `preprocessing.scatter.localized_msc` (transformer). */
+export class LocalizedMSC extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scatter.localized_msc";
+    protected readonly paramTypes = {
+        window_size: "int",
+        reference: "double_array",
+        eps: "double",
+    } as const;
+
+    constructor(params: LocalizedMSCParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scatter.localized_msc", LocalizedMSC);
+
 /** Parameters of MSC; unset values take the native defaults. */
 export interface MSCParams {
 }
@@ -1393,6 +1897,66 @@ export class MSC extends NativeEstimator implements Transformer {
     }
 }
 NativeEstimator.register("preprocessing.scatter.msc", MSC);
+
+/** Parameters of PiecewiseMSC; unset values take the native defaults. */
+export interface PiecewiseMSCParams {
+    /** Default 32. */
+    window_size?: number;
+    /** Default []. */
+    reference?: number[];
+    /** Default 1e-12. */
+    eps?: number;
+}
+
+/** Native `preprocessing.scatter.piecewise_msc` (transformer). */
+export class PiecewiseMSC extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scatter.piecewise_msc";
+    protected readonly paramTypes = {
+        window_size: "int",
+        reference: "double_array",
+        eps: "double",
+    } as const;
+
+    constructor(params: PiecewiseMSCParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scatter.piecewise_msc", PiecewiseMSC);
+
+/** Parameters of PiecewiseSNV; unset values take the native defaults. */
+export interface PiecewiseSNVParams {
+    /** Default 32. */
+    window_size?: number;
+    /** Default 0. */
+    ddof?: number;
+    /** Default 1e-12. */
+    eps?: number;
+}
+
+/** Native `preprocessing.scatter.piecewise_snv` (transformer). */
+export class PiecewiseSNV extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scatter.piecewise_snv";
+    protected readonly paramTypes = {
+        window_size: "int",
+        ddof: "int",
+        eps: "double",
+    } as const;
+
+    constructor(params: PiecewiseSNVParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scatter.piecewise_snv", PiecewiseSNV);
 
 /** Parameters of RNV; unset values take the native defaults. */
 export interface RNVParams {
@@ -1453,6 +2017,60 @@ export class SNV extends NativeEstimator implements Transformer {
     }
 }
 NativeEstimator.register("preprocessing.scatter.snv", SNV);
+
+/** Parameters of VariableSortingNormalization; unset values take the native defaults. */
+export interface VariableSortingNormalizationParams {
+    /** Default 1e-12. */
+    eps?: number;
+}
+
+/** Native `preprocessing.scatter.vsn` (transformer). */
+export class VariableSortingNormalization extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scatter.vsn";
+    protected readonly paramTypes = {
+        eps: "double",
+    } as const;
+
+    constructor(params: VariableSortingNormalizationParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scatter.vsn", VariableSortingNormalization);
+
+/** Parameters of WeightedSNV; unset values take the native defaults. */
+export interface WeightedSNVParams {
+    /** Default []. */
+    weights?: number[];
+    /** Default 0. */
+    ddof?: number;
+    /** Default 1e-12. */
+    eps?: number;
+}
+
+/** Native `preprocessing.scatter.weighted_snv` (transformer). */
+export class WeightedSNV extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scatter.weighted_snv";
+    protected readonly paramTypes = {
+        weights: "double_array",
+        ddof: "int",
+        eps: "double",
+    } as const;
+
+    constructor(params: WeightedSNVParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.scatter.weighted_snv", WeightedSNV);
 
 /** Parameters of FractionToPercent; unset values take the native defaults. */
 export interface FractionToPercentParams {
@@ -1613,6 +2231,126 @@ export class Gaussian extends NativeEstimator implements Transformer {
 }
 NativeEstimator.register("preprocessing.smoothing.gaussian", Gaussian);
 
+/** Parameters of FCKStaticTransformer; unset values take the native defaults. */
+export interface FCKStaticTransformerParams {
+    /** Required. */
+    kernel_size?: number;
+    /** Required. */
+    alphas?: number[];
+    /** Required. */
+    sigmas?: number[];
+}
+
+/** Native `preprocessing.specialized.fck_static` (transformer). */
+export class FCKStaticTransformer extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.specialized.fck_static";
+    protected readonly paramTypes = {
+        kernel_size: "int",
+        alphas: "double_array",
+        sigmas: "double_array",
+    } as const;
+
+    constructor(params: FCKStaticTransformerParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.specialized.fck_static", FCKStaticTransformer);
+
+/** Parameters of DirectStandardization; unset values take the native defaults. */
+export interface DirectStandardizationParams {
+    /** Default true. */
+    fit_intercept?: boolean;
+    /** Default 0. */
+    ridge?: number;
+}
+
+/** Native `preprocessing.transfer.direct_standardization` (transformer). Required fit inputs: target_domain. */
+export class DirectStandardization extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.transfer.direct_standardization";
+    protected readonly paramTypes = {
+        fit_intercept: "bool",
+        ridge: "double",
+    } as const;
+
+    constructor(params: DirectStandardizationParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.transfer.direct_standardization", DirectStandardization);
+
+/** Parameters of PiecewiseDirectStandardization; unset values take the native defaults. */
+export interface PiecewiseDirectStandardizationParams {
+    /** Default 5. */
+    window_size?: number;
+    /** Default true. */
+    fit_intercept?: boolean;
+    /** Default 0. */
+    ridge?: number;
+}
+
+/** Native `preprocessing.transfer.piecewise_direct_standardization` (transformer). Required fit inputs: target_domain. */
+export class PiecewiseDirectStandardization extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.transfer.piecewise_direct_standardization";
+    protected readonly paramTypes = {
+        window_size: "int",
+        fit_intercept: "bool",
+        ridge: "double",
+    } as const;
+
+    constructor(params: PiecewiseDirectStandardizationParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.transfer.piecewise_direct_standardization", PiecewiseDirectStandardization);
+
+/** Parameters of RobustDirectStandardization; unset values take the native defaults. */
+export interface RobustDirectStandardizationParams {
+    /** Default true. */
+    fit_intercept?: boolean;
+    /** Default 0. */
+    ridge?: number;
+    /** Default 0.9. */
+    trim_quantile?: number;
+    /** Default 3. */
+    max_iter?: number;
+}
+
+/** Native `preprocessing.transfer.robust_direct_standardization` (transformer). Required fit inputs: target_domain. */
+export class RobustDirectStandardization extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.transfer.robust_direct_standardization";
+    protected readonly paramTypes = {
+        fit_intercept: "bool",
+        ridge: "double",
+        trim_quantile: "double",
+        max_iter: "int",
+    } as const;
+
+    constructor(params: RobustDirectStandardizationParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.transfer.robust_direct_standardization", RobustDirectStandardization);
+
 /** Parameters of Haar; unset values take the native defaults. */
 export interface HaarParams {
 }
@@ -1729,6 +2467,72 @@ export class WaveletFeatures extends NativeEstimator implements Transformer {
     }
 }
 NativeEstimator.register("preprocessing.wavelets.wavelet_features", WaveletFeatures);
+
+/** Parameters of WaveletPCA; unset values take the native defaults. */
+export interface WaveletPCAParams {
+    /** Default "haar". */
+    family?: "haar" | "db4" | "sym4" | "coif1";
+    /** Default "periodization". */
+    mode?: "periodization" | "symmetric" | "zero";
+    /** Default 2. */
+    max_level?: number;
+    /** Default 5. */
+    n_components?: number;
+}
+
+/** Native `preprocessing.wavelets.wavelet_pca` (transformer). */
+export class WaveletPCA extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.wavelets.wavelet_pca";
+    protected readonly paramTypes = {
+        family: "enum",
+        mode: "enum",
+        max_level: "int",
+        n_components: "double",
+    } as const;
+
+    constructor(params: WaveletPCAParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.wavelets.wavelet_pca", WaveletPCA);
+
+/** Parameters of WaveletSVD; unset values take the native defaults. */
+export interface WaveletSVDParams {
+    /** Default "haar". */
+    family?: "haar" | "db4" | "sym4" | "coif1";
+    /** Default "periodization". */
+    mode?: "periodization" | "symmetric" | "zero";
+    /** Default 2. */
+    max_level?: number;
+    /** Default 5. */
+    n_components?: number;
+}
+
+/** Native `preprocessing.wavelets.wavelet_svd` (transformer). */
+export class WaveletSVD extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.wavelets.wavelet_svd";
+    protected readonly paramTypes = {
+        family: "enum",
+        mode: "enum",
+        max_level: "int",
+        n_components: "double",
+    } as const;
+
+    constructor(params: WaveletSVDParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeEstimator.register("preprocessing.wavelets.wavelet_svd", WaveletSVD);
 
 /** Parameters of BiPLS; unset values take the native defaults. */
 export interface BiPLSParams {

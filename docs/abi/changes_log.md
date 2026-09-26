@@ -31,7 +31,12 @@ sparse/fused/group-sparse PLS, O2PLS, MIR-PLS, MB-PLS, ECR, N-PLS, DI-PLS,
 bagging/boosting/random-subspace PLS) and 25 selectors (SPA, VIP-SPA, CARS,
 SCARS, UVE, EMCUVE, random frog, GA, PSO, VISSA, shaving, BVE, REP, IPW, ST,
 T2, BiPLS, SiPLS, IRIV, IRF, WVC, stability, randomization, variable ranking),
-32 transformers (the stateless spectral transforms, MSC and EMSC) and 4
+60 transformers (the stateless spectral transforms; fitted MSC, EMSC,
+localized/piecewise MSC, piecewise/weighted SNV, VSN, local centering, OSC,
+flexible and wavelet PCA/SVD, k-bins and range discretizers, FCK static,
+baseline centring, log transform, derivative, resampler with a native target
+grid, normalize and simple scale; the four alignments; direct, robust,
+piecewise and score-augmented standardization on a paired target domain) and 4
 classifiers (PLS-LDA, PLS-QDA, PLS-logistic, sparse PLS-DA; labels are integer
 class ids remapped internally, probabilities only where the method defines
 them). `docs/parity/estimator_roles_coverage.md` is the generated per-method
@@ -46,6 +51,12 @@ covariance, log determinant and prior) as `predictions`; it previously
 ignored the fitted covariances. The sparse PLS-DA `sparsity_lambda` parameter
 reaches the kernel through the estimator role (the pls4all wrapper never
 passed it to C).
+The fitted Normalize and SimpleScale roles learn column statistics at fit and
+apply them to new rows (the stateless functions keep per-batch statistics).
+Fixed while adding roles: alignment refits relearn the reference instead of
+keeping the first one; the cubic resampler no longer shares transform scratch
+space across calls; a resampler crop that keeps a single source point is
+refused instead of reading past the axis.
 
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (unreleased)
 

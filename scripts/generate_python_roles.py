@@ -23,6 +23,10 @@ OUTPUT = ROLES / "_generated.py"
 INIT = ROLES / "__init__.py"
 
 ACRONYMS = {
+    "osc",
+    "pca",
+    "svd",
+    "snv",
     "pls",
     "pcr",
     "cppls",
@@ -73,6 +77,15 @@ CLASS_NAMES = {
     "models.classification.pls_qda": "PLSQDA",
     "models.classification.pls_logistic": "PLSLogistic",
     "models.sparse.sparse_pls_da": "SparsePLSDA",
+    "preprocessing.alignment.xcorr_align": "CrossCorrelationAlignment",
+    "preprocessing.alignment.icoshift_align": "IcoshiftAlignment",
+    "preprocessing.alignment.dtw_align": "DynamicTimeWarpingAlignment",
+    "preprocessing.alignment.cow_align": "CorrelationOptimizedWarping",
+    "preprocessing.baselines.saps": "ScoreAugmentedProjectionStandardization",
+    "preprocessing.scatter.vsn": "VariableSortingNormalization",
+    "preprocessing.resampling.kbins_discretizer": "IntegerKBinsDiscretizer",
+    "preprocessing.scaling.baseline": "BaselineCenter",
+    "preprocessing.specialized.fck_static": "FCKStaticTransformer",
 }
 # Role interface -> Python role base class (docs/abi/estimator_roles_design.md, D0b).
 ROLE_BASES = {

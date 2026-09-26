@@ -28,6 +28,10 @@
   "models.specialized.ecr" = c("regressor"),
   "models.specialized.tensor_pls" = c("regressor"),
   "models.transfer.di_pls" = c("regressor"),
+  "preprocessing.alignment.cow_align" = c("transformer"),
+  "preprocessing.alignment.dtw_align" = c("transformer"),
+  "preprocessing.alignment.icoshift_align" = c("transformer"),
+  "preprocessing.alignment.xcorr_align" = c("transformer"),
   "preprocessing.baselines.airpls" = c("transformer"),
   "preprocessing.baselines.arpls" = c("transformer"),
   "preprocessing.baselines.asls" = c("transformer"),
@@ -37,29 +41,53 @@
   "preprocessing.baselines.imodpoly" = c("transformer"),
   "preprocessing.baselines.modpoly" = c("transformer"),
   "preprocessing.baselines.rolling_ball" = c("transformer"),
+  "preprocessing.baselines.saps" = c("transformer"),
   "preprocessing.baselines.snip" = c("transformer"),
+  "preprocessing.derivatives.derivate" = c("transformer"),
   "preprocessing.derivatives.first_derivative" = c("transformer"),
   "preprocessing.derivatives.norris_williams" = c("transformer"),
   "preprocessing.derivatives.savitzky_golay" = c("transformer"),
   "preprocessing.derivatives.second_derivative" = c("transformer"),
+  "preprocessing.feature_selection.flexible_pca" = c("transformer"),
+  "preprocessing.feature_selection.flexible_svd" = c("transformer"),
+  "preprocessing.orthogonalization.osc" = c("transformer"),
   "preprocessing.resampling.crop" = c("transformer"),
+  "preprocessing.resampling.kbins_discretizer" = c("transformer"),
+  "preprocessing.resampling.range_discretizer" = c("transformer"),
   "preprocessing.resampling.resample_transformer" = c("transformer"),
+  "preprocessing.resampling.resampler" = c("transformer"),
+  "preprocessing.scaling.baseline" = c("transformer"),
+  "preprocessing.scaling.log_transform" = c("transformer"),
+  "preprocessing.scaling.normalize" = c("transformer"),
+  "preprocessing.scaling.simple_scale" = c("transformer"),
   "preprocessing.scatter.area_normalization" = c("transformer"),
   "preprocessing.scatter.emsc" = c("transformer"),
+  "preprocessing.scatter.local_centering" = c("transformer"),
   "preprocessing.scatter.local_snv" = c("transformer"),
+  "preprocessing.scatter.localized_msc" = c("transformer"),
   "preprocessing.scatter.msc" = c("transformer"),
+  "preprocessing.scatter.piecewise_msc" = c("transformer"),
+  "preprocessing.scatter.piecewise_snv" = c("transformer"),
   "preprocessing.scatter.robust_snv" = c("transformer"),
   "preprocessing.scatter.snv" = c("transformer"),
+  "preprocessing.scatter.vsn" = c("transformer"),
+  "preprocessing.scatter.weighted_snv" = c("transformer"),
   "preprocessing.signal_conversion.fraction_to_percent" = c("transformer"),
   "preprocessing.signal_conversion.from_absorbance" = c("transformer"),
   "preprocessing.signal_conversion.kubelka_munk" = c("transformer"),
   "preprocessing.signal_conversion.percent_to_fraction" = c("transformer"),
   "preprocessing.signal_conversion.to_absorbance" = c("transformer"),
   "preprocessing.smoothing.gaussian" = c("transformer"),
+  "preprocessing.specialized.fck_static" = c("transformer"),
+  "preprocessing.transfer.direct_standardization" = c("transformer"),
+  "preprocessing.transfer.piecewise_direct_standardization" = c("transformer"),
+  "preprocessing.transfer.robust_direct_standardization" = c("transformer"),
   "preprocessing.wavelets.haar" = c("transformer"),
   "preprocessing.wavelets.wavelet" = c("transformer"),
   "preprocessing.wavelets.wavelet_denoise" = c("transformer"),
   "preprocessing.wavelets.wavelet_features" = c("transformer"),
+  "preprocessing.wavelets.wavelet_pca" = c("transformer"),
+  "preprocessing.wavelets.wavelet_svd" = c("transformer"),
   "selection.bipls" = c("selector"),
   "selection.bve" = c("selector"),
   "selection.cars" = c("selector"),
@@ -113,6 +141,10 @@
   "models.specialized.ecr" = "n4m_ecr",
   "models.specialized.tensor_pls" = "n4m_tensor_pls",
   "models.transfer.di_pls" = "n4m_di_pls",
+  "preprocessing.alignment.cow_align" = "n4m_cow_align",
+  "preprocessing.alignment.dtw_align" = "n4m_dtw_align",
+  "preprocessing.alignment.icoshift_align" = "n4m_icoshift_align",
+  "preprocessing.alignment.xcorr_align" = "n4m_xcorr_align",
   "preprocessing.baselines.airpls" = "n4m_airpls",
   "preprocessing.baselines.arpls" = "n4m_arpls",
   "preprocessing.baselines.asls" = "n4m_asls",
@@ -122,29 +154,53 @@
   "preprocessing.baselines.imodpoly" = "n4m_imodpoly",
   "preprocessing.baselines.modpoly" = "n4m_modpoly",
   "preprocessing.baselines.rolling_ball" = "n4m_rolling_ball",
+  "preprocessing.baselines.saps" = "n4m_saps",
   "preprocessing.baselines.snip" = "n4m_snip",
+  "preprocessing.derivatives.derivate" = "n4m_derivate",
   "preprocessing.derivatives.first_derivative" = "n4m_first_derivative",
   "preprocessing.derivatives.norris_williams" = "n4m_norris_williams",
   "preprocessing.derivatives.savitzky_golay" = "n4m_savitzky_golay",
   "preprocessing.derivatives.second_derivative" = "n4m_second_derivative",
+  "preprocessing.feature_selection.flexible_pca" = "n4m_flexible_pca",
+  "preprocessing.feature_selection.flexible_svd" = "n4m_flexible_svd",
+  "preprocessing.orthogonalization.osc" = "n4m_osc",
   "preprocessing.resampling.crop" = "n4m_crop",
+  "preprocessing.resampling.kbins_discretizer" = "n4m_kbins_discretizer",
+  "preprocessing.resampling.range_discretizer" = "n4m_range_discretizer",
   "preprocessing.resampling.resample_transformer" = "n4m_resample_transformer",
+  "preprocessing.resampling.resampler" = "n4m_resampler",
+  "preprocessing.scaling.baseline" = "n4m_baseline",
+  "preprocessing.scaling.log_transform" = "n4m_log_transform",
+  "preprocessing.scaling.normalize" = "n4m_normalize",
+  "preprocessing.scaling.simple_scale" = "n4m_simple_scale",
   "preprocessing.scatter.area_normalization" = "n4m_area_normalization",
   "preprocessing.scatter.emsc" = "n4m_emsc",
+  "preprocessing.scatter.local_centering" = "n4m_local_centering",
   "preprocessing.scatter.local_snv" = "n4m_local_snv",
+  "preprocessing.scatter.localized_msc" = "n4m_localized_msc",
   "preprocessing.scatter.msc" = "n4m_msc",
+  "preprocessing.scatter.piecewise_msc" = "n4m_piecewise_msc",
+  "preprocessing.scatter.piecewise_snv" = "n4m_piecewise_snv",
   "preprocessing.scatter.robust_snv" = "n4m_robust_snv",
   "preprocessing.scatter.snv" = "n4m_snv",
+  "preprocessing.scatter.vsn" = "n4m_vsn",
+  "preprocessing.scatter.weighted_snv" = "n4m_weighted_snv",
   "preprocessing.signal_conversion.fraction_to_percent" = "n4m_fraction_to_percent",
   "preprocessing.signal_conversion.from_absorbance" = "n4m_from_absorbance",
   "preprocessing.signal_conversion.kubelka_munk" = "n4m_kubelka_munk",
   "preprocessing.signal_conversion.percent_to_fraction" = "n4m_percent_to_fraction",
   "preprocessing.signal_conversion.to_absorbance" = "n4m_to_absorbance",
   "preprocessing.smoothing.gaussian" = "n4m_gaussian",
+  "preprocessing.specialized.fck_static" = "n4m_fck_static",
+  "preprocessing.transfer.direct_standardization" = "n4m_direct_standardization",
+  "preprocessing.transfer.piecewise_direct_standardization" = "n4m_piecewise_direct_standardization",
+  "preprocessing.transfer.robust_direct_standardization" = "n4m_robust_direct_standardization",
   "preprocessing.wavelets.haar" = "n4m_haar",
   "preprocessing.wavelets.wavelet" = "n4m_wavelet",
   "preprocessing.wavelets.wavelet_denoise" = "n4m_wavelet_denoise",
   "preprocessing.wavelets.wavelet_features" = "n4m_wavelet_features",
+  "preprocessing.wavelets.wavelet_pca" = "n4m_wavelet_pca",
+  "preprocessing.wavelets.wavelet_svd" = "n4m_wavelet_svd",
   "selection.bipls" = "n4m_bipls",
   "selection.bve" = "n4m_bve",
   "selection.cars" = "n4m_cars",
@@ -324,6 +380,30 @@ n4m_di_pls <- function(n_components = 2L, di_lambda = 1.0) {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_cow_align <- function(reference = c(), interval_size = 32L, max_shift = 5L) {
+  .n4m_estimator("preprocessing.alignment.cow_align", c("transformer"), list(reference = reference, interval_size = interval_size, max_shift = max_shift))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_dtw_align <- function(reference = c()) {
+  .n4m_estimator("preprocessing.alignment.dtw_align", c("transformer"), list(reference = reference))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_icoshift_align <- function(reference = c(), interval_size = 32L, max_shift = 5L) {
+  .n4m_estimator("preprocessing.alignment.icoshift_align", c("transformer"), list(reference = reference, interval_size = interval_size, max_shift = max_shift))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_xcorr_align <- function(reference = c(), max_shift = 5L) {
+  .n4m_estimator("preprocessing.alignment.xcorr_align", c("transformer"), list(reference = reference, max_shift = max_shift))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_airpls <- function(lam = 1000000.0, max_iter = 50L, tol = 0.001) {
   .n4m_estimator("preprocessing.baselines.airpls", c("transformer"), list(lam = lam, max_iter = max_iter, tol = tol))
 }
@@ -378,8 +458,20 @@ n4m_rolling_ball <- function(half_window = 20L, smooth_half_window = 0L) {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_saps <- function(n_components = 5L, score_weight = 1.0, fit_intercept = TRUE, ridge = 0.0) {
+  .n4m_estimator("preprocessing.baselines.saps", c("transformer"), list(n_components = n_components, score_weight = score_weight, fit_intercept = fit_intercept, ridge = ridge))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_snip <- function(max_half_window = 20L) {
   .n4m_estimator("preprocessing.baselines.snip", c("transformer"), list(max_half_window = max_half_window))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_derivate <- function(order = 1L, delta = 1.0) {
+  .n4m_estimator("preprocessing.derivatives.derivate", c("transformer"), list(order = order, delta = delta))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -408,14 +500,74 @@ n4m_second_derivative <- function(delta = 1.0, edge_order = 2L) {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_flexible_pca <- function(n_components = 5.0) {
+  .n4m_estimator("preprocessing.feature_selection.flexible_pca", c("transformer"), list(n_components = n_components))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_flexible_svd <- function(n_components = 5.0) {
+  .n4m_estimator("preprocessing.feature_selection.flexible_svd", c("transformer"), list(n_components = n_components))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_osc <- function(n_components = 1L, scale = TRUE) {
+  .n4m_estimator("preprocessing.orthogonalization.osc", c("transformer"), list(n_components = n_components, scale = scale))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_crop <- function(start = NULL, end = NULL) {
   .n4m_estimator("preprocessing.resampling.crop", c("transformer"), list(start = start, end = end))
 }
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_kbins_discretizer <- function(n_bins = 5L, strategy = "uniform") {
+  .n4m_estimator("preprocessing.resampling.kbins_discretizer", c("transformer"), list(n_bins = n_bins, strategy = strategy))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_range_discretizer <- function(edges = NULL) {
+  .n4m_estimator("preprocessing.resampling.range_discretizer", c("transformer"), list(edges = edges))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_resample_transformer <- function(num_samples = NULL) {
   .n4m_estimator("preprocessing.resampling.resample_transformer", c("transformer"), list(num_samples = num_samples))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_resampler <- function(target_wavelengths = c(), method = "linear", crop_min = 0.0, crop_max = 0.0, use_crop = FALSE, fill_value = 0.0, bounds_error = FALSE, extrapolate = FALSE, tgt_min = 0.0, tgt_step = 1.0, tgt_n = 0L) {
+  .n4m_estimator("preprocessing.resampling.resampler", c("transformer"), list(target_wavelengths = target_wavelengths, method = method, crop_min = crop_min, crop_max = crop_max, use_crop = use_crop, fill_value = fill_value, bounds_error = bounds_error, extrapolate = extrapolate, tgt_min = tgt_min, tgt_step = tgt_step, tgt_n = tgt_n))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_baseline <- function() {
+  .n4m_estimator("preprocessing.scaling.baseline", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_log_transform <- function(base = 0.0, offset = 0.0, auto_offset = TRUE, min_value = 1e-08) {
+  .n4m_estimator("preprocessing.scaling.log_transform", c("transformer"), list(base = base, offset = offset, auto_offset = auto_offset, min_value = min_value))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_normalize <- function(feature_min = -1.0, feature_max = 1.0) {
+  .n4m_estimator("preprocessing.scaling.normalize", c("transformer"), list(feature_min = feature_min, feature_max = feature_max))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_simple_scale <- function() {
+  .n4m_estimator("preprocessing.scaling.simple_scale", c("transformer"), list())
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -432,14 +584,38 @@ n4m_emsc <- function(degree = 2L) {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_local_centering <- function() {
+  .n4m_estimator("preprocessing.scatter.local_centering", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_local_snv <- function(window = 11L, pad_mode = "reflect", constant_value = 0.0) {
   .n4m_estimator("preprocessing.scatter.local_snv", c("transformer"), list(window = window, pad_mode = pad_mode, constant_value = constant_value))
 }
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_localized_msc <- function(window_size = 32L, reference = c(), eps = 1e-12) {
+  .n4m_estimator("preprocessing.scatter.localized_msc", c("transformer"), list(window_size = window_size, reference = reference, eps = eps))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_msc <- function() {
   .n4m_estimator("preprocessing.scatter.msc", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_piecewise_msc <- function(window_size = 32L, reference = c(), eps = 1e-12) {
+  .n4m_estimator("preprocessing.scatter.piecewise_msc", c("transformer"), list(window_size = window_size, reference = reference, eps = eps))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_piecewise_snv <- function(window_size = 32L, ddof = 0L, eps = 1e-12) {
+  .n4m_estimator("preprocessing.scatter.piecewise_snv", c("transformer"), list(window_size = window_size, ddof = ddof, eps = eps))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -452,6 +628,18 @@ n4m_robust_snv <- function(with_center = TRUE, with_scale = TRUE, k = 1.4826) {
 #' @export
 n4m_snv <- function(with_mean = TRUE, with_std = TRUE, ddof = 0L) {
   .n4m_estimator("preprocessing.scatter.snv", c("transformer"), list(with_mean = with_mean, with_std = with_std, ddof = ddof))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_vsn <- function(eps = 1e-12) {
+  .n4m_estimator("preprocessing.scatter.vsn", c("transformer"), list(eps = eps))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_weighted_snv <- function(weights = c(), ddof = 0L, eps = 1e-12) {
+  .n4m_estimator("preprocessing.scatter.weighted_snv", c("transformer"), list(weights = weights, ddof = ddof, eps = eps))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -492,6 +680,30 @@ n4m_gaussian <- function(sigma = 1.0, order = 0L, mode = "reflect", cval = 0.0, 
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_fck_static <- function(kernel_size = NULL, alphas = NULL, sigmas = NULL) {
+  .n4m_estimator("preprocessing.specialized.fck_static", c("transformer"), list(kernel_size = kernel_size, alphas = alphas, sigmas = sigmas))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_direct_standardization <- function(fit_intercept = TRUE, ridge = 0.0) {
+  .n4m_estimator("preprocessing.transfer.direct_standardization", c("transformer"), list(fit_intercept = fit_intercept, ridge = ridge))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_piecewise_direct_standardization <- function(window_size = 5L, fit_intercept = TRUE, ridge = 0.0) {
+  .n4m_estimator("preprocessing.transfer.piecewise_direct_standardization", c("transformer"), list(window_size = window_size, fit_intercept = fit_intercept, ridge = ridge))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_robust_direct_standardization <- function(fit_intercept = TRUE, ridge = 0.0, trim_quantile = 0.9, max_iter = 3L) {
+  .n4m_estimator("preprocessing.transfer.robust_direct_standardization", c("transformer"), list(fit_intercept = fit_intercept, ridge = ridge, trim_quantile = trim_quantile, max_iter = max_iter))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_haar <- function() {
   .n4m_estimator("preprocessing.wavelets.haar", c("transformer"), list())
 }
@@ -512,6 +724,18 @@ n4m_wavelet_denoise <- function(family = "db4", mode = "periodization", level = 
 #' @export
 n4m_wavelet_features <- function(family = "haar", mode = "periodization", max_level = 3L, entropy = "energy") {
   .n4m_estimator("preprocessing.wavelets.wavelet_features", c("transformer"), list(family = family, mode = mode, max_level = max_level, entropy = entropy))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_wavelet_pca <- function(family = "haar", mode = "periodization", max_level = 2L, n_components = 5.0) {
+  .n4m_estimator("preprocessing.wavelets.wavelet_pca", c("transformer"), list(family = family, mode = mode, max_level = max_level, n_components = n_components))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_wavelet_svd <- function(family = "haar", mode = "periodization", max_level = 2L, n_components = 5.0) {
+  .n4m_estimator("preprocessing.wavelets.wavelet_svd", c("transformer"), list(family = family, mode = mode, max_level = max_level, n_components = n_components))
 }
 
 #' @rdname n4m_estimator_role_constructors

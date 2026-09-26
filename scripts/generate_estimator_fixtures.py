@@ -41,7 +41,14 @@ EXPLICIT_PARAMS = {
     "start": 2,
     "end": 10,
     "num_samples": 8,
+    "edges": [0.25, 0.5, 0.75],
+    "kernel_size": 5,
+    "alphas": [0.0, 1.0],
+    "sigmas": [1.0, 2.0],
 }
+# Fit input name -> n4m_fit_input_t index (n4m/estimator.h).
+DATA_INPUTS = {"feature_groups": 4, "blocks": 5, "axis": 6, "X_target": 7}
+AXIS = (1000.0 + 2.0 * np.arange(N_FEATURES)).tolist()
 
 
 def dataset():
@@ -50,7 +57,8 @@ def dataset():
     loadings = rng.normal(size=(2, N_FEATURES))
     X = scores @ loadings + 0.1 * rng.normal(size=(48, N_FEATURES))
     y = scores[:, 0] - 0.5 * scores[:, 1] + 0.05 * rng.normal(size=48)
-    X_target = rng.normal(size=(30, 2)) @ loadings + 0.3
+    # Paired transfer methods need one target row per training row.
+    X_target = rng.normal(size=(36, 2)) @ loadings + 0.3
     # Strictly positive, reflectance-like values keep every conversion defined.
     shift = 1.0 - min(X.min(), X_target.min())
     X, X_target = (X + shift) / (2 * shift), (X_target + shift) / (2 * shift)
@@ -72,11 +80,15 @@ def explicit_params(cls) -> dict:
 
 
 def fit_inputs(cls, X_target):
-    return {
-        roles.GroupSparsePLS: {"feature_groups": np.arange(N_FEATURES) // 4},
-        roles.MBPLS: {"blocks": [4, 4, 4]},
-        roles.DIPLS: {"X_target": X_target},
-    }.get(cls, {})
+    """The data inputs the manifest declares required for ``cls``."""
+    values = {
+        "feature_groups": np.arange(N_FEATURES) // 4,
+        "blocks": [4, 4, 4],
+        "axis": AXIS,
+        "X_target": X_target,
+    }
+    info = roles.method_info(cls._method_id)
+    return {n: values[n] for n, i in DATA_INPUTS.items() if info.inputs[i] == 2}
 
 
 def main() -> None:
@@ -115,6 +127,7 @@ def main() -> None:
         "x_target": X_target.tolist(),
         "feature_groups": (np.arange(N_FEATURES) // 4).tolist(),
         "blocks": [4, 4, 4],
+        "axis": AXIS,
         "x_test": X_test.tolist(),
         "cases": cases,
     }
@@ -151,6 +164,7 @@ def render_r(doc: dict) -> str:
         f"  x_target = {r_matrix(doc['x_target'])},",
         f"  feature_groups = {r_vector(doc['feature_groups'])},",
         f"  blocks = {r_vector(doc['blocks'])},",
+        f"  axis = {r_vector(doc['axis'])},",
         f"  x_test = {r_matrix(doc['x_test'])},",
         "  cases = list(",
     ]

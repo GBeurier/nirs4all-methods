@@ -29,10 +29,11 @@ def data():
     loadings = rng.normal(size=(2, N_FEATURES))
     X = scores @ loadings + 0.1 * rng.normal(size=(48, N_FEATURES))
     y = scores[:, 0] - 0.5 * scores[:, 1] + 0.05 * rng.normal(size=48)
+    # Paired transfer methods need one target row per training row.
     X_target = (
-        rng.normal(size=(30, 2)) @ loadings
+        rng.normal(size=(36, 2)) @ loadings
         + 0.3
-        + 0.1 * rng.normal(size=(30, N_FEATURES))
+        + 0.1 * rng.normal(size=(36, N_FEATURES))
     )
     return X[:36], y[:36], X[36:], X_target, y[36:]
 
@@ -56,12 +57,21 @@ def build(cls):
     return cls(**params)
 
 
+# Fit input name -> n4m_fit_input_t index (n4m/estimator.h).
+DATA_INPUTS = {"feature_groups": 4, "blocks": 5, "axis": 6, "X_target": 7}
+AXIS = 1000.0 + 2.0 * np.arange(N_FEATURES)
+
+
 def fit_kwargs(cls, X_target):
-    return {
-        roles.GroupSparsePLS: {"feature_groups": np.arange(N_FEATURES) // 4},
-        roles.MBPLS: {"blocks": [4, 4, 4]},
-        roles.DIPLS: {"X_target": X_target},
-    }.get(cls, {})
+    """The data inputs the manifest declares required for ``cls``."""
+    values = {
+        "feature_groups": np.arange(N_FEATURES) // 4,
+        "blocks": [4, 4, 4],
+        "axis": AXIS,
+        "X_target": X_target,
+    }
+    info = roles.method_info(cls._method_id)
+    return {n: values[n] for n, i in DATA_INPUTS.items() if info.inputs[i] == 2}
 
 
 ALL = sorted(_REGISTRY.values(), key=lambda c: c._method_id)
@@ -337,9 +347,311 @@ def test_selector_matches_n4m_reference(cls, data):
     )
 
 
+# Fitted transformers ------------------------------------------------------
+# Each case compares the role with its n4m reference class on smooth
+# synthetic spectra: train and held-out rows are bitwise equal, and the N4ME
+# state round trips.
+
+P_FITTED = 40
+GRID = np.linspace(0.0, 1.0, P_FITTED)
+FITTED_AXIS = 1000.0 + 2.0 * np.arange(P_FITTED)
+
+
+@pytest.fixture(scope="module")
+def spectra():
+    rng = np.random.default_rng(7)
+
+    def draw(n):
+        shift = rng.normal(0.0, 0.03, (n, 1))
+        a, b = rng.uniform(0.5, 1.5, (2, n, 1))
+        return (
+            1.5
+            + a * np.exp(-((GRID - 0.3 - shift) ** 2) / 0.01)
+            + b * np.exp(-((GRID - 0.7 - shift) ** 2) / 0.02)
+            + 0.1 * GRID
+            + 0.002 * rng.standard_normal((n, P_FITTED))
+        )
+
+    X, X_test = draw(40), draw(12)
+    y = X[:, 10] * 2.0 - X[:, 30] + 0.01 * rng.standard_normal(40)
+    X_target = 1.1 * X + 0.05 + 0.02 * np.sin(6.0 * GRID)
+    return X, y, X_test, X_target, draw(1)[0], rng.uniform(0.2, 1.0, P_FITTED)
+
+
+def _ref(module: str, name: str):
+    import importlib
+
+    return getattr(importlib.import_module(module), name)
+
+
+AL, ST, SC = (
+    "n4m.transform.alignment",
+    "n4m.domain_adaptation.standardization",
+    "n4m.transform.scatter",
+)
+FE, AUG, PRE, RES = (
+    "n4m._impl.feature_extraction",
+    "n4m._impl.augmentation",
+    "n4m._impl.preprocessing",
+    "n4m._impl.resampling",
+)
+
+# (role class, reference module, role params, reference params, fit style).
+# Fit styles: "X" fits on X, "y" on (X, y), "paired" on (X, X_target), "axis"
+# on the source axis. "ref"/"w" in params stand for the reference spectrum and
+# the weights of the fixture.
+FITTED_CASES = [
+    ("CrossCorrelationAlignment", AL, {}, None, "X"),
+    ("CrossCorrelationAlignment", AL, {"max_shift": 3, "reference": "ref"}, None, "X"),
+    ("IcoshiftAlignment", AL, {}, None, "X"),
+    ("IcoshiftAlignment", AL, {"interval_size": 10, "max_shift": 2}, None, "X"),
+    ("DynamicTimeWarpingAlignment", AL, {}, None, "X"),
+    ("DynamicTimeWarpingAlignment", AL, {"reference": "ref"}, None, "X"),
+    ("CorrelationOptimizedWarping", AL, {}, None, "X"),
+    (
+        "CorrelationOptimizedWarping",
+        AL,
+        {"interval_size": 8, "max_shift": 2},
+        None,
+        "X",
+    ),
+    ("ScoreAugmentedProjectionStandardization", ST, {}, None, "paired"),
+    (
+        "ScoreAugmentedProjectionStandardization",
+        ST,
+        {"n_components": 3, "score_weight": 0.5, "fit_intercept": False, "ridge": 1e-3},
+        None,
+        "paired",
+    ),
+    ("DirectStandardization", ST, {"ridge": 1e-2}, None, "paired"),
+    (
+        "DirectStandardization",
+        ST,
+        {"fit_intercept": False, "ridge": 0.1},
+        None,
+        "paired",
+    ),
+    ("RobustDirectStandardization", ST, {"ridge": 1e-2}, None, "paired"),
+    (
+        "RobustDirectStandardization",
+        ST,
+        {"ridge": 0.1, "trim_quantile": 0.8, "max_iter": 5},
+        None,
+        "paired",
+    ),
+    ("PiecewiseDirectStandardization", ST, {}, None, "paired"),
+    (
+        "PiecewiseDirectStandardization",
+        ST,
+        {"window_size": 9, "fit_intercept": False, "ridge": 1e-3},
+        None,
+        "paired",
+    ),
+    ("LocalCentering", SC, {}, None, "paired"),
+    ("LocalizedMSC", SC, {}, None, "X"),
+    (
+        "LocalizedMSC",
+        SC,
+        {"window_size": 7, "reference": "ref", "eps": 1e-9},
+        None,
+        "X",
+    ),
+    ("PiecewiseMSC", SC, {}, None, "X"),
+    ("PiecewiseMSC", SC, {"window_size": 12, "reference": "ref"}, None, "X"),
+    ("PiecewiseSNV", SC, {}, None, "X"),
+    ("PiecewiseSNV", SC, {"window_size": 7, "ddof": 1, "eps": 1e-9}, None, "X"),
+    ("WeightedSNV", SC, {}, None, "X"),
+    ("WeightedSNV", SC, {"weights": "w", "ddof": 1}, None, "X"),
+    ("VariableSortingNormalization", SC, {}, None, "X"),
+    ("VariableSortingNormalization", SC, {"eps": 1e-6}, None, "X"),
+    ("OSC", FE, {"n_components": 1, "scale": True}, None, "y"),
+    ("OSC", FE, {"n_components": 3, "scale": False}, None, "y"),
+    ("FlexiblePCA", FE, {"n_components": 5.0}, None, "X"),
+    ("FlexiblePCA", FE, {"n_components": 0.95}, None, "X"),
+    ("FlexibleSVD", FE, {"n_components": 5.0}, None, "X"),
+    ("FlexibleSVD", FE, {"n_components": 0.95}, None, "X"),
+    (
+        "WaveletPCA",
+        AUG,
+        {
+            "family": "haar",
+            "mode": "periodization",
+            "max_level": 2,
+            "n_components": 5.0,
+        },
+        None,
+        "X",
+    ),
+    (
+        "WaveletSVD",
+        AUG,
+        {"family": "db4", "mode": "symmetric", "max_level": 3, "n_components": 0.9},
+        None,
+        "X",
+    ),
+    ("IntegerKBinsDiscretizer", RES, {"n_bins": 5, "strategy": "uniform"}, None, "X"),
+    ("IntegerKBinsDiscretizer", RES, {"n_bins": 4, "strategy": "quantile"}, None, "X"),
+    ("RangeDiscretizer", RES, {"edges": [1.6, 1.9, 2.2, 2.6]}, None, "X"),
+    (
+        "FCKStaticTransformer",
+        FE,
+        {"kernel_size": 7, "alphas": [0.0, 0.5, 1.0], "sigmas": [1.0, 2.0]},
+        None,
+        "X",
+    ),
+    ("BaselineCenter", PRE, {}, None, "X"),
+    ("LogTransform", PRE, {}, None, "X"),
+    (
+        "LogTransform",
+        PRE,
+        {"base": 10.0, "offset": 0.5, "auto_offset": False},
+        None,
+        "X",
+    ),
+    ("Derivate", PRE, {"order": 2, "delta": 0.5}, None, "X"),
+    (
+        "Resampler",
+        RES,
+        {"method": "linear", "tgt_min": 1003.0, "tgt_step": 4.0, "tgt_n": 18},
+        {"method": 0, "tgt_min": 1003.0, "tgt_step": 4.0, "tgt_n": 18},
+        "axis",
+    ),
+    (
+        "Resampler",
+        RES,
+        {
+            "method": "cubic",
+            "tgt_min": 990.0,
+            "tgt_step": 3.0,
+            "tgt_n": 30,
+            "extrapolate": True,
+        },
+        {
+            "method": 2,
+            "tgt_min": 990.0,
+            "tgt_step": 3.0,
+            "tgt_n": 30,
+            "extrapolate": True,
+        },
+        "axis",
+    ),
+    (
+        "Resampler",
+        RES,
+        {
+            "method": "nearest",
+            "tgt_min": 1003.0,
+            "tgt_step": 4.0,
+            "tgt_n": 18,
+            "use_crop": True,
+            "crop_min": 1010.0,
+            "crop_max": 1060.0,
+        },
+        {
+            "method": 1,
+            "tgt_min": 1003.0,
+            "tgt_step": 4.0,
+            "tgt_n": 18,
+            "use_crop": True,
+            "crop_min": 1010.0,
+            "crop_max": 1060.0,
+        },
+        "axis",
+    ),
+]
+FITTED_REFERENCE_CLASSES = {case[0] for case in FITTED_CASES} | {
+    "Normalize",
+    "SimpleScale",
+}
+
+
+@pytest.mark.parametrize(
+    "name,module,params,ref_params,style",
+    FITTED_CASES,
+    ids=[f"{c[0]}-{i}" for i, c in enumerate(FITTED_CASES)],
+)
+def test_fitted_transformer_matches_n4m_reference(
+    name, module, params, ref_params, style, spectra
+):
+    X, y, X_test, X_target, reference, weights = spectra
+    fixture = {"ref": reference, "w": weights}
+    resolve = lambda p: {
+        k: fixture.get(v, v) if isinstance(v, str) else v for k, v in p.items()
+    }
+    role = getattr(roles, name)(**resolve(params))
+    ref = _ref(module, name)(
+        **resolve(ref_params if ref_params is not None else params)
+    )
+    if style == "paired":
+        role.fit(X, X_target=X_target)
+        ref.fit(X, X_target)
+    elif style == "axis":
+        role.fit(X, axis=FITTED_AXIS)
+        ref.fit(source_wavelengths=FITTED_AXIS)
+    elif style == "y":
+        role.fit(X, y)
+        ref.fit(X, y)
+    else:
+        role.fit(X)
+        ref.fit(X)
+    for rows in (X, X_test):
+        np.testing.assert_array_equal(role.transform(rows), ref.transform(rows))
+    payload = role.to_n4me()
+    back = roles.NativeEstimator.from_n4me(payload)
+    assert type(back) is type(role) and back.to_n4me() == payload
+    np.testing.assert_array_equal(back.transform(X_test), role.transform(X_test))
+
+
+def test_refit_relearns_fitted_state(spectra):
+    """A second fit on data of another width equals a fresh fit."""
+    X, _, X_test, _, _, _ = spectra
+    X2 = X_test[:, : P_FITTED - 4]
+    for cls in (roles.CrossCorrelationAlignment, roles.PiecewiseMSC, roles.OSC):
+        est = cls().fit(X, X[:, 0]).fit(X2, X2[:, 0])
+        fresh = cls().fit(X2, X2[:, 0])
+        np.testing.assert_array_equal(est.transform(X2), fresh.transform(X2))
+
+
+def test_scaling_roles_apply_training_statistics(spectra):
+    """Normalize and SimpleScale learn column statistics at fit.
+
+    The stateless references recompute them per batch, so they agree on the
+    training rows only; held-out rows use the training statistics.
+    """
+    X, _, X_test, _, _, _ = spectra
+    lo, hi = X.min(axis=0), X.max(axis=0)
+    for kw in ({}, {"feature_min": 0.0, "feature_max": 2.0}):
+        role = roles.Normalize(**kw).fit(X)
+        np.testing.assert_array_equal(
+            role.transform(X), _ref(PRE, "Normalize")(**kw).fit(X).transform(X)
+        )
+        if kw:
+            expect = kw["feature_min"] + (kw["feature_max"] - kw["feature_min"]) / (
+                hi - lo
+            ) * (X_test - lo)
+        else:
+            expect = X_test * (1.0 / np.sqrt((X * X).sum(axis=0)))
+        np.testing.assert_allclose(role.transform(X_test), expect, rtol=1e-13, atol=0)
+    role = roles.SimpleScale().fit(X)
+    np.testing.assert_array_equal(
+        role.transform(X), _ref(PRE, "SimpleScale")().fit(X).transform(X)
+    )
+    np.testing.assert_allclose(
+        role.transform(X_test), (X_test - lo) / (hi - lo), rtol=1e-13, atol=0
+    )
+
+
 # Transformer role --------------------------------------------------------
 
-TRANSFORMER_PARAMS = {"start": 2, "end": 10, "num_samples": 8}
+TRANSFORMER_PARAMS = {
+    "start": 2,
+    "end": 10,
+    "num_samples": 8,
+    "edges": [0.25, 0.5, 0.75],
+    "kernel_size": 5,
+    "alphas": [0.0, 1.0],
+    "sigmas": [1.0, 2.0],
+}
 
 
 def transformer(cls):
@@ -348,15 +660,16 @@ def transformer(cls):
 
 def positive_spectra(data):
     """Strictly positive, reflectance-like rows (valid for every conversion)."""
-    X, y, X_test, _, _ = data
-    shift = 1.0 - min(X.min(), X_test.min())
-    return (X + shift) / (2 * shift), y, (X_test + shift) / (2 * shift)
+    X, y, X_test, X_target, _ = data
+    shift = 1.0 - min(X.min(), X_test.min(), X_target.min())
+    scale = lambda A: (A + shift) / (2 * shift)
+    return scale(X), y, scale(X_test), scale(X_target)
 
 
 @pytest.mark.parametrize("cls", PURE_TRANSFORMERS, ids=lambda c: c.__name__)
 def test_transformer_roundtrip(cls, data):
-    X, y, X_test = positive_spectra(data)
-    est = transformer(cls).fit(X, y)
+    X, y, X_test, X_target = positive_spectra(data)
+    est = transformer(cls).fit(X, y, **fit_kwargs(cls, X_target))
     out = est.transform(X_test)
     assert out.shape[0] == X_test.shape[0] and np.all(np.isfinite(out))
     restored = roles.NativeEstimator.from_n4me(est.to_n4me())
@@ -390,10 +703,14 @@ def reference_transformer(cls, est):
     return ref_cls(**{k: v for k, v in est.get_params().items() if k in accepted})
 
 
-@pytest.mark.parametrize("cls", PURE_TRANSFORMERS, ids=lambda c: c.__name__)
+@pytest.mark.parametrize(
+    "cls",
+    [c for c in PURE_TRANSFORMERS if c.__name__ not in FITTED_REFERENCE_CLASSES],
+    ids=lambda c: c.__name__,
+)
 def test_transformer_matches_n4m_reference(cls, data):
-    X, y, X_test = positive_spectra(data)
-    est = transformer(cls).fit(X, y)
+    X, y, X_test, X_target = positive_spectra(data)
+    est = transformer(cls).fit(X, y, **fit_kwargs(cls, X_target))
     ref = reference_transformer(cls, est).fit(X, y)
     np.testing.assert_array_equal(est.transform(X_test), ref.transform(X_test))
 
