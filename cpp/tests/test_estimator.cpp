@@ -191,6 +191,24 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
         spread += std::fabs(v - pred[0]);
     }
     CHECK(spread > 0.0);
+    // Column-major (R/MATLAB layout) input and output give the same result.
+    {
+        std::vector<double> x_cm(static_cast<size_t>(kTest * kCols)), p_cm(kTest);
+        for (int64_t i = 0; i < kTest; ++i) {
+            for (int64_t j = 0; j < kCols; ++j) {
+                x_cm[static_cast<size_t>(j * kTest + i)] =
+                    in.data.x_test[static_cast<size_t>(i * kCols + j)];
+            }
+        }
+        n4m_matrix_view_t Xc{}, Pc{};
+        CHECK(n4m_matrix_view_init_colmajor(&Xc, x_cm.data(), kTest, kCols, N4M_DTYPE_F64) == N4M_OK);
+        CHECK(n4m_matrix_view_init_colmajor(&Pc, p_cm.data(), kTest, 1, N4M_DTYPE_F64) == N4M_OK);
+        CHECK(n4m_estimator_predict(ctx, est, &Xc, &Pc) == N4M_OK);
+        for (int64_t i = 0; i < kTest; ++i) {
+            CHECK(std::fabs(p_cm[static_cast<size_t>(i)] - pred[static_cast<size_t>(i)]) <=
+                  1e-12 * (1.0 + std::fabs(pred[static_cast<size_t>(i)])));
+        }
+    }
     auto bad = view(pred.data(), kTest - 1, 1);
     CHECK(n4m_estimator_predict(ctx, est, &X_test, &bad) == N4M_ERR_SHAPE_MISMATCH);
 
