@@ -171,7 +171,8 @@ class Selector(_BaseSelector):
     ``method_params`` keys match the C ABI argument names. Every stochastic
     seed and top-k/threshold input is explicit; omitted optional arguments
     use the same C dispatcher defaults as the R ``n4m_method`` binding.
-    Three contiguous native validation folds are used where required.
+    Up to three contiguous native validation folds are used where required;
+    small datasets use the same ``min(3, floor(n_samples / 2))`` rule as R.
     """
 
     def __init__(
@@ -270,6 +271,8 @@ class Selector(_BaseSelector):
             or not np.isfinite(y_arr).all()
         ):
             raise ValueError("selector requires finite aligned one-dimensional targets")
+        if self.method not in _NO_PLAN and X_arr.shape[0] < 4:
+            raise ValueError("selector validation plan requires at least 4 samples")
         _, arguments, buffers = self._arguments(X_arr.shape[1])
         fields = _native._run_select(
             f"n4m_feature_selection_{self.method}",
@@ -277,7 +280,9 @@ class Selector(_BaseSelector):
             y_arr,
             *arguments,
             n_components=self.n_components,
-            plan_folds=None if self.method in _NO_PLAN else 3,
+            plan_folds=(
+                None if self.method in _NO_PLAN else min(3, X_arr.shape[0] // 2)
+            ),
             with_config=self.method not in _NO_CONFIG,
         )
         del buffers  # Keep vector argument backing arrays alive through the ABI call.
