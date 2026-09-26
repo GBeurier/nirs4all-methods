@@ -1,13 +1,17 @@
-Vendored FITPACK subset
-=======================
+Vendored FITPACK subset (C translation)
+=======================================
 
-This directory vendors the small FITPACK subset needed to reproduce SciPy's
-`UnivariateSpline(x, y, s=1 / n_features)` contract for
-`aug_spline_smooth`.
+`fitpack.c` is a C translation of the FITPACK routines behind SciPy's
+`UnivariateSpline(x, y, k=3, s=1 / n_features)` contract for
+`aug_spline_smooth`: `curfit`, `fpcurf`, `fpback`, `fpbspl`, `fpdisc`,
+`fpgivs`, `fpknot`, `fprati`, `fprota` and `splev`.
 
-Source: SciPy 1.17.1, `scipy/interpolate/fitpack/`.
+Source: SciPy 1.17.1, `scipy/interpolate/fitpack/` (Fortran).
 Original algorithm: P. Dierckx FITPACK curve fitting routines.
+License: BSD-3-Clause, see `LICENSE.scipy.txt`.
 
-The files are kept as close as possible to the upstream SciPy copies. Local C
-code calls `curfit` and `splev` with the same two-stage `nest` contract used by
-SciPy's `fpcurf0`/`fpcurf1` wrappers.
+The translation keeps the Fortran arithmetic order and reproduces the Fortran
+build (and SciPy) bit for bit. Only the paths used by the caller are
+translated: `curfit` with `iopt` 0/1 and `s > 0`, and `splev` with `e = 0`.
+`spline_smoothing.c` uses the same two-stage `nest` contract as SciPy's
+`fpcurf0`/`fpcurf1` wrappers.

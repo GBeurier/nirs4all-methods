@@ -202,6 +202,16 @@ event time, times need only be finite, and at least one event is required.
 The Poisson predictions of the Python `pls4all` `PLSGLMRegressor`, R
 `pls_glm()` and MATLAB `n4m.GlmRegression` apply the inverse link.
 
+`augmentation.splines.spline_smoothing` has one implementation on every
+platform: a C translation of the FITPACK routines it uses (`curfit`, `fpcurf`,
+`fpback`, `fpbspl`, `fpdisc`, `fpgivs`, `fpknot`, `fprati`, `fprota`,
+`splev`) replaces both the vendored Fortran, built only on native Unix with
+gfortran, and the Reinsch fallback used on Windows, WASM and CRAN R. Outputs
+equal the former Fortran build and `scipy.interpolate.UnivariateSpline(x, y,
+k=3, s=1/p)` bitwise; Windows/WASM/R results change from the Reinsch
+approximation to those values. `N4M_HAVE_FITPACK` and the Fortran toolchain
+are gone, and `n4m_get_build_info` no longer carries `fitpack=`.
+
 ## 2026-09-26 — ABI 2.12.0: closed native filter roles (superseded, never released)
 
 A draft `n4m_sample_filter_*` / `n4m_feature_filter_*` surface was added on a

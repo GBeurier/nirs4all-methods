@@ -1,11 +1,11 @@
 COPYRIGHTS — third-party material vendored under src/vendor/
 
-The C/C++/Fortran sources under src/vendor/ are a copy of the nirs4all-methods
+The C/C++ sources under src/vendor/ are a copy of the nirs4all-methods
 (libn4m) numerical core, compiled into this package at install time. They are
 licensed CECILL-2.1 (see the LICENSE file) EXCEPT for the following vendored or
 reproduced third-party material:
 
-1. FITPACK — Fortran spline kernels (SPDX: BSD-3-Clause)
+1. FITPACK — C translation of the Fortran spline kernels (SPDX: BSD-3-Clause)
    Copyright (c) 2001-2002 Enthought, Inc.; 2003 SciPy Developers.
    Vendored from SciPy's interpolate/fitpack/. Full license text:
      src/vendor/cpp/src/core/common/_vendored/fitpack/LICENSE.scipy.txt

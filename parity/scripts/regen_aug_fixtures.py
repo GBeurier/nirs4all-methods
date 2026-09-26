@@ -11,9 +11,6 @@ for stochastic augmenters — nirs4all's numpy RNG ≠ n4m's PCG64, see
 C++ replay in ``cpp/tests/test_augmenters_edge_splines_random.cpp`` becomes a
 real regression-lock.
 
-``spline_smooth`` is deliberately excluded: it is the only FITPACK-gated
-augmenter (a no-op when N4M_HAVE_FITPACK=0, real smoothing when =1), so its
-output is build-dependent and a single committed self-fixture cannot lock it.
 ``detector_rolloff`` stays in: its fixture wavelengths (1000–1700 nm) sit inside
 detector model 4's optimal band, so it is deterministically pass-through here —
 the replay locks that in-band signal is not corrupted.
@@ -39,18 +36,8 @@ from pathlib import Path
 
 import numpy as np
 
-from n4m.python import _aug_apply, lib  # noqa: E402  (after sys.path / env are set)
+from n4m.python import _aug_apply  # noqa: E402  (after sys.path / env are set)
 
-
-def _build_info() -> str:
-    """Return libn4m's build_info string (e.g. 'fitpack=1')."""
-    fn = lib.n4m_get_build_info
-    fn.restype = ctypes.c_char_p
-    return (fn() or b"").decode()
-
-
-def _have_fitpack() -> bool:
-    return "fitpack=1" in _build_info()
 
 # Canonical augmenter parity seed — mirrors `kSeed` in
 # cpp/tests/test_augmenters_edge_splines_random.cpp.
@@ -117,6 +104,10 @@ def _random_x_op(p):
             _f64(p.get("operator_range_max", 1.03))]
 
 
+def _spline_smooth(p):
+    return []
+
+
 SPECS = [
     ("aug_detector_rolloff_v1.json", "n4m_aug_detector_rolloff", True,  _detector_rolloff),
     ("aug_stray_light_v1.json",      "n4m_aug_stray_light",      True,  _stray_light),
@@ -127,6 +118,7 @@ SPECS = [
     ("aug_spline_y_perturb_v1.json", "n4m_aug_spline_y_perturb", False, _spline_y_perturb),
     ("aug_rotate_translate_v1.json", "n4m_aug_rotate_translate", False, _rotate_translate),
     ("aug_random_x_op_v1.json",      "n4m_aug_random_x_op",      False, _random_x_op),
+    ("aug_spline_smooth_v1.json",    "n4m_aug_spline_smooth",    False, _spline_smooth),
 ]
 
 
@@ -246,48 +238,6 @@ def _regen_phase17(check: bool) -> bool:
     return changed
 
 
-# spline_smooth is the only FITPACK-gated augmenter
-# (cpp/src/core/augmentation/splines/spline_smoothing.c): with
-# N4M_HAVE_FITPACK=0 (no Fortran compiler) it is an intentional no-op (memcpy),
-# with =1 it performs real cubic spline smoothing. It takes no create-args and
-# no wavelength axis. The oracle is libn4m's OWN deterministic FITPACK output
-# at the canonical seed (a self-fixture, like the rest of this file). A single
-# committed fixture can lock only one build config, so we touch it ONLY from a
-# fitpack=1 build; under fitpack=0 we skip entirely (neither rewrite nor flag
-# stale) so the non-Fortran dev/CI builds keep passing and never freeze the
-# identity placeholder as the oracle.
-SPLINE_SMOOTH_FIXTURE = "aug_spline_smooth_v1.json"
-
-
-def _regen_spline_smooth(check: bool) -> bool:
-    """Regenerate the FITPACK-gated spline_smooth self-fixture. Returns True
-    if the stored output is stale (only possible under fitpack=1)."""
-    if not _have_fitpack():
-        print(f"  skip    {SPLINE_SMOOTH_FIXTURE} "
-              f"(build_info='{_build_info()}'; needs fitpack=1)")
-        return False
-    path = FIXTURE_DIR / SPLINE_SMOOTH_FIXTURE
-    fx = json.loads(path.read_text())
-    changed = False
-    for case in fx["cases"]:
-        out = _compute(fx, "n4m_aug_spline_smooth", False, lambda p: [],
-                       case.get("params", {}))
-        new_hex = _encode(out)
-        if new_hex != case.get("output_hex", []):
-            changed = True
-            case["output_hex"] = new_hex
-            case["output_rows"] = int(out.shape[0])
-            case["output_cols"] = int(out.shape[1])
-    if changed and not check:
-        path.write_text(json.dumps(fx, indent=2) + "\n")
-        print(f"  rewrote {SPLINE_SMOOTH_FIXTURE} (fitpack oracle)")
-    elif changed:
-        print(f"  STALE   {SPLINE_SMOOTH_FIXTURE} (fitpack oracle)")
-    else:
-        print(f"  ok      {SPLINE_SMOOTH_FIXTURE} (fitpack oracle)")
-    return changed
-
-
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
@@ -321,13 +271,10 @@ def main(argv: list[str] | None = None) -> int:
     if _regen_phase17(args.check):
         stale += 1
 
-    if _regen_spline_smooth(args.check):
-        stale += 1
-
     if args.check and stale:
         print(f"\n{stale} fixture(s) do not match libn4m — run without --check to regenerate.")
         return 1
-    n_total = len(SPECS) + 1 + (1 if _have_fitpack() else 0)
+    n_total = len(SPECS) + 1
     print(f"\n{'checked' if args.check else 'regenerated'} {n_total} augmenter fixtures.")
     return 0
 

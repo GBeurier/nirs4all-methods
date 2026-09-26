@@ -42,8 +42,8 @@
 * **No Fortran, no non-default compilation flags** — the package is a pure
   C/C++ build. It vendors and compiles only C/C++ sources and sets no
   non-default compilation flag (no `PKG_FFLAGS`, no `-std=legacy`). The
-  spline-smoothing augmenter uses a from-scratch C cubic smoothing-spline
-  (Reinsch) implementation, so the build needs no Fortran toolchain. The only
+  spline-smoothing augmenter uses a C translation of the FITPACK routines it
+  needs, so the build needs no Fortran toolchain. The only
   non-portable flag in the install log, `-march=nocona`, is injected by
   conda-forge R's own `Makeconf`, not by the package.
 
@@ -78,10 +78,7 @@ The active R surface is now NIRS-first: base formula/S3, `pls`-style
 
 * The vendored C/C++ sources are a textual copy of `cpp/include/`
   and `cpp/src/` from the project's GitHub repository at the tag
-  matching this version, with one directory omitted: the optional vendored
-  FITPACK Fortran (`cpp/src/core/common/_vendored/fitpack/`) is **not**
-  shipped, because the R build selects the package's own from-scratch C cubic
-  smoothing-spline (Reinsch) path. The sync is automated via
+  matching this version. The sync is automated via
   `scripts/bump_version.sh` and verified by the
   `.github/workflows/version-sync.yml` workflow on every PR.
 * The `CUDA` backend file `cuda_dispatch.cpp` is intentionally
