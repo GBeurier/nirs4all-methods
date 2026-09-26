@@ -33,6 +33,18 @@ publications: []
 notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
 c_surface:
   - "n4m_estimators_so_pls_fit"
+estimator:
+  kind: "estimator"
+  adapter: "affine_so_pls"
+  roles: "[regressor]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+    blocks: "required"
+  params:
+    - name: "n_components_per_block"
+      type: "int_array"
+      min: 0
 fq_name: "n4m.estimators.multiblock.so_pls"
 leaf: "so_pls"
 legacy_ids:

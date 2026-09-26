@@ -46,15 +46,17 @@ struct O2PlsResult {
     O2PlsResult& out);
 
 // SO-PLS: sequential and orthogonalized PLS for B X-blocks predicting one
-// Y. Each block is regressed on Y residual, then orthogonalized against
-// the previous block's prediction.
+// Y. Each block is orthogonalized against the scores of the previous blocks,
+// then regressed on the Y residual. The whole chain is linear in the input
+// row: new rows are predicted as y_mean + (x - x_mean) coefficients, where x
+// concatenates the blocks in input order.
 struct SoPlsResult {
     std::int32_t n_blocks{0};
     std::vector<std::int32_t> n_components_per_block;
     std::vector<double> y_mean;
-    // Block coefficients concatenated in input order.
-    std::vector<std::vector<double>> block_coefficients;
-    std::vector<double> predictions;  // n_samples × n_targets, row-major
+    std::vector<double> x_mean;        // sum(p_b)
+    std::vector<double> coefficients;  // sum(p_b) × n_targets, row-major
+    std::vector<double> predictions;   // n_samples × n_targets, row-major
 };
 
 [[nodiscard]] n4m_status_t fit_so_pls(
@@ -82,6 +84,12 @@ struct OnPlsResult {
     std::vector<std::vector<double>> unique_loadings_per_block;       // p_b × n_unique_b
     std::vector<std::vector<double>> joint_scores_per_block;          // n × n_joint
     std::vector<std::vector<double>> block_reconstruction_per_block;  // n × p_b
+    // What on_pls_joint_scores needs besides the loadings: the block means,
+    // the weights of the unique components actually extracted (one row of
+    // p_b values each, at most n_unique_b rows) and the joint weights.
+    std::vector<std::vector<double>> x_mean_per_block;                // p_b
+    std::vector<std::vector<double>> unique_weights_per_block;        // n_extracted_b × p_b
+    std::vector<std::vector<double>> joint_weights_per_block;         // p_b × n_joint
 };
 
 [[nodiscard]] n4m_status_t fit_on_pls(
@@ -92,14 +100,26 @@ struct OnPlsResult {
     const std::vector<std::int32_t>& n_unique_per_block,
     OnPlsResult& out);
 
+// Joint scores of (new) rows, `OnPLS.predict`'s score step: each block is
+// centered with the training means, its unique components are filtered out,
+// then it is projected on the joint weights with sequential deflation.
+// `scores[b]` is n × n_joint, row-major.
+[[nodiscard]] n4m_status_t on_pls_joint_scores(
+    Context& ctx,
+    const OnPlsResult& model,
+    const std::vector<n4m_matrix_view_t>& X_blocks,
+    std::vector<std::vector<double>>& scores);
+
 // ROSA: Response-Oriented Sequential Alternation. At each component, pick
 // the block whose latent direction yields the highest correlation with the
-// current Y residual.
+// current Y residual. Like SO-PLS, new rows are predicted as
+// y_mean + (x - x_mean) coefficients over the concatenated blocks.
 struct RosaResult {
     std::int32_t n_components{0};
     std::vector<std::int32_t> selected_block_per_component;
     std::vector<double> y_mean;
-    std::vector<std::vector<double>> block_coefficients;
+    std::vector<double> x_mean;        // sum(p_b)
+    std::vector<double> coefficients;  // sum(p_b) × n_targets, row-major
     std::vector<double> predictions;
 };
 

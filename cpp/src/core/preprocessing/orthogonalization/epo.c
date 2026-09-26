@@ -196,3 +196,36 @@ n4m_status_t n4m_pp_epo_state_apply_with_d(const n4m_pp_epo_state_t* state,
     }
     return N4M_OK;
 }
+
+n4m_status_t n4m_pp_epo_state_save(const n4m_pp_epo_state_t* state,
+                                   n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    n4m_state_write_f64_array(w, state->X_mean, state->cols);
+    n4m_state_write_f64(w, state->d_mean);
+    n4m_state_write_f64_array(w, state->B, state->cols);
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_epo_state_load(n4m_pp_epo_state_t* state,
+                                   n4m_state_reader_t* r, int64_t n_features) {
+    double* X_mean = NULL;
+    double* B = NULL;
+    double d_mean = 0.0;
+    n4m_status_t st = n4m_state_read_f64_array_new(r, n_features, &X_mean);
+    if (st == N4M_OK && !n4m_state_read_f64(r, &d_mean)) st = N4M_ERR_CORRUPT_BUFFER;
+    if (st == N4M_OK) st = n4m_state_read_f64_array_new(r, n_features, &B);
+    if (st != N4M_OK) {
+        free(X_mean);
+        free(B);
+        return st;
+    }
+    free(state->X_mean);
+    free(state->B);
+    state->cols = n_features;
+    state->rows = 0;
+    state->X_mean = X_mean;
+    state->d_mean = d_mean;
+    state->B = B;
+    state->fitted = 1;
+    return N4M_OK;
+}

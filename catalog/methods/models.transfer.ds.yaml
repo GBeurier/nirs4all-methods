@@ -33,6 +33,13 @@ publications: []
 notes: "Added in Phase-B ABI reconciliation \u2014 exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
 c_surface:
   - "n4m_domain_adaptation_ds_fit"
+estimator:
+  kind: "estimator"
+  adapter: "tr_ds"
+  roles: "[transformer]"
+  state: "coef"
+  inputs:
+    target_domain: "required"
 fq_name: "n4m.domain_adaptation.standardization.ds"
 leaf: "ds"
 legacy_ids:

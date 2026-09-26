@@ -209,13 +209,15 @@ double dot(const std::vector<double>& a, const std::vector<double>& b) {
 }
 
 // Compute coefficients = W (P' W)^{-1} diag(B) Q' for NIPALS results.
-// Inputs are p × k, k × k, k, q × k. Output is p × q row-major.
+// Inputs are p × k, k × k, k, q × k. Output is p × q row-major; `rotation`,
+// when given, receives R = W (P' W)^{-1} (p × k), so that T = X R.
 void coefficients_from_nipals(const std::vector<double>& W,
                               const std::vector<double>& P,
                               const std::vector<double>& Q_load,
                               const std::vector<double>& B,
                               std::size_t p, std::size_t q, std::size_t k,
-                              std::vector<double>& coefficients) {
+                              std::vector<double>& coefficients,
+                              std::vector<double>* rotation = nullptr) {
     // Compute P' W (k × k)
     std::vector<double> pw(k * k, 0.0);
     for (std::size_t i = 0; i < k; ++i) {
@@ -283,6 +285,7 @@ void coefficients_from_nipals(const std::vector<double>& W,
             coefficients[f * q + t] = s;
         }
     }
+    if (rotation != nullptr) *rotation = std::move(R);
 }
 
 // ---------- OmicsPLS::o2m helpers ---------------------------------------
@@ -992,20 +995,28 @@ n4m_status_t fit_so_pls(Context& ctx,
     column_means(Y_buf, n, q, out.y_mean);
     subtract_means(Y_buf, n, q, out.y_mean);
 
+    std::size_t p_total = 0;
+    for (const auto& X : X_blocks) p_total += static_cast<std::size_t>(X.cols);
     out.n_blocks = static_cast<std::int32_t>(X_blocks.size());
     out.n_components_per_block = n_components_per_block;
+    out.x_mean.assign(p_total, 0.0);
+    out.coefficients.assign(p_total * q, 0.0);
     out.predictions.assign(n * q, 0.0);
     for (std::size_t i = 0; i < n; ++i) {
         for (std::size_t target = 0; target < q; ++target) {
             out.predictions[i * q + target] = out.y_mean[target];
         }
     }
-    out.block_coefficients.assign(X_blocks.size(), {});
 
     std::vector<double> Y_residual = Y_buf;
     std::vector<std::vector<double>> block_scores;
+    // score_maps[b] (p_total × k_b): the scores of block b as a linear map of
+    // the centered concatenated row, T_b = (x - x_mean) score_maps[b].
+    std::vector<std::vector<double>> score_maps;
     block_scores.reserve(X_blocks.size());
+    score_maps.reserve(X_blocks.size());
 
+    std::size_t offset = 0;
     for (std::size_t block = 0; block < X_blocks.size(); ++block) {
         const n4m_matrix_view_t& Xv = X_blocks[block];
         std::vector<double> X_buf;
@@ -1015,8 +1026,14 @@ n4m_status_t fit_so_pls(Context& ctx,
         std::vector<double> x_mean;
         column_means(X_buf, n, p, x_mean);
         subtract_means(X_buf, n, p, x_mean);
-        // Orthogonalize this block against previous block scores.
-        for (const auto& prev_scores : block_scores) {
+        std::copy(x_mean.begin(), x_mean.end(),
+                  out.x_mean.begin() + static_cast<std::ptrdiff_t>(offset));
+        // M (p_total × p) maps the centered concatenated row to this block
+        // after orthogonalization against the previous block scores.
+        std::vector<double> M(p_total * p, 0.0);
+        for (std::size_t f = 0; f < p; ++f) M[(offset + f) * p + f] = 1.0;
+        for (std::size_t prev = 0; prev < block_scores.size(); ++prev) {
+            const std::vector<double>& prev_scores = block_scores[prev];
             const std::size_t k_prev = prev_scores.size() / n;
             for (std::size_t kp = 0; kp < k_prev; ++kp) {
                 std::vector<double> t_prev(n, 0.0);
@@ -1033,14 +1050,19 @@ n4m_status_t fit_so_pls(Context& ctx,
                     for (std::size_t i = 0; i < n; ++i) {
                         X_buf[i * p + f] -= dot_val * t_prev[i];
                     }
+                    for (std::size_t r = 0; r < p_total; ++r) {
+                        M[r * p + f] -= dot_val * score_maps[prev][r * k_prev + kp];
+                    }
                 }
             }
         }
+        offset += p;
 
         const std::size_t k_b =
             static_cast<std::size_t>(n_components_per_block[block]);
         if (k_b == 0) {
             block_scores.emplace_back();
+            score_maps.emplace_back();
             continue;
         }
         std::vector<double> Y_centered = Y_residual;
@@ -1048,24 +1070,29 @@ n4m_status_t fit_so_pls(Context& ctx,
         status = nipals_pls(X_buf, Y_centered, n, p, q, k_b,
                             W, T, P_load, Q_load, B);
         if (status != N4M_OK) return status;
-        // Block coefficients (p × q).
-        std::vector<double> coefs;
-        coefficients_from_nipals(W, P_load, Q_load, B, p, q, k_b, coefs);
-        out.block_coefficients[block] = coefs;
+        std::vector<double> coefs, R;
+        coefficients_from_nipals(W, P_load, Q_load, B, p, q, k_b, coefs, &R);
+        // Out-of-sample contribution: (x - x_mean) M coefs, scores (x - x_mean) M R.
+        std::vector<double> map(p_total * k_b, 0.0);
+        for (std::size_t r = 0; r < p_total; ++r) {
+            for (std::size_t f = 0; f < p; ++f) {
+                const double m = M[r * p + f];
+                for (std::size_t target = 0; target < q; ++target) {
+                    out.coefficients[r * q + target] += m * coefs[f * q + target];
+                }
+                for (std::size_t comp = 0; comp < k_b; ++comp) {
+                    map[r * k_b + comp] += m * R[f * k_b + comp];
+                }
+            }
+        }
 
-        // Predict block contribution and subtract from residual.
-        std::vector<double> X_centered(n * p, 0.0);
-        // Re-copy and center using same x_mean and apply orthogonalization
-        // again, so the contribution to predictions is consistent with
-        // training. To keep this simple, we use T @ Q_load' to reconstruct
-        // the predicted Y contribution.
-        const std::size_t k_dim = k_b;
+        // In-sample block contribution T diag(B) Q', removed from the residual.
         for (std::size_t i = 0; i < n; ++i) {
             for (std::size_t target = 0; target < q; ++target) {
                 double s = 0.0;
-                for (std::size_t comp = 0; comp < k_dim; ++comp) {
-                    s += T[i * k_dim + comp] * B[comp] *
-                         Q_load[target * k_dim + comp];
+                for (std::size_t comp = 0; comp < k_b; ++comp) {
+                    s += T[i * k_b + comp] * B[comp] *
+                         Q_load[target * k_b + comp];
                 }
                 out.predictions[i * q + target] += s;
                 Y_residual[i * q + target] -= s;
@@ -1073,6 +1100,7 @@ n4m_status_t fit_so_pls(Context& ctx,
         }
         // Store scores for orthogonalization of the next block.
         block_scores.push_back(T);
+        score_maps.push_back(std::move(map));
     }
 
     ctx.clear_error();
@@ -1533,16 +1561,14 @@ n4m_status_t fit_on_pls(Context& ctx,
 
     // Step 1: copy + per-block centering.
     std::vector<std::vector<double>> Xc(nb);     // mutable centered blocks
-    std::vector<std::vector<double>> Xfresh(nb); // pristine centered copy
+    std::vector<std::vector<double>> means(nb);
     std::vector<std::size_t> pb(nb, 0);
     for (std::size_t b = 0; b < nb; ++b) {
         n4m_status_t status = copy_matrix(ctx, X_blocks[b], "X_block", Xc[b]);
         if (status != N4M_OK) return status;
         pb[b] = static_cast<std::size_t>(X_blocks[b].cols);
-        std::vector<double> mean;
-        column_means(Xc[b], n, pb[b], mean);
-        subtract_means(Xc[b], n, pb[b], mean);
-        Xfresh[b] = Xc[b];
+        column_means(Xc[b], n, pb[b], means[b]);
+        subtract_means(Xc[b], n, pb[b], means[b]);
     }
 
     // pred_comp[i][j] = n_joint for i ≠ j, 0 on diagonal (matches the
@@ -1720,58 +1746,36 @@ n4m_status_t fit_on_pls(Context& ctx,
         }
     }
 
+    // Pack the model. joint_loadings/scores/unique_loadings hold the
+    // canonical OnPLS quantities.
+    out.n_blocks = static_cast<std::int32_t>(nb);
+    out.n_joint = n_joint;
+    out.n_unique_per_block = n_unique_per_block;
+    out.x_mean_per_block = std::move(means);
+    out.unique_weights_per_block = std::move(Wo);
+    out.joint_weights_per_block = std::move(W_pred);
+    out.joint_loadings_per_block = std::move(P_pred);
+    out.joint_scores_per_block = std::move(T_pred);
+    out.unique_loadings_per_block.assign(nb, {});
+    for (std::size_t b = 0; b < nb; ++b) {
+        const std::size_t pi = pb[b];
+        const std::size_t nu =
+            static_cast<std::size_t>(n_unique_per_block[b]);
+        std::vector<double> Po_packed(pi * nu, 0.0);
+        for (std::size_t kc = 0; kc < std::min(nu, ortho_cols[b]); ++kc) {
+            for (std::size_t f = 0; f < pi; ++f) {
+                Po_packed[f * nu + kc] = Po[b][kc * pi + f];
+            }
+        }
+        out.unique_loadings_per_block[b] = std::move(Po_packed);
+    }
+
     // Step 5: in-sample reconstruction X̂_b for every block, matching
-    // `OnPLS.predict(blocks)[b]`. First re-filter fresh blocks with Wo/Po.
-    std::vector<std::vector<double>> Xpred(nb);
-    for (std::size_t i = 0; i < nb; ++i) Xpred[i] = Xfresh[i];
-    for (std::size_t i = 0; i < nb; ++i) {
-        if (ortho_cols[i] == 0) continue;
-        const std::size_t pi = pb[i];
-        for (std::size_t kk_o = 0; kk_o < ortho_cols[i]; ++kk_o) {
-            std::vector<double> t(n, 0.0);
-            for (std::size_t r = 0; r < n; ++r) {
-                double s = 0.0;
-                for (std::size_t f = 0; f < pi; ++f) {
-                    s += Xpred[i][r * pi + f] * Wo[i][kk_o * pi + f];
-                }
-                t[r] = s;
-            }
-            for (std::size_t r = 0; r < n; ++r) {
-                for (std::size_t f = 0; f < pi; ++f) {
-                    Xpred[i][r * pi + f] -= t[r] * Po[i][kk_o * pi + f];
-                }
-            }
-        }
-    }
-    // Per-component scores via sequential deflation by W_pred / P_pred.
-    std::vector<std::vector<double>> Tpred(nb);
-    for (std::size_t i = 0; i < nb; ++i) Tpred[i].assign(n * kk, 0.0);
-    {
-        std::vector<std::vector<double>> Xtmp = Xpred;
-        for (std::int32_t k = 0; k < n_joint; ++k) {
-            for (std::size_t i = 0; i < nb; ++i) {
-                const std::size_t pi = pb[i];
-                std::vector<double> tcol(n, 0.0);
-                for (std::size_t r = 0; r < n; ++r) {
-                    double s = 0.0;
-                    for (std::size_t f = 0; f < pi; ++f) {
-                        s += Xtmp[i][r * pi + f] *
-                             W_pred[i][f * kk + static_cast<std::size_t>(k)];
-                    }
-                    tcol[r] = s;
-                }
-                for (std::size_t r = 0; r < n; ++r) {
-                    Tpred[i][r * kk + static_cast<std::size_t>(k)] = tcol[r];
-                }
-                for (std::size_t r = 0; r < n; ++r) {
-                    for (std::size_t f = 0; f < pi; ++f) {
-                        Xtmp[i][r * pi + f] -= tcol[r] *
-                            P_pred[i][f * kk + static_cast<std::size_t>(k)];
-                    }
-                }
-            }
-        }
-    }
+    // `OnPLS.predict(blocks)[b]`, from the joint scores of the training rows.
+    std::vector<std::vector<double>> Tpred;
+    const n4m_status_t score_status = on_pls_joint_scores(ctx, out, X_blocks, Tpred);
+    if (score_status != N4M_OK) return score_status;
+    const std::vector<std::vector<double>>& P_joint = out.joint_loadings_per_block;
     // Accumulate X̂_w from connected-block scores per component.
     std::vector<std::vector<double>> Xhat(nb);
     for (std::size_t w = 0; w < nb; ++w) {
@@ -1816,41 +1820,65 @@ n4m_status_t fit_on_pls(Context& ctx,
             for (std::size_t r = 0; r < n; ++r) {
                 for (std::size_t f = 0; f < pw; ++f) {
                     Xhat[w][r * pw + f] += Thatwk[r] *
-                        P_pred[w][f * kk + static_cast<std::size_t>(k)];
+                        P_joint[w][f * kk + static_cast<std::size_t>(k)];
                 }
             }
         }
     }
 
-    // Pack the result. joint_loadings/scores/unique_loadings now hold
-    // the canonical OnPLS quantities; block_reconstruction_per_block is
-    // the sign- and rotation-invariant prediction used by the parity
-    // gate.
-    out.n_blocks = static_cast<std::int32_t>(nb);
-    out.n_joint = n_joint;
-    out.n_unique_per_block = n_unique_per_block;
-    out.joint_loadings_per_block.assign(nb, {});
-    out.joint_scores_per_block.assign(nb, {});
-    out.unique_loadings_per_block.assign(nb, {});
-    out.block_reconstruction_per_block.assign(nb, {});
-    for (std::size_t b = 0; b < nb; ++b) {
-        out.joint_loadings_per_block[b] = P_pred[b];
-        out.joint_scores_per_block[b] = T_pred[b];
-        const std::size_t pi = pb[b];
-        const std::size_t nu =
-            static_cast<std::size_t>(n_unique_per_block[b]);
-        const std::size_t nu_real = ortho_cols[b];
-        std::vector<double> Po_packed(pi * nu, 0.0);
-        for (std::size_t kc = 0; kc < std::min(nu, nu_real); ++kc) {
-            for (std::size_t f = 0; f < pi; ++f) {
-                Po_packed[f * nu + kc] = Po[b][kc * pi + f];
-            }
-        }
-        out.unique_loadings_per_block[b] = std::move(Po_packed);
-        out.block_reconstruction_per_block[b] = Xhat[b];
-    }
+    // block_reconstruction_per_block is the sign- and rotation-invariant
+    // prediction used by the parity gate.
+    out.block_reconstruction_per_block = std::move(Xhat);
 
     ctx.clear_error();
+    return N4M_OK;
+}
+
+n4m_status_t on_pls_joint_scores(Context& ctx,
+                                 const OnPlsResult& model,
+                                 const std::vector<n4m_matrix_view_t>& X_blocks,
+                                 std::vector<std::vector<double>>& scores) {
+    const std::size_t nb = static_cast<std::size_t>(model.n_blocks);
+    const std::size_t kk = static_cast<std::size_t>(model.n_joint);
+    if (X_blocks.size() != nb) {
+        ctx.set_error("OnPLS scores need one view per fitted block");
+        return N4M_ERR_SHAPE_MISMATCH;
+    }
+    scores.assign(nb, {});
+    for (std::size_t i = 0; i < nb; ++i) {
+        const std::size_t pi = model.x_mean_per_block[i].size();
+        if (static_cast<std::size_t>(X_blocks[i].cols) != pi ||
+            X_blocks[i].rows != X_blocks[0].rows) {
+            ctx.set_error("OnPLS block shapes do not match the fitted model");
+            return N4M_ERR_SHAPE_MISMATCH;
+        }
+        std::vector<double> Xi;
+        const n4m_status_t status = copy_matrix(ctx, X_blocks[i], "X_block", Xi);
+        if (status != N4M_OK) return status;
+        const std::size_t n = static_cast<std::size_t>(X_blocks[i].rows);
+        subtract_means(Xi, n, pi, model.x_mean_per_block[i]);
+        const std::vector<double>& Wo = model.unique_weights_per_block[i];
+        const std::vector<double>& Po = model.unique_loadings_per_block[i];
+        const std::size_t nu = static_cast<std::size_t>(model.n_unique_per_block[i]);
+        for (std::size_t kc = 0; kc < Wo.size() / pi; ++kc) {
+            for (std::size_t r = 0; r < n; ++r) {
+                double t = 0.0;
+                for (std::size_t f = 0; f < pi; ++f) t += Xi[r * pi + f] * Wo[kc * pi + f];
+                for (std::size_t f = 0; f < pi; ++f) Xi[r * pi + f] -= t * Po[f * nu + kc];
+            }
+        }
+        const std::vector<double>& W = model.joint_weights_per_block[i];
+        const std::vector<double>& P = model.joint_loadings_per_block[i];
+        scores[i].assign(n * kk, 0.0);
+        for (std::size_t k = 0; k < kk; ++k) {
+            for (std::size_t r = 0; r < n; ++r) {
+                double t = 0.0;
+                for (std::size_t f = 0; f < pi; ++f) t += Xi[r * pi + f] * W[f * kk + k];
+                scores[i][r * kk + k] = t;
+                for (std::size_t f = 0; f < pi; ++f) Xi[r * pi + f] -= t * P[f * kk + k];
+            }
+        }
+    }
     return N4M_OK;
 }
 
@@ -1888,6 +1916,17 @@ n4m_status_t fit_rosa(Context& ctx,
     const std::size_t n_blocks = X_blocks.size();
     std::vector<std::vector<double>> X_bufs(n_blocks);
     std::vector<std::size_t> p_block(n_blocks, 0);
+    std::vector<std::size_t> offsets(n_blocks, 0);
+    std::size_t p_total = 0;
+    for (std::size_t b = 0; b < n_blocks; ++b) {
+        offsets[b] = p_total;
+        p_total += static_cast<std::size_t>(X_blocks[b].cols);
+    }
+    out.x_mean.assign(p_total, 0.0);
+    // x_maps[b] (p_total × p_b): the deflated block b as a linear map of the
+    // centered concatenated row; score_maps[a] (p_total): score a likewise.
+    std::vector<std::vector<double>> x_maps(n_blocks);
+    std::vector<std::vector<double>> score_maps;
     for (std::size_t b = 0; b < n_blocks; ++b) {
         status = copy_matrix(ctx, X_blocks[b], "X_block", X_bufs[b]);
         if (status != N4M_OK) return status;
@@ -1895,6 +1934,12 @@ n4m_status_t fit_rosa(Context& ctx,
         std::vector<double> mean;
         column_means(X_bufs[b], n, p_block[b], mean);
         subtract_means(X_bufs[b], n, p_block[b], mean);
+        std::copy(mean.begin(), mean.end(),
+                  out.x_mean.begin() + static_cast<std::ptrdiff_t>(offsets[b]));
+        x_maps[b].assign(p_total * p_block[b], 0.0);
+        for (std::size_t f = 0; f < p_block[b]; ++f) {
+            x_maps[b][(offsets[b] + f) * p_block[b] + f] = 1.0;
+        }
     }
     column_means(Y_buf, n, q, out.y_mean);
     subtract_means(Y_buf, n, q, out.y_mean);
@@ -1903,10 +1948,7 @@ n4m_status_t fit_rosa(Context& ctx,
     out.selected_block_per_component.assign(
         static_cast<std::size_t>(n_components), 0);
     out.predictions.assign(n * q, 0.0);
-    out.block_coefficients.assign(n_blocks, {});
-    for (std::size_t b = 0; b < n_blocks; ++b) {
-        out.block_coefficients[b].assign(p_block[b] * q, 0.0);
-    }
+    out.coefficients.assign(p_total * q, 0.0);
     for (std::size_t i = 0; i < n; ++i) {
         for (std::size_t target = 0; target < q; ++target) {
             out.predictions[i * q + target] = out.y_mean[target];
@@ -1921,6 +1963,7 @@ n4m_status_t fit_rosa(Context& ctx,
         double best_score = -std::numeric_limits<double>::infinity();
         std::vector<double> best_w;
         std::vector<double> best_t;
+        std::vector<double> best_projections;
 
         for (std::size_t b = 0; b < n_blocks; ++b) {
             // Compute X_b' Y_residual.
@@ -1945,13 +1988,16 @@ n4m_status_t fit_rosa(Context& ctx,
                 }
             }
             // Orthogonalize t against previous scores.
-            for (const auto& prev : previous_scores) {
+            std::vector<double> projections(previous_scores.size(), 0.0);
+            for (std::size_t j = 0; j < previous_scores.size(); ++j) {
+                const std::vector<double>& prev = previous_scores[j];
                 const double tt_prev = squared_norm(prev);
                 if (tt_prev < kEps) continue;
                 double proj = 0.0;
                 for (std::size_t i = 0; i < n; ++i) proj += prev[i] * t[i];
                 proj /= tt_prev;
                 for (std::size_t i = 0; i < n; ++i) t[i] -= proj * prev[i];
+                projections[j] = proj;
             }
             const double tt = squared_norm(t);
             if (tt < kEps) continue;
@@ -1969,6 +2015,7 @@ n4m_status_t fit_rosa(Context& ctx,
                 best_block = static_cast<std::int32_t>(b);
                 best_w = std::move(w);
                 best_t = std::move(t);
+                best_projections = std::move(projections);
             }
         }
 
@@ -1993,35 +2040,40 @@ n4m_status_t fit_rosa(Context& ctx,
                 Y_residual[i * q + target] -= contribution;
             }
         }
-        // Update block coefficients via outer product w * q_load'.
-        const std::size_t pb = p_block[static_cast<std::size_t>(best_block)];
-        std::vector<double>& bcoef =
-            out.block_coefficients[static_cast<std::size_t>(best_block)];
+        const auto bb = static_cast<std::size_t>(best_block);
+        const std::size_t pb = p_block[bb];
         // Compute residual block loading p_load = X_b' t / (t.t)
         std::vector<double> p_load(pb, 0.0);
         for (std::size_t f = 0; f < pb; ++f) {
             double s = 0.0;
             for (std::size_t i = 0; i < n; ++i) {
-                s += X_bufs[static_cast<std::size_t>(best_block)][i * pb + f] *
-                     best_t[i];
+                s += X_bufs[bb][i * pb + f] * best_t[i];
             }
             p_load[f] = s / tt;
         }
-        for (std::size_t f = 0; f < pb; ++f) {
+        // The same score, deflation and response loading as linear maps of
+        // the centered row: t = X_b w - sum_j proj_j t_j.
+        std::vector<double> score_map(p_total, 0.0);
+        for (std::size_t r = 0; r < p_total; ++r) {
+            double s = 0.0;
+            for (std::size_t f = 0; f < pb; ++f) s += x_maps[bb][r * pb + f] * best_w[f];
+            for (std::size_t j = 0; j < score_maps.size(); ++j) {
+                s -= best_projections[j] * score_maps[j][r];
+            }
+            score_map[r] = s;
+            for (std::size_t f = 0; f < pb; ++f) x_maps[bb][r * pb + f] -= s * p_load[f];
             for (std::size_t target = 0; target < q; ++target) {
-                bcoef[f * q + target] +=
-                    best_w[f] * q_load[target];
-                (void)p_load;  // p_load reserved for future deflation logic
+                out.coefficients[r * q + target] += s * q_load[target];
             }
         }
         // Deflate the chosen X block by t.
         for (std::size_t i = 0; i < n; ++i) {
             for (std::size_t f = 0; f < pb; ++f) {
-                X_bufs[static_cast<std::size_t>(best_block)][i * pb + f] -=
-                    best_t[i] * p_load[f];
+                X_bufs[bb][i * pb + f] -= best_t[i] * p_load[f];
             }
         }
         previous_scores.push_back(best_t);
+        score_maps.push_back(std::move(score_map));
     }
 
     ctx.clear_error();

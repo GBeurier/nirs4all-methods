@@ -295,15 +295,13 @@ N4M_API n4m_status_t n4m_estimators_pls_fit(
     double* y_mean_out,
     double* predictions_out);
 
-/* PLS-GLM (§5). PLS-reduced design feeding a softmax / Poisson IRLS.
- * `poisson` selects the Poisson-link path; otherwise a one-vs-rest
- * softmax-like fit on a continuous PLS regression on Y. The result
- * contains:
+/* PLS-GLM (§5), legacy single-pass kernel: a centered SIMPLS regression
+ * of Y on X. `poisson` is recorded but no GLM link is fitted (the
+ * plsRglm algorithm is not native). The result contains:
  *   "coefficients"  (n_features x n_classes)
- *   "intercept"     (1 x n_classes)
+ *   "intercept"     (1 x n_classes); predictions = X @ coefficients + intercept
  *   "predictions"   (n_samples x n_classes)
- *   "x_mean"
- *   scalar "rmse", scalar "poisson" (0 or 1)
+ *   scalars "rmse", "poisson" (0 or 1), "n_components"
  */
 N4M_API n4m_status_t n4m_estimators_pls_glm_fit(
     n4m_context_t* ctx,
@@ -314,8 +312,9 @@ N4M_API n4m_status_t n4m_estimators_pls_glm_fit(
     n4m_method_result_t** out_result);
 
 /* Missing-aware NIPALS (§13). Same shape as a regular PLS regression
- * model but tolerates NaN entries in X (replaced with the current
- * latent-space iterate during NIPALS). The result contains:
+ * model but tolerates NaN entries in X: they are imputed with the column
+ * means of the observed values, at fit and in "predictions". The result
+ * contains:
  *   "coefficients", "predictions", "x_mean", "y_mean"
  *   scalar "rmse"
  */
@@ -327,8 +326,8 @@ N4M_API n4m_status_t n4m_estimators_missing_aware_nipals_fit(
     n4m_method_result_t** out_result);
 
 /* LW-PLS — locally-weighted PLS with k-NN windows (Phase 4s). Predicts
- * each test row from a per-row PLS refit on its `n_neighbors` nearest
- * training rows. Currently the training set is X itself (in-sample). Result
+ * each row of X from a per-row PLS refit on the training set X itself
+ * (in-sample; the estimator role models.local.lw_pls predicts new rows). Result
  * keys:
  *   "predictions"            (n × n_targets) double matrix
  *   "neighbor_indices"       (n × n_neighbors) double matrix (cast from

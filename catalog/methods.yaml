@@ -988,6 +988,26 @@ methods:
       - "n4m_estimators_gpr_pls_fit"
     legacy_ids:
       - "models.specialized.gpr_pls"
+    estimator:
+      kind: estimator
+      adapter: gpr_pls
+      roles: [regressor]
+      state: gpr_pls
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: length_scale
+          type: double
+          default: 1.0
+          min: 0.0
+        - name: noise_level
+          type: double
+          default: 0.001
+          min: 0.0
   - method_id: "selection.interval"
     family: "selection.wrapper"
     category: "selection"
@@ -1036,6 +1056,20 @@ methods:
       - "n4m_feature_selection_interval_select"
     legacy_ids:
       - "selection.interval"
+    estimator:
+      kind: estimator
+      adapter: tr_interval_generator
+      roles: [transformer]
+      state: width
+      params:
+        - name: interval_size
+          type: int
+          default: 32
+          min: 1
+        - name: step
+          type: int
+          default: 0
+          min: 0
   - method_id: "selection.ipw"
     family: "selection.wrapper"
     category: "selection"
@@ -1274,6 +1308,33 @@ methods:
       - "n4m_estimators_kernel_pls_fit"
     legacy_ids:
       - "models.pls.kernel"
+    estimator:
+      kind: estimator
+      adapter: kernel_pls
+      roles: [regressor]
+      state: kernel_pls
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: kernel
+          type: enum
+          choices: [linear, rbf, polynomial, sigmoid]
+          default: rbf
+        - name: gamma
+          type: double
+          default: 0.0
+          min: 0.0
+        - name: coef0
+          type: double
+          default: 1.0
+        - name: degree
+          type: int
+          default: 3
+          min: 1
   - method_id: "models.local.lw_pls"
     family: "models.local"
     category: "models"
@@ -1318,6 +1379,25 @@ methods:
       - "n4m_estimators_lw_pls_fit"
     legacy_ids:
       - "models.local.lw_pls"
+    estimator:
+      kind: estimator
+      adapter: lw_pls
+      roles: [regressor]
+      state: training_rows
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: n_neighbors
+          type: int
+          min: 2
+        - name: mode
+          type: enum
+          choices: [weighted, knn]
+          default: weighted
   - method_id: "models.multiblock.mb_pls"
     family: "models.multiblock"
     category: "models"
@@ -1876,6 +1956,21 @@ methods:
       - "n4m_estimators_recursive_pls_run"
     legacy_ids:
       - "models.specialized.recursive"
+    estimator:
+      kind: estimator
+      adapter: recursive_pls
+      roles: [regressor, transformer]
+      state: n4mm
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
+        - name: window_size
+          type: int
+          min: 2
   - method_id: "selection.rep"
     family: "selection.wrapper"
     category: "selection"
@@ -3869,6 +3964,17 @@ methods:
       - "n4m_domain_adaptation_epo_transform_with_d"
     legacy_ids:
       - "preprocessing.orthogonalization.epo"
+    estimator:
+      kind: estimator
+      adapter: tr_epo
+      roles: [transformer]
+      state: epo
+      inputs:
+        y: required
+      params:
+        - name: scale
+          type: bool
+          default: true
   - method_id: "preprocessing.orthogonalization.osc"
     family: "preprocessing.orthogonalization"
     category: "preprocessing"
@@ -8526,6 +8632,21 @@ methods:
       - "n4m_estimators_on_pls_fit"
     legacy_ids:
       - "models.multiblock.on_pls"
+    estimator:
+      kind: estimator
+      adapter: tr_on_pls
+      roles: [transformer]
+      state: on_pls
+      inputs:
+        blocks: required
+      params:
+        - name: n_joint
+          type: int
+          default: 1
+          min: 1
+        - name: n_unique_per_block
+          type: int_array
+          min: 0
   - method_id: "models.multiblock.so_pls"
     family: "models.multiblock"
     category: "models"
@@ -8563,6 +8684,18 @@ methods:
       - "n4m_estimators_so_pls_fit"
     legacy_ids:
       - "models.multiblock.so_pls"
+    estimator:
+      kind: estimator
+      adapter: affine_so_pls
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        blocks: required
+      params:
+        - name: n_components_per_block
+          type: int_array
+          min: 0
   - method_id: "models.multiblock.mir_pls"
     family: "models.multiblock"
     category: "models"
@@ -8649,6 +8782,19 @@ methods:
       - "n4m_estimators_rosa_fit"
     legacy_ids:
       - "models.multiblock.rosa"
+    estimator:
+      kind: estimator
+      adapter: affine_rosa
+      roles: [regressor]
+      state: n4mm
+      inputs:
+        y: required
+        blocks: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
   - method_id: "models.regularized.ridge_pls"
     family: "models.regularized"
     category: "models"
@@ -9391,6 +9537,18 @@ methods:
       - "n4m_estimators_missing_aware_nipals_fit"
     legacy_ids:
       - "models.specialized.missing_aware_nipals"
+    estimator:
+      kind: estimator
+      adapter: missing_aware_nipals
+      roles: [regressor]
+      state: coef
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 2
+          min: 1
   - method_id: "models.transfer.di_pls"
     family: "models.transfer"
     category: "models"
@@ -9482,6 +9640,13 @@ methods:
       - "n4m_domain_adaptation_ds_fit"
     legacy_ids:
       - "models.transfer.ds"
+    estimator:
+      kind: estimator
+      adapter: tr_ds
+      roles: [transformer]
+      state: coef
+      inputs:
+        target_domain: required
   - method_id: "models.transfer.pds"
     family: "models.transfer"
     category: "models"
@@ -9519,6 +9684,18 @@ methods:
       - "n4m_domain_adaptation_pds_fit"
     legacy_ids:
       - "models.transfer.pds"
+    estimator:
+      kind: estimator
+      adapter: tr_pds
+      roles: [transformer]
+      state: coef
+      inputs:
+        target_domain: required
+      params:
+        - name: window_half_width
+          type: int
+          default: 2
+          min: 0
   - method_id: "preprocessing.transfer.direct_standardization"
     family: "preprocessing.transfer"
     category: "preprocessing"
@@ -9760,6 +9937,13 @@ methods:
       - "n4m_domain_adaptation_slope_bias_transform"
     legacy_ids:
       - "preprocessing.transfer.slope_bias"
+    estimator:
+      kind: estimator
+      adapter: tr_slope_bias
+      roles: [transformer]
+      state: coef
+      inputs:
+        y: required
   - method_id: "preprocessing.alignment.cow_align"
     family: "preprocessing.alignment"
     category: "preprocessing"
