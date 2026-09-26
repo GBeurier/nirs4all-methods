@@ -1,3 +1,17 @@
+# n4m 1.0.21.9005
+
+- Affine `MethodResult` regressors can be promoted by the C++ core to a
+  predict-only, N4MM-serializable model. Sixteen verified methods use this
+  common path in the Python and R estimator interfaces; the JavaScript/WASM
+  binding can replay the native model.
+- R formula estimators use native prediction for qualified affine results and
+  retain N4MM bytes for `saveRDS()`/`readRDS()` across processes.
+- R and Python expose the same generic native preprocessing pipeline for the
+  fifteen supported operator kinds. Fitted linear-chain state can be exchanged
+  as versioned N4MP bytes, with native plan inspection and strict decoding.
+  Branching, variable selection and product-level trained pipeline archives
+  are not implied by this low-level format.
+
 # n4m 1.0.21.9004
 
 - `group_sparse_pls` now applies groupwise proximal shrinkage to the

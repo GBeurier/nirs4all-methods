@@ -3675,7 +3675,10 @@ def parse_operator_bindings(
     if not src_dir.exists():
         return []
     for py in sorted(src_dir.glob("*.py")):
-        if py.name in {"__init__.py", "compat.py", "estimator_base.py"}:
+        # Shared estimator bases use context/model C ABI calls but are not
+        # preprocessing operators with their own scientific page.
+        if py.name in {"__init__.py", "compat.py", "estimator_base.py",
+                       "affine_result.py"}:
             continue
         group = OPERATOR_MODULE_GROUP.get(py.stem, "transform")
         try:

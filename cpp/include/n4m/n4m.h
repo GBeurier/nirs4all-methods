@@ -724,6 +724,50 @@ N4M_API n4m_status_t n4m_pipeline_transform_alloc(n4m_context_t* ctx,
                                                    const n4m_matrix_view_t* X,
                                                    n4m_array_t** out);
 
+/* Standalone fitted preprocessing state, N4MP wire format 1. This is NOT an
+ * N4MM model and contains no training rows or targets. The payload records the
+ * ordered operator recipe and canonical fitted vectors for the 15 pipeline
+ * kinds currently implemented (N4M_OP_IDENTITY through
+ * N4M_OP_WAVELET_DENOISE). Export rejects an unfitted pipeline or any other
+ * kind. Import fully validates magic, version, checksum, ABI compatibility,
+ * bounded dimensions/counts, finite values, per-kind parameters and state
+ * shapes before publishing a new owning pipeline handle. On failure,
+ * *out_pipeline is NULL. Destroy a successful result with n4m_pipeline_destroy.
+ *
+ * Wire v1: little-endian "N4MP", format/writer ABI (four u32), feature width
+ * (u64), step count (u32), then for each step a kind (u32) and four
+ * length-prefixed f64 vectors (recipe params, location, scale, extra), then
+ * FNV-1a-64 of all preceding bytes (u64). Maximum payload 64 MiB, feature
+ * width 1,000,000, and 256 steps. FNV detects accidental corruption; it is
+ * not an authenticity proof. Bindings should additionally bind these bytes
+ * to an ordered recipe and feature schema before portable replay. */
+#define N4M_PIPELINE_SERIALIZATION_FORMAT_VERSION 1u
+/* Read the fitted pipeline width and number of ordered operators. Outputs are
+ * zeroed on failure, including N4M_ERR_NOT_FITTED. This does not attest a
+ * caller-supplied recipe; bindings must match that separately. */
+N4M_API n4m_status_t n4m_pipeline_get_info(
+    const n4m_pipeline_t* pipe, int64_t* out_n_features,
+    int32_t* out_n_operators);
+/* Inspect one ordered fitted operator without allocations. Index is zero-based.
+ * `out_count` receives the number of original positional params. Pass
+ * out_params=NULL and capacity=0 to query only the count. Otherwise capacity
+ * must cover every parameter and out_params receives an exact copy. Defaults
+ * are represented by zero original params, not expanded canonical values;
+ * recipe matching must compare this ordered plan under the same n4m defaults.
+ * Scalar outputs are zeroed on failure, except out_count reports required capacity
+ * for a too-small non-NULL buffer. */
+N4M_API n4m_status_t n4m_pipeline_get_operator(
+    const n4m_pipeline_t* pipe, int32_t index, n4m_operator_kind_t* out_kind,
+    double* out_params, int32_t capacity, int32_t* out_count);
+N4M_API n4m_status_t n4m_pipeline_export_size(
+    const n4m_pipeline_t* pipe, size_t* out_size);
+N4M_API n4m_status_t n4m_pipeline_export_to_buffer(
+    const n4m_pipeline_t* pipe, void* buffer, size_t buffer_size,
+    size_t* out_written);
+N4M_API n4m_status_t n4m_pipeline_import_from_buffer(
+    n4m_context_t* ctx, const void* buffer, size_t buffer_size,
+    n4m_pipeline_t** out_pipeline);
+
 /* ============================================================================
  * 10. Model lifecycle
  * ==========================================================================
@@ -778,6 +822,23 @@ typedef struct n4m_linear_predictor_spec_t {
 N4M_API n4m_status_t n4m_model_import_linear_predictor(
     n4m_context_t* ctx,
     const n4m_linear_predictor_spec_t* spec,
+    n4m_model_t** out_model);
+
+/* Promote an affine MethodResult to a standalone, predict-only N4MM model.
+ * Requires the explicit scalar `affine_predictor=1`, finite `coefficients`
+ * (features x targets) and either a finite
+ * `intercept` (1 x targets) or both `x_mean` (1 x features) and `y_mean`
+ * (1 x targets). The core computes the intercept when needed and copies all
+ * state; the caller may destroy `result` immediately after this call.
+ * If `predictions` is present, it must be a finite matrix with a positive
+ * row count and the same target width; that row count is recorded as source
+ * training-sample provenance in N4MM. If absent, provenance remains unknown
+ * (zero). No training samples or latent fit state are retained.
+ * Incompatible or malformed results return N4M_ERR_INVALID_ARGUMENT.
+ */
+N4M_API n4m_status_t n4m_model_from_method_result(
+    n4m_context_t* ctx,
+    const n4m_method_result_t* result,
     n4m_model_t** out_model);
 
 N4M_API void         n4m_model_destroy(n4m_model_t* model);

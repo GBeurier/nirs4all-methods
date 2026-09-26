@@ -8,7 +8,7 @@ _Namespace_: **`n4m.lowlevel.moments`** · _Fully-qualified_: `n4m.lowlevel.mome
 
 **Python (verified public re-export):** `from n4m.lowlevel.moments import moments`
 
-**Signature:** [`moments(X, y, *, row_indices = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L733)
+**Signature:** [`moments(X, y, *, row_indices = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L769)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

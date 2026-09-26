@@ -4,7 +4,9 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -13,6 +15,7 @@
 #include "core/common/status.hpp"
 #include "core/preprocessing/derivatives/savitzky_golay.h"
 #include "core/preprocessing/scatter/snv.h"
+#include "n4m/n4m_version.h"
 
 namespace {
 
@@ -1956,6 +1959,327 @@ n4m_status_t Pipeline::transform(Context& ctx,
     }
 
     copy_to_output(current, rows, cols, out);
+    ctx.clear_error();
+    return N4M_OK;
+}
+
+namespace {
+
+constexpr std::size_t kMaxPipelineWireBytes = 64U * 1024U * 1024U;
+constexpr std::uint64_t kMaxPipelineFeatures = 1000000U;
+constexpr std::uint32_t kMaxPipelineSteps = 256U;
+constexpr std::size_t kPipelineWireHeaderBytes = 4U + 4U * 4U + 8U + 4U;
+constexpr std::size_t kPipelineWireChecksumBytes = 8U;
+static_assert(sizeof(double) == 8U && std::numeric_limits<double>::is_iec559,
+              "N4MP v1 requires IEEE-754 binary64");
+
+[[nodiscard]] bool finite_vector(const std::vector<double>& values) noexcept {
+    return std::all_of(values.begin(), values.end(),
+                       [](double value) { return std::isfinite(value); });
+}
+
+[[nodiscard]] bool positive_vector(const std::vector<double>& values) noexcept {
+    return std::all_of(values.begin(), values.end(),
+                       [](double value) { return std::isfinite(value) && value > 0.0; });
+}
+
+[[nodiscard]] bool same_values(const std::vector<double>& actual,
+                               std::initializer_list<double> expected) noexcept {
+    return actual.size() == expected.size() &&
+           std::equal(actual.begin(), actual.end(), expected.begin());
+}
+
+[[nodiscard]] bool valid_fitted_step(Context& ctx,
+                                     const OperatorEntry& entry,
+                                     const Pipeline::OperatorState& state,
+                                     std::size_t features) {
+    if (entry.kind != state.kind || state.n_features != static_cast<std::int64_t>(features) ||
+        entry.params.size() > 4U || !finite_vector(entry.params) ||
+        !finite_vector(state.location) || !finite_vector(state.scale) ||
+        !finite_vector(state.extra)) return false;
+    const auto& loc = state.location;
+    const auto& scale = state.scale;
+    const auto& extra = state.extra;
+    switch (entry.kind) {
+        case N4M_OP_IDENTITY:
+        case N4M_OP_SNV:
+            return entry.params.empty() && loc.empty() && scale.empty() && extra.empty();
+        case N4M_OP_CENTER:
+            return entry.params.empty() && loc.size() == features &&
+                   scale.size() == features && extra.empty() &&
+                   std::all_of(scale.begin(), scale.end(), [](double v) { return v == 1.0; });
+        case N4M_OP_AUTOSCALE:
+        case N4M_OP_PARETO_SCALE:
+            return entry.params.empty() && loc.size() == features &&
+                   scale.size() == features && positive_vector(scale) && extra.empty();
+        case N4M_OP_MSC:
+            return entry.params.empty() && features >= 2U && loc.size() == features &&
+                   scale.empty() && extra.empty();
+        case N4M_OP_EMSC: {
+            std::int32_t degree = 0;
+            return parse_emsc_degree(ctx, entry, degree) == N4M_OK &&
+                   loc.size() == features && same_values(scale, {static_cast<double>(degree)}) &&
+                   extra.empty();
+        }
+        case N4M_OP_DETREND_POLY: {
+            std::int32_t degree = 0;
+            return parse_degree(ctx, entry, degree) == N4M_OK && loc.empty() &&
+                   same_values(scale, {static_cast<double>(degree)}) && extra.empty();
+        }
+        case N4M_OP_SAVGOL_SMOOTH:
+        case N4M_OP_SAVGOL_DERIVATIVE: {
+            SavGolParams params;
+            const n4m_status_t status = entry.kind == N4M_OP_SAVGOL_SMOOTH
+                ? parse_savgol_smooth(ctx, entry, params)
+                : parse_savgol_derivative(ctx, entry, params);
+            return status == N4M_OK &&
+                   features >= static_cast<std::size_t>(params.window) && loc.empty() &&
+                   same_values(scale, {static_cast<double>(params.window),
+                                       static_cast<double>(params.poly_degree),
+                                       static_cast<double>(params.derivative_order), params.delta}) &&
+                   extra.empty();
+        }
+        case N4M_OP_ASLS_BASELINE: {
+            AslsParams params;
+            return parse_asls(ctx, entry, params) == N4M_OK && features >= 3U &&
+                   loc.empty() &&
+                   same_values(scale, {params.lambda, params.asymmetry,
+                                       static_cast<double>(params.iterations)}) && extra.empty();
+        }
+        case N4M_OP_NORRIS_WILLIAMS: {
+            NorrisWilliamsParams params;
+            return parse_norris_williams(ctx, entry, params) == N4M_OK && loc.empty() &&
+                   same_values(scale, {static_cast<double>(params.segment),
+                                       static_cast<double>(params.gap),
+                                       static_cast<double>(params.derivative_order)}) && extra.empty();
+        }
+        case N4M_OP_WAVELET_DENOISE: {
+            WaveletParams params;
+            return parse_wavelet(ctx, entry, params) == N4M_OK &&
+                   params.levels <= max_haar_levels(next_power_of_two(features)) &&
+                   loc.empty() &&
+                   same_values(scale, {static_cast<double>(params.levels), params.threshold}) &&
+                   extra.empty();
+        }
+        case N4M_OP_OSC: {
+            ProjectionParams params;
+            return parse_osc(ctx, entry, params) == N4M_OK &&
+                   loc.size() == features && scale.size() == features &&
+                   extra.size() == features;
+        }
+        case N4M_OP_EPO: {
+            ProjectionParams params;
+            return parse_epo(ctx, entry, params) == N4M_OK &&
+                   loc.size() == features && scale.size() == features && extra.empty();
+        }
+        default:
+            return false;
+    }
+}
+
+[[nodiscard]] bool add_wire_vector_size(std::size_t& size,
+                                        const std::vector<double>& values) noexcept {
+    if (size > kMaxPipelineWireBytes - 4U) return false;
+    if (values.size() > (kMaxPipelineWireBytes - size - 4U) / 8U) return false;
+    size += 4U + values.size() * 8U;
+    return true;
+}
+
+[[nodiscard]] std::uint64_t fnv1a64(const unsigned char* bytes,
+                                    std::size_t size) noexcept {
+    std::uint64_t value = UINT64_C(14695981039346656037);
+    for (std::size_t i = 0; i < size; ++i) {
+        value ^= static_cast<std::uint64_t>(bytes[i]);
+        value *= UINT64_C(1099511628211);
+    }
+    return value;
+}
+
+struct PipelineWriter {
+    unsigned char* bytes;
+    std::size_t capacity;
+    std::size_t position{0};
+    bool ok{true};
+
+    void u32(std::uint32_t value) noexcept {
+        if (!ok || capacity - position < 4U) { ok = false; return; }
+        for (std::size_t i = 0; i < 4U; ++i)
+            bytes[position++] = static_cast<unsigned char>((value >> (8U * i)) & 0xffU);
+    }
+    void u64(std::uint64_t value) noexcept {
+        if (!ok || capacity - position < 8U) { ok = false; return; }
+        for (std::size_t i = 0; i < 8U; ++i)
+            bytes[position++] = static_cast<unsigned char>((value >> (8U * i)) & 0xffU);
+    }
+    void f64(double value) noexcept {
+        std::uint64_t bits = 0;
+        std::memcpy(&bits, &value, sizeof(bits));
+        u64(bits);
+    }
+    void vector(const std::vector<double>& values) noexcept {
+        u32(static_cast<std::uint32_t>(values.size()));
+        for (double value : values) f64(value);
+    }
+};
+
+struct PipelineReader {
+    const unsigned char* bytes;
+    std::size_t capacity;
+    std::size_t position{0};
+    bool ok{true};
+
+    std::uint32_t u32() noexcept {
+        if (!ok || capacity - position < 4U) { ok = false; return 0; }
+        std::uint32_t value = 0;
+        for (std::size_t i = 0; i < 4U; ++i)
+            value |= static_cast<std::uint32_t>(bytes[position++]) << (8U * i);
+        return value;
+    }
+    std::uint64_t u64() noexcept {
+        if (!ok || capacity - position < 8U) { ok = false; return 0; }
+        std::uint64_t value = 0;
+        for (std::size_t i = 0; i < 8U; ++i)
+            value |= static_cast<std::uint64_t>(bytes[position++]) << (8U * i);
+        return value;
+    }
+    bool vector(std::vector<double>& out, std::uint32_t max_values) {
+        const std::uint32_t count = u32();
+        if (!ok || count > max_values || count > (capacity - position) / 8U) {
+            ok = false;
+            return false;
+        }
+        out.reserve(count);
+        for (std::uint32_t i = 0; i < count; ++i) {
+            const std::uint64_t bits = u64();
+            double value = 0.0;
+            std::memcpy(&value, &bits, sizeof(value));
+            if (!std::isfinite(value)) { ok = false; return false; }
+            out.push_back(value);
+        }
+        return ok;
+    }
+};
+
+}  // namespace
+
+bool Pipeline::serialized_size(std::size_t& out) const {
+    out = 0;
+    if (!fitted_ || n_features_ < 1 ||
+        static_cast<std::uint64_t>(n_features_) > kMaxPipelineFeatures ||
+        entries_.empty() || entries_.size() > kMaxPipelineSteps ||
+        entries_.size() != states_.size()) return false;
+    Context context;
+    std::size_t size = kPipelineWireHeaderBytes;
+    for (std::size_t i = 0; i < entries_.size(); ++i) {
+        if (!valid_fitted_step(context, entries_[i], states_[i],
+                               static_cast<std::size_t>(n_features_)) ||
+            size > kMaxPipelineWireBytes - 4U) return false;
+        size += 4U;  // kind
+        if (!add_wire_vector_size(size, entries_[i].params) ||
+            !add_wire_vector_size(size, states_[i].location) ||
+            !add_wire_vector_size(size, states_[i].scale) ||
+            !add_wire_vector_size(size, states_[i].extra)) return false;
+    }
+    if (size > kMaxPipelineWireBytes - kPipelineWireChecksumBytes) return false;
+    out = size + kPipelineWireChecksumBytes;
+    return true;
+}
+
+bool Pipeline::export_to_buffer(void* buffer, std::size_t capacity,
+                                std::size_t& written) const {
+    written = 0;
+    std::size_t required = 0;
+    if (buffer == nullptr || !serialized_size(required) || capacity < required) return false;
+    PipelineWriter writer{static_cast<unsigned char*>(buffer), capacity};
+    for (char c : {'N', '4', 'M', 'P'})
+        writer.bytes[writer.position++] = static_cast<unsigned char>(c);
+    writer.u32(N4M_PIPELINE_SERIALIZATION_FORMAT_VERSION);
+    writer.u32(N4M_ABI_VERSION_MAJOR);
+    writer.u32(N4M_ABI_VERSION_MINOR);
+    writer.u32(N4M_ABI_VERSION_PATCH);
+    writer.u64(static_cast<std::uint64_t>(n_features_));
+    writer.u32(static_cast<std::uint32_t>(entries_.size()));
+    for (std::size_t i = 0; i < entries_.size(); ++i) {
+        writer.u32(static_cast<std::uint32_t>(entries_[i].kind));
+        writer.vector(entries_[i].params);
+        writer.vector(states_[i].location);
+        writer.vector(states_[i].scale);
+        writer.vector(states_[i].extra);
+    }
+    if (!writer.ok || writer.position + 8U != required) return false;
+    writer.u64(fnv1a64(writer.bytes, writer.position));
+    if (!writer.ok || writer.position != required) return false;
+    written = writer.position;
+    return true;
+}
+
+n4m_status_t Pipeline::import_from_buffer(Context& ctx, const void* buffer,
+                                           std::size_t size, Pipeline& out) {
+    if (buffer == nullptr) return N4M_ERR_NULL_POINTER;
+    if (size < kPipelineWireHeaderBytes + kPipelineWireChecksumBytes ||
+        size > kMaxPipelineWireBytes) {
+        ctx.set_error("N4MP payload length is invalid or exceeds limit");
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    const auto* bytes = static_cast<const unsigned char*>(buffer);
+    if (std::memcmp(bytes, "N4MP", 4U) != 0) {
+        ctx.set_error("N4MP magic is invalid");
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    PipelineReader checksum_reader{bytes + size - 8U, 8U};
+    if (checksum_reader.u64() != fnv1a64(bytes, size - 8U)) {
+        ctx.set_error("N4MP checksum is invalid");
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    PipelineReader reader{bytes, size - 8U, 4U};
+    const std::uint32_t format = reader.u32();
+    const std::uint32_t major = reader.u32();
+    const std::uint32_t minor = reader.u32();
+    (void)reader.u32();  // writer ABI patch
+    if (format != N4M_PIPELINE_SERIALIZATION_FORMAT_VERSION ||
+        major != N4M_ABI_VERSION_MAJOR || minor > N4M_ABI_VERSION_MINOR) {
+        ctx.set_error("N4MP format or writer ABI is incompatible");
+        return N4M_ERR_VERSION_INCOMPATIBLE;
+    }
+    const std::uint64_t features = reader.u64();
+    const std::uint32_t count = reader.u32();
+    if (!reader.ok || features < 1U || features > kMaxPipelineFeatures ||
+        count < 1U || count > kMaxPipelineSteps) {
+        ctx.set_error("N4MP dimensions or operator count are invalid");
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    Pipeline candidate;
+    candidate.entries_.reserve(count);
+    candidate.states_.reserve(count);
+    for (std::uint32_t i = 0; i < count; ++i) {
+        const std::uint32_t raw_kind = reader.u32();
+        if (!reader.ok || raw_kind > static_cast<std::uint32_t>(N4M_OP_WAVELET_DENOISE)) {
+            ctx.set_error("N4MP operator kind is unsupported");
+            return N4M_ERR_CORRUPT_BUFFER;
+        }
+        OperatorEntry entry;
+        entry.kind = static_cast<n4m_operator_kind_t>(raw_kind);
+        OperatorState state;
+        state.kind = entry.kind;
+        state.n_features = static_cast<std::int64_t>(features);
+        if (!reader.vector(entry.params, 4U) ||
+            !reader.vector(state.location, static_cast<std::uint32_t>(features)) ||
+            !reader.vector(state.scale, static_cast<std::uint32_t>(std::max<std::uint64_t>(features, 4U))) ||
+            !reader.vector(state.extra, static_cast<std::uint32_t>(features)) ||
+            !valid_fitted_step(ctx, entry, state, static_cast<std::size_t>(features))) {
+            ctx.set_error("N4MP operator state or parameter contract is invalid");
+            return N4M_ERR_CORRUPT_BUFFER;
+        }
+        candidate.entries_.push_back(std::move(entry));
+        candidate.states_.push_back(std::move(state));
+    }
+    if (!reader.ok || reader.position != reader.capacity) {
+        ctx.set_error("N4MP payload has trailing or truncated operator data");
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    candidate.n_features_ = static_cast<std::int64_t>(features);
+    candidate.fitted_ = true;
+    out = std::move(candidate);
     ctx.clear_error();
     return N4M_OK;
 }

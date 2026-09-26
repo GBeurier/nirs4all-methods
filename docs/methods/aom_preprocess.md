@@ -72,7 +72,7 @@ from n4m.model_selection.aom_search import aom_preprocess
 result = aom_preprocess(X)
 ```
 
-Source signature: `aom_preprocess(X, y = None, *, operators = None, gating_mode: str | int = 'soft')` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L5750)).
+Source signature: `aom_preprocess(X, y = None, *, operators = None, gating_mode: str | int = 'soft')` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L5786)).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

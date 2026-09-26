@@ -641,6 +641,15 @@ class MethodResult:
             lib.n4m_method_result_destroy(self._h)
             self._h = ctypes.c_void_p(0)
 
+    def to_affine_model(self, ctx: Context):
+        """Copy a native affine result into a standalone predict-only Model."""
+        from ._model import Model
+
+        out = ctypes.c_void_p()
+        _check(lib.n4m_model_from_method_result(
+            ctx.handle, self._h, ctypes.byref(out)), ctx)
+        return Model(out)
+
     def matrix(self, name: str) -> np.ndarray:
         data_ptr = ctypes.POINTER(ctypes.c_double)()
         rows = ctypes.c_int64(0)

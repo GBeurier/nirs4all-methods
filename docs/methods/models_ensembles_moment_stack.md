@@ -8,7 +8,7 @@ _Namespace_: **`n4m.ensemble`** · _Fully-qualified_: `n4m.ensemble.moment_stack
 
 **Python (verified public re-export):** `from n4m.ensemble import moment_stack`
 
-**Signature:** [`moment_stack(X, y, **kwargs)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8868)
+**Signature:** [`moment_stack(X, y, **kwargs)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8904)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

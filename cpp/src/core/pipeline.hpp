@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 #include <vector>
 
 #include "n4m/n4m.h"
@@ -36,6 +37,7 @@ class Pipeline {
     [[nodiscard]] bool fitted() const noexcept {
         return fitted_;
     }
+    [[nodiscard]] std::int64_t n_features() const noexcept { return n_features_; }
 
     // Validate/canonicalize the only pipeline slice that a fitted Model may
     // currently own and serialize: SNV(no params) -> Savitzky-Golay smooth.
@@ -60,7 +62,16 @@ class Pipeline {
                                          const n4m_matrix_view_t& X,
                                          n4m_matrix_view_t& out) const;
 
-  private:
+    // Standalone, fitted N4MP preprocessing payload. These routines never
+    // serialize training rows or targets and do not reuse the model N4MM wire.
+    [[nodiscard]] bool serialized_size(std::size_t& out) const;
+    [[nodiscard]] bool export_to_buffer(void* buffer, std::size_t capacity,
+                                        std::size_t& written) const;
+    [[nodiscard]] static n4m_status_t import_from_buffer(
+        Context& ctx, const void* buffer, std::size_t size, Pipeline& out);
+
+  public:
+    // Internal value type; not part of the public C ABI.
     struct OperatorState {
         n4m_operator_kind_t kind{N4M_OP_IDENTITY};
         std::int64_t n_features{0};
@@ -69,6 +80,7 @@ class Pipeline {
         std::vector<double> extra;
     };
 
+  private:
     std::vector<OperatorEntry> entries_;
     std::vector<OperatorState> states_;
     std::int64_t n_features_{0};

@@ -24,7 +24,7 @@ from .._errors import check
 from .._ffi import lib, library_path
 from .._matrix import as_f64_2d, empty_like_f64, empty_like_i32, numpy_to_view
 from .._rng import PCG64
-from .._types import FilterStats, SplitResult, TransferMetrics
+from .._types import FilterStats, MatrixView, SplitResult, TransferMetrics
 from .._validation import (
     _create_validation_plan_from_fold_ids,
     _selector_fold_ids,
@@ -638,7 +638,8 @@ def _fit_method_result(
     scale_x: bool | None = None,
     center_y: bool | None = None,
     scale_y: bool | None = None,
-) -> dict[str, np.ndarray | float]:
+    as_model: bool = False,
+) -> dict[str, np.ndarray | float | bytes]:
     X_arr = as_f64_2d(X)
     y_arr = _as_y_matrix(y, X_arr.shape[0])
     ctx = ctypes.c_void_p()
@@ -673,7 +674,42 @@ def _fit_method_result(
             ),
             symbol,
         )
-        return _method_result_dict(result, matrices=matrices, scalars=scalars)
+        values = _method_result_dict(result, matrices=matrices, scalars=scalars)
+        if as_model:
+            model = ctypes.c_void_p()
+            intercept_array = ctypes.c_void_p()
+            try:
+                check(
+                    lib.n4m_model_from_method_result(
+                        ctx, result, ctypes.byref(model)
+                    ),
+                    "n4m_model_from_method_result",
+                )
+                size = ctypes.c_size_t()
+                check(lib.n4m_model_export_size(model, ctypes.byref(size)),
+                      "n4m_model_export_size")
+                payload = (ctypes.c_ubyte * size.value)()
+                written = ctypes.c_size_t()
+                check(lib.n4m_model_export_to_buffer(
+                    model, payload, size.value, ctypes.byref(written)),
+                    "n4m_model_export_to_buffer")
+                values["model_bundle"] = bytes(payload[:written.value])
+                check(lib.n4m_model_get_array(
+                    ctx, model, ctypes.c_int(1), ctypes.byref(intercept_array)),
+                    "n4m_model_get_array(intercept)")
+                intercept_view = MatrixView()
+                check(lib.n4m_array_view(intercept_array, ctypes.byref(intercept_view)),
+                      "n4m_array_view(intercept)")
+                intercept_ptr = ctypes.cast(
+                    intercept_view.data, ctypes.POINTER(ctypes.c_double))
+                values["intercept"] = np.ctypeslib.as_array(
+                    intercept_ptr, shape=(int(intercept_view.cols),)).copy()
+            finally:
+                if intercept_array.value:
+                    lib.n4m_array_free(intercept_array)
+                if model.value:
+                    lib.n4m_model_destroy(model)
+        return values
     finally:
         if result.value:
             lib.n4m_method_result_destroy(result)

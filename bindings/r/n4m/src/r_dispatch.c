@@ -214,7 +214,8 @@ static SEXP make_list(const char** names, SEXP* vals, int n) {
     return out;
 }
 
-/* Pack a MethodResult by category. NULL-terminated key arrays. */
+/* Pack a MethodResult by category. The dispatcher keeps the native result
+ * alive until any requested model conversion is complete. */
 static SEXP pack_result(n4m_method_result_t* mr,
                           const char** dmat, const char** iv,
                           const char** i64, const char** sc) {
@@ -245,7 +246,6 @@ static SEXP pack_result(n4m_method_result_t* mr,
     }
     SEXP out = make_list(names, vals, total);
     UNPROTECT(total);
-    n4m_method_result_destroy(mr);
     return out;
 }
 
@@ -555,10 +555,19 @@ static SEXP pack_aom_per_component_result(n4m_aom_per_component_result_t* res) {
  *  Main dispatcher
  * ===================================================================== */
 
-SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
+static void affine_model_finalize(SEXP ptr) {
+    n4m_model_t* model = (n4m_model_t*)R_ExternalPtrAddr(ptr);
+    if (model != NULL) {
+        n4m_model_destroy(model);
+        R_ClearExternalPtr(ptr);
+    }
+}
+
+static SEXP dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
                          SEXP n_components_sexp, SEXP params,
                          SEXP center_x_sexp, SEXP scale_x_sexp,
-                         SEXP center_y_sexp, SEXP scale_y_sexp) {
+                         SEXP center_y_sexp, SEXP scale_y_sexp,
+                         int affine_model, int formula_legacy) {
     /* Early validation BEFORE ctx/cfg allocation: pass NULL for both. */
     if (TYPEOF(algo_sexp) != STRSXP) cleanup_err(NULL, NULL, "algo must be character");
     const char* algo = CHAR(STRING_ELT(algo_sexp, 0));
@@ -631,7 +640,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         double g = get_double(params, "gamma", 0.5);
         /* Match the C ABI/Python default CPPLS convention (NIPALS PLS1).
          * The dispatcher-wide SIMPLS default is a different, legacy recipe. */
-        n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
+        if (!formula_legacy) n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
         st = n4m_estimators_cppls_fit(ctx, cfg, &Xv, &Yv, g, &mr);
         if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
     } else if (strcmp(algo, "ecr") == 0) {
@@ -681,7 +690,11 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "ridge") == 0) {
         double alpha = get_double(params, "ridge_lambda", 1.0);
         st = n4m_estimators_ridge_fit(ctx, cfg, &Xv, &Yv, &alpha, (int64_t)1, &mr);
-        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        if (st == N4M_OK) {
+            static const char* dm[] = {"coefficients", "predictions",
+                                      "x_mean", "y_mean", "intercept", NULL};
+            out = pack_result(mr, dm, NULL, NULL, REG_SCALAR);
+        }
     } else if (strcmp(algo, "continuum_regression") == 0) {
         double t = get_double(params, "tau", 0.5);
         st = n4m_estimators_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
@@ -960,7 +973,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             cleanup_err(ctx, cfg,
                          "sum(block_sizes)=%lld must equal ncol(X)=%d",
                          (long long)bsum, p);
-        n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
+        if (!formula_legacy) n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
         st = n4m_estimators_mb_pls_fit(ctx, cfg, &Xv, &Yv, bsv, bsn, &mr);
         if (st == N4M_OK) {
             static const char* dm[] = {"coefficients", "predictions",
@@ -1341,8 +1354,82 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     }
 
     n4m_config_destroy(cfg);
+    if (st != N4M_OK) {
+        if (mr != NULL) n4m_method_result_destroy(mr);
+        UNPROTECT(2);
+        r_throw(algo, st, ctx);
+    }
+    double affine_marker = 0.0;
+    int promote = affine_model == 1 ||
+        (affine_model == 2 && mr != NULL &&
+         n4m_method_result_get_scalar(mr, "affine_predictor",
+                                      &affine_marker) == N4M_OK &&
+         affine_marker == 1.0);
+    if (promote) {
+        if (mr == NULL || out == R_NilValue) {
+            UNPROTECT(2);
+            r_throw("affine MethodResult", N4M_ERR_INVALID_ARGUMENT, ctx);
+        }
+        n4m_model_t* model = NULL;
+        st = n4m_model_from_method_result(ctx, mr, &model);
+        if (st != N4M_OK) {
+            n4m_method_result_destroy(mr);
+            UNPROTECT(2);
+            r_throw("n4m_model_from_method_result", st, ctx);
+        }
+        SEXP protected_out = PROTECT(out);
+        SEXP ptr = PROTECT(R_MakeExternalPtr(model, R_NilValue, R_NilValue));
+        R_RegisterCFinalizerEx(ptr, affine_model_finalize, TRUE);
+        SEXP n_features = PROTECT(Rf_ScalarInteger(p));
+        SEXP n_targets = PROTECT(Rf_ScalarInteger(q));
+        Rf_setAttrib(ptr, Rf_install("n_features"), n_features);
+        Rf_setAttrib(ptr, Rf_install("n_targets"), n_targets);
+        int count = Rf_length(protected_out);
+        SEXP combined = PROTECT(Rf_allocVector(VECSXP, count + 1));
+        SEXP names = PROTECT(Rf_allocVector(STRSXP, count + 1));
+        SEXP source_names = Rf_getAttrib(protected_out, R_NamesSymbol);
+        for (int i = 0; i < count; ++i) {
+            SET_VECTOR_ELT(combined, i, VECTOR_ELT(protected_out, i));
+            SET_STRING_ELT(names, i, STRING_ELT(source_names, i));
+        }
+        SET_VECTOR_ELT(combined, count, ptr);
+        SET_STRING_ELT(names, count, Rf_mkChar("native_model"));
+        Rf_setAttrib(combined, R_NamesSymbol, names);
+        out = combined;
+        UNPROTECT(6);
+    }
+    if (mr != NULL) n4m_method_result_destroy(mr);
     UNPROTECT(2);  /* X_rm, Y_rm */
-    if (st != N4M_OK) r_throw(algo, st, ctx);
     n4m_context_destroy(ctx);
     return out;
+}
+
+SEXP r_n4m_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                         SEXP params, SEXP center_x, SEXP scale_x,
+                         SEXP center_y, SEXP scale_y) {
+    return dispatch_fit(algo, X, Y, n_components, params,
+                        center_x, scale_x, center_y, scale_y, 0, 0);
+}
+
+SEXP r_n4m_affine_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                                SEXP params, SEXP center_x, SEXP scale_x,
+                                SEXP center_y, SEXP scale_y) {
+    return dispatch_fit(algo, X, Y, n_components, params,
+                        center_x, scale_x, center_y, scale_y, 1, 0);
+}
+
+/* Formula wrappers retain their historical SIMPLS configuration for CPPLS
+ * and MB-PLS while attaching a native model only for marked producers. */
+SEXP r_n4m_formula_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                                 SEXP params, SEXP center_x, SEXP scale_x,
+                                 SEXP center_y, SEXP scale_y) {
+    return dispatch_fit(algo, X, Y, n_components, params,
+                        center_x, scale_x, center_y, scale_y, 2, 1);
+}
+
+/* A serialized external pointer loses its address. R code keeps the N4MM
+ * bytes and reimports on demand; never dereference a stale pointer. */
+SEXP r_n4m_model_pointer_alive(SEXP ptr) {
+    return Rf_ScalarLogical(TYPEOF(ptr) == EXTPTRSXP &&
+                            R_ExternalPtrAddr(ptr) != NULL);
 }

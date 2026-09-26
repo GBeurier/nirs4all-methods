@@ -70,7 +70,7 @@ from n4m.estimators.regression.latent import pls
 result = pls(X, y)
 ```
 
-Source signature: `pls(X, y, *, n_components: int = 2, pls_components = None, cv: int = 5, fold_ids = None, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None, cuda_pls_parallel_folds: bool | None = None, cuda_pls_min_device_features: int | None = None, cuda_pls_many_batched: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8533)).
+Source signature: `pls(X, y, *, n_components: int = 2, pls_components = None, cv: int = 5, fold_ids = None, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None, cuda_pls_parallel_folds: bool | None = None, cuda_pls_min_device_features: int | None = None, cuda_pls_many_batched: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8569)).
 
 **R (source-verified):** [`pls(formula, data, ncomp = 2L, algo = "pls_nipals", na.action = stats::na.omit, ...)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn.R).
 

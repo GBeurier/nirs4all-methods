@@ -8,7 +8,7 @@ _Namespace_: **`n4m.compose.aom_superblock`** · _Fully-qualified_: `n4m.compose
 
 **Python (verified public re-export):** `from n4m.compose.aom_superblock import aom_pls_superblock`
 
-**Signature:** [`aom_pls_superblock(X, y, *, operators = None, n_components: int = 2, pls_components: Sequence[int] | None = None, cv: int = 5, fold_ids = None, block_scaling: str = 'rms', center_x: bool = True, center_y: bool = True, cuda_pls_parallel_folds: bool | None = None, cuda_pls_min_device_features: int | None = None, cuda_pls_many_batched: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L7802)
+**Signature:** [`aom_pls_superblock(X, y, *, operators = None, n_components: int = 2, pls_components: Sequence[int] | None = None, cv: int = 5, fold_ids = None, block_scaling: str = 'rms', center_x: bool = True, center_y: bool = True, cuda_pls_parallel_folds: bool | None = None, cuda_pls_min_device_features: int | None = None, cuda_pls_many_batched: bool | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L7838)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

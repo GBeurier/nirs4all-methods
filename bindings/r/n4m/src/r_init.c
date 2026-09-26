@@ -59,6 +59,20 @@ SEXP r_n4m_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
                          SEXP params,
                          SEXP center_x, SEXP scale_x,
                          SEXP center_y, SEXP scale_y);
+SEXP r_n4m_affine_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                                SEXP params,
+                                SEXP center_x, SEXP scale_x,
+                                SEXP center_y, SEXP scale_y);
+SEXP r_n4m_formula_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
+                                 SEXP params,
+                                 SEXP center_x, SEXP scale_x,
+                                 SEXP center_y, SEXP scale_y);
+SEXP r_n4m_model_pointer_alive(SEXP ptr);
+SEXP r_n4m_preprocess_fit(SEXP X, SEXP Y, SEXP kinds, SEXP params);
+SEXP r_n4m_preprocess_transform(SEXP ptr, SEXP X);
+SEXP r_n4m_preprocess_export(SEXP ptr);
+SEXP r_n4m_preprocess_import(SEXP bytes);
+SEXP r_n4m_preprocess_plan(SEXP ptr);
 
 static const R_CallMethodDef callMethods[] = {
     /* core */
@@ -105,6 +119,14 @@ static const R_CallMethodDef callMethods[] = {
 
     /* unified dispatcher */
     {"r_n4m_dispatch_fit", (DL_FUNC)&r_n4m_dispatch_fit, 9},
+    {"r_n4m_affine_dispatch_fit", (DL_FUNC)&r_n4m_affine_dispatch_fit, 9},
+    {"r_n4m_formula_dispatch_fit", (DL_FUNC)&r_n4m_formula_dispatch_fit, 9},
+    {"r_n4m_model_pointer_alive", (DL_FUNC)&r_n4m_model_pointer_alive, 1},
+    {"r_n4m_preprocess_fit", (DL_FUNC)&r_n4m_preprocess_fit, 4},
+    {"r_n4m_preprocess_transform", (DL_FUNC)&r_n4m_preprocess_transform, 2},
+    {"r_n4m_preprocess_export", (DL_FUNC)&r_n4m_preprocess_export, 1},
+    {"r_n4m_preprocess_import", (DL_FUNC)&r_n4m_preprocess_import, 1},
+    {"r_n4m_preprocess_plan", (DL_FUNC)&r_n4m_preprocess_plan, 1},
 
     {NULL, NULL, 0},
 };

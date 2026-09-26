@@ -8,7 +8,7 @@ _Namespace_: **`n4m.transform.signal_conversion`** · _Fully-qualified_: `n4m.tr
 
 **Python (verified public re-export):** `from n4m.transform.signal_conversion import signal_type_detector`
 
-**Signature:** [`signal_type_detector(X, wavelengths = None, confidence_threshold: float = 0.7)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L10720)
+**Signature:** [`signal_type_detector(X, wavelengths = None, confidence_threshold: float = 0.7)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L10756)
 
 **R:** no current source-verified entry point was found for this catalog method.
 
