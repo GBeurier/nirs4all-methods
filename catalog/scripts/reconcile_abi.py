@@ -57,6 +57,7 @@ INFRA_PREFIXES = (
 # Exact reserved/support symbols whose prefix is otherwise method-owned.
 INFRA_SYMBOLS = {
     "n4m_pls_cross_validate",  # reserved fused/batched PLS CV ABI, not a production method
+    "n4m_splitter_run",  # shared dispatcher for nine catalogued splitters
 }
 
 

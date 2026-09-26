@@ -1951,3 +1951,64 @@ int n4m_wasm_split_indices(int kind, double test_size, unsigned int seed,
     n4m_split_result_destroy(&res);
     return N4M_OK;
 }
+
+/* ABI-2.11 splitter façade. The JS layer supplies a 48-byte native spec and
+ * n-sized output buffers; this helper only marshals matrix views and copies
+ * the native ordered int64 indices into WASM32-safe int32 buffers. */
+_Static_assert(sizeof(n4m_splitter_spec_t) == 48,
+               "JS splitter spec layout must stay 48 bytes on WASM32");
+__attribute__((used))
+int n4m_wasm_splitter_indices(const n4m_splitter_spec_t* spec,
+                             const double* x, const double* y,
+                             int n, int p, int q,
+                             const int64_t* groups, int fold_index,
+                             int* train_idx, int* n_train,
+                             int* test_idx, int* n_test) {
+    if (spec == NULL || n < 1 || p < 0 || q < 0 ||
+        train_idx == NULL || n_train == NULL ||
+        test_idx == NULL || n_test == NULL) return N4M_ERR_INVALID_ARGUMENT;
+    n4m_matrix_view_t xv = {0}, yv = {0};
+    const n4m_matrix_view_t *xp = NULL, *yp = NULL;
+    n4m_status_t status = N4M_OK;
+    if (x != NULL) {
+        status = n4m_matrix_view_init_rowmajor(&xv, (void*)x, n, p, N4M_DTYPE_F64);
+        if (status != N4M_OK) return status;
+        xp = &xv;
+    }
+    if (y != NULL) {
+        status = n4m_matrix_view_init_rowmajor(&yv, (void*)y, n, q, N4M_DTYPE_F64);
+        if (status != N4M_OK) return status;
+        yp = &yv;
+    }
+    n4m_split_result_t result = {0};
+    status = n4m_splitter_run(spec, xp, yp, groups, groups == NULL ? 0 : n,
+                              fold_index, &result);
+    if (status != N4M_OK) {
+        n4m_split_result_destroy(&result);
+        return status;
+    }
+    if (result.n_train < 0 || result.n_test < 0 ||
+        result.n_train > n || result.n_test > n ||
+        result.n_train + result.n_test != n) {
+        n4m_split_result_destroy(&result);
+        return N4M_ERR_INTERNAL;
+    }
+    for (int64_t i = 0; i < result.n_train; ++i) {
+        if (result.train_idx[i] < 0 || result.train_idx[i] >= n) {
+            n4m_split_result_destroy(&result);
+            return N4M_ERR_INTERNAL;
+        }
+    }
+    for (int64_t i = 0; i < result.n_test; ++i) {
+        if (result.test_idx[i] < 0 || result.test_idx[i] >= n) {
+            n4m_split_result_destroy(&result);
+            return N4M_ERR_INTERNAL;
+        }
+    }
+    *n_train = (int)result.n_train;
+    *n_test = (int)result.n_test;
+    for (int i = 0; i < *n_train; ++i) train_idx[i] = (int)result.train_idx[i];
+    for (int i = 0; i < *n_test; ++i) test_idx[i] = (int)result.test_idx[i];
+    n4m_split_result_destroy(&result);
+    return N4M_OK;
+}

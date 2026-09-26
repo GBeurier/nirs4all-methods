@@ -525,6 +525,7 @@ SYMBOLS = (
     ("n4m_serialization_inspect_model_v1", (c_void_p, c_size_t, POINTER(SerializedModelInfoV1)), c_int),
     ("n4m_serialization_inspect_pipeline_v1", (c_void_p, c_size_t, POINTER(SerializedPipelineInfoV1), c_size_t), c_int),
     ("n4m_split_result_destroy", (POINTER(SplitResult),), None),
+    ("n4m_splitter_run", (c_void_p, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_int64), c_int64, c_int32, POINTER(SplitResult)), c_int),
     ("n4m_status_to_string", (c_int,), c_void_p),
     ("n4m_transform_airpls_create", (POINTER(c_void_p), c_double, c_int32, c_double), c_int),
     ("n4m_transform_airpls_destroy", (c_void_p,), None),
