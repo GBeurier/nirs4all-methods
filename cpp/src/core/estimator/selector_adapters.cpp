@@ -195,12 +195,13 @@ class SelectorAdapter final : public Adapter {
             set_error(ctx, "selector selected no column");
             return N4M_ERR_INVALID_ARGUMENT;
         }
-        std::vector<std::int64_t> sorted(selected);
-        std::sort(sorted.begin(), sorted.end());
-        if (sorted.front() < 0 || sorted.back() >= p ||
-            std::adjacent_find(sorted.begin(), sorted.end()) != sorted.end()) {
-            set_error(ctx, "selected indices must be unique input columns");
-            return N4M_ERR_INVALID_ARGUMENT;
+        std::vector<bool> seen(static_cast<std::size_t>(p), false);
+        for (const std::int64_t j : selected) {
+            if (j < 0 || j >= p || seen[static_cast<std::size_t>(j)]) {
+                set_error(ctx, "selected indices must be unique input columns");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+            seen[static_cast<std::size_t>(j)] = true;
         }
         return N4M_OK;
     }
