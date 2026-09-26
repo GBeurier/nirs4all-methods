@@ -37,6 +37,16 @@ c_surface:
   - "n4m_transform_range_discretizer_create"
   - "n4m_transform_range_discretizer_destroy"
   - "n4m_transform_range_discretizer_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_range_discretizer"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "edges"
+      type: "double_array"
 fq_name: "n4m.transform.resampling.range_discretizer"
 leaf: "range_discretizer"
 legacy_ids:

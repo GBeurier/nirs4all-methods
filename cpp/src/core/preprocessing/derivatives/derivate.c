@@ -74,6 +74,11 @@ int64_t n4m_pp_derivate_output_cols_helper(int32_t order, int64_t input_cols) {
     return input_cols - (int64_t)order;
 }
 
+int64_t n4m_pp_derivate_state_output_cols(const n4m_pp_derivate_state_t* state,
+                                          int64_t input_cols) {
+    return n4m_pp_derivate_output_cols_helper(state->order, input_cols);
+}
+
 n4m_status_t n4m_pp_derivate_state_apply(const n4m_pp_derivate_state_t* state,
                                           const double* X,
                                           int64_t rows, int64_t cols,
@@ -148,4 +153,18 @@ n4m_status_t n4m_pp_derivate_state_apply(const n4m_pp_derivate_state_t* state,
 
     free(scratch);
     return N4M_OK;
+}
+
+n4m_status_t n4m_pp_derivate_state_save(const n4m_pp_derivate_state_t* state,
+                                        n4m_state_writer_t* w) {
+    (void)w;
+    return state->fitted ? N4M_OK : N4M_ERR_NOT_FITTED;
+}
+
+n4m_status_t n4m_pp_derivate_state_load(n4m_pp_derivate_state_t* state,
+                                        n4m_state_reader_t* r, int64_t n_features) {
+    (void)r;
+    return n4m_pp_derivate_state_fit(state, NULL, 0, n_features) == N4M_OK
+               ? N4M_OK
+               : N4M_ERR_CORRUPT_BUFFER;
 }

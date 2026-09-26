@@ -3416,6 +3416,21 @@ methods:
       - "n4m_transform_derivative_transform"
     legacy_ids:
       - "preprocessing.derivatives.derivate"
+    estimator:
+      kind: estimator
+      adapter: tr_derivate
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: order
+          type: int
+          default: 1
+          min: 1
+        - name: delta
+          type: double
+          default: 1.0
   - method_id: "preprocessing.derivatives.first_derivative"
     family: "preprocessing.derivatives"
     category: "preprocessing"
@@ -3708,6 +3723,18 @@ methods:
       - "n4m_decomposition_flexible_pca_transform"
     legacy_ids:
       - "preprocessing.feature_selection.flexible_pca"
+    estimator:
+      kind: estimator
+      adapter: tr_flexible_pca
+      roles: [transformer]
+      state: components
+      inputs:
+        y: optional
+      params:
+        - name: n_components
+          type: double
+          default: 5.0
+          min: 0.0
   - method_id: "preprocessing.feature_selection.flexible_svd"
     family: "preprocessing.feature_selection"
     category: "preprocessing"
@@ -3754,6 +3781,18 @@ methods:
       - "n4m_decomposition_flexible_svd_transform"
     legacy_ids:
       - "preprocessing.feature_selection.flexible_svd"
+    estimator:
+      kind: estimator
+      adapter: tr_flexible_svd
+      roles: [transformer]
+      state: components
+      inputs:
+        y: optional
+      params:
+        - name: n_components
+          type: double
+          default: 5.0
+          min: 0.0
   - method_id: "preprocessing.orthogonalization.epo"
     family: "preprocessing.orthogonalization"
     category: "preprocessing"
@@ -3848,6 +3887,21 @@ methods:
       - "n4m_transform_osc_transform"
     legacy_ids:
       - "preprocessing.orthogonalization.osc"
+    estimator:
+      kind: estimator
+      adapter: tr_osc
+      roles: [transformer]
+      state: orthogonal_components
+      inputs:
+        y: required
+      params:
+        - name: n_components
+          type: int
+          default: 1
+          min: 1
+        - name: scale
+          type: bool
+          default: true
   - method_id: "preprocessing.resampling.crop"
     family: "preprocessing.resampling"
     category: "preprocessing"
@@ -3948,6 +4002,22 @@ methods:
       - "n4m_transform_kbins_discretizer_transform"
     legacy_ids:
       - "preprocessing.resampling.kbins_discretizer"
+    estimator:
+      kind: estimator
+      adapter: tr_kbins_discretizer
+      roles: [transformer]
+      state: bin_edges
+      inputs:
+        y: optional
+      params:
+        - name: n_bins
+          type: int
+          default: 5
+          min: 2
+        - name: strategy
+          type: enum
+          choices: [uniform, quantile]
+          default: uniform
   - method_id: "preprocessing.resampling.range_discretizer"
     family: "preprocessing.resampling"
     category: "preprocessing"
@@ -3988,6 +4058,16 @@ methods:
       - "n4m_transform_range_discretizer_transform"
     legacy_ids:
       - "preprocessing.resampling.range_discretizer"
+    estimator:
+      kind: estimator
+      adapter: tr_range_discretizer
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: edges
+          type: double_array
   - method_id: "preprocessing.resampling.resample_transformer"
     family: "preprocessing.resampling"
     category: "preprocessing"
@@ -4087,6 +4167,50 @@ methods:
       - "n4m_transform_resampler_transform"
     legacy_ids:
       - "preprocessing.resampling.resampler"
+    estimator:
+      kind: estimator
+      adapter: tr_resampler
+      roles: [transformer]
+      state: source_axis
+      inputs:
+        y: optional
+        axis: required
+      params:
+        - name: target_wavelengths
+          type: double_array
+          default: []
+        - name: method
+          type: enum
+          choices: [linear, nearest, cubic]
+          default: linear
+        - name: crop_min
+          type: double
+          default: 0.0
+        - name: crop_max
+          type: double
+          default: 0.0
+        - name: use_crop
+          type: bool
+          default: false
+        - name: fill_value
+          type: double
+          default: 0.0
+        - name: bounds_error
+          type: bool
+          default: false
+        - name: extrapolate
+          type: bool
+          default: false
+        - name: tgt_min
+          type: double
+          default: 0.0
+        - name: tgt_step
+          type: double
+          default: 1.0
+        - name: tgt_n
+          type: int
+          default: 0
+          min: 0
   - method_id: "preprocessing.scaling.baseline"
     family: "preprocessing.scaling"
     category: "preprocessing"
@@ -4133,6 +4257,13 @@ methods:
       - "n4m_transform_baseline_center_transform"
     legacy_ids:
       - "preprocessing.scaling.baseline"
+    estimator:
+      kind: estimator
+      adapter: tr_baseline
+      roles: [transformer]
+      state: column_mean
+      inputs:
+        y: optional
   - method_id: "preprocessing.scaling.log_transform"
     family: "preprocessing.scaling"
     category: "preprocessing"
@@ -4177,6 +4308,28 @@ methods:
       - "n4m_transform_log_transform_transform"
     legacy_ids:
       - "preprocessing.scaling.log_transform"
+    estimator:
+      kind: estimator
+      adapter: tr_log_transform
+      roles: [transformer]
+      state: offset
+      inputs:
+        y: optional
+      params:
+        - name: base
+          type: double
+          default: 0.0
+          min: 0.0
+        - name: offset
+          type: double
+          default: 0.0
+        - name: auto_offset
+          type: bool
+          default: true
+        - name: min_value
+          type: double
+          default: 1e-08
+          min: 0.0
   - method_id: "preprocessing.scaling.normalize"
     family: "preprocessing.scaling"
     category: "preprocessing"
@@ -4217,6 +4370,20 @@ methods:
       - "n4m_transform_normalize_transform"
     legacy_ids:
       - "preprocessing.scaling.normalize"
+    estimator:
+      kind: estimator
+      adapter: tr_normalize
+      roles: [transformer]
+      state: column_stats
+      inputs:
+        y: optional
+      params:
+        - name: feature_min
+          type: double
+          default: -1.0
+        - name: feature_max
+          type: double
+          default: 1.0
   - method_id: "preprocessing.scaling.simple_scale"
     family: "preprocessing.scaling"
     category: "preprocessing"
@@ -4257,6 +4424,13 @@ methods:
       - "n4m_transform_simple_scale_transform"
     legacy_ids:
       - "preprocessing.scaling.simple_scale"
+    estimator:
+      kind: estimator
+      adapter: tr_simple_scale
+      roles: [transformer]
+      state: column_stats
+      inputs:
+        y: optional
   - method_id: "preprocessing.scatter.area_normalization"
     family: "preprocessing.scatter"
     category: "preprocessing"
@@ -4972,6 +5146,21 @@ methods:
       - "n4m_transform_fck_static_transform"
     legacy_ids:
       - "preprocessing.specialized.fck_static"
+    estimator:
+      kind: estimator
+      adapter: tr_fck_static
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: kernel_size
+          type: int
+          min: 3
+        - name: alphas
+          type: double_array
+        - name: sigmas
+          type: double_array
   - method_id: "preprocessing.wavelets.haar"
     family: "preprocessing.wavelets"
     category: "preprocessing"
@@ -5261,6 +5450,30 @@ methods:
       - "n4m_transform_wavelet_pca_transform"
     legacy_ids:
       - "preprocessing.wavelets.wavelet_pca"
+    estimator:
+      kind: estimator
+      adapter: tr_wavelet_pca
+      roles: [transformer]
+      state: components
+      inputs:
+        y: optional
+      params:
+        - name: family
+          type: enum
+          choices: [haar, db4, sym4, coif1]
+          default: haar
+        - name: mode
+          type: enum
+          choices: [periodization, symmetric, zero]
+          default: periodization
+        - name: max_level
+          type: int
+          default: 2
+          min: 0
+        - name: n_components
+          type: double
+          default: 5.0
+          min: 0.0
   - method_id: "preprocessing.wavelets.wavelet_svd"
     family: "preprocessing.wavelets"
     category: "preprocessing"
@@ -5307,6 +5520,30 @@ methods:
       - "n4m_transform_wavelet_svd_transform"
     legacy_ids:
       - "preprocessing.wavelets.wavelet_svd"
+    estimator:
+      kind: estimator
+      adapter: tr_wavelet_svd
+      roles: [transformer]
+      state: components
+      inputs:
+        y: optional
+      params:
+        - name: family
+          type: enum
+          choices: [haar, db4, sym4, coif1]
+          default: haar
+        - name: mode
+          type: enum
+          choices: [periodization, symmetric, zero]
+          default: periodization
+        - name: max_level
+          type: int
+          default: 2
+          min: 0
+        - name: n_components
+          type: double
+          default: 5.0
+          min: 0.0
   - method_id: "augmentation.drift.linear_drift"
     family: "augmentation.drift"
     category: "augmentation"

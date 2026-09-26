@@ -62,6 +62,7 @@
 #include "core/preprocessing/scatter/robust_snv.h"
 #include "core/preprocessing/scatter/snv.h"
 #include "core/preprocessing/smoothing/gaussian.h"
+#include "core/estimator/core_state.hpp"
 
 // ---------------------------------------------------------------------------
 // Opaque public handles. Each one wraps the matching internal engine state.
@@ -2259,3 +2260,42 @@ N4M_API n4m_status_t n4m_transform_beads_transform(const n4m_pp_beads_handle_t* 
 }
 
 }  // extern "C"
+
+// ---------------------------------------------------------------------------
+// Fitted-state access for the estimator adapters (core/estimator/core_state.hpp)
+// ---------------------------------------------------------------------------
+
+namespace n4m::estimator {
+
+n4m_status_t kernel_save(const n4m_pp_baseline_handle_t* h, n4m_state_writer_t* w) {
+    return n4m_pp_baseline_state_save(h->state, w);
+}
+
+n4m_status_t kernel_load(n4m_pp_baseline_handle_t* h, n4m_state_reader_t* r,
+                         std::int64_t n_features) {
+    return n4m_pp_baseline_state_load(h->state, r, n_features);
+}
+
+n4m_status_t kernel_save(const n4m_pp_log_handle_t* h, n4m_state_writer_t* w) {
+    return n4m_pp_log_state_save(h->state, w);
+}
+
+n4m_status_t kernel_load(n4m_pp_log_handle_t* h, n4m_state_reader_t* r,
+                         std::int64_t n_features) {
+    return n4m_pp_log_state_load(h->state, r, n_features);
+}
+
+n4m_status_t kernel_save(const n4m_pp_derivate_handle_t* h, n4m_state_writer_t* w) {
+    return n4m_pp_derivate_state_save(h->state, w);
+}
+
+n4m_status_t kernel_load(n4m_pp_derivate_handle_t* h, n4m_state_reader_t* r,
+                         std::int64_t n_features) {
+    return n4m_pp_derivate_state_load(h->state, r, n_features);
+}
+
+std::int64_t kernel_output_cols(const n4m_pp_derivate_handle_t* h, std::int64_t input_cols) {
+    return n4m_pp_derivate_state_output_cols(h->state, input_cols);
+}
+
+}  // namespace n4m::estimator

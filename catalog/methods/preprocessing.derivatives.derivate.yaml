@@ -41,6 +41,21 @@ c_surface:
   - "n4m_transform_derivative_fit"
   - "n4m_transform_derivative_output_cols"
   - "n4m_transform_derivative_transform"
+estimator:
+  kind: "estimator"
+  adapter: "tr_derivate"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "order"
+      type: "int"
+      default: 1
+      min: 1
+    - name: "delta"
+      type: "double"
+      default: 1.0
 fq_name: "n4m.transform.smoothing.derivative"
 leaf: "derivative"
 legacy_ids:

@@ -4,11 +4,14 @@
  * public ABI). Kernels that own an opaque state struct implement
  *
  *     n4m_status_t <kernel>_state_save(const <state>*, n4m_state_writer_t*);
- *     n4m_status_t <kernel>_state_load(<state>*, n4m_state_reader_t*);
+ *     n4m_status_t <kernel>_state_load(<state>*, n4m_state_reader_t*,
+ *                                      int64_t n_features);
  *
  * next to the struct definition, writing exactly the fields needed to
- * transform new rows. Derived quantities are recomputed on load, as fit
- * computes them. The estimator adapters embed these bytes in N4ME.
+ * transform new rows (the input width is stored by the adapter and passed
+ * back as `n_features`). Derived quantities are recomputed on load, as fit
+ * computes them; sizes that do not match yield N4M_ERR_CORRUPT_BUFFER. The
+ * estimator adapters embed these bytes in N4ME.
  *
  * Encoding: little-endian; an array is its length (i64) then its values.
  */
@@ -41,6 +44,14 @@ int n4m_state_read_i64_array(n4m_state_reader_t* r, int64_t* out, int64_t expect
 /* Reads the length of the next array without consuming it (for ragged
  * states); fails when it exceeds `max_len`. */
 int n4m_state_peek_array_length(n4m_state_reader_t* r, int64_t max_len, int64_t* out);
+/* Reads an array of exactly `expected` (>= 1) values into a new malloc'd
+ * buffer the caller owns (free()). The payload length is checked before
+ * allocating. Returns N4M_OK, N4M_ERR_CORRUPT_BUFFER or
+ * N4M_ERR_OUT_OF_MEMORY; `*out` is NULL on failure. */
+n4m_status_t n4m_state_read_f64_array_new(n4m_state_reader_t* r, int64_t expected,
+                                          double** out);
+n4m_status_t n4m_state_read_i64_array_new(n4m_state_reader_t* r, int64_t expected,
+                                          int64_t** out);
 
 #ifdef __cplusplus
 }  /* extern "C" */

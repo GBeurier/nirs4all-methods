@@ -10,9 +10,9 @@
  *   - optional crop mask (indices into the raw input);
  *   - per-target-query segment index (`seg[k]`) so the per-row hot path is
  *     just bracketing-table lookups + arithmetic;
- *   - for `method == cubic`, the source-segment widths `h[i]` and pre-
- *     allocated Thomas-algorithm scratch buffers — the actual tridiagonal
- *     system is re-derived and solved per row because its RHS depends on y.
+ *   - for `method == cubic`, the source-segment widths `h[i]`; the actual
+ *     tridiagonal system is re-derived and solved per row (in scratch owned
+ *     by each apply call) because its RHS depends on y.
  *
  * Per-row apply:
  *   - linear : slope * (q - x_lo) + y_lo
@@ -64,16 +64,6 @@ struct n4m_pp_resampler_state_t {
 
     /* Cubic spline precomputed quantities (method == 2 only) */
     double*  h;             /* length n_source - 1 (source segment widths) */
-    /* Per-row scratch — owned to avoid mallocs in the hot path.
-     * Thomas-algorithm needs two length-n_interior auxiliaries (diag + super)
-     * plus the RHS and the M output. We pack them in a single allocation:
-     *   cs_buf layout (length 4 * n_source):
-     *     [0 .. n_source)               — RHS storage
-     *     [n_source .. 2*n_source)      — M output
-     *     [2*n_source .. 3*n_source)    — Thomas reduced diagonal
-     *     [3*n_source .. 4*n_source)    — Thomas reduced super-diagonal
-     */
-    double*  cs_buf;
 };
 
 static void state_clear_fit(n4m_pp_resampler_state_t* s) {
@@ -83,7 +73,6 @@ static void state_clear_fit(n4m_pp_resampler_state_t* s) {
     free(s->out_of_lo);    s->out_of_lo = NULL;
     free(s->out_of_hi);    s->out_of_hi = NULL;
     free(s->h);            s->h         = NULL;
-    free(s->cs_buf);       s->cs_buf    = NULL;
     s->fitted   = 0;
     s->n_raw    = 0;
     s->n_source = 0;
@@ -145,6 +134,8 @@ int n4m_pp_resampler_state_is_fitted(const n4m_pp_resampler_state_t* state) {
     return (state != NULL && state->fitted) ? 1 : 0;
 }
 
+static n4m_status_t state_prepare(n4m_pp_resampler_state_t* state);
+
 n4m_status_t n4m_pp_resampler_state_fit(n4m_pp_resampler_state_t* state,
                                          const double* source_wl,
                                          int64_t n_source) {
@@ -191,11 +182,21 @@ n4m_status_t n4m_pp_resampler_state_fit(n4m_pp_resampler_state_t* state,
         memcpy(state->source_wl, source_wl,
                (size_t)n_eff * sizeof(double));
     }
-    /* Cubic requires at least 4 source points for the not-a-knot system. */
+    return state_prepare(state);
+}
+
+/* Derived tables of the (post-crop) source axis: the per-target bracketing
+ * and, for cubic, the segment widths. Marks the state fitted. */
+static n4m_status_t state_prepare(n4m_pp_resampler_state_t* state) {
+    const int64_t n_eff = state->n_source;
+    /* Cubic requires at least 4 source points for the not-a-knot system;
+     * linear/nearest interpolation needs 2 (a crop can keep fewer). */
     if (state->method == 2 && n_eff < 4) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
-    /* Linear/nearest need at least 2 source points (already verified). */
+    if (state->n_target != -1 && n_eff < 2) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
     /* Pre-bracket every target query. */
     const int64_t n_target = state->n_target;
     if (n_target != -1) {
@@ -242,8 +243,6 @@ n4m_status_t n4m_pp_resampler_state_fit(n4m_pp_resampler_state_t* state,
         for (int64_t i = 0; i < n_eff - 1; ++i) {
             state->h[i] = state->source_wl[i + 1] - state->source_wl[i];
         }
-        state->cs_buf = (double*)malloc(4 * (size_t)n_eff * sizeof(double));
-        if (state->cs_buf == NULL) return N4M_ERR_OUT_OF_MEMORY;
     }
     state->fitted = 1;
     return N4M_OK;
@@ -348,13 +347,14 @@ static void solve_not_a_knot(const double* h,
 
 static void cubic_evaluate_row(const n4m_pp_resampler_state_t* s,
                                 const double* y,
+                                double* cs_buf,
                                 double* out) {
     const int64_t n = s->n_source;
     /* Layout of cs_buf: [rhs | M | diag | super] each of length n. */
-    double* cs_rhs   = s->cs_buf;
-    double* cs_m     = s->cs_buf + n;
-    double* cs_diag  = s->cs_buf + 2 * n;
-    double* cs_super = s->cs_buf + 3 * n;
+    double* cs_rhs   = cs_buf;
+    double* cs_m     = cs_buf + n;
+    double* cs_diag  = cs_buf + 2 * n;
+    double* cs_super = cs_buf + 3 * n;
     /* RHS only depends on y. */
     cs_rhs[0]     = 0.0;
     cs_rhs[n - 1] = 0.0;
@@ -491,6 +491,16 @@ n4m_status_t n4m_pp_resampler_state_apply(
             return N4M_ERR_OUT_OF_MEMORY;
         }
     }
+    /* Cubic per-row Thomas scratch, owned by this call so concurrent
+     * transforms on one fitted state do not share it. */
+    double* cs_buf = NULL;
+    if (state->method == 2) {
+        cs_buf = (double*)malloc(4 * (size_t)state->n_source * sizeof(double));
+        if (cs_buf == NULL) {
+            free(row_scratch);
+            return N4M_ERR_OUT_OF_MEMORY;
+        }
+    }
     for (int64_t i = 0; i < rows; ++i) {
         const double* raw = X + (size_t)i * (size_t)cols;
         const double* row;
@@ -506,10 +516,52 @@ n4m_status_t n4m_pp_resampler_state_apply(
         switch (state->method) {
             case 0:  linear_evaluate_row(state, row, dst); break;
             case 1:  nearest_evaluate_row(state, row, dst); break;
-            case 2:  cubic_evaluate_row(state, row, dst); break;
+            case 2:  cubic_evaluate_row(state, row, cs_buf, dst); break;
             default: /* unreachable */ break;
         }
     }
     free(row_scratch);
+    free(cs_buf);
     return N4M_OK;
+}
+
+n4m_status_t n4m_pp_resampler_state_save(const n4m_pp_resampler_state_t* state,
+                                         n4m_state_writer_t* w) {
+    if (!state->fitted) return N4M_ERR_NOT_FITTED;
+    n4m_state_write_f64_array(w, state->source_wl, state->n_source);
+    if (state->use_crop) {
+        n4m_state_write_i64_array(w, state->crop_idx, state->n_source);
+    }
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_resampler_state_load(n4m_pp_resampler_state_t* state,
+                                         n4m_state_reader_t* r, int64_t n_features) {
+    state_clear_fit(state);
+    int64_t n = 0;
+    if (!n4m_state_peek_array_length(r, n_features, &n) || n < 1 ||
+        (!state->use_crop && n != n_features)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    n4m_status_t st = n4m_state_read_f64_array_new(r, n, &state->source_wl);
+    for (int64_t i = 1; st == N4M_OK && i < n; ++i) {
+        if (!(state->source_wl[i - 1] < state->source_wl[i])) st = N4M_ERR_CORRUPT_BUFFER;
+    }
+    if (st == N4M_OK && state->use_crop) {
+        st = n4m_state_read_i64_array_new(r, n, &state->crop_idx);
+        for (int64_t i = 0; st == N4M_OK && i < n; ++i) {
+            const int64_t lo = (i == 0) ? 0 : state->crop_idx[i - 1] + 1;
+            if (state->crop_idx[i] < lo || state->crop_idx[i] >= n_features) {
+                st = N4M_ERR_CORRUPT_BUFFER;
+            }
+        }
+    }
+    if (st == N4M_OK) {
+        state->n_raw    = n_features;
+        state->n_source = n;
+        st = state_prepare(state);
+        if (st == N4M_ERR_INVALID_ARGUMENT) st = N4M_ERR_CORRUPT_BUFFER;
+    }
+    if (st != N4M_OK) state_clear_fit(state);
+    return st;
 }
