@@ -13,8 +13,14 @@ import ctypes
 from typing import Any, ClassVar, Self
 
 import numpy as np
-from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin
+from sklearn.base import (
+    BaseEstimator,
+    ClassifierMixin,
+    RegressorMixin,
+    TransformerMixin,
+)
 from sklearn.feature_selection import SelectorMixin
+from sklearn.utils.metaestimators import available_if
 
 from .._errors import N4MError, check
 from .._ffi import lib
@@ -23,6 +29,7 @@ from .._types import FitInputsV1, MethodInfoV1, Status
 
 CAP_TRANSFORM = 1 << 0
 CAP_PREDICT = 1 << 1
+CAP_PREDICT_PROBA = 1 << 2
 
 _REGISTRY: dict[str, type[NativeEstimator]] = {}
 
@@ -171,6 +178,11 @@ class NativeEstimator(BaseEstimator):
         X_view = numpy_to_view(X_arr)
         inputs.X = ctypes.addressof(X_view)
         self._y_1d_ = False
+        if y is not None and isinstance(self, NativeClassifier):
+            codes = self._encode_labels(y)
+            keep.append(codes)
+            inputs.labels, inputs.n_labels = codes.ctypes.data, codes.size
+            y = None
         if y is not None:
             y_arr = np.asarray(y, dtype=np.float64)
             self._y_1d_ = y_arr.ndim == 1
@@ -501,7 +513,83 @@ class NativeSelector(SelectorMixin, NativeEstimator):
         return self._matrix_call("n4m_estimator_transform", X, int(cols.value))
 
 
+class NativeClassifier(ClassifierMixin, NativeEstimator):
+    """Classifier role: Data[n, p] + Labels[n] -> labels, decision scores, probabilities.
+
+    The core works on integer class ids; labels of another type (strings,
+    ...) are encoded here and ``classes_`` restores them. ``predict_proba``
+    exists only for methods that define probabilities.
+    """
+
+    def _encode_labels(self, y) -> np.ndarray:
+        labels = np.asarray(y).ravel()
+        if labels.dtype.kind in "iu":
+            self._label_names_ = None
+            return np.ascontiguousarray(labels, dtype=np.int64)
+        names, codes = np.unique(labels, return_inverse=True)
+        self._label_names_ = names
+        return np.ascontiguousarray(codes, dtype=np.int64)
+
+    @property
+    def classes_(self) -> np.ndarray:
+        ids = self._native_classes()
+        names = getattr(self, "_label_names_", None)
+        return ids if names is None else names[ids]
+
+    def _native_classes(self) -> np.ndarray:
+        handle = self._handle()
+        count = ctypes.c_int64()
+        check(
+            lib.n4m_estimator_classes(handle, None, 0, ctypes.byref(count)), "classes"
+        )
+        out = np.empty(count.value, dtype=np.int64)
+        check(
+            lib.n4m_estimator_classes(
+                handle,
+                out.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                count,
+                ctypes.byref(count),
+            ),
+            "classes",
+        )
+        return out
+
+    def predict(self, X) -> np.ndarray:
+        """Native class labels."""
+        handle = self._handle()
+        X_arr = as_f64_2d(X)
+        out = np.empty(X_arr.shape[0], dtype=np.int64)
+        X_view = numpy_to_view(X_arr)
+        with _Context() as ctx:
+            ctx.check(
+                lib.n4m_estimator_predict_labels(
+                    ctx.handle,
+                    handle,
+                    ctypes.byref(X_view),
+                    out.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                    ctypes.c_int64(out.size),
+                ),
+                "n4m_estimator_predict_labels",
+            )
+        names = getattr(self, "_label_names_", None)
+        return out if names is None else names[out]
+
+    def decision_function(self, X) -> np.ndarray:
+        """Method-defined class scores (for example log posteriors up to a constant)."""
+        return self._matrix_call(
+            "n4m_estimator_decision_function", X, self._n_outputs()
+        )
+
+    @available_if(
+        lambda self: bool(method_info(self._method_id).capabilities & CAP_PREDICT_PROBA)
+    )
+    def predict_proba(self, X) -> np.ndarray:
+        """Class probabilities, for methods that define them."""
+        return self._matrix_call("n4m_estimator_predict_proba", X, self._n_outputs())
+
+
 __all__ = [
+    "NativeClassifier",
     "NativeEstimator",
     "NativeRegressor",
     "NativeSelector",

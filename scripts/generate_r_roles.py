@@ -29,6 +29,11 @@ END = "# END generated estimator roles"
 # Role interface -> R S3 class with its methods (docs/abi/estimator_roles_design.md, D0b).
 ROLE_METHODS = {
     "regressor": ["S3method(predict, n4m_regressor)"],
+    "classifier": [
+        "S3method(predict, n4m_classifier)",
+        "S3method(n4m_classes, n4m_classifier)",
+        "export(n4m_classes)",
+    ],
     "transformer": ["S3method(n4m_estimator_transform, n4m_transformer)"],
     "selector": [
         "S3method(n4m_estimator_transform, n4m_selector)",

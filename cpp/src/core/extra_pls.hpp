@@ -178,6 +178,17 @@ struct PlsQdaResult {
     const std::vector<std::int32_t>& y_labels,
     PlsQdaResult& out);
 
+// Quadratic discriminant decision for new rows of X (row-major n x
+// n_classes): with s = (x - x_mean) R, the score of class c is
+//   -0.5 * ((s - mu_c)' Sigma_c^{-1} (s - mu_c) + log|Sigma_c|) + log pi_c,
+// the scikit-learn QuadraticDiscriminantAnalysis decision. Fails with
+// N4M_ERR_NUMERICAL_FAILURE when a class covariance is not positive definite.
+[[nodiscard]] n4m_status_t pls_qda_decision(
+    Context& ctx,
+    const PlsQdaResult& model,
+    const n4m_matrix_view_t& X,
+    std::vector<double>& decision);
+
 struct PlsCoxResult {
     std::int32_t n_features{0};
     std::int32_t n_components{0};

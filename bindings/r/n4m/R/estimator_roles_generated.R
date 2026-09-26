@@ -3,6 +3,9 @@
 # Native ABI 2.13.0.
 
 .n4m_method_roles <- list(
+  "models.classification.pls_lda" = c("classifier"),
+  "models.classification.pls_logistic" = c("classifier"),
+  "models.classification.pls_qda" = c("classifier"),
   "models.ensembles.bagging_pls" = c("regressor"),
   "models.ensembles.boosting_pls" = c("regressor"),
   "models.ensembles.random_subspace_pls" = c("regressor"),
@@ -20,6 +23,7 @@
   "models.regularized.weighted_pls" = c("regressor"),
   "models.sparse.fused_sparse_pls" = c("regressor"),
   "models.sparse.group_sparse_pls" = c("regressor"),
+  "models.sparse.sparse_pls_da" = c("classifier"),
   "models.sparse.sparse_simpls" = c("regressor"),
   "models.specialized.ecr" = c("regressor"),
   "models.specialized.tensor_pls" = c("regressor"),
@@ -84,6 +88,9 @@
 )
 
 .n4m_method_constructors <- c(
+  "models.classification.pls_lda" = "n4m_pls_lda",
+  "models.classification.pls_logistic" = "n4m_pls_logistic",
+  "models.classification.pls_qda" = "n4m_pls_qda",
   "models.ensembles.bagging_pls" = "n4m_bagging_pls",
   "models.ensembles.boosting_pls" = "n4m_boosting_pls",
   "models.ensembles.random_subspace_pls" = "n4m_random_subspace_pls",
@@ -101,6 +108,7 @@
   "models.regularized.weighted_pls" = "n4m_weighted_pls",
   "models.sparse.fused_sparse_pls" = "n4m_fused_sparse_pls",
   "models.sparse.group_sparse_pls" = "n4m_group_sparse_pls",
+  "models.sparse.sparse_pls_da" = "n4m_sparse_pls_da",
   "models.sparse.sparse_simpls" = "n4m_sparse_simpls",
   "models.specialized.ecr" = "n4m_ecr",
   "models.specialized.tensor_pls" = "n4m_tensor_pls",
@@ -163,6 +171,24 @@
   "selection.wvc" = "n4m_wvc",
   "selection.wvc_threshold" = "n4m_wvc_threshold"
 )
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pls_lda <- function(n_components = 2L) {
+  .n4m_estimator("models.classification.pls_lda", c("classifier"), list(n_components = n_components))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pls_logistic <- function(n_components = 2L, max_iter = 500L) {
+  .n4m_estimator("models.classification.pls_logistic", c("classifier"), list(n_components = n_components, max_iter = max_iter))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pls_qda <- function(n_components = 2L) {
+  .n4m_estimator("models.classification.pls_qda", c("classifier"), list(n_components = n_components))
+}
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
@@ -264,6 +290,12 @@ n4m_fused_sparse_pls <- function(n_components = 2L, l1_lambda = 0.05, fusion_lam
 #' @export
 n4m_group_sparse_pls <- function(n_components = 2L, group_lambda = 0.05) {
   .n4m_estimator("models.sparse.group_sparse_pls", c("regressor"), list(n_components = n_components, group_lambda = group_lambda))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_sparse_pls_da <- function(n_components = 2L, sparsity_lambda = 0.05) {
+  .n4m_estimator("models.sparse.sparse_pls_da", c("classifier"), list(n_components = n_components, sparsity_lambda = sparsity_lambda))
 }
 
 #' @rdname n4m_estimator_role_constructors

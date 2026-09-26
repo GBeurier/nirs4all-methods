@@ -2501,6 +2501,72 @@ n4m_status_t fit_pls_glm(Context& ctx,
 
 // ---- PLS-QDA -----------------------------------------------------------
 
+n4m_status_t pls_qda_decision(Context& ctx,
+                               const PlsQdaResult& model,
+                               const n4m_matrix_view_t& X,
+                               std::vector<double>& decision) {
+    const auto n = static_cast<std::size_t>(X.rows);
+    const auto p = static_cast<std::size_t>(X.cols);
+    const auto a = static_cast<std::size_t>(model.n_components);
+    const auto q = static_cast<std::size_t>(model.n_classes);
+    if (p != model.x_mean.size() || model.rotations_r.size() != p * a) {
+        ctx.set_error("X width does not match the PLS-QDA model");
+        return N4M_ERR_SHAPE_MISMATCH;
+    }
+    // Cholesky factor and log-determinant of every class covariance.
+    std::vector<double> chol(q * a * a, 0.0);
+    std::vector<double> log_det(q, 0.0);
+    for (std::size_t c = 0; c < q; ++c) {
+        const double* cov = model.class_covariances.data() + c * a * a;
+        double* L = chol.data() + c * a * a;
+        for (std::size_t r = 0; r < a; ++r) {
+            for (std::size_t col = 0; col <= r; ++col) {
+                double sum = cov[r * a + col];
+                for (std::size_t t = 0; t < col; ++t) sum -= L[r * a + t] * L[col * a + t];
+                if (r == col) {
+                    if (!(sum > 0.0)) {
+                        ctx.set_error("a PLS-QDA class covariance is not positive definite");
+                        return N4M_ERR_NUMERICAL_FAILURE;
+                    }
+                    L[r * a + r] = std::sqrt(sum);
+                    log_det[c] += 2.0 * std::log(L[r * a + r]);
+                } else {
+                    L[r * a + col] = sum / L[col * a + col];
+                }
+            }
+        }
+    }
+    std::vector<double> X_buf;
+    n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
+    if (status != N4M_OK) return status;
+    decision.assign(n * q, 0.0);
+    std::vector<double> scores(a, 0.0);
+    std::vector<double> z(a, 0.0);
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            double s = 0.0;
+            for (std::size_t f = 0; f < p; ++f) {
+                s += (X_buf[i * p + f] - model.x_mean[f]) * model.rotations_r[f * a + comp];
+            }
+            scores[comp] = s;
+        }
+        for (std::size_t c = 0; c < q; ++c) {
+            const double* L = chol.data() + c * a * a;
+            // Forward substitution L z = s - mu_c; the Mahalanobis term is |z|^2.
+            double norm2 = 0.0;
+            for (std::size_t r = 0; r < a; ++r) {
+                double v = scores[r] - model.class_means[c * a + r];
+                for (std::size_t t = 0; t < r; ++t) v -= L[r * a + t] * z[t];
+                z[r] = v / L[r * a + r];
+                norm2 += z[r] * z[r];
+            }
+            decision[i * q + c] = -0.5 * (norm2 + log_det[c]) + model.log_class_priors[c];
+        }
+    }
+    ctx.clear_error();
+    return N4M_OK;
+}
+
 n4m_status_t fit_pls_qda(Context& ctx,
                           const Config& cfg,
                           const n4m_matrix_view_t& X,

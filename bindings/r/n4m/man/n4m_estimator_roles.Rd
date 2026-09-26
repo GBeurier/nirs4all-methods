@@ -3,6 +3,9 @@
 \alias{n4m_estimator_fit}
 \alias{n4m_estimator_fit.n4m_estimator}
 \alias{predict.n4m_regressor}
+\alias{predict.n4m_classifier}
+\alias{n4m_classes}
+\alias{n4m_classes.n4m_classifier}
 \alias{n4m_estimator_transform}
 \alias{n4m_estimator_transform.n4m_transformer}
 \alias{n4m_estimator_transform.n4m_selector}
@@ -20,6 +23,12 @@ n4m_estimator_fit(object, X, y = NULL, ...)
   X_target = NULL, fold_ids = NULL, ...)
 
 \method{predict}{n4m_regressor}(object, newdata, ...)
+
+\method{predict}{n4m_classifier}(object, newdata, type = c("class", "prob", "decision"), ...)
+
+n4m_classes(object)
+
+\method{n4m_classes}{n4m_classifier}(object)
 
 n4m_estimator_transform(object, X, ...)
 
@@ -41,25 +50,32 @@ n4m_estimator_import(bytes)
 \item{object}{An estimator from one of the generated constructors
 (\code{\link{n4m_estimator_role_constructors}}).}
 \item{X}{Numeric matrix (rows are samples).}
-\item{y}{Numeric response vector or matrix; required by regressors.}
+\item{y}{Numeric response vector or matrix for regressors; class labels
+(factor, character or integer vector) for classifiers.}
 \item{sample_weight, groups, feature_groups, blocks, axis, X_target, fold_ids}{
 Optional fit inputs; each method declares which ones it requires and the
 native core refuses the others.}
 \item{newdata}{Numeric matrix of new samples.}
+\item{type}{For classifiers: \code{"class"} (labels, a factor when the
+estimator was fitted on a factor or character vector), \code{"prob"} (class
+probabilities, for methods that define them) or \code{"decision"}
+(method-defined class scores). Matrix columns are named by class.}
 \item{bytes}{Raw vector produced by \code{n4m_estimator_export()}.}
 \item{x}{An estimator.}
 \item{...}{Unused.}
 }
 \value{
 \code{n4m_estimator_fit()} returns the fitted estimator; \code{predict()} and
-\code{n4m_estimator_transform()} return numeric results;
+\code{n4m_estimator_transform()} return numeric results (class labels for
+\code{predict(type = "class")}); \code{n4m_classes()} the fitted classes;
 \code{n4m_estimator_export()} a raw vector; \code{n4m_estimator_import()} a
 fitted estimator.
 }
 \description{
 Constructors such as \code{n4m_pls_regression()} or \code{n4m_cppls()} return
 an unfitted estimator whose classes are its role interfaces:
-\code{n4m_regressor} (\code{predict}), \code{n4m_transformer}
+\code{n4m_regressor} (\code{predict}), \code{n4m_classifier}
+(\code{predict}, \code{n4m_classes}), \code{n4m_transformer}
 (\code{n4m_estimator_transform}) and \code{n4m_selector}
 (\code{n4m_estimator_transform}, which returns the selected columns in input
 order, and \code{n4m_selected_indices}, 1-based in native selection order). The fitted state is kept as portable N4ME

@@ -514,7 +514,7 @@ N4M_API n4m_status_t n4m_estimator_transform(n4m_context_t* ctx, const n4m_estim
 
 N4M_API n4m_status_t n4m_estimator_predict(n4m_context_t* ctx, const n4m_estimator_t* est,
                                            const n4m_matrix_view_t* X, n4m_matrix_view_t* out) {
-    return matrix_op(ctx, est, X, out, N4M_ROLE_REGRESSOR | N4M_ROLE_CLASSIFIER, N4M_CAP_PREDICT,
+    return matrix_op(ctx, est, X, out, N4M_ROLE_REGRESSOR, N4M_CAP_PREDICT,
                      &n4m::estimator::Adapter::predict);
 }
 

@@ -6,8 +6,8 @@
 # Parameters, defaults, required inputs, fitting and the N4ME fitted state
 # are native; this file only marshals R objects.
 
-.n4m_role_classes <- c(regressor = "n4m_regressor", transformer = "n4m_transformer",
-                       selector = "n4m_selector")
+.n4m_role_classes <- c(regressor = "n4m_regressor", classifier = "n4m_classifier",
+                       transformer = "n4m_transformer", selector = "n4m_selector")
 
 .n4m_estimator <- function(method_id, roles, params) {
   structure(
@@ -37,18 +37,26 @@
 #'
 #' Constructors such as \code{n4m_pls_regression()} or \code{n4m_cppls()}
 #' return an unfitted estimator whose classes are its role interfaces:
-#' \code{n4m_regressor} (\code{predict}), \code{n4m_transformer}
-#' (\code{n4m_estimator_transform}). Fit with \code{n4m_estimator_fit()}. The fitted state is kept
+#' \code{n4m_regressor} (\code{predict}), \code{n4m_classifier}
+#' (\code{predict} with \code{type = "class"}, \code{"prob"} or
+#' \code{"decision"}, \code{n4m_classes}), \code{n4m_transformer}
+#' (\code{n4m_estimator_transform}) and \code{n4m_selector}
+#' (\code{n4m_estimator_transform}, \code{n4m_selected_indices}). Fit with
+#' \code{n4m_estimator_fit()}. The fitted state is kept
 #' as portable N4ME bytes, so \code{saveRDS()}/\code{readRDS()} and the Python
 #' and JS/WASM bindings reuse it without refitting.
 #'
 #' @param object An estimator from one of the generated constructors.
 #' @param X Numeric matrix (rows are samples).
-#' @param y Numeric response vector or matrix; required by regressors.
+#' @param y Numeric response vector or matrix for regressors; class labels
+#'   (factor, character or integer vector) for classifiers.
 #' @param sample_weight,groups,feature_groups,blocks,axis,X_target,fold_ids
 #'   Optional fit inputs; each method declares which ones it requires and the
 #'   native core refuses the others.
 #' @param newdata Numeric matrix of new samples.
+#' @param type For classifiers: \code{"class"} (labels), \code{"prob"}
+#'   (class probabilities, for methods that define them) or \code{"decision"}
+#'   (method-defined class scores).
 #' @param bytes Raw vector produced by \code{n4m_estimator_export()}.
 #' @param ... Unused.
 #' @return \code{n4m_estimator_fit()} returns the fitted estimator; \code{predict()} and
@@ -67,8 +75,20 @@ n4m_estimator_fit.n4m_estimator <- function(object, X, y = NULL, sample_weight =
                                   feature_groups = NULL, blocks = NULL, axis = NULL,
                                   X_target = NULL, fold_ids = NULL, ...) {
   X <- .n4m_as_matrix(X)
+  levels <- NULL
+  labels <- NULL
+  if (inherits(object, "n4m_classifier") && !is.null(y)) {
+    # The core works on integer class ids; other labels are encoded here.
+    if (is.factor(y) || is.character(y)) {
+      levels <- if (is.factor(y)) levels(droplevels(y)) else sort(unique(y))
+      labels <- match(as.character(y), levels) - 1
+    } else {
+      labels <- y
+    }
+    y <- NULL
+  }
   y_matrix <- if (is.null(y)) NULL else matrix(as.double(y), nrow = nrow(X))
-  inputs <- list(sample_weight = sample_weight, groups = groups,
+  inputs <- list(labels = labels, sample_weight = sample_weight, groups = groups,
                  feature_groups = feature_groups, blocks = blocks, axis = axis,
                  X_target = if (is.null(X_target)) NULL else .n4m_as_matrix(X_target, "X_target"),
                  fold_ids = fold_ids)
@@ -79,7 +99,8 @@ n4m_estimator_fit.n4m_estimator <- function(object, X, y = NULL, sample_weight =
   object$state <- list2env(list(
     pointer = pointer,
     n4me = .Call("r_n4m_estimator_export", pointer, PACKAGE = "n4m"),
-    y_vector = !is.null(y) && is.null(dim(y))
+    y_vector = !is.null(y) && is.null(dim(y)),
+    levels = levels
   ))
   object
 }
@@ -90,6 +111,37 @@ predict.n4m_regressor <- function(object, newdata, ...) {
   out <- .Call("r_n4m_estimator_predict", .n4m_pointer(object), .n4m_as_matrix(newdata),
                PACKAGE = "n4m")
   if (isTRUE(object$state$y_vector) && ncol(out) == 1L) out[, 1L] else out
+}
+
+#' @rdname n4m_estimator_roles
+#' @export
+predict.n4m_classifier <- function(object, newdata, type = c("class", "prob", "decision"),
+                                   ...) {
+  type <- match.arg(type)
+  pointer <- .n4m_pointer(object)
+  X <- .n4m_as_matrix(newdata)
+  if (type == "class") {
+    ids <- .Call("r_n4m_estimator_predict_labels", pointer, X, PACKAGE = "n4m")
+    levels <- object$state$levels
+    return(if (is.null(levels)) ids else factor(levels[ids + 1], levels = levels))
+  }
+  entry <- if (type == "prob") "r_n4m_estimator_predict_proba" else
+    "r_n4m_estimator_decision_function"
+  out <- .Call(entry, pointer, X, PACKAGE = "n4m")
+  colnames(out) <- as.character(n4m_classes(object))
+  out
+}
+
+#' @rdname n4m_estimator_roles
+#' @export
+n4m_classes <- function(object) UseMethod("n4m_classes")
+
+#' @rdname n4m_estimator_roles
+#' @export
+n4m_classes.n4m_classifier <- function(object) {
+  ids <- .Call("r_n4m_estimator_classes", .n4m_pointer(object), PACKAGE = "n4m")
+  levels <- object$state$levels
+  if (is.null(levels)) ids else levels[ids + 1]
 }
 
 #' @rdname n4m_estimator_roles

@@ -155,9 +155,10 @@ static double* r_est_double(SEXP v) {
 }
 
 /* fit(method_id, params, X, y, inputs) -> external pointer.
- * `inputs` is a named list among sample_weight, groups, feature_groups,
- * blocks, axis, X_target, fold_ids (R 1-based ids are not used: groups and
- * fold ids are opaque labels, feature groups are labels, blocks are sizes). */
+ * `inputs` is a named list among labels, sample_weight, groups,
+ * feature_groups, blocks, axis, X_target, fold_ids (R 1-based ids are not
+ * used: class labels, groups and fold ids are opaque integers, feature
+ * groups are labels, blocks are sizes). */
 SEXP r_n4m_estimator_fit(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP inputs) {
     const char* id = CHAR(STRING_ELT(method_id, 0));
     int32_t index = -1;
@@ -179,7 +180,10 @@ SEXP r_n4m_estimator_fit(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP input
         const char* name = CHAR(STRING_ELT(names, i));
         SEXP v = VECTOR_ELT(inputs, i);
         int64_t n = (int64_t)XLENGTH(v);
-        if (strcmp(name, "sample_weight") == 0) {
+        if (strcmp(name, "labels") == 0) {
+            in.labels = r_est_int64(v, name);
+            in.n_labels = n;
+        } else if (strcmp(name, "sample_weight") == 0) {
             in.sample_weight = r_est_double(v);
             in.n_sample_weight = n;
         } else if (strcmp(name, "axis") == 0) {
@@ -226,31 +230,80 @@ SEXP r_n4m_estimator_fit(SEXP method_id, SEXP values, SEXP X, SEXP y, SEXP input
     return r_est_wrap(est);
 }
 
-static SEXP r_est_matrix_op(SEXP ptr, SEXP X, int transform) {
+typedef n4m_status_t (*r_est_matrix_fn)(n4m_context_t*, const n4m_estimator_t*,
+                                         const n4m_matrix_view_t*, n4m_matrix_view_t*);
+
+/* Row-wise matrix operation; transform has its own width, the others one
+ * column per output (classes for a classifier). */
+static SEXP r_est_matrix_op(SEXP ptr, SEXP X, r_est_matrix_fn fn, int transform,
+                            const char* where) {
     n4m_estimator_t* est = r_est_get(ptr);
     int64_t cols = 0;
     n4m_status_t st = transform ? n4m_estimator_transform_cols(est, &cols)
                                 : n4m_estimator_n_outputs(est, &cols);
-    if (st != N4M_OK) r_est_fail(transform ? "transform" : "predict", st, NULL, NULL, NULL);
+    if (st != N4M_OK) r_est_fail(where, st, NULL, NULL, NULL);
     n4m_matrix_view_t Xv = r_est_view(X, "X");
     SEXP out = PROTECT(Rf_allocMatrix(REALSXP, Rf_nrows(X), (int)cols));
     n4m_matrix_view_t Ov = r_est_view(out, "out");
     n4m_context_t* ctx = r_est_context();
-    st = transform ? n4m_estimator_transform(ctx, est, &Xv, &Ov)
-                   : n4m_estimator_predict(ctx, est, &Xv, &Ov);
+    st = fn(ctx, est, &Xv, &Ov);
     if (st != N4M_OK) {
         UNPROTECT(1);
-        r_est_fail(transform ? "n4m_estimator_transform" : "n4m_estimator_predict", st, ctx,
-                   NULL, NULL);
+        r_est_fail(where, st, ctx, NULL, NULL);
     }
     n4m_context_destroy(ctx);
     UNPROTECT(1);
     return out;
 }
 
-SEXP r_n4m_estimator_predict(SEXP ptr, SEXP X) { return r_est_matrix_op(ptr, X, 0); }
+SEXP r_n4m_estimator_predict(SEXP ptr, SEXP X) {
+    return r_est_matrix_op(ptr, X, n4m_estimator_predict, 0, "n4m_estimator_predict");
+}
 
-SEXP r_n4m_estimator_transform(SEXP ptr, SEXP X) { return r_est_matrix_op(ptr, X, 1); }
+SEXP r_n4m_estimator_transform(SEXP ptr, SEXP X) {
+    return r_est_matrix_op(ptr, X, n4m_estimator_transform, 1, "n4m_estimator_transform");
+}
+
+SEXP r_n4m_estimator_decision_function(SEXP ptr, SEXP X) {
+    return r_est_matrix_op(ptr, X, n4m_estimator_decision_function, 0,
+                           "n4m_estimator_decision_function");
+}
+
+SEXP r_n4m_estimator_predict_proba(SEXP ptr, SEXP X) {
+    return r_est_matrix_op(ptr, X, n4m_estimator_predict_proba, 0,
+                           "n4m_estimator_predict_proba");
+}
+
+/* Class ids (as fitted) of each row. */
+SEXP r_n4m_estimator_predict_labels(SEXP ptr, SEXP X) {
+    n4m_estimator_t* est = r_est_get(ptr);
+    n4m_matrix_view_t Xv = r_est_view(X, "X");
+    const int64_t n = (int64_t)Rf_nrows(X);
+    int64_t* buf = (int64_t*)R_alloc((size_t)(n > 0 ? n : 1), sizeof(int64_t));
+    n4m_context_t* ctx = r_est_context();
+    n4m_status_t st = n4m_estimator_predict_labels(ctx, est, &Xv, buf, n);
+    if (st != N4M_OK) r_est_fail("n4m_estimator_predict_labels", st, ctx, NULL, NULL);
+    n4m_context_destroy(ctx);
+    SEXP out = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)n));
+    for (int64_t k = 0; k < n; ++k) REAL(out)[k] = (double)buf[k];
+    UNPROTECT(1);
+    return out;
+}
+
+/* Fitted class ids, sorted. */
+SEXP r_n4m_estimator_classes(SEXP ptr) {
+    n4m_estimator_t* est = r_est_get(ptr);
+    int64_t count = 0;
+    n4m_status_t st = n4m_estimator_classes(est, NULL, 0, &count);
+    if (st != N4M_OK) r_est_fail("n4m_estimator_classes", st, NULL, NULL, NULL);
+    int64_t* buf = (int64_t*)R_alloc((size_t)(count > 0 ? count : 1), sizeof(int64_t));
+    st = n4m_estimator_classes(est, buf, count, &count);
+    if (st != N4M_OK) r_est_fail("n4m_estimator_classes", st, NULL, NULL, NULL);
+    SEXP out = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)count));
+    for (int64_t k = 0; k < count; ++k) REAL(out)[k] = (double)buf[k];
+    UNPROTECT(1);
+    return out;
+}
 
 /* Selected input columns (0-based, native selection order). */
 SEXP r_n4m_estimator_selected_indices(SEXP ptr) {

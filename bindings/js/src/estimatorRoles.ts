@@ -14,6 +14,25 @@ export interface Regressor {
     predict(X: Matrix): Matrix;
 }
 
+/**
+ * Classifier role: Data[n, p] + Labels[n] -> class ids and scores. The core
+ * works on integer class ids; callers map their own label names.
+ */
+export interface Classifier {
+    /** Class id of each row. */
+    predictLabels(X: Matrix): number[];
+    /** Method-defined class scores, one column per class in classes() order. */
+    decisionFunction(X: Matrix): Matrix;
+    /** Fitted class ids, ascending. */
+    classes(): number[];
+}
+
+/** Classifier that defines class probabilities. */
+export interface ProbabilisticClassifier extends Classifier {
+    /** Class probabilities, one column per class in classes() order. */
+    predictProba(X: Matrix): Matrix;
+}
+
 /** Transformer role: Data[n, p] (+ Target) -> Data[n, k]. */
 export interface Transformer {
     transform(X: Matrix): Matrix;
@@ -46,7 +65,7 @@ export interface FitInputs {
 // against offsetof() of the C header when the layout was written.
 const FIT_INPUTS_SIZE = 120;
 const OFF = {
-    X: 4, Y: 8, sampleWeight: 24, nSampleWeight: 32, groups: 40, nGroups: 48,
+    X: 4, Y: 8, labels: 12, nLabels: 16, sampleWeight: 24, nSampleWeight: 32, groups: 40, nGroups: 48,
     featureGroups: 56, nFeatureGroups: 64, blocks: 72, nBlocks: 80, axis: 88,
     nAxis: 96, XTarget: 104, foldIds: 108, nFoldIds: 112,
 } as const;
@@ -98,6 +117,8 @@ export abstract class NativeEstimator {
     abstract readonly methodId: string;
     /** Parameter name -> native type. */
     protected abstract readonly paramTypes: Readonly<Record<string, ParamType>>;
+    /** True when the fit target is class labels (classifiers). */
+    protected readonly labelTarget: boolean = false;
     /** Explicit parameter values (unset ones take the native default). */
     params: Record<string, ParamValue | undefined> = {};
     private ptr = 0;
@@ -111,8 +132,11 @@ export abstract class NativeEstimator {
         return this.ptr !== 0;
     }
 
-    /** Fit on row-major X and optional targets. Returns this. */
-    fit(X: Matrix, y?: Matrix | Float64Array, inputs: FitInputs = {}): this {
+    /**
+     * Fit on row-major X and the target: responses for a regressor (a vector
+     * or a row-major matrix), integer class ids for a classifier. Returns this.
+     */
+    fit(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): this {
         const m = getModule();
         const allocs: Alloc[] = [];
         const hold = (a: Alloc) => (allocs.push(a), a.ptr);
@@ -123,16 +147,20 @@ export abstract class NativeEstimator {
             const xv = makeMatrixView(X.data, X.rows, X.cols);
             allocs.push({ ptr: xv.viewPtr, free: xv.free });
             m.setValue(struct + OFF.X, xv.viewPtr, "i32");
-            if (y !== undefined) {
-                const ym: Matrix = y instanceof Float64Array ? { data: y, rows: y.length, cols: 1 } : y;
-                const yv = makeMatrixView(ym.data, ym.rows, ym.cols);
-                allocs.push({ ptr: yv.viewPtr, free: yv.free });
-                m.setValue(struct + OFF.Y, yv.viewPtr, "i32");
-            }
             const setArray = (ptrOff: number, lenOff: number, a: Alloc, n: number) => {
                 m.setValue(struct + ptrOff, hold(a), "i32");
                 m.setValue(struct + lenOff, BigInt(n) as unknown as number, "i64");
             };
+            if (y !== undefined && this.labelTarget) {
+                const labels = Array.from(y as ArrayLike<number>);
+                setArray(OFF.labels, OFF.nLabels, allocI64(labels), labels.length);
+            } else if (y !== undefined) {
+                const ym: Matrix = "data" in y ? (y as Matrix)
+                    : { data: Float64Array.from(y as ArrayLike<number>), rows: (y as ArrayLike<number>).length, cols: 1 };
+                const yv = makeMatrixView(ym.data, ym.rows, ym.cols);
+                allocs.push({ ptr: yv.viewPtr, free: yv.free });
+                m.setValue(struct + OFF.Y, yv.viewPtr, "i32");
+            }
             if (inputs.sampleWeight) setArray(OFF.sampleWeight, OFF.nSampleWeight, allocF64(inputs.sampleWeight), inputs.sampleWeight.length);
             if (inputs.groups) setArray(OFF.groups, OFF.nGroups, allocI64(inputs.groups), inputs.groups.length);
             if (inputs.featureGroups) setArray(OFF.featureGroups, OFF.nFeatureGroups, allocI64(inputs.featureGroups), inputs.featureGroups.length);
@@ -243,17 +271,49 @@ export abstract class NativeEstimator {
         return this.matrixOp("n4m_estimator_transform", "n4m_estimator_transform_cols", X);
     }
 
+    protected decisionMatrix(X: Matrix): Matrix {
+        return this.matrixOp("n4m_estimator_decision_function", "n4m_estimator_n_outputs", X);
+    }
+
+    protected probaMatrix(X: Matrix): Matrix {
+        return this.matrixOp("n4m_estimator_predict_proba", "n4m_estimator_n_outputs", X);
+    }
+
+    protected labelArray(X: Matrix): number[] {
+        const m = getModule();
+        const handle = this.handle();
+        const xv = makeMatrixView(X.data, X.rows, X.cols);
+        const buf = m._malloc(Math.max(1, X.rows) * 8);
+        try {
+            withContext((ctx) => checkStatus(m.ccall("n4m_estimator_predict_labels", "number",
+                ["number", "number", "number", "number", "i64"], [ctx, handle, xv.viewPtr, buf, BigInt(X.rows)]) as number, ctx));
+            return Array.from({ length: X.rows }, (_, i) => readI64(buf + 8 * i));
+        } finally {
+            xv.free();
+            m._free(buf);
+        }
+    }
+
+    protected classArray(): number[] {
+        return this.indexArray("n4m_estimator_classes");
+    }
+
     protected selectedIndexArray(): number[] {
+        return this.indexArray("n4m_estimator_selected_indices");
+    }
+
+    /** Reads a (handle, out, capacity, out_count) integer list. */
+    private indexArray(symbol: string): number[] {
         const m = getModule();
         const handle = this.handle();
         const countPtr = m._malloc(8);
         try {
-            checkStatus(m.ccall("n4m_estimator_selected_indices", "number",
+            checkStatus(m.ccall(symbol, "number",
                 ["number", "number", "i64", "number"], [handle, 0, BigInt(0), countPtr]) as number);
             const count = readI64(countPtr);
             const buf = m._malloc(Math.max(1, count) * 8);
             try {
-                checkStatus(m.ccall("n4m_estimator_selected_indices", "number",
+                checkStatus(m.ccall(symbol, "number",
                     ["number", "number", "i64", "number"], [handle, buf, BigInt(count), countPtr]) as number);
                 return Array.from({ length: count }, (_, i) => readI64(buf + 8 * i));
             } finally {
