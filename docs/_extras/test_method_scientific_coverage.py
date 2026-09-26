@@ -43,6 +43,7 @@ from build_methods import (  # noqa: E402
     catalog_c_symbols,
     load_truth_source_metadata,
     parse_methods_catalog,
+    parse_operator_bindings,
     parse_registry,
     scientific_content,
     validate_scientific_records,
@@ -58,8 +59,8 @@ from public_api_docs import (  # noqa: E402
 
 CATALOG_SIZE = 212
 REGISTRY_SIZE = 73
-PYTHON_VERIFIED = 182
-PYTHON_C_ONLY = 30
+PYTHON_VERIFIED = 183
+PYTHON_C_ONLY = 29
 R_VERIFIED = 76
 MATLAB_VERIFIED = 69
 
@@ -110,6 +111,15 @@ SEPARATE_GENERATED_PAGES = frozenset(
     }
 )
 SCIENTIFIC_SOURCE_FILES = tuple(sorted(HERE.glob("scientific_*.py")))
+
+
+def test_affine_estimator_base_is_not_a_scientific_operator() -> None:
+    impl_dir = ROOT / "bindings" / "python" / "src" / "n4m" / "_impl"
+    operators = parse_operator_bindings(impl_dir)
+    assert "context" not in {operator["name"] for operator in operators}
+    assert "AffineMethodResultRegressor" not in {
+        operator["class"] for operator in operators
+    }
 
 _COVERAGE_ROW = re.compile(
     r"^\| `([^`]+)` \| \[([^]]+)\]\(([^)]+)\) \| (\w+) \|$", re.MULTILINE
