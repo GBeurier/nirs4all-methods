@@ -119,7 +119,7 @@ def _random_x_op(p):
 
 SPECS = [
     ("aug_detector_rolloff_v1.json", "n4m_aug_detector_rolloff", True,  _detector_rolloff),
-    ("aug_stray_light_v1.json",      "n4m_aug_stray_light",      True,  _stray_light),
+    ("aug_stray_light_v1.json",      "n4m_aug_stray_light",      False, _stray_light),
     ("aug_edge_curve_v1.json",       "n4m_aug_edge_curve",       True,  _edge_curve),
     ("aug_truncated_peak_v1.json",   "n4m_aug_truncated_peak",   True,  _truncated_peak),
     ("aug_edge_artifacts_v1.json",   "n4m_aug_edge_artifacts",   True,  _edge_artifacts),

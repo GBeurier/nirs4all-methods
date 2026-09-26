@@ -37,6 +37,30 @@ c_surface:
   - "n4m_augmentation_stray_light_apply"
   - "n4m_augmentation_stray_light_create"
   - "n4m_augmentation_stray_light_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_stray_light"
+  roles: "[augmenter]"
+  params:
+    - name: "stray_light_fraction"
+      type: "double"
+      default: 0.001
+      min: 0.0
+    - name: "edge_enhancement"
+      type: "double"
+      default: 2.0
+    - name: "edge_width"
+      type: "double"
+      default: 0.1
+      min: 0.0
+      max: 0.5
+    - name: "include_peak_truncation"
+      type: "bool"
+      default: true
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.instrument.stray_light"
 leaf: "stray_light"
 legacy_ids:

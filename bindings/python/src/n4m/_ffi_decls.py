@@ -121,7 +121,7 @@ SYMBOLS = (
     ("n4m_augmentation_spline_y_perturbations_apply", (c_void_p, MatrixView, MatrixView), c_int),
     ("n4m_augmentation_spline_y_perturbations_create", (POINTER(c_void_p), c_void_p, c_int32, c_double), c_int),
     ("n4m_augmentation_spline_y_perturbations_destroy", (c_void_p,), None),
-    ("n4m_augmentation_stray_light_apply", (c_void_p, MatrixView, MatrixView, MatrixView), c_int),
+    ("n4m_augmentation_stray_light_apply", (c_void_p, MatrixView, MatrixView), c_int),
     ("n4m_augmentation_stray_light_create", (POINTER(c_void_p), c_void_p, c_double, c_double, c_double, c_int32), c_int),
     ("n4m_augmentation_stray_light_destroy", (c_void_p,), None),
     ("n4m_augmentation_temperature_apply", (c_void_p, MatrixView, MatrixView), c_int),

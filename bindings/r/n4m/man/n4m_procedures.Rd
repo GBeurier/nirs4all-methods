@@ -12,9 +12,9 @@ n4m_split(object, X, y = NULL, groups = NULL)
 
 \method{n4m_split}{n4m_splitter}(object, X, y = NULL, groups = NULL)
 
-n4m_augment(object, X, axis = NULL)
+n4m_augment(object, X, y = NULL, axis = NULL)
 
-\method{n4m_augment}{n4m_augmenter}(object, X, axis = NULL)
+\method{n4m_augment}{n4m_augmenter}(object, X, y = NULL, axis = NULL)
 
 n4m_run(object, X, y = NULL, ...)
 
@@ -26,13 +26,16 @@ n4m_run(object, X, y = NULL, ...)
 \item{X}{Numeric matrix (rows are samples).}
 \item{y}{Optional target vector or matrix, when the method uses it.}
 \item{groups}{Optional sample groups for group-aware splitters.}
-\item{axis}{Optional spectral axis for axis-dependent augmenters.}
+\item{axis}{Optional spectral axis for axis-dependent augmenters
+(wavelengths in nm for the augmenters with nanometre constants).}
 \item{...}{Further named inputs (\code{X_target}, \code{fold_ids}, ...).}
 }
 \value{
 \code{n4m_split()} a list of folds, each \code{list(train, test)} of 1-based
-row indices; \code{n4m_augment()} the augmented matrix; \code{n4m_run()} a
-named list of the native outputs.
+row indices; \code{n4m_augment()} the augmented matrix, or \code{list(X, Y)}
+for the augmenters that mix rows (mixup; \code{y} required, mixed with the
+same draw and returned with its shape); \code{n4m_run()} a named list of the
+native outputs.
 }
 \description{
 Constructors such as \code{n4m_kennard_stone()}, \code{n4m_gaussian_noise()}

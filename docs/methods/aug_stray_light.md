@@ -4,7 +4,7 @@ _Group_: **Augmentation** · _C ABI_: `n4m_augmentation_stray_light_*`
 
 ## Description
 
-Stray-light edge artifact.
+Stray-light edge artifact (the edge profile depends on the channel count).
 
 ## Parameters
 
@@ -14,7 +14,6 @@ Stray-light edge artifact.
 | `edge_enhancement` | `float` | `2.0` |
 | `edge_width` | `float` | `0.1` |
 | `include_peak_truncation` | `bool` | `True` |
-| `wavelengths` | `—` | `None` |
 | `rng` | `Optional[PCG64]` | `None` |
 | `seed` | `int` | `0` |
 
@@ -28,7 +27,7 @@ Stray-light edge artifact.
 from n4m.augmentation.instrument import StrayLightAugmenter
 ```
 
-Source signature: [`StrayLightAugmenter(stray_light_fraction: float = 0.001, edge_enhancement: float = 2.0, edge_width: float = 0.1, include_peak_truncation: bool = True, wavelengths = None, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L1012).
+Source signature: [`StrayLightAugmenter(stray_light_fraction: float = 0.001, edge_enhancement: float = 2.0, edge_width: float = 0.1, include_peak_truncation: bool = True, rng: Optional[PCG64] = None, seed: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/augmentation.py#L1012).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

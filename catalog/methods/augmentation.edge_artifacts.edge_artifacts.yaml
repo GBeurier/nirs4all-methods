@@ -32,11 +32,41 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Added in Phase-B ABI reconciliation - exported by libn4m, missed by the M2 auto-discovery (see catalog/ABI_RECONCILE_GAP.md)."
+notes: "Procedure input axis: wavelengths in nanometres, finite and strictly increasing (the kernel holds band positions or detector ranges in nm, as the n4m reference does)."
 c_surface:
   - "n4m_augmentation_edge_artifacts_apply"
   - "n4m_augmentation_edge_artifacts_create"
   - "n4m_augmentation_edge_artifacts_destroy"
+estimator:
+  kind: "procedure"
+  adapter: "aug_edge_artifacts"
+  roles: "[augmenter]"
+  inputs:
+    axis: "required"
+  params:
+    - name: "detector_roll_off"
+      type: "bool"
+      default: true
+    - name: "stray_light"
+      type: "bool"
+      default: true
+    - name: "edge_curvature"
+      type: "bool"
+      default: true
+    - name: "truncated_peaks"
+      type: "bool"
+      default: true
+    - name: "overall_strength"
+      type: "double"
+      default: 1.0
+    - name: "detector_model"
+      type: "enum"
+      default: "generic_nir"
+      choices: "[ingaas_standard, ingaas_extended, pbs, silicon_ccd, generic_nir]"
+    - name: "seed"
+      type: "int"
+      default: 0
+      min: 0
 fq_name: "n4m.augmentation.instrument.edge_artifacts"
 leaf: "edge_artifacts"
 legacy_ids:

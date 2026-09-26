@@ -369,7 +369,7 @@ AUG_SPECS: list[DonorOpSpec] = [
     _aug("aug_particle_size", "aug_particle_size", "ParticleSizeAugmenter", wl=True),
     _aug("aug_emsc_distort", "aug_emsc_distort", "EMSCDistortionAugmenter", wl=True),
     _aug("aug_detector_rolloff", "aug_detector_rolloff", "DetectorRollOffAugmenter", wl=True),
-    _aug("aug_stray_light", "aug_stray_light", "StrayLightAugmenter", wl=True),
+    _aug("aug_stray_light", "aug_stray_light", "StrayLightAugmenter"),
     _aug("aug_edge_curve", "aug_edge_curve", "EdgeCurvatureAugmenter", wl=True),
     _aug("aug_truncated_peak", "aug_truncated_peak", "TruncatedPeakAugmenter", wl=True),
     _aug("aug_edge_artifacts", "aug_edge_artifacts", "EdgeArtifactsAugmenter", wl=True),

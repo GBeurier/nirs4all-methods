@@ -145,8 +145,12 @@ for (case in fx$procedures) {
           testthat::expect_equal(folds[[i]]$test, case$folds[[i]][[2L]] + 1)
         }
       }
-      if (!is.null(case[["X"]])) {
-        testthat::expect_equal(n4m_augment(spec, X, axis), case[["X"]], tolerance = 1e-12)
+      if (!is.null(case[["Y"]])) {
+        out <- n4m_augment(spec, X, y, axis = axis)
+        testthat::expect_equal(out$X, case[["X"]], tolerance = 1e-12)
+        testthat::expect_equal(out$Y, case[["Y"]], tolerance = 1e-12)
+      } else if (!is.null(case[["X"]])) {
+        testthat::expect_equal(n4m_augment(spec, X, axis = axis), case[["X"]], tolerance = 1e-12)
       }
       if (!is.null(case$outputs)) {
         args <- list(spec, X, y)

@@ -881,12 +881,27 @@ class NativeSplitter(_ProcedureBase):
 
 
 class NativeAugmenter(_ProcedureBase):
-    """Augmenter role: Data[n, p] -> augmented Data[n, p], train only."""
+    """Augmenter role: Data[n, p] (+ Target) -> augmented Data[n, p], train only.
 
-    def augment(self, X, *, axis=None) -> np.ndarray:
-        """Augmented rows; seeds are parameters, so a run is reproducible."""
+    Methods that mix rows (mixup) require ``y`` and return it mixed with the
+    same draw, row for row.
+    """
+
+    def augment(self, X, y=None, *, axis=None):
+        """Augmented rows, or ``(X, y)`` augmented for the methods that mix targets.
+
+        Seeds are parameters, so a run is reproducible. The mixed targets keep
+        the dimensionality of ``y``.
+        """
         inputs = {} if axis is None else {"axis": axis}
-        return self._call(lambda r: _result_entry(r, b"X", 0), X, **inputs)
+
+        def read(result):
+            out = _result_dict(result)
+            if "Y" not in out:
+                return out["X"]
+            return out["X"], out["Y"].reshape(np.shape(y))
+
+        return self._call(read, X, y, **inputs)
 
 
 __all__ = [

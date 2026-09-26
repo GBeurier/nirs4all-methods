@@ -249,10 +249,13 @@ print.n4m_method <- function(x, ...) {
 #' @param X Numeric matrix (rows are samples).
 #' @param y Optional target vector or matrix, when the method uses it.
 #' @param groups Optional sample groups for group-aware splitters.
-#' @param axis Optional spectral axis for axis-dependent augmenters.
+#' @param axis Optional spectral axis for axis-dependent augmenters
+#'   (wavelengths in nm for the augmenters with nanometre constants).
 #' @param ... Further named inputs (\code{X_target}, \code{fold_ids}, ...).
 #' @return \code{n4m_split()} a list of folds, each \code{list(train, test)}
-#'   of 1-based row indices; \code{n4m_augment()} the augmented matrix;
+#'   of 1-based row indices; \code{n4m_augment()} the augmented matrix, or
+#'   \code{list(X, Y)} for the augmenters that mix rows (mixup; \code{y}
+#'   required, mixed with the same draw and returned with its shape);
 #'   \code{n4m_run()} a named list of the native outputs.
 #' @name n4m_procedures
 NULL
@@ -270,12 +273,16 @@ n4m_split.n4m_splitter <- function(object, X, y = NULL, groups = NULL) {
 
 #' @rdname n4m_procedures
 #' @export
-n4m_augment <- function(object, X, axis = NULL) UseMethod("n4m_augment")
+n4m_augment <- function(object, X, y = NULL, axis = NULL) UseMethod("n4m_augment")
 
 #' @rdname n4m_procedures
 #' @export
-n4m_augment.n4m_augmenter <- function(object, X, axis = NULL) {
-  .n4m_procedure_run(object, X, inputs = list(axis = axis))[["X"]]
+n4m_augment.n4m_augmenter <- function(object, X, y = NULL, axis = NULL) {
+  out <- .n4m_procedure_run(object, X, y, list(axis = axis))
+  if (is.null(out[["Y"]])) return(out[["X"]])
+  Y <- out[["Y"]]
+  if (is.null(dim(y))) Y <- as.vector(Y)
+  list(X = out[["X"]], Y = Y)
 }
 
 #' @rdname n4m_procedures

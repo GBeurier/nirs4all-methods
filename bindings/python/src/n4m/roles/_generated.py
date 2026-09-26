@@ -620,6 +620,92 @@ class PolyDrift(NativeAugmenter):
         self.seed = seed
 
 
+class DetectorRolloff(NativeAugmenter):
+    """Native ``augmentation.edge_artifacts.detector_rolloff`` (augmenter).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "augmentation.edge_artifacts.detector_rolloff"
+    _param_types: ClassVar[dict[str, str]] = {
+        "detector_model": "enum",
+        "effect_strength": "double",
+        "noise_amplification": "double",
+        "include_baseline_distortion": "bool",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "detector_model": (
+            "ingaas_standard",
+            "ingaas_extended",
+            "pbs",
+            "silicon_ccd",
+            "generic_nir",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        detector_model="generic_nir",
+        effect_strength=1,
+        noise_amplification=0.02,
+        include_baseline_distortion=True,
+        seed=0,
+    ) -> None:
+        self.detector_model = detector_model
+        self.effect_strength = effect_strength
+        self.noise_amplification = noise_amplification
+        self.include_baseline_distortion = include_baseline_distortion
+        self.seed = seed
+
+
+class EdgeArtifacts(NativeAugmenter):
+    """Native ``augmentation.edge_artifacts.edge_artifacts`` (augmenter).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "augmentation.edge_artifacts.edge_artifacts"
+    _param_types: ClassVar[dict[str, str]] = {
+        "detector_roll_off": "bool",
+        "stray_light": "bool",
+        "edge_curvature": "bool",
+        "truncated_peaks": "bool",
+        "overall_strength": "double",
+        "detector_model": "enum",
+        "seed": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "detector_model": (
+            "ingaas_standard",
+            "ingaas_extended",
+            "pbs",
+            "silicon_ccd",
+            "generic_nir",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        detector_roll_off=True,
+        stray_light=True,
+        edge_curvature=True,
+        truncated_peaks=True,
+        overall_strength=1,
+        detector_model="generic_nir",
+        seed=0,
+    ) -> None:
+        self.detector_roll_off = detector_roll_off
+        self.stray_light = stray_light
+        self.edge_curvature = edge_curvature
+        self.truncated_peaks = truncated_peaks
+        self.overall_strength = overall_strength
+        self.detector_model = detector_model
+        self.seed = seed
+
+
 class EdgeCurvature(NativeAugmenter):
     """Native ``augmentation.edge_artifacts.edge_curvature`` (augmenter).
 
@@ -656,6 +742,34 @@ class EdgeCurvature(NativeAugmenter):
         self.curvature_type = curvature_type
         self.asymmetry = asymmetry
         self.edge_focus = edge_focus
+        self.seed = seed
+
+
+class StrayLight(NativeAugmenter):
+    """Native ``augmentation.edge_artifacts.stray_light`` (augmenter)."""
+
+    _method_id = "augmentation.edge_artifacts.stray_light"
+    _param_types: ClassVar[dict[str, str]] = {
+        "stray_light_fraction": "double",
+        "edge_enhancement": "double",
+        "edge_width": "double",
+        "include_peak_truncation": "bool",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        stray_light_fraction=0.001,
+        edge_enhancement=2,
+        edge_width=0.1,
+        include_peak_truncation=True,
+        seed=0,
+    ) -> None:
+        self.stray_light_fraction = stray_light_fraction
+        self.edge_enhancement = edge_enhancement
+        self.edge_width = edge_width
+        self.include_peak_truncation = include_peak_truncation
         self.seed = seed
 
 
@@ -696,6 +810,139 @@ class TruncatedPeak(NativeAugmenter):
         self.width_max = width_max
         self.left_edge = left_edge
         self.right_edge = right_edge
+        self.seed = seed
+
+
+class Moisture(NativeAugmenter):
+    """Native ``augmentation.environmental.moisture`` (augmenter).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "augmentation.environmental.moisture"
+    _param_types: ClassVar[dict[str, str]] = {
+        "water_activity_delta": "double",
+        "use_aw_range": "bool",
+        "aw_low": "double",
+        "aw_high": "double",
+        "reference_water_activity": "double",
+        "free_water_fraction": "double",
+        "bound_water_shift": "double",
+        "moisture_content": "double",
+        "enable_shift": "bool",
+        "enable_intensity": "bool",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        water_activity_delta=0,
+        use_aw_range=False,
+        aw_low=0,
+        aw_high=1,
+        reference_water_activity=0.5,
+        free_water_fraction=0.3,
+        bound_water_shift=25,
+        moisture_content=0.1,
+        enable_shift=True,
+        enable_intensity=True,
+        seed=0,
+    ) -> None:
+        self.water_activity_delta = water_activity_delta
+        self.use_aw_range = use_aw_range
+        self.aw_low = aw_low
+        self.aw_high = aw_high
+        self.reference_water_activity = reference_water_activity
+        self.free_water_fraction = free_water_fraction
+        self.bound_water_shift = bound_water_shift
+        self.moisture_content = moisture_content
+        self.enable_shift = enable_shift
+        self.enable_intensity = enable_intensity
+        self.seed = seed
+
+
+class Temperature(NativeAugmenter):
+    """Native ``augmentation.environmental.temperature`` (augmenter).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "augmentation.environmental.temperature"
+    _param_types: ClassVar[dict[str, str]] = {
+        "temperature_delta": "double",
+        "use_temp_range": "bool",
+        "temp_low": "double",
+        "temp_high": "double",
+        "enable_shift": "bool",
+        "enable_intensity": "bool",
+        "enable_broadening": "bool",
+        "region_specific": "bool",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        temperature_delta=0,
+        use_temp_range=False,
+        temp_low=-5,
+        temp_high=5,
+        enable_shift=True,
+        enable_intensity=True,
+        enable_broadening=True,
+        region_specific=True,
+        seed=0,
+    ) -> None:
+        self.temperature_delta = temperature_delta
+        self.use_temp_range = use_temp_range
+        self.temp_low = temp_low
+        self.temp_high = temp_high
+        self.enable_shift = enable_shift
+        self.enable_intensity = enable_intensity
+        self.enable_broadening = enable_broadening
+        self.region_specific = region_specific
+        self.seed = seed
+
+
+class LocalMixup(NativeAugmenter):
+    """Native ``augmentation.mixup.local_mixup`` (augmenter)."""
+
+    _method_id = "augmentation.mixup.local_mixup"
+    _param_types: ClassVar[dict[str, str]] = {
+        "alpha": "double",
+        "k_neighbors": "int",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        alpha=0.2,
+        k_neighbors=5,
+        seed=0,
+    ) -> None:
+        self.alpha = alpha
+        self.k_neighbors = k_neighbors
+        self.seed = seed
+
+
+class Mixup(NativeAugmenter):
+    """Native ``augmentation.mixup.mixup`` (augmenter)."""
+
+    _method_id = "augmentation.mixup.mixup"
+    _param_types: ClassVar[dict[str, str]] = {
+        "alpha": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        alpha=0.2,
+        seed=0,
+    ) -> None:
+        self.alpha = alpha
         self.seed = seed
 
 
@@ -989,6 +1236,55 @@ class InstrumentBroaden(NativeAugmenter):
         self.fwhm_low = fwhm_low
         self.fwhm_high = fwhm_high
         self.variation_scope = variation_scope
+        self.seed = seed
+
+
+class ParticleSize(NativeAugmenter):
+    """Native ``augmentation.scattering.particle_size`` (augmenter).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "augmentation.scattering.particle_size"
+    _param_types: ClassVar[dict[str, str]] = {
+        "mean_size_um": "double",
+        "size_variation_um": "double",
+        "use_size_range": "bool",
+        "size_range_low_um": "double",
+        "size_range_high_um": "double",
+        "reference_size_um": "double",
+        "wavelength_exponent": "double",
+        "size_effect_strength": "double",
+        "include_path_length": "bool",
+        "path_length_sensitivity": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        mean_size_um=50,
+        size_variation_um=15,
+        use_size_range=False,
+        size_range_low_um=5,
+        size_range_high_um=500,
+        reference_size_um=50,
+        wavelength_exponent=1.5,
+        size_effect_strength=0.1,
+        include_path_length=True,
+        path_length_sensitivity=0.5,
+        seed=0,
+    ) -> None:
+        self.mean_size_um = mean_size_um
+        self.size_variation_um = size_variation_um
+        self.use_size_range = use_size_range
+        self.size_range_low_um = size_range_low_um
+        self.size_range_high_um = size_range_high_um
+        self.reference_size_um = reference_size_um
+        self.wavelength_exponent = wavelength_exponent
+        self.size_effect_strength = size_effect_strength
+        self.include_path_length = include_path_length
+        self.path_length_sensitivity = path_length_sensitivity
         self.seed = seed
 
 
@@ -5010,10 +5306,12 @@ __all__ = [
     "CrossCorrelationAlignment",
     "DeadBand",
     "Derivate",
+    "DetectorRolloff",
     "Detrend",
     "DirectStandardization",
     "DynamicTimeWarpingAlignment",
     "EMSCDistort",
+    "EdgeArtifacts",
     "EdgeCurvature",
     "FCKStaticTransformer",
     "FirstDerivative",
@@ -5045,13 +5343,16 @@ __all__ = [
     "LinearStackCompress",
     "LocalCentering",
     "LocalClip",
+    "LocalMixup",
     "LocalWarp",
     "LocalizedMSC",
     "LogTransform",
     "MagnitudeWarp",
     "MissingAwareNIPALS",
+    "Mixup",
     "ModPoly",
     "ModelSelection",
+    "Moisture",
     "Moments",
     "MultiplicativeNoise",
     "Normalize",
@@ -5061,6 +5362,7 @@ __all__ = [
     "PLSLogistic",
     "PLSMonitoring",
     "PLSRegression",
+    "ParticleSize",
     "PathLength",
     "PercentToFraction",
     "PiecewiseDirectStandardization",
@@ -5106,8 +5408,10 @@ __all__ = [
     "SplineXSimplification",
     "SplineYPerturbations",
     "Stability",
+    "StrayLight",
     "Sweep",
     "SystematicCircular",
+    "Temperature",
     "ToAbsorbance",
     "TransferMetrics",
     "TruncatedPeak",

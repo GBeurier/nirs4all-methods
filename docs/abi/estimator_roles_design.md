@@ -71,7 +71,7 @@ declare.
 | classifier | `ClassifierMixin` | fit, predict_labels, decision_function, predict_proba (when defined), classes, export | Data + Labels[n] → Prediction labels[n] / scores[n,c] | `model` |
 | sample filter | outlier detector (`fit_predict` mask) | fit, apply_mask, export | Data (+Target) → keep mask[n], train only | `exclude` |
 | splitter (procedure) | `BaseCrossValidator` | split | Data (+Target, groups) → folds | `split` |
-| augmenter (procedure) | train-only sampler | augment | Data (+Target) → Data', train only | `augmentation` |
+| augmenter (procedure) | train-only sampler | augment | Data (+Target) → Data' (+Target' for mixing methods), train only | `augmentation` |
 | generic procedure | function | run | inputs → MethodResult | none (diagnostics, sweeps) |
 
 In C the stateful roles share one opaque `n4m_estimator_t`, because ownership,
@@ -342,7 +342,10 @@ N4M_API n4m_status_t n4m_method_result_get_fold(const n4m_method_result_t*, int3
   `n_folds` is `n_splits` for k-fold kinds, 1 otherwise. Y-only splitters
   split the rows of `X` without reading it.
 - *Augmenter*: double matrix `"X"`, same shape and row order as the input,
-  train-only. A future paired-Y kind adds `"Y"` to the same result.
+  train-only. Augmenters that mix rows (mixup, local mixup) require `y` and
+  add double matrix `"Y"`: the targets mixed with the same draw (the same
+  partner row and weight as row *i* of `"X"`), with the shape of the input
+  `y`. No other augmenter returns `"Y"`; the others refuse `y`.
 - *Generic*: the named outputs of the method's C function; functions that
   return plain values (metrics, T², transfer metrics) are packed under their
   C names.
@@ -356,14 +359,20 @@ Inputs reuse `n4m_fit_inputs_v1_t` and its checks (a missing required or an
 unused input is refused by name). Diagnostics that need a second matrix take
 it as `target_domain` (PLS monitoring: the phase-2 rows; transfer metrics:
 the target set); diagnostics defined on a fitted PLS model fit it from `X`,
-`y` and the declared PLS parameters. Axis-dependent augmenters take `axis`
-only when their kernel works in the axis' own units (optional where the
-kernel falls back to the index grid); kernels with nanometre constants stay
-out until they declare their unit.
+`y` and the declared PLS parameters. Axis-dependent augmenters whose kernel
+works in the axis' own units take `axis` as given (optional where the kernel
+falls back to the index grid). Kernels with nanometre constants (band
+positions of the temperature and moisture effects, the 1500 nm reference of
+particle-size scattering, the detector ranges of roll-off and the combined
+edge artifacts) require `axis` in nanometres, as their n4m references assume;
+the procedure refuses an axis that is not finite and strictly increasing
+(the kernels interpolate on it). Stray light depends on the channel count
+only and takes no axis.
 
-Paired-Y augmentation (mixup, local mixup) requires the kernels to expose the
-sampled partners and weights so Y is mixed with the same draw; that kernel
-change is part of slice S4.
+The mixup kernels draw every row's partner and weight once, then apply them
+to X and, when given, to y (an internal kernel change; the per-method
+`n4m_augmentation_mixup_*` / `_local_mixup_*` functions still return X
+only). Local mixup searches neighbours in X alone.
 
 ### D6 — N4ME fitted-state format
 
@@ -461,9 +470,9 @@ unlock:
 The final claim is per entry: estimator or procedure, languages, operations,
 oracle result — never a bare 212/212.
 
-Status (2026-09-26): 192 of 213 catalog entries reach the generic surface —
+Status (2026-09-27): 200 of 213 catalog entries reach the generic surface —
 140 estimators (regressors incl. 10 AOM/POP ones, 4 classifiers, selectors,
-transformers, 4 sample filters) and 52 procedures (9 splitters, 31
+transformers, 4 sample filters) and 60 procedures (9 splitters, 39
 augmenters, 12 generic); the generated per-entry record is
 `docs/parity/estimator_roles_coverage.md`. Python, R, JS/WASM and Rust
 facades are generated from or driven by the manifest. The shared fixture
@@ -475,8 +484,7 @@ Not covered: the five AOM superblocks and the AOM chain Ridge-PLS (numerics
 still in Python), three AOM orchestrations (screen/refit, staged campaign,
 linear Ridge stack: DAG-ML composition), PLS-GLM (the kernel fits no link),
 PLS-Cox (no survival inputs in `n4m_fit_inputs_v1_t`), the Python-only moment
-stack, the composite filter, mixup / local_mixup (no paired Y) and six
-augmenters with unit-bound constants.
+stack and the composite filter.
 
 ## 5. Tests
 
@@ -488,6 +496,9 @@ augmenters with unit-bound constants.
   Procedures: run with the default parameters, same seed → same result,
   column-major X → same result, refusal of missing, unused and foreign
   inputs or parameters, and bitwise equality with the direct C entry point.
+  Target-mixing augmenters return `"Y"` equal to `"X"` bitwise when y is X
+  (same draw, same rows); nanometre augmenters refuse a decreasing,
+  repeated or non-finite axis.
 - **Kernel equivalence**: estimator output equals the per-method C function
   output (and each N4MP kind equals its kernel).
 - **Cross-binding matrix**: one fixture set produced by the C++ suite
