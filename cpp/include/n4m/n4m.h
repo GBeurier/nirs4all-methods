@@ -786,6 +786,10 @@ N4M_API n4m_status_t n4m_model_import_linear_predictor(
  * `intercept` (1 x targets) or both `x_mean` (1 x features) and `y_mean`
  * (1 x targets). The core computes the intercept when needed and copies all
  * state; the caller may destroy `result` immediately after this call.
+ * If `predictions` is present, it must be a finite matrix with a positive
+ * row count and the same target width; that row count is recorded as source
+ * training-sample provenance in N4MM. If absent, provenance remains unknown
+ * (zero). No training samples or latent fit state are retained.
  * Incompatible or malformed results return N4M_ERR_INVALID_ARGUMENT.
  */
 N4M_API n4m_status_t n4m_model_from_method_result(

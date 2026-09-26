@@ -188,6 +188,7 @@ def test_verified_affine_method_results_promote_to_native_model(data, fit_name, 
             training_predictions = result.matrix("predictions")
             with result.to_affine_model(ctx) as model:
                 payload = model.to_bytes()
+                assert pls4all.inspect_n4mm(payload).training_samples == X.shape[0]
                 np.testing.assert_allclose(
                     model.predict(ctx, X), training_predictions, atol=1e-10,
                 )
@@ -236,6 +237,7 @@ def test_verified_sklearn_wrappers_use_native_heldout_n4mm(data, class_name, par
     else:
         estimator.fit(X, y[:, 0])
     assert estimator._native_affine_model
+    assert pls4all.inspect_n4mm(estimator.export_n4mm()).training_samples == X.shape[0]
     predicted = estimator.predict(X_test)
     assert predicted.shape == (X_test.shape[0],)
     with pls4all.Context() as ctx, pls4all.Model.from_bytes(

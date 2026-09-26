@@ -1029,8 +1029,35 @@ N4M_API n4m_status_t n4m_model_from_method_result(
                 return N4M_ERR_INVALID_ARGUMENT;
             }
         }
+        std::int64_t source_training_samples = 0;
+        const auto predictions_it = result->double_arrays.find("predictions");
+        const auto predictions_shape_it = result->double_shapes.find("predictions");
+        if (predictions_it != result->double_arrays.end() ||
+            predictions_shape_it != result->double_shapes.end()) {
+            if (predictions_it == result->double_arrays.end() ||
+                predictions_shape_it == result->double_shapes.end()) {
+                set_error(ctx, "MethodResult predictions lack a matching shape");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+            const auto [rows, targets] = predictions_shape_it->second;
+            if (rows <= 0 || targets != q ||
+                static_cast<std::uint64_t>(rows) >
+                    std::numeric_limits<std::size_t>::max() / static_cast<std::uint64_t>(q) ||
+                predictions_it->second.size() !=
+                    static_cast<std::size_t>(rows) * static_cast<std::size_t>(q)) {
+                set_error(ctx, "MethodResult predictions have incompatible shape");
+                return N4M_ERR_INVALID_ARGUMENT;
+            }
+            for (double value : predictions_it->second) {
+                if (!std::isfinite(value)) {
+                    set_error(ctx, "MethodResult predictions must be finite");
+                    return N4M_ERR_INVALID_ARGUMENT;
+                }
+            }
+            source_training_samples = rows;
+        }
         n4m_linear_predictor_spec_t spec{};
-        spec.source_training_samples = 0;
+        spec.source_training_samples = source_training_samples;
         spec.n_features = static_cast<std::int32_t>(p);
         spec.n_targets = static_cast<std::int32_t>(q);
         spec.coefficients = coefficients.data();
