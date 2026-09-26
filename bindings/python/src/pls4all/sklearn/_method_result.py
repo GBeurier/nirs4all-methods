@@ -4,9 +4,9 @@ regressors.
 Many pls4all `*_fit` C entry points (sparse_simpls, di_pls, cppls,
 ecr, mb_pls, mir_pls, n_pls, sparse_pls_da, …) return a
 :class:`MethodResult` rather than a re-fittable :class:`Model` handle.
-The MethodResult carries the regression coefficients plus the X/Y
-mean used at fit time, which is everything we need to compute
-predictions on new X.
+Verified affine MethodResults are promoted by the C ABI to native
+predict-only N4MM models. Legacy unmarked results may still use the
+coefficient replay fallback below.
 
 The C ABI convention (confirmed against
 ``cpp/src/core/model.cpp::fill_prediction``) is that ``coefficients``
@@ -15,8 +15,8 @@ fit time and must NOT be re-applied at predict time. Exact formula:
 
     Y_pred = (X - x_mean_) @ coef_.T + y_mean_
 
-This mixin captures that pattern so every concrete subclass only has to
-implement ``_fit_method_result(ctx, cfg, X, y)`` and (optionally)
+This mixin captures both paths so every concrete subclass only has to
+implement ``_fit_method_result(ctx, X, y)`` and (optionally)
 override ``_extract_state`` for non-standard result keys.
 """
 
@@ -89,12 +89,8 @@ class _MethodResultRegressor(BaseEstimator, RegressorMixin):
 
     # --- Sklearn estimator surface --------------------------------------
 
-    def fit(self, X: Any, y: Any) -> "_MethodResultRegressor":
-        # Validate inputs WITHOUT mutating fitted state — a failed fit
-        # must leave the prior (or unfitted) state untouched.
-        X_arr, y_arr, y_ndim_orig = _validate_X_y_no_mutate(X, y)
-        ctx = Context()
-        result = self._fit_method_result(ctx, X_arr, y_arr)
+    def _bind_result(self, ctx, result, X, X_arr, y_ndim_orig):
+        """Promote a verified MethodResult and commit sklearn metadata."""
         try:
             if self._native_affine_model:
                 from .._model import ModelArrayKind
@@ -113,6 +109,14 @@ class _MethodResultRegressor(BaseEstimator, RegressorMixin):
             self.feature_names_in_ = np.asarray(X.columns, dtype=object)
         self._y_ndim_ = y_ndim_orig
         return self
+
+    def fit(self, X: Any, y: Any) -> "_MethodResultRegressor":
+        # Validate inputs WITHOUT mutating fitted state — a failed fit
+        # must leave the prior (or unfitted) state untouched.
+        X_arr, y_arr, y_ndim_orig = _validate_X_y_no_mutate(X, y)
+        with Context() as ctx:
+            result = self._fit_method_result(ctx, X_arr, y_arr)
+            return self._bind_result(ctx, result, X, X_arr, y_ndim_orig)
 
     def predict(self, X: Any) -> np.ndarray:
         check_is_fitted(self)

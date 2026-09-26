@@ -21,6 +21,7 @@ from ._base import (
     _resolve_solver,
     _validate_X_y_no_mutate,
 )
+from ._method_result import _MethodResultRegressor
 
 
 class _PlsRegressorBase(_Pls4allModelEstimator, BaseEstimator, RegressorMixin):
@@ -343,7 +344,7 @@ class PLSSVD(_PlsRegressorBase):
         self.store_scores = store_scores
 
 
-class Ridge(BaseEstimator, RegressorMixin):
+class Ridge(_MethodResultRegressor):
     """Direct (closed-form) L2-penalized linear regression.
 
     Drop-in replacement for ``sklearn.linear_model.Ridge`` backed by the
@@ -373,6 +374,8 @@ class Ridge(BaseEstimator, RegressorMixin):
         convention). Coefficients are reported on the original X scale.
     """
 
+    _native_affine_model = True
+
     def __init__(
         self, alpha: float = 1.0, *, fit_intercept: bool = True, scale_x: bool = False
     ) -> None:
@@ -394,48 +397,9 @@ class Ridge(BaseEstimator, RegressorMixin):
         cfg.scale_y = False  # ignored by the kernel; set explicitly for clarity
         return cfg
 
-    def fit(self, X: Any, y: Any) -> "Ridge":
-        X_arr, y_arr, y_ndim = _validate_X_y_no_mutate(X, y)
-        ctx = Context()
+    def _fit_method_result(self, ctx, X, y):
         cfg = self._make_config()
         try:
-            result = _methods.ridge_fit(
-                ctx, cfg, X_arr, y_arr, ridge_lambda=float(self.alpha)
-            )
+            return _methods.ridge_fit(ctx, cfg, X, y, ridge_lambda=float(self.alpha))
         finally:
             cfg.close()
-        # Read everything before committing fitted state so a partial
-        # failure leaves the prior (or unfitted) state intact.
-        coef = np.asarray(result.matrix("coefficients"), dtype=np.float64)
-        # C result stores coefficients (p, q); sklearn uses (q, p) or (p,)
-        # when q == 1.
-        coef_T = coef.T.copy()
-        if coef_T.shape[0] == 1:
-            coef_T = coef_T.reshape(coef_T.shape[1])
-        intercept_arr = np.asarray(result.matrix("intercept"), dtype=np.float64).ravel()
-        # Commit.
-        self.coef_ = coef_T
-        self.intercept_ = (
-            float(intercept_arr[0]) if intercept_arr.size == 1 else intercept_arr
-        )
-        self.n_features_in_ = int(X_arr.shape[1])
-        if hasattr(X, "columns"):
-            self.feature_names_in_ = np.asarray(X.columns, dtype=object)
-        self._y_ndim_ = y_ndim
-        return self
-
-    def predict(self, X: Any) -> np.ndarray:
-        check_is_fitted(self)
-        X_arr = _check_X_p4a(self, X)
-        if self.coef_.ndim == 1:
-            preds = X_arr @ self.coef_ + self.intercept_
-        else:
-            preds = X_arr @ self.coef_.T + self.intercept_
-        # sklearn convention: 1-D y in -> 1-D predictions out.
-        if (
-            getattr(self, "_y_ndim_", 2) == 1
-            and preds.ndim == 2
-            and preds.shape[1] == 1
-        ):
-            preds = preds.ravel()
-        return preds

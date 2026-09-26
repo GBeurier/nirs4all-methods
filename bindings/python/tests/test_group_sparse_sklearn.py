@@ -144,18 +144,47 @@ def test_legacy_uses_corrected_native_coefficients(data):
         ("random_subspace_pls_fit", {
             "n_estimators": 5, "features_per_subspace": 4, "seed": 7,
         }),
+        ("ridge_fit", {"ridge_lambda": 0.3}),
+        ("cppls_fit", {"gamma": 0.5}),
+        ("sparse_simpls_fit", {"sparsity_lambda": 0.05}),
+        ("ecr_fit", {"alpha": 0.5}),
+        ("mir_pls_fit", {}),
+        ("n_pls_fit", {"mode_j": 2, "mode_k": 3}),
+        ("mb_pls_fit", {"block_sizes": [3, 3]}),
+        ("di_pls_fit", {"di_lambda": 1.0}),
     ],
 )
 def test_verified_affine_method_results_promote_to_native_model(data, fit_name, parameters):
     X, y, X_test = data
-    target_y = y[:, :1] if fit_name == "robust_pls_fit" else y
+    target_y = y if fit_name in {
+        "fused_sparse_pls_fit", "ridge_fit", "mb_pls_fit",
+    } else y[:, :1]
     with pls4all.Context() as ctx, pls4all.Config() as cfg:
         cfg.n_components = 2
-        with getattr(pls4all, fit_name)(ctx, cfg, X, target_y, **parameters) as result:
+        if fit_name == "ridge_fit":
+            cfg.scale_x = False
+            cfg.scale_y = False
+        if fit_name == "n_pls_fit":
+            result = pls4all.n_pls_fit(
+                ctx, cfg, X, parameters["mode_j"], parameters["mode_k"], target_y,
+            )
+        elif fit_name == "di_pls_fit":
+            cfg.scale_x = False
+            cfg.scale_y = False
+            X_target = X + 0.013
+            result = pls4all.di_pls_fit(
+                ctx, cfg, X, target_y, X_target, parameters["di_lambda"],
+            )
+        else:
+            result = getattr(pls4all, fit_name)(ctx, cfg, X, target_y, **parameters)
+        with result:
             coefficients = result.matrix("coefficients")
-            x_mean = result.matrix("x_mean").ravel()
-            y_mean = result.matrix("y_mean").ravel()
-            expected = (X_test - x_mean) @ coefficients + y_mean
+            if fit_name in {"ridge_fit", "mb_pls_fit"}:
+                expected = X_test @ coefficients + result.matrix("intercept").ravel()
+            else:
+                x_mean = result.matrix("x_mean").ravel()
+                y_mean = result.matrix("y_mean").ravel()
+                expected = (X_test - x_mean) @ coefficients + y_mean
             training_predictions = result.matrix("predictions")
             with result.to_affine_model(ctx) as model:
                 payload = model.to_bytes()
@@ -166,3 +195,55 @@ def test_verified_affine_method_results_promote_to_native_model(data, fit_name, 
             np.testing.assert_allclose(
                 restored.predict(ctx, X_test), expected, atol=1e-10,
             )
+            if fit_name == "ridge_fit":
+                from sklearn.linear_model import Ridge
+
+                reference = Ridge(alpha=parameters["ridge_lambda"]).fit(X, target_y)
+                np.testing.assert_allclose(
+                    restored.predict(ctx, X_test), reference.predict(X_test), atol=1e-9,
+                )
+
+
+@pytest.mark.parametrize(
+    ("class_name", "parameters"),
+    [
+        ("GroupSparsePLSRegression", {"group_assignment": [0, 0, 1, 1, 2, 2]}),
+        ("FusedSparsePLSRegression", {}),
+        ("RobustPLSRegression", {}),
+        ("RidgePLSRegression", {}),
+        ("ContinuumRegression", {}),
+        ("BaggingPLSRegression", {"n_estimators": 5}),
+        ("BoostingPLSRegression", {"n_estimators": 5}),
+        ("RandomSubspacePLSRegression", {"n_estimators": 5, "features_per_subspace": 4}),
+        ("Ridge", {"alpha": 0.3}),
+        ("CPPLSRegression", {}),
+        ("SparseSimplsRegression", {}),
+        ("ECRegression", {}),
+        ("MIRPLSRegression", {}),
+        ("NPLSRegression", {"mode_j": 2, "mode_k": 3}),
+        ("MBPLSRegression", {"block_sizes": [3, 3], "scale_x": False,
+                             "scale_y": False}),
+        ("DIPLSRegression", {}),
+    ],
+)
+def test_verified_sklearn_wrappers_use_native_heldout_n4mm(data, class_name, parameters):
+    import pls4all.sklearn as sklearn_wrappers
+
+    X, y, X_test = data
+    estimator = getattr(sklearn_wrappers, class_name)(**parameters)
+    if class_name == "DIPLSRegression":
+        estimator.fit(X, y[:, 0], X_target=X + 0.013)
+    else:
+        estimator.fit(X, y[:, 0])
+    assert estimator._native_affine_model
+    predicted = estimator.predict(X_test)
+    assert predicted.shape == (X_test.shape[0],)
+    with pls4all.Context() as ctx, pls4all.Model.from_bytes(
+        ctx, estimator.export_n4mm()
+    ) as restored:
+        np.testing.assert_allclose(predicted, restored.predict(ctx, X_test).ravel(),
+                                   rtol=0, atol=1e-11)
+    np.testing.assert_allclose(
+        pickle.loads(pickle.dumps(estimator)).predict(X_test), predicted,
+        rtol=0, atol=1e-11,
+    )

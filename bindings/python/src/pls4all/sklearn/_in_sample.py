@@ -152,6 +152,8 @@ class WeightedPLSRegression(_InSampleOnlyRegressor):
 class RobustPLSRegression(_MethodResultRegressor):
     """Robust PLS via Huber IRLS with held-out prediction."""
 
+    _native_affine_model = True
+
     def __init__(
         self, n_components: int = 2, *, huber_k: float = 1.345, max_irls_iter: int = 20
     ) -> None:
@@ -177,6 +179,8 @@ class RobustPLSRegression(_MethodResultRegressor):
 class RidgePLSRegression(_MethodResultRegressor):
     """L2-augmented PLS regression with held-out prediction."""
 
+    _native_affine_model = True
+
     def __init__(self, n_components: int = 2, *, ridge_lambda: float = 1.0) -> None:
         self.n_components = n_components
         self.ridge_lambda = ridge_lambda
@@ -193,6 +197,8 @@ class RidgePLSRegression(_MethodResultRegressor):
 
 class ContinuumRegression(_MethodResultRegressor):
     """Continuum regression τ ∈ [0, 1] with held-out prediction."""
+
+    _native_affine_model = True
 
     def __init__(self, n_components: int = 2, *, tau: float = 0.5) -> None:
         self.n_components = n_components
@@ -309,6 +315,8 @@ class GroupSparsePLSRegression(_MethodResultRegressor):
 class FusedSparsePLSRegression(_MethodResultRegressor):
     """Fused-sparse PLS — L1 + adjacent-coef smoothing."""
 
+    _native_affine_model = True
+
     def __init__(
         self,
         n_components: int = 2,
@@ -342,6 +350,8 @@ class FusedSparsePLSRegression(_MethodResultRegressor):
 
 class BaggingPLSRegression(_MethodResultRegressor):
     """Bagged PLS (Breiman 1996)."""
+
+    _native_affine_model = True
 
     def __init__(
         self, n_components: int = 2, *, n_estimators: int = 50, seed: int = 0
@@ -396,6 +406,8 @@ class GPRPLSRegression(_InSampleOnlyRegressor):
 class BoostingPLSRegression(_MethodResultRegressor):
     """Boosted PLS regression."""
 
+    _native_affine_model = True
+
     def __init__(
         self,
         n_components: int = 2,
@@ -426,6 +438,8 @@ class BoostingPLSRegression(_MethodResultRegressor):
 
 class RandomSubspacePLSRegression(_MethodResultRegressor):
     """Random-subspace PLS — Ho 1998."""
+
+    _native_affine_model = True
 
     def __init__(
         self,
