@@ -1,4 +1,5 @@
 infra_abi_symbols:
+  - n4m_augmentation_run
   - n4m_array_dtype
   - n4m_array_free
   - n4m_array_shape

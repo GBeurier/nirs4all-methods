@@ -36,8 +36,11 @@ library(n4m)
 n4m_version()
 # "1.0.21+abi.2.11.0"
 
+# Seeded native training-only augmentation of X (no paired Y output):
+# n4m::n4m_augmentation_apply("gaussian_noise", train_X, 0.03, seed = 42)
+
 n4m_abi_version()
-# c(2, 3, 0)
+# c(2, 11, 0)
 
 set.seed(42)
 X <- matrix(rnorm(2000), nrow = 200)

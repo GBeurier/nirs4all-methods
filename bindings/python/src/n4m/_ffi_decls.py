@@ -99,6 +99,7 @@ SYMBOLS = (
     ("n4m_augmentation_rotate_translate_apply", (c_void_p, MatrixView, MatrixView), c_int),
     ("n4m_augmentation_rotate_translate_create", (POINTER(c_void_p), c_void_p, c_double, c_double), c_int),
     ("n4m_augmentation_rotate_translate_destroy", (c_void_p,), None),
+    ("n4m_augmentation_run", (c_int32, POINTER(c_double), c_int32, c_uint64, MatrixView, MatrixView), c_int),
     ("n4m_augmentation_scatter_sim_msc_apply", (c_void_p, MatrixView, MatrixView), c_int),
     ("n4m_augmentation_scatter_sim_msc_create", (POINTER(c_void_p), c_void_p, c_double, c_double, c_double, c_double), c_int),
     ("n4m_augmentation_scatter_sim_msc_destroy", (c_void_p,), None),
