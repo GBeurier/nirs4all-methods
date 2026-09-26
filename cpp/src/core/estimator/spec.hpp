@@ -190,6 +190,14 @@ n4m_status_t apply_config_params(const Params& params, n4m_config_t* cfg);
 // Message "<what> '<name>'".
 void set_error_named(n4m_context_t* ctx, const char* what, const char* name) noexcept;
 
+// Predict-only affine regressor (one N4MM block) over a kernel whose result
+// holds the input-space predictor "input_coefficients" (features x targets)
+// plus the intercept under `intercept_key`. The config carries the PLS
+// settings the method declares (defined in linear_adapters.cpp).
+using InputAffineFit = n4m_status_t (*)(n4m_context_t*, n4m_config_t*, const Params&,
+                                        const FitInputs&, n4m_method_result_t**);
+std::unique_ptr<Adapter> input_affine(InputAffineFit fit, const char* intercept_key);
+
 }  // namespace n4m::estimator
 
 struct n4m_params_s {

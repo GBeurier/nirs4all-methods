@@ -99,7 +99,7 @@ const data = {
     x_train: xTrain, x_predictions: matrix(fixture.x_predictions),
 };
 for (const c of fixture.procedures) {
-    const proc = new (n4m.methodClass(c.method_id))();
+    const proc = new (n4m.methodClass(c.method_id))(c.params);
     assert.ok(proc instanceof n4m.NativeProcedure, c.method_id);
     const X = data[c.x];
     const y = c.inputs.includes("y") ? yTrain : undefined;

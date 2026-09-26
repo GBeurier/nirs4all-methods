@@ -584,6 +584,50 @@ n4m_status_t run_sweep(n4m_context_t* ctx, const Params& params, const FitInputs
         static_cast<std::int64_t>(components.size()), heads, out);
 }
 
+// Affine stack compression: X holds the base coefficients (features x base
+// outputs); the base intercepts, the meta weights (base outputs x targets,
+// row-major) and the meta intercept (one per target) are parameters.
+n4m_status_t run_linear_stack_compress(n4m_context_t* ctx, const Params& params,
+                                       const FitInputs& in, n4m_method_result_t** out) {
+    std::vector<double> base_intercepts = params.get_doubles("base_intercepts");
+    std::vector<double> meta_weights = params.get_doubles("meta_weights");
+    std::vector<double> meta_intercept = params.get_doubles("meta_intercept");
+    const std::int64_t m = in.X->cols;
+    const auto q = static_cast<std::int64_t>(meta_intercept.size());
+    if (static_cast<std::int64_t>(base_intercepts.size()) != m || q == 0 ||
+        static_cast<std::int64_t>(meta_weights.size()) != m * q) {
+        set_error(ctx, "base_intercepts needs one value per X column and meta_weights X.cols x "
+                       "len(meta_intercept) values");
+        return N4M_ERR_SHAPE_MISMATCH;
+    }
+    std::vector<double> coefficients(static_cast<std::size_t>(in.X->rows * q));
+    std::vector<double> intercept(static_cast<std::size_t>(q));
+    n4m_matrix_view_t bias{}, weights{}, meta{}, coef{}, icpt{};
+    n4m_status_t st = n4m_matrix_view_init_rowmajor(&bias, base_intercepts.data(), 1, m,
+                                                    N4M_DTYPE_F64);
+    if (st == N4M_OK) {
+        st = n4m_matrix_view_init_rowmajor(&weights, meta_weights.data(), m, q, N4M_DTYPE_F64);
+    }
+    if (st == N4M_OK) {
+        st = n4m_matrix_view_init_rowmajor(&meta, meta_intercept.data(), 1, q, N4M_DTYPE_F64);
+    }
+    if (st == N4M_OK) {
+        st = n4m_matrix_view_init_rowmajor(&coef, coefficients.data(), in.X->rows, q,
+                                           N4M_DTYPE_F64);
+    }
+    if (st == N4M_OK) {
+        st = n4m_matrix_view_init_rowmajor(&icpt, intercept.data(), 1, q, N4M_DTYPE_F64);
+    }
+    if (st == N4M_OK) {
+        st = n4m_ensemble_linear_stack_compress(in.X, &bias, &weights, &meta, &coef, &icpt);
+    }
+    if (st != N4M_OK) return failed(ctx, params, st);
+    auto result = std::make_unique<n4m_method_result_s>();
+    result->set_double_matrix("coefficients", std::move(coefficients), in.X->rows, q);
+    result->set_double_matrix("intercept", std::move(intercept), 1, q);
+    return finish(std::move(result), out);
+}
+
 n4m_status_t run_transfer_metrics(n4m_context_t* ctx, const Params& params, const FitInputs& in,
                                   n4m_method_result_t** out) {
     std::vector<double> source_rows, target_rows;

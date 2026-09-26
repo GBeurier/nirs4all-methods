@@ -218,6 +218,65 @@ class AffineResultAdapter final : public ModelAdapter {
     Configure configure_;
 };
 
+// The input-space predictor of a kernel result as a linear N4MM model; the
+// training row count of "predictions" is kept as provenance.
+n4m_status_t import_input_affine(n4m_context_t* ctx, const n4m_method_result_t* result,
+                                 const char* intercept_key, ModelPtr& out) {
+    const double* coef = nullptr;
+    const double* intercept = nullptr;
+    const double* predictions = nullptr;
+    std::int64_t p = 0, q = 0, rows = 0, cols = 0, n = 0, pred_cols = 0;
+    if (n4m_method_result_get_double_matrix(result, "input_coefficients", &coef, &p, &q) !=
+            N4M_OK ||
+        n4m_method_result_get_double_matrix(result, intercept_key, &intercept, &rows, &cols) !=
+            N4M_OK ||
+        p <= 0 || q <= 0 || p > std::numeric_limits<std::int32_t>::max() ||
+        q > std::numeric_limits<std::int32_t>::max() || rows * cols != q) {
+        set_error(ctx, "kernel result lacks an input-space affine predictor");
+        return N4M_ERR_INTERNAL;
+    }
+    if (n4m_method_result_get_double_matrix(result, "predictions", &predictions, &n,
+                                            &pred_cols) != N4M_OK) {
+        n = 0;
+    }
+    n4m_linear_predictor_spec_t spec{};
+    spec.source_training_samples = n;
+    spec.n_features = static_cast<std::int32_t>(p);
+    spec.n_targets = static_cast<std::int32_t>(q);
+    spec.coefficients = coef;
+    spec.intercept = intercept;
+    n4m_model_t* model = nullptr;
+    const n4m_status_t st = n4m_model_import_linear_predictor(ctx, &spec, &model);
+    out.reset(model);
+    return st;
+}
+
+class InputAffineAdapter final : public ModelAdapter {
+  public:
+    InputAffineAdapter(InputAffineFit fit_fn, const char* intercept_key)
+        : ModelAdapter(N4M_CAP_PREDICT | N4M_CAP_AFFINE | N4M_CAP_SERIALIZABLE),
+          fit_fn_(fit_fn),
+          intercept_key_(intercept_key) {}
+
+    n4m_status_t fit(n4m_context_t* ctx, const Params& params,
+                     const FitInputs& in) override {
+        reset();
+        ConfigPtr cfg;
+        n4m_status_t st = make_config(params, cfg);
+        if (st != N4M_OK) return st;
+        n4m_method_result_t* raw = nullptr;
+        st = fit_fn_(ctx, cfg.get(), params, in, &raw);
+        ResultPtr result(raw);
+        if (st == N4M_OK) st = import_input_affine(ctx, result.get(), intercept_key_, model_);
+        if (st == N4M_OK) result_ = std::move(result);
+        return st;
+    }
+
+  private:
+    InputAffineFit fit_fn_;
+    const char* intercept_key_;
+};
+
 // Recursive (moving-window) PLS: the model that predicts the next sample, a
 // SIMPLS fit on the last `window_size` rows (n4m_estimators_recursive_pls_run
 // predicts row i from the window of rows i - window_size .. i - 1).
@@ -265,6 +324,10 @@ std::unique_ptr<Adapter> affine(AffineResultAdapter::FitFn fn,
 }
 
 }  // namespace
+
+std::unique_ptr<Adapter> input_affine(InputAffineFit fit, const char* intercept_key) {
+    return std::make_unique<InputAffineAdapter>(fit, intercept_key);
+}
 
 std::unique_ptr<Adapter> make_pls_regression(const MethodSpec&) {
     return std::make_unique<ModelFitAdapter>([](const Params& p, n4m_config_t* cfg) {

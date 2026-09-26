@@ -600,6 +600,28 @@ const std::map<std::string, Direct>& generic_checks() {
                  CHECK(scalar_is(r, name, v));
              }
          }},
+        {"aom_pop.linear_stack_compress",
+         [](n4m_context_t*, const n4m_params_t* p, const n4m_fit_inputs_v1_t& in,
+            const n4m_method_result_t* r) {
+             auto bias = doubles(p, "base_intercepts");
+             auto weights = doubles(p, "meta_weights");
+             auto meta = doubles(p, "meta_intercept");
+             std::vector<double> coef(static_cast<size_t>(in.X->rows)), intercept(1);
+             const n4m_matrix_view_t B = view(bias.data(), 1, kCols);
+             const n4m_matrix_view_t W = view(weights.data(), kCols, 1);
+             const n4m_matrix_view_t M = view(meta.data(), 1, 1);
+             n4m_matrix_view_t C = view(coef.data(), in.X->rows, 1);
+             n4m_matrix_view_t I = view(intercept.data(), 1, 1);
+             CHECK(n4m_ensemble_linear_stack_compress(in.X, &B, &W, &M, &C, &I) == N4M_OK);
+             const double* data = nullptr;
+             int64_t rows = 0, cols = 0;
+             CHECK(n4m_method_result_get_double_matrix(r, "coefficients", &data, &rows, &cols) ==
+                   N4M_OK);
+             CHECK(rows == in.X->rows && cols == 1 && same_bits(coef.data(), data, coef.size()));
+             CHECK(n4m_method_result_get_double_matrix(r, "intercept", &data, &rows, &cols) ==
+                   N4M_OK);
+             CHECK(rows == 1 && cols == 1 && same_bits(intercept.data(), data, 1));
+         }},
         {"utilities.hotelling_t2",
          [](n4m_context_t*, const n4m_params_t* p, const n4m_fit_inputs_v1_t& in,
             const n4m_method_result_t* r) {
@@ -672,6 +694,35 @@ const std::map<std::string, Direct>& generic_checks() {
 
 // ---- Conformance -----------------------------------------------------------
 
+// Parameters without a default, sized for the test X; false when none.
+bool fill_required(int32_t index, n4m_params_t* params) {
+    n4m_method_info_v1_t info{};
+    info.struct_size = sizeof(info);
+    CHECK(n4m_method_info_v1(index, &info) == N4M_OK);
+    bool any = false;
+    for (int32_t k = 0; k < info.n_params; ++k) {
+        n4m_param_info_v1_t pi{};
+        pi.struct_size = sizeof(pi);
+        CHECK(n4m_method_param_info_v1(index, k, &pi) == N4M_OK);
+        if (pi.has_default) continue;
+        any = true;
+        // Linear stack compression of the X columns (base outputs) into one target.
+        std::vector<double> v;
+        if (std::strcmp(pi.name, "base_intercepts") == 0 ||
+            std::strcmp(pi.name, "meta_weights") == 0) {
+            for (int64_t j = 0; j < kCols; ++j) v.push_back(0.1 * static_cast<double>(j) - 1.0);
+        } else if (std::strcmp(pi.name, "meta_intercept") == 0) {
+            v.push_back(0.5);
+        } else {
+            throw std::runtime_error(std::string("no test value for required parameter ") +
+                                     pi.name + " @" + current_);
+        }
+        CHECK(n4m_params_set_double_array(params, pi.name, v.data(),
+                                          static_cast<int64_t>(v.size())) == N4M_OK);
+    }
+    return any;
+}
+
 n4m_status_t run(n4m_context_t* ctx, int32_t index, const n4m_params_t* params,
                  const n4m_fit_inputs_v1_t& in, ResultPtr& out) {
     return n4m_procedure_run(ctx, index, params, &in, &out.p);
@@ -706,6 +757,7 @@ void conformance(n4m_context_t* ctx, const Inputs& inputs, int32_t index, int32_
     if (role == N4M_ROLE_AUGMENTER) CHECK(has_param(params, "seed"));
     if (has_param(params, "seed")) CHECK(n4m_params_set_int(params, "seed", 7) == N4M_OK);
     CHECK(n4m_params_set_int(params, "no_such_param", 1) == N4M_ERR_INVALID_ARGUMENT);
+    const bool requires_params = fill_required(index, params);
     CHECK(n4m_params_validate(ctx, params) == N4M_OK);
 
     const n4m_fit_inputs_v1_t in = inputs.for_method(info);
@@ -742,10 +794,16 @@ void conformance(n4m_context_t* ctx, const Inputs& inputs, int32_t index, int32_
     n4m_params_destroy(foreign);
     CHECK(refused.p == nullptr);
 
-    // Defaults (NULL params) and explicit params both run; same seed, same
-    // output; a column-major X gives the same output.
+    // Defaults (NULL params) and explicit params both run, unless a
+    // parameter has no default; same seed, same output; a column-major X
+    // gives the same output.
     ResultPtr defaults, first, second, strided;
-    CHECK(run(ctx, index, nullptr, in, defaults) == N4M_OK);
+    if (requires_params) {
+        CHECK(run(ctx, index, nullptr, in, defaults) == N4M_ERR_INVALID_ARGUMENT);
+        CHECK(std::strstr(n4m_context_last_error(ctx), "missing required parameter") != nullptr);
+    } else {
+        CHECK(run(ctx, index, nullptr, in, defaults) == N4M_OK);
+    }
     const std::vector<double> x_before(static_cast<const double*>(in.X->data),
                                        static_cast<const double*>(in.X->data) +
                                            in.X->rows * in.X->cols);
