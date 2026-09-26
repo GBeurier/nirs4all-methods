@@ -690,7 +690,11 @@ static SEXP dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
     } else if (strcmp(algo, "ridge") == 0) {
         double alpha = get_double(params, "ridge_lambda", 1.0);
         st = n4m_estimators_ridge_fit(ctx, cfg, &Xv, &Yv, &alpha, (int64_t)1, &mr);
-        if (st == N4M_OK) out = pack_result(mr, REG_DMAT, NULL, NULL, REG_SCALAR);
+        if (st == N4M_OK) {
+            static const char* dm[] = {"coefficients", "predictions",
+                                      "x_mean", "y_mean", "intercept", NULL};
+            out = pack_result(mr, dm, NULL, NULL, REG_SCALAR);
+        }
     } else if (strcmp(algo, "continuum_regression") == 0) {
         double t = get_double(params, "tau", 0.5);
         st = n4m_estimators_continuum_regression_fit(ctx, cfg, &Xv, &Yv, t, &mr);
