@@ -20,7 +20,7 @@ _No constructor parameters._
 from n4m.transform.scaling import SimpleScale
 ```
 
-Source signature: [`SimpleScale()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L144).
+Source signature: [`SimpleScale()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L153).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

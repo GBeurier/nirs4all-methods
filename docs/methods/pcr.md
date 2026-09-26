@@ -58,7 +58,7 @@ from n4m.estimators.regression.latent import pcr
 result = pcr(X, y)
 ```
 
-Source signature: `pcr(X, y, *, n_components: int = 2, center_x: bool | None = True, scale_x: bool | None = True, center_y: bool | None = True, scale_y: bool | None = False)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8580)).
+Source signature: `pcr(X, y, *, n_components: int = 2, center_x: bool | None = True, scale_x: bool | None = True, center_y: bool | None = True, scale_y: bool | None = False)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8586)).
 
 **R (source-verified):** [`pcr(formula, ncomp = 2L, data, subset, na.action = stats::na.omit, method = c("svdpc", "pcr"), scale = FALSE, validation = c("none", "CV"), segments = 10L, center = TRUE, fit_components = TRUE, ...)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/pls_compat.R).
 

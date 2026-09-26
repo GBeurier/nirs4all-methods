@@ -20,7 +20,7 @@ _No constructor parameters._
 from n4m.transform.signal_conversion import FractionToPercent
 ```
 
-Source signature: [`FractionToPercent()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L502).
+Source signature: [`FractionToPercent()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L614).
 
 **R:** no current source-verified entry point was found for this catalog method.
 

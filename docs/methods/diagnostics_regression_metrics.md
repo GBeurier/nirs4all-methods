@@ -8,7 +8,7 @@ _Namespace_: **`n4m.metrics.scoring`** · _Fully-qualified_: `n4m.metrics.scorin
 
 **Python (verified public re-export):** `from n4m.metrics.scoring import nirs_metrics`
 
-**Signature:** [`nirs_metrics(y_true, y_pred)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L10634)
+**Signature:** [`nirs_metrics(y_true, y_pred)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L10641)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

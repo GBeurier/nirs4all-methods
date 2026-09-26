@@ -2790,10 +2790,10 @@ def _group_sparse_pls_pls4all(ctx, cfg, X, Y, *, n_components,
     the parity gate against the in-tree NumPy port is bit-exact
     (``max_abs < 1e-6``).
 
-    Opt-in legacy path (``legacy=True``) routes through the original
-    ``n4m_group_sparse_pls_fit`` C kernel (SIMPLS + soft-threshold-on-
-    weights with ``group_lambda``). Kept for users who depend on the
-    historical penalty parametrisation.
+    Opt-in native path (``legacy=True``) routes through the
+    ``n4m_group_sparse_pls_fit`` C kernel (SIMPLS followed by groupwise
+    proximal shrinkage of predictive coefficients). This differs from
+    the published sgPLS reference and the earlier ineffective penalty.
     """
     import pls4all
     groups = kwargs["group_assignment"]
@@ -8358,12 +8358,10 @@ class _GroupSparseNumpyReference(ReferenceAdapter):
     library_version = "in-tree"
     language = "python"
     notes = ("In-tree NumPy port of Liquet et al. 2016 group sparse PLS "
-             "(R `sgPLS::gPLS`, regression mode, scale=TRUE). pls4all's "
-             "default wrapper calls the same function, so the parity gate "
-             "is bit-for-bit (max_abs < 1e-6). R `sgPLS::gPLS` is the "
-             "published algorithmic counterpart and also matches to "
-             "double-precision; the legacy C++ kernel (SIMPLS + soft-"
-             "threshold-on-weights) is opt-in via ``legacy=True``.")
+             "(R `sgPLS::gPLS`, regression mode, scale=TRUE). The archived "
+             "default Python reference uses that port. The opt-in native "
+             "route uses post-SIMPLS coefficient shrinkage and is not "
+             "numerically equivalent to sgPLS::gPLS.")
 
     def __init__(self, n_components: int) -> None:
         self._k = int(n_components)
@@ -9408,11 +9406,11 @@ METHODS: list[MethodSpec] = [
         needs_group_assignment=True,
         rmse_rel_tol=1e-8,
         notes=("R `sgPLS::gPLS` (Liquet et al. 2016, regression mode, "
-               "scale=TRUE). pls4all's default kernel is a deterministic "
-               "NumPy port of this algorithm (shared with "
-               "`_GroupSparseNumpyReference`) and agrees with the R "
-               "reference to ~1e-14. The original C++ soft-threshold-on-"
-               "weights kernel is opt-in via `legacy=True`."),
+               "scale=TRUE). The archived benchmark's default Python "
+               "reference is a deterministic NumPy port of that algorithm. "
+               "Its `legacy=True` route invokes the native C ABI, which "
+               "uses post-SIMPLS coefficient shrinkage; these are distinct "
+               "estimators, not numerical equivalents."),
     ),
     MethodSpec(
         name="fused_sparse_pls",
