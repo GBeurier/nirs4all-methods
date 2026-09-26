@@ -41,7 +41,7 @@ test_that("marked group-sparse MethodResult predicts held-out via native model",
     held), expected_multi, tolerance = 1e-10)
 })
 
-test_that("another marked affine method predicts held-out; unmarked methods refuse", {
+test_that("other marked affine methods predict held-out; non-affine methods refuse", {
   X <- outer(seq_len(21L), seq_len(12L), function(i, j)
     sin(i * j / 9) + cos(i + j / 7) + i * j / 100)
   Y <- 1.3 + 0.7 * X[, 2L] - 0.4 * X[, 6L]
@@ -52,8 +52,35 @@ test_that("another marked affine method predicts held-out; unmarked methods refu
   expect_equal(predict(fitted, held), expected, tolerance = 1e-10)
   expect_equal(as.numeric(n4m_predict(n4m_model_import(
     n4m_affine_model_export(fitted)), held)), expected, tolerance = 1e-10)
-  expect_error(n4m_affine_fit("ridge", X, Y, 2L),
-    "affine_predictor|affine")
+  ridge <- n4m_affine_fit("ridge", X, Y, 2L)
+  expect_equal(predict(ridge, held),
+    as.numeric(n4m_predict(n4m_model_import(n4m_affine_model_export(ridge)),
+      held)), tolerance = 1e-10)
+  expect_length(n4m_affine_supported_methods(), 16L)
   expect_error(n4m_affine_fit("kernel_pls", X, Y, 2L),
     "unsupported affine")
+})
+
+test_that("all 16 marked MethodResult regressors promote to native N4MM", {
+  X <- outer(seq_len(21L), seq_len(12L), function(i, j)
+    sin(i * j / 9) + cos(i + j / 7) + i * j / 100)
+  Y <- 1.3 + 0.7 * X[, 2L] - 0.4 * X[, 6L]
+  held <- X[c(2L, 8L, 17L), , drop = FALSE] + 0.031
+  special <- list(
+    n_pls = list(mode_j = 3L, mode_k = 4L),
+    mb_pls = list(block_sizes = c(6L, 6L)),
+    di_pls = list(X_target = X + 0.02),
+    group_sparse_pls = list(group_assignment = rep(0:2, each = 4L)))
+  methods <- n4m_affine_supported_methods()
+  expect_length(methods, 16L)
+  for (method in methods) {
+    params <- special[[method]]
+    if (is.null(params)) params <- list()
+    fit <- n4m_affine_fit(method, X, Y, 2L, params)
+    expect_type(fit$native_model, "externalptr")
+    imported <- n4m_model_import(n4m_affine_model_export(fit))
+    expect_equal(predict(fit, held),
+                 as.numeric(n4m_predict(imported, held)),
+                 tolerance = 1e-10)
+  }
 })

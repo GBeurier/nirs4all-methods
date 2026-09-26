@@ -24,9 +24,7 @@
 #' @return Character vector of marked method names.
 #' @export
 n4m_affine_supported_methods <- function() c(
-  "group_sparse_pls", "fused_sparse_pls", "robust_pls", "ridge_pls",
-  "continuum_regression", "bagging_pls", "boosting_pls",
-  "random_subspace_pls")
+  names(.n4m_affine_methods))
 
 #' Fit a reusable native affine MethodResult regressor
 #'
@@ -106,7 +104,7 @@ n4m_affine_fit <- function(method, X, Y, n_components = 2L, params = list()) {
   result <- .Call("r_n4m_affine_dispatch_fit", method, X, Y_matrix,
     as.integer(n_components), params, 1L, 0L, 1L, 0L, PACKAGE = "n4m")
   coefficients <- as.matrix(result$coefficients)
-  direct_intercept <- identical(method, "mb_pls")
+  direct_intercept <- method %in% c("mb_pls", "ridge")
   x_mean <- if (direct_intercept) NULL else as.numeric(result$x_mean)
   y_mean <- if (direct_intercept) NULL else as.numeric(result$y_mean)
   if (!is.numeric(coefficients) ||
