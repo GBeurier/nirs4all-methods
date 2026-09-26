@@ -8,6 +8,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- ABI 2.13: generic typed role interfaces for the catalog methods
+  (`n4m/estimator.h`). A native manifest (`n4m_method_*`,
+  `n4m_method_manifest_json`), named typed parameters with core-owned
+  defaults (`n4m_params_*`), one estimator life cycle (`n4m_estimator_*`:
+  transformer, selector, regressor, classifier and sample-filter roles) with a
+  portable fitted state (N4ME), and one call for procedures
+  (`n4m_procedure_run`: splitters, augmenters, diagnostics, utilities).
+  Python `n4m.roles` (scikit-learn classes), R `n4m_<method>()` constructors
+  with S3 role classes, JS/WASM classes and the Rust `n4m::roles` module are
+  generated from or driven by the manifest; a shared fixture replays every
+  fitted state and procedure identically in the four bindings. See
+  `docs/abi/estimator_roles_design.md` and
+  `docs/parity/estimator_roles_coverage.md`.
+
+### Changed
+
+- The draft ABI 2.12 `n4m_sample_filter_*` / `n4m_feature_filter_*` surface,
+  never released, is replaced by the sample-filter and selector roles.
+- Kernel fixes found while adding roles: PLS-QDA now applies the fitted
+  covariances; sparse PLS-DA honours `sparsity_lambda`; SO-PLS / ROSA return
+  affine predictors on raw blocks; PLS-GLM folds the X centering into its
+  intercept; missing-aware NIPALS imputes in-sample; bagging / random-subspace
+  PLS draw portably (fits change once); alignment refits relearn their
+  reference; the cubic resampler no longer shares scratch space; the AOM
+  calibration kernel reports infeasible candidates by status (WASM builds
+  have no exception catching). Details in `docs/abi/changes_log.md`.
+
 - Expose native domain-invariant PLS as `n4m.domain_adaptation.invariant.di_pls`
   and the scikit-learn-compatible `DIPLS` estimator. Both require an explicit
   unlabeled target-domain matrix at fit time; the fitted affine predictor
