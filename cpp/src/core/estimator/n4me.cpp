@@ -216,7 +216,7 @@ n4m_status_t decode_state(n4m_context_t* ctx, const unsigned char* bytes, std::s
         }
         n4m_status_t st = N4M_OK;
         if (is_int_type(type)) {
-            std::vector<std::int64_t> v(count);
+            std::vector<std::int64_t> v(static_cast<std::size_t>(count));
             for (auto& x : v) {
                 std::uint64_t u = 0;
                 r.u64(u);
@@ -225,7 +225,7 @@ n4m_status_t decode_state(n4m_context_t* ctx, const unsigned char* bytes, std::s
             st = params.set_ints(name.c_str(), static_cast<n4m_method_param_type_t>(type), v.data(),
                                  static_cast<std::int64_t>(count));
         } else {
-            std::vector<double> v(count);
+            std::vector<double> v(static_cast<std::size_t>(count));
             for (auto& x : v) r.f64(x);
             st = params.set_doubles(name.c_str(), static_cast<n4m_method_param_type_t>(type), v.data(),
                                     static_cast<std::int64_t>(count));
@@ -245,7 +245,8 @@ n4m_status_t decode_state(n4m_context_t* ctx, const unsigned char* bytes, std::s
     for (StateBlock& b : blocks) {
         std::uint64_t len = 0;
         const unsigned char* data = nullptr;
-        if (!r.u32(b.tag) || !r.u64(len) || len > r.remaining() || !r.take(len, data)) {
+        if (!r.u32(b.tag) || !r.u64(len) || len > r.remaining() ||
+            !r.take(static_cast<std::size_t>(len), data)) {
             return corrupt(ctx, "truncated N4ME state block");
         }
         b.bytes.assign(data, data + len);

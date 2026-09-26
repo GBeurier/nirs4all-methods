@@ -19,6 +19,23 @@ namespace n4m::core {
 
 namespace {
 
+// Portable draws from std::mt19937_64 (whose output sequence is standardized):
+// std::uniform_int_distribution and std::shuffle are implementation-defined and
+// give different samples under libstdc++, libc++ (macOS, Emscripten) and MSVC.
+std::uint64_t portable_bounded(std::mt19937_64& rng, std::uint64_t n) {
+    const std::uint64_t threshold = (std::uint64_t{0} - n) % n;
+    for (;;) {
+        const std::uint64_t x = rng();
+        if (x >= threshold) return x % n;
+    }
+}
+
+void portable_shuffle(std::vector<std::size_t>& values, std::mt19937_64& rng) {
+    for (std::size_t i = values.size(); i > 1; --i) {
+        std::swap(values[i - 1], values[static_cast<std::size_t>(portable_bounded(rng, i))]);
+    }
+}
+
 constexpr double kEps = 1e-12;
 
 [[maybe_unused]] inline std::size_t idx(std::size_t row, std::size_t cols, std::size_t col) noexcept {
@@ -3216,12 +3233,11 @@ n4m_status_t fit_bagging_pls(Context& ctx,
         static_cast<std::size_t>(cfg.n_components),
         std::min(n - 1, p));
     std::mt19937_64 rng(seed);
-    std::uniform_int_distribution<std::size_t> dist(0, n - 1);
     std::vector<double> X_boot(n * p, 0.0);
     std::vector<double> Y_boot(n * q, 0.0);
     for (std::int32_t e = 0; e < n_estimators; ++e) {
         for (std::size_t r = 0; r < n; ++r) {
-            const std::size_t idx_row = dist(rng);
+            const auto idx_row = static_cast<std::size_t>(portable_bounded(rng, n));
             for (std::size_t f = 0; f < p; ++f)
                 X_boot[r * p + f] = X_buf[idx_row * p + f];
             for (std::size_t target = 0; target < q; ++target)
@@ -3330,7 +3346,7 @@ n4m_status_t fit_random_subspace_pls(Context& ctx,
     std::vector<std::size_t> indices(p);
     for (std::size_t i = 0; i < p; ++i) indices[i] = i;
     for (std::int32_t e = 0; e < n_estimators; ++e) {
-        std::shuffle(indices.begin(), indices.end(), rng);
+        portable_shuffle(indices, rng);
         const std::size_t sub_p = static_cast<std::size_t>(features_per_subspace);
         std::vector<double> X_sub(n * sub_p, 0.0);
         for (std::size_t r = 0; r < n; ++r) {
