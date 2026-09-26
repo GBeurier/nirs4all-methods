@@ -23,6 +23,10 @@ export(msc_fit)
 export(msc_transform)
 export(emsc_fit)
 export(emsc_transform)
+export(n4m_preprocess_capabilities)
+export(n4m_preprocess_step)
+export(n4m_preprocess_fit)
+export(n4m_preprocess_transform)
 export(kennard_stone_split)
 
 # Tier 1 — MethodResult fits
