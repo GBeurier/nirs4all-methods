@@ -8637,6 +8637,78 @@ def cppls(
     )
 
 
+def di_pls(
+    X_source,
+    y_source,
+    *,
+    X_target,
+    n_components: int = 2,
+    di_lambda: float = 1.0,
+) -> dict[str, np.ndarray | float]:
+    """Fit native domain-invariant PLS with an unlabeled target cohort.
+
+    ``X_target`` participates in fitting, even though its responses are not
+    used. In cross-validation it must therefore be chosen independently of
+    the held-out source fold; this function does not split or filter it.
+    The returned coefficients are in input space and can predict new spectra
+    without retaining the target cohort.
+    """
+    X_arr = as_f64_2d(X_source)
+    target = np.asarray(X_target, dtype=np.float64)
+    if target.ndim != 2 or target.shape[0] < 2 or target.shape[1] < 2:
+        raise ValueError(
+            "X_target must be a 2-D matrix with at least two rows and columns"
+        )
+    if target.shape[1] != X_arr.shape[1]:
+        raise ValueError("X_target must have the same feature count as X_source")
+    if not np.isfinite(X_arr).all() or not np.isfinite(target).all():
+        raise ValueError("X_source and X_target must contain only finite values")
+    if hasattr(X_source, "columns") or hasattr(X_target, "columns"):
+        source_names = getattr(X_source, "columns", None)
+        target_names = getattr(X_target, "columns", None)
+        if (
+            source_names is None
+            or target_names is None
+            or tuple(source_names) != tuple(target_names)
+        ):
+            raise ValueError("X_target feature names and order must match X_source")
+    y_arr = _as_y_matrix(y_source, X_arr.shape[0])
+    if y_arr.shape[1] != 1:
+        raise ValueError("DI-PLS currently supports exactly one response")
+    if not np.isfinite(y_arr).all():
+        raise ValueError("y_source must contain only finite values")
+    if (
+        isinstance(n_components, (bool, np.bool_))
+        or not isinstance(n_components, (int, np.integer))
+        or n_components < 1
+    ):
+        raise ValueError("n_components must be a positive integer")
+    if (
+        isinstance(di_lambda, (bool, np.bool_))
+        or not isinstance(di_lambda, (int, float, np.integer, np.floating))
+        or not np.isfinite(di_lambda)
+        or di_lambda < 0
+    ):
+        raise ValueError("di_lambda must be finite and non-negative")
+    target = np.ascontiguousarray(target)
+    target_view = numpy_to_view(target)
+    return _fit_method_result(
+        "n4m_domain_adaptation_di_pls_fit",
+        X_arr,
+        y_arr,
+        ctypes.byref(target_view),
+        ctypes.c_double(float(di_lambda)),
+        matrices=("coefficients", "predictions", "x_mean", "y_mean"),
+        scalars=("rmse_source",),
+        n_components=int(n_components),
+        solver=1,  # SIMPLS; the native DI-PLS kernel requires this solver.
+        center_x=True,
+        scale_x=False,
+        center_y=True,
+        scale_y=False,
+    )
+
+
 def weighted_pls(
     X,
     y,

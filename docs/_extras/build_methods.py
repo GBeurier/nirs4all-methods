@@ -2646,6 +2646,17 @@ def usage_section(method: str, spec: dict, cat: dict | None,
         parts.append("**Python:** no current AST-verified public `n4m` re-export was found for this "
                      "method. The linked C ABI above is the documented surface in this checkout.\n")
 
+    if method == "di_pls" and binding:
+        parts.append(
+            "The scikit-learn-compatible `n4m.domain_adaptation.invariant.DIPLS` "
+            "estimator accepts `fit(X_source, y_source, X_target=X_target)` and "
+            "predicts fresh spectra from native input-space coefficients. The "
+            "unlabeled target cohort contributes to training and must be chosen "
+            "within each validation fold; it is not stored in the fitted "
+            "estimator. Cross-language retraining therefore still requires "
+            "the original target cohort.\n"
+        )
+
     parts.append(render_cross_binding_surfaces(cross_bindings))
 
     parts.append(f"**Registry parity references** {TRUTH_SOURCE_ICON}\n")

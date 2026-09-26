@@ -55,7 +55,7 @@ from n4m.estimators.regression.latent import ecr
 result = ecr(X, y)
 ```
 
-Source signature: `ecr(X, y, *, alpha: float = 0.5, n_components: int = 2)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8757)).
+Source signature: `ecr(X, y, *, alpha: float = 0.5, n_components: int = 2)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8829)).
 
 **R (source-verified):** [`ecr(formula, data, ncomp = 2L, alpha = 0.5, na.action = stats::na.omit)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn_extra.R).
 

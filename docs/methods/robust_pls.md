@@ -60,7 +60,7 @@ from n4m.estimators.regression.robust import robust_pls
 result = robust_pls(X, y)
 ```
 
-Source signature: `robust_pls(X, y, *, huber_k: float = 1.345, max_irls_iter: int = 5, n_components: int = 2, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8677)).
+Source signature: `robust_pls(X, y, *, huber_k: float = 1.345, max_irls_iter: int = 5, n_components: int = 2, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8749)).
 
 **R (source-verified):** [`robust_pls(formula, data, ncomp = 2L, huber_k = 1.345, max_irls_iter = 20L, na.action = stats::na.omit)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn_extra.R).
 

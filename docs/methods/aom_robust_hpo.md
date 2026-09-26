@@ -8,7 +8,7 @@ _Namespace_: **`n4m.model_selection.aom_search`** · _Fully-qualified_: `n4m.mod
 
 **Python (verified public re-export):** `from n4m.model_selection.aom_search import aom_robust_hpo`
 
-**Signature:** [`aom_robust_hpo(X, y, *, profile: str | int = 'compact', cv: int = 5, heads = ('ridge', 'pls'))`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8904)
+**Signature:** [`aom_robust_hpo(X, y, *, profile: str | int = 'compact', cv: int = 5, heads = ('ridge', 'pls'))`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8976)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

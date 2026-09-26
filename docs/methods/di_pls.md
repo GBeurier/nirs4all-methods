@@ -12,8 +12,11 @@ Domain-invariant PLS
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `4` | registry benchmark cell value |
-| `di_lambda` | `float` | `1.0` | registry benchmark cell value |
+| `X_source` | `—` | `required` | current public binding signature |
+| `y_source` | `—` | `required` | current public binding signature |
+| `X_target` | `—` | `required` | current public binding signature |
+| `n_components` | `int` | `2` | current public binding signature |
+| `di_lambda` | `float` | `1.0` | current public binding signature |
 
 ## Explanations
 
@@ -52,7 +55,15 @@ Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier
 
 **C ABI (ABI 2):** [`n4m_domain_adaptation_di_pls_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/domain_adaptation.h#L130). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
+**Python (verified public re-export):**
+
+```python
+from n4m.domain_adaptation.invariant import di_pls
+```
+
+Source signature: `di_pls(X_source, y_source, *, X_target, n_components: int = 2, di_lambda: float = 1.0)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8640)).
+
+The scikit-learn-compatible `n4m.domain_adaptation.invariant.DIPLS` estimator accepts `fit(X_source, y_source, X_target=X_target)` and predicts fresh spectra from native input-space coefficients. The unlabeled target cohort contributes to training and must be chosen within each validation fold; it is not stored in the fitted estimator. Cross-language retraining therefore still requires the original target cohort.
 
 **R (source-verified):** [`di_pls(formula, data, ncomp = 2L, X_target, di_lambda = 1.0, na.action = stats::na.omit)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn_methods.R).
 

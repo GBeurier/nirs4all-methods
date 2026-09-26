@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- Expose native domain-invariant PLS as `n4m.domain_adaptation.invariant.di_pls`
+  and the scikit-learn-compatible `DIPLS` estimator. Both require an explicit
+  unlabeled target-domain matrix at fit time; the fitted affine predictor
+  retains no target cohort. Tighten the existing `pls4all.sklearn`
+  DI-PLS wrapper's target-feature validation and failed-refit behavior.
+
 ## [1.0.21] - 2026-09-21
 
 ### Fixed
