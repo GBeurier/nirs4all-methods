@@ -59,7 +59,7 @@ from n4m.estimators.regression.regularized import ridge_pls
 result = ridge_pls(X, y)
 ```
 
-Source signature: `ridge_pls(X, y, *, ridge_lambda: float = 0.1, n_components: int = 2, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8708)).
+Source signature: `ridge_pls(X, y, *, ridge_lambda: float = 0.1, n_components: int = 2, center_x: bool | None = None, scale_x: bool | None = None, center_y: bool | None = None, scale_y: bool | None = None)` ([`n4m/_impl/native.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/native.py#L8780)).
 
 **R (source-verified):** [`ridge_pls(formula, data, ncomp = 2L, ridge_lambda = 1.0, na.action = stats::na.omit)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn_extra.R).
 
