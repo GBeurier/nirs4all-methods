@@ -71,6 +71,7 @@ PAPER_ONLY_METHODS = {
 # resolved by bare-id (last id segment), then bare-id + "_select".
 REGISTRY_NAME_ALIASES = {
     "models.pls.pls_fit_simple": "pls",
+    "models.pls.pls_regression": "pls",
     "models.specialized.tensor_pls": "n_pls",
     "models.pls.kernel": "kernel_pls_rbf",
     "aom_pop.aom_preprocessing": "aom_preprocess",

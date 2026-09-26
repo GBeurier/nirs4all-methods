@@ -11,9 +11,10 @@ siPLS synergistic interval selection (§18 Phase 5q)
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `4` | registry benchmark cell value |
-| `interval_width` | `int` | `5` | registry benchmark cell value |
-| `combination_size` | `int` | `2` | registry benchmark cell value |
+| `n_components` | `int` | `2` | current public binding signature |
+| `interval_width` | `int` | `10` | current public binding signature |
+| `combination_size` | `int` | `2` | current public binding signature |
+| `n_folds` | `int` | `3` | current public binding signature |
 
 ## Explanations
 
@@ -50,7 +51,13 @@ Current implementation: [cpp/src/core/sipls_selection.cpp](https://github.com/GB
 
 **C ABI (ABI 2):** [`n4m_feature_selection_sipls_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L324). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
+**Python (verified public re-export):**
+
+```python
+from n4m.feature_selection.wrapper import SiPLS
+```
+
+Source signature: `SiPLS(*, n_components: int = 2, interval_width: int = 10, combination_size: int = 2, n_folds: int = 3)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L565)).
 
 **R (source-verified):** [`sipls_select(X, Y, n_components, interval_width = 10L, combination_size = 2L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/methods_extra.R).
 

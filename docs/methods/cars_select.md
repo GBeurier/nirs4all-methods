@@ -12,9 +12,11 @@ CARS competitive adaptive reweighted sampling
 
 | Name | Type | Default | Notes |
 |------|------|---------|-------|
-| `n_components` | `int` | `4` | registry benchmark cell value |
-| `n_iterations` | `int` | `8` | registry benchmark cell value |
-| `min_features` | `int` | `5` | registry benchmark cell value |
+| `n_components` | `int` | `2` | current public binding signature |
+| `n_iterations` | `int` | `50` | current public binding signature |
+| `min_features` | `int \| None` | `None` | current public binding signature |
+| `n_folds` | `int` | `3` | current public binding signature |
+| `seed` | `int` | `0` | current public binding signature |
 | `top_k` | `int` | `15` | registry benchmark cell value |
 
 ## Explanations
@@ -52,7 +54,13 @@ Current implementation: [cpp/src/core/cars_selection.cpp](https://github.com/GBe
 
 **C ABI (ABI 2):** [`n4m_feature_selection_cars_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L108). Use the linked public header for the exact signature, configuration, and result handles.
 
-**Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
+**Python (verified public re-export):**
+
+```python
+from n4m.feature_selection.wrapper import CARS
+```
+
+Source signature: `CARS(*, n_components: int = 2, n_iterations: int = 50, min_features: int | None = None, n_folds: int = 3, seed: int = 0)` ([`n4m/_impl/selection.py`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/selection.py#L197)).
 
 **R (source-verified):** [`cars_select(X, Y, n_components, n_iterations = 50L, min_features = 5L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/selectors.R).
 
