@@ -3,7 +3,9 @@
 source(testthat::test_path("fixture-role-pipeline.R"))
 
 rp <- role_pipeline_fixture
-replay_tol <- 1e-12
+# Fixture outputs come from Linux x86-64; kernels drift by a few ulps on other
+# platforms, so replays compare at 1e-9 (the exported bytes stay identical).
+replay_tol <- 1e-9
 refit_tol <- 1e-9
 
 hex_to_raw <- function(hex) {

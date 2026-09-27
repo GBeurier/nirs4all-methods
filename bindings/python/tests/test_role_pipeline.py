@@ -26,7 +26,9 @@ FIXTURE = (
     / "fixtures"
     / "role_pipeline_negative.json"
 )
-REPLAY_TOL = 1e-12
+# Fixture outputs come from Linux x86-64; kernels drift by a few ulps on other
+# platforms, so replays compare at 1e-9 (the exported bytes stay identical).
+REPLAY_TOL = 1e-9
 REFIT_TOL = 1e-9
 
 
