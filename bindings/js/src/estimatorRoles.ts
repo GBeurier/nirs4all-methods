@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: CECILL-2.1
 // Generic native estimator roles (ABI 2.13).
 //
+// The helpers exported below (contexts, allocations, typed parameters, fit
+// inputs) are shared with rolePipeline.ts; the package index does not
+// re-export them.
+//
 // Every class in estimatorRolesGenerated.ts extends NativeEstimator and
 // implements exactly the role interfaces its native method declares
 // (Regressor, Transformer, ...). Parameters, defaults, required inputs,
@@ -80,7 +84,7 @@ const OFF = {
 } as const;
 
 /** Runs `fn` with a fresh native context, destroyed afterwards. */
-function withContext<T>(fn: (ctx: number) => T): T {
+export function withContext<T>(fn: (ctx: number) => T): T {
     const m = getModule();
     const out = m._malloc(4);
     try {
@@ -97,12 +101,12 @@ function withContext<T>(fn: (ctx: number) => T): T {
     }
 }
 
-function readI64(ptr: number): number {
+export function readI64(ptr: number): number {
     const m = getModule();
     return Number(m.getValue(ptr, "i64") as unknown as bigint);
 }
 
-type Alloc = { ptr: number; free: () => void };
+export type Alloc = { ptr: number; free: () => void };
 
 function allocF64(values: Float64Array | number[]): Alloc {
     const m = getModule();
@@ -120,7 +124,7 @@ function allocI64(values: number[]): Alloc {
 
 const registry = new Map<string, new () => NativeMethod>();
 
-function cString(s: string): Alloc {
+export function cString(s: string): Alloc {
     const m = getModule();
     const n = m.lengthBytesUTF8(s) + 1;
     const ptr = m._malloc(n);
@@ -129,7 +133,7 @@ function cString(s: string): Alloc {
 }
 
 /** Validated native parameters of a method; the caller destroys them. */
-function nativeParams(ctx: number, method: NativeMethod): number {
+export function nativeParams(ctx: number, method: NativeMethod): number {
     const m = getModule();
     const indexPtr = m._malloc(4);
     const out = m._malloc(4);
@@ -185,7 +189,7 @@ function nativeParams(ctx: number, method: NativeMethod): number {
 }
 
 /** Runs `fn` over an n4m_fit_inputs_v1_t built from the given data. */
-function withFitInputs<T>(X: Matrix, y: Matrix | Float64Array | ArrayLike<number> | undefined,
+export function withFitInputs<T>(X: Matrix, y: Matrix | Float64Array | ArrayLike<number> | undefined,
                           labels: boolean, inputs: FitInputs,
                           fn: (struct: number, hold: (a: Alloc) => number) => T): T {
     const m = getModule();
