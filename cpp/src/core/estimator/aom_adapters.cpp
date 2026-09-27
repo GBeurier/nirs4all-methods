@@ -529,7 +529,7 @@ n4m_status_t fit_pop_pls(n4m_context_t* ctx, n4m_config_t* cfg, const Params& pa
 
 // ---- Branch calibration ---------------------------------------------------
 
-// The versioned strict10-gaussian-v1 operator bank of the n4m reference
+// The versioned strict10-gaussian-density-v2 operator bank of the n4m reference
 // (n4m.model_selection.aom_calibration.BANK): widths in samples.
 struct BankOperator {
     const char* name;
@@ -547,8 +547,8 @@ constexpr BankOperator kStrict10[] = {
     {"sg_d2_w11_p2", N4M_OP_SAVGOL_DERIVATIVE, {11.0, 2.0, 2.0}, 3},
     {"detrend_d1", N4M_OP_DETREND_POLY, {1.0, 0.0, 0.0}, 1},
     {"detrend_d2", N4M_OP_DETREND_POLY, {2.0, 0.0, 0.0}, 1},
-    {"gauss_d0_s1", N4M_OP_GAUSSIAN, {1.0, 4.0, 0.0}, 3},
-    {"gauss_d0_s2", N4M_OP_GAUSSIAN, {2.0, 4.0, 0.0}, 3},
+    {"gauss_d0_s1", N4M_OP_GAUSSIAN, {1.0, 4.0, 2.0}, 3},
+    {"gauss_d0_s2", N4M_OP_GAUSSIAN, {2.0, 4.0, 2.0}, 3},
 };
 
 // Operators of the smoother, derivative and detrend roles in kStrict10.

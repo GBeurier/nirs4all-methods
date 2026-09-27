@@ -32,6 +32,9 @@ foreach(sym IN LISTS _exported_symbols)
 endforeach()
 list(APPEND _js_export_list
     "_malloc" "_free"
+    "_n4m_wasm_spectral_fit"
+    "_n4m_wasm_spectral_transform"
+    "_n4m_wasm_spectral_affine"
     "_n4m_wasm_pls_fit_legacy"
     "_n4m_wasm_pls_predict_from_coeffs"
     # Generic model dispatcher (Tier A algorithm-enum + Tier B coeff fits)
@@ -61,6 +64,7 @@ list(APPEND _js_export_list
 string(REPLACE ";" "," _js_export_flag "${_js_export_list}")
 
 add_executable(n4m_wasm
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_spectral.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_entry.c")
 target_link_libraries(n4m_wasm PRIVATE n4m_c_static)
 set_target_properties(n4m_wasm PROPERTIES

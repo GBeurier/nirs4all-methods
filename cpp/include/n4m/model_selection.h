@@ -505,6 +505,10 @@ N4M_API n4m_status_t n4m_model_selection_aom_preprocessing_fit(
  * Heads 0/1/2 use the mean of fold RMSEs. fast=1 screens one leader per fold with the rank-r covariance
  * criterion. Branches: 0=raw, 1=SNV, 2=MSC fitted inside each training fold.
  * Operators are flattened in bank; offsets has n_chains+1 entries.
+ * Since ABI 2.15, each chain may end with N4M_OP_LVSE. Its mean and local
+ * bases are fitted inside each training fold after the fixed pre-chain;
+ * rank variants share one maximal-rank fit per window configuration.
+ * Final coefficients include the fitted projection and its affine offset.
  * Caller owns all outputs: coefficients[p], state[2*p+2] (branch mean, MSC reference, intercept, alpha base), selected[3]
  * (branch index, chain index, parameter index), scores[n_scores].
  * n_scores = n_parameters for Fast, otherwise n_branches*n_chains*n_parameters.

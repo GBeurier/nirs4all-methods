@@ -102,7 +102,15 @@ SEXP r_n4m_role_pipeline_info(SEXP);
 SEXP r_n4m_procedure_run(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP r_n4m_manifest_json(void);
 
+/* fitted spectral encoders (ABI 2.15) */
+SEXP r_n4m_spectral_fit(SEXP X, SEXP parameters);
+SEXP r_n4m_spectral_transform(SEXP ptr, SEXP X);
+SEXP r_n4m_spectral_affine(SEXP ptr);
+
 static const R_CallMethodDef callMethods[] = {
+    {"r_n4m_spectral_fit", (DL_FUNC)&r_n4m_spectral_fit, 2},
+    {"r_n4m_spectral_transform", (DL_FUNC)&r_n4m_spectral_transform, 2},
+    {"r_n4m_spectral_affine", (DL_FUNC)&r_n4m_spectral_affine, 1},
     /* core */
     {"r_n4m_version",     (DL_FUNC)&r_n4m_version,     0},
     {"r_n4m_abi_version", (DL_FUNC)&r_n4m_abi_version, 0},

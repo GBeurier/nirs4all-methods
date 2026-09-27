@@ -149,7 +149,7 @@ fn regression_data() -> (Vec<f64>, Vec<f64>) {
 #[test]
 fn manifest_is_typed_and_matches_json() {
     let json = roles::manifest_json().unwrap();
-    assert!(json.starts_with("{\"abi\":\"2.14"), "{}", &json[..40]);
+    assert!(json.starts_with("{\"abi\":\"2.15"), "{}", &json[..40]);
     let methods = roles::methods().unwrap();
     for method in &methods {
         assert!(json.contains(&format!("\"method_id\":\"{}\"", method.method_id)));

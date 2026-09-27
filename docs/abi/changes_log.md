@@ -1,5 +1,16 @@
 # ABI — Changes Log
 
+## 2026-09-28 — ABI 2.15.0: fitted spectral encoders and AOM LVSE terminals
+
+Add six `n4m_decomposition_spectral_*` entry points for creating, fitting,
+transforming and exporting fitted LVSE/GCU encoders. LVSE without SNV exports
+an affine map; SNV-LVSE and GCU reject affine export. Add terminal AOM operator
+`N4M_OP_LVSE=19`, fitted on each training fold. The Python and generic-role
+calibration banks now both use the `strict10-gaussian-density-v2` Gaussian
+normalization to match the paper's Ridge candidates. PLS calibration retries
+lower component counts after numerical failure; its surviving prefixes remain
+in the original CV grid. Other ABI 2.14 interfaces retain their meaning.
+
 ## 2026-09-27 — ABI 2.14.0 unchanged: input validation (re-audit, unreleased)
 
 No symbol or layout change; behaviour only (findings R03 and R13 of the
