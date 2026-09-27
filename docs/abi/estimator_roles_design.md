@@ -283,7 +283,11 @@ before building the views so the error names their own argument; the native
 check is the guard every binding shares.
 Views may be strided; adapters whose kernel needs contiguous row-major data
 get a private copy from one shared helper. This also lifts the contiguous-only
-restriction of the 2.11/2.12 roles.
+restriction of the 2.11/2.12 roles. Every matrix a caller passes (X, Y, the
+target domain, and the new rows of every operation) is validated once, before
+dispatch, by the same check: a valid layout and float64 values. Another dtype
+is `N4M_ERR_DTYPE_MISMATCH`, never read as doubles; the procedures sharing the
+adapters get the same check.
 
 ### D5 — Estimator life cycle and capabilities
 
@@ -555,12 +559,35 @@ widths that do not chain.
 predict_labels, decision_function, predict_proba and classes through the
 terminal step, with the estimator refusals; step introspection
 (`n4m_role_pipeline_step_info_v1`: method, role played, state index, fitted
-widths, training rows).
+widths, training rows). Zero new rows give an empty output of the right width
+whatever the steps: the width and output shape are checked, then no step runs.
+
+**Class labels and column names (facades).** The core works on int64 class
+IDs; the label table and the column names are facade data, and every facade
+applies the same contract before any native call:
+
+- Without a label table the labels are the class IDs; integer labels must fit
+  int64 (JS: safe integers), never wrapped (a uint64 2^63 is refused).
+- At fit, strings and non-integer numbers become the table of sorted unique
+  labels, the IDs their positions. Missing (None / NA / null) and non-finite
+  (NaN, ±Inf) labels are refused, and so are booleans.
+- An imported table (`class_names`, `label_names`, `classNames`) must be a
+  non-empty list of unique strings or finite numbers, not both, and hold an
+  entry for every class ID of the fitted state (`n4m_role_pipeline_classes`):
+  `0 <= id < len(table)`. It may be longer than the set of IDs (labels whose
+  rows a train-only filter removed keep their slot); it is refused on a
+  pipeline whose final step is not a classifier.
+- Column names containing NUL are refused at fit, import and predict, before a
+  C string would truncate them (R strings cannot hold NUL; Rust `CString`
+  refuses it).
 
 Facades: Python `n4m.roles.RolePipeline`, R `n4m_role_pipeline()`, JS
-`RolePipeline`, Rust `n4m::roles::RolePipeline`. The shared fixture
-`parity/fixtures/role_pipeline_negative.json` holds the negative cases and one
-pipeline fitted in Python, replayed by the four suites.
+`RolePipeline`, Rust `n4m::roles::RolePipeline` (it takes `i64` class IDs and
+holds no label table). The shared fixture
+`parity/fixtures/role_pipeline_negative.json` holds the native negative cases
+(`cases`), the facade-level `label_cases` and `name_cases` of the contract
+above (matched by message, no native status), and one pipeline fitted in
+Python, replayed by the four suites.
 
 ## 3. Bindings and controllers
 
@@ -644,7 +671,7 @@ composite filter (a composition of filters).
 ## 6. Decisions on the review questions
 
 1. Class labels: integer IDs in the core and in N4ME; hosts own the ID→name
-   mapping in their envelope.
+   mapping in their envelope, under the shared label contract (D9).
 2. No JSON parser in the core; bindings generate typed setters from the
    manifest dump.
 3. The 2.12 filter symbols are removed as one unreleased ABI revision (headers,
