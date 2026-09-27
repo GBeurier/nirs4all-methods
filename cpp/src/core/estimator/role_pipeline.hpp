@@ -47,7 +47,9 @@ n4m_status_t pipeline_import(n4m_context_t* ctx, n4m_role_pipeline_s& pipeline,
 n4m_status_t pipeline_check_features(n4m_context_t* ctx, const n4m_role_pipeline_s& pipeline,
                                      std::int64_t n_columns, const char* const* names);
 // Input of the terminal step for new rows X: X itself, or its image through
-// the transformers and selectors (stored in `store`).
+// the transformers and selectors (stored in `store`). For zero rows no step
+// runs: `features` is an empty view of the terminal step's input width, and
+// callers dispatch nothing (an empty output, whatever the steps).
 n4m_status_t pipeline_features(n4m_context_t* ctx, const n4m_role_pipeline_s& pipeline,
                                const n4m_matrix_view_t* X, std::vector<double>& store,
                                n4m_matrix_view_t& features);

@@ -189,6 +189,23 @@ void set_error_named(n4m_context_t* ctx, const char* what, const char* name) noe
     if (ctx != nullptr) ctx->set_errorf("%s '%s'", what, name != nullptr ? name : "");
 }
 
+n4m_status_t check_input_view(n4m_context_t* ctx, const n4m_matrix_view_t* view,
+                              const char* name) noexcept {
+    const char* problem = nullptr;
+    n4m_status_t st = N4M_OK;
+    if (view == nullptr) {
+        problem = "is NULL";
+        st = N4M_ERR_NULL_POINTER;
+    } else if ((st = n4m_matrix_view_validate(view)) != N4M_OK) {
+        problem = "is not a valid view";
+    } else if (view->dtype != N4M_DTYPE_F64) {
+        problem = "must hold float64 values";
+        st = N4M_ERR_DTYPE_MISMATCH;
+    }
+    if (problem != nullptr && ctx != nullptr) ctx->set_errorf("matrix '%s' %s", name, problem);
+    return st;
+}
+
 n4m_status_t contradicts(n4m_context_t* ctx, const char* name) noexcept {
     set_error_named(ctx, "N4ME parameter contradicts the fitted state", name);
     return N4M_ERR_CORRUPT_BUFFER;

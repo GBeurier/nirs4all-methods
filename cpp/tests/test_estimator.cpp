@@ -958,6 +958,78 @@ void test_refit_and_input_lengths(n4m_context_t* ctx, Inputs& in) {
     n4m_estimator_destroy(est);
 }
 
+// Every input matrix (X, y, target domain, new rows) is validated before an
+// adapter reads it: a float32 view of exactly its declared size is refused,
+// never read as doubles past its extent, and so is an invalid layout.
+void test_input_views(n4m_context_t* ctx, Inputs& in) {
+    current_ = "input views";
+    std::vector<float> x32(in.data.x_train.begin(), in.data.x_train.end());
+    std::vector<float> y32(in.data.y_train.begin(), in.data.y_train.end());
+    n4m_matrix_view_t X32{}, Y32{};
+    CHECK(n4m_matrix_view_init_rowmajor(&X32, x32.data(), kTrain, kCols, N4M_DTYPE_F32) == N4M_OK);
+    CHECK(n4m_matrix_view_init_rowmajor(&Y32, y32.data(), kTrain, 1, N4M_DTYPE_F32) == N4M_OK);
+    auto expect = [&](n4m_status_t st, n4m_status_t status, const char* fragment) {
+        CHECK(st == status);
+        CHECK(std::strstr(n4m_context_last_error(ctx), fragment) != nullptr);
+    };
+    auto fit = [&](const char* id, const n4m_fit_inputs_v1_t& inputs) {
+        n4m_estimator_t* est = nullptr;
+        CHECK(n4m_estimator_create(ctx, id, nullptr, &est) == N4M_OK);
+        const n4m_status_t st = n4m_estimator_fit(ctx, est, &inputs);
+        int32_t fitted = 1;
+        CHECK(n4m_estimator_is_fitted(est, &fitted) == N4M_OK);
+        n4m_estimator_destroy(est);
+        CHECK(st == N4M_OK || fitted == 0);
+        return st;
+    };
+    n4m_fit_inputs_v1_t inputs{};
+    inputs.struct_size = sizeof(inputs);
+    inputs.X = &X32;
+    expect(fit("preprocessing.scaling.simple_scale", inputs), N4M_ERR_DTYPE_MISMATCH,
+           "matrix 'X' must hold float64 values");
+    inputs.X = &in.X;
+    inputs.Y = &Y32;
+    expect(fit("models.pls.pls_regression", inputs), N4M_ERR_DTYPE_MISMATCH,
+           "matrix 'y' must hold float64 values");
+    inputs.Y = nullptr;
+    inputs.X_target = &X32;
+    expect(fit("preprocessing.transfer.direct_standardization", inputs), N4M_ERR_DTYPE_MISMATCH,
+           "matrix 'target_domain' must hold float64 values");
+    inputs.X_target = nullptr;
+    n4m_matrix_view_t strided = in.X;
+    strided.row_stride = 0;
+    inputs.X = &strided;
+    expect(fit("preprocessing.scaling.simple_scale", inputs), N4M_ERR_STRIDE_INVALID,
+           "matrix 'X' is not a valid view");
+    // Procedures share the adapters and the same validation.
+    int32_t index = -1;
+    CHECK(n4m_method_find("augmentation.drift.linear_drift", &index) == N4M_OK);
+    inputs.X = &X32;
+    n4m_method_result_t* result = nullptr;
+    expect(n4m_procedure_run(ctx, index, nullptr, &inputs, &result), N4M_ERR_DTYPE_MISMATCH,
+           "matrix 'X' must hold float64 values");
+    CHECK(result == nullptr);
+
+    // New rows at predict / transform / mask time.
+    n4m_estimator_t* est = nullptr;
+    inputs.X = &in.X;
+    inputs.Y = &in.Y;
+    CHECK(n4m_estimator_create(ctx, "models.pls.pls_regression", nullptr, &est) == N4M_OK);
+    CHECK(n4m_estimator_fit(ctx, est, &inputs) == N4M_OK);
+    std::vector<double> out(static_cast<size_t>(kTrain), -7.0);
+    auto O = view(out.data(), kTrain, 1);
+    expect(n4m_estimator_predict(ctx, est, &X32, &O), N4M_ERR_DTYPE_MISMATCH,
+           "matrix 'X' must hold float64 values");
+    for (double v : out) CHECK(v == -7.0);
+    n4m_estimator_destroy(est);
+    CHECK(n4m_estimator_create(ctx, "filters.y_outlier", nullptr, &est) == N4M_OK);
+    CHECK(n4m_estimator_fit(ctx, est, &inputs) == N4M_OK);
+    std::vector<uint8_t> mask(kTrain);
+    expect(n4m_estimator_apply_mask(ctx, est, &in.X, &Y32, mask.data(), kTrain),
+           N4M_ERR_DTYPE_MISMATCH, "matrix 'y' must hold float64 values");
+    n4m_estimator_destroy(est);
+}
+
 // Parameters a kernel may legitimately reduce bound the effective value the
 // state holds: import refuses a request below it (and a changed reference or
 // absolute threshold), with the parameter named.
@@ -1095,6 +1167,7 @@ int main() {
     run([&] { test_in_sample_equivalence(ctx, in); });
     run([&] { test_aom_in_sample(ctx, in); });
     run([&] { test_refit_and_input_lengths(ctx, in); });
+    run([&] { test_input_views(ctx, in); });
     run([&] { test_param_descriptors(); });
     run([&] { test_bounded_parameters(ctx, in); });
     int32_t count = 0;

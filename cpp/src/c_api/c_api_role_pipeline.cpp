@@ -56,7 +56,7 @@ n4m_status_t terminal_op(n4m_context_t* ctx, const n4m_role_pipeline_t* p,
         n4m_status_t s = rp::pipeline_features(ctx, *p, X, store, features);
         if (s != N4M_OK) return s;
         s = rp::pipeline_check_output(ctx, out, features.rows, p->terminal().adapter->n_outputs());
-        if (s != N4M_OK) return s;
+        if (s != N4M_OK || features.rows == 0) return s;
         ctx->clear_error();
         s = op(ctx, &p->terminal(), &features, out);
         if (s != N4M_OK) {
@@ -291,6 +291,11 @@ N4M_API n4m_status_t n4m_role_pipeline_predict_labels(n4m_context_t* ctx,
         n4m_matrix_view_t features{};
         n4m_status_t s = rp::pipeline_features(ctx, *pipeline, X, store, features);
         if (s != N4M_OK) return s;
+        if (features.rows == 0) {
+            if (n == 0) return N4M_OK;
+            ctx->set_errorf("output holds %lld labels; X has 0 rows", static_cast<long long>(n));
+            return N4M_ERR_SHAPE_MISMATCH;
+        }
         ctx->clear_error();
         s = n4m_estimator_predict_labels(ctx, &pipeline->terminal(), &features, out, n);
         if (s != N4M_OK) {

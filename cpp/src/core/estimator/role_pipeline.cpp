@@ -57,23 +57,6 @@ double at(const n4m_matrix_view_t& v, std::int64_t i, std::int64_t j) {
     return static_cast<const double*>(v.data)[i * v.row_stride + j * v.col_stride];
 }
 
-n4m_status_t check_view(n4m_context_t* ctx, const n4m_matrix_view_t* v, const char* name) {
-    if (v == nullptr) {
-        ctx->set_errorf("matrix '%s' is NULL", name);
-        return N4M_ERR_NULL_POINTER;
-    }
-    const n4m_status_t st = n4m_matrix_view_validate(v);
-    if (st != N4M_OK) {
-        ctx->set_errorf("matrix '%s' is not a valid view", name);
-        return st;
-    }
-    if (v->dtype != N4M_DTYPE_F64) {
-        ctx->set_errorf("matrix '%s' must hold float64 values", name);
-        return N4M_ERR_DTYPE_MISMATCH;
-    }
-    return N4M_OK;
-}
-
 // Training rows moving through the sample filters; the caller's buffers
 // until a filter drops rows, owned copies afterwards.
 struct TrainingRows {
@@ -150,10 +133,11 @@ n4m_status_t read_inputs(n4m_context_t* ctx, const n4m_fit_inputs_v1_t* raw,
     n4m_fit_inputs_v1_t& in = rows.in;
     std::memcpy(&in, raw, std::min<std::size_t>(raw->struct_size, sizeof(in)));
     in.struct_size = sizeof(in);
-    n4m_status_t st = check_view(ctx, in.X, "X");
+    n4m_status_t st = check_input_view(ctx, in.X, "X");
     if (st != N4M_OK) return st;
-    if (in.Y != nullptr && (st = check_view(ctx, in.Y, "y")) != N4M_OK) return st;
-    if (in.X_target != nullptr && (st = check_view(ctx, in.X_target, "target_domain")) != N4M_OK) {
+    if (in.Y != nullptr && (st = check_input_view(ctx, in.Y, "y")) != N4M_OK) return st;
+    if (in.X_target != nullptr &&
+        (st = check_input_view(ctx, in.X_target, "target_domain")) != N4M_OK) {
         return st;
     }
     rows.X = *in.X;
@@ -704,7 +688,7 @@ n4m_status_t run_transformers(n4m_context_t* ctx, const n4m_role_pipeline_s& p,
         set_error(ctx, "role pipeline is not fitted");
         return N4M_ERR_NOT_FITTED;
     }
-    n4m_status_t st = check_view(ctx, X, "X");
+    n4m_status_t st = check_input_view(ctx, X, "X");
     if (st != N4M_OK) return st;
     if (X->cols != p.n_features) {
         ctx->set_errorf("X has %lld columns; the pipeline was fitted on %lld",
@@ -712,6 +696,15 @@ n4m_status_t run_transformers(n4m_context_t* ctx, const n4m_role_pipeline_s& p,
         return N4M_ERR_SHAPE_MISMATCH;
     }
     features = *X;
+    if (X->rows == 0) {
+        // No row to compute: an empty result of the right width, whatever
+        // the steps (none of them is called).
+        features.data = nullptr;
+        features.cols = count > 0 ? p.states[count - 1]->adapter->transform_cols() : X->cols;
+        features.row_stride = features.cols;
+        features.col_stride = 1;
+        return N4M_OK;
+    }
     std::vector<double> next;
     for (std::size_t i = 0; i < count; ++i) {
         const n4m_estimator_s& est = *p.states[i];
@@ -744,7 +737,7 @@ n4m_status_t pipeline_features(n4m_context_t* ctx, const n4m_role_pipeline_s& p,
 
 n4m_status_t pipeline_check_output(n4m_context_t* ctx, const n4m_matrix_view_t* out,
                                    std::int64_t rows, std::int64_t cols) {
-    const n4m_status_t st = check_view(ctx, out, "out");
+    const n4m_status_t st = check_input_view(ctx, out, "out");
     if (st != N4M_OK) return st;
     if (out->rows != rows || out->cols != cols) {
         ctx->set_errorf("output is %lldx%lld; the operation writes %lldx%lld",
@@ -761,7 +754,7 @@ n4m_status_t pipeline_transform(n4m_context_t* ctx, const n4m_role_pipeline_s& p
         set_error(ctx, "role pipeline is not fitted");
         return N4M_ERR_NOT_FITTED;
     }
-    n4m_status_t st = check_view(ctx, X, "X");
+    n4m_status_t st = check_input_view(ctx, X, "X");
     if (st == N4M_OK) st = pipeline_check_output(ctx, out, X->rows, pipeline_transform_cols(p));
     if (st != N4M_OK) return st;
     std::vector<double> store;
