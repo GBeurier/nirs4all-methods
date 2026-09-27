@@ -1,6 +1,6 @@
 {
   "name": "@nirs4all/methods",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "WebAssembly build of libn4m (nirs4all-methods) — portable PLS/NIRS engine and native method bindings.",
   "type": "module",
   "main": "dist/index.js",

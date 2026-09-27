@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-27
+
+Rust crate `n4m` stays 0.3.0: it links the libn4m that carries these fixes.
 ABI unchanged (2.14.0): input validation and facade contract fixes from the
 2026-09-27 re-audit (findings R03, R05, R06, R07, R08, R10, R12, R13).
 
