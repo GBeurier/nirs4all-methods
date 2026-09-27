@@ -101,11 +101,56 @@ def method_info(method_id: str) -> MethodInfoV1:
     return info
 
 
-def _as_int64(values, name: str) -> np.ndarray:
-    arr = np.ascontiguousarray(values, dtype=np.int64).reshape(-1)
-    if arr.size == 0:
-        raise ValueError(f"{name} must not be empty")
-    return arr
+def _vector(values, name: str, length: int, what: str, dtype) -> np.ndarray:
+    """1-D array of exactly ``length`` entries; never reshaped or broadcast."""
+    arr = np.asarray(values)
+    if arr.ndim != 1 or arr.shape[0] != length:
+        raise ValueError(
+            f"{name} must be a 1-D array of length {length} ({what}); got shape {arr.shape}"
+        )
+    whole = arr.dtype.kind in "iub" or (
+        arr.dtype.kind == "f" and np.all(np.isfinite(arr) & (arr == np.round(arr)))
+    )
+    if dtype is np.int64 and not whole:
+        raise ValueError(f"{name} must contain integers")
+    return np.ascontiguousarray(arr, dtype=dtype)
+
+
+def _targets(y, n_rows: int) -> np.ndarray:
+    """``y`` as an (n_rows, n_targets) matrix: a 1-D target of length n_rows
+    becomes one column, a matrix must have n_rows rows. Nothing else is
+    reshaped: a transposed or flattened target is refused."""
+    arr = np.asarray(y, dtype=np.float64)
+    if arr.ndim == 1 and arr.shape[0] == n_rows:
+        arr = arr.reshape(n_rows, 1)
+    elif arr.ndim != 2 or arr.shape[0] != n_rows or arr.shape[1] == 0:
+        raise ValueError(
+            f"y must have shape ({n_rows},) or ({n_rows}, n_targets), one row per row of X; "
+            f"got shape {arr.shape}"
+        )
+    return np.ascontiguousarray(arr)
+
+
+def _class_labels(y) -> np.ndarray:
+    """Class labels as a 1-D array (a one-column matrix is accepted)."""
+    labels = np.asarray(y)
+    if labels.ndim == 2 and labels.shape[1] == 1:
+        labels = labels[:, 0]
+    if labels.ndim != 1:
+        raise ValueError(
+            f"class labels must be a 1-D array, one per row of X; got shape {labels.shape}"
+        )
+    return labels
+
+
+def _encode_labels(y) -> tuple[np.ndarray, np.ndarray | None]:
+    """Integer class ids for the core, and the label names they index (None
+    when the labels already are integers)."""
+    labels = _class_labels(y)
+    if labels.dtype.kind in "iu":
+        return np.ascontiguousarray(labels, dtype=np.int64), None
+    names, codes = np.unique(labels, return_inverse=True)
+    return np.ascontiguousarray(codes, dtype=np.int64), names
 
 
 def _fit_inputs(
@@ -122,40 +167,57 @@ def _fit_inputs(
     X_target=None,
     fold_ids=None,
 ) -> FitInputsV1:
-    """``n4m_fit_inputs_v1_t`` over the given data; ``keep`` holds the buffers."""
+    """``n4m_fit_inputs_v1_t`` over the given data; ``keep`` holds the buffers.
+
+    Per-row inputs (y, labels, sample_weight, groups, fold_ids) must have one
+    entry per row of X and per-column inputs (feature_groups, axis) one per
+    column: they are checked here, before any reshaping, and again natively.
+    """
     X_arr = as_f64_2d(X)
     X_view = numpy_to_view(X_arr)
     keep += [X_arr, X_view]
+    n_rows, n_cols = X_arr.shape
     inputs = FitInputsV1()
     inputs.struct_size = ctypes.sizeof(FitInputsV1)
     inputs.X = ctypes.addressof(X_view)
     if labels is not None:
+        labels = _vector(labels, "labels", n_rows, "one per row of X", np.int64)
         keep.append(labels)
         inputs.labels, inputs.n_labels = labels.ctypes.data, labels.size
     if y is not None:
-        y_arr = np.ascontiguousarray(
-            np.asarray(y, dtype=np.float64).reshape(X_arr.shape[0], -1)
-        )
+        y_arr = _targets(y, n_rows)
         y_view = numpy_to_view(y_arr)
         keep += [y_arr, y_view]
         inputs.Y = ctypes.addressof(y_view)
     if sample_weight is not None:
-        w = np.ascontiguousarray(sample_weight, dtype=np.float64).reshape(-1)
+        w = _vector(
+            sample_weight, "sample_weight", n_rows, "one per row of X", np.float64
+        )
         keep.append(w)
         inputs.sample_weight, inputs.n_sample_weight = w.ctypes.data, w.size
-    for name, value, ptr_field, len_field in (
-        ("groups", groups, "groups", "n_groups"),
-        ("feature_groups", feature_groups, "feature_groups", "n_feature_groups"),
-        ("blocks", blocks, "block_sizes", "n_blocks"),
-        ("fold_ids", fold_ids, "fold_ids", "n_fold_ids"),
+    for name, value, length, what, ptr_field, len_field in (
+        ("groups", groups, n_rows, "one per row of X", "groups", "n_groups"),
+        (
+            "feature_groups",
+            feature_groups,
+            n_cols,
+            "one per column of X",
+            "feature_groups",
+            "n_feature_groups",
+        ),
+        ("fold_ids", fold_ids, n_rows, "one per row of X", "fold_ids", "n_fold_ids"),
     ):
         if value is not None:
-            arr = _as_int64(value, name)
+            arr = _vector(value, name, length, what, np.int64)
             keep.append(arr)
             setattr(inputs, ptr_field, arr.ctypes.data)
             setattr(inputs, len_field, arr.size)
+    if blocks is not None:
+        sizes = _vector(blocks, "blocks", np.size(blocks), "block sizes", np.int64)
+        keep.append(sizes)
+        inputs.block_sizes, inputs.n_blocks = sizes.ctypes.data, sizes.size
     if axis is not None:
-        a = np.ascontiguousarray(axis, dtype=np.float64).reshape(-1)
+        a = _vector(axis, "axis", n_cols, "one per column of X", np.float64)
         keep.append(a)
         inputs.axis, inputs.n_axis = a.ctypes.data, a.size
     if X_target is not None:
@@ -283,13 +345,18 @@ class NativeEstimator(NativeMethod):
         X_target=None,
         fold_ids=None,
     ):
-        """Fit the native estimator; unused inputs are refused by the core."""
-        labels = None
+        """Fit the native estimator; unused inputs are refused by the core.
+
+        The fitted state (native handle, class names, output shape, feature
+        names) is replaced only when the fit succeeds: a failed refit leaves
+        the previously fitted estimator unchanged and usable.
+        """
+        labels = label_names = None
         if y is not None and isinstance(self, NativeClassifier):
-            labels, y = self._encode_labels(y), None
+            (labels, label_names), y = _encode_labels(y), None
         # A single prediction column comes back 1-D unless y was a one-column
         # matrix (a survival (time, event) response gives one risk column).
-        self._y_1d_ = y is not None and not (np.ndim(y) == 2 and np.shape(y)[1] == 1)
+        y_1d = y is not None and not (np.ndim(y) == 2 and np.shape(y)[1] == 1)
         keep: list[Any] = []
         inputs = _fit_inputs(
             keep,
@@ -325,8 +392,13 @@ class NativeEstimator(NativeMethod):
                 ctx.check(status, f"{type(self).__name__}.fit")
         del keep
         self._set_handle(handle)
+        self._y_1d_ = y_1d
+        if isinstance(self, NativeClassifier):
+            self._label_names_ = label_names
         if hasattr(X, "columns"):
             self.feature_names_in_ = np.asarray(X.columns, dtype=object)
+        else:
+            self.__dict__.pop("feature_names_in_", None)
         return self
 
     def _set_handle(self, handle: ctypes.c_void_p) -> None:
@@ -387,8 +459,25 @@ class NativeEstimator(NativeMethod):
 
     # -- N4ME fitted state ----------------------------------------------------
 
+    @property
+    def contains_training_rows_(self) -> bool:
+        """True when the fitted state embeds training rows (kernel PLS,
+        GPR-PLS, LW-PLS, ...): exporting it shares training data."""
+        out = ctypes.c_int32()
+        check(
+            lib.n4m_estimator_contains_training_rows(self._handle(), ctypes.byref(out)),
+            "n4m_estimator_contains_training_rows",
+        )
+        return bool(out.value)
+
     def to_n4me(self, *, allow_training_rows: bool = False) -> bytes:
-        """Portable fitted state readable by every n4m binding."""
+        """Portable fitted state readable by every n4m binding.
+
+        A state that embeds training rows (``contains_training_rows_``) is
+        refused unless ``allow_training_rows=True``: sharing the export shares
+        those rows. Pickling is an in-process checkpoint of the live object and
+        keeps them, like the object does.
+        """
         handle = self._handle()
         flags = ctypes.c_uint32(1 if allow_training_rows else 0)
         size = ctypes.c_size_t()
@@ -576,9 +665,7 @@ class NativeSampleFilter(NativeEstimator):
         X_view = numpy_to_view(X_arr)
         y_ref = None
         if y is not None:
-            y_arr = np.ascontiguousarray(
-                np.asarray(y, dtype=np.float64).reshape(X_arr.shape[0], -1)
-            )
+            y_arr = _targets(y, X_arr.shape[0])
             y_view = numpy_to_view(y_arr)
             y_ref = ctypes.byref(y_view)
         out = np.empty(X_arr.shape[0], dtype=np.uint8)
@@ -647,15 +734,6 @@ class NativeClassifier(ClassifierMixin, NativeEstimator):
     ...) are encoded here and ``classes_`` restores them. ``predict_proba``
     exists only for methods that define probabilities.
     """
-
-    def _encode_labels(self, y) -> np.ndarray:
-        labels = np.asarray(y).ravel()
-        if labels.dtype.kind in "iu":
-            self._label_names_ = None
-            return np.ascontiguousarray(labels, dtype=np.int64)
-        names, codes = np.unique(labels, return_inverse=True)
-        self._label_names_ = names
-        return np.ascontiguousarray(codes, dtype=np.int64)
 
     @property
     def classes_(self) -> np.ndarray:

@@ -263,6 +263,7 @@ SYMBOLS = (
     ("n4m_ensemble_random_subspace_pls_fit", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), c_int32, c_int32, c_uint64, POINTER(c_void_p)), c_int),
     ("n4m_estimator_apply_mask", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_uint8), c_int64), c_int),
     ("n4m_estimator_classes", (c_void_p, POINTER(c_int64), c_int64, POINTER(c_int64)), c_int),
+    ("n4m_estimator_contains_training_rows", (c_void_p, POINTER(c_int32)), c_int),
     ("n4m_estimator_create", (c_void_p, c_char_p, c_void_p, POINTER(c_void_p)), c_int),
     ("n4m_estimator_decision_function", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView)), c_int),
     ("n4m_estimator_destroy", (c_void_p,), None),

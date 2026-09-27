@@ -69,6 +69,11 @@ REQUIRED_MODEL_PARAMS = {
 }
 
 
+def effective(params: dict) -> dict:
+    """Parameters as the native state records them: an unset seed runs as 0."""
+    return {k: 0 if v is None and k.endswith("seed") else v for k, v in params.items()}
+
+
 def build(cls):
     """Instance with values for the parameters its method requires."""
     return cls(
@@ -147,7 +152,7 @@ def test_fit_predict_roundtrip(cls, data):
     payload = est.to_n4me(allow_training_rows=True)
     restored = roles.NativeEstimator.from_n4me(payload)
     assert type(restored) is cls
-    assert restored.get_params() == est.get_params()
+    assert restored.get_params() == effective(est.get_params())
     np.testing.assert_array_equal(restored.predict(X_test), pred)
     assert restored.to_n4me(allow_training_rows=True) == payload
     if est.capabilities_ & (1 << 9):  # RETAINS_TRAINING_ROWS: explicit consent
@@ -363,7 +368,7 @@ def reference_selector(cls, est):
 
     accepted = inspect.signature(ref_cls.__init__).parameters
     kwargs = {}
-    for name, value in est.get_params().items():
+    for name, value in effective(est.get_params()).items():
         if name == "cv":
             if "n_folds" in accepted:
                 kwargs["n_folds"] = value
@@ -1015,7 +1020,9 @@ def test_sample_filter_matches_n4m_reference(name, params, data):
         np.testing.assert_array_equal(role.get_mask(rows, target), expected)
     if roles.method_info(role._method_id).capabilities & (1 << 7):
         back = roles.NativeEstimator.from_n4me(role.to_n4me())
-        assert type(back) is type(role) and back.get_params() == role.get_params()
+        assert type(back) is type(role) and back.get_params() == effective(
+            role.get_params()
+        )
         np.testing.assert_array_equal(
             back.get_mask(X_test, y_test), role.get_mask(X_test, y_test)
         )
@@ -1178,7 +1185,7 @@ def test_generic_procedure_returns_named_outputs():
 
 def test_manifest_lists_every_generated_class():
     doc = roles.manifest()
-    assert doc["abi"].startswith("2.13")
+    assert doc["abi"].startswith("2.14")
     assert {m["method_id"] for m in doc["methods"]} == set(_REGISTRY)
     for m in doc["methods"]:
         assert roles.method_class(m["method_id"])._method_id == m["method_id"]
