@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- ABI 2.14: native role pipeline (`n4m_role_pipeline_*` in
+  `n4m/estimator.h`). One owner for the portable trained recipe of estimator
+  steps (sample filters, transformers / selectors, one regressor or
+  classifier): recipe validation, fit-input routing (multi-target Y reaches
+  supervised transformers, filters subset every row input), stored feature
+  names with a width/name/order check, per-step N4ME export with an explicit
+  training-row opt-in, and an import that refuses states contradicting the
+  recipe (method, resolved parameters, role, widths). Facades: Python
+  `n4m.roles.RolePipeline`, R `n4m_role_pipeline()`, JS `RolePipeline`, Rust
+  `n4m::roles::RolePipeline`; a shared negative and cross-language fixture
+  (`parity/fixtures/role_pipeline_negative.json`) is replayed by the four
+  suites.
+
 ### Fixed
 
 - The R packages generate `src/Makevars.win` from `configure.win` with
