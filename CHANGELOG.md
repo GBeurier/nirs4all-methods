@@ -33,7 +33,7 @@ ABI unchanged (2.14.0): input validation and facade contract fixes from the
   cover every native class id (`n4m_role_pipeline_classes`); an empty, short,
   duplicated or non-matching table used to import and then fail or merge
   predictions (R05, R08, R12). A table is all strings or all numbers, and its
-  numbers must be exact as float64: an integer beyond ±2^53 (in a table, or
+  numbers must be exact as float64: an integral number beyond ±2^53 (in a table, or
   beside fractions at fit) is refused instead of being rounded into another
   label.
 - Column names containing NUL are refused at fit, import and predict in
