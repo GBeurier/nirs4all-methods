@@ -41,6 +41,7 @@ role_pipeline_fixture <- list(
    list(name = "class_names_duplicate", stage = "import", pipeline = "classification", message = "class_names has duplicate label", class_names = c("high", "low", "low")),
    list(name = "class_names_missing", stage = "import", pipeline = "classification", message = "class_names has a missing entry", class_names = c("high", NA, "mid")),
    list(name = "class_names_non_finite", stage = "import", pipeline = "classification", message = "class_names has a non-finite entry", class_names = c(0.5, 1.5, 2.5), inject = list(at = 1L, value = "inf")),
+   list(name = "class_names_inexact_number", stage = "import", pipeline = "classification", message = "must be exactly representable as float64", class_names = c(1.152921504606847e+18, 1.5, 2.5)),
    list(name = "class_names_boolean", stage = "import", pipeline = "classification", message = "class_names entries must be strings or numbers", class_names = c(TRUE, FALSE, TRUE)),
    list(name = "class_names_mixed", stage = "import", pipeline = "classification", message = "class_names mixes strings and numbers", class_names = list("high", 1.0, "mid")),
    list(name = "class_id_without_name", stage = "import", pipeline = "classification", message = "class id 2 has no entry in class_names", class_names = c("high", "low")),

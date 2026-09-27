@@ -171,6 +171,19 @@ def _class_labels(y) -> np.ndarray:
     return labels
 
 
+def _check_exact_float(values: list[Any], name: str) -> None:
+    """Numbers that must stay exact as float64 (JSON, JS and R numbers are doubles).
+
+    An integer beyond ±2^53 would be rounded, merging distinct labels, so it
+    is refused.
+    """
+    for v in values:
+        if isinstance(v, numbers.Integral) and abs(int(v)) > 2**53:
+            raise ValueError(
+                f"{name} must be exactly representable as float64; {v} is beyond ±2^53"
+            )
+
+
 def _object_labels(labels: np.ndarray) -> np.ndarray:
     """Labels held as Python objects, as strings, integers or floats."""
     values = labels.tolist()
@@ -194,6 +207,7 @@ def _object_labels(labels: np.ndarray) -> np.ndarray:
     if all(isinstance(v, numbers.Integral) for v in values):
         _check_int64(np.asarray(values, dtype=object), "class labels")
         return np.asarray(values, dtype=np.int64)
+    _check_exact_float(values, "class labels mixing integers and fractions")
     return np.asarray(values, dtype=np.float64)
 
 

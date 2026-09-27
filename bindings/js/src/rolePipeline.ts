@@ -147,6 +147,10 @@ function labelTable(table: unknown, ids: readonly number[]): ClassLabel[] {
         }
     });
     if (new Set(table.map((v) => typeof v)).size > 1) throw new TypeError("class_names mixes strings and numbers");
+    const inexact = table.find((v) => typeof v === "number" && Number.isInteger(v) && Math.abs(v) > 2 ** 53);
+    if (inexact !== undefined) {
+        throw new RangeError(`numeric class_names must be exactly representable as float64; ${inexact} is beyond ±2^53`);
+    }
     const seen = new Set<ClassLabel>();
     for (const v of table as ClassLabel[]) {
         if (seen.has(v)) throw new RangeError(`class_names has duplicate label ${JSON.stringify(v)}`);

@@ -1465,6 +1465,17 @@
    "message": "class_names has a non-finite entry"
   },
   {
+   "name": "class_names_inexact_number",
+   "stage": "import",
+   "pipeline": "classification",
+   "class_names": [
+    1152921504606846976,
+    1.5,
+    2.5
+   ],
+   "message": "must be exactly representable as float64"
+  },
+  {
    "name": "class_names_boolean",
    "stage": "import",
    "pipeline": "classification",

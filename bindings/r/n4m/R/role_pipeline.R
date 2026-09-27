@@ -97,6 +97,11 @@
     i <- which(!is.finite(values))[1]
     stop(sprintf("class_names has a non-finite entry at %d: %s", i, values[i]), call. = FALSE)
   }
+  if (is.numeric(values) && any(values == floor(values) & abs(values) > 2^53)) {
+    v <- values[values == floor(values) & abs(values) > 2^53][1]
+    stop(sprintf("numeric class_names must be exactly representable as float64; %s is beyond +-2^53",
+                 format(v, scientific = FALSE)), call. = FALSE)
+  }
   dup <- anyDuplicated(values)
   if (dup > 0L) stop(sprintf("class_names has duplicate label '%s'", values[dup]), call. = FALSE)
   unname(values)
