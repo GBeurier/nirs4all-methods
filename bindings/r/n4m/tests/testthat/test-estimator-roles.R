@@ -1,4 +1,4 @@
-# Generic estimator roles (ABI 2.13): R facade and cross-language N4ME states.
+# Generic estimator roles (ABI 2.13, 2.14): R facade and cross-language N4ME states.
 source(testthat::test_path("fixture-estimator-roles.R"))
 
 fx <- estimator_roles_fixture
@@ -64,7 +64,11 @@ for (case in fx$cases) {
       if (!is.null(case$mask)) {
         testthat::expect_identical(n4m_sample_mask(est, fx$x_test, fx$y_test), case$mask == 1)
       }
-      testthat::expect_identical(n4m_estimator_export(est), bytes)
+      # Training rows leave only with the explicit opt-in.
+      if (n4m_contains_training_rows(est)) {
+        testthat::expect_error(n4m_estimator_export(est), "training rows")
+      }
+      testthat::expect_identical(n4m_estimator_export(est, allow_training_rows = TRUE), bytes)
     })
 
     testthat::test_that(paste("R fit reproduces the Python fit:", case$method_id), {
@@ -172,7 +176,7 @@ for (case in fx$procedures) {
 
 testthat::test_that("the native manifest and constructor lookup cover every method", {
   json <- n4m_manifest_json()
-  testthat::expect_true(startsWith(json, "{\"abi\":\"2.13"))
+  testthat::expect_true(startsWith(json, "{\"abi\":\"2.14"))
   for (id in names(constructors)) {
     testthat::expect_true(grepl(paste0("\"method_id\":\"", id, "\""), json, fixed = TRUE))
     testthat::expect_identical(n4m_constructor(id), constructors[[id]])

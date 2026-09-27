@@ -23,10 +23,93 @@
 }
 
 .n4m_as_matrix <- function(X, name = "X") {
+  if (!is.null(dim(X)) && length(dim(X)) > 2L) {
+    stop(name, " must be a matrix; got an array with ", length(dim(X)), " dimensions",
+         call. = FALSE)
+  }
   X <- as.matrix(X)
   if (!is.numeric(X)) stop(name, " must be numeric", call. = FALSE)
   storage.mode(X) <- "double"
   X
+}
+
+# Inputs are matched to the rows (or columns) of X exactly: R recycling and
+# reshaping never apply, so a target of the wrong length is an error, not a
+# different problem.
+
+# A vector (a one-column matrix is accepted) of exactly `n` entries.
+.n4m_vector <- function(v, name, n, what) {
+  if (!is.null(dim(v))) {
+    if (length(dim(v)) != 2L || ncol(v) != 1L) {
+      stop(name, " must be a vector (", what, "); got dimensions ",
+           paste(dim(v), collapse = " x "), call. = FALSE)
+    }
+    v <- v[, 1L]
+  }
+  if (length(v) != n) {
+    stop(sprintf("%s must have length %d (%s); got %d", name, n, what, length(v)),
+         call. = FALSE)
+  }
+  v
+}
+
+# Integer-valued numbers (class ids, groups, fold ids, block sizes).
+.n4m_integers <- function(v, name) {
+  if (is.factor(v)) v <- as.integer(v)
+  if (!is.numeric(v) || anyNA(v) || any(!is.finite(v)) || any(v != round(v))) {
+    stop(name, " must contain finite integers", call. = FALSE)
+  }
+  v
+}
+
+# Targets as an n x q double matrix: a vector of length n is one column, a
+# matrix must have n rows.
+.n4m_targets <- function(y, n) {
+  if (is.data.frame(y)) y <- as.matrix(y)
+  if (!is.null(dim(y))) {
+    if (length(dim(y)) != 2L) {
+      stop("y must be a vector or a matrix; got an array with ", length(dim(y)),
+           " dimensions", call. = FALSE)
+    }
+    if (nrow(y) != n || ncol(y) < 1L) {
+      stop(sprintf("y must have %d rows (one per row of X); got %d x %d", n, nrow(y),
+                   ncol(y)), call. = FALSE)
+    }
+  } else if (length(y) != n) {
+    stop(sprintf("y must have length %d (one per row of X); got %d", n, length(y)),
+         call. = FALSE)
+  }
+  if (!is.numeric(y) && !is.logical(y)) stop("y must be numeric", call. = FALSE)
+  matrix(as.double(y), nrow = n)
+}
+
+# Optional fit inputs checked against X; NULL entries are dropped.
+.n4m_fit_inputs <- function(X, inputs) {
+  inputs <- inputs[!vapply(inputs, is.null, logical(1))]
+  n <- nrow(X)
+  p <- ncol(X)
+  rows <- "one per row of X"
+  for (name in intersect(c("labels", "groups", "fold_ids"), names(inputs))) {
+    inputs[[name]] <- .n4m_integers(.n4m_vector(inputs[[name]], name, n, rows), name)
+  }
+  if (!is.null(inputs$sample_weight)) {
+    inputs$sample_weight <- as.double(.n4m_vector(inputs$sample_weight, "sample_weight", n, rows))
+  }
+  if (!is.null(inputs$feature_groups)) {
+    inputs$feature_groups <- .n4m_integers(
+      .n4m_vector(inputs$feature_groups, "feature_groups", p, "one per column of X"),
+      "feature_groups")
+  }
+  if (!is.null(inputs$axis)) {
+    inputs$axis <- as.double(.n4m_vector(inputs$axis, "axis", p, "one per column of X"))
+  }
+  if (!is.null(inputs$blocks)) {
+    blocks <- inputs$blocks
+    inputs$blocks <- .n4m_integers(.n4m_vector(blocks, "blocks", length(blocks), "block sizes"),
+                                   "blocks")
+  }
+  if (!is.null(inputs$X_target)) inputs$X_target <- .n4m_as_matrix(inputs$X_target, "X_target")
+  inputs
 }
 
 # The external pointer does not survive saveRDS(); the N4ME bytes do.
@@ -59,8 +142,10 @@
 #'
 #' @param object An estimator from one of the generated constructors.
 #' @param X Numeric matrix (rows are samples).
-#' @param y Numeric response vector or matrix for regressors; class labels
-#'   (factor, character or integer vector) for classifiers.
+#' @param y Numeric response vector (one value per row of \code{X}) or matrix
+#'   (one row per row of \code{X}) for regressors; class labels (factor,
+#'   character or integer vector, one per row) for classifiers. Nothing is
+#'   recycled: another length is an error.
 #' @param sample_weight,groups,feature_groups,blocks,axis,X_target,fold_ids
 #'   Optional fit inputs; each method declares which ones it requires and the
 #'   native core refuses the others.
@@ -68,9 +153,15 @@
 #' @param type For classifiers: \code{"class"} (labels), \code{"prob"}
 #'   (class probabilities, for methods that define them) or \code{"decision"}
 #'   (method-defined class scores).
+#' @param allow_training_rows \code{n4m_estimator_export()} refuses a state
+#'   that embeds training rows (\code{n4m_contains_training_rows()}, e.g.
+#'   kernel PLS, GPR-PLS, LW-PLS) unless this is \code{TRUE}: sharing the
+#'   export shares those rows. \code{saveRDS()} keeps them, as a checkpoint of
+#'   the in-process object.
 #' @param bytes Raw vector produced by \code{n4m_estimator_export()}.
 #' @param ... Unused.
-#' @return \code{n4m_estimator_fit()} returns the fitted estimator; \code{predict()} and
+#' @return \code{n4m_estimator_fit()} returns the fitted estimator (a failed fit
+#'   leaves the object passed in unchanged); \code{predict()} and
 #'   \code{n4m_estimator_transform()} return numeric results; \code{n4m_estimator_export()} a raw
 #'   vector; \code{n4m_estimator_import()} a fitted estimator.
 #' @name n4m_estimator_roles
@@ -90,7 +181,9 @@ n4m_estimator_fit.n4m_estimator <- function(object, X, y = NULL, sample_weight =
   labels <- NULL
   if (inherits(object, "n4m_classifier") && !is.null(y)) {
     # The core works on integer class ids; other labels are encoded here.
+    y <- .n4m_vector(y, "class labels", nrow(X), "one per row of X")
     if (is.factor(y) || is.character(y)) {
+      if (anyNA(y)) stop("class labels must not be NA", call. = FALSE)
       levels <- if (is.factor(y)) levels(droplevels(y)) else sort(unique(y))
       labels <- match(as.character(y), levels) - 1
     } else {
@@ -98,20 +191,24 @@ n4m_estimator_fit.n4m_estimator <- function(object, X, y = NULL, sample_weight =
     }
     y <- NULL
   }
-  y_matrix <- if (is.null(y)) NULL else matrix(as.double(y), nrow = nrow(X))
-  inputs <- list(labels = labels, sample_weight = sample_weight, groups = groups,
-                 feature_groups = feature_groups, blocks = blocks, axis = axis,
-                 X_target = if (is.null(X_target)) NULL else .n4m_as_matrix(X_target, "X_target"),
-                 fold_ids = fold_ids)
-  inputs <- inputs[!vapply(inputs, is.null, logical(1))]
+  y_matrix <- if (is.null(y)) NULL else .n4m_targets(y, nrow(X))
+  inputs <- .n4m_fit_inputs(X, list(labels = labels, sample_weight = sample_weight,
+                                    groups = groups, feature_groups = feature_groups,
+                                    blocks = blocks, axis = axis, X_target = X_target,
+                                    fold_ids = fold_ids))
   params <- object$params[!vapply(object$params, is.null, logical(1))]
   pointer <- .Call("r_n4m_estimator_fit", object$method_id, params, X, y_matrix,
                    inputs, PACKAGE = "n4m")
   caps <- .Call("r_n4m_estimator_info", pointer, PACKAGE = "n4m")$capabilities
   serializable <- bitwAnd(as.integer(caps), .n4m_cap_serializable) != 0
+  # The object is replaced only here, after a successful fit: a failed refit
+  # leaves the caller's fitted object (state, levels) untouched. The N4ME
+  # bytes kept in the object are the saveRDS() checkpoint of this in-process
+  # object, so they keep training rows like the object does;
+  # n4m_estimator_export() is the explicit, shareable export.
   object$state <- list2env(list(
     pointer = pointer,
-    n4me = if (serializable) .Call("r_n4m_estimator_export", pointer, PACKAGE = "n4m"),
+    n4me = if (serializable) .Call("r_n4m_estimator_export", pointer, TRUE, PACKAGE = "n4m"),
     # One prediction column comes back as a vector unless y was a one-column
     # matrix (a survival (time, event) response gives one risk column).
     y_vector = !is.null(y) && !identical(ncol(y), 1L),
@@ -155,7 +252,7 @@ n4m_sample_mask <- function(object, X, y = NULL) UseMethod("n4m_sample_mask")
 #' @export
 n4m_sample_mask.n4m_sample_filter <- function(object, X, y = NULL) {
   X <- .n4m_as_matrix(X)
-  y_matrix <- if (is.null(y)) NULL else matrix(as.double(y), nrow = nrow(X))
+  y_matrix <- if (is.null(y)) NULL else .n4m_targets(y, nrow(X))
   .Call("r_n4m_estimator_apply_mask", .n4m_pointer(object), X, y_matrix, PACKAGE = "n4m")
 }
 
@@ -199,12 +296,19 @@ n4m_selected_indices.n4m_selector <- function(object) {
 
 #' @rdname n4m_estimator_roles
 #' @export
-n4m_estimator_export <- function(object) {
+n4m_estimator_export <- function(object, allow_training_rows = FALSE) {
   if (is.null(object$state)) stop("n4m estimator is not fitted", call. = FALSE)
   if (is.null(object$state$n4me)) {
     stop("this estimator's state is not serializable", call. = FALSE)
   }
-  object$state$n4me
+  .Call("r_n4m_estimator_export", .n4m_pointer(object), isTRUE(allow_training_rows),
+        PACKAGE = "n4m")
+}
+
+#' @rdname n4m_estimator_roles
+#' @export
+n4m_contains_training_rows <- function(object) {
+  .Call("r_n4m_estimator_contains_training_rows", .n4m_pointer(object), PACKAGE = "n4m")
 }
 
 #' @rdname n4m_estimator_roles
@@ -230,9 +334,8 @@ print.n4m_method <- function(x, ...) {
 
 .n4m_procedure_run <- function(object, X, y = NULL, inputs = list()) {
   X <- .n4m_as_matrix(X)
-  y_matrix <- if (is.null(y)) NULL else matrix(as.double(y), nrow = nrow(X))
-  inputs <- inputs[!vapply(inputs, is.null, logical(1))]
-  if (!is.null(inputs$X_target)) inputs$X_target <- .n4m_as_matrix(inputs$X_target, "X_target")
+  y_matrix <- if (is.null(y)) NULL else .n4m_targets(y, nrow(X))
+  inputs <- .n4m_fit_inputs(X, inputs)
   params <- object$params[!vapply(object$params, is.null, logical(1))]
   .Call("r_n4m_procedure_run", object$method_id, params, X, y_matrix, inputs, PACKAGE = "n4m")
 }
