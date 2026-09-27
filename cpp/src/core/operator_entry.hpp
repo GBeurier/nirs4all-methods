@@ -24,7 +24,7 @@ struct OperatorEntry {
 };
 
 [[nodiscard]] inline bool operator_kind_is_valid(n4m_operator_kind_t k) noexcept {
-    return k >= N4M_OP_IDENTITY && k <= N4M_OP_GAUSSIAN;
+    return k >= N4M_OP_IDENTITY && k <= N4M_OP_LVSE;
 }
 
 }  // namespace n4m::core

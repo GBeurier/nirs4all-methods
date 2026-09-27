@@ -653,7 +653,11 @@ typedef enum n4m_operator_kind_t {
     N4M_OP_FINITE_DIFFERENCE   = 15,
     N4M_OP_WHITTAKER           = 16,
     N4M_OP_FCK                 = 17,
-    N4M_OP_GAUSSIAN            = 18
+    N4M_OP_GAUSSIAN            = 18,
+    /* Fitted LVSE terminal for aom_calibration only. Parameters:
+     * width, local_rank, overlap, standardize (0/1). Fit is fold-local.
+     * Fixed-operator execution does not support this kind. */
+    N4M_OP_LVSE                = 19
 } n4m_operator_kind_t;
 
 /* Operator-bank lifecycle. An operator bank is an unordered collection of

@@ -1,0 +1,53 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "preprocessing.feature_selection.spectral_encoding"
+family: "preprocessing.feature_selection"
+category: "preprocessing"
+subcategory: "feature_selection"
+since_abi: "2.7.0"
+abi_symbols:
+  - "n4m_decomposition_spectral_create"
+  - "n4m_decomposition_spectral_destroy"
+  - "n4m_decomposition_spectral_fit"
+  - "n4m_decomposition_spectral_output_cols"
+  - "n4m_decomposition_spectral_transform"
+  - "n4m_decomposition_spectral_export_affine"
+tu:
+  - "cpp/src/core/spectral_encoding.cpp"
+  - "cpp/src/c_api/c_api_spectral_encoding.cpp"
+headers:
+  - "cpp/include/n4m/decomposition.h"
+carry_along_tu:
+  - "cpp/src/core/common/svd.c"
+  - "cpp/src/core/common/matrix_view.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "n4m/spectral-encoding-contract"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "preprocessing.feature_selection.spectral_encoding"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.decomposition"
+    class: "LVSE"
+    legacy_aliases: []
+publications: []
+notes: "Shared lifecycle for LVSE (kind 0) and GCU (kind 1). Python exposes LVSE and GCU; R exposes lvse_fit and gcu_fit; WASM exposes SpectralEncoder. Exact SVD, no implicit subsampling. See docs/methods/spectral_encoding.md."
+c_surface:
+  - "n4m_decomposition_spectral_create"
+  - "n4m_decomposition_spectral_destroy"
+  - "n4m_decomposition_spectral_fit"
+  - "n4m_decomposition_spectral_output_cols"
+  - "n4m_decomposition_spectral_transform"
+  - "n4m_decomposition_spectral_export_affine"
+fq_name: "n4m.decomposition.spectral_encoding"
+leaf: "spectral_encoding"
+legacy_ids:
+  - "preprocessing.feature_selection.spectral_encoding"
+namespace: "decomposition"

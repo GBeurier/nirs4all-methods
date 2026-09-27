@@ -154,6 +154,7 @@ _AOM_STRICT_OPERATOR_KINDS = {
     "fck": 17,
     "gaussian": 18,
     "gaussian_smooth": 18,
+    "lvse": 19,
     0: 0,
     7: 7,
     8: 8,
@@ -174,6 +175,7 @@ _AOM_STRICT_OPERATOR_NAMES = {
     16: "whittaker",
     17: "fck",
     18: "gaussian",
+    19: "lvse",
 }
 _AOM_SELECTOR_DEFAULT_OPERATORS = (
     "identity",

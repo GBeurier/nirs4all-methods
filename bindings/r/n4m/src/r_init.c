@@ -47,7 +47,14 @@ SEXP r_n4m_dispatch_fit(SEXP algo, SEXP X, SEXP Y, SEXP n_components,
                          SEXP center_x, SEXP scale_x,
                          SEXP center_y, SEXP scale_y);
 
+SEXP r_n4m_spectral_fit(SEXP X, SEXP parameters);
+SEXP r_n4m_spectral_transform(SEXP ptr, SEXP X);
+SEXP r_n4m_spectral_affine(SEXP ptr);
+
 static const R_CallMethodDef callMethods[] = {
+    {"r_n4m_spectral_fit", (DL_FUNC)&r_n4m_spectral_fit, 2},
+    {"r_n4m_spectral_transform", (DL_FUNC)&r_n4m_spectral_transform, 2},
+    {"r_n4m_spectral_affine", (DL_FUNC)&r_n4m_spectral_affine, 1},
     /* core */
     {"r_n4m_version",     (DL_FUNC)&r_n4m_version,     0},
     {"r_n4m_abi_version", (DL_FUNC)&r_n4m_abi_version, 0},

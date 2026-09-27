@@ -30,6 +30,7 @@ add_library(n4m_core OBJECT
     core/aom_sweep.cpp
     core/aom_selection.cpp
     core/aom_calibration.cpp
+    core/spectral_encoding.cpp
     core/linear_stack.cpp
     core/bipls_selection.cpp
     core/bve_selection.cpp
@@ -187,6 +188,8 @@ if(N4M_WITH_BLAS)
         if(N4M_HAS_AOM_LAPACKE)
             set_property(SOURCE core/aom_calibration.cpp APPEND PROPERTY
                 COMPILE_DEFINITIONS N4M_AOM_USE_LAPACKE=1)
+            set_property(SOURCE core/spectral_encoding.cpp APPEND PROPERTY
+                COMPILE_DEFINITIONS N4M_SPECTRAL_USE_LAPACKE=1)
             message(STATUS "  AOM Ridge eigenpath: LAPACKE dsyevd")
         else()
             message(STATUS "  AOM Ridge eigenpath: portable (LAPACKE unavailable)")
