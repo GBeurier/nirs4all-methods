@@ -78,7 +78,12 @@ testthat::test_that("targets and per-row inputs are never recycled", {
   lda <- n4m_pls_lda()
   labels <- ifelse(y > 0, "up", "down")
   testthat::expect_error(n4m_estimator_fit(lda, X, labels[1:20]), "class labels must have length 40")
-  testthat::expect_error(n4m_estimator_fit(lda, X, rep(c(0, 1.5), 20)), "finite integers")
+  # Non-integer numbers are labels (a table), not truncated ids; missing,
+  # non-finite and out-of-int64 labels are refused.
+  testthat::expect_identical(n4m_classes(n4m_estimator_fit(lda, X, rep(c(0, 1.5), 20))), c(0, 1.5))
+  testthat::expect_error(n4m_estimator_fit(lda, X, rep(c(0, NA), 20)), "must not be missing")
+  testthat::expect_error(n4m_estimator_fit(lda, X, rep(c(0, Inf), 20)), "must be finite")
+  testthat::expect_error(n4m_estimator_fit(lda, X, rep(c(0, 2^63), 20)), "must fit int64")
   testthat::expect_error(n4m_estimator_fit(n4m_stability(top_k = 3), X, y, fold_ids = rep(0:1, 10)),
                          "fold_ids must have length 40")
   filt <- n4m_estimator_fit(n4m_y_outlier(), X, y)
@@ -108,4 +113,24 @@ testthat::test_that("seeds are optional and an unset seed runs as seed 0", {
                              n4m_augment(n4m_gaussian_noise(seed = 0), X))
   bag <- n4m_estimator_fit(n4m_bagging_pls(n_estimators = 3), X, X[, 1])
   testthat::expect_identical(n4m_estimator_import(n4m_estimator_export(bag))$params$seed, 0)
+})
+
+test_that("the legacy dispatcher refuses ids it would truncate", {
+  set.seed(4)
+  X <- matrix(stats::rnorm(120), 20, 6)
+  y <- X[, 1] * 2 + X[, 2]
+  expect_error(n4m_method("pls_logistic", X, y, 2,
+                          params = list(y_labels = rep(c(0.2, 1.8), 10), n_classes = 2)),
+               "y_labels must contain finite integers")
+  expect_error(n4m_method("pls_lda", X, y, 2, params = list(y_labels = rep(c(0, NA), 10))),
+               "y_labels must contain finite integers")
+  expect_error(n4m_method("pls_lda", X, y, 2, params = list(y_labels = rep(c(0, 2^40), 10))),
+               "y_labels must contain finite integers")
+  expect_error(n4m_method("group_sparse_pls", X, y, 2,
+                          params = list(group_assignment = c(0, 0.5, 1, 1, 2, 2))),
+               "group_assignment must contain finite integers")
+  expect_error(n4m_method("mb_pls", X, y, 2, params = list(block_sizes = c(2.5, 3.5))),
+               "block_sizes must contain finite integers")
+  expect_true(is.list(n4m_method("pls_logistic", X, y, 2,
+                                 params = list(y_labels = rep(c(0, 1), 10), n_classes = 2))))
 })

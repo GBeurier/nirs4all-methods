@@ -12,6 +12,8 @@ Classifier label names stay here, as in :class:`NativeClassifier`.
 from __future__ import annotations
 
 import ctypes
+import math
+import numbers
 from typing import Any
 
 import numpy as np
@@ -21,7 +23,7 @@ from .._errors import N4MError, check
 from .._ffi import lib
 from .._matrix import as_f64_2d, numpy_to_view
 from .._types import Status
-from ._base import _Context, _fit_inputs, method_class
+from ._base import _Context, _encode_labels, _fit_inputs, _label_array, method_class
 
 _ROLE_NAMES = {
     1 << 0: "transformer",
@@ -64,18 +66,60 @@ def _parse_step(step: Any) -> tuple[str, dict[str, Any]]:
 
 
 def _label_ids(y) -> tuple[np.ndarray, np.ndarray | None]:
-    """Class ids for the core, and the label names when they are not integers."""
-    labels = np.asarray(y)
+    """Class ids for the core, and the label table when they are not integers."""
+    labels = _label_array(y)
     if labels.ndim != 1:
         raise ValueError(f"class labels must be 1-D, got shape {labels.shape}")
-    if labels.dtype.kind in "iu":
-        return np.ascontiguousarray(labels, dtype=np.int64), None
-    names, codes = np.unique(labels, return_inverse=True)
-    return np.ascontiguousarray(codes, dtype=np.int64), names
+    return _encode_labels(labels)
+
+
+def _label_table(class_names) -> np.ndarray:
+    """``class_names`` checked against the shared label contract.
+
+    A non-empty 1-D list of unique strings or finite numbers (not both, no
+    boolean). Whether every class id has an entry is checked by the caller,
+    against the fitted state.
+    """
+    table = np.asarray(class_names, dtype=object)
+    if table.ndim != 1:
+        raise ValueError(f"class_names must be a 1-D list; got shape {table.shape}")
+    entries = table.tolist()
+    if not entries:
+        raise ValueError("class_names must not be empty")
+    for i, value in enumerate(entries):
+        if value is None:
+            raise ValueError(f"class_names has a missing entry at {i}")
+        if isinstance(value, (bool, np.bool_)) or not isinstance(
+            value, (str, numbers.Real)
+        ):
+            raise ValueError(
+                f"class_names entries must be strings or numbers; entry {i} is {value!r}"
+            )
+        if not isinstance(value, (str, numbers.Integral)) and not math.isfinite(value):
+            raise ValueError(f"class_names has a non-finite entry at {i}: {value!r}")
+    if len({isinstance(value, str) for value in entries}) > 1:
+        raise ValueError("class_names mixes strings and numbers")
+    seen: set[Any] = set()
+    for value in entries:
+        if value in seen:
+            raise ValueError(f"class_names has duplicate label {value!r}")
+        seen.add(value)
+    return np.asarray(entries)
 
 
 def _column_names(X) -> list[str] | None:
     return [str(c) for c in X.columns] if hasattr(X, "columns") else None
+
+
+def _c_names(names) -> list[bytes]:
+    """Column names as C strings; a NUL would silently truncate one, so it is refused."""
+    encoded = []
+    for i, name in enumerate(names):
+        text = str(name)
+        if "\0" in text:
+            raise ValueError(f"feature name {i} must not contain NUL: {text!r}")
+        encoded.append(text.encode())
+    return encoded
 
 
 class RolePipeline(BaseEstimator):
@@ -114,10 +158,13 @@ class RolePipeline(BaseEstimator):
 
         The native import refuses states that contradict ``steps`` (count,
         method, parameters, role, widths). ``class_names`` restores the label
-        names of a classifier trained on non-integer labels.
+        table of a classifier trained on non-integer labels: it is refused
+        unless it is a non-empty list of unique strings or finite numbers
+        with an entry for every class id of the fitted state.
         """
         pipeline = cls(list(steps))
         handle = pipeline._create()
+        label_names = None
         try:
             payloads = [bytes(s[1] if isinstance(s, tuple) else s) for s in states]
             buffers = [(ctypes.c_ubyte * len(p)).from_buffer_copy(p) for p in payloads]
@@ -135,16 +182,34 @@ class RolePipeline(BaseEstimator):
                     ),
                     "RolePipeline.from_states",
                 )
+            if class_names is not None:
+                label_names = pipeline._checked_label_table(handle, class_names)
         except BaseException:
             pipeline._release(handle)
             raise
         pipeline._publish(
             handle,
             None if feature_names is None else [str(n) for n in feature_names],
-            None if class_names is None else np.asarray(class_names),
+            label_names,
             None,
         )
         return pipeline
+
+    @staticmethod
+    def _checked_label_table(handle, class_names) -> np.ndarray:
+        """The label table of an imported classifier, covering its class ids."""
+        if RolePipeline._terminal_role(handle) != _ROLE_CLASSIFIER:
+            raise ValueError(
+                "class_names are given but the final step is not a classifier"
+            )
+        table = _label_table(class_names)
+        ids = RolePipeline._class_ids(handle)
+        outside = ids[(ids < 0) | (ids >= table.size)]
+        if outside.size:
+            raise ValueError(
+                f"class id {outside[0]} has no entry in class_names ({table.size} entries)"
+            )
+        return table
 
     # -- native handle --------------------------------------------------------
 
@@ -177,7 +242,7 @@ class RolePipeline(BaseEstimator):
     def _set_feature_names(ctx: _Context, handle, names) -> None:
         if names is None:
             return
-        encoded = [str(n).encode() for n in names]
+        encoded = _c_names(names)
         ctx.check(
             lib.n4m_role_pipeline_set_feature_names(
                 ctx.handle,
@@ -279,9 +344,7 @@ class RolePipeline(BaseEstimator):
         names = _column_names(X)
         X_arr = as_f64_2d(X)
         encoded = (
-            None
-            if names is None
-            else (ctypes.c_char_p * len(names))(*(n.encode() for n in names))
+            None if names is None else (ctypes.c_char_p * len(names))(*_c_names(names))
         )
         ctx.check(
             lib.n4m_role_pipeline_check_features(
@@ -351,7 +414,12 @@ class RolePipeline(BaseEstimator):
 
     @property
     def classes_(self) -> np.ndarray:
-        handle = self._handle()
+        ids = self._class_ids(self._handle())
+        return ids if self._label_names_ is None else self._label_names_[ids]
+
+    @staticmethod
+    def _class_ids(handle) -> np.ndarray:
+        """Native class ids of the final classifier (``n4m_role_pipeline_classes``)."""
         count = ctypes.c_int64()
         check(
             lib.n4m_role_pipeline_classes(handle, None, 0, ctypes.byref(count)),
@@ -367,7 +435,7 @@ class RolePipeline(BaseEstimator):
             ),
             "classes",
         )
-        return ids if self._label_names_ is None else self._label_names_[ids]
+        return ids
 
     @property
     def label_names_(self) -> np.ndarray | None:

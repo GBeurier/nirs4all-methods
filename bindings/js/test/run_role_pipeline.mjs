@@ -90,6 +90,68 @@ for (const c of fx.cases) {
 }
 fitted.dispose();
 
+// Label tables and labels (shared label contract): refused with the fixture
+// message, no native status. JSON has no NaN / infinity: `inject` adds one.
+const injected = (values, c) => {
+    const out = [...values];
+    if (c.inject) out[c.inject.at] = c.inject.value === "inf" ? Infinity : NaN;
+    return out;
+};
+for (const c of fx.label_cases) {
+    if (c.stage === "import") {
+        const source = fx[c.pipeline];
+        const load = () => n4m.RolePipeline.fromStates(source.steps,
+            source.states.map((s) => decode(s.n4me_base64)), { classNames: injected(c.class_names, c) });
+        if (c.accept) {
+            const pipeline = load();
+            assert.deepEqual(pipeline.predictLabels(xTest), source.predict, c.name);
+            pipeline.dispose();
+            continue;
+        }
+        assert.throws(load, (e) => e.message.includes(c.message), `${c.name}: expected '${c.message}'`);
+        continue;
+    }
+    assert.throws(() => n4m.RolePipeline.fromSteps(fx.classification.steps).fit(xTrain, injected(c.labels, c)),
+                  (e) => e.message.includes(c.message), `${c.name}: expected '${c.message}'`);
+}
+// Numbers that are not integers become a label table, as in Python and R.
+{
+    const labels = fx.labels_train.map((v) => ({ high: 2.5, low: 0.5, mid: 1.5 })[v]);
+    const pipeline = n4m.RolePipeline.fromSteps(fx.classification.steps).fit(xTrain, labels);
+    assert.deepEqual(pipeline.labelNames(), [0.5, 1.5, 2.5]);
+    const restored = n4m.RolePipeline.fromStates(fx.classification.steps, pipeline.exportStates(),
+                                                 { classNames: pipeline.labelNames() });
+    assert.deepEqual(restored.predictLabels(xTest), pipeline.predictLabels(xTest));
+    pipeline.dispose();
+    restored.dispose();
+}
+
+// Column names holding NUL are refused before a C string would truncate them.
+{
+    const reg = fx.regression;
+    const states = reg.states.map((s) => decode(s.n4me_base64));
+    const imported = n4m.RolePipeline.fromStates(reg.steps, states, { featureNames: names });
+    for (const c of fx.name_cases) {
+        const run = {
+            fit: () => n4m.RolePipeline.fromSteps(c.steps).fit(xTrain, fx[c.y], { featureNames: c.feature_names }),
+            import: () => n4m.RolePipeline.fromStates(reg.steps, states, { featureNames: c.feature_names }),
+            predict: () => imported.predict(xTest, c.feature_names),
+        }[c.stage];
+        assert.throws(run, (e) => e.message.includes(c.message), `${c.name}: expected '${c.message}'`);
+    }
+    imported.dispose();
+}
+
+// Zero new rows: an empty output of the right width, whatever the steps.
+for (const steps of [["models.regularized.ridge"], ["preprocessing.scatter.snv", "models.regularized.ridge"]]) {
+    const pipeline = n4m.RolePipeline.fromSteps(steps).fit(xTrain, fx.y_train);
+    const empty = { data: new Float64Array(0), rows: 0, cols: xTrain.cols };
+    const out = pipeline.predict(empty);
+    assert.equal(out.rows, 0);
+    assert.equal(out.data.length, 0);
+    pipeline.dispose();
+}
+
 // Training rows need an explicit opt-in; an unused input is refused.
 {
     const pipeline = n4m.RolePipeline.fromSteps(["preprocessing.scatter.snv", "models.pls.kernel"])
@@ -103,4 +165,5 @@ fitted.dispose();
     /not used by any step of the pipeline 'groups'/);
 }
 
-console.log(`role pipeline: ${fx.cases.length} shared cases, 2 cross-language pipelines OK`);
+console.log(`role pipeline: ${fx.cases.length} shared cases, ${fx.label_cases.length} label cases, ` +
+            `${fx.name_cases.length} name cases, 2 cross-language pipelines OK`);

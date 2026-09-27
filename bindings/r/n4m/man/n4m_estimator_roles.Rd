@@ -61,7 +61,9 @@ n4m_estimator_import(bytes)
 \item{X}{Numeric matrix (rows are samples).}
 \item{y}{Numeric response vector (one value per row of \code{X}) or matrix
 (one row per row of \code{X}) for regressors; class labels (factor, character
-or integer vector, one per row) for classifiers. Nothing is recycled: another
+or numeric vector, one per row) for classifiers: integer labels are the class
+ids (within int64), strings and other finite numbers become a label table;
+missing (NA) and non-finite labels are refused. Nothing is recycled: another
 length is an error.}
 \item{sample_weight, groups, feature_groups, blocks, axis, X_target, fold_ids}{
 Optional fit inputs; each method declares which ones it requires and the

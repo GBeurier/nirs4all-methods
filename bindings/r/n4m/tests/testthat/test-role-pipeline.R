@@ -145,3 +145,73 @@ testthat::test_that("n4m_role_pipeline_info exposes width, column names and clas
   reg <- n4m_estimator_fit(n4m_role_pipeline(list("models.pls.cppls")), X, stats::rnorm(80))
   testthat::expect_null(n4m_role_pipeline_info(reg)$classes)
 })
+
+testthat::test_that("the shared fixture's label cases are refused alike", {
+  # JSON has no NaN / infinity: `inject` puts one at position `at` (0-based).
+  injected <- function(values, case) {
+    if (!is.null(case$inject)) {
+      values[[case$inject$at + 1L]] <- if (case$inject$value == "inf") Inf else NaN
+    }
+    values
+  }
+  for (case in rp$label_cases) {
+    if (case$stage == "fit") {
+      labels <- injected(case$labels, case)
+      testthat::expect_error(
+        n4m_estimator_fit(n4m_role_pipeline(rp$classification$steps), rp$x_train, labels),
+        case$message, fixed = TRUE, label = case$name)
+      # The estimator-level classifiers encode labels the same way.
+      testthat::expect_error(n4m_estimator_fit(n4m_pls_lda(), rp$x_train, labels),
+                             case$message, fixed = TRUE, label = case$name)
+      next
+    }
+    source <- rp[[case$pipeline]]
+    load <- function() {
+      n4m_role_pipeline_import(source$steps, states_of(source$states),
+                               class_names = injected(case$class_names, case))
+    }
+    if (isTRUE(case$accept)) {
+      testthat::expect_identical(as.character(predict(load(), rp$x_test)), source$predict,
+                                 label = case$name)
+    } else {
+      testthat::expect_error(load(), case$message, fixed = TRUE, label = case$name)
+    }
+  }
+})
+
+testthat::test_that("non-integer numeric labels become a label table", {
+  cls <- rp$classification
+  labels <- c(high = 2.5, low = 0.5, mid = 1.5)[rp$labels_train]
+  fit <- n4m_estimator_fit(n4m_role_pipeline(cls$steps), rp$x_train, unname(labels))
+  testthat::expect_identical(n4m_role_pipeline_info(fit)$label_names, c(0.5, 1.5, 2.5))
+  back <- n4m_role_pipeline_import(cls$steps, n4m_role_pipeline_export(fit),
+                                   class_names = n4m_role_pipeline_info(fit)$label_names)
+  testthat::expect_identical(predict(back, rp$x_test), predict(fit, rp$x_test))
+})
+
+testthat::test_that("pipeline fit inputs are converted as strictly as the estimators'", {
+  d <- toy()
+  weighted <- list("models.regularized.weighted_pls")
+  testthat::expect_error(n4m_estimator_fit(n4m_role_pipeline(weighted), d$X, d$y,
+                                           sample_weight = matrix(1, 20, 2)),
+                         "sample_weight must be a vector")
+  testthat::expect_error(n4m_estimator_fit(n4m_role_pipeline(weighted), d$X, d$y,
+                                           sample_weight = array(1, c(40, 1, 1))),
+                         "sample_weight must be a vector")
+  ridge <- n4m_role_pipeline(list("models.regularized.ridge"))
+  testthat::expect_error(n4m_estimator_fit(ridge, d$X, d$y, groups = matrix(1, 20, 2)),
+                         "groups must be a vector")
+  testthat::expect_error(n4m_estimator_fit(ridge, d$X, d$y, fold_ids = rep(0.5, 40)),
+                         "fold_ids must contain finite integers")
+  testthat::expect_error(n4m_estimator_fit(ridge, d$X, d$y, axis = matrix(1, 4, 2)),
+                         "axis must be a vector")
+})
+
+testthat::test_that("zero new rows give an empty output whatever the steps", {
+  d <- toy()
+  for (steps in list(list("models.regularized.ridge"),
+                     list("preprocessing.scatter.snv", "models.regularized.ridge"))) {
+    fit <- n4m_estimator_fit(n4m_role_pipeline(steps), d$X, d$y)
+    testthat::expect_length(predict(fit, d$X[0, , drop = FALSE]), 0L)
+  }
+})

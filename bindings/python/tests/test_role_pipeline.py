@@ -5,12 +5,14 @@ from __future__ import annotations
 import base64
 import json
 import pickle
+import re
 from pathlib import Path
 
 import numpy as np
 import pytest
 from n4m import N4MError
 from n4m.roles import (
+    PLSLDA,
     SNV,
     PLSRegression,
     Ridge,
@@ -272,3 +274,119 @@ def test_shared_fixture_negative_cases(doc):
                 ).export_states()
         assert error.value.status == case["status"], case["name"]
         assert case["message"] in str(error.value), case["name"]
+
+
+def _inject(values: list, case: dict) -> list:
+    """The case's labels / class_names with its non-finite value (JSON has none)."""
+    values = list(values)
+    if "inject" in case:
+        values[case["inject"]["at"]] = float(case["inject"]["value"])
+    return values
+
+
+def test_shared_fixture_label_cases(doc):
+    X, X_test = np.asarray(doc["x_train"]), np.asarray(doc["x_test"])
+    for case in doc["label_cases"]:
+        if case["stage"] == "import":
+            source = doc[case["pipeline"]]
+            class_names = _inject(case["class_names"], case)
+
+            def load(source=source, class_names=class_names):
+                return RolePipeline.from_states(
+                    source["steps"],
+                    _payloads(source["states"]),
+                    class_names=class_names,
+                )
+
+            if case.get("accept"):
+                assert load().predict(X_test).tolist() == source["predict"], case[
+                    "name"
+                ]
+                continue
+            with pytest.raises(ValueError, match=re.escape(case["message"])):
+                load()
+            continue
+        labels = _inject(case["labels"], case)
+        steps = doc["classification"]["steps"]
+        with pytest.raises(ValueError, match=re.escape(case["message"])):
+            RolePipeline(steps).fit(X, labels)
+        # The estimator-level classifiers encode labels the same way.
+        with pytest.raises(ValueError, match=re.escape(case["message"])):
+            PLSLDA().fit(X, labels)
+
+
+def test_shared_fixture_name_cases(doc):
+    names = doc["feature_names"]
+    X, X_test = np.asarray(doc["x_train"]), np.asarray(doc["x_test"])
+    reg = doc["regression"]
+    fitted = RolePipeline.from_states(
+        reg["steps"], _payloads(reg["states"]), feature_names=names
+    )
+    for case in doc["name_cases"]:
+        columns = case["feature_names"]
+        with pytest.raises(ValueError, match=case["message"]):
+            if case["stage"] == "fit":
+                RolePipeline(case["steps"]).fit(
+                    frame(X, columns), np.asarray(doc[case["y"]])
+                )
+            elif case["stage"] == "import":
+                RolePipeline.from_states(
+                    reg["steps"], _payloads(reg["states"]), feature_names=columns
+                )
+            else:
+                fitted.predict(frame(X_test, columns))
+
+
+def test_label_tables_round_trip_numbers_and_pickles():
+    X, y = data()
+    labels = np.where(y > np.median(y), 2.5, 0.5)
+    steps = ["models.classification.pls_lda"]
+    pipeline = RolePipeline(steps).fit(X, labels)
+    assert pipeline.label_names_.tolist() == [0.5, 2.5]
+    restored = RolePipeline.from_states(
+        steps, pipeline.export_states(), class_names=pipeline.label_names_.tolist()
+    )
+    np.testing.assert_array_equal(restored.predict(X), pipeline.predict(X))
+    clone = pickle.loads(pickle.dumps(pipeline))
+    np.testing.assert_array_equal(clone.predict(X), pipeline.predict(X))
+    # Integer labels are the class ids: no table, and uint64 beyond int64 is
+    # refused instead of wrapping to a negative id.
+    ids = np.where(y > np.median(y), 7, 3)
+    assert RolePipeline(steps).fit(X, ids).label_names_ is None
+    with pytest.raises(ValueError, match="class labels must fit int64"):
+        RolePipeline(steps).fit(X, ids.astype(np.uint64) + np.uint64(2**63))
+    with pytest.raises(
+        ValueError, match="class labels must be integers, finite numbers"
+    ):
+        RolePipeline(steps).fit(X, ids > 5)
+
+
+def test_integer_fit_inputs_must_fit_int64():
+    X, y = data()
+    groups = np.full(X.shape[0], 2**63, dtype=np.uint64)
+    with pytest.raises(ValueError, match="groups must fit int64"):
+        RolePipeline(["models.regularized.ridge"]).fit(X, y, groups=groups)
+
+
+def test_zero_rows_give_empty_outputs_whatever_the_steps():
+    X, y = data()
+    for steps in (
+        ["models.regularized.ridge"],
+        ["preprocessing.scatter.snv", "models.regularized.ridge"],
+        [
+            "preprocessing.scatter.snv",
+            "models.pls.pls_regression",
+            "models.regularized.ridge",
+        ],
+    ):
+        pipeline = RolePipeline(steps).fit(X, y)
+        assert pipeline.predict(X[:0]).shape == (0,)
+        assert pipeline.transform(X[:0]).shape == (0, pipeline.transform(X).shape[1])
+        with pytest.raises(N4MError, match="fitted on 8"):
+            pipeline.predict(X[:0, :-1])
+    labels = np.where(y > np.median(y), "high", "low")
+    classifier = RolePipeline(
+        ["preprocessing.scatter.snv", "models.classification.pls_lda"]
+    ).fit(X, labels)
+    assert classifier.predict(X[:0]).shape == (0,)
+    assert classifier.decision_function(X[:0]).shape == (0, 2)
