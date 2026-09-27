@@ -172,7 +172,7 @@ for (case in fx$procedures) {
 
 testthat::test_that("the native manifest and constructor lookup cover every method", {
   json <- n4m_manifest_json()
-  testthat::expect_true(startsWith(json, "{\"abi\":\"2.13"))
+  testthat::expect_true(startsWith(json, "{\"abi\":\"2.14"))
   for (id in names(constructors)) {
     testthat::expect_true(grepl(paste0("\"method_id\":\"", id, "\""), json, fixed = TRUE))
     testthat::expect_identical(n4m_constructor(id), constructors[[id]])
