@@ -244,13 +244,12 @@ predict.n4m_role_pipeline <- function(object, newdata, type = c("class", "prob",
   }
   type <- match.arg(type)
   if (type == "class") {
-    ids <- .n4m_role_op(object, newdata, 4L)
-    levels <- object$state$levels
-    return(if (is.null(levels)) ids else factor(levels[ids + 1], levels = levels))
+    return(.n4m_label_values(.n4m_role_op(object, newdata, 4L), object$state$levels))
   }
   out <- .n4m_role_op(object, newdata, if (type == "prob") 3L else 2L)
   classes <- object$state$info$classes
-  colnames(out) <- if (is.null(object$state$levels)) classes else object$state$levels[classes + 1]
+  colnames(out) <- .n4m_label_text(
+    if (is.null(object$state$levels)) classes else object$state$levels[classes + 1])
   out
 }
 

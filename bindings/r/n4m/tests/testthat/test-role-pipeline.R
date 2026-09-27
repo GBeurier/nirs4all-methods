@@ -215,3 +215,17 @@ testthat::test_that("zero new rows give an empty output whatever the steps", {
     testthat::expect_length(predict(fit, d$X[0, , drop = FALSE]), 0L)
   }
 })
+
+testthat::test_that("numeric labels stay exact numbers in predictions", {
+  set.seed(1)
+  X <- matrix(stats::rnorm(400), 80, 5)
+  close <- c(0.12345678901234559, 0.12345678901234571)
+  y <- sample(close, 80, TRUE)
+  fit <- n4m_estimator_fit(n4m_role_pipeline(list("models.classification.pls_logistic")), X, y)
+  pred <- predict(fit, X)
+  testthat::expect_type(pred, "double")
+  testthat::expect_true(all(pred %in% close))
+  prob <- predict(fit, X, type = "prob")
+  testthat::expect_identical(anyDuplicated(colnames(prob)), 0L)
+  testthat::expect_identical(as.numeric(colnames(prob)), close)
+})

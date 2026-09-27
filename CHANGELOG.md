@@ -35,7 +35,8 @@ ABI unchanged (2.14.0): input validation and facade contract fixes from the
   predictions (R05, R08, R12). A table is all strings or all numbers, and its
   numbers must be exact as float64: an integral number beyond ±2^53 (in a table, or
   beside fractions at fit) is refused instead of being rounded into another
-  label.
+  label. R predictions keep numeric labels as numbers (string labels stay a
+  factor), and probability column names keep close fractions distinct.
 - Column names containing NUL are refused at fit, import and predict in
   Python and JS; they were truncated at the NUL, so a renamed column passed
   the identity check (R10).
