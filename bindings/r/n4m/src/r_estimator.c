@@ -77,8 +77,10 @@ static n4m_matrix_view_t r_est_view(SEXP m, const char* name) {
 }
 
 /* A finite whole number representable as int64 (R integers arrive as doubles). */
+/* A finite whole number within int64 (2^63 is exact in double). */
 static int r_est_whole(double d) {
-    return R_FINITE(d) && fabs(d) < 9.0e18 && d == floor(d);
+    return R_FINITE(d) && d >= -9223372036854775808.0 && d < 9223372036854775808.0 &&
+           d == floor(d);
 }
 
 /* Sets each element of a named list with the manifest type of that name. */

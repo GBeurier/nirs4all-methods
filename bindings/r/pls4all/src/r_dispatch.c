@@ -20,6 +20,7 @@
 #include <R.h>
 #include <Rinternals.h>
 
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -296,31 +297,44 @@ static n4m_config_t* build_cfg(int n_components,
     return cfg;
 }
 
-/* ---- Coerce R int/double-vector list field to int32 buffer --------- */
+/* ---- Coerce R int/double-vector list field to an integer buffer ----- */
 
-static int32_t* coerce_int32_vec(SEXP v, int* n_out) {
+/* Entry i of an R integer or double vector as a whole number in [lo, hi]:
+ * a fractional, non-finite, NA or out-of-range entry (class ids, groups,
+ * blocks, events) is refused with the field named, never truncated. */
+static double whole_entry(SEXP v, int i, double lo, double hi, const char* name,
+                          n4m_context_t* ctx, n4m_config_t* cfg) {
+    double d = NAN;
+    if (TYPEOF(v) == INTSXP) {
+        if (INTEGER(v)[i] != NA_INTEGER) d = (double)INTEGER(v)[i];
+    } else if (TYPEOF(v) == REALSXP) {
+        d = REAL(v)[i];
+    } else {
+        cleanup_err(ctx, cfg, "%s must be a numeric or integer vector", name);
+    }
+    if (!R_FINITE(d) || d != floor(d) || d < lo || d > hi)
+        cleanup_err(ctx, cfg, "%s must contain finite integers (entry %d is not one)", name,
+                    i + 1);
+    return d;
+}
+
+static int32_t* coerce_int32_vec(SEXP v, int* n_out, const char* name, n4m_context_t* ctx,
+                                 n4m_config_t* cfg) {
     *n_out = (int)Rf_length(v);
     int32_t* out = (int32_t*)R_alloc((size_t)*n_out, sizeof(int32_t));
-    if (TYPEOF(v) == INTSXP) {
-        for (int i = 0; i < *n_out; ++i) out[i] = INTEGER(v)[i];
-    } else if (TYPEOF(v) == REALSXP) {
-        for (int i = 0; i < *n_out; ++i) out[i] = (int32_t)REAL(v)[i];
-    } else {
-        Rf_error("expected numeric or integer vector");
-    }
+    for (int i = 0; i < *n_out; ++i)
+        out[i] = (int32_t)whole_entry(v, i, (double)INT32_MIN, (double)INT32_MAX, name, ctx, cfg);
     return out;
 }
 
-static int64_t* coerce_int64_vec(SEXP v, int* n_out) {
+static int64_t* coerce_int64_vec(SEXP v, int* n_out, const char* name, n4m_context_t* ctx,
+                                 n4m_config_t* cfg) {
     *n_out = (int)Rf_length(v);
     int64_t* out = (int64_t*)R_alloc((size_t)*n_out, sizeof(int64_t));
-    if (TYPEOF(v) == INTSXP) {
-        for (int i = 0; i < *n_out; ++i) out[i] = (int64_t)INTEGER(v)[i];
-    } else if (TYPEOF(v) == REALSXP) {
-        for (int i = 0; i < *n_out; ++i) out[i] = (int64_t)REAL(v)[i];
-    } else {
-        Rf_error("expected numeric or integer vector");
-    }
+    /* 2^63 is exact in double; the largest double below it fits int64. */
+    for (int i = 0; i < *n_out; ++i)
+        out[i] = (int64_t)whole_entry(v, i, -9223372036854775808.0,
+                                      nextafter(9223372036854775808.0, 0.0), name, ctx, cfg);
     return out;
 }
 
@@ -734,7 +748,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP yl = get_list_element(params, "y_labels");
         if (yl == R_NilValue) cleanup_err(ctx, cfg, "sparse_pls_da requires params$y_labels");
         int nl = 0;
-        int32_t* labels = coerce_int32_vec(yl, &nl);
+        int32_t* labels = coerce_int32_vec(yl, &nl, "y_labels", ctx, cfg);
         if (nl != n) cleanup_err(ctx, cfg, "y_labels must have length n");
         st = n4m_estimators_sparse_pls_da_fit(ctx, cfg, &Xv, labels, nl, &mr);
         if (st == N4M_OK) {
@@ -747,7 +761,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP g = get_list_element(params, "group_assignment");
         if (g == R_NilValue) cleanup_err(ctx, cfg, "group_sparse_pls requires params$group_assignment");
         int gn = 0;
-        int32_t* groups = coerce_int32_vec(g, &gn);
+        int32_t* groups = coerce_int32_vec(g, &gn, "group_assignment", ctx, cfg);
         if (gn != p) cleanup_err(ctx, cfg, "group_assignment must have length ncol(X)");
         double gl = get_double(params, "group_lambda", 0.05);
         st = n4m_estimators_group_sparse_pls_fit(ctx, cfg, &Xv, &Yv, groups, gn, gl, &mr);
@@ -769,7 +783,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP bs = get_list_element(params, "block_sizes");
         if (bs == R_NilValue) cleanup_err(ctx, cfg, "%s requires params$block_sizes", algo);
         int bsn = 0;
-        int64_t* bsv = coerce_int64_vec(bs, &bsn);
+        int64_t* bsv = coerce_int64_vec(bs, &bsn, "block_sizes", ctx, cfg);
         int64_t bsum = 0;
         for (int i = 0; i < bsn; ++i) {
             if (bsv[i] <= 0)
@@ -800,7 +814,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             if (ncpb_sexp == R_NilValue)
                 cleanup_err(ctx, cfg, "so_pls requires params$n_components_per_block");
             int ncn = 0;
-            int32_t* ncpb = coerce_int32_vec(ncpb_sexp, &ncn);
+            int32_t* ncpb = coerce_int32_vec(ncpb_sexp, &ncn, "n_components_per_block", ctx, cfg);
             if (ncn != bsn) cleanup_err(ctx, cfg, "n_components_per_block must have length n_blocks");
             st = n4m_estimators_so_pls_fit(ctx, cfg, blocks, bsn, &Yv, ncpb, ncn, &mr);
         } else if (strcmp(algo, "rosa") == 0) {
@@ -811,7 +825,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
             if (upb_sexp == R_NilValue)
                 cleanup_err(ctx, cfg, "on_pls requires params$n_unique_per_block");
             int upbn = 0;
-            int32_t* upb = coerce_int32_vec(upb_sexp, &upbn);
+            int32_t* upb = coerce_int32_vec(upb_sexp, &upbn, "n_unique_per_block", ctx, cfg);
             if (upbn != bsn) cleanup_err(ctx, cfg, "n_unique_per_block must have length n_blocks");
             st = n4m_estimators_on_pls_fit(ctx, cfg, blocks, bsn, njoint, upb, upbn, &mr);
         }
@@ -877,7 +891,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP yl = get_list_element(params, "y_labels");
         if (yl == R_NilValue) cleanup_err(ctx, cfg, "pls_qda requires params$y_labels");
         int nl = 0;
-        int32_t* labels = coerce_int32_vec(yl, &nl);
+        int32_t* labels = coerce_int32_vec(yl, &nl, "y_labels", ctx, cfg);
         if (nl != n) cleanup_err(ctx, cfg, "y_labels must have length n");
         st = n4m_estimators_pls_qda_fit(ctx, cfg, &Xv, labels, nl, &mr);
         if (st == N4M_OK) {
@@ -896,7 +910,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         if (Rf_length(sts_sexp) != n)
             cleanup_err(ctx, cfg, "survival_times must have length n");
         int en = 0;
-        int32_t* ev = coerce_int32_vec(ev_sexp, &en);
+        int32_t* ev = coerce_int32_vec(ev_sexp, &en, "event_indicators", ctx, cfg);
         if (en != n) cleanup_err(ctx, cfg, "event_indicators must have length n");
         st = n4m_estimators_pls_cox_fit(ctx, cfg, &Xv, REAL(sts_sexp), Rf_length(sts_sexp),
                               ev, en, &mr);
@@ -951,7 +965,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP bs = get_list_element(params, "block_sizes");
         if (bs == R_NilValue) cleanup_err(ctx, cfg, "mb_pls requires params$block_sizes");
         int bsn = 0;
-        int64_t* bsv = coerce_int64_vec(bs, &bsn);
+        int64_t* bsv = coerce_int64_vec(bs, &bsn, "block_sizes", ctx, cfg);
         int64_t bsum = 0;
         for (int i = 0; i < bsn; ++i) {
             if (bsv[i] <= 0)
@@ -986,7 +1000,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP yl = get_list_element(params, "y_labels");
         if (yl == R_NilValue) cleanup_err(ctx, cfg, "pls_lda requires params$y_labels");
         int nl = 0;
-        int32_t* labels = coerce_int32_vec(yl, &nl);
+        int32_t* labels = coerce_int32_vec(yl, &nl, "y_labels", ctx, cfg);
         int nc = get_int(params, "n_classes", 0);
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;
@@ -1002,7 +1016,7 @@ SEXP r_n4m_dispatch_fit(SEXP algo_sexp, SEXP X, SEXP Y,
         SEXP yl = get_list_element(params, "y_labels");
         if (yl == R_NilValue) cleanup_err(ctx, cfg, "pls_logistic requires params$y_labels");
         int nl = 0;
-        int32_t* labels = coerce_int32_vec(yl, &nl);
+        int32_t* labels = coerce_int32_vec(yl, &nl, "y_labels", ctx, cfg);
         int nc = get_int(params, "n_classes", 0);
         if (nc <= 0) {
             for (int i = 0; i < nl; ++i) if (labels[i] + 1 > nc) nc = labels[i] + 1;

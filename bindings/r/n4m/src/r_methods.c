@@ -20,6 +20,7 @@
 #include <R.h>
 #include <Rinternals.h>
 
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -327,11 +328,17 @@ SEXP r_n4m_mb_pls_fit(SEXP X, SEXP Y, SEXP n_components_sexp,
     int64_t* bs = (int64_t*)R_alloc((size_t)n_blocks, sizeof(int64_t));
     int64_t bs_sum = 0;
     for (int i = 0; i < n_blocks; ++i) {
-        int64_t v = (TYPEOF(block_sizes_sexp) == INTSXP)
-            ? (int64_t)INTEGER(block_sizes_sexp)[i]
-            : (int64_t)REAL(block_sizes_sexp)[i];
-        bs[i] = v;
-        bs_sum += v;
+        const double d = (TYPEOF(block_sizes_sexp) == INTSXP)
+            ? (INTEGER(block_sizes_sexp)[i] == NA_INTEGER ? NAN
+                                                          : INTEGER(block_sizes_sexp)[i])
+            : REAL(block_sizes_sexp)[i];
+        /* Block sizes are column counts: never truncated. */
+        if (!R_FINITE(d) || d != floor(d) || d < 1 || d > (double)n_cols) {
+            UNPROTECT(2);
+            Rf_error("block_sizes must contain positive integers (entry %d is not one)", i + 1);
+        }
+        bs[i] = (int64_t)d;
+        bs_sum += bs[i];
     }
     if (bs_sum != n_cols) {
         UNPROTECT(2);
