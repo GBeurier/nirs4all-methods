@@ -468,7 +468,8 @@ n4m_status_t pipeline_fit(n4m_context_t* ctx, n4m_role_pipeline_s& p,
     const std::int64_t n_features = rows.X.cols;
     if (!p.feature_names.empty() &&
         static_cast<std::int64_t>(p.feature_names.size()) != n_features) {
-        ctx->set_errorf("%zu feature names for %lld input columns", p.feature_names.size(),
+        ctx->set_errorf("%lld feature names for %lld input columns",
+                        static_cast<long long>(p.feature_names.size()),
                         static_cast<long long>(n_features));
         return N4M_ERR_SHAPE_MISMATCH;
     }
@@ -585,8 +586,8 @@ n4m_status_t pipeline_import(n4m_context_t* ctx, n4m_role_pipeline_s& p, std::in
         if (step.state_index >= 0) stateful.push_back(&step);
     }
     if (n_states != static_cast<std::int32_t>(stateful.size())) {
-        ctx->set_errorf("the recipe has %zu stateful steps but %d states were given",
-                        stateful.size(), n_states);
+        ctx->set_errorf("the recipe has %lld stateful steps but %d states were given",
+                        static_cast<long long>(stateful.size()), n_states);
         return N4M_ERR_INVALID_ARGUMENT;
     }
     if (buffers == nullptr || sizes == nullptr) {
@@ -641,7 +642,8 @@ n4m_status_t pipeline_import(n4m_context_t* ctx, n4m_role_pipeline_s& p, std::in
     }
     if (!p.feature_names.empty() &&
         static_cast<std::int64_t>(p.feature_names.size()) != n_features) {
-        ctx->set_errorf("%zu feature names for %lld input columns", p.feature_names.size(),
+        ctx->set_errorf("%lld feature names for %lld input columns",
+                        static_cast<long long>(p.feature_names.size()),
                         static_cast<long long>(n_features));
         return N4M_ERR_SHAPE_MISMATCH;
     }

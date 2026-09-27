@@ -76,8 +76,8 @@ n4m_status_t state_at(n4m_context_t* ctx, const n4m_role_pipeline_t* p, int32_t 
         return N4M_ERR_NOT_FITTED;
     }
     if (state < 0 || static_cast<std::size_t>(state) >= p->states.size()) {
-        ctx->set_errorf("state %d is out of range (the pipeline has %zu states)", state,
-                        p->states.size());
+        ctx->set_errorf("state %d is out of range (the pipeline has %lld states)", state,
+                        static_cast<long long>(p->states.size()));
         return N4M_ERR_INVALID_ARGUMENT;
     }
     *out = p->states[static_cast<std::size_t>(state)].get();
