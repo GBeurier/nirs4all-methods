@@ -322,11 +322,12 @@ update_with_sed \
     "^version[[:space:]]*=[[:space:]]*\"([0-9]+\.[0-9]+\.[0-9]+)\"" \
     "s/^(version[[:space:]]*=[[:space:]]*\")[0-9]+\.[0-9]+\.[0-9]+(\")/\1${VERSION}\2/"
 
-# R (DESCRIPTION:  Version: X.Y.Z)
+# R (DESCRIPTION:  Version: X.Y.Z). A bump also drops the R-universe
+# development suffix (X.Y.Z.9NNN), so released tarballs carry X.Y.Z.
 update_with_sed \
     "bindings/r/n4m/DESCRIPTION" \
     "^Version:[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)" \
-    "s/^(Version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
+    "s/^(Version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$/\1${VERSION}/"
 
 # R CRAN comments (release summary line)
 update_with_sed \
@@ -338,7 +339,7 @@ update_with_sed \
 update_with_sed \
     "bindings/r/pls4all/DESCRIPTION" \
     "^Version:[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)" \
-    "s/^(Version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+/\1${VERSION}/"
+    "s/^(Version:[[:space:]]+)[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$/\1${VERSION}/"
 update_with_sed \
     "bindings/r/pls4all/cran-comments.md" \
     '`pls4all`[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+)' \

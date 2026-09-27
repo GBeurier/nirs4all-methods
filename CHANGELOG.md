@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-27
+
+### Fixed
+
+- The R packages `n4m` and `pls4all` are versioned 1.1.1: the 1.1.0 bump kept
+  the R-universe development suffix (1.1.0.9006). `scripts/bump_version.sh`
+  now drops that suffix on a bump.
+- The shared estimator-role fixture uses a full-rank transfer target; with a
+  rank-2 target `utilities.transfer_metrics` compared null-space directions,
+  which made the macOS arm64 R check fail. No library code changed.
+
 ## [1.1.0] - 2026-09-27
 
 ### Added
