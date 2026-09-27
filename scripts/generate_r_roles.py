@@ -49,6 +49,7 @@ ROLE_METHODS = {
     ],
 }
 COMMON_EXPORTS = [
+    "export(n4m_contains_training_rows)",
     "export(n4m_estimator_export)",
     "export(n4m_estimator_fit)",
     "export(n4m_estimator_import)",

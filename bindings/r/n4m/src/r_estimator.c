@@ -12,6 +12,7 @@
 #define R_NO_REMAP
 #include <R.h>
 #include <Rinternals.h>
+#include <math.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -75,6 +76,11 @@ static n4m_matrix_view_t r_est_view(SEXP m, const char* name) {
     return v;
 }
 
+/* A finite whole number representable as int64 (R integers arrive as doubles). */
+static int r_est_whole(double d) {
+    return R_FINITE(d) && fabs(d) < 9.0e18 && d == floor(d);
+}
+
 /* Sets each element of a named list with the manifest type of that name. */
 static n4m_status_t r_est_set_params(n4m_params_t* params, int32_t index, SEXP values,
                                      const char** bad) {
@@ -98,15 +104,23 @@ static n4m_status_t r_est_set_params(n4m_params_t* params, int32_t index, SEXP v
             }
         }
         if (p == info.n_params) return N4M_ERR_INVALID_ARGUMENT;
-        if (XLENGTH(v) < 1) return N4M_ERR_INVALID_ARGUMENT;
+        /* A scalar parameter takes exactly one value; nothing is recycled
+         * or truncated. */
+        const int array = pi.type == N4M_METHOD_PARAM_INT_ARRAY ||
+                          pi.type == N4M_METHOD_PARAM_DOUBLE_ARRAY;
+        if (!array && XLENGTH(v) != 1) return N4M_ERR_INVALID_ARGUMENT;
         switch (pi.type) {
-            case N4M_METHOD_PARAM_INT:
-                st = n4m_params_set_int(params, name, (int64_t)Rf_asReal(v));
+            case N4M_METHOD_PARAM_INT: {
+                const double d = Rf_asReal(v);
+                if (!r_est_whole(d)) return N4M_ERR_INVALID_ARGUMENT;
+                st = n4m_params_set_int(params, name, (int64_t)d);
                 break;
+            }
             case N4M_METHOD_PARAM_DOUBLE:
                 st = n4m_params_set_double(params, name, Rf_asReal(v));
                 break;
             case N4M_METHOD_PARAM_BOOL:
+                if (Rf_asLogical(v) == NA_LOGICAL) return N4M_ERR_INVALID_ARGUMENT;
                 st = n4m_params_set_bool(params, name, Rf_asLogical(v) == TRUE ? 1 : 0);
                 break;
             case N4M_METHOD_PARAM_ENUM:
@@ -116,7 +130,13 @@ static n4m_status_t r_est_set_params(n4m_params_t* params, int32_t index, SEXP v
             case N4M_METHOD_PARAM_INT_ARRAY: {
                 SEXP d = PROTECT(Rf_coerceVector(v, REALSXP));
                 int64_t* buf = (int64_t*)R_alloc((size_t)XLENGTH(d), sizeof(int64_t));
-                for (R_xlen_t k = 0; k < XLENGTH(d); ++k) buf[k] = (int64_t)REAL(d)[k];
+                for (R_xlen_t k = 0; k < XLENGTH(d); ++k) {
+                    if (!r_est_whole(REAL(d)[k])) {
+                        UNPROTECT(1);
+                        return N4M_ERR_INVALID_ARGUMENT;
+                    }
+                    buf[k] = (int64_t)REAL(d)[k];
+                }
                 st = n4m_params_set_int_array(params, name, buf, (int64_t)XLENGTH(d));
                 UNPROTECT(1);
                 break;
@@ -140,7 +160,9 @@ static int64_t* r_est_int64(SEXP v, const char* name) {
     SEXP d = PROTECT(Rf_coerceVector(v, REALSXP));
     int64_t* out = (int64_t*)R_alloc((size_t)XLENGTH(d), sizeof(int64_t));
     for (R_xlen_t k = 0; k < XLENGTH(d); ++k) {
-        if (!R_FINITE(REAL(d)[k])) Rf_error("%s must contain finite integers", name);
+        if (!r_est_whole(REAL(d)[k])) {
+            Rf_error("%s must contain finite integers", name);
+        }
         out[k] = (int64_t)REAL(d)[k];
     }
     UNPROTECT(1);
@@ -459,11 +481,14 @@ SEXP r_n4m_estimator_selected_indices(SEXP ptr) {
     return out;
 }
 
-SEXP r_n4m_estimator_export(SEXP ptr) {
+/* N4ME bytes; a state that embeds training rows exports only when
+ * allow_training_rows is TRUE. */
+SEXP r_n4m_estimator_export(SEXP ptr, SEXP allow_training_rows) {
     n4m_estimator_t* est = r_est_get(ptr);
+    const uint32_t flags =
+        Rf_asLogical(allow_training_rows) == TRUE ? N4M_EXPORT_ALLOW_TRAINING_ROWS : 0u;
     n4m_context_t* ctx = r_est_context();
     size_t size = 0;
-    const uint32_t flags = N4M_EXPORT_ALLOW_TRAINING_ROWS;
     n4m_status_t st = n4m_estimator_export_size(ctx, est, flags, &size);
     if (st != N4M_OK) r_est_fail("n4m_estimator_export_size", st, ctx, NULL, NULL);
     SEXP out = PROTECT(Rf_allocVector(RAWSXP, (R_xlen_t)size));
@@ -476,6 +501,13 @@ SEXP r_n4m_estimator_export(SEXP ptr) {
     n4m_context_destroy(ctx);
     UNPROTECT(1);
     return out;
+}
+
+SEXP r_n4m_estimator_contains_training_rows(SEXP ptr) {
+    int32_t out = 0;
+    const n4m_status_t st = n4m_estimator_contains_training_rows(r_est_get(ptr), &out);
+    if (st != N4M_OK) r_est_fail("n4m_estimator_contains_training_rows", st, NULL, NULL, NULL);
+    return Rf_ScalarLogical(out != 0);
 }
 
 SEXP r_n4m_estimator_import(SEXP bytes) {
