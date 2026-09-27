@@ -53,13 +53,36 @@
   v
 }
 
-# Integer-valued numbers (class ids, groups, fold ids, block sizes).
+# Integer-valued numbers (class ids, groups, fold ids, block sizes), within
+# int64 (the native type): nothing is truncated or wrapped.
 .n4m_integers <- function(v, name) {
   if (is.factor(v)) v <- as.integer(v)
   if (!is.numeric(v) || anyNA(v) || any(!is.finite(v)) || any(v != round(v))) {
     stop(name, " must contain finite integers", call. = FALSE)
   }
+  if (any(v < -2^63 | v >= 2^63)) stop(name, " must fit int64", call. = FALSE)
   v
+}
+
+# Class ids for the core and the label table they index (the shared label
+# contract). Integer labels are the ids (no table) and must fit int64; other
+# numbers, and strings (tabled by `string_levels`), become a table whose
+# positions are the ids. Missing and non-finite labels are refused.
+.n4m_encode_labels <- function(y, string_levels) {
+  if (is.factor(y) || is.character(y)) {
+    if (anyNA(y)) stop("class labels must not be missing (NA)", call. = FALSE)
+    levels <- string_levels(y)
+    return(list(ids = match(as.character(y), levels) - 1, levels = levels))
+  }
+  if (!is.numeric(y)) stop("class labels must be a factor, characters or numbers", call. = FALSE)
+  if (any(is.na(y) & !is.nan(y))) stop("class labels must not be missing (NA)", call. = FALSE)
+  if (!all(is.finite(y))) stop("class labels must be finite (no NaN or infinity)", call. = FALSE)
+  if (all(y == round(y))) {
+    if (any(y < -2^63 | y >= 2^63)) stop("class labels must fit int64", call. = FALSE)
+    return(list(ids = as.double(y), levels = NULL))
+  }
+  levels <- sort(unique(as.double(y)))
+  list(ids = match(y, levels) - 1, levels = levels)
 }
 
 # Targets as an n x q double matrix: a vector of length n is one column, a
@@ -144,7 +167,9 @@
 #' @param X Numeric matrix (rows are samples).
 #' @param y Numeric response vector (one value per row of \code{X}) or matrix
 #'   (one row per row of \code{X}) for regressors; class labels (factor,
-#'   character or integer vector, one per row) for classifiers. Nothing is
+#'   character or numeric vector, one per row) for classifiers: integer labels
+#'   are the class ids (within int64), strings and other finite numbers become
+#'   a label table; missing (NA) and non-finite labels are refused. Nothing is
 #'   recycled: another length is an error.
 #' @param sample_weight,groups,feature_groups,blocks,axis,X_target,fold_ids
 #'   Optional fit inputs; each method declares which ones it requires and the
@@ -182,13 +207,10 @@ n4m_estimator_fit.n4m_estimator <- function(object, X, y = NULL, sample_weight =
   if (inherits(object, "n4m_classifier") && !is.null(y)) {
     # The core works on integer class ids; other labels are encoded here.
     y <- .n4m_vector(y, "class labels", nrow(X), "one per row of X")
-    if (is.factor(y) || is.character(y)) {
-      if (anyNA(y)) stop("class labels must not be NA", call. = FALSE)
-      levels <- if (is.factor(y)) levels(droplevels(y)) else sort(unique(y))
-      labels <- match(as.character(y), levels) - 1
-    } else {
-      labels <- y
-    }
+    encoded <- .n4m_encode_labels(
+      y, function(y) if (is.factor(y)) levels(droplevels(y)) else sort(unique(y)))
+    labels <- encoded$ids
+    levels <- encoded$levels
     y <- NULL
   }
   y_matrix <- if (is.null(y)) NULL else .n4m_targets(y, nrow(X))

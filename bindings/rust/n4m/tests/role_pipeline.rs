@@ -286,6 +286,43 @@ fn shared_fixture_negative_cases_are_refused_alike() {
     }
 }
 
+/// Column names holding NUL are refused before a C string would truncate
+/// them. The fixture's `label_cases` concern label tables, which this facade
+/// does not hold: it takes `i64` class ids, so a missing, non-finite or
+/// out-of-int64 label cannot reach it.
+#[test]
+fn shared_fixture_name_cases_are_refused() {
+    let fx = fixture();
+    let ctx = Context::new().unwrap();
+    let owned_names = strings(&fx["feature_names"]);
+    let names: Vec<&str> = owned_names.iter().map(String::as_str).collect();
+    let x_test = Dense::new(&fx["x_test"]);
+    let reg = &fx["regression"];
+    let fitted = import(&ctx, &reg["steps"], &reg["states"], Some(&names)).unwrap();
+    for case in fx["name_cases"].as_array().unwrap() {
+        let name = case["name"].as_str().unwrap();
+        let owned = strings(&case["feature_names"]);
+        let columns: Vec<&str> = owned.iter().map(String::as_str).collect();
+        let result = match case["stage"].as_str().unwrap() {
+            "fit" => Recipe::new(&ctx, &case["steps"])
+                .pipeline(&ctx)
+                .and_then(|mut p| p.set_feature_names(&ctx, &columns)),
+            "import" => import(&ctx, &reg["steps"], &reg["states"], Some(&columns)).map(drop),
+            "predict" => fitted
+                .predict(&ctx, x_test.view(), Some(&columns))
+                .map(drop),
+            other => panic!("fixture stage {other}"),
+        };
+        let error = result.expect_err(name);
+        let message = case["message"].as_str().unwrap();
+        assert!(
+            error.message.contains(message),
+            "{name}: '{}' lacks '{message}'",
+            error.message
+        );
+    }
+}
+
 #[test]
 fn training_rows_need_an_opt_in() {
     let fx = fixture();

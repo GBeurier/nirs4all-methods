@@ -3,7 +3,8 @@
 // estimators (sample filters, transformers / selectors, one regressor or
 // classifier). Recipe validation, fit-input routing, the feature-name check
 // and the per-step N4ME states are native (n4m_role_pipeline_*); this file
-// marshals only. Class label names stay here, as the other bindings do.
+// marshals only. Class label tables stay here, as the other bindings do, and
+// follow the shared label contract (docs/abi/estimator_roles_design.md).
 
 import { checkStatus, getModule, makeMatrixView } from "./ffi.js";
 import {
@@ -51,7 +52,7 @@ export interface RolePipelineState {
     containsTrainingRows: boolean;
 }
 
-/** Class labels: integer ids, or names mapped to ids in sorted order. */
+/** Class labels: integer ids, or strings / numbers mapped to ids in sorted order. */
 export type ClassLabel = number | string;
 
 const ROLES: Record<number, PipelineRole> = {
@@ -82,17 +83,80 @@ function cStrings(values: readonly string[], allocs: Alloc[]): number {
     return head;
 }
 
-function encodeLabels(y: ArrayLike<ClassLabel>): { ids: number[]; names?: string[] } {
-    const labels = Array.from(y);
-    if (labels.every((v) => typeof v === "number" && Number.isInteger(v))) {
+/** Column names become C strings: a NUL would silently truncate one, so it is refused. */
+function checkNames(names: readonly string[]): void {
+    names.forEach((name, i) => {
+        if (name.includes("\0")) {
+            throw new Error(`feature name ${i} must not contain NUL: ${JSON.stringify(name)}`);
+        }
+    });
+}
+
+/**
+ * Class ids for the core and the label table (shared label contract).
+ * Integer labels are the ids and must be safe integers (so they fit int64
+ * exactly); strings and non-integer numbers become the table of sorted unique
+ * labels, the ids their positions. Missing (null / undefined), non-finite and
+ * boolean labels, and a mix of strings and numbers, are refused.
+ */
+function encodeLabels(y: ArrayLike<ClassLabel>): { ids: number[]; names?: ClassLabel[] } {
+    const labels = Array.from(y as ArrayLike<unknown>);
+    for (const v of labels) {
+        if (v === null || v === undefined) {
+            throw new TypeError("class labels must not be missing (null or undefined)");
+        }
+        if (typeof v === "number" && !Number.isFinite(v)) {
+            throw new RangeError("class labels must be finite (no NaN or infinity)");
+        }
+        if (typeof v !== "number" && typeof v !== "string") {
+            throw new TypeError(`class labels must be integers, finite numbers or strings; got ${String(v)}`);
+        }
+    }
+    const numbers = labels.every((v) => typeof v === "number");
+    if (numbers && labels.every((v) => Number.isInteger(v))) {
+        const unsafe = labels.find((v) => !Number.isSafeInteger(v));
+        if (unsafe !== undefined) {
+            throw new RangeError(`class labels must fit int64 exactly (safe integers); got ${unsafe}`);
+        }
         return { ids: labels as number[] };
     }
-    if (!labels.every((v) => typeof v === "string")) {
-        throw new TypeError("class labels must be all integers or all strings");
+    if (!numbers && !labels.every((v) => typeof v === "string")) {
+        throw new TypeError("class labels must be all numbers or all strings");
     }
-    const names = [...new Set(labels as string[])].sort();
-    const index = new Map(names.map((name, i) => [name, i]));
-    return { ids: (labels as string[]).map((v) => index.get(v) as number), names };
+    const names = [...new Set(labels as ClassLabel[])];
+    names.sort(numbers ? (a, b) => (a as number) - (b as number) : undefined);
+    const index = new Map<ClassLabel, number>(names.map((name, i) => [name, i]));
+    return { ids: labels.map((v) => index.get(v as ClassLabel) as number), names };
+}
+
+/**
+ * An imported label table (class_names) checked against the shared label
+ * contract: a non-empty list of unique strings or finite numbers (not both,
+ * no boolean) with an entry for every class id of the fitted state.
+ */
+function labelTable(table: unknown, ids: readonly number[]): ClassLabel[] {
+    if (!Array.isArray(table)) throw new TypeError("class_names must be a list");
+    if (table.length === 0) throw new RangeError("class_names must not be empty");
+    table.forEach((v: unknown, i) => {
+        if (v === null || v === undefined) throw new TypeError(`class_names has a missing entry at ${i}`);
+        if (typeof v !== "string" && typeof v !== "number") {
+            throw new TypeError(`class_names entries must be strings or numbers; entry ${i} is ${String(v)}`);
+        }
+        if (typeof v === "number" && !Number.isFinite(v)) {
+            throw new RangeError(`class_names has a non-finite entry at ${i}: ${v}`);
+        }
+    });
+    if (new Set(table.map((v) => typeof v)).size > 1) throw new TypeError("class_names mixes strings and numbers");
+    const seen = new Set<ClassLabel>();
+    for (const v of table as ClassLabel[]) {
+        if (seen.has(v)) throw new RangeError(`class_names has duplicate label ${JSON.stringify(v)}`);
+        seen.add(v);
+    }
+    const outside = ids.find((id) => id < 0 || id >= table.length);
+    if (outside !== undefined) {
+        throw new RangeError(`class id ${outside} has no entry in class_names (${table.length} entries)`);
+    }
+    return [...(table as ClassLabel[])];
 }
 
 /** Native trained recipe of role steps, portable as N4ME states. */
@@ -100,7 +164,7 @@ export class RolePipeline {
     readonly steps: ReadonlyArray<RoleStep>;
     private ptr = 0;
     private names: string[] | undefined;
-    private classNames: string[] | undefined;
+    private classNames: ClassLabel[] | undefined;
 
     private constructor(steps: ReadonlyArray<RoleStep>) {
         this.steps = [...steps];
@@ -116,15 +180,19 @@ export class RolePipeline {
     /**
      * A fitted pipeline rebuilt from one N4ME state per stateful step. The
      * native import refuses states that contradict the recipe (count, method,
-     * parameters, role, widths). classNames restores string class labels.
+     * parameters, role, widths). classNames restores the label table of a
+     * classifier trained on strings or non-integer numbers; it is refused
+     * unless it is a non-empty list of unique strings or finite numbers with
+     * an entry for every class id of the fitted state.
      */
     static fromStates(steps: ReadonlyArray<RoleStep>, states: ReadonlyArray<Uint8Array | RolePipelineState>,
-                      options: { featureNames?: string[]; classNames?: string[] } = {}): RolePipeline {
+                      options: { featureNames?: string[]; classNames?: ClassLabel[] } = {}): RolePipeline {
         const m = getModule();
         const pipeline = new RolePipeline(steps);
         const handle = pipeline.create();
         const payloads = states.map((s) => (s instanceof Uint8Array ? s : s.n4me));
         const allocs: Alloc[] = [];
+        let classNames: ClassLabel[] | undefined;
         try {
             const buffers = m._malloc(Math.max(1, payloads.length) * 4);
             allocs.push({ ptr: buffers, free: () => m._free(buffers) });
@@ -143,13 +211,19 @@ export class RolePipeline {
                     ["number", "number", "number", "number", "number"],
                     [ctx, handle, payloads.length, buffers, sizes]) as number, ctx);
             });
+            if (options.classNames !== undefined) {
+                if (RolePipeline.stepInfo(handle, steps.length - 1).role !== "classifier") {
+                    throw new TypeError("class_names are given but the final step is not a classifier");
+                }
+                classNames = labelTable(options.classNames, RolePipeline.classIds(handle));
+            }
         } catch (error) {
             m.ccall("n4m_role_pipeline_destroy", null, ["number"], [handle]);
             throw error;
         } finally {
             allocs.forEach((a) => a.free());
         }
-        pipeline.publish(handle, options.featureNames, options.classNames);
+        pipeline.publish(handle, options.featureNames, classNames);
         return pipeline;
     }
 
@@ -172,7 +246,7 @@ export class RolePipeline {
         inputs: FitInputs & { featureNames?: string[] } = {}): this {
         const m = getModule();
         const handle = this.create();
-        let classNames: string[] | undefined;
+        let classNames: ClassLabel[] | undefined;
         try {
             const classifier = RolePipeline.stepInfo(handle, this.steps.length - 1).role === "classifier";
             let target = y as Matrix | Float64Array | ArrayLike<number> | undefined;
@@ -242,15 +316,19 @@ export class RolePipeline {
      * undefined. Unlike classes() it keeps labels whose rows a sample filter
      * removed, so an exported pipeline can restore every name.
      */
-    labelNames(): string[] | undefined {
+    labelNames(): ClassLabel[] | undefined {
         this.handle();
         return this.classNames === undefined ? undefined : [...this.classNames];
     }
 
     /** Fitted classes, ascending ids (names when trained on names). */
     classes(): ClassLabel[] {
+        return RolePipeline.classIds(this.handle()).map((id) => this.label(id));
+    }
+
+    /** Native class ids of the final classifier (n4m_role_pipeline_classes). */
+    private static classIds(handle: number): number[] {
         const m = getModule();
-        const handle = this.handle();
         const countPtr = m._malloc(8);
         try {
             checkStatus(m.ccall("n4m_role_pipeline_classes", "number",
@@ -260,7 +338,7 @@ export class RolePipeline {
             try {
                 checkStatus(m.ccall("n4m_role_pipeline_classes", "number",
                     ["number", "number", "i64", "number"], [handle, buf, BigInt(count), countPtr]) as number);
-                return Array.from({ length: count }, (_, i) => this.label(readI64(buf + 8 * i)));
+                return Array.from({ length: count }, (_, i) => readI64(buf + 8 * i));
             } finally {
                 m._free(buf);
             }
@@ -347,7 +425,7 @@ export class RolePipeline {
         });
     }
 
-    private publish(handle: number, featureNames: string[] | undefined, classNames: string[] | undefined): void {
+    private publish(handle: number, featureNames: string[] | undefined, classNames: ClassLabel[] | undefined): void {
         this.dispose();
         this.ptr = handle;
         this.names = featureNames === undefined ? undefined : [...featureNames];
@@ -360,11 +438,12 @@ export class RolePipeline {
     }
 
     private label(id: number): ClassLabel {
-        return this.classNames === undefined ? id : (this.classNames[id] as string);
+        return this.classNames === undefined ? id : (this.classNames[id] as ClassLabel);
     }
 
     private static setFeatureNames(ctx: number, handle: number, names: string[] | undefined): void {
         if (names === undefined) return;
+        checkNames(names);
         const allocs: Alloc[] = [];
         try {
             checkStatus(getModule().ccall("n4m_role_pipeline_set_feature_names", "number",
@@ -380,6 +459,7 @@ export class RolePipeline {
         if (names !== undefined && names.length !== X.cols) {
             throw new RangeError(`${names.length} feature names for ${X.cols} columns`);
         }
+        if (names !== undefined) checkNames(names);
         const namesPtr = names === undefined ? 0 : cStrings(names, allocs);
         checkStatus(getModule().ccall("n4m_role_pipeline_check_features", "number",
             ["number", "number", "i64", "number"],

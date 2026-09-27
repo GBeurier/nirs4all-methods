@@ -1406,5 +1406,317 @@
     ]
    ]
   }
+ ],
+ "label_cases": [
+  {
+   "name": "class_names_longer_than_classes",
+   "stage": "import",
+   "pipeline": "classification",
+   "class_names": [
+    "high",
+    "low",
+    "mid",
+    "unused"
+   ],
+   "accept": true
+  },
+  {
+   "name": "class_names_empty",
+   "stage": "import",
+   "pipeline": "classification",
+   "class_names": [],
+   "message": "class_names must not be empty"
+  },
+  {
+   "name": "class_names_duplicate",
+   "stage": "import",
+   "pipeline": "classification",
+   "class_names": [
+    "high",
+    "low",
+    "low"
+   ],
+   "message": "class_names has duplicate label"
+  },
+  {
+   "name": "class_names_missing",
+   "stage": "import",
+   "pipeline": "classification",
+   "class_names": [
+    "high",
+    null,
+    "mid"
+   ],
+   "message": "class_names has a missing entry"
+  },
+  {
+   "name": "class_names_non_finite",
+   "stage": "import",
+   "pipeline": "classification",
+   "class_names": [
+    0.5,
+    1.5,
+    2.5
+   ],
+   "inject": {
+    "at": 1,
+    "value": "inf"
+   },
+   "message": "class_names has a non-finite entry"
+  },
+  {
+   "name": "class_names_boolean",
+   "stage": "import",
+   "pipeline": "classification",
+   "class_names": [
+    true,
+    false,
+    true
+   ],
+   "message": "class_names entries must be strings or numbers"
+  },
+  {
+   "name": "class_names_mixed",
+   "stage": "import",
+   "pipeline": "classification",
+   "class_names": [
+    "high",
+    1,
+    "mid"
+   ],
+   "message": "class_names mixes strings and numbers"
+  },
+  {
+   "name": "class_id_without_name",
+   "stage": "import",
+   "pipeline": "classification",
+   "class_names": [
+    "high",
+    "low"
+   ],
+   "message": "class id 2 has no entry in class_names"
+  },
+  {
+   "name": "class_names_on_regressor",
+   "stage": "import",
+   "pipeline": "regression",
+   "class_names": [
+    "a"
+   ],
+   "message": "class_names are given but the final step is not a classifier"
+  },
+  {
+   "name": "labels_missing",
+   "stage": "fit",
+   "labels": [
+    "low",
+    "mid",
+    "mid",
+    null,
+    "mid",
+    "low",
+    "high",
+    "mid",
+    "low",
+    "high",
+    "low",
+    "high",
+    "mid",
+    "low",
+    "mid",
+    "mid",
+    "high",
+    "low",
+    "high",
+    "low",
+    "low",
+    "high",
+    "low",
+    "mid",
+    "mid",
+    "mid",
+    "low",
+    "mid",
+    "mid",
+    "mid",
+    "mid",
+    "mid",
+    "low",
+    "mid",
+    "mid",
+    "high"
+   ],
+   "message": "class labels must not be missing"
+  },
+  {
+   "name": "labels_non_finite",
+   "stage": "fit",
+   "labels": [
+    1.0,
+    2.0,
+    2.0,
+    1.0,
+    2.0,
+    1.0,
+    0.0,
+    2.0,
+    1.0,
+    0.0,
+    1.0,
+    0.0,
+    2.0,
+    1.0,
+    2.0,
+    2.0,
+    0.0,
+    1.0,
+    0.0,
+    1.0,
+    1.0,
+    0.0,
+    1.0,
+    2.0,
+    2.0,
+    2.0,
+    1.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    2.0,
+    1.0,
+    2.0,
+    2.0,
+    0.0
+   ],
+   "inject": {
+    "at": 3,
+    "value": "nan"
+   },
+   "message": "class labels must be finite"
+  },
+  {
+   "name": "labels_outside_int64",
+   "stage": "fit",
+   "labels": [
+    1,
+    2,
+    2,
+    1,
+    2,
+    1,
+    9223372036854775808,
+    2,
+    1,
+    9223372036854775808,
+    1,
+    9223372036854775808,
+    2,
+    1,
+    2,
+    2,
+    9223372036854775808,
+    1,
+    9223372036854775808,
+    1,
+    1,
+    9223372036854775808,
+    1,
+    2,
+    2,
+    2,
+    1,
+    2,
+    2,
+    2,
+    2,
+    2,
+    1,
+    2,
+    2,
+    9223372036854775808
+   ],
+   "message": "class labels must fit int64"
+  }
+ ],
+ "name_cases": [
+  {
+   "name": "feature_name_nul_fit",
+   "stage": "fit",
+   "steps": [
+    {
+     "class": "n4m:filters.y_outlier",
+     "params": {}
+    },
+    {
+     "class": "n4m:preprocessing.scatter.snv",
+     "params": {}
+    },
+    {
+     "class": "n4m:models.pls.pls_regression",
+     "params": {
+      "n_components": 3
+     }
+    },
+    {
+     "class": "n4m:models.regularized.ridge",
+     "params": {}
+    }
+   ],
+   "y": "y_train",
+   "feature_names": [
+    "nm1000\u0000x",
+    "nm1002",
+    "nm1004",
+    "nm1006",
+    "nm1008",
+    "nm1010",
+    "nm1012",
+    "nm1014",
+    "nm1016",
+    "nm1018",
+    "nm1020",
+    "nm1022"
+   ],
+   "message": "must not contain NUL"
+  },
+  {
+   "name": "feature_name_nul_import",
+   "stage": "import",
+   "feature_names": [
+    "nm1000\u0000x",
+    "nm1002",
+    "nm1004",
+    "nm1006",
+    "nm1008",
+    "nm1010",
+    "nm1012",
+    "nm1014",
+    "nm1016",
+    "nm1018",
+    "nm1020",
+    "nm1022"
+   ],
+   "message": "must not contain NUL"
+  },
+  {
+   "name": "feature_name_nul_predict",
+   "stage": "predict",
+   "feature_names": [
+    "nm1000\u0000changed",
+    "nm1002",
+    "nm1004",
+    "nm1006",
+    "nm1008",
+    "nm1010",
+    "nm1012",
+    "nm1014",
+    "nm1016",
+    "nm1018",
+    "nm1020",
+    "nm1022"
+   ],
+   "message": "must not contain NUL"
+  }
  ]
 }

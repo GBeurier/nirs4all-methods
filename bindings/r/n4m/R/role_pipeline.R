@@ -3,7 +3,8 @@
 # Native role pipelines (ABI 2.14): a trained linear recipe of catalog
 # estimators. Recipe validation, fit-input routing, the feature-name check and
 # the per-step N4ME states are native (n4m_role_pipeline_*); this file only
-# converts R objects, strictly (no recycling), and keeps class label names.
+# converts R objects, strictly (no recycling, the same conversions as the
+# estimators), and keeps the class label table (shared label contract).
 
 .n4m_role_names <- c(`1` = "transformer", `2` = "regressor", `4` = "classifier",
                      `8` = "selector", `16` = "sample_filter")
@@ -54,20 +55,51 @@
   matrix(as.double(y), ncol = 1L)
 }
 
-# Class ids for the core and the label names (NULL for integer labels). Names
-# sort in C-locale order, as the other bindings do.
+# Class ids for the core and the label table (NULL for integer labels).
+# Strings sort in C-locale order, as the other bindings do.
 .n4m_role_labels <- function(y, n) {
   if (!is.null(dim(y)) || length(y) != n) {
     stop(sprintf("class labels must be a vector of %d values", n), call. = FALSE)
   }
-  if (is.factor(y) || is.character(y)) {
-    levels <- sort(unique(as.character(y)), method = "radix")
-    return(list(ids = match(as.character(y), levels) - 1, levels = levels))
+  .n4m_encode_labels(y, function(y) sort(unique(as.character(y)), method = "radix"))
+}
+
+# An imported label table (class_names) checked against the shared label
+# contract: a non-empty vector (or list of scalars) of unique strings or
+# finite numbers, not both. Positions are reported 1-based.
+.n4m_label_table <- function(class_names) {
+  values <- if (is.factor(class_names)) as.character(class_names) else class_names
+  if (length(values) == 0L) stop("class_names must not be empty", call. = FALSE)
+  missing <- function(v) if (is.double(v)) is.na(v) & !is.nan(v) else is.na(v)
+  if (is.list(values)) {
+    for (i in seq_along(values)) {
+      v <- values[[i]]
+      if (is.null(v) || (length(v) == 1L && missing(v))) {
+        stop(sprintf("class_names has a missing entry at %d", i), call. = FALSE)
+      }
+      if (length(v) != 1L || !(is.character(v) || is.numeric(v))) {
+        stop(sprintf("class_names entries must be strings or numbers; entry %d is %s", i,
+                     paste(deparse(v), collapse = "")), call. = FALSE)
+      }
+    }
+    if (length(unique(vapply(values, is.character, logical(1)))) > 1L) {
+      stop("class_names mixes strings and numbers", call. = FALSE)
+    }
+    values <- unlist(values)
   }
-  if (!is.numeric(y) || any(y != round(y))) {
-    stop("class labels must be a factor, characters or integers", call. = FALSE)
+  if (!(is.character(values) || is.numeric(values)) || !is.null(dim(values))) {
+    stop("class_names entries must be strings or numbers", call. = FALSE)
   }
-  list(ids = as.double(y), levels = NULL)
+  if (any(missing(values))) {
+    stop(sprintf("class_names has a missing entry at %d", which(missing(values))[1]), call. = FALSE)
+  }
+  if (is.numeric(values) && !all(is.finite(values))) {
+    i <- which(!is.finite(values))[1]
+    stop(sprintf("class_names has a non-finite entry at %d: %s", i, values[i]), call. = FALSE)
+  }
+  dup <- anyDuplicated(values)
+  if (dup > 0L) stop(sprintf("class_names has duplicate label '%s'", values[dup]), call. = FALSE)
+  unname(values)
 }
 
 .n4m_role_state <- function(object, pointer, names, levels, y_vector) {
@@ -136,7 +168,9 @@
 #' @param states List of N4ME raw vectors, one per stateful step (or the list
 #'   returned by \code{n4m_role_pipeline_export()}).
 #' @param feature_names Optional input column names of the imported pipeline.
-#' @param class_names Optional label names of an imported classifier.
+#' @param class_names Optional label table of an imported classifier (index =
+#'   class id): a non-empty vector, or list of scalars, of unique strings or
+#'   finite numbers with an entry for every class id of the fitted state.
 #' @param x A role pipeline to print.
 #' @param ... Unused.
 #' @return \code{n4m_role_pipeline()} an unfitted pipeline;
@@ -176,11 +210,12 @@ n4m_estimator_fit.n4m_role_pipeline <- function(object, X, y = NULL, sample_weig
   } else if (!is.null(y)) {
     y_matrix <- .n4m_role_y(y, n)
   }
-  inputs <- list(labels = labels, sample_weight = sample_weight, groups = groups,
-                 feature_groups = feature_groups, blocks = blocks, axis = axis,
-                 X_target = if (is.null(X_target)) NULL else .n4m_role_x(X_target)$X,
-                 fold_ids = fold_ids)
-  inputs <- inputs[!vapply(inputs, is.null, logical(1))]
+  # The same strict conversions as the estimators: a matrix or array where a
+  # vector is expected is refused, never flattened into another length.
+  inputs <- .n4m_fit_inputs(x$X, list(
+    labels = labels, sample_weight = sample_weight, groups = groups,
+    feature_groups = feature_groups, blocks = blocks, axis = axis,
+    X_target = if (is.null(X_target)) NULL else .n4m_role_x(X_target)$X, fold_ids = fold_ids))
   pointer <- .Call("r_n4m_role_pipeline_fit", .n4m_role_ids(object$steps),
                    .n4m_role_params(object$steps), x$X, y_matrix, inputs, x$names,
                    PACKAGE = "n4m")
@@ -244,8 +279,19 @@ n4m_role_pipeline_import <- function(steps, states, feature_names = NULL, class_
   names <- if (is.null(feature_names)) NULL else as.character(feature_names)
   pointer <- .Call("r_n4m_role_pipeline_import", .n4m_role_ids(object$steps),
                    .n4m_role_params(object$steps), payloads, names, PACKAGE = "n4m")
-  levels <- if (is.null(class_names)) NULL else as.character(class_names)
+  levels <- if (!is.null(class_names)) .n4m_label_table(class_names)
   object <- .n4m_role_state(object, pointer, names, levels, FALSE)
+  if (!is.null(levels)) {
+    if (!.n4m_role_classifier(object)) {
+      stop("class_names are given but the final step is not a classifier", call. = FALSE)
+    }
+    ids <- object$state$info$classes
+    outside <- ids[ids < 0 | ids >= length(levels)]
+    if (length(outside) > 0L) {
+      stop(sprintf("class id %s has no entry in class_names (%d entries)",
+                   format(outside[1], scientific = FALSE), length(levels)), call. = FALSE)
+    }
+  }
   # N4ME does not record the caller's target shape: one output is a vector.
   widths <- object$state$info$steps$n_features_out
   object$state$y_vector <- widths[length(widths)] == 1

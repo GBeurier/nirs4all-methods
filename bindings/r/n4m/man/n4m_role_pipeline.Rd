@@ -57,7 +57,9 @@ returned by \code{n4m_role_pipeline_export()}).}
 
 \item{feature_names}{Optional input column names of the imported pipeline.}
 
-\item{class_names}{Optional label names of an imported classifier.}
+\item{class_names}{Optional label table of an imported classifier (index =
+class id): a non-empty vector, or list of scalars, of unique strings or
+finite numbers with an entry for every class id of the fitted state.}
 
 \item{x}{A role pipeline to print.}
 

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ctypes
 import math
+import numbers
 from typing import Any, ClassVar, Self
 
 import numpy as np
@@ -101,6 +102,23 @@ def method_info(method_id: str) -> MethodInfoV1:
     return info
 
 
+_INT64_MIN = -(2**63)
+_INT64_MAX = 2**63 - 1
+
+
+def _check_int64(values: np.ndarray, name: str) -> None:
+    """Refuses integers outside int64: the cast would wrap them silently."""
+    if values.size == 0:
+        return
+    lo, hi = values.min(), values.max()
+    if values.dtype.kind == "f":
+        outside = hi >= 2.0**63 or lo < -(2.0**63)
+    else:
+        outside = int(hi) > _INT64_MAX or int(lo) < _INT64_MIN
+    if outside:
+        raise ValueError(f"{name} must fit int64; got values in [{lo}, {hi}]")
+
+
 def _vector(values, name: str, length: int, what: str, dtype) -> np.ndarray:
     """1-D array of exactly ``length`` entries; never reshaped or broadcast."""
     arr = np.asarray(values)
@@ -108,11 +126,13 @@ def _vector(values, name: str, length: int, what: str, dtype) -> np.ndarray:
         raise ValueError(
             f"{name} must be a 1-D array of length {length} ({what}); got shape {arr.shape}"
         )
-    whole = arr.dtype.kind in "iub" or (
-        arr.dtype.kind == "f" and np.all(np.isfinite(arr) & (arr == np.round(arr)))
-    )
-    if dtype is np.int64 and not whole:
-        raise ValueError(f"{name} must contain integers")
+    if dtype is np.int64:
+        whole = arr.dtype.kind in "iub" or (
+            arr.dtype.kind == "f" and np.all(np.isfinite(arr) & (arr == np.round(arr)))
+        )
+        if not whole:
+            raise ValueError(f"{name} must contain integers")
+        _check_int64(arr, name)
     return np.ascontiguousarray(arr, dtype=dtype)
 
 
@@ -131,9 +151,17 @@ def _targets(y, n_rows: int) -> np.ndarray:
     return np.ascontiguousarray(arr)
 
 
+def _label_array(y) -> np.ndarray:
+    """Labels as an array. A Python list is read element by element: NumPy would
+    turn integers beyond int64 into floats, merging distinct labels."""
+    return (
+        np.asarray(y, dtype=object) if isinstance(y, (list, tuple)) else np.asarray(y)
+    )
+
+
 def _class_labels(y) -> np.ndarray:
     """Class labels as a 1-D array (a one-column matrix is accepted)."""
-    labels = np.asarray(y)
+    labels = _label_array(y)
     if labels.ndim == 2 and labels.shape[1] == 1:
         labels = labels[:, 0]
     if labels.ndim != 1:
@@ -143,12 +171,52 @@ def _class_labels(y) -> np.ndarray:
     return labels
 
 
-def _encode_labels(y) -> tuple[np.ndarray, np.ndarray | None]:
-    """Integer class ids for the core, and the label names they index (None
-    when the labels already are integers)."""
-    labels = _class_labels(y)
-    if labels.dtype.kind in "iu":
+def _object_labels(labels: np.ndarray) -> np.ndarray:
+    """Labels held as Python objects, as strings, integers or floats."""
+    values = labels.tolist()
+    numeric = all(
+        isinstance(v, numbers.Real) and not isinstance(v, (bool, np.bool_))
+        for v in values
+    )
+    # Among strings, NaN is how pandas marks a missing label.
+    if any(
+        v is None or (not numeric and isinstance(v, float) and math.isnan(v))
+        for v in values
+    ):
+        raise ValueError("class labels must not be missing (None or NaN)")
+    if all(isinstance(v, str) for v in values):
+        return np.asarray(values, dtype=str)
+    if not numeric:
+        raise ValueError(
+            "class labels must be all integers, all numbers or all strings "
+            "(no booleans, no mix)"
+        )
+    if all(isinstance(v, numbers.Integral) for v in values):
+        _check_int64(np.asarray(values, dtype=object), "class labels")
+        return np.asarray(values, dtype=np.int64)
+    return np.asarray(values, dtype=np.float64)
+
+
+def _encode_labels(labels: np.ndarray) -> tuple[np.ndarray, np.ndarray | None]:
+    """Class ids for the core and the label table they index (shared label contract).
+
+    Integer labels are the ids themselves (no table) and must fit int64: they
+    are never wrapped. Strings and non-integer numbers become the table of
+    sorted unique labels, the ids their positions. Missing, non-finite and
+    boolean labels are refused.
+    """
+    if labels.dtype.kind == "O":
+        labels = _object_labels(labels)
+    kind = labels.dtype.kind
+    if kind in "iu":
+        _check_int64(labels, "class labels")
         return np.ascontiguousarray(labels, dtype=np.int64), None
+    if kind == "f" and not np.all(np.isfinite(labels)):
+        raise ValueError("class labels must be finite (no NaN or infinity)")
+    if kind not in "fU":
+        raise ValueError(
+            f"class labels must be integers, finite numbers or strings; got dtype {labels.dtype}"
+        )
     names, codes = np.unique(labels, return_inverse=True)
     return np.ascontiguousarray(codes, dtype=np.int64), names
 
@@ -353,7 +421,7 @@ class NativeEstimator(NativeMethod):
         """
         labels = label_names = None
         if y is not None and isinstance(self, NativeClassifier):
-            (labels, label_names), y = _encode_labels(y), None
+            (labels, label_names), y = _encode_labels(_class_labels(y)), None
         # A single prediction column comes back 1-D unless y was a one-column
         # matrix (a survival (time, event) response gives one risk column).
         y_1d = y is not None and not (np.ndim(y) == 2 and np.shape(y)[1] == 1)

@@ -33,5 +33,20 @@ role_pipeline_fixture <- list(
    list(name = "width_mismatch", stage = "predict", drop_last_column = TRUE, status = 3L, message = "the input has 11 columns; the pipeline was fitted on 12"),
    list(name = "training_rows_without_opt_in", stage = "export", steps = list(list(method_id = "preprocessing.scatter.snv", params = list()), list(method_id = "models.pls.kernel", params = list())), y = "y_train", status = 1L, message = "state 1 (step 1 (models.pls.kernel)): state retains training rows"),
    list(name = "multi_target_supervised_transformer", stage = "fit", steps = list(list(method_id = "models.pls.pls_regression", params = list(n_components = 2L)), list(method_id = "models.pls.pls_regression", params = list(n_components = 2L))), y = "y2_train", predict = matrix(c(1.0490170637467033, -0.5677358463109566, 2.4272044354374915, -0.11649696575414115, 0.029784901281782017, -0.1418143886232425, -0.9244725931525443, 4.602303589983613, 2.183805240243362, -0.9838102134013477, -1.3639746720177417, -2.313854227277056, 1.1664396576180978, 1.105522734948175, 2.45752516947005, -3.146161271557904, 1.225954190047131, -0.20439787925640995, 2.0287520096635605, 0.18361580958421106, 2.2476429473540214, -0.9406724038007189, 1.3141068532240294, 1.6469197786309144), nrow = 12, byrow = TRUE))
+  ),
+  # R strings cannot hold NUL: the name cases do not apply to R.
+  label_cases = list(
+   list(name = "class_names_longer_than_classes", stage = "import", pipeline = "classification", class_names = c("high", "low", "mid", "unused"), accept = TRUE),
+   list(name = "class_names_empty", stage = "import", pipeline = "classification", message = "class_names must not be empty", class_names = character()),
+   list(name = "class_names_duplicate", stage = "import", pipeline = "classification", message = "class_names has duplicate label", class_names = c("high", "low", "low")),
+   list(name = "class_names_missing", stage = "import", pipeline = "classification", message = "class_names has a missing entry", class_names = c("high", NA, "mid")),
+   list(name = "class_names_non_finite", stage = "import", pipeline = "classification", message = "class_names has a non-finite entry", class_names = c(0.5, 1.5, 2.5), inject = list(at = 1L, value = "inf")),
+   list(name = "class_names_boolean", stage = "import", pipeline = "classification", message = "class_names entries must be strings or numbers", class_names = c(TRUE, FALSE, TRUE)),
+   list(name = "class_names_mixed", stage = "import", pipeline = "classification", message = "class_names mixes strings and numbers", class_names = list("high", 1.0, "mid")),
+   list(name = "class_id_without_name", stage = "import", pipeline = "classification", message = "class id 2 has no entry in class_names", class_names = c("high", "low")),
+   list(name = "class_names_on_regressor", stage = "import", pipeline = "regression", message = "class_names are given but the final step is not a classifier", class_names = c("a")),
+   list(name = "labels_missing", stage = "fit", message = "class labels must not be missing", labels = c("low", "mid", "mid", NA, "mid", "low", "high", "mid", "low", "high", "low", "high", "mid", "low", "mid", "mid", "high", "low", "high", "low", "low", "high", "low", "mid", "mid", "mid", "low", "mid", "mid", "mid", "mid", "mid", "low", "mid", "mid", "high")),
+   list(name = "labels_non_finite", stage = "fit", message = "class labels must be finite", labels = c(1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 0.0, 2.0, 1.0, 0.0, 1.0, 0.0, 2.0, 1.0, 2.0, 2.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 2.0, 2.0, 2.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 2.0, 2.0, 0.0), inject = list(at = 3L, value = "nan")),
+   list(name = "labels_outside_int64", stage = "fit", message = "class labels must fit int64", labels = c(1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 9.223372036854776e+18, 2.0, 1.0, 9.223372036854776e+18, 1.0, 9.223372036854776e+18, 2.0, 1.0, 2.0, 2.0, 9.223372036854776e+18, 1.0, 9.223372036854776e+18, 1.0, 1.0, 9.223372036854776e+18, 1.0, 2.0, 2.0, 2.0, 1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0, 2.0, 2.0, 9.223372036854776e+18))
   )
 )
