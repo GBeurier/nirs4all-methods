@@ -8,9 +8,7 @@ import pickle
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import pytest
-
 from n4m import N4MError
 from n4m.roles import (
     SNV,
@@ -19,6 +17,19 @@ from n4m.roles import (
     RolePipeline,
     YOutlierFilter,
 )
+
+
+class _Named(np.ndarray):
+    """A 2-D float table with column names (the facade reads ``.columns``)."""
+
+    columns: list[str]
+
+
+def frame(values, columns) -> _Named:
+    table = np.asarray(values, dtype=np.float64).view(_Named)
+    table.columns = list(columns)
+    return table
+
 
 FIXTURE = (
     Path(__file__).resolve().parents[3]
@@ -123,24 +134,22 @@ def test_classifier_labels_stay_facade_level():
 
 def test_dataframe_column_identity_is_checked():
     X, y = data()
-    frame = pd.DataFrame(X, columns=[f"w{j}" for j in range(X.shape[1])])
+    table = frame(X, [f"w{j}" for j in range(X.shape[1])])
     pipeline = RolePipeline(
         ["preprocessing.scatter.snv", "models.regularized.ridge"]
-    ).fit(frame, y)
-    assert list(pipeline.feature_names_in_) == list(frame.columns)
+    ).fit(table, y)
+    assert list(pipeline.feature_names_in_) == list(table.columns)
     np.testing.assert_array_equal(
-        pipeline.predict(frame), pipeline.predict(X)
+        pipeline.predict(table), pipeline.predict(X)
     )  # arrays are positional
     with pytest.raises(N4MError, match="the columns are reordered"):
-        pipeline.predict(frame[frame.columns[::-1]])
+        pipeline.predict(frame(np.asarray(X)[:, ::-1], table.columns[::-1]))
     with pytest.raises(N4MError, match="fitted with 'w0' there"):
-        pipeline.predict(frame.rename(columns={"w0": "other"}))
+        pipeline.predict(frame(X, ["other", *table.columns[1:]]))
     with pytest.raises(N4MError, match="7 columns; the pipeline was fitted on 8"):
-        pipeline.predict(frame.iloc[:, :-1])
+        pipeline.predict(frame(np.asarray(X)[:, :-1], table.columns[:-1]))
     with pytest.raises(N4MError, match="duplicate feature name"):
-        RolePipeline(["models.regularized.ridge"]).fit(
-            pd.DataFrame(X, columns=["a"] * X.shape[1]), y
-        )
+        RolePipeline(["models.regularized.ridge"]).fit(frame(X, ["a"] * X.shape[1]), y)
 
 
 def test_unused_input_is_refused():
@@ -202,9 +211,7 @@ def test_shared_fixture_positive_pipelines_replay(doc):
         s["method_id"] for s in reg["states"]
     ]
     assert [p for _, p, _ in pipeline.export_states()] == _payloads(reg["states"])
-    refit = RolePipeline(reg["steps"]).fit(
-        pd.DataFrame(X, columns=names), np.asarray(doc["y_train"])
-    )
+    refit = RolePipeline(reg["steps"]).fit(frame(X, names), np.asarray(doc["y_train"]))
     np.testing.assert_allclose(
         refit.predict(X_test), reg["predict"], rtol=REFIT_TOL, atol=REFIT_TOL
     )
@@ -256,7 +263,7 @@ def test_shared_fixture_negative_cases(doc):
                     if case.get("drop_last_column")
                     else case["feature_names"]
                 )
-                fitted.predict(pd.DataFrame(X_test[:, : len(columns)], columns=columns))
+                fitted.predict(frame(X_test[:, : len(columns)], columns))
             else:
                 RolePipeline(case["steps"]).fit(
                     X, np.asarray(doc[case["y"]])
