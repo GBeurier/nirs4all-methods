@@ -174,11 +174,12 @@ def _class_labels(y) -> np.ndarray:
 def _check_exact_float(values: list[Any], name: str) -> None:
     """Numbers that must stay exact as float64 (JSON, JS and R numbers are doubles).
 
-    An integer beyond ±2^53 would be rounded, merging distinct labels, so it
-    is refused.
+    An integral number beyond ±2^53 would be rounded (or read back rounded by
+    JS and R), merging distinct labels, so it is refused.
     """
     for v in values:
-        if isinstance(v, numbers.Integral) and abs(int(v)) > 2**53:
+        integral = isinstance(v, numbers.Integral) or (isinstance(v, float) and v.is_integer())
+        if integral and abs(v) > 2**53:
             raise ValueError(
                 f"{name} must be exactly representable as float64; {v} is beyond ±2^53"
             )
