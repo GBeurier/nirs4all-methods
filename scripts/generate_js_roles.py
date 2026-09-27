@@ -197,9 +197,10 @@ def params_interface(m: dict, name: str) -> list[str]:
     out = ["", f"/** Parameters of {name}; unset values take the native defaults. */"]
     out.append(f"export interface {name}Params {{")
     for p in m["params"]:
-        default = (
-            "" if p["default"] is None else f" Default {json.dumps(p['default'])}."
-        )
+        if p["default"] is not None:
+            default = f" Default {json.dumps(p['default'])}."
+        else:  # required, or optional and unset by default
+            default = "" if p["required"] else " Optional: unset by default."
         required = " Required." if p["required"] else ""
         out.append(f"    /**{required}{default} */")
         out.append(f"    {p['name']}?: {ts_type(p)};")

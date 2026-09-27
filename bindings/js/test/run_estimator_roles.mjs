@@ -81,7 +81,9 @@ for (const c of fixture.cases) {
     } else {
         assert.equal(typeof est.transform, "undefined", `${c.method_id} must not transform`);
     }
-    assert.deepEqual(est.toN4me(), payload, `${c.method_id} re-export`);
+    // Training rows leave only with the explicit opt-in.
+    if (est.containsTrainingRows()) assert.throws(() => est.toN4me(), /training rows/);
+    assert.deepEqual(est.toN4me({ allowTrainingRows: true }), payload, `${c.method_id} re-export`);
     est.dispose();
 
     const target = c.y ? matrix(fixture[c.y]) : c.classes ? fixture.labels_train : yTrain;
