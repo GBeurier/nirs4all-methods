@@ -446,3 +446,13 @@ export(n4m_x_outlier)
 export(n4m_xcorr_align)
 export(n4m_y_outlier)
 # END generated estimator roles
+
+# Native role pipelines (ABI 2.14)
+export(n4m_role_pipeline)
+export(n4m_role_pipeline_export)
+export(n4m_role_pipeline_import)
+export(n4m_role_pipeline_steps)
+S3method(n4m_estimator_fit, n4m_role_pipeline)
+S3method(n4m_estimator_transform, n4m_role_pipeline)
+S3method(predict, n4m_role_pipeline)
+S3method(print, n4m_role_pipeline)

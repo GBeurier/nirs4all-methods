@@ -560,3 +560,262 @@ SEXP r_n4m_estimator_info(SEXP ptr) {
     UNPROTECT(4);
     return out;
 }
+
+/* ---- Role pipelines (ABI 2.14) ---------------------------------------- */
+
+static void r_rp_finalize(SEXP ptr) {
+    n4m_role_pipeline_t* p = (n4m_role_pipeline_t*)R_ExternalPtrAddr(ptr);
+    if (p != NULL) {
+        n4m_role_pipeline_destroy(p);
+        R_ClearExternalPtr(ptr);
+    }
+}
+
+static SEXP r_rp_wrap(n4m_role_pipeline_t* p) {
+    SEXP ptr = PROTECT(R_MakeExternalPtr(p, R_NilValue, R_NilValue));
+    R_RegisterCFinalizerEx(ptr, r_rp_finalize, TRUE);
+    UNPROTECT(1);
+    return ptr;
+}
+
+static n4m_role_pipeline_t* r_rp_get(SEXP ptr) {
+    if (TYPEOF(ptr) != EXTPTRSXP || R_ExternalPtrAddr(ptr) == NULL) {
+        Rf_error("n4m role pipeline pointer is not alive; rehydrate it from its N4ME states");
+    }
+    return (n4m_role_pipeline_t*)R_ExternalPtrAddr(ptr);
+}
+
+/* Like r_est_fail, for a pipeline under construction. */
+static void r_rp_fail(const char* where, n4m_status_t st, n4m_context_t* ctx,
+                      n4m_role_pipeline_t* p) {
+    if (p != NULL) n4m_role_pipeline_destroy(p);
+    r_est_fail(where, st, ctx, NULL, NULL);
+}
+
+/* Native recipe from method ids and one named parameter list per step. */
+static n4m_role_pipeline_t* r_rp_create(n4m_context_t* ctx, SEXP method_ids, SEXP values) {
+    const R_xlen_t n = XLENGTH(method_ids);
+    const char** ids = (const char**)R_alloc((size_t)(n > 0 ? n : 1), sizeof(char*));
+    n4m_params_t** params = (n4m_params_t**)R_alloc((size_t)(n > 0 ? n : 1), sizeof(n4m_params_t*));
+    memset(params, 0, (size_t)(n > 0 ? n : 1) * sizeof(n4m_params_t*));
+    const char* bad = NULL;
+    R_xlen_t failed = -1;
+    for (R_xlen_t k = 0; k < n && failed < 0; ++k) {
+        ids[k] = CHAR(STRING_ELT(method_ids, k));
+        int32_t index = -1;
+        /* An unknown id is reported by the native create, step included. */
+        if (n4m_method_find(ids[k], &index) != N4M_OK) continue;
+        if (n4m_params_create(ctx, index, &params[k]) != N4M_OK ||
+            r_est_set_params(params[k], index, VECTOR_ELT(values, k), &bad) != N4M_OK) {
+            failed = k;
+        }
+    }
+    n4m_role_pipeline_t* p = NULL;
+    n4m_status_t st = N4M_OK;
+    if (failed < 0) {
+        st = n4m_role_pipeline_create(ctx, (int32_t)n, ids, (const n4m_params_t* const*)params, &p);
+    }
+    for (R_xlen_t k = 0; k < n; ++k) {
+        if (params[k] != NULL) n4m_params_destroy(params[k]);
+    }
+    if (failed >= 0) {
+        n4m_context_destroy(ctx);
+        Rf_error("invalid value for parameter '%s' of %s (step %d)", bad != NULL ? bad : "",
+                 ids[failed], (int)failed);
+    }
+    if (st != N4M_OK) r_est_fail("n4m_role_pipeline_create", st, ctx, NULL, NULL);
+    return p;
+}
+
+/* Refuses an invalid recipe (role order, final step, parameters). */
+SEXP r_n4m_role_pipeline_validate(SEXP method_ids, SEXP values) {
+    n4m_context_t* ctx = r_est_context();
+    n4m_role_pipeline_destroy(r_rp_create(ctx, method_ids, values));
+    n4m_context_destroy(ctx);
+    return R_NilValue;
+}
+
+/* Column names as a C array, NULL for positional data. */
+static const char** r_rp_names(SEXP names) {
+    if (Rf_isNull(names)) return NULL;
+    const R_xlen_t n = XLENGTH(names);
+    const char** out = (const char**)R_alloc((size_t)(n > 0 ? n : 1), sizeof(char*));
+    for (R_xlen_t k = 0; k < n; ++k) out[k] = Rf_translateCharUTF8(STRING_ELT(names, k));
+    return out;
+}
+
+static void r_rp_set_names(n4m_context_t* ctx, n4m_role_pipeline_t* p, SEXP names) {
+    if (Rf_isNull(names)) return;
+    n4m_status_t st = n4m_role_pipeline_set_feature_names(ctx, p, r_rp_names(names),
+                                                          (int64_t)XLENGTH(names));
+    if (st != N4M_OK) r_rp_fail("n4m_role_pipeline_set_feature_names", st, ctx, p);
+}
+
+/* fit(method_ids, params, X, y, inputs, feature_names) -> external pointer. */
+SEXP r_n4m_role_pipeline_fit(SEXP method_ids, SEXP values, SEXP X, SEXP y, SEXP inputs,
+                             SEXP names) {
+    r_est_inputs_t s;
+    r_est_inputs(&s, X, y, inputs);
+    n4m_context_t* ctx = r_est_context();
+    n4m_role_pipeline_t* p = r_rp_create(ctx, method_ids, values);
+    r_rp_set_names(ctx, p, names);
+    n4m_status_t st = n4m_role_pipeline_fit(ctx, p, &s.in);
+    if (st != N4M_OK) r_rp_fail("n4m_role_pipeline_fit", st, ctx, p);
+    n4m_context_destroy(ctx);
+    return r_rp_wrap(p);
+}
+
+/* import(method_ids, params, states, feature_names) -> external pointer. */
+SEXP r_n4m_role_pipeline_import(SEXP method_ids, SEXP values, SEXP states, SEXP names) {
+    const R_xlen_t n = XLENGTH(states);
+    const void** buffers = (const void**)R_alloc((size_t)(n > 0 ? n : 1), sizeof(void*));
+    size_t* sizes = (size_t*)R_alloc((size_t)(n > 0 ? n : 1), sizeof(size_t));
+    for (R_xlen_t k = 0; k < n; ++k) {
+        SEXP bytes = VECTOR_ELT(states, k);
+        if (TYPEOF(bytes) != RAWSXP) Rf_error("N4ME state %d must be a raw vector", (int)k);
+        buffers[k] = RAW(bytes);
+        sizes[k] = (size_t)XLENGTH(bytes);
+    }
+    n4m_context_t* ctx = r_est_context();
+    n4m_role_pipeline_t* p = r_rp_create(ctx, method_ids, values);
+    r_rp_set_names(ctx, p, names);
+    n4m_status_t st = n4m_role_pipeline_import_states(ctx, p, (int32_t)n, buffers, sizes);
+    if (st != N4M_OK) r_rp_fail("n4m_role_pipeline_import_states", st, ctx, p);
+    n4m_context_destroy(ctx);
+    return r_rp_wrap(p);
+}
+
+typedef n4m_status_t (*r_rp_matrix_fn)(n4m_context_t*, const n4m_role_pipeline_t*,
+                                        const n4m_matrix_view_t*, n4m_matrix_view_t*);
+
+/* op(ptr, X, names, kind): kind 0 predict, 1 transform, 2 decision function,
+ * 3 probabilities, 4 class ids. The input columns are checked first. */
+SEXP r_n4m_role_pipeline_op(SEXP ptr, SEXP X, SEXP names, SEXP kind) {
+    n4m_role_pipeline_t* p = r_rp_get(ptr);
+    const int op = Rf_asInteger(kind);
+    n4m_matrix_view_t Xv = r_est_view(X, "X");
+    n4m_context_t* ctx = r_est_context();
+    n4m_status_t st = n4m_role_pipeline_check_features(ctx, p, (int64_t)Rf_ncols(X),
+                                                       r_rp_names(names));
+    if (st != N4M_OK) r_est_fail("n4m_role_pipeline_check_features", st, ctx, NULL, NULL);
+    const int64_t n = (int64_t)Rf_nrows(X);
+    if (op == 4) {
+        int64_t* buf = (int64_t*)R_alloc((size_t)(n > 0 ? n : 1), sizeof(int64_t));
+        st = n4m_role_pipeline_predict_labels(ctx, p, &Xv, buf, n);
+        if (st != N4M_OK) r_est_fail("n4m_role_pipeline_predict_labels", st, ctx, NULL, NULL);
+        n4m_context_destroy(ctx);
+        return r_est_int64_vector(buf, n);
+    }
+    int64_t cols = 0;
+    st = op == 1 ? n4m_role_pipeline_transform_cols(p, &cols) : n4m_role_pipeline_n_outputs(p, &cols);
+    if (st != N4M_OK) r_est_fail("n4m_role_pipeline output width", st, ctx, NULL, NULL);
+    const r_rp_matrix_fn fns[] = {n4m_role_pipeline_predict, n4m_role_pipeline_transform,
+                                  n4m_role_pipeline_decision_function,
+                                  n4m_role_pipeline_predict_proba};
+    SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)n, (int)cols));
+    n4m_matrix_view_t Ov = r_est_view(out, "out");
+    st = fns[op](ctx, p, &Xv, &Ov);
+    if (st != N4M_OK) {
+        UNPROTECT(1);
+        r_est_fail("n4m_role_pipeline", st, ctx, NULL, NULL);
+    }
+    n4m_context_destroy(ctx);
+    UNPROTECT(1);
+    return out;
+}
+
+/* One N4ME raw vector per stateful step. */
+SEXP r_n4m_role_pipeline_export(SEXP ptr, SEXP allow_training_rows) {
+    n4m_role_pipeline_t* p = r_rp_get(ptr);
+    const uint32_t flags = Rf_asLogical(allow_training_rows) == TRUE
+                               ? N4M_EXPORT_ALLOW_TRAINING_ROWS : 0u;
+    int32_t n = 0;
+    n4m_role_pipeline_n_states(p, &n);
+    SEXP out = PROTECT(Rf_allocVector(VECSXP, n));
+    n4m_context_t* ctx = r_est_context();
+    for (int32_t k = 0; k < n; ++k) {
+        size_t size = 0;
+        n4m_status_t st = n4m_role_pipeline_export_state_size(ctx, p, k, flags, &size);
+        if (st != N4M_OK) {
+            UNPROTECT(1);
+            r_est_fail("n4m_role_pipeline_export_state_size", st, ctx, NULL, NULL);
+        }
+        SEXP bytes = PROTECT(Rf_allocVector(RAWSXP, (R_xlen_t)size));
+        size_t written = 0;
+        st = n4m_role_pipeline_export_state_to_buffer(ctx, p, k, flags, RAW(bytes), size, &written);
+        if (st != N4M_OK) {
+            UNPROTECT(2);
+            r_est_fail("n4m_role_pipeline_export_state_to_buffer", st, ctx, NULL, NULL);
+        }
+        SET_VECTOR_ELT(out, k, bytes);
+        UNPROTECT(1);
+    }
+    n4m_context_destroy(ctx);
+    UNPROTECT(1);
+    return out;
+}
+
+/* list(steps = list(method_id, role, state_index, contains_training_rows,
+ * n_features_in, n_features_out), n_features, feature_names, classes). */
+SEXP r_n4m_role_pipeline_info(SEXP ptr) {
+    n4m_role_pipeline_t* p = r_rp_get(ptr);
+    int32_t n = 0;
+    n4m_role_pipeline_n_steps(p, &n);
+    SEXP ids = PROTECT(Rf_allocVector(STRSXP, n));
+    SEXP role = PROTECT(Rf_allocVector(INTSXP, n));
+    SEXP state = PROTECT(Rf_allocVector(INTSXP, n));
+    SEXP rows = PROTECT(Rf_allocVector(LGLSXP, n));
+    SEXP n_in = PROTECT(Rf_allocVector(REALSXP, n));
+    SEXP n_out = PROTECT(Rf_allocVector(REALSXP, n));
+    for (int32_t k = 0; k < n; ++k) {
+        n4m_role_pipeline_step_info_v1_t info;
+        memset(&info, 0, sizeof(info));
+        info.struct_size = sizeof(info);
+        n4m_role_pipeline_step_info_v1(p, k, &info);
+        SET_STRING_ELT(ids, k, Rf_mkChar(info.method_id));
+        INTEGER(role)[k] = (int)info.role;
+        INTEGER(state)[k] = info.state_index;
+        LOGICAL(rows)[k] = info.contains_training_rows != 0;
+        REAL(n_in)[k] = (double)info.n_features_in;
+        REAL(n_out)[k] = (double)info.n_features_out;
+    }
+    const char* step_fields[] = {"method_id", "role", "state_index", "contains_training_rows",
+                                 "n_features_in", "n_features_out"};
+    SEXP steps = PROTECT(Rf_allocVector(VECSXP, 6));
+    SEXP step_names = PROTECT(Rf_allocVector(STRSXP, 6));
+    SEXP columns[] = {ids, role, state, rows, n_in, n_out};
+    for (int k = 0; k < 6; ++k) {
+        SET_VECTOR_ELT(steps, k, columns[k]);
+        SET_STRING_ELT(step_names, k, Rf_mkChar(step_fields[k]));
+    }
+    Rf_setAttrib(steps, R_NamesSymbol, step_names);
+
+    int64_t n_features = 0, n_names = 0;
+    n4m_role_pipeline_n_features_in(p, &n_features);
+    n4m_role_pipeline_n_feature_names(p, &n_names);
+    SEXP feature_names = PROTECT(n_names > 0 ? Rf_allocVector(STRSXP, (R_xlen_t)n_names) : R_NilValue);
+    for (int64_t k = 0; k < n_names; ++k) {
+        const char* name = NULL;
+        n4m_role_pipeline_feature_name(p, k, &name);
+        SET_STRING_ELT(feature_names, (R_xlen_t)k, Rf_mkCharCE(name, CE_UTF8));
+    }
+    SEXP classes = R_NilValue;
+    int64_t count = 0;
+    if (n4m_role_pipeline_classes(p, NULL, 0, &count) == N4M_OK) {
+        int64_t* buf = (int64_t*)R_alloc((size_t)(count > 0 ? count : 1), sizeof(int64_t));
+        n4m_role_pipeline_classes(p, buf, count, &count);
+        classes = r_est_int64_vector(buf, count);
+    }
+    PROTECT(classes);
+    const char* fields[] = {"steps", "n_features", "feature_names", "classes"};
+    SEXP out = PROTECT(Rf_allocVector(VECSXP, 4));
+    SEXP out_names = PROTECT(Rf_allocVector(STRSXP, 4));
+    SET_VECTOR_ELT(out, 0, steps);
+    SET_VECTOR_ELT(out, 1, Rf_ScalarReal((double)n_features));
+    SET_VECTOR_ELT(out, 2, feature_names);
+    SET_VECTOR_ELT(out, 3, classes);
+    for (int k = 0; k < 4; ++k) SET_STRING_ELT(out_names, k, Rf_mkChar(fields[k]));
+    Rf_setAttrib(out, R_NamesSymbol, out_names);
+    UNPROTECT(12);
+    return out;
+}
