@@ -28,6 +28,7 @@ add_executable(n4m_tests
     test_threading.cpp
     test_preprocessing_baselines.cpp
     test_preprocessing_feature_selection.cpp
+    test_spectral_encoding.cpp
     test_preprocessing_orthogonalization.cpp
     test_preprocessing_resampling.cpp
     test_preprocessing_signal_conversion.cpp

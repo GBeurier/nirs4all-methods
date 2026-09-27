@@ -39,6 +39,7 @@ void register_preprocessing_orthogonalization_tests(n4m_testing::Runner& r);
 // Phase 9 — feature-selection (FlexiblePCA, FlexibleSVD) parity tests live
 // in test_preprocessing_feature_selection.cpp.
 void register_preprocessing_feature_selection_tests(n4m_testing::Runner& r);
+void register_spectral_encoding_tests(n4m_testing::Runner& r);
 
 // Phase 10 — resampling / cropping / discretizers parity tests live in
 // test_preprocessing_resampling.cpp.
@@ -211,6 +212,7 @@ int main() {
     register_preprocessing_signal_conversion_tests(r);
     register_preprocessing_orthogonalization_tests(r);
     register_preprocessing_feature_selection_tests(r);
+    register_spectral_encoding_tests(r);
     register_preprocessing_resampling_tests(r);
     register_splitters_tests(r);
     register_filters_y_tests(r);

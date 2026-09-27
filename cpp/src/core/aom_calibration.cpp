@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <map>
 #include <memory>
 #include <numeric>
 #include <stdexcept>
@@ -20,6 +21,7 @@
 #include "core/linalg.hpp"
 #include "core/model.hpp"
 #include "core/ridge.hpp"
+#include "core/spectral_encoding.hpp"
 
 namespace n4m::core {
 namespace {
@@ -132,6 +134,8 @@ Vec transform(Context& ctx,
               const std::int32_t* offsets,
               std::size_t chain) {
     for (std::int32_t i = offsets[chain]; i < offsets[chain + 1]; ++i) {
+        if (bank.entries()[static_cast<std::size_t>(i)].kind == N4M_OP_LVSE)
+            continue;  // fitted separately, using this fold's full training view
         Vec result;
         auto v = view(x, n, p);
         require(transform_aom_strict_operator(
@@ -150,6 +154,8 @@ Vec adjoint(Context& ctx,
     Vec current = beta;
     for (std::int32_t i = offsets[chain + 1] - 1; i >= offsets[chain]; --i) {
         const auto& entry = bank.entries()[static_cast<std::size_t>(i)];
+        if (entry.kind == N4M_OP_LVSE)
+            continue;  // the fitted projection has already been folded
         if (entry.kind == N4M_OP_DETREND_POLY || entry.kind == N4M_OP_IDENTITY) {
             Vec result;
             auto v = view(current, 1, p);
@@ -175,6 +181,100 @@ struct Path {
     Vec coefficients;
     int count;
 };
+bool has_lvse(const OperatorBank& bank, const std::int32_t* offsets, std::size_t c) {
+    return bank.entries()[static_cast<std::size_t>(offsets[c + 1] - 1)].kind == N4M_OP_LVSE;
+}
+struct LVSECache {
+    Vec prefix;
+    std::map<Vec, SpectralEncoding> bases;
+};
+n4m_status_t fit_lvse(const OperatorBank& bank,
+                      const std::int32_t* offsets,
+                      std::size_t c,
+                      const Vec& x,
+                      std::size_t n,
+                      std::size_t p,
+                      SpectralEncoding& out,
+                      LVSECache* cache = nullptr) {
+    const auto& params = bank.entries()[static_cast<std::size_t>(offsets[c + 1] - 1)].params;
+    SpectralEncoding encoder;
+    encoder.width = static_cast<int>(params[0]);
+    encoder.rank = static_cast<int>(params[1]);
+    encoder.overlap = params[2];
+    encoder.standardize = params[3] != 0;
+    if (!cache) {
+        const auto status = encoder.fit(x, n, p);
+        if (status == N4M_OK)
+            out = std::move(encoder);
+        return status;
+    }
+    Vec prefix;
+    for (int i = offsets[c]; i < offsets[c + 1] - 1; ++i) {
+        const auto& op = bank.entries()[static_cast<std::size_t>(i)];
+        prefix.push_back(static_cast<double>(op.kind));
+        prefix.push_back(static_cast<double>(op.params.size()));
+        prefix.insert(prefix.end(), op.params.begin(), op.params.end());
+    }
+    // Lifetime is one branch and one fold. Retain only the current pre-chain
+    // so long chain banks do not accumulate thousands of dense bases.
+    if (cache->prefix != prefix) {
+        cache->bases.clear();
+        cache->prefix = std::move(prefix);
+    }
+    const Vec key{params[0], params[2], params[3]};
+    auto found = cache->bases.find(key);
+    if (found == cache->bases.end()) {
+        const int requested_rank = encoder.rank;
+        for (const auto& op : bank.entries())
+            if (op.kind == N4M_OP_LVSE && op.params[0] == params[0] && op.params[2] == params[2]
+                && op.params[3] == params[3])
+                encoder.rank = std::max(encoder.rank, static_cast<int>(op.params[1]));
+        const auto status = encoder.fit(x, n, p);
+        if (status != N4M_OK) {
+            // Rank reuse is only an optimization. A maximal-rank numerical
+            // failure must not invalidate a lower-rank candidate that fits.
+            if ((status == N4M_ERR_NUMERICAL_FAILURE || status == N4M_ERR_CONVERGENCE_FAILED)
+                && encoder.rank > requested_rank) {
+                encoder.rank = requested_rank;
+                const auto smaller_status = encoder.fit(x, n, p);
+                if (smaller_status == N4M_OK) {
+                    out = std::move(encoder);
+                    return N4M_OK;
+                }
+                return smaller_status;
+            }
+            return status;
+        }
+        found = cache->bases.emplace(key, encoder).first;
+    }
+    encoder = found->second;
+    const auto desired = static_cast<std::size_t>(params[1]);
+    if (desired < static_cast<std::size_t>(encoder.rank)) {
+        const auto w = std::min(p, static_cast<std::size_t>(encoder.width));
+        Vec reduced;
+        std::size_t offset = 0;
+        while (offset < encoder.outputs) {
+            // Nonoverlap can have one final shorter block. Overlap windows
+            // all have width w, including the final end-anchored window.
+            const auto full = std::min(static_cast<std::size_t>(encoder.rank), std::min(n, w) - 1);
+            const auto available = std::min(full, encoder.outputs - offset);
+            const auto keep = std::min(desired, available);
+            const auto first = static_cast<Vec::difference_type>(offset * p);
+            const auto last = static_cast<Vec::difference_type>((offset + keep) * p);
+            reduced.insert(
+                reduced.end(), encoder.basis.begin() + first, encoder.basis.begin() + last);
+            offset += available;
+        }
+        encoder.basis = std::move(reduced);
+        encoder.outputs = encoder.basis.size() / p;
+        encoder.rank = static_cast<int>(desired);
+    }
+    out = std::move(encoder);
+    return N4M_OK;
+}
+bool numerical_failure(n4m_status_t status) {
+    return status == N4M_ERR_NUMERICAL_FAILURE || status == N4M_ERR_CONVERGENCE_FAILED;
+}
 // Candidate paths report numerical failure as a status, not an exception, so
 // a failed candidate stays invalid without aborting WASM (built without
 // exception catching).
@@ -190,16 +290,24 @@ n4m_status_t pls_path(Context& ctx, Vec z, Vec y, std::size_t n, std::size_t p, 
     std::unique_ptr<Model> model;
     auto xv = view(z, n, p);
     auto yv = view(y, n, 1);
-    if (const n4m_status_t st = fit_model(ctx, cfg, xv, yv, model); st != N4M_OK)
-        return st;
     Path result;
-    result.count = model->n_components;
-    if (const n4m_status_t st =
-            compute_regression_coefficients_by_component(ctx, *model, result.coefficients);
-        st != N4M_OK)
-        return st;
-    out = std::move(result);
-    return N4M_OK;
+    // A high-component numerical breakdown must not discard valid shorter
+    // prefixes. Retry only on numerical failure, keeping every usable prefix
+    // in the original CV grid (the remaining entries receive infinity).
+    for (; cfg.n_components > 0; --cfg.n_components) {
+        auto status = fit_model(ctx, cfg, xv, yv, model);
+        if (status == N4M_OK) {
+            status = compute_regression_coefficients_by_component(ctx, *model, result.coefficients);
+            if (status == N4M_OK) {
+                result.count = model->n_components;
+                out = std::move(result);
+                return N4M_OK;
+            }
+        }
+        if (status != N4M_ERR_NUMERICAL_FAILURE)
+            return status;
+    }
+    return N4M_ERR_NUMERICAL_FAILURE;
 }
 n4m_status_t ridge_path(const Vec& z, const Vec& y, std::size_t n, std::size_t p,
                         const double* alphas, int count, Path& out) {
@@ -269,6 +377,71 @@ n4m_status_t ridge_path(const Vec& z, const Vec& y, std::size_t n, std::size_t p
     out = std::move(result);
     return N4M_OK;
 }
+Vec screen_sketch(const Vec& x, std::size_t n, std::size_t p, std::size_t r) {
+    Vec u(n * r), s(r), vt(r * p);
+    const auto rows = static_cast<std::int64_t>(n);
+    const auto cols = static_cast<std::int64_t>(p);
+    const auto rank_count = static_cast<std::int64_t>(r);
+    const auto status = n <= p
+                            ? n4m_svd_truncated_dual_wide(
+                                  x.data(), rows, cols, rank_count, u.data(), s.data(), vt.data())
+                            : n4m_svd_truncated_tall_gram(
+                                  x.data(), rows, cols, rank_count, u.data(), s.data(), vt.data());
+    if (status == N4M_OK) {
+        for (std::size_t k = 0; k < r; ++k)
+            for (std::size_t j = 0; j < p; ++j)
+                vt[k * p + j] *= s[k];
+        return vt;
+    }
+    if (status != N4M_ERR_CONVERGENCE_FAILED && status != N4M_ERR_NUMERICAL_FAILURE)
+        require(status);
+    // Keep the same exact leading-r sketch when the portable Gram
+    // eigensolver fails on an ill-conditioned view. Never change the rank,
+    // candidate bank or CV grid to get a fit through.
+#if defined(N4M_AOM_USE_LAPACKE)
+    const auto d = std::min(n, p);
+    if (d > static_cast<std::size_t>(std::numeric_limits<lapack_int>::max()))
+        throw Failure{N4M_ERR_INVALID_ARGUMENT};
+    const Vec xt = transpose(x, n, p);
+    Vec gram = n <= p ? product(x, xt, n, p, n) : product(xt, x, p, n, p);
+    Vec eigenvalues(d);
+    const auto info = LAPACKE_dsyevd(LAPACK_ROW_MAJOR,
+                                     'V',
+                                     'U',
+                                     static_cast<lapack_int>(d),
+                                     gram.data(),
+                                     static_cast<lapack_int>(d),
+                                     eigenvalues.data());
+    if (info == LAPACK_WORK_MEMORY_ERROR || info == LAPACK_TRANSPOSE_MEMORY_ERROR)
+        throw Failure{N4M_ERR_OUT_OF_MEMORY};
+    if (info < 0)
+        throw Failure{N4M_ERR_INTERNAL};
+    if (info > 0)
+        throw Failure{N4M_ERR_CONVERGENCE_FAILED};
+    if (n <= p) {
+        Vec left(r * n);
+        for (std::size_t k = 0; k < r; ++k)
+            if (eigenvalues[d - 1 - k] > 0)
+                for (std::size_t i = 0; i < n; ++i)
+                    left[k * n + i] = gram[i * d + d - 1 - k];
+        // U_r.T @ X == S_r @ V_r.T, without dividing by small sigma.
+        return product(left, x, r, n, p);
+    }
+    for (std::size_t k = 0; k < r; ++k)
+        for (std::size_t j = 0; j < p; ++j)
+            vt[k * p + j] =
+                std::sqrt(std::max(0.0, eigenvalues[d - 1 - k])) * gram[j * d + d - 1 - k];
+#else
+    // Portable builds retain an independent one-sided Jacobi SVD fallback.
+    const auto full = std::min(n, p);
+    Vec copy = x, full_u(n * full), full_s(full), full_vt(full * p);
+    require(n4m_svd_compact(copy.data(), rows, cols, full_u.data(), full_s.data(), full_vt.data()));
+    for (std::size_t k = 0; k < r; ++k)
+        for (std::size_t j = 0; j < p; ++j)
+            vt[k * p + j] = full_s[k] * full_vt[k * p + j];
+#endif
+    return vt;
+}
 std::pair<std::size_t, std::size_t> screen(Context& ctx,
                                            const std::vector<Branch>& branches,
                                            const Vec& y,
@@ -283,22 +456,37 @@ std::pair<std::size_t, std::size_t> screen(Context& ctx,
     double yy = dot(y, y);
     const auto r = std::min(rank, std::min(n, p));
     for (std::size_t b = 0; b < branches.size(); ++b) {
+        LVSECache cache;
         const auto& x = branches[b].train;
-        Vec u(n * r), s(r), vt(r * p);
-        const auto rows = static_cast<std::int64_t>(n);
-        const auto cols = static_cast<std::int64_t>(p);
-        const auto rank_count = static_cast<std::int64_t>(r);
-        require(n <= p ? n4m_svd_truncated_dual_wide(
-                             x.data(), rows, cols, rank_count, u.data(), s.data(), vt.data())
-                       : n4m_svd_truncated_tall_gram(
-                             x.data(), rows, cols, rank_count, u.data(), s.data(), vt.data()));
-        for (std::size_t k = 0; k < r; ++k)
-            for (std::size_t j = 0; j < p; ++j)
-                vt[k * p + j] *= s[k];
+        Vec vt = screen_sketch(x, n, p, r);
         Vec g = product(transpose(x, n, p), y, p, n, 1);
         for (std::size_t c = 0; c < chains; ++c) {
             Vec ag = transform(ctx, g, 1, p, bank, offsets, c);
             Vec av = transform(ctx, vt, r, p, bank, offsets, c);
+            if (has_lvse(bank, offsets, c)) {
+                Vec full = transform(ctx, x, n, p, bank, offsets, c);
+                SpectralEncoding encoder;
+                const auto status = fit_lvse(bank, offsets, c, full, n, p, encoder, &cache);
+                if (numerical_failure(status))
+                    continue;
+                require(status);
+                // Covariances and the SVD sketch are linear quantities, so
+                // propagate the fitted basis without subtracting its mean.
+                auto project = [&](const Vec& input, std::size_t rows) {
+                    Vec output(rows * encoder.outputs);
+                    for (std::size_t a = 0; a < encoder.outputs; ++a)
+                        for (std::size_t j = 0; j < p; ++j) {
+                            const double coefficient = encoder.basis[a * p + j];
+                            if (coefficient != 0)
+                                for (std::size_t i = 0; i < rows; ++i)
+                                    output[i * encoder.outputs + a] +=
+                                        input[i * p + j] * coefficient;
+                        }
+                    return output;
+                };
+                ag = project(ag, 1);
+                av = project(av, r);
+            }
             double score = dot(ag, ag) / (dot(av, av) * yy + 1e-12);
             if (score > best) {
                 best = score;
@@ -338,6 +526,19 @@ n4m_status_t fit_aom_calibration(Context& ctx,
         for (int c = 0; c < chains; ++c)
             if (offsets[c] < 0 || offsets[c] >= offsets[c + 1])
                 return N4M_ERR_INVALID_ARGUMENT;
+        for (int c = 0; c < chains; ++c)
+            for (int i = offsets[c]; i < offsets[c + 1]; ++i) {
+                const auto& entry = bank.entries()[static_cast<std::size_t>(i)];
+                if (entry.kind != N4M_OP_LVSE)
+                    continue;
+                const auto& v = entry.params;
+                if (i != offsets[c + 1] - 1 || v.size() != 4 || X.cols < 2
+                    || !std::isfinite(v[0]) || v[0] < 2
+                    || v[0] > 1000000 || v[0] != std::floor(v[0]) || !std::isfinite(v[1])
+                    || v[1] < 1 || v[1] > 1000000 || v[1] != std::floor(v[1])
+                    || !(v[2] >= 0 && v[2] < 1) || (v[3] != 0 && v[3] != 1))
+                    return N4M_ERR_INVALID_ARGUMENT;
+            }
         for (int b = 0; b < nb; ++b)
             if (kinds[b] < 0 || kinds[b] > 2)
                 return N4M_ERR_INVALID_ARGUMENT;
@@ -426,16 +627,38 @@ n4m_status_t fit_aom_calibration(Context& ctx,
                                         chain_count,
                                         static_cast<std::size_t>(rank))
                                : std::pair<std::size_t, std::size_t>{0, 0};
-            for (std::size_t b = 0; b < branch_count; ++b)
+            for (std::size_t b = 0; b < branch_count; ++b) {
+                LVSECache cache;
                 for (std::size_t c = 0; c < chain_count; ++c) {
                     if (fast && (b != chosen.first || c != chosen.second))
                         continue;
                     Vec z = transform(ctx, branches[b].train, yt.size(), p, bank, offsets, c);
                     Vec zv = transform(ctx, branches[b].valid, yv.size(), p, bank, offsets, c);
+                    std::size_t q = p;
+                    if (has_lvse(bank, offsets, c)) {
+                        SpectralEncoding encoder;
+                        const auto status =
+                            fit_lvse(bank, offsets, c, z, yt.size(), p, encoder, &cache);
+                        if (numerical_failure(status)) {
+                            for (std::size_t a = 0; a < parameter_count; ++a) {
+                                const std::size_t cell =
+                                    fast ? a : (b * chain_count + c) * parameter_count + a;
+                                out.scores[cell] = std::numeric_limits<double>::infinity();
+                            }
+                            continue;
+                        }
+                        require(status);
+                        Vec train_encoded, valid_encoded;
+                        require(encoder.transform(z, yt.size(), train_encoded));
+                        require(encoder.transform(zv, yv.size(), valid_encoded));
+                        z.swap(train_encoded);
+                        zv.swap(valid_encoded);
+                        q = encoder.outputs;
+                    }
                     Path path{{}, 0};
                     const n4m_status_t path_status =
-                        head == 0 ? pls_path(ctx, z, yt, yt.size(), p, np, path)
-                                  : ridge_path(z, yt, yt.size(), p, alphas, np, path);
+                        head == 0 ? pls_path(ctx, z, yt, yt.size(), q, np, path)
+                                  : ridge_path(z, yt, yt.size(), q, alphas, np, path);
                     // A failed candidate is invalid in this fold; never average its
                     // score over fewer folds or abort other valid candidates.
                     if (path_status == N4M_ERR_NUMERICAL_FAILURE)
@@ -452,8 +675,8 @@ n4m_status_t fit_aom_calibration(Context& ctx,
                         double sse = 0;
                         for (std::size_t i = 0; i < yv.size(); ++i) {
                             double prediction = mean;
-                            for (std::size_t j = 0; j < p; ++j)
-                                prediction += zv[i * p + j] * path.coefficients[a * p + j];
+                            for (std::size_t j = 0; j < q; ++j)
+                                prediction += zv[i * q + j] * path.coefficients[a * q + j];
                             sse += (prediction - yv[i]) * (prediction - yv[i]);
                         }
                         out.scores[cell] += pooled_rmse
@@ -462,6 +685,7 @@ n4m_status_t fit_aom_calibration(Context& ctx,
                                                       / static_cast<double>(nf);
                     }
                 }
+            }
         }
         if (pooled_rmse)
             for (double& score : out.scores)
@@ -488,20 +712,39 @@ n4m_status_t fit_aom_calibration(Context& ctx,
         auto& branch = branches[static_cast<std::size_t>(out.branch)];
         Vec z =
             transform(ctx, branch.train, n, p, bank, offsets, static_cast<std::size_t>(out.chain));
+        SpectralEncoding encoder;
+        std::size_t q = p;
+        const auto c = static_cast<std::size_t>(out.chain);
+        if (has_lvse(bank, offsets, c)) {
+            const auto status = fit_lvse(bank, offsets, c, z, n, p, encoder);
+            if (status != N4M_OK)
+                return status;
+            Vec encoded;
+            const auto transform_status = encoder.transform(z, n, encoded);
+            if (transform_status != N4M_OK)
+                return transform_status;
+            z.swap(encoded);
+            q = encoder.outputs;
+        }
         Path path;
-        require(head == 0 ? pls_path(ctx, z, y, n, p, out.parameter + 1, path)
-                          : ridge_path(z, y, n, p, alphas + out.parameter, 1, path));
+        require(head == 0 ? pls_path(ctx, z, y, n, q, out.parameter + 1, path)
+                          : ridge_path(z, y, n, q, alphas + out.parameter, 1, path));
         const auto a = head == 0 ? static_cast<std::size_t>(out.parameter) : 0U;
         if (a >= static_cast<std::size_t>(path.count))
             return N4M_ERR_NUMERICAL_FAILURE;
-        const auto begin_offset = static_cast<Vec::difference_type>(a * p);
-        const auto end_offset = static_cast<Vec::difference_type>((a + 1) * p);
+        const auto begin_offset = static_cast<Vec::difference_type>(a * q);
+        const auto end_offset = static_cast<Vec::difference_type>((a + 1) * q);
         Vec beta(path.coefficients.begin() + begin_offset, path.coefficients.begin() + end_offset);
+        double encoding_offset = 0;
+        if (has_lvse(bank, offsets, c)) {
+            beta = product(beta, encoder.basis, 1, q, p);
+            encoding_offset = -dot(encoder.center, beta);
+        }
         out.coefficients =
             adjoint(ctx, beta, p, bank, offsets, static_cast<std::size_t>(out.chain));
         out.state = branch.mean;
         out.state.insert(out.state.end(), branch.reference.begin(), branch.reference.end());
-        out.state.push_back(mean - dot(branch.mean, out.coefficients));
+        out.state.push_back(mean + encoding_offset - dot(branch.mean, out.coefficients));
         out.state.push_back(alpha_base);
         ctx.clear_error();
         return N4M_OK;

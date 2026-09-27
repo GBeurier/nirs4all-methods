@@ -27,6 +27,25 @@ def test_chain_grammar_cardinality_and_order():
         assert all("identity" not in s for s in signatures if ">" in s)
 
 
+def test_fast_pls_keeps_valid_prefixes_after_high_rank_breakdown():
+    rng = np.random.default_rng(716)
+    latent = rng.normal(size=(40, 3))
+    x = latent @ rng.normal(size=(3, 31))
+    y = latent[:, 0] + 0.2 * rng.normal(size=40)
+    ids = np.arange(40, dtype=np.int32) % 3
+    short = FastAOMPLSRegressor(max_components=3, branches=("raw",), fold_ids=ids).fit(
+        x, y
+    )
+    full = FastAOMPLSRegressor(max_components=25, branches=("raw",), fold_ids=ids).fit(
+        x, y
+    )
+    np.testing.assert_allclose(
+        full.cv_scores_.ravel()[:3], short.cv_scores_.ravel(), atol=1e-10
+    )
+    assert np.isinf(full.cv_scores_.ravel()[3:]).all()
+    np.testing.assert_allclose(full.predict(x), short.predict(x), atol=1e-10)
+
+
 @pytest.mark.parametrize(
     "cls",
     [AOMPLSRegressor, AOMRidgeRegressor, FastAOMPLSRegressor, FastAOMRidgeRegressor],
@@ -48,7 +67,10 @@ def _operator_matrix(name, p):
         sigma = float(name[-1])
         r = round(4 * sigma)
         t = np.arange(-r, r + 1)
-        kernel = np.exp(-t * t / (2 * sigma * sigma))
+        # The paper uses sampled Gaussian density, not an unnormalized
+        # exponential (nor a discrete sum-normalized filter). Ridge depends
+        # on this scale even though PLS is invariant to it.
+        kernel = np.exp(-t * t / (2 * sigma * sigma)) / (sigma * np.sqrt(2 * np.pi))
     else:
         _, kind, window, poly = name.split("_")
         deriv = 0 if kind == "smooth" else int(kind[1:])

@@ -1185,7 +1185,7 @@ def test_generic_procedure_returns_named_outputs():
 
 def test_manifest_lists_every_generated_class():
     doc = roles.manifest()
-    assert doc["abi"].startswith("2.14")
+    assert doc["abi"].startswith("2.15")
     assert {m["method_id"] for m in doc["methods"]} == set(_REGISTRY)
     for m in doc["methods"]:
         assert roles.method_class(m["method_id"])._method_id == m["method_id"]
