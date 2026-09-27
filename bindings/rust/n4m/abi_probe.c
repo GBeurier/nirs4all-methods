@@ -235,7 +235,8 @@ _Static_assert(sizeof(n4m_method_info_v1_t) == 88, "Rust MethodInfoV1Raw size is
 _Static_assert(offsetof(n4m_method_info_v1_t, capabilities) == 32, "Rust MethodInfoV1Raw.capabilities offset is stale relative to the C header");
 _Static_assert(offsetof(n4m_method_info_v1_t, inputs) == 48, "Rust MethodInfoV1Raw.inputs offset is stale relative to the C header");
 _Static_assert(N4M_FIT_INPUT_COUNT == 9, "Rust FIT_INPUT_COUNT is stale relative to the C header");
-_Static_assert(sizeof(n4m_param_info_v1_t) == 56, "Rust ParamInfoV1Raw size is stale relative to the C header");
+_Static_assert(sizeof(n4m_param_info_v1_t) == 64, "Rust ParamInfoV1Raw size is stale relative to the C header");
+_Static_assert(offsetof(n4m_param_info_v1_t, recorded) == 56, "Rust ParamInfoV1Raw.recorded offset is stale relative to the C header");
 _Static_assert(offsetof(n4m_param_info_v1_t, default_length) == 24, "Rust ParamInfoV1Raw.default_length offset is stale relative to the C header");
 _Static_assert(offsetof(n4m_param_info_v1_t, choices) == 48, "Rust ParamInfoV1Raw.choices offset is stale relative to the C header");
 _Static_assert(N4M_EXPORT_ALLOW_TRAINING_ROWS == 1u, "Rust EXPORT_ALLOW_TRAINING_ROWS is stale relative to the C header");
@@ -270,6 +271,7 @@ _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_info, n4m_status_t (*)(const 
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_get_params, n4m_status_t (*)(n4m_context_t*, const n4m_estimator_t*, n4m_params_t**)), "n4m_estimator_get_params signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_n_features_in, n4m_status_t (*)(const n4m_estimator_t*, int64_t*)), "n4m_estimator_n_features_in signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_transform_cols, n4m_status_t (*)(const n4m_estimator_t*, int64_t*)), "n4m_estimator_transform_cols signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_contains_training_rows, n4m_status_t (*)(const n4m_estimator_t*, int32_t*)), "n4m_estimator_contains_training_rows signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_n_outputs, n4m_status_t (*)(const n4m_estimator_t*, int64_t*)), "n4m_estimator_n_outputs signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_transform, n4m_status_t (*)(n4m_context_t*, const n4m_estimator_t*, const n4m_matrix_view_t*, n4m_matrix_view_t*)), "n4m_estimator_transform signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_predict, n4m_status_t (*)(n4m_context_t*, const n4m_estimator_t*, const n4m_matrix_view_t*, n4m_matrix_view_t*)), "n4m_estimator_predict signature drifted");
