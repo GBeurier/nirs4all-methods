@@ -73,7 +73,10 @@ a list of \code{list(method_id, n4me, contains_training_rows)};
 \code{n4m_role_pipeline_info()} a list with the input width \code{n_features},
 the stored \code{feature_names} (or \code{NULL}), the \code{classes} of a
 classifier pipeline (labels when fitted on labels, integer ids otherwise;
-\code{NULL} for a regressor) and the \code{steps} data frame.
+\code{NULL} for a regressor), the \code{label_names} table of a classifier
+fitted on labels (index = class id + 1; unlike \code{classes} it keeps labels
+whose rows a sample filter removed; \code{NULL} otherwise) and the \code{steps}
+data frame.
 \code{n4m_classes()} the classes of a classifier pipeline.
 }
 \description{

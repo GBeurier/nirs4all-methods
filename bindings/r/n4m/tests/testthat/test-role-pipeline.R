@@ -140,6 +140,7 @@ testthat::test_that("n4m_role_pipeline_info exposes width, column names and clas
   testthat::expect_identical(info$feature_names, paste0("w", 1:5))
   testthat::expect_identical(info$classes, c("a", "b"))
   testthat::expect_identical(n4m_classes(fit), c("a", "b"))
+  testthat::expect_identical(info$label_names, c("a", "b"))
   testthat::expect_identical(nrow(info$steps), 2L)
   reg <- n4m_estimator_fit(n4m_role_pipeline(list("models.pls.cppls")), X, stats::rnorm(80))
   testthat::expect_null(n4m_role_pipeline_info(reg)$classes)

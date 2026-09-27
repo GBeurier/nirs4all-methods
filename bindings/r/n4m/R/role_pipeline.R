@@ -277,6 +277,7 @@ n4m_role_pipeline_info <- function(object) {
   list(n_features = as.integer(state$info$n_features),
        feature_names = state$feature_names,
        classes = classes,
+       label_names = state$levels,
        steps = n4m_role_pipeline_steps(object))
 }
 
