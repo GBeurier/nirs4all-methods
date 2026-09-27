@@ -10,7 +10,7 @@
 # `N4M_R_VENDOR=1 ./configure` copies the C/C++ core into src/vendor/.
 # `R CMD build` then bundles src/vendor/ into the source tarball, so every later
 # step (the tarball's own configure on install, and the Windows/macOS binary
-# builds via src/Makevars.win) compiles a self-contained n4m.so with no external
+# builds via the Makevars.win that configure.win writes) compiles a self-contained n4m.so with no external
 # libn4m and no need for the parent repo. See docs/dev/release_process.md.
 set -e
 N4M_R_VENDOR=1 ./configure

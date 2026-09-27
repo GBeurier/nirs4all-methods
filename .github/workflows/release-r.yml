@@ -102,7 +102,7 @@ jobs:
       # reachable; the build then bundles src/vendor/ into the tarball and the
       # check installs from that bundled copy (no re-vendor at install time).
       # shell: bash so it runs on the Windows runner too (Rtools provides bash;
-      # the package ships src/Makevars.win for the actual Windows compile).
+      # configure.win writes src/Makevars.win for the actual Windows compile).
       - name: Vendor libn4m sources into the R package
         shell: bash
         run: cd bindings/r/${{ matrix.pkg }} && N4M_R_VENDOR=1 ./configure

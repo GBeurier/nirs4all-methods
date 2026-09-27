@@ -84,7 +84,7 @@ The active R surface is PLS/chemometrics-first: base formula/S3, `pls`-style
   `.github/workflows/version-sync.yml` workflow on every PR.
 * The `CUDA` backend file `cuda_dispatch.cpp` is intentionally
   excluded from the R-package build (filtered out in `src/Makevars` on
-  Unix and `src/Makevars.win` on Windows).
+  Unix and the `src/Makevars.win` that `configure.win` writes on Windows).
   CUDA is an optional accelerated backend in the standalone library,
   not required for the reference scalar code path that the R package
   exposes.
