@@ -29,6 +29,7 @@ export { MethodResult } from "./methodResult.js";
 export { NativeModel } from "./nativeModel.js";
 export { NativeEstimator, NativeMethod, NativeProcedure, manifest, methodClass, type Augmenter, type Classifier, type FitInputs, type Fold, type ParamType, type ParamValue, type ProbabilisticClassifier, type Procedure, type ProcedureOutput, type Regressor, type SampleFilter, type Selector, type Splitter, type TargetMixingAugmenter, type Transformer } from "./estimatorRoles.js";
 export * from "./estimatorRolesGenerated.js";
+export { RolePipeline, type ClassLabel, type PipelineRole, type RolePipelineState, type RolePipelineStepInfo, type RoleStep } from "./rolePipeline.js";
 export { splitNative, type NativeSplitterKind,
          type NativeSplitterOptions, type NativeSplitIndices } from "./nativeSplitter.js";
 export { augmentNative, type NativeAugmentationKind } from "./nativeAugmentation.js";

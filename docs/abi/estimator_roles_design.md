@@ -492,6 +492,76 @@ DAG-ML. n4m provides estimators; DAG-ML controllers compose them. Model
 families that need a host framework (torch, sklearn RF, ranger) are not n4m
 estimators.
 
+### D9 — Role pipeline: the trained linear recipe is native (ABI 2.14)
+
+The portable trained pipeline (a recipe of `n4m:<method id>` steps plus one
+N4ME state per fitted step, the nirs4all `trained_pipeline.v8` envelope) was
+implemented five times — nirs4all Python, Core Python, Core WASM, Core Rust
+and the R product — and the copies diverged: contradictory recipe/state pairs
+and empty recipes accepted, multi-target Y dropped before supervised steps in
+WASM, column identity lost, training-row export policy different per surface
+(integration audit 2026-09-27, F03/F05/F06/F10). ABI 2.14 moves the semantics
+into one owner, `n4m_role_pipeline_t`; the envelope JSON stays a thin host
+wrapper (schema string, recipe tokens, base64, checksums, class names).
+
+This is not composition in the D8 sense: a role pipeline is one linear,
+already-decided chain (no branches, no CV/OOF, no selection, no stacking).
+DAG-ML keeps composing; a fitted linear chain it wants to ship is exchanged
+as a role pipeline.
+
+**Recipe.** `n4m_role_pipeline_create(ctx, n, method_ids, params, &out)`:
+zero or more sample filters, zero or more transformers / selectors, exactly
+one regressor or classifier last. A multi-role method plays the role of its
+position (PLS: transformer inside, regressor last). Refused with the step
+named: empty recipe, unknown method, procedure, params of another method,
+missing required parameter, filter after a transformer, non-terminal
+regressor, missing terminal.
+
+**Fit routing** (`n4m_role_pipeline_fit`, one `n4m_fit_inputs_v1_t`):
+
+| Input | Reaches |
+|---|---|
+| `Y` (n×q) | every step whose manifest *requires* y, all q columns (F06) |
+| `labels` | steps declaring labels (the classifier); without `Y`, the non-terminal steps that require y get the class ids as one double column (what the host implementations did) |
+| `sample_weight`, `groups`, `fold_ids` | steps declaring them |
+| `feature_groups`, `blocks`, `axis`, `X_target` | steps declaring them, only while no transformer or selector has changed the columns (they describe the pipeline input columns); a later step that requires one is refused |
+
+Sample filters are fitted, applied to the training rows, and subset every
+row-aligned input (X, Y, labels, weights, groups, fold ids); they keep no
+state. An input no step uses is refused by name, as `n4m_estimator_fit`
+does. Optional `y` is not forwarded (unchanged from the host code). Every
+error is prefixed `step <i> (<method id>)`. On failure the pipeline is
+unfitted.
+
+**Feature identity (F03).** `n4m_role_pipeline_set_feature_names` (before
+fit or import; UTF-8, unique) stores the input column names;
+`n4m_role_pipeline_check_features(ctx, p, n_columns, names)` refuses a width
+mismatch and, when names are stored and given, any renamed or reordered
+column (the message says which). Arrays without names are positional.
+Facades call it before every operation with the caller's column names.
+
+**Portable state (F05, F10).** `n4m_role_pipeline_export_state_*` exports one
+N4ME per stateful step (filters excluded); a state embedding training rows
+needs `N4M_EXPORT_ALLOW_TRAINING_ROWS`, and
+`n4m_role_pipeline_step_info_v1.contains_training_rows` says which do.
+`n4m_role_pipeline_import_states` rebuilds a fitted pipeline from the recipe
+and the states and refuses: a state count different from the stateful
+steps, a state of another method, a parameter whose resolved value differs
+from the recipe's (typed comparison after default resolution; for example
+CPPLS 2 vs 1 components), a state lacking the operation its role needs, and
+widths that do not chain.
+
+**Operations.** transform (transformers/selectors only), predict,
+predict_labels, decision_function, predict_proba and classes through the
+terminal step, with the estimator refusals; step introspection
+(`n4m_role_pipeline_step_info_v1`: method, role played, state index, fitted
+widths, training rows).
+
+Facades: Python `n4m.roles.RolePipeline`, R `n4m_role_pipeline()`, JS
+`RolePipeline`, Rust `n4m::roles::RolePipeline`. The shared fixture
+`parity/fixtures/role_pipeline_negative.json` holds the negative cases and one
+pipeline fitted in Python, replayed by the four suites.
+
 ## 3. Bindings and controllers
 
 - **Python**: one `NativeEstimator` base in `n4m` (`BaseEstimator` plus the

@@ -77,6 +77,9 @@ add_test(NAME n4m_tests COMMAND n4m_tests)
 add_executable(n4m_estimator_tests test_estimator.cpp)
 target_link_libraries(n4m_estimator_tests PRIVATE n4m_c)
 add_test(NAME n4m_estimator_tests COMMAND n4m_estimator_tests)
+add_executable(n4m_role_pipeline_tests test_role_pipeline.cpp)
+target_link_libraries(n4m_role_pipeline_tests PRIVATE n4m_c)
+add_test(NAME n4m_role_pipeline_tests COMMAND n4m_role_pipeline_tests)
 # Procedure results are compared field by field through the internal
 # MethodResult layout.
 add_executable(n4m_procedure_tests test_procedure.cpp)
