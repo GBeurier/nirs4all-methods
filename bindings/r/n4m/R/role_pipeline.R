@@ -267,6 +267,25 @@ n4m_role_pipeline_steps <- function(object) {
 
 #' @rdname n4m_role_pipeline
 #' @export
+n4m_role_pipeline_info <- function(object) {
+  .n4m_role_pointer(object)
+  state <- object$state
+  classes <- if (.n4m_role_classifier(object)) {
+    ids <- state$info$classes
+    if (is.null(state$levels)) ids else state$levels[ids + 1]
+  }
+  list(n_features = as.integer(state$info$n_features),
+       feature_names = state$feature_names,
+       classes = classes,
+       steps = n4m_role_pipeline_steps(object))
+}
+
+#' @rdname n4m_role_pipeline
+#' @export
+n4m_classes.n4m_role_pipeline <- function(object) n4m_role_pipeline_info(object)$classes
+
+#' @rdname n4m_role_pipeline
+#' @export
 print.n4m_role_pipeline <- function(x, ...) {
   state <- if (is.null(x$state)) "unfitted" else "fitted"
   cat("<n4m role pipeline (", state, "): ", paste(.n4m_role_ids(x$steps), collapse = " -> "),
