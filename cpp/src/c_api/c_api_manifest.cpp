@@ -57,12 +57,13 @@ const char* param_type_name(int32_t t) {
 
 n4m_status_t add_default(std::string& o, int32_t method, int32_t param,
                          const n4m_param_info_v1_t& pi) {
-    if (!pi.has_default) {
+    const bool array = pi.type == N4M_METHOD_PARAM_INT_ARRAY ||
+                       pi.type == N4M_METHOD_PARAM_DOUBLE_ARRAY;
+    // A required parameter, or an optional one left unset by default.
+    if (!pi.has_default || (!array && pi.default_length == 0)) {
         o += "null";
         return N4M_OK;
     }
-    const bool array = pi.type == N4M_METHOD_PARAM_INT_ARRAY ||
-                       pi.type == N4M_METHOD_PARAM_DOUBLE_ARRAY;
     const auto n = static_cast<std::size_t>(pi.default_length);
     int64_t count = 0;
     if (array) o += '[';
@@ -197,7 +198,7 @@ n4m_status_t render(std::string& o) {
                 if (c > 0) o += ',';
                 add_string(o, pi.choices[c]);
             }
-            o += "]}";
+            o += pi.recorded != 0 ? "],\"recorded\":true}" : "],\"recorded\":false}";
         }
         o += "]}";
     }

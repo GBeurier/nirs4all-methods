@@ -57,6 +57,7 @@ estimator:
     - name: "seed"
       type: "int"
       default: 0
+      optional: true
       min: 0
 fq_name: "n4m.augmentation.spectral.gauss_jitter"
 leaf: "gauss_jitter"

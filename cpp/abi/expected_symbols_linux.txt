@@ -245,6 +245,7 @@ n4m_ensemble_linear_stack_compress
 n4m_ensemble_random_subspace_pls_fit
 n4m_estimator_apply_mask
 n4m_estimator_classes
+n4m_estimator_contains_training_rows
 n4m_estimator_create
 n4m_estimator_decision_function
 n4m_estimator_destroy

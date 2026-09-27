@@ -46,9 +46,11 @@ estimator:
       type: "int"
       default: 1
       min: 1
+      recorded: true
     - name: "n_unique_per_block"
       type: "int_array"
       min: 0
+      recorded: true
 fq_name: "n4m.estimators.multiblock.on_pls"
 leaf: "on_pls"
 legacy_ids:

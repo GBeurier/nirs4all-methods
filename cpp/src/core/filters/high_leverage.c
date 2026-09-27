@@ -625,6 +625,21 @@ n4m_status_t n4m_filter_leverage_state_load(n4m_filter_leverage_state_t* state,
     if (st == N4M_OK && (!n4m_state_read_f64(r, &threshold) || !isfinite(threshold))) {
         st = N4M_ERR_CORRUPT_BUFFER;
     }
+    /* The state agrees with the configuration: PCA was requested or is the
+     * hat fallback; a PCA keeps at most the requested (else at most 50)
+     * components; an absolute threshold is kept as is; no centring leaves a
+     * zero mean. */
+    if (st == N4M_OK &&
+        ((state->method == N4M_FILTER_LEVERAGE_METHOD_PCA &&
+          method != N4M_FILTER_LEVERAGE_METHOD_PCA) ||
+         (method == N4M_FILTER_LEVERAGE_METHOD_PCA &&
+          k > (state->n_components > 0 ? state->n_components : 50)) ||
+         (state->use_absolute && threshold != state->absolute_threshold))) {
+        st = N4M_ERR_CORRUPT_BUFFER;
+    }
+    for (int64_t j = 0; st == N4M_OK && !state->center && j < n_features; ++j) {
+        if (mean[j] != 0.0) st = N4M_ERR_CORRUPT_BUFFER;
+    }
     if (st != N4M_OK) {
         free(mean); free(a); free(b);
         return st;

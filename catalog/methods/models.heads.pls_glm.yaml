@@ -49,6 +49,7 @@ estimator:
       type: "enum"
       choices: "[gaussian, poisson, binomial]"
       default: "gaussian"
+      recorded: true
     - name: "max_iter"
       type: "int"
       default: 100

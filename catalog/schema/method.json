@@ -163,7 +163,15 @@
               "default": {},
               "min": {"type": "number"},
               "max": {"type": "number"},
-              "choices": {"type": "string"}
+              "choices": {"type": "string"},
+              "optional": {
+                "type": "boolean",
+                "description": "The manifest publishes a null default: the caller may leave the parameter unset and the core then uses `default` (seeds: unset means 0)."
+              },
+              "recorded": {
+                "type": "boolean",
+                "description": "The fitted state records this parameter (its value, or a dimension it fixes); N4ME import refuses a payload whose value contradicts the state."
+              }
             }
           }
         }

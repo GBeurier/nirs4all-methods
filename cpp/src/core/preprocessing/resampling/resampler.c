@@ -547,6 +547,11 @@ n4m_status_t n4m_pp_resampler_state_load(n4m_pp_resampler_state_t* state,
     for (int64_t i = 1; st == N4M_OK && i < n; ++i) {
         if (!(state->source_wl[i - 1] < state->source_wl[i])) st = N4M_ERR_CORRUPT_BUFFER;
     }
+    /* The cropped axis lies inside [crop_min, crop_max]. */
+    if (st == N4M_OK && state->use_crop &&
+        !(state->crop_min <= state->source_wl[0] && state->source_wl[n - 1] <= state->crop_max)) {
+        st = N4M_ERR_CORRUPT_BUFFER;
+    }
     if (st == N4M_OK && state->use_crop) {
         st = n4m_state_read_i64_array_new(r, n, &state->crop_idx);
         for (int64_t i = 0; st == N4M_OK && i < n; ++i) {

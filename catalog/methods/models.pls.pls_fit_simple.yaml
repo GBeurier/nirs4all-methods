@@ -49,6 +49,7 @@ estimator:
       type: "int"
       default: 2
       min: 1
+      recorded: true
 fq_name: "n4m.estimators.regression.latent.pls"
 leaf: "pls"
 legacy_ids:

@@ -50,6 +50,7 @@ estimator:
     - name: "seed"
       type: "int"
       default: 0
+      optional: true
       min: 0
     - name: "max_iter"
       type: "int"

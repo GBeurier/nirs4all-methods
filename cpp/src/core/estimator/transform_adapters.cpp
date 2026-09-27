@@ -142,6 +142,9 @@ class StatelessTransformAdapter final : public Adapter {
         return build(ctx, params, static_cast<std::int64_t>(width));
     }
 
+    // The state is the input width; every parameter is replayed by build().
+    n4m_status_t check_params(n4m_context_t*, const Params&) const override { return N4M_OK; }
+
   private:
     n4m_status_t build(n4m_context_t* ctx, const Params& params, std::int64_t width) {
         handle_.reset();

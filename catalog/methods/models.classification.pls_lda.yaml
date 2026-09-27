@@ -45,6 +45,7 @@ estimator:
       type: "int"
       default: 2
       min: 1
+      recorded: true
 fq_name: "n4m.estimators.classification.pls_lda"
 leaf: "pls_lda"
 legacy_ids:

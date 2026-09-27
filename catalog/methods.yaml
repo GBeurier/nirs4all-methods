@@ -1335,6 +1335,7 @@ methods:
         - name: noise_seed
           type: int
           default: 0
+          optional: true
           min: 0
         - name: n_ensembles
           type: int
@@ -1426,6 +1427,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "models.specialized.gpr_pls"
     family: "models.specialized"
@@ -1475,6 +1477,7 @@ methods:
           type: int
           default: 2
           min: 1
+          recorded: true
         - name: length_scale
           type: double
           default: 1.0
@@ -1595,6 +1598,7 @@ methods:
         - name: top_k
           type: int
           min: 1
+          recorded: true
         - name: n_components
           type: int
           default: 2
@@ -1687,6 +1691,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "selection.iriv"
     family: "selection.wrapper"
@@ -1748,6 +1753,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "models.pls.kernel"
     family: "models.pls"
@@ -1805,6 +1811,7 @@ methods:
           type: double
           default: 0.0
           min: 0.0
+          recorded: true
         - name: coef0
           type: double
           default: 1.0
@@ -2127,6 +2134,7 @@ methods:
           type: int
           default: 2
           min: 1
+          recorded: true
   - method_id: "models.classification.pls_logistic"
     family: "models.classification"
     category: "models"
@@ -2175,6 +2183,7 @@ methods:
           type: int
           default: 2
           min: 1
+          recorded: true
         - name: max_iter
           type: int
           default: 500
@@ -2321,6 +2330,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "selection.random_frog"
     family: "selection.wrapper"
@@ -2370,6 +2380,7 @@ methods:
         - name: top_k
           type: int
           min: 1
+          recorded: true
         - name: n_components
           type: int
           default: 2
@@ -2397,6 +2408,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "selection.randomization"
     family: "selection.wrapper"
@@ -2453,6 +2465,7 @@ methods:
         - name: randomization_seed
           type: int
           default: 0
+          optional: true
           min: 0
         - name: alpha
           type: double
@@ -2507,9 +2520,11 @@ methods:
           type: int
           default: 2
           min: 1
+          recorded: true
         - name: window_size
           type: int
           min: 2
+          recorded: true
   - method_id: "selection.rep"
     family: "selection.wrapper"
     category: "selection"
@@ -2644,6 +2659,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "selection.shaving"
     family: "selection.wrapper"
@@ -2819,6 +2835,7 @@ methods:
         - name: top_k
           type: int
           min: 1
+          recorded: true
         - name: n_components
           type: int
           default: 2
@@ -2930,6 +2947,7 @@ methods:
         - name: top_k
           type: int
           min: 1
+          recorded: true
         - name: n_components
           type: int
           default: 2
@@ -3048,9 +3066,11 @@ methods:
         - name: mode_j
           type: int
           min: 1
+          recorded: true
         - name: mode_k
           type: int
           min: 1
+          recorded: true
   - method_id: "selection.uve"
     family: "selection.wrapper"
     category: "selection"
@@ -3107,6 +3127,7 @@ methods:
         - name: noise_seed
           type: int
           default: 0
+          optional: true
           min: 0
         - name: min_features
           type: int
@@ -3163,6 +3184,7 @@ methods:
         - name: top_k
           type: int
           min: 1
+          recorded: true
         - name: n_components
           type: int
           default: 2
@@ -3305,6 +3327,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "selection.wvc"
     family: "selection.wrapper"
@@ -3353,6 +3376,7 @@ methods:
         - name: top_k
           type: int
           min: 1
+          recorded: true
         - name: n_components
           type: int
           default: 2
@@ -6277,6 +6301,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.drift.path_length"
     family: "augmentation.drift"
@@ -6334,6 +6359,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.drift.poly_drift"
     family: "augmentation.drift"
@@ -6389,6 +6415,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.edge_artifacts.detector_rolloff"
     family: "augmentation.edge_artifacts"
@@ -6453,6 +6480,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.edge_artifacts.edge_curvature"
     family: "augmentation.edge_artifacts"
@@ -6518,6 +6546,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.edge_artifacts.stray_light"
     family: "augmentation.edge_artifacts"
@@ -6582,6 +6611,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.edge_artifacts.truncated_peak"
     family: "augmentation.edge_artifacts"
@@ -6658,6 +6688,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.environmental.moisture"
     family: "augmentation.environmental"
@@ -6739,6 +6770,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.environmental.temperature"
     family: "augmentation.environmental"
@@ -6814,6 +6846,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.mixup.local_mixup"
     family: "augmentation.mixup"
@@ -6873,6 +6906,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.mixup.mixup"
     family: "augmentation.mixup"
@@ -6928,6 +6962,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.noise.gaussian_noise"
     family: "augmentation.noise"
@@ -6981,6 +7016,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.noise.hetero_noise"
     family: "augmentation.noise"
@@ -7038,6 +7074,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.noise.multiplicative_noise"
     family: "augmentation.noise"
@@ -7091,6 +7128,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.noise.spike_noise"
     family: "augmentation.noise"
@@ -7154,6 +7192,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.random.random_x_op"
     family: "augmentation.random"
@@ -7213,6 +7252,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.random.rotate_translate"
     family: "augmentation.random"
@@ -7268,6 +7308,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.scattering.batch_effect"
     family: "augmentation.scattering"
@@ -7333,6 +7374,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.scattering.dead_band"
     family: "augmentation.scattering"
@@ -7407,6 +7449,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.scattering.emsc_distort"
     family: "augmentation.scattering"
@@ -7481,6 +7524,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.scattering.instrument_broaden"
     family: "augmentation.scattering"
@@ -7551,6 +7595,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.scattering.particle_size"
     family: "augmentation.scattering"
@@ -7633,6 +7678,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.scattering.scatter_sim_msc"
     family: "augmentation.scattering"
@@ -7694,6 +7740,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.spectral.band_mask"
     family: "augmentation.spectral"
@@ -7763,6 +7810,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.spectral.band_perturb"
     family: "augmentation.spectral"
@@ -7836,6 +7884,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.spectral.channel_dropout"
     family: "augmentation.spectral"
@@ -7894,6 +7943,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.spectral.gauss_jitter"
     family: "augmentation.spectral"
@@ -7955,6 +8005,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.spectral.local_clip"
     family: "augmentation.spectral"
@@ -8016,6 +8067,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.spectral.magnitude_warp"
     family: "augmentation.spectral"
@@ -8077,6 +8129,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.spectral.unsharp_mask"
     family: "augmentation.spectral"
@@ -8140,6 +8193,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.splines.spline_curve_simplification"
     family: "augmentation.splines"
@@ -8197,6 +8251,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.splines.spline_smoothing"
     family: "augmentation.splines"
@@ -8246,6 +8301,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.splines.spline_x_perturbations"
     family: "augmentation.splines"
@@ -8309,6 +8365,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.splines.spline_x_simplification"
     family: "augmentation.splines"
@@ -8366,6 +8423,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.splines.spline_y_perturbations"
     family: "augmentation.splines"
@@ -8422,6 +8480,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.wavelength.local_warp"
     family: "augmentation.wavelength"
@@ -8481,6 +8540,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.wavelength.wavelength_shift"
     family: "augmentation.wavelength"
@@ -8538,6 +8598,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "augmentation.wavelength.wavelength_stretch"
     family: "augmentation.wavelength"
@@ -8595,6 +8656,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "splitters.binned_strat_group_kfold"
     family: "splitters"
@@ -8664,6 +8726,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "splitters.kbins_stratified"
     family: "splitters"
@@ -8720,6 +8783,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
         - name: n_bins
           type: int
@@ -8832,6 +8896,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
         - name: max_iter
           type: int
@@ -8890,6 +8955,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "splitters.spxy"
     family: "splitters"
@@ -9117,6 +9183,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "filters.composite"
     family: "filters"
@@ -9373,6 +9440,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
         - name: n_estimators
           type: int
@@ -9653,6 +9721,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "aom_pop.pop_pls"
     family: "aom_pop.aom"
@@ -9833,6 +9902,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
   - method_id: "diagnostics.approximate_press"
     family: "diagnostics.validation"
@@ -10115,22 +10185,28 @@ methods:
           type: int
           default: 2
           min: 1
+          recorded: true
         - name: solver
           type: enum
           choices: [nipals, simpls, orthogonal_scores, kernel_algorithm, wide_kernel, svd, power, randomized_svd]
           default: nipals
+          recorded: true
         - name: center_x
           type: bool
           default: true
+          recorded: true
         - name: scale_x
           type: bool
           default: true
+          recorded: true
         - name: center_y
           type: bool
           default: true
+          recorded: true
         - name: scale_y
           type: bool
           default: true
+          recorded: true
   - method_id: "models.pls.pcr"
     family: "models.pls"
     category: "models"
@@ -10186,18 +10262,23 @@ methods:
           type: int
           default: 2
           min: 1
+          recorded: true
         - name: center_x
           type: bool
           default: true
+          recorded: true
         - name: scale_x
           type: bool
           default: true
+          recorded: true
         - name: center_y
           type: bool
           default: true
+          recorded: true
         - name: scale_y
           type: bool
           default: false
+          recorded: true
   - method_id: "models.pls.pls_fit_simple"
     family: "models.pls"
     category: "models"
@@ -10251,6 +10332,7 @@ methods:
           type: int
           default: 2
           min: 1
+          recorded: true
   - method_id: "models.classification.pls_qda"
     family: "models.classification"
     category: "models"
@@ -10410,6 +10492,7 @@ methods:
           type: enum
           choices: [gaussian, poisson, binomial]
           default: gaussian
+          recorded: true
         - name: max_iter
           type: int
           default: 100
@@ -10525,9 +10608,11 @@ methods:
           type: int
           default: 1
           min: 1
+          recorded: true
         - name: n_unique_per_block
           type: int_array
           min: 0
+          recorded: true
   - method_id: "models.multiblock.so_pls"
     family: "models.multiblock"
     category: "models"
@@ -10998,6 +11083,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
 
   - method_id: "models.ensembles.boosting_pls"
@@ -11118,6 +11204,7 @@ methods:
         - name: seed
           type: int
           default: 0
+          optional: true
           min: 0
 
   - method_id: "models.ensembles.moment_stack"
@@ -11636,6 +11723,7 @@ methods:
         - name: fit_intercept
           type: bool
           default: true
+          recorded: true
         - name: ridge
           type: double
           default: 0.0
@@ -11701,6 +11789,7 @@ methods:
         - name: fit_intercept
           type: bool
           default: true
+          recorded: true
         - name: ridge
           type: double
           default: 0.0
@@ -11762,6 +11851,7 @@ methods:
         - name: fit_intercept
           type: bool
           default: true
+          recorded: true
         - name: ridge
           type: double
           default: 0.0
@@ -12502,6 +12592,7 @@ methods:
         - name: fit_intercept
           type: bool
           default: true
+          recorded: true
         - name: ridge
           type: double
           default: 0.0

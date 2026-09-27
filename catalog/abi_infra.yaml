@@ -2,6 +2,7 @@ infra_abi_symbols:
   - n4m_context_set_max_state_bytes
   - n4m_estimator_apply_mask
   - n4m_estimator_classes
+  - n4m_estimator_contains_training_rows
   - n4m_estimator_create
   - n4m_estimator_decision_function
   - n4m_estimator_destroy

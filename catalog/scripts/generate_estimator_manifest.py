@@ -129,6 +129,11 @@ def parse_param(method_id: str, raw: dict[str, Any]) -> dict[str, Any]:
         v = default[0]
         if (not math.isnan(lo) and v < lo) or (not math.isnan(hi) and v > hi):
             raise ManifestError(f"{method_id}.{name}: default {v} outside [{lo}, {hi}]")
+    optional = flag(method_id, name, raw, "optional")
+    if optional and (default is None or ptype not in ("int", "double")):
+        raise ManifestError(
+            f"{method_id}.{name}: an optional param is a scalar with the default the core uses when unset"
+        )
     return {
         "name": name,
         "type": ptype,
@@ -136,7 +141,16 @@ def parse_param(method_id: str, raw: dict[str, Any]) -> dict[str, Any]:
         "min": lo,
         "max": hi,
         "choices": choices,
+        "optional": optional,
+        "recorded": flag(method_id, name, raw, "recorded"),
     }
+
+
+def flag(method_id: str, name: str, raw: dict[str, Any], key: str) -> bool:
+    value = str(raw.get(key, "false"))
+    if value not in ("true", "false", "True", "False"):
+        raise ManifestError(f"{method_id}.{name}: {key} must be true/false")
+    return value in ("true", "True")
 
 
 def load_specs() -> list[dict[str, Any]]:
@@ -266,7 +280,8 @@ def render(specs: list[dict[str, Any]]) -> str:
                 out.append(
                     f"    {{{c_string(p['name'])}, {PARAM_TYPES[p['type']]}, {'true' if d is not None else 'false'}, "
                     f"{d_int}, {d_dbl}, {len(d) if d is not None else 0}, {c_double(p['min'])}, "
-                    f"{c_double(p['max'])}, {choices}, {len(p['choices'])}}},"
+                    f"{c_double(p['max'])}, {choices}, {len(p['choices'])}, "
+                    f"{'true' if p['optional'] else 'false'}, {'true' if p['recorded'] else 'false'}}},"
                 )
             out.append("};")
     out.append("")

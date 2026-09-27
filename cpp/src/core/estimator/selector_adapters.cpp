@@ -90,11 +90,21 @@ std::uint64_t get_u64(const unsigned char* p) {
 }
 
 // Selectors whose kernel returns a MethodResult with int64 "selected_indices".
+// What the parameters guarantee about a fitted selection of p input columns
+// (true when the selection is one the kernel can return); `name` is the
+// parameter a contradiction is reported under.
+struct SelectionRule {
+    const char* name = nullptr;
+    std::function<bool(const Params&, std::int64_t p, const std::vector<std::int64_t>& selected)>
+        holds;
+};
+
 class SelectorAdapter final : public Adapter {
   public:
     using FitFn = std::function<n4m_status_t(n4m_context_t*, const Params&, const FitInputs&,
                                              n4m_method_result_t**)>;
-    explicit SelectorAdapter(FitFn fit_fn) : fit_fn_(std::move(fit_fn)) {}
+    explicit SelectorAdapter(FitFn fit_fn, SelectionRule rule = {})
+        : fit_fn_(std::move(fit_fn)), rule_(std::move(rule)) {}
 
     std::uint64_t capabilities() const noexcept override {
         return N4M_CAP_TRANSFORM | N4M_CAP_SELECTED_INDICES | N4M_CAP_SERIALIZABLE;
@@ -190,6 +200,13 @@ class SelectorAdapter final : public Adapter {
         return N4M_OK;
     }
 
+    // Size parameters (top_k, min_features, ...) bound or fix the number of
+    // selected columns; the selection itself is data-driven.
+    n4m_status_t check_params(n4m_context_t* ctx, const Params& params) const override {
+        if (!rule_.holds || rule_.holds(params, n_features_, selected_)) return N4M_OK;
+        return contradicts(ctx, rule_.name);
+    }
+
   private:
     static n4m_status_t validate(n4m_context_t* ctx, const std::vector<std::int64_t>& selected,
                                  std::int64_t p) {
@@ -209,6 +226,7 @@ class SelectorAdapter final : public Adapter {
     }
 
     FitFn fit_fn_;
+    SelectionRule rule_;
     std::vector<std::int64_t> selected_;
     std::int64_t n_features_ = 0;
     ResultPtr result_;
@@ -266,7 +284,7 @@ using ConfigKernel = std::function<n4m_status_t(n4m_context_t*, const n4m_config
                                                 n4m_method_result_t**)>;
 
 // Kernels taking (config, internal-CV plan).
-std::unique_ptr<Adapter> with_plan(PlanKernel kernel) {
+std::unique_ptr<Adapter> with_plan(PlanKernel kernel, SelectionRule rule = {}) {
     return std::make_unique<SelectorAdapter>(
         [kernel](n4m_context_t* ctx, const Params& p, const FitInputs& in,
                  n4m_method_result_t** out) {
@@ -276,18 +294,153 @@ std::unique_ptr<Adapter> with_plan(PlanKernel kernel) {
             PlanPtr plan;
             st = make_plan(ctx, in, p.get_int("cv"), plan);
             return st != N4M_OK ? st : kernel(ctx, cfg.get(), plan.get(), p, in, out);
-        });
+        },
+        std::move(rule));
 }
 
 // Kernels taking a config but no plan.
-std::unique_ptr<Adapter> with_config(ConfigKernel kernel) {
+std::unique_ptr<Adapter> with_config(ConfigKernel kernel, SelectionRule rule = {}) {
     return std::make_unique<SelectorAdapter>(
         [kernel](n4m_context_t* ctx, const Params& p, const FitInputs& in,
                  n4m_method_result_t** out) {
             ConfigPtr cfg;
             n4m_status_t st = selector_config(p, false, cfg);
             return st != N4M_OK ? st : kernel(ctx, cfg.get(), p, in, out);
-        });
+        },
+        std::move(rule));
+}
+
+std::int64_t count(const std::vector<std::int64_t>& selected) {
+    return static_cast<std::int64_t>(selected.size());
+}
+
+// A size parameter whose 0 means n_components.
+std::int64_t or_n_components(const Params& p, const char* name) {
+    const std::int64_t v = p.get_int(name);
+    return v == 0 ? p.get_int("n_components") : v;
+}
+
+using Selected = std::vector<std::int64_t>;
+
+// The kernel keeps exactly top_k columns.
+SelectionRule exactly_top_k() {
+    return {"top_k", [](const Params& p, std::int64_t, const Selected& s) {
+                return count(s) == p.get_int("top_k");
+            }};
+}
+
+// VIP-SPA keeps at most top_k columns (fewer when few pass the VIP cut).
+SelectionRule at_most_top_k() {
+    return {"top_k", [](const Params& p, std::int64_t, const Selected& s) {
+                return count(s) <= p.get_int("top_k");
+            }};
+}
+
+// At least the resolved minimum (0 means n_components).
+SelectionRule at_least(const char* name) {
+    return {name, [name](const Params& p, std::int64_t, const Selected& s) {
+                return count(s) >= or_n_components(p, name);
+            }};
+}
+
+// UVE completes a short selection to min_features (negative: n_components,
+// 0: no minimum), within the p columns.
+SelectionRule uve_minimum() {
+    return {"min_features", [](const Params& p, std::int64_t n_features, const Selected& s) {
+                const std::int64_t v = p.get_int("min_features");
+                return count(s) >= std::min(v < 0 ? p.get_int("n_components") : v, n_features);
+            }};
+}
+
+// GA individuals stay within [min_features, max_features] (0: n_components,
+// 0: p).
+SelectionRule ga_range() {
+    return {"min_features, max_features",
+            [](const Params& p, std::int64_t n_features, const Selected& s) {
+                const std::int64_t hi = p.get_int("max_features");
+                return count(s) >= or_n_components(p, "min_features") &&
+                       count(s) <= (hi == 0 ? n_features : hi);
+            }};
+}
+
+// Every PSO mask is repaired to at least n_components columns.
+SelectionRule pso_minimum() {
+    return {"n_components", [](const Params& p, std::int64_t, const Selected& s) {
+                return count(s) >= p.get_int("n_components");
+            }};
+}
+
+// BVE removes one column per step.
+SelectionRule bve_steps() {
+    return {"n_steps", [](const Params& p, std::int64_t n_features, const Selected& s) {
+                return n_features - count(s) <= p.get_int("n_steps");
+            }};
+}
+
+// REP step t keeps max(m, p - t remove_count) columns, t < n_steps.
+SelectionRule rep_sizes() {
+    return {"n_steps, min_features, remove_count",
+            [](const Params& p, std::int64_t n_features, const Selected& s) {
+                const std::int64_t m = or_n_components(p, "min_features");
+                const std::int64_t r = p.get_int("remove_count");
+                const std::int64_t steps = p.get_int("n_steps");
+                const std::int64_t removed = n_features - count(s);
+                if (count(s) == m) {
+                    return m >= n_features || (n_features - m) / r + ((n_features - m) % r != 0) < steps;
+                }
+                return count(s) > m && removed % r == 0 && removed / r < steps;
+            }};
+}
+
+// Whole blocks [b w, min((b + 1) w, p)) of w = interval_width columns: the
+// number of blocks the selection covers, or -1 when it covers part of one.
+std::int64_t whole_blocks(const Params& p, std::int64_t n_features, const Selected& selected) {
+    const std::int64_t w = p.get_int("interval_width");
+    const std::int64_t n_blocks = n_features / w + (n_features % w != 0 ? 1 : 0);
+    std::vector<std::int64_t> per_block(static_cast<std::size_t>(n_blocks), 0);
+    for (std::int64_t j : selected) ++per_block[static_cast<std::size_t>(j / w)];
+    std::int64_t blocks = 0;
+    for (std::int64_t b = 0; b < n_blocks; ++b) {
+        const std::int64_t in_block = per_block[static_cast<std::size_t>(b)];
+        if (in_block != 0 && in_block != std::min(w, n_features - b * w)) return -1;
+        blocks += in_block != 0 ? 1 : 0;
+    }
+    return blocks;
+}
+
+// biPLS keeps whole intervals, at least min_intervals of them.
+SelectionRule bipls_blocks() {
+    return {"interval_width, min_intervals",
+            [](const Params& p, std::int64_t n_features, const Selected& s) {
+                return whole_blocks(p, n_features, s) >= p.get_int("min_intervals");
+            }};
+}
+
+// siPLS keeps exactly combination_size whole intervals.
+SelectionRule sipls_blocks() {
+    return {"interval_width, combination_size",
+            [](const Params& p, std::int64_t n_features, const Selected& s) {
+                return whole_blocks(p, n_features, s) == p.get_int("combination_size");
+            }};
+}
+
+// IRF keeps the union of top_k distinct windows of window_size columns:
+// window_size + top_k - 1 <= k <= min(top_k window_size, p).
+SelectionRule irf_windows() {
+    return {"top_k, window_size", [](const Params& p, std::int64_t, const Selected& s) {
+                const std::int64_t k = p.get_int("top_k");
+                const std::int64_t w = p.get_int("window_size");
+                return count(s) - w >= k - 1 && (count(s) + w - 1) / w <= k;
+            }};
+}
+
+// Variance / correlation filters: top_k >= 1 keeps min(top_k, p) columns;
+// otherwise the threshold decides.
+SelectionRule filter_top_k() {
+    return {"top_k", [](const Params& p, std::int64_t n_features, const Selected& s) {
+                const std::int64_t k = p.get_int("top_k");
+                return k < 1 || count(s) == std::min(k, n_features);
+            }};
 }
 
 }  // namespace
@@ -295,7 +448,8 @@ std::unique_ptr<Adapter> with_config(ConfigKernel kernel) {
 std::unique_ptr<Adapter> make_select_spa(const MethodSpec&) {
     return with_config([](auto ctx, auto cfg, const Params& p, const FitInputs& in, auto out) {
         return n4m_feature_selection_spa_select(ctx, cfg, in.X, in.Y, i32(p.get_int("top_k")), out);
-    });
+    },
+                     exactly_top_k());
 }
 
 std::unique_ptr<Adapter> make_select_vip_spa(const MethodSpec&) {
@@ -303,7 +457,8 @@ std::unique_ptr<Adapter> make_select_vip_spa(const MethodSpec&) {
         return n4m_feature_selection_vip_spa_select(ctx, cfg, in.X, in.Y,
                                                     p.get_double("vip_threshold"),
                                                     i32(p.get_int("top_k")), out);
-    });
+    },
+                     at_most_top_k());
 }
 
 std::unique_ptr<Adapter> make_select_randomization(const MethodSpec&) {
@@ -319,7 +474,8 @@ std::unique_ptr<Adapter> make_select_stability(const MethodSpec&) {
                         auto out) {
         return n4m_feature_selection_stability_select(ctx, cfg, in.X, in.Y, plan,
                                                       i32(p.get_int("top_k")), out);
-    });
+    },
+                     exactly_top_k());
 }
 
 // When UVE keeps fewer than min_features columns (-1 means n_components, 0
@@ -362,7 +518,8 @@ std::unique_ptr<Adapter> make_select_uve(const MethodSpec&) {
             }
         }
         return N4M_OK;
-    });
+    },
+                     uve_minimum());
 }
 
 std::unique_ptr<Adapter> make_select_cars(const MethodSpec&) {
@@ -371,7 +528,8 @@ std::unique_ptr<Adapter> make_select_cars(const MethodSpec&) {
         return n4m_feature_selection_cars_select(ctx, cfg, in.X, in.Y, plan,
                                                  i32(p.get_int("n_iterations")),
                                                  or_components(p, "min_features"), out);
-    });
+    },
+                     at_least("min_features"));
 }
 
 std::unique_ptr<Adapter> make_select_random_frog(const MethodSpec&) {
@@ -381,7 +539,8 @@ std::unique_ptr<Adapter> make_select_random_frog(const MethodSpec&) {
             ctx, cfg, in.X, in.Y, plan, i32(p.get_int("n_iterations")),
             i32(p.get_int("initial_size")), or_components(p, "min_size"),
             or_features(p, "max_size", in), i32(p.get_int("top_k")), u64(p, "seed"), out);
-    });
+    },
+                     exactly_top_k());
 }
 
 std::unique_ptr<Adapter> make_select_scars(const MethodSpec&) {
@@ -391,7 +550,8 @@ std::unique_ptr<Adapter> make_select_scars(const MethodSpec&) {
             ctx, cfg, in.X, in.Y, plan, i32(p.get_int("n_iterations")),
             or_components(p, "min_features"), p.get_double("sample_fraction"), u64(p, "seed"),
             out);
-    });
+    },
+                     at_least("min_features"));
 }
 
 std::unique_ptr<Adapter> make_select_ga(const MethodSpec&) {
@@ -402,7 +562,8 @@ std::unique_ptr<Adapter> make_select_ga(const MethodSpec&) {
             i32(p.get_int("population_size")), or_components(p, "min_features"),
             or_features(p, "max_features", in), p.get_double("mutation_rate"), u64(p, "seed"),
             out);
-    });
+    },
+                     ga_range());
 }
 
 std::unique_ptr<Adapter> make_select_pso(const MethodSpec&) {
@@ -412,7 +573,8 @@ std::unique_ptr<Adapter> make_select_pso(const MethodSpec&) {
             ctx, cfg, in.X, in.Y, plan, i32(p.get_int("n_swarm")), i32(p.get_int("n_iterations")),
             p.get_double("w"), p.get_double("c1"), p.get_double("c2"), p.get_double("v_max"),
             u64(p, "seed"), out);
-    });
+    },
+                     pso_minimum());
 }
 
 std::unique_ptr<Adapter> make_select_vissa(const MethodSpec&) {
@@ -431,7 +593,8 @@ std::unique_ptr<Adapter> make_select_shaving(const MethodSpec&) {
         return n4m_feature_selection_shaving_select(
             ctx, cfg, in.X, in.Y, plan, i32(p.get_int("n_steps")),
             or_components(p, "min_features"), p.get_double("shave_fraction"), out);
-    });
+    },
+                     at_least("min_features"));
 }
 
 std::unique_ptr<Adapter> make_select_bve(const MethodSpec&) {
@@ -440,7 +603,8 @@ std::unique_ptr<Adapter> make_select_bve(const MethodSpec&) {
         return n4m_feature_selection_bve_select(ctx, cfg, in.X, in.Y, plan,
                                                 i32(p.get_int("n_steps")),
                                                 or_components(p, "min_features"), out);
-    });
+    },
+                     bve_steps());
 }
 
 std::unique_ptr<Adapter> make_select_rep(const MethodSpec&) {
@@ -449,7 +613,8 @@ std::unique_ptr<Adapter> make_select_rep(const MethodSpec&) {
         return n4m_feature_selection_rep_select(
             ctx, cfg, in.X, in.Y, plan, i32(p.get_int("n_steps")),
             or_components(p, "min_features"), i32(p.get_int("remove_count")), out);
-    });
+    },
+                     rep_sizes());
 }
 
 std::unique_ptr<Adapter> make_select_ipw(const MethodSpec&) {
@@ -458,7 +623,8 @@ std::unique_ptr<Adapter> make_select_ipw(const MethodSpec&) {
         return n4m_feature_selection_ipw_select(
             ctx, cfg, in.X, in.Y, plan, i32(p.get_int("n_iterations")), i32(p.get_int("top_k")),
             p.get_double("damping"), p.get_double("weight_floor"), out);
-    });
+    },
+                     exactly_top_k());
 }
 
 std::unique_ptr<Adapter> make_select_st(const MethodSpec&) {
@@ -468,7 +634,8 @@ std::unique_ptr<Adapter> make_select_st(const MethodSpec&) {
         return n4m_feature_selection_st_select(
             ctx, cfg, in.X, in.Y, plan, thresholds.data(),
             static_cast<std::int64_t>(thresholds.size()), or_components(p, "min_selected"), out);
-    });
+    },
+                     at_least("min_selected"));
 }
 
 std::unique_ptr<Adapter> make_select_t2(const MethodSpec&) {
@@ -478,7 +645,8 @@ std::unique_ptr<Adapter> make_select_t2(const MethodSpec&) {
         return n4m_feature_selection_t2_select(
             ctx, cfg, in.X, in.Y, plan, alphas.data(), static_cast<std::int64_t>(alphas.size()),
             or_components(p, "min_selected"), out);
-    });
+    },
+                     at_least("min_selected"));
 }
 
 std::unique_ptr<Adapter> make_select_bipls(const MethodSpec&) {
@@ -487,7 +655,8 @@ std::unique_ptr<Adapter> make_select_bipls(const MethodSpec&) {
         return n4m_feature_selection_bipls_select(ctx, cfg, in.X, in.Y, plan,
                                                   i32(p.get_int("interval_width")),
                                                   i32(p.get_int("min_intervals")), out);
-    });
+    },
+                     bipls_blocks());
 }
 
 std::unique_ptr<Adapter> make_select_sipls(const MethodSpec&) {
@@ -496,7 +665,8 @@ std::unique_ptr<Adapter> make_select_sipls(const MethodSpec&) {
         return n4m_feature_selection_sipls_select(ctx, cfg, in.X, in.Y, plan,
                                                   i32(p.get_int("interval_width")),
                                                   i32(p.get_int("combination_size")), out);
-    });
+    },
+                     sipls_blocks());
 }
 
 std::unique_ptr<Adapter> make_select_emcuve(const MethodSpec&) {
@@ -524,7 +694,8 @@ std::unique_ptr<Adapter> make_select_irf(const MethodSpec&) {
             ctx, cfg, in.X, in.Y, plan, i32(p.get_int("n_iterations")),
             i32(p.get_int("window_size")), i32(p.get_int("initial_intervals")),
             i32(p.get_int("top_k")), u64(p, "seed"), out);
-    });
+    },
+                     irf_windows());
 }
 
 // Weighted variable combination takes no config: n_components is explicit.
@@ -534,7 +705,8 @@ std::unique_ptr<Adapter> make_select_wvc(const MethodSpec&) {
             return n4m_feature_selection_wvc_select(ctx, in.X, in.Y, i32(p.get_int("n_components")),
                                                     i32(p.get_int("top_k")),
                                                     p.get_bool("normalize") ? 1 : 0, out);
-        });
+        },
+        exactly_top_k());
 }
 
 std::unique_ptr<Adapter> make_select_wvc_threshold(const MethodSpec&) {
@@ -544,7 +716,8 @@ std::unique_ptr<Adapter> make_select_wvc_threshold(const MethodSpec&) {
                 ctx, in.X, in.Y, i32(p.get_int("n_components")), p.get_bool("normalize") ? 1 : 0,
                 p.get_double("score_threshold"), p.get_double("threshold_factor"),
                 or_components(p, "min_selected"), out);
-        });
+        },
+        at_least("min_selected"));
 }
 
 // Ranks the variables of a PLS model fitted with stored scores (VIP,
@@ -562,7 +735,8 @@ std::unique_ptr<Adapter> make_select_variable_rank(const MethodSpec&) {
             return n4m_feature_selection_variable_select_rank(
                 ctx, model.get(), in.X, i32(p.get_int("rank_method")), i32(p.get_int("top_k")),
                 out);
-        });
+        },
+        exactly_top_k());
 }
 
 namespace {
@@ -591,7 +765,8 @@ std::unique_ptr<Adapter> column_filter(
             result->set_int64_vector("selected_indices", std::move(indices));
             *out = result.release();
             return N4M_OK;
-        });
+        },
+        filter_top_k());
 }
 
 }  // namespace

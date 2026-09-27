@@ -16,6 +16,7 @@
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/spec.hpp"
 #include "core/estimator/state_io.hpp"
+#include "core/model.hpp"
 
 namespace n4m::estimator {
 
@@ -138,6 +139,31 @@ class ModelAdapter : public Adapter {
         model_.reset(model);
         result_.reset();
         return N4M_OK;
+    }
+
+    // A latent (PLS/PCR) model records its fit configuration; the affine
+    // predictors keep coefficients only, so their parameters are provenance,
+    // except the N-PLS unfolding of X into mode_j x mode_k columns.
+    n4m_status_t check_params(n4m_context_t* ctx, const Params& params) const override {
+        if ((caps_ & N4M_CAP_TRANSFORM) == 0) {
+            if (param_index(params.spec(), "mode_j") >= 0) {
+                const std::int64_t j = params.get_int("mode_j");
+                if (n_features_in() % j != 0 || n_features_in() / j != params.get_int("mode_k")) {
+                    return contradicts(ctx, "mode_j x mode_k");
+                }
+            }
+            return N4M_OK;
+        }
+        const core::Model& m = *model_;
+        n4m_status_t st = check_int(ctx, params, "n_components", m.n_components);
+        if (st == N4M_OK) st = check_int(ctx, params, "solver", m.solver);
+        if (st == N4M_OK) st = check_int(ctx, params, "center_x", m.center_x);
+        if (st == N4M_OK) st = check_int(ctx, params, "scale_x", m.scale_x);
+        if (st == N4M_OK) st = check_int(ctx, params, "center_y", m.center_y);
+        if (st == N4M_OK) st = check_int(ctx, params, "scale_y", m.scale_y);
+        // Recursive PLS keeps the model of its last window.
+        if (st == N4M_OK) st = check_int(ctx, params, "window_size", m.n_samples);
+        return st;
     }
 
   protected:

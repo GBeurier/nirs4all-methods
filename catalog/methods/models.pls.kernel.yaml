@@ -53,6 +53,7 @@ estimator:
       type: "double"
       default: 0.0
       min: 0.0
+      recorded: true
     - name: "coef0"
       type: "double"
       default: 1.0

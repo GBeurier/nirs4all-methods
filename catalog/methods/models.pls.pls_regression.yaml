@@ -47,22 +47,28 @@ estimator:
       type: "int"
       default: 2
       min: 1
+      recorded: true
     - name: "solver"
       type: "enum"
       choices: "[nipals, simpls, orthogonal_scores, kernel_algorithm, wide_kernel, svd, power, randomized_svd]"
       default: "nipals"
+      recorded: true
     - name: "center_x"
       type: "bool"
       default: true
+      recorded: true
     - name: "scale_x"
       type: "bool"
       default: true
+      recorded: true
     - name: "center_y"
       type: "bool"
       default: true
+      recorded: true
     - name: "scale_y"
       type: "bool"
       default: true
+      recorded: true
 fq_name: "n4m.estimators.regression.latent.pls_regression"
 leaf: "pls_regression"
 legacy_ids:

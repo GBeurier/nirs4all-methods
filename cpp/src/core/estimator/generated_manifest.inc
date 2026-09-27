@@ -12,16 +12,16 @@ const std::int64_t kDefault_aom_pop_aom_chain_fixed_fit_scale_y[] = {1};
 const std::int64_t kDefault_aom_pop_aom_chain_fixed_fit_moment_policy[] = {0};
 const char* const kChoices_aom_pop_aom_chain_fixed_fit_moment_policy[] = {"auto", "materialized", "force"};
 const ParamSpec kParams_aom_pop_aom_chain_fixed_fit[] = {
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0},
-    {"chain_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_fixed_fit_chain_params, 0, kNaN, kNaN, nullptr, 0},
-    {"head", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_chain_fixed_fit_head, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_chain_fixed_fit_head, 2},
-    {"param", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_aom_chain_fixed_fit_param, 1, 0.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_fixed_fit_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_fixed_fit_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_fixed_fit_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_fixed_fit_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_chain_fixed_fit_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_chain_fixed_fit_moment_policy, 3},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0, false, false},
+    {"chain_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_fixed_fit_chain_params, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"head", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_chain_fixed_fit_head, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_chain_fixed_fit_head, 2, false, false},
+    {"param", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_aom_chain_fixed_fit_param, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_fixed_fit_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_fixed_fit_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_fixed_fit_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_fixed_fit_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_chain_fixed_fit_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_chain_fixed_fit_moment_policy, 3, false, false},
 };
 const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_chain_offsets[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 15};
 const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15, 7, 9, 7, 10, 8, 15};
@@ -33,15 +33,15 @@ const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_cv[] = {5};
 const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_center_x[] = {1};
 const std::int64_t kDefault_aom_pop_aom_chain_ridge_pls_center_y[] = {1};
 const ParamSpec kParams_aom_pop_aom_chain_ridge_pls[] = {
-    {"chain_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_chain_offsets, nullptr, 13, 0.0, kNaN, nullptr, 0},
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_op_kinds, nullptr, 15, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_param_offsets, nullptr, 16, 0.0, kNaN, nullptr, 0},
-    {"chain_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_ridge_pls_chain_params, 27, kNaN, kNaN, nullptr, 0},
-    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_pls_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_ridge_pls_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_chain_ridge_pls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_ridge_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_ridge_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"chain_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_chain_offsets, nullptr, 13, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_op_kinds, nullptr, 15, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_param_offsets, nullptr, 16, 0.0, kNaN, nullptr, 0, false, false},
+    {"chain_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_ridge_pls_chain_params, 27, kNaN, kNaN, nullptr, 0, false, false},
+    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_ridge_pls_pls_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_ridge_pls_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_chain_ridge_pls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_ridge_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_ridge_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_aom_pop_aom_chain_sweep_chain_params[] = {0};
 const std::int64_t kDefault_aom_pop_aom_chain_sweep_cv[] = {5};
@@ -56,19 +56,19 @@ const std::int64_t kDefault_aom_pop_aom_chain_sweep_scale_y[] = {1};
 const std::int64_t kDefault_aom_pop_aom_chain_sweep_moment_policy[] = {0};
 const char* const kChoices_aom_pop_aom_chain_sweep_moment_policy[] = {"auto", "materialized", "force"};
 const ParamSpec kParams_aom_pop_aom_chain_sweep[] = {
-    {"chain_offsets", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0},
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0},
-    {"chain_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_sweep_chain_params, 0, kNaN, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_chain_sweep_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_sweep_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0},
-    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_sweep_pls_components, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"heads", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_chain_sweep_heads, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_chain_sweep_heads, 3},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_sweep_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_sweep_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_sweep_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_sweep_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_chain_sweep_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_chain_sweep_moment_policy, 3},
+    {"chain_offsets", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0, false, false},
+    {"chain_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_sweep_chain_params, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_chain_sweep_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_chain_sweep_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_chain_sweep_pls_components, nullptr, 0, 1.0, kNaN, nullptr, 0, false, false},
+    {"heads", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_chain_sweep_heads, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_chain_sweep_heads, 3, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_sweep_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_sweep_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_sweep_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_chain_sweep_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_chain_sweep_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_chain_sweep_moment_policy, 3, false, false},
 };
 const std::int64_t kDefault_aom_pop_aom_pls_max_components[] = {3};
 const std::int64_t kDefault_aom_pop_aom_pls_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
@@ -80,15 +80,15 @@ const std::int64_t kDefault_aom_pop_aom_pls_scale_x[] = {1};
 const std::int64_t kDefault_aom_pop_aom_pls_center_y[] = {1};
 const std::int64_t kDefault_aom_pop_aom_pls_scale_y[] = {1};
 const ParamSpec kParams_aom_pop_aom_pls[] = {
-    {"max_components", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_pls_max_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
-    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_pls_op_params, 16, kNaN, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_pls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"max_components", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_pls_max_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_pls_op_params, 16, kNaN, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_pls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_aom_pls_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
 const std::int64_t kDefault_aom_pop_aom_pls_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
@@ -100,14 +100,14 @@ const char* const kChoices_aom_pop_aom_pls_superblock_block_scaling[] = {"rms", 
 const std::int64_t kDefault_aom_pop_aom_pls_superblock_center_x[] = {1};
 const std::int64_t kDefault_aom_pop_aom_pls_superblock_center_y[] = {1};
 const ParamSpec kParams_aom_pop_aom_pls_superblock[] = {
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
-    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_pls_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
-    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_superblock_pls_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_pls_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_pls_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_pls_superblock_block_scaling, 2},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_pls_superblock_op_params, 16, kNaN, kNaN, nullptr, 0, false, false},
+    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_pls_superblock_pls_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_pls_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_pls_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_pls_superblock_block_scaling, 2, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_pls_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_aom_preprocessing_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
 const std::int64_t kDefault_aom_pop_aom_preprocessing_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
@@ -115,10 +115,10 @@ const double kDefault_aom_pop_aom_preprocessing_op_params[] = {1.0, 2.0, 5.0, 2.
 const std::int64_t kDefault_aom_pop_aom_preprocessing_gating_mode[] = {1};
 const char* const kChoices_aom_pop_aom_preprocessing_gating_mode[] = {"hard", "soft"};
 const ParamSpec kParams_aom_pop_aom_preprocessing[] = {
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_preprocessing_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_preprocessing_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
-    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_preprocessing_op_params, 16, kNaN, kNaN, nullptr, 0},
-    {"gating_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_preprocessing_gating_mode, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_preprocessing_gating_mode, 2},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_preprocessing_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_preprocessing_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_preprocessing_op_params, 16, kNaN, kNaN, nullptr, 0, false, false},
+    {"gating_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_preprocessing_gating_mode, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_preprocessing_gating_mode, 2, false, false},
 };
 const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
 const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
@@ -130,14 +130,14 @@ const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_block_scaling[] = {
 const char* const kChoices_aom_pop_aom_ridge_pls_superblock_block_scaling[] = {"rms", "none"};
 const std::int64_t kDefault_aom_pop_aom_ridge_pls_superblock_center_x[] = {1};
 const ParamSpec kParams_aom_pop_aom_ridge_pls_superblock[] = {
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_ridge_pls_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_ridge_pls_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
-    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_ridge_pls_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
-    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_ridge_pls_superblock_pls_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_ridge_pls_superblock_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_ridge_pls_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_ridge_pls_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_ridge_pls_superblock_block_scaling, 2},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_ridge_pls_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_ridge_pls_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_ridge_pls_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_ridge_pls_superblock_op_params, 16, kNaN, kNaN, nullptr, 0, false, false},
+    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_ridge_pls_superblock_pls_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_ridge_pls_superblock_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_ridge_pls_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_ridge_pls_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_ridge_pls_superblock_block_scaling, 2, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_ridge_pls_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_aom_sweep_profile[] = {0};
 const char* const kChoices_aom_pop_aom_sweep_profile[] = {"compact", "wide"};
@@ -153,16 +153,16 @@ const std::int64_t kDefault_aom_pop_aom_sweep_scale_y[] = {1};
 const std::int64_t kDefault_aom_pop_aom_sweep_moment_policy[] = {0};
 const char* const kChoices_aom_pop_aom_sweep_moment_policy[] = {"auto", "materialized", "force"};
 const ParamSpec kParams_aom_pop_aom_sweep[] = {
-    {"profile", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_sweep_profile, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_sweep_profile, 2},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_sweep_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_sweep_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0},
-    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_sweep_pls_components, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"heads", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_sweep_heads, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_sweep_heads, 3},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_sweep_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_sweep_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_sweep_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_sweep_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_sweep_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_sweep_moment_policy, 3},
+    {"profile", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_sweep_profile, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_sweep_profile, 2, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_aom_sweep_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_aom_sweep_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_aom_sweep_pls_components, nullptr, 0, 1.0, kNaN, nullptr, 0, false, false},
+    {"heads", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_sweep_heads, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_sweep_heads, 3, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_sweep_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_sweep_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_sweep_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_aom_sweep_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_aom_sweep_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_aom_sweep_moment_policy, 3, false, false},
 };
 const std::int64_t kDefault_aom_pop_calibration_head[] = {0};
 const char* const kChoices_aom_pop_calibration_head[] = {"pls", "ridge"};
@@ -174,19 +174,19 @@ const std::int64_t kDefault_aom_pop_calibration_branches[] = {0, 1, 2};
 const std::int64_t kDefault_aom_pop_calibration_max_depth[] = {1};
 const std::int64_t kDefault_aom_pop_calibration_rank[] = {200};
 const ParamSpec kParams_aom_pop_calibration[] = {
-    {"head", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_calibration_head, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_calibration_head, 2},
-    {"fast", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_calibration_fast, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"max_components", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_calibration_max_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_calibration_alphas, 0, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_calibration_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"branches", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_calibration_branches, nullptr, 3, 0.0, 2.0, nullptr, 0},
-    {"max_depth", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_calibration_max_depth, nullptr, 1, 1.0, 3.0, nullptr, 0},
-    {"rank", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_calibration_rank, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"head", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_calibration_head, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_calibration_head, 2, false, false},
+    {"fast", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_calibration_fast, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"max_components", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_calibration_max_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_calibration_alphas, 0, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_calibration_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"branches", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_calibration_branches, nullptr, 3, 0.0, 2.0, nullptr, 0, false, false},
+    {"max_depth", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_calibration_max_depth, nullptr, 1, 1.0, 3.0, nullptr, 0, false, false},
+    {"rank", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_calibration_rank, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const ParamSpec kParams_aom_pop_linear_stack_compress[] = {
-    {"base_intercepts", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
-    {"meta_weights", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
-    {"meta_intercept", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
+    {"base_intercepts", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"meta_weights", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"meta_intercept", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_operator_pls_stack_profile[] = {0};
 const char* const kChoices_aom_pop_operator_pls_stack_profile[] = {"compact", "wide"};
@@ -200,16 +200,16 @@ const std::int64_t kDefault_aom_pop_operator_pls_stack_scale_x[] = {1};
 const std::int64_t kDefault_aom_pop_operator_pls_stack_center_y[] = {1};
 const std::int64_t kDefault_aom_pop_operator_pls_stack_scale_y[] = {1};
 const ParamSpec kParams_aom_pop_operator_pls_stack[] = {
-    {"profile", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_operator_pls_stack_profile, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_operator_pls_stack_profile, 2},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_operator_pls_stack_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_operator_pls_stack_components, nullptr, 3, 1.0, kNaN, nullptr, 0},
-    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_operator_pls_stack_alphas, 6, 0.0, kNaN, nullptr, 0},
-    {"std_penalty", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_operator_pls_stack_std_penalty, 1, 0.0, kNaN, nullptr, 0},
-    {"gap_penalty", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_operator_pls_stack_gap_penalty, 1, 0.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_operator_pls_stack_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_operator_pls_stack_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_operator_pls_stack_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_operator_pls_stack_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"profile", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_operator_pls_stack_profile, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_operator_pls_stack_profile, 2, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_operator_pls_stack_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_operator_pls_stack_components, nullptr, 3, 1.0, kNaN, nullptr, 0, false, false},
+    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_operator_pls_stack_alphas, 6, 0.0, kNaN, nullptr, 0, false, false},
+    {"std_penalty", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_operator_pls_stack_std_penalty, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"gap_penalty", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_operator_pls_stack_gap_penalty, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_operator_pls_stack_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_operator_pls_stack_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_operator_pls_stack_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_operator_pls_stack_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_pop_pls_max_components[] = {3};
 const std::int64_t kDefault_aom_pop_pop_pls_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
@@ -221,15 +221,15 @@ const std::int64_t kDefault_aom_pop_pop_pls_scale_x[] = {1};
 const std::int64_t kDefault_aom_pop_pop_pls_center_y[] = {1};
 const std::int64_t kDefault_aom_pop_pop_pls_scale_y[] = {1};
 const ParamSpec kParams_aom_pop_pop_pls[] = {
-    {"max_components", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_pop_pls_max_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_pop_pls_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_pop_pls_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
-    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_pop_pls_op_params, 16, kNaN, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_pop_pls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"max_components", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_pop_pls_max_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_pop_pls_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_pop_pls_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_pop_pls_op_params, 16, kNaN, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_pop_pls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_pop_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_ridge_active_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
 const std::int64_t kDefault_aom_pop_ridge_active_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
@@ -247,19 +247,19 @@ const char* const kChoices_aom_pop_ridge_active_superblock_block_scaling[] = {"r
 const std::int64_t kDefault_aom_pop_ridge_active_superblock_center_x[] = {1};
 const std::int64_t kDefault_aom_pop_ridge_active_superblock_center_y[] = {1};
 const ParamSpec kParams_aom_pop_ridge_active_superblock[] = {
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_active_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_active_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
-    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_active_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
-    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_active_superblock_alphas, 4, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_active_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"active_top_m", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_active_superblock_active_top_m, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"active_diversity_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_ridge_active_superblock_active_diversity_threshold, 1, 0.0, 1.0, nullptr, 0},
-    {"active_score_method", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_active_superblock_active_score_method, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_active_superblock_active_score_method, 3},
-    {"active_max_per_family", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_active_superblock_active_max_per_family, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"keep_identity", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_active_superblock_keep_identity, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_active_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_active_superblock_block_scaling, 2},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_active_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_active_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_active_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_active_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_active_superblock_op_params, 16, kNaN, kNaN, nullptr, 0, false, false},
+    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_active_superblock_alphas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_active_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"active_top_m", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_active_superblock_active_top_m, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"active_diversity_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_ridge_active_superblock_active_diversity_threshold, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"active_score_method", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_active_superblock_active_score_method, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_active_superblock_active_score_method, 3, false, false},
+    {"active_max_per_family", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_active_superblock_active_max_per_family, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"keep_identity", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_active_superblock_keep_identity, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_active_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_active_superblock_block_scaling, 2, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_active_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_active_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_ridge_blender_profile[] = {0};
 const char* const kChoices_aom_pop_ridge_blender_profile[] = {"compact", "wide"};
@@ -271,14 +271,14 @@ const std::int64_t kDefault_aom_pop_ridge_blender_scale_x[] = {1};
 const std::int64_t kDefault_aom_pop_ridge_blender_center_y[] = {1};
 const std::int64_t kDefault_aom_pop_ridge_blender_scale_y[] = {1};
 const ParamSpec kParams_aom_pop_ridge_blender[] = {
-    {"profile", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_blender_profile, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_blender_profile, 2},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_blender_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_blender_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0},
-    {"regularizer", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_ridge_blender_regularizer, 1, 0.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_blender_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_blender_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_blender_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_blender_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"profile", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_blender_profile, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_blender_profile, 2, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_blender_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_blender_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"regularizer", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_aom_pop_ridge_blender_regularizer, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_blender_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_blender_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_blender_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_blender_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_ridge_global_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
 const std::int64_t kDefault_aom_pop_ridge_global_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
@@ -292,16 +292,16 @@ const std::int64_t kDefault_aom_pop_ridge_global_scale_y[] = {1};
 const std::int64_t kDefault_aom_pop_ridge_global_moment_policy[] = {0};
 const char* const kChoices_aom_pop_ridge_global_moment_policy[] = {"auto", "materialized", "force"};
 const ParamSpec kParams_aom_pop_ridge_global[] = {
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_global_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_global_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
-    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_global_op_params, 16, kNaN, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_global_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_global_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_global_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_global_moment_policy, 3},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_global_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_global_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_global_op_params, 16, kNaN, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_global_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_global_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_global_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"moment_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_global_moment_policy, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_global_moment_policy, 3, false, false},
 };
 const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
 const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
@@ -314,15 +314,15 @@ const char* const kChoices_aom_pop_ridge_mkl_superblock_block_scaling[] = {"rms"
 const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_center_x[] = {1};
 const std::int64_t kDefault_aom_pop_ridge_mkl_superblock_center_y[] = {1};
 const ParamSpec kParams_aom_pop_ridge_mkl_superblock[] = {
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_mkl_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_mkl_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
-    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_mkl_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
-    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_mkl_superblock_alphas, 4, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_mkl_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"mkl_top_k", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_mkl_superblock_mkl_top_k, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_mkl_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_mkl_superblock_block_scaling, 2},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_mkl_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_mkl_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_mkl_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_mkl_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_mkl_superblock_op_params, 16, kNaN, kNaN, nullptr, 0, false, false},
+    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_mkl_superblock_alphas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_mkl_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"mkl_top_k", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_mkl_superblock_mkl_top_k, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_mkl_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_mkl_superblock_block_scaling, 2, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_mkl_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_mkl_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_ridge_superblock_op_kinds[] = {0, 7, 7, 8, 8, 9, 9, 10, 15};
 const std::int64_t kDefault_aom_pop_ridge_superblock_param_offsets[] = {0, 0, 1, 2, 4, 6, 9, 12, 15, 16};
@@ -334,14 +334,14 @@ const char* const kChoices_aom_pop_ridge_superblock_block_scaling[] = {"rms", "n
 const std::int64_t kDefault_aom_pop_ridge_superblock_center_x[] = {1};
 const std::int64_t kDefault_aom_pop_ridge_superblock_center_y[] = {1};
 const ParamSpec kParams_aom_pop_ridge_superblock[] = {
-    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0},
-    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0},
-    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_superblock_op_params, 16, kNaN, kNaN, nullptr, 0},
-    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_superblock_alphas, 4, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_superblock_block_scaling, 2},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"op_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_superblock_op_kinds, nullptr, 9, 0.0, 18.0, nullptr, 0, false, false},
+    {"param_offsets", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_aom_pop_ridge_superblock_param_offsets, nullptr, 10, 0.0, kNaN, nullptr, 0, false, false},
+    {"op_params", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_superblock_op_params, 16, kNaN, kNaN, nullptr, 0, false, false},
+    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_aom_pop_ridge_superblock_alphas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_ridge_superblock_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"block_scaling", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_ridge_superblock_block_scaling, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_ridge_superblock_block_scaling, 2, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_superblock_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_aom_pop_ridge_superblock_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_aom_pop_robust_hpo_profile[] = {0};
 const char* const kChoices_aom_pop_robust_hpo_profile[] = {"compact", "wide"};
@@ -349,9 +349,9 @@ const std::int64_t kDefault_aom_pop_robust_hpo_cv[] = {5};
 const std::int64_t kDefault_aom_pop_robust_hpo_heads[] = {2};
 const char* const kChoices_aom_pop_robust_hpo_heads[] = {"ridge", "pls", "ridge_pls"};
 const ParamSpec kParams_aom_pop_robust_hpo[] = {
-    {"profile", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_robust_hpo_profile, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_robust_hpo_profile, 2},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_robust_hpo_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"heads", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_robust_hpo_heads, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_robust_hpo_heads, 3},
+    {"profile", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_robust_hpo_profile, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_robust_hpo_profile, 2, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_aom_pop_robust_hpo_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"heads", N4M_METHOD_PARAM_ENUM, true, kDefault_aom_pop_robust_hpo_heads, nullptr, 1, kNaN, kNaN, kChoices_aom_pop_robust_hpo_heads, 3, false, false},
 };
 const double kDefault_augmentation_drift_linear_drift_offset_min[] = {-0.05};
 const double kDefault_augmentation_drift_linear_drift_offset_max[] = {0.05};
@@ -359,27 +359,27 @@ const double kDefault_augmentation_drift_linear_drift_slope_min[] = {-0.01};
 const double kDefault_augmentation_drift_linear_drift_slope_max[] = {0.01};
 const std::int64_t kDefault_augmentation_drift_linear_drift_seed[] = {0};
 const ParamSpec kParams_augmentation_drift_linear_drift[] = {
-    {"offset_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_linear_drift_offset_min, 1, kNaN, kNaN, nullptr, 0},
-    {"offset_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_linear_drift_offset_max, 1, kNaN, kNaN, nullptr, 0},
-    {"slope_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_linear_drift_slope_min, 1, kNaN, kNaN, nullptr, 0},
-    {"slope_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_linear_drift_slope_max, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_drift_linear_drift_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"offset_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_linear_drift_offset_min, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"offset_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_linear_drift_offset_max, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"slope_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_linear_drift_slope_min, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"slope_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_linear_drift_slope_max, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_drift_linear_drift_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_drift_path_length_path_length_std[] = {0.05};
 const double kDefault_augmentation_drift_path_length_min_path_length[] = {0.1};
 const std::int64_t kDefault_augmentation_drift_path_length_seed[] = {0};
 const ParamSpec kParams_augmentation_drift_path_length[] = {
-    {"path_length_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_path_length_path_length_std, 1, 0.0, kNaN, nullptr, 0},
-    {"min_path_length", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_path_length_min_path_length, 1, 0.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_drift_path_length_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"path_length_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_path_length_path_length_std, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"min_path_length", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_drift_path_length_min_path_length, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_drift_path_length_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_drift_poly_drift_coeff_min[] = {-0.01, -0.01, -0.01};
 const double kDefault_augmentation_drift_poly_drift_coeff_max[] = {0.01, 0.01, 0.01};
 const std::int64_t kDefault_augmentation_drift_poly_drift_seed[] = {0};
 const ParamSpec kParams_augmentation_drift_poly_drift[] = {
-    {"coeff_min", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_augmentation_drift_poly_drift_coeff_min, 3, kNaN, kNaN, nullptr, 0},
-    {"coeff_max", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_augmentation_drift_poly_drift_coeff_max, 3, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_drift_poly_drift_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"coeff_min", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_augmentation_drift_poly_drift_coeff_min, 3, kNaN, kNaN, nullptr, 0, false, false},
+    {"coeff_max", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_augmentation_drift_poly_drift_coeff_max, 3, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_drift_poly_drift_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_edge_artifacts_detector_rolloff_detector_model[] = {4};
 const char* const kChoices_augmentation_edge_artifacts_detector_rolloff_detector_model[] = {"ingaas_standard", "ingaas_extended", "pbs", "silicon_ccd", "generic_nir"};
@@ -388,11 +388,11 @@ const double kDefault_augmentation_edge_artifacts_detector_rolloff_noise_amplifi
 const std::int64_t kDefault_augmentation_edge_artifacts_detector_rolloff_include_baseline_distortion[] = {1};
 const std::int64_t kDefault_augmentation_edge_artifacts_detector_rolloff_seed[] = {0};
 const ParamSpec kParams_augmentation_edge_artifacts_detector_rolloff[] = {
-    {"detector_model", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_edge_artifacts_detector_rolloff_detector_model, nullptr, 1, kNaN, kNaN, kChoices_augmentation_edge_artifacts_detector_rolloff_detector_model, 5},
-    {"effect_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_detector_rolloff_effect_strength, 1, kNaN, kNaN, nullptr, 0},
-    {"noise_amplification", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_detector_rolloff_noise_amplification, 1, kNaN, kNaN, nullptr, 0},
-    {"include_baseline_distortion", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_detector_rolloff_include_baseline_distortion, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_detector_rolloff_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"detector_model", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_edge_artifacts_detector_rolloff_detector_model, nullptr, 1, kNaN, kNaN, kChoices_augmentation_edge_artifacts_detector_rolloff_detector_model, 5, false, false},
+    {"effect_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_detector_rolloff_effect_strength, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"noise_amplification", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_detector_rolloff_noise_amplification, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"include_baseline_distortion", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_detector_rolloff_include_baseline_distortion, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_detector_rolloff_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_detector_roll_off[] = {1};
 const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_stray_light[] = {1};
@@ -403,13 +403,13 @@ const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_detector_
 const char* const kChoices_augmentation_edge_artifacts_edge_artifacts_detector_model[] = {"ingaas_standard", "ingaas_extended", "pbs", "silicon_ccd", "generic_nir"};
 const std::int64_t kDefault_augmentation_edge_artifacts_edge_artifacts_seed[] = {0};
 const ParamSpec kParams_augmentation_edge_artifacts_edge_artifacts[] = {
-    {"detector_roll_off", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_detector_roll_off, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"stray_light", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_stray_light, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"edge_curvature", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_edge_curvature, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"truncated_peaks", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_truncated_peaks, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"overall_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_artifacts_overall_strength, 1, kNaN, kNaN, nullptr, 0},
-    {"detector_model", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_edge_artifacts_edge_artifacts_detector_model, nullptr, 1, kNaN, kNaN, kChoices_augmentation_edge_artifacts_edge_artifacts_detector_model, 5},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_edge_artifacts_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"detector_roll_off", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_detector_roll_off, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"stray_light", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_stray_light, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"edge_curvature", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_edge_curvature, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"truncated_peaks", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_edge_artifacts_truncated_peaks, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"overall_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_artifacts_overall_strength, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"detector_model", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_edge_artifacts_edge_artifacts_detector_model, nullptr, 1, kNaN, kNaN, kChoices_augmentation_edge_artifacts_edge_artifacts_detector_model, 5, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_edge_artifacts_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_edge_artifacts_edge_curvature_curvature_strength[] = {0.02};
 const std::int64_t kDefault_augmentation_edge_artifacts_edge_curvature_curvature_type[] = {0};
@@ -418,11 +418,11 @@ const double kDefault_augmentation_edge_artifacts_edge_curvature_asymmetry[] = {
 const double kDefault_augmentation_edge_artifacts_edge_curvature_edge_focus[] = {0.7};
 const std::int64_t kDefault_augmentation_edge_artifacts_edge_curvature_seed[] = {0};
 const ParamSpec kParams_augmentation_edge_artifacts_edge_curvature[] = {
-    {"curvature_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_curvature_curvature_strength, 1, 0.0, kNaN, nullptr, 0},
-    {"curvature_type", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_edge_artifacts_edge_curvature_curvature_type, nullptr, 1, kNaN, kNaN, kChoices_augmentation_edge_artifacts_edge_curvature_curvature_type, 4},
-    {"asymmetry", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_curvature_asymmetry, 1, kNaN, kNaN, nullptr, 0},
-    {"edge_focus", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_curvature_edge_focus, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_edge_curvature_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"curvature_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_curvature_curvature_strength, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"curvature_type", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_edge_artifacts_edge_curvature_curvature_type, nullptr, 1, kNaN, kNaN, kChoices_augmentation_edge_artifacts_edge_curvature_curvature_type, 4, false, false},
+    {"asymmetry", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_curvature_asymmetry, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"edge_focus", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_edge_curvature_edge_focus, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_edge_curvature_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_edge_artifacts_stray_light_stray_light_fraction[] = {0.001};
 const double kDefault_augmentation_edge_artifacts_stray_light_edge_enhancement[] = {2.0};
@@ -430,11 +430,11 @@ const double kDefault_augmentation_edge_artifacts_stray_light_edge_width[] = {0.
 const std::int64_t kDefault_augmentation_edge_artifacts_stray_light_include_peak_truncation[] = {1};
 const std::int64_t kDefault_augmentation_edge_artifacts_stray_light_seed[] = {0};
 const ParamSpec kParams_augmentation_edge_artifacts_stray_light[] = {
-    {"stray_light_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_stray_light_stray_light_fraction, 1, 0.0, kNaN, nullptr, 0},
-    {"edge_enhancement", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_stray_light_edge_enhancement, 1, kNaN, kNaN, nullptr, 0},
-    {"edge_width", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_stray_light_edge_width, 1, 0.0, 0.5, nullptr, 0},
-    {"include_peak_truncation", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_stray_light_include_peak_truncation, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_stray_light_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"stray_light_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_stray_light_stray_light_fraction, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"edge_enhancement", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_stray_light_edge_enhancement, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"edge_width", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_stray_light_edge_width, 1, 0.0, 0.5, nullptr, 0, false, false},
+    {"include_peak_truncation", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_stray_light_include_peak_truncation, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_stray_light_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_edge_artifacts_truncated_peak_peak_probability[] = {0.5};
 const double kDefault_augmentation_edge_artifacts_truncated_peak_amplitude_min[] = {0.01};
@@ -445,14 +445,14 @@ const std::int64_t kDefault_augmentation_edge_artifacts_truncated_peak_left_edge
 const std::int64_t kDefault_augmentation_edge_artifacts_truncated_peak_right_edge[] = {1};
 const std::int64_t kDefault_augmentation_edge_artifacts_truncated_peak_seed[] = {0};
 const ParamSpec kParams_augmentation_edge_artifacts_truncated_peak[] = {
-    {"peak_probability", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_peak_probability, 1, 0.0, 1.0, nullptr, 0},
-    {"amplitude_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_amplitude_min, 1, kNaN, kNaN, nullptr, 0},
-    {"amplitude_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_amplitude_max, 1, kNaN, kNaN, nullptr, 0},
-    {"width_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_width_min, 1, 0.0, kNaN, nullptr, 0},
-    {"width_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_width_max, 1, 0.0, kNaN, nullptr, 0},
-    {"left_edge", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_truncated_peak_left_edge, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"right_edge", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_truncated_peak_right_edge, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_truncated_peak_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"peak_probability", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_peak_probability, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"amplitude_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_amplitude_min, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"amplitude_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_amplitude_max, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"width_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_width_min, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"width_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_edge_artifacts_truncated_peak_width_max, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"left_edge", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_truncated_peak_left_edge, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"right_edge", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_edge_artifacts_truncated_peak_right_edge, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_edge_artifacts_truncated_peak_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_environmental_moisture_water_activity_delta[] = {0.0};
 const std::int64_t kDefault_augmentation_environmental_moisture_use_aw_range[] = {0};
@@ -466,17 +466,17 @@ const std::int64_t kDefault_augmentation_environmental_moisture_enable_shift[] =
 const std::int64_t kDefault_augmentation_environmental_moisture_enable_intensity[] = {1};
 const std::int64_t kDefault_augmentation_environmental_moisture_seed[] = {0};
 const ParamSpec kParams_augmentation_environmental_moisture[] = {
-    {"water_activity_delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_water_activity_delta, 1, kNaN, kNaN, nullptr, 0},
-    {"use_aw_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_moisture_use_aw_range, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"aw_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_aw_low, 1, kNaN, kNaN, nullptr, 0},
-    {"aw_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_aw_high, 1, kNaN, kNaN, nullptr, 0},
-    {"reference_water_activity", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_reference_water_activity, 1, kNaN, kNaN, nullptr, 0},
-    {"free_water_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_free_water_fraction, 1, kNaN, kNaN, nullptr, 0},
-    {"bound_water_shift", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_bound_water_shift, 1, kNaN, kNaN, nullptr, 0},
-    {"moisture_content", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_moisture_content, 1, kNaN, kNaN, nullptr, 0},
-    {"enable_shift", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_moisture_enable_shift, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"enable_intensity", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_moisture_enable_intensity, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_environmental_moisture_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"water_activity_delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_water_activity_delta, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"use_aw_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_moisture_use_aw_range, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"aw_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_aw_low, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"aw_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_aw_high, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"reference_water_activity", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_reference_water_activity, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"free_water_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_free_water_fraction, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"bound_water_shift", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_bound_water_shift, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"moisture_content", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_moisture_moisture_content, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"enable_shift", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_moisture_enable_shift, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"enable_intensity", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_moisture_enable_intensity, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_environmental_moisture_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_environmental_temperature_temperature_delta[] = {0.0};
 const std::int64_t kDefault_augmentation_environmental_temperature_use_temp_range[] = {0};
@@ -488,49 +488,49 @@ const std::int64_t kDefault_augmentation_environmental_temperature_enable_broade
 const std::int64_t kDefault_augmentation_environmental_temperature_region_specific[] = {1};
 const std::int64_t kDefault_augmentation_environmental_temperature_seed[] = {0};
 const ParamSpec kParams_augmentation_environmental_temperature[] = {
-    {"temperature_delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_temperature_temperature_delta, 1, kNaN, kNaN, nullptr, 0},
-    {"use_temp_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_use_temp_range, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"temp_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_temperature_temp_low, 1, kNaN, kNaN, nullptr, 0},
-    {"temp_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_temperature_temp_high, 1, kNaN, kNaN, nullptr, 0},
-    {"enable_shift", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_enable_shift, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"enable_intensity", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_enable_intensity, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"enable_broadening", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_enable_broadening, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"region_specific", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_region_specific, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_environmental_temperature_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"temperature_delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_temperature_temperature_delta, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"use_temp_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_use_temp_range, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"temp_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_temperature_temp_low, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"temp_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_environmental_temperature_temp_high, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"enable_shift", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_enable_shift, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"enable_intensity", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_enable_intensity, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"enable_broadening", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_enable_broadening, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"region_specific", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_environmental_temperature_region_specific, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_environmental_temperature_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_mixup_local_mixup_alpha[] = {0.2};
 const std::int64_t kDefault_augmentation_mixup_local_mixup_k_neighbors[] = {5};
 const std::int64_t kDefault_augmentation_mixup_local_mixup_seed[] = {0};
 const ParamSpec kParams_augmentation_mixup_local_mixup[] = {
-    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_mixup_local_mixup_alpha, 1, 0.0, kNaN, nullptr, 0},
-    {"k_neighbors", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_mixup_local_mixup_k_neighbors, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_mixup_local_mixup_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_mixup_local_mixup_alpha, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"k_neighbors", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_mixup_local_mixup_k_neighbors, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_mixup_local_mixup_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_mixup_mixup_alpha[] = {0.2};
 const std::int64_t kDefault_augmentation_mixup_mixup_seed[] = {0};
 const ParamSpec kParams_augmentation_mixup_mixup[] = {
-    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_mixup_mixup_alpha, 1, 0.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_mixup_mixup_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_mixup_mixup_alpha, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_mixup_mixup_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_noise_gaussian_noise_sigma[] = {0.01};
 const std::int64_t kDefault_augmentation_noise_gaussian_noise_seed[] = {0};
 const ParamSpec kParams_augmentation_noise_gaussian_noise[] = {
-    {"sigma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_gaussian_noise_sigma, 1, 0.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_gaussian_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"sigma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_gaussian_noise_sigma, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_gaussian_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_noise_hetero_noise_noise_base[] = {0.001};
 const double kDefault_augmentation_noise_hetero_noise_noise_signal_dep[] = {0.01};
 const std::int64_t kDefault_augmentation_noise_hetero_noise_seed[] = {0};
 const ParamSpec kParams_augmentation_noise_hetero_noise[] = {
-    {"noise_base", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_hetero_noise_noise_base, 1, 0.0, kNaN, nullptr, 0},
-    {"noise_signal_dep", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_hetero_noise_noise_signal_dep, 1, 0.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_hetero_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"noise_base", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_hetero_noise_noise_base, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"noise_signal_dep", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_hetero_noise_noise_signal_dep, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_hetero_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_noise_multiplicative_noise_sigma_gain[] = {0.01};
 const std::int64_t kDefault_augmentation_noise_multiplicative_noise_seed[] = {0};
 const ParamSpec kParams_augmentation_noise_multiplicative_noise[] = {
-    {"sigma_gain", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_multiplicative_noise_sigma_gain, 1, 0.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_multiplicative_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"sigma_gain", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_multiplicative_noise_sigma_gain, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_multiplicative_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_noise_spike_noise_n_spikes_min[] = {1};
 const std::int64_t kDefault_augmentation_noise_spike_noise_n_spikes_max[] = {3};
@@ -538,11 +538,11 @@ const double kDefault_augmentation_noise_spike_noise_amplitude_min[] = {-0.1};
 const double kDefault_augmentation_noise_spike_noise_amplitude_max[] = {0.1};
 const std::int64_t kDefault_augmentation_noise_spike_noise_seed[] = {0};
 const ParamSpec kParams_augmentation_noise_spike_noise[] = {
-    {"n_spikes_min", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_spike_noise_n_spikes_min, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"n_spikes_max", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_spike_noise_n_spikes_max, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"amplitude_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_spike_noise_amplitude_min, 1, kNaN, kNaN, nullptr, 0},
-    {"amplitude_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_spike_noise_amplitude_max, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_spike_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_spikes_min", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_spike_noise_n_spikes_min, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"n_spikes_max", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_spike_noise_n_spikes_max, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"amplitude_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_spike_noise_amplitude_min, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"amplitude_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_noise_spike_noise_amplitude_max, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_noise_spike_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_random_random_x_op_op_kind[] = {0};
 const char* const kChoices_augmentation_random_random_x_op_op_kind[] = {"multiply", "add", "subtract"};
@@ -550,18 +550,18 @@ const double kDefault_augmentation_random_random_x_op_operator_range_min[] = {0.
 const double kDefault_augmentation_random_random_x_op_operator_range_max[] = {1.03};
 const std::int64_t kDefault_augmentation_random_random_x_op_seed[] = {0};
 const ParamSpec kParams_augmentation_random_random_x_op[] = {
-    {"op_kind", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_random_random_x_op_op_kind, nullptr, 1, kNaN, kNaN, kChoices_augmentation_random_random_x_op_op_kind, 3},
-    {"operator_range_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_random_random_x_op_operator_range_min, 1, kNaN, kNaN, nullptr, 0},
-    {"operator_range_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_random_random_x_op_operator_range_max, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_random_random_x_op_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"op_kind", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_random_random_x_op_op_kind, nullptr, 1, kNaN, kNaN, kChoices_augmentation_random_random_x_op_op_kind, 3, false, false},
+    {"operator_range_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_random_random_x_op_operator_range_min, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"operator_range_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_random_random_x_op_operator_range_max, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_random_random_x_op_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_random_rotate_translate_p_range[] = {2.0};
 const double kDefault_augmentation_random_rotate_translate_y_factor[] = {3.0};
 const std::int64_t kDefault_augmentation_random_rotate_translate_seed[] = {0};
 const ParamSpec kParams_augmentation_random_rotate_translate[] = {
-    {"p_range", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_random_rotate_translate_p_range, 1, kNaN, kNaN, nullptr, 0},
-    {"y_factor", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_random_rotate_translate_y_factor, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_random_rotate_translate_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"p_range", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_random_rotate_translate_p_range, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"y_factor", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_random_rotate_translate_y_factor, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_random_rotate_translate_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_scattering_batch_effect_offset_std[] = {0.0};
 const double kDefault_augmentation_scattering_batch_effect_slope_std[] = {0.0};
@@ -570,11 +570,11 @@ const std::int64_t kDefault_augmentation_scattering_batch_effect_variation_scope
 const char* const kChoices_augmentation_scattering_batch_effect_variation_scope[] = {"sample", "batch"};
 const std::int64_t kDefault_augmentation_scattering_batch_effect_seed[] = {0};
 const ParamSpec kParams_augmentation_scattering_batch_effect[] = {
-    {"offset_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_batch_effect_offset_std, 1, 0.0, kNaN, nullptr, 0},
-    {"slope_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_batch_effect_slope_std, 1, 0.0, kNaN, nullptr, 0},
-    {"gain_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_batch_effect_gain_std, 1, 0.0, kNaN, nullptr, 0},
-    {"variation_scope", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_scattering_batch_effect_variation_scope, nullptr, 1, kNaN, kNaN, kChoices_augmentation_scattering_batch_effect_variation_scope, 2},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_batch_effect_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"offset_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_batch_effect_offset_std, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"slope_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_batch_effect_slope_std, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"gain_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_batch_effect_gain_std, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"variation_scope", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_scattering_batch_effect_variation_scope, nullptr, 1, kNaN, kNaN, kChoices_augmentation_scattering_batch_effect_variation_scope, 2, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_batch_effect_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_scattering_dead_band_n_bands[] = {1};
 const std::int64_t kDefault_augmentation_scattering_dead_band_width_low[] = {5};
@@ -585,13 +585,13 @@ const std::int64_t kDefault_augmentation_scattering_dead_band_variation_scope[] 
 const char* const kChoices_augmentation_scattering_dead_band_variation_scope[] = {"sample", "batch"};
 const std::int64_t kDefault_augmentation_scattering_dead_band_seed[] = {0};
 const ParamSpec kParams_augmentation_scattering_dead_band[] = {
-    {"n_bands", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_dead_band_n_bands, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"width_low", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_dead_band_width_low, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"width_high", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_dead_band_width_high, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"noise_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_dead_band_noise_std, 1, 0.0, kNaN, nullptr, 0},
-    {"probability", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_dead_band_probability, 1, 0.0, 1.0, nullptr, 0},
-    {"variation_scope", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_scattering_dead_band_variation_scope, nullptr, 1, kNaN, kNaN, kChoices_augmentation_scattering_dead_band_variation_scope, 2},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_dead_band_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_bands", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_dead_band_n_bands, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"width_low", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_dead_band_width_low, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"width_high", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_dead_band_width_high, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"noise_std", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_dead_band_noise_std, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"probability", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_dead_band_probability, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"variation_scope", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_scattering_dead_band_variation_scope, nullptr, 1, kNaN, kNaN, kChoices_augmentation_scattering_dead_band_variation_scope, 2, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_dead_band_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_scattering_emsc_distort_mult_low[] = {0.9};
 const double kDefault_augmentation_scattering_emsc_distort_mult_high[] = {1.1};
@@ -602,14 +602,14 @@ const double kDefault_augmentation_scattering_emsc_distort_polynomial_strength[]
 const double kDefault_augmentation_scattering_emsc_distort_correlation[] = {0.3};
 const std::int64_t kDefault_augmentation_scattering_emsc_distort_seed[] = {0};
 const ParamSpec kParams_augmentation_scattering_emsc_distort[] = {
-    {"mult_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_mult_low, 1, kNaN, kNaN, nullptr, 0},
-    {"mult_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_mult_high, 1, kNaN, kNaN, nullptr, 0},
-    {"add_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_add_low, 1, kNaN, kNaN, nullptr, 0},
-    {"add_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_add_high, 1, kNaN, kNaN, nullptr, 0},
-    {"polynomial_order", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_emsc_distort_polynomial_order, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"polynomial_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_polynomial_strength, 1, 0.0, kNaN, nullptr, 0},
-    {"correlation", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_correlation, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_emsc_distort_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"mult_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_mult_low, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"mult_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_mult_high, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"add_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_add_low, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"add_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_add_high, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"polynomial_order", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_emsc_distort_polynomial_order, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"polynomial_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_polynomial_strength, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"correlation", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_emsc_distort_correlation, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_emsc_distort_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_scattering_instrument_broaden_fwhm[] = {5.0};
 const std::int64_t kDefault_augmentation_scattering_instrument_broaden_use_fwhm_range[] = {0};
@@ -619,12 +619,12 @@ const std::int64_t kDefault_augmentation_scattering_instrument_broaden_variation
 const char* const kChoices_augmentation_scattering_instrument_broaden_variation_scope[] = {"sample", "batch"};
 const std::int64_t kDefault_augmentation_scattering_instrument_broaden_seed[] = {0};
 const ParamSpec kParams_augmentation_scattering_instrument_broaden[] = {
-    {"fwhm", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_instrument_broaden_fwhm, 1, 0.0, kNaN, nullptr, 0},
-    {"use_fwhm_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_scattering_instrument_broaden_use_fwhm_range, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"fwhm_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_instrument_broaden_fwhm_low, 1, 0.0, kNaN, nullptr, 0},
-    {"fwhm_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_instrument_broaden_fwhm_high, 1, 0.0, kNaN, nullptr, 0},
-    {"variation_scope", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_scattering_instrument_broaden_variation_scope, nullptr, 1, kNaN, kNaN, kChoices_augmentation_scattering_instrument_broaden_variation_scope, 2},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_instrument_broaden_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"fwhm", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_instrument_broaden_fwhm, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"use_fwhm_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_scattering_instrument_broaden_use_fwhm_range, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"fwhm_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_instrument_broaden_fwhm_low, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"fwhm_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_instrument_broaden_fwhm_high, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"variation_scope", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_scattering_instrument_broaden_variation_scope, nullptr, 1, kNaN, kNaN, kChoices_augmentation_scattering_instrument_broaden_variation_scope, 2, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_instrument_broaden_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_scattering_particle_size_mean_size_um[] = {50.0};
 const double kDefault_augmentation_scattering_particle_size_size_variation_um[] = {15.0};
@@ -638,17 +638,17 @@ const std::int64_t kDefault_augmentation_scattering_particle_size_include_path_l
 const double kDefault_augmentation_scattering_particle_size_path_length_sensitivity[] = {0.5};
 const std::int64_t kDefault_augmentation_scattering_particle_size_seed[] = {0};
 const ParamSpec kParams_augmentation_scattering_particle_size[] = {
-    {"mean_size_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_mean_size_um, 1, kNaN, kNaN, nullptr, 0},
-    {"size_variation_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_variation_um, 1, 0.0, kNaN, nullptr, 0},
-    {"use_size_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_scattering_particle_size_use_size_range, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"size_range_low_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_range_low_um, 1, kNaN, kNaN, nullptr, 0},
-    {"size_range_high_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_range_high_um, 1, kNaN, kNaN, nullptr, 0},
-    {"reference_size_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_reference_size_um, 1, kNaN, kNaN, nullptr, 0},
-    {"wavelength_exponent", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_wavelength_exponent, 1, kNaN, kNaN, nullptr, 0},
-    {"size_effect_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_effect_strength, 1, kNaN, kNaN, nullptr, 0},
-    {"include_path_length", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_scattering_particle_size_include_path_length, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"path_length_sensitivity", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_path_length_sensitivity, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_particle_size_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"mean_size_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_mean_size_um, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"size_variation_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_variation_um, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"use_size_range", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_scattering_particle_size_use_size_range, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"size_range_low_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_range_low_um, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"size_range_high_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_range_high_um, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"reference_size_um", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_reference_size_um, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"wavelength_exponent", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_wavelength_exponent, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"size_effect_strength", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_size_effect_strength, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"include_path_length", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_scattering_particle_size_include_path_length, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"path_length_sensitivity", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_particle_size_path_length_sensitivity, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_particle_size_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_scattering_scatter_sim_msc_a_low[] = {-0.05};
 const double kDefault_augmentation_scattering_scatter_sim_msc_a_high[] = {0.05};
@@ -656,11 +656,11 @@ const double kDefault_augmentation_scattering_scatter_sim_msc_b_low[] = {0.9};
 const double kDefault_augmentation_scattering_scatter_sim_msc_b_high[] = {1.1};
 const std::int64_t kDefault_augmentation_scattering_scatter_sim_msc_seed[] = {0};
 const ParamSpec kParams_augmentation_scattering_scatter_sim_msc[] = {
-    {"a_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_scatter_sim_msc_a_low, 1, kNaN, kNaN, nullptr, 0},
-    {"a_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_scatter_sim_msc_a_high, 1, kNaN, kNaN, nullptr, 0},
-    {"b_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_scatter_sim_msc_b_low, 1, kNaN, kNaN, nullptr, 0},
-    {"b_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_scatter_sim_msc_b_high, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_scatter_sim_msc_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"a_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_scatter_sim_msc_a_low, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"a_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_scatter_sim_msc_a_high, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"b_low", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_scatter_sim_msc_b_low, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"b_high", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_scattering_scatter_sim_msc_b_high, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_scattering_scatter_sim_msc_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_spectral_band_mask_n_bands_lo[] = {1};
 const std::int64_t kDefault_augmentation_spectral_band_mask_n_bands_hi[] = {3};
@@ -670,12 +670,12 @@ const std::int64_t kDefault_augmentation_spectral_band_mask_mode[] = {0};
 const char* const kChoices_augmentation_spectral_band_mask_mode[] = {"zero", "interp"};
 const std::int64_t kDefault_augmentation_spectral_band_mask_seed[] = {0};
 const ParamSpec kParams_augmentation_spectral_band_mask[] = {
-    {"n_bands_lo", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_n_bands_lo, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"n_bands_hi", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_n_bands_hi, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"bw_lo", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_bw_lo, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"bw_hi", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_bw_hi, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_spectral_band_mask_mode, nullptr, 1, kNaN, kNaN, kChoices_augmentation_spectral_band_mask_mode, 2},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_bands_lo", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_n_bands_lo, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"n_bands_hi", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_n_bands_hi, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"bw_lo", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_bw_lo, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"bw_hi", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_bw_hi, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_spectral_band_mask_mode, nullptr, 1, kNaN, kNaN, kChoices_augmentation_spectral_band_mask_mode, 2, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_mask_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_spectral_band_perturb_n_bands[] = {3};
 const std::int64_t kDefault_augmentation_spectral_band_perturb_bw_lo[] = {5};
@@ -686,53 +686,53 @@ const double kDefault_augmentation_spectral_band_perturb_offset_lo[] = {-0.01};
 const double kDefault_augmentation_spectral_band_perturb_offset_hi[] = {0.01};
 const std::int64_t kDefault_augmentation_spectral_band_perturb_seed[] = {0};
 const ParamSpec kParams_augmentation_spectral_band_perturb[] = {
-    {"n_bands", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_perturb_n_bands, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"bw_lo", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_perturb_bw_lo, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"bw_hi", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_perturb_bw_hi, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"gain_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_band_perturb_gain_lo, 1, kNaN, kNaN, nullptr, 0},
-    {"gain_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_band_perturb_gain_hi, 1, kNaN, kNaN, nullptr, 0},
-    {"offset_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_band_perturb_offset_lo, 1, kNaN, kNaN, nullptr, 0},
-    {"offset_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_band_perturb_offset_hi, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_perturb_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_bands", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_perturb_n_bands, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"bw_lo", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_perturb_bw_lo, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"bw_hi", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_perturb_bw_hi, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"gain_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_band_perturb_gain_lo, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"gain_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_band_perturb_gain_hi, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"offset_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_band_perturb_offset_lo, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"offset_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_band_perturb_offset_hi, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_band_perturb_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_spectral_channel_dropout_dropout_prob[] = {0.05};
 const std::int64_t kDefault_augmentation_spectral_channel_dropout_mode[] = {0};
 const char* const kChoices_augmentation_spectral_channel_dropout_mode[] = {"zero", "interp"};
 const std::int64_t kDefault_augmentation_spectral_channel_dropout_seed[] = {0};
 const ParamSpec kParams_augmentation_spectral_channel_dropout[] = {
-    {"dropout_prob", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_channel_dropout_dropout_prob, 1, 0.0, 1.0, nullptr, 0},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_spectral_channel_dropout_mode, nullptr, 1, kNaN, kNaN, kChoices_augmentation_spectral_channel_dropout_mode, 2},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_channel_dropout_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"dropout_prob", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_channel_dropout_dropout_prob, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_augmentation_spectral_channel_dropout_mode, nullptr, 1, kNaN, kNaN, kChoices_augmentation_spectral_channel_dropout_mode, 2, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_channel_dropout_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_spectral_gauss_jitter_sigma_lo[] = {0.5};
 const double kDefault_augmentation_spectral_gauss_jitter_sigma_hi[] = {1.5};
 const std::int64_t kDefault_augmentation_spectral_gauss_jitter_kernel_width[] = {9};
 const std::int64_t kDefault_augmentation_spectral_gauss_jitter_seed[] = {0};
 const ParamSpec kParams_augmentation_spectral_gauss_jitter[] = {
-    {"sigma_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_gauss_jitter_sigma_lo, 1, 0.0, kNaN, nullptr, 0},
-    {"sigma_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_gauss_jitter_sigma_hi, 1, 0.0, kNaN, nullptr, 0},
-    {"kernel_width", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_gauss_jitter_kernel_width, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_gauss_jitter_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"sigma_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_gauss_jitter_sigma_lo, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"sigma_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_gauss_jitter_sigma_hi, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"kernel_width", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_gauss_jitter_kernel_width, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_gauss_jitter_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_spectral_local_clip_n_regions[] = {1};
 const std::int64_t kDefault_augmentation_spectral_local_clip_width_lo[] = {5};
 const std::int64_t kDefault_augmentation_spectral_local_clip_width_hi[] = {15};
 const std::int64_t kDefault_augmentation_spectral_local_clip_seed[] = {0};
 const ParamSpec kParams_augmentation_spectral_local_clip[] = {
-    {"n_regions", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_local_clip_n_regions, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"width_lo", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_local_clip_width_lo, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"width_hi", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_local_clip_width_hi, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_local_clip_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_regions", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_local_clip_n_regions, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"width_lo", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_local_clip_width_lo, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"width_hi", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_local_clip_width_hi, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_local_clip_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_spectral_magnitude_warp_n_control_points[] = {5};
 const double kDefault_augmentation_spectral_magnitude_warp_gain_lo[] = {0.9};
 const double kDefault_augmentation_spectral_magnitude_warp_gain_hi[] = {1.1};
 const std::int64_t kDefault_augmentation_spectral_magnitude_warp_seed[] = {0};
 const ParamSpec kParams_augmentation_spectral_magnitude_warp[] = {
-    {"n_control_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_magnitude_warp_n_control_points, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"gain_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_magnitude_warp_gain_lo, 1, kNaN, kNaN, nullptr, 0},
-    {"gain_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_magnitude_warp_gain_hi, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_magnitude_warp_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_control_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_magnitude_warp_n_control_points, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"gain_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_magnitude_warp_gain_lo, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"gain_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_magnitude_warp_gain_hi, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_magnitude_warp_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_spectral_unsharp_mask_amount_lo[] = {0.1};
 const double kDefault_augmentation_spectral_unsharp_mask_amount_hi[] = {0.5};
@@ -740,23 +740,23 @@ const double kDefault_augmentation_spectral_unsharp_mask_sigma[] = {1.0};
 const std::int64_t kDefault_augmentation_spectral_unsharp_mask_kernel_width[] = {11};
 const std::int64_t kDefault_augmentation_spectral_unsharp_mask_seed[] = {0};
 const ParamSpec kParams_augmentation_spectral_unsharp_mask[] = {
-    {"amount_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_unsharp_mask_amount_lo, 1, kNaN, kNaN, nullptr, 0},
-    {"amount_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_unsharp_mask_amount_hi, 1, kNaN, kNaN, nullptr, 0},
-    {"sigma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_unsharp_mask_sigma, 1, 0.0, kNaN, nullptr, 0},
-    {"kernel_width", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_unsharp_mask_kernel_width, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_unsharp_mask_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"amount_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_unsharp_mask_amount_lo, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"amount_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_unsharp_mask_amount_hi, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"sigma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_spectral_unsharp_mask_sigma, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"kernel_width", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_unsharp_mask_kernel_width, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_spectral_unsharp_mask_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_splines_spline_curve_simplification_spline_points[] = {-1};
 const std::int64_t kDefault_augmentation_splines_spline_curve_simplification_uniform[] = {0};
 const std::int64_t kDefault_augmentation_splines_spline_curve_simplification_seed[] = {0};
 const ParamSpec kParams_augmentation_splines_spline_curve_simplification[] = {
-    {"spline_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_curve_simplification_spline_points, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"uniform", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_splines_spline_curve_simplification_uniform, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_curve_simplification_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"spline_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_curve_simplification_spline_points, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"uniform", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_splines_spline_curve_simplification_uniform, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_curve_simplification_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_splines_spline_smoothing_seed[] = {0};
 const ParamSpec kParams_augmentation_splines_spline_smoothing[] = {
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_smoothing_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_smoothing_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_splines_spline_x_perturbations_spline_degree[] = {3};
 const double kDefault_augmentation_splines_spline_x_perturbations_perturbation_density[] = {0.05};
@@ -764,55 +764,55 @@ const double kDefault_augmentation_splines_spline_x_perturbations_perturbation_r
 const double kDefault_augmentation_splines_spline_x_perturbations_perturbation_range_max[] = {0.1};
 const std::int64_t kDefault_augmentation_splines_spline_x_perturbations_seed[] = {0};
 const ParamSpec kParams_augmentation_splines_spline_x_perturbations[] = {
-    {"spline_degree", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_x_perturbations_spline_degree, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"perturbation_density", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_splines_spline_x_perturbations_perturbation_density, 1, 0.0, kNaN, nullptr, 0},
-    {"perturbation_range_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_splines_spline_x_perturbations_perturbation_range_min, 1, kNaN, kNaN, nullptr, 0},
-    {"perturbation_range_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_splines_spline_x_perturbations_perturbation_range_max, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_x_perturbations_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"spline_degree", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_x_perturbations_spline_degree, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"perturbation_density", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_splines_spline_x_perturbations_perturbation_density, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"perturbation_range_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_splines_spline_x_perturbations_perturbation_range_min, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"perturbation_range_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_splines_spline_x_perturbations_perturbation_range_max, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_x_perturbations_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_splines_spline_x_simplification_spline_points[] = {-1};
 const std::int64_t kDefault_augmentation_splines_spline_x_simplification_uniform[] = {0};
 const std::int64_t kDefault_augmentation_splines_spline_x_simplification_seed[] = {0};
 const ParamSpec kParams_augmentation_splines_spline_x_simplification[] = {
-    {"spline_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_x_simplification_spline_points, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"uniform", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_splines_spline_x_simplification_uniform, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_x_simplification_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"spline_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_x_simplification_spline_points, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"uniform", N4M_METHOD_PARAM_BOOL, true, kDefault_augmentation_splines_spline_x_simplification_uniform, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_x_simplification_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_splines_spline_y_perturbations_spline_points[] = {-1};
 const double kDefault_augmentation_splines_spline_y_perturbations_perturbation_intensity[] = {0.005};
 const std::int64_t kDefault_augmentation_splines_spline_y_perturbations_seed[] = {0};
 const ParamSpec kParams_augmentation_splines_spline_y_perturbations[] = {
-    {"spline_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_y_perturbations_spline_points, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"perturbation_intensity", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_splines_spline_y_perturbations_perturbation_intensity, 1, 0.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_y_perturbations_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"spline_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_y_perturbations_spline_points, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"perturbation_intensity", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_splines_spline_y_perturbations_perturbation_intensity, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_splines_spline_y_perturbations_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_augmentation_wavelength_local_warp_n_control_points[] = {5};
 const double kDefault_augmentation_wavelength_local_warp_max_shift[] = {1.0};
 const std::int64_t kDefault_augmentation_wavelength_local_warp_seed[] = {0};
 const ParamSpec kParams_augmentation_wavelength_local_warp[] = {
-    {"n_control_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_wavelength_local_warp_n_control_points, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"max_shift", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_local_warp_max_shift, 1, 0.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_wavelength_local_warp_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_control_points", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_wavelength_local_warp_n_control_points, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"max_shift", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_local_warp_max_shift, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_wavelength_local_warp_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_wavelength_wavelength_shift_shift_lo[] = {-1.0};
 const double kDefault_augmentation_wavelength_wavelength_shift_shift_hi[] = {1.0};
 const std::int64_t kDefault_augmentation_wavelength_wavelength_shift_seed[] = {0};
 const ParamSpec kParams_augmentation_wavelength_wavelength_shift[] = {
-    {"shift_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_wavelength_shift_shift_lo, 1, kNaN, kNaN, nullptr, 0},
-    {"shift_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_wavelength_shift_shift_hi, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_wavelength_wavelength_shift_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"shift_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_wavelength_shift_shift_lo, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"shift_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_wavelength_shift_shift_hi, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_wavelength_wavelength_shift_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_augmentation_wavelength_wavelength_stretch_stretch_lo[] = {0.99};
 const double kDefault_augmentation_wavelength_wavelength_stretch_stretch_hi[] = {1.01};
 const std::int64_t kDefault_augmentation_wavelength_wavelength_stretch_seed[] = {0};
 const ParamSpec kParams_augmentation_wavelength_wavelength_stretch[] = {
-    {"stretch_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_wavelength_stretch_stretch_lo, 1, kNaN, kNaN, nullptr, 0},
-    {"stretch_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_wavelength_stretch_stretch_hi, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_wavelength_wavelength_stretch_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"stretch_lo", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_wavelength_stretch_stretch_lo, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"stretch_hi", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_augmentation_wavelength_wavelength_stretch_stretch_hi, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_augmentation_wavelength_wavelength_stretch_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_diagnostics_approximate_press_max_components[] = {10};
 const ParamSpec kParams_diagnostics_approximate_press[] = {
-    {"max_components", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_approximate_press_max_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"max_components", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_approximate_press_max_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_diagnostics_pls_diagnostics_n_components[] = {2};
 const std::int64_t kDefault_diagnostics_pls_diagnostics_center_x[] = {1};
@@ -820,11 +820,11 @@ const std::int64_t kDefault_diagnostics_pls_diagnostics_scale_x[] = {1};
 const std::int64_t kDefault_diagnostics_pls_diagnostics_center_y[] = {1};
 const std::int64_t kDefault_diagnostics_pls_diagnostics_scale_y[] = {1};
 const ParamSpec kParams_diagnostics_pls_diagnostics[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_pls_diagnostics_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_diagnostics_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_diagnostics_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_diagnostics_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_diagnostics_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_pls_diagnostics_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_diagnostics_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_diagnostics_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_diagnostics_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_diagnostics_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_diagnostics_pls_monitoring_n_components[] = {2};
 const std::int64_t kDefault_diagnostics_pls_monitoring_center_x[] = {1};
@@ -833,18 +833,18 @@ const std::int64_t kDefault_diagnostics_pls_monitoring_center_y[] = {1};
 const std::int64_t kDefault_diagnostics_pls_monitoring_scale_y[] = {1};
 const double kDefault_diagnostics_pls_monitoring_alpha[] = {0.05};
 const ParamSpec kParams_diagnostics_pls_monitoring[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_pls_monitoring_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_diagnostics_pls_monitoring_alpha, 1, 0.0, 1.0, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_pls_monitoring_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_diagnostics_pls_monitoring_alpha, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const double kDefault_filters_correlation_threshold[] = {0.0};
 const std::int64_t kDefault_filters_correlation_top_k[] = {-1};
 const ParamSpec kParams_filters_correlation[] = {
-    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_correlation_threshold, 1, kNaN, kNaN, nullptr, 0},
-    {"top_k", N4M_METHOD_PARAM_INT, true, kDefault_filters_correlation_top_k, nullptr, 1, -1.0, kNaN, nullptr, 0},
+    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_correlation_threshold, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"top_k", N4M_METHOD_PARAM_INT, true, kDefault_filters_correlation_top_k, nullptr, 1, -1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_filters_high_leverage_method[] = {0};
 const char* const kChoices_filters_high_leverage_method[] = {"hat", "pca"};
@@ -853,11 +853,11 @@ const double kDefault_filters_high_leverage_absolute_threshold[] = {kNaN};
 const std::int64_t kDefault_filters_high_leverage_n_components[] = {0};
 const std::int64_t kDefault_filters_high_leverage_center[] = {1};
 const ParamSpec kParams_filters_high_leverage[] = {
-    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_filters_high_leverage_method, nullptr, 1, kNaN, kNaN, kChoices_filters_high_leverage_method, 2},
-    {"threshold_multiplier", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_high_leverage_threshold_multiplier, 1, kNaN, kNaN, nullptr, 0},
-    {"absolute_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_high_leverage_absolute_threshold, 1, kNaN, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_filters_high_leverage_n_components, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"center", N4M_METHOD_PARAM_BOOL, true, kDefault_filters_high_leverage_center, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_filters_high_leverage_method, nullptr, 1, kNaN, kNaN, kChoices_filters_high_leverage_method, 2, false, false},
+    {"threshold_multiplier", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_high_leverage_threshold_multiplier, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"absolute_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_high_leverage_absolute_threshold, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_filters_high_leverage_n_components, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"center", N4M_METHOD_PARAM_BOOL, true, kDefault_filters_high_leverage_center, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_filters_spectral_quality_max_nan_ratio[] = {0.1};
 const double kDefault_filters_spectral_quality_max_zero_ratio[] = {0.5};
@@ -866,18 +866,18 @@ const double kDefault_filters_spectral_quality_max_value[] = {kNaN};
 const double kDefault_filters_spectral_quality_min_value[] = {kNaN};
 const std::int64_t kDefault_filters_spectral_quality_check_inf[] = {1};
 const ParamSpec kParams_filters_spectral_quality[] = {
-    {"max_nan_ratio", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_max_nan_ratio, 1, 0.0, 1.0, nullptr, 0},
-    {"max_zero_ratio", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_max_zero_ratio, 1, 0.0, 1.0, nullptr, 0},
-    {"min_variance", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_min_variance, 1, 0.0, kNaN, nullptr, 0},
-    {"max_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_max_value, 1, kNaN, kNaN, nullptr, 0},
-    {"min_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_min_value, 1, kNaN, kNaN, nullptr, 0},
-    {"check_inf", N4M_METHOD_PARAM_BOOL, true, kDefault_filters_spectral_quality_check_inf, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"max_nan_ratio", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_max_nan_ratio, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"max_zero_ratio", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_max_zero_ratio, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"min_variance", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_min_variance, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"max_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_max_value, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"min_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_spectral_quality_min_value, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"check_inf", N4M_METHOD_PARAM_BOOL, true, kDefault_filters_spectral_quality_check_inf, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_filters_variance_threshold[] = {0.0};
 const std::int64_t kDefault_filters_variance_top_k[] = {-1};
 const ParamSpec kParams_filters_variance[] = {
-    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_variance_threshold, 1, kNaN, kNaN, nullptr, 0},
-    {"top_k", N4M_METHOD_PARAM_INT, true, kDefault_filters_variance_top_k, nullptr, 1, -1.0, kNaN, nullptr, 0},
+    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_variance_threshold, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"top_k", N4M_METHOD_PARAM_INT, true, kDefault_filters_variance_top_k, nullptr, 1, -1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_filters_x_outlier_method[] = {0};
 const char* const kChoices_filters_x_outlier_method[] = {"mahalanobis", "robust_mahalanobis", "pca_residual", "pca_leverage", "isolation_forest", "lof"};
@@ -888,13 +888,13 @@ const std::int64_t kDefault_filters_x_outlier_seed[] = {0};
 const std::int64_t kDefault_filters_x_outlier_n_estimators[] = {100};
 const std::int64_t kDefault_filters_x_outlier_max_samples[] = {256};
 const ParamSpec kParams_filters_x_outlier[] = {
-    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_filters_x_outlier_method, nullptr, 1, kNaN, kNaN, kChoices_filters_x_outlier_method, 6},
-    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_x_outlier_threshold, 1, kNaN, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_filters_x_outlier_n_components, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"contamination", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_x_outlier_contamination, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_filters_x_outlier_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_filters_x_outlier_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"max_samples", N4M_METHOD_PARAM_INT, true, kDefault_filters_x_outlier_max_samples, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_filters_x_outlier_method, nullptr, 1, kNaN, kNaN, kChoices_filters_x_outlier_method, 6, false, false},
+    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_x_outlier_threshold, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_filters_x_outlier_n_components, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"contamination", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_x_outlier_contamination, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_filters_x_outlier_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
+    {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_filters_x_outlier_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"max_samples", N4M_METHOD_PARAM_INT, true, kDefault_filters_x_outlier_max_samples, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_filters_y_outlier_method[] = {0};
 const char* const kChoices_filters_y_outlier_method[] = {"iqr", "zscore", "percentile", "mad"};
@@ -902,58 +902,58 @@ const double kDefault_filters_y_outlier_threshold[] = {1.5};
 const double kDefault_filters_y_outlier_lower_percentile[] = {1.0};
 const double kDefault_filters_y_outlier_upper_percentile[] = {99.0};
 const ParamSpec kParams_filters_y_outlier[] = {
-    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_filters_y_outlier_method, nullptr, 1, kNaN, kNaN, kChoices_filters_y_outlier_method, 4},
-    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_y_outlier_threshold, 1, kNaN, kNaN, nullptr, 0},
-    {"lower_percentile", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_y_outlier_lower_percentile, 1, 0.0, 100.0, nullptr, 0},
-    {"upper_percentile", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_y_outlier_upper_percentile, 1, 0.0, 100.0, nullptr, 0},
+    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_filters_y_outlier_method, nullptr, 1, kNaN, kNaN, kChoices_filters_y_outlier_method, 4, false, false},
+    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_y_outlier_threshold, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"lower_percentile", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_y_outlier_lower_percentile, 1, 0.0, 100.0, nullptr, 0, false, false},
+    {"upper_percentile", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_filters_y_outlier_upper_percentile, 1, 0.0, 100.0, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_classification_pls_lda_n_components[] = {2};
 const ParamSpec kParams_models_classification_pls_lda[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_classification_pls_lda_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_classification_pls_lda_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, true},
 };
 const std::int64_t kDefault_models_classification_pls_logistic_n_components[] = {2};
 const std::int64_t kDefault_models_classification_pls_logistic_max_iter[] = {500};
 const ParamSpec kParams_models_classification_pls_logistic[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_classification_pls_logistic_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_classification_pls_logistic_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_classification_pls_logistic_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, true},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_classification_pls_logistic_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_classification_pls_qda_n_components[] = {2};
 const ParamSpec kParams_models_classification_pls_qda[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_classification_pls_qda_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_classification_pls_qda_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_ensembles_bagging_pls_n_components[] = {2};
 const std::int64_t kDefault_models_ensembles_bagging_pls_n_estimators[] = {50};
 const std::int64_t kDefault_models_ensembles_bagging_pls_seed[] = {0};
 const ParamSpec kParams_models_ensembles_bagging_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_bagging_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_bagging_pls_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_bagging_pls_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_bagging_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_bagging_pls_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_bagging_pls_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_models_ensembles_boosting_pls_n_components[] = {2};
 const std::int64_t kDefault_models_ensembles_boosting_pls_n_estimators[] = {50};
 const double kDefault_models_ensembles_boosting_pls_learning_rate[] = {0.1};
 const ParamSpec kParams_models_ensembles_boosting_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_boosting_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_boosting_pls_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"learning_rate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_ensembles_boosting_pls_learning_rate, 1, 0.0, 1.0, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_boosting_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_boosting_pls_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"learning_rate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_ensembles_boosting_pls_learning_rate, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_ensembles_random_subspace_pls_n_components[] = {2};
 const std::int64_t kDefault_models_ensembles_random_subspace_pls_n_estimators[] = {50};
 const std::int64_t kDefault_models_ensembles_random_subspace_pls_features_per_subspace[] = {10};
 const std::int64_t kDefault_models_ensembles_random_subspace_pls_seed[] = {0};
 const ParamSpec kParams_models_ensembles_random_subspace_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"features_per_subspace", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_features_per_subspace, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_estimators", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_n_estimators, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"features_per_subspace", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_features_per_subspace, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_models_ensembles_random_subspace_pls_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_models_heads_pls_cox_n_components[] = {2};
 const std::int64_t kDefault_models_heads_pls_cox_max_iter[] = {50};
 const double kDefault_models_heads_pls_cox_tol[] = {1e-10};
 const ParamSpec kParams_models_heads_pls_cox[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_cox_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_cox_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_heads_pls_cox_tol, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_cox_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_cox_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_heads_pls_cox_tol, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_heads_pls_glm_n_components[] = {2};
 const std::int64_t kDefault_models_heads_pls_glm_family[] = {0};
@@ -961,52 +961,52 @@ const char* const kChoices_models_heads_pls_glm_family[] = {"gaussian", "poisson
 const std::int64_t kDefault_models_heads_pls_glm_max_iter[] = {100};
 const double kDefault_models_heads_pls_glm_tol[] = {1e-10};
 const ParamSpec kParams_models_heads_pls_glm[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_glm_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_models_heads_pls_glm_family, nullptr, 1, kNaN, kNaN, kChoices_models_heads_pls_glm_family, 3},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_glm_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_heads_pls_glm_tol, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_glm_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_models_heads_pls_glm_family, nullptr, 1, kNaN, kNaN, kChoices_models_heads_pls_glm_family, 3, false, true},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_heads_pls_glm_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_heads_pls_glm_tol, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_local_lw_pls_n_components[] = {2};
 const std::int64_t kDefault_models_local_lw_pls_mode[] = {0};
 const char* const kChoices_models_local_lw_pls_mode[] = {"weighted", "knn"};
 const ParamSpec kParams_models_local_lw_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_local_lw_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_neighbors", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 2.0, kNaN, nullptr, 0},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_models_local_lw_pls_mode, nullptr, 1, kNaN, kNaN, kChoices_models_local_lw_pls_mode, 2},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_local_lw_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_neighbors", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 2.0, kNaN, nullptr, 0, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_models_local_lw_pls_mode, nullptr, 1, kNaN, kNaN, kChoices_models_local_lw_pls_mode, 2, false, false},
 };
 const std::int64_t kDefault_models_multiblock_mb_pls_n_components[] = {2};
 const ParamSpec kParams_models_multiblock_mb_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_mb_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_mb_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_multiblock_mir_pls_n_components[] = {2};
 const ParamSpec kParams_models_multiblock_mir_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_mir_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_mir_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_multiblock_o2pls_n_predictive[] = {2};
 const std::int64_t kDefault_models_multiblock_o2pls_n_x_orthogonal[] = {1};
 const std::int64_t kDefault_models_multiblock_o2pls_n_y_orthogonal[] = {1};
 const ParamSpec kParams_models_multiblock_o2pls[] = {
-    {"n_predictive", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_o2pls_n_predictive, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_x_orthogonal", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_o2pls_n_x_orthogonal, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"n_y_orthogonal", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_o2pls_n_y_orthogonal, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_predictive", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_o2pls_n_predictive, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_x_orthogonal", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_o2pls_n_x_orthogonal, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"n_y_orthogonal", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_o2pls_n_y_orthogonal, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_multiblock_on_pls_n_joint[] = {1};
 const ParamSpec kParams_models_multiblock_on_pls[] = {
-    {"n_joint", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_on_pls_n_joint, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_unique_per_block", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0},
+    {"n_joint", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_on_pls_n_joint, nullptr, 1, 1.0, kNaN, nullptr, 0, false, true},
+    {"n_unique_per_block", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0, false, true},
 };
 const std::int64_t kDefault_models_multiblock_rosa_n_components[] = {2};
 const ParamSpec kParams_models_multiblock_rosa[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_rosa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_multiblock_rosa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const ParamSpec kParams_models_multiblock_so_pls[] = {
-    {"n_components_per_block", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0},
+    {"n_components_per_block", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_pls_cppls_n_components[] = {2};
 const double kDefault_models_pls_cppls_gamma[] = {0.5};
 const ParamSpec kParams_models_pls_cppls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_cppls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"gamma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_cppls_gamma, 1, 0.0, 1.0, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_cppls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"gamma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_cppls_gamma, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_pls_kernel_n_components[] = {2};
 const std::int64_t kDefault_models_pls_kernel_kernel[] = {1};
@@ -1015,11 +1015,11 @@ const double kDefault_models_pls_kernel_gamma[] = {0.0};
 const double kDefault_models_pls_kernel_coef0[] = {1.0};
 const std::int64_t kDefault_models_pls_kernel_degree[] = {3};
 const ParamSpec kParams_models_pls_kernel[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_kernel_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"kernel", N4M_METHOD_PARAM_ENUM, true, kDefault_models_pls_kernel_kernel, nullptr, 1, kNaN, kNaN, kChoices_models_pls_kernel_kernel, 4},
-    {"gamma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_kernel_gamma, 1, 0.0, kNaN, nullptr, 0},
-    {"coef0", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_kernel_coef0, 1, kNaN, kNaN, nullptr, 0},
-    {"degree", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_kernel_degree, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_kernel_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"kernel", N4M_METHOD_PARAM_ENUM, true, kDefault_models_pls_kernel_kernel, nullptr, 1, kNaN, kNaN, kChoices_models_pls_kernel_kernel, 4, false, false},
+    {"gamma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_kernel_gamma, 1, 0.0, kNaN, nullptr, 0, false, true},
+    {"coef0", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_kernel_coef0, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"degree", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_kernel_degree, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_pls_pcr_n_components[] = {2};
 const std::int64_t kDefault_models_pls_pcr_center_x[] = {1};
@@ -1027,15 +1027,15 @@ const std::int64_t kDefault_models_pls_pcr_scale_x[] = {1};
 const std::int64_t kDefault_models_pls_pcr_center_y[] = {1};
 const std::int64_t kDefault_models_pls_pcr_scale_y[] = {0};
 const ParamSpec kParams_models_pls_pcr[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_pcr_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pcr_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pcr_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pcr_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pcr_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_pcr_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, true},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pcr_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pcr_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pcr_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pcr_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
 };
 const std::int64_t kDefault_models_pls_pls_fit_simple_n_components[] = {2};
 const ParamSpec kParams_models_pls_pls_fit_simple[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_pls_fit_simple_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_pls_fit_simple_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, true},
 };
 const std::int64_t kDefault_models_pls_pls_regression_n_components[] = {2};
 const std::int64_t kDefault_models_pls_pls_regression_solver[] = {0};
@@ -1045,28 +1045,28 @@ const std::int64_t kDefault_models_pls_pls_regression_scale_x[] = {1};
 const std::int64_t kDefault_models_pls_pls_regression_center_y[] = {1};
 const std::int64_t kDefault_models_pls_pls_regression_scale_y[] = {1};
 const ParamSpec kParams_models_pls_pls_regression[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_pls_regression_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"solver", N4M_METHOD_PARAM_ENUM, true, kDefault_models_pls_pls_regression_solver, nullptr, 1, kNaN, kNaN, kChoices_models_pls_pls_regression_solver, 8},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pls_regression_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pls_regression_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pls_regression_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pls_regression_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_pls_regression_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, true},
+    {"solver", N4M_METHOD_PARAM_ENUM, true, kDefault_models_pls_pls_regression_solver, nullptr, 1, kNaN, kNaN, kChoices_models_pls_pls_regression_solver, 8, false, true},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pls_regression_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pls_regression_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pls_regression_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_pls_regression_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
 };
 const std::int64_t kDefault_models_regularized_continuum_regression_n_components[] = {2};
 const double kDefault_models_regularized_continuum_regression_tau[] = {0.5};
 const ParamSpec kParams_models_regularized_continuum_regression[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_continuum_regression_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"tau", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_regularized_continuum_regression_tau, 1, 0.0, 1.0, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_continuum_regression_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"tau", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_regularized_continuum_regression_tau, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const double kDefault_models_regularized_ridge_alpha[] = {1.0};
 const std::int64_t kDefault_models_regularized_ridge_center_x[] = {1};
 const std::int64_t kDefault_models_regularized_ridge_scale_x[] = {1};
 const std::int64_t kDefault_models_regularized_ridge_center_y[] = {1};
 const ParamSpec kParams_models_regularized_ridge[] = {
-    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_regularized_ridge_alpha, 1, 0.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_regularized_ridge_alpha, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_regularized_ridge_pls_n_components[] = {2};
 const double kDefault_models_regularized_ridge_pls_ridge_lambda[] = {0.1};
@@ -1075,12 +1075,12 @@ const std::int64_t kDefault_models_regularized_ridge_pls_scale_x[] = {1};
 const std::int64_t kDefault_models_regularized_ridge_pls_center_y[] = {1};
 const std::int64_t kDefault_models_regularized_ridge_pls_scale_y[] = {1};
 const ParamSpec kParams_models_regularized_ridge_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_ridge_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"ridge_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_regularized_ridge_pls_ridge_lambda, 1, 0.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_ridge_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"ridge_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_regularized_ridge_pls_ridge_lambda, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_ridge_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_regularized_robust_pls_n_components[] = {2};
 const double kDefault_models_regularized_robust_pls_huber_k[] = {1.345};
@@ -1090,13 +1090,13 @@ const std::int64_t kDefault_models_regularized_robust_pls_scale_x[] = {1};
 const std::int64_t kDefault_models_regularized_robust_pls_center_y[] = {1};
 const std::int64_t kDefault_models_regularized_robust_pls_scale_y[] = {1};
 const ParamSpec kParams_models_regularized_robust_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_robust_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"huber_k", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_regularized_robust_pls_huber_k, 1, 0.0, kNaN, nullptr, 0},
-    {"max_irls_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_robust_pls_max_irls_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_robust_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_robust_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_robust_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_robust_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_robust_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"huber_k", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_regularized_robust_pls_huber_k, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"max_irls_iter", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_robust_pls_max_irls_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_robust_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_robust_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_robust_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_robust_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_regularized_weighted_pls_n_components[] = {2};
 const std::int64_t kDefault_models_regularized_weighted_pls_center_x[] = {1};
@@ -1104,128 +1104,128 @@ const std::int64_t kDefault_models_regularized_weighted_pls_scale_x[] = {1};
 const std::int64_t kDefault_models_regularized_weighted_pls_center_y[] = {1};
 const std::int64_t kDefault_models_regularized_weighted_pls_scale_y[] = {1};
 const ParamSpec kParams_models_regularized_weighted_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_weighted_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_weighted_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_weighted_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_weighted_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_weighted_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_regularized_weighted_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_weighted_pls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_weighted_pls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_weighted_pls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_regularized_weighted_pls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_sparse_fused_sparse_pls_n_components[] = {2};
 const double kDefault_models_sparse_fused_sparse_pls_l1_lambda[] = {0.05};
 const double kDefault_models_sparse_fused_sparse_pls_fusion_lambda[] = {0.05};
 const ParamSpec kParams_models_sparse_fused_sparse_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_sparse_fused_sparse_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"l1_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_fused_sparse_pls_l1_lambda, 1, 0.0, kNaN, nullptr, 0},
-    {"fusion_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_fused_sparse_pls_fusion_lambda, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_sparse_fused_sparse_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"l1_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_fused_sparse_pls_l1_lambda, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"fusion_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_fused_sparse_pls_fusion_lambda, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_sparse_group_sparse_pls_n_components[] = {2};
 const double kDefault_models_sparse_group_sparse_pls_group_lambda[] = {0.05};
 const ParamSpec kParams_models_sparse_group_sparse_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_sparse_group_sparse_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"group_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_group_sparse_pls_group_lambda, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_sparse_group_sparse_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"group_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_group_sparse_pls_group_lambda, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_sparse_sparse_pls_da_n_components[] = {2};
 const double kDefault_models_sparse_sparse_pls_da_sparsity_lambda[] = {0.05};
 const ParamSpec kParams_models_sparse_sparse_pls_da[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_sparse_sparse_pls_da_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"sparsity_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_sparse_pls_da_sparsity_lambda, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_sparse_sparse_pls_da_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"sparsity_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_sparse_pls_da_sparsity_lambda, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_sparse_sparse_simpls_n_components[] = {2};
 const double kDefault_models_sparse_sparse_simpls_sparsity_lambda[] = {0.05};
 const ParamSpec kParams_models_sparse_sparse_simpls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_sparse_sparse_simpls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"sparsity_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_sparse_simpls_sparsity_lambda, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_sparse_sparse_simpls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"sparsity_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_sparse_sparse_simpls_sparsity_lambda, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_specialized_ecr_n_components[] = {2};
 const double kDefault_models_specialized_ecr_alpha[] = {0.5};
 const ParamSpec kParams_models_specialized_ecr[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_ecr_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_specialized_ecr_alpha, 1, 0.0, 1.0, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_ecr_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_specialized_ecr_alpha, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_specialized_gpr_pls_n_components[] = {2};
 const double kDefault_models_specialized_gpr_pls_length_scale[] = {1.0};
 const double kDefault_models_specialized_gpr_pls_noise_level[] = {0.001};
 const ParamSpec kParams_models_specialized_gpr_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_gpr_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"length_scale", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_specialized_gpr_pls_length_scale, 1, 0.0, kNaN, nullptr, 0},
-    {"noise_level", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_specialized_gpr_pls_noise_level, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_gpr_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, true},
+    {"length_scale", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_specialized_gpr_pls_length_scale, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"noise_level", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_specialized_gpr_pls_noise_level, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_specialized_missing_aware_nipals_n_components[] = {2};
 const ParamSpec kParams_models_specialized_missing_aware_nipals[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_missing_aware_nipals_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_missing_aware_nipals_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_specialized_recursive_n_components[] = {2};
 const ParamSpec kParams_models_specialized_recursive[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_recursive_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"window_size", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 2.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_recursive_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, true},
+    {"window_size", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 2.0, kNaN, nullptr, 0, false, true},
 };
 const std::int64_t kDefault_models_specialized_tensor_pls_n_components[] = {2};
 const ParamSpec kParams_models_specialized_tensor_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_tensor_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"mode_j", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"mode_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_specialized_tensor_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"mode_j", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, true},
+    {"mode_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, true},
 };
 const std::int64_t kDefault_models_transfer_di_pls_n_components[] = {2};
 const double kDefault_models_transfer_di_pls_di_lambda[] = {1.0};
 const ParamSpec kParams_models_transfer_di_pls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_transfer_di_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"di_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_transfer_di_pls_di_lambda, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_transfer_di_pls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"di_lambda", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_transfer_di_pls_di_lambda, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_models_transfer_pds_window_half_width[] = {2};
 const ParamSpec kParams_models_transfer_pds[] = {
-    {"window_half_width", N4M_METHOD_PARAM_INT, true, kDefault_models_transfer_pds_window_half_width, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"window_half_width", N4M_METHOD_PARAM_INT, true, kDefault_models_transfer_pds_window_half_width, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_alignment_cow_align_reference[] = {0};
 const std::int64_t kDefault_preprocessing_alignment_cow_align_interval_size[] = {32};
 const std::int64_t kDefault_preprocessing_alignment_cow_align_max_shift[] = {5};
 const ParamSpec kParams_preprocessing_alignment_cow_align[] = {
-    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_alignment_cow_align_reference, 0, kNaN, kNaN, nullptr, 0},
-    {"interval_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_cow_align_interval_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"max_shift", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_cow_align_max_shift, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_alignment_cow_align_reference, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"interval_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_cow_align_interval_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"max_shift", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_cow_align_max_shift, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_alignment_dtw_align_reference[] = {0};
 const ParamSpec kParams_preprocessing_alignment_dtw_align[] = {
-    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_alignment_dtw_align_reference, 0, kNaN, kNaN, nullptr, 0},
+    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_alignment_dtw_align_reference, 0, kNaN, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_alignment_icoshift_align_reference[] = {0};
 const std::int64_t kDefault_preprocessing_alignment_icoshift_align_interval_size[] = {32};
 const std::int64_t kDefault_preprocessing_alignment_icoshift_align_max_shift[] = {5};
 const ParamSpec kParams_preprocessing_alignment_icoshift_align[] = {
-    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_alignment_icoshift_align_reference, 0, kNaN, kNaN, nullptr, 0},
-    {"interval_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_icoshift_align_interval_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"max_shift", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_icoshift_align_max_shift, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_alignment_icoshift_align_reference, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"interval_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_icoshift_align_interval_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"max_shift", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_icoshift_align_max_shift, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_alignment_xcorr_align_reference[] = {0};
 const std::int64_t kDefault_preprocessing_alignment_xcorr_align_max_shift[] = {5};
 const ParamSpec kParams_preprocessing_alignment_xcorr_align[] = {
-    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_alignment_xcorr_align_reference, 0, kNaN, kNaN, nullptr, 0},
-    {"max_shift", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_xcorr_align_max_shift, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_alignment_xcorr_align_reference, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"max_shift", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_alignment_xcorr_align_max_shift, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_baselines_airpls_lam[] = {1000000.0};
 const std::int64_t kDefault_preprocessing_baselines_airpls_max_iter[] = {50};
 const double kDefault_preprocessing_baselines_airpls_tol[] = {0.001};
 const ParamSpec kParams_preprocessing_baselines_airpls[] = {
-    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_airpls_lam, 1, 0.0, kNaN, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_airpls_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_airpls_tol, 1, 0.0, kNaN, nullptr, 0},
+    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_airpls_lam, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_airpls_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_airpls_tol, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_baselines_arpls_lam[] = {100000.0};
 const std::int64_t kDefault_preprocessing_baselines_arpls_max_iter[] = {50};
 const double kDefault_preprocessing_baselines_arpls_tol[] = {0.001};
 const ParamSpec kParams_preprocessing_baselines_arpls[] = {
-    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_arpls_lam, 1, 0.0, kNaN, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_arpls_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_arpls_tol, 1, 0.0, kNaN, nullptr, 0},
+    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_arpls_lam, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_arpls_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_arpls_tol, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_baselines_asls_lam[] = {1000000.0};
 const double kDefault_preprocessing_baselines_asls_p[] = {0.01};
 const std::int64_t kDefault_preprocessing_baselines_asls_max_iter[] = {50};
 const double kDefault_preprocessing_baselines_asls_tol[] = {0.001};
 const ParamSpec kParams_preprocessing_baselines_asls[] = {
-    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_asls_lam, 1, 0.0, kNaN, nullptr, 0},
-    {"p", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_asls_p, 1, 0.0, 1.0, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_asls_max_iter, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_asls_tol, 1, 0.0, kNaN, nullptr, 0},
+    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_asls_lam, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"p", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_asls_p, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_asls_max_iter, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_asls_tol, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_baselines_beads_lam_0[] = {100.0};
 const double kDefault_preprocessing_baselines_beads_lam_1[] = {0.5};
@@ -1233,15 +1233,15 @@ const double kDefault_preprocessing_baselines_beads_lam_2[] = {0.5};
 const std::int64_t kDefault_preprocessing_baselines_beads_max_iter[] = {50};
 const double kDefault_preprocessing_baselines_beads_tol[] = {0.001};
 const ParamSpec kParams_preprocessing_baselines_beads[] = {
-    {"lam_0", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_lam_0, 1, 0.0, kNaN, nullptr, 0},
-    {"lam_1", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_lam_1, 1, 0.0, kNaN, nullptr, 0},
-    {"lam_2", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_lam_2, 1, 0.0, kNaN, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_beads_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_tol, 1, 0.0, kNaN, nullptr, 0},
+    {"lam_0", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_lam_0, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"lam_1", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_lam_1, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"lam_2", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_lam_2, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_beads_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_beads_tol, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_baselines_detrend_polyorder[] = {1};
 const ParamSpec kParams_preprocessing_baselines_detrend[] = {
-    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_detrend_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_detrend_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_baselines_iasls_lam[] = {1000000.0};
 const double kDefault_preprocessing_baselines_iasls_p[] = {0.01};
@@ -1251,71 +1251,71 @@ const std::int64_t kDefault_preprocessing_baselines_iasls_diff_order[] = {2};
 const std::int64_t kDefault_preprocessing_baselines_iasls_max_iter[] = {50};
 const double kDefault_preprocessing_baselines_iasls_tol[] = {0.001};
 const ParamSpec kParams_preprocessing_baselines_iasls[] = {
-    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_lam, 1, 0.0, kNaN, nullptr, 0},
-    {"p", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_p, 1, 0.0, 1.0, nullptr, 0},
-    {"lam_1", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_lam_1, 1, 0.0, kNaN, nullptr, 0},
-    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_iasls_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"diff_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_iasls_diff_order, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_iasls_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_tol, 1, 0.0, kNaN, nullptr, 0},
+    {"lam", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_lam, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"p", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_p, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"lam_1", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_lam_1, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_iasls_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"diff_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_iasls_diff_order, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_iasls_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_iasls_tol, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_baselines_imodpoly_polyorder[] = {2};
 const std::int64_t kDefault_preprocessing_baselines_imodpoly_max_iter[] = {250};
 const double kDefault_preprocessing_baselines_imodpoly_tol[] = {0.001};
 const ParamSpec kParams_preprocessing_baselines_imodpoly[] = {
-    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_imodpoly_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_imodpoly_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_imodpoly_tol, 1, 0.0, kNaN, nullptr, 0},
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_imodpoly_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_imodpoly_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_imodpoly_tol, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_baselines_modpoly_polyorder[] = {2};
 const std::int64_t kDefault_preprocessing_baselines_modpoly_max_iter[] = {250};
 const double kDefault_preprocessing_baselines_modpoly_tol[] = {0.001};
 const ParamSpec kParams_preprocessing_baselines_modpoly[] = {
-    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_modpoly_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_modpoly_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_modpoly_tol, 1, 0.0, kNaN, nullptr, 0},
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_modpoly_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_modpoly_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"tol", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_modpoly_tol, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_baselines_rolling_ball_half_window[] = {20};
 const std::int64_t kDefault_preprocessing_baselines_rolling_ball_smooth_half_window[] = {0};
 const ParamSpec kParams_preprocessing_baselines_rolling_ball[] = {
-    {"half_window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_rolling_ball_half_window, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"smooth_half_window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_rolling_ball_smooth_half_window, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"half_window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_rolling_ball_half_window, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"smooth_half_window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_rolling_ball_smooth_half_window, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_baselines_saps_n_components[] = {5};
 const double kDefault_preprocessing_baselines_saps_score_weight[] = {1.0};
 const std::int64_t kDefault_preprocessing_baselines_saps_fit_intercept[] = {1};
 const double kDefault_preprocessing_baselines_saps_ridge[] = {0.0};
 const ParamSpec kParams_preprocessing_baselines_saps[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_saps_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"score_weight", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_saps_score_weight, 1, kNaN, kNaN, nullptr, 0},
-    {"fit_intercept", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_baselines_saps_fit_intercept, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"ridge", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_saps_ridge, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_saps_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"score_weight", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_saps_score_weight, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"fit_intercept", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_baselines_saps_fit_intercept, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"ridge", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_baselines_saps_ridge, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_baselines_snip_max_half_window[] = {20};
 const ParamSpec kParams_preprocessing_baselines_snip[] = {
-    {"max_half_window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_snip_max_half_window, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"max_half_window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_baselines_snip_max_half_window, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_derivatives_derivate_order[] = {1};
 const double kDefault_preprocessing_derivatives_derivate_delta[] = {1.0};
 const ParamSpec kParams_preprocessing_derivatives_derivate[] = {
-    {"order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_derivate_order, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_derivate_delta, 1, kNaN, kNaN, nullptr, 0},
+    {"order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_derivate_order, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_derivate_delta, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_derivatives_first_derivative_delta[] = {1.0};
 const std::int64_t kDefault_preprocessing_derivatives_first_derivative_edge_order[] = {2};
 const ParamSpec kParams_preprocessing_derivatives_first_derivative[] = {
-    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_first_derivative_delta, 1, kNaN, kNaN, nullptr, 0},
-    {"edge_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_first_derivative_edge_order, nullptr, 1, 1.0, 2.0, nullptr, 0},
+    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_first_derivative_delta, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"edge_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_first_derivative_edge_order, nullptr, 1, 1.0, 2.0, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_derivatives_norris_williams_segment[] = {5};
 const std::int64_t kDefault_preprocessing_derivatives_norris_williams_gap[] = {5};
 const std::int64_t kDefault_preprocessing_derivatives_norris_williams_derivative_order[] = {1};
 const double kDefault_preprocessing_derivatives_norris_williams_delta[] = {1.0};
 const ParamSpec kParams_preprocessing_derivatives_norris_williams[] = {
-    {"segment", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_norris_williams_segment, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"gap", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_norris_williams_gap, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"derivative_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_norris_williams_derivative_order, nullptr, 1, 0.0, 2.0, nullptr, 0},
-    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_norris_williams_delta, 1, kNaN, kNaN, nullptr, 0},
+    {"segment", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_norris_williams_segment, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"gap", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_norris_williams_gap, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"derivative_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_norris_williams_derivative_order, nullptr, 1, 0.0, 2.0, nullptr, 0, false, false},
+    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_norris_williams_delta, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_derivatives_savitzky_golay_window_length[] = {5};
 const std::int64_t kDefault_preprocessing_derivatives_savitzky_golay_polyorder[] = {2};
@@ -1325,53 +1325,53 @@ const std::int64_t kDefault_preprocessing_derivatives_savitzky_golay_mode[] = {0
 const char* const kChoices_preprocessing_derivatives_savitzky_golay_mode[] = {"mirror", "constant", "nearest", "wrap", "interp"};
 const double kDefault_preprocessing_derivatives_savitzky_golay_cval[] = {0.0};
 const ParamSpec kParams_preprocessing_derivatives_savitzky_golay[] = {
-    {"window_length", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_savitzky_golay_window_length, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_savitzky_golay_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"deriv", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_savitzky_golay_deriv, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_savitzky_golay_delta, 1, kNaN, kNaN, nullptr, 0},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_derivatives_savitzky_golay_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_derivatives_savitzky_golay_mode, 5},
-    {"cval", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_savitzky_golay_cval, 1, kNaN, kNaN, nullptr, 0},
+    {"window_length", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_savitzky_golay_window_length, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"polyorder", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_savitzky_golay_polyorder, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"deriv", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_savitzky_golay_deriv, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_savitzky_golay_delta, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_derivatives_savitzky_golay_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_derivatives_savitzky_golay_mode, 5, false, false},
+    {"cval", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_savitzky_golay_cval, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_derivatives_second_derivative_delta[] = {1.0};
 const std::int64_t kDefault_preprocessing_derivatives_second_derivative_edge_order[] = {2};
 const ParamSpec kParams_preprocessing_derivatives_second_derivative[] = {
-    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_second_derivative_delta, 1, kNaN, kNaN, nullptr, 0},
-    {"edge_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_second_derivative_edge_order, nullptr, 1, 1.0, 2.0, nullptr, 0},
+    {"delta", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_derivatives_second_derivative_delta, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"edge_order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_derivatives_second_derivative_edge_order, nullptr, 1, 1.0, 2.0, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_feature_selection_flexible_pca_n_components[] = {5.0};
 const ParamSpec kParams_preprocessing_feature_selection_flexible_pca[] = {
-    {"n_components", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_feature_selection_flexible_pca_n_components, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_feature_selection_flexible_pca_n_components, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_feature_selection_flexible_svd_n_components[] = {5.0};
 const ParamSpec kParams_preprocessing_feature_selection_flexible_svd[] = {
-    {"n_components", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_feature_selection_flexible_svd_n_components, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_feature_selection_flexible_svd_n_components, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_orthogonalization_epo_scale[] = {1};
 const ParamSpec kParams_preprocessing_orthogonalization_epo[] = {
-    {"scale", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_orthogonalization_epo_scale, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"scale", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_orthogonalization_epo_scale, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_orthogonalization_osc_n_components[] = {1};
 const std::int64_t kDefault_preprocessing_orthogonalization_osc_scale[] = {1};
 const ParamSpec kParams_preprocessing_orthogonalization_osc[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_orthogonalization_osc_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"scale", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_orthogonalization_osc_scale, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_orthogonalization_osc_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"scale", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_orthogonalization_osc_scale, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const ParamSpec kParams_preprocessing_resampling_crop[] = {
-    {"start", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0},
-    {"end", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, -1.0, kNaN, nullptr, 0},
+    {"start", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0, false, false},
+    {"end", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, -1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_resampling_kbins_discretizer_n_bins[] = {5};
 const std::int64_t kDefault_preprocessing_resampling_kbins_discretizer_strategy[] = {0};
 const char* const kChoices_preprocessing_resampling_kbins_discretizer_strategy[] = {"uniform", "quantile"};
 const ParamSpec kParams_preprocessing_resampling_kbins_discretizer[] = {
-    {"n_bins", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_resampling_kbins_discretizer_n_bins, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"strategy", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_resampling_kbins_discretizer_strategy, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_resampling_kbins_discretizer_strategy, 2},
+    {"n_bins", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_resampling_kbins_discretizer_n_bins, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"strategy", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_resampling_kbins_discretizer_strategy, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_resampling_kbins_discretizer_strategy, 2, false, false},
 };
 const ParamSpec kParams_preprocessing_resampling_range_discretizer[] = {
-    {"edges", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
+    {"edges", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
 };
 const ParamSpec kParams_preprocessing_resampling_resample_transformer[] = {
-    {"num_samples", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, -1.0, kNaN, nullptr, 0},
+    {"num_samples", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, -1.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_resampling_resampler_target_wavelengths[] = {0};
 const std::int64_t kDefault_preprocessing_resampling_resampler_method[] = {0};
@@ -1386,121 +1386,121 @@ const double kDefault_preprocessing_resampling_resampler_tgt_min[] = {0.0};
 const double kDefault_preprocessing_resampling_resampler_tgt_step[] = {1.0};
 const std::int64_t kDefault_preprocessing_resampling_resampler_tgt_n[] = {0};
 const ParamSpec kParams_preprocessing_resampling_resampler[] = {
-    {"target_wavelengths", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_resampling_resampler_target_wavelengths, 0, kNaN, kNaN, nullptr, 0},
-    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_resampling_resampler_method, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_resampling_resampler_method, 3},
-    {"crop_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_crop_min, 1, kNaN, kNaN, nullptr, 0},
-    {"crop_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_crop_max, 1, kNaN, kNaN, nullptr, 0},
-    {"use_crop", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_resampling_resampler_use_crop, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"fill_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_fill_value, 1, kNaN, kNaN, nullptr, 0},
-    {"bounds_error", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_resampling_resampler_bounds_error, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"extrapolate", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_resampling_resampler_extrapolate, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"tgt_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_tgt_min, 1, kNaN, kNaN, nullptr, 0},
-    {"tgt_step", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_tgt_step, 1, kNaN, kNaN, nullptr, 0},
-    {"tgt_n", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_resampling_resampler_tgt_n, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"target_wavelengths", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_resampling_resampler_target_wavelengths, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_resampling_resampler_method, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_resampling_resampler_method, 3, false, false},
+    {"crop_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_crop_min, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"crop_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_crop_max, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"use_crop", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_resampling_resampler_use_crop, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"fill_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_fill_value, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"bounds_error", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_resampling_resampler_bounds_error, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"extrapolate", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_resampling_resampler_extrapolate, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"tgt_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_tgt_min, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"tgt_step", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_resampling_resampler_tgt_step, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"tgt_n", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_resampling_resampler_tgt_n, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_scaling_log_transform_base[] = {0.0};
 const double kDefault_preprocessing_scaling_log_transform_offset[] = {0.0};
 const std::int64_t kDefault_preprocessing_scaling_log_transform_auto_offset[] = {1};
 const double kDefault_preprocessing_scaling_log_transform_min_value[] = {1e-08};
 const ParamSpec kParams_preprocessing_scaling_log_transform[] = {
-    {"base", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_log_transform_base, 1, 0.0, kNaN, nullptr, 0},
-    {"offset", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_log_transform_offset, 1, kNaN, kNaN, nullptr, 0},
-    {"auto_offset", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scaling_log_transform_auto_offset, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"min_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_log_transform_min_value, 1, 0.0, kNaN, nullptr, 0},
+    {"base", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_log_transform_base, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"offset", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_log_transform_offset, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"auto_offset", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scaling_log_transform_auto_offset, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"min_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_log_transform_min_value, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_scaling_normalize_feature_min[] = {-1.0};
 const double kDefault_preprocessing_scaling_normalize_feature_max[] = {1.0};
 const ParamSpec kParams_preprocessing_scaling_normalize[] = {
-    {"feature_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_normalize_feature_min, 1, kNaN, kNaN, nullptr, 0},
-    {"feature_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_normalize_feature_max, 1, kNaN, kNaN, nullptr, 0},
+    {"feature_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_normalize_feature_min, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"feature_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_normalize_feature_max, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_scatter_area_normalization_method[] = {0};
 const char* const kChoices_preprocessing_scatter_area_normalization_method[] = {"sum", "abs_sum", "trapz"};
 const ParamSpec kParams_preprocessing_scatter_area_normalization[] = {
-    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_scatter_area_normalization_method, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_scatter_area_normalization_method, 3},
+    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_scatter_area_normalization_method, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_scatter_area_normalization_method, 3, false, false},
 };
 const std::int64_t kDefault_preprocessing_scatter_emsc_degree[] = {2};
 const ParamSpec kParams_preprocessing_scatter_emsc[] = {
-    {"degree", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_emsc_degree, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"degree", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_emsc_degree, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_scatter_local_snv_window[] = {11};
 const std::int64_t kDefault_preprocessing_scatter_local_snv_pad_mode[] = {0};
 const char* const kChoices_preprocessing_scatter_local_snv_pad_mode[] = {"reflect", "edge", "constant"};
 const double kDefault_preprocessing_scatter_local_snv_constant_value[] = {0.0};
 const ParamSpec kParams_preprocessing_scatter_local_snv[] = {
-    {"window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_local_snv_window, nullptr, 1, 3.0, kNaN, nullptr, 0},
-    {"pad_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_scatter_local_snv_pad_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_scatter_local_snv_pad_mode, 3},
-    {"constant_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_local_snv_constant_value, 1, kNaN, kNaN, nullptr, 0},
+    {"window", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_local_snv_window, nullptr, 1, 3.0, kNaN, nullptr, 0, false, false},
+    {"pad_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_scatter_local_snv_pad_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_scatter_local_snv_pad_mode, 3, false, false},
+    {"constant_value", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_local_snv_constant_value, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_scatter_localized_msc_window_size[] = {32};
 const double kDefault_preprocessing_scatter_localized_msc_reference[] = {0};
 const double kDefault_preprocessing_scatter_localized_msc_eps[] = {1e-12};
 const ParamSpec kParams_preprocessing_scatter_localized_msc[] = {
-    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_localized_msc_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_scatter_localized_msc_reference, 0, kNaN, kNaN, nullptr, 0},
-    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_localized_msc_eps, 1, 0.0, kNaN, nullptr, 0},
+    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_localized_msc_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_scatter_localized_msc_reference, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_localized_msc_eps, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_scatter_piecewise_msc_window_size[] = {32};
 const double kDefault_preprocessing_scatter_piecewise_msc_reference[] = {0};
 const double kDefault_preprocessing_scatter_piecewise_msc_eps[] = {1e-12};
 const ParamSpec kParams_preprocessing_scatter_piecewise_msc[] = {
-    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_piecewise_msc_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_scatter_piecewise_msc_reference, 0, kNaN, kNaN, nullptr, 0},
-    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_piecewise_msc_eps, 1, 0.0, kNaN, nullptr, 0},
+    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_piecewise_msc_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_scatter_piecewise_msc_reference, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_piecewise_msc_eps, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_scatter_piecewise_snv_window_size[] = {32};
 const std::int64_t kDefault_preprocessing_scatter_piecewise_snv_ddof[] = {0};
 const double kDefault_preprocessing_scatter_piecewise_snv_eps[] = {1e-12};
 const ParamSpec kParams_preprocessing_scatter_piecewise_snv[] = {
-    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_piecewise_snv_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"ddof", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_piecewise_snv_ddof, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_piecewise_snv_eps, 1, 0.0, kNaN, nullptr, 0},
+    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_piecewise_snv_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"ddof", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_piecewise_snv_ddof, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_piecewise_snv_eps, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_scatter_robust_snv_with_center[] = {1};
 const std::int64_t kDefault_preprocessing_scatter_robust_snv_with_scale[] = {1};
 const double kDefault_preprocessing_scatter_robust_snv_k[] = {1.4826};
 const ParamSpec kParams_preprocessing_scatter_robust_snv[] = {
-    {"with_center", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_robust_snv_with_center, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"with_scale", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_robust_snv_with_scale, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"k", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_robust_snv_k, 1, 0.0, kNaN, nullptr, 0},
+    {"with_center", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_robust_snv_with_center, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"with_scale", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_robust_snv_with_scale, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"k", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_robust_snv_k, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_scatter_snv_with_mean[] = {1};
 const std::int64_t kDefault_preprocessing_scatter_snv_with_std[] = {1};
 const std::int64_t kDefault_preprocessing_scatter_snv_ddof[] = {0};
 const ParamSpec kParams_preprocessing_scatter_snv[] = {
-    {"with_mean", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_snv_with_mean, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"with_std", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_snv_with_std, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"ddof", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_snv_ddof, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"with_mean", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_snv_with_mean, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"with_std", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scatter_snv_with_std, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"ddof", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_snv_ddof, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_scatter_vsn_eps[] = {1e-12};
 const ParamSpec kParams_preprocessing_scatter_vsn[] = {
-    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_vsn_eps, 1, 0.0, kNaN, nullptr, 0},
+    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_vsn_eps, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_scatter_weighted_snv_weights[] = {0};
 const std::int64_t kDefault_preprocessing_scatter_weighted_snv_ddof[] = {0};
 const double kDefault_preprocessing_scatter_weighted_snv_eps[] = {1e-12};
 const ParamSpec kParams_preprocessing_scatter_weighted_snv[] = {
-    {"weights", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_scatter_weighted_snv_weights, 0, kNaN, kNaN, nullptr, 0},
-    {"ddof", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_weighted_snv_ddof, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_weighted_snv_eps, 1, 0.0, kNaN, nullptr, 0},
+    {"weights", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_scatter_weighted_snv_weights, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"ddof", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_scatter_weighted_snv_ddof, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"eps", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scatter_weighted_snv_eps, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_signal_conversion_from_absorbance_is_percent[] = {0};
 const ParamSpec kParams_preprocessing_signal_conversion_from_absorbance[] = {
-    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_from_absorbance_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_from_absorbance_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_signal_conversion_kubelka_munk_is_percent[] = {0};
 const double kDefault_preprocessing_signal_conversion_kubelka_munk_epsilon[] = {1e-10};
 const ParamSpec kParams_preprocessing_signal_conversion_kubelka_munk[] = {
-    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_kubelka_munk_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"epsilon", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_signal_conversion_kubelka_munk_epsilon, 1, 0.0, kNaN, nullptr, 0},
+    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_kubelka_munk_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"epsilon", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_signal_conversion_kubelka_munk_epsilon, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_signal_conversion_to_absorbance_is_percent[] = {0};
 const double kDefault_preprocessing_signal_conversion_to_absorbance_epsilon[] = {1e-10};
 const std::int64_t kDefault_preprocessing_signal_conversion_to_absorbance_clip_negative[] = {1};
 const ParamSpec kParams_preprocessing_signal_conversion_to_absorbance[] = {
-    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_to_absorbance_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"epsilon", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_signal_conversion_to_absorbance_epsilon, 1, 0.0, kNaN, nullptr, 0},
-    {"clip_negative", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_to_absorbance_clip_negative, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_to_absorbance_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"epsilon", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_signal_conversion_to_absorbance_epsilon, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"clip_negative", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_to_absorbance_clip_negative, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_preprocessing_smoothing_gaussian_sigma[] = {1.0};
 const std::int64_t kDefault_preprocessing_smoothing_gaussian_order[] = {0};
@@ -1509,48 +1509,48 @@ const char* const kChoices_preprocessing_smoothing_gaussian_mode[] = {"reflect",
 const double kDefault_preprocessing_smoothing_gaussian_cval[] = {0.0};
 const double kDefault_preprocessing_smoothing_gaussian_truncate[] = {4.0};
 const ParamSpec kParams_preprocessing_smoothing_gaussian[] = {
-    {"sigma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_smoothing_gaussian_sigma, 1, 0.0, kNaN, nullptr, 0},
-    {"order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_smoothing_gaussian_order, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_smoothing_gaussian_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_smoothing_gaussian_mode, 5},
-    {"cval", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_smoothing_gaussian_cval, 1, kNaN, kNaN, nullptr, 0},
-    {"truncate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_smoothing_gaussian_truncate, 1, 0.0, kNaN, nullptr, 0},
+    {"sigma", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_smoothing_gaussian_sigma, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"order", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_smoothing_gaussian_order, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_smoothing_gaussian_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_smoothing_gaussian_mode, 5, false, false},
+    {"cval", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_smoothing_gaussian_cval, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"truncate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_smoothing_gaussian_truncate, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const ParamSpec kParams_preprocessing_specialized_fck_static[] = {
-    {"kernel_size", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 3.0, kNaN, nullptr, 0},
-    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
-    {"sigmas", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
+    {"kernel_size", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 3.0, kNaN, nullptr, 0, false, false},
+    {"alphas", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"sigmas", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_transfer_direct_standardization_fit_intercept[] = {1};
 const double kDefault_preprocessing_transfer_direct_standardization_ridge[] = {0.0};
 const ParamSpec kParams_preprocessing_transfer_direct_standardization[] = {
-    {"fit_intercept", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_transfer_direct_standardization_fit_intercept, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"ridge", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_transfer_direct_standardization_ridge, 1, 0.0, kNaN, nullptr, 0},
+    {"fit_intercept", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_transfer_direct_standardization_fit_intercept, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"ridge", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_transfer_direct_standardization_ridge, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_transfer_piecewise_direct_standardization_window_size[] = {5};
 const std::int64_t kDefault_preprocessing_transfer_piecewise_direct_standardization_fit_intercept[] = {1};
 const double kDefault_preprocessing_transfer_piecewise_direct_standardization_ridge[] = {0.0};
 const ParamSpec kParams_preprocessing_transfer_piecewise_direct_standardization[] = {
-    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_transfer_piecewise_direct_standardization_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"fit_intercept", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_transfer_piecewise_direct_standardization_fit_intercept, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"ridge", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_transfer_piecewise_direct_standardization_ridge, 1, 0.0, kNaN, nullptr, 0},
+    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_transfer_piecewise_direct_standardization_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"fit_intercept", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_transfer_piecewise_direct_standardization_fit_intercept, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"ridge", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_transfer_piecewise_direct_standardization_ridge, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_transfer_robust_direct_standardization_fit_intercept[] = {1};
 const double kDefault_preprocessing_transfer_robust_direct_standardization_ridge[] = {0.0};
 const double kDefault_preprocessing_transfer_robust_direct_standardization_trim_quantile[] = {0.9};
 const std::int64_t kDefault_preprocessing_transfer_robust_direct_standardization_max_iter[] = {3};
 const ParamSpec kParams_preprocessing_transfer_robust_direct_standardization[] = {
-    {"fit_intercept", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_transfer_robust_direct_standardization_fit_intercept, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"ridge", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_transfer_robust_direct_standardization_ridge, 1, 0.0, kNaN, nullptr, 0},
-    {"trim_quantile", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_transfer_robust_direct_standardization_trim_quantile, 1, 0.0, 1.0, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_transfer_robust_direct_standardization_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"fit_intercept", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_transfer_robust_direct_standardization_fit_intercept, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"ridge", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_transfer_robust_direct_standardization_ridge, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"trim_quantile", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_transfer_robust_direct_standardization_trim_quantile, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_transfer_robust_direct_standardization_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_family[] = {0};
 const char* const kChoices_preprocessing_wavelets_wavelet_family[] = {"haar", "db4", "sym4", "coif1"};
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_mode[] = {0};
 const char* const kChoices_preprocessing_wavelets_wavelet_mode[] = {"periodization", "symmetric", "zero"};
 const ParamSpec kParams_preprocessing_wavelets_wavelet[] = {
-    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_family, 4},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_mode, 3},
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_family, 4, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_mode, 3, false, false},
 };
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_denoise_family[] = {1};
 const char* const kChoices_preprocessing_wavelets_wavelet_denoise_family[] = {"haar", "db4", "sym4", "coif1"};
@@ -1562,11 +1562,11 @@ const char* const kChoices_preprocessing_wavelets_wavelet_denoise_threshold_mode
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_denoise_noise_estimator[] = {0};
 const char* const kChoices_preprocessing_wavelets_wavelet_denoise_noise_estimator[] = {"median", "std"};
 const ParamSpec kParams_preprocessing_wavelets_wavelet_denoise[] = {
-    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_family, 4},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_mode, 3},
-    {"level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_denoise_level, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"threshold_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_threshold_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_threshold_mode, 2},
-    {"noise_estimator", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_noise_estimator, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_noise_estimator, 2},
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_family, 4, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_mode, 3, false, false},
+    {"level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_denoise_level, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"threshold_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_threshold_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_threshold_mode, 2, false, false},
+    {"noise_estimator", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_denoise_noise_estimator, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_denoise_noise_estimator, 2, false, false},
 };
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_features_family[] = {0};
 const char* const kChoices_preprocessing_wavelets_wavelet_features_family[] = {"haar", "db4", "sym4", "coif1"};
@@ -1576,10 +1576,10 @@ const std::int64_t kDefault_preprocessing_wavelets_wavelet_features_max_level[] 
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_features_entropy[] = {0};
 const char* const kChoices_preprocessing_wavelets_wavelet_features_entropy[] = {"energy", "histogram"};
 const ParamSpec kParams_preprocessing_wavelets_wavelet_features[] = {
-    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_features_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_features_family, 4},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_features_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_features_mode, 3},
-    {"max_level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_features_max_level, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"entropy", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_features_entropy, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_features_entropy, 2},
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_features_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_features_family, 4, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_features_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_features_mode, 3, false, false},
+    {"max_level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_features_max_level, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"entropy", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_features_entropy, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_features_entropy, 2, false, false},
 };
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_pca_family[] = {0};
 const char* const kChoices_preprocessing_wavelets_wavelet_pca_family[] = {"haar", "db4", "sym4", "coif1"};
@@ -1588,10 +1588,10 @@ const char* const kChoices_preprocessing_wavelets_wavelet_pca_mode[] = {"periodi
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_pca_max_level[] = {2};
 const double kDefault_preprocessing_wavelets_wavelet_pca_n_components[] = {5.0};
 const ParamSpec kParams_preprocessing_wavelets_wavelet_pca[] = {
-    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_pca_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_pca_family, 4},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_pca_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_pca_mode, 3},
-    {"max_level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_pca_max_level, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_wavelets_wavelet_pca_n_components, 1, 0.0, kNaN, nullptr, 0},
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_pca_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_pca_family, 4, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_pca_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_pca_mode, 3, false, false},
+    {"max_level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_pca_max_level, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"n_components", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_wavelets_wavelet_pca_n_components, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_svd_family[] = {0};
 const char* const kChoices_preprocessing_wavelets_wavelet_svd_family[] = {"haar", "db4", "sym4", "coif1"};
@@ -1600,40 +1600,40 @@ const char* const kChoices_preprocessing_wavelets_wavelet_svd_mode[] = {"periodi
 const std::int64_t kDefault_preprocessing_wavelets_wavelet_svd_max_level[] = {2};
 const double kDefault_preprocessing_wavelets_wavelet_svd_n_components[] = {5.0};
 const ParamSpec kParams_preprocessing_wavelets_wavelet_svd[] = {
-    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_svd_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_svd_family, 4},
-    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_svd_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_svd_mode, 3},
-    {"max_level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_svd_max_level, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_wavelets_wavelet_svd_n_components, 1, 0.0, kNaN, nullptr, 0},
+    {"family", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_svd_family, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_svd_family, 4, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_wavelets_wavelet_svd_mode, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_wavelets_wavelet_svd_mode, 3, false, false},
+    {"max_level", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_wavelets_wavelet_svd_max_level, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"n_components", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_wavelets_wavelet_svd_n_components, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_bipls_n_components[] = {2};
 const std::int64_t kDefault_selection_bipls_interval_width[] = {10};
 const std::int64_t kDefault_selection_bipls_min_intervals[] = {2};
 const std::int64_t kDefault_selection_bipls_cv[] = {3};
 const ParamSpec kParams_selection_bipls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"interval_width", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_interval_width, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"min_intervals", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_min_intervals, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"interval_width", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_interval_width, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"min_intervals", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_min_intervals, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_bipls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_bve_n_components[] = {2};
 const std::int64_t kDefault_selection_bve_n_steps[] = {10};
 const std::int64_t kDefault_selection_bve_min_features[] = {0};
 const std::int64_t kDefault_selection_bve_cv[] = {3};
 const ParamSpec kParams_selection_bve[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_steps", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_n_steps, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_steps", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_n_steps, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_bve_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_cars_n_components[] = {2};
 const std::int64_t kDefault_selection_cars_n_iterations[] = {50};
 const std::int64_t kDefault_selection_cars_min_features[] = {0};
 const std::int64_t kDefault_selection_cars_cv[] = {3};
 const ParamSpec kParams_selection_cars[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_cars_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_emcuve_n_components[] = {2};
 const std::int64_t kDefault_selection_emcuve_noise_features[] = {50};
@@ -1642,12 +1642,12 @@ const std::int64_t kDefault_selection_emcuve_n_ensembles[] = {10};
 const double kDefault_selection_emcuve_vote_threshold[] = {0.5};
 const std::int64_t kDefault_selection_emcuve_cv[] = {3};
 const ParamSpec kParams_selection_emcuve[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"noise_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_noise_features, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"noise_seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"n_ensembles", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_n_ensembles, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"vote_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_emcuve_vote_threshold, 1, 0.0, 1.0, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"noise_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_noise_features, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"noise_seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
+    {"n_ensembles", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_n_ensembles, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"vote_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_emcuve_vote_threshold, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_emcuve_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_ga_n_components[] = {2};
 const std::int64_t kDefault_selection_ga_n_generations[] = {30};
@@ -1658,20 +1658,20 @@ const double kDefault_selection_ga_mutation_rate[] = {0.05};
 const std::int64_t kDefault_selection_ga_cv[] = {3};
 const std::int64_t kDefault_selection_ga_seed[] = {0};
 const ParamSpec kParams_selection_ga[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_generations", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_n_generations, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"population_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_population_size, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"max_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_max_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"mutation_rate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ga_mutation_rate, 1, 0.0, 1.0, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_generations", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_n_generations, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"population_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_population_size, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"max_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_max_features, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"mutation_rate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ga_mutation_rate, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_ga_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_selection_interval_interval_size[] = {32};
 const std::int64_t kDefault_selection_interval_step[] = {0};
 const ParamSpec kParams_selection_interval[] = {
-    {"interval_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_interval_interval_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"step", N4M_METHOD_PARAM_INT, true, kDefault_selection_interval_step, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"interval_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_interval_interval_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"step", N4M_METHOD_PARAM_INT, true, kDefault_selection_interval_step, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_ipw_n_components[] = {2};
 const std::int64_t kDefault_selection_ipw_n_iterations[] = {20};
@@ -1679,12 +1679,12 @@ const double kDefault_selection_ipw_damping[] = {0.5};
 const double kDefault_selection_ipw_weight_floor[] = {1e-06};
 const std::int64_t kDefault_selection_ipw_cv[] = {3};
 const ParamSpec kParams_selection_ipw[] = {
-    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_ipw_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_ipw_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"damping", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ipw_damping, 1, 0.0, 1.0, nullptr, 0},
-    {"weight_floor", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ipw_weight_floor, 1, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_ipw_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, true},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_ipw_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_ipw_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"damping", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ipw_damping, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"weight_floor", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_ipw_weight_floor, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_ipw_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_irf_n_components[] = {2};
 const std::int64_t kDefault_selection_irf_n_iterations[] = {100};
@@ -1693,23 +1693,23 @@ const std::int64_t kDefault_selection_irf_initial_intervals[] = {5};
 const std::int64_t kDefault_selection_irf_cv[] = {3};
 const std::int64_t kDefault_selection_irf_seed[] = {0};
 const ParamSpec kParams_selection_irf[] = {
-    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"initial_intervals", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_initial_intervals, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"window_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_window_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"initial_intervals", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_initial_intervals, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_irf_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_selection_iriv_n_components[] = {2};
 const std::int64_t kDefault_selection_iriv_max_rounds[] = {5};
 const std::int64_t kDefault_selection_iriv_cv[] = {5};
 const std::int64_t kDefault_selection_iriv_seed[] = {0};
 const ParamSpec kParams_selection_iriv[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"max_rounds", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_max_rounds, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"max_rounds", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_max_rounds, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_iriv_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_selection_pso_n_components[] = {2};
 const std::int64_t kDefault_selection_pso_n_swarm[] = {30};
@@ -1721,15 +1721,15 @@ const double kDefault_selection_pso_v_max[] = {4.0};
 const std::int64_t kDefault_selection_pso_cv[] = {3};
 const std::int64_t kDefault_selection_pso_seed[] = {0};
 const ParamSpec kParams_selection_pso[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_swarm", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_n_swarm, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"w", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_w, 1, kNaN, kNaN, nullptr, 0},
-    {"c1", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_c1, 1, kNaN, kNaN, nullptr, 0},
-    {"c2", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_c2, 1, kNaN, kNaN, nullptr, 0},
-    {"v_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_v_max, 1, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_swarm", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_n_swarm, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"w", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_w, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"c1", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_c1, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"c2", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_c2, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"v_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_pso_v_max, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_pso_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_selection_random_frog_n_components[] = {2};
 const std::int64_t kDefault_selection_random_frog_n_iterations[] = {100};
@@ -1739,24 +1739,24 @@ const std::int64_t kDefault_selection_random_frog_max_size[] = {0};
 const std::int64_t kDefault_selection_random_frog_cv[] = {3};
 const std::int64_t kDefault_selection_random_frog_seed[] = {0};
 const ParamSpec kParams_selection_random_frog[] = {
-    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"initial_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_initial_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"min_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_min_size, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"max_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_max_size, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, true},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"initial_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_initial_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"min_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_min_size, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"max_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_max_size, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_random_frog_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_selection_randomization_n_components[] = {2};
 const std::int64_t kDefault_selection_randomization_n_permutations[] = {200};
 const std::int64_t kDefault_selection_randomization_randomization_seed[] = {0};
 const double kDefault_selection_randomization_alpha[] = {0.05};
 const ParamSpec kParams_selection_randomization[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_randomization_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_permutations", N4M_METHOD_PARAM_INT, true, kDefault_selection_randomization_n_permutations, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"randomization_seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_randomization_randomization_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_randomization_alpha, 1, 0.0, 1.0, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_randomization_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_permutations", N4M_METHOD_PARAM_INT, true, kDefault_selection_randomization_n_permutations, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"randomization_seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_randomization_randomization_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_randomization_alpha, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_rep_n_components[] = {2};
 const std::int64_t kDefault_selection_rep_n_steps[] = {10};
@@ -1764,11 +1764,11 @@ const std::int64_t kDefault_selection_rep_min_features[] = {0};
 const std::int64_t kDefault_selection_rep_remove_count[] = {1};
 const std::int64_t kDefault_selection_rep_cv[] = {3};
 const ParamSpec kParams_selection_rep[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_steps", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_n_steps, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"remove_count", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_remove_count, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_steps", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_n_steps, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"remove_count", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_remove_count, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_rep_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_scars_n_components[] = {2};
 const std::int64_t kDefault_selection_scars_n_iterations[] = {50};
@@ -1777,12 +1777,12 @@ const double kDefault_selection_scars_sample_fraction[] = {0.8};
 const std::int64_t kDefault_selection_scars_cv[] = {3};
 const std::int64_t kDefault_selection_scars_seed[] = {0};
 const ParamSpec kParams_selection_scars[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"sample_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_scars_sample_fraction, 1, 0.0, 1.0, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"sample_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_scars_sample_fraction, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_scars_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_selection_shaving_n_components[] = {2};
 const std::int64_t kDefault_selection_shaving_n_steps[] = {10};
@@ -1790,51 +1790,51 @@ const std::int64_t kDefault_selection_shaving_min_features[] = {0};
 const double kDefault_selection_shaving_shave_fraction[] = {0.2};
 const std::int64_t kDefault_selection_shaving_cv[] = {3};
 const ParamSpec kParams_selection_shaving[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_steps", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_n_steps, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"shave_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_shaving_shave_fraction, 1, 0.0, 1.0, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_steps", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_n_steps, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_min_features, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"shave_fraction", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_shaving_shave_fraction, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_shaving_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_sipls_n_components[] = {2};
 const std::int64_t kDefault_selection_sipls_interval_width[] = {10};
 const std::int64_t kDefault_selection_sipls_combination_size[] = {2};
 const std::int64_t kDefault_selection_sipls_cv[] = {3};
 const ParamSpec kParams_selection_sipls[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"interval_width", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_interval_width, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"combination_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_combination_size, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"interval_width", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_interval_width, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"combination_size", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_combination_size, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_sipls_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_spa_n_components[] = {2};
 const ParamSpec kParams_selection_spa[] = {
-    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_spa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, true},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_spa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_st_n_components[] = {2};
 const std::int64_t kDefault_selection_st_min_selected[] = {0};
 const std::int64_t kDefault_selection_st_cv[] = {3};
 const ParamSpec kParams_selection_st[] = {
-    {"thresholds", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_st_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"min_selected", N4M_METHOD_PARAM_INT, true, kDefault_selection_st_min_selected, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_st_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"thresholds", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_st_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"min_selected", N4M_METHOD_PARAM_INT, true, kDefault_selection_st_min_selected, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_st_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_stability_n_components[] = {2};
 const std::int64_t kDefault_selection_stability_cv[] = {3};
 const ParamSpec kParams_selection_stability[] = {
-    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_stability_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_stability_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, true},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_stability_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_stability_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_t2_n_components[] = {2};
 const std::int64_t kDefault_selection_t2_min_selected[] = {0};
 const std::int64_t kDefault_selection_t2_cv[] = {3};
 const ParamSpec kParams_selection_t2[] = {
-    {"alpha_thresholds", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_t2_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"min_selected", N4M_METHOD_PARAM_INT, true, kDefault_selection_t2_min_selected, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_t2_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"alpha_thresholds", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_t2_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"min_selected", N4M_METHOD_PARAM_INT, true, kDefault_selection_t2_min_selected, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_t2_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_uve_n_components[] = {2};
 const std::int64_t kDefault_selection_uve_noise_features[] = {50};
@@ -1842,26 +1842,26 @@ const std::int64_t kDefault_selection_uve_noise_seed[] = {0};
 const std::int64_t kDefault_selection_uve_min_features[] = {-1};
 const std::int64_t kDefault_selection_uve_cv[] = {3};
 const ParamSpec kParams_selection_uve[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"noise_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_noise_features, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"noise_seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_min_features, nullptr, 1, -1.0, kNaN, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"noise_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_noise_features, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"noise_seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_noise_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
+    {"min_features", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_min_features, nullptr, 1, -1.0, kNaN, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_uve_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_variable_select_n_components[] = {2};
 const std::int64_t kDefault_selection_variable_select_rank_method[] = {0};
 const char* const kChoices_selection_variable_select_rank_method[] = {"vip", "coefficient", "selectivity_ratio"};
 const ParamSpec kParams_selection_variable_select[] = {
-    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_variable_select_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"rank_method", N4M_METHOD_PARAM_ENUM, true, kDefault_selection_variable_select_rank_method, nullptr, 1, kNaN, kNaN, kChoices_selection_variable_select_rank_method, 3},
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, true},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_variable_select_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"rank_method", N4M_METHOD_PARAM_ENUM, true, kDefault_selection_variable_select_rank_method, nullptr, 1, kNaN, kNaN, kChoices_selection_variable_select_rank_method, 3, false, false},
 };
 const std::int64_t kDefault_selection_vip_spa_n_components[] = {2};
 const double kDefault_selection_vip_spa_vip_threshold[] = {0.3};
 const ParamSpec kParams_selection_vip_spa[] = {
-    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_vip_spa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"vip_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vip_spa_vip_threshold, 1, 0.0, kNaN, nullptr, 0},
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_vip_spa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"vip_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vip_spa_vip_threshold, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_vissa_n_components[] = {2};
 const std::int64_t kDefault_selection_vissa_n_iterations[] = {10};
@@ -1872,21 +1872,21 @@ const double kDefault_selection_vissa_floor_probability[] = {0.05};
 const std::int64_t kDefault_selection_vissa_cv[] = {3};
 const std::int64_t kDefault_selection_vissa_seed[] = {0};
 const ParamSpec kParams_selection_vissa[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"n_submodels", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_n_submodels, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"ratio_kept", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vissa_ratio_kept, 1, 0.0, 1.0, nullptr, 0},
-    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vissa_threshold, 1, 0.0, 1.0, nullptr, 0},
-    {"floor_probability", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vissa_floor_probability, 1, 0.0, 1.0, nullptr, 0},
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_iterations", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_n_iterations, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"n_submodels", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_n_submodels, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"ratio_kept", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vissa_ratio_kept, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vissa_threshold, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"floor_probability", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_vissa_floor_probability, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_selection_vissa_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_selection_wvc_n_components[] = {2};
 const std::int64_t kDefault_selection_wvc_normalize[] = {1};
 const ParamSpec kParams_selection_wvc[] = {
-    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0},
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_wvc_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"normalize", N4M_METHOD_PARAM_BOOL, true, kDefault_selection_wvc_normalize, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"top_k", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 1.0, kNaN, nullptr, 0, false, true},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_wvc_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"normalize", N4M_METHOD_PARAM_BOOL, true, kDefault_selection_wvc_normalize, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_selection_wvc_threshold_n_components[] = {2};
 const std::int64_t kDefault_selection_wvc_threshold_normalize[] = {1};
@@ -1894,11 +1894,11 @@ const double kDefault_selection_wvc_threshold_score_threshold[] = {0.0};
 const double kDefault_selection_wvc_threshold_threshold_factor[] = {1.0};
 const std::int64_t kDefault_selection_wvc_threshold_min_selected[] = {0};
 const ParamSpec kParams_selection_wvc_threshold[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_wvc_threshold_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"normalize", N4M_METHOD_PARAM_BOOL, true, kDefault_selection_wvc_threshold_normalize, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"score_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_wvc_threshold_score_threshold, 1, kNaN, kNaN, nullptr, 0},
-    {"threshold_factor", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_wvc_threshold_threshold_factor, 1, 0.0, kNaN, nullptr, 0},
-    {"min_selected", N4M_METHOD_PARAM_INT, true, kDefault_selection_wvc_threshold_min_selected, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_selection_wvc_threshold_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"normalize", N4M_METHOD_PARAM_BOOL, true, kDefault_selection_wvc_threshold_normalize, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"score_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_wvc_threshold_score_threshold, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"threshold_factor", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_selection_wvc_threshold_threshold_factor, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"min_selected", N4M_METHOD_PARAM_INT, true, kDefault_selection_wvc_threshold_min_selected, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_splitters_binned_strat_group_kfold_n_splits[] = {5};
 const std::int64_t kDefault_splitters_binned_strat_group_kfold_n_bins[] = {5};
@@ -1907,11 +1907,11 @@ const char* const kChoices_splitters_binned_strat_group_kfold_strategy[] = {"uni
 const std::int64_t kDefault_splitters_binned_strat_group_kfold_shuffle[] = {1};
 const std::int64_t kDefault_splitters_binned_strat_group_kfold_seed[] = {0};
 const ParamSpec kParams_splitters_binned_strat_group_kfold[] = {
-    {"n_splits", N4M_METHOD_PARAM_INT, true, kDefault_splitters_binned_strat_group_kfold_n_splits, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"n_bins", N4M_METHOD_PARAM_INT, true, kDefault_splitters_binned_strat_group_kfold_n_bins, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"strategy", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_binned_strat_group_kfold_strategy, nullptr, 1, kNaN, kNaN, kChoices_splitters_binned_strat_group_kfold_strategy, 2},
-    {"shuffle", N4M_METHOD_PARAM_BOOL, true, kDefault_splitters_binned_strat_group_kfold_shuffle, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_binned_strat_group_kfold_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_splits", N4M_METHOD_PARAM_INT, true, kDefault_splitters_binned_strat_group_kfold_n_splits, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"n_bins", N4M_METHOD_PARAM_INT, true, kDefault_splitters_binned_strat_group_kfold_n_bins, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"strategy", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_binned_strat_group_kfold_strategy, nullptr, 1, kNaN, kNaN, kChoices_splitters_binned_strat_group_kfold_strategy, 2, false, false},
+    {"shuffle", N4M_METHOD_PARAM_BOOL, true, kDefault_splitters_binned_strat_group_kfold_shuffle, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_binned_strat_group_kfold_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_splitters_kbins_stratified_test_size[] = {0.25};
 const std::int64_t kDefault_splitters_kbins_stratified_seed[] = {0};
@@ -1919,39 +1919,39 @@ const std::int64_t kDefault_splitters_kbins_stratified_n_bins[] = {5};
 const std::int64_t kDefault_splitters_kbins_stratified_strategy[] = {0};
 const char* const kChoices_splitters_kbins_stratified_strategy[] = {"uniform", "quantile"};
 const ParamSpec kParams_splitters_kbins_stratified[] = {
-    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_kbins_stratified_test_size, 1, 0.0, 1.0, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_kbins_stratified_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"n_bins", N4M_METHOD_PARAM_INT, true, kDefault_splitters_kbins_stratified_n_bins, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"strategy", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_kbins_stratified_strategy, nullptr, 1, kNaN, kNaN, kChoices_splitters_kbins_stratified_strategy, 2},
+    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_kbins_stratified_test_size, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_kbins_stratified_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
+    {"n_bins", N4M_METHOD_PARAM_INT, true, kDefault_splitters_kbins_stratified_n_bins, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"strategy", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_kbins_stratified_strategy, nullptr, 1, kNaN, kNaN, kChoices_splitters_kbins_stratified_strategy, 2, false, false},
 };
 const double kDefault_splitters_kennard_stone_test_size[] = {0.25};
 const ParamSpec kParams_splitters_kennard_stone[] = {
-    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_kennard_stone_test_size, 1, 0.0, 1.0, nullptr, 0},
+    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_kennard_stone_test_size, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const double kDefault_splitters_kmeans_test_size[] = {0.25};
 const std::int64_t kDefault_splitters_kmeans_seed[] = {0};
 const std::int64_t kDefault_splitters_kmeans_max_iter[] = {100};
 const ParamSpec kParams_splitters_kmeans[] = {
-    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_kmeans_test_size, 1, 0.0, 1.0, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_kmeans_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
-    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_splitters_kmeans_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0},
+    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_kmeans_test_size, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_kmeans_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
+    {"max_iter", N4M_METHOD_PARAM_INT, true, kDefault_splitters_kmeans_max_iter, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
 const double kDefault_splitters_split_splitter_test_size[] = {0.25};
 const std::int64_t kDefault_splitters_split_splitter_seed[] = {0};
 const ParamSpec kParams_splitters_split_splitter[] = {
-    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_split_splitter_test_size, 1, 0.0, 1.0, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_split_splitter_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_split_splitter_test_size, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_split_splitter_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_splitters_spxy_test_size[] = {0.25};
 const ParamSpec kParams_splitters_spxy[] = {
-    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_spxy_test_size, 1, 0.0, 1.0, nullptr, 0},
+    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_spxy_test_size, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_splitters_spxy_fold_n_splits[] = {5};
 const std::int64_t kDefault_splitters_spxy_fold_y_metric[] = {1};
 const char* const kChoices_splitters_spxy_fold_y_metric[] = {"x_only", "euclidean", "hamming"};
 const ParamSpec kParams_splitters_spxy_fold[] = {
-    {"n_splits", N4M_METHOD_PARAM_INT, true, kDefault_splitters_spxy_fold_n_splits, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"y_metric", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_spxy_fold_y_metric, nullptr, 1, kNaN, kNaN, kChoices_splitters_spxy_fold_y_metric, 3},
+    {"n_splits", N4M_METHOD_PARAM_INT, true, kDefault_splitters_spxy_fold_n_splits, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"y_metric", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_spxy_fold_y_metric, nullptr, 1, kNaN, kNaN, kChoices_splitters_spxy_fold_y_metric, 3, false, false},
 };
 const std::int64_t kDefault_splitters_spxy_g_fold_n_splits[] = {5};
 const std::int64_t kDefault_splitters_spxy_g_fold_y_metric[] = {1};
@@ -1959,31 +1959,31 @@ const char* const kChoices_splitters_spxy_g_fold_y_metric[] = {"x_only", "euclid
 const std::int64_t kDefault_splitters_spxy_g_fold_aggregation[] = {0};
 const char* const kChoices_splitters_spxy_g_fold_aggregation[] = {"mean", "median"};
 const ParamSpec kParams_splitters_spxy_g_fold[] = {
-    {"n_splits", N4M_METHOD_PARAM_INT, true, kDefault_splitters_spxy_g_fold_n_splits, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"y_metric", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_spxy_g_fold_y_metric, nullptr, 1, kNaN, kNaN, kChoices_splitters_spxy_g_fold_y_metric, 3},
-    {"aggregation", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_spxy_g_fold_aggregation, nullptr, 1, kNaN, kNaN, kChoices_splitters_spxy_g_fold_aggregation, 2},
+    {"n_splits", N4M_METHOD_PARAM_INT, true, kDefault_splitters_spxy_g_fold_n_splits, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"y_metric", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_spxy_g_fold_y_metric, nullptr, 1, kNaN, kNaN, kChoices_splitters_spxy_g_fold_y_metric, 3, false, false},
+    {"aggregation", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_spxy_g_fold_aggregation, nullptr, 1, kNaN, kNaN, kChoices_splitters_spxy_g_fold_aggregation, 2, false, false},
 };
 const double kDefault_splitters_systematic_circular_test_size[] = {0.25};
 const std::int64_t kDefault_splitters_systematic_circular_seed[] = {0};
 const ParamSpec kParams_splitters_systematic_circular[] = {
-    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_systematic_circular_test_size, 1, 0.0, 1.0, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_systematic_circular_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_systematic_circular_test_size, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_systematic_circular_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const std::int64_t kDefault_utilities_hotelling_t2_n_components[] = {5};
 const double kDefault_utilities_hotelling_t2_alpha[] = {0.05};
 const ParamSpec kParams_utilities_hotelling_t2[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_utilities_hotelling_t2_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_utilities_hotelling_t2_alpha, 1, 0.0, 1.0, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_utilities_hotelling_t2_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_utilities_hotelling_t2_alpha, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_utilities_q_residuals_n_components[] = {5};
 const double kDefault_utilities_q_residuals_alpha[] = {0.05};
 const ParamSpec kParams_utilities_q_residuals[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_utilities_q_residuals_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_utilities_q_residuals_alpha, 1, 0.0, 1.0, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_utilities_q_residuals_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_utilities_q_residuals_alpha, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const double kDefault_utilities_signal_type_detector_confidence_threshold[] = {0.7};
 const ParamSpec kParams_utilities_signal_type_detector[] = {
-    {"confidence_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_utilities_signal_type_detector_confidence_threshold, 1, 0.0, 1.0, nullptr, 0},
+    {"confidence_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_utilities_signal_type_detector_confidence_threshold, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_utilities_sweep_cv[] = {5};
 const double kDefault_utilities_sweep_ridge_lambdas[] = {0.01, 0.1, 1.0, 10.0};
@@ -1995,22 +1995,22 @@ const std::int64_t kDefault_utilities_sweep_scale_x[] = {1};
 const std::int64_t kDefault_utilities_sweep_center_y[] = {1};
 const std::int64_t kDefault_utilities_sweep_scale_y[] = {1};
 const ParamSpec kParams_utilities_sweep[] = {
-    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_utilities_sweep_cv, nullptr, 1, 2.0, kNaN, nullptr, 0},
-    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_utilities_sweep_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0},
-    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_utilities_sweep_pls_components, nullptr, 5, 1.0, kNaN, nullptr, 0},
-    {"heads", N4M_METHOD_PARAM_ENUM, true, kDefault_utilities_sweep_heads, nullptr, 1, kNaN, kNaN, kChoices_utilities_sweep_heads, 3},
-    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_utilities_sweep_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_utilities_sweep_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_utilities_sweep_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
-    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_utilities_sweep_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0},
+    {"cv", N4M_METHOD_PARAM_INT, true, kDefault_utilities_sweep_cv, nullptr, 1, 2.0, kNaN, nullptr, 0, false, false},
+    {"ridge_lambdas", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_utilities_sweep_ridge_lambdas, 4, 0.0, kNaN, nullptr, 0, false, false},
+    {"pls_components", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_utilities_sweep_pls_components, nullptr, 5, 1.0, kNaN, nullptr, 0, false, false},
+    {"heads", N4M_METHOD_PARAM_ENUM, true, kDefault_utilities_sweep_heads, nullptr, 1, kNaN, kNaN, kChoices_utilities_sweep_heads, 3, false, false},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_utilities_sweep_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_utilities_sweep_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_utilities_sweep_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_utilities_sweep_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_utilities_transfer_metrics_n_components[] = {10};
 const std::int64_t kDefault_utilities_transfer_metrics_k_neighbors[] = {10};
 const std::int64_t kDefault_utilities_transfer_metrics_seed[] = {0};
 const ParamSpec kParams_utilities_transfer_metrics[] = {
-    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_utilities_transfer_metrics_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"k_neighbors", N4M_METHOD_PARAM_INT, true, kDefault_utilities_transfer_metrics_k_neighbors, nullptr, 1, 1.0, kNaN, nullptr, 0},
-    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_utilities_transfer_metrics_seed, nullptr, 1, 0.0, kNaN, nullptr, 0},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_utilities_transfer_metrics_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"k_neighbors", N4M_METHOD_PARAM_INT, true, kDefault_utilities_transfer_metrics_k_neighbors, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_utilities_transfer_metrics_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 
 const MethodSpec kMethods[] = {

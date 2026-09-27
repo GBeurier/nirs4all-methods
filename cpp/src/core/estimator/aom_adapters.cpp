@@ -749,6 +749,20 @@ class CalibrationAdapter final : public Adapter {
         return N4M_OK;
     }
 
+    // The selected branch is one of the requested branches, and the ridge
+    // penalties are relative to the data scale only with head ridge and no
+    // explicit alphas (the alpha base is 1 otherwise). The other parameters
+    // only shaped the calibration search.
+    n4m_status_t check_params(n4m_context_t* ctx, const Params& params) const override {
+        const std::vector<std::int64_t> branches = params.get_ints("branches");
+        if (std::find(branches.begin(), branches.end(), branch_) == branches.end()) {
+            return contradicts(ctx, "branches");
+        }
+        const bool relative = params.get_int("head") == 1 && params.get_doubles("alphas").empty();
+        if (!relative && state_[coef_.size() * 2 + 1] != 1.0) return contradicts(ctx, "head, alphas");
+        return N4M_OK;
+    }
+
   private:
     void reset() noexcept {
         branch_ = 0;
@@ -834,6 +848,10 @@ class AomPreprocessingAdapter final : public Adapter {
         }
         return build(ctx, params, width);
     }
+
+    // The state is the input width; the operator bank and gating mode are
+    // replayed by build().
+    n4m_status_t check_params(n4m_context_t*, const Params&) const override { return N4M_OK; }
 
   private:
     n4m_status_t build(n4m_context_t* ctx, const Params& params, std::int64_t width) {

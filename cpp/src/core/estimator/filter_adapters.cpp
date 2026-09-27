@@ -117,6 +117,10 @@ class SampleFilterAdapter final : public Adapter {
         return N4M_OK;
     }
 
+    // The kernels' state loaders compare their configuration (built from the
+    // parameters) with the restored state.
+    n4m_status_t check_params(n4m_context_t*, const Params&) const override { return N4M_OK; }
+
   private:
     n4m_status_t create(n4m_context_t* ctx, const Params& params) {
         state_.reset(kernel_.create(params));

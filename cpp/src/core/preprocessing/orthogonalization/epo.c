@@ -214,6 +214,11 @@ n4m_status_t n4m_pp_epo_state_load(n4m_pp_epo_state_t* state,
     n4m_status_t st = n4m_state_read_f64_array_new(r, n_features, &X_mean);
     if (st == N4M_OK && !n4m_state_read_f64(r, &d_mean)) st = N4M_ERR_CORRUPT_BUFFER;
     if (st == N4M_OK) st = n4m_state_read_f64_array_new(r, n_features, &B);
+    /* Without scaling, fit centres neither X nor d. */
+    if (st == N4M_OK && !state->scale && d_mean != 0.0) st = N4M_ERR_CORRUPT_BUFFER;
+    for (int64_t j = 0; st == N4M_OK && !state->scale && j < n_features; ++j) {
+        if (X_mean[j] != 0.0) st = N4M_ERR_CORRUPT_BUFFER;
+    }
     if (st != N4M_OK) {
         free(X_mean);
         free(B);

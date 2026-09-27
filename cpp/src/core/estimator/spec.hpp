@@ -27,6 +27,12 @@ struct ParamSpec {
     double max_value;
     const char* const* choices;
     std::int32_t n_choices;
+    // Optional value: the manifest publishes no default (null) and the core
+    // uses the default above when the caller leaves the parameter unset.
+    bool optional;
+    // The fitted state records this parameter (its value, or a dimension it
+    // fixes): N4ME import refuses a payload whose value contradicts the state.
+    bool recorded;
 };
 
 class Adapter;
@@ -173,6 +179,13 @@ class Adapter {
     virtual n4m_status_t save_state(n4m_context_t* ctx, std::vector<StateBlock>& out) const = 0;
     virtual n4m_status_t load_state(n4m_context_t* ctx, const Params& params,
                                     const std::vector<StateBlock>& blocks) = 0;
+    // Checks the parameters of an N4ME payload against the state load_state
+    // restored: every parameter the state records (ParamSpec::recorded) must
+    // equal the value the state implies. Parameters replayed from Params at
+    // load cannot contradict the state; fit-only parameters (penalties,
+    // tolerances, seeds, ...) leave no trace in it and are provenance.
+    // Called by decode_state after load_state.
+    virtual n4m_status_t check_params(n4m_context_t* ctx, const Params& params) const = 0;
 };
 
 // Splitter procedure results: the indices of every fold concatenated, with
@@ -189,6 +202,15 @@ void set_error(n4m_context_t* ctx, const char* message) noexcept;
 n4m_status_t apply_config_params(const Params& params, n4m_config_t* cfg);
 // Message "<what> '<name>'".
 void set_error_named(n4m_context_t* ctx, const char* what, const char* name) noexcept;
+// N4M_ERR_CORRUPT_BUFFER naming a parameter that contradicts the restored
+// state (check_params).
+n4m_status_t contradicts(n4m_context_t* ctx, const char* name) noexcept;
+// check_params helpers: OK when the method does not declare `name` or its
+// resolved value equals `state`.
+n4m_status_t check_int(n4m_context_t* ctx, const Params& params, const char* name,
+                       std::int64_t state);
+n4m_status_t check_double(n4m_context_t* ctx, const Params& params, const char* name,
+                          double state);
 
 // Predict-only affine regressor (one N4MM block) over a kernel whose result
 // holds the input-space predictor "input_coefficients" (features x targets)

@@ -137,6 +137,12 @@ class FittedTransformAdapter final : public Adapter {
         return N4M_OK;
     }
 
+    // The kernel is created from the parameters before its state is loaded:
+    // its loader refuses a state its configuration cannot produce (component
+    // counts, references, crop bounds, scaling), and array sizes derived from
+    // the parameters refuse the rest.
+    n4m_status_t check_params(n4m_context_t*, const Params&) const override { return N4M_OK; }
+
   private:
     n4m_status_t create(n4m_context_t* ctx, const Params& params) {
         H* raw = nullptr;

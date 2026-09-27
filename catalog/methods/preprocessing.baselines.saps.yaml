@@ -60,6 +60,7 @@ estimator:
     - name: "fit_intercept"
       type: "bool"
       default: true
+      recorded: true
     - name: "ridge"
       type: "double"
       default: 0.0

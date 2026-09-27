@@ -267,6 +267,12 @@ n4m_status_t n4m_pp_wavelet_svd_state_save(
     return N4M_OK;
 }
 
+/* An integer request (n_components >= 1) keeps at most that many components;
+ * a variance ratio (< 1) leaves the count to the data. */
+static int within_request(double requested, int64_t k) {
+    return requested < 1.0 || (double)k <= requested;
+}
+
 n4m_status_t n4m_pp_wavelet_svd_state_load(
     n4m_pp_wavelet_svd_state_t* state, n4m_state_reader_t* r, int64_t n_features) {
     /* Level and flattened width, as fit derives them from the input width. */
@@ -283,7 +289,8 @@ n4m_status_t n4m_pp_wavelet_svd_state_load(
 
     double* components = NULL;
     int64_t k = 0;
-    st = (n4m_state_read_i64(r, &k) && k >= 1 && k <= flat_dim)
+    st = (n4m_state_read_i64(r, &k) && k >= 1 && k <= flat_dim &&
+                           within_request(state->n_components_param, k))
              ? n4m_state_read_f64_array_new(r, k * flat_dim, &components)
              : N4M_ERR_CORRUPT_BUFFER;
     if (st != N4M_OK) {
