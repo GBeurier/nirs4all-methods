@@ -55,6 +55,8 @@ n4m_status_t terminal_op(n4m_context_t* ctx, const n4m_role_pipeline_t* p,
         n4m_matrix_view_t features{};
         n4m_status_t s = rp::pipeline_features(ctx, *p, X, store, features);
         if (s != N4M_OK) return s;
+        s = rp::pipeline_check_output(ctx, out, features.rows, p->terminal().adapter->n_outputs());
+        if (s != N4M_OK) return s;
         ctx->clear_error();
         s = op(ctx, &p->terminal(), &features, out);
         if (s != N4M_OK) {
