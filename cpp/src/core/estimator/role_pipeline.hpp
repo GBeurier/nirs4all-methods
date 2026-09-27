@@ -51,6 +51,9 @@ n4m_status_t pipeline_check_features(n4m_context_t* ctx, const n4m_role_pipeline
 n4m_status_t pipeline_features(n4m_context_t* ctx, const n4m_role_pipeline_s& pipeline,
                                const n4m_matrix_view_t* X, std::vector<double>& store,
                                n4m_matrix_view_t& features);
+// Refuses an output view that is not a valid rows x cols float64 matrix.
+n4m_status_t pipeline_check_output(n4m_context_t* ctx, const n4m_matrix_view_t* out,
+                                   std::int64_t rows, std::int64_t cols);
 n4m_status_t pipeline_transform(n4m_context_t* ctx, const n4m_role_pipeline_s& pipeline,
                                 const n4m_matrix_view_t* X, n4m_matrix_view_t* out);
 std::int64_t pipeline_transform_cols(const n4m_role_pipeline_s& pipeline) noexcept;

@@ -321,7 +321,10 @@ N4M_API n4m_status_t n4m_estimator_import_from_buffer(n4m_context_t* ctx, const 
  * Operations follow n4m_estimator_*: the terminal step answers predict,
  * predict_labels, decision_function and predict_proba (N4M_ERR_UNSUPPORTED
  * when its role lacks the operation); transform runs the transformers and
- * selectors only. N4M_ERR_NOT_FITTED before a successful fit or import. */
+ * selectors only. Output views must have X->rows rows and the operation's
+ * width (n4m_role_pipeline_transform_cols / _n_outputs), else
+ * N4M_ERR_SHAPE_MISMATCH. N4M_ERR_NOT_FITTED before a successful fit or
+ * import. */
 typedef struct n4m_role_pipeline_s n4m_role_pipeline_t;
 
 typedef struct n4m_role_pipeline_step_info_v1_t {

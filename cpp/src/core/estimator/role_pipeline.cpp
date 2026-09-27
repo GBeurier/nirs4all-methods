@@ -740,24 +740,34 @@ n4m_status_t pipeline_features(n4m_context_t* ctx, const n4m_role_pipeline_s& p,
     return run_transformers(ctx, p, X, count, store, features, nullptr);
 }
 
-n4m_status_t pipeline_transform(n4m_context_t* ctx, const n4m_role_pipeline_s& p,
-                                const n4m_matrix_view_t* X, n4m_matrix_view_t* out) {
-    if (out == nullptr) {
-        set_error(ctx, "output view is NULL");
-        return N4M_ERR_NULL_POINTER;
-    }
-    std::vector<double> store;
-    n4m_matrix_view_t features{};
-    const std::size_t count = p.fitted ? p.states.size() - 1 : 0;
-    n4m_status_t st = run_transformers(ctx, p, X, count, store, features, out);
-    if (st != N4M_OK || count > 0) return st;
-    // No transformer: the terminal step reads X itself.
-    st = check_view(ctx, out, "out");
+n4m_status_t pipeline_check_output(n4m_context_t* ctx, const n4m_matrix_view_t* out,
+                                   std::int64_t rows, std::int64_t cols) {
+    const n4m_status_t st = check_view(ctx, out, "out");
     if (st != N4M_OK) return st;
-    if (out->rows != X->rows || out->cols != X->cols) {
-        set_error(ctx, "output shape does not match the pipeline transform");
+    if (out->rows != rows || out->cols != cols) {
+        ctx->set_errorf("output is %lldx%lld; the operation writes %lldx%lld",
+                        static_cast<long long>(out->rows), static_cast<long long>(out->cols),
+                        static_cast<long long>(rows), static_cast<long long>(cols));
         return N4M_ERR_SHAPE_MISMATCH;
     }
+    return N4M_OK;
+}
+
+n4m_status_t pipeline_transform(n4m_context_t* ctx, const n4m_role_pipeline_s& p,
+                                const n4m_matrix_view_t* X, n4m_matrix_view_t* out) {
+    if (!p.fitted) {
+        set_error(ctx, "role pipeline is not fitted");
+        return N4M_ERR_NOT_FITTED;
+    }
+    n4m_status_t st = check_view(ctx, X, "X");
+    if (st == N4M_OK) st = pipeline_check_output(ctx, out, X->rows, pipeline_transform_cols(p));
+    if (st != N4M_OK) return st;
+    std::vector<double> store;
+    n4m_matrix_view_t features{};
+    const std::size_t count = p.states.size() - 1;
+    st = run_transformers(ctx, p, X, count, store, features, out);
+    if (st != N4M_OK || count > 0) return st;
+    // No transformer: the terminal step reads X itself.
     auto* dst = static_cast<double*>(out->data);
     for (std::int64_t i = 0; i < X->rows; ++i) {
         for (std::int64_t j = 0; j < X->cols; ++j) {

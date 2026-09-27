@@ -21,7 +21,8 @@ readers re-implemented:
   change, unused inputs refused);
 - `n4m_role_pipeline_transform` / `_predict` / `_predict_labels` /
   `_decision_function` / `_predict_proba` / `_classes` / `_transform_cols` /
-  `_n_outputs`;
+  `_n_outputs` (output views of another shape are refused before any
+  write);
 - introspection: `_is_fitted`, `_n_steps`, `_n_states`, `_n_features_in`,
   `_step_info_v1` (`n4m_role_pipeline_step_info_v1_t`: method, role played,
   state index, fitted widths, whether the state embeds training rows);

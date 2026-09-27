@@ -250,6 +250,14 @@ void test_regression_chain(Data& d) {
     CHECK(n4m_role_pipeline_transform(ctx_, p, &X, &TR) == N4M_OK);
     CHECK(tr == t2);
 
+    // Output views of the wrong width are refused before any write.
+    std::vector<double> wide(static_cast<size_t>(kRows * 2));
+    auto W = view(wide, kRows, 2);
+    expect_error(n4m_role_pipeline_predict(ctx_, p, &X, &W), N4M_ERR_SHAPE_MISMATCH,
+                 "output is 40x2; the operation writes 40x1");
+    expect_error(n4m_role_pipeline_transform(ctx_, p, &X, &W), N4M_ERR_SHAPE_MISMATCH,
+                 "output is 40x2; the operation writes 40x3");
+
     // Column-major input gives the same predictions (stride-aware).
     std::vector<double> xcm(d.x.size());
     for (int64_t i = 0; i < kRows; ++i)
