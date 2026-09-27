@@ -286,3 +286,31 @@ _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_context_set_max_state_bytes, n4m_status
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_export_size, n4m_status_t (*)(n4m_context_t*, const n4m_estimator_t*, uint32_t, size_t*)), "n4m_estimator_export_size signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_export_to_buffer, n4m_status_t (*)(n4m_context_t*, const n4m_estimator_t*, uint32_t, void*, size_t, size_t*)), "n4m_estimator_export_to_buffer signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_import_from_buffer, n4m_status_t (*)(n4m_context_t*, const void*, size_t, n4m_estimator_t**)), "n4m_estimator_import_from_buffer signature drifted");
+
+/* Role pipelines (n4m/estimator.h, ABI 2.14). */
+_Static_assert(sizeof(n4m_role_pipeline_step_info_v1_t) == 48, "Rust RolePipelineStepInfoV1Raw size is stale relative to the C header");
+_Static_assert(offsetof(n4m_role_pipeline_step_info_v1_t, role) == 16, "Rust RolePipelineStepInfoV1Raw.role offset is stale relative to the C header");
+_Static_assert(offsetof(n4m_role_pipeline_step_info_v1_t, n_features_in) == 32, "Rust RolePipelineStepInfoV1Raw.n_features_in offset is stale relative to the C header");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_create, n4m_status_t (*)(n4m_context_t*, int32_t, const char* const*, const n4m_params_t* const*, n4m_role_pipeline_t**)), "n4m_role_pipeline_create signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_destroy, void (*)(n4m_role_pipeline_t*)), "n4m_role_pipeline_destroy signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_set_feature_names, n4m_status_t (*)(n4m_context_t*, n4m_role_pipeline_t*, const char* const*, int64_t)), "n4m_role_pipeline_set_feature_names signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_fit, n4m_status_t (*)(n4m_context_t*, n4m_role_pipeline_t*, const n4m_fit_inputs_v1_t*)), "n4m_role_pipeline_fit signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_import_states, n4m_status_t (*)(n4m_context_t*, n4m_role_pipeline_t*, int32_t, const void* const*, const size_t*)), "n4m_role_pipeline_import_states signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_is_fitted, n4m_status_t (*)(const n4m_role_pipeline_t*, int32_t*)), "n4m_role_pipeline_is_fitted signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_n_steps, n4m_status_t (*)(const n4m_role_pipeline_t*, int32_t*)), "n4m_role_pipeline_n_steps signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_n_states, n4m_status_t (*)(const n4m_role_pipeline_t*, int32_t*)), "n4m_role_pipeline_n_states signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_step_info_v1, n4m_status_t (*)(const n4m_role_pipeline_t*, int32_t, n4m_role_pipeline_step_info_v1_t*)), "n4m_role_pipeline_step_info_v1 signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_n_features_in, n4m_status_t (*)(const n4m_role_pipeline_t*, int64_t*)), "n4m_role_pipeline_n_features_in signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_n_feature_names, n4m_status_t (*)(const n4m_role_pipeline_t*, int64_t*)), "n4m_role_pipeline_n_feature_names signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_feature_name, n4m_status_t (*)(const n4m_role_pipeline_t*, int64_t, const char**)), "n4m_role_pipeline_feature_name signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_check_features, n4m_status_t (*)(n4m_context_t*, const n4m_role_pipeline_t*, int64_t, const char* const*)), "n4m_role_pipeline_check_features signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_transform_cols, n4m_status_t (*)(const n4m_role_pipeline_t*, int64_t*)), "n4m_role_pipeline_transform_cols signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_n_outputs, n4m_status_t (*)(const n4m_role_pipeline_t*, int64_t*)), "n4m_role_pipeline_n_outputs signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_transform, n4m_status_t (*)(n4m_context_t*, const n4m_role_pipeline_t*, const n4m_matrix_view_t*, n4m_matrix_view_t*)), "n4m_role_pipeline_transform signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_predict, n4m_status_t (*)(n4m_context_t*, const n4m_role_pipeline_t*, const n4m_matrix_view_t*, n4m_matrix_view_t*)), "n4m_role_pipeline_predict signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_decision_function, n4m_status_t (*)(n4m_context_t*, const n4m_role_pipeline_t*, const n4m_matrix_view_t*, n4m_matrix_view_t*)), "n4m_role_pipeline_decision_function signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_predict_proba, n4m_status_t (*)(n4m_context_t*, const n4m_role_pipeline_t*, const n4m_matrix_view_t*, n4m_matrix_view_t*)), "n4m_role_pipeline_predict_proba signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_predict_labels, n4m_status_t (*)(n4m_context_t*, const n4m_role_pipeline_t*, const n4m_matrix_view_t*, int64_t*, int64_t)), "n4m_role_pipeline_predict_labels signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_classes, n4m_status_t (*)(const n4m_role_pipeline_t*, int64_t*, int64_t, int64_t*)), "n4m_role_pipeline_classes signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_export_state_size, n4m_status_t (*)(n4m_context_t*, const n4m_role_pipeline_t*, int32_t, uint32_t, size_t*)), "n4m_role_pipeline_export_state_size signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_export_state_to_buffer, n4m_status_t (*)(n4m_context_t*, const n4m_role_pipeline_t*, int32_t, uint32_t, void*, size_t, size_t*)), "n4m_role_pipeline_export_state_to_buffer signature drifted");

@@ -317,6 +317,153 @@ N4M_API n4m_status_t n4m_estimator_import_from_buffer(n4m_context_t* ctx, const 
                                                       size_t buffer_size,
                                                       n4m_estimator_t** out);
 
+/* ---- Role pipelines (ABI 2.14) -------------------------------------- */
+
+/* A trained linear recipe of estimators, owned natively so every binding
+ * shares one implementation of the portable trained pipeline
+ * (docs/abi/estimator_roles_design.md, D9). Steps, in order: zero or more
+ * sample filters (fitted and applied to the training rows only; they keep
+ * no state), zero or more transformers / selectors, then exactly one
+ * regressor or classifier. A method with several roles plays the one its
+ * position gives it (PLS is a transformer inside, a regressor last).
+ *
+ * Fit routing (n4m_fit_inputs_v1_t of the whole pipeline):
+ *   - Y reaches every step whose manifest requires y, with all its columns.
+ *     Without Y, the non-terminal steps that require y receive the class
+ *     labels as one double column (classification recipes).
+ *   - labels, sample_weight, groups and fold_ids reach the steps that
+ *     declare them. Sample filters subset every row-aligned input.
+ *   - feature_groups, blocks, axis and X_target describe the pipeline input
+ *     columns: they reach the steps that declare them only while no
+ *     transformer or selector has changed the columns.
+ *   - An input no step uses is refused by name.
+ * Every error names the step: "step <i> (<method id>): <message>".
+ *
+ * Feature identity: names set with n4m_role_pipeline_set_feature_names are
+ * part of the fitted pipeline; n4m_role_pipeline_check_features refuses a
+ * width mismatch and, when names are stored and given, any missing, renamed
+ * or reordered column. Arrays without names are positional.
+ *
+ * Operations follow n4m_estimator_*: the terminal step answers predict,
+ * predict_labels, decision_function and predict_proba (N4M_ERR_UNSUPPORTED
+ * when its role lacks the operation); transform runs the transformers and
+ * selectors only. Output views must have X->rows rows and the operation's
+ * width (n4m_role_pipeline_transform_cols / _n_outputs), else
+ * N4M_ERR_SHAPE_MISMATCH. N4M_ERR_NOT_FITTED before a successful fit or
+ * import. */
+typedef struct n4m_role_pipeline_s n4m_role_pipeline_t;
+
+typedef struct n4m_role_pipeline_step_info_v1_t {
+    uint32_t struct_size;
+    int32_t method_index;
+    const char* method_id;          /* library-owned static string */
+    uint32_t role;                  /* the one N4M_ROLE_* the step plays */
+    int32_t state_index;            /* index among the stateful steps; -1 for
+                                       a sample filter (train-only, no state) */
+    int32_t contains_training_rows; /* 1 when the fitted state embeds training
+                                       rows (export needs
+                                       N4M_EXPORT_ALLOW_TRAINING_ROWS) */
+    int64_t n_features_in;          /* fitted widths; 0 while unfitted */
+    int64_t n_features_out;
+} n4m_role_pipeline_step_info_v1_t;
+
+/* method_ids: n_steps catalog ids. params: NULL (all defaults) or n_steps
+ * entries, each NULL (defaults) or created for that step's method; the
+ * pipeline copies them. Refuses an empty recipe, unknown methods,
+ * procedures, foreign params, missing required parameters and any other
+ * role order. */
+N4M_API n4m_status_t n4m_role_pipeline_create(n4m_context_t* ctx, int32_t n_steps,
+                                              const char* const* method_ids,
+                                              const n4m_params_t* const* params,
+                                              n4m_role_pipeline_t** out);
+N4M_API void n4m_role_pipeline_destroy(n4m_role_pipeline_t* pipeline);
+/* UTF-8, unique names of the input columns, set before fit or import
+ * (N4M_ERR_INVALID_ARGUMENT once fitted); n = 0 clears them. Fit and import
+ * refuse a count different from the input width. */
+N4M_API n4m_status_t n4m_role_pipeline_set_feature_names(n4m_context_t* ctx,
+                                                         n4m_role_pipeline_t* pipeline,
+                                                         const char* const* names, int64_t n);
+/* Fits every step in order. On failure the pipeline is unfitted. */
+N4M_API n4m_status_t n4m_role_pipeline_fit(n4m_context_t* ctx, n4m_role_pipeline_t* pipeline,
+                                           const n4m_fit_inputs_v1_t* inputs);
+/* Rebuilds a fitted pipeline from one N4ME state per stateful step, in step
+ * order. Refuses a state count that differs from the recipe, a state of
+ * another method, a state whose parameters differ from the recipe's
+ * (typed comparison after default resolution), a state without the
+ * operation its role needs, and widths that do not chain. On failure the
+ * pipeline is unfitted. */
+N4M_API n4m_status_t n4m_role_pipeline_import_states(n4m_context_t* ctx,
+                                                     n4m_role_pipeline_t* pipeline,
+                                                     int32_t n_states,
+                                                     const void* const* states,
+                                                     const size_t* state_sizes);
+N4M_API n4m_status_t n4m_role_pipeline_is_fitted(const n4m_role_pipeline_t* pipeline,
+                                                 int32_t* out);
+N4M_API n4m_status_t n4m_role_pipeline_n_steps(const n4m_role_pipeline_t* pipeline,
+                                               int32_t* out);
+/* Number of stateful steps (all but the sample filters). */
+N4M_API n4m_status_t n4m_role_pipeline_n_states(const n4m_role_pipeline_t* pipeline,
+                                                int32_t* out);
+N4M_API n4m_status_t n4m_role_pipeline_step_info_v1(const n4m_role_pipeline_t* pipeline,
+                                                    int32_t step,
+                                                    n4m_role_pipeline_step_info_v1_t* out);
+/* Input width of a fitted pipeline. */
+N4M_API n4m_status_t n4m_role_pipeline_n_features_in(const n4m_role_pipeline_t* pipeline,
+                                                     int64_t* out);
+/* Stored feature names: count (0 when positional), then each name,
+ * borrowed until the next set, fit, import or destroy. */
+N4M_API n4m_status_t n4m_role_pipeline_n_feature_names(const n4m_role_pipeline_t* pipeline,
+                                                       int64_t* out);
+N4M_API n4m_status_t n4m_role_pipeline_feature_name(const n4m_role_pipeline_t* pipeline,
+                                                    int64_t index, const char** out_borrowed);
+/* Checks new input columns against the fitted pipeline: N4M_ERR_SHAPE_MISMATCH
+ * when n_columns differs from the input width; N4M_ERR_INVALID_ARGUMENT when
+ * names (n_columns entries, or NULL for positional data) and the stored
+ * names differ at any position. */
+N4M_API n4m_status_t n4m_role_pipeline_check_features(n4m_context_t* ctx,
+                                                      const n4m_role_pipeline_t* pipeline,
+                                                      int64_t n_columns,
+                                                      const char* const* names);
+/* Output width of transform (the input of the terminal step) and of the
+ * terminal step's predict / decision_function / predict_proba. */
+N4M_API n4m_status_t n4m_role_pipeline_transform_cols(const n4m_role_pipeline_t* pipeline,
+                                                      int64_t* out);
+N4M_API n4m_status_t n4m_role_pipeline_n_outputs(const n4m_role_pipeline_t* pipeline,
+                                                 int64_t* out);
+N4M_API n4m_status_t n4m_role_pipeline_transform(n4m_context_t* ctx,
+                                                 const n4m_role_pipeline_t* pipeline,
+                                                 const n4m_matrix_view_t* X,
+                                                 n4m_matrix_view_t* out);
+N4M_API n4m_status_t n4m_role_pipeline_predict(n4m_context_t* ctx,
+                                               const n4m_role_pipeline_t* pipeline,
+                                               const n4m_matrix_view_t* X,
+                                               n4m_matrix_view_t* out);
+N4M_API n4m_status_t n4m_role_pipeline_decision_function(n4m_context_t* ctx,
+                                                         const n4m_role_pipeline_t* pipeline,
+                                                         const n4m_matrix_view_t* X,
+                                                         n4m_matrix_view_t* out);
+N4M_API n4m_status_t n4m_role_pipeline_predict_proba(n4m_context_t* ctx,
+                                                     const n4m_role_pipeline_t* pipeline,
+                                                     const n4m_matrix_view_t* X,
+                                                     n4m_matrix_view_t* out);
+N4M_API n4m_status_t n4m_role_pipeline_predict_labels(n4m_context_t* ctx,
+                                                      const n4m_role_pipeline_t* pipeline,
+                                                      const n4m_matrix_view_t* X, int64_t* out,
+                                                      int64_t n);
+/* Class ids of a classifier pipeline, ascending. */
+N4M_API n4m_status_t n4m_role_pipeline_classes(const n4m_role_pipeline_t* pipeline,
+                                               int64_t* out, int64_t capacity,
+                                               int64_t* out_count);
+/* N4ME state of stateful step `state` (see state_index). States that embed
+ * training rows export only with N4M_EXPORT_ALLOW_TRAINING_ROWS. */
+N4M_API n4m_status_t n4m_role_pipeline_export_state_size(n4m_context_t* ctx,
+                                                         const n4m_role_pipeline_t* pipeline,
+                                                         int32_t state, uint32_t flags,
+                                                         size_t* out_size);
+N4M_API n4m_status_t n4m_role_pipeline_export_state_to_buffer(
+    n4m_context_t* ctx, const n4m_role_pipeline_t* pipeline, int32_t state, uint32_t flags,
+    void* buffer, size_t buffer_size, size_t* out_written);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif

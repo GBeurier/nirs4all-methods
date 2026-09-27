@@ -1,6 +1,6 @@
 # ABI — Changes Log
 
-## 2026-09-27 — ABI 2.14.0: estimator-role hardening (unreleased)
+## 2026-09-27 — ABI 2.14.0: native role pipeline and estimator-role hardening (unreleased)
 
 Additive; fixes findings F01, F02, F04, F08 and F10 of the 2026-09-27
 integration audit. Design notes are in `docs/abi/estimator_roles_design.md`
@@ -50,6 +50,39 @@ integration audit. Design notes are in `docs/abi/estimator_roles_design.md`
   alignments and MSC variants, resampler crop bounds, the PDS band, the AOM
   calibration branch. A contradiction is `N4M_ERR_CORRUPT_BUFFER` naming the
   parameter. Valid payloads written by 2.13 still import.
+
+### Native role pipeline
+
+Additive. Adds `n4m_role_pipeline_t` to `n4m/estimator.h` (design:
+`docs/abi/estimator_roles_design.md`, D9), the single owner of the portable
+trained linear recipe (sample filters, transformers / selectors, one
+regressor or classifier) that the bindings and the nirs4all / Core envelope
+readers re-implemented:
+
+- `n4m_role_pipeline_create` / `_destroy`: recipe of method ids and typed
+  params, role order validated (a multi-role method plays the role of its
+  position);
+- `n4m_role_pipeline_set_feature_names` / `_check_features` /
+  `_n_feature_names` / `_feature_name`: stored input column names, width and
+  name/order check;
+- `n4m_role_pipeline_fit`: one `n4m_fit_inputs_v1_t`, routed per step from
+  the manifest (multi-target Y to supervised steps, class ids as the target
+  of non-terminal supervised steps of a classification recipe, row inputs
+  subset by the sample filters, column inputs only before the columns
+  change, unused inputs refused);
+- `n4m_role_pipeline_transform` / `_predict` / `_predict_labels` /
+  `_decision_function` / `_predict_proba` / `_classes` / `_transform_cols` /
+  `_n_outputs` (output views of another shape are refused before any
+  write);
+- introspection: `_is_fitted`, `_n_steps`, `_n_states`, `_n_features_in`,
+  `_step_info_v1` (`n4m_role_pipeline_step_info_v1_t`: method, role played,
+  state index, fitted widths, whether the state embeds training rows);
+- `n4m_role_pipeline_export_state_size` / `_to_buffer` (one N4ME per stateful
+  step; training rows need `N4M_EXPORT_ALLOW_TRAINING_ROWS`) and
+  `n4m_role_pipeline_import_states` (state count, method, resolved
+  parameters, role capability and width chain checked against the recipe).
+
+23 new symbols; snapshots regenerated for the three platforms.
 
 ## 2026-09-27 — ABI 2.13.0: generic estimator roles (unreleased)
 

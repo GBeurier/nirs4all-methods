@@ -286,7 +286,8 @@ def render_init(manifest: dict) -> str:
         "Each class wraps one catalog method through the shared ``n4m_estimator_*``",
         "life cycle: fit, out-of-sample transform/predict, and a portable fitted state",
         "(:meth:`NativeEstimator.to_n4me` / :meth:`NativeEstimator.from_n4me`) that the",
-        "R and JS/WASM bindings read unchanged.",
+        "R and JS/WASM bindings read unchanged. :class:`RolePipeline` chains them into",
+        "a native trained recipe.",
         '"""',
         "",
         "from ._base import (",
@@ -295,12 +296,13 @@ def render_init(manifest: dict) -> str:
         "from ._generated import (",
         *[f"    {n}," for n in names],
         ")",
+        "from ._pipeline import RolePipeline",
         "",
         "__all__ = [",
         *[
             f"    {literal(n)},"
             for n in sorted(
-                [*names, *base_exports],
+                [*names, *base_exports, "RolePipeline"],
                 key=isort_key,
             )
         ],

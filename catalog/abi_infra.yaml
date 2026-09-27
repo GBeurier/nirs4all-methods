@@ -197,6 +197,29 @@ infra_abi_symbols:
   - n4m_rng_pcg64_standard_normal_fill
   - n4m_rng_pcg64_uint64
   - n4m_rng_pcg64_uint64_fill
+  - n4m_role_pipeline_check_features
+  - n4m_role_pipeline_classes
+  - n4m_role_pipeline_create
+  - n4m_role_pipeline_decision_function
+  - n4m_role_pipeline_destroy
+  - n4m_role_pipeline_export_state_size
+  - n4m_role_pipeline_export_state_to_buffer
+  - n4m_role_pipeline_feature_name
+  - n4m_role_pipeline_fit
+  - n4m_role_pipeline_import_states
+  - n4m_role_pipeline_is_fitted
+  - n4m_role_pipeline_n_feature_names
+  - n4m_role_pipeline_n_features_in
+  - n4m_role_pipeline_n_outputs
+  - n4m_role_pipeline_n_states
+  - n4m_role_pipeline_n_steps
+  - n4m_role_pipeline_predict
+  - n4m_role_pipeline_predict_labels
+  - n4m_role_pipeline_predict_proba
+  - n4m_role_pipeline_set_feature_names
+  - n4m_role_pipeline_step_info_v1
+  - n4m_role_pipeline_transform
+  - n4m_role_pipeline_transform_cols
   - n4m_search_space_add_categorical
   - n4m_search_space_add_constraint
   - n4m_search_space_add_float

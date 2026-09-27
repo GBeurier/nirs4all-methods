@@ -139,6 +139,29 @@ macro_rules! n4m_symbols {
             n4m_estimator_export_size(ctx: *mut ContextRaw, est: *const EstimatorRaw, flags: u32, out_size: *mut usize) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_estimator_export_to_buffer(ctx: *mut ContextRaw, est: *const EstimatorRaw, flags: u32, buffer: *mut c_void, buffer_size: usize, out_written: *mut usize) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_estimator_import_from_buffer(ctx: *mut ContextRaw, buffer: *const c_void, buffer_size: usize, out: *mut *mut EstimatorRaw) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_create(ctx: *mut ContextRaw, n_steps: i32, method_ids: *const *const c_char, params: *const *const ParamsRaw, out: *mut *mut RolePipelineRaw) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_destroy(pipeline: *mut RolePipelineRaw) -> () => ();
+            n4m_role_pipeline_set_feature_names(ctx: *mut ContextRaw, pipeline: *mut RolePipelineRaw, names: *const *const c_char, n: i64) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_fit(ctx: *mut ContextRaw, pipeline: *mut RolePipelineRaw, inputs: *const FitInputsV1Raw) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_import_states(ctx: *mut ContextRaw, pipeline: *mut RolePipelineRaw, n_states: i32, states: *const *const c_void, state_sizes: *const usize) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_is_fitted(pipeline: *const RolePipelineRaw, out: *mut i32) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_n_steps(pipeline: *const RolePipelineRaw, out: *mut i32) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_n_states(pipeline: *const RolePipelineRaw, out: *mut i32) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_step_info_v1(pipeline: *const RolePipelineRaw, step: i32, out: *mut RolePipelineStepInfoV1Raw) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_n_features_in(pipeline: *const RolePipelineRaw, out: *mut i64) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_n_feature_names(pipeline: *const RolePipelineRaw, out: *mut i64) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_feature_name(pipeline: *const RolePipelineRaw, index: i64, out_borrowed: *mut *const c_char) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_check_features(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, n_columns: i64, names: *const *const c_char) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_transform_cols(pipeline: *const RolePipelineRaw, out: *mut i64) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_n_outputs(pipeline: *const RolePipelineRaw, out: *mut i64) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_transform(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, x: *const MatrixView, out: *mut MatrixView) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_predict(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, x: *const MatrixView, out: *mut MatrixView) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_decision_function(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, x: *const MatrixView, out: *mut MatrixView) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_predict_proba(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, x: *const MatrixView, out: *mut MatrixView) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_predict_labels(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, x: *const MatrixView, out: *mut i64, n: i64) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_classes(pipeline: *const RolePipelineRaw, out: *mut i64, capacity: i64, out_count: *mut i64) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_export_state_size(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, state: i32, flags: u32, out_size: *mut usize) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_role_pipeline_export_state_to_buffer(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, state: i32, flags: u32, buffer: *mut c_void, buffer_size: usize, out_written: *mut usize) -> i32 => RUNTIME_UNAVAILABLE;
         }
     };
 }

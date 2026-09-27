@@ -975,3 +975,355 @@ pub fn run_procedure(
         _thread_bound: PhantomData,
     })
 }
+
+/// Role a step plays in a [`RolePipeline`] (one `ROLE_*` bit).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RoleStepInfo {
+    pub method_id: String,
+    /// `ROLE_*` bit the step plays (PLS: transformer inside, regressor last).
+    pub role: u32,
+    /// Index among the stateful steps; `None` for a train-only sample filter.
+    pub state_index: Option<usize>,
+    /// The fitted state embeds training rows (export needs the opt-in).
+    pub contains_training_rows: bool,
+    /// Fitted widths; 0 while unfitted.
+    pub n_features_in: usize,
+    pub n_features_out: usize,
+}
+
+/// A native trained recipe of role steps (ABI 2.14, `n4m_role_pipeline_*`):
+/// sample filters (training rows only), transformers / selectors, then one
+/// regressor or classifier. Recipe validation, fit-input routing, the
+/// feature-name check and the per-step N4ME states are native; class ids
+/// stay integers as in [`Estimator`].
+pub struct RolePipeline {
+    raw: NonNull<RolePipelineRaw>,
+    _thread_bound: PhantomData<*mut ()>,
+}
+impl RolePipeline {
+    /// Unfitted pipeline of `steps` (`method_id`, parameters or `None` for the
+    /// defaults); refused natively unless the role order is valid.
+    pub fn new(ctx: &Context, steps: &[(&str, Option<&Params>)]) -> Result<Self, Error> {
+        ensure_abi()?;
+        let ids = steps
+            .iter()
+            .map(|(id, _)| cstring(id, "method id"))
+            .collect::<Result<Vec<_>, _>>()?;
+        let id_ptrs: Vec<*const c_char> = ids.iter().map(|id| id.as_ptr()).collect();
+        let params: Vec<*const ParamsRaw> = steps
+            .iter()
+            .map(|(_, p)| p.map_or(ptr::null(), |p| p.ptr().cast_const()))
+            .collect();
+        let n = i32::try_from(steps.len()).map_err(|_| invalid("too many steps"))?;
+        let mut raw = ptr::null_mut();
+        check(
+            unsafe {
+                n4m_role_pipeline_create(ctx.ptr(), n, id_ptrs.as_ptr(), params.as_ptr(), &mut raw)
+            },
+            Some(ctx.ptr()),
+        )?;
+        Ok(Self {
+            raw: NonNull::new(raw).ok_or_else(|| error(255, Some(ctx.ptr())))?,
+            _thread_bound: PhantomData,
+        })
+    }
+    fn ptr(&self) -> *mut RolePipelineRaw {
+        self.raw.as_ptr()
+    }
+    /// Input column names (UTF-8, unique), set before fit or import; they are
+    /// then checked by every operation given names.
+    pub fn set_feature_names(&mut self, ctx: &Context, names: &[&str]) -> Result<(), Error> {
+        let (_owned, ptrs) = c_strings(names)?;
+        check(
+            unsafe {
+                n4m_role_pipeline_set_feature_names(
+                    ctx.ptr(),
+                    self.ptr(),
+                    ptrs.as_ptr(),
+                    names.len() as i64,
+                )
+            },
+            Some(ctx.ptr()),
+        )
+    }
+    /// Fits every step: `y` for a final regressor, `labels` (class ids) for a
+    /// final classifier; the other inputs reach the steps that declare them.
+    /// On failure the pipeline is unfitted.
+    pub fn fit(&mut self, ctx: &Context, inputs: &FitInputs<'_>) -> Result<(), Error> {
+        let status =
+            inputs.with_raw(|raw| unsafe { n4m_role_pipeline_fit(ctx.ptr(), self.ptr(), raw) });
+        check(status, Some(ctx.ptr()))
+    }
+    /// Rebuilds the fitted pipeline from one N4ME state per stateful step;
+    /// states contradicting the recipe (count, method, parameters, role,
+    /// widths) are refused.
+    pub fn import_states(&mut self, ctx: &Context, states: &[&[u8]]) -> Result<(), Error> {
+        let buffers: Vec<*const c_void> = states.iter().map(|s| s.as_ptr().cast()).collect();
+        let sizes: Vec<usize> = states.iter().map(|s| s.len()).collect();
+        let n = i32::try_from(states.len()).map_err(|_| invalid("too many states"))?;
+        check(
+            unsafe {
+                n4m_role_pipeline_import_states(
+                    ctx.ptr(),
+                    self.ptr(),
+                    n,
+                    buffers.as_ptr(),
+                    sizes.as_ptr(),
+                )
+            },
+            Some(ctx.ptr()),
+        )
+    }
+    pub fn is_fitted(&self) -> Result<bool, Error> {
+        let mut fitted = 0;
+        check(
+            unsafe { n4m_role_pipeline_is_fitted(self.ptr(), &mut fitted) },
+            None,
+        )?;
+        Ok(fitted != 0)
+    }
+    /// Every step, in recipe order.
+    pub fn steps(&self) -> Result<Vec<RoleStepInfo>, Error> {
+        let mut n = 0;
+        check(
+            unsafe { n4m_role_pipeline_n_steps(self.ptr(), &mut n) },
+            None,
+        )?;
+        (0..n)
+            .map(|step| {
+                // All-zero is a valid value for every field.
+                let mut raw: RolePipelineStepInfoV1Raw = unsafe { mem::zeroed() };
+                raw.struct_size = mem::size_of::<RolePipelineStepInfoV1Raw>() as u32;
+                check(
+                    unsafe { n4m_role_pipeline_step_info_v1(self.ptr(), step, &mut raw) },
+                    None,
+                )?;
+                Ok(RoleStepInfo {
+                    method_id: static_str(raw.method_id)?,
+                    role: raw.role,
+                    state_index: usize::try_from(raw.state_index).ok(),
+                    contains_training_rows: raw.contains_training_rows != 0,
+                    n_features_in: native_len(raw.n_features_in, "step width")?,
+                    n_features_out: native_len(raw.n_features_out, "step width")?,
+                })
+            })
+            .collect()
+    }
+    /// Input width of the fitted pipeline.
+    pub fn n_features_in(&self) -> Result<usize, Error> {
+        let mut n = 0;
+        check(
+            unsafe { n4m_role_pipeline_n_features_in(self.ptr(), &mut n) },
+            None,
+        )?;
+        native_len(n, "input width")
+    }
+    /// Stored input column names (empty: positional).
+    pub fn feature_names(&self) -> Result<Vec<String>, Error> {
+        let mut n = 0;
+        check(
+            unsafe { n4m_role_pipeline_n_feature_names(self.ptr(), &mut n) },
+            None,
+        )?;
+        (0..n)
+            .map(|k| {
+                let mut name = ptr::null();
+                check(
+                    unsafe { n4m_role_pipeline_feature_name(self.ptr(), k, &mut name) },
+                    None,
+                )?;
+                static_str(name)
+            })
+            .collect()
+    }
+    /// Refuses a width mismatch and, when names are stored and given, a
+    /// renamed or reordered column.
+    pub fn check_features(
+        &self,
+        ctx: &Context,
+        n_columns: usize,
+        names: Option<&[&str]>,
+    ) -> Result<(), Error> {
+        let owned = names.map(c_strings).transpose()?;
+        let names_ptr = owned.as_ref().map_or(ptr::null(), |(_, p)| p.as_ptr());
+        check(
+            unsafe {
+                n4m_role_pipeline_check_features(ctx.ptr(), self.ptr(), n_columns as i64, names_ptr)
+            },
+            Some(ctx.ptr()),
+        )
+    }
+    fn width(
+        &self,
+        read: impl FnOnce(*const RolePipelineRaw, *mut i64) -> i32,
+    ) -> Result<usize, Error> {
+        let mut value = 0;
+        check(read(self.ptr(), &mut value), None)?;
+        native_len(value, "pipeline width")
+    }
+    /// Checks the columns of `x`, then runs `op` into a `rows x width` output.
+    fn matrix_op(
+        &self,
+        ctx: &Context,
+        x: MatrixRef<'_>,
+        names: Option<&[&str]>,
+        width: usize,
+        op: impl FnOnce(*const MatrixView, *mut MatrixView) -> i32,
+    ) -> Result<Matrix, Error> {
+        self.check_features(ctx, x.cols(), names)?;
+        let x_raw = x.raw();
+        matrix_output(x.rows(), width, |out| op(&x_raw, out), ctx)
+    }
+    /// Rows after the transformers and selectors (the final step's input).
+    pub fn transform(
+        &self,
+        ctx: &Context,
+        x: MatrixRef<'_>,
+        names: Option<&[&str]>,
+    ) -> Result<Matrix, Error> {
+        let cols = self.width(|p, out| unsafe { n4m_role_pipeline_transform_cols(p, out) })?;
+        self.matrix_op(ctx, x, names, cols, |x, out| unsafe {
+            n4m_role_pipeline_transform(ctx.ptr(), self.ptr(), x, out)
+        })
+    }
+    fn n_outputs(&self) -> Result<usize, Error> {
+        self.width(|p, out| unsafe { n4m_role_pipeline_n_outputs(p, out) })
+    }
+    /// Predictions of a final regressor.
+    pub fn predict(
+        &self,
+        ctx: &Context,
+        x: MatrixRef<'_>,
+        names: Option<&[&str]>,
+    ) -> Result<Matrix, Error> {
+        self.matrix_op(ctx, x, names, self.n_outputs()?, |x, out| unsafe {
+            n4m_role_pipeline_predict(ctx.ptr(), self.ptr(), x, out)
+        })
+    }
+    /// Class scores of a final classifier, one column per class.
+    pub fn decision_function(
+        &self,
+        ctx: &Context,
+        x: MatrixRef<'_>,
+        names: Option<&[&str]>,
+    ) -> Result<Matrix, Error> {
+        self.matrix_op(ctx, x, names, self.n_outputs()?, |x, out| unsafe {
+            n4m_role_pipeline_decision_function(ctx.ptr(), self.ptr(), x, out)
+        })
+    }
+    /// Class probabilities, for final classifiers that define them.
+    pub fn predict_proba(
+        &self,
+        ctx: &Context,
+        x: MatrixRef<'_>,
+        names: Option<&[&str]>,
+    ) -> Result<Matrix, Error> {
+        self.matrix_op(ctx, x, names, self.n_outputs()?, |x, out| unsafe {
+            n4m_role_pipeline_predict_proba(ctx.ptr(), self.ptr(), x, out)
+        })
+    }
+    /// Class ids predicted by a final classifier.
+    pub fn predict_labels(
+        &self,
+        ctx: &Context,
+        x: MatrixRef<'_>,
+        names: Option<&[&str]>,
+    ) -> Result<Vec<i64>, Error> {
+        self.check_features(ctx, x.cols(), names)?;
+        let x_raw = x.raw();
+        let mut out = vec![0; x.rows()];
+        check(
+            unsafe {
+                n4m_role_pipeline_predict_labels(
+                    ctx.ptr(),
+                    self.ptr(),
+                    &x_raw,
+                    out.as_mut_ptr(),
+                    out.len() as i64,
+                )
+            },
+            Some(ctx.ptr()),
+        )?;
+        Ok(out)
+    }
+    /// Class ids of a final classifier, ascending.
+    pub fn classes(&self) -> Result<Vec<i64>, Error> {
+        read_counted(
+            |out, capacity, count| unsafe {
+                n4m_role_pipeline_classes(self.ptr(), out, capacity, count)
+            },
+            "classes",
+        )
+    }
+    /// N4ME state of every stateful step, in step order. States embedding
+    /// training rows export only with `allow_training_rows`.
+    pub fn export_states(
+        &self,
+        ctx: &Context,
+        allow_training_rows: bool,
+    ) -> Result<Vec<Vec<u8>>, Error> {
+        let flags = if allow_training_rows {
+            EXPORT_ALLOW_TRAINING_ROWS
+        } else {
+            0
+        };
+        let mut n = 0;
+        check(
+            unsafe { n4m_role_pipeline_n_states(self.ptr(), &mut n) },
+            None,
+        )?;
+        (0..n)
+            .map(|state| {
+                let mut size = 0;
+                check(
+                    unsafe {
+                        n4m_role_pipeline_export_state_size(
+                            ctx.ptr(),
+                            self.ptr(),
+                            state,
+                            flags,
+                            &mut size,
+                        )
+                    },
+                    Some(ctx.ptr()),
+                )?;
+                let mut out = vec![0u8; size];
+                let mut written = 0;
+                check(
+                    unsafe {
+                        n4m_role_pipeline_export_state_to_buffer(
+                            ctx.ptr(),
+                            self.ptr(),
+                            state,
+                            flags,
+                            out.as_mut_ptr().cast(),
+                            out.len(),
+                            &mut written,
+                        )
+                    },
+                    Some(ctx.ptr()),
+                )?;
+                if written > out.len() {
+                    return Err(corrupt("native N4ME wrote beyond its allocation"));
+                }
+                out.truncate(written);
+                Ok(out)
+            })
+            .collect()
+    }
+}
+impl Drop for RolePipeline {
+    fn drop(&mut self) {
+        unsafe { n4m_role_pipeline_destroy(self.ptr()) }
+    }
+}
+
+/// NUL-terminated copies of `values` and their pointer array.
+fn c_strings(values: &[&str]) -> Result<(Vec<CString>, Vec<*const c_char>), Error> {
+    let owned = values
+        .iter()
+        .map(|v| cstring(v, "feature name"))
+        .collect::<Result<Vec<_>, _>>()?;
+    let ptrs = owned.iter().map(|v| v.as_ptr()).collect();
+    Ok((owned, ptrs))
+}
