@@ -18,7 +18,7 @@ use std::{
 compile_error!("n4m requires exactly one runtime feature: `linked` or `dynamic`");
 
 const ABI_MAJOR: u32 = 2;
-const ABI_MINOR: u32 = 13;
+const ABI_MINOR: u32 = 14;
 const OK: i32 = 0;
 const NOT_FITTED: i32 = 6;
 const DTYPE_I64: i32 = 4;
@@ -221,6 +221,7 @@ struct ParamInfoV1Raw {
     min_value: f64,
     max_value: f64,
     choices: *const *const c_char,
+    recorded: i32,
 }
 const _: () = assert!(mem::size_of::<MatrixView>() == 48);
 const _: () = assert!(mem::align_of::<MatrixView>() == 8);
@@ -244,9 +245,10 @@ const _: () = assert!(mem::offset_of!(FitInputsV1Raw, n_fold_ids) == 136);
 const _: () = assert!(mem::size_of::<MethodInfoV1Raw>() == 88);
 const _: () = assert!(mem::offset_of!(MethodInfoV1Raw, capabilities) == 32);
 const _: () = assert!(mem::offset_of!(MethodInfoV1Raw, inputs) == 48);
-const _: () = assert!(mem::size_of::<ParamInfoV1Raw>() == 56);
+const _: () = assert!(mem::size_of::<ParamInfoV1Raw>() == 64);
 const _: () = assert!(mem::offset_of!(ParamInfoV1Raw, default_length) == 24);
 const _: () = assert!(mem::offset_of!(ParamInfoV1Raw, choices) == 48);
+const _: () = assert!(mem::offset_of!(ParamInfoV1Raw, recorded) == 56);
 
 #[cfg(all(feature = "linked", not(feature = "dynamic")))]
 #[link(name = "n4m")]
@@ -596,6 +598,7 @@ extern "C" {
         inputs: *const FitInputsV1Raw,
     ) -> i32;
     fn n4m_estimator_is_fitted(est: *const EstimatorRaw, out: *mut i32) -> i32;
+    fn n4m_estimator_contains_training_rows(est: *const EstimatorRaw, out: *mut i32) -> i32;
     fn n4m_estimator_info(
         est: *const EstimatorRaw,
         out_method_index: *mut i32,

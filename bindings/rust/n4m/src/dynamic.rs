@@ -120,6 +120,7 @@ macro_rules! n4m_symbols {
             n4m_estimator_destroy(est: *mut EstimatorRaw) -> () => ();
             n4m_estimator_fit(ctx: *mut ContextRaw, est: *mut EstimatorRaw, inputs: *const FitInputsV1Raw) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_estimator_is_fitted(est: *const EstimatorRaw, out: *mut i32) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_estimator_contains_training_rows(est: *const EstimatorRaw, out: *mut i32) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_estimator_info(est: *const EstimatorRaw, out_method_index: *mut i32, out_capabilities: *mut u64) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_estimator_get_params(ctx: *mut ContextRaw, est: *const EstimatorRaw, out_copy: *mut *mut ParamsRaw) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_estimator_n_features_in(est: *const EstimatorRaw, out: *mut i64) -> i32 => RUNTIME_UNAVAILABLE;

@@ -54,8 +54,14 @@ pub enum ParamValue {
 pub struct ParamInfo {
     pub name: String,
     pub param_type: ParamType,
-    /// `None` when the parameter is required.
+    /// The caller must set it (no default).
+    pub required: bool,
+    /// `None` when the parameter is required, or optional and unset by
+    /// default (seeds: an unset seed runs as 0).
     pub default: Option<ParamValue>,
+    /// The fitted state records the value (or a dimension it fixes); N4ME
+    /// import refuses a contradicting value.
+    pub recorded: bool,
     pub min: Option<f64>,
     pub max: Option<f64>,
     /// Labels of an [`ParamType::Enum`] parameter.
@@ -214,7 +220,8 @@ fn param_at(index: i32, param: i32) -> Result<ParamInfo, Error> {
         .into_iter()
         .map(static_str)
         .collect::<Result<Vec<_>, _>>()?;
-    let default = if raw.has_default == 0 {
+    let array = matches!(param_type, ParamType::IntArray | ParamType::DoubleArray);
+    let default = if raw.has_default == 0 || (!array && raw.default_length == 0) {
         None
     } else {
         Some(default_value(index, param, param_type, &choices)?)
@@ -223,7 +230,9 @@ fn param_at(index: i32, param: i32) -> Result<ParamInfo, Error> {
     Ok(ParamInfo {
         name: static_str(raw.name)?,
         param_type,
+        required: raw.has_default == 0,
         default,
+        recorded: raw.recorded != 0,
         min: bound(raw.min_value),
         max: bound(raw.max_value),
         choices,
@@ -564,8 +573,10 @@ impl Estimator {
     fn ptr(&self) -> *mut EstimatorRaw {
         self.raw.as_ptr()
     }
-    /// Fits (or refits) the state; missing or unused inputs are named in the
-    /// error. On failure the estimator is unfitted.
+    /// Fits (or refits) the state; missing, unused or mismatched inputs (one
+    /// entry per row of `X`, never broadcast) are named in the error. The
+    /// state is replaced only on success: a failed refit keeps the previous
+    /// fitted state.
     pub fn fit(&mut self, ctx: &Context, inputs: &FitInputs<'_>) -> Result<(), Error> {
         let status =
             inputs.with_raw(|raw| unsafe { n4m_estimator_fit(ctx.ptr(), self.ptr(), raw) });
@@ -725,9 +736,19 @@ impl Estimator {
         )?;
         Ok(mask.into_iter().map(|keep| keep != 0).collect())
     }
+    /// True when the fitted state embeds training rows (kernel PLS, GPR-PLS,
+    /// LW-PLS, ...): exporting it shares training data.
+    pub fn contains_training_rows(&self) -> Result<bool, Error> {
+        let mut out = 0;
+        check(
+            unsafe { n4m_estimator_contains_training_rows(self.ptr(), &mut out) },
+            None,
+        )?;
+        Ok(out != 0)
+    }
     /// Portable fitted state readable by every n4m binding. States that
-    /// retain training rows (`CAP_RETAINS_TRAINING_ROWS`) export only when
-    /// `allow_training_rows` is set.
+    /// retain training rows ([`Estimator::contains_training_rows`]) export
+    /// only when `allow_training_rows` is set.
     pub fn to_n4me(&self, ctx: &Context, allow_training_rows: bool) -> Result<Vec<u8>, Error> {
         let flags = if allow_training_rows {
             EXPORT_ALLOW_TRAINING_ROWS
