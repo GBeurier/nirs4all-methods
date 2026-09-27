@@ -250,7 +250,13 @@ typedef struct n4m_fit_inputs_v1_t {
 
 Seeds are hyperparameters (`seed`, `noise_seed`, ...), as `random_state` is
 in scikit-learn and as the n4m references take them: they belong to the
-parameters, so a recipe `{method_id, params}` fixes every random draw.
+parameters, so a recipe `{method_id, params}` fixes every random draw. Since
+ABI 2.14 they are *optional*: the manifest publishes no default (`null`,
+`has_default = 1` with `default_length = 0`), the facades default them to
+None / NULL / undefined, and "unset" means "not set by the caller", so a
+host runtime can tell an explicit operator seed from one it may derive. An
+unset seed runs as seed 0 (the former default, results unchanged), and an
+N4ME state records the seed it ran with.
 Internal-CV methods take a `cv` parameter; when `fold_ids` are absent the core
 builds the canonical contiguous plan (fold size n/k, last fold absorbs the
 remainder).
@@ -266,6 +272,15 @@ build their kernel at fit, instead of at construction.
 
 `fit` checks the manifest input requirements and returns
 `N4M_ERR_INVALID_ARGUMENT` with a context message naming the missing input.
+Lengths are exact (ABI 2.14 made the rule explicit in every facade): `Y` has
+`X->rows` rows and at least one column, labels, sample weights, groups and
+fold ids have `X->rows` entries, feature groups and the axis `X->cols`; a
+mismatch is `N4M_ERR_SHAPE_MISMATCH` naming the input. Nothing is broadcast or
+reshaped, natively or in a facade: R never recycles a vector to the rows of X,
+Python and JS never infer the rows of a target from its element count (a
+`(2, 20)` target for 40 rows is refused, not reinterpreted). The facades check
+before building the views so the error names their own argument; the native
+check is the guard every binding shares.
 Views may be strided; adapters whose kernel needs contiguous row-major data
 get a private copy from one shared helper. This also lifts the contiguous-only
 restriction of the 2.11/2.12 roles.
@@ -320,7 +335,12 @@ each classifier documents its score semantics in the manifest, and
 `PREDICT_PROBA` is set only where probabilities are defined.
 
 `fit_result` is borrowed: valid until the next `fit`, `load_state` or
-`destroy` of the same estimator. All `_v1` input structs carry `struct_size`
+`destroy` of the same estimator. Since ABI 2.14 a (re)fit fits a fresh state
+and replaces the previous one only on success: a failed refit leaves the
+estimator fitted with its previous state. Facades follow the same rule for
+the host metadata they keep beside the handle (class names, target shape,
+feature names): published with the new state, never before the native fit
+succeeded. All `_v1` input structs carry `struct_size`
 set by the caller; unknown trailing fields are rejected, shorter known
 layouts accepted.
 
@@ -400,7 +420,49 @@ FNV-1a-64 over all preceding bytes
   LW-PLS, GPR-PLS; LW-PLS also needs a new out-of-sample predict kernel, since
   today it only predicts its training rows) export only when the caller passes
   `N4M_EXPORT_ALLOW_TRAINING_ROWS`; otherwise export fails with a message.
-  This keeps data retention an explicit decision.
+  This keeps data retention an explicit decision. Policy (ABI 2.14, identical
+  on every surface): `n4m_estimator_contains_training_rows` answers for a
+  fitted or imported state (the manifest capability `retains_training_rows`
+  answers per method); every facade export takes an explicit opt-in that
+  defaults to off (Python `to_n4me(allow_training_rows=True)`, R
+  `n4m_estimator_export(object, allow_training_rows = TRUE)`, JS
+  `toN4me({ allowTrainingRows: true })`, Rust `to_n4me(&ctx, true)`). An
+  N4ME export is the shareable artefact; in-process persistence of the live
+  object (Python pickle, R `saveRDS`) is a local checkpoint and keeps the rows
+  as the object does. Hosts writing shareable envelopes pass the opt-in only
+  on an explicit user decision.
+- Parameters against state (ABI 2.14). The payload is protected against
+  corruption by its checksum, not against edits (the checksum can be
+  recomputed): import therefore also checks that the parameters describe the
+  restored state. Each parameter of a method is
+  - *recorded*: the state holds its value or a dimension it fixes (PLS/PCR
+    `n_components`, `solver` and centring/scaling flags in the embedded N4MM,
+    recursive PLS `window_size`, N-PLS `mode_j x mode_k`, kernel PLS effective
+    `gamma`, PLS-DA heads `n_components`, `top_k` of the selectors that keep
+    exactly `top_k` columns, the DS/SAPS `fit_intercept` layout, GLM
+    `family`, OnPLS component counts, GPR-PLS `n_components`). Import refuses
+    a different value with `N4M_ERR_CORRUPT_BUFFER` naming the parameter; the
+    manifest flags these parameters (`recorded`, `n4m_param_info_v1_t`), and
+    the C++ conformance suite mutates each of them in a real payload,
+    recomputes the checksum and expects the refusal;
+  - *bounded*: a kernel legitimately reduces the requested value to what the
+    data allow, so the request is only an upper (or lower) bound on the
+    effective value the state holds, and import checks the bound: PLS-QDA and
+    OSC components (min(requested, rank)), flexible / wavelet PCA and SVD
+    (at most an integer request), leverage PCA components (at most the
+    request, else 50), selector sizes (`min_features`, `min_selected`,
+    `max_features`, windows and intervals), the AOM calibration branch (one of
+    `branches`); conditional rules check a recorded effect when the parameter
+    has one (no centring leaves zero means, a given reference is stored as
+    is, a crop keeps the axis inside its bounds, PDS stays banded);
+  - *replayed*: the adapter rebuilds its behaviour from the parameter at load
+    (transform kernels, kernel type, LW-PLS neighbours, filter thresholds),
+    so the state cannot contradict it;
+  - *fit-only*: it shaped the fit and left no trace (penalties, tolerances,
+    iteration counts, seeds, the hyperparameters of affine predictors whose
+    state is coefficients only); it is provenance and cannot be checked.
+  Every adapter family implements `Adapter::check_params`; kernel state
+  loaders check the rules that need the kernel's own configuration.
 
 N4ME is the Level 2 unit of portability: the same bytes predict identically in
 Python, R and WASM.

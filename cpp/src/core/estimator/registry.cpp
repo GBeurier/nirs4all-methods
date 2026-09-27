@@ -189,4 +189,21 @@ void set_error_named(n4m_context_t* ctx, const char* what, const char* name) noe
     if (ctx != nullptr) ctx->set_errorf("%s '%s'", what, name != nullptr ? name : "");
 }
 
+n4m_status_t contradicts(n4m_context_t* ctx, const char* name) noexcept {
+    set_error_named(ctx, "N4ME parameter contradicts the fitted state", name);
+    return N4M_ERR_CORRUPT_BUFFER;
+}
+
+n4m_status_t check_int(n4m_context_t* ctx, const Params& params, const char* name,
+                       std::int64_t state) {
+    if (param_index(params.spec(), name) < 0 || params.get_int(name) == state) return N4M_OK;
+    return contradicts(ctx, name);
+}
+
+n4m_status_t check_double(n4m_context_t* ctx, const Params& params, const char* name,
+                          double state) {
+    if (param_index(params.spec(), name) < 0 || params.get_double(name) == state) return N4M_OK;
+    return contradicts(ctx, name);
+}
+
 }  // namespace n4m::estimator

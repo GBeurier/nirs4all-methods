@@ -66,6 +66,7 @@ estimator:
     - name: "seed"
       type: "int"
       default: 0
+      optional: true
       min: 0
 fq_name: "n4m.feature_selection.wrapper.scars"
 leaf: "scars"

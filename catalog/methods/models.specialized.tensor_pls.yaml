@@ -48,9 +48,11 @@ estimator:
     - name: "mode_j"
       type: "int"
       min: 1
+      recorded: true
     - name: "mode_k"
       type: "int"
       min: 1
+      recorded: true
 fq_name: "n4m.estimators.regression.tensor.n_pls"
 leaf: "n_pls"
 legacy_ids:

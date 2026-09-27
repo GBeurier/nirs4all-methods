@@ -53,6 +53,7 @@ estimator:
     - name: "noise_seed"
       type: "int"
       default: 0
+      optional: true
       min: 0
     - name: "min_features"
       type: "int"

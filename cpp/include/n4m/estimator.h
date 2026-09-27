@@ -105,10 +105,17 @@ typedef struct n4m_param_info_v1_t {
     const char* name;
     int32_t has_default;          /* 0: the parameter is required */
     int32_t n_choices;            /* N4M_METHOD_PARAM_ENUM only */
-    int64_t default_length;       /* 1 for scalars, n for arrays */
+    int64_t default_length;       /* 1 for scalars, n for arrays; 0 for an
+                                     optional scalar (has_default = 1): no
+                                     published default, the caller may leave
+                                     it unset (seeds: unset means 0) */
     double min_value;             /* NaN when unbounded */
     double max_value;             /* NaN when unbounded */
     const char* const* choices;   /* N4M_METHOD_PARAM_ENUM labels */
+    /* ABI 2.14; callers with the shorter 2.13 layout get the prefix. */
+    int32_t recorded;             /* 1: the fitted state records the value (or
+                                     a dimension it fixes) and N4ME import
+                                     refuses a contradicting value */
 } n4m_param_info_v1_t;
 
 N4M_API n4m_status_t n4m_method_count(int32_t* out_count);
@@ -194,8 +201,12 @@ N4M_API n4m_status_t n4m_estimator_create(n4m_context_t* ctx, const char* method
                                           const n4m_params_t* params,
                                           n4m_estimator_t** out);
 N4M_API void n4m_estimator_destroy(n4m_estimator_t* est);
-/* Refitting replaces the previous state. On failure the estimator is
- * unfitted. Missing required inputs are named in the context message. */
+/* Refitting replaces the previous state only when the fit succeeds: a failed
+ * fit or refit leaves the estimator as it was (still fitted with its previous
+ * state, or unfitted). Every per-row input (Y rows, labels, sample_weight,
+ * groups, fold_ids) must have exactly X->rows entries and per-column inputs
+ * (feature_groups, axis) X->cols; nothing is broadcast. Missing required and
+ * mismatched inputs are named in the context message. */
 N4M_API n4m_status_t n4m_estimator_fit(n4m_context_t* ctx, n4m_estimator_t* est,
                                        const n4m_fit_inputs_v1_t* inputs);
 N4M_API n4m_status_t n4m_estimator_is_fitted(const n4m_estimator_t* est, int32_t* out);
@@ -210,7 +221,10 @@ N4M_API n4m_status_t n4m_estimator_transform_cols(const n4m_estimator_t* est, in
 N4M_API n4m_status_t n4m_estimator_n_outputs(const n4m_estimator_t* est, int64_t* out);
 
 /* Operations return N4M_ERR_UNSUPPORTED when the capability is absent and
- * N4M_ERR_NOT_FITTED before a successful fit. `out` must have X->rows rows. */
+ * N4M_ERR_NOT_FITTED before a successful fit. `out` must be a valid F64 view
+ * of exactly X->rows rows and the operation's width (transform_cols for
+ * transform, n_outputs otherwise); any other view is refused with
+ * N4M_ERR_SHAPE_MISMATCH before anything is written (checked since 2.14). */
 N4M_API n4m_status_t n4m_estimator_transform(n4m_context_t* ctx, const n4m_estimator_t* est,
                                              const n4m_matrix_view_t* X, n4m_matrix_view_t* out);
 N4M_API n4m_status_t n4m_estimator_predict(n4m_context_t* ctx, const n4m_estimator_t* est,
@@ -274,11 +288,23 @@ N4M_API n4m_status_t n4m_method_result_get_fold(const n4m_method_result_t* resul
 
 #define N4M_ESTIMATOR_SERIALIZATION_FORMAT_VERSION 1u
 /* Flags for export. States that retain training rows (capability
- * N4M_CAP_RETAINS_TRAINING_ROWS) export only with this flag. */
+ * N4M_CAP_RETAINS_TRAINING_ROWS) export only with this flag, which every
+ * binding facade exposes as an explicit opt-in defaulting to off. */
 #define N4M_EXPORT_ALLOW_TRAINING_ROWS (1u << 0)
 
+/* ABI 2.14. *out = 1 when the fitted (or imported) state embeds training
+ * rows, so that exporting it shares training data and needs
+ * N4M_EXPORT_ALLOW_TRAINING_ROWS; 0 otherwise. N4M_ERR_NOT_FITTED before a
+ * fit. The method-level capability "retains_training_rows" of the manifest
+ * says which methods can produce such states. */
+N4M_API n4m_status_t n4m_estimator_contains_training_rows(const n4m_estimator_t* est,
+                                                         int32_t* out);
+
 /* Import refuses payloads larger than this per-context limit (default
- * 256 MiB). */
+ * 256 MiB), and payloads whose parameters contradict their state: a
+ * parameter the state records (its value, or a dimension it fixes, such as
+ * n_components against the stored loadings) must equal what the state
+ * implies. */
 N4M_API n4m_status_t n4m_context_set_max_state_bytes(n4m_context_t* ctx, uint64_t max_bytes);
 
 N4M_API n4m_status_t n4m_estimator_export_size(n4m_context_t* ctx, const n4m_estimator_t* est,

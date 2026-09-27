@@ -128,7 +128,14 @@ class CoreRegressor : public Adapter {
         return N4M_OK;
     }
 
+    n4m_status_t check_params(n4m_context_t* ctx, const Params& params) const override {
+        return check_kernel(ctx, params);
+    }
+
   protected:
+    // The kernel states size their arrays from the parameters they record,
+    // so load already refuses most contradictions; this checks the rest.
+    virtual n4m_status_t check_kernel(n4m_context_t*, const Params&) const { return N4M_OK; }
     virtual std::int64_t fitted_outputs(const FitInputs& in) const { return in.Y->cols; }
     virtual n4m_status_t fit_kernel(core::Context& ctx, const Params& params,
                                     const FitInputs& in) = 0;
@@ -195,6 +202,14 @@ class KernelPlsRegressor final : public CoreRegressor {
         return n >= 2 && read_f64s(r, n * p, model_.x_train) && read_f64s(r, n * q, model_.alpha) &&
                read_f64s(r, q, model_.y_mean) && read_f64s(r, n, model_.K_train_row_means) &&
                n4m_state_read_f64(r, &model_.K_train_global_mean);
+    }
+    // The state keeps the kernel's effective gamma: the requested one, or
+    // 1 / n_features for a requested gamma <= 0.
+    n4m_status_t check_kernel(n4m_context_t* ctx, const Params& params) const override {
+        const double requested = params.get_double("gamma");
+        const double effective =
+            requested <= 0.0 ? 1.0 / static_cast<double>(model_.n_features) : requested;
+        return model_.gamma == effective ? N4M_OK : contradicts(ctx, "gamma");
     }
 
   private:
@@ -515,6 +530,10 @@ class OnPlsTransformer final : public Adapter {
         return N4M_OK;
     }
 
+    // n_joint and n_unique_per_block size the loaded weights: load refuses a
+    // contradiction.
+    n4m_status_t check_params(n4m_context_t*, const Params&) const override { return N4M_OK; }
+
   private:
     bool load(const Params& params, const StateBlock& block) {
         n4m_state_reader_t r(block.bytes.data(), block.bytes.size());
@@ -651,8 +670,19 @@ std::unique_ptr<Adapter> make_tr_pds(const MethodSpec&) {
         write_f64s(w, h->transformation);
         return N4M_OK;
     };
+    // The map is banded: entries farther than window_half_width from the
+    // diagonal are never fitted and stay zero.
     kernel.load = [](T* h, n4m_state_reader_t* r, std::int64_t p) {
-        return read_f64s(r, p * p, h->transformation) ? N4M_OK : N4M_ERR_CORRUPT_BUFFER;
+        if (!read_f64s(r, p * p, h->transformation)) return N4M_ERR_CORRUPT_BUFFER;
+        for (std::int64_t j = 0; j < p; ++j) {
+            for (std::int64_t k = 0; k < p; ++k) {
+                if ((j - k > h->window_half_width || k - j > h->window_half_width) &&
+                    h->transformation[static_cast<std::size_t>(j * p + k)] != 0.0) {
+                    return N4M_ERR_CORRUPT_BUFFER;
+                }
+            }
+        }
+        return N4M_OK;
     };
     return fitted(std::move(kernel));
 }

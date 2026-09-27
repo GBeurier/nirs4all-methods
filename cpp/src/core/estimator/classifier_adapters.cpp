@@ -189,6 +189,18 @@ class ClassifierAdapter : public Adapter {
 
     std::int32_t n_classes() const noexcept { return static_cast<std::int32_t>(classes_.size()); }
 
+    // An embedded N4MM class-score model maps the fitted width to one column
+    // per class.
+    n4m_status_t check_model_shape(const n4m_model_t* model) const {
+        std::int32_t p = 0, c = 0;
+        if (n4m_model_get_n_features(model, &p) != N4M_OK ||
+            n4m_model_get_n_targets(model, &c) != N4M_OK || p != n_features_ ||
+            c != n_classes()) {
+            return N4M_ERR_CORRUPT_BUFFER;
+        }
+        return N4M_OK;
+    }
+
   private:
     static n4m_status_t write(const std::vector<double>& values, n4m_matrix_view_t& out) {
         if (values.size() != static_cast<std::size_t>(out.rows * out.cols)) {
@@ -267,8 +279,14 @@ class PlsHeadClassifier : public ClassifierAdapter {
 
     n4m_status_t load_head(n4m_context_t* ctx, const Params& params,
                            n4m_state_reader_t* r) override {
-        const n4m_status_t st = import_model(ctx, r, model_);
+        n4m_status_t st = import_model(ctx, r, model_);
+        if (st == N4M_OK) st = check_model_shape(model_.get());
         return st != N4M_OK ? st : load_head_params(params, r);
+    }
+
+    // The latent model records the fitted component count.
+    n4m_status_t check_params(n4m_context_t* ctx, const Params& params) const override {
+        return check_int(ctx, params, "n_components", components());
     }
 
     virtual n4m_status_t fit_head(n4m_context_t* ctx, const Params& params,
@@ -419,6 +437,13 @@ class PlsQdaClassifier final : public ClassifierAdapter {
         return N4M_OK;
     }
 
+    // The kernel keeps min(n_components, n - 1, p) components; the training
+    // row count is not stored, so the requested count is an upper bound.
+    n4m_status_t check_params(n4m_context_t* ctx, const Params& params) const override {
+        return model_.n_components <= params.get_int("n_components") ? N4M_OK
+                                                                     : contradicts(ctx, "n_components");
+    }
+
     n4m_status_t load_head(n4m_context_t*, const Params&, n4m_state_reader_t* r) override {
         std::int64_t k = 0;
         if (!n4m_state_read_i64(r, &k) || k <= 0 || k > (std::int64_t{1} << 16)) {
@@ -509,8 +534,13 @@ class SparsePlsDaClassifier final : public ClassifierAdapter {
 
     n4m_status_t save_head(n4m_state_writer_t* w) const override { return export_model(model_.get(), w); }
     n4m_status_t load_head(n4m_context_t* ctx, const Params&, n4m_state_reader_t* r) override {
-        return import_model(ctx, r, model_);
+        const n4m_status_t st = import_model(ctx, r, model_);
+        return st != N4M_OK ? st : check_model_shape(model_.get());
     }
+
+    // The affine class-score map keeps no latent dimension: n_components and
+    // sparsity_lambda are provenance.
+    n4m_status_t check_params(n4m_context_t*, const Params&) const override { return N4M_OK; }
 
   private:
     ModelPtr model_;

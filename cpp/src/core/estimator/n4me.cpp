@@ -255,6 +255,7 @@ n4m_status_t decode_state(n4m_context_t* ctx, const unsigned char* bytes, std::s
 
     auto est = std::make_unique<n4m_estimator_s>(index, params, spec.factory(spec));
     n4m_status_t st = est->adapter->load_state(ctx, est->params, blocks);
+    if (st == N4M_OK) st = est->adapter->check_params(ctx, est->params);
     if (st != N4M_OK) return st;
     if (est->adapter->capabilities() != caps ||
         static_cast<std::uint64_t>(est->adapter->n_features_in()) != n_features ||

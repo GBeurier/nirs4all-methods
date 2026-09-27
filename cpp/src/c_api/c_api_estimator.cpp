@@ -138,7 +138,9 @@ n4m_status_t normalize_inputs(n4m_context_t* ctx, const MethodSpec& spec,
         set_error_named(ctx, "fit input has an incompatible length", name);
         return N4M_ERR_SHAPE_MISMATCH;
     };
-    if (in.Y != nullptr && in.Y->rows != rows) return fail("y");
+    if (rows <= 0 || cols <= 0) return fail("X");
+    // One target row per row of X: a target is never broadcast or reshaped.
+    if (in.Y != nullptr && (in.Y->rows != rows || in.Y->cols <= 0)) return fail("y");
     if (in.labels != nullptr && in.n_labels != rows) return fail("labels");
     if (in.sample_weight != nullptr && in.n_sample_weight != rows) return fail("sample_weight");
     if (in.groups != nullptr && in.n_groups != rows) return fail("groups");
@@ -180,6 +182,11 @@ n4m_status_t check_rows(n4m_context_t* ctx, const n4m_estimator_t* est,
         set_error(ctx, "X is NULL");
         return N4M_ERR_NULL_POINTER;
     }
+    const n4m_status_t st = n4m_matrix_view_validate(X);
+    if (st != N4M_OK) {
+        set_error(ctx, "X is not a valid matrix view");
+        return st;
+    }
     if (X->cols != est->adapter->n_features_in() || out_rows != X->rows) {
         set_error(ctx, "X or output shape does not match the fitted estimator");
         return N4M_ERR_SHAPE_MISMATCH;
@@ -190,6 +197,8 @@ n4m_status_t check_rows(n4m_context_t* ctx, const n4m_estimator_t* est,
 using MatrixOp = n4m_status_t (n4m::estimator::Adapter::*)(n4m_context_t*,
                                                            const n4m_matrix_view_t&,
                                                            n4m_matrix_view_t&) const;
+// Output width of an operation: transform_cols or n_outputs.
+using Width = std::int64_t (n4m::estimator::Adapter::*)() const noexcept;
 
 // An operation belongs to role interfaces; a method exposes it only when it
 // declares one of those roles and its fitted state supports it.
@@ -204,7 +213,7 @@ n4m_status_t check_operation(n4m_context_t* ctx, const n4m_estimator_t* est, std
 
 n4m_status_t matrix_op(n4m_context_t* ctx, const n4m_estimator_t* est,
                        const n4m_matrix_view_t* X, n4m_matrix_view_t* out, std::uint32_t roles,
-                       std::uint64_t cap, MatrixOp op) {
+                       std::uint64_t cap, MatrixOp op, Width width) {
     return guarded(ctx, [&]() {
         n4m_status_t st = check_fitted(ctx, est);
         if (st != N4M_OK) return st;
@@ -216,6 +225,13 @@ n4m_status_t matrix_op(n4m_context_t* ctx, const n4m_estimator_t* est,
         if (st != N4M_OK) return st;
         st = check_rows(ctx, est, X, out->rows);
         if (st != N4M_OK) return st;
+        // The caller's view must hold exactly the output: X rows by the
+        // operation's width, F64, with a valid layout.
+        if (n4m_matrix_view_validate(out) != N4M_OK || out->dtype != N4M_DTYPE_F64 ||
+            out->cols != ((*est->adapter).*width)()) {
+            set_error(ctx, "output view does not match the operation's output shape");
+            return N4M_ERR_SHAPE_MISMATCH;
+        }
         return ((*est->adapter).*op)(ctx, *X, *out);
     });
 }
@@ -273,11 +289,12 @@ N4M_API n4m_status_t n4m_method_param_info_v1(int32_t index, int32_t param,
     info.name = p.name;
     info.has_default = p.has_default ? 1 : 0;
     info.n_choices = p.n_choices;
-    info.default_length = p.has_default ? p.default_length : 0;
+    info.default_length = p.has_default && !p.optional ? p.default_length : 0;
     info.min_value = p.min_value;
     info.max_value = p.max_value;
     info.choices = p.choices;
-    return write_descriptor(out, sizeof(n4m_param_info_v1_t), info);
+    info.recorded = p.recorded ? 1 : 0;
+    return write_descriptor(out, offsetof(n4m_param_info_v1_t, recorded), info);
 }
 
 N4M_API n4m_status_t n4m_method_param_default_int(int32_t index, int32_t param, int64_t* out,
@@ -286,7 +303,7 @@ N4M_API n4m_status_t n4m_method_param_default_int(int32_t index, int32_t param, 
     if (spec == nullptr || param < 0 || param >= spec->n_params) return N4M_ERR_INVALID_ARGUMENT;
     const auto& p = spec->params[param];
     if (!p.has_default || p.default_int == nullptr) return N4M_ERR_INVALID_ARGUMENT;
-    return copy_array(p.default_int, p.default_length, out, capacity, out_count);
+    return copy_array(p.default_int, p.optional ? 0 : p.default_length, out, capacity, out_count);
 }
 
 N4M_API n4m_status_t n4m_method_param_default_double(int32_t index, int32_t param, double* out,
@@ -295,7 +312,8 @@ N4M_API n4m_status_t n4m_method_param_default_double(int32_t index, int32_t para
     if (spec == nullptr || param < 0 || param >= spec->n_params) return N4M_ERR_INVALID_ARGUMENT;
     const auto& p = spec->params[param];
     if (!p.has_default || p.default_double == nullptr) return N4M_ERR_INVALID_ARGUMENT;
-    return copy_array(p.default_double, p.default_length, out, capacity, out_count);
+    return copy_array(p.default_double, p.optional ? 0 : p.default_length, out, capacity,
+                      out_count);
 }
 
 /* ---- Params --------------------------------------------------------- */
@@ -443,13 +461,18 @@ N4M_API n4m_status_t n4m_estimator_fit(n4m_context_t* ctx, n4m_estimator_t* est,
         return N4M_ERR_NULL_POINTER;
     }
     return guarded(ctx, [&]() {
-        est->fitted = false;
+        const MethodSpec& spec = est->params.spec();
         FitInputs in;
-        n4m_status_t st = normalize_inputs(ctx, est->params.spec(), inputs, in);
+        n4m_status_t st = normalize_inputs(ctx, spec, inputs, in);
         if (st != N4M_OK) return st;
-        st = est->adapter->fit(ctx, est->params, in);
-        est->fitted = st == N4M_OK;
-        return st;
+        // A refit fits a fresh state; the previous one is replaced only on
+        // success, so a failed refit leaves the estimator as it was.
+        std::unique_ptr<n4m::estimator::Adapter> fresh = spec.factory(spec);
+        st = fresh->fit(ctx, est->params, in);
+        if (st != N4M_OK) return st;
+        est->adapter = std::move(fresh);
+        est->fitted = true;
+        return N4M_OK;
     });
 }
 
@@ -510,13 +533,14 @@ N4M_API n4m_status_t n4m_estimator_transform(n4m_context_t* ctx, const n4m_estim
                                              const n4m_matrix_view_t* X,
                                              n4m_matrix_view_t* out) {
     return matrix_op(ctx, est, X, out, N4M_ROLE_TRANSFORMER | N4M_ROLE_SELECTOR, N4M_CAP_TRANSFORM,
-                     &n4m::estimator::Adapter::transform);
+                     &n4m::estimator::Adapter::transform,
+                     &n4m::estimator::Adapter::transform_cols);
 }
 
 N4M_API n4m_status_t n4m_estimator_predict(n4m_context_t* ctx, const n4m_estimator_t* est,
                                            const n4m_matrix_view_t* X, n4m_matrix_view_t* out) {
     return matrix_op(ctx, est, X, out, N4M_ROLE_REGRESSOR, N4M_CAP_PREDICT,
-                     &n4m::estimator::Adapter::predict);
+                     &n4m::estimator::Adapter::predict, &n4m::estimator::Adapter::n_outputs);
 }
 
 N4M_API n4m_status_t n4m_estimator_decision_function(n4m_context_t* ctx,
@@ -524,14 +548,14 @@ N4M_API n4m_status_t n4m_estimator_decision_function(n4m_context_t* ctx,
                                                      const n4m_matrix_view_t* X,
                                                      n4m_matrix_view_t* out) {
     return matrix_op(ctx, est, X, out, N4M_ROLE_CLASSIFIER, N4M_CAP_DECISION_FUNCTION,
-                     &n4m::estimator::Adapter::decision_function);
+                     &n4m::estimator::Adapter::decision_function, &n4m::estimator::Adapter::n_outputs);
 }
 
 N4M_API n4m_status_t n4m_estimator_predict_proba(n4m_context_t* ctx, const n4m_estimator_t* est,
                                                  const n4m_matrix_view_t* X,
                                                  n4m_matrix_view_t* out) {
     return matrix_op(ctx, est, X, out, N4M_ROLE_CLASSIFIER, N4M_CAP_PREDICT_PROBA,
-                     &n4m::estimator::Adapter::predict_proba);
+                     &n4m::estimator::Adapter::predict_proba, &n4m::estimator::Adapter::n_outputs);
 }
 
 N4M_API n4m_status_t n4m_estimator_predict_labels(n4m_context_t* ctx,
@@ -580,6 +604,10 @@ N4M_API n4m_status_t n4m_estimator_apply_mask(n4m_context_t* ctx, const n4m_esti
         if (mask == nullptr) return N4M_ERR_NULL_POINTER;
         st = check_operation(ctx, est, N4M_ROLE_SAMPLE_FILTER, N4M_CAP_APPLY_MASK);
         if (st == N4M_OK) st = check_rows(ctx, est, X, n);
+        if (st == N4M_OK && Y != nullptr && (Y->rows != X->rows || Y->cols <= 0)) {
+            set_error_named(ctx, "input has an incompatible length", "y");
+            st = N4M_ERR_SHAPE_MISMATCH;
+        }
         return st != N4M_OK ? st : est->adapter->apply_mask(ctx, *X, Y, mask);
     });
 }
@@ -700,6 +728,15 @@ n4m_status_t encode_checked(n4m_context_t* ctx, const n4m_estimator_t* est, uint
     return n4m::estimator::encode_state(ctx, *est, bytes);
 }
 }  // namespace
+
+N4M_API n4m_status_t n4m_estimator_contains_training_rows(const n4m_estimator_t* est,
+                                                         int32_t* out) {
+    if (est == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
+    *out = 0;
+    if (!est->fitted) return N4M_ERR_NOT_FITTED;
+    *out = (est->adapter->capabilities() & N4M_CAP_RETAINS_TRAINING_ROWS) != 0 ? 1 : 0;
+    return N4M_OK;
+}
 
 N4M_API n4m_status_t n4m_estimator_export_size(n4m_context_t* ctx, const n4m_estimator_t* est,
                                                uint32_t flags, size_t* out_size) {

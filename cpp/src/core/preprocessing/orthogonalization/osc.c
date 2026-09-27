@@ -407,6 +407,10 @@ n4m_status_t n4m_pp_osc_state_load(n4m_pp_osc_state_t* state,
                          nc > state->n_components_request || nc > n_features - 1)) {
         st = N4M_ERR_CORRUPT_BUFFER;
     }
+    /* Without scaling, fit centres nothing and divides by nothing. */
+    for (int64_t j = 0; st == N4M_OK && !state->scale && j < n_features; ++j) {
+        if (X_mean[j] != 0.0 || X_std[j] != 1.0) st = N4M_ERR_CORRUPT_BUFFER;
+    }
     if (st == N4M_OK && nc > 0) {
         st = n4m_state_read_f64_array_new(r, n_features * nc, &W_ortho);
         if (st == N4M_OK) st = n4m_state_read_f64_array_new(r, n_features * nc, &P_ortho);

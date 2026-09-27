@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -207,6 +208,134 @@ std::vector<unsigned char> export_bytes(n4m_context_t* ctx, const n4m_estimator_
     return bytes;
 }
 
+// ---- N4ME semantic mutations ------------------------------------------------
+
+uint64_t fnv1a64(const unsigned char* data, size_t size) {
+    uint64_t h = 0xcbf29ce484222325ULL;
+    for (size_t i = 0; i < size; ++i) {
+        h ^= data[i];
+        h *= 0x100000001b3ULL;
+    }
+    return h;
+}
+
+uint64_t get_le(const std::vector<unsigned char>& b, size_t pos, int n) {
+    uint64_t v = 0;
+    for (int i = 0; i < n; ++i) v |= static_cast<uint64_t>(b[pos + static_cast<size_t>(i)]) << (8 * i);
+    return v;
+}
+
+void put_le(std::vector<unsigned char>& b, size_t pos, uint64_t v) {
+    for (int i = 0; i < 8; ++i) b[pos + static_cast<size_t>(i)] = static_cast<unsigned char>(v >> (8 * i));
+}
+
+// Recomputes the trailing FNV-1a checksum: the mutations below test semantic
+// consistency, not corruption detection.
+void reseal(std::vector<unsigned char>& b) { put_le(b, b.size() - 8, fnv1a64(b.data(), b.size() - 8)); }
+
+// Byte offset of the first value and value count of each N4ME parameter.
+struct ParamSlot {
+    size_t offset;
+    uint64_t count;
+};
+std::vector<ParamSlot> param_slots(const std::vector<unsigned char>& b) {
+    size_t pos = 20;  // magic, format, writer ABI
+    pos += 4 + get_le(b, pos, 4);
+    const uint64_t n = get_le(b, pos, 4);
+    pos += 4;
+    std::vector<ParamSlot> slots;
+    for (uint64_t k = 0; k < n; ++k) {
+        pos += 4 + get_le(b, pos, 4);  // name
+        pos += 4;                      // type
+        const uint64_t count = get_le(b, pos, 8);
+        pos += 8;
+        slots.push_back({pos, count});
+        pos += 8 * count;
+    }
+    return slots;
+}
+
+bool in_bounds(const n4m_param_info_v1_t& pi, double v) {
+    return std::isfinite(v) && (std::isnan(pi.min_value) || v >= pi.min_value) &&
+           (std::isnan(pi.max_value) || v <= pi.max_value);
+}
+
+// Writes a different valid value into the first element of a parameter;
+// false when the manifest leaves no other value.
+bool mutate(std::vector<unsigned char>& b, const ParamSlot& slot, const n4m_param_info_v1_t& pi) {
+    if (slot.count == 0) return false;
+    const uint64_t raw = get_le(b, slot.offset, 8);
+    if (pi.type == N4M_METHOD_PARAM_DOUBLE || pi.type == N4M_METHOD_PARAM_DOUBLE_ARRAY) {
+        double v = 0.0;
+        std::memcpy(&v, &raw, 8);
+        for (double w : {v * 2.0 + 1.0, v / 2.0, v - 1.0}) {
+            if (w != v && in_bounds(pi, w)) {
+                uint64_t bits = 0;
+                std::memcpy(&bits, &w, 8);
+                put_le(b, slot.offset, bits);
+                return true;
+            }
+        }
+        return false;
+    }
+    const auto v = static_cast<int64_t>(raw);
+    int64_t w = v;
+    if (pi.type == N4M_METHOD_PARAM_BOOL) {
+        w = 1 - v;
+    } else if (pi.type == N4M_METHOD_PARAM_ENUM) {
+        if (pi.n_choices < 2) return false;
+        w = (v + 1) % pi.n_choices;
+    } else if (in_bounds(pi, static_cast<double>(v + 1))) {
+        w = v + 1;
+    } else if (in_bounds(pi, static_cast<double>(v - 1))) {
+        w = v - 1;
+    } else {
+        return false;
+    }
+    put_le(b, slot.offset, static_cast<uint64_t>(w));
+    return true;
+}
+
+int recorded_refusals = 0;
+
+// Every parameter the state records refuses a different value at import
+// (checksum recomputed); a payload with another parameter mutated either is
+// refused or round-trips unchanged.
+void semantic_mutations(n4m_context_t* ctx, int32_t index, const n4m_method_info_v1_t& info,
+                        const std::vector<unsigned char>& bytes) {
+    std::vector<unsigned char> same = bytes;
+    reseal(same);
+    CHECK(same == bytes);
+    const auto slots = param_slots(bytes);
+    CHECK(slots.size() == static_cast<size_t>(info.n_params));
+    for (int32_t p = 0; p < info.n_params; ++p) {
+        n4m_param_info_v1_t pi{};
+        pi.struct_size = sizeof(pi);
+        CHECK(n4m_method_param_info_v1(index, p, &pi) == N4M_OK);
+        std::vector<unsigned char> mutated = bytes;
+        if (!mutate(mutated, slots[static_cast<size_t>(p)], pi)) {
+            CHECK(pi.recorded == 0);
+            continue;
+        }
+        reseal(mutated);
+        n4m_estimator_t* back = nullptr;
+        const n4m_status_t st =
+            n4m_estimator_import_from_buffer(ctx, mutated.data(), mutated.size(), &back);
+        if (pi.recorded != 0) {
+            if (st != N4M_ERR_CORRUPT_BUFFER) {
+                throw std::runtime_error(std::string("recorded parameter ") + pi.name +
+                                         " accepted a contradicting value @" + current_);
+            }
+            ++recorded_refusals;
+            continue;
+        }
+        if (st == N4M_OK) {
+            CHECK(export_bytes(ctx, back) == mutated);
+            n4m_estimator_destroy(back);
+        }
+    }
+}
+
 // Classifiers: labels from the fitted classes, decision width, probabilities
 // summing to one when defined, bitwise N4ME round trip.
 void conformance_classifier(n4m_context_t* ctx, const n4m_estimator_t* est, Inputs& in) {
@@ -373,6 +502,8 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
     n4m_params_destroy(params);
 
     // Not fitted yet.
+    int32_t unfitted_rows = -1;
+    CHECK(n4m_estimator_contains_training_rows(est, &unfitted_rows) == N4M_ERR_NOT_FITTED);
     std::vector<double> pred(kTest), pred2(kTest);
     auto X_test = view(in.data.x_test.data(), kTest, kCols);
     auto P = view(pred.data(), kTest, 1);
@@ -404,6 +535,18 @@ void conformance(n4m_context_t* ctx, Inputs& in, int32_t index) {
     CHECK(n4m_estimator_is_fitted(est, &fitted) == N4M_OK && fitted == 1);
     CHECK(n4m_estimator_info(est, &idx, &caps) == N4M_OK && idx == index);
     CHECK(caps == info.capabilities);
+    int32_t retains = -1;
+    CHECK(n4m_estimator_contains_training_rows(est, &retains) == N4M_OK);
+    CHECK(retains == ((caps & N4M_CAP_RETAINS_TRAINING_ROWS) != 0 ? 1 : 0));
+    if ((caps & N4M_CAP_SERIALIZABLE) != 0) {
+        semantic_mutations(ctx, index, info, export_bytes(ctx, est));
+    } else {
+        for (int32_t p = 0; p < info.n_params; ++p) {
+            n4m_param_info_v1_t pi{};
+            pi.struct_size = sizeof(pi);
+            CHECK(n4m_method_param_info_v1(index, p, &pi) == N4M_OK && pi.recorded == 0);
+        }
+    }
     // Role interfaces and fitted capabilities agree both ways.
     const bool predicts = (info.roles & N4M_ROLE_REGRESSOR) != 0;
     const bool transforms = (info.roles & (N4M_ROLE_TRANSFORMER | N4M_ROLE_SELECTOR)) != 0;
@@ -712,6 +855,225 @@ void test_aom_in_sample(n4m_context_t* ctx, Inputs& in) {
     }
 }
 
+// A failed refit keeps the previous fitted state; per-row inputs must match
+// the rows of X exactly (never broadcast).
+void test_refit_and_input_lengths(n4m_context_t* ctx, Inputs& in) {
+    current_ = "refit";
+    n4m_estimator_t* est = nullptr;
+    CHECK(n4m_estimator_create(ctx, "models.pls.pls_regression", nullptr, &est) == N4M_OK);
+    n4m_fit_inputs_v1_t inputs{};
+    inputs.struct_size = sizeof(inputs);
+    inputs.X = &in.X;
+    inputs.Y = &in.Y;
+    CHECK(n4m_estimator_fit(ctx, est, &inputs) == N4M_OK);
+    auto X_test = view(in.data.x_test.data(), kTest, kCols);
+    std::vector<double> before(kTest), after(kTest);
+    auto B = view(before.data(), kTest, 1);
+    CHECK(n4m_estimator_predict(ctx, est, &X_test, &B) == N4M_OK);
+    // Fewer target rows than X rows, and a transposed target.
+    n4m_fit_inputs_v1_t bad = inputs;
+    auto short_y = view(in.data.y_train.data(), kTrain - 1, 1);
+    bad.Y = &short_y;
+    CHECK(n4m_estimator_fit(ctx, est, &bad) == N4M_ERR_SHAPE_MISMATCH);
+    CHECK(std::strstr(n4m_context_last_error(ctx), "'y'") != nullptr);
+    auto wide_y = view(in.data.y_train.data(), 1, kTrain);
+    bad.Y = &wide_y;
+    CHECK(n4m_estimator_fit(ctx, est, &bad) == N4M_ERR_SHAPE_MISMATCH);
+    int32_t fitted = 0;
+    CHECK(n4m_estimator_is_fitted(est, &fitted) == N4M_OK && fitted == 1);
+    auto A = view(after.data(), kTest, 1);
+    CHECK(n4m_estimator_predict(ctx, est, &X_test, &A) == N4M_OK);
+    CHECK(before == after);
+    // Output views must match the operation's shape exactly: a narrower or
+    // wider view, or another dtype, is refused before anything is written.
+    {
+        std::vector<double> buf(static_cast<size_t>(kTest * 3), -7.0);
+        auto wide = view(buf.data(), kTest, 2);
+        CHECK(n4m_estimator_predict(ctx, est, &X_test, &wide) == N4M_ERR_SHAPE_MISMATCH);
+        auto narrow = view(buf.data(), kTest, 1);
+        CHECK(n4m_estimator_transform(ctx, est, &X_test, &narrow) == N4M_ERR_SHAPE_MISMATCH);
+        CHECK(std::strstr(n4m_context_last_error(ctx), "output view") != nullptr);
+        auto three = view(buf.data(), kTest, 3);
+        CHECK(n4m_estimator_transform(ctx, est, &X_test, &three) == N4M_ERR_SHAPE_MISMATCH);
+        std::vector<float> f32(static_cast<size_t>(kTest));
+        n4m_matrix_view_t single{};
+        CHECK(n4m_matrix_view_init_rowmajor(&single, f32.data(), kTest, 1, N4M_DTYPE_F32) == N4M_OK);
+        CHECK(n4m_estimator_predict(ctx, est, &X_test, &single) == N4M_ERR_SHAPE_MISMATCH);
+        for (double v : buf) CHECK(v == -7.0);
+    }
+    // A refit that fails inside the kernel (more components than rows allow).
+    n4m_params_t* params = nullptr;
+    int32_t index = -1;
+    CHECK(n4m_method_find("models.pls.pls_regression", &index) == N4M_OK);
+    CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+    CHECK(n4m_params_set_int(params, "n_components", 3) == N4M_OK);
+    n4m_estimator_t* three = nullptr;
+    CHECK(n4m_estimator_create(ctx, "models.pls.pls_regression", params, &three) == N4M_OK);
+    n4m_params_destroy(params);
+    CHECK(n4m_estimator_fit(ctx, three, &inputs) == N4M_OK);
+    auto two_rows = view(in.data.x_train.data(), 2, kCols);
+    auto two_y = view(in.data.y_train.data(), 2, 1);
+    n4m_fit_inputs_v1_t tiny = inputs;
+    tiny.X = &two_rows;
+    tiny.Y = &two_y;
+    CHECK(n4m_estimator_fit(ctx, three, &tiny) != N4M_OK);
+    CHECK(n4m_estimator_is_fitted(three, &fitted) == N4M_OK && fitted == 1);
+    int64_t n_in = 0;
+    CHECK(n4m_estimator_n_features_in(three, &n_in) == N4M_OK && n_in == kCols);
+    n4m_estimator_destroy(three);
+    n4m_estimator_destroy(est);
+
+    // Classifier: labels, weights and groups have one entry per row.
+    current_ = "classifier refit";
+    CHECK(n4m_estimator_create(ctx, "models.classification.pls_lda", nullptr, &est) == N4M_OK);
+    n4m_fit_inputs_v1_t cls{};
+    cls.struct_size = sizeof(cls);
+    cls.X = &in.X;
+    cls.labels = in.labels.data();
+    cls.n_labels = kTrain;
+    CHECK(n4m_estimator_fit(ctx, est, &cls) == N4M_OK);
+    n4m_fit_inputs_v1_t one_class = cls;
+    std::vector<int64_t> same(kTrain, 7);
+    one_class.labels = same.data();
+    CHECK(n4m_estimator_fit(ctx, est, &one_class) == N4M_ERR_INVALID_ARGUMENT);
+    n4m_fit_inputs_v1_t short_labels = cls;
+    short_labels.n_labels = kTrain - 1;
+    CHECK(n4m_estimator_fit(ctx, est, &short_labels) == N4M_ERR_SHAPE_MISMATCH);
+    std::vector<int64_t> classes(3);
+    int64_t count = 0;
+    CHECK(n4m_estimator_classes(est, classes.data(), 3, &count) == N4M_OK && count == 3);
+    std::vector<double> scores(static_cast<size_t>(kTest * 2));
+    auto two = view(scores.data(), kTest, 2);
+    CHECK(n4m_estimator_decision_function(ctx, est, &X_test, &two) == N4M_ERR_SHAPE_MISMATCH);
+    CHECK((classes == std::vector<int64_t>{10, 20, 30}));
+    n4m_estimator_destroy(est);
+
+    // Sample filters read an aligned target only.
+    current_ = "filter y";
+    CHECK(n4m_estimator_create(ctx, "filters.y_outlier", nullptr, &est) == N4M_OK);
+    CHECK(n4m_estimator_fit(ctx, est, &inputs) == N4M_OK);
+    std::vector<uint8_t> mask(kTrain);
+    CHECK(n4m_estimator_apply_mask(ctx, est, &in.X, &short_y, mask.data(), kTrain) ==
+          N4M_ERR_SHAPE_MISMATCH);
+    n4m_estimator_destroy(est);
+}
+
+// Parameters a kernel may legitimately reduce bound the effective value the
+// state holds: import refuses a request below it (and a changed reference or
+// absolute threshold), with the parameter named.
+void test_bounded_parameters(n4m_context_t* ctx, Inputs& in) {
+    struct Case {
+        const char* method_id;
+        const char* param;
+        double fitted;   // value set before the fit (NaN: default)
+        double mutated;  // value written into the payload
+    };
+    const Case cases[] = {
+        {"models.classification.pls_qda", "n_components", NAN, 1},
+        {"preprocessing.feature_selection.flexible_pca", "n_components", NAN, 2.0},
+        {"preprocessing.wavelets.wavelet_svd", "n_components", NAN, 2.0},
+        {"preprocessing.orthogonalization.osc", "n_components", 2, 1},
+        {"preprocessing.orthogonalization.osc", "scale", NAN, 0},
+        {"filters.high_leverage", "absolute_threshold", 0.5, 0.25},
+        {"filters.high_leverage", "center", NAN, 0},
+        {"selection.vip_spa", "top_k", 4, 1},
+        {"selection.cars", "min_features", 4, 12},
+        {"selection.uve", "min_features", 4, 12},
+        {"preprocessing.alignment.xcorr_align", "reference", 1.0, 2.0},
+        {"models.transfer.pds", "window_half_width", 5, 1},
+    };
+    for (const Case& c : cases) {
+        current_ = std::string("bounded ") + c.method_id + "." + c.param;
+        int32_t index = -1;
+        CHECK(n4m_method_find(c.method_id, &index) == N4M_OK);
+        n4m_method_info_v1_t info{};
+        info.struct_size = sizeof(info);
+        CHECK(n4m_method_info_v1(index, &info) == N4M_OK);
+        n4m_params_t* params = nullptr;
+        CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+        fill_required(index, params);
+        int32_t slot = -1;
+        n4m_param_info_v1_t pi{};
+        for (int32_t p = 0; p < info.n_params; ++p) {
+            pi = n4m_param_info_v1_t{};
+            pi.struct_size = sizeof(pi);
+            CHECK(n4m_method_param_info_v1(index, p, &pi) == N4M_OK);
+            if (std::strcmp(pi.name, c.param) == 0) {
+                slot = p;
+                break;
+            }
+        }
+        CHECK(slot >= 0);
+        const std::vector<double> reference(kCols, c.fitted);
+        if (!std::isnan(c.fitted)) {
+            if (pi.type == N4M_METHOD_PARAM_DOUBLE) {
+                CHECK(n4m_params_set_double(params, c.param, c.fitted) == N4M_OK);
+            } else if (pi.type == N4M_METHOD_PARAM_DOUBLE_ARRAY) {
+                CHECK(n4m_params_set_double_array(params, c.param, reference.data(), kCols) ==
+                      N4M_OK);
+            } else {
+                CHECK(n4m_params_set_int(params, c.param, static_cast<int64_t>(c.fitted)) == N4M_OK);
+            }
+        }
+        n4m_estimator_t* est = nullptr;
+        CHECK(n4m_estimator_create(ctx, c.method_id, params, &est) == N4M_OK);
+        n4m_params_destroy(params);
+        n4m_fit_inputs_v1_t inputs = in.for_method(info);
+        CHECK(n4m_estimator_fit(ctx, est, &inputs) == N4M_OK);
+        std::vector<unsigned char> bytes = export_bytes(ctx, est);
+        n4m_estimator_destroy(est);
+        const ParamSlot at = param_slots(bytes)[static_cast<size_t>(slot)];
+        if (pi.type == N4M_METHOD_PARAM_DOUBLE || pi.type == N4M_METHOD_PARAM_DOUBLE_ARRAY) {
+            uint64_t bits = 0;
+            std::memcpy(&bits, &c.mutated, 8);
+            put_le(bytes, at.offset, bits);
+        } else {
+            put_le(bytes, at.offset, static_cast<uint64_t>(static_cast<int64_t>(c.mutated)));
+        }
+        reseal(bytes);
+        n4m_estimator_t* back = nullptr;
+        CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) ==
+              N4M_ERR_CORRUPT_BUFFER);
+        CHECK(back == nullptr);
+    }
+}
+
+// ABI 2.14 parameter descriptors: the 2.13 layout stays accepted, recorded
+// parameters are flagged, and seeds are optional (no published default).
+void test_param_descriptors() {
+    current_ = "param descriptors";
+    int32_t index = -1;
+    CHECK(n4m_method_find("models.pls.pls_regression", &index) == N4M_OK);
+    n4m_param_info_v1_t pi{};
+    pi.struct_size = offsetof(n4m_param_info_v1_t, recorded);
+    CHECK(n4m_method_param_info_v1(index, 0, &pi) == N4M_OK);
+    CHECK(std::strcmp(pi.name, "n_components") == 0 && pi.recorded == 0);
+    pi.struct_size = sizeof(pi);
+    CHECK(n4m_method_param_info_v1(index, 0, &pi) == N4M_OK && pi.recorded == 1);
+    CHECK(n4m_method_find("augmentation.noise.gaussian_noise", &index) == N4M_OK);
+    n4m_method_info_v1_t info{};
+    info.struct_size = sizeof(info);
+    CHECK(n4m_method_info_v1(index, &info) == N4M_OK);
+    bool seen = false;
+    for (int32_t p = 0; p < info.n_params; ++p) {
+        pi = n4m_param_info_v1_t{};
+        pi.struct_size = sizeof(pi);
+        CHECK(n4m_method_param_info_v1(index, p, &pi) == N4M_OK);
+        if (std::strcmp(pi.name, "seed") != 0) continue;
+        seen = true;
+        CHECK(pi.has_default == 1 && pi.default_length == 0);
+        int64_t count = -1;
+        CHECK(n4m_method_param_default_int(index, p, nullptr, 0, &count) == N4M_OK && count == 0);
+    }
+    CHECK(seen);
+    // An unset seed runs as seed 0.
+    n4m_params_t* params = nullptr;
+    CHECK(n4m_params_create(nullptr, index, &params) == N4M_OK);
+    int64_t seed = -1, count = 0;
+    CHECK(n4m_params_get_int(params, "seed", &seed, 1, &count) == N4M_OK && seed == 0);
+    n4m_params_destroy(params);
+}
+
 }  // namespace
 
 int main() {
@@ -732,6 +1094,9 @@ int main() {
     run([&] { test_pls_fit_simple_equivalence(ctx, in); });
     run([&] { test_in_sample_equivalence(ctx, in); });
     run([&] { test_aom_in_sample(ctx, in); });
+    run([&] { test_refit_and_input_lengths(ctx, in); });
+    run([&] { test_param_descriptors(); });
+    run([&] { test_bounded_parameters(ctx, in); });
     int32_t count = 0;
     n4m_method_count(&count);
     for (int32_t i = 0; i < count; ++i) {
@@ -739,6 +1104,9 @@ int main() {
         ++checked;
     }
     n4m_context_destroy(ctx);
-    std::printf("n4m_estimator_tests: %d methods, %d failures\n", checked, failures);
+    if (recorded_refusals == 0) ++failures;
+    std::printf("n4m_estimator_tests: %d methods, %d recorded-parameter mutations refused, "
+                "%d failures\n",
+                checked, recorded_refusals, failures);
     return failures == 0 ? 0 : 1;
 }

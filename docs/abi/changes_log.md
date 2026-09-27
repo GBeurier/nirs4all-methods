@@ -1,5 +1,56 @@
 # ABI — Changes Log
 
+## 2026-09-27 — ABI 2.14.0: estimator-role hardening (unreleased)
+
+Additive; fixes findings F01, F02, F04, F08 and F10 of the 2026-09-27
+integration audit. Design notes are in `docs/abi/estimator_roles_design.md`
+(D4, D5, D6).
+
+- New symbol `n4m_estimator_contains_training_rows(est, &out)`: 1 when a
+  fitted or imported state embeds training rows (kernel PLS, GPR-PLS,
+  LW-PLS), so that exporting it shares training data; `N4M_ERR_NOT_FITTED`
+  before a fit. It is the per-state answer; the manifest capability
+  `retains_training_rows` stays the per-method one. Every facade exposes it
+  (Python `contains_training_rows_`, R `n4m_contains_training_rows()`, JS
+  `containsTrainingRows()`, Rust `contains_training_rows()`) and exports such
+  a state only with an explicit opt-in defaulting to off (Python
+  `to_n4me(allow_training_rows=True)`, R `n4m_estimator_export(object,
+  allow_training_rows = TRUE)`, JS `toN4me({ allowTrainingRows: true })`,
+  Rust `to_n4me(&ctx, true)`). JS used to pass the flag unconditionally and R
+  returned its cached checkpoint; in-process persistence (Python pickle, R
+  `saveRDS`) remains a checkpoint of the live object and keeps the rows.
+- `n4m_param_info_v1_t` gains a trailing `int32_t recorded` (callers with the
+  2.13 layout are still accepted and get the prefix): the fitted state
+  records the parameter, and N4ME import refuses a payload whose value
+  contradicts it. The manifest JSON publishes it as `"recorded"`.
+- Optional parameters: `seed`, `noise_seed` and `randomization_seed` (58
+  methods: augmenters, splitters, stochastic selectors, ensembles, the X
+  outlier filter, transfer metrics) have no published default any more
+  (`has_default = 1`, `default_length = 0`, JSON `"default": null`,
+  `n4m_method_param_default_int` returns 0 values) and mean "not set by the
+  caller"; an unset seed runs as seed 0, so default results are unchanged,
+  and an N4ME state records the seed it ran with (0).
+- Behaviour: `n4m_estimator_fit` fits a fresh state and replaces the
+  previous one only on success: a failed refit leaves the estimator fitted
+  with its previous state (it used to become unfitted). Fit inputs also
+  refuse an empty X and a Y without columns, and `n4m_estimator_apply_mask`
+  refuses a Y whose rows differ from X.
+- Behaviour: `n4m_estimator_transform`, `_predict`, `_decision_function` and
+  `_predict_proba` validate the caller's output view (valid layout, F64,
+  exactly X rows by `transform_cols` / `n_outputs` columns) and the input
+  view before writing; a narrower or wider view used to be written through
+  (out of bounds for a narrower one) and is now `N4M_ERR_SHAPE_MISMATCH`.
+- Behaviour: N4ME import checks the parameters against the restored state
+  (`Adapter::check_params`, then the kernel state loaders): PLS/PCR
+  `n_components`, `solver` and centring/scaling flags against the embedded
+  N4MM model, recursive PLS `window_size`, N-PLS `mode_j x mode_k`, kernel PLS
+  effective `gamma`, classifier component counts, selector sizes (`top_k`
+  exact where the kernel keeps exactly `top_k`, bounds for the others), OSC /
+  EPO / leverage centring, PCA-type component counts, references of the
+  alignments and MSC variants, resampler crop bounds, the PDS band, the AOM
+  calibration branch. A contradiction is `N4M_ERR_CORRUPT_BUFFER` naming the
+  parameter. Valid payloads written by 2.13 still import.
+
 ## 2026-09-27 — ABI 2.13.0: generic estimator roles (unreleased)
 
 Adds one life cycle for catalog methods with reusable fitted state

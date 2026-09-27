@@ -44,6 +44,7 @@ estimator:
     - name: "top_k"
       type: "int"
       min: 1
+      recorded: true
     - name: "n_components"
       type: "int"
       default: 2

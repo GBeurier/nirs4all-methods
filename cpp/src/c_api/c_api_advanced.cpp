@@ -941,7 +941,11 @@ n4m_status_t msc_save(const MSCState& s, n4m_state_writer_t* w) {
 }
 
 n4m_status_t msc_load(MSCState& s, n4m_state_reader_t* r, std::int64_t n_features) {
-    if (!read_f64s(r, 1, n_features, s.reference)) return N4M_ERR_CORRUPT_BUFFER;
+    // A given reference is stored as is.
+    if (!read_f64s(r, 1, n_features, s.reference) ||
+        (s.has_reference && s.reference != s.initial_reference)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
     s.features = n_features;
     s.bands = intervals(n_features, s.window, s.window);
     s.fitted = true;
@@ -989,7 +993,11 @@ n4m_status_t align_save(const AlignState& s, n4m_state_writer_t* w) {
 }
 
 n4m_status_t align_load(AlignState& s, n4m_state_reader_t* r, std::int64_t n_features) {
-    if (!read_f64s(r, 1, n_features, s.reference)) return N4M_ERR_CORRUPT_BUFFER;
+    // A given reference is stored as is.
+    if (!read_f64s(r, 1, n_features, s.reference) ||
+        (!s.initial_reference.empty() && s.reference != s.initial_reference)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
     s.features = n_features;
     s.fitted = true;
     return N4M_OK;

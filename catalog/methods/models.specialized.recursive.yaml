@@ -45,9 +45,11 @@ estimator:
       type: "int"
       default: 2
       min: 1
+      recorded: true
     - name: "window_size"
       type: "int"
       min: 2
+      recorded: true
 fq_name: "n4m.estimators.regression.online.recursive_pls"
 leaf: "recursive_pls"
 legacy_ids:
