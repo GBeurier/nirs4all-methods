@@ -11,6 +11,7 @@
 //   const preds = n4m.predictPls(model, { data: X, rows, cols });
 
 import { getModule } from "./ffi.js";
+export { SpectralEncoder, type SpectralEncodingOptions } from "./spectralEncoding.js";
 
 export { loadModule, getModule, makeMatrixView, readArrayView } from "./ffi.js";
 export { Context } from "./context.js";

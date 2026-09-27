@@ -196,6 +196,7 @@ struct GaussianParams {
     double sigma{1.0};
     double truncate{4.0};
     bool normalize{true};
+    bool density_normalize{false};
 };
 
 [[nodiscard]] double factorial(std::int32_t n) noexcept {
@@ -358,7 +359,7 @@ struct GaussianParams {
         return N4M_OK;
     }
     if (entry.params.size() != 1U && entry.params.size() != 2U && entry.params.size() != 3U) {
-        ctx.set_error("AOM Gaussian expects sigma[, truncate[, normalize (0 or 1)]]");
+        ctx.set_error("AOM Gaussian expects sigma[, truncate[, normalization (0, 1 or 2)]]");
         return N4M_ERR_INVALID_ARGUMENT;
     }
     params.sigma = entry.params[0];
@@ -366,11 +367,12 @@ struct GaussianParams {
         params.truncate = entry.params[1];
     }
     if (entry.params.size() == 3U) {
-        if (entry.params[2] != 0.0 && entry.params[2] != 1.0) {
-            ctx.set_error("AOM Gaussian normalize must be zero or one");
+        if (entry.params[2] != 0.0 && entry.params[2] != 1.0 && entry.params[2] != 2.0) {
+            ctx.set_error("AOM Gaussian normalization must be 0 (none), 1 (sum), or 2 (density)");
             return N4M_ERR_INVALID_ARGUMENT;
         }
-        params.normalize = entry.params[2] != 0.0;
+        params.normalize = entry.params[2] == 1.0;
+        params.density_normalize = entry.params[2] == 2.0;
     }
     if (!std::isfinite(params.sigma) || params.sigma <= 0.0) {
         ctx.set_error("AOM Gaussian sigma must be finite and positive");
@@ -413,6 +415,10 @@ struct GaussianParams {
     }
     if (params.normalize) {
         for (double& value : kernel) value /= total;
+    }
+    if (params.density_normalize) {
+        const double denominator = params.sigma * std::sqrt(2.0 * std::acos(-1.0));
+        for (double& value : kernel) value /= denominator;
     }
     return N4M_OK;
 }

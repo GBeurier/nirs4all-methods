@@ -6,7 +6,7 @@ The production entry points are `n4m.model_selection.AOMPLSRegressor`,
 The AOM research repository may forward these names through `aom_nirs.calibration`;
 the dependency goes from AOM to methods. Methods does not import AOM.
 These additions are unreleased; project version 1.0.19 alone does not identify
-this working tree. Use ABI 2.6 plus source and native-library hashes.
+this working tree. Use ABI 2.7 plus source and native-library hashes.
 
 ## Versioned protocols
 
@@ -18,14 +18,19 @@ this working tree. Use ABI 2.6 plus source and native-library hashes.
 | FastAOMRidgeRegressor | `fast-ridge-branch-cv-v1`; experimental Ridge extension of the same screen. PLS speed/accuracy evidence does not validate this extension. |
 | LinearRidgeStackRegressor | `linear-ridge-stack-nested-oof-v1`; strict-linear base views, inner-CV base tuning for each OOF fold, Ridge meta-head on OOF predictions, affine export. |
 
-The `strict10-gaussian-v1` bank is identity; SG smooth (11,2)/(21,3);
+The `strict10-gaussian-density-v2` bank is identity; SG smooth (11,2)/(21,3);
 SG first derivative (11,2)/(21,3); SG second derivative (11,2); detrend degree
 1/2; and Gaussian sigma 1/2. Widths are channel counts. SG uses unit spacing
-and zero padding. Gaussian kernels are **unnormalized** `exp(-x*x/(2*sigma*sigma))`,
-truncated at four sigmas, with zero padding. The generic native Gaussian operator
-still defaults to normalized kernels: its optional third descriptor parameter
-is `normalize` (0 or 1). The versioned bank passes `(sigma, 4, 0)` explicitly;
-this amplitude convention matters for Ridge alpha selection.
+and zero padding. Gaussian kernels are sampled densities
+`exp(-x*x/(2*sigma*sigma))/(sigma*sqrt(2*pi))`, truncated at four sigmas, with
+zero padding. This corrects the earlier unnormalized bank, whose Ridge scores
+did not reproduce the paper. The generic operator still defaults to discrete
+sum normalization; descriptor mode 0 is unnormalized, 1 is discrete-normalized,
+and 2 is density-normalized. The versioned bank passes `(sigma, 4, 2)`.
+
+The optional `lvse` bank extension adds fold-local fitted terminals to each
+fixed chain. See [spectral encoding](spectral_encoding.md) for parameters,
+rank reuse, affine exports and the distinction from non-affine GCU/SNV.
 
 The chain grammar allows each of three roles (smoother, derivative, detrend)
 at most once, in every order, with identity a separate singleton. Cumulative

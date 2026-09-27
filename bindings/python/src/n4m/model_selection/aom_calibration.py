@@ -23,7 +23,7 @@ from .._types import MatrixView
 from .._validation import _selector_fold_ids
 
 # Versioned discrete bank: widths are sample counts, zero padding, no FD.
-BANK_ID = "strict10-gaussian-v1"
+BANK_ID = "strict10-gaussian-density-v2"
 BANK = (
     ("identity", ("identity", ())),
     ("sg_smooth_w11_p2", ("savgol_smooth", (11, 2))),
@@ -33,8 +33,8 @@ BANK = (
     ("sg_d2_w11_p2", ("savgol_derivative", (11, 2, 2))),
     ("detrend_d1", ("detrend_poly", (1,))),
     ("detrend_d2", ("detrend_poly", (2,))),
-    ("gauss_d0_s1", ("gaussian", (1.0, 4.0, 0.0))),
-    ("gauss_d0_s2", ("gaussian", (2.0, 4.0, 0.0))),
+    ("gauss_d0_s1", ("gaussian", (1.0, 4.0, 2.0))),
+    ("gauss_d0_s2", ("gaussian", (2.0, 4.0, 2.0))),
 )
 
 
@@ -75,6 +75,7 @@ class _Calibration(RegressorMixin, BaseEstimator):
         branches=("raw", "snv", "msc"),
         max_depth: int = 1,
         rank: int = 200,
+        lvse=None,
     ):
         self.max_components = max_components
         self.alphas = alphas
@@ -83,9 +84,36 @@ class _Calibration(RegressorMixin, BaseEstimator):
         self.branches = branches
         self.max_depth = max_depth
         self.rank = rank
+        self.lvse = lvse
 
     def _candidate_chains(self):
-        return strict_chain_bank(self.max_depth)
+        chains = strict_chain_bank(self.max_depth)
+        if self.lvse is None:
+            return chains
+        variants = []
+        for config in self.lvse:
+            if len(config) not in (3, 4):
+                raise ValueError(
+                    "LVSE configurations require (width, rank, overlap[, standardize])"
+                )
+            width, rank, overlap = config[:3]
+            standardize = config[3] if len(config) == 4 else True
+            if (
+                not isinstance(width, (int, np.integer))
+                or width < 1
+                or not isinstance(rank, (int, np.integer))
+                or rank < 1
+                or not 0 <= overlap < 1
+                or standardize not in (True, False)
+            ):
+                raise ValueError("invalid LVSE configuration")
+            name = f"lvse_w{width}_r{rank}_o{overlap:g}_s{int(standardize)}"
+            variants.append((name, ("lvse", (width, rank, overlap, int(standardize)))))
+        if not variants or len({v[0] for v in variants}) != len(variants):
+            raise ValueError("lvse must contain distinct nonempty configurations")
+        return chains + tuple(
+            chain + (variant,) for chain in chains for variant in variants
+        )
 
     def fit(self, X, y):
         X = as_f64_2d(X)
@@ -208,6 +236,7 @@ class _Calibration(RegressorMixin, BaseEstimator):
         self.bank_id_ = self._bank_id
         self.protocol_id_ = (
             f"{'fast' if self._fast else 'global'}-{self._head}-branch-cv-v1"
+            + ("-lvse-v1" if self.lvse is not None else "")
         )
         return self
 

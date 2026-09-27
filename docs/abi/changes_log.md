@@ -1,5 +1,25 @@
 # ABI — Changes Log
 
+## 2026-09-27 — ABI 2.7.0: fitted spectral encoders and AOM LVSE terminals
+
+Add six `n4m_decomposition_spectral_*` entry points: create, destroy, fit,
+output_cols, transform and export_affine. LVSE and GCU share the opaque
+encoder lifecycle; every matrix uses the stride-aware public view. Failed
+refits preserve prior state. LVSE without SNV exports its affine map; GCU
+and SNV-LVSE explicitly reject affine export. Handles are process-local.
+
+Add operator enum value `N4M_OP_LVSE=19`, accepted only as a terminal by the
+complete AOM calibration path. Fits and rank caches are fold-local. Existing
+calibration signatures, output sizes and coefficient prediction stay unchanged.
+
+Gaussian normalization descriptor value 2 adds sampled-density normalization
+(`sigma * sqrt(2*pi)` divisor); values 0 and 1 retain their meaning. The Python
+calibration bank is versioned `strict10-gaussian-density-v2`: its previous
+unnormalized Gaussian entries disagreed with the paper's Ridge candidates.
+This correction can change Ridge selection independently of LVSE. Native-bank
+conformance was checked against archived paper predictions; the LVSE comparison
+uses the archived paper scores as its baseline.
+
 ## 2026-09-03 — ABI 2.5.0: typed N4MM pipeline inspection
 
 Additive MINOR change: `n4m_serialization_inspect_pipeline_v1` returns the
