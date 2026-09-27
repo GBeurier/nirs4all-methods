@@ -5,7 +5,8 @@
 Each class wraps one catalog method through the shared ``n4m_estimator_*``
 life cycle: fit, out-of-sample transform/predict, and a portable fitted state
 (:meth:`NativeEstimator.to_n4me` / :meth:`NativeEstimator.from_n4me`) that the
-R and JS/WASM bindings read unchanged.
+R and JS/WASM bindings read unchanged. :class:`RolePipeline` chains them into
+a native trained recipe.
 """
 
 from ._base import (
@@ -233,6 +234,7 @@ from ._generated import (
     XOutlierFilter,
     YOutlierFilter,
 )
+from ._pipeline import RolePipeline
 
 __all__ = [
     "AOMPLS",
@@ -405,6 +407,7 @@ __all__ = [
     "RidgePLS",
     "RobustDirectStandardization",
     "RobustPLS",
+    "RolePipeline",
     "RollingBall",
     "RotateTranslate",
     "SPXYFold",
