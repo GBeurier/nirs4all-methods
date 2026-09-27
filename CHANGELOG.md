@@ -6,7 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- ABI 2.14: `n4m_estimator_contains_training_rows`, and a `recorded` flag on
+  `n4m_param_info_v1_t` and in the manifest JSON for the parameters a fitted
+  state records. Every binding exports a state that embeds training rows only
+  with an explicit opt-in (Python `allow_training_rows=True`, R
+  `allow_training_rows = TRUE`, JS `{ allowTrainingRows: true }`, Rust
+  `to_n4me(&ctx, true)`); JS no longer passes it implicitly.
+- Shared negative fixture `parity/fixtures/estimator_roles_negative.json`
+  (`scripts/generate_estimator_negative_fixture.py`), replayed by the Python,
+  R, JS/WASM and Rust suites: mismatched target and per-row input lengths, a
+  transposed target, an N4ME payload with a contradicting parameter, an export
+  of training rows without opt-in, a failed classifier refit.
+
+### Changed
+
+- Seeds (`seed`, `noise_seed`, `randomization_seed`) are optional parameters:
+  the manifest publishes no default (None / NULL / undefined in the facades)
+  and an unset seed runs as 0, so default results are unchanged; an N4ME state
+  records the seed it ran with.
+- A failed `n4m_estimator_fit` keeps the previous fitted state instead of
+  leaving the estimator unfitted.
+
 ### Fixed
+
+- R recycled targets, weights, groups and labels to the rows of X
+  (`y = 1:20` for 40 rows was accepted): every per-row input must now have
+  exactly one entry per row, a matrix target one row per row of X, and scalar
+  parameters exactly one whole value (audit F01).
+- Python reshaped a target by its element count (`(2, 20)` for 40 rows was
+  accepted): `y` must be `(n,)` or `(n, q)`, and per-row / per-column inputs
+  1-D of the matching length; JS checks the same lengths before the native
+  call, and the core refuses them for every binding (audit F02).
+- N4ME import refused corrupted bytes but accepted parameters contradicting
+  the restored state (a PLS header claiming one component for a
+  two-component state): each adapter family now checks the parameters its
+  state records (audit F04).
+- `n4m_estimator_transform` / `_predict` / `_decision_function` /
+  `_predict_proba` wrote through an output view of the wrong width (past its
+  end for a narrower one); the view must now be F64 with exactly X rows and
+  the operation's width, else `N4M_ERR_SHAPE_MISMATCH` before any write.
+- A failed Python classifier refit replaced the class names before the fit
+  failed, breaking the previous model; label names, output shape and feature
+  names are now published with the new state only on success (audit F08).
 
 - The R packages generate `src/Makevars.win` from `configure.win` with
   `-ffp-contract=off`, like the Unix `configure`: Windows arm64 (clang) fused
