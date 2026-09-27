@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+ABI unchanged (2.14.0): input validation and facade contract fixes from the
+2026-09-27 re-audit (findings R03, R05, R06, R07, R08, R10, R12, R13).
+
+### Fixed
+
+- The estimator C ABI read a float32 view as doubles, past its declared
+  extent: `n4m_estimator_fit`, `n4m_procedure_run` and every estimator
+  operation now validate each input matrix (X, y, target domain, new rows,
+  mask target: layout and float64 dtype) before dispatch and refuse another
+  dtype with `N4M_ERR_DTYPE_MISMATCH` (R03).
+- A role pipeline predicting zero rows returned `NULL_POINTER` when a
+  transformer preceded the final step; zero rows now give an empty output of
+  the right width whatever the steps (R13).
+- Shared label contract in the Python, R and JS facades (pipelines and the
+  estimator classifiers that keep label names): integer labels must fit int64
+  (a uint64 2^63 was wrapped to a negative id in Python; a Python list mixing
+  small ints with 2^63 no longer turns into floats); missing, non-finite and
+  boolean labels are refused at fit (Python fitted NaN as a class); strings
+  and non-integer numbers become a sorted label table in every facade (JS and
+  R now accept non-integer numbers, as Python did). An imported label table
+  (`class_names`) must be non-empty, unique, strings or finite numbers, and
+  cover every native class id (`n4m_role_pipeline_classes`); an empty, short,
+  duplicated or non-matching table used to import and then fail or merge
+  predictions (R05, R08, R12).
+- Column names containing NUL are refused at fit, import and predict in
+  Python and JS; they were truncated at the NUL, so a renamed column passed
+  the identity check (R10).
+- R `n4m_role_pipeline` fit converts its auxiliary inputs (weights, groups,
+  fold ids, feature groups, blocks, axis, target domain) as strictly as the
+  estimators: a matrix is no longer flattened into another length (R06).
+- The legacy R dispatcher (`n4m_method`, also in the `pls4all` R subset)
+  refuses fractional, NA, non-finite and out-of-range class ids, groups,
+  block sizes and event indicators instead of truncating them; `mb_pls`
+  block sizes likewise (R07). R integer inputs and Python integer inputs
+  (groups, fold ids, feature groups, blocks) must fit int64 exactly.
+- `parity/fixtures/role_pipeline_negative.json` gains the facade-level
+  `label_cases` and `name_cases`, replayed by the Python, R and JS suites
+  (Rust replays the name cases; it takes `i64` class ids and holds no table).
+
 ## [1.2.0] - 2026-09-27
 
 Rust crate `n4m` 0.3.0 ships the same API (`n4m::roles::RolePipeline`, `Estimator::contains_training_rows`).

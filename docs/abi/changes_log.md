@@ -1,5 +1,24 @@
 # ABI — Changes Log
 
+## 2026-09-27 — ABI 2.14.0 unchanged: input validation (re-audit, unreleased)
+
+No symbol or layout change; behaviour only (findings R03 and R13 of the
+2026-09-27 re-audit).
+
+- `n4m_estimator_fit` and `n4m_procedure_run` validate X, Y and the target
+  domain before any adapter reads them, and `n4m_estimator_transform`,
+  `_predict`, `_decision_function`, `_predict_proba`, `_predict_labels` and
+  `_apply_mask` validate their new rows (and the mask target): a valid
+  layout (extents, strides) and float64 values. Another dtype is refused
+  with `N4M_ERR_DTYPE_MISMATCH` and a message naming the matrix; a float32
+  view used to be read as doubles past its declared extent. The role
+  pipeline shares the same check.
+- A role pipeline given zero new rows returns an empty output of the right
+  width whatever the steps (no step runs), after the width and output-shape
+  checks; `n4m_role_pipeline_predict_labels` with zero rows expects `n == 0`.
+  An empty intermediate buffer used to surface as `N4M_ERR_NULL_POINTER`
+  when a transformer preceded the terminal step.
+
 ## 2026-09-27 — ABI 2.14.0: native role pipeline and estimator-role hardening (unreleased)
 
 Additive; fixes findings F01, F02, F04, F08 and F10 of the 2026-09-27
