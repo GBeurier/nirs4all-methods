@@ -85,6 +85,21 @@
   list(ids = match(y, levels) - 1, levels = levels)
 }
 
+# Predicted labels: a factor over string labels. Numeric labels stay numbers:
+# a factor prints them with 15 digits, which merges close fractions.
+.n4m_label_values <- function(ids, levels) {
+  if (is.null(levels)) ids
+  else if (is.character(levels)) factor(levels[ids + 1], levels = levels)
+  else levels[ids + 1]
+}
+
+# Class labels as column names, with enough digits to keep numbers distinct.
+.n4m_label_text <- function(labels) {
+  text <- as.character(labels)
+  if (is.numeric(labels) && anyDuplicated(text)) text <- formatC(labels, digits = 17, format = "g")
+  text
+}
+
 # Targets as an n x q double matrix: a vector of length n is one column, a
 # matrix must have n rows.
 .n4m_targets <- function(y, n) {
@@ -256,13 +271,12 @@ predict.n4m_classifier <- function(object, newdata, type = c("class", "prob", "d
   X <- .n4m_as_matrix(newdata)
   if (type == "class") {
     ids <- .Call("r_n4m_estimator_predict_labels", pointer, X, PACKAGE = "n4m")
-    levels <- object$state$levels
-    return(if (is.null(levels)) ids else factor(levels[ids + 1], levels = levels))
+    return(.n4m_label_values(ids, object$state$levels))
   }
   entry <- if (type == "prob") "r_n4m_estimator_predict_proba" else
     "r_n4m_estimator_decision_function"
   out <- .Call(entry, pointer, X, PACKAGE = "n4m")
-  colnames(out) <- as.character(n4m_classes(object))
+  colnames(out) <- .n4m_label_text(n4m_classes(object))
   out
 }
 
