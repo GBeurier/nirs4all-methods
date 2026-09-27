@@ -342,7 +342,8 @@ Notes (all expected):
 - GNU make is declared in SystemRequirements.
 - Any 'compilation flags' NOTE on a local build comes from the host R's Makeconf
   (e.g. conda's -march=nocona), not from the package Makevars, which use no
-  -O3 / -march=native / -Werror.
+  -O3 / -march=native / -Werror. The Makevars that configure / configure.win
+  generate add -ffp-contract=off so every platform returns the same bits.
 - The optional CUDA backend (cuda_dispatch.cpp) is intentionally excluded from
   the R build; the package exposes the portable scalar code path only.
 
@@ -375,7 +376,8 @@ Notes (all expected):
 - GNU make is declared in SystemRequirements.
 - Any 'compilation flags' NOTE on a local build comes from the host R's Makeconf
   (e.g. conda's -march=nocona), not from the package Makevars, which use no
-  -O3 / -march=native / -Werror.
+  -O3 / -march=native / -Werror. The Makevars that configure / configure.win
+  generate add -ffp-contract=off so every platform returns the same bits.
 - The optional CUDA backend (cuda_dispatch.cpp) is intentionally excluded from
   the R build; the package exposes the portable scalar code path only.
 
