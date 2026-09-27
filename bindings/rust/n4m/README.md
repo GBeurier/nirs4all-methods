@@ -72,6 +72,31 @@ pls.fit(&ctx, &FitInputs::new(x).y(y))?;
 let state = pls.to_n4me(&ctx, false)?; // predicts identically in Python, R, WASM
 ```
 
+## Role pipelines (ABI 2.14)
+
+`n4m::roles::RolePipeline` is the native trained recipe of role steps (sample
+filters, transformers / selectors, one regressor or classifier), shared with
+Python `n4m.roles.RolePipeline`, R `n4m_role_pipeline()` and JS
+`RolePipeline`. The recipe order, fit-input routing (multi-target `y` reaches
+supervised transformers, filters subset every row input), the feature-name
+check and the per-step N4ME states are native; `import_states` refuses states
+that contradict the recipe (method, parameters, widths) and `export_states`
+refuses training-row states unless `allow_training_rows` is set.
+
+```rust
+use n4m::{roles::{FitInputs, RolePipeline}, Context, MatrixRef};
+
+let ctx = Context::new()?;
+let mut pipe = RolePipeline::new(&ctx, &[
+    ("preprocessing.scatter.snv", None),
+    ("models.pls.cppls", None),
+])?;
+pipe.set_feature_names(&ctx, &names)?;
+pipe.fit(&ctx, &FitInputs::new(MatrixRef::row_major(&x, n, p)?).y(y_view))?;
+let pred = pipe.predict(&ctx, x_new, Some(&names))?; // refuses reordered columns
+let states = pipe.export_states(&ctx, false)?;       // one N4ME per stateful step
+```
+
 `tests/estimator_roles.rs` replays the shared
 `parity/fixtures/estimator_roles_n4me.json` fixture written by the Python
 binding: every N4ME state predicts at 1e-12 and every Rust refit and procedure
