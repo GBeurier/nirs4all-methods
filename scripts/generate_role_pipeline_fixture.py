@@ -279,6 +279,11 @@ def label_cases(labels) -> list[dict]:
             inject={"at": 1, "value": "inf"},
         ),
         table(
+            "class_names_inexact_number",
+            [2**60, 1.5, 2.5],
+            "must be exactly representable as float64",
+        ),
+        table(
             "class_names_boolean",
             [True, False, True],
             "class_names entries must be strings or numbers",

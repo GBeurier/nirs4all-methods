@@ -355,6 +355,11 @@ def test_label_tables_round_trip_numbers_and_pickles():
     assert RolePipeline(steps).fit(X, ids).label_names_ is None
     with pytest.raises(ValueError, match="class labels must fit int64"):
         RolePipeline(steps).fit(X, ids.astype(np.uint64) + np.uint64(2**63))
+    # Beside a fraction, an integer beyond 2^53 would round and merge labels.
+    mixed = [2**53 + 1 if v > np.median(y) else 0.5 for v in y]
+    mixed[0] = 2**53
+    with pytest.raises(ValueError, match="exactly representable as float64"):
+        RolePipeline(steps).fit(X, np.asarray(mixed, dtype=object))
     with pytest.raises(
         ValueError, match="class labels must be integers, finite numbers"
     ):

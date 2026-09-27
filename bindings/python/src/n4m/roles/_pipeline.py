@@ -23,7 +23,7 @@ from .._errors import N4MError, check
 from .._ffi import lib
 from .._matrix import as_f64_2d, numpy_to_view
 from .._types import Status
-from ._base import _Context, _encode_labels, _fit_inputs, _label_array, method_class
+from ._base import _check_exact_float, _Context, _encode_labels, _fit_inputs, _label_array, method_class
 
 _ROLE_NAMES = {
     1 << 0: "transformer",
@@ -99,6 +99,7 @@ def _label_table(class_names) -> np.ndarray:
             raise ValueError(f"class_names has a non-finite entry at {i}: {value!r}")
     if len({isinstance(value, str) for value in entries}) > 1:
         raise ValueError("class_names mixes strings and numbers")
+    _check_exact_float(entries, "numeric class_names")
     seen: set[Any] = set()
     for value in entries:
         if value in seen:
