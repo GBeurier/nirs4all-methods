@@ -122,6 +122,8 @@ def test_classifier_labels_stay_facade_level():
         ]
     ).fit(X, labels)
     assert list(pipeline.classes_) == ["high", "low"]
+    assert list(pipeline.label_names_) == ["high", "low"]
+    assert RolePipeline(["models.regularized.ridge"]).fit(X, y).label_names_ is None
     assert set(pipeline.predict(X)) <= {"high", "low"}
     assert pipeline.decision_function(X).shape == (X.shape[0], 2)
     restored = RolePipeline.from_states(

@@ -237,6 +237,16 @@ export class RolePipeline {
         }
     }
 
+    /**
+     * Label table of a classifier fitted on names (index = class id), else
+     * undefined. Unlike classes() it keeps labels whose rows a sample filter
+     * removed, so an exported pipeline can restore every name.
+     */
+    labelNames(): string[] | undefined {
+        this.handle();
+        return this.classNames === undefined ? undefined : [...this.classNames];
+    }
+
     /** Fitted classes, ascending ids (names when trained on names). */
     classes(): ClassLabel[] {
         const m = getModule();

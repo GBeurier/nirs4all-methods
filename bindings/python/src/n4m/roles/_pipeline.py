@@ -369,6 +369,17 @@ class RolePipeline(BaseEstimator):
         )
         return ids if self._label_names_ is None else self._label_names_[ids]
 
+    @property
+    def label_names_(self) -> np.ndarray | None:
+        """Label table of a classifier fitted on names (index = class id), else None.
+
+        Unlike ``classes_`` it keeps labels whose rows a sample filter
+        removed, so an exported pipeline can restore every name.
+        """
+        self._handle()
+        names: np.ndarray | None = self._label_names_
+        return None if names is None else names.copy()
+
     # -- introspection and states -------------------------------------------------
 
     @property

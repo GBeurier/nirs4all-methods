@@ -55,6 +55,7 @@ const names = fx.feature_names;
                                                  { featureNames: names, classNames: cls.class_names });
     assert.deepEqual(pipeline.predictLabels(xTest), cls.predict);
     assert.deepEqual(pipeline.classes(), cls.class_names);
+    assert.deepEqual(pipeline.labelNames(), cls.class_names);
     close(pipeline.decisionFunction(xTest).data, cls.decision_function.flat(), REPLAY_TOL, "decision");
     assert.throws(() => pipeline.predict(xTest), (e) => e.status === n4m.Status.ERR_UNSUPPORTED);
     const refit = n4m.RolePipeline.fromSteps(cls.steps).fit(xTrain, fx.labels_train);
