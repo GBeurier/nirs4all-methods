@@ -6,6 +6,8 @@
 \alias{n4m_role_pipeline_export}
 \alias{n4m_role_pipeline_import}
 \alias{n4m_role_pipeline_steps}
+\alias{n4m_role_pipeline_info}
+\alias{n4m_classes.n4m_role_pipeline}
 \alias{print.n4m_role_pipeline}
 \title{Native role pipelines}
 \usage{
@@ -24,6 +26,10 @@ n4m_role_pipeline_export(object, allow_training_rows = FALSE)
 n4m_role_pipeline_import(steps, states, feature_names = NULL, class_names = NULL)
 
 n4m_role_pipeline_steps(object)
+
+n4m_role_pipeline_info(object)
+
+\method{n4m_classes}{n4m_role_pipeline}(object)
 
 \method{print}{n4m_role_pipeline}(x, ...)
 }
@@ -64,6 +70,11 @@ one; \code{predict()} and \code{n4m_estimator_transform()} numeric results
 (class labels for \code{type = "class"}); \code{n4m_role_pipeline_export()}
 a list of \code{list(method_id, n4me, contains_training_rows)};
 \code{n4m_role_pipeline_steps()} a data frame describing each step.
+\code{n4m_role_pipeline_info()} a list with the input width \code{n_features},
+the stored \code{feature_names} (or \code{NULL}), the \code{classes} of a
+classifier pipeline (labels when fitted on labels, integer ids otherwise;
+\code{NULL} for a regressor) and the \code{steps} data frame.
+\code{n4m_classes()} the classes of a classifier pipeline.
 }
 \description{
 \code{n4m_role_pipeline()} builds a trained linear recipe of catalog

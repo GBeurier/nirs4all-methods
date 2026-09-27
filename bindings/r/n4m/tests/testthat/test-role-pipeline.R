@@ -128,3 +128,19 @@ testthat::test_that("the shared fixture's negative cases are refused alike", {
     testthat::expect_error(run(), case$message, fixed = TRUE, label = case$name)
   }
 })
+
+testthat::test_that("n4m_role_pipeline_info exposes width, column names and classes", {
+  set.seed(1)
+  X <- matrix(stats::rnorm(400), 80, 5, dimnames = list(NULL, paste0("w", 1:5)))
+  y <- factor(sample(c("a", "b"), 80, TRUE))
+  fit <- n4m_estimator_fit(n4m_role_pipeline(list("preprocessing.scatter.snv",
+                                                  "models.classification.pls_qda")), X, y)
+  info <- n4m_role_pipeline_info(fit)
+  testthat::expect_identical(info$n_features, 5L)
+  testthat::expect_identical(info$feature_names, paste0("w", 1:5))
+  testthat::expect_identical(info$classes, c("a", "b"))
+  testthat::expect_identical(n4m_classes(fit), c("a", "b"))
+  testthat::expect_identical(nrow(info$steps), 2L)
+  reg <- n4m_estimator_fit(n4m_role_pipeline(list("models.pls.cppls")), X, stats::rnorm(80))
+  testthat::expect_null(n4m_role_pipeline_info(reg)$classes)
+})
