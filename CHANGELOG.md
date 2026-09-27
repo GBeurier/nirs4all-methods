@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-27
+
+Rust crate `n4m` 0.3.0 ships the same API (`n4m::roles::RolePipeline`, `Estimator::contains_training_rows`).
+
 ### Added
 
 - ABI 2.14: native role pipeline (`n4m_role_pipeline_*` in
