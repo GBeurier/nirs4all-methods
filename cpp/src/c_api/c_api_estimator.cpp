@@ -15,6 +15,7 @@
 #include "core/method_result.hpp"
 #include "n4m/estimator.h"
 
+using n4m::estimator::check_input_view;
 using n4m::estimator::FitInputs;
 using n4m::estimator::MethodSpec;
 using n4m::estimator::Params;
@@ -99,6 +100,14 @@ n4m_status_t normalize_inputs(n4m_context_t* ctx, const MethodSpec& spec,
         set_error(ctx, "fit input 'X' is required");
         return N4M_ERR_NULL_POINTER;
     }
+    // Every matrix is validated before any adapter reads it (estimators and
+    // the procedures sharing their adapters).
+    n4m_status_t st = check_input_view(ctx, v.X, "X");
+    if (st == N4M_OK && v.Y != nullptr) st = check_input_view(ctx, v.Y, "y");
+    if (st == N4M_OK && v.X_target != nullptr) {
+        st = check_input_view(ctx, v.X_target, "target_domain");
+    }
+    if (st != N4M_OK) return st;
     in = FitInputs{};
     in.X = v.X;
     in.Y = v.Y;
@@ -178,15 +187,8 @@ n4m_status_t check_fitted(n4m_context_t* ctx, const n4m_estimator_t* est) {
 
 n4m_status_t check_rows(n4m_context_t* ctx, const n4m_estimator_t* est,
                         const n4m_matrix_view_t* X, std::int64_t out_rows) {
-    if (X == nullptr) {
-        set_error(ctx, "X is NULL");
-        return N4M_ERR_NULL_POINTER;
-    }
-    const n4m_status_t st = n4m_matrix_view_validate(X);
-    if (st != N4M_OK) {
-        set_error(ctx, "X is not a valid matrix view");
-        return st;
-    }
+    const n4m_status_t st = check_input_view(ctx, X, "X");
+    if (st != N4M_OK) return st;
     if (X->cols != est->adapter->n_features_in() || out_rows != X->rows) {
         set_error(ctx, "X or output shape does not match the fitted estimator");
         return N4M_ERR_SHAPE_MISMATCH;
@@ -604,6 +606,7 @@ N4M_API n4m_status_t n4m_estimator_apply_mask(n4m_context_t* ctx, const n4m_esti
         if (mask == nullptr) return N4M_ERR_NULL_POINTER;
         st = check_operation(ctx, est, N4M_ROLE_SAMPLE_FILTER, N4M_CAP_APPLY_MASK);
         if (st == N4M_OK) st = check_rows(ctx, est, X, n);
+        if (st == N4M_OK && Y != nullptr) st = check_input_view(ctx, Y, "y");
         if (st == N4M_OK && Y != nullptr && (Y->rows != X->rows || Y->cols <= 0)) {
             set_error_named(ctx, "input has an incompatible length", "y");
             st = N4M_ERR_SHAPE_MISMATCH;

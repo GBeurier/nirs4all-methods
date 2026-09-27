@@ -478,6 +478,50 @@ void test_training_rows(Data& d) {
     n4m_role_pipeline_destroy(p);
 }
 
+// Zero new rows give an empty output of the right width whatever the steps
+// (no step runs); the width and the output shape are still checked.
+void test_zero_rows(Data& d) {
+    current_ = "zero rows";
+    auto X = view(d.x, kRows, kCols);
+    auto Y = view(d.y2, kRows, 1);
+    auto empty = view(d.x, 0, kCols);
+    std::vector<double> none;
+    for (std::vector<const char*> ids :
+         {std::vector<const char*>{"models.regularized.ridge"},
+          {"preprocessing.scatter.snv", "models.regularized.ridge"},
+          {"preprocessing.scatter.snv", "models.pls.pls_regression", "models.regularized.ridge"}}) {
+        n4m_role_pipeline_t* p = make(ids);
+        auto in = inputs(&X, &Y);
+        CHECK(n4m_role_pipeline_fit(ctx_, p, &in) == N4M_OK);
+        auto O = view(none, 0, 1);
+        CHECK(n4m_role_pipeline_predict(ctx_, p, &empty, &O) == N4M_OK);
+        int64_t cols = 0;
+        CHECK(n4m_role_pipeline_transform_cols(p, &cols) == N4M_OK);
+        auto T = view(none, 0, cols);
+        CHECK(n4m_role_pipeline_transform(ctx_, p, &empty, &T) == N4M_OK);
+        auto narrow = view(d.x, 0, kCols - 1);
+        expect_error(n4m_role_pipeline_predict(ctx_, p, &narrow, &O), N4M_ERR_SHAPE_MISMATCH,
+                     "fitted on 10");
+        auto wide = view(none, 0, 2);
+        expect_error(n4m_role_pipeline_predict(ctx_, p, &empty, &wide), N4M_ERR_SHAPE_MISMATCH,
+                     "output is 0x2");
+        n4m_role_pipeline_destroy(p);
+    }
+    n4m_role_pipeline_t* p = make({"preprocessing.scatter.snv", "models.pls.pls_regression",
+                                   "models.classification.pls_lda"});
+    n4m_fit_inputs_v1_t in = inputs(&X, nullptr);
+    in.labels = d.labels.data();
+    in.n_labels = kRows;
+    CHECK(n4m_role_pipeline_fit(ctx_, p, &in) == N4M_OK);
+    CHECK(n4m_role_pipeline_predict_labels(ctx_, p, &empty, nullptr, 0) == N4M_OK);
+    int64_t label = -1;
+    expect_error(n4m_role_pipeline_predict_labels(ctx_, p, &empty, &label, 1),
+                 N4M_ERR_SHAPE_MISMATCH, "X has 0 rows");
+    auto S = view(none, 0, 3);
+    CHECK(n4m_role_pipeline_decision_function(ctx_, p, &empty, &S) == N4M_OK);
+    n4m_role_pipeline_destroy(p);
+}
+
 }  // namespace
 
 int main() {
@@ -499,6 +543,7 @@ int main() {
     run([&] { test_input_routing(d); });
     run([&] { test_feature_names(d); });
     run([&] { test_training_rows(d); });
+    run([&] { test_zero_rows(d); });
     n4m_context_destroy(ctx_);
     std::printf("n4m_role_pipeline_tests: %d failures\n", failures);
     return failures == 0 ? 0 : 1;

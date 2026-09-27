@@ -202,6 +202,11 @@ void set_error(n4m_context_t* ctx, const char* message) noexcept;
 n4m_status_t apply_config_params(const Params& params, n4m_config_t* cfg);
 // Message "<what> '<name>'".
 void set_error_named(n4m_context_t* ctx, const char* what, const char* name) noexcept;
+// Every matrix a caller passes in (X, y, target domain, new rows): non-NULL,
+// a valid layout (extents, strides) and float64 values. Another dtype is
+// refused with N4M_ERR_DTYPE_MISMATCH, never read as doubles.
+n4m_status_t check_input_view(n4m_context_t* ctx, const n4m_matrix_view_t* view,
+                              const char* name) noexcept;
 // N4M_ERR_CORRUPT_BUFFER naming a parameter that contradicts the restored
 // state (check_params).
 n4m_status_t contradicts(n4m_context_t* ctx, const char* name) noexcept;
