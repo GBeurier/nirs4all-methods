@@ -7,7 +7,9 @@ use base64::{engine::general_purpose::STANDARD, Engine as _};
 use n4m::roles::{self, Estimator, FitInputs, ParamValue, Params};
 use n4m::{Context, MatrixRef};
 use serde_json::Value;
+#[cfg(feature = "linked")]
 use std::ffi::{c_char, c_void, CStr};
+#[cfg(feature = "linked")]
 use std::ptr;
 
 fn fixture() -> Value {
@@ -35,6 +37,7 @@ fn rows_cols(value: &Value) -> (usize, usize) {
 
 /// Raw ABI view (`n4m_matrix_view_t`): the safe API always allocates the
 /// native width, so a narrower or wider caller view needs the raw call.
+#[cfg(feature = "linked")]
 #[repr(C)]
 struct RawView {
     data: *mut c_void,
@@ -45,6 +48,7 @@ struct RawView {
     dtype: i32,
     reserved0: i32,
 }
+#[cfg(feature = "linked")]
 impl RawView {
     fn row_major(data: &mut [f64], rows: usize, cols: usize) -> Self {
         Self {
@@ -58,7 +62,9 @@ impl RawView {
         }
     }
 }
+#[cfg(feature = "linked")]
 type Op = unsafe extern "C" fn(*mut c_void, *const c_void, *const RawView, *mut RawView) -> i32;
+#[cfg(feature = "linked")]
 extern "C" {
     fn n4m_context_create(out: *mut *mut c_void) -> i32;
     fn n4m_context_destroy(ctx: *mut c_void);
@@ -85,6 +91,7 @@ extern "C" {
 }
 
 /// A caller's output view of another width is refused before any write.
+#[cfg(feature = "linked")]
 fn output_views(case: &Value, x_test: &[f64], p: usize) {
     let id = case["id"].as_str().unwrap();
     let payload = STANDARD
@@ -203,7 +210,12 @@ fn replays_the_shared_negative_fixture() {
                     assert!((a - e).abs() <= 1e-12 * (1.0 + e.abs()), "{id}");
                 }
             }
-            "output_view" => output_views(case, &t_data, p),
+            // Raw caller views need the link-time ABI (the dynamic build has
+            // no raw symbols); the safe API cannot pass a view of another width.
+            "output_view" => {
+                #[cfg(feature = "linked")]
+                output_views(case, &t_data, p);
+            }
             "export" => {
                 let mut est = estimator(&ctx, case);
                 let y = floats(&case["y"]);
