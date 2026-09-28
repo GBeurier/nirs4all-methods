@@ -196,6 +196,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "N4M_BUILD_FUZZ": "ON",
+        "N4M_BUILD_STATIC": "ON",
         "N4M_BUILD_TESTS": "OFF",
         "N4M_BUILD_CLI": "OFF",
         "N4M_ENABLE_ASAN": "ON",

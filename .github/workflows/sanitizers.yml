@@ -38,3 +38,34 @@ jobs:
       - run: ctest --preset ci-${{ matrix.san }} --output-on-failure
       - name: Run CLI selfcheck under sanitizers
         run: ./build/ci-${{ matrix.san }}/cpp/cli/n4m_cli --selfcheck
+
+  n4mm-fuzz:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    env:
+      ASAN_OPTIONS: "detect_leaks=1:halt_on_error=1:abort_on_error=1"
+      UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+    steps:
+      - uses: actions/checkout@v7.0.0
+      - name: Install the declared Clang 16 toolchain
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/llvm.gpg
+          codename=$(lsb_release -sc)
+          echo "deb [signed-by=/etc/apt/keyrings/llvm.gpg] http://apt.llvm.org/$codename/ llvm-toolchain-$codename-16 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm-16.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang-16 libclang-rt-16-dev ninja-build cmake
+      - run: cmake --preset ci-fuzz-n4mm
+      - run: cmake --build --preset ci-fuzz-n4mm --target n4m_fuzz_n4mm --parallel
+      - name: Run the bounded N4MM campaign
+        run: |
+          mkdir -p "${RUNNER_TEMP}/n4mm-corpus" "${RUNNER_TEMP}/n4mm-artifacts"
+          cp cpp/fuzz/corpus/n4mm/*.n4mm "${RUNNER_TEMP}/n4mm-corpus/"
+          ./build/ci-fuzz-n4mm/cpp/fuzz/n4m_fuzz_n4mm \
+            "${RUNNER_TEMP}/n4mm-corpus" \
+            -max_total_time=60 \
+            -max_len=1048576 \
+            -timeout=10 \
+            -rss_limit_mb=4096 \
+            -print_final_stats=1 \
+            -artifact_prefix="${RUNNER_TEMP}/n4mm-artifacts/"
