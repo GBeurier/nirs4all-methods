@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **220**
+- Curated records: **221**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `9b9d58596371dcc1fd96d0c1976a3058e640f405a5a6e4e5da49e07ea892b75d`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `bac8f366280b3f6695666f060a3c096653d4b7a919bfa1f62d003a572a7471fd`
 
 ## References by documentation page
 
@@ -1077,6 +1077,12 @@ No single canonical paper defines this exact weighted estimator. It generalizes 
 No single canonical paper defines this bounded implementation. It applies the standard discrete cross-correlation lag estimator; the source defines padding and tie behaviour.
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_advanced.cpp#L798-L900
+
+### [`preprocessing_feature_selection_spectral_encoding`](preprocessing_feature_selection_spectral_encoding.md) — Training-fitted LVSE and GCU spectral encoders
+
+No single canonical paper specifies this combined n4m lifecycle. The exact local subspace and global nonnegative constructions are defined by the current C++ implementation and its spectral-encoding contract.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/spectral_encoding.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/methods/spectral_encoding.md
 
 ### [`pso_select`](pso_select.md) — PSO-PLS — Particle Swarm Optimisation
 

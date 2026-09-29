@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **213**
-- Curated scientific records: **220**
-- Resolved documentation pages: **213**
+- Catalog entries: **214**
+- Curated scientific records: **221**
+- Resolved documentation pages: **214**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -140,6 +140,7 @@ This generated report records the documentation source used for each catalog ent
 | `preprocessing.derivatives.second_derivative` | [pp_second_derivative](pp_second_derivative.md) | curated |
 | `preprocessing.feature_selection.flexible_pca` | [pp_flex_pca](pp_flex_pca.md) | curated |
 | `preprocessing.feature_selection.flexible_svd` | [pp_flex_svd](pp_flex_svd.md) | curated |
+| `preprocessing.feature_selection.spectral_encoding` | [preprocessing_feature_selection_spectral_encoding](preprocessing_feature_selection_spectral_encoding.md) | curated |
 | `preprocessing.orthogonalization.epo` | [pp_epo](pp_epo.md) | curated |
 | `preprocessing.orthogonalization.osc` | [pp_osc](pp_osc.md) | curated |
 | `preprocessing.resampling.crop` | [pp_crop](pp_crop.md) | curated |

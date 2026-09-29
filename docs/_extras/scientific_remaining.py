@@ -32,6 +32,30 @@ def _entry(
 
 
 SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
+    "preprocessing_feature_selection_spectral_encoding": _entry(
+        "Training-fitted LVSE and GCU spectral encoders",
+        "No single canonical paper specifies this combined n4m lifecycle. The exact local "
+        "subspace and global nonnegative constructions are defined by the current C++ "
+        "implementation and its spectral-encoding contract.",
+        "LVSE centers and optionally scales each channel on training rows, then uses exact "
+        "local Gram SVD bases over fixed or overlapping windows; small singular modes are "
+        "zeroed and the retained coordinates form a fitted spectral representation. GCU "
+        "subtracts training channel minima, applies a global scale and fits nonnegative "
+        "factors with NNDSVDa initialization and cyclic coordinate descent. Query rows "
+        "reuse the fitted bases and scaling instead of refitting them.",
+        "Representing NIR spectra by local subspaces or global nonnegative factors before "
+        "a downstream estimator, with encoder window, rank and overlap chosen inside "
+        "training-fold validation.",
+        "Fitting an encoder before the data split leaks validation spectra. Overlapping "
+        "LVSE windows do not generally form one orthogonal projector; SNV-enabled LVSE "
+        "and GCU are non-affine in raw inputs. Exact SVD on all supplied rows does not "
+        "promise bitwise parity with stochastic or subsampled research prototypes.",
+        "The `n4m_decomposition_spectral_*` C ABI owns the fitted lifecycle. "
+        "`cpp/src/core/spectral_encoding.cpp` implements the numerical transforms; "
+        "Python, R, MATLAB and WASM bindings marshal data to that same native engine.",
+        _REPO + "cpp/src/core/spectral_encoding.cpp; "
+        + _REPO + "docs/methods/spectral_encoding.md",
+    ),
     "models_pls_pls_regression": _entry(
         "PLS regression with a selectable solver",
         "Wold, Sjöström & Eriksson (2001), *PLS-regression: a basic tool of "

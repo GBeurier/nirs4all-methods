@@ -4,11 +4,11 @@ _Namespace_: **`n4m.model_selection.aom_calibration`** · _Fully-qualified_: `n4
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_model_selection_aom_calibration_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L514) · [`n4m_model_selection_aom_calibration_predict`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L521). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_model_selection_aom_calibration_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L518) · [`n4m_model_selection_aom_calibration_predict`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/model_selection.h#L525). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.model_selection.aom_calibration import AOMPLSRegressor`
 
-**Signature:** [`AOMPLSRegressor()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_calibration.py#L266)
+**Signature:** [`AOMPLSRegressor()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/model_selection/aom_calibration.py#L297)
 
 **R:** no current source-verified entry point was found for this catalog method.
 
