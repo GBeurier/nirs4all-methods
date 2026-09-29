@@ -33,7 +33,6 @@ class HpoSpec:
     space: tuple[ParamDecl, ...]
     objective: str  # key into objectives.OBJECTIVES
     n_trials: int
-    checkpoint_after_trials: int = 0  # 0 disables a mid-study binding resume
     seed: int = 0
     pruner: str = "none"  # none | median | asha | hyperband | racing
     direction: str = "minimize"  # minimize | maximize
@@ -48,6 +47,7 @@ class HpoSpec:
     failed_trial_ids: tuple[int, ...] = ()
     tol: float = 0.0  # 0 = exact; >0 = abs tolerance on params/scores
     notes: str = ""
+    checkpoint_after_trials: int = 0  # 0 disables a mid-study binding resume
 
 
 def _floats(*names, low=-5.0, high=5.0):
