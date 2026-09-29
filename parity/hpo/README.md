@@ -1,17 +1,16 @@
 # HPO cross-binding parity (Track Q)
 
 Parity harness for the native ask/tell hyperparameter optimizer (`optimization`
-role, ABI 2.2), with an authoritative Python runner and a JS/WASM binding runner.
+role, ABI 2.2), with an authoritative Python runner and R and JS/WASM binding runners.
 It is the HPO analogue of the numeric fixtures under `parity/fixtures/`: it
-commits selected native traces that each binding must reproduce. The JS/WASM
-runner consumes the 14 authoritative specs via `export_js_specs.py`, checks
-each native proposal and pruner decision, and compares its rich trace with the
+commits selected native traces that each binding must reproduce. The R and JS/WASM
+binding runners consume the 14 authoritative specs via `export_specs.py`, check
+each native proposal and pruner decision, and compare their rich traces with the
 published goldens using a fixed score tape. Python and JS arithmetic for the
-closed-form score may differ by one binary64 ULP; the runner checks that
-separately within `1e-12` relative tolerance. R has a native optimizer binding
-and bidirectional N4MOPT continuation with Python, but no 14-tape runner yet;
-MATLAB-Octave still needs the optimizer wrapper. A separate versioned
-compatibility contract executes all 45 native
+closed-form score may differ by one binary64 ULP; the JS runner checks that
+separately within `1e-12` relative tolerance. R also has bidirectional N4MOPT
+continuation with Python. MATLAB-Octave still needs the optimizer wrapper. A
+separate versioned compatibility contract executes all 45 native
 sampler-pruner compositions; that exhaustive native/Python gate is not a set of
 45 independent references and is not cross-binding evidence.
 
@@ -24,9 +23,9 @@ sampler-pruner compositions; that exhaustive native/Python gate is not a set of
    parameters (+ score / prune decisions). The trace is committed under
    `golden/<id>.json`. Any binding must satisfy the same comparator (float axes
    may use `HpoSpec.tol`, but the current cells default to exact equality). The
-   native/Python and JS/WASM runners now reproduce the same 14 traces with the
+   native/Python, R and JS/WASM runners reproduce the same 14 traces with the
    same ordered ask/tell schedule and fixed score tape. This does not establish
-   R or MATLAB-Octave parity for those 14 cases.
+   MATLAB-Octave parity or full 45-cell cross-binding compatibility.
 
 2. **Sobol Tier-A (external reference).** The Sobol cell's parameters must equal
    `scipy.stats.qmc.Sobol(scramble=False)` bit-for-bit.
@@ -172,11 +171,11 @@ which already builds `libn4m`). Skips cleanly when `N4M_LIB_PATH` is unset.
 
 ## Adding a binding to the contract
 
-An R / MATLAB / WASM binding validates the selected golden contract by adding a
+Another binding validates the selected golden contract by adding a
 binding-specific runner that
 builds the ordered search space and optimizer for each `HpoSpec`, runs the same
-ask/tell loop with the reimplemented objective, emits the StudyTrace in the same
-JSON shape, and diffs it against `golden/<id>.json`. Passing those cells means the
+ask/tell loop with the fixed golden score tape, decodes the native rich trace,
+and compares it against `golden/<id>.json`. Passing those cells means the
 binding matches the covered native traces; it is not evidence for unregistered
 sampler/pruner or search-space combinations. It may then implement the versioned
 45-cell compatibility contract with the same canonical tape. Only the results of
@@ -190,6 +189,8 @@ Python-driven native gate alone cannot.
 | `specs.py` | `HpoSpec` dataclass + `REGISTRY` (the parity cells). |
 | `objectives.py` | Portable closed-form objectives (`OBJECTIVES`, `INTERMEDIATE`). |
 | `run_native.py` | Run a spec, then build StudyTrace from the owning native `Optimizer.get_trials()` snapshot. |
+| `export_specs.py` | Export the ordered registry to JSON for the R and JS/WASM runners. |
+| `bindings/r/test_optimizer_goldens.R` | R binding proposals, pruners and rich trace against all 14 tapes. |
 | `comparators.py` | Trace comparison + golden load/dump. |
 | `references.py` | scipy Sobol + pure-Python pruner rules. |
 | `compatibility.py` | Semantic validator, 45-cell executor, transition/checkpoint assertions and typed refusal probes. |

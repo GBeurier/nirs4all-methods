@@ -1,4 +1,4 @@
-"""Export the authoritative HPO registry for the JS/WASM golden-tape runner."""
+"""Export the authoritative HPO registry for cross-binding golden-tape runners."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from specs import REGISTRY
 
 def main() -> None:
     if len(sys.argv) != 2:
-        raise SystemExit("usage: export_js_specs.py OUTPUT.json")
+        raise SystemExit("usage: export_specs.py OUTPUT.json")
     Path(sys.argv[1]).write_text(
         json.dumps([asdict(spec) for spec in REGISTRY], ensure_ascii=False),
         encoding="utf-8",

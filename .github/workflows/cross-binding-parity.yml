@@ -189,7 +189,7 @@ jobs:
           cmake --preset dev-release
           cmake --build --preset dev-release --target n4m_c --parallel 4
           python -m pip install numpy
-          python parity/hpo/export_js_specs.py /tmp/n4m-hpo-js-specs.json
+          python parity/hpo/export_specs.py /tmp/n4m-hpo-js-specs.json
           node bindings/js/test/run_optimization_goldens.mjs \
             /tmp/n4m-hpo-js-specs.json parity/hpo/golden
           python bindings/js/test/optimizer_interop.py
@@ -276,3 +276,9 @@ jobs:
           Rscript bindings/r/test_optimizer_interop.R "$n4m_opt_interop_dir"
           python3 bindings/r/test_optimizer_interop.py read "$n4m_opt_interop_dir"
           rm -rf "$n4m_opt_interop_dir"
+
+      - name: R optimizer HPO golden traces
+        run: |
+          python3 parity/hpo/export_specs.py /tmp/n4m-hpo-r-specs.json
+          Rscript bindings/r/test_optimizer_goldens.R \
+            /tmp/n4m-hpo-r-specs.json parity/hpo/golden
