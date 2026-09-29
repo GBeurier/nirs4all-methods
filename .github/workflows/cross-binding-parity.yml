@@ -244,3 +244,17 @@ jobs:
         run: |
           R CMD INSTALL --preclean --no-multiarch --no-staged-install bindings/r/n4m
           Rscript bindings/r/test_parity.R
+          Rscript bindings/r/test_optimizer.R
+
+      - name: R/Python optimizer checkpoint continuation
+        env:
+          N4M_LIBRARY_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libn4m.so
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
+          PYTHONPATH: bindings/python/src
+        run: |
+          python3 -m pip install 'numpy>=1.24,<3'
+          n4m_opt_interop_dir="$(mktemp -d)"
+          python3 bindings/r/test_optimizer_interop.py write "$n4m_opt_interop_dir"
+          Rscript bindings/r/test_optimizer_interop.R "$n4m_opt_interop_dir"
+          python3 bindings/r/test_optimizer_interop.py read "$n4m_opt_interop_dir"
+          rm -rf "$n4m_opt_interop_dir"

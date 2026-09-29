@@ -102,12 +102,36 @@ SEXP r_n4m_role_pipeline_info(SEXP);
 SEXP r_n4m_procedure_run(SEXP, SEXP, SEXP, SEXP, SEXP);
 SEXP r_n4m_manifest_json(void);
 
+/* native ask/tell optimization */
+SEXP r_n4m_optimizer_create(SEXP, SEXP, SEXP);
+SEXP r_n4m_optimizer_close(SEXP);
+SEXP r_n4m_optimizer_load(SEXP);
+SEXP r_n4m_optimizer_ask(SEXP, SEXP);
+SEXP r_n4m_optimizer_ask_batch(SEXP, SEXP, SEXP);
+SEXP r_n4m_optimizer_enqueue(SEXP, SEXP);
+SEXP r_n4m_optimizer_tell(SEXP, SEXP, SEXP, SEXP, SEXP);
+SEXP r_n4m_optimizer_intermediate(SEXP, SEXP, SEXP, SEXP);
+SEXP r_n4m_optimizer_best(SEXP, SEXP);
+SEXP r_n4m_optimizer_save(SEXP);
+SEXP r_n4m_optimizer_trials(SEXP, SEXP);
+
 /* fitted spectral encoders (ABI 2.15) */
 SEXP r_n4m_spectral_fit(SEXP X, SEXP parameters);
 SEXP r_n4m_spectral_transform(SEXP ptr, SEXP X);
 SEXP r_n4m_spectral_affine(SEXP ptr);
 
 static const R_CallMethodDef callMethods[] = {
+    {"r_n4m_optimizer_create", (DL_FUNC)&r_n4m_optimizer_create, 3},
+    {"r_n4m_optimizer_close", (DL_FUNC)&r_n4m_optimizer_close, 1},
+    {"r_n4m_optimizer_load", (DL_FUNC)&r_n4m_optimizer_load, 1},
+    {"r_n4m_optimizer_ask", (DL_FUNC)&r_n4m_optimizer_ask, 2},
+    {"r_n4m_optimizer_ask_batch", (DL_FUNC)&r_n4m_optimizer_ask_batch, 3},
+    {"r_n4m_optimizer_enqueue", (DL_FUNC)&r_n4m_optimizer_enqueue, 2},
+    {"r_n4m_optimizer_tell", (DL_FUNC)&r_n4m_optimizer_tell, 5},
+    {"r_n4m_optimizer_intermediate", (DL_FUNC)&r_n4m_optimizer_intermediate, 4},
+    {"r_n4m_optimizer_best", (DL_FUNC)&r_n4m_optimizer_best, 2},
+    {"r_n4m_optimizer_save", (DL_FUNC)&r_n4m_optimizer_save, 1},
+    {"r_n4m_optimizer_trials", (DL_FUNC)&r_n4m_optimizer_trials, 2},
     {"r_n4m_spectral_fit", (DL_FUNC)&r_n4m_spectral_fit, 2},
     {"r_n4m_spectral_transform", (DL_FUNC)&r_n4m_spectral_transform, 2},
     {"r_n4m_spectral_affine", (DL_FUNC)&r_n4m_spectral_affine, 1},

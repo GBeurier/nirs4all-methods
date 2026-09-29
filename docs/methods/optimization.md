@@ -1,6 +1,6 @@
 # Optimization role — native hyperparameter finetuning
 
-The `optimization` role (C ABI header [`n4m/optimization.h`](../../cpp/include/n4m/optimization.h), ABI 2.2) is a **portable ask/tell hyperparameter optimizer**: the search algorithm lives once in `libn4m` and can be reused by every binding. The native core and Python binding are implemented. R, MATLAB-Octave and WASM optimizer wrappers and their cross-binding gates are still pending, so cross-language reproducibility is a target backed by the shared C ABI and Track-Q fixtures, not yet a release claim for every binding. Design rationale and the full plan are in [developer documentation](../dev/documentation.md) and [`NATIVE_FINETUNING.md`](../NATIVE_FINETUNING.md); the ABI freeze is detailed in [developer documentation](../dev/documentation.md).
+The `optimization` role (C ABI header [`n4m/optimization.h`](../../cpp/include/n4m/optimization.h), ABI 2.2) is a **portable ask/tell hyperparameter optimizer**: the search algorithm lives once in `libn4m` and can be reused by every binding. The native core and Python binding are implemented. The R binding now exposes the native optimizer lifecycle and rich trace in the source checkout; its installed-package gate covers deterministic continuation and checkpoint resume. MATLAB-Octave and WASM optimizer wrappers remain pending. A full cross-binding golden-tape parity claim still requires its own runner; the shared C ABI alone does not prove one. Design rationale and the full plan are in [developer documentation](../dev/documentation.md) and [`NATIVE_FINETUNING.md`](../NATIVE_FINETUNING.md); the ABI freeze is detailed in [developer documentation](../dev/documentation.md).
 
 ## Model
 
@@ -435,6 +435,16 @@ existing int32 method-result vector type. Offsets start at zero, are
 non-decreasing, and end at the byte/element stream length. Sorted-tuple
 components appear under their deterministic expanded names (`name#0`,
 `name#1`, …), exactly as they do on `n4m_trial_t`.
+
+The R binding now exposes this owning payload through `n4m_optimizer_trials()`;
+it converts row-major native matrices to R matrices and keeps int64 vectors
+lossless (character when any value exceeds binary64's exact integer range).
+Its `n4m_optimizer()` facade also exposes typed axes, constraints, ask/batch,
+enqueue, terminal/intermediate reports, best, and native N4MOPT save/load.
+The accompanying R search-space declaration is retained solely to decode
+returned trial values after load; the native checkpoint owns the authoritative
+optimizer state. R does not yet expose the pure-native `finetune_estimator`
+driver or a DAG-level tuning controller.
 
 Python's `Optimizer.get_trials()` decodes this payload into owning
 `TrialRecord` objects. Each record exposes `params`, lossless
