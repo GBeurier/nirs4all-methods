@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: CECILL-2.1
-// Execute the authoritative 14 HPO specs through JS/WASM and compare the
+// Execute selected or exhaustive HPO specs through JS/WASM and compare the
 // native rich trace with the published Python/native golden tapes.
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -10,7 +10,7 @@ const [specsFile, goldenDir] = process.argv.slice(2);
 if (!specsFile || !goldenDir) throw new Error("usage: run_optimization_goldens.mjs SPECS.json GOLDEN_DIR");
 await loadModule();
 const specs = JSON.parse(fs.readFileSync(specsFile, "utf8"));
-assert.equal(specs.length, 14);
+assert.ok([14, 45].includes(specs.length));
 
 function searchSpace(spec) {
     return Object.fromEntries(spec.space.map(parameter => {
@@ -46,6 +46,7 @@ function sphere(parameters) {
 
 function intermediate(kind, parameters, step) {
     if (kind === "learning_curve") return sphere(parameters) + 5 / (step + 1);
+    if (kind === "compatibility_curve") return -sphere(parameters) + 5 / (step + 1);
     if (kind === "racing_observation") {
         return sphere(parameters) + [-0.21, 0.08, 0.17, -0.04, 0.13, -0.19, 0.02, 0.04][step % 8];
     }
@@ -145,4 +146,4 @@ for (const spec of specs) {
         optimizer.dispose();
     }
 }
-console.log("All 14 HPO JS/WASM golden traces match Python/native");
+console.log(`All ${specs.length} HPO JS/WASM golden traces match Python/native`);

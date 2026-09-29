@@ -9,7 +9,7 @@ if (length(args) != 2L)
 if (!requireNamespace("jsonlite", quietly = TRUE))
   stop("jsonlite is required for the cross-binding golden gate", call. = FALSE)
 specs <- jsonlite::fromJSON(args[[1]], simplifyVector = FALSE)
-stopifnot(length(specs) == 14L)
+stopifnot(length(specs) %in% c(14L, 45L))
 
 same <- function(actual, expected, label) {
   result <- all.equal(actual, expected, tolerance = 0, check.attributes = FALSE)
@@ -172,4 +172,4 @@ for (spec in specs) {
     cat("HPO R golden:", spec$id, "(", length(golden), "trials )\n")
   }, finally = n4m_optimizer_close(optimizer))
 }
-cat("All 14 HPO R golden traces match Python/native\n")
+cat("All", length(specs), "HPO R golden traces match Python/native\n")

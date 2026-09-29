@@ -192,13 +192,16 @@ jobs:
           python parity/hpo/export_specs.py /tmp/n4m-hpo-js-specs.json
           node bindings/js/test/run_optimization_goldens.mjs \
             /tmp/n4m-hpo-js-specs.json parity/hpo/golden
+          python parity/hpo/export_compatibility_fixtures.py /tmp/n4m-hpo-js-matrix
+          node bindings/js/test/run_optimization_goldens.mjs \
+            /tmp/n4m-hpo-js-matrix/specs.json /tmp/n4m-hpo-js-matrix/golden
           python bindings/js/test/optimizer_interop.py
 
   octave-mex:
     # Octave binding: build libn4m, compile the +n4m MEX shims (build_mex.m),
     # run the parity test. Verified locally (MEX compiles, test_parity PASS at
     # rmse_rel ~4e-16); CI uses apt Octave (clean mkoctfile + system gcc, none of
-    # the conda-octave quirks). MATLAB stays manual (no licensed runner — COMPAT.md).
+    # the conda-octave quirks). Licensed MATLAB runtime is deferred (COMPAT.md).
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7.0.0
@@ -226,7 +229,7 @@ jobs:
           octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_n4m_namespace"
           octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_optimizer"
 
-      - name: MATLAB/Octave optimizer HPO golden traces
+      - name: Octave optimizer HPO golden traces
         run: |
           python3 parity/hpo/export_matlab_fixtures.py /tmp/n4m-hpo-octave-fixtures
           octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_optimizer_goldens('/tmp/n4m-hpo-octave-fixtures')"
@@ -235,7 +238,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Python/MATLAB-Octave optimizer checkpoint continuation
+      - name: Python/Octave optimizer checkpoint continuation
         env:
           PYTHONPATH: ${{ github.workspace }}/bindings/python/src
           N4M_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libn4m.so
@@ -248,12 +251,21 @@ jobs:
           python bindings/matlab/test/optimizer_interop.py read "$n4m_opt_interop_dir"
           rm -rf "$n4m_opt_interop_dir"
 
+      - name: Octave optimizer 45-cell sampler-pruner parity
+        env:
+          PYTHONPATH: ${{ github.workspace }}/bindings/python/src
+          N4M_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libn4m.so
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
+        run: |
+          python parity/hpo/export_compatibility_fixtures.py /tmp/n4m-hpo-octave-matrix
+          octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_optimizer_goldens('/tmp/n4m-hpo-octave-matrix')"
+
   r-binding:
     # R binding: build libn4m, install the package standalone (configure +
     # prebuilt-link Makevars), run the parity test. Verified locally:
     # R CMD INSTALL succeeds + test_parity.R gives rmse_rel ~9.4e-18. This is the
     # dev/CI build path; the CRAN self-contained vendored build stays separate
-    # (release-r.yml, manual). MATLAB stays manual (COMPAT.md).
+    # (release-r.yml, manual). Licensed MATLAB runtime is deferred (COMPAT.md).
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7.0.0
@@ -301,7 +313,14 @@ jobs:
           rm -rf "$n4m_opt_interop_dir"
 
       - name: R optimizer HPO golden traces
+        env:
+          PYTHONPATH: ${{ github.workspace }}/bindings/python/src
+          N4M_LIB_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src/libn4m.so
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build/ci-linux-gcc12-release/cpp/src
         run: |
           python3 parity/hpo/export_specs.py /tmp/n4m-hpo-r-specs.json
           Rscript bindings/r/test_optimizer_goldens.R \
             /tmp/n4m-hpo-r-specs.json parity/hpo/golden
+          python3 parity/hpo/export_compatibility_fixtures.py /tmp/n4m-hpo-r-matrix
+          Rscript bindings/r/test_optimizer_goldens.R \
+            /tmp/n4m-hpo-r-matrix/specs.json /tmp/n4m-hpo-r-matrix/golden
