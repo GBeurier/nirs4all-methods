@@ -29,6 +29,8 @@ Usage::
     python scripts/retag_wheels.py wheelhouse/
 
 The script is idempotent — already-retagged wheels are left untouched.
+It rejects a wheelhouse containing any non-ctypes or non-target wheel before
+rewriting any member, so native ``abi3`` extensions keep their ABI tag.
 """
 
 from __future__ import annotations
@@ -56,11 +58,61 @@ from pathlib import Path
 # We deliberately allow dots inside the platform segment so that compressed
 # tags are not rejected.
 _WHEEL_NAME_RE = re.compile(
-    r"^(?P<dist>[A-Za-z0-9_]+(?:-[A-Za-z0-9_.]+)*)-(?P<ver>[^-]+)"
-    r"-(?P<build>[^-]+-)?"
+    r"^(?P<dist>[A-Za-z0-9_.]+)-(?P<ver>[^-]+)"
+    r"-(?P<build>[0-9][^-]*-)?"
     r"(?P<python>[^-]+)-(?P<abi>[^-]+)-(?P<platform>[A-Za-z0-9_.]+)"
     r"\.whl$"
 )
+_CTYPES_DISTRIBUTIONS = frozenset({"nirs4all_methods", "pls4all"})
+
+
+def _validate_wheel_name(src: Path) -> re.Match[str]:
+    """Refuse native extension wheels before any archive is rewritten."""
+    match = _WHEEL_NAME_RE.match(src.name)
+    if match is None:
+        raise ValueError(f"unrecognised wheel filename: {src.name}")
+    if match.group("dist") not in _CTYPES_DISTRIBUTIONS:
+        raise ValueError(f"retag supports only ctypes wheels: {src.name}")
+    python_tag, abi_tag = match.group("python"), match.group("abi")
+    if (python_tag, abi_tag) != ("py3", "none") and not (
+        python_tag.startswith("cp3") and abi_tag == python_tag
+    ):
+        raise ValueError(f"retag refuses non-ctypes ABI tag: {src.name}")
+    return match
+
+
+def _validate_wheel_archive(src: Path, match: re.Match[str]) -> None:
+    """Check every wheel before the in-place pass can remove any source."""
+    try:
+        with zipfile.ZipFile(src) as archive:
+            corrupt_member = archive.testzip()
+            if corrupt_member is not None:
+                raise ValueError(
+                    f"wheel {src.name} has a corrupt member: {corrupt_member}"
+                )
+            members = archive.namelist()
+            wheel_member = next(
+                (name for name in members if name.endswith(".dist-info/WHEEL")), None
+            )
+            record_member = next(
+                (name for name in members if name.endswith(".dist-info/RECORD")), None
+            )
+            if wheel_member is None or record_member is None:
+                raise ValueError(f"wheel {src.name} is missing WHEEL or RECORD")
+            wheel_text = archive.read(wheel_member).decode("utf-8")
+            record_text = archive.read(record_member).decode("utf-8")
+            python_tag, abi_tag = match.group("python"), match.group("abi")
+            _rewrite_wheel_metadata(
+                wheel_text, python_tag, abi_tag, match.group("platform"), "py3", "none"
+            )
+            _rewrite_record(
+                record_text,
+                wheel_member,
+                _record_hash(wheel_text.encode()),
+                len(wheel_text),
+            )
+    except (OSError, RuntimeError, UnicodeError, zipfile.BadZipFile) as exc:
+        raise ValueError(f"invalid wheel archive {src.name}: {exc}") from exc
 
 
 def _record_hash(payload: bytes) -> str:
@@ -71,9 +123,7 @@ def _record_hash(payload: bytes) -> str:
 
 def _retag_wheel(src: Path, dest_dir: Path) -> Path:
     """Rewrite a single wheel; return the destination path."""
-    m = _WHEEL_NAME_RE.match(src.name)
-    if m is None:
-        raise ValueError(f"unrecognised wheel filename: {src.name}")
+    m = _validate_wheel_name(src)
 
     python_tag = m.group("python")
     abi_tag = m.group("abi")
@@ -185,7 +235,7 @@ def _rewrite_wheel_metadata(
     text: str,
     old_python: str,
     old_abi: str,
-    old_platform: str,  # noqa: ARG001 — kept for API symmetry
+    old_platform: str,  # Kept for API symmetry.
     new_python: str,
     new_abi: str,
 ) -> str:
@@ -206,11 +256,11 @@ def _rewrite_wheel_metadata(
     for line in text.splitlines(keepends=True):
         if line.startswith("Tag:"):
             saw_tag = True
-            current = line[len("Tag:"):].strip()
+            current = line[len("Tag:") :].strip()
             if current.startswith(old_prefix):
                 # Strip the interpreter/abi prefix and re-prefix; preserves
                 # the platform segment exactly (including dotted forms).
-                platform_part = current[len(old_prefix):]
+                platform_part = current[len(old_prefix) :]
                 out_lines.append(f"Tag: {new_prefix}{platform_part}\n")
                 rewritten += 1
             else:
@@ -254,8 +304,7 @@ def _rewrite_record(
             writer.writerow(row)
     if not updated:
         raise RuntimeError(
-            f"RECORD has no entry for {wheel_member}; "
-            "the wheel is malformed."
+            f"RECORD has no entry for {wheel_member}; the wheel is malformed."
         )
     return out_stream.getvalue()
 
@@ -283,13 +332,22 @@ def main(argv: list[str] | None = None) -> int:
         print(f"warning: no wheels found in {args.wheelhouse}", file=sys.stderr)
         return 0
 
+    # A mixed wheelhouse must fail before an earlier ctypes wheel is renamed.
+    try:
+        for wheel in wheels:
+            match = _validate_wheel_name(wheel)
+            _validate_wheel_archive(wheel, match)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
     out_dir = args.wheelhouse if args.inplace else (args.wheelhouse / "retagged")
     out_dir.mkdir(exist_ok=True)
 
     for src in wheels:
         try:
             dest = _retag_wheel(src, out_dir)
-        except Exception as exc:  # pragma: no cover — fail loudly for diagnostics.
+        except Exception as exc:  # noqa: BLE001 — report malformed wheels.
             print(f"error: failed to retag {src.name}: {exc}", file=sys.stderr)
             return 1
         if args.inplace and dest != src:
