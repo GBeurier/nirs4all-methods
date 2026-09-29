@@ -1,17 +1,17 @@
 # HPO cross-binding parity (Track Q)
 
 Parity harness for the native ask/tell hyperparameter optimizer (`optimization`
-role, ABI 2.2), with an authoritative Python runner and R and JS/WASM binding runners.
-It is the HPO analogue of the numeric fixtures under `parity/fixtures/`: it
-commits selected native traces that each binding must reproduce. The R and JS/WASM
-binding runners consume the 14 authoritative specs via `export_specs.py`, check
-each native proposal and pruner decision, and compare their rich traces with the
-published goldens using a fixed score tape. Python and JS arithmetic for the
-closed-form score may differ by one binary64 ULP; the JS runner checks that
-separately within `1e-12` relative tolerance. R also has bidirectional N4MOPT
-continuation with Python. A MATLAB/Octave MEX runner and bidirectional N4MOPT
-continuation check have been added to the source checkout; their Octave runtime
-CI and a licensed MATLAB check remain open.
+role, ABI 2.2), with an authoritative Python runner and R, JS/WASM and Octave
+binding runners. It is the HPO analogue of the numeric fixtures under
+`parity/fixtures/`: it commits selected native traces that each binding must
+reproduce. R and JS/WASM consume the 14 authoritative specs via
+`export_specs.py`; Octave consumes equivalent generated `.m` data. Each runner
+checks native proposals, pruner decisions and rich traces against the published
+goldens using a fixed score tape. Python and JS arithmetic for the closed-form
+score may differ by one binary64 ULP; the JS runner checks that separately
+within `1e-12` relative tolerance. R, JS/WASM and Octave each pass bidirectional
+N4MOPT continuation with Python in [cross-binding CI](https://github.com/GBeurier/nirs4all-methods/actions/runs/36546137355).
+A licensed MATLAB check remains open.
 The Octave runner uses a temporary `.m` fixture generated from this registry and
 the committed JSON goldens; the Ubuntu 22.04 Octave 6.4 package has no
 `jsondecode`.
