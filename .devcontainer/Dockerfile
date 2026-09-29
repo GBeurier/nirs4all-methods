@@ -4,7 +4,7 @@
 #   * C++17 toolchain + CMake + Ninja + OpenBLAS
 #   * Python 3.12 + uv (the package manager n4m's Python pipeline uses)
 #   * R 4.4 + system deps for the in-tree R binding
-#   * Octave 9 + statistics package (CI exercises Octave, not MATLAB)
+#   * Ubuntu 24.04 Octave package + statistics package (CI exercises Octave 6.4)
 #   * Node 22 + Emscripten 3.x (for the JS / WASM binding)
 #   * Docker CLI (host docker socket mounted by docker-compose) — needed
 #     because parity-snapshots.yml builds reference env images

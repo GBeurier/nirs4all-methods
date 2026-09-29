@@ -3,8 +3,11 @@
 `bindings/matlab/` targets the **intersection of MATLAB and Octave** so one
 source binding ships to both ecosystems. The V1 namespace is `+n4m`. The Octave path is CI-runnable:
 `.github/workflows/cross-binding-parity.yml` builds `libn4m`, compiles the MEX
-shims with `build_mex.m`, and runs `bindings/matlab/test/test_parity.m` plus
-`bindings/matlab/test/test_n4m_namespace.m`.
+shims with `build_mex.m`, and runs `bindings/matlab/test/test_parity.m`,
+`test_n4m_namespace.m`, `test_optimizer.m`, all 14 HPO golden traces and a
+bidirectional Python checkpoint continuation. The CI runner currently uses
+Octave 6.4 from Ubuntu 22.04; the devcontainer installs the Octave package
+available on Ubuntu 24.04.
 
 MATLAB uses the same source package but remains a manual release/runtime check
 because GitHub-hosted runners do not provide a MATLAB license.
@@ -12,9 +15,8 @@ because GitHub-hosted runners do not provide a MATLAB license.
 Releases to MATLAB File Exchange happen on a periodic manual cadence performed
 by a maintainer with a MATLAB licence.
 
-Divergences between MATLAB and Octave **must** be declared in the table below;
-once an Octave conformance job exists it will fail closed on any undeclared
-divergence.
+Divergences between MATLAB and Octave **must** be declared in the table below
+and covered by the relevant conformance test.
 
 ---
 
@@ -27,7 +29,7 @@ MATLAB versus Octave. The columns are:
 |-------|---------|
 | **Symbol** | Public name in the `+n4m` namespace |
 | **MATLAB**  | Behaviour on MATLAB R2024a+ (the minimum we target) |
-| **Octave**  | Behaviour on Octave 9.x (the version pinned in `.devcontainer/Dockerfile`) |
+| **Octave**  | Behaviour on Octave 6.4 CI and the Ubuntu 24.04 devcontainer package |
 | **Resolution** | What the binding does at runtime to keep the contract observable |
 
 ---
