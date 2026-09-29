@@ -1,5 +1,23 @@
 useDynLib(n4m, .registration = TRUE)
 
+export(n4m_param_int)
+export(n4m_param_float)
+export(n4m_param_categorical)
+export(n4m_param_ordinal)
+export(n4m_param_sorted_tuple)
+export(n4m_constraint)
+export(n4m_optimizer)
+export(n4m_optimizer_close)
+export(n4m_optimizer_ask)
+export(n4m_optimizer_ask_batch)
+export(n4m_optimizer_enqueue)
+export(n4m_optimizer_tell)
+export(n4m_optimizer_intermediate)
+export(n4m_optimizer_best)
+export(n4m_optimizer_save)
+export(n4m_optimizer_load)
+export(n4m_optimizer_trials)
+
 importFrom(stats, model.frame, model.matrix, model.response, na.omit,
            na.pass, terms, delete.response, .getXlevels, predict)
 
