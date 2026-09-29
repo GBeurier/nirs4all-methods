@@ -1,6 +1,6 @@
 # Optimization role — native hyperparameter finetuning
 
-The `optimization` role (C ABI header [`n4m/optimization.h`](../../cpp/include/n4m/optimization.h), ABI 2.2) is a **portable ask/tell hyperparameter optimizer**: the search algorithm lives once in `libn4m` and can be reused by every binding. The native core and Python binding are implemented. R, JS/WASM and MATLAB/Octave expose the native optimizer lifecycle, rich trace and N4MOPT checkpoint in the source checkout. All three bindings reproduce the 14 published Python/native HPO golden traces under a fixed score tape and resume checkpoints bidirectionally with Python in [cross-binding CI](https://github.com/GBeurier/nirs4all-methods/actions/runs/36546137355). This establishes parity for those selected cases on Octave. MATLAB runtime qualification is deferred until a license is available and does not gate the current work; all 45 sampler-pruner compositions per binding and DAG-level tuning remain open. Design rationale and the full plan are in [developer documentation](../dev/documentation.md) and [`NATIVE_FINETUNING.md`](../NATIVE_FINETUNING.md); the ABI freeze is detailed in [developer documentation](../dev/documentation.md).
+The `optimization` role (C ABI header [`n4m/optimization.h`](../../cpp/include/n4m/optimization.h), ABI 2.2) is a **portable ask/tell hyperparameter optimizer**: the search algorithm lives once in `libn4m` and can be reused by every binding. The native core and Python binding are implemented. R, JS/WASM and MATLAB/Octave expose the native optimizer lifecycle, rich trace and N4MOPT checkpoint in the source checkout. R, JS/WASM and Octave reproduce the 14 published Python/native HPO golden traces and resume selected checkpoints bidirectionally with Python. They also reproduce all 45 sampler-pruner compositions under a fixed score tape in [cross-binding CI](https://github.com/GBeurier/nirs4all-methods/actions/runs/36548060107). MATLAB runtime qualification is deferred until a license is available and does not gate current work; checkpoint replay of every composition and DAG-level tuning remain open. Design rationale and the full plan are in [developer documentation](../dev/documentation.md) and [`NATIVE_FINETUNING.md`](../NATIVE_FINETUNING.md); the ABI freeze is detailed in [developer documentation](../dev/documentation.md).
 
 ## Model
 
@@ -181,7 +181,8 @@ pruners require `max_resource = 0`. `reduction_factor` is accepted only by
 2). API composition alone is not the proof: Track-Q separately executes all 45
 sampler/pruner pairs through the native/Python compatibility gate. That result
 proves deterministic conformance on the contracted plain numeric space, not
-cross-binding parity or 45 independent algorithm-oracle results.
+45 independent algorithm-oracle results. The separate cross-binding CI runner
+reproduces these 45 tapes in R, JS/WASM and Octave.
 
 The portable, ordered wire format for future DAG-level tuning is specified in
 [`ordered_search_space.md`](../architecture/ordered_search_space.md). Axis and
@@ -492,11 +493,11 @@ cell must terminalize 20 trials, cross the relevant startup/generation boundary,
 replay exactly, and continue exactly through a public checkpoint. Its transverse
 refusal catalogue checks stable C ABI status codes rather than error messages.
 
-This exhaustive result is **native/Python deterministic conformance**, not 45
-independent algorithm references and not cross-binding parity. Only Sobol has an
-external sampler oracle; the four selected pruner cells have independent
-decision-rule implementations. R, MATLAB-Octave or WASM earns a parity claim
-only after its own runner reproduces the same covered tapes. Parallel execution
+The native matrix result is **native/Python deterministic conformance**, not 45
+independent algorithm references. Only Sobol has an external sampler oracle;
+the four selected pruner cells have independent decision-rule implementations.
+R, JS/WASM and Octave also reproduce all 45 tapes in cross-binding CI; this
+does not qualify a licensed MATLAB runtime. Parallel execution
 is reproducible only when the binding records and replays the same logical event
 stream and fixed tell order. Arbitrary wall-clock completion order is not
 interchangeable with event order, and `trial_duration` is intentionally excluded

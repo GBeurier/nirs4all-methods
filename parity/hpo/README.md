@@ -17,8 +17,11 @@ The Octave runner uses a temporary `.m` fixture generated from this registry and
 the committed JSON goldens; the Ubuntu 22.04 Octave 6.4 package has no
 `jsondecode`.
 A separate versioned compatibility contract executes all 45 native
-sampler-pruner compositions; that exhaustive native/Python gate is not a set of
-45 independent references and is not cross-binding evidence.
+sampler-pruner compositions. `export_compatibility_fixtures.py` projects that
+contract into temporary native traces, then the R, JS/WASM and Octave runners
+reproduce all 45 in [cross-binding CI](https://github.com/GBeurier/nirs4all-methods/actions/runs/36548060107).
+The native gate is not a set of 45 independent algorithm references, and the
+cross-binding gate does not qualify every checkpoint composition.
 
 ## What it checks
 
@@ -29,9 +32,9 @@ sampler-pruner compositions; that exhaustive native/Python gate is not a set of
    parameters (+ score / prune decisions). The trace is committed under
    `golden/<id>.json`. Any binding must satisfy the same comparator (float axes
    may use `HpoSpec.tol`, but the current cells default to exact equality). The
-   native/Python, R and JS/WASM runners reproduce the same 14 traces with the
-   same ordered ask/tell schedule and fixed score tape. This does not establish
-   MATLAB-Octave parity or full 45-cell cross-binding compatibility.
+   native/Python, R, JS/WASM and Octave runners reproduce the same 14 traces
+   with the same ordered ask/tell schedule and fixed score tape. The separate
+   generated matrix gate covers 45 sampler-pruner compositions in those bindings.
 
 2. **Sobol Tier-A (external reference).** The Sobol cell's parameters must equal
    `scipy.stats.qmc.Sobol(scramble=False)` bit-for-bit.
@@ -90,12 +93,13 @@ evaluation modes, unsupported hard constraints, and hard constraints over a
 `sorted_tuple` root. Existing lifecycle tests cover runtime misuse such as
 unknown trial ids, score rewrites and illegal terminal transitions.
 
-The 45-cell gate does **not** prove independent sampler correctness (except the
-separate SciPy Sobol gate), independent pruner correctness (except the four
-selected decision references), R/MATLAB parity, every
-typed/conditional/constrained space, every persistence-state cross-product, or
-the pure-native finetune driver. In particular, no cross-binding 45/45 claim is
-valid until another binding executes the same contract.
+The native 45-cell gate does **not** prove independent sampler correctness
+(except the separate SciPy Sobol gate), independent pruner correctness (except
+the four selected decision references), every typed/conditional/constrained
+space, every persistence-state cross-product, or the pure-native finetune
+driver. The additional R, JS/WASM and Octave runners prove binding parity for
+the contracted score tape, not licensed MATLAB execution or checkpoint replay
+of every cell.
 
 ## Ordered events, population schedules and replay
 
@@ -185,8 +189,8 @@ and compares it against `golden/<id>.json`. Passing those cells means the
 binding matches the covered native traces; it is not evidence for unregistered
 sampler/pruner or search-space combinations. It may then implement the versioned
 45-cell compatibility contract with the same canonical tape. Only the results of
-that second runner can establish cross-binding 45/45 parity; the current
-Python-driven native gate alone cannot.
+that second runner can establish cross-binding 45/45 parity; the R, JS/WASM
+and Octave runners now pass it in CI. The Python-driven native gate alone cannot.
 
 ## Files
 
@@ -196,7 +200,9 @@ Python-driven native gate alone cannot.
 | `objectives.py` | Portable closed-form objectives (`OBJECTIVES`, `INTERMEDIATE`). |
 | `run_native.py` | Run a spec, then build StudyTrace from the owning native `Optimizer.get_trials()` snapshot. |
 | `export_specs.py` | Export the ordered registry to JSON for the R and JS/WASM runners. |
-| `bindings/r/test_optimizer_goldens.R` | R binding proposals, pruners and rich trace against all 14 tapes. |
+| `export_compatibility_fixtures.py` | Generate 45 native traces and runner inputs from the versioned matrix contract. |
+| `export_matlab_fixtures.py` | Render selected or exhaustive inputs as an Octave-compatible `.m` function. |
+| `bindings/r/test_optimizer_goldens.R` | R binding proposals, pruners and rich trace against selected or exhaustive tapes. |
 | `comparators.py` | Trace comparison + golden load/dump. |
 | `references.py` | scipy Sobol + pure-Python pruner rules. |
 | `compatibility.py` | Semantic validator, 45-cell executor, transition/checkpoint assertions and typed refusal probes. |

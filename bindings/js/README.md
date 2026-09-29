@@ -147,7 +147,8 @@ and exact proposed parameters, statuses, pruning decisions, errors and event
 order. The JS closed-form objective is checked against that tape within a
 relative `1e-12` band: Python `**2` can differ from JS multiplication by one
 binary64 ULP. A separate gate resumes checkpoints Python → JS/WASM and
-JS/WASM → Python exactly.
+JS/WASM → Python exactly. The [cross-binding CI](https://github.com/GBeurier/nirs4all-methods/actions/runs/36548060107)
+also reproduces all 45 sampler-pruner compositions from temporary native traces.
 
 ## Build options
 
