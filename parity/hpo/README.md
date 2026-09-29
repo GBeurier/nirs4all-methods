@@ -20,8 +20,9 @@ A separate versioned compatibility contract executes all 45 native
 sampler-pruner compositions. `export_compatibility_fixtures.py` projects that
 contract into temporary native traces, then the R, JS/WASM and Octave runners
 reproduce all 45 in [cross-binding CI](https://github.com/GBeurier/nirs4all-methods/actions/runs/36548060107).
-The native gate is not a set of 45 independent algorithm references, and the
-cross-binding gate does not qualify every checkpoint composition.
+The native gate is not a set of 45 independent algorithm references. The
+binding runners now save at the contract's 14-trial terminal boundary, restore
+a fresh optimizer handle and compare the completed trace for every cell.
 
 ## What it checks
 
@@ -98,8 +99,9 @@ The native 45-cell gate does **not** prove independent sampler correctness
 the four selected decision references), every typed/conditional/constrained
 space, every persistence-state cross-product, or the pure-native finetune
 driver. The additional R, JS/WASM and Octave runners prove binding parity for
-the contracted score tape, not licensed MATLAB execution or checkpoint replay
-of every cell.
+the contracted score tape and terminal-prefix checkpoint continuation, not
+licensed MATLAB execution, cross-language continuation of every cell, or
+checkpointing a study with running trials.
 
 ## Ordered events, population schedules and replay
 
@@ -133,6 +135,10 @@ a logical-batch boundary, asserts that no trial is `RUNNING`, restores via
 proves a terminal-prefix checkpoint for every pair. It does not claim coverage
 of checkpoints containing running trials or queued warm starts; those states
 remain covered by their dedicated native tests rather than this matrix.
+The R, JS/WASM and Octave matrix runners use the same boundary and compare the
+resumed native trace against the Python-generated full tape. This is a
+same-binding N4MOPT continuation gate for each cell; selected separate tests
+cover cross-language checkpoint exchange.
 
 ## Why the objective is closed-form
 

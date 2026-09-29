@@ -84,13 +84,16 @@ function goldenRecord(record, withIntermediate) {
 
 for (const spec of specs) {
     const golden = JSON.parse(fs.readFileSync(path.join(goldenDir, `${spec.id}.json`), "utf8"));
-    let optimizer = Optimizer.create(searchSpace(spec), {
+    const space = searchSpace(spec);
+    let optimizer = Optimizer.create(space, {
         sampler: spec.sampler, pruner: spec.pruner, direction: spec.direction,
         startupTrials: spec.n_startup_trials, seed: spec.seed,
         maxResource: spec.max_resource, reductionFactor: spec.reduction_factor,
     });
     try {
         const batchSize = spec.max_in_flight;
+        const checkpointAfter = spec.checkpoint_after_trials ?? 0;
+        let resumed = false;
         for (let start = 0; start < spec.n_trials; start += batchSize) {
             const size = Math.min(batchSize, spec.n_trials - start);
             const batch = Array.from({ length: size }, () => optimizer.ask());
@@ -138,7 +141,19 @@ for (const spec of specs) {
                     optimizer.tell(trial, "completed", expected.score);
                 }
             }
+            if (checkpointAfter && start + size === checkpointAfter) {
+                const prefix = optimizer.trialRecords();
+                assert.equal(prefix.length, checkpointAfter, `${spec.id} checkpoint prefix length`);
+                assert.ok(prefix.every(record => record.status !== "running"),
+                    `${spec.id} checkpoint contains a running trial`);
+                const checkpoint = optimizer.save();
+                const restored = Optimizer.load(checkpoint, space);
+                optimizer.dispose();
+                optimizer = restored;
+                resumed = true;
+            }
         }
+        assert.equal(resumed, checkpointAfter > 0, `${spec.id} checkpoint was not exercised`);
         const actual = optimizer.trialRecords().map(record => goldenRecord(record, Boolean(spec.intermediate)));
         assert.deepEqual(actual, golden, `${spec.id} native JS/WASM trace diverges from golden`);
         console.log(`HPO JS/WASM golden: ${spec.id} (${actual.length} trials)`);

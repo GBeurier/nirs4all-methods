@@ -479,6 +479,7 @@ def make_spec(document: dict[str, Any], cell: dict[str, Any]) -> HpoSpec:
         ),
         objective=tape["objective"],
         n_trials=tape["n_trials"],
+        checkpoint_after_trials=tape["checkpoint_after_trials"],
         seed=tape["seed"],
         n_startup_trials=tape["n_startup_trials"],
         intermediate=pruner["intermediate"],
@@ -787,8 +788,8 @@ def execute_refusal_vector(vector: dict[str, Any]) -> int:
                 try:
                     status = int(
                         lib.n4m_optimizer_create(
-                            context._handle,  # noqa: SLF001 - direct C ABI refusal probe
-                            space._handle,  # noqa: SLF001 - direct C ABI refusal probe
+                            context._handle,  # direct C ABI refusal probe
+                            space._handle,  # direct C ABI refusal probe
                             byref(options),
                             byref(handle),
                         )
