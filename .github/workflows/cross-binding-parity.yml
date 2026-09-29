@@ -176,6 +176,24 @@ jobs:
           npm test               # WASM smoke + parity vs native (rmse_rel ~1e-16)
           npm pack --dry-run     # confirm dist/n4m.{js,wasm} ship
 
+      - name: Python 3.11 for bidirectional optimizer checkpoint parity
+        uses: actions/setup-python@v6.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Build native peer and continue N4MOPT Python ↔ JS/WASM
+        env:
+          PYTHONPATH: ${{ github.workspace }}/bindings/python/src
+          N4M_LIB_PATH: ${{ github.workspace }}/build/dev-release/cpp/src/libn4m.so
+        run: |
+          cmake --preset dev-release
+          cmake --build --preset dev-release --target n4m_c --parallel 4
+          python -m pip install numpy
+          python parity/hpo/export_js_specs.py /tmp/n4m-hpo-js-specs.json
+          node bindings/js/test/run_optimization_goldens.mjs \
+            /tmp/n4m-hpo-js-specs.json parity/hpo/golden
+          python bindings/js/test/optimizer_interop.py
+
   octave-mex:
     # Octave binding: build libn4m, compile the +n4m MEX shims (build_mex.m),
     # run the parity test. Verified locally (MEX compiles, test_parity PASS at

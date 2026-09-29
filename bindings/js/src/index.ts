@@ -12,6 +12,9 @@
 
 import { getModule } from "./ffi.js";
 export { SpectralEncoder, type SpectralEncodingOptions } from "./spectralEncoding.js";
+export { Optimizer, type OptimizerOptions, type OptimizerTrial, type BatchResult,
+         type OptimizerTrialRecord, type SearchAxis, type SearchConstraint,
+         type TrialValue } from "./optimization.js";
 
 export { loadModule, getModule, makeMatrixView, readArrayView } from "./ffi.js";
 export { Context } from "./context.js";

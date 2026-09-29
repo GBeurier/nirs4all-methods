@@ -205,9 +205,12 @@ n4m_status_t SpectralEncoding::fit(const Vec& x, std::size_t n, std::size_t p) {
             const auto step = std::max(
                 std::size_t{1},
                 static_cast<std::size_t>(std::nearbyint(static_cast<double>(w) * (1 - overlap))));
-            for (std::size_t start = 0; start + w <= p; start += step)
+            std::size_t last_start = 0;
+            for (std::size_t start = 0; start + w <= p; start += step) {
                 starts.push_back(start);
-            if (starts.back() != p - w)
+                last_start = start;
+            }
+            if (last_start != p - w)
                 starts.push_back(p - w);
         }
         // Store one row per mode (q x p); also the orientation of the public

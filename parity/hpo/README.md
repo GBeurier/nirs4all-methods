@@ -1,12 +1,17 @@
 # HPO cross-binding parity (Track Q)
 
 Parity harness for the native ask/tell hyperparameter optimizer (`optimization`
-role, ABI 2.2), currently driven through the Python binding. It is the HPO
-analogue of the numeric fixtures under `parity/fixtures/`: it commits selected
-native traces that future R, MATLAB-Octave and JS-WASM runners must reproduce.
-Those optimizer wrappers and runners are not implemented by this harness, so the
-goldens are acceptance targets rather than proof that every binding already
-matches. A separate versioned compatibility contract executes all 45 native
+role, ABI 2.2), with an authoritative Python runner and a JS/WASM binding runner.
+It is the HPO analogue of the numeric fixtures under `parity/fixtures/`: it
+commits selected native traces that each binding must reproduce. The JS/WASM
+runner consumes the 14 authoritative specs via `export_js_specs.py`, checks
+each native proposal and pruner decision, and compares its rich trace with the
+published goldens using a fixed score tape. Python and JS arithmetic for the
+closed-form score may differ by one binary64 ULP; the runner checks that
+separately within `1e-12` relative tolerance. R has a native optimizer binding
+and bidirectional N4MOPT continuation with Python, but no 14-tape runner yet;
+MATLAB-Octave still needs the optimizer wrapper. A separate versioned
+compatibility contract executes all 45 native
 sampler-pruner compositions; that exhaustive native/Python gate is not a set of
 45 independent references and is not cross-binding evidence.
 
@@ -18,10 +23,10 @@ sampler-pruner compositions; that exhaustive native/Python gate is not a set of
    through a binding produces a **StudyTrace** — the ordered list of proposed
    parameters (+ score / prune decisions). The trace is committed under
    `golden/<id>.json`. Any binding must satisfy the same comparator (float axes
-   may use `HpoSpec.tol`, but the current cells default to exact equality). Today this
-   proves stability of the native/Python runner. A second binding earns a parity
-   claim only after its own runner produces the same trace with the same ordered
-   ask/tell schedule and score tape.
+   may use `HpoSpec.tol`, but the current cells default to exact equality). The
+   native/Python and JS/WASM runners now reproduce the same 14 traces with the
+   same ordered ask/tell schedule and fixed score tape. This does not establish
+   R or MATLAB-Octave parity for those 14 cases.
 
 2. **Sobol Tier-A (external reference).** The Sobol cell's parameters must equal
    `scipy.stats.qmc.Sobol(scramble=False)` bit-for-bit.
@@ -82,7 +87,7 @@ unknown trial ids, score rewrites and illegal terminal transitions.
 
 The 45-cell gate does **not** prove independent sampler correctness (except the
 separate SciPy Sobol gate), independent pruner correctness (except the four
-selected decision references), R/MATLAB/WASM parity, every
+selected decision references), R/MATLAB parity, every
 typed/conditional/constrained space, every persistence-state cross-product, or
 the pure-native finetune driver. In particular, no cross-binding 45/45 claim is
 valid until another binding executes the same contract.
@@ -130,7 +135,7 @@ objective and `learning_curve` / `racing_observation` for intermediate tapes;
 `weighted_ramp` is defined but is not currently registered. A
 binding runner must reimplement the formulas used by each selected spec. The
 trace comparison is on the *proposals* and recorded prune points, so the selected
-sampler/pruner paths — not model-fitting numerics — are what is pinned.
+   sampler/pruner paths — not model-fitting numerics — are what is pinned.
 
 The exhaustive matrix additionally uses
 `compatibility_curve(p, s) = -sphere(p) + 5/(s+1)`. Its intentionally inverted
