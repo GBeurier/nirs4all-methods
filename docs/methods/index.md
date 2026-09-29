@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **213**. Additional Python reference
+_Total catalogued native methods_: **214**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -281,6 +281,7 @@ Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-b
 |--------|----------------------|-----------|------|
 | [`flexible_pca`](pp_flex_pca.md) | `n4m.decomposition.flexible_pca` | `n4m.decomposition` | C |
 | [`flexible_svd`](pp_flex_svd.md) | `n4m.decomposition.flexible_svd` | `n4m.decomposition` | C |
+| [`spectral_encoding`](preprocessing_feature_selection_spectral_encoding.md) | `n4m.decomposition.spectral_encoding` | `n4m.decomposition` | C, Py |
 
 ## lowlevel — sufficient-statistics substrate
 

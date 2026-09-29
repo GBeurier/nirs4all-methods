@@ -650,6 +650,7 @@ def scan_matlab_public_api(source_dir: Path = DEFAULT_MATLAB_SOURCE) -> CrossBin
 
 CROSS_BINDING_OVERRIDES: dict[str, dict[str, str]] = {
     "models.pls.pls_fit_simple": {"r": "pls", "matlab": "pls_fit"},
+    "preprocessing.feature_selection.spectral_encoding": {"r": "lvse_fit", "matlab": "LVSE"},
     "preprocessing.derivatives.savitzky_golay": {"r": "savgol_transform", "matlab": "savgol_transform"},
     "preprocessing.scatter.snv": {"r": "snv_transform", "matlab": "snv_transform"},
     "splitters.kennard_stone": {"r": "kennard_stone_split", "matlab": "kennard_stone_split"},
