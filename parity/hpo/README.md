@@ -9,8 +9,9 @@ each native proposal and pruner decision, and compare their rich traces with the
 published goldens using a fixed score tape. Python and JS arithmetic for the
 closed-form score may differ by one binary64 ULP; the JS runner checks that
 separately within `1e-12` relative tolerance. R also has bidirectional N4MOPT
-continuation with Python. MATLAB-Octave still needs the optimizer wrapper. A
-separate versioned compatibility contract executes all 45 native
+continuation with Python. A MATLAB/Octave MEX runner has been added to the
+source checkout; its Octave runtime CI and licensed MATLAB check remain open.
+A separate versioned compatibility contract executes all 45 native
 sampler-pruner compositions; that exhaustive native/Python gate is not a set of
 45 independent references and is not cross-binding evidence.
 
