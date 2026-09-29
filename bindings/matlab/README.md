@@ -124,9 +124,14 @@ octave --no-gui --no-history --eval \
 
 `cross-binding-parity.yml` builds the Octave MEX package and is configured to
 run the optimizer lifecycle and 14 selected Python/native HPO golden traces
-through this binding with a fixed score tape. The new optimizer checks still
-need a completed CI run. MATLAB uses the same source but still needs a manual
-licensed-runtime check.
+through this binding with a fixed score tape. The canonical Python specs and
+JSON goldens are rendered as a temporary `.m` fixture by
+`parity/hpo/export_matlab_fixtures.py` because the CI's Octave 6.4 has no
+`jsondecode`. The workflow also continues a Python
+N4MOPT checkpoint in Octave and the reciprocal Octave checkpoint in Python,
+checking the next proposal exactly in both directions. These new optimizer
+checks still need a completed CI run. MATLAB uses the same source but still
+needs a manual licensed-runtime check.
 
 ## Limitations
 

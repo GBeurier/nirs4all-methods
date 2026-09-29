@@ -1,14 +1,15 @@
-function test_optimizer_goldens(specs_file, golden_dir)
+function test_optimizer_goldens(fixture_dir)
 % Compare all selected native optimizer traces from Octave/MATLAB with Python.
-if nargin ~= 2
-    error('n4m:optimizer', 'usage: test_optimizer_goldens(specs_file, golden_dir)');
+if nargin ~= 1 || exist(fullfile(fixture_dir, 'n4m_hpo_fixtures.m'), 'file') ~= 2
+    error('n4m:optimizer', 'expected the generated HPO fixture directory');
 end
-specs = elements(jsondecode(fileread(specs_file)));
+addpath(fixture_dir);
+[specs, goldens] = n4m_hpo_fixtures();
+specs = elements(specs);
 assert(numel(specs) == 14);
 for s = 1:numel(specs)
     spec = specs{s};
-    golden = elements(jsondecode(fileread(fullfile(golden_dir, ...
-                              [spec.id '.json']))));
+    golden = elements(goldens{s});
     declared = elements(spec.space);
     space = search_space(declared);
     options = struct('sampler', spec.sampler, 'pruner', spec.pruner, ...
