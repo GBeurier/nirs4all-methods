@@ -11,6 +11,8 @@ points and exported C symbols use the `n4m_*` prefix.
 - `n4m.snv_transform(X, ...)`
 - `n4m.savgol_transform(X, ...)`
 - `n4m.kennard_stone_split(X, ...)`
+- `n4m.Optimizer(space, options, constraints)` for native HPO ask/tell,
+  pruning, rich trace and N4MOPT checkpoint/restart
 - generated method/model wrappers backed by `n4m_method_fit_mex` and
   `n4m_model_fit_mex`
 
@@ -22,7 +24,7 @@ Kennard-Stone/SNV/Savitzky-Golay/PLS subset.
 
 ```text
 bindings/matlab/
-├── mex/                      C sources for MEX shims
+├── mex/                      C/C++ sources for MEX shims
 ├── +n4m/                     V1 namespace functions, classes, and MEX artifacts
 ├── build_mex.m               Build script for Octave and MATLAB
 └── test/test_parity.m        Cross-binding parity gate
@@ -59,6 +61,7 @@ build_mex
 - `n4m_method_fit_mex`
 - `n4m_model_fit_mex`
 - `n4m_pls_fit_mex`
+- `n4m_optimizer_mex`
 - `n4m_version_mex`
 
 ## Usage
@@ -77,7 +80,39 @@ Xsavgol = n4m.savgol_transform(Xsnv, ...
 split = n4m.kennard_stone_split(Xsavgol, 'test_size', 0.25, 'zero_based', true);
 
 [coefs, x_mean, y_mean, preds] = n4m.pls_fit(Xsavgol, Y, 3);
+
+axis = struct('name', 'components', 'kind', 'int', 'low', 1, ...
+              'high', 12, 'step', 1);
+study = n4m.Optimizer(axis, struct('sampler', 'tpe', ...
+                                 'n_startup_trials', 4, 'seed', 7));
+for k = 1:12
+    trial = study.ask();
+    % Replace this demonstration score with a held-out host-model metric.
+    score = (double(trial.parameters.components) - 4)^2;
+    study.tell(trial, score);
+end
+best = study.best();
+checkpoint = study.save();  % uint8 N4MOPT, portable across bindings
+study.close();
+study = n4m.Optimizer.load(checkpoint, axis);
+trace = study.trials();      % owning native trace v1 fields
+study.close();
 ```
+
+The `space` argument is an ordered struct array with `name` and `kind` on each
+axis. Numeric axes use `low`, `high` and optional `step`; categorical and
+ordinal axes use `choices`; sorted tuples use `length`, `low` and `high`.
+Unused fields may be empty. Categorical choices may be cell strings, doubles,
+int64 values or logical values. `constraints` is an optional struct array with
+`kind`, cell-string `refs` and optional cell-string `labels`. `askBatch(n)`
+returns a cell array of committed trials plus native status, including partial
+batches; `intermediate(trial, step, score)` returns the native pruning decision.
+`enqueue` accepts a struct of numeric values, with zero-based category indices.
+For names that are not valid MATLAB struct fields, such as DAG paths containing
+points, each trial also carries exact ordered `parameter_names` and
+`parameter_values` cell arrays; use `n4m.Optimizer.getParameter(trial, name)`
+to retrieve them. `enqueue(names, values)` accepts a cell array of such names.
+Call `close` or let the handle destructor release native resources.
 
 ## Parity gate
 
@@ -87,9 +122,11 @@ octave --no-gui --no-history --eval \
   "addpath('bindings/matlab'); cd bindings/matlab/test; test_parity"
 ```
 
-`cross-binding-parity.yml` runs the Octave MEX build and parity gate in CI.
-MATLAB uses the same source package but remains a manual release/runtime check
-because GitHub-hosted runners do not provide a MATLAB license.
+`cross-binding-parity.yml` builds the Octave MEX package and is configured to
+run the optimizer lifecycle and 14 selected Python/native HPO golden traces
+through this binding with a fixed score tape. The new optimizer checks still
+need a completed CI run. MATLAB uses the same source but still needs a manual
+licensed-runtime check.
 
 ## Limitations
 
