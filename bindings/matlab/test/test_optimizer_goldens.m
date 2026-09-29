@@ -1,12 +1,12 @@
 function test_optimizer_goldens(fixture_dir)
-% Compare all selected native optimizer traces from Octave/MATLAB with Python.
+% Compare selected or exhaustive native optimizer traces from Octave with Python.
 if nargin ~= 1 || exist(fullfile(fixture_dir, 'n4m_hpo_fixtures.m'), 'file') ~= 2
     error('n4m:optimizer', 'expected the generated HPO fixture directory');
 end
 addpath(fixture_dir);
 [specs, goldens] = n4m_hpo_fixtures();
 specs = elements(specs);
-assert(numel(specs) == 14);
+assert(numel(specs) == 14 || numel(specs) == 45);
 for s = 1:numel(specs)
     spec = specs{s};
     golden = elements(goldens{s});
@@ -70,7 +70,7 @@ for s = 1:numel(specs)
     end
     optimizer.close();
 end
-fprintf('All 14 HPO MATLAB/Octave golden traces match Python/native\n');
+fprintf('All %d HPO Octave golden traces match Python/native\n', numel(specs));
 end
 
 function items = elements(value)

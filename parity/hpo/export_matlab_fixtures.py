@@ -14,7 +14,7 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from specs import REGISTRY
+from specs import REGISTRY, HpoSpec
 
 _FIELD = re.compile(r"[A-Za-z][A-Za-z0-9_]*\Z")
 
@@ -59,16 +59,22 @@ def _emit(lines: list[str], target: str, value: object) -> None:
         lines.append(f"{target} = {_literal(value)};")
 
 
-def export(directory: Path) -> Path:
+def export(
+    directory: Path,
+    *,
+    specs: list[HpoSpec] = REGISTRY,
+    golden_root: Path | None = None,
+) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
+    if golden_root is None:
+        golden_root = Path(__file__).with_name("golden")
     lines = [
         "function [specs, goldens] = n4m_hpo_fixtures()",
-        "% Generated from parity/hpo/specs.py and golden/*.json; do not edit.",
-        f"specs = cell(1, {len(REGISTRY)});",
-        f"goldens = cell(1, {len(REGISTRY)});",
+        "% Generated from Python HPO specs and native JSON traces; do not edit.",
+        f"specs = cell(1, {len(specs)});",
+        f"goldens = cell(1, {len(specs)});",
     ]
-    golden_root = Path(__file__).with_name("golden")
-    for index, spec in enumerate(REGISTRY, start=1):
+    for index, spec in enumerate(specs, start=1):
         _emit(lines, f"specs{{{index}}}", asdict(spec))
         golden = json.loads(
             (golden_root / f"{spec.id}.json").read_text(encoding="utf-8")
