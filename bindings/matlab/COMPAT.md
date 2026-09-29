@@ -9,11 +9,8 @@ bidirectional Python checkpoint continuation. The CI runner currently uses
 Octave 6.4 from Ubuntu 22.04; the devcontainer installs the Octave package
 available on Ubuntu 24.04.
 
-MATLAB uses the same source package but remains a manual release/runtime check
-because GitHub-hosted runners do not provide a MATLAB license.
-
-Releases to MATLAB File Exchange happen on a periodic manual cadence performed
-by a maintainer with a MATLAB licence.
+MATLAB uses the same source package, but its runtime and File Exchange checks
+are deferred until a license is available. They do not gate current Octave work.
 
 Divergences between MATLAB and Octave **must** be declared in the table below
 and covered by the relevant conformance test.
