@@ -131,7 +131,8 @@ JSON goldens are rendered as a temporary `.m` fixture by
 Octave and the reciprocal Octave checkpoint in Python, checking the next
 proposal exactly in both directions. All four cross-binding jobs, including
 the Octave optimizer checks, passed on `38c2cc84` ([CI run](https://github.com/GBeurier/nirs4all-methods/actions/runs/36546137355)).
-MATLAB uses the same source but still needs a manual licensed-runtime check.
+MATLAB uses the same source; its runtime check is deferred until a license is
+available and does not gate the current Octave qualification.
 
 ## Limitations
 

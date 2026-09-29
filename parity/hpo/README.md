@@ -11,7 +11,8 @@ goldens using a fixed score tape. Python and JS arithmetic for the closed-form
 score may differ by one binary64 ULP; the JS runner checks that separately
 within `1e-12` relative tolerance. R, JS/WASM and Octave each pass bidirectional
 N4MOPT continuation with Python in [cross-binding CI](https://github.com/GBeurier/nirs4all-methods/actions/runs/36546137355).
-A licensed MATLAB check remains open.
+MATLAB runtime qualification is deferred until a license is available; Octave
+is the current executable gate.
 The Octave runner uses a temporary `.m` fixture generated from this registry and
 the committed JSON goldens; the Ubuntu 22.04 Octave 6.4 package has no
 `jsondecode`.
