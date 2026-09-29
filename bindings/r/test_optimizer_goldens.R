@@ -128,6 +128,9 @@ for (spec in specs) {
                              reduction_factor = spec$reduction_factor)
   tryCatch({
     batch_size <- spec$max_in_flight
+    checkpoint_after <- if (is.null(spec$checkpoint_after_trials))
+      0L else as.integer(spec$checkpoint_after_trials)
+    resumed <- FALSE
     for (start in seq.int(1L, spec$n_trials, by = batch_size)) {
       size <- min(batch_size, spec$n_trials - start + 1L)
       batch <- lapply(seq_len(size), function(unused) n4m_optimizer_ask(optimizer))
@@ -167,7 +170,19 @@ for (spec in specs) {
                                             "|0|", expected$error$message))
         } else n4m_optimizer_tell(optimizer, trial, score = expected$score)
       }
+      if (checkpoint_after > 0L && start + size - 1L == checkpoint_after) {
+        prefix <- n4m_optimizer_trials(optimizer)
+        same(prefix$n_trials, checkpoint_after, paste(spec$id, "checkpoint prefix"))
+        if (any(prefix$trial_status == 0L))
+          stop(spec$id, ": checkpoint contains a running trial", call. = FALSE)
+        checkpoint <- n4m_optimizer_save(optimizer)
+        restored <- n4m_optimizer_load(checkpoint)
+        n4m_optimizer_close(optimizer)
+        optimizer <- restored
+        resumed <- TRUE
+      }
     }
+    same(resumed, checkpoint_after > 0L, paste(spec$id, "checkpoint exercised"))
     check_trace(n4m_optimizer_trials(optimizer), spec, golden)
     cat("HPO R golden:", spec$id, "(", length(golden), "trials )\n")
   }, finally = n4m_optimizer_close(optimizer))

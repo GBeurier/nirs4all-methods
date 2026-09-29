@@ -33,6 +33,7 @@ class HpoSpec:
     space: tuple[ParamDecl, ...]
     objective: str  # key into objectives.OBJECTIVES
     n_trials: int
+    checkpoint_after_trials: int = 0  # 0 disables a mid-study binding resume
     seed: int = 0
     pruner: str = "none"  # none | median | asha | hyperband | racing
     direction: str = "minimize"  # minimize | maximize

@@ -19,6 +19,8 @@ for s = 1:numel(specs)
                      'reduction_factor', spec.reduction_factor);
     optimizer = n4m.Optimizer(space, options);
     try
+        checkpoint_after = double(spec.checkpoint_after_trials);
+        resumed = false;
         for start = 1:spec.max_in_flight:spec.n_trials
             size_now = min(spec.max_in_flight, spec.n_trials - start + 1);
             batch = cell(1, size_now);
@@ -61,7 +63,18 @@ for s = 1:numel(specs)
                     optimizer.tell(trial, expected.score);
                 end
             end
+            if checkpoint_after > 0 && start + size_now - 1 == checkpoint_after
+                prefix = optimizer.trials();
+                assert(prefix.n_trials == checkpoint_after);
+                assert(all(prefix.trial_status(:) ~= 0));
+                checkpoint = optimizer.save();
+                restored = n4m.Optimizer.load(checkpoint, space);
+                optimizer.close();
+                optimizer = restored;
+                resumed = true;
+            end
         end
+        assert(resumed == (checkpoint_after > 0));
         verify_trace(optimizer.trials(), space, spec, golden);
         fprintf('HPO MATLAB/Octave golden: %s (%d trials)\n', spec.id, numel(golden));
     catch err
