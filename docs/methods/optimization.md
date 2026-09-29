@@ -1,6 +1,6 @@
 # Optimization role — native hyperparameter finetuning
 
-The `optimization` role (C ABI header [`n4m/optimization.h`](../../cpp/include/n4m/optimization.h), ABI 2.2) is a **portable ask/tell hyperparameter optimizer**: the search algorithm lives once in `libn4m` and can be reused by every binding. The native core and Python binding are implemented. The R binding now exposes the native optimizer lifecycle and rich trace in the source checkout; its installed-package gate covers deterministic continuation and checkpoint resume. MATLAB-Octave and WASM optimizer wrappers remain pending. A full cross-binding golden-tape parity claim still requires its own runner; the shared C ABI alone does not prove one. Design rationale and the full plan are in [developer documentation](../dev/documentation.md) and [`NATIVE_FINETUNING.md`](../NATIVE_FINETUNING.md); the ABI freeze is detailed in [developer documentation](../dev/documentation.md).
+The `optimization` role (C ABI header [`n4m/optimization.h`](../../cpp/include/n4m/optimization.h), ABI 2.2) is a **portable ask/tell hyperparameter optimizer**: the search algorithm lives once in `libn4m` and can be reused by every binding. The native core and Python binding are implemented. R and JS/WASM now expose the native optimizer lifecycle, rich trace and N4MOPT checkpoint in the source checkout. JS/WASM reproduces all 14 published Python/native HPO golden traces under a fixed score tape and resumes checkpoints bidirectionally with Python. MATLAB-Octave remains pending; the 14-tape result is a Python ↔ JS/WASM claim, not a four-language or DAG-level parity claim. Design rationale and the full plan are in [developer documentation](../dev/documentation.md) and [`NATIVE_FINETUNING.md`](../NATIVE_FINETUNING.md); the ABI freeze is detailed in [developer documentation](../dev/documentation.md).
 
 ## Model
 
@@ -445,6 +445,14 @@ The accompanying R search-space declaration is retained solely to decode
 returned trial values after load; the native checkpoint owns the authoritative
 optimizer state. R does not yet expose the pure-native `finetune_estimator`
 driver or a DAG-level tuning controller.
+
+The JS/WASM `Optimizer` exposes the same native lifecycle. `trials()` returns
+an owning `MethodResult`, while `trialRecords()` decodes that rich trace to
+typed JavaScript values and releases the snapshot. Integer values and ids stay
+as `bigint`; `save()` returns portable N4MOPT bytes, and `load(bytes, space)`
+uses the caller's unchanged ordered axis declaration only for typed decoding.
+The [JS binding guide](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/js/README.md#native-optimizer) gives an
+ask/tell example and the exact scope of the 14-tape and checkpoint gates.
 
 Python's `Optimizer.get_trials()` decodes this payload into owning
 `TrialRecord` objects. Each record exposes `params`, lossless

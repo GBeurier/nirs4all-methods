@@ -13,6 +13,7 @@ The package ships:
 - `n4m.js` — Emscripten MODULARIZE/EXPORT_ES6 loader.
 - `dist/` — TypeScript wrappers (`Context`, `Config`, `Model`, `MethodResult`)
   emitted from `src/`.
+- `Optimizer` — an owning typed facade over the native ask/tell HPO engine.
 
 ## Build
 
@@ -103,6 +104,51 @@ OSC/EPO additionally require a training `Y` matrix at `fit`. The optional
 positional parameters; applications should also bind the blob to their
 feature schema. Native N4MP v1 supports operator kinds 0–14 only (15 kinds).
 
+## Native optimizer
+
+`Optimizer` uses the same C ABI and N4MOPT checkpoint as Python and R. It owns
+its context; call `dispose()` after the study. Integer axes, trial ids and
+integer categorical choices use `bigint`, so the browser does not silently
+round the native int64 values. The host supplies the objective and score; no
+search or pruning algorithm is implemented in TypeScript.
+
+```typescript
+const space = {
+  components: { kind: "int", low: 1, high: 8 },
+  alpha: { kind: "log_float", low: 1e-4, high: 1e-1 },
+  branch: { kind: "categorical", type: "string", choices: ["nir", "fusion"] },
+} as const;
+const study = n4m.Optimizer.create(space, { sampler: "tpe", seed: 42n });
+try {
+  for (let i = 0; i < 30; i++) {
+    const trial = study.ask();
+    const score = evaluate(trial.parameters); // application-owned validation
+    study.tell(trial, "completed", score);
+  }
+  console.log(study.best(), study.trialRecords());
+  const checkpoint = study.save(); // portable N4MOPT bytes
+  const resumed = n4m.Optimizer.load(checkpoint, space);
+  resumed.dispose();
+} finally {
+  study.dispose();
+}
+```
+
+`askBatch`, `enqueue`, `intermediate`, terminal outcomes and conditional
+constraints also call native ABI functions. `trials()` returns an owning
+`MethodResult` rich-trace snapshot that the caller destroys; `trialRecords()`
+decodes and releases that snapshot. The search-space declaration passed to
+`load()` is for typed JS decoding; the native checkpoint owns the optimizer
+state. Keep that declaration identical to the original one. The binding does
+not fit a model or tune a DAG by itself.
+
+The 14 committed HPO golden traces run through JS/WASM with a fixed score tape
+and exact proposed parameters, statuses, pruning decisions, errors and event
+order. The JS closed-form objective is checked against that tape within a
+relative `1e-12` band: Python `**2` can differ from JS multiplication by one
+binary64 ULP. A separate gate resumes checkpoints Python → JS/WASM and
+JS/WASM → Python exactly.
+
 ## Build options
 
 The CMake `emscripten` preset sets:
@@ -158,6 +204,7 @@ bindings/js/
 │   ├── config.ts         # Config wrapper
 │   ├── model.ts          # Model fit / predict (raw-pointer path)
 │   ├── methodResult.ts   # Universal n4m_method_result_t wrapper
+│   ├── optimization.ts   # Owning native HPO facade
 │   └── index.ts          # Public barrel
 ├── examples/
 │   └── consume.mjs       # downstream-consumption example
