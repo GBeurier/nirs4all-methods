@@ -2,10 +2,12 @@
 // Thin MATLAB/Octave raw tensor translator for ABI 2.16.
 #include "mex.h"
 #include "n4m/multimodal.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <cstdlib>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -82,32 +84,40 @@ struct Schema {
     std::string name, representation, dtype, identity;
     std::vector<int64_t> shape;
 };
-Schema read_schema(const mxArray* schemas, int i) {
-    const mxArray* s = field(schemas, order[i]); keys(s, {"representation_id", "input_shape", "dtype", "identity"});
-    return {order[i], text(field(s, "representation_id")), text(field(s, "dtype")),
+Schema read_schema(const mxArray* schemas, const std::string& name) {
+    const mxArray* s = field(schemas, name.c_str()); keys(s, {"representation_id", "input_shape", "dtype", "identity"});
+    return {name, text(field(s, "representation_id")), text(field(s, "dtype")),
         text(field(s, "identity")), shape_vector(field(s, "input_shape"))};
 }
 struct Config {
+    std::vector<std::string> selected;
     std::vector<Schema> schemas;
     std::vector<n4m_multimodal_source_spec_v1_t> sources;
     n4m_multimodal_recipe_v1_t recipe{};
     Config(const mxArray* raw, const mxArray* source_schemas) {
         keys(raw, {"schema_version", "fusion", "source_order", "encoders", "source_weights", "model"});
-        keys(source_schemas, {"nir", "image", "series", "metadata"});
         require(integer(field(raw, "schema_version")) == 1 && text(field(raw, "fusion")) == "early", "expected recipe v1 early fusion");
         const mxArray* names = field(raw, "source_order");
-        require(mxIsCell(names) && mxGetNumberOfElements(names) == 4, "expected ordered four sources");
-        for (mwIndex i = 0; i < 4; ++i) require(text(mxGetCell(names, i)) == order[i], "source order differs");
+        require(mxIsCell(names) && mxGetNumberOfElements(names) >= 1 && mxGetNumberOfElements(names) <= 4,
+            "expected 1..4 ordered modalities");
+        for (mwIndex i = 0; i < mxGetNumberOfElements(names); ++i) {
+            const std::string name = text(mxGetCell(names, i));
+            require(std::find(std::begin(order), std::end(order), name) != std::end(order) &&
+                std::find(selected.begin(), selected.end(), name) == selected.end(),
+                "source_order must select distinct U07 modalities");
+            selected.push_back(name);
+        }
+        keys(source_schemas, selected);
         const mxArray* encoders = field(raw, "encoders"), *weights = field(raw, "source_weights");
-        keys(encoders, {"nir", "image", "series", "metadata"}); keys(weights, {"nir", "image", "series", "metadata"});
-        schemas.reserve(4); sources.resize(4);
-        for (int i = 0; i < 4; ++i) schemas.push_back(read_schema(source_schemas, i));
-        for (int i = 0; i < 4; ++i) {
-            const auto& s = schemas[i]; auto& spec = sources[i]; const mxArray* encoder = field(encoders, order[i]);
+        keys(encoders, selected); keys(weights, selected);
+        schemas.reserve(selected.size()); sources.resize(selected.size());
+        for (const auto& name : selected) schemas.push_back(read_schema(source_schemas, name));
+        for (std::size_t i = 0; i < selected.size(); ++i) {
+            const auto& s = schemas[i]; auto& spec = sources[i]; const mxArray* encoder = field(encoders, s.name.c_str());
             spec.struct_size = sizeof(spec); spec.name = s.name.c_str(); spec.representation_id = s.representation.c_str();
             spec.dtype = s.dtype.c_str(); spec.identity_utf8 = s.identity.data(); spec.identity_bytes = s.identity.size();
             spec.ndim = static_cast<int32_t>(s.shape.size()); spec.shape = s.shape.data();
-            spec.weight = number(field(weights, order[i])); spec.numeric_column = spec.categorical_column = -1;
+            spec.weight = number(field(weights, s.name.c_str())); spec.numeric_column = spec.categorical_column = -1;
             const std::string kind = text(field(encoder, "kind"));
             if (kind == "standard_scaler") {
                 keys(encoder, {"kind", "with_mean", "with_std"}); spec.encoder = N4M_MULTIMODAL_STANDARD_SCALER;
@@ -129,7 +139,7 @@ struct Config {
         const mxArray* model = field(raw, "model"); keys(model, {"method_id", "params"});
         require(text(field(model, "method_id")) == "models.regularized.ridge", "expected native Ridge");
         const mxArray* params = field(model, "params"); keys(params, {"alpha", "center_x", "center_y", "scale_x"});
-        recipe.struct_size = sizeof(recipe); recipe.n_sources = 4; recipe.sources = sources.data();
+        recipe.struct_size = sizeof(recipe); recipe.n_sources = static_cast<int32_t>(sources.size()); recipe.sources = sources.data();
         recipe.alpha = number(field(params, "alpha")); recipe.center_x = boolean(field(params, "center_x"));
         recipe.center_y = boolean(field(params, "center_y")); recipe.scale_x = boolean(field(params, "scale_x"));
     }
@@ -146,11 +156,11 @@ struct Inputs {
     std::vector<RawBlock> blocks;
     std::vector<n4m_multimodal_source_view_v1_t> views;
     int64_t rows = -1;
-    Inputs(const mxArray* raw, const mxArray* schemas) {
-        keys(raw, {"nir", "image", "series", "metadata"}); keys(schemas, {"nir", "image", "series", "metadata"});
-        blocks.resize(4); views.resize(4);
-        for (int i = 0; i < 4; ++i) {
-            auto& b = blocks[i]; b.schema = read_schema(schemas, i); const mxArray* data = field(raw, order[i]);
+    Inputs(const mxArray* raw, const mxArray* schemas, const std::vector<std::string>& selected) {
+        keys(raw, selected); keys(schemas, selected);
+        blocks.resize(selected.size()); views.resize(selected.size());
+        for (std::size_t i = 0; i < selected.size(); ++i) {
+            auto& b = blocks[i]; b.schema = read_schema(schemas, selected[i]); const mxArray* data = field(raw, selected[i].c_str());
             const mwSize rank = mxGetNumberOfDimensions(data); const mwSize* dims = mxGetDimensions(data);
             require(rank <= b.schema.shape.size() + 1, "raw tensor rank differs from schema");
             b.shape.push_back(static_cast<int64_t>(dims[0]));
@@ -164,7 +174,7 @@ struct Inputs {
             v.representation_id = b.schema.representation.c_str(); v.dtype = b.schema.dtype.c_str();
             v.identity_utf8 = b.schema.identity.data(); v.identity_bytes = b.schema.identity.size();
             v.rank = static_cast<int32_t>(b.shape.size()); v.shape = b.shape.data(); v.strides = b.strides.data();
-            if (i != 3) {
+            if (b.schema.name != "metadata") {
                 require((mxIsDouble(data) || mxIsSingle(data)) && !mxIsComplex(data) && !mxIsSparse(data), "raw numeric tensors require real float32/64");
                 v.numeric_data = mxGetData(data); v.numeric_dtype = mxIsDouble(data) ? N4M_DTYPE_F64 : N4M_DTYPE_F32;
             } else {
@@ -192,6 +202,7 @@ struct Inputs {
     }
 };
 struct Entry {
+    std::vector<std::string> selected;
     n4m_context_t* context = nullptr;
     n4m_multimodal_pipeline_t* pipeline = nullptr;
     ~Entry() { n4m_multimodal_pipeline_destroy(pipeline); n4m_context_destroy(context); }
@@ -216,7 +227,8 @@ void dispatch(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     if (command == "create" || command == "from_state") {
         require(nlhs == 1 && nrhs == (command == "create" ? 3 : 4), "create/from_state argument count");
         check(n4m_check_abi_compatibility(2, 16), nullptr); Config config(prhs[1], prhs[2]);
-        auto value = std::make_unique<Entry>(); check(n4m_context_create(&value->context), value->context);
+        auto value = std::make_unique<Entry>(); value->selected = config.selected;
+        check(n4m_context_create(&value->context), value->context);
         if (command == "create") check(n4m_multimodal_pipeline_create(value->context, &config.recipe, &value->pipeline), value->context);
         else {
             require(mxIsUint8(prhs[3]) && !mxIsSparse(prhs[3]), "state must be uint8 bytes");
@@ -233,19 +245,19 @@ void dispatch(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     }
     auto& value = entry(prhs[1]);
     if (command == "fit") {
-        require(nrhs == 5 && nlhs == 0, "fit(handle, blocks, schemas, y)"); Inputs inputs(prhs[2], prhs[3]);
+        require(nrhs == 5 && nlhs == 0, "fit(handle, blocks, schemas, y)"); Inputs inputs(prhs[2], prhs[3], value.selected);
         require(mxIsDouble(prhs[4]) && !mxIsSparse(prhs[4]) && !mxIsComplex(prhs[4]) &&
             mxGetNumberOfElements(prhs[4]) == static_cast<mwSize>(inputs.rows), "expected one double target per row");
         n4m_matrix_view_t target; check(n4m_matrix_view_init_rowmajor(&target, mxGetData(prhs[4]), inputs.rows, 1, N4M_DTYPE_F64), value.context);
-        check(n4m_multimodal_pipeline_fit(value.context, value.pipeline, 4, inputs.views.data(), &target), value.context);
+        check(n4m_multimodal_pipeline_fit(value.context, value.pipeline, static_cast<int32_t>(inputs.views.size()), inputs.views.data(), &target), value.context);
     } else if (command == "predict" || command == "transform") {
-        require(nrhs == 4 && nlhs == 1, "predict/transform(handle, blocks, schemas)"); Inputs inputs(prhs[2], prhs[3]); int64_t width = 1;
+        require(nrhs == 4 && nlhs == 1, "predict/transform(handle, blocks, schemas)"); Inputs inputs(prhs[2], prhs[3], value.selected); int64_t width = 1;
         if (command == "transform") check(n4m_multimodal_pipeline_transform_cols(value.pipeline, &width), value.context);
         require(inputs.rows >= 0 && width > 0 && inputs.rows <= 16777216 / width, "output exceeds native bounds");
         mxArray* output = mxCreateDoubleMatrix(inputs.rows, width, mxREAL); n4m_matrix_view_t view;
         check(n4m_matrix_view_init_colmajor(&view, mxGetPr(output), inputs.rows, width, N4M_DTYPE_F64), value.context);
-        const auto status = command == "transform" ? n4m_multimodal_pipeline_transform(value.context, value.pipeline, 4, inputs.views.data(), &view) :
-            n4m_multimodal_pipeline_predict(value.context, value.pipeline, 4, inputs.views.data(), &view);
+        const auto status = command == "transform" ? n4m_multimodal_pipeline_transform(value.context, value.pipeline, static_cast<int32_t>(inputs.views.size()), inputs.views.data(), &view) :
+            n4m_multimodal_pipeline_predict(value.context, value.pipeline, static_cast<int32_t>(inputs.views.size()), inputs.views.data(), &view);
         if (status != N4M_OK) { mxDestroyArray(output); check(status, value.context); } plhs[0] = output;
     } else if (command == "export_state") {
         require(nrhs == 2 && nlhs == 1, "export_state takes a handle"); size_t size = 0;

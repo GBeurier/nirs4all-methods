@@ -26,6 +26,13 @@ export interface MultimodalRecipe {
     model: { method_id: string; params: Record<string, unknown> };
 }
 const ORDER = ["nir", "image", "series", "metadata"];
+function sourceOrder(value: unknown): string[] {
+    if (!Array.isArray(value) || value.length < 1 || value.length > ORDER.length ||
+        value.some((name) => typeof name !== "string" || !ORDER.includes(name)) ||
+        new Set(value).size !== value.length)
+        throw new TypeError("source_order must select 1..4 distinct U07 modalities");
+    return [...value];
+}
 // wasm32 layouts of multimodal.h (double/int64 align to eight bytes).
 const SPEC_SIZE = 96, RECIPE_SIZE = 40, VIEW_SIZE = 56;
 function utf8(value: string): Uint8Array {
@@ -86,14 +93,15 @@ function schema(p: number, value: MultimodalSourceSchema, arena: Arena): void {
 }
 function configuration(recipe: MultimodalRecipe, schemas: MultimodalSourceSchemas, arena: Arena): number {
     keys(recipe, ["schema_version", "fusion", "source_order", "encoders", "source_weights", "model"], "recipe");
-    if (recipe.schema_version !== 1 || recipe.fusion !== "early" || recipe.source_order.join("\0") !== ORDER.join("\0"))
-        throw new TypeError("expected canonical v1 early-fusion recipe");
-    keys(recipe.encoders, ORDER, "encoders"); keys(recipe.source_weights, ORDER, "weights"); keys(schemas, ORDER, "schemas");
+    if (recipe.schema_version !== 1 || recipe.fusion !== "early")
+        throw new TypeError("expected v1 early-fusion recipe");
+    const order = sourceOrder(recipe.source_order);
+    keys(recipe.encoders, order, "encoders"); keys(recipe.source_weights, order, "weights"); keys(schemas, order, "schemas");
     keys(recipe.model, ["method_id", "params"], "model");
     keys(recipe.model.params, ["alpha", "center_x", "center_y", "scale_x"], "Ridge parameters");
     if (recipe.model.method_id !== "models.regularized.ridge") throw new TypeError("expected native Ridge");
-    const sources = arena.alloc(ORDER.length * SPEC_SIZE);
-    ORDER.forEach((name, index) => {
+    const sources = arena.alloc(order.length * SPEC_SIZE);
+    order.forEach((name, index) => {
         const p = sources + index * SPEC_SIZE, encoder = recipe.encoders[name]!;
         i32(p, SPEC_SIZE); i32(p + 4, arena.text(name)); schema(p, schemas[name]!, arena);
         const shape = schemas[name]!.input_shape;
@@ -115,13 +123,13 @@ function configuration(recipe: MultimodalRecipe, schemas: MultimodalSourceSchema
         } else throw new TypeError("unsupported encoder");
     });
     const p = arena.alloc(RECIPE_SIZE), params = recipe.model.params;
-    i32(p, RECIPE_SIZE); i32(p + 4, 4); i32(p + 8, sources); f64(p + 16, params.alpha as number);
+    i32(p, RECIPE_SIZE); i32(p + 4, order.length); i32(p + 8, sources); f64(p + 16, params.alpha as number);
     i32(p + 24, flag(params.center_x)); i32(p + 28, flag(params.center_y)); i32(p + 32, flag(params.scale_x)); return p;
 }
-function views(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas, arena: Arena): { pointer: number; rows: number } {
-    keys(blocks, ORDER, "blocks"); keys(schemas, ORDER, "schemas");
-    const pointer = arena.alloc(4 * VIEW_SIZE); let rows = -1;
-    ORDER.forEach((name, index) => {
+function views(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas, arena: Arena, order: readonly string[]): { pointer: number; rows: number } {
+    keys(blocks, [...order], "blocks"); keys(schemas, [...order], "schemas");
+    const pointer = arena.alloc(order.length * VIEW_SIZE); let rows = -1;
+    order.forEach((name, index) => {
         const p = pointer + index * VIEW_SIZE, raw = blocks[name]!;
         i32(p, VIEW_SIZE); i32(p + 4, arena.text(name)); schema(p, schemas[name]!, arena);
         let shape: number[], strides: number[], data: Float32Array | Float64Array;
@@ -162,10 +170,12 @@ function views(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas, arena
 /** Complete native early-fusion pipeline, portable as a bounded N4MF state. */
 export class MultimodalPipeline {
     private ptr = 0;
+    private readonly sourceOrder: readonly string[];
     readonly recipe: MultimodalRecipe;
     readonly sourceSchemas: MultimodalSourceSchemas;
     constructor(recipe: MultimodalRecipe, sourceSchemas: MultimodalSourceSchemas) {
         this.recipe = structuredClone(recipe); this.sourceSchemas = structuredClone(sourceSchemas);
+        this.sourceOrder = sourceOrder(this.recipe.source_order);
         const arena = new Arena();
         try {
             const config = configuration(this.recipe, this.sourceSchemas, arena), out = arena.alloc(4);
@@ -177,11 +187,11 @@ export class MultimodalPipeline {
     fit(blocks: MultimodalBlocks, y: Matrix | Float64Array): this {
         const arena = new Arena();
         try {
-            const x = views(blocks, this.sourceSchemas, arena), target = y instanceof Float64Array ? { data: y, rows: x.rows, cols: 1 } : y;
+            const x = views(blocks, this.sourceSchemas, arena, this.sourceOrder), target = y instanceof Float64Array ? { data: y, rows: x.rows, cols: 1 } : y;
             if (target.rows !== x.rows || target.cols !== 1) throw new TypeError("expected one target per raw source row");
             const matrix = makeMatrixView(target.data, target.rows, 1);
             try { withContext((ctx) => checkStatus(getModule().ccall("n4m_multimodal_pipeline_fit", "number",
-                ["number", "number", "number", "number", "number"], [ctx, this.handle(), 4, x.pointer, matrix.viewPtr]) as number, ctx)); }
+                ["number", "number", "number", "number", "number"], [ctx, this.handle(), this.sourceOrder.length, x.pointer, matrix.viewPtr]) as number, ctx)); }
             finally { matrix.free(); } return this;
         } finally { arena.close(); }
     }
@@ -190,12 +200,12 @@ export class MultimodalPipeline {
     private operation(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas, transform: boolean): Matrix {
         const arena = new Arena();
         try {
-            const x = views(blocks, schemas, arena); let cols = 1;
+            const x = views(blocks, schemas, arena, this.sourceOrder); let cols = 1;
             if (transform) { const out = arena.alloc(8); checkStatus(getModule().ccall("n4m_multimodal_pipeline_transform_cols", "number", ["number", "number"], [this.handle(), out]) as number); cols = Number(new DataView(getModule().HEAPU8.buffer).getBigInt64(out, true)); }
             const matrix = makeMatrixView(new Float64Array(x.rows * cols), x.rows, cols);
             try {
                 withContext((ctx) => checkStatus(getModule().ccall("n4m_multimodal_pipeline_" + (transform ? "transform" : "predict"), "number",
-                    ["number", "number", "number", "number", "number"], [ctx, this.handle(), 4, x.pointer, matrix.viewPtr]) as number, ctx));
+                    ["number", "number", "number", "number", "number"], [ctx, this.handle(), this.sourceOrder.length, x.pointer, matrix.viewPtr]) as number, ctx));
                 return { data: getModule().HEAPF64.slice(matrix.dataPtr / 8, matrix.dataPtr / 8 + x.rows * cols), rows: x.rows, cols };
             } finally { matrix.free(); }
         } finally { arena.close(); }

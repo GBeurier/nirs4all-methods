@@ -5,12 +5,14 @@ library(n4m)
 fixture <- jsonlite::fromJSON(args[[1]], simplifyVector = FALSE)
 unlist_recipe <- function(recipe) {
   recipe$source_order <- unlist(recipe$source_order)
-  for (name in c("image", "series")) {
+  for (name in intersect(c("image", "series"), recipe$source_order)) {
     recipe$encoders[[name]]$n_components <- as.numeric(recipe$encoders[[name]]$n_components)
     recipe$encoders[[name]]$random_state <- as.numeric(recipe$encoders[[name]]$random_state)
   }
-  recipe$encoders$metadata$numeric_columns <- 0
-  recipe$encoders$metadata$categorical_columns <- 1
+  if ("metadata" %in% recipe$source_order) {
+    recipe$encoders$metadata$numeric_columns <- 0
+    recipe$encoders$metadata$categorical_columns <- 1
+  }
   recipe
 }
 recipe <- unlist_recipe(fixture$recipe)
@@ -31,7 +33,17 @@ state <- jsonlite::base64_dec(fixture$state)
 replay <- n4m_multimodal_pipeline_from_state(state, recipe, schemas)
 check(predict(replay, heldout))
 z <- n4m_estimator_transform(replay, heldout)
-stopifnot(ncol(z) == 14L, identical(as.double(z[1, 12:14]), c(0, 0, 0)))
+width <- 0L
+for (name in recipe$source_order) {
+  if (name == "metadata") {
+    count <- length(unique(train$metadata[, 2]))
+    stopifnot(identical(as.double(z[1, width + 1L + seq_len(count)]), rep(0, count)))
+    width <- width + 1L + count
+  } else if (recipe$encoders[[name]]$kind == "tensor_pca") {
+    width <- width + recipe$encoders[[name]]$n_components
+  } else width <- width + prod(schemas[[name]]$input_shape)
+}
+stopifnot(ncol(z) == width)
 float32_sources <- names(schemas)[vapply(schemas, function(schema) identical(schema$dtype, "float32"), logical(1))]
 if (length(float32_sources)) {
   # JSON preserves exact f32 values in R doubles. Only declared marshalling
@@ -50,7 +62,8 @@ if (length(float32_sources)) {
 }
 broken <- state; broken[[61]] <- as.raw(bitwXor(as.integer(broken[[61]]), 1L))
 stopifnot(inherits(try(n4m_multimodal_pipeline_from_state(broken, recipe, schemas), silent = TRUE), "try-error"))
-wrong <- schemas; wrong$image$identity <- paste0(wrong$image$identity, ":wrong-axis")
+wrong <- schemas; selected <- recipe$source_order[[1]]
+wrong[[selected]]$identity <- paste0(wrong[[selected]]$identity, ":wrong-axis")
 stopifnot(inherits(try(predict(replay, heldout, source_schemas = wrong), silent = TRUE), "try-error"))
 fresh <- n4m_multimodal_pipeline(recipe, schemas)
 fresh <- n4m_fit(fresh, train, as.double(unlist(fixture$y)))
@@ -58,7 +71,8 @@ check(predict(fresh, heldout))
 hydrated <- n4m_multimodal_pipeline_from_state(n4m_export_state(fresh), recipe, schemas)
 stopifnot(identical(predict(hydrated, heldout), predict(fresh, heldout)))
 before <- predict(fresh, heldout)
-train$series[[1]] <- NaN
+numeric <- setdiff(recipe$source_order, "metadata")
+if (length(numeric)) train[[numeric[[1]]]][[1]] <- NaN else train$metadata[1, 1] <- "NaN"
 stopifnot(inherits(try(n4m_fit(fresh, train, as.double(unlist(fixture$y))), silent = TRUE), "try-error"))
 stopifnot(identical(predict(fresh, heldout), before))
 n4m_close(replay); n4m_close(hydrated); n4m_close(fresh); n4m_close(fresh)

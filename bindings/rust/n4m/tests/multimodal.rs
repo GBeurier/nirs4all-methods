@@ -94,26 +94,96 @@ impl Data {
         }
     }
     fn views<'a>(&'a self, declaration: &'a Recipe) -> Vec<SourceView<'a>> {
-        vec![
-            SourceView::numeric(&declaration.sources[0], &self.nir, &[self.rows, 3]).unwrap(),
-            SourceView::numeric(&declaration.sources[1], &self.image, &[self.rows, 2, 2, 1])
-                .unwrap(),
-            SourceView::numeric(&declaration.sources[2], &self.series, &[self.rows, 3, 1]).unwrap(),
-            SourceView::mixed(
-                &declaration.sources[3],
-                &self.metadata,
-                &self
-                    .categories
-                    .iter()
-                    .map(String::as_str)
-                    .collect::<Vec<_>>(),
-            )
-            .unwrap(),
-        ]
+        declaration
+            .sources
+            .iter()
+            .map(|source| match source.name.as_str() {
+                "nir" => SourceView::numeric(source, &self.nir, &[self.rows, 3]),
+                "image" => SourceView::numeric(source, &self.image, &[self.rows, 2, 2, 1]),
+                "series" => SourceView::numeric(source, &self.series, &[self.rows, 3, 1]),
+                "metadata" => SourceView::mixed(
+                    source,
+                    &self.metadata,
+                    &self
+                        .categories
+                        .iter()
+                        .map(String::as_str)
+                        .collect::<Vec<_>>(),
+                ),
+                _ => panic!("unknown diagnostic modality"),
+            })
+            .map(Result::unwrap)
+            .collect()
     }
     fn y(&self) -> MatrixRef<'_> {
         MatrixRef::row_major(&self.y, self.rows, 1).unwrap()
     }
+}
+
+#[test]
+fn selected_order_weights_and_state_replay_exclude_unselected_encoders() {
+    let ctx = Context::new().unwrap();
+    let full = recipe();
+    let mut train = Data::training();
+    let mut canonical = MultimodalPipeline::new(&ctx, &full).unwrap();
+    canonical.fit(&ctx, &train.views(&full), train.y()).unwrap();
+    let features = canonical.transform(&ctx, &train.views(&full)).unwrap();
+    let mut selected = Recipe {
+        alpha: full.alpha,
+        sources: vec![full.sources[3].clone(), full.sources[0].clone()],
+    };
+    selected.sources[0].weight = 1.5;
+    selected.sources[1].weight = 0.5;
+    // These buffers are absent from the native call, not encoded with zero weights.
+    train.image.clear();
+    train.series.clear();
+    let mut model = MultimodalPipeline::new(&ctx, &selected).unwrap();
+    model.fit(&ctx, &train.views(&selected), train.y()).unwrap();
+    let actual = model.transform(&ctx, &train.views(&selected)).unwrap();
+    assert_eq!(actual.cols, 6);
+    for row in 0..train.rows {
+        for col in 0..3 {
+            assert_eq!(
+                actual.data[row * 6 + col],
+                features.data[row * 9 + 6 + col] * 1.5
+            );
+            assert_eq!(
+                actual.data[row * 6 + 3 + col],
+                features.data[row * 9 + col] * 0.5
+            );
+        }
+    }
+    let state = model.export_state(&ctx).unwrap();
+    assert_eq!(u32::from_le_bytes(state[36..40].try_into().unwrap()), 2);
+    let replay = MultimodalPipeline::from_state(&ctx, &selected, &state).unwrap();
+    assert_eq!(replay.export_state(&ctx).unwrap(), state);
+    assert_eq!(
+        replay.predict(&ctx, &train.views(&selected)).unwrap().data,
+        model.predict(&ctx, &train.views(&selected)).unwrap().data
+    );
+    let mut changed = selected.clone();
+    changed.sources.reverse();
+    assert!(MultimodalPipeline::from_state(&ctx, &changed, &state).is_err());
+    changed = selected.clone();
+    changed.sources[0].weight = 0.25;
+    assert!(MultimodalPipeline::from_state(&ctx, &changed, &state).is_err());
+    changed = selected.clone();
+    changed.sources[0].identity.push_str(":rebound");
+    assert!(MultimodalPipeline::from_state(&ctx, &changed, &state).is_err());
+}
+
+#[test]
+fn one_selected_scaler_accepts_one_row_without_fitting_omitted_pca() {
+    let ctx = Context::new().unwrap();
+    let full = recipe();
+    let selected = Recipe {
+        alpha: full.alpha,
+        sources: vec![full.sources[0].clone()],
+    };
+    let data = Data::new(1, 1, false);
+    let mut model = MultimodalPipeline::new(&ctx, &selected).unwrap();
+    model.fit(&ctx, &data.views(&selected), data.y()).unwrap();
+    assert_eq!(model.transform_cols().unwrap(), 3);
 }
 
 #[test]

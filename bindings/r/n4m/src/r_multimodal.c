@@ -10,7 +10,6 @@
 #include <string.h>
 #include "n4m/multimodal.h"
 
-static const char* source_names[] = {"nir", "image", "series", "metadata"};
 static SEXP field(SEXP value, const char* name) {
     SEXP names = Rf_getAttrib(value, R_NamesSymbol);
     if (TYPEOF(value) != VECSXP || TYPEOF(names) != STRSXP)
@@ -45,16 +44,22 @@ static int boolean(SEXP value) {
     return LOGICAL(value)[0] != 0;
 }
 static n4m_multimodal_recipe_v1_t configuration(SEXP recipe, SEXP schemas) {
+    SEXP order = field(recipe, "source_order");
+    if (TYPEOF(order) != STRSXP || XLENGTH(order) < 1 || XLENGTH(order) > 4)
+        Rf_error("source_order requires 1..4 selected modality names");
+    const int count = (int)XLENGTH(order);
     n4m_multimodal_recipe_v1_t out;
-    memset(&out, 0, sizeof(out)); out.struct_size = sizeof(out); out.n_sources = 4;
+    memset(&out, 0, sizeof(out)); out.struct_size = sizeof(out); out.n_sources = count;
     n4m_multimodal_source_spec_v1_t* sources =
-        (n4m_multimodal_source_spec_v1_t*)R_alloc(4, sizeof(*sources));
-    memset(sources, 0, 4 * sizeof(*sources)); out.sources = sources;
+        (n4m_multimodal_source_spec_v1_t*)R_alloc(count, sizeof(*sources));
+    memset(sources, 0, count * sizeof(*sources)); out.sources = sources;
     SEXP encoders = field(recipe, "encoders"), weights = field(recipe, "source_weights");
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < count; ++i) {
+        if (STRING_ELT(order, i) == NA_STRING) Rf_error("source names must not be missing");
+        const char* name = Rf_translateCharUTF8(STRING_ELT(order, i));
         n4m_multimodal_source_spec_v1_t* s = sources + i;
-        SEXP schema = field(schemas, source_names[i]), encoder = field(encoders, source_names[i]);
-        s->struct_size = sizeof(*s); s->name = source_names[i];
+        SEXP schema = field(schemas, name), encoder = field(encoders, name);
+        s->struct_size = sizeof(*s); s->name = name;
         s->representation_id = text(field(schema, "representation_id"));
         s->dtype = text(field(schema, "dtype")); s->identity_utf8 = text(field(schema, "identity"));
         s->identity_bytes = strlen((const char*)s->identity_utf8);
@@ -92,16 +97,23 @@ static n4m_multimodal_recipe_v1_t configuration(SEXP recipe, SEXP schemas) {
     return out;
 }
 static n4m_multimodal_source_view_v1_t* views(SEXP blocks, SEXP schemas, int64_t* rows) {
+    SEXP names = Rf_getAttrib(schemas, R_NamesSymbol);
+    if (TYPEOF(schemas) != VECSXP || TYPEOF(names) != STRSXP || XLENGTH(schemas) < 1 ||
+        XLENGTH(schemas) > 4 || XLENGTH(names) != XLENGTH(schemas))
+        Rf_error("expected 1..4 ordered source schemas");
+    const int count = (int)XLENGTH(schemas);
     n4m_multimodal_source_view_v1_t* out =
-        (n4m_multimodal_source_view_v1_t*)R_alloc(4, sizeof(*out));
-    memset(out, 0, 4 * sizeof(*out)); *rows = -1;
-    for (int i = 0; i < 4; ++i) {
-        SEXP block = field(blocks, source_names[i]), schema = field(schemas, source_names[i]);
+        (n4m_multimodal_source_view_v1_t*)R_alloc(count, sizeof(*out));
+    memset(out, 0, count * sizeof(*out)); *rows = -1;
+    for (int i = 0; i < count; ++i) {
+        if (STRING_ELT(names, i) == NA_STRING) Rf_error("source names must not be missing");
+        const char* name = Rf_translateCharUTF8(STRING_ELT(names, i));
+        SEXP block = field(blocks, name), schema = field(schemas, name);
         SEXP dims = Rf_getAttrib(block, R_DimSymbol);
         if (TYPEOF(dims) != INTSXP || XLENGTH(dims) < 2 || XLENGTH(dims) > 8)
             Rf_error("raw sources must have sample-first dimensions");
         n4m_multimodal_source_view_v1_t* v = out + i;
-        v->struct_size = sizeof(*v); v->name = source_names[i];
+        v->struct_size = sizeof(*v); v->name = name;
         v->representation_id = text(field(schema, "representation_id")); v->dtype = text(field(schema, "dtype"));
         v->identity_utf8 = text(field(schema, "identity")); v->identity_bytes = strlen((const char*)v->identity_utf8);
         v->rank = (int32_t)XLENGTH(dims);
@@ -119,7 +131,7 @@ static n4m_multimodal_source_view_v1_t* views(SEXP blocks, SEXP schemas, int64_t
         }
         if (*rows >= 0 && *rows != shape[0]) Rf_error("source row counts differ"); *rows = shape[0];
         v->numeric_dtype = N4M_DTYPE_F64;
-        if (i != 3) {
+        if (strcmp(name, "metadata")) {
             if (TYPEOF(block) != REALSXP) Rf_error("raw numeric arrays must be doubles");
             if (!strcmp(v->dtype, "float32")) {
                 const R_xlen_t count = XLENGTH(block);
@@ -190,7 +202,7 @@ SEXP r_n4m_multimodal_fit(SEXP ptr, SEXP blocks, SEXP schemas, SEXP y) {
     n4m_multimodal_source_view_v1_t* input = views(blocks, schemas, &rows);
     if (TYPEOF(y) != REALSXP || XLENGTH(y) != rows) Rf_error("expected one double target per row");
     n4m_matrix_view_t target; check(n4m_matrix_view_init_rowmajor(&target, REAL(y), rows, 1, N4M_DTYPE_F64), NULL);
-    n4m_context_t* ctx = context(); check(n4m_multimodal_pipeline_fit(ctx, p, 4, input, &target), ctx); n4m_context_destroy(ctx); return ptr;
+    n4m_context_t* ctx = context(); check(n4m_multimodal_pipeline_fit(ctx, p, (int32_t)XLENGTH(schemas), input, &target), ctx); n4m_context_destroy(ctx); return ptr;
 }
 SEXP r_n4m_multimodal_op(SEXP ptr, SEXP blocks, SEXP schemas, SEXP transform) {
     n4m_multimodal_pipeline_t* p = handle(ptr); int64_t rows, width = 1;
@@ -199,7 +211,7 @@ SEXP r_n4m_multimodal_op(SEXP ptr, SEXP blocks, SEXP schemas, SEXP transform) {
     if (rows > INT_MAX || width > INT_MAX || width * rows > 16777216) Rf_error("output exceeds native shape bounds");
     SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)rows, (int)width)); n4m_matrix_view_t view;
     check(n4m_matrix_view_init_colmajor(&view, REAL(out), rows, width, N4M_DTYPE_F64), NULL);
-    n4m_context_t* ctx = context(); check(tr ? n4m_multimodal_pipeline_transform(ctx, p, 4, input, &view) : n4m_multimodal_pipeline_predict(ctx, p, 4, input, &view), ctx);
+    n4m_context_t* ctx = context(); check(tr ? n4m_multimodal_pipeline_transform(ctx, p, (int32_t)XLENGTH(schemas), input, &view) : n4m_multimodal_pipeline_predict(ctx, p, (int32_t)XLENGTH(schemas), input, &view), ctx);
     n4m_context_destroy(ctx); UNPROTECT(1); return out;
 }
 SEXP r_n4m_multimodal_export(SEXP ptr) {

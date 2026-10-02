@@ -21,8 +21,9 @@ n4m_close(object)
   source_schemas = object$source_schemas, ...)
 }
 \arguments{
-\item{recipe}{Closed version-one early-fusion recipe: ordered nir, image,
-series and metadata encoders, source weights and one centered, unscaled-X Ridge.}
+\item{recipe}{Closed version-one early-fusion recipe: an ordered subset of one
+to four distinct nir, image, series and metadata sources, their encoder and weight
+declarations, and one centered, unscaled-X Ridge.}
 \item{source_schemas}{Named raw source descriptors containing representation_id,
 input_shape, dtype and the unchanged canonical IO identity string.}
 \item{state}{Raw vector containing a bounded native N4MF fitted state.}
@@ -46,6 +47,10 @@ bytes, and close releases native resources invisibly and idempotently.
 \details{
 Requires ABI 2.16. Numeric arrays use R's double storage. Raw descriptors and
 array layouts are translated only; all learned arithmetic belongs to libn4m.
+Encoder, weight and schema mappings cover exactly the selected source names.
+Absent sources are not fitted; selected zero-weight sources retain their
+historical encoder fitting semantics. N4MF format 1 and canonical four-source
+archives remain supported.
 The existing \code{n4m_fit(object, blocks, y)} entry point delegates this class
 to \code{n4m_estimator_fit}. Calls with extra constructor controls are refused.
 }
