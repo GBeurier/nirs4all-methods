@@ -3512,6 +3512,169 @@ std::vector<std::uint8_t> save_checkpoint(n4m_optimizer_t* optimizer) {
     return result;
 }
 
+n4m_search_space_t* configuration_space(int mutation = 0) {
+    n4m_search_space_t* space = nullptr;
+    N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+    const char* labels[] = {"ridge", "pls"};
+    const char* reversed_labels[] = {"pls", "ridge"};
+    N4M_TEST_REQUIRE(n4m_search_space_add_categorical(
+                         space, "recipe", N4M_CAT_STR,
+                         mutation == 3 ? reversed_labels : labels, 2) == N4M_OK);
+    auto alpha = [&]() {
+        if (mutation == 8) {
+            N4M_TEST_REQUIRE(n4m_search_space_add_int(space, "alpha", 1, 4, 1, 0) == N4M_OK);
+        } else {
+            N4M_TEST_REQUIRE(n4m_search_space_add_float(
+                                 space, "alpha", 1.0, mutation == 2 ? 8.0 : 4.0,
+                                 mutation == 9 ? 0.5 : 0.0, mutation == 10 ? 1 : 0) == N4M_OK);
+        }
+    };
+    auto components = [&]() {
+        N4M_TEST_REQUIRE(n4m_search_space_add_int(space, "n_components", 1, 5, 1, 0) ==
+                         N4M_OK);
+    };
+    if (mutation == 1) {
+        components();
+        alpha();
+    } else {
+        alpha();
+        components();
+    }
+    const int64_t numbers[] = {1, 2};
+    const char* strings[] = {"1", "2"};
+    if (mutation == 4) {
+        N4M_TEST_REQUIRE(n4m_search_space_add_categorical(
+                             space, "choice", N4M_CAT_STR, strings, 2) == N4M_OK);
+    } else {
+        N4M_TEST_REQUIRE(n4m_search_space_add_categorical(
+                             space, "choice", N4M_CAT_INT, numbers, 2) == N4M_OK);
+    }
+    const char* alpha_refs[] = {"alpha", "recipe"};
+    const char* alpha_labels[] = {"", mutation == 11 ? "pls" : "ridge"};
+    const char* component_refs[] = {"n_components", "recipe"};
+    const char* component_labels[] = {"", "pls"};
+    auto alpha_condition = [&]() {
+        N4M_TEST_REQUIRE(n4m_search_space_add_constraint(
+                             space, mutation == 5 ? N4M_CONSTRAINT_CONDITION_NOT_IN
+                                                   : N4M_CONSTRAINT_CONDITION_IN,
+                             alpha_refs, alpha_labels, 2) == N4M_OK);
+    };
+    auto component_condition = [&]() {
+        N4M_TEST_REQUIRE(n4m_search_space_add_constraint(
+                             space, N4M_CONSTRAINT_CONDITION_IN,
+                             component_refs, component_labels, 2) == N4M_OK);
+    };
+    if (mutation == 7) {
+        component_condition();
+        alpha_condition();
+    } else {
+        alpha_condition();
+        component_condition();
+    }
+    if (mutation == 6) {
+        const char* refs[] = {"choice", "recipe"};
+        const char* values[] = {"1", "pls"};
+        N4M_TEST_REQUIRE(n4m_search_space_add_constraint(
+                             space, N4M_CONSTRAINT_EXCLUDE, refs, values, 2) == N4M_OK);
+    }
+    return space;
+}
+
+void test_optimizer_configuration_matches() {
+    n4m_context_t* context = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&context) == N4M_OK);
+    n4m_search_space_t* space = configuration_space();
+    n4m_optimizer_options_t options = default_opts();
+    options.seed = 47;
+    n4m_optimizer_t* actual = nullptr;
+    n4m_optimizer_t* expected = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(context, space, &options, &actual) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_optimizer_create(context, space, &options, &expected) == N4M_OK);
+    int32_t matches = -1;
+    N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(actual, expected, &matches) == N4M_OK);
+    N4M_TEST_REQUIRE(matches == 1);
+    n4m_trial_t* trial = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_ask(actual, &trial) == N4M_OK);
+    int64_t id = -1;
+    N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+    N4M_TEST_REQUIRE(id == 0);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell(actual, id, 0.5) == N4M_OK);
+    const std::vector<std::uint8_t> checkpoint = save_checkpoint(actual);
+    n4m_optimizer_t* loaded = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_load(
+                         context, checkpoint.data(), checkpoint.size(), &loaded) == N4M_OK);
+    for (const n4m_optimizer_t* candidate : {actual, loaded}) {
+        N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(candidate, expected, &matches) ==
+                         N4M_OK);
+        N4M_TEST_REQUIRE(matches == 1);
+    }
+    N4M_TEST_REQUIRE(n4m_optimizer_ask(expected, &trial) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+    N4M_TEST_REQUIRE(id == 0);  // Comparing did not advance the expected study.
+    for (int mutation = 1; mutation <= 11; ++mutation) {
+        n4m_search_space_t* changed_space = configuration_space(mutation);
+        n4m_optimizer_t* changed = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(context, changed_space, &options, &changed) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(loaded, changed, &matches) == N4M_OK);
+        N4M_TEST_REQUIRE(matches == 0);
+        n4m_optimizer_destroy(changed);
+        n4m_search_space_destroy(changed_space);
+    }
+    matches = 1;
+    N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(nullptr, expected, &matches) ==
+                     N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(matches == 0);
+    matches = 1;
+    N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(actual, nullptr, &matches) ==
+                     N4M_ERR_NULL_POINTER);
+    N4M_TEST_REQUIRE(matches == 0);
+    N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(actual, expected, nullptr) ==
+                     N4M_ERR_NULL_POINTER);
+    n4m_optimizer_destroy(loaded);
+    n4m_optimizer_destroy(expected);
+    n4m_optimizer_destroy(actual);
+    n4m_search_space_destroy(space);
+    n4m_context_destroy(context);
+}
+
+void test_optimizer_configuration_options() {
+    n4m_context_t* context = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&context) == N4M_OK);
+    n4m_search_space_t* space = configuration_space();
+    n4m_optimizer_options_t options = default_opts();
+    n4m_optimizer_t* actual = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(context, space, &options, &actual) == N4M_OK);
+    for (int mutation = 0; mutation < 9; ++mutation) {
+        n4m_optimizer_options_t changed_options = options;
+        switch (mutation) {
+            case 0: changed_options.sampler = N4M_SAMPLER_TPE; break;
+            case 1: changed_options.pruner = N4M_PRUNER_MEDIAN; break;
+            case 2: changed_options.direction = N4M_OPT_MAXIMIZE; break;
+            case 3: changed_options.metric = N4M_METRIC_MAE; break;
+            case 4: changed_options.n_startup_trials = 11; break;
+            case 5: changed_options.seed = 47; break;
+            case 6: changed_options.timeout_seconds = 30.0; break;
+            case 7:
+                changed_options.pruner = N4M_PRUNER_HYPERBAND;
+                changed_options.max_resource = 9;
+                break;
+            case 8:
+                changed_options.pruner = N4M_PRUNER_ASHA;
+                changed_options.reduction_factor = 3;
+                break;
+        }
+        n4m_optimizer_t* changed = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(context, space, &changed_options, &changed) == N4M_OK);
+        int32_t matches = -1;
+        N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(actual, changed, &matches) == N4M_OK);
+        N4M_TEST_REQUIRE(matches == 0);
+        n4m_optimizer_destroy(changed);
+    }
+    n4m_optimizer_destroy(actual);
+    n4m_search_space_destroy(space);
+    n4m_context_destroy(context);
+}
+
 void test_ask_batch_checkpoint_and_determinism() {
     // MT12 — ask_batch(n) is exactly n sequential ask() calls with no
     // intervening tell (constant-liar stays NONE), and a checkpoint saved AT a
@@ -4270,6 +4433,8 @@ void test_checkpoint_wide_space_and_empty_queue() {
 
 void register_optimization_tests(n4m_testing::Runner& r) {
     r.run("optimization: options init", test_options_init);
+    r.run("optimization: immutable configuration matches", test_optimizer_configuration_matches);
+    r.run("optimization: immutable configuration options", test_optimizer_configuration_options);
     r.run("optimization: checkpoint all sampler trajectories",
           test_checkpoint_all_sampler_trajectories);
     r.run("optimization: checkpoint lifecycle + fail-closed decode",

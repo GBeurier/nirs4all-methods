@@ -486,6 +486,7 @@ n4m_operator_bank_size
 n4m_optimizer_ask
 n4m_optimizer_ask_batch
 n4m_optimizer_best
+n4m_optimizer_configuration_matches
 n4m_optimizer_create
 n4m_optimizer_destroy
 n4m_optimizer_enqueue

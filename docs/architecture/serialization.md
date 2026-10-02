@@ -151,3 +151,11 @@ The public save symbol predates byte dtypes. It therefore returns an owning
 `N4M_DTYPE_I64` array whose underlying bytes are the aligned checkpoint; bindings
 must treat the storage as bytes, not numeric word values. Python presents those
 bytes directly through `Optimizer.save()` / `Optimizer.load()`.
+
+Before resuming, compare the loaded optimizer with a fresh expected optimizer
+using `n4m_optimizer_configuration_matches(actual, expected, &matches)` or
+Python `loaded.configuration_matches(expected)`. The native comparison covers
+ordered space, category codecs, constraints/conditions and options; history,
+RNG, queues and elapsed/adaptive state are excluded. Both handles must be open,
+and the comparison leaves them unchanged. A trial budget is a caller policy,
+not an optimizer option, so callers may extend it separately.

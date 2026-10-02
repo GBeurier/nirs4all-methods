@@ -29,6 +29,7 @@ from n4m.model_selection import (
 )
 from n4m.model_selection.optimizer import (
     Direction,
+    Metric,
     Optimizer,
     Pruner,
     Sampler,
@@ -403,6 +404,123 @@ def test_checkpoint_preserves_lifecycle_error_intermediate_and_warm_queue():
                 restored.close()
         finally:
             original.close()
+
+
+def _configuration_space(change="none"):
+    space = SearchSpace().add_categorical(
+        "recipe", ["pls", "ridge"] if change == "labels" else ["ridge", "pls"]
+    )
+    if change == "order":
+        space.add_int("n_components", 1, 5)
+    space.add_float("alpha", 1.0, 8.0 if change == "domain" else 4.0)
+    if change != "order":
+        space.add_int("n_components", 1, 5)
+    space.add_categorical("choice", [1.0, 2.0] if change == "codec" else [1, 2])
+    space.add_ordinal("grade", [0.1, 0.25 if change == "ordinal" else 0.5, 1.0])
+    space.add_sorted_tuple("knots", 3 if change == "tuple" else 2, 0.0, 1.0)
+    space.add_constraint(
+        ConstraintKind.CONDITION_NOT_IN
+        if change == "condition"
+        else ConstraintKind.CONDITION_IN,
+        ["alpha", "recipe"],
+        [None, "ridge"],
+    )
+    space.add_constraint(
+        ConstraintKind.CONDITION_IN,
+        ["n_components", "recipe"],
+        [None, "pls"],
+    )
+    if change == "constraints":
+        space.add_constraint(
+            ConstraintKind.EXCLUDE, ["choice", "recipe"], ["1", "pls"]
+        )
+    return space
+
+
+def test_configuration_matches_loaded_and_fresh_despite_mutable_history():
+    with _configuration_space() as space:
+        with (
+            Optimizer(space, seed=47) as original,
+            Optimizer(space, seed=47) as expected,
+        ):
+            assert original.configuration_matches(expected) is True
+            trial = original.ask()
+            original.tell(trial.id, 0.5)
+            original.enqueue({"choice": 1})
+            with Optimizer.load(original.save()) as loaded:
+                assert loaded._space is None and loaded._opts is None
+                history = loaded.get_trials()
+                assert loaded.configuration_matches(expected) is True
+                assert expected.configuration_matches(loaded) is True
+                assert loaded.get_trials() == history
+                assert expected.get_trials() == []
+                first = expected.ask()
+                assert first.id == 0
+                assert first.get_float("alpha") == trial.get_float("alpha")
+                queued = loaded.ask()
+                original_queued = original.ask()
+                assert queued.id == original_queued.id == 1
+                assert loaded.get_trials()[-1].params == original.get_trials()[-1].params
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["order", "domain", "codec", "condition", "constraints", "labels", "tuple", "ordinal"],
+)
+def test_configuration_matches_rejects_valid_changed_ordered_spaces(change):
+    with _configuration_space() as space, _configuration_space(change) as changed_space:
+        with (
+            Optimizer(space, seed=47) as original,
+            Optimizer(changed_space, seed=47) as changed,
+        ):
+            with Optimizer.load(original.save()) as loaded:
+                assert loaded.configuration_matches(changed) is False
+                assert loaded.get_trials() == changed.get_trials() == []
+
+
+@pytest.mark.parametrize(
+    ("baseline_options", "changed_options"),
+    [
+        ({}, {"sampler": Sampler.TPE}),
+        ({}, {"pruner": Pruner.MEDIAN}),
+        ({}, {"direction": Direction.MAXIMIZE}),
+        ({}, {"metric": Metric.MAE}),
+        ({}, {"n_startup_trials": 11}),
+        ({}, {"seed": 47}),
+        ({}, {"timeout_seconds": 30.0}),
+        (
+            {"pruner": Pruner.HYPERBAND, "max_resource": 9},
+            {"pruner": Pruner.HYPERBAND, "max_resource": 27},
+        ),
+        (
+            {"pruner": Pruner.ASHA, "reduction_factor": 3},
+            {"pruner": Pruner.ASHA, "reduction_factor": 4},
+        ),
+    ],
+)
+def test_configuration_matches_rejects_valid_changed_options(
+    baseline_options, changed_options
+):
+    # Use a numeric-only space so each supported sampler can be constructed.
+    with SearchSpace().add_float("alpha", 1.0, 4.0) as space:
+        with (
+            Optimizer(space, **baseline_options) as original,
+            Optimizer(space, **changed_options) as changed,
+        ):
+            assert original.configuration_matches(changed) is False
+
+
+def test_configuration_matches_requires_both_optimizers_open():
+    with SearchSpace().add_int("k", 1, 3) as space:
+        with Optimizer(space) as actual, Optimizer(space) as expected:
+            with pytest.raises(TypeError, match="other must be an Optimizer"):
+                actual.configuration_matches(object())
+            expected.close()
+            with pytest.raises(RuntimeError, match="Optimizer is closed"):
+                actual.configuration_matches(expected)
+            actual.close()
+            with pytest.raises(RuntimeError, match="Optimizer is closed"):
+                actual.configuration_matches(expected)
 
 
 def test_checkpoint_decode_is_transactional_and_fail_closed():

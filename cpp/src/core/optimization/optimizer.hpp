@@ -244,6 +244,9 @@ class Optimizer {
     const std::vector<std::unique_ptr<::n4m_trial_s>>& trials() const { return trials_; }
     const SearchSpace& search_space() const { return space_; }
     n4m_opt_direction_t direction() const { return dir_; }
+    // Compare immutable configuration using the native checkpoint serializers;
+    // trial history, RNG, queues, elapsed time and sampler state are excluded.
+    n4m_status_t configuration_matches(const Optimizer& other, bool& out_matches) const;
 
   protected:
     // Sample one trial, honouring `forced` values (unforced dimensions are

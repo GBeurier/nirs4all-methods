@@ -1099,6 +1099,23 @@ N4M_API n4m_status_t n4m_optimizer_load(n4m_context_t* ctx, const uint8_t* blob,
     }
 }
 
+N4M_API n4m_status_t n4m_optimizer_configuration_matches(
+    const n4m_optimizer_t* actual, const n4m_optimizer_t* expected, int32_t* out_matches) {
+    if (out_matches == nullptr) return N4M_ERR_NULL_POINTER;
+    *out_matches = 0;
+    if (actual == nullptr || expected == nullptr) return N4M_ERR_NULL_POINTER;
+    try {
+        bool matches = false;
+        const n4m_status_t status = actual->impl->configuration_matches(*expected->impl, matches);
+        if (status == N4M_OK) *out_matches = matches ? 1 : 0;
+        return status;
+    } catch (const std::bad_alloc&) {
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        return N4M_ERR_INTERNAL;
+    }
+}
+
 // ==== trial accessors ====================================================
 
 N4M_API n4m_status_t n4m_trial_get_id(const n4m_trial_t* trial, int64_t* out) {

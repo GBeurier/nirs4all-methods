@@ -1236,6 +1236,19 @@ struct OptimizerCheckpointAccess {
     }
 };
 
+n4m_status_t Optimizer::configuration_matches(const Optimizer& other, bool& out_matches) const {
+    out_matches = false;
+    Writer actual;
+    encode_space(space_, actual);
+    encode_options(opts_, actual);
+    Writer expected;
+    encode_space(other.space_, expected);
+    encode_options(other.opts_, expected);
+    if (!actual.ok || !expected.ok) return N4M_ERR_UNSUPPORTED;
+    out_matches = actual.data == expected.data;
+    return N4M_OK;
+}
+
 n4m_status_t save_optimizer_checkpoint(const Optimizer& optimizer,
                                        std::vector<std::uint8_t>& out,
                                        std::string* error) {

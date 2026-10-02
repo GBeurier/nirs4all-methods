@@ -14,7 +14,7 @@ The top-level package only exposes metadata and a handful of shared helpers
 (:func:`version`, :func:`abi_version`, :class:`Context`, :class:`N4MError`,
 :class:`PartialBatchError`, :class:`MatrixView`, :class:`PCG64`) plus the role
 subpackages. The complete raw-source :class:`MultimodalPipeline` facade is
-also available directly at the package root.
+also available directly at the package root when scikit-learn is installed.
 """
 
 import ctypes
@@ -31,7 +31,6 @@ from ._ffi import (
 )
 from ._rng import PCG64
 from ._types import MatrixView
-from .roles._multimodal import MultimodalPipeline
 
 # Role subpackages (the public surface).
 from . import (  # noqa: F401
@@ -48,6 +47,12 @@ from . import (  # noqa: F401
     outlier_detection,
     transform,
 )
+from ._impl.compat import _SKLEARN_AVAILABLE
+
+# Importing the generic roles package requires scikit-learn. Keep the core
+# NumPy-only surface available through the existing compatibility decision.
+if _SKLEARN_AVAILABLE:
+    from .roles._multimodal import MultimodalPipeline
 
 
 def version() -> str:
@@ -74,7 +79,6 @@ __all__ = [
     "ABI_VERSION_STRING",
     "Context",
     "MatrixView",
-    "MultimodalPipeline",
     "N4MError",
     "PartialBatchError",
     "PCG64",
@@ -95,6 +99,8 @@ __all__ = [
     "version",
     "__version__",
 ]
+if _SKLEARN_AVAILABLE:
+    __all__.append("MultimodalPipeline")
 
 # Derive __version__ from the loaded native library so it stays in sync with the
 # C ABI version_string (shape "X.Y.Z+abi.A.B.C") — strip the "+abi.*" suffix.

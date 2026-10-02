@@ -1090,6 +1090,30 @@ class Optimizer:
             raise N4MError(status, "n4m_optimizer_ask_batch")
         raise PartialBatchError(status, committed, "n4m_optimizer_ask_batch")
 
+    def configuration_matches(self, other: Optimizer) -> bool:
+        """Compare immutable configuration through libn4m.
+
+        Both optimizers must be open. Ordered parameters, categorical codecs,
+        constraints/conditions and native options must match. Trial history,
+        RNG, queued trials, elapsed time and adaptive state are ignored, so a
+        loaded checkpoint can be compared with a fresh expected optimizer
+        before asking for a trial. Neither optimizer is modified.
+        """
+        self._require_open()
+        if not isinstance(other, Optimizer):
+            raise TypeError("other must be an Optimizer")
+        other._require_open()
+        matches = c_int32()
+        check(
+            lib.n4m_optimizer_configuration_matches(
+                self._handle, other._handle, byref(matches)
+            ),
+            "n4m_optimizer_configuration_matches",
+        )
+        if matches.value not in (0, 1):
+            raise RuntimeError("corrupt native optimizer configuration comparison")
+        return bool(matches.value)
+
     def save(self) -> bytes:
         """Return a portable native optimizer checkpoint.
 

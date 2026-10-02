@@ -23,10 +23,14 @@ bench:
   registry_entry: null
 feature_flags: []
 vendored_licenses: []
-bindings: {}
+bindings:
+  python:
+    module: "n4m.roles"
+    class: "StandardScale"
+    legacy_aliases: []
 publications: []
-notes: "Train-only population standardization (ddof=0; zero variance scale=1), with portable native learned means and scales."
-c_surface: []
+notes: "Native transformer through the shared n4m_estimator_* role API, with no dedicated C exports. Train-only population standardization (ddof=0; zero variance scale=1), with portable native learned means and scales."
+c_surface: "none"
 estimator:
   kind: "estimator"
   adapter: "tr_standard_scale"
@@ -43,5 +47,6 @@ estimator:
       default: true
 fq_name: "n4m.transform.scaling.standard_scale"
 leaf: "standard_scale"
-legacy_ids: []
+legacy_ids:
+  - "preprocessing.scaling.standard_scale"
 namespace: "transform.scaling"
