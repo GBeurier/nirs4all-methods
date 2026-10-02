@@ -1414,6 +1414,12 @@ const ParamSpec kParams_preprocessing_scaling_normalize[] = {
     {"feature_min", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_normalize_feature_min, 1, kNaN, kNaN, nullptr, 0, false, false},
     {"feature_max", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_scaling_normalize_feature_max, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
+const std::int64_t kDefault_preprocessing_scaling_standard_scale_with_mean[] = {1};
+const std::int64_t kDefault_preprocessing_scaling_standard_scale_with_std[] = {1};
+const ParamSpec kParams_preprocessing_scaling_standard_scale[] = {
+    {"with_mean", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scaling_standard_scale_with_mean, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+    {"with_std", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_scaling_standard_scale_with_std, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+};
 const std::int64_t kDefault_preprocessing_scatter_area_normalization_method[] = {0};
 const char* const kChoices_preprocessing_scatter_area_normalization_method[] = {"sum", "abs_sum", "trapz"};
 const ParamSpec kParams_preprocessing_scatter_area_normalization[] = {
@@ -2152,6 +2158,7 @@ const MethodSpec kMethods[] = {
     {"preprocessing.scaling.log_transform", "n4m.transform.scaling.log_transform", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scaling_log_transform, 4, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "offset", &make_tr_log_transform, nullptr},
     {"preprocessing.scaling.normalize", "n4m.transform.scaling.normalize", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scaling_normalize, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "column_stats", &make_tr_normalize, nullptr},
     {"preprocessing.scaling.simple_scale", "n4m.transform.scaling.simple_scale", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "column_stats", &make_tr_simple_scale, nullptr},
+    {"preprocessing.scaling.standard_scale", "n4m.transform.scaling.standard_scale", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scaling_standard_scale, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "components", &make_tr_standard_scale, nullptr},
     {"preprocessing.scatter.area_normalization", "n4m.transform.scatter.area_normalization", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_area_normalization, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_area_normalization, nullptr},
     {"preprocessing.scatter.emsc", "n4m.transform.scatter.emsc", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_emsc, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "reference", &make_tr_emsc, nullptr},
     {"preprocessing.scatter.local_centering", "n4m.transform.scatter.local_centering", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "offset", &make_tr_local_centering, nullptr},

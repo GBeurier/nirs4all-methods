@@ -1,0 +1,47 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "preprocessing.scaling.standard_scale"
+family: "preprocessing.scaling"
+category: "preprocessing"
+subcategory: "scaling"
+since_abi: "2.16.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/estimator/fitted_core.cpp"
+headers:
+  - "cpp/include/n4m/estimator.h"
+carry_along_tu: []
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "preprocessing.scaling.standard_scale"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications: []
+notes: "Train-only population standardization (ddof=0; zero variance scale=1), with portable native learned means and scales."
+c_surface: []
+estimator:
+  kind: "estimator"
+  adapter: "tr_standard_scale"
+  roles: "[transformer]"
+  state: "components"
+  inputs:
+    y: "optional"
+  params:
+    - name: "with_mean"
+      type: "bool"
+      default: true
+    - name: "with_std"
+      type: "bool"
+      default: true
+fq_name: "n4m.transform.scaling.standard_scale"
+leaf: "standard_scale"
+legacy_ids: []
+namespace: "transform.scaling"

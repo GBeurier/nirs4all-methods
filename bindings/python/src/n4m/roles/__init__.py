@@ -210,6 +210,7 @@ from ._generated import (
     SPXYFold,
     SPXYGroupFold,
     Stability,
+    StandardScale,
     StrayLight,
     Sweep,
     SystematicCircular,
@@ -234,6 +235,7 @@ from ._generated import (
     XOutlierFilter,
     YOutlierFilter,
 )
+from ._multimodal import MultimodalPipeline
 from ._pipeline import RolePipeline
 
 __all__ = [
@@ -367,6 +369,7 @@ __all__ = [
     "ModelSelection",
     "Moisture",
     "Moments",
+    "MultimodalPipeline",
     "MultiplicativeNoise",
     "NativeAugmenter",
     "NativeClassifier",
@@ -433,6 +436,7 @@ __all__ = [
     "SplineXSimplification",
     "SplineYPerturbations",
     "Stability",
+    "StandardScale",
     "StrayLight",
     "Sweep",
     "SystematicCircular",

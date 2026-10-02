@@ -139,6 +139,7 @@
 \alias{n4m_log_transform}
 \alias{n4m_normalize}
 \alias{n4m_simple_scale}
+\alias{n4m_standard_scale}
 \alias{n4m_area_normalization}
 \alias{n4m_emsc}
 \alias{n4m_local_centering}
@@ -349,6 +350,7 @@ n4m_baseline()
 n4m_log_transform(base = 0.0, offset = 0.0, auto_offset = TRUE, min_value = 1e-08)
 n4m_normalize(feature_min = -1.0, feature_max = 1.0)
 n4m_simple_scale()
+n4m_standard_scale(with_mean = TRUE, with_std = TRUE)
 n4m_area_normalization(method = "sum")
 n4m_emsc(degree = 2L)
 n4m_local_centering()
@@ -898,6 +900,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_log_transform}: \code{preprocessing.scaling.log_transform} (transformer)
 \item \code{n4m_normalize}: \code{preprocessing.scaling.normalize} (transformer)
 \item \code{n4m_simple_scale}: \code{preprocessing.scaling.simple_scale} (transformer)
+\item \code{n4m_standard_scale}: \code{preprocessing.scaling.standard_scale} (transformer)
 \item \code{n4m_area_normalization}: \code{preprocessing.scatter.area_normalization} (transformer)
 \item \code{n4m_emsc}: \code{preprocessing.scatter.emsc} (transformer)
 \item \code{n4m_local_centering}: \code{preprocessing.scatter.local_centering} (transformer)

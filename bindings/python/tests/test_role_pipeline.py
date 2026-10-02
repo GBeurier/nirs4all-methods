@@ -20,6 +20,8 @@ from n4m.roles import (
     YOutlierFilter,
 )
 
+from _n4me_compat import assert_n4me_reexport_equivalent
+
 
 class _Named(np.ndarray):
     """A 2-D float table with column names (the facade reads ``.columns``)."""
@@ -40,7 +42,8 @@ FIXTURE = (
     / "role_pipeline_negative.json"
 )
 # Fixture outputs come from Linux x86-64; kernels drift by a few ulps on other
-# platforms, so replays compare at 1e-9 (the exported bytes stay identical).
+# platforms, so replays compare at 1e-9. Reexports preserve the complete learned
+# payload; only the current writer ABI header and its checksum can change.
 REPLAY_TOL = 1e-9
 REFIT_TOL = 1e-9
 
@@ -214,7 +217,10 @@ def test_shared_fixture_positive_pipelines_replay(doc):
     assert [m for m, _, _ in pipeline.export_states()] == [
         s["method_id"] for s in reg["states"]
     ]
-    assert [p for _, p, _ in pipeline.export_states()] == _payloads(reg["states"])
+    for original, (_, current, _) in zip(
+        _payloads(reg["states"]), pipeline.export_states(), strict=True
+    ):
+        assert_n4me_reexport_equivalent(original, current)
     refit = RolePipeline(reg["steps"]).fit(frame(X, names), np.asarray(doc["y_train"]))
     np.testing.assert_allclose(
         refit.predict(X_test), reg["predict"], rtol=REFIT_TOL, atol=REFIT_TOL

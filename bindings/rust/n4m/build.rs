@@ -4,7 +4,7 @@ use std::{
 };
 
 const ABI_MAJOR: &str = "2";
-const ABI_MINOR: &str = "15";
+const ABI_MINOR: &str = "16";
 const ABI_PATCH: &str = "0";
 const MATRIX_VIEW_SIZE: &str = "48";
 const MATRIX_VIEW_ALIGN: &str = "8";
@@ -126,7 +126,12 @@ fn include_dirs(lib_dir: &Path) -> Vec<PathBuf> {
             ));
         }
     }
-    for header in ["n4m/n4m.h", "n4m/n4m_version.h", "n4m/optimization.h"] {
+    for header in [
+        "n4m/n4m.h",
+        "n4m/n4m_version.h",
+        "n4m/optimization.h",
+        "n4m/multimodal.h",
+    ] {
         if !dirs.iter().any(|dir| dir.join(header).is_file()) {
             panic!("n4m public header {header} is not available in N4M_INCLUDE_DIR/N4M_GENERATED_INCLUDE_DIR");
         }
@@ -158,6 +163,7 @@ fn compile_header_probe(include_dirs: &[PathBuf]) {
             "n4m/n4m.h",
             "n4m/n4m_version.h",
             "n4m/optimization.h",
+            "n4m/multimodal.h",
             "n4m/n4m_export.h",
         ] {
             let path = dir.join(header);

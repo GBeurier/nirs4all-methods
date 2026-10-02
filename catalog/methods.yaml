@@ -4908,6 +4908,49 @@ methods:
           type: int
           default: 0
           min: 0
+  - method_id: "preprocessing.scaling.standard_scale"
+    family: "preprocessing.scaling"
+    category: "preprocessing"
+    subcategory: "scaling"
+    since_abi: "2.16.0"
+    abi_symbols: []
+    tu:
+      - "cpp/src/core/estimator/fitted_core.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    carry_along_tu: []
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "preprocessing.scaling.standard_scale"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings: {}
+    publications: []
+    notes: "Train-only population standardization (ddof=0; zero variance scale=1), with portable native learned means and scales."
+    namespace: "transform.scaling"
+    leaf: "standard_scale"
+    fq_name: "n4m.transform.scaling.standard_scale"
+    c_surface: []
+    legacy_ids: []
+    estimator:
+      kind: estimator
+      adapter: tr_standard_scale
+      roles: [transformer]
+      state: components
+      inputs:
+        y: optional
+      params:
+        - name: with_mean
+          type: bool
+          default: true
+        - name: with_std
+          type: bool
+          default: true
   - method_id: "preprocessing.scaling.baseline"
     family: "preprocessing.scaling"
     category: "preprocessing"

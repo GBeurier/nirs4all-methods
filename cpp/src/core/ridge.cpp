@@ -12,7 +12,9 @@
 #include <vector>
 
 #include "core/common/linalg.h"
+#include "core/common/svd.h"
 #include "core/common/matrix_view.hpp"
+#include "core/common/column_stats.hpp"
 
 namespace n4m::core {
 
@@ -63,33 +65,8 @@ namespace {
     return N4M_OK;
 }
 
-void column_means(const std::vector<double>& mat, std::size_t rows,
-                  std::size_t cols, std::vector<double>& means) {
-    means.assign(cols, 0.0);
-    if (rows == 0) return;
-    for (std::size_t r = 0; r < rows; ++r) {
-        for (std::size_t c = 0; c < cols; ++c) means[c] += mat[r * cols + c];
-    }
-    const double inv = 1.0 / static_cast<double>(rows);
-    for (double& m : means) m *= inv;
-}
-
-// Population std-dev per column (sklearn StandardScaler convention: ddof=0,
-// zero-variance -> scale 1.0). Operates on already-centered data.
-void column_scales(const std::vector<double>& centered, std::size_t rows,
-                   std::size_t cols, std::vector<double>& scales) {
-    scales.assign(cols, 1.0);
-    if (rows == 0) return;
-    for (std::size_t c = 0; c < cols; ++c) {
-        double ss = 0.0;
-        for (std::size_t r = 0; r < rows; ++r) {
-            const double v = centered[r * cols + c];
-            ss += v * v;
-        }
-        const double std_dev = std::sqrt(ss / static_cast<double>(rows));
-        scales[c] = (std_dev > 0.0) ? std_dev : 1.0;
-    }
-}
+using detail::column_means;
+using detail::column_scales;
 
 void apply_column_scale(std::vector<double>& mat, std::size_t rows,
                         std::size_t cols, const std::vector<double>& scales) {
@@ -118,6 +95,41 @@ void apply_column_scale(std::vector<double>& mat, std::size_t rows,
     x.assign(m, 0.0);
     return n4m_back_solve_R(Af.data(), static_cast<std::int64_t>(m),
                             static_cast<std::int64_t>(m), rhs.data(), x.data());
+}
+
+// At zero penalty, centered one-hot columns and other valid designs need not
+// be full rank. Reuse the native compact SVD to obtain the minimum-norm least-
+// squares solution; never form X'X, which squares its condition number.
+[[nodiscard]] n4m_status_t solve_zero_penalty_svd(
+    const std::vector<double>& X, const std::vector<double>& Y,
+    std::size_t n, std::size_t p, std::size_t q, std::vector<double>& B) {
+    const std::size_t k = std::min(n, p);
+    std::vector<double> work = X;
+    std::vector<double> U(n * k), S(k), Vt(k * p);
+    const n4m_status_t st = n4m_svd_compact(
+        work.data(), static_cast<std::int64_t>(n), static_cast<std::int64_t>(p),
+        U.data(), S.data(), Vt.data());
+    if (st != N4M_OK) return st;
+    // The relative rank cutoff matches the conventional dense least-squares
+    // criterion. An all-zero matrix has rank zero and leaves B exactly zero.
+    if (!std::isfinite(S[0]) || S[0] < 0.0) return N4M_ERR_NUMERICAL_FAILURE;
+    const double cutoff = (std::numeric_limits<double>::epsilon() *
+                           static_cast<double>(std::max(n, p))) * S[0];
+    for (std::size_t j = 0; j < k; ++j) {
+        if (!std::isfinite(S[j]) || S[j] < 0.0) return N4M_ERR_NUMERICAL_FAILURE;
+        if (S[j] <= cutoff) continue;
+        for (std::size_t t = 0; t < q; ++t) {
+            double projection = 0.0;
+            for (std::size_t r = 0; r < n; ++r)
+                projection += U[r * k + j] * Y[r * q + t];
+            projection /= S[j];
+            for (std::size_t c = 0; c < p; ++c)
+                B[c * q + t] += Vt[j * p + c] * projection;
+        }
+    }
+    for (double value : B)
+        if (!std::isfinite(value)) return N4M_ERR_NUMERICAL_FAILURE;
+    return N4M_OK;
 }
 
 }  // namespace
@@ -174,7 +186,13 @@ n4m_status_t fit_ridge(Context& ctx, const Config& cfg,
     // Coefficients on the *scaled, centered* X. B is p x q row-major.
     std::vector<double> B(p * q, 0.0);
 
-    if (chosen == RidgeSolver::kPrimal) {
+    if (lambda == 0.0) {
+        st = solve_zero_penalty_svd(Xc, Yc, n, p, q, B);
+        if (st != N4M_OK) {
+            ctx.set_error("ridge zero-penalty least-squares SVD failed");
+            return st;
+        }
+    } else if (chosen == RidgeSolver::kPrimal) {
         // Augmented QR: stack [Xc; sqrt(lambda) I_p] (rows n+p, cols p) and
         // [Yc; 0] per column, then least-squares solve. The normal equations
         // of this augmented system are exactly (Xc'Xc + lambda I) B = Xc'Yc.

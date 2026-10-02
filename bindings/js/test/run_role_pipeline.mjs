@@ -7,6 +7,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as n4m from "../dist/index.js";
+import { assertN4meReexportEquivalent } from "./_n4me_compat.mjs";
 
 await n4m.loadModule();
 const fx = JSON.parse(readFileSync(
@@ -39,7 +40,8 @@ const names = fx.feature_names;
     close(pipeline.transform(xTest).data, reg.transform.flat(), REPLAY_TOL, "regression transform");
     const exported = pipeline.exportStates();
     assert.deepEqual(exported.map((s) => s.methodId), reg.states.map((s) => s.method_id));
-    exported.forEach((s, i) => assert.deepEqual(s.n4me, decode(reg.states[i].n4me_base64), `state ${i} bytes`));
+    exported.forEach((s, i) => assertN4meReexportEquivalent(n4m,
+        decode(reg.states[i].n4me_base64), s.n4me, `state ${i} bytes`));
     assert.deepEqual(pipeline.stepsInfo().map((s) => s.role),
                      ["sample_filter", "transformer", "transformer", "regressor"]);
     const refit = n4m.RolePipeline.fromSteps(reg.steps).fit(xTrain, fx.y_train, { featureNames: names });
