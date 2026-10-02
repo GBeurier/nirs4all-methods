@@ -122,6 +122,148 @@ def oracle(blocks, y, recipe):
     return encode, ridge, learned
 
 
+def subset_oracle(blocks, y, recipe):
+    """Independent selected-name traversal; fit every learned state on train only."""
+    learned = {}
+    widths = {}
+    for name in recipe["source_order"]:
+        raw = blocks[name]
+        settings = recipe["encoders"][name]
+        if name == "metadata":
+            scaler = StandardScaler().fit(raw[:, :1].astype(np.float64))
+            categories = OneHotEncoder(handle_unknown="ignore", sparse_output=False).fit(raw[:, 1:2])
+            learned[name] = (scaler, categories)
+            widths[name] = 1 + len(categories.categories_[0])
+        elif name == "nir":
+            learned[name] = StandardScaler().fit(raw.astype(np.float64))
+            widths[name] = raw.shape[1]
+        else:
+            learned[name] = PCA(settings["n_components"], svd_solver="full").fit(
+                raw.reshape(len(y), -1).astype(np.float64)
+            )
+            widths[name] = settings["n_components"]
+
+    def encode(new):
+        parts = []
+        for name in recipe["source_order"]:
+            raw = new[name]
+            if name == "metadata":
+                scaler, categories = learned[name]
+                part = np.column_stack((
+                    scaler.transform(raw[:, :1].astype(np.float64)),
+                    categories.transform(raw[:, 1:2]),
+                ))
+            else:
+                part = learned[name].transform(raw.reshape(len(raw), -1).astype(np.float64))
+            parts.append(part * recipe["source_weights"][name])
+        return np.column_stack(parts)
+
+    ridge = Ridge(alpha=recipe["model"]["params"]["alpha"]).fit(encode(blocks), y)
+    return encode, ridge, widths
+
+
+def selected_case(order, dtype=np.float64):
+    blocks, y, recipe, schemas = raw_case(dtype)
+    recipe["source_order"] = list(order)
+    recipe["encoders"] = {name: recipe["encoders"][name] for name in order}
+    recipe["source_weights"] = {name: recipe["source_weights"][name] for name in order}
+    return {name: blocks[name] for name in order}, y, recipe, {name: schemas[name] for name in order}
+
+
+@pytest.mark.parametrize("order", [
+    ("nir",), ("metadata",), ("series", "nir"),
+    ("metadata", "image", "nir"), ("metadata", "series", "image", "nir"),
+])
+@pytest.mark.parametrize("dtype", [np.float64, np.float32])
+def test_selected_order_weighted_early_fusion_train_only_oracle_and_replay(order, dtype):
+    blocks, y, recipe, schemas = selected_case(order, dtype)
+    heldout = {name: value[:3].copy() for name, value in blocks.items()}
+    if "metadata" in heldout:
+        heldout["metadata"][:, 1] = ["🚀", "A", "é"]
+    encode, ridge, widths = subset_oracle(blocks, y, recipe)
+    # Named mappings may arrive in any insertion order; the recipe fixes fusion order.
+    with MultimodalPipeline(recipe, dict(reversed(list(schemas.items())))) as native:
+        native.fit(dict(reversed(list(blocks.items()))), y)
+        actual, expected = native.transform(blocks), encode(blocks)
+        start = 0
+        for name in order:
+            end = start + widths[name]
+            a, b = actual[:, start:end], expected[:, start:end]
+            if name in ("image", "series"):
+                assert_allclose(a @ a.T, b @ b.T, rtol=1e-8, atol=1e-8)
+            else:
+                assert_allclose(a, b, rtol=1e-11, atol=1e-11)
+            if name == "metadata":
+                assert_array_equal(native.transform(heldout)[0, start + 1:end], np.zeros(widths[name] - 1))
+            start = end
+        assert_allclose(native.predict(blocks), ridge.predict(expected), rtol=1e-8, atol=1e-8)
+        assert_allclose(native.predict(heldout), ridge.predict(encode(heldout)), rtol=1e-8, atol=1e-8)
+        state = native.export_state()
+        assert struct.unpack_from("<I", state, 4)[0] == 1
+        assert struct.unpack_from("<I", state, 36)[0] == len(order)
+        with MultimodalPipeline.from_state(state, recipe=recipe, source_schemas=schemas) as replay:
+            assert_array_equal(replay.predict(heldout), native.predict(heldout))
+            assert replay.export_state() == state
+        altered = copy.deepcopy(recipe)
+        altered["source_weights"][order[0]] += 0.25
+        with pytest.raises(RuntimeError, match="recipe/source schema"):
+            MultimodalPipeline.from_state(state, recipe=altered, source_schemas=schemas)
+        if len(order) > 1:
+            reordered = copy.deepcopy(recipe)
+            reordered["source_order"] = list(reversed(order))
+            with pytest.raises(RuntimeError, match="recipe/source schema"):
+                MultimodalPipeline.from_state(state, recipe=reordered, source_schemas=schemas)
+            shortened = copy.deepcopy(recipe)
+            shortened["source_order"] = list(order[:-1])
+            shortened["encoders"].pop(order[-1])
+            shortened["source_weights"].pop(order[-1])
+            with pytest.raises(RuntimeError, match="recipe/source schema"):
+                MultimodalPipeline.from_state(
+                    state, recipe=shortened,
+                    source_schemas={name: schemas[name] for name in order[:-1]},
+                )
+        changed = copy.deepcopy(schemas)
+        changed[order[0]]["identity"] += ":rebound"
+        with pytest.raises(RuntimeError, match="recipe/source schema"):
+            MultimodalPipeline.from_state(state, recipe=recipe, source_schemas=changed)
+
+
+def test_absent_encoders_are_never_fit_but_selected_zero_weight_is_fit():
+    blocks, y, recipe, schemas = selected_case(("nir",))
+    with MultimodalPipeline(recipe, schemas) as native:
+        native.fit({"nir": blocks["nir"][:1]}, y[:1])
+        assert native.transform({"nir": blocks["nir"][:1]}).shape == (1, 5)
+    blocks, y, recipe, schemas = selected_case(("image",))
+    recipe["source_weights"]["image"] = 0.0
+    with MultimodalPipeline(recipe, schemas) as native:
+        with pytest.raises(RuntimeError, match="component count"):
+            native.fit({"image": blocks["image"][:1]}, y[:1])
+
+
+@pytest.mark.parametrize("order", [[], ["nir", "nir"], ["other"], ["nir"] * 5, "nir"])
+def test_subset_recipe_rejects_invalid_order_before_native_fit(order):
+    _, _, recipe, schemas = raw_case()
+    recipe["source_order"] = order
+    with pytest.raises(ValueError, match="source_order"):
+        MultimodalPipeline(recipe, schemas)
+
+
+def test_selected_schema_encoder_and_weight_maps_require_exact_coverage():
+    blocks, y, recipe, schemas = selected_case(("nir",))
+    full_blocks, _, full_recipe, full_schemas = raw_case()
+    for field in ("encoders", "source_weights"):
+        altered = copy.deepcopy(recipe)
+        altered[field]["image"] = full_recipe[field]["image"]
+        with pytest.raises(ValueError, match=field):
+            MultimodalPipeline(altered, schemas)
+    with pytest.raises(ValueError, match="source_schemas"):
+        MultimodalPipeline(recipe, full_schemas)
+    with MultimodalPipeline(recipe, schemas) as native:
+        with pytest.raises(ValueError, match="blocks"):
+            native.fit(full_blocks, y)
+        native.fit(blocks, y)
+
+
 def test_population_scaler_constants_large_offset_and_portable_state():
     x = np.column_stack(
         (np.full(37, 0.1), 2.0**40 + np.arange(37), np.arange(37) ** 2 / 7)

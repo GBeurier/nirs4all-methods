@@ -92,7 +92,7 @@ pub struct SourceSpec {
     pub weight: f64,
 }
 
-/// Complete early-fusion declaration; no learned categories or input rows.
+/// Ordered selection of 1..4 distinct U07 modalities; no learned categories or input rows.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Recipe {
     pub sources: Vec<SourceSpec>,
@@ -130,14 +130,14 @@ fn dimensions(values: &[usize]) -> Result<Vec<i64>, Error> {
         .collect()
 }
 fn with_recipe<R>(recipe: &Recipe, call: impl FnOnce(&RecipeRaw) -> R) -> Result<R, Error> {
-    if recipe.sources.len() != 4
+    if !(1..=4).contains(&recipe.sources.len())
         || recipe
             .sources
             .iter()
             .any(|source| !(1..=7).contains(&source.input_shape.len()))
     {
         return Err(invalid(
-            "multimodal recipe requires four sources with non-sample rank 1..7",
+            "multimodal recipe requires 1..4 sources with non-sample rank 1..7",
         ));
     }
     let count = i32::try_from(recipe.sources.len()).map_err(|_| invalid("too many sources"))?;

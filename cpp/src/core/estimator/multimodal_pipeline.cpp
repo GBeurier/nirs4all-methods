@@ -329,7 +329,7 @@ n4m_status_t validate_state(n4m_context_t* ctx, const Pipeline::Estimator& state
 n4m_status_t create(n4m_context_t* ctx, const n4m_multimodal_recipe_v1_t* recipe,
                     std::unique_ptr<Pipeline>& out) {
     if (ctx == nullptr || recipe == nullptr) return N4M_ERR_NULL_POINTER;
-    if (recipe->struct_size < sizeof(*recipe) || recipe->n_sources != 4 ||
+    if (recipe->struct_size < sizeof(*recipe) || recipe->n_sources < 1 || recipe->n_sources > 4 ||
         recipe->sources == nullptr || !std::isfinite(recipe->alpha) || recipe->alpha < 0 ||
         recipe->center_x != 1 || recipe->center_y != 1 || recipe->scale_x != 0) {
         return error(ctx, "multimodal profile requires early fusion and centered, unscaled Ridge");
@@ -353,8 +353,12 @@ n4m_status_t create(n4m_context_t* ctx, const n4m_multimodal_recipe_v1_t* recipe
         const char* required_representations[] = {"signal_1d", "rgb_image", "series_mv", "tabular_mixed"};
         const std::uint32_t required_encoders[] = {N4M_MULTIMODAL_STANDARD_SCALER,
             N4M_MULTIMODAL_TENSOR_PCA, N4M_MULTIMODAL_TENSOR_PCA, N4M_MULTIMODAL_COLUMN_TRANSFORMER};
-        if (source.name != required_names[i] || source.representation != required_representations[i] ||
-            source.encoder != required_encoders[i]) return error(ctx, "multimodal profile source/encoder pattern mismatch");
+        // Selection and fusion order are explicit. Encoder semantics belong to
+        // the declared modality, rather than its position in the selected list.
+        std::size_t modality = 0;
+        while (modality < 4 && source.name != required_names[modality]) ++modality;
+        if (modality == 4 || source.representation != required_representations[modality] ||
+            source.encoder != required_encoders[modality]) return error(ctx, "multimodal profile source/encoder pattern mismatch");
         const auto cols = width(source);
         if (cols == 0) return error(ctx, "invalid or oversized multimodal source shape");
         if (source.encoder == N4M_MULTIMODAL_STANDARD_SCALER) {

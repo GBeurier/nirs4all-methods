@@ -198,23 +198,23 @@ def _configuration(recipe: Any, schemas: Any) -> tuple[_Recipe, list[Any]]:
         type(recipe["schema_version"]) is not int
         or recipe["schema_version"] != 1
         or recipe["fusion"] != "early"
-        or list(recipe["source_order"]) != list(_ORDER)
     ):
         raise ValueError(
-            "MultimodalPipeline requires recipe v1 with canonical ordered early fusion"
+            "MultimodalPipeline requires recipe v1 with ordered early fusion"
         )
-    encoders = _keys(recipe["encoders"], set(_ORDER), "encoders")
-    weights = _keys(recipe["source_weights"], set(_ORDER), "source_weights")
-    schemas = _keys(schemas, set(_ORDER), "source_schemas")
+    order = _source_order(recipe["source_order"])
+    encoders = _keys(recipe["encoders"], set(order), "encoders")
+    weights = _keys(recipe["source_weights"], set(order), "source_weights")
+    schemas = _keys(schemas, set(order), "source_schemas")
     model = _keys(recipe["model"], {"method_id", "params"}, "model")
     if model["method_id"] != "models.regularized.ridge":
         raise ValueError("MultimodalPipeline requires the native Ridge head")
     params = _keys(
         model["params"], {"alpha", "center_x", "center_y", "scale_x"}, "Ridge params"
     )
-    sources = (_SourceSpec * 4)()
+    sources = (_SourceSpec * len(order))()
     keep: list[Any] = [sources]
-    for index, name in enumerate(_ORDER):
+    for index, name in enumerate(order):
         spec = sources[index]
         spec.struct_size = ct.sizeof(_SourceSpec)
         spec.name = name.encode()
@@ -280,7 +280,7 @@ def _configuration(recipe: Any, schemas: Any) -> tuple[_Recipe, list[Any]]:
         raise TypeError("alpha must be a number")
     config = _Recipe(
         ct.sizeof(_Recipe),
-        4,
+        len(order),
         sources,
         float(params["alpha"]),
         _boolean(params["center_x"], "center_x"),
@@ -290,13 +290,24 @@ def _configuration(recipe: Any, schemas: Any) -> tuple[_Recipe, list[Any]]:
     return config, keep
 
 
-def _views(blocks: Any, schemas: Any) -> tuple[Any, list[Any], int]:
-    blocks = _keys(blocks, set(_ORDER), "blocks")
-    schemas = _keys(schemas, set(_ORDER), "source_schemas")
-    views = (_SourceView * 4)()
+def _source_order(value: Any) -> tuple[str, ...]:
+    if (
+        not isinstance(value, (list, tuple))
+        or not 1 <= len(value) <= len(_ORDER)
+        or any(not isinstance(name, str) or name not in _ORDER for name in value)
+        or len(set(value)) != len(value)
+    ):
+        raise ValueError("source_order must select 1..4 distinct U07 modalities")
+    return tuple(value)
+
+
+def _views(blocks: Any, schemas: Any, order: tuple[str, ...]) -> tuple[Any, list[Any], int]:
+    blocks = _keys(blocks, set(order), "blocks")
+    schemas = _keys(schemas, set(order), "source_schemas")
+    views = (_SourceView * len(order))()
     keep: list[Any] = [views]
     row_count = -1
-    for index, name in enumerate(_ORDER):
+    for index, name in enumerate(order):
         values = np.asarray(blocks[name])
         if values.ndim < 2:
             raise ValueError(
@@ -375,7 +386,7 @@ def _views(blocks: Any, schemas: Any) -> tuple[Any, list[Any], int]:
 
 
 class MultimodalPipeline:
-    """One native complete-source early-fusion predictor, portable as N4MF.
+    """One native selected-modality early-fusion predictor, portable as N4MF.
 
     ``recipe`` and ``source_schemas`` are versioned public declarations.
     ``identity`` is the existing canonical IO descriptor text, carried
@@ -391,6 +402,7 @@ class MultimodalPipeline:
         self._handle = ct.c_void_p()
         self._closed = False
         config, keep = _configuration(self.recipe, self.source_schemas)
+        self._source_order = _source_order(self.recipe["source_order"])
         with _Context() as context:
             context.check(
                 lib.n4m_multimodal_pipeline_create(
@@ -407,7 +419,7 @@ class MultimodalPipeline:
     def fit(self, blocks: Mapping[str, Any], y: Any) -> MultimodalPipeline:
         """Learn native encoders and Ridge from exactly the supplied rows."""
         self._require_open()
-        views, keep, _ = _views(blocks, self.source_schemas)
+        views, keep, _ = _views(blocks, self.source_schemas, self._source_order)
         target = np.ascontiguousarray(y, dtype=np.float64)
         if target.ndim == 1:
             target = target.reshape(-1, 1)
@@ -417,7 +429,7 @@ class MultimodalPipeline:
         with _Context() as context:
             context.check(
                 lib.n4m_multimodal_pipeline_fit(
-                    context.handle, self._handle, 4, views, ct.byref(target_view)
+                    context.handle, self._handle, len(self._source_order), views, ct.byref(target_view)
                 ),
                 "MultimodalPipeline.fit",
             )
@@ -432,7 +444,7 @@ class MultimodalPipeline:
     ) -> np.ndarray:
         self._require_open()
         views, keep, rows = _views(
-            blocks, self.source_schemas if schemas is None else schemas
+            blocks, self.source_schemas if schemas is None else schemas, self._source_order
         )
         cols = ct.c_int64(1)
         with _Context() as context:
@@ -451,7 +463,7 @@ class MultimodalPipeline:
                 else lib.n4m_multimodal_pipeline_predict
             )
             context.check(
-                operation(context.handle, self._handle, 4, views, ct.byref(view)),
+                operation(context.handle, self._handle, len(self._source_order), views, ct.byref(view)),
                 "MultimodalPipeline.transform"
                 if transform
                 else "MultimodalPipeline.predict",

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1
 #include "n4m/multimodal.h"
+#include "n4m/estimator.h"
 #include <array>
 #include <cmath>
 #include <cstdio>
@@ -181,10 +182,122 @@ void profile_and_output_bounds() {
     fixture.strides[0][0] = INT64_MAX;
     REQUIRE(n4m_multimodal_pipeline_predict(ctx.value, p.get(), 4, fixture.views.data(), &output) != N4M_OK); REQUIRE(sentinel == 91);
 }
+std::vector<double> encoded(Context& ctx, n4m_multimodal_pipeline_t* p, int32_t count,
+                            const n4m_multimodal_source_view_v1_t* views) {
+    int64_t width = 0;
+    REQUIRE(n4m_multimodal_pipeline_transform_cols(p, &width) == N4M_OK);
+    const int64_t rows = views[0].shape[0];
+    std::vector<double> result(rows * width); n4m_matrix_view_t out{};
+    REQUIRE(n4m_matrix_view_init_rowmajor(&out, result.data(), rows, width, N4M_DTYPE_F64) == N4M_OK);
+    REQUIRE(n4m_multimodal_pipeline_transform(ctx.value, p, count, views, &out) == N4M_OK);
+    return result;
+}
+void ordered_subsets_match_fixed_encoders_and_one_native_ridge() {
+    Context ctx; Fixture full; auto y = full.targets(); auto complete = create(ctx, full);
+    REQUIRE(n4m_multimodal_pipeline_fit(ctx.value, complete.get(), 4, full.views.data(), &y) == N4M_OK);
+    const auto canonical = encoded(ctx, complete.get(), 4, full.views.data());
+    const int64_t widths[] = {4, 2, 2, 3}, starts[] = {0, 4, 6, 8};
+    for (const auto& selection : std::vector<std::vector<int>>{{0}, {3, 0}, {2, 1, 3}, {3, 2, 1, 0}}) {
+        std::vector<n4m_multimodal_source_spec_v1_t> specs;
+        std::vector<n4m_multimodal_source_view_v1_t> views;
+        int64_t width = 0;
+        for (size_t i = 0; i < selection.size(); ++i) {
+            const int source = selection[i]; specs.push_back(full.specs[source]);
+            specs.back().weight *= static_cast<double>(i + 1);
+            views.push_back(full.views[source]); width += widths[source];
+        }
+        auto recipe = full.recipe; recipe.n_sources = static_cast<int32_t>(specs.size()); recipe.sources = specs.data();
+        n4m_multimodal_pipeline_t* raw = nullptr;
+        REQUIRE(n4m_multimodal_pipeline_create(ctx.value, &recipe, &raw) == N4M_OK);
+        Owner selected(raw, n4m_multimodal_pipeline_destroy);
+        REQUIRE(n4m_multimodal_pipeline_fit(ctx.value, selected.get(), recipe.n_sources, views.data(), &y) == N4M_OK);
+        const auto actual = encoded(ctx, selected.get(), recipe.n_sources, views.data());
+        std::vector<double> expected(Fixture::rows * width);
+        for (int64_t row = 0; row < Fixture::rows; ++row) {
+            int64_t column = 0;
+            for (size_t i = 0; i < selection.size(); ++i) {
+                const int source = selection[i];
+                for (int64_t j = 0; j < widths[source]; ++j)
+                    expected[row * width + column++] = canonical[row * 11 + starts[source] + j] * static_cast<double>(i + 1);
+            }
+        }
+        REQUIRE(actual == expected);
+        // A separate fixed Ridge receives the independently assembled features.
+        int32_t index = -1; REQUIRE(n4m_method_find("models.regularized.ridge", &index) == N4M_OK);
+        n4m_params_t* params_raw = nullptr; REQUIRE(n4m_params_create(ctx.value, index, &params_raw) == N4M_OK);
+        std::unique_ptr<n4m_params_t, decltype(&n4m_params_destroy)> params(params_raw, n4m_params_destroy);
+        REQUIRE(n4m_params_set_double(params.get(), "alpha", recipe.alpha) == N4M_OK);
+        REQUIRE(n4m_params_set_bool(params.get(), "center_x", 1) == N4M_OK);
+        REQUIRE(n4m_params_set_bool(params.get(), "center_y", 1) == N4M_OK);
+        REQUIRE(n4m_params_set_bool(params.get(), "scale_x", 0) == N4M_OK);
+        n4m_estimator_t* estimator_raw = nullptr;
+        REQUIRE(n4m_estimator_create(ctx.value, "models.regularized.ridge", params.get(), &estimator_raw) == N4M_OK);
+        std::unique_ptr<n4m_estimator_t, decltype(&n4m_estimator_destroy)> ridge(estimator_raw, n4m_estimator_destroy);
+        n4m_matrix_view_t x{}; REQUIRE(n4m_matrix_view_init_rowmajor(&x, expected.data(), Fixture::rows, width, N4M_DTYPE_F64) == N4M_OK);
+        n4m_fit_inputs_v1_t inputs{}; inputs.struct_size = sizeof(inputs); inputs.X = &x; inputs.Y = &y;
+        REQUIRE(n4m_estimator_fit(ctx.value, ridge.get(), &inputs) == N4M_OK);
+        std::vector<double> reference(Fixture::rows), prediction(Fixture::rows); n4m_matrix_view_t out{};
+        REQUIRE(n4m_matrix_view_init_rowmajor(&out, reference.data(), Fixture::rows, 1, N4M_DTYPE_F64) == N4M_OK);
+        REQUIRE(n4m_estimator_predict(ctx.value, ridge.get(), &x, &out) == N4M_OK);
+        REQUIRE(n4m_matrix_view_init_rowmajor(&out, prediction.data(), Fixture::rows, 1, N4M_DTYPE_F64) == N4M_OK);
+        REQUIRE(n4m_multimodal_pipeline_predict(ctx.value, selected.get(), recipe.n_sources, views.data(), &out) == N4M_OK);
+        REQUIRE(prediction == reference);
+        const auto bytes = state(ctx, selected.get()); raw = nullptr;
+        // The unchanged format stores exactly the selected count, not dormant branches.
+        REQUIRE(bytes[36] == selection.size() && bytes[37] == 0 && bytes[38] == 0 && bytes[39] == 0);
+        REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &recipe, bytes.data(), bytes.size(), &raw) == N4M_OK);
+        Owner restored(raw, n4m_multimodal_pipeline_destroy); REQUIRE(state(ctx, restored.get()) == bytes);
+        REQUIRE(encoded(ctx, restored.get(), recipe.n_sources, views.data()) == actual);
+        specs[0].weight += 0.25; raw = nullptr;
+        REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &recipe, bytes.data(), bytes.size(), &raw) == N4M_ERR_CORRUPT_BUFFER);
+        REQUIRE(raw == nullptr); specs[0].weight -= 0.25;
+        specs[0].identity_utf8 = "changed-schema"; specs[0].identity_bytes = 14;
+        REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &recipe, bytes.data(), bytes.size(), &raw) == N4M_ERR_CORRUPT_BUFFER);
+        REQUIRE(raw == nullptr); specs[0] = full.specs[selection[0]];
+        if (specs.size() > 1) {
+            std::swap(specs[0], specs[1]);
+            REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &recipe, bytes.data(), bytes.size(), &raw) == N4M_ERR_CORRUPT_BUFFER);
+            REQUIRE(raw == nullptr); std::swap(specs[0], specs[1]);
+            std::swap(views[0], views[1]);
+            REQUIRE(n4m_multimodal_pipeline_predict(ctx.value, selected.get(), recipe.n_sources, views.data(), &out) == N4M_ERR_SHAPE_MISMATCH);
+        }
+    }
+}
+void excluded_encoders_are_not_fitted_and_zero_weight_still_fits() {
+    Context ctx; Fixture fixture;
+    fixture.recipe.n_sources = 1; fixture.recipe.sources = fixture.specs.data();
+    auto selected = create(ctx, fixture);
+    fixture.raw_shapes[0][0] = 1; auto y = fixture.targets(); y.rows = 1;
+    // Both omitted PCA recipes require two fit rows; the selected scaler accepts one.
+    REQUIRE(n4m_multimodal_pipeline_fit(ctx.value, selected.get(), 1, fixture.views.data(), &y) == N4M_OK);
+    int64_t width = 0; REQUIRE(n4m_multimodal_pipeline_transform_cols(selected.get(), &width) == N4M_OK);
+    REQUIRE(width == 4);
+    fixture.recipe.sources = &fixture.specs[1]; fixture.specs[1].weight = 0;
+    auto weighted = create(ctx, fixture); fixture.raw_shapes[1][0] = 1;
+    REQUIRE(n4m_multimodal_pipeline_fit(ctx.value, weighted.get(), 1, &fixture.views[1], &y) != N4M_OK);
+}
+void subsets_reject_invalid_count_duplicates_and_wrong_modality_encoder() {
+    Context ctx; Fixture fixture; n4m_multimodal_pipeline_t* raw = nullptr;
+    for (int count : {0, -1, 5}) {
+        fixture.recipe.n_sources = count;
+        REQUIRE(n4m_multimodal_pipeline_create(ctx.value, &fixture.recipe, &raw) == N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(raw == nullptr);
+    }
+    fixture.recipe.n_sources = 2; fixture.specs[1] = fixture.specs[0];
+    REQUIRE(n4m_multimodal_pipeline_create(ctx.value, &fixture.recipe, &raw) == N4M_ERR_INVALID_ARGUMENT);
+    fixture.recipe.n_sources = 1; fixture.specs[0].name = "other";
+    REQUIRE(n4m_multimodal_pipeline_create(ctx.value, &fixture.recipe, &raw) == N4M_ERR_INVALID_ARGUMENT);
+    fixture.specs[0].name = "image";
+    REQUIRE(n4m_multimodal_pipeline_create(ctx.value, &fixture.recipe, &raw) == N4M_ERR_INVALID_ARGUMENT);
+    REQUIRE(raw == nullptr);
+}
 }
 int main() {
     int failures = 0;
-    for (auto test : {ownership_and_transaction, vocabulary_and_import, zero_alpha_rank_deficiency_and_transaction, profile_and_output_bounds}) {
+    for (auto test : {ownership_and_transaction, vocabulary_and_import, zero_alpha_rank_deficiency_and_transaction, profile_and_output_bounds,
+                     ordered_subsets_match_fixed_encoders_and_one_native_ridge,
+                     excluded_encoders_are_not_fitted_and_zero_weight_still_fits,
+                     subsets_reject_invalid_count_duplicates_and_wrong_modality_encoder}) {
         try { test(); } catch (const std::exception& error) { std::fprintf(stderr, "%s\n", error.what()); ++failures; }
     }
     std::printf("native multimodal: %d failures\n", failures); return failures ? 1 : 0;

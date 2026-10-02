@@ -8,7 +8,10 @@
 extern "C" {
 #endif
 
-/* Dense, complete-source early fusion. No folds, scoring or row alignment
+/* Dense early fusion of an explicit ordered U07 modality subset (1..4 distinct
+ * names: nir, image, series, metadata). Only selected encoders are fitted;
+ * a selected source of weight zero is still fitted for compatibility.
+ * No folds, scoring or row alignment
  * live here. The caller supplies already aligned rows for this fit scope.
  * All pointers are borrowed for a call; fitted state owns no input rows.
  * Numeric tensors use explicit element strides and sample axis zero. */
@@ -42,7 +45,7 @@ typedef struct n4m_multimodal_source_spec_v1_t {
 typedef struct n4m_multimodal_recipe_v1_t {
     uint32_t struct_size;
     int32_t n_sources;
-    const n4m_multimodal_source_spec_v1_t* sources; /* explicit fusion order */
+    const n4m_multimodal_source_spec_v1_t* sources; /* selected sources in fusion order */
     double alpha;
     int32_t center_x;
     int32_t center_y;

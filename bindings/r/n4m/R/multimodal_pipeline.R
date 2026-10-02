@@ -7,10 +7,11 @@
   }
 }
 .n4m_mm_recipe <- function(recipe, source_schemas) {
-  order <- c("nir", "image", "series", "metadata")
   .n4m_mm_keys(recipe, c("schema_version", "fusion", "source_order", "encoders", "source_weights", "model"))
+  order <- unlist(recipe$source_order, use.names = FALSE)
   if (!identical(as.numeric(recipe$schema_version), 1) || !identical(recipe$fusion, "early") ||
-      !identical(unlist(recipe$source_order, use.names = FALSE), order)) stop("expected canonical recipe v1", call. = FALSE)
+      !is.character(order) || length(order) < 1L || length(order) > 4L || anyDuplicated(order) ||
+      any(!order %in% c("nir", "image", "series", "metadata"))) stop("expected recipe v1 with 1..4 distinct ordered modalities", call. = FALSE)
   .n4m_mm_keys(recipe$encoders, order)
   .n4m_mm_keys(recipe$source_weights, order)
   .n4m_mm_keys(source_schemas, order)
@@ -33,15 +34,17 @@
   if (!identical(recipe$model$method_id, "models.regularized.ridge")) stop("expected native Ridge", call. = FALSE)
   invisible(NULL)
 }
-.n4m_mm_blocks <- function(blocks) {
-  order <- c("nir", "image", "series", "metadata")
+.n4m_mm_blocks <- function(blocks, order) {
+  order <- unlist(order, use.names = FALSE)
   .n4m_mm_keys(blocks, order)
-  for (name in order[1:3]) {
+  blocks <- blocks[order]
+  for (name in setdiff(order, "metadata")) {
     x <- blocks[[name]]
     if (!is.numeric(x) || is.null(dim(x))) stop("raw numeric sources need sample-first arrays", call. = FALSE)
     storage.mode(x) <- "double"
     blocks[[name]] <- x
   }
+  if (!"metadata" %in% order) return(blocks)
   metadata <- blocks$metadata
   if (is.data.frame(metadata)) {
     if (ncol(metadata) != 2L || !is.character(metadata[[2]])) stop("metadata needs declared numeric/string columns", call. = FALSE)
@@ -55,8 +58,8 @@
 
 #' Complete native raw multimodal pipeline
 #'
-#' The ordered fixed-shape sources nir, image, series and metadata are encoded
-#' and fused natively, followed by centered, unscaled-X Ridge. The UTF-8
+#' An explicit ordered subset of the fixed-shape nir, image, series and metadata
+#' sources is encoded and fused natively, followed by centered, unscaled-X Ridge. The UTF-8
 #' vocabulary is learned only from fit rows; unseen categories encode as zero.
 #' N4MF bytes contain the complete fitted state and no training rows.
 #' @param recipe Closed version-one early-fusion recipe.
@@ -65,6 +68,8 @@
 #' @export
 n4m_multimodal_pipeline <- function(recipe, source_schemas) {
   .n4m_mm_recipe(recipe, source_schemas)
+  recipe$source_order <- unlist(recipe$source_order, use.names = FALSE)
+  source_schemas <- source_schemas[recipe$source_order]
   structure(list(recipe = recipe, source_schemas = source_schemas,
                  pointer = .Call("r_n4m_multimodal_create", recipe, source_schemas, NULL, PACKAGE = "n4m")),
             class = "n4m_multimodal_pipeline")
@@ -73,6 +78,8 @@ n4m_multimodal_pipeline <- function(recipe, source_schemas) {
 #' @export
 n4m_multimodal_pipeline_from_state <- function(state, recipe, source_schemas) {
   .n4m_mm_recipe(recipe, source_schemas)
+  recipe$source_order <- unlist(recipe$source_order, use.names = FALSE)
+  source_schemas <- source_schemas[recipe$source_order]
   structure(list(recipe = recipe, source_schemas = source_schemas,
                  pointer = .Call("r_n4m_multimodal_create", recipe, source_schemas, state, PACKAGE = "n4m")),
             class = "n4m_multimodal_pipeline")
@@ -80,7 +87,7 @@ n4m_multimodal_pipeline_from_state <- function(state, recipe, source_schemas) {
 #' @export
 n4m_estimator_fit.n4m_multimodal_pipeline <- function(object, X, y = NULL, ...) {
   if (length(list(...))) stop("unsupported multimodal fit inputs", call. = FALSE)
-  blocks <- .n4m_mm_blocks(X)
+  blocks <- .n4m_mm_blocks(X, object$recipe$source_order)
   if (!is.numeric(y) || !is.null(dim(y)) && !(is.matrix(y) && ncol(y) == 1L))
     stop("one numeric target per row is required", call. = FALSE)
   .Call("r_n4m_multimodal_fit", object$pointer, blocks, object$source_schemas, as.double(y), PACKAGE = "n4m")
@@ -89,12 +96,14 @@ n4m_estimator_fit.n4m_multimodal_pipeline <- function(object, X, y = NULL, ...) 
 #' @export
 predict.n4m_multimodal_pipeline <- function(object, newdata, source_schemas = object$source_schemas, ...) {
   if (length(list(...))) stop("unsupported prediction options", call. = FALSE)
-  drop(.Call("r_n4m_multimodal_op", object$pointer, .n4m_mm_blocks(newdata), source_schemas, FALSE, PACKAGE = "n4m"))
+  .n4m_mm_keys(source_schemas, object$recipe$source_order)
+  drop(.Call("r_n4m_multimodal_op", object$pointer, .n4m_mm_blocks(newdata, object$recipe$source_order), source_schemas[object$recipe$source_order], FALSE, PACKAGE = "n4m"))
 }
 #' @export
 n4m_estimator_transform.n4m_multimodal_pipeline <- function(object, X, source_schemas = object$source_schemas, ...) {
   if (length(list(...))) stop("unsupported transform options", call. = FALSE)
-  .Call("r_n4m_multimodal_op", object$pointer, .n4m_mm_blocks(X), source_schemas, TRUE, PACKAGE = "n4m")
+  .n4m_mm_keys(source_schemas, object$recipe$source_order)
+  .Call("r_n4m_multimodal_op", object$pointer, .n4m_mm_blocks(X, object$recipe$source_order), source_schemas[object$recipe$source_order], TRUE, PACKAGE = "n4m")
 }
 #' @export
 n4m_export_state <- function(object) UseMethod("n4m_export_state")

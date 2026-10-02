@@ -20,10 +20,12 @@ replay = n4m.MultimodalPipeline.fromState(state, recipe, schemas);
 cleanupReplay = onCleanup(@() replay.close()); %#ok<NASGU>
 check_prediction(replay.predict(heldout), fixture.expected);
 z = replay.transform(heldout);
-assert(size(z, 2) == 14);
-assert(isequal(z(1, 12:14), [0 0 0]));
+[width, categorical] = encoding_layout(recipe, schemas, train);
+assert(size(z, 2) == width);
+if ~isempty(categorical), assert(isequal(z(1, categorical), zeros(1, numel(categorical)))); end
 wrong = schemas;
-wrong.image.identity = [wrong.image.identity ':wrong-axis'];
+selected = recipe.source_order{1};
+wrong.(selected).identity = [wrong.(selected).identity ':wrong-axis'];
 must_fail(@() replay.predict(heldout, wrong));
 broken = state;
 broken(61) = bitxor(broken(61), uint8(1));
@@ -37,8 +39,9 @@ hydrated = n4m.MultimodalPipeline.fromState(fresh.exportState(), recipe, schemas
 cleanupHydrated = onCleanup(@() hydrated.close()); %#ok<NASGU>
 assert(isequal(hydrated.predict(heldout), fresh.predict(heldout)));
 before = fresh.predict(heldout);
-check_nul_categories(train, fixture.y, recipe, schemas);
-train.series(1) = NaN;
+if isfield(train, 'metadata'), check_nul_categories(train, fixture.y, recipe, schemas); end
+numeric = setdiff(recipe.source_order, {'metadata'}, 'stable');
+if isempty(numeric), train.metadata{1, 1} = NaN; else, train.(numeric{1})(1) = NaN; end
 must_fail(@() fresh.fit(train, fixture.y));
 assert(isequal(fresh.predict(heldout), before));
 fresh.close();
@@ -58,13 +61,14 @@ cleanupModel = onCleanup(@() model.close()); %#ok<NASGU>
 model.fit(train, y);
 known = model.transform(train);
 weight = recipe.source_weights.metadata;
-assert(isequal(known(1:3, end-2:end), eye(3) * weight));
+[~, categorical] = encoding_layout(recipe, schemas, train);
+assert(isequal(known(1:3, categorical), eye(3) * weight));
 query = train;
 query.metadata{1, 2} = [nulLabel 'x'];
 query.metadata{2, 2} = nulLabel;
 query.metadata{3, 2} = 'A';
 z = model.transform(query);
-assert(isequal(z(1:3, end-2:end), [0 0 0; 0 1 0; 1 0 0] * weight));
+assert(isequal(z(1:3, categorical), [0 0 0; 0 1 0; 1 0 0] * weight));
 bytes = model.exportState();
 replay = n4m.MultimodalPipeline.fromState(bytes, recipe, schemas);
 cleanupReplay = onCleanup(@() replay.close()); %#ok<NASGU>
@@ -72,14 +76,15 @@ assert(isequal(replay.transform(query), z));
 assert(isequal(replay.predict(query), model.predict(query)));
 assert(isequal(replay.exportState(), bytes));
 wrong = schemas;
-wrong.nir.identity = [wrong.nir.identity char(0) 'suffix'];
+selected = recipe.source_order{1};
+wrong.(selected).identity = [wrong.(selected).identity char(0) 'suffix'];
 must_fail(@() n4m.MultimodalPipeline(recipe, wrong));
 end
 
 function result = raw_blocks(raw)
 result = struct();
-names = {'nir', 'image', 'series', 'metadata'};
-for index = 1:4
+names = fieldnames(raw);
+for index = 1:numel(names)
     name = names{index};
     if strcmp(name, 'metadata')
         result.(name) = raw.(name);
@@ -90,6 +95,23 @@ for index = 1:4
         shape = double(raw.(name).shape(:)');
         % Raw layout conversion only: preserve every sample-first dimension.
         result.(name) = permute(reshape(double(raw.(name).data), fliplr(shape)), numel(shape):-1:1);
+    end
+end
+end
+
+function [width, categorical] = encoding_layout(recipe, schemas, train)
+width = 0;
+categorical = [];
+for index = 1:numel(recipe.source_order)
+    name = recipe.source_order{index};
+    if strcmp(name, 'metadata')
+        count = numel(unique(train.metadata(:, 2)));
+        categorical = width + 1 + (1:count);
+        width = width + 1 + count;
+    elseif strcmp(recipe.encoders.(name).kind, 'tensor_pca')
+        width = width + recipe.encoders.(name).n_components;
+    else
+        width = width + prod(schemas.(name).input_shape);
     end
 end
 end

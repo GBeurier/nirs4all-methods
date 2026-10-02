@@ -7,9 +7,21 @@ import { loadModule, MultimodalPipeline } from "../dist/index.js";
 if (!process.argv[2]) throw new Error("raw diagnostic fixture JSON path required");
 const fixture = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 await loadModule();
-const blocks = (raw) => Object.fromEntries(Object.entries(raw).map(([name, value]) =>
-    [name, name === "metadata" ? value : { data: new Float64Array(value.data), shape: value.shape }]));
+const blocks = (raw) => Object.fromEntries(Object.entries(raw).map(([name, value]) => {
+    if (name === "metadata") return [name, value];
+    const ArrayType = fixture.source_schemas[name].dtype === "float32" ? Float32Array : Float64Array;
+    return [name, { data: new ArrayType(value.data), shape: value.shape }];
+}));
 const heldout = blocks(fixture.heldout), train = blocks(fixture.train);
+const order = fixture.recipe.source_order;
+let width = 0, categoryStart = -1, categoryCount = 0;
+for (const name of order) {
+    const encoder = fixture.recipe.encoders[name];
+    if (name === "metadata") {
+        categoryCount = new Set(fixture.train.metadata.map((row) => row[1])).size;
+        categoryStart = width + 1; width += 1 + categoryCount;
+    } else width += encoder.kind === "tensor_pca" ? encoder.n_components : fixture.source_schemas[name].input_shape.reduce((a, b) => a * b, 1);
+}
 const check = (prediction) => {
     assert.equal(prediction.rows, fixture.expected.length); assert.equal(prediction.cols, 1);
     prediction.data.forEach((value, i) => assert.ok(Math.abs(value - fixture.expected[i]) <= 1e-8 * (1 + Math.abs(fixture.expected[i]))));
@@ -19,10 +31,11 @@ const replay = MultimodalPipeline.fromState(state, fixture.recipe, fixture.sourc
 try {
     check(replay.predict(heldout));
     const z = replay.transform(heldout);
-    assert.equal(z.cols, 14); assert.deepEqual(Array.from(z.data.slice(11, 14)), [0, 0, 0]);
+    assert.equal(z.cols, width);
+    if (categoryStart >= 0) assert.deepEqual(Array.from(z.data.slice(categoryStart, categoryStart + categoryCount)), Array(categoryCount).fill(0));
     const broken = state.slice(); broken[60] ^= 1;
     assert.throws(() => MultimodalPipeline.fromState(broken, fixture.recipe, fixture.source_schemas));
-    const schema = structuredClone(fixture.source_schemas); schema.image.identity += ":wrong-axis";
+    const schema = structuredClone(fixture.source_schemas); schema[order[0]].identity += ":wrong-axis";
     assert.throws(() => replay.predict(heldout, schema));
     assert.throws(() => MultimodalPipeline.fromState(state, fixture.recipe, schema));
     const fresh = new MultimodalPipeline(fixture.recipe, fixture.source_schemas);
@@ -31,7 +44,9 @@ try {
         const exported = fresh.exportState(); assert.equal(Buffer.from(exported.slice(0, 4)).toString(), "N4MF");
         const hydrated = MultimodalPipeline.fromState(exported, fixture.recipe, fixture.source_schemas);
         try { assert.deepEqual(hydrated.predict(heldout), fresh.predict(heldout)); } finally { hydrated.dispose(); }
-        const before = fresh.predict(heldout).data; train.series.data[0] = NaN;
+        const before = fresh.predict(heldout).data;
+        const numeric = order.find((name) => name !== "metadata");
+        if (numeric) train[numeric].data[0] = NaN; else train.metadata[0][0] = NaN;
         assert.throws(() => fresh.fit(train, new Float64Array(fixture.y)));
         assert.deepEqual(fresh.predict(heldout).data, before);
     } finally { fresh.dispose(); fresh.dispose(); }

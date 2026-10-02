@@ -5,8 +5,9 @@ Python exposes `n4m.MultimodalPipeline`; JavaScript/WASM exposes
 `MultimodalPipeline`; R exposes `n4m_multimodal_pipeline`; Octave exposes
 `n4m.MultimodalPipeline`. Rust exposes the same C ABI through its typed facade.
 
-The first closed profile takes four IO-aligned sources in the declared order
-`nir`, `image`, `series`, `metadata`. Their representations are `signal_1d`,
+The closed profile takes an explicit ordered subset of one to four distinct
+IO-aligned sources named `nir`, `image`, `series`, `metadata`. The historical
+canonical profile selects all four in that order. Their representations are `signal_1d`,
 `rgb_image`, `series_mv`, and `tabular_mixed`. Numeric arrays retain their raw
 sample-first dimensions. Native code reshapes only the non-sample dimensions
 for the learned encoders. Metadata remains a two-column raw table: declared
@@ -37,6 +38,14 @@ randomized/auto solver choices on larger inputs. The recorded uint32 seed is
 recipe identity; the existing deterministic native PCA kernel controls its
 solver and does not consume that seed as a host algorithm.
 
+`source_order` alone selects branches: encoder, weight and schema mappings have
+exactly those names. Only selected sources are passed to the C ABI, fitted and
+serialized. A selected source of weight zero still fits its encoder and keeps
+its fitted state, preserving the historical weight semantics. Exclusion is
+declared by absence. The surrounding SDK/DAG graph keeps the complete signed
+four-source raw contract and projects selected schemas/views for Methods;
+native Methods owns no graph, catalogue or row alignment.
+
 Source schemas contain exactly `representation_id`, `input_shape`, `dtype`,
 and `identity`. `identity` is the original canonical IO descriptor text
 including axes/coordinates/features; every host carries it unchanged. Fit,
@@ -56,7 +65,8 @@ the learned vocabulary has at most 65,536 entries. The complete state has a
 
 N4MF format 1 starts with `N4MF`, then little-endian u32 format version and
 writer ABI major/minor/patch (20-byte prefix). The body stores the complete
-normalized recipe and source schemas, four native fitted encoder states,
+normalized recipe and selected source schemas, one native fitted encoder state
+per selected source,
 training-only UTF-8 vocabulary and one native Ridge state. The final eight
 bytes are an FNV-1a integrity checksum. Import requires independently expected
 recipe and schemas, validates nested methods/parameters/widths/state integrity,
@@ -64,7 +74,12 @@ and publishes only a fully valid predictor. It never fits and contains no
 training rows. Export/import buffers are caller owned; the appropriate native
 destroy function releases the handle.
 
-The complete public recipe declaration is:
+The existing recipe count/order and N4MF format 1 already encode this selection.
+Canonical four-source payloads retain the same layout and bytes; import also
+validates selected count, order, weights and schema identity before publishing.
+The C structures and exported symbols are unchanged.
+
+The canonical public recipe declaration is:
 
 ```json
 {

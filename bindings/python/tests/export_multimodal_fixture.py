@@ -16,18 +16,22 @@ from pathlib import Path
 import numpy as np
 
 from n4m import MultimodalPipeline
-from test_multimodal_pipeline import oracle, raw_case
+from test_multimodal_pipeline import oracle, raw_case, selected_case, subset_oracle
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
     parser.add_argument("--dtype", choices=("float64", "float32"), default="float64")
+    parser.add_argument("--source-order", nargs="+", choices=("nir", "image", "series", "metadata"))
     args = parser.parse_args()
     blocks, y, recipe, schemas = raw_case(np.dtype(args.dtype))
+    if args.source_order is not None:
+        blocks, y, recipe, schemas = selected_case(args.source_order, np.dtype(args.dtype))
     heldout = {name: value[:3].copy() for name, value in blocks.items()}
-    heldout["metadata"][:, 1] = ["🚀", "A", "é"]
-    encode, ridge, _ = oracle(blocks, y, recipe)
+    if "metadata" in heldout:
+        heldout["metadata"][:, 1] = ["🚀", "A", "é"]
+    encode, ridge, _ = (oracle if args.source_order is None else subset_oracle)(blocks, y, recipe)
 
     def transport(values):
         return {
