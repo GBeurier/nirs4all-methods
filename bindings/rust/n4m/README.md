@@ -109,6 +109,42 @@ run reproduces the Python outputs at 1e-9. `tests/estimator_roles_negative.rs`
 replays `parity/fixtures/estimator_roles_negative.json`, the refusals shared
 with the Python, R and JS/WASM suites.
 
+## Complete multimodal predictor (ABI 2.16)
+
+`n4m::MultimodalPipeline` owns one native early-fusion predictor, including its
+population scaler, image/series PCA, learned UTF-8 categories, source weights
+and Ridge. `multimodal::Recipe` contains four ordered `SourceSpec` declarations
+(`nir`, `image`, `series`, `metadata`); shapes are fixed by the caller's schema,
+not by the dimensions of the U07 test fixture. Each source carries its exact
+canonical IO descriptor in `identity`. Native import checks the independent
+expected recipe and schema against every learned state.
+
+`SourceView::numeric`, `numeric_f32` and `strided` borrow tensors with the sample
+axis first. `SourceView::mixed` borrows numeric column 0 and copies raw UTF-8 cells
+for column 1; it never creates category codes. Native fit learns the vocabulary,
+and prediction ignores unknown categories. Numeric spans are checked against
+their Rust slices before pointers cross the ABI.
+
+```rust
+use n4m::MultimodalPipeline;
+
+// ctx, recipe and views are provided from independently declared input schemas.
+let mut model = MultimodalPipeline::new(&ctx, &recipe)?;
+model.fit(&ctx, &views, y_view)?;
+let features = model.transform(&ctx, &views)?; // actual weighted encodings
+let state = model.export_state(&ctx)?;         // complete N4MF, at most 64 MiB
+drop(model);
+let replay = MultimodalPipeline::from_state(&ctx, &recipe, &state)?;
+let prediction = replay.predict(&ctx, &new_views)?; // no fit
+```
+
+The first profile uses complete sources, one target, dense PCA without
+whitening and a centered Ridge without an additional X scaling step. Fit is
+transactional. Handles are `!Send + !Sync` and released by `Drop`. The binding
+performs no numerical preprocessing or orchestration. Its native contract,
+strides, train-only scaler statistics, unknown categories, complete state and
+refusals are exercised in `tests/multimodal.rs`.
+
 This crate is binding work only: crate version 0.1.4 tracks the additive ABI-2.5
 inspection surface and is not an independent numerical-engine release. It
 requires a prebuilt `libn4m`. The default

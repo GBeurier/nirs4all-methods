@@ -64,6 +64,7 @@ list(APPEND _js_export_list
 string(REPLACE ";" "," _js_export_flag "${_js_export_list}")
 
 add_executable(n4m_wasm
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_multimodal_layout.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_spectral.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_entry.c")
 target_link_libraries(n4m_wasm PRIVATE n4m_c_static)

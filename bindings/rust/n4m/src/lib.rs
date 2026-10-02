@@ -18,7 +18,7 @@ use std::{
 compile_error!("n4m requires exactly one runtime feature: `linked` or `dynamic`");
 
 const ABI_MAJOR: u32 = 2;
-const ABI_MINOR: u32 = 15;
+const ABI_MINOR: u32 = 16;
 const OK: i32 = 0;
 const NOT_FITTED: i32 = 6;
 const DTYPE_I64: i32 = 4;
@@ -811,6 +811,56 @@ extern "C" {
         buffer_size: usize,
         out_written: *mut usize,
     ) -> i32;
+    fn n4m_multimodal_pipeline_create(
+        ctx: *mut ContextRaw,
+        recipe: *const multimodal::RecipeRaw,
+        out: *mut *mut multimodal::PipelineRaw,
+    ) -> i32;
+    fn n4m_multimodal_pipeline_destroy(pipeline: *mut multimodal::PipelineRaw);
+    fn n4m_multimodal_pipeline_fit(
+        ctx: *mut ContextRaw,
+        pipeline: *mut multimodal::PipelineRaw,
+        n_sources: i32,
+        sources: *const multimodal::SourceViewRaw,
+        y: *const MatrixView,
+    ) -> i32;
+    fn n4m_multimodal_pipeline_predict(
+        ctx: *mut ContextRaw,
+        pipeline: *const multimodal::PipelineRaw,
+        n_sources: i32,
+        sources: *const multimodal::SourceViewRaw,
+        out: *mut MatrixView,
+    ) -> i32;
+    fn n4m_multimodal_pipeline_transform_cols(
+        pipeline: *const multimodal::PipelineRaw,
+        out: *mut i64,
+    ) -> i32;
+    fn n4m_multimodal_pipeline_transform(
+        ctx: *mut ContextRaw,
+        pipeline: *const multimodal::PipelineRaw,
+        n_sources: i32,
+        sources: *const multimodal::SourceViewRaw,
+        out: *mut MatrixView,
+    ) -> i32;
+    fn n4m_multimodal_pipeline_export_size(
+        ctx: *mut ContextRaw,
+        pipeline: *const multimodal::PipelineRaw,
+        out: *mut usize,
+    ) -> i32;
+    fn n4m_multimodal_pipeline_export_to_buffer(
+        ctx: *mut ContextRaw,
+        pipeline: *const multimodal::PipelineRaw,
+        buffer: *mut c_void,
+        size: usize,
+        written: *mut usize,
+    ) -> i32;
+    fn n4m_multimodal_pipeline_import_from_buffer(
+        ctx: *mut ContextRaw,
+        expected_recipe: *const multimodal::RecipeRaw,
+        buffer: *const c_void,
+        size: usize,
+        out: *mut *mut multimodal::PipelineRaw,
+    ) -> i32;
 }
 
 #[cfg(feature = "dynamic")]
@@ -970,7 +1020,9 @@ c_enum!(Metric { Rmse=0, Mse=1, Mae=2, R2=3, Accuracy=16, BalancedAccuracy=17, F
 c_enum!(Liar { None=0, Min=1, Mean=2, Max=3 });
 c_enum!(TrialStatus { Running=0, Completed=1, Pruned=2, Failed=3, Cancelled=4 });
 
+pub mod multimodal;
 pub mod roles;
+pub use multimodal::MultimodalPipeline;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Category {

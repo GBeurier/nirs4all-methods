@@ -162,6 +162,15 @@ macro_rules! n4m_symbols {
             n4m_role_pipeline_classes(pipeline: *const RolePipelineRaw, out: *mut i64, capacity: i64, out_count: *mut i64) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_role_pipeline_export_state_size(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, state: i32, flags: u32, out_size: *mut usize) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_role_pipeline_export_state_to_buffer(ctx: *mut ContextRaw, pipeline: *const RolePipelineRaw, state: i32, flags: u32, buffer: *mut c_void, buffer_size: usize, out_written: *mut usize) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_multimodal_pipeline_create(ctx: *mut ContextRaw, recipe: *const multimodal::RecipeRaw, out: *mut *mut multimodal::PipelineRaw) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_multimodal_pipeline_destroy(pipeline: *mut multimodal::PipelineRaw) -> () => ();
+            n4m_multimodal_pipeline_fit(ctx: *mut ContextRaw, pipeline: *mut multimodal::PipelineRaw, n_sources: i32, sources: *const multimodal::SourceViewRaw, y: *const MatrixView) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_multimodal_pipeline_predict(ctx: *mut ContextRaw, pipeline: *const multimodal::PipelineRaw, n_sources: i32, sources: *const multimodal::SourceViewRaw, out: *mut MatrixView) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_multimodal_pipeline_transform_cols(pipeline: *const multimodal::PipelineRaw, out: *mut i64) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_multimodal_pipeline_transform(ctx: *mut ContextRaw, pipeline: *const multimodal::PipelineRaw, n_sources: i32, sources: *const multimodal::SourceViewRaw, out: *mut MatrixView) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_multimodal_pipeline_export_size(ctx: *mut ContextRaw, pipeline: *const multimodal::PipelineRaw, out: *mut usize) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_multimodal_pipeline_export_to_buffer(ctx: *mut ContextRaw, pipeline: *const multimodal::PipelineRaw, buffer: *mut c_void, size: usize, written: *mut usize) -> i32 => RUNTIME_UNAVAILABLE;
+            n4m_multimodal_pipeline_import_from_buffer(ctx: *mut ContextRaw, expected_recipe: *const multimodal::RecipeRaw, buffer: *const c_void, size: usize, out: *mut *mut multimodal::PipelineRaw) -> i32 => RUNTIME_UNAVAILABLE;
         }
     };
 }

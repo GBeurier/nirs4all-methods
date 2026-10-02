@@ -11,6 +11,9 @@ use n4m::{Context, ErrorKind, MatrixRef};
 use serde_json::Value;
 use std::collections::BTreeSet;
 
+#[path = "support/n4me_compat.rs"]
+mod n4me_compat;
+
 static_assertions::assert_not_impl_any!(Estimator: Send, Sync);
 static_assertions::assert_not_impl_any!(Params: Send, Sync);
 static_assertions::assert_not_impl_any!(roles::MethodResult: Send, Sync);
@@ -149,7 +152,8 @@ fn regression_data() -> (Vec<f64>, Vec<f64>) {
 #[test]
 fn manifest_is_typed_and_matches_json() {
     let json = roles::manifest_json().unwrap();
-    assert!(json.starts_with("{\"abi\":\"2.15"), "{}", &json[..40]);
+    let manifest: Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(manifest["abi"], "2.16.0");
     let methods = roles::methods().unwrap();
     for method in &methods {
         assert!(json.contains(&format!("\"method_id\":\"{}\"", method.method_id)));
@@ -273,6 +277,30 @@ fn regressor_fit_predict_and_n4me_round_trip() {
     assert!(err.message.contains("no_such_parameter"), "{err}");
     ctx.set_max_state_bytes(8).unwrap();
     assert!(Estimator::from_n4me(&ctx, &bytes).is_err());
+}
+
+#[test]
+fn standard_scale_preserves_train_population_and_native_replay() {
+    let ctx = Context::new().unwrap();
+    let training = [1., 4., 3., 4., 5., 4.];
+    let heldout = [7., 4.];
+    let training_view = MatrixRef::row_major(&training, 3, 2).unwrap();
+    let heldout_view = MatrixRef::row_major(&heldout, 1, 2).unwrap();
+    let mut estimator = Estimator::new(&ctx, "preprocessing.scaling.standard_scale", None).unwrap();
+    estimator.fit(&ctx, &FitInputs::new(training_view)).unwrap();
+    let transformed = estimator.transform(&ctx, heldout_view).unwrap();
+    // Independent constants: train mean=3, population variance=8/3;
+    // the constant second column stays zero and heldout never refits.
+    close(
+        &transformed.data,
+        &[2.449489742783178, 0.],
+        1e-12,
+        "population scale",
+    );
+    let state = estimator.to_n4me(&ctx, false).unwrap();
+    let restored = Estimator::from_n4me(&ctx, &state).unwrap();
+    assert_eq!(restored.transform(&ctx, heldout_view).unwrap(), transformed);
+    assert_eq!(restored.to_n4me(&ctx, false).unwrap(), state);
 }
 
 #[test]
@@ -446,12 +474,15 @@ fn replays_the_cross_language_fixture() {
     let cases = fx["cases"].as_array().unwrap();
     let procedures = fx["procedures"].as_array().unwrap();
     let methods = roles::methods().unwrap();
-    assert_eq!(methods.len(), cases.len() + procedures.len());
-    let listed: BTreeSet<&str> = cases
+    // Keep the old 208-method ABI2.15 fixture unchanged. The additive scaler
+    // is covered by an independent native binding test above.
+    assert_eq!(methods.len(), cases.len() + procedures.len() + 1);
+    let mut listed: BTreeSet<&str> = cases
         .iter()
         .chain(procedures)
         .map(|c| c["method_id"].as_str().unwrap())
         .collect();
+    assert!(listed.insert("preprocessing.scaling.standard_scale"));
     assert_eq!(
         listed,
         methods
@@ -560,10 +591,11 @@ fn replays_the_cross_language_fixture() {
         let est = Estimator::from_n4me(&ctx, &payload).unwrap();
         assert_eq!(est.method_id().unwrap(), method_id);
         check(&est, case, REPLAY_TOL, method_id);
-        assert_eq!(
-            est.to_n4me(&ctx, true).unwrap(),
-            payload,
-            "{method_id} re-export"
+        n4me_compat::assert_reexport_equivalent(
+            &ctx,
+            &payload,
+            &est.to_n4me(&ctx, true).unwrap(),
+            method_id,
         );
         imported += 1;
     }

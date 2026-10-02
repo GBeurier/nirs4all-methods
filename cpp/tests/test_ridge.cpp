@@ -257,6 +257,44 @@ void test_dual_equals_primal() {
     }
 }
 
+void test_zero_lambda_minimum_norm() {
+    // X[:,c] = (c+1)*t has rank one. The unique minimum-norm coefficients
+    // satisfy sum((c+1)*beta[c]) = slope: beta[c] = slope*(c+1)/sum((c+1)^2).
+    // Cover tall and wide shapes and two targets without a solver-based oracle.
+    constexpr std::int64_t n = 4, q = 2;
+    for (const std::int64_t p : {2, 6}) {
+        std::vector<double> X(n * p), Y(n * q), expected(p * q);
+        double norm = 0.0;
+        for (std::int64_t c = 0; c < p; ++c) norm += (c + 1) * (c + 1);
+        for (std::int64_t r = 0; r < n; ++r) {
+            for (std::int64_t c = 0; c < p; ++c) X[r * p + c] = r * (c + 1);
+            Y[r * q] = 3.0 + 5.0 * r;
+            Y[r * q + 1] = -2.0 - 4.0 * r;
+        }
+        for (std::int64_t c = 0; c < p; ++c) {
+            expected[c * q] = 5.0 * (c + 1) / norm;
+            expected[c * q + 1] = -4.0 * (c + 1) / norm;
+        }
+        const double intercept[] = {3.0, -2.0};
+        n4m_method_result_t* result = fit(X.data(), n, p, Y.data(), q, 0.0, 0);
+        check_matrix(result, "coefficients", expected.data(), p, q);
+        check_matrix(result, "intercept", intercept, 1, q);
+        check_matrix(result, "predictions", Y.data(), n, q);
+        n4m_method_result_destroy(result);
+    }
+    // Constant columns become an all-zero centered design; only the mean is fit.
+    const double X[] = {42, -7, 1, 42, -7, 1, 42, -7, 1, 42, -7, 1};
+    const double Y[] = {1, -1, 3, 1, 5, 3, 7, 5};
+    const double coefficients[] = {0, 0, 0, 0, 0, 0};
+    const double intercept[] = {4, 2};
+    const double predictions[] = {4, 2, 4, 2, 4, 2, 4, 2};
+    n4m_method_result_t* result = fit(X, n, 3, Y, q, 0.0, 0);
+    check_matrix(result, "coefficients", coefficients, 3, q);
+    check_matrix(result, "intercept", intercept, 1, q);
+    check_matrix(result, "predictions", predictions, n, q);
+    n4m_method_result_destroy(result);
+}
+
 void test_invalid_lambda_rejected() {
     n4m_context_t* ctx = nullptr;
     n4m_config_t* cfg = nullptr;
@@ -284,5 +322,6 @@ void register_ridge_tests(n4m_testing::Runner& r) {
     r.run("ridge/multi_output", test_multi_output);
     r.run("ridge/scale_x", test_scale_x);
     r.run("ridge/dual_equals_primal", test_dual_equals_primal);
+    r.run("ridge/zero_lambda_minimum_norm", test_zero_lambda_minimum_norm);
     r.run("ridge/invalid_lambda_rejected", test_invalid_lambda_rejected);
 }

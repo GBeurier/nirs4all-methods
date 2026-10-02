@@ -179,6 +179,7 @@ std::unique_ptr<Adapter> make_tr_simple_scale(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_slope_bias(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_snip(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_snv(const MethodSpec& spec);
+std::unique_ptr<Adapter> make_tr_standard_scale(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_to_absorbance(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_vsn(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_wavelet(const MethodSpec& spec);

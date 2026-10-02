@@ -1,0 +1,217 @@
+/* SPDX-License-Identifier: CECILL-2.1 */
+/* Native raw tensor/UTF-8 marshalling; no learned arithmetic in R. */
+#define R_NO_REMAP
+#include <R.h>
+#include <Rinternals.h>
+#include <math.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "n4m/multimodal.h"
+
+static const char* source_names[] = {"nir", "image", "series", "metadata"};
+static SEXP field(SEXP value, const char* name) {
+    SEXP names = Rf_getAttrib(value, R_NamesSymbol);
+    if (TYPEOF(value) != VECSXP || TYPEOF(names) != STRSXP)
+        Rf_error("expected a named list");
+    for (R_xlen_t i = 0; i < XLENGTH(value); ++i)
+        if (!strcmp(CHAR(STRING_ELT(names, i)), name)) return VECTOR_ELT(value, i);
+    Rf_error("missing field %s", name);
+    return R_NilValue;
+}
+static const char* text(SEXP value) {
+    if (TYPEOF(value) != STRSXP || XLENGTH(value) != 1 || STRING_ELT(value, 0) == NA_STRING)
+        Rf_error("expected one UTF-8 string");
+    return Rf_translateCharUTF8(STRING_ELT(value, 0));
+}
+static double number(SEXP value) {
+    if (TYPEOF(value) == VECSXP && XLENGTH(value) == 1) value = VECTOR_ELT(value, 0);
+    if (!(TYPEOF(value) == REALSXP || TYPEOF(value) == INTSXP) || XLENGTH(value) != 1)
+        Rf_error("expected one numeric value");
+    double x = Rf_asReal(value);
+    if (!R_FINITE(x)) Rf_error("numeric value must be finite");
+    return x;
+}
+static int64_t integer(SEXP value) {
+    double x = number(value);
+    if (floor(x) != x || x < -9007199254740991.0 || x > 9007199254740991.0)
+        Rf_error("expected an exactly representable integer");
+    return (int64_t)x;
+}
+static int boolean(SEXP value) {
+    if (TYPEOF(value) != LGLSXP || XLENGTH(value) != 1 || LOGICAL(value)[0] == NA_LOGICAL)
+        Rf_error("expected one boolean");
+    return LOGICAL(value)[0] != 0;
+}
+static n4m_multimodal_recipe_v1_t configuration(SEXP recipe, SEXP schemas) {
+    n4m_multimodal_recipe_v1_t out;
+    memset(&out, 0, sizeof(out)); out.struct_size = sizeof(out); out.n_sources = 4;
+    n4m_multimodal_source_spec_v1_t* sources =
+        (n4m_multimodal_source_spec_v1_t*)R_alloc(4, sizeof(*sources));
+    memset(sources, 0, 4 * sizeof(*sources)); out.sources = sources;
+    SEXP encoders = field(recipe, "encoders"), weights = field(recipe, "source_weights");
+    for (int i = 0; i < 4; ++i) {
+        n4m_multimodal_source_spec_v1_t* s = sources + i;
+        SEXP schema = field(schemas, source_names[i]), encoder = field(encoders, source_names[i]);
+        s->struct_size = sizeof(*s); s->name = source_names[i];
+        s->representation_id = text(field(schema, "representation_id"));
+        s->dtype = text(field(schema, "dtype")); s->identity_utf8 = text(field(schema, "identity"));
+        s->identity_bytes = strlen((const char*)s->identity_utf8);
+        SEXP shape = field(schema, "input_shape");
+        if (!(TYPEOF(shape) == INTSXP || TYPEOF(shape) == REALSXP || TYPEOF(shape) == VECSXP) || XLENGTH(shape) > 7)
+            Rf_error("shape must be a numeric vector of at most seven dimensions");
+        s->ndim = (int32_t)XLENGTH(shape);
+        int64_t* dims = (int64_t*)R_alloc(s->ndim, sizeof(*dims)); s->shape = dims;
+        for (int j = 0; j < s->ndim; ++j) {
+            double d = TYPEOF(shape) == VECSXP ? number(VECTOR_ELT(shape, j)) :
+                TYPEOF(shape) == REALSXP ? REAL(shape)[j] : INTEGER(shape)[j];
+            if (!R_FINITE(d) || d < 1 || floor(d) != d || d > 1048576) Rf_error("invalid shape dimension");
+            dims[j] = (int64_t)d;
+        }
+        s->weight = number(field(weights, s->name)); s->numeric_column = s->categorical_column = -1;
+        const char* kind = text(field(encoder, "kind"));
+        if (!strcmp(kind, "standard_scaler")) s->encoder = N4M_MULTIMODAL_STANDARD_SCALER;
+        else if (!strcmp(kind, "tensor_pca")) {
+            s->encoder = N4M_MULTIMODAL_TENSOR_PCA;
+            s->n_components = integer(field(encoder, "n_components"));
+            s->random_state = integer(field(encoder, "random_state")); s->whiten = boolean(field(encoder, "whiten"));
+        } else if (!strcmp(kind, "column_transformer")) {
+            s->encoder = N4M_MULTIMODAL_COLUMN_TRANSFORMER;
+            s->ignore_unknown = !strcmp(text(field(encoder, "handle_unknown")), "ignore");
+            s->numeric_column = integer(field(encoder, "numeric_columns"));
+            s->categorical_column = integer(field(encoder, "categorical_columns"));
+        } else Rf_error("unknown native multimodal encoder");
+        if (s->encoder != N4M_MULTIMODAL_TENSOR_PCA) {
+            s->with_mean = boolean(field(encoder, "with_mean")); s->with_std = boolean(field(encoder, "with_std"));
+        }
+    }
+    SEXP params = field(field(recipe, "model"), "params");
+    out.alpha = number(field(params, "alpha")); out.center_x = boolean(field(params, "center_x"));
+    out.center_y = boolean(field(params, "center_y")); out.scale_x = boolean(field(params, "scale_x"));
+    return out;
+}
+static n4m_multimodal_source_view_v1_t* views(SEXP blocks, SEXP schemas, int64_t* rows) {
+    n4m_multimodal_source_view_v1_t* out =
+        (n4m_multimodal_source_view_v1_t*)R_alloc(4, sizeof(*out));
+    memset(out, 0, 4 * sizeof(*out)); *rows = -1;
+    for (int i = 0; i < 4; ++i) {
+        SEXP block = field(blocks, source_names[i]), schema = field(schemas, source_names[i]);
+        SEXP dims = Rf_getAttrib(block, R_DimSymbol);
+        if (TYPEOF(dims) != INTSXP || XLENGTH(dims) < 2 || XLENGTH(dims) > 8)
+            Rf_error("raw sources must have sample-first dimensions");
+        n4m_multimodal_source_view_v1_t* v = out + i;
+        v->struct_size = sizeof(*v); v->name = source_names[i];
+        v->representation_id = text(field(schema, "representation_id")); v->dtype = text(field(schema, "dtype"));
+        v->identity_utf8 = text(field(schema, "identity")); v->identity_bytes = strlen((const char*)v->identity_utf8);
+        v->rank = (int32_t)XLENGTH(dims);
+        int64_t* shape = (int64_t*)R_alloc(v->rank, sizeof(*shape));
+        int64_t* strides = (int64_t*)R_alloc(v->rank, sizeof(*strides));
+        v->shape = shape; v->strides = strides;
+        for (int j = 0; j < v->rank; ++j) { shape[j] = INTEGER(dims)[j]; strides[j] = j ? strides[j - 1] * shape[j - 1] : 1; }
+        SEXP declared = field(schema, "input_shape");
+        if (XLENGTH(declared) != v->rank - 1) Rf_error("raw source rank differs from its schema");
+        for (int j = 1; j < v->rank; ++j) {
+            double d = TYPEOF(declared) == VECSXP ? number(VECTOR_ELT(declared, j - 1)) :
+                TYPEOF(declared) == REALSXP ? REAL(declared)[j - 1] :
+                TYPEOF(declared) == INTSXP ? INTEGER(declared)[j - 1] : -1;
+            if (d != shape[j]) Rf_error("raw source shape differs from its schema");
+        }
+        if (*rows >= 0 && *rows != shape[0]) Rf_error("source row counts differ"); *rows = shape[0];
+        v->numeric_dtype = N4M_DTYPE_F64;
+        if (i != 3) {
+            if (TYPEOF(block) != REALSXP) Rf_error("raw numeric arrays must be doubles");
+            if (!strcmp(v->dtype, "float32")) {
+                const R_xlen_t count = XLENGTH(block);
+                if (count > 16777216) Rf_error("raw float32 source exceeds native element bound");
+                float* numeric = (float*)R_alloc(count ? count : 1, sizeof(*numeric));
+                for (R_xlen_t j = 0; j < count; ++j) {
+                    const double value = REAL(block)[j];
+                    numeric[j] = (float)value;
+                    if (!R_FINITE(value) || !R_FINITE((double)numeric[j]) || (double)numeric[j] != value)
+                        Rf_error("declared float32 values require finite, lossless transport");
+                }
+                v->numeric_data = numeric; v->numeric_dtype = N4M_DTYPE_F32;
+            } else v->numeric_data = REAL(block);
+        } else {
+            if (TYPEOF(block) != STRSXP || v->rank != 2 || shape[1] != 2)
+                Rf_error("metadata must be a two-column character matrix");
+            double* numeric = (double*)R_alloc(*rows, sizeof(*numeric)); v->numeric_data = numeric; strides[0] = 1;
+            uint64_t* offsets = (uint64_t*)R_alloc(*rows + 1, sizeof(*offsets)); offsets[0] = 0;
+            v->categorical_offsets = offsets;
+            for (int64_t j = 0; j < *rows; ++j) {
+                SEXP cell = STRING_ELT(block, j), cat = STRING_ELT(block, *rows + j);
+                if (cell == NA_STRING || cat == NA_STRING) Rf_error("metadata cells must not be missing");
+                const char* numeric_text = Rf_translateCharUTF8(cell); char* end = NULL;
+                numeric[j] = strtod(numeric_text, &end);
+                if (end == numeric_text || !R_FINITE(numeric[j])) Rf_error("invalid declared numeric metadata cell");
+                while (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n') ++end;
+                if (*end) Rf_error("invalid trailing numeric metadata text");
+                const size_t length = strlen(Rf_translateCharUTF8(cat));
+                if (length > 1048576 || offsets[j] + length > 67108864) Rf_error("categorical UTF-8 input exceeds native bound");
+                offsets[j + 1] = offsets[j] + length;
+            }
+            char* bytes = (char*)R_alloc(offsets[*rows] ? offsets[*rows] : 1, 1);
+            for (int64_t j = 0; j < *rows; ++j) memcpy(bytes + offsets[j], Rf_translateCharUTF8(STRING_ELT(block, *rows + j)), offsets[j + 1] - offsets[j]);
+            v->categorical_utf8 = bytes; v->utf8_bytes = offsets[*rows];
+        }
+    }
+    return out;
+}
+static void finalizer(SEXP ptr) {
+    n4m_multimodal_pipeline_destroy((n4m_multimodal_pipeline_t*)R_ExternalPtrAddr(ptr)); R_ClearExternalPtr(ptr);
+}
+static n4m_multimodal_pipeline_t* handle(SEXP ptr) {
+    if (TYPEOF(ptr) != EXTPTRSXP || R_ExternalPtrTag(ptr) != Rf_install("n4m_multimodal_pipeline") ||
+        R_ExternalPtrAddr(ptr) == NULL) Rf_error("native multimodal pipeline is closed or has the wrong pointer type");
+    return (n4m_multimodal_pipeline_t*)R_ExternalPtrAddr(ptr);
+}
+static void check(n4m_status_t status, n4m_context_t* ctx) {
+    if (status == N4M_OK) return;
+    char message[2048]; snprintf(message, sizeof(message), "%s: %s", n4m_status_to_string(status), ctx ? n4m_context_last_error(ctx) : "");
+    n4m_context_destroy(ctx); Rf_error("%s", message);
+}
+static n4m_context_t* context(void) {
+    n4m_context_t* ctx = NULL; check(n4m_check_abi_compatibility(2, 16), NULL); check(n4m_context_create(&ctx), ctx); return ctx;
+}
+SEXP r_n4m_multimodal_create(SEXP recipe, SEXP schemas, SEXP state) {
+    n4m_multimodal_recipe_v1_t cfg = configuration(recipe, schemas);
+    if (!Rf_isNull(state) && TYPEOF(state) != RAWSXP) Rf_error("state must be raw N4MF bytes");
+    if (!Rf_isNull(state) && XLENGTH(state) > 67108864) Rf_error("N4MF bytes exceed native limit");
+    SEXP ptr = PROTECT(R_MakeExternalPtr(NULL, Rf_install("n4m_multimodal_pipeline"), R_NilValue));
+    R_RegisterCFinalizerEx(ptr, finalizer, TRUE);
+    n4m_context_t* ctx = context(); n4m_multimodal_pipeline_t* pipeline = NULL;
+    n4m_status_t status = Rf_isNull(state) ? n4m_multimodal_pipeline_create(ctx, &cfg, &pipeline) :
+        n4m_multimodal_pipeline_import_from_buffer(ctx, &cfg, RAW(state), XLENGTH(state), &pipeline);
+    check(status, ctx); n4m_context_destroy(ctx); R_SetExternalPtrAddr(ptr, pipeline); UNPROTECT(1); return ptr;
+}
+SEXP r_n4m_multimodal_fit(SEXP ptr, SEXP blocks, SEXP schemas, SEXP y) {
+    n4m_multimodal_pipeline_t* p = handle(ptr); int64_t rows;
+    n4m_multimodal_source_view_v1_t* input = views(blocks, schemas, &rows);
+    if (TYPEOF(y) != REALSXP || XLENGTH(y) != rows) Rf_error("expected one double target per row");
+    n4m_matrix_view_t target; check(n4m_matrix_view_init_rowmajor(&target, REAL(y), rows, 1, N4M_DTYPE_F64), NULL);
+    n4m_context_t* ctx = context(); check(n4m_multimodal_pipeline_fit(ctx, p, 4, input, &target), ctx); n4m_context_destroy(ctx); return ptr;
+}
+SEXP r_n4m_multimodal_op(SEXP ptr, SEXP blocks, SEXP schemas, SEXP transform) {
+    n4m_multimodal_pipeline_t* p = handle(ptr); int64_t rows, width = 1;
+    n4m_multimodal_source_view_v1_t* input = views(blocks, schemas, &rows); int tr = boolean(transform);
+    if (tr) check(n4m_multimodal_pipeline_transform_cols(p, &width), NULL);
+    if (rows > INT_MAX || width > INT_MAX || width * rows > 16777216) Rf_error("output exceeds native shape bounds");
+    SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)rows, (int)width)); n4m_matrix_view_t view;
+    check(n4m_matrix_view_init_colmajor(&view, REAL(out), rows, width, N4M_DTYPE_F64), NULL);
+    n4m_context_t* ctx = context(); check(tr ? n4m_multimodal_pipeline_transform(ctx, p, 4, input, &view) : n4m_multimodal_pipeline_predict(ctx, p, 4, input, &view), ctx);
+    n4m_context_destroy(ctx); UNPROTECT(1); return out;
+}
+SEXP r_n4m_multimodal_export(SEXP ptr) {
+    n4m_multimodal_pipeline_t* p = handle(ptr); n4m_context_t* ctx = context(); size_t size = 0;
+    check(n4m_multimodal_pipeline_export_size(ctx, p, &size), ctx);
+    /* R allocation happens before a new context so allocation failures cannot leak it. */
+    n4m_context_destroy(ctx); SEXP out = PROTECT(Rf_allocVector(RAWSXP, size)); ctx = context();
+    check(n4m_multimodal_pipeline_export_to_buffer(ctx, p, RAW(out), size, &size), ctx);
+    n4m_context_destroy(ctx); UNPROTECT(1); return out;
+}
+SEXP r_n4m_multimodal_close(SEXP ptr) {
+    if (TYPEOF(ptr) != EXTPTRSXP || R_ExternalPtrTag(ptr) != Rf_install("n4m_multimodal_pipeline"))
+        Rf_error("expected a native multimodal pointer");
+    finalizer(ptr); return R_NilValue;
+}

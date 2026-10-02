@@ -31,6 +31,12 @@ n4m_fit <- function(X, Y, algo, n_components,
                          center_x = TRUE, scale_x = TRUE,
                          center_y = TRUE, scale_y = TRUE,
                          embedded_snv_savgol = NULL) {
+  if (inherits(X, "n4m_multimodal_pipeline")) {
+    if (!missing(n_components) || !missing(store_scores) || !missing(center_x) ||
+        !missing(scale_x) || !missing(center_y) || !missing(scale_y) || !missing(embedded_snv_savgol))
+      stop("multimodal n4m_fit accepts object, blocks and y only", call. = FALSE)
+    return(n4m_estimator_fit(X, Y, algo))
+  }
   if (!is.numeric(X)) stop("X must be numeric")
   if (!is.matrix(X)) X <- as.matrix(X)
   if (is.null(dim(Y))) Y <- matrix(as.numeric(Y), ncol = 1L)

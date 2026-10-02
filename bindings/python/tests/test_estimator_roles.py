@@ -11,12 +11,14 @@ import pytest
 from sklearn.base import clone
 from sklearn.model_selection import cross_val_score
 
-from n4m import roles
+from n4m import abi_version, roles
 from n4m._errors import N4MError
 from n4m._ffi import lib
 from n4m._impl import native
 from n4m._types import MethodInfoV1
 from n4m.roles._base import _REGISTRY
+
+from _n4me_compat import assert_n4me_reexport_equivalent
 
 N_FEATURES = 12
 
@@ -273,7 +275,13 @@ def test_cross_language_fixture_states_replay():
     )
     doc = json.loads(fixture.read_text(encoding="utf-8"))
     X_test = np.asarray(doc["x_test"])
-    assert {case["method_id"] for case in doc["cases"]} == {
+    assert doc["abi"] == "2.15.0"
+    legacy_methods = {case["method_id"] for case in doc["cases"]}
+    new_methods = {"preprocessing.scaling.standard_scale"}
+    assert legacy_methods.isdisjoint(new_methods)
+    # Preserve every old fixture packet; StandardScale has its actual native
+    # population/scientific oracle and portable-state cases in the new suite.
+    assert legacy_methods | new_methods == {
         m for m, c in _REGISTRY.items() if issubclass(c, roles.NativeEstimator)
     }
     for case in doc["cases"]:
@@ -317,7 +325,9 @@ def test_cross_language_fixture_states_replay():
                     rtol=REPLAY_TOL,
                     atol=REPLAY_TOL,
                 )
-        assert est.to_n4me(allow_training_rows=True) == payload
+        assert_n4me_reexport_equivalent(
+            payload, est.to_n4me(allow_training_rows=True)
+        )
 
 
 # Selector role -------------------------------------------------------------
@@ -754,6 +764,11 @@ def reference_transformer(cls, est):
     import importlib
     import inspect
 
+    if cls is roles.StandardScale:
+        from sklearn.preprocessing import StandardScaler
+
+        return StandardScaler(**est.get_params())
+
     for module in (
         "baseline",
         "smoothing",
@@ -785,7 +800,13 @@ def test_transformer_matches_n4m_reference(cls, data):
     X, y, X_test, X_target = positive_spectra(data)
     est = transformer(cls).fit(X, y, **fit_kwargs(cls, X_target))
     ref = reference_transformer(cls, est).fit(X, y)
-    np.testing.assert_array_equal(est.transform(X_test), ref.transform(X_test))
+    if cls is roles.StandardScale:
+        # Independent population-variance arithmetic can differ by roundoff.
+        np.testing.assert_allclose(
+            est.transform(X_test), ref.transform(X_test), rtol=1e-12, atol=1e-12
+        )
+    else:
+        np.testing.assert_array_equal(est.transform(X_test), ref.transform(X_test))
 
 
 # AOM / POP roles --------------------------------------------------------
@@ -1185,7 +1206,7 @@ def test_generic_procedure_returns_named_outputs():
 
 def test_manifest_lists_every_generated_class():
     doc = roles.manifest()
-    assert doc["abi"].startswith("2.15")
+    assert doc["abi"] == ".".join(map(str, abi_version()))
     assert {m["method_id"] for m in doc["methods"]} == set(_REGISTRY)
     for m in doc["methods"]:
         assert roles.method_class(m["method_id"])._method_id == m["method_id"]

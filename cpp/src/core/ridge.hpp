@@ -13,7 +13,11 @@
 //                (textbook-stable, reuses the shipped Householder QR).
 //   * p >  n  -> DUAL  : K = Xc Xc' (n x n), solve (K + lambda I_n) A = Yc,
 //                then B = Xc' A  (O(n^3 + n^2 p) instead of O(p^3)).
-// Both paths produce identical coefficients up to round-off.
+// Both positive-penalty paths produce identical coefficients up to round-off.
+// At lambda == 0, both formulations use the shipped compact SVD and the
+// minimum-norm least-squares solution, discarding singular values no larger
+// than epsilon * max(n, p) * largest_singular_value. Rank-zero X gives zero
+// coefficients and the configured target mean as intercept.
 //
 // Standardization: center X and Y by column mean (always when the
 // corresponding cfg center flag is set, and only when fit_intercept is on).

@@ -120,7 +120,19 @@ SEXP r_n4m_spectral_fit(SEXP X, SEXP parameters);
 SEXP r_n4m_spectral_transform(SEXP ptr, SEXP X);
 SEXP r_n4m_spectral_affine(SEXP ptr);
 
+/* Complete raw multimodal pipeline (ABI 2.16). */
+SEXP r_n4m_multimodal_create(SEXP, SEXP, SEXP);
+SEXP r_n4m_multimodal_fit(SEXP, SEXP, SEXP, SEXP);
+SEXP r_n4m_multimodal_op(SEXP, SEXP, SEXP, SEXP);
+SEXP r_n4m_multimodal_export(SEXP);
+SEXP r_n4m_multimodal_close(SEXP);
+
 static const R_CallMethodDef callMethods[] = {
+    {"r_n4m_multimodal_create", (DL_FUNC)&r_n4m_multimodal_create, 3},
+    {"r_n4m_multimodal_fit", (DL_FUNC)&r_n4m_multimodal_fit, 4},
+    {"r_n4m_multimodal_op", (DL_FUNC)&r_n4m_multimodal_op, 4},
+    {"r_n4m_multimodal_export", (DL_FUNC)&r_n4m_multimodal_export, 1},
+    {"r_n4m_multimodal_close", (DL_FUNC)&r_n4m_multimodal_close, 1},
     {"r_n4m_optimizer_create", (DL_FUNC)&r_n4m_optimizer_create, 3},
     {"r_n4m_optimizer_close", (DL_FUNC)&r_n4m_optimizer_close, 1},
     {"r_n4m_optimizer_load", (DL_FUNC)&r_n4m_optimizer_load, 1},

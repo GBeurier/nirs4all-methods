@@ -8,10 +8,13 @@
 // handles through core_state.hpp. RangeDiscretizer and FCK static learn
 // nothing: their state is the input width alone.
 
+#include <cmath>
 #include <cstdint>
 #include <functional>
+#include <new>
 #include <vector>
 
+#include "core/common/column_stats.hpp"
 #include "core/estimator/core_state.hpp"
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/state_io.hpp"
@@ -21,6 +24,95 @@
 namespace n4m::estimator {
 
 namespace {
+
+struct StandardScaleState {
+    bool with_mean, with_std;
+    std::vector<double> mean, scale;
+};
+
+StandardScaleState* standard_scale_create(const Params& params) {
+    return new (std::nothrow) StandardScaleState{params.get_bool("with_mean"),
+                                                params.get_bool("with_std"), {}, {}};
+}
+
+n4m_status_t standard_scale_fit(StandardScaleState* state, const double* values,
+                               std::int64_t rows, std::int64_t cols) {
+    if (rows <= 0 || cols <= 0) return N4M_ERR_INVALID_ARGUMENT;
+    std::vector<double> centered(values, values + rows * cols);
+    for (double value : centered) {
+        if (!std::isfinite(value)) return N4M_ERR_INVALID_ARGUMENT;
+    }
+    // Translation before the shared population arithmetic preserves exact
+    // constants and avoids summing a large common offset repeatedly.
+    std::vector<double> anchor(centered.begin(), centered.begin() + cols);
+    for (std::int64_t row = 0; row < rows; ++row) {
+        for (std::int64_t col = 0; col < cols; ++col) {
+            centered[static_cast<std::size_t>(row * cols + col)] -= anchor[static_cast<std::size_t>(col)];
+        }
+    }
+    n4m::core::detail::column_means(centered, static_cast<std::size_t>(rows),
+                                   static_cast<std::size_t>(cols), state->mean);
+    for (std::int64_t row = 0; row < rows; ++row) {
+        for (std::int64_t col = 0; col < cols; ++col) {
+            centered[static_cast<std::size_t>(row * cols + col)] -=
+                state->mean[static_cast<std::size_t>(col)];
+        }
+    }
+    n4m::core::detail::column_scales(centered, static_cast<std::size_t>(rows),
+                                    static_cast<std::size_t>(cols), state->scale);
+    for (std::size_t col = 0; col < state->mean.size(); ++col) {
+        state->mean[col] += anchor[col];
+        if (!std::isfinite(state->mean[col]) || !std::isfinite(state->scale[col])) {
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+    }
+    return N4M_OK;
+}
+
+n4m_status_t standard_scale_apply(const StandardScaleState* state, const double* values,
+                                 std::int64_t rows, std::int64_t cols, double* out) {
+    if (static_cast<std::size_t>(cols) != state->mean.size()) return N4M_ERR_SHAPE_MISMATCH;
+    for (std::int64_t row = 0; row < rows; ++row) {
+        for (std::int64_t col = 0; col < cols; ++col) {
+            const auto c = static_cast<std::size_t>(col);
+            const double value = values[row * cols + col];
+            if (!std::isfinite(value)) return N4M_ERR_INVALID_ARGUMENT;
+            out[row * cols + col] =
+                (value - (state->with_mean ? state->mean[c] : 0.0)) /
+                (state->with_std ? state->scale[c] : 1.0);
+        }
+    }
+    return N4M_OK;
+}
+
+n4m_status_t standard_scale_save(const StandardScaleState* state, n4m_state_writer_t* out) {
+    n4m_state_write_i64(out, state->with_mean ? 1 : 0);
+    n4m_state_write_i64(out, state->with_std ? 1 : 0);
+    n4m_state_write_f64_array(out, state->mean.data(), static_cast<std::int64_t>(state->mean.size()));
+    n4m_state_write_f64_array(out, state->scale.data(), static_cast<std::int64_t>(state->scale.size()));
+    return N4M_OK;
+}
+
+n4m_status_t standard_scale_load(StandardScaleState* state, n4m_state_reader_t* in,
+                                std::int64_t width) {
+    std::int64_t mean_flag = 0, std_flag = 0;
+    if (!n4m_state_read_i64(in, &mean_flag) || !n4m_state_read_i64(in, &std_flag) ||
+        mean_flag != static_cast<std::int64_t>(state->with_mean) ||
+        std_flag != static_cast<std::int64_t>(state->with_std) ||
+        width <= 0 || static_cast<std::uint64_t>(width) > in->remaining() / 16) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
+    state->mean.resize(static_cast<std::size_t>(width));
+    state->scale.resize(static_cast<std::size_t>(width));
+    if (!n4m_state_read_f64_array(in, state->mean.data(), width) ||
+        !n4m_state_read_f64_array(in, state->scale.data(), width)) return N4M_ERR_CORRUPT_BUFFER;
+    for (std::size_t col = 0; col < state->mean.size(); ++col) {
+        if (!std::isfinite(state->mean[col]) || !std::isfinite(state->scale[col]) || state->scale[col] <= 0) {
+            return N4M_ERR_CORRUPT_BUFFER;
+        }
+    }
+    return N4M_OK;
+}
 
 // Fit on a contiguous copy of X.
 template <typename H>
@@ -92,6 +184,12 @@ FittedKernel<S> owned_state(S* (*make)(const Params&), void (*destroy)(S*),
 }
 
 }  // namespace
+
+std::unique_ptr<Adapter> make_tr_standard_scale(const MethodSpec&) {
+    return fitted(owned_state<StandardScaleState>(
+        standard_scale_create, [](StandardScaleState* state) { delete state; },
+        standard_scale_fit, standard_scale_apply, standard_scale_save, standard_scale_load));
+}
 
 // ---- orthogonalization -----------------------------------------------------
 

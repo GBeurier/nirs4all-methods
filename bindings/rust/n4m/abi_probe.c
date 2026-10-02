@@ -3,6 +3,7 @@
 
 #include "n4m/n4m.h"
 #include "n4m/optimization.h"
+#include "n4m/multimodal.h"
 
 #ifndef N4M_RUST_ABI_MAJOR
 #error "N4M_RUST_ABI_MAJOR must be provided by build.rs"
@@ -20,6 +21,32 @@ _Static_assert(alignof(n4m_matrix_view_t) == N4M_RUST_MATRIX_VIEW_ALIGN,
                "Rust MatrixView alignment is stale relative to the C header");
 _Static_assert(sizeof(n4m_optimizer_options_t) == N4M_RUST_OPTIMIZER_OPTIONS_SIZE,
                "Rust OptimizerOptions size is stale relative to the C header");
+_Static_assert(sizeof(n4m_multimodal_source_spec_v1_t) == 128,
+               "Rust multimodal source spec layout drifted");
+_Static_assert(alignof(n4m_multimodal_source_spec_v1_t) == 8,
+               "Rust multimodal source spec alignment drifted");
+_Static_assert(offsetof(n4m_multimodal_source_spec_v1_t, shape) == 56,
+               "Rust multimodal source shape offset drifted");
+_Static_assert(offsetof(n4m_multimodal_source_spec_v1_t, weight) == 72,
+               "Rust multimodal source weight offset drifted");
+_Static_assert(offsetof(n4m_multimodal_source_spec_v1_t, numeric_column) == 112,
+               "Rust multimodal numeric column offset drifted");
+_Static_assert(sizeof(n4m_multimodal_recipe_v1_t) == 40,
+               "Rust multimodal recipe layout drifted");
+_Static_assert(offsetof(n4m_multimodal_recipe_v1_t, sources) == 8,
+               "Rust multimodal recipe sources offset drifted");
+_Static_assert(offsetof(n4m_multimodal_recipe_v1_t, alpha) == 16,
+               "Rust multimodal recipe alpha offset drifted");
+_Static_assert(sizeof(n4m_multimodal_source_view_v1_t) == 112,
+               "Rust multimodal tensor layout drifted");
+_Static_assert(alignof(n4m_multimodal_source_view_v1_t) == 8,
+               "Rust multimodal tensor alignment drifted");
+_Static_assert(offsetof(n4m_multimodal_source_view_v1_t, numeric_data) == 72,
+               "Rust multimodal numeric data offset drifted");
+_Static_assert(offsetof(n4m_multimodal_source_view_v1_t, categorical_utf8) == 88,
+               "Rust multimodal UTF-8 data offset drifted");
+_Static_assert(offsetof(n4m_multimodal_source_view_v1_t, categorical_offsets) == 104,
+               "Rust multimodal UTF-8 offsets drifted");
 
 #define N4M_RUST_TYPE_IS(expression, expected_type) \
     _Generic((expression), expected_type: 1, default: 0)
@@ -64,6 +91,32 @@ _Static_assert(offsetof(n4m_optimizer_options_t, reserved) == 64,
 
 #define N4M_RUST_SIGNATURE_IS(function_name, expected_type) \
     _Generic(&(function_name), expected_type: 1, default: 0)
+
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_create,
+    n4m_status_t (*)(n4m_context_t*, const n4m_multimodal_recipe_v1_t*, n4m_multimodal_pipeline_t**)),
+    "n4m_multimodal_pipeline_create signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_destroy,
+    void (*)(n4m_multimodal_pipeline_t*)), "n4m_multimodal_pipeline_destroy signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_fit,
+    n4m_status_t (*)(n4m_context_t*, n4m_multimodal_pipeline_t*, int32_t, const n4m_multimodal_source_view_v1_t*, const n4m_matrix_view_t*)),
+    "n4m_multimodal_pipeline_fit signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_predict,
+    n4m_status_t (*)(n4m_context_t*, const n4m_multimodal_pipeline_t*, int32_t, const n4m_multimodal_source_view_v1_t*, n4m_matrix_view_t*)),
+    "n4m_multimodal_pipeline_predict signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_transform_cols,
+    n4m_status_t (*)(const n4m_multimodal_pipeline_t*, int64_t*)), "n4m_multimodal_pipeline_transform_cols signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_transform,
+    n4m_status_t (*)(n4m_context_t*, const n4m_multimodal_pipeline_t*, int32_t, const n4m_multimodal_source_view_v1_t*, n4m_matrix_view_t*)),
+    "n4m_multimodal_pipeline_transform signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_export_size,
+    n4m_status_t (*)(n4m_context_t*, const n4m_multimodal_pipeline_t*, size_t*)),
+    "n4m_multimodal_pipeline_export_size signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_export_to_buffer,
+    n4m_status_t (*)(n4m_context_t*, const n4m_multimodal_pipeline_t*, void*, size_t, size_t*)),
+    "n4m_multimodal_pipeline_export_to_buffer signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_import_from_buffer,
+    n4m_status_t (*)(n4m_context_t*, const n4m_multimodal_recipe_v1_t*, const void*, size_t, n4m_multimodal_pipeline_t**)),
+    "n4m_multimodal_pipeline_import_from_buffer signature drifted");
 
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_check_abi_compatibility,
                                      n4m_status_t (*)(uint32_t, uint32_t)),

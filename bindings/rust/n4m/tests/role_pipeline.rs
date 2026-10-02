@@ -4,6 +4,9 @@
 //! refused with the same native status and message.
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
+
+#[path = "support/n4me_compat.rs"]
+mod n4me_compat;
 use n4m::roles::{self, FitInputs, ParamType, ParamValue, Params, RolePipeline};
 use n4m::{Context, MatrixRef};
 use serde_json::Value;
@@ -182,10 +185,17 @@ fn shared_fixture_pipelines_replay_and_refit() {
         &floats(&reg["transform"]),
         "regression transform",
     );
-    assert_eq!(
-        pipeline.export_states(&ctx, false).unwrap(),
-        decode(&reg["states"])
-    );
+    let exported = pipeline.export_states(&ctx, false).unwrap();
+    let original = decode(&reg["states"]);
+    assert_eq!(exported.len(), original.len());
+    for (index, (current, previous)) in exported.iter().zip(&original).enumerate() {
+        n4me_compat::assert_reexport_equivalent(
+            &ctx,
+            previous,
+            current,
+            &format!("regression.state{index}"),
+        );
+    }
     assert_eq!(pipeline.feature_names().unwrap(), owned_names);
     let steps = pipeline.steps().unwrap();
     assert_eq!(steps[0].role, roles::ROLE_SAMPLE_FILTER);

@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as n4m from "../dist/index.js";
+import { assertN4meReexportEquivalent } from "./_n4me_compat.mjs";
 
 await n4m.loadModule();
 const fixture = JSON.parse(readFileSync(
@@ -49,7 +50,33 @@ const inputsFor = (names) => ({
 const classes = Object.values(n4m).filter(
     (c) => typeof c === "function" && c.prototype instanceof n4m.NativeEstimator);
 const byMethod = new Map(classes.map((c) => [new c().methodId, c]));
-assert.deepEqual([...byMethod.keys()].sort(), fixture.cases.map((c) => c.method_id).sort());
+const newMethods = ["preprocessing.scaling.standard_scale"];
+const legacyMethods = fixture.cases.map((c) => c.method_id);
+assert.ok(newMethods.every((id) => !legacyMethods.includes(id)));
+assert.deepEqual([...byMethod.keys()].sort(), [...legacyMethods, ...newMethods].sort());
+
+// Independent analytic population oracle, including a constant column and a
+// large offset. Four equally spaced values have variance 5 (not sample 20/3).
+{
+    const offset = 1e12;
+    const train = matrix([[offset, 7, 0], [offset + 2, 7, 2],
+        [offset + 4, 7, 4], [offset + 6, 7, 6]]);
+    const heldout = matrix([[offset + 1, 7, 1], [offset + 5, 7, 5]]);
+    const expected = [-2 / Math.sqrt(5), 0, -2 / Math.sqrt(5),
+        2 / Math.sqrt(5), 0, 2 / Math.sqrt(5)];
+    const scaler = new n4m.StandardScale().fit(train);
+    let restored;
+    try {
+        close(scaler.transform(heldout).data, expected, 1e-12, "population StandardScale");
+        const state = scaler.toN4me();
+        restored = n4m.NativeEstimator.fromN4me(state);
+        close(restored.transform(heldout).data, expected, 1e-12, "population StandardScale replay");
+        assert.deepEqual(restored.toN4me(), state);
+    } finally {
+        scaler.dispose();
+        restored?.dispose();
+    }
+}
 
 const yTest = Float64Array.from(fixture.y_test);
 const checkMask = (est, c, label) => {
@@ -83,7 +110,8 @@ for (const c of fixture.cases) {
     }
     // Training rows leave only with the explicit opt-in.
     if (est.containsTrainingRows()) assert.throws(() => est.toN4me(), /training rows/);
-    assert.deepEqual(est.toN4me({ allowTrainingRows: true }), payload, `${c.method_id} re-export`);
+    assertN4meReexportEquivalent(n4m, payload,
+        est.toN4me({ allowTrainingRows: true }), `${c.method_id} re-export`);
     est.dispose();
 
     const target = c.y ? matrix(fixture[c.y]) : c.classes ? fixture.labels_train : yTrain;
@@ -136,7 +164,7 @@ for (const c of fixture.procedures) {
 }
 assert.throws(() => n4m.methodClass("models.pls.missing"), /no n4m role class/);
 const native = n4m.manifest();
-assert.equal(native.methods.length, fixture.cases.length + fixture.procedures.length);
+assert.equal(native.methods.length, fixture.cases.length + fixture.procedures.length + newMethods.length);
 for (const m of native.methods) assert.ok(n4m.methodClass(m.method_id), m.method_id);
 
 assert.throws(() => new n4m.GroupSparsePLS().fit(xTrain, yTrain), /feature_groups/);
@@ -145,4 +173,4 @@ assert.throws(() => new n4m.CPPLS().fit(xTrain, yTrain, { groups: new Array(xTra
 assert.throws(() => new n4m.PLSRegression({ solver: "bogus" }).fit(xTrain, yTrain), /solver/);
 assert.throws(() => new n4m.PLSLDA().fit(xTrain), /labels/);
 
-console.log(`estimator roles: ${fixture.cases.length} estimators and ${fixture.procedures.length} procedures reproduced in JS/WASM`);
+console.log(`estimator roles: ${fixture.cases.length} unchanged fixture estimators and ${fixture.procedures.length} procedures reproduced in JS/WASM; independent population StandardScale oracle/replay PASS`);

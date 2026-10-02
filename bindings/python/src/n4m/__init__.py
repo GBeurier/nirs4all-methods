@@ -13,7 +13,8 @@ scikit-learn / DL pipeline conventions::
 The top-level package only exposes metadata and a handful of shared helpers
 (:func:`version`, :func:`abi_version`, :class:`Context`, :class:`N4MError`,
 :class:`PartialBatchError`, :class:`MatrixView`, :class:`PCG64`) plus the role
-subpackages. There are no top-level class/function re-exports.
+subpackages. The complete raw-source :class:`MultimodalPipeline` facade is
+also available directly at the package root.
 """
 
 import ctypes
@@ -30,6 +31,7 @@ from ._ffi import (
 )
 from ._rng import PCG64
 from ._types import MatrixView
+from .roles._multimodal import MultimodalPipeline
 
 # Role subpackages (the public surface).
 from . import (  # noqa: F401
@@ -72,6 +74,7 @@ __all__ = [
     "ABI_VERSION_STRING",
     "Context",
     "MatrixView",
+    "MultimodalPipeline",
     "N4MError",
     "PartialBatchError",
     "PCG64",

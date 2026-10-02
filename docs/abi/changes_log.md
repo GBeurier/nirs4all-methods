@@ -1,5 +1,33 @@
 # ABI — Changes Log
 
+## 2026-10-02 — ABI 2.16.0: fitted multimodal early fusion (unreleased)
+
+Add nine `n4m_multimodal_pipeline_*` entry points: `create`, `destroy`, `fit`,
+`predict`, `transform_cols`, `transform`, `export_size`, `export_to_buffer` and
+`import_from_buffer`. The public `n4m/multimodal.h` header declares the opaque
+pipeline and size-versioned recipe, source-schema and borrowed-input descriptors.
+Existing ABI entry points and role-pipeline state formats retain their meaning.
+
+The initial profile owns four ordered, complete sources: NIR standard scaling,
+fixed-shape image and series PCA, and mixed numeric/categorical metadata. Native
+training learns population scaling, PCA, the UTF-8 category vocabulary and one
+Ridge after weighted early fusion. Bindings pass numeric tensors and raw UTF-8
+cells; they do not learn encoders or assign category codes. Unknown categories
+produce zero indicator columns. The fitted StandardScale role is also exposed
+as `preprocessing.scaling.standard_scale`.
+
+Zero-alpha Ridge uses native minimum-norm least squares for rank-deficient
+inputs, including centered one-hot features; positive-alpha paths keep their
+existing solver. Bindings preserve empty and embedded-NUL categorical cells as
+length-delimited UTF-8, while identifiers retain their NUL restrictions.
+
+Export uses the bounded N4MF version-1 envelope, containing the complete recipe,
+source identities, learned encoders and terminal fitted state. Import validates
+the independently supplied expected recipe and source schemas before exposing
+the predictor; replay does not require training rows. Failed fits retain the
+previous fitted state. Distribution versions are unchanged; native and binding
+qualification follows source review before publication.
+
 ## 2026-09-28 — ABI 2.15.0: fitted spectral encoders and AOM LVSE terminals
 
 Add six `n4m_decomposition_spectral_*` entry points for creating, fitting,
