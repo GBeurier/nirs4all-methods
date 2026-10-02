@@ -1,5 +1,20 @@
 # ABI — Changes Log
 
+## 2026-10-02 — ABI 2.16.0: optimizer configuration comparison (unreleased)
+
+Add `n4m_optimizer_configuration_matches(actual, expected, out_matches)` to
+the unreleased ABI 2.16.0 surface (838 functions; 839 Linux snapshot entries,
+including the `N4M_2` version node). It compares ordered
+search-space and optimizer-option bytes using the existing native checkpoint
+serializers, including categorical codecs and constraints/conditions. It ignores
+trial history, RNG, queued warm starts, elapsed time and adaptive sampler state,
+and modifies neither optimizer. The result is a caller-owned `int32_t` 0/1;
+null pointers and allocation/internal failures follow the existing status model.
+Python exposes `Optimizer.configuration_matches(other) -> bool`, allowing a
+loaded optimizer to be checked against a fresh expected configuration before
+resuming any callback. N4MOPT format, numerical kernels, layouts and distribution
+versions are unchanged.
+
 ## 2026-10-02 — ABI 2.16.0: fitted multimodal early fusion (unreleased)
 
 Add nine `n4m_multimodal_pipeline_*` entry points: `create`, `destroy`, `fit`,

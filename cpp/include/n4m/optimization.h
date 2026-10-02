@@ -269,6 +269,16 @@ N4M_API n4m_status_t n4m_optimizer_save(const n4m_optimizer_t* opt, n4m_array_t*
 N4M_API n4m_status_t n4m_optimizer_load(n4m_context_t* ctx, const uint8_t* blob,
                         uint64_t n, n4m_optimizer_t** out);
 
+/* Compare only immutable native configuration: ordered parameters, categorical
+ * codecs, constraints/conditions and persisted optimizer options. Uses the
+ * checkpoint serializers, without comparing history, RNG, queues, elapsed time
+ * or adaptive sampler state. Neither optimizer is modified. On success,
+ * `*out_matches` is 0 or 1; it is initialized to 0 on failure when non-NULL.
+ * All three pointers must be non-NULL and optimizer handles must remain live. */
+N4M_API n4m_status_t n4m_optimizer_configuration_matches(
+                        const n4m_optimizer_t* actual, const n4m_optimizer_t* expected,
+                        int32_t* out_matches);
+
 /* ==== trial accessors ==================================================== */
 
 N4M_API n4m_status_t n4m_trial_get_id(const n4m_trial_t* trial, int64_t* out);

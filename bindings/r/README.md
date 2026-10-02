@@ -34,13 +34,13 @@ on the system path or export `LD_LIBRARY_PATH` (Linux) /
 library(n4m)
 
 n4m_version()
-# "1.2.1+abi.2.15.0"
+# "1.2.1+abi.2.16.0"
 
 # Seeded native training-only augmentation of X (no paired Y output):
 # n4m::n4m_augmentation_apply("gaussian_noise", train_X, 0.03, seed = 42)
 
 n4m_abi_version()
-# c(2, 15, 0)
+# c(2, 16, 0)
 
 set.seed(42)
 X <- matrix(rnorm(2000), nrow = 200)

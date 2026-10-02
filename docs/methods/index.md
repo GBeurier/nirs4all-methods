@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **214**. Additional Python reference
+_Total catalogued native methods_: **215**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -44,6 +44,7 @@ Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-b
 | [`log_transform`](pp_log.md) | `n4m.transform.scaling.log_transform` | `n4m.transform.scaling` | C |
 | [`normalize`](pp_normalize.md) | `n4m.transform.scaling.normalize` | `n4m.transform.scaling` | C |
 | [`simple_scale`](pp_simple_scale.md) | `n4m.transform.scaling.simple_scale` | `n4m.transform.scaling` | C |
+| [`standard_scale`](preprocessing_scaling_standard_scale.md) | `n4m.transform.scaling.standard_scale` | `n4m.transform.scaling` | Py |
 | [`area_normalization`](pp_area.md) | `n4m.transform.scatter.area_normalization` | `n4m.transform.scatter` | C |
 | [`emsc`](pp_emsc.md) | `n4m.transform.scatter.emsc` | `n4m.transform.scatter` | C |
 | [`local_centering`](pp_local_centering.md) | `n4m.transform.scatter.local_centering` | `n4m.transform.scatter` | C |

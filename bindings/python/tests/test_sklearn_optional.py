@@ -52,6 +52,8 @@ from n4m._impl import moment_facade as moment
 # Importing the core surface must not have pulled in the optional deps.
 assert "sklearn" not in sys.modules, sorted(m for m in sys.modules if m.startswith("sklearn"))
 assert "scipy" not in sys.modules, sorted(m for m in sys.modules if m.startswith("scipy"))
+assert not hasattr(n4m, "MultimodalPipeline")
+assert "MultimodalPipeline" not in n4m.__all__
 
 # The estimator layer must be running on the dependency-light fallback base.
 from n4m._impl.compat import BaseEstimator

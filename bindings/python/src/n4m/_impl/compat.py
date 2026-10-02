@@ -9,7 +9,10 @@ from __future__ import annotations
 
 try:  # pragma: no cover - exercised only when scikit-learn is installed
     from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin
+
+    _SKLEARN_AVAILABLE = True
 except ImportError:  # pragma: no cover - keep the core binding dependency-light
+    _SKLEARN_AVAILABLE = False
 
     class BaseEstimator:
         """Small fallback with the get/set params contract used by sklearn."""
