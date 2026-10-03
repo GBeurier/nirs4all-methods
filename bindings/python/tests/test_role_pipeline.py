@@ -10,7 +10,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from _n4me_compat import assert_n4me_reexport_equivalent
 from n4m import N4MError
+from n4m._types import Status
 from n4m.roles import (
     PLSLDA,
     SNV,
@@ -19,8 +21,6 @@ from n4m.roles import (
     RolePipeline,
     YOutlierFilter,
 )
-
-from _n4me_compat import assert_n4me_reexport_equivalent
 
 
 class _Named(np.ndarray):
@@ -193,6 +193,63 @@ def test_failed_refit_keeps_the_fitted_pipeline():
     with pytest.raises(N4MError):
         pipeline.fit(X, y, groups=np.arange(X.shape[0]))
     np.testing.assert_array_equal(pipeline.predict(X), before)
+
+
+@pytest.mark.parametrize(
+    "state", ["fitted", "hydrated", "failed_refit", "failed_fit", "unfitted"]
+)
+def test_close_releases_owned_state_once_and_refuses_prediction(state, monkeypatch):
+    X, y = data()
+    steps = ["models.regularized.ridge"]
+    pipeline = RolePipeline.from_steps(steps)
+    if state in {"fitted", "hydrated", "failed_refit"}:
+        pipeline.fit(X, y)
+    if state == "hydrated":
+        fitted = pipeline
+        pipeline = RolePipeline.from_states(steps, fitted.export_states())
+        np.testing.assert_array_equal(pipeline.predict(X), fitted.predict(X))
+        fitted.close()
+    if state in {"failed_fit", "failed_refit"}:
+        with pytest.raises(N4MError):
+            pipeline.fit(X, y, groups=np.arange(X.shape[0]))
+
+    owned = pipeline.__dict__.get("_handle_")
+    released = []
+    release = RolePipeline._release
+
+    def record_release(handle):
+        if handle is not None and handle.value is not None:
+            released.append(handle.value)
+        release(handle)
+
+    monkeypatch.setattr(RolePipeline, "_release", staticmethod(record_release))
+    pipeline.close()
+    pipeline.close()
+    pipeline.__del__()
+    assert pipeline._handle_ is None
+    assert released == ([] if owned is None else [owned.value])
+    with pytest.raises(N4MError, match="RolePipeline is not fitted") as error:
+        pipeline.predict(X)
+    assert error.value.status == Status.ERR_NOT_FITTED
+
+
+def test_destructor_releases_fitted_state_once(monkeypatch):
+    X, y = data()
+    pipeline = RolePipeline(["models.regularized.ridge"]).fit(X, y)
+    owned = pipeline._handle_.value
+    released = []
+    release = RolePipeline._release
+
+    def record_release(handle):
+        if handle is not None and handle.value is not None:
+            released.append(handle.value)
+        release(handle)
+
+    monkeypatch.setattr(RolePipeline, "_release", staticmethod(record_release))
+    pipeline.__del__()
+    pipeline.close()
+    assert pipeline._handle_ is None
+    assert released == [owned]
 
 
 def _payloads(states: list) -> list[bytes]:

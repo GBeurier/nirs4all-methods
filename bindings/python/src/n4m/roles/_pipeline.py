@@ -23,7 +23,14 @@ from .._errors import N4MError, check
 from .._ffi import lib
 from .._matrix import as_f64_2d, numpy_to_view
 from .._types import Status
-from ._base import _check_exact_float, _Context, _encode_labels, _fit_inputs, _label_array, method_class
+from ._base import (
+    _check_exact_float,
+    _Context,
+    _encode_labels,
+    _fit_inputs,
+    _label_array,
+    method_class,
+)
 
 _ROLE_NAMES = {
     1 << 0: "transformer",
@@ -284,8 +291,14 @@ class RolePipeline(BaseEstimator):
             raise N4MError(Status.ERR_NOT_FITTED, "RolePipeline is not fitted")
         return handle
 
+    def close(self) -> None:
+        """Release the fitted native state; repeated calls are harmless."""
+        handle = self.__dict__.get("_handle_")
+        self._handle_ = None
+        self._release(handle)
+
     def __del__(self) -> None:
-        self._release(self.__dict__.get("_handle_"))
+        self.close()
 
     # -- fit --------------------------------------------------------------------
 
