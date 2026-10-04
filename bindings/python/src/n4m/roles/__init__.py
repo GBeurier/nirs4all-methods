@@ -236,6 +236,7 @@ from ._generated import (
     YOutlierFilter,
 )
 from ._multimodal import MultimodalPipeline
+from ._multimodal_classifier import MultimodalClassifierPipeline
 from ._pipeline import RolePipeline
 
 __all__ = [
@@ -370,6 +371,7 @@ __all__ = [
     "Moisture",
     "Moments",
     "MultimodalPipeline",
+    "MultimodalClassifierPipeline",
     "MultiplicativeNoise",
     "NativeAugmenter",
     "NativeClassifier",

@@ -143,3 +143,164 @@ N4M_API n4m_status_t n4m_multimodal_pipeline_import_from_buffer(n4m_context_t* c
         if (status == N4M_OK) *out = pipeline.release(); return status;
     });
 }
+
+namespace {
+enum class ClassifierOperation { Transform, Decision, Probability };
+
+n4m_status_t classifier_output_bound(n4m_context_t* ctx, std::int64_t rows, std::int64_t cols) {
+    constexpr std::int64_t limit = 16 * 1024 * 1024;
+    if (rows < 0 || cols <= 0 || cols > limit || rows > limit / cols) {
+        ctx->set_error("classifier output exceeds element limit");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    return N4M_OK;
+}
+
+n4m_status_t classifier_matrix(n4m_context_t* ctx, const n4m_multimodal_classifier_t* pipeline,
+                               int32_t count, const n4m_multimodal_source_view_v1_t* sources,
+                               n4m_matrix_view_t* out, ClassifierOperation operation) {
+    return guarded(ctx, [&]() {
+        if (pipeline == nullptr) return N4M_ERR_NULL_POINTER;
+        std::vector<double> features;
+        std::int64_t rows = 0, cols = 0;
+        auto status = n4m::multimodal::features(ctx, pipeline->encoded, count, sources, features, rows, cols);
+        if (status != N4M_OK) return status;
+        std::int64_t outputs = cols;
+        if (operation != ClassifierOperation::Transform)
+            status = n4m_estimator_n_outputs(pipeline->encoded.model.get(), &outputs);
+        if (status == N4M_OK) status = classifier_output_bound(ctx, rows, outputs);
+        if (status == N4M_OK) status = output(ctx, out, rows, outputs);
+        if (status != N4M_OK || rows == 0) return status;
+        if (operation == ClassifierOperation::Transform) {
+            auto* values = static_cast<double*>(out->data);
+            for (std::int64_t row = 0; row < rows; ++row)
+                for (std::int64_t col = 0; col < cols; ++col)
+                    values[row * out->row_stride + col * out->col_stride] = features[static_cast<std::size_t>(row * cols + col)];
+            return N4M_OK;
+        }
+        n4m_matrix_view_t x{};
+        n4m_matrix_view_init_rowmajor(&x, features.data(), rows, cols, N4M_DTYPE_F64);
+        return operation == ClassifierOperation::Probability
+            ? n4m_estimator_predict_proba(ctx, pipeline->encoded.model.get(), &x, out)
+            : n4m_estimator_decision_function(ctx, pipeline->encoded.model.get(), &x, out);
+    });
+}
+}
+
+N4M_API n4m_status_t n4m_multimodal_classifier_create(n4m_context_t* ctx,
+    const n4m_multimodal_classifier_recipe_v1_t* recipe, n4m_multimodal_classifier_t** out) {
+    if (out == nullptr) return N4M_ERR_NULL_POINTER;
+    *out = nullptr;
+    return guarded(ctx, [&]() {
+        std::unique_ptr<n4m_multimodal_classifier_s> pipeline;
+        const auto status = n4m::multimodal::classifier_create(ctx, recipe, pipeline);
+        if (status == N4M_OK) *out = pipeline.release();
+        return status;
+    });
+}
+N4M_API void n4m_multimodal_classifier_destroy(n4m_multimodal_classifier_t* pipeline) { delete pipeline; }
+N4M_API n4m_status_t n4m_multimodal_classifier_fit(n4m_context_t* ctx,
+    n4m_multimodal_classifier_t* pipeline, int32_t count,
+    const n4m_multimodal_source_view_v1_t* sources, const int64_t* labels, int64_t n_labels) {
+    return guarded(ctx, [&]() {
+        return pipeline == nullptr ? N4M_ERR_NULL_POINTER
+            : n4m::multimodal::classifier_fit(ctx, *pipeline, count, sources, labels, n_labels);
+    });
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_predict_labels(n4m_context_t* ctx,
+    const n4m_multimodal_classifier_t* pipeline, int32_t count,
+    const n4m_multimodal_source_view_v1_t* sources, int64_t* out, int64_t n) {
+    return guarded(ctx, [&]() {
+        if (pipeline == nullptr) return N4M_ERR_NULL_POINTER;
+        std::vector<double> features;
+        std::int64_t rows = 0, cols = 0;
+        auto status = n4m::multimodal::features(ctx, pipeline->encoded, count, sources, features, rows, cols);
+        if (status != N4M_OK) return status;
+        if (n != rows) return N4M_ERR_SHAPE_MISMATCH;
+        std::int64_t classes = 0;
+        status = n4m_estimator_n_outputs(pipeline->encoded.model.get(), &classes);
+        if (status == N4M_OK) status = classifier_output_bound(ctx, rows, classes);
+        if (status != N4M_OK) return status;
+        if (rows == 0) return N4M_OK;
+        if (out == nullptr) return N4M_ERR_NULL_POINTER;
+        n4m_matrix_view_t x{};
+        n4m_matrix_view_init_rowmajor(&x, features.data(), rows, cols, N4M_DTYPE_F64);
+        return n4m_estimator_predict_labels(ctx, pipeline->encoded.model.get(), &x, out, rows);
+    });
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_decision_function(n4m_context_t* ctx,
+    const n4m_multimodal_classifier_t* pipeline, int32_t count,
+    const n4m_multimodal_source_view_v1_t* sources, n4m_matrix_view_t* out) {
+    return classifier_matrix(ctx, pipeline, count, sources, out, ClassifierOperation::Decision);
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_predict_proba(n4m_context_t* ctx,
+    const n4m_multimodal_classifier_t* pipeline, int32_t count,
+    const n4m_multimodal_source_view_v1_t* sources, n4m_matrix_view_t* out) {
+    return classifier_matrix(ctx, pipeline, count, sources, out, ClassifierOperation::Probability);
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_classes(const n4m_multimodal_classifier_t* pipeline,
+    int64_t* out, int64_t capacity, int64_t* count) {
+    if (pipeline == nullptr || count == nullptr) return N4M_ERR_NULL_POINTER;
+    *count = 0;
+    if (!pipeline->encoded.fitted) return N4M_ERR_NOT_FITTED;
+    return n4m_estimator_classes(pipeline->encoded.model.get(), out, capacity, count);
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_n_outputs(const n4m_multimodal_classifier_t* pipeline,
+    int64_t* out) {
+    if (pipeline == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
+    *out = 0;
+    if (!pipeline->encoded.fitted) return N4M_ERR_NOT_FITTED;
+    return n4m_estimator_n_outputs(pipeline->encoded.model.get(), out);
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_transform_cols(const n4m_multimodal_classifier_t* pipeline,
+    int64_t* out) {
+    if (pipeline == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
+    *out = 0;
+    if (!pipeline->encoded.fitted) return N4M_ERR_NOT_FITTED;
+    *out = pipeline->encoded.encoded_cols;
+    return N4M_OK;
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_transform(n4m_context_t* ctx,
+    const n4m_multimodal_classifier_t* pipeline, int32_t count,
+    const n4m_multimodal_source_view_v1_t* sources, n4m_matrix_view_t* out) {
+    return classifier_matrix(ctx, pipeline, count, sources, out, ClassifierOperation::Transform);
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_export_size(n4m_context_t* ctx,
+    const n4m_multimodal_classifier_t* pipeline, size_t* out) {
+    if (out == nullptr) return N4M_ERR_NULL_POINTER;
+    *out = 0;
+    return guarded(ctx, [&]() {
+        if (pipeline == nullptr) return N4M_ERR_NULL_POINTER;
+        std::vector<unsigned char> bytes;
+        const auto status = n4m::multimodal::classifier_save(ctx, *pipeline, bytes);
+        if (status == N4M_OK) *out = bytes.size();
+        return status;
+    });
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_export_to_buffer(n4m_context_t* ctx,
+    const n4m_multimodal_classifier_t* pipeline, void* buffer, size_t size, size_t* written) {
+    if (written == nullptr) return N4M_ERR_NULL_POINTER;
+    *written = 0;
+    return guarded(ctx, [&]() {
+        if (pipeline == nullptr || buffer == nullptr) return N4M_ERR_NULL_POINTER;
+        std::vector<unsigned char> bytes;
+        const auto status = n4m::multimodal::classifier_save(ctx, *pipeline, bytes);
+        if (status != N4M_OK) return status;
+        if (size < bytes.size()) return N4M_ERR_INVALID_ARGUMENT;
+        std::memcpy(buffer, bytes.data(), bytes.size());
+        *written = bytes.size();
+        return N4M_OK;
+    });
+}
+N4M_API n4m_status_t n4m_multimodal_classifier_import_from_buffer(n4m_context_t* ctx,
+    const n4m_multimodal_classifier_recipe_v1_t* expected, const void* buffer, size_t size,
+    n4m_multimodal_classifier_t** out) {
+    if (out == nullptr) return N4M_ERR_NULL_POINTER;
+    *out = nullptr;
+    return guarded(ctx, [&]() {
+        std::unique_ptr<n4m_multimodal_classifier_s> pipeline;
+        const auto status = n4m::multimodal::classifier_load(ctx, expected, buffer, size, pipeline);
+        if (status == N4M_OK) *out = pipeline.release();
+        return status;
+    });
+}

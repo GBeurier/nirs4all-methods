@@ -493,3 +493,13 @@ S3method(n4m_estimator_transform,n4m_multimodal_pipeline)
 S3method(predict,n4m_multimodal_pipeline)
 S3method(n4m_export_state,n4m_multimodal_pipeline)
 S3method(n4m_close,n4m_multimodal_pipeline)
+
+# Complete native raw PLS-logistic classifier
+export(n4m_multimodal_classifier)
+export(n4m_multimodal_classifier_from_state)
+S3method(n4m_estimator_fit,n4m_multimodal_classifier)
+S3method(n4m_estimator_transform,n4m_multimodal_classifier)
+S3method(n4m_classes,n4m_multimodal_classifier)
+S3method(predict,n4m_multimodal_classifier)
+S3method(n4m_export_state,n4m_multimodal_classifier)
+S3method(n4m_close,n4m_multimodal_classifier)

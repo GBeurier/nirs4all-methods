@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <functional>
 #include <limits>
 #include <set>
 
@@ -259,9 +260,9 @@ struct Reader {
     }
 };
 
-void recipe_bytes(const Pipeline& pipeline, std::vector<unsigned char>& bytes) {
+void source_recipe_bytes(const Pipeline& pipeline, std::vector<unsigned char>& bytes) {
     Writer out{bytes};
-    out.f64(pipeline.alpha); out.u32(static_cast<std::uint32_t>(pipeline.sources.size()));
+    out.u32(static_cast<std::uint32_t>(pipeline.sources.size()));
     for (const auto& source : pipeline.sources) {
         out.string(source.name); out.string(source.representation); out.string(source.dtype); out.string(source.identity);
         out.u32(static_cast<std::uint32_t>(source.shape.size()));
@@ -272,6 +273,12 @@ void recipe_bytes(const Pipeline& pipeline, std::vector<unsigned char>& bytes) {
         out.u32(static_cast<std::uint32_t>(source.with_mean)); out.u32(static_cast<std::uint32_t>(source.with_std));
         out.u32(static_cast<std::uint32_t>(source.whiten)); out.u32(static_cast<std::uint32_t>(source.ignore_unknown));
     }
+}
+
+void recipe_bytes(const Pipeline& pipeline, std::vector<unsigned char>& bytes) {
+    Writer out{bytes};
+    out.f64(pipeline.alpha);
+    source_recipe_bytes(pipeline, bytes);
 }
 
 n4m_status_t state_bytes(n4m_context_t* ctx, const Pipeline::Estimator& state, std::vector<unsigned char>& out) {
@@ -326,18 +333,15 @@ n4m_status_t validate_state(n4m_context_t* ctx, const Pipeline::Estimator& state
 }
 }  // namespace
 
-n4m_status_t create(n4m_context_t* ctx, const n4m_multimodal_recipe_v1_t* recipe,
-                    std::unique_ptr<Pipeline>& out) {
-    if (ctx == nullptr || recipe == nullptr) return N4M_ERR_NULL_POINTER;
-    if (recipe->struct_size < sizeof(*recipe) || recipe->n_sources < 1 || recipe->n_sources > 4 ||
-        recipe->sources == nullptr || !std::isfinite(recipe->alpha) || recipe->alpha < 0 ||
-        recipe->center_x != 1 || recipe->center_y != 1 || recipe->scale_x != 0) {
-        return error(ctx, "multimodal profile requires early fusion and centered, unscaled Ridge");
-    }
-    auto pipeline = std::make_unique<Pipeline>(); pipeline->alpha = recipe->alpha;
+n4m_status_t create_encoders(n4m_context_t* ctx, std::int32_t n_sources,
+                             const n4m_multimodal_source_spec_v1_t* sources,
+                             std::unique_ptr<Pipeline>& out) {
+    if (ctx == nullptr || sources == nullptr) return N4M_ERR_NULL_POINTER;
+    if (n_sources < 1 || n_sources > 4) return error(ctx, "expected 1..4 multimodal sources");
+    auto pipeline = std::make_unique<Pipeline>(); pipeline->alpha = 0;
     std::set<std::string> names;
-    for (std::int32_t i = 0; i < recipe->n_sources; ++i) {
-        const auto& spec = recipe->sources[i]; Source source{};
+    for (std::int32_t i = 0; i < n_sources; ++i) {
+        const auto& spec = sources[i]; Source source{};
         if (spec.struct_size < sizeof(spec) || !text(spec.name, source.name) ||
             !text(spec.representation_id, source.representation) || !text(spec.dtype, source.dtype) ||
             !identity(spec.identity_utf8, spec.identity_bytes, source.identity) ||
@@ -381,6 +385,19 @@ n4m_status_t create(n4m_context_t* ctx, const n4m_multimodal_recipe_v1_t* recipe
         pipeline->sources.push_back(std::move(source));
     }
     out = std::move(pipeline); return N4M_OK;
+}
+
+n4m_status_t create(n4m_context_t* ctx, const n4m_multimodal_recipe_v1_t* recipe,
+                    std::unique_ptr<Pipeline>& out) {
+    if (ctx == nullptr || recipe == nullptr) return N4M_ERR_NULL_POINTER;
+    if (recipe->struct_size < sizeof(*recipe) || recipe->n_sources < 1 || recipe->n_sources > 4 ||
+        recipe->sources == nullptr || !std::isfinite(recipe->alpha) || recipe->alpha < 0 ||
+        recipe->center_x != 1 || recipe->center_y != 1 || recipe->scale_x != 0) {
+        return error(ctx, "multimodal profile requires early fusion and centered, unscaled Ridge");
+    }
+    auto status = create_encoders(ctx, recipe->n_sources, recipe->sources, out);
+    if (status == N4M_OK) out->alpha = recipe->alpha;
+    return status;
 }
 
 n4m_status_t features(n4m_context_t* ctx, const Pipeline& pipeline, std::int32_t n,
@@ -438,13 +455,11 @@ n4m_status_t features(n4m_context_t* ctx, const Pipeline& pipeline, std::int32_t
     return start == cols ? N4M_OK : error(ctx, "multimodal fused state width mismatch", N4M_ERR_CORRUPT_BUFFER);
 }
 
-n4m_status_t fit(n4m_context_t* ctx, Pipeline& pipeline, std::int32_t n,
-                 const n4m_multimodal_source_view_v1_t* views, const n4m_matrix_view_t* y) {
-    n4m_status_t status = check_source_count(ctx, pipeline, n, views);
+n4m_status_t fit_encoders(n4m_context_t* ctx, Pipeline& next, std::int32_t n,
+                          const n4m_multimodal_source_view_v1_t* views,
+                          std::int64_t expected_rows) {
+    auto status = check_source_count(ctx, next, n, views);
     if (status != N4M_OK) return status;
-    if (y == nullptr || y->cols != 1) return error(ctx, "multimodal profile requires one numeric target", N4M_ERR_SHAPE_MISMATCH);
-    Pipeline next{}; next.alpha = pipeline.alpha;
-    for (const auto& source : pipeline.sources) next.sources.push_back(plan_copy(source));
     std::int64_t rows = -1;
     for (std::size_t i = 0; i < next.sources.size(); ++i) {
         auto& source = next.sources[i];
@@ -452,7 +467,7 @@ n4m_status_t fit(n4m_context_t* ctx, Pipeline& pipeline, std::int32_t n,
         status = input(ctx, source, views[i], values, cells, count);
         if (status != N4M_OK) return status;
         if (rows == -1) rows = count;
-        if (count <= 0 || count != rows || y->rows != rows) return error(ctx, "multimodal fit row counts mismatch", N4M_ERR_SHAPE_MISMATCH);
+        if (count <= 0 || count != rows || expected_rows != rows) return error(ctx, "multimodal fit row counts mismatch", N4M_ERR_SHAPE_MISMATCH);
         if (source.encoder == N4M_MULTIMODAL_TENSOR_PCA && (rows < 2 || source.n_components > std::min(rows, width(source)))) {
             return error(ctx, "TensorPCA component count exceeds training rows/features");
         }
@@ -474,6 +489,19 @@ n4m_status_t fit(n4m_context_t* ctx, Pipeline& pipeline, std::int32_t n,
         if (next.encoded_cols > kMaxWidth) return error(ctx, "multimodal fused width is oversized");
     }
     next.fitted = true;
+    return N4M_OK;
+}
+
+n4m_status_t fit(n4m_context_t* ctx, Pipeline& pipeline, std::int32_t n,
+                 const n4m_multimodal_source_view_v1_t* views, const n4m_matrix_view_t* y) {
+    n4m_status_t status = check_source_count(ctx, pipeline, n, views);
+    if (status != N4M_OK) return status;
+    if (y == nullptr || y->cols != 1) return error(ctx, "multimodal profile requires one numeric target", N4M_ERR_SHAPE_MISMATCH);
+    Pipeline next{}; next.alpha = pipeline.alpha;
+    for (const auto& source : pipeline.sources) next.sources.push_back(plan_copy(source));
+    status = fit_encoders(ctx, next, n, views, y->rows);
+    if (status != N4M_OK) return status;
+    std::int64_t rows = 0;
     std::vector<double> fused; std::int64_t cols = 0;
     status = features(ctx, next, n, views, fused, rows, cols);
     if (status != N4M_OK) return status;
@@ -486,13 +514,9 @@ n4m_status_t fit(n4m_context_t* ctx, Pipeline& pipeline, std::int32_t n,
     return status;
 }
 
-n4m_status_t save(n4m_context_t* ctx, const Pipeline& pipeline, std::vector<unsigned char>& bytes) {
-    if (!pipeline.fitted) return error(ctx, "multimodal pipeline is not fitted", N4M_ERR_NOT_FITTED);
-    bytes = {'N', '4', 'M', 'F'}; Writer out{bytes};
-    out.u32(1); out.u32(N4M_ABI_VERSION_MAJOR); out.u32(N4M_ABI_VERSION_MINOR); out.u32(N4M_ABI_VERSION_PATCH);
-    std::vector<unsigned char> recipe; recipe_bytes(pipeline, recipe); out.block(recipe.data(), recipe.size());
-    const auto limit = static_cast<std::size_t>(std::min<std::uint64_t>(ctx->max_state_bytes(), kMaxBytes));
-    if (bytes.size() + 8 > limit) return error(ctx, "multimodal state exceeds byte limit");
+n4m_status_t save_sources(n4m_context_t* ctx, const Pipeline& pipeline,
+                          std::vector<unsigned char>& bytes, std::size_t limit) {
+    Writer out{bytes};
     for (const auto& source : pipeline.sources) {
         std::vector<unsigned char> state; n4m_status_t status = state_bytes(ctx, source.state, state);
         if (status != N4M_OK) return status;
@@ -503,12 +527,52 @@ n4m_status_t save(n4m_context_t* ctx, const Pipeline& pipeline, std::vector<unsi
         for (const auto& category : source.categories) out.string(category);
         if (bytes.size() + 8 > std::min<std::uint64_t>(ctx->max_state_bytes(), kMaxBytes)) return error(ctx, "multimodal state exceeds byte limit");
     }
+    return N4M_OK;
+}
+
+n4m_status_t save(n4m_context_t* ctx, const Pipeline& pipeline, std::vector<unsigned char>& bytes) {
+    if (!pipeline.fitted) return error(ctx, "multimodal pipeline is not fitted", N4M_ERR_NOT_FITTED);
+    bytes = {'N', '4', 'M', 'F'}; Writer out{bytes};
+    out.u32(1); out.u32(N4M_ABI_VERSION_MAJOR); out.u32(N4M_ABI_VERSION_MINOR); out.u32(N4M_ABI_VERSION_PATCH);
+    std::vector<unsigned char> recipe; recipe_bytes(pipeline, recipe); out.block(recipe.data(), recipe.size());
+    const auto limit = static_cast<std::size_t>(std::min<std::uint64_t>(ctx->max_state_bytes(), kMaxBytes));
+    if (bytes.size() + 8 > limit) return error(ctx, "multimodal state exceeds byte limit");
+    auto source_status = save_sources(ctx, pipeline, bytes, limit);
+    if (source_status != N4M_OK) return source_status;
     std::vector<unsigned char> model; n4m_status_t status = state_bytes(ctx, pipeline.model, model);
     if (status != N4M_OK) return status;
     if (model.size() + 8 > limit - bytes.size() - 8) return error(ctx, "multimodal state exceeds byte limit");
     out.block(model.data(), model.size());
     if (bytes.size() + 8 > std::min<std::uint64_t>(ctx->max_state_bytes(), kMaxBytes)) return error(ctx, "multimodal state exceeds byte limit");
     out.u64(checksum(bytes.data(), bytes.size())); return N4M_OK;
+}
+
+n4m_status_t load_sources(n4m_context_t* ctx, Pipeline& pipeline, Reader& in) {
+    n4m_status_t status = N4M_OK;
+    for (auto& source : pipeline.sources) {
+        const unsigned char* state; std::size_t state_size; std::uint64_t n_categories;
+        if (!in.block(state, state_size) || !in.integer(n_categories) || n_categories > kMaxCategories ||
+            (source.encoder == N4M_MULTIMODAL_COLUMN_TRANSFORMER ? n_categories == 0 : n_categories != 0)) {
+            return error(ctx, "invalid multimodal branch state", N4M_ERR_CORRUPT_BUFFER);
+        }
+        n4m_estimator_t* raw = nullptr;
+        status = n4m_estimator_import_from_buffer(ctx, state, state_size, &raw); source.state.reset(raw);
+        if (status != N4M_OK) return status;
+        std::int64_t encoded = 0;
+        status = validate_state(ctx, source.state, &source, pipeline.alpha,
+                                source.encoder == N4M_MULTIMODAL_COLUMN_TRANSFORMER ? 1 : width(source), encoded);
+        if (status != N4M_OK) return status;
+        for (std::uint64_t i = 0; i < n_categories; ++i) {
+            std::string category;
+            if (!in.string(category) || (!source.categories.empty() && source.categories.back() >= category)) {
+                return error(ctx, "invalid or duplicate categorical state", N4M_ERR_CORRUPT_BUFFER);
+            }
+            source.categories.push_back(std::move(category));
+        }
+        pipeline.encoded_cols += encoded + static_cast<std::int64_t>(n_categories);
+        if (pipeline.encoded_cols > kMaxWidth) return error(ctx, "multimodal state width is oversized", N4M_ERR_CORRUPT_BUFFER);
+    }
+    return N4M_OK;
 }
 
 n4m_status_t load(n4m_context_t* ctx, const n4m_multimodal_recipe_v1_t* expected,
@@ -532,29 +596,9 @@ n4m_status_t load(n4m_context_t* ctx, const n4m_multimodal_recipe_v1_t* expected
         std::memcmp(recipe, expected_bytes.data(), recipe_size) != 0) {
         return error(ctx, "multimodal state contradicts expected recipe/source schema", N4M_ERR_CORRUPT_BUFFER);
     }
-    for (auto& source : pipeline->sources) {
-        const unsigned char* state; std::size_t state_size; std::uint64_t n_categories;
-        if (!in.block(state, state_size) || !in.integer(n_categories) || n_categories > kMaxCategories ||
-            (source.encoder == N4M_MULTIMODAL_COLUMN_TRANSFORMER ? n_categories == 0 : n_categories != 0)) {
-            return error(ctx, "invalid multimodal branch state", N4M_ERR_CORRUPT_BUFFER);
-        }
-        n4m_estimator_t* raw = nullptr;
-        status = n4m_estimator_import_from_buffer(ctx, state, state_size, &raw); source.state.reset(raw);
-        if (status != N4M_OK) return status;
-        std::int64_t encoded = 0;
-        status = validate_state(ctx, source.state, &source, pipeline->alpha,
-                                source.encoder == N4M_MULTIMODAL_COLUMN_TRANSFORMER ? 1 : width(source), encoded);
-        if (status != N4M_OK) return status;
-        for (std::uint64_t i = 0; i < n_categories; ++i) {
-            std::string category;
-            if (!in.string(category) || (!source.categories.empty() && source.categories.back() >= category)) {
-                return error(ctx, "invalid or duplicate categorical state", N4M_ERR_CORRUPT_BUFFER);
-            }
-            source.categories.push_back(std::move(category));
-        }
-        pipeline->encoded_cols += encoded + static_cast<std::int64_t>(n_categories);
-        if (pipeline->encoded_cols > kMaxWidth) return error(ctx, "multimodal state width is oversized", N4M_ERR_CORRUPT_BUFFER);
-    }
+    status = load_sources(ctx, *pipeline, in);
+    if (status != N4M_OK) return status;
+
     const unsigned char* state; std::size_t state_size;
     if (!in.block(state, state_size) || in.pos != in.size) return error(ctx, "truncated/trailing multimodal state", N4M_ERR_CORRUPT_BUFFER);
     n4m_estimator_t* raw = nullptr;
@@ -564,5 +608,233 @@ n4m_status_t load(n4m_context_t* ctx, const n4m_multimodal_recipe_v1_t* expected
     status = validate_state(ctx, pipeline->model, nullptr, pipeline->alpha, pipeline->encoded_cols, outputs);
     if (status != N4M_OK) return status;
     pipeline->fitted = true; out = std::move(pipeline); return N4M_OK;
+}
+namespace {
+constexpr const char* kClassifier = "models.classification.pls_logistic";
+using Classifier = n4m_multimodal_classifier_s;
+
+n4m_status_t classifier_head(n4m_context_t* ctx, std::int64_t components,
+                             std::int64_t iterations, Pipeline::Estimator& out) {
+    std::int32_t method = -1;
+    auto status = n4m_method_find(kClassifier, &method);
+    n4m_params_t* raw = nullptr;
+    if (status == N4M_OK) status = n4m_params_create(ctx, method, &raw);
+    std::unique_ptr<n4m_params_t, decltype(&n4m_params_destroy)> params(raw, n4m_params_destroy);
+    if (status == N4M_OK) status = n4m_params_set_int(raw, "n_components", components);
+    if (status == N4M_OK) status = n4m_params_set_int(raw, "max_iter", iterations);
+    n4m_estimator_t* head = nullptr;
+    if (status == N4M_OK) status = n4m_estimator_create(ctx, kClassifier, raw, &head);
+    if (status == N4M_OK) out.reset(head);
+    return status;
+}
+
+void classifier_recipe_bytes(const Classifier& pipeline, std::vector<unsigned char>& bytes) {
+    Writer out{bytes};
+    out.string(kClassifier);
+    out.u64(static_cast<std::uint64_t>(pipeline.n_components));
+    out.u64(static_cast<std::uint64_t>(pipeline.max_iter));
+    source_recipe_bytes(pipeline.encoded, bytes);
+}
+
+n4m_status_t classifier_ids(const Classifier& pipeline, std::vector<std::int64_t>& ids) {
+    std::int64_t count = 0;
+    auto status = n4m_estimator_classes(pipeline.encoded.model.get(), nullptr, 0, &count);
+    if (status != N4M_OK) return status;
+    if (count < 2 || count > static_cast<std::int64_t>(kMaxCategories)) return N4M_ERR_CORRUPT_BUFFER;
+    ids.resize(static_cast<std::size_t>(count));
+    status = n4m_estimator_classes(pipeline.encoded.model.get(), ids.data(), count, &count);
+    if (status != N4M_OK) return status;
+    return std::adjacent_find(ids.begin(), ids.end(), std::greater_equal<std::int64_t>()) == ids.end()
+        ? N4M_OK : N4M_ERR_CORRUPT_BUFFER;
+}
+
+n4m_status_t validate_classifier_head(n4m_context_t* ctx, const Classifier& pipeline) {
+    const auto& state = pipeline.encoded.model;
+    std::int32_t actual = -1, expected = -1, retains = -1;
+    std::uint64_t capabilities = 0;
+    std::int64_t width_in = 0, outputs = 0;
+    auto status = n4m_estimator_info(state.get(), &actual, &capabilities);
+    if (status == N4M_OK) status = n4m_method_find(kClassifier, &expected);
+    if (status == N4M_OK) status = n4m_estimator_n_features_in(state.get(), &width_in);
+    if (status == N4M_OK) status = n4m_estimator_n_outputs(state.get(), &outputs);
+    if (status == N4M_OK) status = n4m_estimator_contains_training_rows(state.get(), &retains);
+    if (status != N4M_OK) return status;
+    const auto required = N4M_CAP_PREDICT_LABELS | N4M_CAP_DECISION_FUNCTION |
+                          N4M_CAP_PREDICT_PROBA | N4M_CAP_SERIALIZABLE;
+    if (actual != expected || capabilities != required || retains != 0 ||
+        width_in != pipeline.encoded.encoded_cols) {
+        return error(ctx, "multimodal classifier head method/role/width mismatch", N4M_ERR_CORRUPT_BUFFER);
+    }
+    n4m_params_t* raw = nullptr;
+    status = n4m_estimator_get_params(ctx, state.get(), &raw);
+    std::unique_ptr<n4m_params_t, decltype(&n4m_params_destroy)> params(raw, n4m_params_destroy);
+    if (status != N4M_OK) return status;
+    std::vector<std::int64_t> classes;
+    status = classifier_ids(pipeline, classes);
+    if (status != N4M_OK) return status;
+    if (!integer_param(raw, "n_components", pipeline.n_components) ||
+        !integer_param(raw, "max_iter", pipeline.max_iter) ||
+        outputs != static_cast<std::int64_t>(classes.size())) {
+        return error(ctx, "multimodal classifier head parameters/classes mismatch", N4M_ERR_CORRUPT_BUFFER);
+    }
+    return N4M_OK;
+}
+}  // namespace
+
+n4m_status_t classifier_create(n4m_context_t* ctx,
+                               const n4m_multimodal_classifier_recipe_v1_t* recipe,
+                               std::unique_ptr<Classifier>& out) {
+    if (ctx == nullptr || recipe == nullptr) return N4M_ERR_NULL_POINTER;
+    if (recipe->struct_size < sizeof(*recipe) || recipe->method_id == nullptr ||
+        std::strcmp(recipe->method_id, kClassifier) != 0 || recipe->params == nullptr) {
+        return error(ctx, "closed native PLS-logistic multimodal classifier recipe required", N4M_ERR_UNSUPPORTED);
+    }
+    // Validates the parameter owner/type/domain using the registered adapter.
+    n4m_estimator_t* raw = nullptr;
+    auto status = n4m_estimator_create(ctx, kClassifier, recipe->params, &raw);
+    Pipeline::Estimator checked(raw);
+    if (status != N4M_OK) return status;
+    std::int64_t components = 0, iterations = 0, count = 0;
+    status = n4m_params_get_int(recipe->params, "n_components", &components, 1, &count);
+    if (status == N4M_OK && count == 1) status = n4m_params_get_int(recipe->params, "max_iter", &iterations, 1, &count);
+    if (status != N4M_OK || count != 1 || components <= 0 || iterations <= 0 ||
+        components > std::numeric_limits<std::int32_t>::max() ||
+        iterations > std::numeric_limits<std::int32_t>::max()) {
+        return error(ctx, "invalid multimodal classifier component/iteration count");
+    }
+    std::unique_ptr<Pipeline> encoders;
+    status = create_encoders(ctx, recipe->n_sources, recipe->sources, encoders);
+    if (status != N4M_OK) return status;
+    auto pipeline = std::make_unique<Classifier>();
+    pipeline->encoded = std::move(*encoders);
+    pipeline->n_components = components;
+    pipeline->max_iter = iterations;
+    out = std::move(pipeline);
+    return N4M_OK;
+}
+
+n4m_status_t classifier_fit(n4m_context_t* ctx, Classifier& pipeline, std::int32_t count,
+                            const n4m_multimodal_source_view_v1_t* sources,
+                            const std::int64_t* labels, std::int64_t n_labels) {
+    if (labels == nullptr) return N4M_ERR_NULL_POINTER;
+    if (n_labels < 2 || n_labels > kMaxElements) return error(ctx, "invalid classifier label count");
+    std::set<std::int64_t> classes(labels, labels + n_labels);
+    if (classes.size() < 2 || classes.size() > kMaxCategories) return error(ctx, "classifier requires 2..65536 classes");
+    if (n_labels > kMaxElements / static_cast<std::int64_t>(classes.size()))
+        return error(ctx, "classifier training labels/classes exceed element limit");
+    if (!classifier_working_set_fits(n_labels, classes.size(), pipeline.n_components))
+        return error(ctx, "multimodal classifier PLS-logistic working set exceeds 16777216-element matrix limit");
+    Classifier next{};
+    next.n_components = pipeline.n_components;
+    next.max_iter = pipeline.max_iter;
+    for (const auto& source : pipeline.encoded.sources) next.encoded.sources.push_back(plan_copy(source));
+    auto status = fit_encoders(ctx, next.encoded, count, sources, n_labels);
+    if (status != N4M_OK) return status;
+    std::vector<double> fused;
+    std::int64_t rows = 0, cols = 0;
+    status = features(ctx, next.encoded, count, sources, fused, rows, cols);
+    if (status != N4M_OK) return status;
+    if (next.n_components > std::min(rows, cols)) return error(ctx, "classifier component count exceeds fit rows/features");
+    status = classifier_head(ctx, next.n_components, next.max_iter, next.encoded.model);
+    if (status != N4M_OK) return status;
+    auto x = matrix(fused, rows, cols);
+    n4m_fit_inputs_v1_t inputs{};
+    inputs.struct_size = sizeof(inputs); inputs.X = &x;
+    inputs.labels = labels; inputs.n_labels = n_labels;
+    status = n4m_estimator_fit(ctx, next.encoded.model.get(), &inputs);
+    if (status == N4M_OK) status = validate_classifier_head(ctx, next);
+    if (status == N4M_OK) pipeline = std::move(next);
+    return status;
+}
+
+n4m_status_t classifier_save(n4m_context_t* ctx, const Classifier& pipeline,
+                             std::vector<unsigned char>& bytes) {
+    if (!pipeline.encoded.fitted) return error(ctx, "multimodal classifier is not fitted", N4M_ERR_NOT_FITTED);
+    auto status = validate_classifier_head(ctx, pipeline);
+    if (status != N4M_OK) return status;
+    bytes = {'N', '4', 'M', 'C'};
+    Writer out{bytes};
+    out.u32(1); out.u32(N4M_ABI_VERSION_MAJOR); out.u32(N4M_ABI_VERSION_MINOR); out.u32(N4M_ABI_VERSION_PATCH);
+    std::vector<unsigned char> recipe;
+    classifier_recipe_bytes(pipeline, recipe);
+    out.block(recipe.data(), recipe.size());
+    const auto limit = static_cast<std::size_t>(std::min<std::uint64_t>(ctx->max_state_bytes(), kMaxBytes));
+    if (bytes.size() + 8 > limit) return error(ctx, "multimodal classifier state exceeds byte limit");
+    status = save_sources(ctx, pipeline.encoded, bytes, limit);
+    if (status != N4M_OK) return status;
+    std::vector<std::int64_t> classes;
+    status = classifier_ids(pipeline, classes);
+    if (status != N4M_OK) return status;
+    if (8 + classes.size() * 8 > limit - bytes.size() - 8) return error(ctx, "classifier classes exceed byte limit");
+    out.u64(classes.size());
+    for (const auto id : classes) out.u64(static_cast<std::uint64_t>(id));
+    std::vector<unsigned char> model;
+    status = state_bytes(ctx, pipeline.encoded.model, model);
+    if (status != N4M_OK) return status;
+    if (model.size() + 8 > limit - bytes.size() - 8) return error(ctx, "classifier head exceeds byte limit");
+    out.block(model.data(), model.size());
+    out.u64(checksum(bytes.data(), bytes.size()));
+    return N4M_OK;
+}
+
+n4m_status_t classifier_load(n4m_context_t* ctx,
+                             const n4m_multimodal_classifier_recipe_v1_t* expected,
+                             const void* buffer, std::size_t size,
+                             std::unique_ptr<Classifier>& out) {
+    if (ctx == nullptr || buffer == nullptr) return N4M_ERR_NULL_POINTER;
+    if (size < 44 || size > std::min<std::uint64_t>(ctx->max_state_bytes(), kMaxBytes))
+        return error(ctx, "invalid classifier state byte size", N4M_ERR_CORRUPT_BUFFER);
+    const auto* bytes = static_cast<const unsigned char*>(buffer);
+    Reader footer{bytes + size - 8, 8};
+    std::uint64_t stored;
+    if (std::memcmp(bytes, "N4MC", 4) != 0 || !footer.integer(stored) || stored != checksum(bytes, size - 8))
+        return error(ctx, "classifier state magic/checksum mismatch", N4M_ERR_CORRUPT_BUFFER);
+    Reader in{bytes + 4, size - 12};
+    std::uint64_t format, major, minor, patch;
+    if (!in.integer(format, 4) || !in.integer(major, 4) || !in.integer(minor, 4) || !in.integer(patch, 4) ||
+        format != 1 || major != N4M_ABI_VERSION_MAJOR || minor < 17 || minor > N4M_ABI_VERSION_MINOR)
+        return error(ctx, "unsupported classifier state format/ABI", N4M_ERR_UNSUPPORTED);
+    std::unique_ptr<Classifier> pipeline;
+    auto status = classifier_create(ctx, expected, pipeline);
+    if (status != N4M_OK) return status;
+    std::vector<unsigned char> expected_bytes;
+    classifier_recipe_bytes(*pipeline, expected_bytes);
+    const unsigned char* recipe;
+    std::size_t recipe_size;
+    if (!in.block(recipe, recipe_size) || recipe_size != expected_bytes.size() ||
+        std::memcmp(recipe, expected_bytes.data(), recipe_size) != 0)
+        return error(ctx, "classifier state contradicts expected recipe/source schema", N4M_ERR_CORRUPT_BUFFER);
+    status = load_sources(ctx, pipeline->encoded, in);
+    if (status != N4M_OK) return status;
+    std::uint64_t count;
+    if (!in.integer(count) || count < 2 || count > kMaxCategories || count > (in.size - in.pos) / 8)
+        return error(ctx, "invalid classifier class table", N4M_ERR_CORRUPT_BUFFER);
+    std::vector<std::int64_t> classes;
+    classes.reserve(static_cast<std::size_t>(count));
+    for (std::uint64_t i = 0; i < count; ++i) {
+        std::uint64_t bits;
+        if (!in.integer(bits)) return N4M_ERR_CORRUPT_BUFFER;
+        std::int64_t id;
+        std::memcpy(&id, &bits, sizeof(id));
+        if (!classes.empty() && id <= classes.back()) return error(ctx, "classifier class IDs must be sorted and unique", N4M_ERR_CORRUPT_BUFFER);
+        classes.push_back(id);
+    }
+    const unsigned char* state;
+    std::size_t state_size;
+    if (!in.block(state, state_size) || in.pos != in.size)
+        return error(ctx, "truncated/trailing classifier state", N4M_ERR_CORRUPT_BUFFER);
+    n4m_estimator_t* head = nullptr;
+    status = n4m_estimator_import_from_buffer(ctx, state, state_size, &head);
+    pipeline->encoded.model.reset(head);
+    if (status != N4M_OK) return status;
+    status = validate_classifier_head(ctx, *pipeline);
+    if (status != N4M_OK) return status;
+    std::vector<std::int64_t> actual;
+    status = classifier_ids(*pipeline, actual);
+    if (status != N4M_OK) return status;
+    if (actual != classes) return error(ctx, "classifier class table contradicts head state", N4M_ERR_CORRUPT_BUFFER);
+    pipeline->encoded.fitted = true;
+    out = std::move(pipeline);
+    return N4M_OK;
 }
 }  // namespace n4m::multimodal

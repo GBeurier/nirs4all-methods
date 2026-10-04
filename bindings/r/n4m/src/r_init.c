@@ -126,8 +126,20 @@ SEXP r_n4m_multimodal_fit(SEXP, SEXP, SEXP, SEXP);
 SEXP r_n4m_multimodal_op(SEXP, SEXP, SEXP, SEXP);
 SEXP r_n4m_multimodal_export(SEXP);
 SEXP r_n4m_multimodal_close(SEXP);
+SEXP r_n4m_multimodal_classifier_create(SEXP, SEXP, SEXP);
+SEXP r_n4m_multimodal_classifier_fit(SEXP, SEXP, SEXP, SEXP);
+SEXP r_n4m_multimodal_classifier_classes(SEXP);
+SEXP r_n4m_multimodal_classifier_op(SEXP, SEXP, SEXP, SEXP);
+SEXP r_n4m_multimodal_classifier_export(SEXP);
+SEXP r_n4m_multimodal_classifier_close(SEXP);
 
 static const R_CallMethodDef callMethods[] = {
+    {"r_n4m_multimodal_classifier_create", (DL_FUNC)&r_n4m_multimodal_classifier_create, 3},
+    {"r_n4m_multimodal_classifier_fit", (DL_FUNC)&r_n4m_multimodal_classifier_fit, 4},
+    {"r_n4m_multimodal_classifier_classes", (DL_FUNC)&r_n4m_multimodal_classifier_classes, 1},
+    {"r_n4m_multimodal_classifier_op", (DL_FUNC)&r_n4m_multimodal_classifier_op, 4},
+    {"r_n4m_multimodal_classifier_export", (DL_FUNC)&r_n4m_multimodal_classifier_export, 1},
+    {"r_n4m_multimodal_classifier_close", (DL_FUNC)&r_n4m_multimodal_classifier_close, 1},
     {"r_n4m_multimodal_create", (DL_FUNC)&r_n4m_multimodal_create, 3},
     {"r_n4m_multimodal_fit", (DL_FUNC)&r_n4m_multimodal_fit, 4},
     {"r_n4m_multimodal_op", (DL_FUNC)&r_n4m_multimodal_op, 4},

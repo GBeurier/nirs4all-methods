@@ -32,11 +32,51 @@ fit_inputs <- function(names) {
   all[names]
 }
 
+testthat::test_that("writer ABI comparison retains checksum and learned state refusals", {
+  case <- Filter(function(item) item$method_id == "models.regularized.ridge", fx$cases)[[1L]]
+  original <- hex_to_raw(case$n4me)
+  current <- n4m_estimator_export(n4m_estimator_import(original))
+  testthat::expect_true(assert_n4me_reexport_equivalent(original, current))
+  # A checksum byte is never ignored before validating the full packet.
+  corrupt <- current
+  corrupt[[length(corrupt)]] <- as.raw(bitwXor(as.integer(corrupt[[length(corrupt)]]), 1L))
+  testthat::expect_error(assert_n4me_reexport_equivalent(original, corrupt))
+  testthat::expect_error(n4m_estimator_import(corrupt))
+  # A genuinely fitted native state with changed targets must compare unequal.
+  other <- n4m_estimator_fit(do.call(constructors[[case$method_id]], case$params),
+                             fx$x_train, fx$y_train + 1)
+  changed <- n4m_estimator_export(other)
+  testthat::expect_s3_class(n4m_estimator_import(changed), "n4m_regressor")
+  testthat::expect_error(assert_n4me_reexport_equivalent(original, changed))
+  # Recomputing the checksum cannot conceal an unexpected writer ABI.
+  foreign <- current
+  foreign[13:16] <- writeBin(as.integer(n4m_abi_version()[[2L]] + 1L), raw(), size = 4L, endian = "little")
+  foreign[(length(foreign) - 7L):length(foreign)] <- .n4me_fnv(head(foreign, -8L))
+  testthat::expect_error(assert_n4me_reexport_equivalent(original, foreign))
+})
+
 testthat::test_that("every manifest estimator has a generated R constructor", {
   testthat::expect_setequal(names(constructors), names(n4m:::.n4m_method_roles))
   testthat::expect_setequal(names(constructors),
                             c(vapply(fx$cases, `[[`, "", "method_id"),
-                              vapply(fx$procedures, `[[`, "", "method_id")))
+                              vapply(fx$procedures, `[[`, "", "method_id"),
+                              "preprocessing.scaling.standard_scale"))
+})
+
+testthat::test_that("StandardScale fits population moments on training rows only", {
+  train <- cbind(c(1, 2, 4, 7), c(5, 5, 5, 5), c(100, 101, 103, 107))
+  heldout <- cbind(c(20, -10), c(5, 8), c(200, -200))
+  mean <- colMeans(train)
+  scale <- sqrt(colMeans(sweep(train, 2L, mean)^2))
+  scale[scale == 0] <- 1
+  expected <- sweep(sweep(heldout, 2L, mean), 2L, scale, "/")
+  fit <- n4m_estimator_fit(n4m_standard_scale(), train)
+  testthat::expect_equal(n4m_estimator_transform(fit, heldout), expected, tolerance = 1e-12)
+  state <- n4m_estimator_export(fit)
+  replay <- n4m_estimator_import(state)
+  testthat::expect_identical(n4m_estimator_transform(replay, heldout),
+                              n4m_estimator_transform(fit, heldout))
+  testthat::expect_identical(n4m_estimator_export(replay), state)
 })
 
 for (case in fx$cases) {
@@ -68,7 +108,7 @@ for (case in fx$cases) {
       if (n4m_contains_training_rows(est)) {
         testthat::expect_error(n4m_estimator_export(est), "training rows")
       }
-      testthat::expect_identical(n4m_estimator_export(est, allow_training_rows = TRUE), bytes)
+      testthat::expect_true(assert_n4me_reexport_equivalent(bytes, n4m_estimator_export(est, allow_training_rows = TRUE)))
     })
 
     testthat::test_that(paste("R fit reproduces the Python fit:", case$method_id), {
@@ -176,7 +216,7 @@ for (case in fx$procedures) {
 
 testthat::test_that("the native manifest and constructor lookup cover every method", {
   json <- n4m_manifest_json()
-  testthat::expect_true(startsWith(json, "{\"abi\":\"2.15"))
+  testthat::expect_true(startsWith(json, paste0("{\"abi\":\"", paste(n4m_abi_version(), collapse = "."), "\"")))
   for (id in names(constructors)) {
     testthat::expect_true(grepl(paste0("\"method_id\":\"", id, "\""), json, fixed = TRUE))
     testthat::expect_identical(n4m_constructor(id), constructors[[id]])

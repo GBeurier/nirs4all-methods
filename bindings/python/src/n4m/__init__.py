@@ -11,7 +11,8 @@ scikit-learn / DL pipeline conventions::
     from n4m.ensemble import AOMRidgeBlender
 
 The top-level package only exposes metadata and a handful of shared helpers
-(:func:`version`, :func:`abi_version`, :class:`Context`, :class:`N4MError`,
+(:func:`version`, :func:`abi_version`, :func:`build_info`,
+:func:`build_capabilities`, :class:`BuildCapabilities`, :class:`Context`, :class:`N4MError`,
 :class:`PartialBatchError`, :class:`MatrixView`, :class:`PCG64`) plus the role
 subpackages. The complete raw-source :class:`MultimodalPipeline` facade is
 also available directly at the package root when scikit-learn is installed.
@@ -19,6 +20,7 @@ also available directly at the package root when scikit-learn is installed.
 
 import ctypes
 
+from ._build import BuildCapabilities, build_capabilities, build_info
 from ._context import Context
 from ._errors import N4MError, PartialBatchError
 from ._ffi import (
@@ -53,6 +55,7 @@ from ._impl.compat import _SKLEARN_AVAILABLE
 # NumPy-only surface available through the existing compatibility decision.
 if _SKLEARN_AVAILABLE:
     from .roles._multimodal import MultimodalPipeline
+    from .roles._multimodal_classifier import MultimodalClassifierPipeline
 
 
 def version() -> str:
@@ -77,6 +80,7 @@ __all__ = [
     "ABI_VERSION_MINOR",
     "ABI_VERSION_PATCH",
     "ABI_VERSION_STRING",
+    "BuildCapabilities",
     "Context",
     "MatrixView",
     "N4MError",
@@ -84,6 +88,8 @@ __all__ = [
     "PCG64",
     "abi_version",
     "augmentation",
+    "build_capabilities",
+    "build_info",
     "compose",
     "decomposition",
     "domain_adaptation",
@@ -101,6 +107,7 @@ __all__ = [
 ]
 if _SKLEARN_AVAILABLE:
     __all__.append("MultimodalPipeline")
+    __all__.append("MultimodalClassifierPipeline")
 
 # Derive __version__ from the loaded native library so it stays in sync with the
 # C ABI version_string (shape "X.Y.Z+abi.A.B.C") — strip the "+abi.*" suffix.

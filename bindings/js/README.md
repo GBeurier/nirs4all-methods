@@ -44,14 +44,21 @@ DataTwinning, SystematicCircular). The PLS smoke compares coefficients +
 predictions to a frozen native fixture (`test/parity_fixture.json`) at a 1e-9
 isolated band (achieved ~1e-16).
 
+The additive raw `MultimodalClassifierPipeline` requires ABI 2.17 and the
+native PLS-logistic head. `fit(blocks, labels)` keeps string or exact integer
+original labels; `predictProba(blocks)` returns columns in `classes()` order.
+`exportState()` writes N4MC bytes without training rows.
+`MultimodalClassifierPipeline.fromState(state, recipe, schemas, { classNames })`
+restores the original typed label table; omitting it exposes native class IDs.
+
 ## API surface
 
 ```typescript
 import * as n4m from "@nirs4all/methods";
 
 await n4m.loadModule();
-console.log(n4m.version());     // "1.2.1+abi.2.16.0"
-console.log(n4m.abiVersion());  // [2, 16, 0]
+console.log(n4m.version());     // "1.2.1+abi.2.17.0"
+console.log(n4m.abiVersion());  // [2, 17, 0]
 
 const rows = 40, cols = 6;
 const X = new Float64Array(rows * cols);   // row-major

@@ -32,6 +32,8 @@ check <- function(value) stopifnot(length(value) == length(expected), max(abs(va
 state <- jsonlite::base64_dec(fixture$state)
 replay <- n4m_multimodal_pipeline_from_state(state, recipe, schemas)
 check(predict(replay, heldout))
+# Current writer ABI may differ from the historical imported fixture.
+replay_before <- n4m_export_state(replay)
 z <- n4m_estimator_transform(replay, heldout)
 width <- 0L
 for (name in recipe$source_order) {
@@ -57,7 +59,7 @@ if (length(float32_sources)) {
   invalid[[float32_sources[[1]]]][[1]] <- 0.1
   failure <- try(predict(replay, invalid), silent = TRUE)
   stopifnot(inherits(failure, "try-error"), grepl("float32.*lossless", as.character(failure)))
-  stopifnot(identical(n4m_export_state(replay), state))
+  stopifnot(identical(n4m_export_state(replay), replay_before))
   check(predict(replay, heldout))
 }
 broken <- state; broken[[61]] <- as.raw(bitwXor(as.integer(broken[[61]]), 1L))

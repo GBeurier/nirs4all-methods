@@ -86,6 +86,12 @@ target_link_libraries(n4m_multimodal_pipeline_tests PRIVATE n4m_c)
 n4m_add_warnings(n4m_multimodal_pipeline_tests)
 add_test(NAME n4m_multimodal_pipeline_tests COMMAND n4m_multimodal_pipeline_tests)
 set_tests_properties(n4m_multimodal_pipeline_tests PROPERTIES LABELS "abi;parity" TIMEOUT 30)
+add_executable(n4m_multimodal_classifier_tests test_multimodal_classifier.cpp)
+target_link_libraries(n4m_multimodal_classifier_tests PRIVATE n4m_c)
+target_include_directories(n4m_multimodal_classifier_tests PRIVATE ${CMAKE_SOURCE_DIR}/cpp/src)
+n4m_add_warnings(n4m_multimodal_classifier_tests)
+add_test(NAME n4m_multimodal_classifier_tests COMMAND n4m_multimodal_classifier_tests)
+set_tests_properties(n4m_multimodal_classifier_tests PROPERTIES LABELS "abi;parity;classification" TIMEOUT 60)
 # Procedure results are compared field by field through the internal
 # MethodResult layout.
 add_executable(n4m_procedure_tests test_procedure.cpp)
@@ -163,3 +169,76 @@ if(TARGET n4m_c_static)
         LABELS "parity"
         TIMEOUT 60)
 endif()
+
+# Existing public build-info ABI must report the numerical core's actual flags.
+add_executable(n4m_build_capabilities_tests test_build_capabilities.cpp)
+target_link_libraries(n4m_build_capabilities_tests PRIVATE n4m_c)
+target_include_directories(n4m_build_capabilities_tests PRIVATE ${CMAKE_SOURCE_DIR}/cpp/src)
+target_compile_definitions(n4m_build_capabilities_tests PRIVATE
+    $<TARGET_PROPERTY:n4m_core,COMPILE_DEFINITIONS>)
+n4m_add_warnings(n4m_build_capabilities_tests)
+add_test(NAME n4m_build_capabilities_tests COMMAND n4m_build_capabilities_tests)
+set_tests_properties(n4m_build_capabilities_tests PROPERTIES LABELS "abi" TIMEOUT 30)
+
+# Compile only the metadata TU for every backend combination. This proves
+# compiled CUDA is reported even on hosts without a toolkit or visible GPU;
+# these executables neither link nor run numerical acceleration libraries.
+foreach(_profile RANGE 0 7)
+    set(_target n4m_build_profile_${_profile}_tests)
+    add_executable(${_target} test_build_capabilities.cpp ../src/core/common/version.cpp)
+    target_include_directories(${_target} PRIVATE
+        ${CMAKE_SOURCE_DIR}/cpp/include ${CMAKE_SOURCE_DIR}/cpp/src
+        ${PROJECT_BINARY_DIR}/generated)
+    target_compile_definitions(${_target} PRIVATE
+        N4M_TEST_BUILD_INFO_CORE=1 N4M_BUILD_INFO="profile matrix descriptive text")
+    math(EXPR _blas "${_profile} & 1")
+    math(EXPR _openmp "${_profile} & 2")
+    math(EXPR _cuda "${_profile} & 4")
+    if(_blas)
+        target_compile_definitions(${_target} PRIVATE N4M_USE_BLAS=1)
+    endif()
+    if(_openmp)
+        target_compile_definitions(${_target} PRIVATE N4M_USE_OPENMP=1)
+    endif()
+    if(_cuda)
+        target_compile_definitions(${_target} PRIVATE N4M_USE_CUDA=1)
+    endif()
+    n4m_add_warnings(${_target})
+    add_test(NAME ${_target} COMMAND ${_target})
+    set_tests_properties(${_target} PROPERTIES LABELS "abi" TIMEOUT 30)
+endforeach()
+
+# A real externally supplied compiler flag enables _OPENMP even when the
+# configured N4M OpenMP backend is disabled. Compile the metadata TU only:
+# no numerical acceleration is linked or executed by this witness.
+include(CheckCXXCompilerFlag)
+if(MSVC)
+    set(_external_openmp_flag "/openmp")
+else()
+    set(_external_openmp_flag "-fopenmp")
+endif()
+check_cxx_compiler_flag("${_external_openmp_flag}" N4M_TEST_HAS_EXTERNAL_OPENMP_FLAG)
+if(N4M_TEST_HAS_EXTERNAL_OPENMP_FLAG)
+    add_executable(n4m_build_external_openmp_tests
+        test_build_capabilities.cpp ../src/core/common/version.cpp)
+    target_include_directories(n4m_build_external_openmp_tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/cpp/include ${CMAKE_SOURCE_DIR}/cpp/src
+        ${PROJECT_BINARY_DIR}/generated)
+    target_compile_definitions(n4m_build_external_openmp_tests PRIVATE
+        N4M_TEST_BUILD_INFO_CORE=1 N4M_TEST_REQUIRE_EXTERNAL_OPENMP=1)
+    target_compile_options(n4m_build_external_openmp_tests PRIVATE "${_external_openmp_flag}")
+    n4m_add_warnings(n4m_build_external_openmp_tests)
+    add_test(NAME n4m_build_external_openmp_tests COMMAND n4m_build_external_openmp_tests)
+    set_tests_properties(n4m_build_external_openmp_tests PROPERTIES LABELS "abi" TIMEOUT 30)
+else()
+    message(STATUS "External compiler OpenMP capability witness unavailable on this toolchain")
+endif()
+
+# Explicit test instrumentation only. Product libn4m sources/exports are untouched.
+# ctypes releases the GIL across each CDLL probe and the real linked native FIT.
+add_library(n4m_fit_witness SHARED test_native_fit_witness.cpp)
+target_link_libraries(n4m_fit_witness PRIVATE n4m_c)
+target_compile_features(n4m_fit_witness PRIVATE cxx_std_17)
+set_target_properties(n4m_fit_witness PROPERTIES
+    CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
+n4m_add_warnings(n4m_fit_witness)

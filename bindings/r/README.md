@@ -28,19 +28,27 @@ At load time R needs to find `libn4m`. Either install the shared library
 on the system path or export `LD_LIBRARY_PATH` (Linux) /
 `DYLD_LIBRARY_PATH` (macOS) / `PATH` (Windows).
 
+The raw multimodal classifier requires ABI 2.17. Use
+`n4m_multimodal_classifier(recipe, source_schemas)` with the native PLS-logistic
+head, then `model <- n4m_fit(model, blocks, labels)`.
+`predict(model, blocks, type = "prob")` returns columns in `n4m_classes(model)`
+order. N4MC states contain the complete native encoder/head state and no
+training rows; provide the original typed label table as `class_names` to
+`n4m_multimodal_classifier_from_state` when restoring named classes.
+
 ## Smoke
 
 ```R
 library(n4m)
 
 n4m_version()
-# "1.2.1+abi.2.16.0"
+# "1.2.1+abi.2.17.0"
 
 # Seeded native training-only augmentation of X (no paired Y output):
 # n4m::n4m_augmentation_apply("gaussian_noise", train_X, 0.03, seed = 42)
 
 n4m_abi_version()
-# c(2, 16, 0)
+# c(2, 17, 0)
 
 set.seed(42)
 X <- matrix(rnorm(2000), nrow = 200)

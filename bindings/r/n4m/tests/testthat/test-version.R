@@ -10,9 +10,9 @@ testthat::test_that("abi version is a three-element integer vector", {
   testthat::expect_length(abi, 3)
 })
 
-testthat::test_that("abi major/minor includes native role pipelines", {
+testthat::test_that("abi major/minor includes raw multimodal classification", {
   abi <- n4m::n4m_abi_version()
-  testthat::expect_equal(abi[1:2], c(2L, 14L))
+  testthat::expect_equal(abi[1:2], c(2L, 17L))
 })
 
 testthat::test_that("locked role-name aliases are exported", {

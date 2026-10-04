@@ -43,7 +43,7 @@ static int boolean(SEXP value) {
         Rf_error("expected one boolean");
     return LOGICAL(value)[0] != 0;
 }
-static n4m_multimodal_recipe_v1_t configuration(SEXP recipe, SEXP schemas) {
+static n4m_multimodal_recipe_v1_t source_configuration(SEXP recipe, SEXP schemas) {
     SEXP order = field(recipe, "source_order");
     if (TYPEOF(order) != STRSXP || XLENGTH(order) < 1 || XLENGTH(order) > 4)
         Rf_error("source_order requires 1..4 selected modality names");
@@ -91,6 +91,10 @@ static n4m_multimodal_recipe_v1_t configuration(SEXP recipe, SEXP schemas) {
             s->with_mean = boolean(field(encoder, "with_mean")); s->with_std = boolean(field(encoder, "with_std"));
         }
     }
+    return out;
+}
+static n4m_multimodal_recipe_v1_t configuration(SEXP recipe, SEXP schemas) {
+    n4m_multimodal_recipe_v1_t out = source_configuration(recipe, schemas);
     SEXP params = field(field(recipe, "model"), "params");
     out.alpha = number(field(params, "alpha")); out.center_x = boolean(field(params, "center_x"));
     out.center_y = boolean(field(params, "center_y")); out.scale_x = boolean(field(params, "scale_x"));
@@ -226,4 +230,132 @@ SEXP r_n4m_multimodal_close(SEXP ptr) {
     if (TYPEOF(ptr) != EXTPTRSXP || R_ExternalPtrTag(ptr) != Rf_install("n4m_multimodal_pipeline"))
         Rf_error("expected a native multimodal pointer");
     finalizer(ptr); return R_NilValue;
+}
+
+/* Classifier ABI is additive; the existing Ridge pointer/tag is unchanged. */
+static void classifier_finalizer(SEXP ptr) {
+    n4m_multimodal_classifier_destroy((n4m_multimodal_classifier_t*)R_ExternalPtrAddr(ptr));
+    R_ClearExternalPtr(ptr);
+}
+static n4m_multimodal_classifier_t* classifier_handle(SEXP ptr) {
+    if (TYPEOF(ptr) != EXTPTRSXP || R_ExternalPtrTag(ptr) != Rf_install("n4m_multimodal_classifier") ||
+        R_ExternalPtrAddr(ptr) == NULL)
+        Rf_error("native multimodal classifier is closed or has the wrong pointer type");
+    return (n4m_multimodal_classifier_t*)R_ExternalPtrAddr(ptr);
+}
+static n4m_context_t* classifier_context(void) {
+    n4m_context_t* ctx = NULL;
+    check(n4m_check_abi_compatibility(2, 17), NULL);
+    check(n4m_context_create(&ctx), ctx);
+    return ctx;
+}
+SEXP r_n4m_multimodal_classifier_create(SEXP recipe, SEXP schemas, SEXP state) {
+    n4m_multimodal_recipe_v1_t sources = source_configuration(recipe, schemas);
+    SEXP model = field(recipe, "model"), values = field(model, "params");
+    const char* method_id = text(field(model, "method_id"));
+    int64_t n_components = integer(field(values, "n_components"));
+    int64_t max_iter = integer(field(values, "max_iter"));
+    if (!Rf_isNull(state) && (TYPEOF(state) != RAWSXP || XLENGTH(state) == 0 || XLENGTH(state) > 67108864))
+        Rf_error("expected bounded raw N4MC state bytes");
+    SEXP ptr = PROTECT(R_MakeExternalPtr(NULL, Rf_install("n4m_multimodal_classifier"), R_NilValue));
+    R_RegisterCFinalizerEx(ptr, classifier_finalizer, TRUE);
+    n4m_context_t* ctx = classifier_context(); n4m_params_t* params = NULL;
+    n4m_multimodal_classifier_t* pipeline = NULL; int32_t method_index = -1;
+    n4m_status_t status = n4m_method_find(method_id, &method_index);
+    if (status == N4M_OK) status = n4m_params_create(ctx, method_index, &params);
+    if (status == N4M_OK) status = n4m_params_set_int(params, "n_components", n_components);
+    if (status == N4M_OK) status = n4m_params_set_int(params, "max_iter", max_iter);
+    if (status == N4M_OK) status = n4m_params_validate(ctx, params);
+    n4m_multimodal_classifier_recipe_v1_t cfg;
+    memset(&cfg, 0, sizeof(cfg)); cfg.struct_size = sizeof(cfg);
+    cfg.n_sources = sources.n_sources; cfg.sources = sources.sources;
+    cfg.method_id = method_id; cfg.params = params;
+    if (status == N4M_OK) status = Rf_isNull(state) ?
+        n4m_multimodal_classifier_create(ctx, &cfg, &pipeline) :
+        n4m_multimodal_classifier_import_from_buffer(ctx, &cfg, RAW(state), XLENGTH(state), &pipeline);
+    n4m_params_destroy(params);
+    check(status, ctx); n4m_context_destroy(ctx);
+    R_SetExternalPtrAddr(ptr, pipeline); UNPROTECT(1); return ptr;
+}
+SEXP r_n4m_multimodal_classifier_fit(SEXP ptr, SEXP blocks, SEXP schemas, SEXP y) {
+    n4m_multimodal_classifier_t* p = classifier_handle(ptr); int64_t rows;
+    n4m_multimodal_source_view_v1_t* input = views(blocks, schemas, &rows);
+    if (TYPEOF(y) != REALSXP || XLENGTH(y) != rows) Rf_error("expected one native class ID per row");
+    int64_t* labels = (int64_t*)R_alloc(rows ? rows : 1, sizeof(*labels));
+    for (int64_t i = 0; i < rows; ++i) {
+        double value = REAL(y)[i];
+        if (!R_FINITE(value) || floor(value) != value || fabs(value) > 9007199254740991.0)
+            Rf_error("class IDs require finite lossless integer transport");
+        labels[i] = (int64_t)value;
+    }
+    n4m_context_t* ctx = classifier_context();
+    check(n4m_multimodal_classifier_fit(ctx, p, (int32_t)XLENGTH(schemas), input, labels, rows), ctx);
+    n4m_context_destroy(ctx); return ptr;
+}
+SEXP r_n4m_multimodal_classifier_classes(SEXP ptr) {
+    n4m_multimodal_classifier_t* p = classifier_handle(ptr); int64_t count = 0;
+    check(n4m_multimodal_classifier_classes(p, NULL, 0, &count), NULL);
+    if (count < 2 || count > 65536) Rf_error("class count exceeds native bounds");
+    int64_t* ids = (int64_t*)R_alloc(count, sizeof(*ids));
+    check(n4m_multimodal_classifier_classes(p, ids, count, &count), NULL);
+    SEXP out = PROTECT(Rf_allocVector(REALSXP, count));
+    for (int64_t i = 0; i < count; ++i) {
+        if (ids[i] < -9007199254740991LL || ids[i] > 9007199254740991LL)
+            Rf_error("native class ID exceeds lossless R numeric range");
+        REAL(out)[i] = (double)ids[i];
+    }
+    UNPROTECT(1); return out;
+}
+SEXP r_n4m_multimodal_classifier_op(SEXP ptr, SEXP blocks, SEXP schemas, SEXP operation) {
+    n4m_multimodal_classifier_t* p = classifier_handle(ptr);
+    const char* op = text(operation);
+    const int labels = !strcmp(op, "class"), transform = !strcmp(op, "transform");
+    const int probabilities = !strcmp(op, "prob"), decision = !strcmp(op, "decision");
+    if (!labels && !transform && !probabilities && !decision) Rf_error("unsupported classifier operation");
+    int64_t rows, width = 1;
+    n4m_multimodal_source_view_v1_t* input = views(blocks, schemas, &rows);
+    if (rows < 1 || rows > INT_MAX) Rf_error("output rows exceed native bounds");
+    if (labels) {
+        int64_t class_count = 0;
+        check(n4m_multimodal_classifier_n_outputs(p, &class_count), NULL);
+        if (class_count < 2 || rows > 16777216 / class_count)
+            Rf_error("classifier prediction matrix exceeds native bounds");
+        int64_t* ids = (int64_t*)R_alloc(rows, sizeof(*ids));
+        SEXP out = PROTECT(Rf_allocVector(REALSXP, rows));
+        n4m_context_t* ctx = classifier_context();
+        check(n4m_multimodal_classifier_predict_labels(ctx, p, (int32_t)XLENGTH(schemas), input, ids, rows), ctx);
+        n4m_context_destroy(ctx);
+        for (int64_t i = 0; i < rows; ++i) {
+            if (ids[i] < -9007199254740991LL || ids[i] > 9007199254740991LL)
+                Rf_error("native prediction exceeds lossless R numeric range");
+            REAL(out)[i] = (double)ids[i];
+        }
+        UNPROTECT(1); return out;
+    }
+    check(transform ? n4m_multimodal_classifier_transform_cols(p, &width) :
+        n4m_multimodal_classifier_n_outputs(p, &width), NULL);
+    if (width < 1 || width > INT_MAX || rows > 16777216 / width)
+        Rf_error("output exceeds native shape bounds");
+    SEXP out = PROTECT(Rf_allocMatrix(REALSXP, (int)rows, (int)width)); n4m_matrix_view_t view;
+    check(n4m_matrix_view_init_colmajor(&view, REAL(out), rows, width, N4M_DTYPE_F64), NULL);
+    n4m_context_t* ctx = classifier_context();
+    n4m_status_t status = transform ?
+        n4m_multimodal_classifier_transform(ctx, p, (int32_t)XLENGTH(schemas), input, &view) : probabilities ?
+        n4m_multimodal_classifier_predict_proba(ctx, p, (int32_t)XLENGTH(schemas), input, &view) :
+        n4m_multimodal_classifier_decision_function(ctx, p, (int32_t)XLENGTH(schemas), input, &view);
+    check(status, ctx); n4m_context_destroy(ctx); UNPROTECT(1); return out;
+}
+SEXP r_n4m_multimodal_classifier_export(SEXP ptr) {
+    n4m_multimodal_classifier_t* p = classifier_handle(ptr);
+    n4m_context_t* ctx = classifier_context(); size_t size = 0;
+    check(n4m_multimodal_classifier_export_size(ctx, p, &size), ctx); n4m_context_destroy(ctx);
+    if (size < 1 || size > 67108864) Rf_error("N4MC state exceeds native limit");
+    SEXP out = PROTECT(Rf_allocVector(RAWSXP, size)); ctx = classifier_context();
+    check(n4m_multimodal_classifier_export_to_buffer(ctx, p, RAW(out), size, &size), ctx);
+    n4m_context_destroy(ctx); UNPROTECT(1); return out;
+}
+SEXP r_n4m_multimodal_classifier_close(SEXP ptr) {
+    if (TYPEOF(ptr) != EXTPTRSXP || R_ExternalPtrTag(ptr) != Rf_install("n4m_multimodal_classifier"))
+        Rf_error("expected a native multimodal classifier pointer");
+    classifier_finalizer(ptr); return R_NilValue;
 }
