@@ -119,7 +119,7 @@ license = "CECILL-2.1"
 license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.21"]
+dependencies = ["numpy>=1.21", "typing-extensions>=4.0; python_version < '3.11'"]
 
 [project.urls]
 Homepage = "https://github.com/GBeurier/nirs4all-methods"
@@ -160,6 +160,7 @@ packages = find:
 python_requires = >=3.10
 install_requires =
     numpy>=1.21
+    typing-extensions>=4.0; python_version < "3.11"
 include_package_data = True
 
 [options.packages.find]

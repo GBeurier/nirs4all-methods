@@ -86,6 +86,16 @@ class FitScope {
 }  // namespace
 
 extern "C" {
+// This test library exports its probes independently of the production ABI.
+N4M_TEST_PROBE_API int n4m_test_native_fit_reset(int serialize, std::uint64_t limit);
+N4M_TEST_PROBE_API const char* n4m_test_native_fit_snapshot();
+N4M_TEST_PROBE_API std::uint64_t n4m_test_native_fit_real_address(int kind);
+N4M_TEST_PROBE_API n4m_status_t n4m_test_probe_role_fit(
+    n4m_context_t* context, n4m_role_pipeline_t* handle, const n4m_fit_inputs_v1_t* inputs);
+N4M_TEST_PROBE_API n4m_status_t n4m_test_probe_multimodal_fit(
+    n4m_context_t* context, n4m_multimodal_pipeline_t* handle, int32_t n_sources,
+    const n4m_multimodal_source_view_v1_t* sources, const n4m_matrix_view_t* target);
+
 N4M_TEST_PROBE_API int n4m_test_native_fit_reset(int serialize, std::uint64_t limit) {
     try {
         std::lock_guard<std::mutex> lock(state_mutex);

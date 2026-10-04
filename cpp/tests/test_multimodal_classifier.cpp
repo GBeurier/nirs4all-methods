@@ -36,13 +36,13 @@ struct Fixture {
     std::array<n4m_multimodal_source_view_v1_t, 4> views{};
     n4m_multimodal_recipe_v1_t recipe{};
     Fixture() {
-        for (int i = 0; i < 4; ++i) {
+        for (size_t i = 0; i < 4; ++i) {
             int64_t width = i == 3 ? 1 : 1;
             if (i != 3) for (auto d : shapes[i]) width *= d;
-            numeric[i].resize(rows * width);
+            numeric[i].resize(static_cast<size_t>(rows * width));
             for (int64_t r = 0; r < rows; ++r)
                 for (int64_t c = 0; c < width; ++c)
-                    numeric[i][r * width + c] = std::sin(0.37 * (r + 1) * (c + 1)) + 0.03 * r * c;
+                    numeric[i][static_cast<size_t>(r * width + c)] = std::sin(0.37 * static_cast<double>(r + 1) * static_cast<double>(c + 1)) + 0.03 * static_cast<double>(r) * static_cast<double>(c);
             auto& s = specs[i]; s.struct_size = sizeof(s); s.name = names[i].c_str();
             s.representation_id = representations[i]; s.dtype = i == 3 ? "<U32" : "float64";
             s.identity_utf8 = identities[i].data(); s.identity_bytes = identities[i].size();
@@ -63,7 +63,7 @@ struct Fixture {
         }
         for (int64_t r = 0; r < rows; ++r) {
             const std::string label = r % 2 ? "é" : "猫";
-            categories += label; offsets.push_back(categories.size()); y.push_back(0.4 * r + std::cos(0.2 * r));
+            categories += label; offsets.push_back(categories.size()); y.push_back(0.4 * static_cast<double>(r) + std::cos(0.2 * static_cast<double>(r)));
         }
         views[3].categorical_utf8 = categories.data(); views[3].utf8_bytes = categories.size(); views[3].categorical_offsets = offsets.data();
         recipe.struct_size = sizeof(recipe); recipe.n_sources = 4; recipe.sources = specs.data(); recipe.alpha = 0.2;
@@ -105,14 +105,14 @@ std::vector<int64_t> labels(Context& ctx, const Owner& p, Fixture& f) {
     return result;
 }
 std::vector<double> probabilities(Context& ctx, const Owner& p, Fixture& f, int64_t classes) {
-    std::vector<double> result(Fixture::rows * classes);
+    std::vector<double> result(static_cast<size_t>(Fixture::rows * classes));
     n4m_matrix_view_t out{};
     REQUIRE(n4m_matrix_view_init_rowmajor(&out, result.data(), Fixture::rows, classes, N4M_DTYPE_F64) == N4M_OK);
     REQUIRE(n4m_multimodal_classifier_predict_proba(ctx.value, p.get(), 4, f.views.data(), &out) == N4M_OK);
     for (int64_t row = 0; row < Fixture::rows; ++row) {
         double sum = 0;
         for (int64_t column = 0; column < classes; ++column) {
-            double value = result[row * classes + column];
+            double value = result[static_cast<size_t>(row * classes + column)];
             REQUIRE(std::isfinite(value) && value >= 0 && value <= 1); sum += value;
         }
         REQUIRE(std::abs(sum - 1) < 1e-12);
@@ -148,19 +148,19 @@ void binary_and_multiclass() {
         Context ctx; Fixture f; Recipe r(ctx, f); auto p = create(ctx, r);
         std::vector<int64_t> y(Fixture::rows);
         const int64_t ids[] = {-19, 5, 90};
-        for (int64_t i = 0; i < Fixture::rows; ++i) y[i] = ids[i % count];
+        for (int64_t i = 0; i < Fixture::rows; ++i) y[static_cast<size_t>(i)] = ids[i % count];
         REQUIRE(n4m_multimodal_classifier_fit(ctx.value, p.get(), 4, f.views.data(), y.data(), Fixture::rows) == N4M_OK);
         int64_t size = 0;
         REQUIRE(n4m_multimodal_classifier_classes(p.get(), nullptr, 0, &size) == N4M_OK);
         REQUIRE(size == count);
-        std::vector<int64_t> classes(count);
+        std::vector<int64_t> classes(static_cast<size_t>(count));
         REQUIRE(n4m_multimodal_classifier_classes(p.get(), classes.data(), count, &size) == N4M_OK);
-        for (int64_t i = 0; i < count; ++i) REQUIRE(classes[i] == ids[i]);
+        for (int64_t i = 0; i < count; ++i) REQUIRE(classes[static_cast<size_t>(i)] == ids[i]);
         auto predicted = labels(ctx, p, f); auto proba = probabilities(ctx, p, f, count);
         // Independent public native estimator receives already transformed X.
         int64_t width = 0;
         REQUIRE(n4m_multimodal_classifier_transform_cols(p.get(), &width) == N4M_OK);
-        std::vector<double> z(Fixture::rows * width);
+        std::vector<double> z(static_cast<size_t>(Fixture::rows * width));
         n4m_matrix_view_t x{};
         REQUIRE(n4m_matrix_view_init_rowmajor(&x, z.data(), Fixture::rows, width, N4M_DTYPE_F64) == N4M_OK);
         REQUIRE(n4m_multimodal_classifier_transform(ctx.value, p.get(), 4, f.views.data(), &x) == N4M_OK);
@@ -172,7 +172,7 @@ void binary_and_multiclass() {
         std::vector<int64_t> expected(Fixture::rows);
         REQUIRE(n4m_estimator_predict_labels(ctx.value, head.get(), &x, expected.data(), Fixture::rows) == N4M_OK);
         REQUIRE(expected == predicted);
-        std::vector<double> expected_proba(Fixture::rows * count); n4m_matrix_view_t out{};
+        std::vector<double> expected_proba(static_cast<size_t>(Fixture::rows * count)); n4m_matrix_view_t out{};
         REQUIRE(n4m_matrix_view_init_rowmajor(&out, expected_proba.data(), Fixture::rows, count, N4M_DTYPE_F64) == N4M_OK);
         REQUIRE(n4m_estimator_predict_proba(ctx.value, head.get(), &x, &out) == N4M_OK);
         for (size_t i = 0; i < proba.size(); ++i) REQUIRE(std::abs(proba[i] - expected_proba[i]) < 1e-13);
@@ -194,7 +194,7 @@ void binary_and_multiclass() {
 void vocabulary_and_regression_conservation() {
     Context ctx; Fixture f; Recipe r(ctx, f); auto p = create(ctx, r);
     std::vector<int64_t> y(Fixture::rows);
-    for (int64_t i = 0; i < Fixture::rows; ++i) y[i] = i % 2;
+    for (int64_t i = 0; i < Fixture::rows; ++i) y[static_cast<size_t>(i)] = i % 2;
     REQUIRE(n4m_multimodal_classifier_fit(ctx.value, p.get(), 4, f.views.data(), y.data(), Fixture::rows) == N4M_OK);
     n4m_multimodal_pipeline_t* raw = nullptr;
     REQUIRE(n4m_multimodal_pipeline_create(ctx.value, &f.recipe, &raw) == N4M_OK);
@@ -206,13 +206,13 @@ void vocabulary_and_regression_conservation() {
     std::string unknown; std::vector<uint64_t> offsets{0};
     for (int64_t i = 0; i < Fixture::rows; ++i) { unknown += "🚀"; offsets.push_back(unknown.size()); }
     f.views[3].categorical_utf8 = unknown.data(); f.views[3].utf8_bytes = unknown.size(); f.views[3].categorical_offsets = offsets.data();
-    std::vector<double> z(Fixture::rows * width), old(Fixture::rows * width); n4m_matrix_view_t a{}, b{};
+    std::vector<double> z(static_cast<size_t>(Fixture::rows * width)), old(static_cast<size_t>(Fixture::rows * width)); n4m_matrix_view_t a{}, b{};
     REQUIRE(n4m_matrix_view_init_rowmajor(&a, z.data(), Fixture::rows, width, N4M_DTYPE_F64) == N4M_OK);
     REQUIRE(n4m_matrix_view_init_rowmajor(&b, old.data(), Fixture::rows, width, N4M_DTYPE_F64) == N4M_OK);
     REQUIRE(n4m_multimodal_classifier_transform(ctx.value, p.get(), 4, f.views.data(), &a) == N4M_OK);
     REQUIRE(n4m_multimodal_pipeline_transform(ctx.value, reg.get(), 4, f.views.data(), &b) == N4M_OK);
     REQUIRE(z == old);
-    for (int64_t i = 0; i < Fixture::rows; ++i) REQUIRE(z[i * width + width - 2] == 0 && z[i * width + width - 1] == 0);
+    for (int64_t i = 0; i < Fixture::rows; ++i) REQUIRE(z[static_cast<size_t>(i * width + width - 2)] == 0 && z[static_cast<size_t>(i * width + width - 1)] == 0);
 }
 void malformed_and_expected_recipe() {
     // The pure admission predicate checks boundary/overflow without allocating
@@ -255,11 +255,11 @@ void malformed_and_expected_recipe() {
     }
     Context ctx; Fixture f; Recipe r(ctx, f); auto p = create(ctx, r);
     std::vector<int64_t> y(Fixture::rows);
-    for (int64_t i = 0; i < Fixture::rows; ++i) y[i] = i % 2 ? 42 : -7;
+    for (int64_t i = 0; i < Fixture::rows; ++i) y[static_cast<size_t>(i)] = i % 2 ? 42 : -7;
     REQUIRE(n4m_multimodal_classifier_fit(ctx.value, p.get(), 4, f.views.data(), y.data(), Fixture::rows) == N4M_OK);
     const auto bytes = state(ctx, p);
     std::vector<int64_t> oversized_classes(65536);
-    for (size_t i = 0; i < oversized_classes.size(); ++i) oversized_classes[i] = static_cast<int64_t>(i);
+    for (size_t i = 0; i < oversized_classes.size(); ++i) oversized_classes[static_cast<size_t>(i)] = static_cast<int64_t>(i);
     REQUIRE(n4m_multimodal_classifier_fit(ctx.value, p.get(), 4, f.views.data(),
         oversized_classes.data(), static_cast<int64_t>(oversized_classes.size())) == N4M_ERR_INVALID_ARGUMENT);
     REQUIRE(std::strstr(n4m_context_last_error(ctx.value), "element limit") != nullptr);

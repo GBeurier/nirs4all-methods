@@ -14,7 +14,8 @@ from __future__ import annotations
 import ctypes
 import math
 import numbers
-from typing import Any, ClassVar, Self
+import sys
+from typing import Any, ClassVar
 
 import numpy as np
 from sklearn.base import (
@@ -25,6 +26,11 @@ from sklearn.base import (
 )
 from sklearn.feature_selection import SelectorMixin
 from sklearn.utils.metaestimators import available_if
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 from .._errors import N4MError, check
 from .._ffi import lib
