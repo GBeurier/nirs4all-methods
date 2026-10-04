@@ -6,7 +6,7 @@
     stop("invalid multimodal recipe/schema fields", call. = FALSE)
   }
 }
-.n4m_mm_recipe <- function(recipe, source_schemas) {
+.n4m_mm_recipe <- function(recipe, source_schemas, classifier = FALSE) {
   .n4m_mm_keys(recipe, c("schema_version", "fusion", "source_order", "encoders", "source_weights", "model"))
   order <- unlist(recipe$source_order, use.names = FALSE)
   if (!identical(as.numeric(recipe$schema_version), 1) || !identical(recipe$fusion, "early") ||
@@ -30,8 +30,19 @@
     } else stop("unsupported encoder", call. = FALSE)
   }
   .n4m_mm_keys(recipe$model, c("method_id", "params"))
-  .n4m_mm_keys(recipe$model$params, c("alpha", "center_x", "center_y", "scale_x"))
-  if (!identical(recipe$model$method_id, "models.regularized.ridge")) stop("expected native Ridge", call. = FALSE)
+  if (classifier) {
+    .n4m_mm_keys(recipe$model$params, c("n_components", "max_iter"))
+    if (!identical(recipe$model$method_id, "models.classification.pls_logistic"))
+      stop("expected native PLS-logistic classifier", call. = FALSE)
+    for (value in recipe$model$params) {
+      if (!is.numeric(value) || length(value) != 1L || !is.finite(value) ||
+          value < 1 || value != floor(value) || value > 2^53 - 1)
+        stop("classifier parameters must be exact positive integers", call. = FALSE)
+    }
+  } else {
+    .n4m_mm_keys(recipe$model$params, c("alpha", "center_x", "center_y", "scale_x"))
+    if (!identical(recipe$model$method_id, "models.regularized.ridge")) stop("expected native Ridge", call. = FALSE)
+  }
   invisible(NULL)
 }
 .n4m_mm_blocks <- function(blocks, order) {

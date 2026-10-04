@@ -1,5 +1,28 @@
 # ABI — Changes Log
 
+## 2026-10-03 — ABI 2.17.0: raw multimodal classification (unreleased)
+
+Add thirteen n4m_multimodal_classifier_* functions and the separate
+size-versioned n4m_multimodal_classifier_recipe_v1_t declaration. The classifier
+reuses the existing raw source descriptors and native fitted encoders, then fits
+the registered models.classification.pls_logistic head with exactly
+n_components and max_iter. No placeholder regression fit occurs. Public
+regression layouts and recipe-v1 payload grammar remain unchanged.
+
+Native class IDs are signed int64, sorted and unique. Probability and decision
+columns follow that class order. N4MC format 1 owns fitted encoders, vocabulary,
+the classifier head and matching native class IDs, checked against an independently
+supplied expected recipe. Original homogeneous string/integer labels remain an
+explicit external table, as for RolePipeline, rather than an extra native ABI.
+See [the portable-state specification](multimodal_classifier.md).
+
+This is an additive unreleased ABI minor change, with no distribution-version
+or release change. Existing historical N4MF/N4ME bytes are not regenerated.
+Newly exported native states correctly stamp writer ABI 2.17.0; their writer
+header and checksum consequently differ from newly written 2.16.0 states.
+Existing regression recipe fields, state-body layout and numerical semantics
+are conserved; literal new export-byte equality across ABI minors is not claimed.
+
 ## 2026-10-02 — ABI 2.16.0: optimizer configuration comparison (unreleased)
 
 Add `n4m_optimizer_configuration_matches(actual, expected, out_matches)` to

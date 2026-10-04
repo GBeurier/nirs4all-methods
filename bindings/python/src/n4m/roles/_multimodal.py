@@ -181,7 +181,7 @@ def _schema(schema: Any, item: Any, keep: list[Any]) -> None:
     item.identity_bytes = len(identity)
 
 
-def _configuration(recipe: Any, schemas: Any) -> tuple[_Recipe, list[Any]]:
+def _source_configuration(recipe: Any, schemas: Any) -> tuple[Any, list[Any], Any]:
     recipe = _keys(
         recipe,
         {
@@ -206,12 +206,6 @@ def _configuration(recipe: Any, schemas: Any) -> tuple[_Recipe, list[Any]]:
     encoders = _keys(recipe["encoders"], set(order), "encoders")
     weights = _keys(recipe["source_weights"], set(order), "source_weights")
     schemas = _keys(schemas, set(order), "source_schemas")
-    model = _keys(recipe["model"], {"method_id", "params"}, "model")
-    if model["method_id"] != "models.regularized.ridge":
-        raise ValueError("MultimodalPipeline requires the native Ridge head")
-    params = _keys(
-        model["params"], {"alpha", "center_x", "center_y", "scale_x"}, "Ridge params"
-    )
     sources = (_SourceSpec * len(order))()
     keep: list[Any] = [sources]
     for index, name in enumerate(order):
@@ -276,11 +270,22 @@ def _configuration(recipe: Any, schemas: Any) -> tuple[_Recipe, list[Any]]:
             spec.with_mean = _boolean(encoder["with_mean"], "with_mean")
             spec.with_std = _boolean(encoder["with_std"], "with_std")
             spec.ignore_unknown = 1
+    return sources, keep, recipe
+
+
+def _configuration(recipe: Any, schemas: Any) -> tuple[_Recipe, list[Any]]:
+    sources, keep, recipe = _source_configuration(recipe, schemas)
+    model = _keys(recipe["model"], {"method_id", "params"}, "model")
+    if model["method_id"] != "models.regularized.ridge":
+        raise ValueError("MultimodalPipeline requires the native Ridge head")
+    params = _keys(
+        model["params"], {"alpha", "center_x", "center_y", "scale_x"}, "Ridge params"
+    )
     if isinstance(params["alpha"], (bool, np.bool_)):
         raise TypeError("alpha must be a number")
     config = _Recipe(
         ct.sizeof(_Recipe),
-        len(order),
+        len(sources),
         sources,
         float(params["alpha"]),
         _boolean(params["center_x"], "center_x"),

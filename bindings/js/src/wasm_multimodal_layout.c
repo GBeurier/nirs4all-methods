@@ -12,3 +12,6 @@ _Static_assert(offsetof(n4m_multimodal_recipe_v1_t, alpha) == 16, "alpha offset"
 _Static_assert(sizeof(n4m_multimodal_source_view_v1_t) == 56, "raw view layout");
 _Static_assert(offsetof(n4m_multimodal_source_view_v1_t, numeric_data) == 36, "numeric pointer offset");
 _Static_assert(offsetof(n4m_multimodal_source_view_v1_t, categorical_offsets) == 52, "categorical offsets pointer");
+_Static_assert(sizeof(n4m_multimodal_classifier_recipe_v1_t) == 20, "classifier recipe layout");
+_Static_assert(offsetof(n4m_multimodal_classifier_recipe_v1_t, method_id) == 12, "classifier method offset");
+_Static_assert(offsetof(n4m_multimodal_classifier_recipe_v1_t, params) == 16, "classifier params offset");

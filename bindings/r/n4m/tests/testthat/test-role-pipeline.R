@@ -89,7 +89,9 @@ testthat::test_that("the shared fixture's pipelines replay and refit identically
                          tolerance = replay_tol)
   exported <- n4m_role_pipeline_export(fit)
   testthat::expect_identical(vapply(exported, `[[`, "", "method_id"), reg$state_methods)
-  testthat::expect_identical(lapply(exported, `[[`, "n4me"), states_of(reg$states))
+  for (i in seq_along(exported)) {
+    testthat::expect_true(assert_n4me_reexport_equivalent(states_of(reg$states)[[i]], exported[[i]]$n4me))
+  }
   refit <- n4m_estimator_fit(n4m_role_pipeline(reg$steps), named(rp$x_train), rp$y_train)
   testthat::expect_equal(predict(refit, rp$x_test), reg$predict, tolerance = refit_tol)
 

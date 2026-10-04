@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CECILL-2.1
 // Raw tensor marshalling only. Learned encoders/fusion/Ridge live in libn4m.
 import { checkStatus, getModule, makeMatrixView } from "./ffi.js";
-import { withContext } from "./estimatorRoles.js";
+import { nativeParams, type NativeMethod, withContext } from "./estimatorRoles.js";
 import type { Matrix } from "./types.js";
 
 export interface MultimodalSourceSchema {
@@ -91,15 +91,12 @@ function schema(p: number, value: MultimodalSourceSchema, arena: Arena): void {
     const bytes = utf8(value.identity);
     i32(p + 16, arena.bytes(bytes)); i32(p + 20, bytes.length);
 }
-function configuration(recipe: MultimodalRecipe, schemas: MultimodalSourceSchemas, arena: Arena): number {
+function sourceConfiguration(recipe: MultimodalRecipe, schemas: MultimodalSourceSchemas, arena: Arena): { sources: number; order: string[] } {
     keys(recipe, ["schema_version", "fusion", "source_order", "encoders", "source_weights", "model"], "recipe");
     if (recipe.schema_version !== 1 || recipe.fusion !== "early")
         throw new TypeError("expected v1 early-fusion recipe");
     const order = sourceOrder(recipe.source_order);
     keys(recipe.encoders, order, "encoders"); keys(recipe.source_weights, order, "weights"); keys(schemas, order, "schemas");
-    keys(recipe.model, ["method_id", "params"], "model");
-    keys(recipe.model.params, ["alpha", "center_x", "center_y", "scale_x"], "Ridge parameters");
-    if (recipe.model.method_id !== "models.regularized.ridge") throw new TypeError("expected native Ridge");
     const sources = arena.alloc(order.length * SPEC_SIZE);
     order.forEach((name, index) => {
         const p = sources + index * SPEC_SIZE, encoder = recipe.encoders[name]!;
@@ -122,9 +119,39 @@ function configuration(recipe: MultimodalRecipe, schemas: MultimodalSourceSchema
             i32(p + 76, 1); i64(p + 80, 0); i64(p + 88, 1);
         } else throw new TypeError("unsupported encoder");
     });
+    return { sources, order };
+}
+function configuration(recipe: MultimodalRecipe, schemas: MultimodalSourceSchemas, arena: Arena): number {
+    keys(recipe.model, ["method_id", "params"], "model");
+    keys(recipe.model.params, ["alpha", "center_x", "center_y", "scale_x"], "Ridge parameters");
+    if (recipe.model.method_id !== "models.regularized.ridge") throw new TypeError("expected native Ridge");
+    const { sources, order } = sourceConfiguration(recipe, schemas, arena);
     const p = arena.alloc(RECIPE_SIZE), params = recipe.model.params;
     i32(p, RECIPE_SIZE); i32(p + 4, order.length); i32(p + 8, sources); f64(p + 16, params.alpha as number);
     i32(p + 24, flag(params.center_x)); i32(p + 28, flag(params.center_y)); i32(p + 32, flag(params.scale_x)); return p;
+}
+
+function withClassifierConfiguration<T>(recipe: MultimodalRecipe, schemas: MultimodalSourceSchemas,
+                                         arena: Arena, ctx: number, fn: (config: number) => T): T {
+    checkStatus(getModule().ccall("n4m_check_abi_compatibility", "number", ["number", "number"], [2, 17]) as number, ctx);
+    keys(recipe.model, ["method_id", "params"], "model");
+    keys(recipe.model.params, ["n_components", "max_iter"], "classifier parameters");
+    if (recipe.model.method_id !== "models.classification.pls_logistic")
+        throw new TypeError("expected native PLS-logistic classifier");
+    const nComponents = integer(recipe.model.params.n_components), maxIter = integer(recipe.model.params.max_iter);
+    if (nComponents < 1 || maxIter < 1) throw new RangeError("classifier parameters must be positive integers");
+    const { sources, order } = sourceConfiguration(recipe, schemas, arena);
+    const head: NativeMethod = { methodId: recipe.model.method_id,
+        paramTypes: { n_components: "int", max_iter: "int" },
+        params: { n_components: nComponents, max_iter: maxIter } };
+    const params = nativeParams(ctx, head);
+    try {
+        // wasm32 classifier recipe: size/count/sources/method_id/params, all four-byte fields.
+        const p = arena.alloc(20);
+        i32(p, 20); i32(p + 4, order.length); i32(p + 8, sources);
+        i32(p + 12, arena.text(head.methodId)); i32(p + 16, params);
+        return fn(p);
+    } finally { getModule().ccall("n4m_params_destroy", null, ["number"], [params]); }
 }
 function views(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas, arena: Arena, order: readonly string[]): { pointer: number; rows: number } {
     keys(blocks, [...order], "blocks"); keys(schemas, [...order], "schemas");
@@ -230,4 +257,188 @@ export class MultimodalPipeline {
         } catch (error) { model.dispose(); throw error; } finally { arena.close(); }
     }
     dispose(): void { if (this.ptr) { getModule().ccall("n4m_multimodal_pipeline_destroy", null, ["number"], [this.ptr]); this.ptr = 0; } }
+}
+
+/** Original class labels; numeric labels require lossless JS/int64 transport. */
+export type MultimodalClassLabel = string | number;
+
+function classifierLabelTable(value: unknown): MultimodalClassLabel[] {
+    if (!Array.isArray(value) || value.length < 2) throw new TypeError("expected at least two class labels");
+    if (value.length > 65536) throw new RangeError("class count exceeds native bounds");
+    const kind = typeof value[0];
+    if (kind !== "string" && kind !== "number") throw new TypeError("class labels must be strings or integers");
+    for (const label of value) {
+        if (typeof label !== kind) throw new TypeError("class labels must be homogeneous strings or integers");
+        if (typeof label === "string") {
+            if (utf8(label).length > 1024 * 1024) throw new RangeError("class label exceeds the UTF-8 bound");
+        }
+        else if (!Number.isSafeInteger(label)) throw new RangeError("numeric class labels must be exact safe integers");
+    }
+    if (new Set(value).size !== value.length) throw new TypeError("class_names must contain unique labels");
+    return [...value] as MultimodalClassLabel[];
+}
+
+function classifierLabels(y: readonly MultimodalClassLabel[], rows: number): { names: MultimodalClassLabel[]; ids: number[] } {
+    if (!Array.isArray(y) || y.length !== rows) throw new TypeError("expected one class label per raw source row");
+    const names = classifierLabelTable([...new Set(y)]);
+    if (typeof names[0] === "number") names.sort((a, b) => (a as number) - (b as number));
+    else names.sort((a, b) => {
+        // UTF-8/code-point order matches Python and R even for astral Unicode labels.
+        const x = utf8(a as string), z = utf8(b as string);
+        for (let i = 0; i < Math.min(x.length, z.length); ++i) if (x[i] !== z[i]) return x[i]! - z[i]!;
+        return x.length - z.length;
+    });
+    const index = new Map(names.map((label, i) => [label, i]));
+    return { names, ids: y.map((label) => index.get(label)!) };
+}
+
+/** Native raw PLS-logistic classifier; N4MC states contain no training rows. */
+export class MultimodalClassifierPipeline {
+    private ptr = 0;
+    private classNames: MultimodalClassLabel[] | undefined;
+    private readonly sourceOrder: readonly string[];
+    readonly recipe: MultimodalRecipe;
+    readonly sourceSchemas: MultimodalSourceSchemas;
+
+    constructor(recipe: MultimodalRecipe, sourceSchemas: MultimodalSourceSchemas) {
+        this.recipe = structuredClone(recipe); this.sourceSchemas = structuredClone(sourceSchemas);
+        this.sourceOrder = sourceOrder(this.recipe.source_order);
+        this.ptr = this.createHandle();
+    }
+    private createHandle(): number {
+        const arena = new Arena();
+        try { return withContext((ctx) => withClassifierConfiguration(this.recipe, this.sourceSchemas, arena, ctx, (config) => {
+            const out = arena.alloc(4);
+            checkStatus(getModule().ccall("n4m_multimodal_classifier_create", "number",
+                ["number", "number", "number"], [ctx, config, out]) as number, ctx);
+            return getModule().getValue(out, "i32");
+        })); } finally { arena.close(); }
+    }
+    private handle(): number { if (!this.ptr) throw new Error("MultimodalClassifierPipeline is closed"); return this.ptr; }
+    private static classIds(handle: number): number[] {
+        const arena = new Arena(), m = getModule();
+        try {
+            const count = arena.alloc(8);
+            checkStatus(m.ccall("n4m_multimodal_classifier_classes", "number",
+                ["number", "number", "i64", "number"], [handle, 0, 0n, count]) as number);
+            const n = Number(new DataView(m.HEAPU8.buffer).getBigInt64(count, true));
+            if (!Number.isSafeInteger(n) || n < 2 || n > 65536) throw new RangeError("native class count exceeds bounds");
+            const ids = arena.alloc(n * 8);
+            checkStatus(m.ccall("n4m_multimodal_classifier_classes", "number",
+                ["number", "number", "i64", "number"], [handle, ids, BigInt(n), count]) as number);
+            return Array.from({ length: n }, (_, i) => {
+                const raw = new DataView(m.HEAPU8.buffer).getBigInt64(ids + i * 8, true), id = Number(raw);
+                if (!Number.isSafeInteger(id) || BigInt(id) !== raw) throw new RangeError("native class ID exceeds lossless JS range");
+                return id;
+            });
+        } finally { arena.close(); }
+    }
+    fit(blocks: MultimodalBlocks, y: readonly MultimodalClassLabel[]): this {
+        this.handle();
+        const arena = new Arena(); let pending = 0;
+        try {
+            const x = views(blocks, this.sourceSchemas, arena, this.sourceOrder), labels = classifierLabels(y, x.rows);
+            if (x.rows * labels.names.length > 16777216) throw new RangeError("classifier fit matrix exceeds native bounds");
+            pending = this.createHandle();
+            withContext((ctx) => checkStatus(getModule().ccall("n4m_multimodal_classifier_fit", "number",
+                ["number", "number", "number", "number", "number", "i64"],
+                [ctx, pending, this.sourceOrder.length, x.pointer, arena.ints(labels.ids), BigInt(x.rows)]) as number, ctx));
+            const ids = MultimodalClassifierPipeline.classIds(pending);
+            if (ids.length !== labels.names.length || ids.some((id, i) => id !== i))
+                throw new Error("native classifier class order differs from the encoded label table");
+            const previous = this.ptr; this.ptr = pending; pending = 0; this.classNames = labels.names;
+            getModule().ccall("n4m_multimodal_classifier_destroy", null, ["number"], [previous]);
+            return this;
+        } finally {
+            if (pending) getModule().ccall("n4m_multimodal_classifier_destroy", null, ["number"], [pending]);
+            arena.close();
+        }
+    }
+    classes(): MultimodalClassLabel[] {
+        const ids = MultimodalClassifierPipeline.classIds(this.handle());
+        return this.classNames === undefined ? ids : [...this.classNames];
+    }
+    labelNames(): MultimodalClassLabel[] | undefined { return this.classNames === undefined ? undefined : [...this.classNames]; }
+    predict(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas = this.sourceSchemas): MultimodalClassLabel[] {
+        const handle = this.handle(), arena = new Arena(), m = getModule();
+        try {
+            const ids = MultimodalClassifierPipeline.classIds(handle), x = views(blocks, schemas, arena, this.sourceOrder);
+            if (x.rows * ids.length > 16777216) throw new RangeError("classifier prediction matrix exceeds native bounds");
+            const out = arena.alloc(x.rows * 8), labels = this.classNames;
+            withContext((ctx) => checkStatus(m.ccall("n4m_multimodal_classifier_predict_labels", "number",
+                ["number", "number", "number", "number", "number", "i64"],
+                [ctx, handle, this.sourceOrder.length, x.pointer, out, BigInt(x.rows)]) as number, ctx));
+            return Array.from({ length: x.rows }, (_, i) => {
+                const raw = new DataView(m.HEAPU8.buffer).getBigInt64(out + i * 8, true), id = Number(raw);
+                if (!Number.isSafeInteger(id) || BigInt(id) !== raw) throw new RangeError("native prediction exceeds lossless JS range");
+                const index = ids.indexOf(id);
+                if (index < 0) throw new Error("native prediction contains an undeclared class ID");
+                return labels === undefined ? id : labels[index]!;
+            });
+        } finally { arena.close(); }
+    }
+    predictProba(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas = this.sourceSchemas): Matrix {
+        return this.matrixOperation(blocks, schemas, "predict_proba", "n_outputs");
+    }
+    decisionFunction(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas = this.sourceSchemas): Matrix {
+        return this.matrixOperation(blocks, schemas, "decision_function", "n_outputs");
+    }
+    transform(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas = this.sourceSchemas): Matrix {
+        return this.matrixOperation(blocks, schemas, "transform", "transform_cols");
+    }
+    private matrixOperation(blocks: MultimodalBlocks, schemas: MultimodalSourceSchemas, operation: string, widthSymbol: string): Matrix {
+        const handle = this.handle(), arena = new Arena(), m = getModule();
+        try {
+            const x = views(blocks, schemas, arena, this.sourceOrder), out = arena.alloc(8);
+            checkStatus(m.ccall("n4m_multimodal_classifier_" + widthSymbol, "number", ["number", "number"], [handle, out]) as number);
+            const cols = Number(new DataView(m.HEAPU8.buffer).getBigInt64(out, true));
+            if (!Number.isSafeInteger(cols) || cols < 1 || x.rows * cols > 16777216) throw new RangeError("native output shape exceeds bounds");
+            const matrix = makeMatrixView(new Float64Array(x.rows * cols), x.rows, cols);
+            try {
+                withContext((ctx) => checkStatus(m.ccall("n4m_multimodal_classifier_" + operation, "number",
+                    ["number", "number", "number", "number", "number"],
+                    [ctx, handle, this.sourceOrder.length, x.pointer, matrix.viewPtr]) as number, ctx));
+                return { data: m.HEAPF64.slice(matrix.dataPtr / 8, matrix.dataPtr / 8 + x.rows * cols), rows: x.rows, cols };
+            } finally { matrix.free(); }
+        } finally { arena.close(); }
+    }
+    exportState(): Uint8Array {
+        const handle = this.handle(), arena = new Arena();
+        try { return withContext((ctx) => {
+            const m = getModule(), size = arena.alloc(4);
+            checkStatus(m.ccall("n4m_multimodal_classifier_export_size", "number", ["number", "number", "number"], [ctx, handle, size]) as number, ctx);
+            const capacity = m.getValue(size, "i32");
+            if (capacity < 1 || capacity > 64 * 1024 * 1024) throw new RangeError("N4MC state exceeds bounds");
+            const buffer = arena.alloc(capacity);
+            checkStatus(m.ccall("n4m_multimodal_classifier_export_to_buffer", "number",
+                ["number", "number", "number", "number", "number"], [ctx, handle, buffer, capacity, size]) as number, ctx);
+            return m.HEAPU8.slice(buffer, buffer + m.getValue(size, "i32"));
+        }); } finally { arena.close(); }
+    }
+    static fromState(state: Uint8Array, recipe: MultimodalRecipe, sourceSchemas: MultimodalSourceSchemas,
+                     options: { classNames?: MultimodalClassLabel[] } = {}): MultimodalClassifierPipeline {
+        if (!(state instanceof Uint8Array) || !state.length || state.length > 64 * 1024 * 1024) throw new TypeError("expected bounded N4MC bytes");
+        const names = options.classNames === undefined ? undefined : classifierLabelTable(options.classNames);
+        const model = new MultimodalClassifierPipeline(recipe, sourceSchemas), arena = new Arena(); let pending = 0;
+        try {
+            withContext((ctx) => withClassifierConfiguration(model.recipe, model.sourceSchemas, arena, ctx, (config) => {
+                const out = arena.alloc(4), bytes = arena.bytes(state);
+                checkStatus(getModule().ccall("n4m_multimodal_classifier_import_from_buffer", "number",
+                    ["number", "number", "number", "number", "number"], [ctx, config, bytes, state.length, out]) as number, ctx);
+                pending = getModule().getValue(out, "i32");
+            }));
+            const ids = MultimodalClassifierPipeline.classIds(pending);
+            if (names !== undefined && names.length !== ids.length) throw new TypeError("class_names length differs from native class columns");
+            model.dispose(); model.ptr = pending; pending = 0; model.classNames = names;
+            return model;
+        } catch (error) { model.dispose(); throw error; }
+        finally {
+            if (pending) getModule().ccall("n4m_multimodal_classifier_destroy", null, ["number"], [pending]);
+            arena.close();
+        }
+    }
+    dispose(): void {
+        if (this.ptr) getModule().ccall("n4m_multimodal_classifier_destroy", null, ["number"], [this.ptr]);
+        this.ptr = 0; this.classNames = undefined;
+    }
 }

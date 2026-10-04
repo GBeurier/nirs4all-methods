@@ -3,10 +3,14 @@
 #define N4M_MULTIMODAL_H
 
 #include "n4m/n4m.h"
+#include "n4m/estimator.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Also available when estimator.h includes the umbrella header first. */
+typedef struct n4m_params_s n4m_params_t;
 
 /* Dense early fusion of an explicit ordered U07 modality subset (1..4 distinct
  * names: nir, image, series, metadata). Only selected encoders are fitted;
@@ -107,6 +111,57 @@ N4M_API n4m_status_t n4m_multimodal_pipeline_export_to_buffer(
 N4M_API n4m_status_t n4m_multimodal_pipeline_import_from_buffer(
     n4m_context_t* ctx, const n4m_multimodal_recipe_v1_t* expected_recipe,
     const void* buffer, size_t buffer_size, n4m_multimodal_pipeline_t** out);
+
+/* ABI 2.17: genuine raw classifier, distinct from the unchanged Ridge v1.
+ * Closed head: models.classification.pls_logistic, n_components/max_iter.
+ * Source descriptors and views are exactly the existing v1 definitions.
+ * Native class IDs are arbitrary int64, sorted; scores/probability columns
+ * follow classes(). Labels/arrays are borrowed only during the call. */
+typedef struct n4m_multimodal_classifier_recipe_v1_t {
+    uint32_t struct_size;
+    int32_t n_sources;
+    const n4m_multimodal_source_spec_v1_t* sources;
+    const char* method_id;
+    const n4m_params_t* params;
+} n4m_multimodal_classifier_recipe_v1_t;
+typedef struct n4m_multimodal_classifier_s n4m_multimodal_classifier_t;
+
+N4M_API n4m_status_t n4m_multimodal_classifier_create(
+    n4m_context_t*, const n4m_multimodal_classifier_recipe_v1_t*,
+    n4m_multimodal_classifier_t**);
+N4M_API void n4m_multimodal_classifier_destroy(n4m_multimodal_classifier_t*);
+/* Transactional: failed FIT leaves the previous fitted classifier usable. */
+N4M_API n4m_status_t n4m_multimodal_classifier_fit(
+    n4m_context_t*, n4m_multimodal_classifier_t*, int32_t,
+    const n4m_multimodal_source_view_v1_t*, const int64_t*, int64_t);
+N4M_API n4m_status_t n4m_multimodal_classifier_predict_labels(
+    n4m_context_t*, const n4m_multimodal_classifier_t*, int32_t,
+    const n4m_multimodal_source_view_v1_t*, int64_t*, int64_t);
+N4M_API n4m_status_t n4m_multimodal_classifier_decision_function(
+    n4m_context_t*, const n4m_multimodal_classifier_t*, int32_t,
+    const n4m_multimodal_source_view_v1_t*, n4m_matrix_view_t*);
+N4M_API n4m_status_t n4m_multimodal_classifier_predict_proba(
+    n4m_context_t*, const n4m_multimodal_classifier_t*, int32_t,
+    const n4m_multimodal_source_view_v1_t*, n4m_matrix_view_t*);
+N4M_API n4m_status_t n4m_multimodal_classifier_classes(
+    const n4m_multimodal_classifier_t*, int64_t*, int64_t, int64_t*);
+N4M_API n4m_status_t n4m_multimodal_classifier_n_outputs(
+    const n4m_multimodal_classifier_t*, int64_t*);
+N4M_API n4m_status_t n4m_multimodal_classifier_transform_cols(
+    const n4m_multimodal_classifier_t*, int64_t*);
+N4M_API n4m_status_t n4m_multimodal_classifier_transform(
+    n4m_context_t*, const n4m_multimodal_classifier_t*, int32_t,
+    const n4m_multimodal_source_view_v1_t*, n4m_matrix_view_t*);
+/* N4MC format1; complete expected recipe/schema, fitted encoders/vocabulary,
+ * sorted class IDs and genuine classifier N4ME. No training rows.
+ * Limits and integrity checksum match N4MF; old N4MF is never accepted here. */
+N4M_API n4m_status_t n4m_multimodal_classifier_export_size(
+    n4m_context_t*, const n4m_multimodal_classifier_t*, size_t*);
+N4M_API n4m_status_t n4m_multimodal_classifier_export_to_buffer(
+    n4m_context_t*, const n4m_multimodal_classifier_t*, void*, size_t, size_t*);
+N4M_API n4m_status_t n4m_multimodal_classifier_import_from_buffer(
+    n4m_context_t*, const n4m_multimodal_classifier_recipe_v1_t*, const void*, size_t,
+    n4m_multimodal_classifier_t**);
 
 #ifdef __cplusplus
 }
