@@ -140,7 +140,8 @@ N4M_API n4m_status_t n4m_multimodal_pipeline_import_from_buffer(n4m_context_t* c
     return guarded(ctx, [&]() {
         std::unique_ptr<n4m_multimodal_pipeline_s> pipeline;
         const auto status = n4m::multimodal::load(ctx, recipe, buffer, size, pipeline);
-        if (status == N4M_OK) *out = pipeline.release(); return status;
+        if (status == N4M_OK) *out = pipeline.release();
+        return status;
     });
 }
 
