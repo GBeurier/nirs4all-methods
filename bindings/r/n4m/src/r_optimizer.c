@@ -274,8 +274,11 @@ static SEXP trial_value(const n4m_trial_t* trial, const char* name, SEXP spec,
     /* Tuple roots are declarations, while trial parameters are name#0, name#1... */
     char* first_component = NULL;
     if (kind == N4M_PARAM_SORTED_TUPLE) {
-        first_component = (char*)R_alloc(strlen(name) + 32, 1);
-        sprintf(first_component, "%s#0", name);
+        const size_t capacity = strlen(name) + 32;
+        first_component = (char*)R_alloc(capacity, 1);
+        const int written = snprintf(first_component, capacity, "%s#0", name);
+        if (written < 0 || (size_t)written >= capacity)
+            Rf_error("native tuple component name could not be formatted");
     }
     check(n4m_trial_is_active(trial, first_component ? first_component : name, &active),
           context, NULL, "trial_is_active");
@@ -305,8 +308,11 @@ static SEXP trial_value(const n4m_trial_t* trial, const char* name, SEXP spec,
         int32_t n = int_scalar(field(spec, "length"), "length");
         SEXP values = PROTECT(Rf_allocVector(REALSXP, n));
         for (int32_t i = 0; i < n; ++i) {
-            char* component = (char*)R_alloc(strlen(name) + 32, 1);
-            sprintf(component, "%s#%d", name, i);
+            const size_t capacity = strlen(name) + 32;
+            char* component = (char*)R_alloc(capacity, 1);
+            const int written = snprintf(component, capacity, "%s#%d", name, i);
+            if (written < 0 || (size_t)written >= capacity)
+                Rf_error("native tuple component name could not be formatted");
             check(n4m_trial_get_float(trial, component, &REAL(values)[i]), context, NULL,
                   "trial_get_tuple_component");
         }
