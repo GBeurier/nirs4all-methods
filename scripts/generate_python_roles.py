@@ -297,13 +297,20 @@ def render_init(manifest: dict) -> str:
         *[f"    {n}," for n in names],
         ")",
         "from ._multimodal import MultimodalPipeline",
+        "from ._multimodal_classifier import MultimodalClassifierPipeline",
         "from ._pipeline import RolePipeline",
         "",
         "__all__ = [",
         *[
             f"    {literal(n)},"
             for n in sorted(
-                [*names, *base_exports, "MultimodalPipeline", "RolePipeline"],
+                [
+                    *names,
+                    *base_exports,
+                    "MultimodalPipeline",
+                    "MultimodalClassifierPipeline",
+                    "RolePipeline",
+                ],
                 key=isort_key,
             )
         ],

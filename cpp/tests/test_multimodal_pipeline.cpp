@@ -120,7 +120,8 @@ void vocabulary_and_import() {
     const auto bytes = state(ctx, p.get()); n4m_multimodal_pipeline_t* raw = nullptr;
     REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &fixture.recipe, bytes.data(), bytes.size(), &raw) == N4M_OK);
     Owner restored(raw, n4m_multimodal_pipeline_destroy); REQUIRE(predict(ctx, restored.get(), fixture) == predict(ctx, p.get(), fixture));
-    auto corrupt = bytes; corrupt[40] ^= 1; raw = reinterpret_cast<n4m_multimodal_pipeline_t*>(1);
+    REQUIRE(bytes.size() > 40);
+    auto corrupt = bytes; corrupt.at(40) ^= 1; raw = reinterpret_cast<n4m_multimodal_pipeline_t*>(1);
     REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &fixture.recipe, corrupt.data(), corrupt.size(), &raw) == N4M_ERR_CORRUPT_BUFFER); REQUIRE(raw == nullptr);
     fixture.specs[1].weight = 0.75;
     REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &fixture.recipe, bytes.data(), bytes.size(), &raw) == N4M_ERR_CORRUPT_BUFFER); REQUIRE(raw == nullptr);
