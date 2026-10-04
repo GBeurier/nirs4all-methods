@@ -57,12 +57,13 @@ from public_api_docs import (  # noqa: E402
     scan_r_public_api,
 )
 
-CATALOG_SIZE = 214
+CATALOG_SIZE = 215
 REGISTRY_SIZE = 73
 PYTHON_VERIFIED = 184
-# models.pls.pls_regression is exposed only through the generated n4m.roles
-# classes (docs/parity/estimator_roles_coverage.md).
-PYTHON_C_ONLY = 30
+# models.pls.pls_regression and preprocessing.scaling.standard_scale use the
+# generated n4m.roles index (docs/parity/estimator_roles_coverage.md), which is
+# intentionally separate from the legacy public re-export scanner below.
+PYTHON_C_ONLY = 31
 R_VERIFIED = 77
 MATLAB_VERIFIED = 70
 

@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **214**
-- Curated scientific records: **221**
-- Resolved documentation pages: **214**
+- Catalog entries: **215**
+- Curated scientific records: **222**
+- Resolved documentation pages: **215**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -152,6 +152,7 @@ This generated report records the documentation source used for each catalog ent
 | `preprocessing.scaling.log_transform` | [pp_log](pp_log.md) | curated |
 | `preprocessing.scaling.normalize` | [pp_normalize](pp_normalize.md) | curated |
 | `preprocessing.scaling.simple_scale` | [pp_simple_scale](pp_simple_scale.md) | curated |
+| `preprocessing.scaling.standard_scale` | [preprocessing_scaling_standard_scale](preprocessing_scaling_standard_scale.md) | curated |
 | `preprocessing.scatter.area_normalization` | [pp_area](pp_area.md) | curated |
 | `preprocessing.scatter.emsc` | [pp_emsc](pp_emsc.md) | curated |
 | `preprocessing.scatter.local_centering` | [pp_local_centering](pp_local_centering.md) | curated |

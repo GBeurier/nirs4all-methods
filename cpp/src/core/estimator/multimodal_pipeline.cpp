@@ -333,7 +333,7 @@ n4m_status_t validate_state(n4m_context_t* ctx, const Pipeline::Estimator& state
 }
 }  // namespace
 
-n4m_status_t create_encoders(n4m_context_t* ctx, std::int32_t n_sources,
+static n4m_status_t create_encoders(n4m_context_t* ctx, std::int32_t n_sources,
                              const n4m_multimodal_source_spec_v1_t* sources,
                              std::unique_ptr<Pipeline>& out) {
     if (ctx == nullptr || sources == nullptr) return N4M_ERR_NULL_POINTER;
@@ -455,7 +455,7 @@ n4m_status_t features(n4m_context_t* ctx, const Pipeline& pipeline, std::int32_t
     return start == cols ? N4M_OK : error(ctx, "multimodal fused state width mismatch", N4M_ERR_CORRUPT_BUFFER);
 }
 
-n4m_status_t fit_encoders(n4m_context_t* ctx, Pipeline& next, std::int32_t n,
+static n4m_status_t fit_encoders(n4m_context_t* ctx, Pipeline& next, std::int32_t n,
                           const n4m_multimodal_source_view_v1_t* views,
                           std::int64_t expected_rows) {
     auto status = check_source_count(ctx, next, n, views);
@@ -514,7 +514,7 @@ n4m_status_t fit(n4m_context_t* ctx, Pipeline& pipeline, std::int32_t n,
     return status;
 }
 
-n4m_status_t save_sources(n4m_context_t* ctx, const Pipeline& pipeline,
+static n4m_status_t save_sources(n4m_context_t* ctx, const Pipeline& pipeline,
                           std::vector<unsigned char>& bytes, std::size_t limit) {
     Writer out{bytes};
     for (const auto& source : pipeline.sources) {
@@ -547,7 +547,7 @@ n4m_status_t save(n4m_context_t* ctx, const Pipeline& pipeline, std::vector<unsi
     out.u64(checksum(bytes.data(), bytes.size())); return N4M_OK;
 }
 
-n4m_status_t load_sources(n4m_context_t* ctx, Pipeline& pipeline, Reader& in) {
+static n4m_status_t load_sources(n4m_context_t* ctx, Pipeline& pipeline, Reader& in) {
     n4m_status_t status = N4M_OK;
     for (auto& source : pipeline.sources) {
         const unsigned char* state; std::size_t state_size; std::uint64_t n_categories;

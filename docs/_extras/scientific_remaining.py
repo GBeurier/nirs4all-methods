@@ -32,6 +32,30 @@ def _entry(
 
 
 SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
+    "preprocessing_scaling_standard_scale": _entry(
+        "Training-fitted column standardization",
+        "Population standardization uses the arithmetic mean and population variance. "
+        "The public StandardScaler reference documents the same ddof=0 convention: "
+        "https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html.",
+        "For each training column, the native fitter stores its mean and "
+        "population standard deviation. Transform applies (x-mean)/scale, "
+        "with centering and scaling independently controlled by with_mean and "
+        "with_std. A zero-variance column receives scale one. Held-out rows "
+        "reuse the learned vectors; they never update training statistics.",
+        "Standardizing heterogeneous numerical predictors before a fitted "
+        "encoder or estimator, with a separate scaler fitted on each training fold.",
+        "Fitting on validation or Test rows leaks their distribution into training. "
+        "Standardization is sensitive to outliers and does not establish normality. "
+        "Population variance differs from sample variance; ddof=1 references "
+        "require an explicit convention adjustment before parity comparisons.",
+        "The native transformer preprocessing.scaling.standard_scale is exposed "
+        "as n4m.roles.StandardScale through the shared n4m_estimator_* lifecycle. "
+        "cpp/include/n4m/estimator.h defines the shared ABI. "
+        "cpp/src/core/estimator/fitted_core.cpp owns fitting, transformation and "
+        "portable learned means/scales; bindings marshal inputs without numerical logic.",
+        _REPO + "cpp/src/core/estimator/fitted_core.cpp; "
+        + _REPO + "catalog/methods/preprocessing.scaling.standard_scale.yaml",
+    ),
     "preprocessing_feature_selection_spectral_encoding": _entry(
         "Training-fitted LVSE and GCU spectral encoders",
         "No single canonical paper specifies this combined n4m lifecycle. The exact local "

@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **221**
+- Curated records: **222**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `bac8f366280b3f6695666f060a3c096653d4b7a919bfa1f62d003a572a7471fd`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `0be61888b418dfdd6c4745708db84cb0336ce6c245a9b5957ce89ad535396f99`
 
 ## References by documentation page
 
@@ -1083,6 +1083,12 @@ No single canonical paper defines this bounded implementation. It applies the st
 No single canonical paper specifies this combined n4m lifecycle. The exact local subspace and global nonnegative constructions are defined by the current C++ implementation and its spectral-encoding contract.
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/spectral_encoding.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/methods/spectral_encoding.md
+
+### [`preprocessing_scaling_standard_scale`](preprocessing_scaling_standard_scale.md) — Training-fitted column standardization
+
+Population standardization uses the arithmetic mean and population variance. The public StandardScaler reference documents the same ddof=0 convention: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/fitted_core.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/preprocessing.scaling.standard_scale.yaml
 
 ### [`pso_select`](pso_select.md) — PSO-PLS — Particle Swarm Optimisation
 

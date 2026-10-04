@@ -1,22 +1,46 @@
-# StandardScale
+# `standard_scale` — n4m.transform.scaling.standard_scale
 
-`preprocessing.scaling.standard_scale` is a native transformer exposed as
-`n4m.roles.StandardScale`. The optional scikit-learn dependency is required for
-the `n4m.roles` Python facade.
+_Namespace_: **`n4m.transform.scaling`** · _Fully-qualified_: `n4m.transform.scaling.standard_scale` · _Catalog id_: `preprocessing.scaling.standard_scale`
 
-```python
-from n4m.roles import StandardScale
+## API surface
 
-scaler = StandardScale(with_mean=True, with_std=True).fit(X_train)
-X_scaled = scaler.transform(X_test)
-```
+**C ABI:** no standalone exported symbol is declared for this method.
 
-Both parameters are booleans and default to `True`; `y` is optional. Fitting
-learns column means and population standard deviations (`ddof=0`) from the
-training data, with a scale of one for zero-variance columns. Transform uses
-those learned values. The fitted component state can be saved with `to_n4me()`
-and loaded with `StandardScale.from_n4me()`.
+**Python:** catalog binding is not currently an AST-verified public `n4m` re-export. See the implementation source below.
 
-The method uses the shared `n4m_estimator_*` C ABI and exports no dedicated C
-symbols. Its typed native contract is maintained in
-[the method catalog](../../catalog/methods/preprocessing.scaling.standard_scale.yaml).
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
+## Explanations
+
+### Bibliographic source
+
+Population standardization uses the arithmetic mean and population variance. The public StandardScaler reference documents the same ddof=0 convention: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html.
+
+### Mathematical principle
+
+For each training column, the native fitter stores its mean and population standard deviation. Transform applies (x-mean)/scale, with centering and scaling independently controlled by with_mean and with_std. A zero-variance column receives scale one. Held-out rows reuse the learned vectors; they never update training statistics.
+
+### Appropriate uses
+
+Standardizing heterogeneous numerical predictors before a fitted encoder or estimator, with a separate scaler fitted on each training fold.
+
+### Limits and validation
+
+Fitting on validation or Test rows leaks their distribution into training. Standardization is sensitive to outliers and does not establish normality. Population variance differs from sample variance; ddof=1 references require an explicit convention adjustment before parity comparisons.
+
+### Implementation
+
+The native transformer preprocessing.scaling.standard_scale is exposed as n4m.roles.StandardScale through the shared n4m_estimator_* lifecycle. cpp/include/n4m/estimator.h defines the shared ABI. cpp/src/core/estimator/fitted_core.cpp owns fitting, transformation and portable learned means/scales; bindings marshal inputs without numerical logic.
+
+### Sources and provenance
+
+https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/fitted_core.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/preprocessing.scaling.standard_scale.yaml
+
+## Catalog note
+
+Native transformer through the shared n4m_estimator_* role API, with no dedicated C exports. Train-only population standardization (ddof=0; zero variance scale=1), with portable native learned means and scales.
+
+
+_See also_: [methods index](index.md).
