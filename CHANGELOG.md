@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-04
+
+ABI 2.17.0 and Rust crate n4m 0.4.0 remain unchanged. Existing 1.3.1
+artifacts and tags are preserved.
+
+### Fixed
+
+- Import the standard Self annotation through its backport on Python 3.10,
+  with an explicit conditional dependency in generated wheel metadata.
+- Make fixed-fixture index and floating-point conversions explicit in the
+  multimodal C++ tests under the complete strict GCC 12 build.
+- Bound R optimizer tuple component formatting with snprintf.
+
 ## [1.3.1] - 2026-10-04
 
 Native ABI 2.17.0 and the independently published Rust crate n4m 0.4.0 are unchanged.

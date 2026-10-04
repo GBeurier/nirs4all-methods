@@ -34,13 +34,13 @@ struct Fixture {
     std::array<n4m_multimodal_source_view_v1_t, 4> views{};
     n4m_multimodal_recipe_v1_t recipe{};
     Fixture() {
-        for (int i = 0; i < 4; ++i) {
+        for (size_t i = 0; i < 4; ++i) {
             int64_t width = i == 3 ? 1 : 1;
             if (i != 3) for (auto d : shapes[i]) width *= d;
-            numeric[i].resize(rows * width);
+            numeric[i].resize(static_cast<size_t>(rows * width));
             for (int64_t r = 0; r < rows; ++r)
                 for (int64_t c = 0; c < width; ++c)
-                    numeric[i][r * width + c] = std::sin(0.37 * (r + 1) * (c + 1)) + 0.03 * r * c;
+                    numeric[i][static_cast<size_t>(r * width + c)] = std::sin(0.37 * static_cast<double>(r + 1) * static_cast<double>(c + 1)) + 0.03 * static_cast<double>(r) * static_cast<double>(c);
             auto& s = specs[i]; s.struct_size = sizeof(s); s.name = names[i].c_str();
             s.representation_id = representations[i]; s.dtype = i == 3 ? "<U32" : "float64";
             s.identity_utf8 = identities[i].data(); s.identity_bytes = identities[i].size();
@@ -61,7 +61,7 @@ struct Fixture {
         }
         for (int64_t r = 0; r < rows; ++r) {
             const std::string label = r % 2 ? "é" : "猫";
-            categories += label; offsets.push_back(categories.size()); y.push_back(0.4 * r + std::cos(0.2 * r));
+            categories += label; offsets.push_back(categories.size()); y.push_back(0.4 * static_cast<double>(r) + std::cos(0.2 * static_cast<double>(r)));
         }
         views[3].categorical_utf8 = categories.data(); views[3].utf8_bytes = categories.size(); views[3].categorical_offsets = offsets.data();
         recipe.struct_size = sizeof(recipe); recipe.n_sources = 4; recipe.sources = specs.data(); recipe.alpha = 0.2;
@@ -110,13 +110,13 @@ void vocabulary_and_import() {
     Context ctx; Fixture fixture; auto p = create(ctx, fixture); auto y = fixture.targets();
     REQUIRE(n4m_multimodal_pipeline_fit(ctx.value, p.get(), 4, fixture.views.data(), &y) == N4M_OK);
     int64_t width = 0; REQUIRE(n4m_multimodal_pipeline_transform_cols(p.get(), &width) == N4M_OK); REQUIRE(width == 11);
-    std::vector<double> fused(Fixture::rows * width); n4m_matrix_view_t out{};
+    std::vector<double> fused(static_cast<size_t>(Fixture::rows * width)); n4m_matrix_view_t out{};
     REQUIRE(n4m_matrix_view_init_rowmajor(&out, fused.data(), Fixture::rows, width, N4M_DTYPE_F64) == N4M_OK);
     std::string unknown; std::vector<uint64_t> offsets{0};
     for (int64_t r = 0; r < Fixture::rows; ++r) { unknown += "🚀"; offsets.push_back(unknown.size()); }
     fixture.views[3].categorical_utf8 = unknown.data(); fixture.views[3].utf8_bytes = unknown.size(); fixture.views[3].categorical_offsets = offsets.data();
     REQUIRE(n4m_multimodal_pipeline_transform(ctx.value, p.get(), 4, fixture.views.data(), &out) == N4M_OK);
-    for (int64_t r = 0; r < Fixture::rows; ++r) { REQUIRE(fused[r * width + 9] == 0); REQUIRE(fused[r * width + 10] == 0); }
+    for (int64_t r = 0; r < Fixture::rows; ++r) { REQUIRE(fused[static_cast<size_t>(r * width + 9)] == 0); REQUIRE(fused[static_cast<size_t>(r * width + 10)] == 0); }
     const auto bytes = state(ctx, p.get()); n4m_multimodal_pipeline_t* raw = nullptr;
     REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &fixture.recipe, bytes.data(), bytes.size(), &raw) == N4M_OK);
     Owner restored(raw, n4m_multimodal_pipeline_destroy); REQUIRE(predict(ctx, restored.get(), fixture) == predict(ctx, p.get(), fixture));
@@ -138,13 +138,13 @@ void zero_alpha_rank_deficiency_and_transaction() {
             // Two centered one-hot columns are dependent. The categorical
             // target is fit exactly; numeric metadata cannot explain it alone.
             for (int64_t row = 0; row < Fixture::rows; ++row)
-                fixture.y[row] = row % 2 ? 2.0 : -1.0;
+                fixture.y[static_cast<size_t>(row)] = row % 2 ? 2.0 : -1.0;
         } else if (profile == 2) {
             // A single learned category is a constant feature after centering.
             fixture.categories.clear(); fixture.offsets = {0};
             for (int64_t row = 0; row < Fixture::rows; ++row) {
                 fixture.categories += "é"; fixture.offsets.push_back(fixture.categories.size());
-                fixture.y[row] = 2.0 + 3.0 * fixture.numeric[3][row];
+                fixture.y[static_cast<size_t>(row)] = 2.0 + 3.0 * fixture.numeric[3][static_cast<size_t>(row)];
             }
             fixture.views[3].categorical_utf8 = fixture.categories.data();
             fixture.views[3].utf8_bytes = fixture.categories.size();
@@ -155,8 +155,8 @@ void zero_alpha_rank_deficiency_and_transaction() {
         const auto before = predict(ctx, p.get(), fixture);
         double mean = 0; for (double value : fixture.y) mean += value / Fixture::rows;
         for (int64_t row = 0; row < Fixture::rows; ++row) {
-            REQUIRE(std::isfinite(before[row]));
-            REQUIRE(std::abs(before[row] - (profile == 1 ? mean : fixture.y[row])) <= 1e-10);
+            REQUIRE(std::isfinite(before[static_cast<size_t>(row)]));
+            REQUIRE(std::abs(before[static_cast<size_t>(row)] - (profile == 1 ? mean : fixture.y[static_cast<size_t>(row)])) <= 1e-10);
         }
         const auto bytes = state(ctx, p.get()); n4m_multimodal_pipeline_t* raw = nullptr;
         REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &fixture.recipe, bytes.data(), bytes.size(), &raw) == N4M_OK);
@@ -187,7 +187,7 @@ std::vector<double> encoded(Context& ctx, n4m_multimodal_pipeline_t* p, int32_t 
     int64_t width = 0;
     REQUIRE(n4m_multimodal_pipeline_transform_cols(p, &width) == N4M_OK);
     const int64_t rows = views[0].shape[0];
-    std::vector<double> result(rows * width); n4m_matrix_view_t out{};
+    std::vector<double> result(static_cast<size_t>(rows * width)); n4m_matrix_view_t out{};
     REQUIRE(n4m_matrix_view_init_rowmajor(&out, result.data(), rows, width, N4M_DTYPE_F64) == N4M_OK);
     REQUIRE(n4m_multimodal_pipeline_transform(ctx.value, p, count, views, &out) == N4M_OK);
     return result;
@@ -202,7 +202,7 @@ void ordered_subsets_match_fixed_encoders_and_one_native_ridge() {
         std::vector<n4m_multimodal_source_view_v1_t> views;
         int64_t width = 0;
         for (size_t i = 0; i < selection.size(); ++i) {
-            const int source = selection[i]; specs.push_back(full.specs[source]);
+            const size_t source = static_cast<size_t>(selection[i]); specs.push_back(full.specs[source]);
             specs.back().weight *= static_cast<double>(i + 1);
             views.push_back(full.views[source]); width += widths[source];
         }
@@ -212,13 +212,13 @@ void ordered_subsets_match_fixed_encoders_and_one_native_ridge() {
         Owner selected(raw, n4m_multimodal_pipeline_destroy);
         REQUIRE(n4m_multimodal_pipeline_fit(ctx.value, selected.get(), recipe.n_sources, views.data(), &y) == N4M_OK);
         const auto actual = encoded(ctx, selected.get(), recipe.n_sources, views.data());
-        std::vector<double> expected(Fixture::rows * width);
+        std::vector<double> expected(static_cast<size_t>(Fixture::rows * width));
         for (int64_t row = 0; row < Fixture::rows; ++row) {
             int64_t column = 0;
             for (size_t i = 0; i < selection.size(); ++i) {
-                const int source = selection[i];
+                const size_t source = static_cast<size_t>(selection[i]);
                 for (int64_t j = 0; j < widths[source]; ++j)
-                    expected[row * width + column++] = canonical[row * 11 + starts[source] + j] * static_cast<double>(i + 1);
+                    expected[static_cast<size_t>(row * width + column++)] = canonical[static_cast<size_t>(row * 11 + starts[source] + j)] * static_cast<double>(i + 1);
             }
         }
         REQUIRE(actual == expected);
@@ -253,7 +253,7 @@ void ordered_subsets_match_fixed_encoders_and_one_native_ridge() {
         REQUIRE(raw == nullptr); specs[0].weight -= 0.25;
         specs[0].identity_utf8 = "changed-schema"; specs[0].identity_bytes = 14;
         REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &recipe, bytes.data(), bytes.size(), &raw) == N4M_ERR_CORRUPT_BUFFER);
-        REQUIRE(raw == nullptr); specs[0] = full.specs[selection[0]];
+        REQUIRE(raw == nullptr); specs[0] = full.specs[static_cast<size_t>(selection[0])];
         if (specs.size() > 1) {
             std::swap(specs[0], specs[1]);
             REQUIRE(n4m_multimodal_pipeline_import_from_buffer(ctx.value, &recipe, bytes.data(), bytes.size(), &raw) == N4M_ERR_CORRUPT_BUFFER);
