@@ -127,7 +127,7 @@ jobs:
       - name: Build libn4m for package smoke
         run: |
           cmake --preset ci-linux-gcc12-release
-          cmake --build --preset ci-linux-gcc12-release --target n4m_c n4m_cli --parallel
+          cmake --build --preset ci-linux-gcc12-release --target n4m_c n4m_cli n4m_fit_witness --parallel
 
       - name: Check generated Python and R estimator roles
         run: |
@@ -142,6 +142,7 @@ jobs:
       - name: Full Python binding suite
         run: |
           N4M_LIB_PATH="$PWD/$(ls build/ci-linux-gcc12-release/cpp/src/libn4m.so.*.*.* | head -1)" \
+          N4M_NATIVE_FIT_WITNESS_LIBRARY="$PWD/build/ci-linux-gcc12-release/cpp/tests/libn4m_fit_witness.so" \
           PYTHONPATH=bindings/python/src \
           OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2 \
             python3 -m pytest bindings/python/tests -q
