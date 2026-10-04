@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-04
+
+Native ABI 2.17.0 and the independently published Rust crate n4m 0.4.0 are unchanged.
+This patch supersedes the 1.3.0 source and npm release without replacing its assets.
+
+### Fixed
+
+- Give private multimodal helpers internal linkage for strict GCC builds.
+- Classify all 13 multimodal classifier lifecycle symbols as ABI infrastructure.
+- Generate the StandardScale scientific documentation from its maintained native
+  contract, including train-only population statistics and portable state.
+
 ## [1.3.0] - 2026-10-04
 
 Rust crate `n4m` is released separately as 0.4.0. The native ABI is 2.17.0;
