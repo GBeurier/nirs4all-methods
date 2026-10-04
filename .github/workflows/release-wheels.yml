@@ -45,6 +45,11 @@ on:
         required: true
         type: boolean
         default: false
+      artifact_run_id:
+        description: 'Optional run with successful builds for this exact tag; revalidate and reuse its wheels'
+        required: false
+        type: string
+        default: ''
   push:
     # GitHub tag filters are globs, not regex — '+' is literal there, so
     # 'v[0-9]+.[0-9]+.[0-9]+' never matches v0.98.0. Use '*' wildcards.
@@ -62,6 +67,9 @@ jobs:
   matrix:
     name: nirs4all-methods / ${{ matrix.os }} / ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
@@ -82,13 +90,15 @@ jobs:
             arch: aarch64
     steps:
       - uses: actions/checkout@v7.0.0
+        with:
+          ref: ${{ inputs.artifact_run_id != '' && inputs.version_tag || github.ref }}
 
       - uses: actions/setup-python@v6.3.0
         with:
           python-version: '3.x'
 
       - name: Set up QEMU (Linux aarch64)
-        if: runner.os == 'Linux' && matrix.arch == 'aarch64'
+        if: inputs.artifact_run_id == '' && runner.os == 'Linux' && matrix.arch == 'aarch64'
         uses: docker/setup-qemu-action@v3
 
       # The nirs4all-methods package dir is generated + gitignored, so it must
@@ -99,9 +109,11 @@ jobs:
       # CIBW_BEFORE_ALL (in the manylinux container on Linux) so the bundled
       # lib matches the wheel.
       - name: Materialize the nirs4all-methods package dir (metadata only)
+        if: inputs.artifact_run_id == ''
         run: python bindings/python/scripts/make_python_package.py --name nirs4all-methods
 
       - name: Build wheels
+        if: inputs.artifact_run_id == ''
         uses: pypa/cibuildwheel@v2.21.3
         with:
           package-dir: bindings/python_nirs4all_methods
@@ -149,11 +161,60 @@ jobs:
           CIBW_TEST_REQUIRES: pytest numpy scikit-learn
           CIBW_TEST_COMMAND: pytest {project}/bindings/python_nirs4all_methods/tests
 
+      - name: Validate original build run and immutable tag
+        if: inputs.artifact_run_id != ''
+        shell: bash
+        env:
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+          VERSION_TAG: ${{ inputs.version_tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PYCODE'
+          import json, os, re, subprocess, urllib.request
+          repo, run_id, tag = (os.environ[k] for k in
+              ("GITHUB_REPOSITORY", "ARTIFACT_RUN_ID", "VERSION_TAG"))
+          assert re.fullmatch(r"[0-9]+", run_id), "invalid artifact run ID"
+          assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", tag), "invalid release tag"
+          def api(path):
+              request = urllib.request.Request("https://api.github.com/repos/" + repo + path,
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          run = api("/actions/runs/" + run_id)
+          commit = api("/commits/" + tag)["sha"]
+          assert subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip() == commit, "checkout/tag mismatch"
+          assert run["repository"]["full_name"] == repo, "foreign artifact repository"
+          assert run["event"] == "push" and run["head_branch"] == tag, "not a tag build"
+          assert run["path"] == ".github/workflows/release-wheels.yml", "foreign workflow"
+          assert run["status"] == "completed" and run["head_sha"] == commit, "tag/run mismatch"
+          jobs = api("/actions/runs/" + run_id + "/jobs?per_page=100")["jobs"]
+          expected = {"nirs4all-methods / " + platform for platform in
+              ("ubuntu-22.04 / x86_64", "ubuntu-22.04 / aarch64",
+               "macos-14 / aarch64", "windows-2022 / x86_64")}
+          successful = {job["name"] for job in jobs if job["conclusion"] == "success"}
+          assert expected <= successful, "original platform build failed or missing"
+          print("REUSE_ORIGINAL_BUILD", repo, run_id, tag, commit)
+          PYCODE
+
+      - name: Download the original wheel with digest verification
+        if: inputs.artifact_run_id != ''
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: wheels-nirs4all-methods-${{ matrix.os }}-${{ matrix.arch }}
+          path: wheelhouse
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+          digest-mismatch: error
+
       - name: Retag ctypes-only wheel cp312 to py3
+        if: inputs.artifact_run_id == ''
         run: python bindings/python/scripts/retag_wheels.py wheelhouse --inplace
 
       - name: Verify portable wheel metadata
         shell: bash
+        env:
+          VERSION_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.version_tag }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -168,7 +229,7 @@ jobs:
             ls -la wheelhouse/
             exit 1
           fi
-          python -c "import sys, zipfile; p=sys.argv[1]; z=zipfile.ZipFile(p); w=next(n for n in z.namelist() if n.endswith('.dist-info/WHEEL')); tags=[line for line in z.read(w).decode().splitlines() if line.startswith('Tag:')]; assert tags and all(line.startswith('Tag: py3-none-') for line in tags), tags; print(*tags, sep='\n')" "${wheels[0]}"
+          python -c "import sys, zipfile; from email.parser import Parser; p=sys.argv[1]; z=zipfile.ZipFile(p); w=next(n for n in z.namelist() if n.endswith('.dist-info/WHEEL')); tags=[line for line in z.read(w).decode().splitlines() if line.startswith('Tag:')]; assert tags and all(line.startswith('Tag: py3-none-') for line in tags), tags; m=Parser().parsestr(z.read(next(n for n in z.namelist() if n.endswith('.dist-info/METADATA'))).decode()); assert m['Name'] == 'nirs4all-methods' and m['Version'] == sys.argv[2].removeprefix('v'), (m['Name'], m['Version'], sys.argv[2]); print(*tags, sep='\n')" "${wheels[0]}" "${VERSION_TAG}"
 
       - uses: actions/upload-artifact@v7.0.1
         with:
@@ -233,7 +294,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          python -m pip install "numpy>=1.21" scikit-learn
+          python -m pip install "numpy>=1.21" scikit-learn "typing-extensions>=4.0; python_version < '3.11'"
           python -m pip install --no-index --find-links=wheelhouse --no-deps \
             "nirs4all-methods==${N4M_VERSION}"
           python -m pip check
