@@ -112,7 +112,7 @@ fn normalized(ctx: &Context, packet: &[u8], abi: (u32, u32, u32)) -> Vec<u8> {
 
 pub fn assert_reexport_equivalent(ctx: &Context, original: &[u8], current: &[u8], method: &str) {
     let old = normalized(ctx, original, (2, 15, 0));
-    let new = normalized(ctx, current, (2, 16, 0));
+    let new = normalized(ctx, current, (2, 17, 0));
     assert!(
         old == new,
         "{method}: non-writer bytes changed during re-export"
