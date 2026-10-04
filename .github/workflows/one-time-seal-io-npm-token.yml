@@ -1,0 +1,56 @@
+# One-time encrypted transfer of this repository's npm publishing credential
+# to nirs4all-io. Delete this workflow after the transfer succeeds.
+name: one-time-seal-io-npm-token
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seal:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install sealed-box implementation
+        run: python -m pip install --disable-pip-version-check 'PyNaCl==1.5.0'
+      - name: Encrypt npm token to the IO repository Actions public key
+        env:
+          SOURCE_NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          python - <<'PY'
+          import base64
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          from nacl.public import PublicKey, SealedBox
+
+          token = os.environ.get("SOURCE_NPM_TOKEN", "")
+          if not token:
+              raise SystemExit("Methods NPM_TOKEN is not configured")
+          public_key = base64.b64decode("Cz2o0XkggD+B5/7Qw04XsrgPUkwZAPjTpH6FSTLzZEE=", validate=True)
+          if len(public_key) != 32:
+              raise SystemExit("IO Actions public key is invalid")
+          ciphertext = SealedBox(PublicKey(public_key)).encrypt(token.encode("utf-8"))
+          payload = {
+              "target_repository": "GBeurier/nirs4all-io",
+              "key_id": "3380204578043523366",
+              "encrypted_value": base64.b64encode(ciphertext).decode("ascii"),
+              "ciphertext_sha256": hashlib.sha256(ciphertext).hexdigest(),
+          }
+          output = Path("io-npm-secret-transfer.json")
+          output.write_text(json.dumps(payload, sort_keys=True) + "\n")
+          print("Encrypted Methods npm credential for the IO Actions public key.")
+          PY
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: io-npm-secret-transfer
+          path: io-npm-secret-transfer.json
+          if-no-files-found: error
+          retention-days: 1
