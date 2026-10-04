@@ -263,17 +263,23 @@ void test_zero_lambda_minimum_norm() {
     // Cover tall and wide shapes and two targets without a solver-based oracle.
     constexpr std::int64_t n = 4, q = 2;
     for (const std::int64_t p : {2, 6}) {
-        std::vector<double> X(n * p), Y(n * q), expected(p * q);
+        std::vector<double> X(static_cast<std::size_t>(n * p));
+        std::vector<double> Y(static_cast<std::size_t>(n * q));
+        std::vector<double> expected(static_cast<std::size_t>(p * q));
         double norm = 0.0;
-        for (std::int64_t c = 0; c < p; ++c) norm += (c + 1) * (c + 1);
+        for (std::int64_t c = 0; c < p; ++c) {
+            norm += static_cast<double>((c + 1) * (c + 1));
+        }
         for (std::int64_t r = 0; r < n; ++r) {
-            for (std::int64_t c = 0; c < p; ++c) X[r * p + c] = r * (c + 1);
-            Y[r * q] = 3.0 + 5.0 * r;
-            Y[r * q + 1] = -2.0 - 4.0 * r;
+            for (std::int64_t c = 0; c < p; ++c) {
+                X[static_cast<std::size_t>(r * p + c)] = static_cast<double>(r * (c + 1));
+            }
+            Y[static_cast<std::size_t>(r * q)] = 3.0 + 5.0 * static_cast<double>(r);
+            Y[static_cast<std::size_t>(r * q + 1)] = -2.0 - 4.0 * static_cast<double>(r);
         }
         for (std::int64_t c = 0; c < p; ++c) {
-            expected[c * q] = 5.0 * (c + 1) / norm;
-            expected[c * q + 1] = -4.0 * (c + 1) / norm;
+            expected[static_cast<std::size_t>(c * q)] = 5.0 * static_cast<double>(c + 1) / norm;
+            expected[static_cast<std::size_t>(c * q + 1)] = -4.0 * static_cast<double>(c + 1) / norm;
         }
         const double intercept[] = {3.0, -2.0};
         n4m_method_result_t* result = fit(X.data(), n, p, Y.data(), q, 0.0, 0);
