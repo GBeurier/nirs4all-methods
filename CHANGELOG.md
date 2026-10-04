@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-04
+
+Rust crate `n4m` is released separately as 0.4.0. The native ABI is 2.17.0;
+regression state formats and existing compatible replay profiles are preserved.
+
+### Added
+
+- Native multimodal encoding and PLS-logistic classification, with explicit
+  class vocabularies, probability outputs and validated N4MC fitted states.
+- Compile-time build capabilities for admission of the documented sequential
+  numerical profile and independent pipeline lifecycle support.
+- Matching complete/slim Python, R and JS/WASM facades for the qualified
+  multimodal fit, state export/import and prediction profiles.
+
+### Fixed
+
+- Overflow-safe classifier working-set admission before native fitting.
+- Generated Python classifier declarations and binding ABI constants now track
+  the actual 2.17 native surface.
+
 ## [1.2.1] - 2026-09-27
 
 Rust crate `n4m` stays 0.3.0: it links the libn4m that carries these fixes.
