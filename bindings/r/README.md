@@ -1,12 +1,21 @@
 # R binding
 
-Phase 7c scaffolding. Minimal `.Call` gateway over `libn4m` with
-fit/predict wrappers for every shipped PLS regression solver. Builds and
-installs from `bindings/r/n4m/`.
+The `n4m` package is a thin `.Call` binding over the native engine. It exposes
+PLS regression, preprocessing, estimator roles and pipelines, multimodal
+regression/classification, AOM/POP and native optimization. The `pls4all`
+package provides the slim PLS subset. Neither package implements numerical
+kernels in R.
 
 ## Build / install
 
-The package needs a copy of `libn4m` already built. Build the C ABI
+Source distributions vendor the native C/C++ sources and build a self-contained
+R shared library. From a full source checkout, prepare this mode with:
+
+```bash
+N4M_R_VENDOR=1 R CMD INSTALL bindings/r/n4m
+```
+
+For a development installation using an external `libn4m`, build the C ABI
 first:
 
 ```bash
@@ -42,7 +51,7 @@ training rows; provide the original typed label table as `class_names` to
 library(n4m)
 
 n4m_version()
-# "1.2.1+abi.2.17.0"
+# "1.3.2+abi.2.17.0"
 
 # Seeded native training-only augmentation of X (no paired Y output):
 # n4m::n4m_augmentation_apply("gaussian_noise", train_X, 0.03, seed = 42)
@@ -97,8 +106,10 @@ Other stateful operators still need explicit state import/export surfaces.
 
 ## Scope
 
-This phase ships the smallest viable surface to wire R into the
-comprehensive benchmark matrix (see `benchmarks/`). AOM/POP wrappers,
-sklearn-style classes, and parity tests against R `pls` / `ropls` /
-`mixOmics` are deferred. See [`../../ROADMAP.md`](../../ROADMAP.md) for
-the binding roadmap.
+Fitted native handles are R external pointers with an explicit native lifetime;
+serializing an external pointer with `saveRDS()` does not preserve its learned
+state. Use `n4m_model_export()` / `n4m_model_import()` for portable N4MM model
+bytes, or the corresponding estimator, role-pipeline and multimodal state APIs.
+Import validates the native format and ABI before exposing the restored handle.
+Cross-language parity fixtures and native lifecycle tests live under
+`bindings/r/n4m/tests/`; numerical reference comparisons are profile-specific.
