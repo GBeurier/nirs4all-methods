@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **215**
-- Curated scientific records: **222**
-- Resolved documentation pages: **215**
+- Catalog entries: **216**
+- Curated scientific records: **223**
+- Resolved documentation pages: **216**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -220,6 +220,7 @@ This generated report records the documentation source used for each catalog ent
 | `utilities.hotelling_t2` | [utilities_hotelling_t2](utilities_hotelling_t2.md) | curated |
 | `utilities.moments` | [utilities_moments](utilities_moments.md) | curated |
 | `utilities.q_residuals` | [utilities_q_residuals](utilities_q_residuals.md) | curated |
+| `utilities.ragged_summary` | [utilities_ragged_summary](utilities_ragged_summary.md) | curated |
 | `utilities.signal_type_detector` | [utilities_signal_type_detector](utilities_signal_type_detector.md) | curated |
 | `utilities.sweep` | [utilities_sweep](utilities_sweep.md) | curated |
 | `utilities.transfer_metrics` | [utilities_transfer_metrics](utilities_transfer_metrics.md) | curated |

@@ -7,7 +7,6 @@ currently shipped by nirs4all-methods.
 
 from __future__ import annotations
 
-
 _REPO = "https://github.com/GBeurier/nirs4all-methods/blob/main/"
 
 
@@ -32,6 +31,34 @@ def _entry(
 
 
 SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
+    "utilities_ragged_summary": _entry(
+        "Deterministic ragged sequence summaries",
+        "Descriptive population statistics and explicit temporal support. This operator "
+        "is specified by its native sequence contract rather than a separate learned model. "
+        "NumPy documents the same population-standard-deviation convention (ddof=0): "
+        "https://numpy.org/doc/stable/reference/generated/numpy.std.html.",
+        "For each observed sequence and channel, emit the arithmetic mean, population "
+        "standard deviation (ddof=0), minimum and maximum. Append the sequence length, "
+        "last-minus-first physical time (or index span when times are absent), and presence "
+        "indicator one. Explicitly absent sequences receive zeros and indicator zero only "
+        "under the opt-in zero_with_indicator policy; the default reject policy refuses absence.",
+        "Creating a fixed-width tabular view of variable-duration, multichannel records "
+        "before fold-scoped predictive fitting, while retaining source presence evidence.",
+        "Summaries discard detailed temporal ordering and cannot replace a sequence model. "
+        "No resampling, padding or learned imputation occurs. Offsets must be integral and "
+        "bound the packed rows; present sequences must be nonempty, absent sequences empty, "
+        "and optional finite times strictly increasing per sequence. The shared procedure "
+        "input contract requires at least one observed packed row. Nonfinite output is refused.",
+        "The native utilities.ragged_summary procedure uses the existing n4m_procedure_run "
+        "ABI. cpp/src/core/estimator/procedures.cpp accumulates means and squared deviations "
+        "in extended precision and checks the resulting double features. Python/R/JS/Rust "
+        "bindings marshal typed parameters and matrices without recomputing statistics. "
+        "Independent NumPy population reductions and malformed-boundary cases qualify it.",
+        _REPO + "cpp/include/n4m/estimator.h; "
+        + _REPO + "cpp/src/core/estimator/procedures.cpp; "
+        + _REPO + "catalog/methods/utilities.ragged_summary.yaml; "
+        + _REPO + "bindings/python/tests/test_ragged_summary.py",
+    ),
     "preprocessing_scaling_standard_scale": _entry(
         "Training-fitted column standardization",
         "Population standardization uses the arithmetic mean and population variance. "

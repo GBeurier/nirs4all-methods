@@ -288,8 +288,13 @@ Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-b
 
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
-| [`ragged_summary`](utilities_ragged_summary.md) | `n4m.utilities.ragged_summary` | `n4m.roles.RaggedSummary` | Py, R, JS |
 | [`moments`](utilities_moments.md) | `n4m.lowlevel.moments.moments` | `n4m.lowlevel.moments` | C, Py |
+
+## utilities
+
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`ragged_summary`](utilities_ragged_summary.md) | `n4m.utilities.ragged_summary` | `n4m.utilities` | Py |
 
 ---
 

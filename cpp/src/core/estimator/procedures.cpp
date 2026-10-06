@@ -805,7 +805,7 @@ n4m_status_t run_ragged_summary(n4m_context_t* ctx, const Params& params, const 
                 else { lo = std::min(lo, value); hi = std::max(hi, value); }
                 const long double delta = static_cast<long double>(value) - mean;
                 mean += delta / static_cast<long double>(row - start + 1);
-                m2 += delta * (value - mean);
+                m2 += delta * (static_cast<long double>(value) - mean);
             }
             output[static_cast<std::size_t>(4 * col)] = static_cast<double>(mean);
             output[static_cast<std::size_t>(4 * col + 1)] = static_cast<double>(std::sqrt(std::max(0.0L, m2 / static_cast<long double>(count))));
