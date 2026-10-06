@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-10-06
+
+ABI 2.17.0 and the independently published Rust crate n4m 0.4.0 are unchanged.
+This patch publishes the Python mixed-metadata replay correction; existing
+1.3.2 artifacts and tags are preserved.
+
 ### Fixed
 
 - Accept object and fixed-width text storage for raw mixed metadata without
