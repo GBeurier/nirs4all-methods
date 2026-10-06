@@ -8,7 +8,7 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**209 of 215 catalog entries covered.**
+**210 of 216 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
@@ -20,7 +20,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | preprocessing | 63 | 64 |
 | selection | 26 | 26 |
 | splitters | 9 | 9 |
-| utilities | 6 | 6 |
+| utilities | 7 | 7 |
 
 | Method | Kind | Roles | Validated in |
 |---|---|---|---|
@@ -236,6 +236,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `utilities.hotelling_t2` | procedure | generic | manifest only |
 | `utilities.moments` | procedure | generic | manifest only |
 | `utilities.q_residuals` | procedure | generic | manifest only |
+| `utilities.ragged_summary` | procedure | generic | manifest only |
 | `utilities.signal_type_detector` | procedure | generic | manifest only |
 | `utilities.sweep` | procedure | generic | manifest only |
 | `utilities.transfer_metrics` | procedure | generic | manifest only |
