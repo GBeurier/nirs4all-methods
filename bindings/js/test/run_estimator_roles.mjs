@@ -51,6 +51,7 @@ const classes = Object.values(n4m).filter(
     (c) => typeof c === "function" && c.prototype instanceof n4m.NativeEstimator);
 const byMethod = new Map(classes.map((c) => [new c().methodId, c]));
 const newMethods = ["preprocessing.scaling.standard_scale"];
+const newProcedures = ["utilities.ragged_summary"];
 const legacyMethods = fixture.cases.map((c) => c.method_id);
 assert.ok(newMethods.every((id) => !legacyMethods.includes(id)));
 assert.deepEqual([...byMethod.keys()].sort(), [...legacyMethods, ...newMethods].sort());
@@ -164,7 +165,7 @@ for (const c of fixture.procedures) {
 }
 assert.throws(() => n4m.methodClass("models.pls.missing"), /no n4m role class/);
 const native = n4m.manifest();
-assert.equal(native.methods.length, fixture.cases.length + fixture.procedures.length + newMethods.length);
+assert.equal(native.methods.length, fixture.cases.length + fixture.procedures.length + newMethods.length + newProcedures.length);
 for (const m of native.methods) assert.ok(n4m.methodClass(m.method_id), m.method_id);
 
 assert.throws(() => new n4m.GroupSparsePLS().fit(xTrain, yTrain), /feature_groups/);
@@ -174,3 +175,11 @@ assert.throws(() => new n4m.PLSRegression({ solver: "bogus" }).fit(xTrain, yTrai
 assert.throws(() => new n4m.PLSLDA().fit(xTrain), /labels/);
 
 console.log(`estimator roles: ${fixture.cases.length} unchanged fixture estimators and ${fixture.procedures.length} procedures reproduced in JS/WASM; independent population StandardScale oracle/replay PASS`);
+
+// Independent two-sequence population statistics, with physical time spans.
+const ragged = new n4m.RaggedSummary({offsets: [0, 2, 3], time_coordinates: [0, 0.25, 0]});
+const summaries = ragged.run(matrix([[1, 2], [3, 4], [6, 8]])).features;
+assert.deepEqual([summaries.rows, summaries.cols], [2, 11]);
+close(summaries.data, [2, 1, 1, 3, 3, 1, 2, 4, 2, 0.25, 1,
+    6, 0, 6, 6, 8, 0, 8, 8, 1, 0, 1], 1e-12, "native ragged summary");
+console.log("independent ragged population summary PASS");

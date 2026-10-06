@@ -3135,6 +3135,31 @@
       "links": [
         {
           "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_ragged_summary.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/utilities.ragged_summary.yaml"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimator.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/procedures.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://numpy.org/doc/stable/reference/generated/numpy.std.html"
+        }
+      ],
+      "page": "utilities_ragged_summary"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
           "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/signal_type_detector.c"
         }
       ],
@@ -3326,6 +3351,6 @@
     "docs/_extras/scientific_aom.py": "43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93",
     "docs/_extras/scientific_augmentation_filter_split.py": "477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77",
     "docs/_extras/scientific_legacy.py": "3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547",
-    "docs/_extras/scientific_remaining.py": "0be61888b418dfdd6c4745708db84cb0336ce6c245a9b5957ce89ad535396f99"
+    "docs/_extras/scientific_remaining.py": "f12a9e01bc98939e81ce81bbc4195b2cb24926dd003a2263c8c349b1eeda1b10"
   }
 }

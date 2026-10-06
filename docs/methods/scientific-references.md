@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **222**
+- Curated records: **223**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `0be61888b418dfdd6c4745708db84cb0336ce6c245a9b5957ce89ad535396f99`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `f12a9e01bc98939e81ce81bbc4195b2cb24926dd003a2263c8c349b1eeda1b10`
 
 ## References by documentation page
 
@@ -1275,6 +1275,12 @@ No single canonical paper defines the ABI utility surface; it implements standar
 Jackson & Mudholkar (1979), *Control Procedures for Residuals Associated With Principal Component Analysis*, Technometrics 21, 341–349, https://doi.org/10.1080/00401706.1979.10489779.
 
 **Provenance:** https://doi.org/10.1080/00401706.1979.10489779; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/q_residuals.c
+
+### [`utilities_ragged_summary`](utilities_ragged_summary.md) — Deterministic ragged sequence summaries
+
+Descriptive population statistics and explicit temporal support. This operator is specified by its native sequence contract rather than a separate learned model. NumPy documents the same population-standard-deviation convention (ddof=0): https://numpy.org/doc/stable/reference/generated/numpy.std.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimator.h; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/procedures.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/utilities.ragged_summary.yaml; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_ragged_summary.py
 
 ### [`utilities_signal_type_detector`](utilities_signal_type_detector.md) — Heuristic spectral signal-type detector
 

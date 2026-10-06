@@ -475,14 +475,15 @@ fn replays_the_cross_language_fixture() {
     let procedures = fx["procedures"].as_array().unwrap();
     let methods = roles::methods().unwrap();
     // Keep the old 208-method ABI2.15 fixture unchanged. The additive scaler
-    // is covered by an independent native binding test above.
-    assert_eq!(methods.len(), cases.len() + procedures.len() + 1);
+    // and ragged utility are covered independently; preserve the historical fixture.
+    assert_eq!(methods.len(), cases.len() + procedures.len() + 2);
     let mut listed: BTreeSet<&str> = cases
         .iter()
         .chain(procedures)
         .map(|c| c["method_id"].as_str().unwrap())
         .collect();
     assert!(listed.insert("preprocessing.scaling.standard_scale"));
+    assert!(listed.insert("utilities.ragged_summary"));
     assert_eq!(
         listed,
         methods
@@ -684,5 +685,38 @@ fn replays_the_cross_language_fixture() {
          ({folds} splitters, {augmented} augmenters, {runs} generic) reproduced in Rust",
         cases.len(),
         procedures.len()
+    );
+}
+
+#[test]
+fn ragged_summary_matches_independent_population_statistics() {
+    let context = Context::new().unwrap();
+    let values = vec![1., 2., 3., 4., 6., 8.];
+    let x = MatrixRef::row_major(&values, 3, 2).unwrap();
+    let mut params = Params::new(&context, "utilities.ragged_summary").unwrap();
+    params
+        .set("offsets", &ParamValue::IntArray(vec![0, 2, 3]))
+        .unwrap();
+    params
+        .set(
+            "time_coordinates",
+            &ParamValue::DoubleArray(vec![0., 0.25, 0.]),
+        )
+        .unwrap();
+    let result = roles::run_procedure(
+        &context,
+        "utilities.ragged_summary",
+        Some(&params),
+        &FitInputs::new(x),
+    )
+    .unwrap();
+    let output = result.double_matrix("features").unwrap();
+    assert_eq!((output.rows, output.cols), (2, 11));
+    assert_eq!(
+        output.data,
+        vec![
+            2., 1., 1., 3., 3., 1., 2., 4., 2., 0.25, 1., 6., 0., 6., 6., 8., 0., 8., 8., 1., 0.,
+            1.
+        ]
     );
 }
