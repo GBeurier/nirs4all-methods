@@ -5496,6 +5496,37 @@ class QResiduals(NativeProcedure):
         self.alpha = alpha
 
 
+class RaggedSummary(NativeProcedure):
+    """Native ``utilities.ragged_summary`` (generic)."""
+
+    _method_id = "utilities.ragged_summary"
+    _param_types: ClassVar[dict[str, str]] = {
+        "offsets": "int_array",
+        "presence": "int_array",
+        "time_coordinates": "double_array",
+        "missing_policy": "enum",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "missing_policy": (
+            "reject",
+            "zero_with_indicator",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        offsets=None,
+        presence=(),
+        time_coordinates=(),
+        missing_policy="reject",
+    ) -> None:
+        self.offsets = offsets
+        self.presence = presence
+        self.time_coordinates = time_coordinates
+        self.missing_policy = missing_policy
+
+
 class SignalTypeDetector(NativeProcedure):
     """Native ``utilities.signal_type_detector`` (generic)."""
 
@@ -5729,6 +5760,7 @@ __all__ = [
     "PiecewiseSNV",
     "PolyDrift",
     "QResiduals",
+    "RaggedSummary",
     "RandomFrog",
     "RandomSubspacePLS",
     "RandomXOp",
