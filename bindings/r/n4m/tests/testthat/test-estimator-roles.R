@@ -60,7 +60,8 @@ testthat::test_that("every manifest estimator has a generated R constructor", {
   testthat::expect_setequal(names(constructors),
                             c(vapply(fx$cases, `[[`, "", "method_id"),
                               vapply(fx$procedures, `[[`, "", "method_id"),
-                              "preprocessing.scaling.standard_scale"))
+                              "preprocessing.scaling.standard_scale",
+                              "utilities.ragged_summary"))
 })
 
 testthat::test_that("StandardScale fits population moments on training rows only", {
@@ -77,6 +78,17 @@ testthat::test_that("StandardScale fits population moments on training rows only
   testthat::expect_identical(n4m_estimator_transform(replay, heldout),
                               n4m_estimator_transform(fit, heldout))
   testthat::expect_identical(n4m_estimator_export(replay), state)
+})
+
+testthat::test_that("RaggedSummary matches independent population statistics", {
+  packed <- matrix(c(1, 2, 3, 4, 6, 8), nrow = 3L, byrow = TRUE)
+  procedure <- n4m_ragged_summary(offsets = c(0L, 2L, 3L),
+                                 time_coordinates = c(0, 0.25, 0))
+  actual <- n4m_run(procedure, packed)$features
+  expected <- matrix(c(2, 1, 1, 3, 3, 1, 2, 4, 2, 0.25, 1,
+                       6, 0, 6, 6, 8, 0, 8, 8, 1, 0, 1),
+                     nrow = 2L, byrow = TRUE)
+  testthat::expect_equal(unname(actual), expected, tolerance = 1e-12)
 })
 
 for (case in fx$cases) {
