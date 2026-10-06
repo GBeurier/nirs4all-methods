@@ -383,7 +383,8 @@ class NativeMethod(BaseEstimator):
                 elif kind == "enum":
                     status = lib.n4m_params_set_enum(params, key, str(value).encode())
                 elif kind == "int_array":
-                    arr = np.ascontiguousarray(value, dtype=np.int64).reshape(-1)
+                    original = np.asarray(value)
+                    arr = _vector(value, name, len(original), "integer parameter", np.int64)
                     ptr = arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int64))
                     status = lib.n4m_params_set_int_array(
                         params, key, ptr, ctypes.c_int64(arr.size)

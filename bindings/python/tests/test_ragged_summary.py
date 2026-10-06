@@ -42,3 +42,20 @@ def test_present_nonfinite_refused_and_single_observation_duration_zero():
         RaggedSummary(offsets=[0, 2]).run(np.array([[1., 2.], [np.nan, 3.]]))
     output = RaggedSummary(offsets=[0, 1]).run(np.array([[2., 5.]]))["features"]
     np.testing.assert_array_equal(output[0, -3:], [1, 0, 1])
+
+@pytest.mark.parametrize("options", [
+    {"offsets": [0, 1.8, 3]},
+    {"offsets": [0, 3], "presence": [0.5], "missing_policy": "zero_with_indicator"},
+    {"offsets": [[0, 3]]},
+])
+def test_parameter_integer_vectors_refuse_lossy_conversion(options):
+    with pytest.raises((ValueError, TypeError)):
+        RaggedSummary(**options).run(np.ones((3, 2)))
+
+
+def test_extreme_finite_statistics_and_duration_overflow_refusal():
+    output = RaggedSummary(offsets=[0, 2]).run(np.array([[1.e308], [-1.e308]]))["features"]
+    assert np.isfinite(output).all()
+    np.testing.assert_allclose(output[0,:4], [0.,1.e308,-1.e308,1.e308], rtol=2e-15)
+    with pytest.raises(Exception):
+        RaggedSummary(offsets=[0, 2], time_coordinates=[-1.e308, 1.e308]).run(np.ones((2, 1)))

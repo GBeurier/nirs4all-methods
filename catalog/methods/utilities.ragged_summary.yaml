@@ -55,4 +55,4 @@ fq_name: "n4m.utilities.ragged_summary"
 leaf: "ragged_summary"
 legacy_ids:
   - "utilities.ragged_summary"
-namespace: "utilities.ragged_summary"
+namespace: "utilities"
