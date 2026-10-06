@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- Accept object and fixed-width text storage for raw mixed metadata without
+  casting categories to a saved NumPy text width. Preserve the captured native
+  source descriptor and reject non-text categorical cells during fit and replay.
+
 ## [1.3.2] - 2026-10-04
 
 ABI 2.17.0 and Rust crate n4m 0.4.0 remain unchanged. Existing 1.3.1

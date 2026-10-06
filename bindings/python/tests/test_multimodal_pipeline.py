@@ -454,3 +454,28 @@ def test_rows_bounds_and_unsupported_declarations_are_refused_without_fallback()
         wrong["encoders"]["image"][key] = value
         with pytest.raises(Exception):
             MultimodalPipeline(wrong, schemas)
+
+
+@pytest.mark.parametrize("saved_dtype", ["object", "<U32"])
+def test_mixed_text_storage_replays_without_truncating_categories(saved_dtype):
+    blocks, y, recipe, schemas = raw_case()
+    blocks["metadata"][:, 1] = ["A" * 32, "B", "C"] * 5
+    blocks["metadata"] = blocks["metadata"].astype("<U32")
+    schemas["metadata"]["dtype"] = saved_dtype
+    heldout = {name: value[:3].copy() for name, value in blocks.items()}
+    heldout["metadata"] = heldout["metadata"].astype(object)
+    heldout["metadata"][:, 1] = ["A" * 32 + "unseen", "B", "C"]
+    encode, reference, _ = oracle(blocks, y, recipe)
+    with MultimodalPipeline(recipe, schemas) as native:
+        native.fit(blocks, y)
+        state = native.export_state()
+        with MultimodalPipeline.from_state(state, recipe=recipe, source_schemas=schemas) as replay:
+            # A cast to saved <U32 would silently turn the first unknown
+            # category into the known A category and activate its one-hot cell.
+            assert_array_equal(replay.transform(heldout)[0, -3:], np.zeros(3))
+            assert_allclose(replay.predict(heldout), reference.predict(encode(heldout)), rtol=1e-8, atol=1e-8)
+            assert replay.export_state() == state
+            invalid = {name: value.copy() for name, value in heldout.items()}
+            invalid["metadata"][0, 1] = 7
+            with pytest.raises(TypeError, match="categorical cells"):
+                replay.predict(invalid)

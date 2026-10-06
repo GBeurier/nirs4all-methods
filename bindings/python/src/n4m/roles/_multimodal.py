@@ -336,7 +336,15 @@ def _views(blocks: Any, schemas: Any, order: tuple[str, ...]) -> tuple[Any, list
         if name == "metadata":
             if values.ndim != 2 or values.shape[1] != 2:
                 raise ValueError("mixed metadata must be a two-column raw table")
-            if str(values.dtype) != schemas[name]["dtype"]:
+            # Mixed tables carry raw UTF-8 categories, independently of a
+            # host's object or fixed-width text storage. Keep the saved native
+            # descriptor exact; never cast categories to its old text width.
+            logical_text = (
+                schemas[name]["representation_id"] == "tabular_mixed"
+                and values.dtype.kind in "OUS"
+                and np.dtype(schemas[name]["dtype"]).kind in "OUS"
+            )
+            if str(values.dtype) != schemas[name]["dtype"] and not logical_text:
                 raise ValueError(
                     "mixed metadata dtype differs from its captured source schema"
                 )
