@@ -13170,7 +13170,7 @@ methods:
         legacy_aliases: []
     publications: []
     notes: "Packed ragged series summary: per-channel mean/population std/min/max, length, duration and presence. Default refuses absence; explicit zero_with_indicator emits zeros for absent sequences. No resampling or learned imputation."
-    namespace: utilities.ragged_summary
+    namespace: utilities
     leaf: ragged_summary
     fq_name: n4m.utilities.ragged_summary
     c_surface: none

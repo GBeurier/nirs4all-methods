@@ -790,30 +790,33 @@ n4m_status_t run_ragged_summary(n4m_context_t* ctx, const Params& params, const 
         }
         if (!times.empty()) {
             for (auto row = start; row < end; ++row)
-                if (!std::isfinite(times[row]) || (row > start && times[row] <= times[row - 1]))
+                if (!std::isfinite(times[static_cast<std::size_t>(row)]) || (row > start && times[static_cast<std::size_t>(row)] <= times[static_cast<std::size_t>(row - 1)]))
                     return invalid("time coordinates must be finite and strictly increasing within each sequence");
         }
         const auto count = end - start;
         auto* output = features.data() + sample * width;
         for (std::int64_t col = 0; col < X.cols; ++col) {
-            double mean = 0.0, m2 = 0.0, lo = 0.0, hi = 0.0;
+            long double mean = 0.0L, m2 = 0.0L;
+            double lo = 0.0, hi = 0.0;
             for (auto row = start; row < end; ++row) {
                 const double value = static_cast<const double*>(X.data)[row * X.row_stride + col * X.col_stride];
                 if (!std::isfinite(value)) return invalid("present packed observations must be finite");
                 if (row == start) lo = hi = value;
                 else { lo = std::min(lo, value); hi = std::max(hi, value); }
-                const double delta = value - mean;
-                mean += delta / static_cast<double>(row - start + 1);
+                const long double delta = static_cast<long double>(value) - mean;
+                mean += delta / static_cast<long double>(row - start + 1);
                 m2 += delta * (value - mean);
             }
-            output[4 * col] = mean;
-            output[4 * col + 1] = std::sqrt(std::max(0.0, m2 / static_cast<double>(count)));
-            output[4 * col + 2] = lo;
-            output[4 * col + 3] = hi;
+            output[static_cast<std::size_t>(4 * col)] = static_cast<double>(mean);
+            output[static_cast<std::size_t>(4 * col + 1)] = static_cast<double>(std::sqrt(std::max(0.0L, m2 / static_cast<long double>(count))));
+            output[static_cast<std::size_t>(4 * col + 2)] = lo;
+            output[static_cast<std::size_t>(4 * col + 3)] = hi;
         }
-        output[4 * X.cols] = static_cast<double>(count);
-        output[4 * X.cols + 1] = times.empty() ? static_cast<double>(count - 1) : times[end - 1] - times[start];
-        output[4 * X.cols + 2] = 1.0;
+        output[static_cast<std::size_t>(4 * X.cols)] = static_cast<double>(count);
+        output[static_cast<std::size_t>(4 * X.cols + 1)] = times.empty() ? static_cast<double>(count - 1) : times[static_cast<std::size_t>(end - 1)] - times[static_cast<std::size_t>(start)];
+        output[static_cast<std::size_t>(4 * X.cols + 2)] = 1.0;
+        for (std::size_t col = 0; col < width; ++col)
+            if (!std::isfinite(output[col])) return invalid("ragged summary output exceeds finite F64 range");
     }
     auto result = std::make_unique<n4m_method_result_s>();
     result->set_double_matrix("features", features, static_cast<std::int64_t>(samples), static_cast<std::int64_t>(width));
