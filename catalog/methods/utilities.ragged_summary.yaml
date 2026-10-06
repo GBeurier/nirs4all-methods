@@ -1,0 +1,58 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "utilities.ragged_summary"
+family: "utilities.ragged_summary"
+category: "utilities"
+subcategory: "ragged_summary"
+since_abi: "2.17.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/estimator/procedures.cpp"
+headers:
+  - "cpp/include/n4m/estimator.h"
+carry_along_tu: []
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "utilities.ragged_summary"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.roles"
+    class: "RaggedSummary"
+    legacy_aliases: []
+publications: []
+notes: "Packed ragged series summary: per-channel mean/population std/min/max, length, duration and presence. Default refuses absence; explicit zero_with_indicator emits zeros for absent sequences. No resampling or learned imputation."
+c_surface: "none"
+estimator:
+  kind: "procedure"
+  adapter: "ragged_summary"
+  roles: "[generic]"
+  params:
+    - name: "offsets"
+      type: "int_array"
+      min: 0
+    - name: "presence"
+      type: "int_array"
+      default: []
+      min: 0
+      max: 1
+    - name: "time_coordinates"
+      type: "double_array"
+      default: []
+    - name: "missing_policy"
+      type: "enum"
+      default: "reject"
+      choices: "[reject, zero_with_indicator]"
+fq_name: "n4m.utilities.ragged_summary"
+leaf: "ragged_summary"
+legacy_ids:
+  - "utilities.ragged_summary"
+namespace: "utilities.ragged_summary"

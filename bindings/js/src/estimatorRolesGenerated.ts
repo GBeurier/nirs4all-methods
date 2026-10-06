@@ -6868,6 +6868,39 @@ export class QResiduals extends NativeProcedure implements Procedure {
 }
 NativeMethod.register("utilities.q_residuals", QResiduals);
 
+/** Parameters of RaggedSummary; unset values take the native defaults. */
+export interface RaggedSummaryParams {
+    /** Required. */
+    offsets?: number[];
+    /** Default []. */
+    presence?: number[];
+    /** Default []. */
+    time_coordinates?: number[];
+    /** Default "reject". */
+    missing_policy?: "reject" | "zero_with_indicator";
+}
+
+/** Native `utilities.ragged_summary` (generic). */
+export class RaggedSummary extends NativeProcedure implements Procedure {
+    readonly methodId = "utilities.ragged_summary";
+    readonly paramTypes = {
+        offsets: "int_array",
+        presence: "int_array",
+        time_coordinates: "double_array",
+        missing_policy: "enum",
+    } as const;
+
+    constructor(params: RaggedSummaryParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("utilities.ragged_summary", RaggedSummary);
+
 /** Parameters of SignalTypeDetector; unset values take the native defaults. */
 export interface SignalTypeDetectorParams {
     /** Default 0.7. */

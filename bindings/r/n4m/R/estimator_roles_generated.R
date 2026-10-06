@@ -209,6 +209,7 @@
   "utilities.hotelling_t2" = c("generic"),
   "utilities.moments" = c("generic"),
   "utilities.q_residuals" = c("generic"),
+  "utilities.ragged_summary" = c("generic"),
   "utilities.signal_type_detector" = c("generic"),
   "utilities.sweep" = c("generic"),
   "utilities.transfer_metrics" = c("generic")
@@ -421,6 +422,7 @@
   "utilities.hotelling_t2" = "n4m_hotelling_t2",
   "utilities.moments" = "n4m_moments",
   "utilities.q_residuals" = "n4m_q_residuals",
+  "utilities.ragged_summary" = "n4m_ragged_summary",
   "utilities.signal_type_detector" = "n4m_signal_type_detector",
   "utilities.sweep" = "n4m_sweep",
   "utilities.transfer_metrics" = "n4m_transfer_metrics"
@@ -1660,6 +1662,12 @@ n4m_moments <- function() {
 #' @export
 n4m_q_residuals <- function(n_components = 5L, alpha = 0.05) {
   .n4m_estimator("utilities.q_residuals", c("generic"), list(n_components = n_components, alpha = alpha))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_ragged_summary <- function(offsets = NULL, presence = c(), time_coordinates = c(), missing_policy = "reject") {
+  .n4m_estimator("utilities.ragged_summary", c("generic"), list(offsets = offsets, presence = presence, time_coordinates = time_coordinates, missing_policy = missing_policy))
 }
 
 #' @rdname n4m_estimator_role_constructors

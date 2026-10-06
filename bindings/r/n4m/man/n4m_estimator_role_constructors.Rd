@@ -207,6 +207,7 @@
 \alias{n4m_hotelling_t2}
 \alias{n4m_moments}
 \alias{n4m_q_residuals}
+\alias{n4m_ragged_summary}
 \alias{n4m_signal_type_detector}
 \alias{n4m_sweep}
 \alias{n4m_transfer_metrics}
@@ -418,6 +419,7 @@ n4m_systematic_circular(test_size = 0.25, seed = NULL)
 n4m_hotelling_t2(n_components = 5L, alpha = 0.05)
 n4m_moments()
 n4m_q_residuals(n_components = 5L, alpha = 0.05)
+n4m_ragged_summary(offsets = NULL, presence = c(), time_coordinates = c(), missing_policy = "reject")
 n4m_signal_type_detector(confidence_threshold = 0.7)
 n4m_sweep(cv = 5L, ridge_lambdas = c(0.01, 0.1, 1.0, 10.0), pls_components = c(1L, 2L, 3L, 4L, 5L), heads = "ridge", center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
 n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
@@ -578,6 +580,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{min_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{min_value}{Native parameter (double); defaults come from the n4m manifest.}
 \item{min_variance}{Native parameter (double); defaults come from the n4m manifest.}
+\item{missing_policy}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{mkl_top_k}{Native parameter (int); defaults come from the n4m manifest.}
 \item{mode}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{mode_j}{Native parameter (int); defaults come from the n4m manifest.}
@@ -628,6 +631,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{offset_max}{Native parameter (double); defaults come from the n4m manifest.}
 \item{offset_min}{Native parameter (double); defaults come from the n4m manifest.}
 \item{offset_std}{Native parameter (double); defaults come from the n4m manifest.}
+\item{offsets}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{op_kind}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{op_kinds}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{op_params}{Native parameter (double_array); defaults come from the n4m manifest.}
@@ -652,6 +656,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{polynomial_strength}{Native parameter (double); defaults come from the n4m manifest.}
 \item{polyorder}{Native parameter (int); defaults come from the n4m manifest.}
 \item{population_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{presence}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{probability}{Native parameter (double); defaults come from the n4m manifest.}
 \item{profile}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{randomization_seed}{Native parameter (int); defaults come from the n4m manifest.}
@@ -719,6 +724,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{threshold_mode}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{threshold_multiplier}{Native parameter (double); defaults come from the n4m manifest.}
 \item{thresholds}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{time_coordinates}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{tol}{Native parameter (double); defaults come from the n4m manifest.}
 \item{top_k}{Native parameter (int); defaults come from the n4m manifest.}
 \item{trim_quantile}{Native parameter (double); defaults come from the n4m manifest.}
@@ -968,6 +974,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_hotelling_t2}: \code{utilities.hotelling_t2} (generic)
 \item \code{n4m_moments}: \code{utilities.moments} (generic)
 \item \code{n4m_q_residuals}: \code{utilities.q_residuals} (generic)
+\item \code{n4m_ragged_summary}: \code{utilities.ragged_summary} (generic)
 \item \code{n4m_signal_type_detector}: \code{utilities.signal_type_detector} (generic)
 \item \code{n4m_sweep}: \code{utilities.sweep} (generic)
 \item \code{n4m_transfer_metrics}: \code{utilities.transfer_metrics} (generic)
