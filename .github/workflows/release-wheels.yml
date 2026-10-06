@@ -91,7 +91,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.0
         with:
-          ref: ${{ inputs.artifact_run_id != '' && inputs.version_tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.version_tag || github.ref }}
 
       - uses: actions/setup-python@v6.3.0
         with:
