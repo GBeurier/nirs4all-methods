@@ -1987,6 +1987,16 @@ const ParamSpec kParams_utilities_q_residuals[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_utilities_q_residuals_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
     {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_utilities_q_residuals_alpha, 1, 0.0, 1.0, nullptr, 0, false, false},
 };
+const std::int64_t kDefault_utilities_ragged_summary_presence[] = {0};
+const double kDefault_utilities_ragged_summary_time_coordinates[] = {0};
+const std::int64_t kDefault_utilities_ragged_summary_missing_policy[] = {0};
+const char* const kChoices_utilities_ragged_summary_missing_policy[] = {"reject", "zero_with_indicator"};
+const ParamSpec kParams_utilities_ragged_summary[] = {
+    {"offsets", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0, false, false},
+    {"presence", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_utilities_ragged_summary_presence, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
+    {"time_coordinates", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_utilities_ragged_summary_time_coordinates, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"missing_policy", N4M_METHOD_PARAM_ENUM, true, kDefault_utilities_ragged_summary_missing_policy, nullptr, 1, kNaN, kNaN, kChoices_utilities_ragged_summary_missing_policy, 2, false, false},
+};
 const double kDefault_utilities_signal_type_detector_confidence_threshold[] = {0.7};
 const ParamSpec kParams_utilities_signal_type_detector[] = {
     {"confidence_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_utilities_signal_type_detector_confidence_threshold, 1, 0.0, 1.0, nullptr, 0, false, false},
@@ -2226,6 +2236,7 @@ const MethodSpec kMethods[] = {
     {"utilities.hotelling_t2", "n4m.outlier_detection.hotelling_t2", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_utilities_hotelling_t2, 2, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_hotelling_t2},
     {"utilities.moments", "n4m.lowlevel.moments.moments", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, nullptr, 0, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_moments},
     {"utilities.q_residuals", "n4m.outlier_detection.q_residuals", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_utilities_q_residuals, 2, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_q_residuals},
+    {"utilities.ragged_summary", "n4m.utilities.ragged_summary", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_utilities_ragged_summary, 4, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_ragged_summary},
     {"utilities.signal_type_detector", "n4m.transform.signal_conversion.signal_type_detector", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_utilities_signal_type_detector, 1, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_signal_type},
     {"utilities.sweep", "n4m.model_selection.sweep.sweep", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_utilities_sweep, 8, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL}, "", nullptr, &run_sweep},
     {"utilities.transfer_metrics", "n4m.domain_adaptation.metrics.transfer_metrics", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_utilities_transfer_metrics, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "", nullptr, &run_transfer_metrics},

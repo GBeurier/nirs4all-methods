@@ -90,6 +90,7 @@ n4m_status_t run_pls_monitoring(n4m_context_t* ctx, const Params& params, const 
 std::unique_ptr<Adapter> make_pls_regression(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_pop_pls(const MethodSpec& spec);
 n4m_status_t run_q_residuals(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
+n4m_status_t run_ragged_summary(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 std::unique_ptr<Adapter> make_recursive_pls(const MethodSpec& spec);
 n4m_status_t run_regression_metrics(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 std::unique_ptr<Adapter> make_select_bipls(const MethodSpec& spec);

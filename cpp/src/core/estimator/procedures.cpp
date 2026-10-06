@@ -8,6 +8,7 @@
 // onto those calls and pack a MethodResult. Augmenters whose kernels hold
 // band positions or detector ranges take the axis in nanometres.
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <functional>
@@ -753,6 +754,74 @@ n4m_status_t run_hotelling_t2(n4m_context_t* ctx, const Params& params, const Fi
 n4m_status_t run_q_residuals(n4m_context_t* ctx, const Params& params, const FitInputs& in,
                              n4m_method_result_t** out) {
     return outlier_statistic(ctx, params, in, out, n4m_outlier_detection_q_residuals, "q");
+}
+
+// Explicit packed-series projection. Absence is never inferred from numeric zeros.
+n4m_status_t run_ragged_summary(n4m_context_t* ctx, const Params& params, const FitInputs& in,
+                                n4m_method_result_t** out) {
+    std::vector<double> storage;
+    n4m_matrix_view_t X{};
+    const auto st = row_major_f64(ctx, *in.X, "X", storage, X);
+    if (st != N4M_OK) return st;
+    const auto offsets = params.get_ints("offsets");
+    auto presence = params.get_ints("presence");
+    const auto times = params.get_doubles("time_coordinates");
+    auto invalid = [&](const char* message) {
+        set_error_named(ctx, message, "utilities.ragged_summary");
+        return N4M_ERR_INVALID_ARGUMENT;
+    };
+    if (offsets.size() < 2 || offsets.front() != 0 || offsets.back() != X.rows)
+        return invalid("offsets must start at zero and cover all packed rows");
+    const std::size_t samples = offsets.size() - 1;
+    if (presence.empty()) presence.assign(samples, 1);
+    if (presence.size() != samples || (!times.empty() && times.size() != static_cast<std::size_t>(X.rows)))
+        return invalid("presence/time coordinate dimensions disagree with packed rows");
+    const std::size_t width = static_cast<std::size_t>(4 * X.cols + 3);
+    std::vector<double> features(samples * width, 0.0);
+    for (std::size_t sample = 0; sample < samples; ++sample) {
+        const auto start = offsets[sample], end = offsets[sample + 1];
+        if (start < 0 || end < start || end > X.rows || (presence[sample] != 0 && presence[sample] != 1))
+            return invalid("invalid offsets or presence values");
+        if ((end == start) != (presence[sample] == 0))
+            return invalid("empty sequences require explicit absence and absent sequences must be empty");
+        if (!presence[sample]) {
+            if (params.get_int("missing_policy") == 0) return invalid("absent modality requires explicit zero_with_indicator policy");
+            continue;
+        }
+        if (!times.empty()) {
+            for (auto row = start; row < end; ++row)
+                if (!std::isfinite(times[static_cast<std::size_t>(row)]) || (row > start && times[static_cast<std::size_t>(row)] <= times[static_cast<std::size_t>(row - 1)]))
+                    return invalid("time coordinates must be finite and strictly increasing within each sequence");
+        }
+        const auto count = end - start;
+        auto* output = features.data() + sample * width;
+        for (std::int64_t col = 0; col < X.cols; ++col) {
+            long double mean = 0.0L, m2 = 0.0L;
+            double lo = 0.0, hi = 0.0;
+            for (auto row = start; row < end; ++row) {
+                const double value = static_cast<const double*>(X.data)[row * X.row_stride + col * X.col_stride];
+                if (!std::isfinite(value)) return invalid("present packed observations must be finite");
+                if (row == start) lo = hi = value;
+                else { lo = std::min(lo, value); hi = std::max(hi, value); }
+                const long double delta = static_cast<long double>(value) - mean;
+                mean += delta / static_cast<long double>(row - start + 1);
+                m2 += delta * (value - mean);
+            }
+            output[static_cast<std::size_t>(4 * col)] = static_cast<double>(mean);
+            output[static_cast<std::size_t>(4 * col + 1)] = static_cast<double>(std::sqrt(std::max(0.0L, m2 / static_cast<long double>(count))));
+            output[static_cast<std::size_t>(4 * col + 2)] = lo;
+            output[static_cast<std::size_t>(4 * col + 3)] = hi;
+        }
+        output[static_cast<std::size_t>(4 * X.cols)] = static_cast<double>(count);
+        output[static_cast<std::size_t>(4 * X.cols + 1)] = times.empty() ? static_cast<double>(count - 1) : times[static_cast<std::size_t>(end - 1)] - times[static_cast<std::size_t>(start)];
+        output[static_cast<std::size_t>(4 * X.cols + 2)] = 1.0;
+        for (std::size_t col = 0; col < width; ++col)
+            if (!std::isfinite(output[col])) return invalid("ragged summary output exceeds finite F64 range");
+    }
+    auto result = std::make_unique<n4m_method_result_s>();
+    result->set_double_matrix("features", features, static_cast<std::int64_t>(samples), static_cast<std::int64_t>(width));
+    result->set_int64_vector("presence", presence);
+    return finish(std::move(result), out);
 }
 
 n4m_status_t run_moments(n4m_context_t* ctx, const Params&, const FitInputs& in,
