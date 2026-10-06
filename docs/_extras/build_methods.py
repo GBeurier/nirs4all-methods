@@ -3209,8 +3209,34 @@ def render_catalog_stub_page(method: dict, science: dict[str, str],
     elif (method.get("bindings", {}) or {}).get("python"):
         parts.append("**Python:** catalog binding is not currently an AST-verified public "
                      "`n4m` re-export. See the implementation source below.\n")
-    parts.append(render_cross_binding_surfaces(
-        cross_bindings_for_catalog(method, r_public_api, matlab_public_api)))
+    if method["method_id"] == "utilities.ragged_summary":
+        parts.append("### Generated generic procedure bindings\n")
+        parts.append(
+            "The legacy API scanner above excludes generated role bindings. "
+            "This procedure is available through the following native transports; "
+            "their coverage is tracked separately in "
+            "[generic role coverage](../parity/estimator_roles_coverage.md).\n"
+        )
+        parts.append(
+            "- **Python:** `from n4m.roles import RaggedSummary`; "
+            "`RaggedSummary(offsets=...).run(packed)[\"features\"]` "
+            "([generated source](https://github.com/GBeurier/nirs4all-methods/blob/main/"
+            "bindings/python/src/n4m/roles/_generated.py)).\n"
+            "- **R:** `n4m::n4m_ragged_summary(offsets=...)`, then "
+            "`n4m::n4m_run(object, packed)$features` "
+            "([generated source](https://github.com/GBeurier/nirs4all-methods/blob/main/"
+            "bindings/r/n4m/R/estimator_roles_generated.R)).\n"
+            "- **JS/WASM:** `new RaggedSummary({offsets: [...]})`, then "
+            "`object.run(packed).features` "
+            "([generated source](https://github.com/GBeurier/nirs4all-methods/blob/main/"
+            "bindings/js/src/estimatorRolesGenerated.ts)).\n"
+            "- **C ABI / Rust:** generic `n4m_procedure_run` in "
+            "[`estimator.h`](https://github.com/GBeurier/nirs4all-methods/blob/main/"
+            "cpp/include/n4m/estimator.h); Rust uses `Procedure::run`.\n"
+        )
+    else:
+        parts.append(render_cross_binding_surfaces(
+            cross_bindings_for_catalog(method, r_public_api, matlab_public_api)))
     if binding and binding.get("parameters"):
         parts.append("### Parameters\n")
         parts.append("| Name | Type | Default |")

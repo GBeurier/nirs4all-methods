@@ -8,9 +8,14 @@ _Namespace_: **`n4m.utilities`** · _Fully-qualified_: `n4m.utilities.ragged_sum
 
 **Python:** catalog binding is not currently an AST-verified public `n4m` re-export. See the implementation source below.
 
-**R:** no current source-verified entry point was found for this catalog method.
+### Generated generic procedure bindings
 
-**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+The legacy API scanner above excludes generated role bindings. This procedure is available through the following native transports; their coverage is tracked separately in [generic role coverage](../parity/estimator_roles_coverage.md).
+
+- **Python:** `from n4m.roles import RaggedSummary`; `RaggedSummary(offsets=...).run(packed)["features"]` ([generated source](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py)).
+- **R:** `n4m::n4m_ragged_summary(offsets=...)`, then `n4m::n4m_run(object, packed)$features` ([generated source](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/estimator_roles_generated.R)).
+- **JS/WASM:** `new RaggedSummary({offsets: [...]})`, then `object.run(packed).features` ([generated source](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/js/src/estimatorRolesGenerated.ts)).
+- **C ABI / Rust:** generic `n4m_procedure_run` in [`estimator.h`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimator.h); Rust uses `Procedure::run`.
 
 ## Explanations
 
