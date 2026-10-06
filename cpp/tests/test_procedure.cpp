@@ -6,7 +6,8 @@
 // column-major X, refuses missing or unused inputs and unknown or foreign
 // parameters, and reproduces its direct C entry point bitwise: splitters
 // n4m_splitter_run, the ABI 2.11 augmentations n4m_augmentation_run, the
-// other procedures their own C functions. Target-mixing augmenters also
+// other procedures their own C functions or an analytical oracle for
+// procedures without a separate C entry point. Target-mixing augmenters also
 // return "Y", mixed with the same draw as "X"; augmenters with nanometre
 // constants refuse an axis that is not finite and strictly increasing.
 
@@ -784,6 +785,30 @@ const std::map<std::string, Direct>& generic_checks() {
                    N4M_OK);
              CHECK(rows == 1 && cols == 1 && same_bits(intercept.data(), data, 1));
          }},
+        {"utilities.ragged_summary",
+         [](n4m_context_t*, const n4m_params_t*, const n4m_fit_inputs_v1_t& in,
+            const n4m_method_result_t* r) {
+             // One packed point per sample: mean/min/max are X, std/duration
+             // are zero, length/presence are one. This also exercises the
+             // generic suite's determinism, column strides and input guards.
+             const double* data = nullptr;
+             int64_t rows = 0, cols = 0;
+             CHECK(n4m_method_result_get_double_matrix(r, "features", &data, &rows, &cols) == N4M_OK);
+             CHECK(rows == in.X->rows && cols == 4 * in.X->cols + 3);
+             for (int64_t i = 0; i < rows; ++i) {
+                 for (int64_t j = 0; j < in.X->cols; ++j) {
+                     const double value = static_cast<const double*>(in.X->data)[
+                         i * in.X->row_stride + j * in.X->col_stride];
+                     CHECK(data[i * cols + 4 * j] == value);
+                     CHECK(data[i * cols + 4 * j + 1] == 0.0);
+                     CHECK(data[i * cols + 4 * j + 2] == value);
+                     CHECK(data[i * cols + 4 * j + 3] == value);
+                 }
+                 CHECK(data[i * cols + 4 * in.X->cols] == 1.0);
+                 CHECK(data[i * cols + 4 * in.X->cols + 1] == 0.0);
+                 CHECK(data[i * cols + 4 * in.X->cols + 2] == 1.0);
+             }
+         }},
         {"utilities.hotelling_t2",
          [](n4m_context_t*, const n4m_params_t* p, const n4m_fit_inputs_v1_t& in,
             const n4m_method_result_t* r) {
@@ -868,6 +893,14 @@ bool fill_required(int32_t index, n4m_params_t* params) {
         CHECK(n4m_method_param_info_v1(index, k, &pi) == N4M_OK);
         if (pi.has_default) continue;
         any = true;
+        if (std::strcmp(info.method_id, "utilities.ragged_summary") == 0 &&
+            std::strcmp(pi.name, "offsets") == 0) {
+            std::vector<int64_t> offsets;
+            for (int64_t i = 0; i <= kRows; ++i) offsets.push_back(i);
+            CHECK(n4m_params_set_int_array(params, pi.name, offsets.data(),
+                                          static_cast<int64_t>(offsets.size())) == N4M_OK);
+            continue;
+        }
         // Linear stack compression of the X columns (base outputs) into one target.
         std::vector<double> v;
         if (std::strcmp(pi.name, "base_intercepts") == 0 ||
