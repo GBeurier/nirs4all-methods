@@ -355,6 +355,16 @@ def test_catalogued_native_aom_moment_bindings_are_exposed_on_a_facade():
         binding = _catalog_python_binding(text)
         if binding is None or not binding["module"].startswith("n4m."):
             continue
+        if binding["module"] == "n4m.roles":
+            # Catalog-native procedures belong to the public role API. Resolve
+            # their declared implementation rather than requiring an unrelated
+            # private AOM/moment facade to advertise them.
+            from n4m.roles._base import NativeProcedure
+
+            public_class = getattr(importlib.import_module(binding["module"]), binding["class"])
+            assert issubclass(public_class, NativeProcedure)
+            assert public_class._method_id == method_id
+            continue
         if method_id not in exposed_catalog_ids:
             missing.append(method_id)
 
