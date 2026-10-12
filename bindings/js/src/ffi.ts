@@ -104,17 +104,38 @@ export function makeMatrixView(data: Float64Array, rows: number,
         );
     }
     const bytes = Math.max(1, data.length) * 8;
+    if (!Number.isSafeInteger(bytes) || bytes > 0x7fffffff) {
+        throw new RangeError("matrix exceeds WASM allocation limit");
+    }
     const dataPtr = m._malloc(bytes);
+    if (dataPtr === 0) throw new N4mError(Status.ERR_OUT_OF_MEMORY, "matrix allocation failed");
     if (data.length > 0) {
         m.HEAPF64.set(data, dataPtr / 8);
     }
-    const viewPtr = m._malloc(MATRIX_VIEW_SIZE);
-    const status = m.ccall(
-        "n4m_matrix_view_init_rowmajor",
-        "number",
-        ["number", "number", "i64", "i64", "number"],
-        [viewPtr, dataPtr, BigInt(rows), BigInt(cols), dtype],
-    ) as number;
+    let viewPtr: number;
+    try {
+        viewPtr = m._malloc(MATRIX_VIEW_SIZE);
+    } catch (error) {
+        m._free(dataPtr);
+        throw error;
+    }
+    if (viewPtr === 0) {
+        m._free(dataPtr);
+        throw new N4mError(Status.ERR_OUT_OF_MEMORY, "matrix view allocation failed");
+    }
+    let status: number;
+    try {
+        status = m.ccall(
+            "n4m_matrix_view_init_rowmajor",
+            "number",
+            ["number", "number", "i64", "i64", "number"],
+            [viewPtr, dataPtr, BigInt(rows), BigInt(cols), dtype],
+        ) as number;
+    } catch (error) {
+        m._free(viewPtr);
+        m._free(dataPtr);
+        throw error;
+    }
     if (status !== Status.OK) {
         m._free(dataPtr);
         m._free(viewPtr);

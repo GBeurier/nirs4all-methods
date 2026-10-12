@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- Public ABI 2.18.0 diagnostics for Preflight: centered PCA scores, loadings,
+  retained eigenvalues and exact full covariance moments; masked pooled
+  repeatability with balanced ICC(1,1); finite summaries with quartiles; and
+  group-excluding Euclidean neighbors and local target contrast. The same five
+  calls are exported through
+  WASM and thin TypeScript wrappers.
+- Native scientific cases for truncated PCA moments, negative and unbalanced
+  ICC, strided views, quantiles, neighbor exclusions, and finite extreme-value
+  summaries and distances. Scaled variance and distance calculations retain
+  representable f64 results and reject unrepresentable results explicitly.
+
+The project and npm package version is prepared as 1.3.5. No model-state
+serialization format changes.
+
 ## [1.3.3] - 2026-10-06
 
 ABI 2.17.0 and the independently published Rust crate n4m 0.4.0 are unchanged.

@@ -1,5 +1,21 @@
 # ABI — Changes Log
 
+## 2026-10-12 — ABI 2.18.0: reusable Preflight diagnostics (unreleased)
+
+Add five caller-buffer C ABI operations in `n4m/metrics.h`: centered PCA
+scores/loadings/eigenvalues plus exact full covariance spectral moments,
+per-feature pooled repeatability and balanced ICC(1,1), finite-value summary
+with type-7 quantiles, group-excluding Euclidean nearest neighbors, and local
+Y contrast over a supplied neighbor graph. Categorical contrast uses equal
+focal-row weight and per-row admissible-population expectations; continuous
+contrast is one minus normalized squared target difference.
+These share existing Methods PCA/SVD and matrix-view validation. PCA moments
+use the smaller centered Gram dimension and reject workloads above 250 million
+scalar products with `N4M_ERR_UNSUPPORTED`; no truncated variance is reported
+as full. Repeatability returns a per-band status: 0 computed, 1 insufficient,
+2 unbalanced, 3 zero total variance. Negative ICC estimates are preserved.
+All outputs are caller-owned, and no serialized format changes.
+
 ## 2026-10-03 — ABI 2.17.0: raw multimodal classification (unreleased)
 
 Add thirteen n4m_multimodal_classifier_* functions and the separate
