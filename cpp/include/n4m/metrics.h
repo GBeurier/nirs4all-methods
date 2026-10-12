@@ -8,6 +8,74 @@
 extern "C" {
 #endif
 
+/* Preflight diagnostics. All outputs are caller-owned. X and matrix outputs
+ * accept positive element strides and F64 only. PCA requires n>=2, p>=1,
+ * 1<=k<=min(n,p); scores is n x k, loadings k x p, eigenvalues has k
+ * elements, and full_moments has two elements: sum(lambda) and
+ * sum(lambda^2), over the FULL centered covariance spectrum (ddof=1).
+ * The moments remain exact when PCA is truncated or approximated. */
+N4M_API n4m_status_t n4m_preflight_pca_compute(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
+    const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
+    double* eigenvalues, double* full_moments);
+
+/* Pooled within-group repeatability for each feature. group_ids has X.rows
+ * elements. valid_mask is optional row-major X.rows x X.cols bytes; nonzero
+ * means valid. All unmasked X values must be finite. Output arrays have
+ * X.cols elements. pooled_sd is sqrt(sum within-group squared deviations /
+ * sum(r_i-1)) over groups with r_i>=2; NaN when that denominator is zero.
+ * ICC(1,1) is computed only when at least two complete groups share the
+ * same r>=2. An unbalanced feature keeps its pooled_sd but has NaN ICC.
+ * band_status: 0=ICC computed, 1=insufficient groups/repeats,
+ * 2=unbalanced, 3=zero total variance. Negative ICC estimates are retained.
+ * n_complete_groups counts groups having any valid observations. */
+N4M_API n4m_status_t n4m_preflight_repeatability_compute(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X,
+    const int64_t* group_ids, const uint8_t* valid_mask,
+    double* pooled_sd, double* icc, int64_t* n_complete_groups,
+    int32_t* band_status);
+
+/* Eight finite-value summary outputs: count, min, max, mean, sample SD,
+ * q25, median, q75. Quantiles use linear type-7 interpolation. The optional
+ * mask has n bytes; zero excludes a value. Unmasked nonfinite values fail.
+ * For no values, all fields except count=0 are NaN; SD is NaN for n<2. */
+N4M_API n4m_status_t n4m_preflight_summary_compute(
+    n4m_context_t* ctx, const double* values, const uint8_t* valid_mask,
+    int64_t n, double* out_eight);
+
+/* Euclidean k-nearest reference rows for each query row, sorted by ascending
+ * distance then reference index. When BOTH group arrays are non-NULL, rows
+ * with the same group ID are excluded. Outputs are row-major n_query x k,
+ * using index=-1 and distance=NaN when too few eligible neighbors remain.
+ * All input values must be finite. k>0; callers own every buffer. */
+N4M_API n4m_status_t n4m_preflight_nearest_neighbors(
+    n4m_context_t* ctx, const n4m_matrix_view_t* query,
+    const n4m_matrix_view_t* reference, const int64_t* query_groups,
+    const int64_t* reference_groups, int32_t k, int64_t* indices,
+    double* distances);
+
+/* Local target contrast over a row-major n x k neighbor-index table. -1
+ * marks an unavailable slot. Every real neighbor must differ from its row
+ * and, when group_ids is non-NULL, from that row's group. All targets must
+ * be finite. categorical=1 requires exactly representable integer category
+ * codes (|code| <= 2^53-1); categorical=0 accepts continuous targets.
+ * out_four[1] is the fraction of rows with >=1 eligible neighbor. Each such
+ * row contributes equally, after averaging its available neighbors.
+ * Continuous contrast out_four[0] is 1 minus mean row squared Y difference
+ * divided by (2*sample variance of all n targets).
+ * Categorical contrast is (sum_i expected_i - observed_i)/sum_i expected_i,
+ * where expected_i is the disagreement fraction among all admissible rows
+ * for focal row i (distinct rows, and distinct groups if supplied), and
+ * observed_i is the disagreement fraction among that row's neighbors.
+ * out_four[2:4] are the observed and expected SAME-class fractions, each
+ * averaged equally over eligible focal rows. Continuous sets these to NaN.
+ * A zero denominator or no eligible rows yields NaN contrast, with N4M_OK
+ * and coverage still reported. */
+N4M_API n4m_status_t n4m_preflight_local_contrast(
+    n4m_context_t* ctx, const double* targets, const int64_t* neighbor_indices,
+    const int64_t* group_ids, int64_t n, int32_t k, int32_t categorical,
+    double* out_four);
+
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
                                        const double* y_pred,
