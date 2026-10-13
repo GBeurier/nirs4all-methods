@@ -31,6 +31,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <numeric>
+#include <utility>
 #include <vector>
 
 extern "C" {
@@ -520,6 +521,109 @@ void test_magnitude_sweep() {
                                                        Vt.data()) == N4M_ERR_NUMERICAL_FAILURE);
 }
 
+
+// Status of every SVD helper (and eigh on A^T A-free symmetric input) on a
+// square matrix; all must agree with `want`.
+void expect_all_helpers(const char* name, const Mat& A, int64_t n, n4m_status_t want) {
+    Mat U(static_cast<size_t>(n * n)), S(static_cast<size_t>(n)), Vt(static_cast<size_t>(n * n));
+    Mat W = A;
+    SVD_CHECK(name, n4m_svd_compact(W.data(), n, n, U.data(), S.data(), Vt.data()) == want);
+    SVD_CHECK(name, n4m_svd_truncated_tall_gram(A.data(), n, n, n, U.data(), S.data(),
+                                                Vt.data()) == want);
+    SVD_CHECK(name, n4m_svd_truncated_dual_wide(A.data(), n, n, n, U.data(), S.data(),
+                                                Vt.data()) == want);
+    SVD_CHECK(name, n4m_svd_truncated_randomized(A.data(), n, n, n, U.data(), S.data(),
+                                                 Vt.data()) == want);
+    SVD_CHECK(name, n4m_symmetric_eigh(A.data(), n, S.data(), U.data()) == want);
+}
+
+// Analytic oracles from the second review round, with row / column
+// permutations, and the resolution domain of the helpers on both sides.
+void test_review_round_two() {
+    // P0-1: full-rank A = [[-1,1,-1],[-1,-1,-1],[1,-1,1],[-t,t,t]]. Rows 0
+    // and 2 are opposite; the top block has singular values (sqrt17 +- 1)/2,
+    // the last row adds sigma_3 = sqrt(2) t (1 + O(t^2)).
+    const double s17 = std::sqrt(17.0);
+    for (double t : {1e-40, 0x1p-40, 1e-100}) {
+        const double rows[4][3] = {{-1, 1, -1}, {-1, -1, -1}, {1, -1, 1}, {-t, t, t}};
+        const double want[3] = {(s17 + 1.0) / 2.0, (s17 - 1.0) / 2.0, std::sqrt(2.0) * t};
+        for (int perm = 0; perm < 4; ++perm) {
+            Mat A(12);
+            for (int i = 0; i < 4; ++i)
+                for (int j = 0; j < 3; ++j) {
+                    const int ri = (perm & 1) ? 3 - i : i;
+                    const int cj = (perm & 2) ? 2 - j : j;
+                    A[at(ri, cj, 3)] = rows[i][j];
+                }
+            Mat U(12), S(3), Vt(9);
+            SVD_CHECK("p01_weak_direction",
+                      n4m_svd_compact(A.data(), 4, 3, U.data(), S.data(), Vt.data()) == N4M_OK);
+            SVD_CHECK("p01_weak_direction", all_relative_close(S.data(), want, 3, 1e-12));
+        }
+        // PCA of [A; -A], exactly centred already (center=0: n4m_pca_fit's
+        // plain-sum mean is only accurate to eps * max|x|, see
+        // pca_helper.h; the preflight entry point centres with compensated
+        // sums): variances 2 sigma^2 / 7.
+        Mat X(24);
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 3; ++j) {
+                X[at(i, j, 3)] = rows[i][j];
+                X[at(i + 4, j, 3)] = -rows[i][j];
+            }
+        n4m_pca_fit_t fit{};
+        SVD_CHECK("p01_pca", n4m_pca_fit(X.data(), 8, 3, 3, 0, &fit) == N4M_OK);
+        const double ev[3] = {2 * want[0] * want[0] / 7, 2 * want[1] * want[1] / 7,
+                              4 * t * t / 7};
+        SVD_CHECK("p01_pca", all_relative_close(fit.explained_var, ev, 3, 1e-12));
+        n4m_pca_fit_free(&fit);
+    }
+    // P0-2: dynamic ranges beyond 2^480 (2^1100, 2^628) are refused by every
+    // helper, in both orders, instead of returning a zero singular value.
+    for (const auto& d : {std::pair<int, int>{500, -600}, std::pair<int, int>{128, -500},
+                          std::pair<int, int>{0, -481}}) {
+        for (int order = 0; order < 2; ++order) {
+            Mat A(4, 0.0);
+            A[0] = std::ldexp(1.0, order ? d.second : d.first);
+            A[3] = std::ldexp(1.0, order ? d.first : d.second);
+            expect_all_helpers("p02_refused", A, 2, N4M_ERR_NUMERICAL_FAILURE);
+        }
+    }
+    {
+        Mat X = {0x1p200, 0, -0x1p200, 0, 0, 0x1p-450, 0, -0x1p-450};
+        n4m_pca_fit_t fit{};
+        SVD_CHECK("p02_pca", n4m_pca_fit(X.data(), 4, 2, 2, 1, &fit) == N4M_ERR_NUMERICAL_FAILURE);
+        n4m_pca_fit_free(&fit);
+    }
+    // Inside the resolution domain (range <= 2^480), at extreme magnitudes,
+    // in both orders: exact singular values / eigenvalues.
+    for (const auto& d : {std::pair<int, int>{0, -470}, std::pair<int, int>{1000, 560},
+                          std::pair<int, int>{-560, -1000}, std::pair<int, int>{200, -279}}) {
+        for (int order = 0; order < 2; ++order) {
+            Mat A(4, 0.0);
+            A[0] = std::ldexp(1.0, order ? d.second : d.first);
+            A[3] = std::ldexp(-1.0, order ? d.first : d.second);
+            const double want[2] = {std::ldexp(1.0, d.first), std::ldexp(1.0, d.second)};
+            Mat U(4), S(2), Vt(4), W = A;
+            SVD_CHECK("domain_inside", n4m_svd_compact(W.data(), 2, 2, U.data(), S.data(),
+                                                       Vt.data()) == N4M_OK);
+            SVD_CHECK("domain_inside", S[0] == want[0] && S[1] == want[1]);
+            SVD_CHECK("domain_inside", n4m_svd_truncated_tall_gram(A.data(), 2, 2, 2, U.data(),
+                                                                   S.data(), Vt.data()) == N4M_OK);
+            SVD_CHECK("domain_inside", all_relative_close(S.data(), want, 2, 1e-15));
+            SVD_CHECK("domain_inside", n4m_svd_truncated_dual_wide(A.data(), 2, 2, 2, U.data(),
+                                                                   S.data(), Vt.data()) == N4M_OK);
+            SVD_CHECK("domain_inside", all_relative_close(S.data(), want, 2, 1e-15));
+            std::vector<double> w;
+            Mat V;
+            SVD_CHECK("domain_inside", eigh_sorted(A.data(), 2, &w, &V) == N4M_OK);
+            const double wl[2] = {-std::ldexp(1.0, order ? d.first : d.second),
+                                  std::ldexp(1.0, order ? d.second : d.first)};
+            SVD_CHECK("domain_inside", w[0] == std::min(wl[0], wl[1]) &&
+                                           w[1] == std::max(wl[0], wl[1]));
+        }
+    }
+}
+
 }  // namespace
 
 // Entry point invoked from the n4m_internal_tests main (test_internal_rng_choice.cpp).
@@ -531,6 +635,7 @@ int run_internal_svd_degenerate_tests() {
     test_pm1_opposite_sweep();
     test_large_repeated_spectra();
     test_magnitude_sweep();
+    test_review_round_two();
     if (g_svd_failures == 0) {
         std::printf("[internal] degenerate SVD/eigh vs numpy %s ... ok\n", kSvdGoldenNumpyVersion);
     } else {

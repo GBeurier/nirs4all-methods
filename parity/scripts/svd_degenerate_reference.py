@@ -120,7 +120,7 @@ def sym_cases() -> list[tuple[str, np.ndarray, bool]]:
     cases.append(("diagonal_repeated_6", np.diag([2.0, 0.0, 1.0, 2.0, 0.0, 1.0]), True))
     t = np.diag([1.0, 1.0, 1.0, 1.0])
     for i in range(3):
-        t[i, i + 1] = t[i + 1, i] = 1e-300
+        t[i, i + 1] = t[i + 1, i] = 1e-120
     cases.append(("tiny_offdiag_equal_diag_4", t, True))
     t = np.zeros((4, 4))
     for i in range(3):
@@ -192,7 +192,7 @@ def svd_cases() -> list[tuple[str, np.ndarray, bool]]:
         ("diagonal_repeated_4x4", np.diag([3.0, 3.0, 1.0, 0.0]), True),
         (
             "tiny_offdiag_3x3",
-            np.array([[1.0, 1e-300, 0.0], [1e-300, 1.0, 1e-300], [0.0, 1e-300, 1.0]]),
+            np.array([[1.0, 1e-120, 0.0], [1e-120, 1.0, 1e-120], [0.0, 1e-120, 1.0]]),
             True,
         ),
         ("weak_tall_gram_3x3", ASTRA_TALL, True),
