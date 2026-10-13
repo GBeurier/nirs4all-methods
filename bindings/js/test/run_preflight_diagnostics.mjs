@@ -8,7 +8,7 @@ import {
     statsFactorAssociationExact, statsCorrelationExact,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane,
+    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane, N4mError,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -311,6 +311,53 @@ const sst = bigD.reduce((a, v) => a + (v - dm) ** 2, 0);
 assert.ok(Number.isFinite(big.ssTotal) && Math.abs(big.ssTotal - sst) <= 1e-10 * sst);
 const bigDisp = statsPermdisp({data: new Float64Array(bigX), rows: 6, cols: 1}, [0, 0, 0, 1, 1, 1], 0, 1);
 assert.ok(bigDisp.distances.every(Number.isFinite));
+// Robustness rule (same properties as test_permanova.cpp): magnitude sweep,
+// constant columns and the cancellation case. Unrepresentable sums of squares
+// must raise N4M_ERR_NUMERICAL_FAILURE (7), never return a wrong number.
+const kTerm = [0, 0, 1, 1, 2, 2, 0, 1, 1, 2, 2, 2];
+const kStrata = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1];
+const kBase = [3, 1, 5, 2, 9, 4, 11, 7, 13, 12, 15, 9, 4, 6, 10, 3, 12, 8, 16, 14, 17, 10, 21, 11];
+const kernels = {
+    permanova: (x, cols) => { const r = statsPermanova({data: Float64Array.from(x), rows: 12, cols}, kTerm, kStrata, 199, 7); return {ss: [r.ssTotal, r.ssTerm, r.ssResidual], ratio: [r.pseudoF, r.partialR2], b: r.nAtLeastObserved}; },
+    freedmanLane: (x, cols) => { const r = statsPermanovaFreedmanLane({data: Float64Array.from(x), rows: 12, cols}, kTerm, [kStrata], 199, 7); return {ss: [r.ssTotal, r.ssTerm, r.ssResidual], ratio: [r.pseudoF, r.partialR2], b: r.nAtLeastObserved}; },
+    permdisp: (x, cols) => { const r = statsPermdisp({data: Float64Array.from(x), rows: 12, cols}, kTerm, 199, 7); return {ss: Array.from(r.distances), ratio: [r.f], b: r.nAtLeastObserved}; },
+};
+const ldexp = (v, k) => { let out = v; for (let i = 0; i < Math.abs(k); i++) out = k > 0 ? out * 2 : out / 2; return out; };
+for (const [name, run] of Object.entries(kernels)) {
+    const power = name === "permdisp" ? 1 : 2;
+    const base = run(kBase, 2);
+    for (const k of [-1069, -500, 0, 500, 1000]) {
+        const scaled = kBase.map((v) => ldexp(v, k));
+        // Base SS times 2^(power k): overflow or flush to zero means failure.
+        const expected = base.ss.map((v) => v * 2 ** Math.max(-1000, Math.min(1000, power * k)) *
+            2 ** (power * k - Math.max(-1000, Math.min(1000, power * k))));
+        const unrepresentable = base.ss.some((v, i) => v > 0 && (!Number.isFinite(expected[i]) || expected[i] === 0));
+        if (unrepresentable) {
+            assert.throws(() => run(scaled, 2), (e) => e instanceof N4mError && e.status === 7, `${name} k=${k}`);
+            continue;
+        }
+        const got = run(scaled, 2);
+        got.ss.forEach((v, i) => assert.ok(Math.abs(v - expected[i]) <= 1e-9 * expected[i] + Number.MIN_VALUE, `${name} k=${k}`));
+        got.ratio.forEach((v, i) => assert.ok(Math.abs(v - base.ratio[i]) <= 1e-9 * Math.max(1, Math.abs(base.ratio[i])), `${name} k=${k}`));
+        assert.equal(got.b, base.b, `${name} k=${k}`);
+    }
+    const wide = [];
+    for (let i = 0; i < 12; i++) wide.push(1e308, kBase[2 * i], -1.7e308, kBase[2 * i + 1], 5e-324);
+    const constant = run(wide, 5);
+    constant.ss.forEach((v, i) => assert.ok(Math.abs(v - base.ss[i]) <= 1e-9 * Math.max(1, base.ss[i]), name));
+    assert.equal(constant.b, base.b, name);
+}
+const astraConstant = statsPermanova({data: new Float64Array([1e308, 1, 1e308, 2, 1e308, 3, 1e308, 7, 1e308, 8, 1e308, 9]), rows: 6, cols: 2},
+    [4, 4, 4, -9, -9, -9], undefined, 0, 1);
+near(astraConstant.ssTotal, 58);
+{
+    const dev = [-3e-10, -1e-10, 1e-10, 3e-10];
+    const a = [], b = [], y = [];
+    for (let i = 0; i < 16; i++) { a.push(Math.floor(i / 4) % 2); b.push(Math.floor(i / 8)); y.push(10 * b[i] + 3 * a[i] + dev[i % 4]); }
+    const fl = statsPermanovaFreedmanLane({data: Float64Array.from(y), rows: 16, cols: 1}, a, [b], 99, 3);
+    assert.ok(fl.ssResidual > 7e-19 && fl.ssResidual < 9e-19);
+    assert.ok(Number.isFinite(fl.pseudoF) && Math.abs(fl.pseudoF / 5.85e20 - 1) < 1e-2);
+}
 const permanovaFixture = JSON.parse(readFileSync(
     new URL("../../../parity/fixtures/permanova_v1.json", import.meta.url), "utf8"));
 for (const c of permanovaFixture.cases) {

@@ -49,7 +49,13 @@ power-of-two scaling and per-column centring. `n4m_stats_permanova_freedman_lane
 given the additive main effects of condition factors (row-major
 `n x n_conditions` codes), by Freedman-Lane permutation of the reduced-model
 residuals, with numerical design ranks, `df_term = 0` for an aliased term and
-no test when either design is saturated. Terms above 2048 levels and workloads above 250 million
+no test when either design is saturated. Numerical domain of the three kernels: centring before
+scaling, a common power-of-two unit from the centred variation (constant
+columns and offsets are invisible), explicit residual sums of squares for the
+observation and every draw, `N4M_ERR_NUMERICAL_FAILURE` for sums of squares or
+distances not representable as doubles, and size/budget checks before
+level-dependent allocations (the Freedman-Lane basis is limited to 32 Mi
+values). Terms above 2048 levels and workloads above 250 million
 operations return `N4M_ERR_UNSUPPORTED`.
 
 Domain of validity (ABI 2.20 association kernels): any finite doubles. The
