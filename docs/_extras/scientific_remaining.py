@@ -1665,7 +1665,8 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "connected component of the level-stratum occupancy graph, whose count $c$ gives the "
         "identifiable df $=$ levels $-\\,c$ (0 when the term is aliased with the strata). "
         "pseudo-$F=(SS_{term}/df_{term})/(SS_{res}/df_{res})$. The Monte Carlo test permutes rows "
-        "only inside their stratum and reports $(1+b)/(1+B)$.",
+        "only inside their stratum, counts permuted $F\\ge F_{obs}-\\sqrt{\\epsilon}$ as vegan "
+        "`anova.cca`, and reports $(1+b)/(1+B)$.",
         "Exploratory variance partition of a multivariate structure (for example PCA scores of "
         "spectra) by categorical design factors such as instrument or campaign, with explicit "
         "detection of factors that cannot be separated from the others.",
@@ -1696,7 +1697,7 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "Each row's Euclidean distance $z_i$ to its group centroid is computed, then a one-way "
         "ANOVA $F$ compares the groups' mean distances. As in vegan `betadisper(type = "
         "\"centroid\")` and `permutest`, the Monte Carlo test permutes the ANOVA residuals "
-        "$z_i-\\bar z_{g(i)}$ over all rows and counts permuted $F$ at least the observed one.",
+        "$z_i-\\bar z_{g(i)}$ over all rows, refits and counts permuted $F\\ge F_{obs}-\\sqrt{\\epsilon}$.",
         "Reporting whether groups differ in spread, alongside a PERMANOVA whose location test "
         "is sensitive to dispersion differences.",
         "The residual-permutation test is approximate. Dispersion differences neither validate "
