@@ -46,23 +46,26 @@ extern "C" {
  * broken by smallest index). Vt[i, :] is flipped along with U[:, i] to
  * preserve A = U @ diag(S) @ Vt.
  *
- * Accuracy: one-sided Jacobi keeps relative accuracy for graded or
- * block-decoupled inputs; small but genuine directions are never truncated.
- * Rank-deficient inputs: an exactly zero column gives an exactly zero
- * singular value with a zero U column (zero Vt row for m < n). A column that
- * two consecutive sweeps cancel to rounding level (rotations regenerating
- * noise parallel to another column, e.g. +-1 designs with opposite rows) is
- * frozen: its singular value is its residual norm (rounding level, not
- * forced to 0) and its U column an explicit orthonormal completion.
+ * Accuracy: one-sided Jacobi runs to convergence (no early stop on norm
+ * reduction) and keeps relative accuracy for graded or block-decoupled
+ * inputs; small but genuine directions are resolved. Resolution floor: a
+ * column whose norm falls below 2^-500 of the scaled input (max|a| in
+ * [0.5, 1)) is reported as an exactly zero singular value with a zero U
+ * column (zero Vt row for m < n). Because inputs with a larger dynamic
+ * range are refused (below), only cancellation reaches the floor: exact
+ * rank deficiency in floating point, e.g. +-1 designs where one row is the
+ * opposite of another, or sigma < 2^-500 * max|A| (condition number above
+ * ~2^500) from in-range entries.
  *
- * Magnitude domain (all helpers in this header): entries must be finite
- * (otherwise N4M_ERR_NUMERICAL_FAILURE). Inputs whose largest magnitude lies
- * outside [2^-128, 2^128) are rescaled by an exact power of two, so results
- * are scale-equivariant over the whole double range; inside that band the
- * algorithms run unscaled. A published singular value / eigenvalue that is
- * significant (> max(m,n) * eps * the largest one) but overflows, or falls
- * below 2^-1042 (fewer than 32 significant bits), is an explicit
- * N4M_ERR_NUMERICAL_FAILURE; output buffers are then unspecified.
+ * Magnitude domain (all helpers in this header): entries must be finite and
+ * their dynamic range max|a| / min nonzero |a| at most 2^480; otherwise
+ * N4M_ERR_NUMERICAL_FAILURE before computing (small entries would otherwise
+ * be lost to underflow). Inside it results are scale-equivariant over the
+ * whole double range (exact power-of-two rescaling; bit-identical to the
+ * unscaled algorithms whenever those do not under/overflow). A published
+ * value that is significant (> max(m,n) * eps * the largest one) but
+ * overflows, or falls below 2^-1042 (fewer than 32 significant bits), is
+ * also N4M_ERR_NUMERICAL_FAILURE; output buffers are then unspecified.
  *
  * The input A is consumed (modified in place) — pass a copy if the
  * caller needs to keep the original.

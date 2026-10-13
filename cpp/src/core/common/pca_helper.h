@@ -52,7 +52,11 @@ typedef struct n4m_pca_fit_t {
  *   - cols         : number of features (>= 1).
  *   - n_components : requested component count; <= 0 selects min(rows, cols).
  *                    Capped at min(rows, cols).
- *   - center       : non-zero applies mean centring before SVD.
+ *   - center       : non-zero applies mean centring before SVD. The mean is
+ *                    a plain sum: centred values are accurate to
+ *                    O(n * eps * max|x|), so variances far below that level
+ *                    are only absolutely accurate (callers needing more
+ *                    centre themselves, as n4m_preflight_pca_compute does).
  *
  * On success the caller-allocated ``out`` struct receives newly
  * allocated buffers (mean, components, explained_var) which must be
