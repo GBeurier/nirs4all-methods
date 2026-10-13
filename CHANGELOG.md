@@ -51,6 +51,12 @@ ABI 2.20.0. No model-state serialization format changes.
   independence). Mixed-exponent and near-zero-effect tests use exact dyadic
   and rational references; the precision contract in `metrics.h` is revised
   to what these computations guarantee.
+- Supported numerical domain D for the association, correlation, exact,
+  Holm and BH kernels: nonzero |x| in [2^-256, 2^256], max/min nonzero
+  |x| <= 2^64 per input array, zeros allowed. Inputs outside D are refused
+  with `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain
+  (...)") by a pre-pass; native and JS/WASM tests cover both sides of every
+  boundary, and the magnitude sweeps run inside D.
 
 ## [1.3.6] - 2026-10-13
 

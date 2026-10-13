@@ -49,6 +49,16 @@ cell. eta^2, V and r have absolute error of order n * DBL_EPSILON; F is
 relatively accurate when SSB is not small and absolutely accurate near 0
 (see metrics.h). Categorical targets are limited to n <= 3e9.
 
+Supported numerical domain (preflight rule 13): continuous targets of the
+factor-association kernels (Monte Carlo and exact), both correlation vectors
+and Holm/BH p-values must be finite with every nonzero |x| in
+[2^-256, 2^256] and max/min nonzero |x| <= 2^64 per input array (exact zeros
+allowed; categorical codes are labels and are not checked). A cheap O(n)
+pre-pass refuses other inputs with `N4M_ERR_UNSUPPORTED` and the message
+"input outside the supported numerical domain (nonzero |x| in [2^-256,
+2^256], max/min nonzero |x| <= 2^64)" before any computation. Inside D an F
+cannot overflow; the overflow refusal remains as a guard.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged
