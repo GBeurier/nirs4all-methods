@@ -2,18 +2,21 @@
 
 ## Unreleased — ABI 2.19.0 unchanged: `n4m_preflight_pca_compute` numerical domain
 
-No symbol, signature or layout change. `n4m_preflight_pca_compute` now centres
-each column in an exactly rescaled space (two-term mean) and runs the
-decomposition at one power-of-two scale chosen from the centred variation.
-Constant columns of any amplitude have no influence, a translation changes
-nothing beyond the input's own rounding, and scaling X by 2^s scales
-eigenvalues and `full_moments[0]` by 4^s, `full_moments[1]` by 16^s and scores
-by 2^s, with loadings invariant. `N4M_ERR_NUMERICAL_FAILURE` now means only
-that an output is not representable: a moment or an above-rank eigenvalue
-overflows or falls below 2^-1042, or a score overflows. For unit-scale
-variation this allows s in about [-255, 255]. Representing the moments outside
-that range would need a new output (for example a binary exponent), which is
-an ABI change.
+No symbol, signature or layout change. `n4m_preflight_pca_compute` declares
+its supported numerical domain D: every nonzero |x| in [2^-128, 2^128] (tighter
+than the generic 2^256 because trace(C^2) is quartic in X) and max/min nonzero
+|x| <= 2^64, with exact zeros allowed. Outside D it returns
+`N4M_ERR_UNSUPPORTED` with the context message "input outside the supported
+numerical domain (...)" before computing; Preflight maps it to the
+`NUMERICAL_DOMAIN_EXCEEDED` reason.
+
+Inside D every output is a normal double. Each column is centred in an exactly
+rescaled space, using compensated sums for a two-term mean, and the
+decomposition runs at one power-of-two scale chosen from the centred
+variation. Constant columns therefore have no influence, and translations
+change nothing beyond the input's rounding. Scaling X by 2^s scales the
+eigenvalues and `full_moments[0]` by 4^s, `full_moments[1]` by 16^s and the
+scores by 2^s; the loadings are invariant.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
