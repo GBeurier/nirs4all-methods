@@ -7,15 +7,17 @@
  * guard. Agreement with numpy is within rounding (parity tolerance 1e-12),
  * not bit-for-bit: the moments are computed more accurately.
  *
- * Numerical scheme (Methods 1.3.7), for a finite row x of n values:
+ * Numerical scheme (ABI 2.20), for a finite row x of n values:
  *   - constant rows (all values equal) map to exact zeros when centred and
  *     are never scaled;
  *   - y = x * 2^-e with e = ilogb(max|x|), an exact power-of-two rescaling
- *     (|y| < 2), so no sum overflows and subnormal rows are not lost;
- *   - mean m = m0 + C(y - m0)/n, with m0 = C(y)/n and C a compensated
- *     (Neumaier) sum, so the mean error is about u(|m| + mean|y - m|);
- *   - deviations d = y - m are rescaled again by a power of two of max|d|
- *     (t = d * 2^-k) before squaring, so squares cannot underflow;
+ *     (|y| < 2), so no sum overflows and subnormal rows are not lost (values
+ *     below 2^-1074 relative to max|x| are not representable after scaling);
+ *   - the mean is a double-double m_hi + m_lo from a compensated (Neumaier)
+ *     sum, the exact fma division remainder and one refinement pass, so a
+ *     large offset (1e16, 1e300) does not leak into the deviations;
+ *   - deviations d = (y - m_hi) - m_lo are rescaled again by 2^-ilogb(max|d|)
+ *     before squaring, so squares cannot underflow;
  *   - centred and scaled output is t / sd_t, never reconstructed at the
  *     original scale; other modes rescale back and must stay finite.
  * A non-finite result for a finite row returns N4M_ERR_NUMERICAL_FAILURE.
@@ -23,7 +25,7 @@
  *
  * First-order rounding bound (u = 2^-53) on every entry of a centred and
  * scaled row, reported by n4m_pp_snv_apply_bounded:
- *   B = (u (|m| + A) + 4 n u^2 max|y|) / sd_y + 8 u max|z|,
+ *   B = (3 u A + n u^2 (A + |m|)) / sd_y + 8 u max|z|,
  * with A = mean|y - m|, sd_y the SD in y units and z the output row.
  */
 
@@ -91,15 +93,18 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
     double amax = 0.0;
     for (int64_t j = 0; j < cols; ++j) amax = fmax(amax, fabs(x[j]));
     const int e = ilogb(amax);
+    /* Mean as a double-double m_hi + m_lo: the remainder of a correctly
+     * rounded division is exact (fma), then one refinement pass. */
     snv_acc_t s0 = {0.0, 0.0};
     for (int64_t j = 0; j < cols; ++j) snv_acc_add(&s0, ldexp(x[j], -e));
-    const double m0 = (s0.sum + s0.comp) / n;
+    const double m_hi = s0.sum / n;
+    double m_lo = (fma(-m_hi, n, s0.sum) + s0.comp) / n;
     snv_acc_t s1 = {0.0, 0.0};
+    for (int64_t j = 0; j < cols; ++j) snv_acc_add(&s1, (ldexp(x[j], -e) - m_hi) - m_lo);
+    m_lo += (s1.sum + s1.comp) / n;
     double abs_dev = 0.0, dmax = 0.0;
-    for (int64_t j = 0; j < cols; ++j) snv_acc_add(&s1, ldexp(x[j], -e) - m0);
-    const double m = m0 + (s1.sum + s1.comp) / n;
     for (int64_t j = 0; j < cols; ++j) {
-        const double d = fabs(ldexp(x[j], -e) - m);
+        const double d = fabs((ldexp(x[j], -e) - m_hi) - m_lo);
         abs_dev += d;
         dmax = fmax(dmax, d);
     }
@@ -108,16 +113,18 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
     if (!scale) {
         /* Centre only (or no SD available): x - mean at the original scale. */
         for (int64_t j = 0; j < cols; ++j) {
-            const double v = state->with_mean ? ldexp(ldexp(x[j], -e) - m, e) : x[j];
+            const double v = state->with_mean
+                ? ldexp((ldexp(x[j], -e) - m_hi) - m_lo, e) : x[j];
             if (!isfinite(v)) return N4M_ERR_NUMERICAL_FAILURE;
             out[j] = v;
         }
         return N4M_OK;
     }
+    /* Deviations rescaled by 2^-k (k = ilogb(max|d|)) before squaring. */
     const int k = ilogb(dmax);
     snv_acc_t ss = {0.0, 0.0};
     for (int64_t j = 0; j < cols; ++j) {
-        const double t = ldexp(ldexp(x[j], -e) - m, -k);
+        const double t = ldexp((ldexp(x[j], -e) - m_hi) - m_lo, -k);
         snv_acc_add(&ss, t * t);
     }
     const double sd_t = sqrt((ss.sum + ss.comp) / (double)denom_count);
@@ -127,9 +134,9 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
         const double y = ldexp(x[j], -e);
         double v;
         if (state->with_mean) {
-            v = ldexp(y - m, -k) / sd_t;
+            v = ldexp((y - m_hi) - m_lo, -k) / sd_t;
         } else {
-            /* x / sd = (y / sd_t) * 2^-k. */
+            /* x / sd = (y / sd_t) * 2^-k; may legitimately overflow. */
             v = ldexp(y / sd_t, -k);
         }
         if (!isfinite(v)) return N4M_ERR_NUMERICAL_FAILURE;
@@ -137,9 +144,10 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
         out[j] = v;
     }
     if (bound && state->with_mean) {
-        const double sd_y = ldexp(sd_t, k);
-        *bound = (u * (fabs(m) + abs_dev / n) + 4.0 * n * u * u * ldexp(amax, -e)) / sd_y +
-                 8.0 * u * zmax;
+        /* Mean error <= 3u A + n u^2 (A + |m|); deviation and SD roundings
+         * add at most 8u |z|. A = mean|y - m|, sd_y = sd_t 2^k. */
+        const double a = abs_dev / n, sd_y = ldexp(sd_t, k);
+        *bound = (3.0 * u * a + n * u * u * (a + fabs(m_hi))) / sd_y + 8.0 * u * zmax;
     }
     return N4M_OK;
 }

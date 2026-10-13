@@ -16,7 +16,7 @@ Weighted standard normal variate normalization.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_weighted_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L167) · [`n4m_transform_weighted_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L170) · [`n4m_transform_weighted_snv_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L171) · [`n4m_transform_weighted_snv_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L176) · [`n4m_transform_weighted_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L173). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_weighted_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L168) · [`n4m_transform_weighted_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L171) · [`n4m_transform_weighted_snv_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L172) · [`n4m_transform_weighted_snv_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L177) · [`n4m_transform_weighted_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L174). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

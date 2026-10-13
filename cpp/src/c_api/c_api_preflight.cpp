@@ -679,13 +679,14 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
         impulse[sz(window_length - 1)] = 1.0;
         auto sst = n4m_pp_savgol_state_apply(sg, impulse.data(), 1, impulse_cols, response.data());
         if (sst != N4M_OK) return fail(ctx, sst, "Savitzky-Golay impulse response failed");
-        long double gain2 = 0.0L;
+        double gain2 = 0.0, gain2_comp = 0.0;  // Neumaier, same on every host
         for (int64_t j = h; j < impulse_cols - h; ++j) {
-            const long double d = static_cast<long double>(impulse[sz(j)]) -
-                                  static_cast<long double>(response[sz(j)]);
-            gain2 += d * d;
+            const double d = impulse[sz(j)] - response[sz(j)];
+            const double sq = d * d, next = gain2 + sq;
+            gain2_comp += gain2 >= sq ? (gain2 - next) + sq : (sq - next) + gain2;
+            gain2 = next;
         }
-        const double gain = static_cast<double>(std::sqrt(gain2));
+        const double gain = std::sqrt(gain2 + gain2_comp);
         if (!(gain > 0.0) || !std::isfinite(gain))
             return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "zero residual gain");
         // Smoothing invariant: the weights reproduce every polynomial of
@@ -701,59 +702,110 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
                 return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
                             "Savitzky-Golay weights do not reproduce polynomial moments");
         }
-        std::vector<double> data(sz(n) * sz(p)), smooth(sz(n) * sz(p));
+        // Each row is centred on its first valid value (SG reproduces
+        // constants, so the residual is translation invariant) and rescaled
+        // by an exact power of two of its largest centred deviation (exact
+        // halves when a deviation overflows), so smoothing runs on values in
+        // [-2, 2] whatever the magnitude. Residuals are accumulated per band
+        // in a scaled sum of squares (value = ssq 2^(2 exp), Neumaier).
+        std::vector<double> data(sz(n) * sz(p), 0.0), smooth(sz(n) * sz(p));
+        std::vector<int> row_exp(sz(n), 0);
         std::vector<int64_t> invalid_prefix(sz(p) + 1);
         std::vector<uint8_t> evaluable(sz(n) * sz(p), 0);
         for (int64_t i = 0; i < n; ++i) {
             invalid_prefix[0] = 0;
+            bool have_offset = false, halved = false;
+            double offset = 0.0, dmax = 0.0;
             for (int64_t j = 0; j < p; ++j) {
                 const bool valid = !valid_mask || valid_mask[sz(i) * sz(p) + sz(j)];
-                double x = 0.0;
-                if (valid) {
-                    x = at(*X, i, j);
-                    if (!std::isfinite(x))
-                        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite unmasked noise proxy input");
-                }
-                data[sz(i) * sz(p) + sz(j)] = x;
                 invalid_prefix[sz(j) + 1] = invalid_prefix[sz(j)] + (valid ? 0 : 1);
+                if (!valid) continue;
+                const double x = at(*X, i, j);
+                if (!std::isfinite(x))
+                    return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite unmasked noise proxy input");
+                if (!have_offset) { offset = x; have_offset = true; }
+                const double d = x - offset;
+                if (!std::isfinite(d)) halved = true;
+                else dmax = std::max(dmax, std::fabs(d));
             }
+            const auto centred = [&](int64_t j) {
+                const double x = at(*X, i, j);
+                return halved ? 0.5 * x - 0.5 * offset : x - offset;
+            };
+            if (halved) {
+                dmax = 0.0;
+                for (int64_t j = 0; j < p; ++j)
+                    if (!valid_mask || valid_mask[sz(i) * sz(p) + sz(j)])
+                        dmax = std::max(dmax, std::fabs(centred(j)));
+            }
+            const int k = dmax > 0.0 ? std::ilogb(dmax) : 0;
+            row_exp[sz(i)] = k + (halved ? 1 : 0);
+            for (int64_t j = 0; j < p; ++j)
+                if (!valid_mask || valid_mask[sz(i) * sz(p) + sz(j)])
+                    data[sz(i) * sz(p) + sz(j)] = std::ldexp(centred(j), -k);
             for (int64_t j = h; j < p - h; ++j)
                 evaluable[sz(i) * sz(p) + sz(j)] =
                     invalid_prefix[sz(j + h) + 1] == invalid_prefix[sz(j - h)] ? 1 : 0;
         }
         sst = n4m_pp_savgol_state_apply(sg, data.data(), n, p, smooth.data());
         if (sst != N4M_OK) return fail(ctx, sst, "Savitzky-Golay smoothing failed");
-        double scale = 0.0;
-        for (size_t c = 0; c < data.size(); ++c) {
-            if (!evaluable[c]) continue;
-            smooth[c] = data[c] - smooth[c];
-            if (!std::isfinite(smooth[c]))
-                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "noise proxy residual overflow");
-            scale = std::max(scale, std::abs(smooth[c]));
-        }
-        if (scale == 0.0) scale = 1.0;
-        const long double lscale = static_cast<long double>(scale);
-        const long double lgain = static_cast<long double>(gain);
-        long double pooled = 0.0L;
-        int64_t pooled_count = 0;
-        for (int64_t j = 0; j < p; ++j) {
-            long double sum = 0.0L;
+        struct ScaledSsq {
+            int exp = 0;
+            double ssq = 0.0, comp = 0.0;
+            bool any = false;
             int64_t count = 0;
+            void add_square(double v) {
+                const double next = ssq + v;
+                comp += ssq >= v ? (ssq - next) + v : (v - next) + ssq;
+                ssq = next;
+            }
+            void add(double r, int e) {  // adds (r 2^e)^2
+                ++count;
+                if (r == 0.0) return;
+                const int k = std::ilogb(r) + e;
+                const double t = std::ldexp(r, e - k);  // [1, 2)
+                if (!any) { exp = k; ssq = t * t; comp = 0.0; any = true; return; }
+                if (k > exp) {
+                    ssq = std::ldexp(ssq, 2 * (exp - k));
+                    comp = std::ldexp(comp, 2 * (exp - k));
+                    exp = k;
+                    add_square(t * t);
+                } else {
+                    const double v = std::ldexp(t, k - exp);
+                    add_square(v * v);
+                }
+            }
+            // sqrt(sum / count) / gain; status != OK when not representable.
+            n4m_status_t rms(double gain, double& out) const {
+                if (!any) { out = 0.0; return N4M_OK; }
+                const double m = std::sqrt((ssq + comp) / static_cast<double>(count)) / gain;
+                out = std::ldexp(m, exp);
+                if (!std::isfinite(out)) return N4M_ERR_NUMERICAL_FAILURE;
+                // A positive RMS below 2^-1074 is reported as 2^-1074.
+                out = std::max(out, std::numeric_limits<double>::denorm_min());
+                return N4M_OK;
+            }
+        };
+        ScaledSsq pooled;
+        for (int64_t j = 0; j < p; ++j) {
+            ScaledSsq band;
             for (int64_t i = 0; i < n; ++i) {
                 const size_t c = sz(i) * sz(p) + sz(j);
                 if (!evaluable[c]) continue;
-                const long double r = static_cast<long double>(smooth[c]) / lscale;
-                sum += r * r;
-                ++count;
+                const double r = data[c] - smooth[c];
+                if (!std::isfinite(r))
+                    return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "noise proxy residual overflow");
+                band.add(r, row_exp[sz(i)]);
+                pooled.add(r, row_exp[sz(i)]);
             }
-            band_counts[j] = count;
-            band_noise[j] = count ? static_cast<double>(
-                lscale * std::sqrt(sum / static_cast<long double>(count)) / lgain) : nan_value;
-            pooled += sum;
-            pooled_count += count;
+            band_counts[j] = band.count;
+            if (!band.count) { band_noise[j] = nan_value; continue; }
+            if (band.rms(gain, band_noise[j]) != N4M_OK)
+                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "band noise proxy is not representable");
         }
-        out_two[0] = pooled_count ? static_cast<double>(
-            lscale * std::sqrt(pooled / static_cast<long double>(pooled_count)) / lgain) : nan_value;
+        if (!pooled.count) out_two[0] = nan_value;
+        else if (pooled.rms(gain, out_two[0]) != N4M_OK)
+            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "pooled noise proxy is not representable");
         out_two[1] = gain;
         return N4M_OK;
     } catch (const std::bad_alloc&) {
@@ -762,36 +814,73 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
 }
 
 N4M_API n4m_status_t n4m_preflight_snv_compute(
-    n4m_context_t* ctx, const n4m_matrix_view_t* X, const n4m_matrix_view_t* out,
-    double* row_error_bounds) {
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
+    int64_t n_groups, const n4m_matrix_view_t* out, double* error_bounds) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
     for (const auto* v : {X, out}) {
         const auto st = check_view(ctx, v);
         if (st != N4M_OK) return st;
     }
-    if (!row_error_bounds) return fail(ctx, N4M_ERR_NULL_POINTER, "null SNV bound output");
+    if (!error_bounds) return fail(ctx, N4M_ERR_NULL_POINTER, "null SNV bound output");
     const int64_t n = X->rows, p = X->cols;
     if (n < 1 || p < 2) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "SNV needs rows >= 1 and cols >= 2");
-    if (out->rows != n || out->cols != p)
+    if (group_ids ? (n_groups < 1 || n_groups > n) : n_groups != n)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid SNV group count");
+    if (out->rows != n_groups || out->cols != p)
         return fail(ctx, N4M_ERR_SHAPE_MISMATCH, "SNV output shape mismatch");
-    if (static_cast<uint64_t>(n) > SIZE_MAX / sizeof(double) / static_cast<uint64_t>(p))
+    // rows*cols for the copy and the result, plus 2*groups*cols accumulators.
+    if (static_cast<uint64_t>(n) > SIZE_MAX / sizeof(double) / 4 / static_cast<uint64_t>(p))
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "SNV size overflow");
     n4m_pp_snv_state_t* state = n4m_pp_snv_state_new(1, 1, 0);
     if (!state) return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "SNV state allocation failed");
     struct Release { n4m_pp_snv_state_t* s; ~Release() { n4m_pp_snv_state_free(s); } } release{state};
     try {
         const auto sz = [](int64_t v) { return static_cast<size_t>(v); };
-        std::vector<double> data(sz(n) * sz(p)), result(sz(n) * sz(p));
+        std::vector<int64_t> members(sz(n_groups), 0);
+        for (int64_t i = 0; i < n; ++i) {
+            const int64_t g = group_ids ? group_ids[i] : i;
+            if (g < 0 || g >= n_groups)
+                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "SNV group ID out of range");
+            ++members[sz(g)];
+        }
+        if (std::find(members.begin(), members.end(), int64_t{0}) != members.end())
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "empty SNV group");
+        std::vector<double> data(sz(n) * sz(p)), z(sz(n) * sz(p)), row_bound(sz(n));
         for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j) {
             const double x = at(*X, i, j);
             if (!std::isfinite(x)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite SNV input");
             data[sz(i) * sz(p) + sz(j)] = x;
         }
-        const auto st = n4m_pp_snv_apply_bounded(state, data.data(), n, p, result.data(),
-                                                 row_error_bounds);
+        const auto st = n4m_pp_snv_apply_bounded(state, data.data(), n, p, z.data(),
+                                                 row_bound.data());
         if (st != N4M_OK) return fail(ctx, st, "SNV is not representable for a row");
-        for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j)
-            put(*out, i, j, result[sz(i) * sz(p) + sz(j)]);
+        // Equal-weight group means of the SNV rows, compensated per band.
+        // Bound: max member bound + (4u + 2 r u^2) max member |z| for r > 1.
+        constexpr double u = 0x1p-53;
+        std::vector<double> sum(sz(n_groups) * sz(p), 0.0), comp(sum.size(), 0.0);
+        std::vector<double> max_bound(sz(n_groups), 0.0), max_z(sz(n_groups), 0.0);
+        for (int64_t i = 0; i < n; ++i) {
+            const auto g = sz(group_ids ? group_ids[i] : i);
+            max_bound[g] = std::max(max_bound[g], row_bound[sz(i)]);
+            for (int64_t j = 0; j < p; ++j) {
+                const double v = z[sz(i) * sz(p) + sz(j)];
+                max_z[g] = std::max(max_z[g], std::fabs(v));
+                double& s0 = sum[g * sz(p) + sz(j)];
+                double& c0 = comp[g * sz(p) + sz(j)];
+                const double t = s0 + v;
+                c0 += std::fabs(s0) >= std::fabs(v) ? (s0 - t) + v : (v - t) + s0;
+                s0 = t;
+            }
+        }
+        for (int64_t g = 0; g < n_groups; ++g) {
+            const double r = static_cast<double>(members[sz(g)]);
+            for (int64_t j = 0; j < p; ++j) {
+                const size_t c = sz(g) * sz(p) + sz(j);
+                put(*out, g, j, (sum[c] + comp[c]) / r);
+            }
+            error_bounds[g] = max_bound[sz(g)] +
+                (r > 1.0 ? (4.0 * u + 2.0 * r * u * u) * max_z[sz(g)] : 0.0);
+        }
         return N4M_OK;
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "SNV allocation failed");
@@ -830,41 +919,52 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     std::fill(query_flags, query_flags + query->rows, uint8_t{0});
     if (!self) std::fill(reference_flags, reference_flags + R.rows, uint8_t{0});
     uint8_t* rflags = self ? query_flags : reference_flags;
-    // RMS distance on a scaled representation independent of the tolerance:
-    // the differences d_j = q_j - r_j are accumulated as scale^2 * ssq
-    // (LAPACK dnrm2), so tiny differences neither underflow nor are divided
-    // by the tolerance first. If some q_j - r_j overflows, the whole pair uses
-    // the exact halves q_j/2 - r_j/2 and its RMS is twice their RMS. The
-    // partial RMS only grows, so a pair stops as soon as it exceeds the
-    // tolerance.
+    // RMS distance and decision in a scaled space, independent of the
+    // tolerance and decided before the published value is rounded:
+    //   d_j = q_j - r_j (or the exact halves q_j/2 - r_j/2 when some
+    //   difference overflows, with the exponent raised by one), k = ilogb of
+    //   max|d|, t_j = d_j 2^-k in [0, 2) (exact), rho = sqrt(sum t^2 / cols),
+    //   RMS = rho 2^k and RMS <= tol  <=>  rho <= tol 2^-k (exact power of two).
+    // Components below 2^-1074 relative to max|d| are not representable after
+    // scaling and contribute nothing (relative effect < 2^-1000). A positive
+    // RMS below 2^-1074 is published as 2^-1074, the smallest positive double.
     const double inv_cols = 1.0 / static_cast<double>(query->cols);
+    const double min_positive = std::numeric_limits<double>::denorm_min();
     const auto rms_within = [&](int64_t i, int64_t k, double& distance) {
-        for (const bool halved : {false, true}) {
-            double scale = 0.0, ssq = 1.0;
-            bool overflow = false, far = false;
-            const double limit = halved ? 0.5 * tolerance : tolerance;
-            for (int64_t j = 0; j < query->cols; ++j) {
-                const double a = at(*query, i, j), b = at(R, k, j);
-                const double d = std::fabs(halved ? 0.5 * a - 0.5 * b : a - b);
-                if (!std::isfinite(d)) { overflow = true; break; }
-                if (d == 0.0) continue;
-                if (scale < d) {
-                    const double r = scale / d;
-                    ssq = 1.0 + ssq * r * r;
-                    scale = d;
-                } else {
-                    const double r = d / scale;
-                    ssq += r * r;
-                }
-                if (scale * std::sqrt(ssq * inv_cols) > limit) { far = true; break; }
-            }
-            if (overflow) continue;
-            if (far) return false;
-            const double rms = scale * std::sqrt(ssq * inv_cols);
-            distance = halved ? 2.0 * rms : rms;
-            return true;
+        bool halved = false;
+        double dmax = 0.0;
+        for (int64_t j = 0; j < query->cols; ++j) {
+            const double d = std::fabs(at(*query, i, j) - at(R, k, j));
+            if (!std::isfinite(d)) { halved = true; break; }
+            dmax = std::max(dmax, d);
         }
-        return false;
+        const auto diff = [&](int64_t j) {
+            const double a = at(*query, i, j), b = at(R, k, j);
+            return std::fabs(halved ? 0.5 * a - 0.5 * b : a - b);
+        };
+        if (halved) {
+            dmax = 0.0;
+            for (int64_t j = 0; j < query->cols; ++j) dmax = std::max(dmax, diff(j));
+        }
+        if (dmax == 0.0) { distance = 0.0; return true; }
+        const int e = std::ilogb(dmax) + (halved ? 1 : 0);
+        const int shift = halved ? e - 1 : e;
+        const double tau = std::ldexp(tolerance, -e);
+        // sum t^2 / cols only grows; leave as soon as it exceeds tau^2 by
+        // more than rounding, then decide on the square root.
+        const double tau2 = tau * tau * (1.0 + 0x1p-50);
+        double sum = 0.0, comp = 0.0;  // Neumaier: relative error ~2u
+        for (int64_t j = 0; j < query->cols; ++j) {
+            const double t = std::ldexp(diff(j), -shift);
+            const double sq = t * t, next = sum + sq;
+            comp += sum >= sq ? (sum - next) + sq : (sq - next) + sum;
+            sum = next;
+            if (sum * inv_cols > tau2) return false;
+        }
+        const double rho = std::sqrt((sum + comp) * inv_cols);
+        if (!(rho <= tau)) return false;
+        distance = std::max(std::ldexp(rho, e), min_positive);
+        return true;
     };
     int64_t found = 0, candidates = 0;
     for (int64_t i = 0; i < query->rows; ++i) {

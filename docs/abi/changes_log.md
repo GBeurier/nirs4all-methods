@@ -2,20 +2,38 @@
 
 ## 2026-10-13 — ABI 2.20.0: SNV with rounding bounds (unreleased)
 
-Add `n4m_preflight_snv_compute` in `n4m/metrics.h`. It applies SNV (centring
-and population SD) to each row of a finite matrix into a caller view and
-writes one first-order rounding bound per row:
-`(u(|m| + A) + 4 n u^2 max|y|) / sd_y + 8 u max|z|`, where `y` is the row
-rescaled by a power of two, `m` and `sd_y` are its mean and SD, `A` is the
-mean absolute deviation and `z` is the output. A constant row gives exact
-zeros and a bound of 0. The SNV engine behind `n4m_transform_snv_*` now
-rescales each finite row by a power of two and uses compensated sums. Rows at
-the smallest subnormal, rows that overflow and rows with 100,000 offset bands
-are standardized correctly. `n4m_preflight_pairs_within_tolerance` computes
-the RMS on rescaled differences, independent of the tolerance. Its listed
-distances no longer underflow (`[1e-170, 0]` against `[0, 0]` at tolerance
-1e200 gives 7.07e-171). Existing symbols and signatures are unchanged, and no
-serialized format changes.
+Add `n4m_preflight_snv_compute(ctx, X, group_ids, n_groups, out,
+error_bounds)` in `n4m/metrics.h`. It applies SNV (centring and population
+SD) to each row of a finite matrix. With `group_ids` it also returns the
+equal-weight mean of the SNV rows of each group (compensated per band). It
+writes one first-order rounding bound per output row:
+
+- for one row, `(3uA + n u^2 (A + |m|)) / sd_y + 8 u max|z|`;
+- for a group of r rows, the largest member bound plus
+  `(4u + 2 r u^2) max|z|`.
+
+A constant row gives exact zeros and a bound of 0. The SNV engine behind
+`n4m_transform_snv_*` now rescales each finite row by a power of two. Its
+mean is a compensated double-double, and deviations are rescaled before
+squaring. Rows at the smallest subnormal, rows that overflow, rows offset by
+2^60 or 1e300 and rows with 100,000 offset bands are standardized within
+their bound.
+
+`n4m_preflight_pairs_within_tolerance` compares the RMS with the tolerance
+in a power-of-two scaled space before rounding the published distance. A
+positive distance below 2^-1074 is published as 2^-1074. The decision for
+`[2^-1073, 0]` against `[0, 0]` at tolerance 2^-1074 is therefore far.
+
+`n4m_preflight_noise_proxy_compute` centres each row on its first valid
+value, rescales it by a power of two before smoothing, and accumulates scaled
+sums of squares. It is translation invariant for exact offsets and
+power-of-two equivariant over the finite range. A result above DBL_MAX is
+`N4M_ERR_NUMERICAL_FAILURE`.
+
+The magnitude-sweep tests (`cpp/tests/test_preflight_robustness.cpp`, JS
+`run_preflight_diagnostics.mjs`) cover scales 2^k for k from -1074 to 1000,
+exact offsets near 1e16 and 1e300, and constant columns of huge amplitude.
+Existing symbol signatures are unchanged, and no serialized format changes.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
