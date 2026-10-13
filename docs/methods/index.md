@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **225**. Additional Python reference
+_Total catalogued native methods_: **226**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -308,6 +308,7 @@ Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-b
 |--------|----------------------|-----------|------|
 | [`permanova`](diagnostics_permanova.md) | `n4m.stats.permanova` | `n4m.stats` | C |
 | [`permdisp`](diagnostics_permdisp.md) | `n4m.stats.permdisp` | `n4m.stats` | C |
+| [`one_way_reml`](diagnostics_variance_components.md) | `n4m.stats.variance_components.one_way_reml` | `n4m.stats.variance_components` | C |
 
 ## utilities
 

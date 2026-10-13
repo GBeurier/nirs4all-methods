@@ -8,13 +8,13 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**210 of 225 catalog entries covered.**
+**210 of 226 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
 | aom_pop | 18 | 21 |
 | augmentation | 39 | 39 |
-| diagnostics | 5 | 14 |
+| diagnostics | 5 | 15 |
 | filters | 6 | 7 |
 | models | 37 | 38 |
 | preprocessing | 63 | 64 |
@@ -98,6 +98,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `diagnostics.pls_monitoring` | procedure | generic | manifest only |
 | `diagnostics.preflight_qualification` | not yet | - | - |
 | `diagnostics.regression_metrics` | procedure | generic | manifest only |
+| `diagnostics.variance_components` | not yet | - | - |
 | `filters.composite` | not yet | - | - |
 | `filters.correlation` | estimator | selector | Python, R, JS/WASM |
 | `filters.high_leverage` | estimator | sample_filter | Python, R, JS/WASM |

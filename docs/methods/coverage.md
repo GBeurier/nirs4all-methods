@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **225**
-- Curated scientific records: **232**
-- Resolved documentation pages: **225**
+- Catalog entries: **226**
+- Curated scientific records: **233**
+- Resolved documentation pages: **226**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -82,6 +82,7 @@ This generated report records the documentation source used for each catalog ent
 | `diagnostics.pls_monitoring` | [pls_monitoring](pls_monitoring.md) | curated |
 | `diagnostics.preflight_qualification` | [diagnostics_preflight_qualification](diagnostics_preflight_qualification.md) | curated |
 | `diagnostics.regression_metrics` | [diagnostics_regression_metrics](diagnostics_regression_metrics.md) | curated |
+| `diagnostics.variance_components` | [diagnostics_variance_components](diagnostics_variance_components.md) | curated |
 | `filters.composite` | [filter_composite](filter_composite.md) | curated |
 | `filters.correlation` | [filter_correlation](filter_correlation.md) | curated |
 | `filters.high_leverage` | [filter_leverage](filter_leverage.md) | curated |
