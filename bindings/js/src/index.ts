@@ -21,12 +21,13 @@ export { Context } from "./context.js";
 export { preflightPca, preflightRepeatability, preflightSummary,
          preflightNearestNeighbors, preflightLocalContrast, preflightNoiseProxy,
          preflightPairsWithinTolerance, preflightFactorAssociation, preflightHolmAdjust,
-         clusterHdbscan,
+         statsCorrelationTest, statsBhAdjust, clusterHdbscan,
          preflightAdjustedRandIndex, type HdbscanOptions,
          type HdbscanTreeNode, type HdbscanResult, type PreflightPcaResult,
          type PreflightRepeatabilityResult, type PreflightNeighborResult,
          type PreflightLocalContrastResult, type PreflightNoiseProxyResult,
-         type PreflightPairsResult, type PreflightFactorAssociationResult
+         type PreflightPairsResult, type PreflightFactorAssociationResult,
+         type StatsCorrelationTestResult
        } from "./preflightDiagnostics.js";
 export { Config } from "./config.js";
 export { Model, fitPls, predictPls, fitModel, predictModel, fitAom, fitAomChain, fitPop, fitAomRidge, fitAomStack, computeSplit, computeSplitIndices, type PlsModel, type FittedModel, type AomModel, type AomChainDescriptor, type AomChainModel, type PopModel, type AomRidgeOptions, type AomStackOptions, type SplitKind, type SplitOptions, type SplitIndices } from "./model.js";

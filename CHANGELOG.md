@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+ABI 2.20.0. No model-state serialization format changes.
+
+### Added
+
+- Public ABI 2.20.0 generic statistics: `n4m_stats_correlation_test`
+  (Pearson or Spearman correlation with a seeded two-sided permutation
+  p-value, NumPy `default_rng` permutation parity) and `n4m_stats_bh_adjust`
+  (Benjamini-Hochberg adjusted p-values). JS/WASM wrappers
+  `statsCorrelationTest` and `statsBhAdjust`. SciPy 1.15.3 `pearsonr` /
+  `spearmanr`, statsmodels 0.15.0 `multipletests(method="fdr_bh")` and NumPy
+  2.2.6 permutation counts are pinned in `cpp/tests/test_preflight.cpp`.
+
 ## [1.3.6] - 2026-10-13
 
 ABI 2.19.0. No model-state serialization format changes.

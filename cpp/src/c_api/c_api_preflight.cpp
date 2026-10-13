@@ -134,6 +134,44 @@ struct AssociationKernel {
         return std::max(0.0, (sum - 1.0) / static_cast<double>(std::min(g, c) - 1));
     }
 };
+
+// Average ranks 1..n; tied values share the mean of their ranks.
+std::vector<double> average_ranks(const std::vector<double>& values) {
+    const size_t n = values.size();
+    std::vector<size_t> order(n);
+    std::iota(order.begin(), order.end(), size_t{0});
+    std::sort(order.begin(), order.end(),
+              [&values](size_t a, size_t b) { return values[a] < values[b]; });
+    std::vector<double> ranks(n);
+    for (size_t start = 0; start < n;) {
+        size_t end = start + 1;
+        while (end < n && values[order[end]] == values[order[start]]) ++end;
+        const double rank = 0.5 * static_cast<double>(start + 1 + end);
+        for (size_t k = start; k < end; ++k) ranks[order[k]] = rank;
+        start = end;
+    }
+    return ranks;
+}
+
+// Values divided by max|v| (sums stay representable; r is scale invariant),
+// then centered. Returns the centered sum of squares.
+double scaled_centered(std::vector<double>& values) noexcept {
+    double scale = 0.0;
+    for (double v : values) scale = std::max(scale, std::abs(v));
+    if (!(scale > 0.0)) return 0.0;
+    double mean = 0.0;
+    for (double& v : values) {
+        v /= scale;
+        mean += v;
+    }
+    mean /= static_cast<double>(values.size());
+    double ss = 0.0;
+    for (double& v : values) {
+        v -= mean;
+        ss += v * v;
+    }
+    return ss;
+}
 }  // namespace
 
 extern "C" {
@@ -944,5 +982,104 @@ N4M_API n4m_status_t n4m_preflight_holm_adjust(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "Holm allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "Holm internal error"); }
+}
+N4M_API n4m_status_t n4m_stats_correlation_test(
+    n4m_context_t* ctx, const double* x, const double* y, int64_t n,
+    int32_t method, int32_t n_permutations, uint64_t seed,
+    double* out_five, int64_t* out_two) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    if (!x || !y || !out_five || !out_two)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null correlation buffer");
+    if (n < 2 || (method != 0 && method != 1) || n_permutations < 0 ||
+        n_permutations > 1000000 ||
+        static_cast<uint64_t>(n) > static_cast<uint64_t>(PTRDIFF_MAX / sizeof(double)))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid correlation dimensions or method");
+    try {
+        for (int64_t i = 0; i < n; ++i)
+            if (!std::isfinite(x[i]) || !std::isfinite(y[i]))
+                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite correlation input");
+        const long double work = static_cast<long double>(n) *
+                                 (static_cast<long double>(n_permutations) + 1.0L);
+        if (work > max_moment_products)
+            return fail(ctx, N4M_ERR_UNSUPPORTED,
+                        "correlation permutations exceed 250 million operation budget");
+        // +0.0 replaces -0.0 so both zero encodings share one value.
+        std::vector<double> xs(x, x + n), ys(y, y + n);
+        for (double& v : xs) v += 0.0;
+        for (double& v : ys) v += 0.0;
+        std::vector<int64_t> x_n, y_n;
+        dense_codes(xs, x_n);
+        dense_codes(ys, y_n);
+        for (int i = 0; i < 5; ++i) out_five[i] = nan_value;
+        out_two[0] = 0;
+        out_two[1] = 0;
+        out_five[1] = static_cast<double>(x_n.size());
+        out_five[2] = static_cast<double>(y_n.size());
+        out_five[3] = std::min(log10_factorial_ratio(n, x_n), log10_factorial_ratio(n, y_n));
+        if (x_n.size() < 2 || y_n.size() < 2) return N4M_OK;
+        if (method == 1) {
+            xs = average_ranks(xs);
+            ys = average_ranks(ys);
+        }
+        const double sxx = scaled_centered(xs), syy = scaled_centered(ys);
+        if (!(sxx > 0.0) || !(syy > 0.0)) return N4M_OK;
+        const double denominator = std::sqrt(sxx) * std::sqrt(syy);
+        const auto size = static_cast<size_t>(n);
+        const auto correlation = [&](const int64_t* perm) {
+            double sxy = 0.0;
+            for (size_t i = 0; i < size; ++i)
+                sxy += xs[i] * ys[perm ? static_cast<size_t>(perm[i]) : i];
+            return std::max(-1.0, std::min(1.0, sxy / denominator));
+        };
+        const double observed = correlation(nullptr);
+        out_five[0] = observed;
+        if (n_permutations == 0) return N4M_OK;
+        n4m_rng_pcg64 rng{};
+        n4m_pcg64_engine_seed(&rng, seed);
+        std::vector<int64_t> perm(size);
+        const double threshold =
+            std::abs(observed) - std::sqrt(std::numeric_limits<double>::epsilon());
+        int64_t at_least = 0;
+        for (int32_t b = 0; b < n_permutations; ++b) {
+            n4m_pcg64_engine_permutation(&rng, perm.data(), n);
+            if (std::abs(correlation(perm.data())) >= threshold) ++at_least;
+        }
+        out_two[0] = at_least;
+        out_two[1] = n_permutations;
+        out_five[4] = static_cast<double>(1 + at_least) /
+                      static_cast<double>(1 + n_permutations);
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "correlation allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "correlation internal error"); }
+}
+
+N4M_API n4m_status_t n4m_stats_bh_adjust(
+    n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    if (!p_values || !adjusted)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null Benjamini-Hochberg buffer");
+    if (m < 1 || static_cast<uint64_t>(m) >
+                     static_cast<uint64_t>(PTRDIFF_MAX / sizeof(double)))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid Benjamini-Hochberg family size");
+    try {
+        for (int64_t i = 0; i < m; ++i)
+            if (!(p_values[i] >= 0.0 && p_values[i] <= 1.0))
+                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "p-values must lie in [0, 1]");
+        std::vector<int64_t> order(static_cast<size_t>(m));
+        std::iota(order.begin(), order.end(), int64_t{0});
+        std::stable_sort(order.begin(), order.end(),
+                         [p_values](int64_t a, int64_t b) { return p_values[a] < p_values[b]; });
+        double running = 1.0;
+        for (int64_t rank = m; rank >= 1; --rank) {
+            const int64_t i = order[static_cast<size_t>(rank - 1)];
+            running = std::min(running, static_cast<double>(m) / static_cast<double>(rank) *
+                                            p_values[i]);
+            adjusted[i] = running;
+        }
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "Benjamini-Hochberg allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "Benjamini-Hochberg internal error"); }
 }
 }  // extern "C"

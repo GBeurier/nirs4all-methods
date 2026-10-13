@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
     loadModule, abiVersion, preflightPca, preflightRepeatability,
-    preflightFactorAssociation, preflightHolmAdjust,
+    preflightFactorAssociation, preflightHolmAdjust, statsCorrelationTest, statsBhAdjust,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
     clusterHdbscan, preflightAdjustedRandIndex,
@@ -16,7 +16,7 @@ const relativeNear = (actual, expected) => assert.ok(
     Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected)),
     `${actual} != ${expected}`);
 await loadModule();
-assert.deepEqual(abiVersion(), [2, 19, 0]);
+assert.deepEqual(abiVersion(), [2, 20, 0]);
 const pca = preflightPca({
     data: new Float64Array([2, 1, 2, -1, -2, 1, -2, -1]), rows: 4, cols: 2,
 }, 1);
@@ -158,4 +158,24 @@ for (const c of fixture.cases) {
     c.outlier_scores_hex.map(hex).forEach((v, i) => assert.ok(same(got.outlierScores[i], v), c.name));
     assert.deepEqual(got.tree.map((node) => node.parent), c.tree_parent, c.name);
 }
+// Same hand values and SciPy/NumPy/statsmodels goldens as test_preflight.cpp.
+const pearson = statsCorrelationTest(new Float64Array([1, 2, 3, 4, 5]),
+    new Float64Array([2, 4, 5, 4, 5]), "pearson", 999, 17);
+near(pearson.coefficient, 6 / Math.sqrt(60));
+near(pearson.log10DistinctPermutations, Math.log10(30));
+assert.equal(pearson.nAtLeastObserved, 133);
+assert.equal(pearson.nPermutationsExecuted, 999);
+near(pearson.pValue, 134 / 1000);
+const spearman = statsCorrelationTest(new Float64Array([1, 2, 3, 4, 5]),
+    new Float64Array([2, 4, 5, 4, 5]), "spearman", 999, 18446744073709551557n);
+near(spearman.coefficient, 7 / Math.sqrt(90));
+assert.equal(spearman.nAtLeastObserved, 190);
+const tiedRho = statsCorrelationTest(new Float64Array([1, 1, 2, 2, 3, 3, 4, 4, 5, 5]),
+    new Float64Array([3, 1, 4, 1, 5, 9, 2, 6, 5, 3]), "spearman", 999, 17);
+near(tiedRho.coefficient, 0.4099457958749614);
+assert.equal(tiedRho.nAtLeastObserved, 241);
+assert.ok(Number.isNaN(statsCorrelationTest(new Float64Array([1, 1, 1]),
+    new Float64Array([1, 2, 3]), "pearson", 99, 1).coefficient));
+const bh = statsBhAdjust(new Float64Array([0.001, 0.2, 0.5, 0.03, 0.04, 0.049]));
+[0.006, 0.24, 0.5, 0.0735, 0.0735, 0.0735].forEach((value, i) => near(bh[i], value));
 console.log("JS/WASM Preflight diagnostics passed");
