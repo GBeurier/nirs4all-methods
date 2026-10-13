@@ -280,12 +280,26 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
  * (rows move only inside their stratum). As vegan anova.cca, b counts
  * pseudo-F_perm >= F_obs - sqrt(DBL_EPSILON) (+inf when the permuted residual
  * SS is zero); p = (1+b)/(1+B).
- * X is scaled by an exact power of two and centred per column before any sum;
- * sums of squares are mapped back with scalbn, never through a squared scale,
- * so representable results (subnormal or near DBL_MAX) are returned.
+ * Numerical domain (shared by n4m_stats_permanova_freedman_lane and
+ * n4m_stats_permdisp): each column is centred (exact power-of-two prescale,
+ * shift to its first row, compensated mean) and all columns are expressed in
+ * one power-of-two unit chosen from the CENTRED variation, so constant
+ * columns of any amplitude and common offsets do not change any output; a
+ * column varying less than 2^-1074 of the most varying one is below the
+ * resolution of the distances and ignored. Every sum of squares is a sum of
+ * squared terms (residuals are projected explicitly, never obtained as a
+ * difference of totals) accumulated in long double, and F and all ratios are
+ * formed in the scaled unit. Sums of squares and distances are mapped back
+ * with scalbn; when one is not representable as a double (overflow, or a
+ * value above the rounding floor n k DBL_EPSILON^2 x total that would
+ * underflow to 0) the call returns N4M_ERR_NUMERICAL_FAILURE. Subnormal
+ * results are returned rounded. The residual SS keeps a relative accuracy
+ * of about DBL_EPSILON max|x - mean| / |residual| (data representation).
+ * Sizes, products and work budgets are checked before any allocation that
+ * depends on the number of levels.
  * Requires n >= 2, k >= 1, finite X, at most 2048 term levels, 0 <=
- * n_permutations <= 1000000 and (n(k+1) + levels^2 k)(B+1) + levels n <= 250
- * million operations (N4M_ERR_UNSUPPORTED otherwise).
+ * n_permutations <= 1000000 and (2n(k+1) + 2 levels^2 k)(B+1) + levels n <=
+ * 250 million operations (N4M_ERR_UNSUPPORTED otherwise).
  * out_thirteen (caller-owned, NaN when undefined):
  *   [0] ss_total  [1] ss_strata  [2] ss_term  [3] ss_residual
  *   [4] R^2 = ss_term/ss_total  [5] partial R^2 = ss_term/(ss_term+ss_residual)
@@ -315,9 +329,12 @@ N4M_API n4m_status_t n4m_stats_permanova(
  * PCG64 as numpy.random.default_rng(seed); the b-th draw perm =
  * rng.permutation(n) gives data fitted_reduced[i] + residual[perm[i]], refitted
  * on both designs; b counts pseudo-F_perm >= F_obs - sqrt(DBL_EPSILON) (+inf
- * for a zero residual SS), p = (1+b)/(1+B). Scaling and centring as
- * n4m_stats_permanova. Limits: at most 4096 design columns and
- * 2 n c^2 + n k (c+1)(B+1) <= 250 million operations (c design columns).
+ * for an exactly zero residual SS), p = (1+b)/(1+B). Residual SS of the
+ * observation and of every draw are explicit projections off the full
+ * design. Numerical domain as n4m_stats_permanova. Limits, checked before
+ * the design is generated: at most 4096 design columns c, n c <= 32 Mi
+ * values (256 MiB) and 2 n c^2 + 4 n k (c+1)(B+1) <= 250 million
+ * operations.
  * out_twelve (NaN when undefined): [0] ss_total [1] ss_reduced (model SS of
  * the reduced design) [2] ss_term [3] ss_residual [4] ss_term/ss_total
  * [5] partial R^2 ss_term/(ss_term+ss_residual) [6] pseudo-F [7] df_term
@@ -337,9 +354,13 @@ N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
  * b-th rng.permutation(n)), refits the one-way model and counts
  * F_perm >= F_obs - sqrt(DBL_EPSILON), as vegan permutest.betadisper (the
  * comparison is on F; a tolerance on a monotone transform of F is not
- * equivalent). Same scaling as n4m_stats_permanova. Dispersion differences
- * do not validate exchangeability or a PERMANOVA. Same input limits as
- * n4m_stats_permanova; work n(2k + B + 1) <= 250 million operations.
+ * equivalent); the between and within SS of each draw are explicit sums of
+ * squares around its own group means. Numerical domain as
+ * n4m_stats_permanova (distances map back by 2^exponent; distances below
+ * n k DBL_EPSILON of the largest are rounding level). Dispersion
+ * differences do not validate exchangeability or a PERMANOVA. Same input
+ * limits as n4m_stats_permanova; work n(2k + 3(B + 1)) <= 250 million
+ * operations.
  * distances has n elements; group_mean_distances has capacity n and
  * receives one mean per group in ascending code order.
  * out_six: [0] F (NaN with one group, n == groups or zero within SS)
