@@ -80,6 +80,29 @@ blobs with an outlier at `(1e300, -1e300)`, and columns at `1e-200` and `1e-250`
 reference is scikit-learn `HDBSCAN(metric="precomputed")` on exact `math.dist`
 distances; labels match up to permutation and membership within 1e-12.
 
+## Density guard (ABI 2.20, third review)
+
+With distances near the subnormal range, densities `λ = 1/d` and their excess-of-mass
+sums overflowed: `1e-308 × [0, 1, 3, 10, 11, 14]` gave NaN persistence and
+`1e-310` an infinite density for a positive distance, both with `N4M_OK`. Densities
+are now computed on MST weights divided by `2^e`, where `e` is the midpoint of the
+binary exponents of the smallest positive and the largest weight, so internal
+densities lie near 1. EOM comparisons, membership, GLOSH and persistence use these
+scaled values, which are exact power-of-two multiples, so ordinary results stay
+bit-identical. Lambdas and stabilities are published in `1/distance` units; a finite
+published value outside `[DBL_MIN, DBL_MAX]` returns `N4M_ERR_UNSUPPORTED` with
+nothing written. Zero distances keep the documented `+inf` lambdas; an `inf − inf`
+excess at zero distance counts as 0 (scikit-learn would produce NaN; no reference
+fixture contains that case).
+
+`n4m_cluster_robustness_tests` scales an irregular two-blob set with an outlier by
+`2^k`, `k ∈ {−1014, −1022, −500, −100, 0, 100, 500, 1000}`: every run either keeps
+labels, membership, GLOSH and persistence and scales lambdas and stabilities by
+`2^−k`, or is refused because those values are not representable (here `k = −1022`).
+Exact translations by `2^54` and `2^996` and a constant `1e300` column leave every
+output bit-identical. The JS/WASM test checks the same properties and the precise
+status code of the refusals.
+
 ## Tie order matters, including in the reference
 
 Mutual-reachability weights tie structurally, even on continuous data, because an edge

@@ -18,6 +18,11 @@ covariance regularization and the null protocol belong to the caller.
 
 ## Frozen semantics
 
+- Domains of validity are stated in each header: assignment costs are centred on
+  their minimum and scaled by a power of two; Gaussian draws factor a scaled
+  covariance; Jaccard refuses `n > 2^53`. `n4m_cluster_robustness_tests` checks
+  scaling, translation and constant-column invariance for these kernels, HDBSCAN and
+  ARI.
 - `n4m_cluster_jaccard_matrix`: negative labels are unassigned and belong to no cluster;
   labels must be below the declared cluster counts. `J_ij = |A_i ∩ B_j| / (|A_i| + |B_j| -
   |A_i ∩ B_j|)`, NaN when both clusters are empty. Callers restrict both labelings to the
@@ -46,7 +51,7 @@ covariance regularization and the null protocol belong to the caller.
 `parity/generators/cluster_matching_null_v1.py` (test-only; pins NumPy 2.4.6, SciPy
 1.18.1, scikit-learn 1.9.1 and hdbscan 0.8.44) writes
 `parity/fixtures/cluster_matching_null_v1.json`. Its SHA-256 at generation is
-`e327755133f91bb10f4d0db9168bf17e7ecf4a1a8e4405ce5cd37c788ef18e56`. The cases are:
+`ff6288f3df873b7a0589b7b25835c242db2afe6d08afeba6c74597b4eed13b27`. The cases are:
 
 - twelve assignment matrices: square, wide, tall (transposed path), small-integer ties,
   constant (identity), tall constant maximized, forbidden `+inf` pairs, a maximized
@@ -63,7 +68,8 @@ covariance regularization and the null protocol belong to the caller.
   ARI is recorded for information (1, 1 and 0: stock scikit-learn finds clusters in the
   third dataset because of its unspecified MST tie order).
 
-Five multi-magnitude HDBSCAN cases (see `docs/dev/hdbscan.md`) use scikit-learn
+Three large-n adjusted Rand indices (up to 3 million elements, values near 0) are
+checked within 1e-14 relative against exact-integer scikit-learn. Five multi-magnitude HDBSCAN cases (see `docs/dev/hdbscan.md`) use scikit-learn
 `HDBSCAN(metric="precomputed")` on exact `math.dist` distances.
 
 `n4m_cluster_matching_null_tests` checks the assignments, Jaccard values and permutations

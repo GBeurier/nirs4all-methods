@@ -22,6 +22,8 @@ hdbscan==0.8.44 (all BSD-3-Clause); none of them enters libn4m.
 - HDBSCAN on multi-magnitude data (squared differences that overflow or
   underflow), against scikit-learn HDBSCAN(metric="precomputed") on exact
   math.dist distances.
+- Large-n adjusted Rand indices with labelings a_i = i mod ka and
+  b_i = (i // ka + shift (i mod 3)) mod kb (exact-integer scikit-learn).
 - HDBSCAN on Gaussian draws: the stable-tie scikit-learn reference of
   hdbscan_v1.py (same single-linkage path), and the stock scikit-learn ARI for
   information.
@@ -198,6 +200,25 @@ def multiscale_hdbscan_cases() -> list[dict]:
     return cases
 
 
+def ari_cases() -> list[dict]:
+    """Large-n ARI values where rounded pair-count products would cancel.
+
+    scikit-learn adjusted_rand_score works on exact Python integers; the
+    labelings are given by formulas so the fixture stays small.
+    """
+    specs = [("independent_1024x1024", 1 << 20, 1024, 1024, 0),
+             ("nearly_independent_shifted", 1 << 20, 1000, 1009, 7),
+             ("coarse_vs_fine", 3_000_000, 3, 999_983, 1)]
+    cases = []
+    for name, n, ka, kb, shift in specs:
+        i = np.arange(n, dtype=np.int64)
+        a = i % ka
+        b = (i // ka + shift * (i % 3)) % kb
+        cases.append({"name": name, "n": n, "ka": ka, "kb": kb, "shift": shift,
+                      "ari_hex": hexd([adjusted_rand_score(a, b)])})
+    return cases
+
+
 def gaussian_hdbscan_cases() -> list[dict]:
     eig = np.array([6.0, 2.5, 1.0, 0.4, 0.1])
     cov = np.diag(eig + 1e-6 * eig.mean())
@@ -233,7 +254,8 @@ def main() -> None:
                   [{"kind": "normal", **c} for c in normal_cases()] +
                   [{"kind": "permutations", **c} for c in permutation_cases()] +
                   [{"kind": "gaussian_hdbscan", **c} for c in gaussian_hdbscan_cases()] +
-                  [{"kind": "multiscale_hdbscan", **c} for c in multiscale_hdbscan_cases()]),
+                  [{"kind": "multiscale_hdbscan", **c} for c in multiscale_hdbscan_cases()] +
+                  [{"kind": "ari", **c} for c in ari_cases()]),
     }
     out = (Path(sys.argv[1]) if len(sys.argv) > 1 else
            Path(__file__).resolve().parents[1] / "fixtures" / "cluster_matching_null_v1.json")

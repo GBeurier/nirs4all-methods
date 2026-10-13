@@ -196,6 +196,21 @@ void multiscale_hdbscan_case(n4m_context_t* ctx, const std::string& s, size_t lo
                 static_cast<long long>(clusters));
 }
 
+// Large-n ARI against exact-integer scikit-learn (no cancelled products).
+void ari_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
+    const auto n = integer(s, "n", lo, hi), ka = integer(s, "ka", lo, hi);
+    const auto kb = integer(s, "kb", lo, hi), shift = integer(s, "shift", lo, hi);
+    std::vector<int64_t> a(static_cast<size_t>(n)), b(a.size());
+    for (int64_t i = 0; i < n; ++i) {
+        a[static_cast<size_t>(i)] = i % ka;
+        b[static_cast<size_t>(i)] = (i / ka + shift * (i % 3)) % kb;
+    }
+    double got = 0.0;
+    REQUIRE(n4m_preflight_adjusted_rand_index(ctx, a.data(), b.data(), n, &got) == N4M_OK);
+    const double want = hex_array(s, "ari_hex", lo, hi)[0];
+    REQUIRE(std::fabs(got - want) <= 1e-14 * std::fabs(want));
+}
+
 void gaussian_hdbscan_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
     const auto d = integer(s, "d", lo, hi), n = integer(s, "n", lo, hi);
     auto cov = hex_array(s, "cov_hex", lo, hi);
@@ -237,10 +252,11 @@ int main() {
             else if (kind == "permutations") permutations_case(ctx, s, a, b);
             else if (kind == "gaussian_hdbscan") gaussian_hdbscan_case(ctx, s, a, b);
             else if (kind == "multiscale_hdbscan") multiscale_hdbscan_case(ctx, s, a, b);
+            else if (kind == "ari") ari_case(ctx, s, a, b);
             else REQUIRE(false);
         }
         REQUIRE(seen["assignment"] == 12 && seen["jaccard"] == 4 && seen["normal"] == 4 && seen["permutations"] == 4 &&
-                seen["gaussian_hdbscan"] == 3 && seen["multiscale_hdbscan"] == 5);
+                seen["gaussian_hdbscan"] == 3 && seen["multiscale_hdbscan"] == 5 && seen["ari"] == 3);
 
         // Argument validation.
         double cost[4] = {1, 2, 3, 4};

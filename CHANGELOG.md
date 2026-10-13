@@ -40,6 +40,20 @@ ABI 2.20.0. No model-state serialization format changes.
   above `DBL_MAX` return `N4M_ERR_UNSUPPORTED`, MST edges and tree sizes are
   validated, and nothing is written when an invariant fails. Sentinel and
   multi-magnitude regression tests run natively and in WASM.
+- Third review (systematic robustness pass over the clustering kernels):
+  `n4m_cluster_hdbscan` accumulated densities `1/distance` unscaled, so
+  `1e-308 x [0,1,3,10,11,14]` overflowed the stability sums (persistence NaN)
+  and `1e-310` gave an infinite density for a positive distance, with
+  `N4M_OK`. Densities are now accumulated on MST weights divided by `2^e` and
+  published in `1/distance` units; an unrepresentable published lambda or
+  stability returns `N4M_ERR_UNSUPPORTED`, and `inf - inf` excess at zero
+  distance counts as 0 instead of NaN. `n4m_preflight_adjusted_rand_index`
+  uses exact 128-bit pair-count products (no cancellation near 0).
+  `n4m_linear_sum_assignment` centres and scales finite costs (costs near
+  `DBL_MAX` and large offsets no longer overflow the dual sums).
+  `n4m_random_multivariate_normal` factors a scaled covariance (no
+  underflow for tiny covariances). Magnitude, translation and
+  constant-column property tests (`n4m_cluster_robustness_tests`, JS/WASM).
 - `n4m_random_multivariate_normal` (new in this release) checks the Cholesky
   storage and cost (`d*d <= 5e7`, `d^3/6 <= 2.5e9`) and the draws
   (`n*d <= 5e7`, `n*d*d <= 2.5e9`) before any allocation, including `n = 0`;

@@ -189,6 +189,45 @@ assert.throws(() => clusterHdbscan({data: new Float64Array([-1e308, 1e308]), row
         m._free(mean); backing.free(); ctx.destroy();
     }
 }
+// Magnitude robustness (same rules as n4m_cluster_robustness_tests): every
+// result is either invariant or an explicit N4M_ERR_UNSUPPORTED (10).
+{
+    const status = (fn) => { try { fn(); return 0; } catch (e) { return e.status ?? -1; } };
+    // Purely relative: the expected values span 2^-1000 to 2^1000.
+    const relEq = (a, e) => assert.ok(Math.abs(a - e) <= 1e-12 * Math.abs(e), `${a} != ${e}`);
+    const line = [0, 1, 3, 10, 11, 14];
+    const unit = clusterHdbscan({data: new Float64Array(line), rows: 6, cols: 1}, {minClusterSize: 2, minSamples: 2});
+    for (const k of [-500, -100, 100, 500, 1000]) {
+        const got = clusterHdbscan({data: new Float64Array(line.map((v) => v * 2 ** k)), rows: 6, cols: 1},
+            {minClusterSize: 2, minSamples: 2});
+        assert.deepEqual(got.labels, unit.labels);
+        got.persistence.forEach((v, i) => relEq(v, unit.persistence[i]));
+        got.tree.forEach((node, i) => relEq(node.stability, unit.tree[i].stability * 2 ** -k));
+    }
+    // Review 2026-10-13: 1e-308 overflowed the stability sums (persistence NaN)
+    // and 1e-310 gave an infinite density for a positive distance, with OK.
+    for (const factor of [1e-308, 1e-310]) {
+        const code = status(() => clusterHdbscan({data: new Float64Array(line.map((v) => v * factor)), rows: 6, cols: 1},
+            {minClusterSize: 2, minSamples: 2}));
+        assert.equal(code, 10, `hdbscan x ${factor}`);
+    }
+    const base = Array.from({length: 35}, (_, i) => 1 + ((i * 7.31) % 9));
+    const want = linearSumAssignment({data: new Float64Array(base), rows: 5, cols: 7});
+    for (const scale of [2 ** -1014, 2 ** -500, 2 ** 500, 2 ** 1019]) {
+        assert.deepEqual(linearSumAssignment({data: new Float64Array(base.map((v) => v * scale / 16)), rows: 5, cols: 7}).colInd,
+            want.colInd);
+    }
+    const span = base.map((v) => v * 1e-300);
+    span[0] = 1e300;
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array(span), rows: 5, cols: 7})), 10);
+    const cov = [2.0, 0.3, 0.1, 0.3, 1.0, -0.2, 0.1, -0.2, 0.5];
+    const unitDraw = randomMultivariateNormal(new Float64Array(3), {data: new Float64Array(cov), rows: 3, cols: 3}, 6, 42n);
+    for (const k of [-509, 511]) {
+        const got = randomMultivariateNormal(new Float64Array(3),
+            {data: new Float64Array(cov.map((v) => v * 4 ** k)), rows: 3, cols: 3}, 6, 42n);
+        got.data.forEach((v, i) => assert.equal(v, unitDraw.data[i] * 2 ** k));
+    }
+}
 // Same assignment, Jaccard, normal-draw and Gaussian HDBSCAN gate as the
 // native n4m_cluster_matching_null_tests (NumPy 2.4.6, SciPy 1.18.1).
 const samePartition = (got, want, name) => {
@@ -229,6 +268,11 @@ for (const c of nullFixture.cases) {
             {minClusterSize: c.min_cluster_size, minSamples: c.min_samples});
         samePartition(got.labels, c.labels, c.name);
         c.membership_hex.map(hex).forEach((v, i) => relativeNear(got.membership[i], v));
+    } else if (c.kind === "ari") {
+        const a = Array.from({length: c.n}, (_, i) => i % c.ka);
+        const b = Array.from({length: c.n}, (_, i) => (Math.floor(i / c.ka) + c.shift * (i % 3)) % c.kb);
+        const want = hex(c.ari_hex[0]);
+        assert.ok(Math.abs(preflightAdjustedRandIndex(a, b) - want) <= 1e-14 * Math.abs(want), c.name);
     } else if (c.kind === "permutations") {
         assert.deepEqual(randomPermutations(BigInt(c.seed), c.n, c.n_permutations), c.draws, c.name);
     } else {

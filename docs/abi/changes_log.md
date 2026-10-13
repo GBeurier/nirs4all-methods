@@ -25,6 +25,15 @@ scaled accumulation; other distances are unchanged. Distances above `DBL_MAX` re
 checked before any output is written. `n4m_random_multivariate_normal` checks its
 Cholesky and draw limits before any allocation, also for `n = 0`.
 
+Robustness pass (no signature change): `n4m_cluster_hdbscan` accumulates densities on
+MST weights divided by `2^e` and refuses (`N4M_ERR_UNSUPPORTED`) a published lambda or
+stability outside the normal range, instead of returning NaN persistence or infinite
+densities for positive distances; `inf - inf` excess at zero distance counts as 0.
+`n4m_preflight_adjusted_rand_index` computes exact integer numerators and denominators
+(n ≤ 2^31). `n4m_linear_sum_assignment` centres and scales finite costs.
+`n4m_random_multivariate_normal` factors a power-of-two-scaled covariance.
+`n4m_cluster_jaccard_matrix` refuses n > 2^53. Each header states its domain of validity.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged
