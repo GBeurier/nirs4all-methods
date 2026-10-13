@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <stdexcept>
+#include <vector>
 
 #define REQUIRE(x) do { if (!(x)) throw std::runtime_error(#x); } while (false)
 static bool near(double x, double y) { return std::abs(x-y) < 1e-9; }
@@ -110,6 +111,94 @@ int main() {
         double one_class[3]={1,1,1};
         REQUIRE(n4m_preflight_local_contrast(ctx,one_class,local_idx,nullptr,3,1,1,contrast)==N4M_OK);
         REQUIRE(std::isnan(contrast[0]) && near(contrast[2],1) && near(contrast[3],1));
+        // Noise proxy, window 5 / quadratic: SG weights (-3,12,17,12,-3)/35,
+        // white-noise residual gain^2 = (18/35)^2 + 2(12/35)^2 + 2(3/35)^2
+        // = 18/35. Row 0 is quadratic (zero interior residual). Row 1 is
+        // linear plus a 35 impulse at band 5: residuals 3,-12,18,-12,3 at
+        // bands 3..7. Edge bands 0,1,9,10 are not padded.
+        double noise[22];
+        for (int j=0;j<11;++j) { noise[j]=j*j; noise[11+j]=1+2*j+(j==5?35:0); }
+        double band[11], pooled2[2]; int64_t counts[11];
+        auto N=view(noise,2,11);
+        REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&N,nullptr,5,2,band,counts,pooled2)==N4M_OK);
+        REQUIRE(near(pooled2[1],std::sqrt(18.0/35.0)));
+        REQUIRE(near(band[5],std::sqrt(315.0)) && near(band[4],std::sqrt(140.0)));
+        REQUIRE(near(band[6],std::sqrt(140.0)) && near(band[3],std::sqrt(8.75)));
+        REQUIRE(near(band[2],0) && near(band[8],0) && counts[5]==2);
+        for (int j : {0,1,9,10}) REQUIRE(std::isnan(band[j]) && counts[j]==0);
+        REQUIRE(near(pooled2[0],std::sqrt(87.5)));
+        // Column-major storage gives the same result.
+        double noise_c[22];
+        for (int i=0;i<2;++i) for (int j=0;j<11;++j) noise_c[j*2+i]=noise[i*11+j];
+        n4m_matrix_view_t NC{};
+        REQUIRE(n4m_matrix_view_init_colmajor(&NC,noise_c,2,11,N4M_DTYPE_F64)==N4M_OK);
+        double band_c[11], pooled_c[2];
+        REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&NC,nullptr,5,2,band_c,counts,pooled_c)==N4M_OK);
+        REQUIRE(near(band_c[5],band[5]) && near(pooled_c[0],pooled2[0]));
+        // Masked band 9 of row 1 (value ignored) removes that row from the
+        // windows of bands 7 and 8 only: pooled sum 324+288+9 over 12 cells.
+        uint8_t noise_mask[22]; std::fill(noise_mask,noise_mask+22,uint8_t{1});
+        noise_mask[11+9]=0; noise[11+9]=std::nan("");
+        REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&N,noise_mask,5,2,band,counts,pooled2)==N4M_OK);
+        REQUIRE(counts[6]==2 && counts[7]==1 && counts[8]==1 && near(band[7],0));
+        REQUIRE(near(pooled2[0],std::sqrt(621.0/12.0)/std::sqrt(18.0/35.0)));
+        REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&N,nullptr,5,2,band,counts,pooled2)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        noise[11+9]=0;
+        REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&N,nullptr,4,2,band,counts,pooled2)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&N,nullptr,5,4,band,counts,pooled2)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        auto narrow=view(noise,2,3);
+        REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&narrow,nullptr,5,2,band,counts,pooled2)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        // Statistical reference: zero signal plus uniform white noise of
+        // variance 1 (deterministic LCG); the normalized proxy estimates 1.
+        {
+            const int64_t wn=2000, wp=40;
+            std::vector<double> white(static_cast<size_t>(wn*wp));
+            uint64_t state_lcg=12345;
+            for (auto& v : white) {
+                state_lcg=state_lcg*6364136223846793005ULL+1442695040888963407ULL;
+                v=std::sqrt(12.0)*((state_lcg>>11)*(1.0/9007199254740992.0)-0.5);
+            }
+            auto W=view(white.data(),wn,wp);
+            std::vector<double> wband(wp); std::vector<int64_t> wcount(wp); double wpool[2];
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&W,nullptr,11,2,wband.data(),
+                                                      wcount.data(),wpool)==N4M_OK);
+            REQUIRE(std::abs(wpool[0]-1.0)<0.02 && wcount[20]==wn);
+        }
+        // Pairs within tolerance 0.1 (RMS over two features). Groups exclude
+        // (0,4); pairs (0,1) and (1,4) have distance sqrt(0.01/2).
+        double pts[10]={0,0, 0.1,0, 0,0.3, 5,5, 0,0};
+        int64_t pgroups[5]={1,2,3,4,1}, pidx[4]={-7,-7,-7,-7}, pcounts[2];
+        double pdist[2]={}; uint8_t pflags[5];
+        auto P=view(pts,5,2);
+        REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&P,nullptr,pgroups,nullptr,0.1,2,
+                                                     pidx,pdist,pflags,nullptr,pcounts)==N4M_OK);
+        REQUIRE(pcounts[0]==2 && pcounts[1]==9);
+        REQUIRE(pidx[0]==0 && pidx[1]==1 && pidx[2]==1 && pidx[3]==4);
+        REQUIRE(near(pdist[0],std::sqrt(0.005)) && near(pdist[1],std::sqrt(0.005)));
+        REQUIRE(pflags[0]==1 && pflags[1]==1 && pflags[2]==0 && pflags[3]==0 && pflags[4]==1);
+        // Truncated listing keeps the exact total; no groups => 10 candidates.
+        REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&P,nullptr,nullptr,nullptr,0.1,1,
+                                                     pidx,pdist,pflags,nullptr,pcounts)==N4M_OK);
+        REQUIRE(pcounts[0]==3 && pcounts[1]==10 && pidx[0]==0 && pidx[1]==1);
+        REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&P,nullptr,nullptr,nullptr,0.0,0,
+                                                     nullptr,nullptr,pflags,nullptr,pcounts)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        // Two matrices: one query, two references; only reference 0 is near.
+        double one[2]={0,0}, two[4]={0,0.1, 1,1};
+        auto O=view(one,1,2), T=view(two,2,2);
+        uint8_t qflag[1], rflag[2];
+        REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&O,&T,nullptr,nullptr,0.1,0,
+                                                     nullptr,nullptr,qflag,rflag,pcounts)==N4M_OK);
+        REQUIRE(pcounts[0]==1 && pcounts[1]==2 && qflag[0]==1 && rflag[0]==1 && rflag[1]==0);
+        // An overflowing difference is far, not an error.
+        Q=view(max_query,1,1); F=view(min_ref,1,1);
+        REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&Q,&F,nullptr,nullptr,1.0,0,
+                                                     nullptr,nullptr,qflag,rflag,pcounts)==N4M_OK);
+        REQUIRE(pcounts[0]==0 && pcounts[1]==1 && qflag[0]==0);
         n4m_context_destroy(ctx);
         std::puts("preflight diagnostics: ok");
         return 0;
