@@ -52,8 +52,11 @@ residuals, with numerical design ranks, `df_term = 0` for an aliased term and
 no test when either design is saturated. Numerical domain of the three kernels: centring before
 scaling, a common power-of-two unit from the centred variation (constant
 columns and offsets are invisible), explicit residual sums of squares for the
-observation and every draw, `N4M_ERR_NUMERICAL_FAILURE` for sums of squares or
-distances not representable as doubles, and size/budget checks before
+observation and every draw, an `int32_t*` exponent output on each function
+(true value = out x 2^exponent; 0 when every positive value is a normal
+double) instead of rounding a positive quantity to 0 or infinity
+(`N4M_ERR_NUMERICAL_FAILURE` only when a value is below 2^-1074 of the largest
+even in the scaled unit), and size/budget checks before
 level-dependent allocations (the Freedman-Lane basis is limited to 32 Mi
 values). Terms above 2048 levels and workloads above 250 million
 operations return `N4M_ERR_UNSUPPORTED`.

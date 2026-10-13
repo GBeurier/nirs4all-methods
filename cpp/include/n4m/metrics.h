@@ -309,17 +309,20 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
  * n4m_stats_permdisp): each column is centred (exact power-of-two prescale,
  * shift to its first row, compensated mean) and all columns are expressed in
  * one power-of-two unit chosen from the CENTRED variation, so constant
- * columns of any amplitude and common offsets do not change any output; a
- * column varying less than 2^-1074 of the most varying one is below the
- * resolution of the distances and ignored. Every sum of squares is a sum of
+ * columns of any amplitude and common offsets do not change any output.
+ * Every sum of squares is a sum of
  * squared terms (residuals are projected explicitly, never obtained as a
  * difference of totals) accumulated in long double, and F and all ratios are
- * formed in the scaled unit. Sums of squares and distances are mapped back
- * with scalbn; when one is not representable as a double (overflow, or a
- * value above the rounding floor n k DBL_EPSILON^2 x total that would
- * underflow to 0) the call returns N4M_ERR_NUMERICAL_FAILURE. Subnormal
- * results are returned rounded. The residual SS keeps a relative accuracy
- * of about DBL_EPSILON max|x - mean| / |residual| (data representation).
+ * formed in the scaled unit, so they never depend on the representability
+ * of the published sums of squares. Published sums of squares (and PERMDISP
+ * distances) carry an exponent: the true value is out * 2^(*ss_exponent).
+ * The exponent is 0, with true values written, when every positive value is
+ * a normal double; otherwise the values are written in the scaled unit and
+ * the exponent is the unit's (so a positive quantity is never published as
+ * 0 or inf). N4M_ERR_NUMERICAL_FAILURE is returned only when a positive
+ * value lies below 2^-1074 of the largest one even in the scaled unit.
+ * A column varying less than 2^-1074 of the most varying one is dropped: its
+ * contribution is below the long double resolution of every sum.
  * Sizes, products and work budgets are checked before any allocation that
  * depends on the number of levels.
  * Requires n >= 2, k >= 1, finite X, at most 2048 term levels, 0 <=
@@ -333,11 +336,11 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
  *   [11] log10 prod_s (n_s!/prod_a n_as!), the number of distinct
  *        within-strata level assignments (an upper bound on distinct outcomes)
  *   [12] Monte Carlo p-value.
- * out_two = {b, executed B}. */
+ * out_two = {b, executed B}; *ss_exponent: true SS = out[0..3] * 2^exponent. */
 N4M_API n4m_status_t n4m_stats_permanova(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
     const int64_t* strata_codes, int32_t n_permutations, uint64_t seed,
-    double* out_thirteen, int64_t* out_two);
+    double* out_thirteen, int64_t* out_two, int32_t* ss_exponent);
 
 /* Partial PERMANOVA of one categorical term given the additive main effects
  * of n_conditions categorical factors, tested by Freedman-Lane permutation of
@@ -365,11 +368,11 @@ N4M_API n4m_status_t n4m_stats_permanova(
  * [5] partial R^2 ss_term/(ss_term+ss_residual) [6] pseudo-F [7] df_term
  * [8] df_residual [9] rank of the reduced design (intercept included)
  * [10] log10(n!), the distinct residual permutations bound [11] p-value.
- * out_two = {b, executed B}. */
+ * out_two = {b, executed B}; *ss_exponent: true SS = out[0..3] * 2^exponent. */
 N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
     const int64_t* condition_codes, int32_t n_conditions, int32_t n_permutations,
-    uint64_t seed, double* out_twelve, int64_t* out_two);
+    uint64_t seed, double* out_twelve, int64_t* out_two, int32_t* ss_exponent);
 
 /* PERMDISP (Anderson 2006), as vegan betadisper(type = "centroid") with
  * permutest: Euclidean distances of the rows of X to their group centroid,
@@ -381,8 +384,7 @@ N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
  * comparison is on F; a tolerance on a monotone transform of F is not
  * equivalent); the between and within SS of each draw are explicit sums of
  * squares around its own group means. Numerical domain as
- * n4m_stats_permanova (distances map back by 2^exponent; distances below
- * n k DBL_EPSILON of the largest are rounding level). Dispersion
+ * n4m_stats_permanova (distances share one published exponent). Dispersion
  * differences do not validate exchangeability or a PERMANOVA. Same input
  * limits as n4m_stats_permanova; work n(2k + 3(B + 1)) <= 250 million
  * operations.
@@ -390,11 +392,13 @@ N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
  * receives one mean per group in ascending code order.
  * out_six: [0] F (NaN with one group, n == groups or zero within SS)
  * [1] df1 = groups-1 [2] df2 = n-groups [3] groups
- * [4] log10(n!/prod n_g!) [5] Monte Carlo p-value; out_two = {b, executed B}. */
+ * [4] log10(n!/prod n_g!) [5] Monte Carlo p-value; out_two = {b, executed B};
+ * *distance_exponent: true distance = out * 2^exponent (both arrays). */
 N4M_API n4m_status_t n4m_stats_permdisp(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
     int32_t n_permutations, uint64_t seed, double* distances,
-    double* group_mean_distances, double* out_six, int64_t* out_two);
+    double* group_mean_distances, double* out_six, int64_t* out_two,
+    int32_t* distance_exponent);
 
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
