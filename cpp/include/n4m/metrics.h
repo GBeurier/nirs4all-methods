@@ -85,6 +85,12 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
  * values, min_cluster_size>=2, 1<=min_samples<=X.rows, selection_method
  * 0=EOM or 1=leaf, allow_single_cluster 0 or 1. Workloads with
  * rows*rows*cols above 2.5e9 return N4M_ERR_UNSUPPORTED.
+ * Overflow guard (ABI 2.20): when max|X| is outside [2^-480, 2^480], X is
+ * scaled by an exact power of two before distances are summed and the MST
+ * weights are scaled back exactly; ordinary data are not scaled. An MST
+ * distance that is not representable in double precision returns
+ * N4M_ERR_UNSUPPORTED, and the result is checked against the output
+ * capacities before anything is written.
  * Tie rule: MST edges of equal mutual-reachability weight are processed in
  * Prim insertion order (stable sort); Prim keeps the lowest row index on
  * equal weights. EOM replaces a node by its children only when their summed
@@ -120,6 +126,58 @@ N4M_API n4m_status_t n4m_cluster_hdbscan(
 N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
     n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
     double* ari);
+
+/* Cluster overlap between two partitions of the same n elements (ABI 2.20).
+ * labels_a[i] in [0, n_clusters_a) or negative (unassigned, e.g. HDBSCAN
+ * noise), likewise labels_b with n_clusters_b; unassigned elements belong to
+ * no cluster. Caller-owned row-major outputs: intersections[i*n_clusters_b+j]
+ * = |A_i ∩ B_j| and jaccard[i*n_clusters_b+j] = |A_i ∩ B_j| / |A_i ∪ B_j|
+ * (NaN when both clusters are empty); sizes_a[i] = |A_i|, sizes_b[j] = |B_j|.
+ * n >= 0, n_clusters_a and n_clusters_b >= 0, and
+ * n_clusters_a * n_clusters_b <= 100 million cells. */
+N4M_API n4m_status_t n4m_cluster_jaccard_matrix(
+    n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
+    int64_t n_clusters_a, int64_t n_clusters_b, double* jaccard, int64_t* intersections,
+    int64_t* sizes_a, int64_t* sizes_b);
+
+/* Rectangular linear sum assignment (ABI 2.20), a port of SciPy 1.18.1
+ * scipy.optimize.linear_sum_assignment (Crouse's shortest augmenting path,
+ * BSD-3-Clause). Minimizes (maximize=0) or maximizes (maximize=1) the summed
+ * cost of a one-to-one assignment of min(rows, cols) row/column pairs. The
+ * cost view is any strided f64 matrix; +inf forbids a pair, NaN and -inf
+ * (after negation when maximizing) return N4M_ERR_INVALID_ARGUMENT, and an
+ * assignment without forbidden pairs that does not exist returns
+ * N4M_ERR_NUMERICAL_FAILURE. Ties follow SciPy exactly (columns scanned from
+ * last to first, an unassigned column wins equal reduced costs; a constant
+ * matrix gives the identity). Caller-owned row_ind/col_ind receive
+ * min(rows, cols) pairs in increasing row order; *n_assigned their count.
+ * rows * cols * min(rows, cols) must not exceed 2.5e9. */
+N4M_API n4m_status_t n4m_linear_sum_assignment(
+    n4m_context_t* ctx, const n4m_matrix_view_t* cost, int32_t maximize, int64_t* row_ind,
+    int64_t* col_ind, int64_t* n_assigned);
+
+/* n_permutations successive uniform permutations of [0, n) (ABI 2.20), equal
+ * to rng = numpy.random.default_rng(seed); [rng.permutation(n) for _ in
+ * range(n_permutations)]: one Methods PCG64 stream (NumPy SeedSequence
+ * expansion) and NumPy's Fisher-Yates over random_interval. out is caller-owned
+ * row-major n_permutations x n. n >= 0, n_permutations >= 0 and
+ * n * n_permutations <= 250 million. */
+N4M_API n4m_status_t n4m_random_permutations(
+    n4m_context_t* ctx, uint64_t seed, int64_t n, int64_t n_permutations, int64_t* out);
+
+/* n draws of a d-variate normal distribution (ABI 2.20), equal to
+ * numpy.random.default_rng(seed).multivariate_normal(mean, cov, size=n,
+ * method="cholesky"): standard normals from the Methods PCG64 Ziggurat stream
+ * (NumPy-identical) fill z row by row, L is the lower Cholesky factor of cov
+ * (only the lower triangle of cov is read, as LAPACK potrf "L"), and
+ * out[i*d+j] = sum_k z[i*d+k] L[j][k] + mean[j]. cov is a d x d strided f64
+ * view (d >= 1), mean has d finite values, out is caller-owned row-major
+ * n x d (n >= 0). A covariance that is not numerically positive definite
+ * returns N4M_ERR_NUMERICAL_FAILURE; regularization is the caller's choice.
+ * n * d * d must not exceed 2.5e9. */
+N4M_API n4m_status_t n4m_random_multivariate_normal(
+    n4m_context_t* ctx, uint64_t seed, const double* mean, const n4m_matrix_view_t* cov,
+    int64_t n, double* out);
 
 /* Smoothing-residual noise proxy along the feature axis. Features are assumed
  * equally spaced. Each row is smoothed by the Methods Savitzky-Golay filter

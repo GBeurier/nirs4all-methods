@@ -54,11 +54,14 @@ NIRS4ALL_DONOR_CATEGORIES = {
 # models mixes reference-backed PLS variants with direct native heads).
 # The Preflight diagnostics (ABI 2.18/2.19) are not registry-wired: their
 # NumPy/SciPy, scikit-learn and R p.adjust reference values are pinned in the
-# native contract tests (cpp/tests/test_preflight.cpp, cpp/tests/test_hdbscan.cpp)
-# and parity/fixtures/hdbscan_v1.json.
+# native contract tests (cpp/tests/test_preflight.cpp, cpp/tests/test_hdbscan.cpp,
+# cpp/tests/test_cluster_matching_null.cpp) and parity/fixtures/hdbscan_v1.json,
+# parity/fixtures/cluster_matching_null_v1.json (ABI 2.20).
 NIRS4ALL_DONOR_METHODS = {
     "diagnostics.adjusted_rand_index",
+    "diagnostics.cluster_jaccard_matrix",
     "diagnostics.hdbscan",
+    "diagnostics.linear_sum_assignment",
     "diagnostics.holm_adjust",
     "diagnostics.preflight_qualification",
     "diagnostics.regression_metrics",

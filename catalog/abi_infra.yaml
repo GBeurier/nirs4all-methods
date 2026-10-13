@@ -215,6 +215,8 @@ infra_abi_symbols:
   - n4m_pipeline_transform_alloc
   - n4m_pls_cross_validate
   - n4m_procedure_run
+  - n4m_random_multivariate_normal
+  - n4m_random_permutations
   - n4m_rng_pcg64_advance
   - n4m_rng_pcg64_create
   - n4m_rng_pcg64_destroy

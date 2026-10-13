@@ -23,6 +23,7 @@ configure_file(
 # ---------------------------------------------------------------------------
 add_library(n4m_core OBJECT
     core/clustering/_vendored/hdbscan.cpp
+    core/optimization/_vendored/rectangular_lsap.cpp
     core/aom_operators.cpp
   core/aom_preprocessing.cpp
   core/aom_operator_pls_stack.cpp

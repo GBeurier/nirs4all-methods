@@ -7,7 +7,8 @@ import {
     preflightFactorAssociation, preflightHolmAdjust,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex,
+    clusterHdbscan, preflightAdjustedRandIndex, clusterJaccardMatrix, linearSumAssignment,
+    randomMultivariateNormal, randomPermutations,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -16,7 +17,7 @@ const relativeNear = (actual, expected) => assert.ok(
     Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected)),
     `${actual} != ${expected}`);
 await loadModule();
-assert.deepEqual(abiVersion(), [2, 19, 0]);
+assert.deepEqual(abiVersion(), [2, 20, 0]);
 const pca = preflightPca({
     data: new Float64Array([2, 1, 2, -1, -2, 1, -2, -1]), rows: 4, cols: 2,
 }, 1);
@@ -157,5 +158,59 @@ for (const c of fixture.cases) {
     c.membership_hex.map(hex).forEach((v, i) => assert.ok(same(got.membership[i], v), c.name));
     c.outlier_scores_hex.map(hex).forEach((v, i) => assert.ok(same(got.outlierScores[i], v), c.name));
     assert.deepEqual(got.tree.map((node) => node.parent), c.tree_parent, c.name);
+}
+// Overflowing squared distances once produced 7 tree nodes for 4 rows.
+const huge = clusterHdbscan({data: new Float64Array([0, 1e155, 2e155, 3e155]), rows: 4, cols: 1},
+    {minClusterSize: 2, minSamples: 2});
+const unit = clusterHdbscan({data: new Float64Array([0, 1, 2, 3]), rows: 4, cols: 1},
+    {minClusterSize: 2, minSamples: 2});
+assert.ok(huge.tree.length <= 4);
+assert.deepEqual(huge.labels, unit.labels);
+assert.throws(() => clusterHdbscan({data: new Float64Array([-1e308, 1e308]), rows: 2, cols: 1},
+    {minClusterSize: 2, minSamples: 2}));
+// Same assignment, Jaccard, normal-draw and Gaussian HDBSCAN gate as the
+// native n4m_cluster_matching_null_tests (NumPy 2.4.6, SciPy 1.18.1).
+const samePartition = (got, want, name) => {
+    const forward = new Map(), backward = new Map();
+    got.forEach((label, i) => {
+        assert.equal(label < 0, want[i] < 0, name);
+        if (label < 0) return;
+        assert.equal(forward.get(label) ?? want[i], want[i], name);
+        assert.equal(backward.get(want[i]) ?? label, label, name);
+        forward.set(label, want[i]); backward.set(want[i], label);
+    });
+};
+const nullFixture = JSON.parse(readFileSync(
+    new URL("../../../parity/fixtures/cluster_matching_null_v1.json", import.meta.url), "utf8"));
+for (const c of nullFixture.cases) {
+    if (c.kind === "assignment") {
+        const cost = {data: new Float64Array(c.cost_hex.map(hex)), rows: c.rows, cols: c.cols};
+        if (c.error) {
+            assert.throws(() => linearSumAssignment(cost, c.maximize === 1), c.name);
+            continue;
+        }
+        const got = linearSumAssignment(cost, c.maximize === 1);
+        assert.deepEqual(got.rowInd, c.row_ind, c.name);
+        assert.deepEqual(got.colInd, c.col_ind, c.name);
+    } else if (c.kind === "jaccard") {
+        const got = clusterJaccardMatrix(c.labels_a, c.labels_b, c.n_clusters_a, c.n_clusters_b);
+        assert.deepEqual(got.intersections, c.intersections, c.name);
+        assert.deepEqual(got.sizesA, c.sizes_a, c.name);
+        assert.deepEqual(got.sizesB, c.sizes_b, c.name);
+        c.jaccard_hex.map(hex).forEach((v, i) =>
+            assert.ok(Number.isNaN(v) ? Number.isNaN(got.jaccard.data[i]) : got.jaccard.data[i] === v, c.name));
+    } else if (c.kind === "normal") {
+        const got = randomMultivariateNormal(new Float64Array(c.mean_hex.map(hex)),
+            {data: new Float64Array(c.cov_hex.map(hex)), rows: c.d, cols: c.d}, c.n, BigInt(c.seed));
+        c.draws_hex.map(hex).forEach((v, i) => relativeNear(got.data[i], v));
+    } else if (c.kind === "permutations") {
+        assert.deepEqual(randomPermutations(BigInt(c.seed), c.n, c.n_permutations), c.draws, c.name);
+    } else {
+        const x = randomMultivariateNormal(new Float64Array(c.d),
+            {data: new Float64Array(c.cov_hex.map(hex)), rows: c.d, cols: c.d}, c.n, BigInt(c.seed));
+        const got = clusterHdbscan(x, {minClusterSize: c.min_cluster_size, minSamples: c.min_samples});
+        assert.equal(got.nClusters, c.n_clusters, c.name);
+        samePartition(got.labels, c.labels, c.name);
+    }
 }
 console.log("JS/WASM Preflight diagnostics passed");

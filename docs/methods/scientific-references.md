@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **227**
+- Curated records: **229**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `09a6fe945c7d274a7da54dfaa6bd175c8d10fda963c853aeb190ca509a0df549`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `9c8fd5de1102b51a178fc5ea04c36da35e49e61a6ceeed710ab28453af173ce2`
 
 ## References by documentation page
 
@@ -430,6 +430,12 @@ Hubert & Arabie (1985), *Comparing partitions*, Journal of Classification 2, 193
 
 **Provenance:** https://doi.org/10.1007/BF01908075; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_hdbscan.cpp
 
+### [`diagnostics_cluster_jaccard_matrix`](diagnostics_cluster_jaccard_matrix.md) — Jaccard overlap between the clusters of two partitions
+
+Jaccard (1912), *The distribution of the flora in the alpine zone*, New Phytologist 11(2), 37–50, https://doi.org/10.1111/j.1469-8137.1912.tb05611.x; Hennig (2007), *Cluster-wise assessment of cluster stability*, Computational Statistics & Data Analysis 52(1), 258–271, https://doi.org/10.1016/j.csda.2006.11.025.
+
+**Provenance:** https://doi.org/10.1111/j.1469-8137.1912.tb05611.x; https://doi.org/10.1016/j.csda.2006.11.025; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/cluster_matching_null_v1.json
+
 ### [`diagnostics_hdbscan`](diagnostics_hdbscan.md) — HDBSCAN* density-based hierarchical clustering
 
 Campello, Moulavi & Sander (2013), *Density-Based Clustering Based on Hierarchical Density Estimates*, PAKDD 2013, LNCS 7819, 160–172, https://doi.org/10.1007/978-3-642-37456-2_14; McInnes & Healy (2017), *Accelerated Hierarchical Density Based Clustering*, ICDMW 2017, 33–42, https://doi.org/10.1109/ICDMW.2017.12.
@@ -441,6 +447,12 @@ Campello, Moulavi & Sander (2013), *Density-Based Clustering Based on Hierarchic
 Holm (1979), *A Simple Sequentially Rejective Multiple Test Procedure*, Scandinavian Journal of Statistics 6(2), 65–70, https://www.jstor.org/stable/4615733.
 
 **Provenance:** https://www.jstor.org/stable/4615733; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
+
+### [`diagnostics_linear_sum_assignment`](diagnostics_linear_sum_assignment.md) — Rectangular linear sum assignment
+
+Crouse (2016), *On implementing 2D rectangular assignment algorithms*, IEEE Transactions on Aerospace and Electronic Systems 52(4), 1679–1696, https://doi.org/10.1109/TAES.2016.140952; Kuhn (1955), *The Hungarian method for the assignment problem*, Naval Research Logistics Quarterly 2, 83–97, https://doi.org/10.1002/nav.3800020109.
+
+**Provenance:** https://doi.org/10.1109/TAES.2016.140952; https://doi.org/10.1002/nav.3800020109; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/optimization/_vendored/rectangular_lsap.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/cluster_matching_null_v1.json
 
 ### [`diagnostics_pls_diagnostics`](diagnostics_pls_diagnostics.md) — PLS model diagnostics: Hotelling T², Q residuals, and DModX
 

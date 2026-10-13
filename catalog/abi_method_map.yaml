@@ -82,6 +82,8 @@ method_prefix:
   diagnostics.holm_adjust: n4m_preflight_holm_adjust
   diagnostics.adjusted_rand_index: n4m_preflight_adjusted_rand_index
   diagnostics.hdbscan: n4m_cluster_hdbscan
+  diagnostics.cluster_jaccard_matrix: n4m_cluster_jaccard_matrix
+  diagnostics.linear_sum_assignment: n4m_linear_sum_assignment
 
   # ---- filters ----
   filters.composite: n4m_outlier_detection_composite

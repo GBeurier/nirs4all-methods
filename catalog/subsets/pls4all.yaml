@@ -63,6 +63,8 @@ excludes:
     - "diagnostics.holm_adjust"
     - "diagnostics.adjusted_rand_index"
     - "diagnostics.hdbscan"
+    - "diagnostics.cluster_jaccard_matrix"
+    - "diagnostics.linear_sum_assignment"
     - "preprocessing.signal_conversion.*"
     - "preprocessing.specialized.*"
 audience: |

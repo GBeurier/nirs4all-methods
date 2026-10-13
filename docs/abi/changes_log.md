@@ -1,5 +1,28 @@
 # ABI — Changes Log
 
+## 2026-10-13 — ABI 2.20.0: cluster matching and Gaussian null kernels (unreleased)
+
+Add three caller-buffer operations in `n4m/metrics.h`. 2.19 symbols are unchanged
+and no serialized format changes. `n4m_cluster_jaccard_matrix` writes the
+row-major intersection counts and Jaccard indices of every cluster pair of two
+labelings (negative labels unassigned; NaN when both clusters are empty) and the
+cluster sizes; it refuses more than 100 million cells. `n4m_linear_sum_assignment`
+is a port of SciPy 1.18.1 `linear_sum_assignment` (minimize or maximize, +inf
+forbids a pair, NaN/-inf invalid, infeasible -> `N4M_ERR_NUMERICAL_FAILURE`,
+SciPy tie order, pairs in increasing row order). `n4m_random_multivariate_normal`
+equals NumPy `default_rng(seed).multivariate_normal(mean, cov, size=n,
+method="cholesky")`: PCG64 Ziggurat normals row by row times the lower Cholesky
+factor of the lower triangle of `cov`; a covariance that is not numerically
+positive definite returns `N4M_ERR_NUMERICAL_FAILURE`. `n4m_random_permutations`
+writes successive `default_rng(seed).permutation(n)` draws of one PCG64 stream.
+
+Behaviour fix in `n4m_cluster_hdbscan` (signature unchanged): finite inputs whose
+squared distances overflowed made Prim emit self-edges and a condensed tree larger
+than the documented `X.rows` capacity, so the call wrote past caller buffers. Data
+with `max|X|` outside `[2^-480, 2^480]` are now scaled by an exact power of two,
+unrepresentable MST distances return `N4M_ERR_UNSUPPORTED`, and size invariants are
+checked before any output is written.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged

@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **220**. Additional Python reference
+_Total catalogued native methods_: **222**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -298,6 +298,13 @@ Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-b
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
 | [`hdbscan`](diagnostics_hdbscan.md) | `n4m.cluster.hdbscan` | `n4m.cluster` | C |
+| [`jaccard_matrix`](diagnostics_cluster_jaccard_matrix.md) | `n4m.cluster.jaccard_matrix` | `n4m.cluster` | C |
+
+## optimize
+
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`linear_sum_assignment`](diagnostics_linear_sum_assignment.md) | `n4m.optimize.linear_sum_assignment` | `n4m.optimize` | C |
 
 ## utilities
 

@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <limits>
 #include <numeric>
+#include <utility>
 
 namespace n4m::core::hdbscan {
 namespace {
@@ -125,6 +126,7 @@ std::vector<Merge> single_linkage(std::vector<Edge> mst, std::size_t n) {
     std::size_t next_label = n;
     for (std::size_t i = 0; i + 1 < n; ++i) {
         const std::size_t a = find(mst[i].current), b = find(mst[i].next);
+        if (a == b) return {};  // a cycle: the caller rejects the empty linkage
         merges[i] = {a, b, mst[i].distance, size[a] + size[b]};
         parent[a] = parent[b] = next_label;
         size[next_label] = size[a] + size[b];
@@ -197,9 +199,40 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
     const auto n = static_cast<std::size_t>(n_rows);
     const auto p = static_cast<std::size_t>(n_cols);
     const auto min_size = static_cast<std::size_t>(params.min_cluster_size);
+    // Overflow guard (not in scikit-learn). Data whose largest magnitude is
+    // outside [2^-480, 2^480] is scaled by an exact power of two so that every
+    // sum of squared differences stays finite; MST weights are scaled back
+    // exactly. Ordinary data are not scaled, so results stay bit-identical to
+    // the reference. A distance that is not representable after scaling back
+    // is refused rather than turned into infinity.
+    double largest = 0.0;
+    for (std::size_t i = 0; i < n * p; ++i) largest = std::max(largest, std::fabs(data[i]));
+    int exponent = 0;
+    if (largest > 0.0 && (largest > std::ldexp(1.0, 480) || largest < std::ldexp(1.0, -480)))
+        std::frexp(largest, &exponent);
+    std::vector<double> scaled;
+    const double* x = data;
+    if (exponent != 0) {
+        scaled.assign(data, data + n * p);
+        for (double& v : scaled) v = std::ldexp(v, -exponent);
+        x = scaled.data();
+    }
     const std::vector<double> core =
-        core_distances(data, n, p, static_cast<std::size_t>(params.min_samples));
-    const std::vector<Merge> merges = single_linkage(prim_mst(data, n, p, core), n);
+        core_distances(x, n, p, static_cast<std::size_t>(params.min_samples));
+    std::vector<Edge> mst = prim_mst(x, n, p, core);
+    const auto failure = [](Error error) {
+        Result failed;
+        failed.error = error;
+        return failed;
+    };
+    for (Edge& e : mst) {
+        e.distance = std::ldexp(e.distance, exponent);
+        if (!std::isfinite(e.distance)) return failure(Error::unrepresentable_distance);
+        if (e.current >= n || e.next >= n || e.current == e.next)
+            return failure(Error::invalid_tree);
+    }
+    const std::vector<Merge> merges = single_linkage(std::move(mst), n);
+    if (merges.size() != n - 1) return failure(Error::invalid_tree);
     std::size_t k = 0;
     const std::vector<Row> rows = condense(merges, n, min_size, k);
 
