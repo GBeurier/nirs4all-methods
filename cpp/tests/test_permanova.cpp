@@ -191,6 +191,194 @@ void gate_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
     std::printf("permanova gate %-32s b=%lld ok\n", name.c_str(),
                 static_cast<long long>(got.counts[0]));
 }
+
+// ---------------------------------------------------------------------------
+// Systematic robustness properties (magnitude sweep, translation, constant
+// columns). Every result is either correct or an explicit
+// N4M_ERR_NUMERICAL_FAILURE; never a silently wrong number.
+// ---------------------------------------------------------------------------
+struct Outputs {
+    n4m_status_t status = N4M_OK;
+    std::vector<double> ss;     // sums of squares or distances (scale with 2^power k)
+    std::vector<double> ratios; // scale invariant values (R^2, F, df, p)
+    std::vector<int64_t> counts;
+};
+
+// 12 rows: term 3 levels x strata 2 levels (unbalanced), integer coordinates.
+const int64_t kTerm[12] = {0, 0, 1, 1, 2, 2, 0, 1, 1, 2, 2, 2};
+const int64_t kStrata[12] = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1};
+const double kBase[24] = {3, 1, 5, 2, 9, 4, 11, 7, 13, 12, 15, 9,
+                          4, 6, 10, 3, 12, 8, 16, 14, 17, 10, 21, 11};
+
+Outputs run_kernel(n4m_context_t* ctx, int which, std::vector<double> x, int64_t cols) {
+    Outputs o;
+    n4m_matrix_view_t X{};
+    REQUIRE(n4m_matrix_view_init_rowmajor(&X, x.data(), 12, cols, N4M_DTYPE_F64) == N4M_OK);
+    int64_t counts[2] = {};
+    if (which == 0) {
+        double v[13];
+        o.status = n4m_stats_permanova(ctx, &X, kTerm, kStrata, 199, 7, v, counts);
+        o.ss = {v[0], v[1], v[2], v[3]};
+        o.ratios = {v[4], v[5], v[6], v[7], v[8], v[12]};
+    } else if (which == 1) {
+        double v[12];
+        o.status = n4m_stats_permanova_freedman_lane(ctx, &X, kTerm, kStrata, 1, 199, 7, v, counts);
+        o.ss = {v[0], v[1], v[2], v[3]};
+        o.ratios = {v[4], v[5], v[6], v[7], v[8], v[9], v[11]};
+    } else {
+        std::vector<double> dist(12), means(12);
+        double v[6];
+        o.status = n4m_stats_permdisp(ctx, &X, kTerm, 199, 7, dist.data(), means.data(), v, counts);
+        o.ss = dist;
+        o.ss.insert(o.ss.end(), means.begin(), means.begin() + 3);
+        o.ratios = {v[0], v[1], v[2], v[5]};
+    }
+    o.counts = {counts[0], counts[1]};
+    return o;
+}
+
+bool same_ratio(double got, double want) {
+    if (std::isnan(want)) return std::isnan(got);
+    return std::abs(got - want) <= 1e-9 * std::max(1.0, std::abs(want));
+}
+
+// Scaled data must reproduce the base ratios and counts, with sums of
+// squares (power 2) or distances (power 1) scaled by 2^(power*k) when
+// representable, and an explicit numerical failure otherwise.
+void check_scaled(const Outputs& base, const Outputs& got, int power, int k, const char* tag) {
+    bool representable = true;
+    for (double v : base.ss) {
+        const long double e = std::ldexp(static_cast<long double>(v), power * k);
+        if (v > 0.0 && (e > static_cast<long double>(std::numeric_limits<double>::max()) ||
+                        e < static_cast<long double>(std::numeric_limits<double>::denorm_min()) / 2))
+            representable = false;
+    }
+    if (!representable) {
+        if (got.status != N4M_ERR_NUMERICAL_FAILURE)
+            throw std::runtime_error(std::string(tag) + " expected numerical failure at k=" +
+                                     std::to_string(k));
+        return;
+    }
+    if (got.status != N4M_OK)
+        throw std::runtime_error(std::string(tag) + " unexpected status at k=" + std::to_string(k));
+    for (size_t i = 0; i < base.ss.size(); ++i) {
+        const long double e = std::ldexp(static_cast<long double>(base.ss[i]), power * k);
+        const long double err = std::abs(static_cast<long double>(got.ss[i]) - e);
+        const bool ok = e >= static_cast<long double>(std::numeric_limits<double>::min())
+            ? err <= 1e-9L * e
+            : err <= 1e-9L * e + static_cast<long double>(std::numeric_limits<double>::denorm_min());
+        if (!ok || (base.ss[i] > 0.0 && !(got.ss[i] > 0.0)))
+            throw std::runtime_error(std::string(tag) + " SS mismatch at k=" + std::to_string(k));
+    }
+    for (size_t i = 0; i < base.ratios.size(); ++i)
+        if (!same_ratio(got.ratios[i], base.ratios[i]))
+            throw std::runtime_error(std::string(tag) + " ratio mismatch at k=" + std::to_string(k));
+    if (got.counts != base.counts)
+        throw std::runtime_error(std::string(tag) + " count mismatch at k=" + std::to_string(k));
+}
+
+void robustness_sweep(n4m_context_t* ctx) {
+    const char* names[3] = {"permanova", "freedman_lane", "permdisp"};
+    for (int which = 0; which < 3; ++which) {
+        const int power = which == 2 ? 1 : 2;
+        const std::vector<double> base_x(kBase, kBase + 24);
+        const Outputs base = run_kernel(ctx, which, base_x, 2);
+        REQUIRE(base.status == N4M_OK && base.counts[1] == 199);
+        // Magnitude sweep 2^k (integer data < 2^5: exact down to 2^-1069).
+        for (int k : {-1069, -1022, -500, -100, 0, 100, 500, 1000}) {
+            std::vector<double> x(base_x);
+            for (double& v : x) v = std::ldexp(v, k);
+            check_scaled(base, run_kernel(ctx, which, x, 2), power, k, names[which]);
+        }
+        // Translation: offsets exactly representable with the data spacing.
+        // 1e16 with even data (spacing 2 = ulp); 2^300 with data * 2^248.
+        for (const auto& [offset, k] : {std::pair<double, int>{1e16, 1},
+                                        std::pair<double, int>{std::ldexp(1.0, 300), 248}}) {
+            std::vector<double> x(base_x);
+            for (double& v : x) v = offset + std::ldexp(v, k);
+            check_scaled(base, run_kernel(ctx, which, x, 2), power, k, names[which]);
+        }
+        // 1e300 + data spaced by its ulp (2^944): the sums of squares exceed
+        // DBL_MAX, so the only acceptable answer is an explicit failure.
+        {
+            std::vector<double> x(base_x);
+            for (double& v : x) v = 1e300 + std::ldexp(v, 944);
+            check_scaled(base, run_kernel(ctx, which, x, 2), power, 944, names[which]);
+        }
+        // Constant columns of huge, tiny and opposite amplitude change nothing.
+        {
+            std::vector<double> x;
+            for (int i = 0; i < 12; ++i) {
+                x.push_back(1e308);
+                x.push_back(kBase[2 * i]);
+                x.push_back(-1.7e308);
+                x.push_back(kBase[2 * i + 1]);
+                x.push_back(4.9e-324);
+            }
+            check_scaled(base, run_kernel(ctx, which, x, 5), power, 0, names[which]);
+        }
+    }
+    // Astra P0 constant column: SS 58 next to a constant 1e308 column.
+    double c2[12] = {1e308, 1, 1e308, 2, 1e308, 3, 1e308, 7, 1e308, 8, 1e308, 9};
+    int64_t g[6] = {4, 4, 4, -9, -9, -9};
+    n4m_matrix_view_t C{};
+    REQUIRE(n4m_matrix_view_init_rowmajor(&C, c2, 6, 2, N4M_DTYPE_F64) == N4M_OK);
+    Permanova r{};
+    REQUIRE(permanova(ctx, C, g, nullptr, 0, 1, r) == N4M_OK);
+    REQUIRE(near(r.v[0], 58) && near(r.v[2], 54) && near(r.v[6], 54));
+}
+
+// Astra P0 cancellation: balanced 2x2, 4 rows per cell, y = 10B + 3A +
+// 1e-10 * {-3,-1,1,3}. The residual SS (~8e-19) must come from explicit
+// residuals, not SS_reduced_residual - SS_term. Reference: long double
+// within-cell deviations of the stored doubles (the additive model fits the
+// cell means exactly here).
+void cancellation_case(n4m_context_t* ctx) {
+    double y[16];
+    int64_t a[16], b[16];
+    const double dev[4] = {-3e-10, -1e-10, 1e-10, 3e-10};
+    for (int i = 0; i < 16; ++i) {
+        a[i] = (i / 4) % 2;
+        b[i] = i / 8;
+        y[i] = 10.0 * static_cast<double>(b[i]) + 3.0 * static_cast<double>(a[i]) + dev[i % 4];
+    }
+    long double rss = 0.0L;
+    for (int c = 0; c < 4; ++c) {
+        long double m = 0.0L;
+        for (int i = 0; i < 4; ++i) m += y[4 * c + i];
+        m /= 4.0L;
+        for (int i = 0; i < 4; ++i) rss += (y[4 * c + i] - m) * (y[4 * c + i] - m);
+    }
+    REQUIRE(rss > 7e-19L && rss < 9e-19L);
+    const long double f = 36.0L * 13.0L / rss;  // SS_A = 16 * 1.5^2 = 36 on 1 df
+    auto Y = view(y, 16, 1);
+    double fl[12];
+    int64_t counts[2];
+    REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, a, b, 1, 99, 3, fl, counts) == N4M_OK);
+    REQUIRE(fl[3] > 0.0 && std::abs(fl[3] - static_cast<double>(rss)) <= 1e-3 * static_cast<double>(rss));
+    REQUIRE(std::isfinite(fl[6]) && std::abs(fl[6] - static_cast<double>(f)) <= 1e-3 * static_cast<double>(f));
+    REQUIRE(counts[0] == 0 && counts[1] == 99);
+    Permanova r{};
+    REQUIRE(permanova(ctx, Y, a, b, 99, 3, r) == N4M_OK);
+    REQUIRE(r.v[3] > 0.0 && std::abs(r.v[3] - static_cast<double>(rss)) <= 1e-3 * static_cast<double>(rss));
+    REQUIRE(std::isfinite(r.v[6]) && std::abs(r.v[6] - static_cast<double>(f)) <= 1e-3 * static_cast<double>(f));
+}
+
+// Size checks precede dense allocation: 20000 levels are refused at once.
+void size_limits(n4m_context_t* ctx) {
+    std::vector<double> x(20000);
+    std::vector<int64_t> levels(20000), term(20000);
+    for (size_t i = 0; i < x.size(); ++i) {
+        x[i] = static_cast<double>(i % 7);
+        levels[i] = static_cast<int64_t>(i);
+        term[i] = static_cast<int64_t>(i % 2);
+    }
+    auto X = view(x.data(), 20000, 1);
+    double fl[12];
+    int64_t counts[2];
+    REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term.data(), levels.data(), 1, 0, 1, fl,
+                                              counts) == N4M_ERR_UNSUPPORTED);
+}
 }  // namespace
 
 int main() {
@@ -317,6 +505,10 @@ int main() {
         int64_t one_group[5] = {1, 1, 1, 1, 1};
         REQUIRE(n4m_stats_permdisp(ctx, &D, one_group, 99, 1, dist, means, out6, counts) == N4M_OK);
         REQUIRE(std::isnan(out6[0]) && std::isnan(out6[5]) && counts[1] == 0);
+
+        robustness_sweep(ctx);
+        cancellation_case(ctx);
+        size_limits(ctx);
 
         // Reference gate.
         const std::string s = slurp(std::string(N4M_PARITY_FIXTURE_DIR) + "/permanova_v1.json");
