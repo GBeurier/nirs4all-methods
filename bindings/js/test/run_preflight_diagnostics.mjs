@@ -23,6 +23,17 @@ const pca = preflightPca({
 near(pca.eigenvalues[0], 16 / 3);
 near(pca.fullMoments[0], 20 / 3);
 near(pca.fullMoments[1], 272 / 9);
+// +-1 spectra, row 2 = -row 0 (rank-deficient): used to fail to converge.
+// Eigenvalues are NumPy 2.2.6 eigvalsh goldens (same case as test_preflight.cpp).
+const pm1 = preflightPca({
+    data: new Float64Array([1, -1, -1, 1, -1, -1, -1, -1, 1, 1, -1, -1,
+                            -1, 1, 1, -1, 1, 1, 1, 1, -1, -1, -1, 1]),
+    rows: 4, cols: 6,
+}, 3);
+near(pm1.eigenvalues[0], 4.451454311908496);
+near(pm1.eigenvalues[1], 2.943891106099754);
+near(pm1.eigenvalues[2], 0.2713212486584137);
+near(pm1.fullMoments[0], 23 / 3);
 assert.equal(pca.scores.rows, 4);
 assert.equal(pca.loadings.cols, 2);
 const repeat = preflightRepeatability({

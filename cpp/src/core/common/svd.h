@@ -44,6 +44,11 @@ extern "C" {
  * broken by smallest index). Vt[i, :] is flipped along with U[:, i] to
  * preserve A = U @ diag(S) @ Vt.
  *
+ * Rank-deficient inputs: a singular value that is zero, or a null-space
+ * direction at rounding level (column norm <= 4 * DBL_EPSILON * ||A||_F)
+ * that the Jacobi rotations cannot orthogonalise, is returned as exactly 0
+ * with a zero U column (zero Vt row for m < n).
+ *
  * The input A is consumed (modified in place) — pass a copy if the
  * caller needs to keep the original.
  *
