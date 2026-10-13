@@ -23,19 +23,23 @@ rank from ``numpy.linalg.matrix_rank``:
 * PERMDISP is vegan ``betadisper(type = "centroid")`` + ``permutest``:
   Euclidean distances to group centroids, one-way ANOVA F (cross-checked with
   scipy ``f_oneway`` and scikit-bio ``permdisp(test="centroid")``), and a
-  permutation of the ANOVA residuals of the distances.
+  permutation test transcribed from vegan ``permutest.betadisper``: the
+  residuals of ``lm(distances ~ group)`` are permuted, refitted by least
+  squares (``qr.fitted``/``qr.resid`` here ``lstsq``), and
+  ``F = (mss/(p-1)) / (rss/(n-p))`` is counted when ``F >= F0 - EPS`` with
+  ``EPS = sqrt(.Machine$double.eps)``.
 
 Monte Carlo draws reproduce the native convention with
 ``rng = numpy.random.default_rng(seed)``. PERMANOVA: for each draw, each
 stratum in ascending code order (all rows when unstratified) takes
 ``q = rng.permutation(n_s)`` over its rows in ascending order, and row
-``idx[j]`` receives the data of row ``idx[q[j]]``. The statistic is the
-partial R^2 ss_term / (ss_term + ss_residual), counted when
-``>= observed - sqrt(eps)``. PERMDISP: ``perm = rng.permutation(n)``; row i
-receives residual ``r[perm[i]]``; the statistic is between-group SS of the
-permuted residuals over their total SS, compared with the observed
-B / (B + W) of the distances under the same tolerance (equivalent to vegan's
-``F_perm >= F_obs``).
+``idx[j]`` receives the data of row ``idx[q[j]]``. As vegan ``anova.cca``
+(adonis2), a draw counts when its pseudo-F ``>= F_obs - sqrt(eps)`` (+inf
+when its residual SS is zero); no test runs when the observed pseudo-F is
+undefined. PERMDISP: ``perm = rng.permutation(n)``; row i receives residual
+``r[perm[i]]``. Both comparisons are on the F scale, never on a monotone
+transform, because an additive tolerance is not invariant under it (case
+``permdisp_boundary``).
 
 Usage: python parity/generators/permanova_v1.py [output.json]
 """
@@ -108,7 +112,7 @@ def log10_distinct(term: np.ndarray, strata: np.ndarray) -> float:
 
 def permanova_counts(X, term, strata, seed) -> int:
     obs = decompose(X, term, strata)
-    if not obs["defined"]:
+    if not np.isfinite(obs["pseudo_f"]):
         return 0
     rng = np.random.default_rng(seed)
     blocks = [np.flatnonzero(strata == s) for s in np.unique(strata)]
@@ -117,7 +121,9 @@ def permanova_counts(X, term, strata, seed) -> int:
         perm = np.arange(X.shape[0])
         for idx in blocks:
             perm[idx] = idx[rng.permutation(idx.size)]
-        if decompose(X[perm], term, strata)["partial_r2"] >= obs["partial_r2"] - TOL:
+        d = decompose(X[perm], term, strata)
+        f = (d["ss_term"] / d["df_term"]) / (d["ss_residual"] / d["df_residual"]) if d["ss_residual"] > 0 else np.inf
+        if f >= obs["pseudo_f"] - TOL:
             b += 1
     return b
 
@@ -136,23 +142,37 @@ def permdisp_reference(X: np.ndarray, groups: np.ndarray, seed: int) -> dict:
     n, k = z.size, levels.size
     f = (between / (k - 1)) / (within / (n - k))
     scipy_f = float(f_oneway(*[z[groups == g] for g in levels]).statistic)
-    assert abs(scipy_f - f) <= 1e-12 * f, (scipy_f, f)
+    # SciPy forms SS_within by subtraction; on the near-singular boundary case
+    # it loses ~1e-5 relative, so the cross-check tolerance is 1e-4. The
+    # recorded F uses the residuals directly.
+    assert abs(scipy_f - f) <= 1e-4 * f, (scipy_f, f)
+    # vegan permutest.betadisper, transcribed: permute residuals, refit.
+    design = (groups[:, None] == levels[None, :]).astype(np.float64)
+    rank = int(np.linalg.matrix_rank(design))
     rng = np.random.default_rng(seed)
-    u0 = between / (between + within)
-    total = float(np.sum((resid - resid.mean()) ** 2))
     b = 0
     for _ in range(PERMUTATIONS):
-        r = resid[rng.permutation(n)]
-        sums = np.array([r[groups == g].sum() for g in levels])
-        counts = np.array([np.sum(groups == g) for g in levels])
-        bp = float(np.sum(sums**2 / counts) - r.sum() ** 2 / n)
-        if bp / total >= u0 - TOL:
+        perm_resid = resid[rng.permutation(n)]
+        beta, *_ = np.linalg.lstsq(design, perm_resid, rcond=None)
+        fit = design @ beta
+        mss = float(np.sum((fit - fit.mean()) ** 2))
+        rss = float(np.sum((perm_resid - fit) ** 2))
+        f_perm = (mss / (rank - 1)) / (rss / (n - rank)) if rss > 0 else np.inf
+        if f_perm >= f - TOL:
             b += 1
+    # Informational: the rejected rule, mss/total >= B/(B+W) - TOL on U.
+    rng = np.random.default_rng(seed)
+    total = float(np.sum((resid - resid.mean()) ** 2))
+    b_u = 0
+    for _ in range(PERMUTATIONS):
+        r = resid[rng.permutation(n)]
+        bp = sum(r[groups == g].sum() ** 2 / np.sum(groups == g) for g in levels) - r.sum() ** 2 / n
+        b_u += bp / total >= between / (between + within) - TOL
     from math import lgamma, log
 
     distinct = (lgamma(n + 1) - sum(lgamma(int(c) + 1) for c in np.unique(groups, return_counts=True)[1])) / log(10.0)
     return {"distances": z, "group_mean_distances": means, "f": f, "df1": k - 1, "df2": n - k,
-            "n_groups": k, "log10_distinct": distinct, "b": b}
+            "n_groups": k, "log10_distinct": distinct, "b": b, "b_u_rule": int(b_u)}
 
 
 def skbio_checks(X: np.ndarray, term: np.ndarray, ref: dict, disp: dict | None) -> dict:
@@ -161,14 +181,14 @@ def skbio_checks(X: np.ndarray, term: np.ndarray, ref: dict, disp: dict | None) 
     dm = DistanceMatrix(d, ids)
     grouping = [str(t) for t in term]
     out = {"skbio_permanova_pseudo_f": float(permanova(dm, grouping, permutations=0)["test statistic"])}
-    assert abs(out["skbio_permanova_pseudo_f"] - ref["pseudo_f"]) <= 1e-9 * ref["pseudo_f"], out
+    assert abs(out["skbio_permanova_pseudo_f"] - ref["pseudo_f"]) <= 1e-9 * max(1.0, ref["pseudo_f"]), out
     if disp is not None:
         out["skbio_permdisp_f"] = float(permdisp(dm, grouping, test="centroid", permutations=0)["test statistic"])
-        assert abs(out["skbio_permdisp_f"] - disp["f"]) <= 1e-9 * disp["f"], out
+        assert abs(out["skbio_permdisp_f"] - disp["f"]) <= 1e-4 * disp["f"], out
     return out
 
 
-def make_case(name, X, term, strata, seed, with_disp, note):
+def make_case(name, X, term, strata, seed, with_disp, note, skbio=True):
     has_strata = strata is not None
     s = strata if has_strata else np.zeros(X.shape[0], dtype=np.int64)
     ref = decompose(X, term, s)
@@ -195,8 +215,9 @@ def make_case(name, X, term, strata, seed, with_disp, note):
             "f": hexd([disp["f"]])[0], "df1": disp["df1"], "df2": disp["df2"],
             "n_groups": disp["n_groups"], "log10_distinct": hexd([disp["log10_distinct"]])[0],
             "b": disp["b"],
+            "b_if_compared_on_u_informational": disp["b_u_rule"],
         }
-    if not has_strata and ref["defined"]:
+    if skbio and not has_strata and ref["defined"]:
         case["informational"] = skbio_checks(X, term, ref, disp)
     return case
 
@@ -246,6 +267,15 @@ def main() -> None:
     X = term[:, None] * np.array([0.35, 0.05, -0.1]) + rng.normal(scale=0.8, size=(term.size, 3))
     cases.append(make_case("singleton_and_constant_strata", X, term, strata, 16, False,
                            "stratum 0 has one row, stratum 1 a constant term"))
+
+    # Astra review: near U = B/(B+W) = 1 an additive tolerance on U merges
+    # very different F values; vegan compares F. Expected b = 0 (U rule: 22).
+    X = np.array([-1001.0, -999.0, 999.0, 1001.0,
+                  -1000001.0001, -999998.9999, 999998.9999, 1000001.0001])[:, None]
+    term = np.repeat([0, 1], 4).astype(np.int64)
+    cases.append(make_case("permdisp_boundary", X, term, None, 0, True,
+                           "PERMDISP seed 1: F comparison (vegan) versus U comparison",
+                           skbio=False))  # scikit-bio PCoA rejects this rank-1 matrix
 
     # Equal centroids, unequal spreads: dispersion differs, location does not.
     term = np.repeat([1, 2, 3], 10).astype(np.int64)

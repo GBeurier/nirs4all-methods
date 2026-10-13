@@ -4,7 +4,7 @@ _Namespace_: **`n4m.stats`** · _Fully-qualified_: `n4m.stats.permanova` · _Cat
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_stats_permanova`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L319). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_stats_permanova`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L323). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -18,7 +18,7 @@ Anderson (2001), *A new method for non-parametric multivariate analysis of varia
 
 ### Mathematical principle
 
-With Euclidean distances the PERMANOVA sums of squares are traces of projections of the centered coordinates. For a term given strata in the additive model strata + term, $SS_{term}=SS(strata+term)-SS(strata)$ is computed from the reduced normal equations $M_{ab}=\delta_{ab}n_a-\sum_s n_{as}n_{bs}/n_s$ after dropping one reference level per connected component of the level-stratum occupancy graph, whose count $c$ gives the identifiable df $=$ levels $-\,c$ (0 when the term is aliased with the strata). pseudo-$F=(SS_{term}/df_{term})/(SS_{res}/df_{res})$. The Monte Carlo test permutes rows only inside their stratum and reports $(1+b)/(1+B)$.
+With Euclidean distances the PERMANOVA sums of squares are traces of projections of the centered coordinates. For a term given strata in the additive model strata + term, $SS_{term}=SS(strata+term)-SS(strata)$ is computed from the reduced normal equations $M_{ab}=\delta_{ab}n_a-\sum_s n_{as}n_{bs}/n_s$ after dropping one reference level per connected component of the level-stratum occupancy graph, whose count $c$ gives the identifiable df $=$ levels $-\,c$ (0 when the term is aliased with the strata). pseudo-$F=(SS_{term}/df_{term})/(SS_{res}/df_{res})$. The Monte Carlo test permutes rows only inside their stratum, counts permuted $F\ge F_{obs}-\sqrt{\epsilon}$ as vegan `anova.cca`, and reports $(1+b)/(1+B)$.
 
 ### Appropriate uses
 

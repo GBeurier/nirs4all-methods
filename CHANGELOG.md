@@ -31,14 +31,19 @@ ABI 2.20.0. No model-state serialization format changes.
   Carlo test) and `n4m_stats_permdisp` (vegan `betadisper(type =
   "centroid")` + `permutest` residual permutation). Both reuse the PCG64
   permutation helper (`numpy.random.default_rng` parity) and are wrapped in
-  JS/WASM as `statsPermanova` and `statsPermdisp`.
+  JS/WASM as `statsPermanova` and `statsPermdisp`. As in vegan, both count
+  permuted `F >= F_obs - sqrt(DBL_EPSILON)` on the F scale. Inputs are scaled
+  by an exact power of two and centred per column; sums of squares are mapped
+  back with `scalbn`, so subnormal and near-`DBL_MAX` results stay
+  representable.
 - Reference gate `parity/fixtures/permanova_v1.json`
   (`parity/generators/permanova_v1.py`, `n4m_permanova_tests`): NumPy 2.2.6
   least squares on full one-hot designs, SciPy 1.15.3 `f_oneway`,
   scikit-bio 0.7.4 `permanova`/`permdisp` and NumPy permutation counts, on
-  free, conditional, partially aliased, fully aliased, singleton-stratum and
-  dispersion-only cases, plus hand-derived closed forms. The reference
-  packages are test-only.
+  free, conditional, partially aliased, fully aliased, singleton-stratum,
+  dispersion-only and PERMDISP F-boundary cases (vegan `permutest.betadisper`
+  transcribed as the counting oracle), plus hand-derived closed forms and
+  1e-162 / 1e155-offset scale cases. The reference packages are test-only.
 
 ### Fixed
 

@@ -43,7 +43,9 @@ seeded Monte Carlo p-value whose draws permute rows only inside their stratum
 (PCG64, `numpy.random.default_rng` parity). `n4m_stats_permdisp` runs PERMDISP
 as vegan `betadisper(type = "centroid")` + `permutest`: distances to group
 centroids, per-group mean distances, one-way ANOVA F and a residual
-permutation test. Terms above 2048 levels and workloads above 250 million
+permutation test. Both count permuted `F >= F_obs - sqrt(DBL_EPSILON)` (vegan
+convention, on the F scale), and rescale results with `scalbn` after exact
+power-of-two scaling and per-column centring. Terms above 2048 levels and workloads above 250 million
 operations return `N4M_ERR_UNSUPPORTED`.
 
 Domain of validity (ABI 2.20 association kernels): any finite doubles. The

@@ -298,12 +298,16 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
  * The identifiable term df is levels - c, with c the connected components of
  * the bipartite level-stratum occupancy graph (0 when the term is aliased
  * with the strata); df_residual = n - strata - df_term.
- * Monte Carlo test (n_permutations > 0, df_term > 0, within-strata SS > 0):
+ * Monte Carlo test (n_permutations > 0 and a defined observed pseudo-F):
  * PCG64 seeded like numpy.random.default_rng(seed). For each draw, every
  * stratum in ascending code order (members in ascending row order idx) takes
  * q = rng.permutation(n_s), and row idx[j] receives the data of row idx[q[j]]
- * (rows move only inside their stratum). b counts partial R^2 >= observed -
- * sqrt(DBL_EPSILON); p = (1+b)/(1+B).
+ * (rows move only inside their stratum). As vegan anova.cca, b counts
+ * pseudo-F_perm >= F_obs - sqrt(DBL_EPSILON) (+inf when the permuted residual
+ * SS is zero); p = (1+b)/(1+B).
+ * X is scaled by an exact power of two and centred per column before any sum;
+ * sums of squares are mapped back with scalbn, never through a squared scale,
+ * so representable results (subnormal or near DBL_MAX) are returned.
  * Requires n >= 2, k >= 1, finite X, at most 2048 term levels, 0 <=
  * n_permutations <= 1000000 and (n(k+1) + levels^2 k)(B+1) + levels n <= 250
  * million operations (N4M_ERR_UNSUPPORTED otherwise).
@@ -326,9 +330,11 @@ N4M_API n4m_status_t n4m_stats_permanova(
  * one-way ANOVA F on those distances, and a Monte Carlo test permuting the
  * ANOVA residuals of the distances over all rows (PCG64 as
  * numpy.random.default_rng(seed); row i receives residual perm[i] of the
- * b-th rng.permutation(n)). b counts B_perm/total >= B/(B+W) -
- * sqrt(DBL_EPSILON), which is F_perm >= F_obs. Dispersion differences do not
- * validate exchangeability or a PERMANOVA. Same input limits as
+ * b-th rng.permutation(n)), refits the one-way model and counts
+ * F_perm >= F_obs - sqrt(DBL_EPSILON), as vegan permutest.betadisper (the
+ * comparison is on F; a tolerance on a monotone transform of F is not
+ * equivalent). Same scaling as n4m_stats_permanova. Dispersion differences
+ * do not validate exchangeability or a PERMANOVA. Same input limits as
  * n4m_stats_permanova; work n(2k + B + 1) <= 250 million operations.
  * distances has n elements; group_mean_distances has capacity n and
  * receives one mean per group in ascending code order.
