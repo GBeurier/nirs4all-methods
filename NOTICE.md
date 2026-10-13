@@ -7,6 +7,7 @@ each retaining its original license:
 
 - **FITPACK** (BSD-3-Clause) — vendored under `cpp/src/core/common/_vendored/fitpack` from `https://github.com/scipy/scipy/tree/main/scipy/interpolate/fitpack`.
 - **Isolation Forest + LOF + Minimum Covariance Determinant** (BSD-3-Clause) — vendored under `cpp/src/core/filters/_vendored` from `https://github.com/scikit-learn/scikit-learn`.
+- **HDBSCAN*** (BSD-3-Clause) — ported under `cpp/src/core/clustering/_vendored` from `https://github.com/scikit-learn/scikit-learn` (1.9.1) and `https://github.com/scikit-learn-contrib/hdbscan` (0.8.44).
 
 ## Documented external references (not vendored)
 
@@ -16,6 +17,7 @@ CI / test environment, not redistribution targets.
 
 - scipy 1.17.1 (BSD-3-Clause)
 - scikit-learn 1.8.0 (BSD-3-Clause)
+- scikit-learn 1.9.1 and hdbscan 0.8.44 (BSD-3-Clause; HDBSCAN gate only)
 - numpy 1.26.4 (BSD-3-Clause)
 - pywt 1.8.0 (MIT)
 - pybaselines 1.2.1 (BSD-3-Clause)

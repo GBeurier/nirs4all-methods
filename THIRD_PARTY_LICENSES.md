@@ -79,6 +79,22 @@ reference implementations; the C code itself is original.
 ```
 
 
+## HDBSCAN* (scikit-learn + scikit-learn-contrib/hdbscan)  (SPDX: BSD-3-Clause)
+
+**Upstream**: https://github.com/scikit-learn/scikit-learn (1.9.1, `sklearn/cluster/_hdbscan`) and
+https://github.com/scikit-learn-contrib/hdbscan (0.8.44, GLOSH outlier scores and cluster persistence)
+**Vendored at**: `cpp/src/core/clustering/_vendored` (full notice in `LICENSE.scikit_learn.txt` there)
+**Notes**: Independent C++ port reproducing the reference control flow and floating-point order; no
+source copied verbatim. Only difference: equal-weight MST edges are stably sorted.
+
+```
+Copyright (c) 2007-2026 The scikit-learn developers.
+Copyright (c) 2015, Leland McInnes.
+Licensed under the BSD-3-Clause license; the algorithms reproduced here are
+attributed to both projects. The n4m source files are CECILL-2.1 (see the
+repository LICENSE); BSD-3 is permissive and compatible.
+```
+
 ## NumPy random (PCG64 / SeedSequence / Ziggurat / bounded + choice samplers)  (SPDX: BSD-3-Clause)
 
 **Upstream**: https://github.com/numpy/numpy (numpy/random)

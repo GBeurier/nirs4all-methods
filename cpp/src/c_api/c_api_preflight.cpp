@@ -13,12 +13,14 @@
 
 #include "core/common/context.hpp"
 #include "core/common/matrix_view.hpp"
+#include "core/clustering/_vendored/hdbscan.hpp"
 #include "core/common/pca_helper.h"
 
 namespace {
 using ::n4m::core::Context;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_moment_products = 250000000.0L;
+constexpr long double max_hdbscan_products = 2500000000.0L;
 
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
     if (ctx) static_cast<Context*>(ctx)->set_error(message);
@@ -469,5 +471,106 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "local contrast allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "local contrast internal error"); }
+}
+N4M_API n4m_status_t n4m_preflight_hdbscan(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, int64_t min_cluster_size,
+    int64_t min_samples, int32_t selection_method, int32_t allow_single_cluster,
+    int64_t* labels, double* membership, double* outlier_scores, int64_t* n_clusters,
+    double* cluster_persistence, int64_t* n_tree_nodes, int64_t* tree_parent,
+    int64_t* tree_size, int64_t* tree_label, double* tree_lambda_birth,
+    double* tree_lambda_death, double* tree_stability) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    if (!labels || !membership || !outlier_scores || !n_clusters || !cluster_persistence ||
+        !n_tree_nodes || !tree_parent || !tree_size || !tree_label || !tree_lambda_birth ||
+        !tree_lambda_death || !tree_stability)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null HDBSCAN output");
+    const int64_t n = X->rows, p = X->cols;
+    if (n < 2 || p < 1)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "HDBSCAN needs at least two rows and one column");
+    if (min_cluster_size < 2 || min_samples < 1 || min_samples > n)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                    "HDBSCAN needs min_cluster_size>=2 and 1<=min_samples<=rows");
+    if ((selection_method != 0 && selection_method != 1) ||
+        (allow_single_cluster != 0 && allow_single_cluster != 1))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid HDBSCAN selection flags");
+    if (static_cast<long double>(n) * n * p > max_hdbscan_products)
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "HDBSCAN exceeds 2.5 billion distance-product budget");
+    try {
+        std::vector<double> data(static_cast<size_t>(n) * static_cast<size_t>(p));
+        for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j) {
+            const double x = at(*X, i, j);
+            if (!std::isfinite(x)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite HDBSCAN input");
+            data[static_cast<size_t>(i) * static_cast<size_t>(p) + static_cast<size_t>(j)] = x;
+        }
+        ::n4m::core::hdbscan::Params params;
+        params.min_cluster_size = min_cluster_size;
+        params.min_samples = min_samples;
+        params.selection = static_cast<::n4m::core::hdbscan::Selection>(selection_method);
+        params.allow_single_cluster = allow_single_cluster != 0;
+        const auto result = ::n4m::core::hdbscan::fit(data.data(), n, p, params);
+        for (size_t i = 0; i < result.labels.size(); ++i) {
+            labels[i] = result.labels[i];
+            membership[i] = result.membership[i];
+            outlier_scores[i] = result.outlier_scores[i];
+        }
+        *n_clusters = static_cast<int64_t>(result.persistence.size());
+        std::copy(result.persistence.begin(), result.persistence.end(), cluster_persistence);
+        *n_tree_nodes = static_cast<int64_t>(result.tree.size());
+        for (size_t k = 0; k < result.tree.size(); ++k) {
+            const auto& node = result.tree[k];
+            tree_parent[k] = node.parent;
+            tree_size[k] = node.size;
+            tree_label[k] = node.label;
+            tree_lambda_birth[k] = node.lambda_birth;
+            tree_lambda_death[k] = node.lambda_death;
+            tree_stability[k] = node.stability;
+        }
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "HDBSCAN allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "HDBSCAN internal error"); }
+}
+
+N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
+    n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
+    double* ari) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    if (!labels_a || !labels_b || !ari) return fail(ctx, N4M_ERR_NULL_POINTER, "null ARI buffer");
+    if (n < 0) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "negative ARI length");
+    try {
+        *ari = nan_value;
+        if (n < 2) return N4M_OK;
+        std::vector<std::pair<int64_t, int64_t>> pairs(static_cast<size_t>(n));
+        std::vector<int64_t> a(labels_a, labels_a + n), b(labels_b, labels_b + n);
+        for (int64_t i = 0; i < n; ++i) pairs[static_cast<size_t>(i)] = {labels_a[i], labels_b[i]};
+        // Sum of squared run lengths of a sorted sequence.
+        auto squared_runs = [](auto& values) {
+            std::sort(values.begin(), values.end());
+            long double total = 0.0L;
+            for (size_t i = 0; i < values.size();) {
+                size_t j = i;
+                while (j < values.size() && values[j] == values[i]) ++j;
+                total += static_cast<long double>(j - i) * static_cast<long double>(j - i);
+                i = j;
+            }
+            return total;
+        };
+        // scikit-learn pair_confusion_matrix / adjusted_rand_score.
+        const long double squares = squared_runs(pairs);
+        const long double rows = squared_runs(a), cols = squared_runs(b);
+        const long double total = static_cast<long double>(n);
+        const long double tp = squares - total;
+        const long double fp = cols - squares;
+        const long double fn = rows - squares;
+        const long double tn = total * total - fp - fn - squares;
+        const long double denominator = (tp + fn) * (fn + tn) + (tp + fp) * (fp + tn);
+        if (denominator == 0.0L) return N4M_OK;
+        *ari = static_cast<double>(2.0L * (tp * tn - fn * fp) / denominator);
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "ARI allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "ARI internal error"); }
 }
 }  // extern "C"

@@ -561,6 +561,8 @@ n4m_pipeline_size
 n4m_pipeline_transform
 n4m_pipeline_transform_alloc
 n4m_pls_cross_validate
+n4m_preflight_adjusted_rand_index
+n4m_preflight_hdbscan
 n4m_preflight_local_contrast
 n4m_preflight_nearest_neighbors
 n4m_preflight_pca_compute

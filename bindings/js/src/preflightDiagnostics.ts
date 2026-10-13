@@ -34,6 +34,38 @@ export interface PreflightLocalContrastResult {
     expectedSameClassFraction: number;
 }
 
+export interface PreflightHdbscanOptions {
+    minClusterSize: number;
+    /** Neighbors defining the core distance, the row itself included (scikit-learn). */
+    minSamples: number;
+    selection?: "eom" | "leaf";
+    allowSingleCluster?: boolean;
+}
+
+export interface PreflightHdbscanTreeNode {
+    /** Parent node index, -1 for the root (node 0). */
+    parent: number;
+    size: number;
+    /** Selected cluster label or -1. */
+    label: number;
+    lambdaBirth: number;
+    lambdaDeath: number;
+    stability: number;
+}
+
+export interface PreflightHdbscanResult {
+    /** -1 = noise; clusters 0..nClusters-1. */
+    labels: number[];
+    /** scikit-learn probabilities_: a membership strength, not a probability. */
+    membership: Float64Array;
+    /** GLOSH outlier scores in [0, 1]. */
+    outlierScores: Float64Array;
+    nClusters: number;
+    /** scikit-learn-contrib/hdbscan cluster_persistence_, one value per label. */
+    persistence: Float64Array;
+    tree: PreflightHdbscanTreeNode[];
+}
+
 function validateMatrix(X: Matrix): void {
     if (!Number.isSafeInteger(X.rows) || !Number.isSafeInteger(X.cols) ||
         X.rows < 1 || X.cols < 1 || X.data.length !== X.rows * X.cols) {
@@ -241,6 +273,73 @@ export function preflightLocalContrast(targets: Float64Array,
             contrast: result[0]!, fractionRowsWithNeighbors: result[1]!,
             observedSameClassFraction: result[2]!, expectedSameClassFraction: result[3]!,
         };
+    } finally {
+        scope.close();
+    }
+}
+
+/** Euclidean HDBSCAN* (scikit-learn 1.9.1 semantics, stable MST tie order). */
+export function preflightHdbscan(X: Matrix, options: PreflightHdbscanOptions): PreflightHdbscanResult {
+    validateMatrix(X);
+    const {minClusterSize, minSamples} = options;
+    if (X.rows < 2 || !Number.isSafeInteger(minClusterSize) || minClusterSize < 2 ||
+        !Number.isSafeInteger(minSamples) || minSamples < 1 || minSamples > X.rows) {
+        throw new RangeError("invalid HDBSCAN dimensions or parameters");
+    }
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const perRow = () => scope.alloc(X.rows * 8);
+        const labels = perRow(), membership = perRow(), outlier = perRow();
+        const persistence = perRow(), parent = perRow(), size = perRow(), label = perRow();
+        const birth = perRow(), death = perRow(), stability = perRow();
+        const nClusters = scope.alloc(8), nNodes = scope.alloc(8);
+        const st = m.ccall("n4m_preflight_hdbscan", "number",
+            ["number", "number", "i64", "i64", "number", "number", ...Array(12).fill("number")],
+            [ctx.handle, x.viewPtr, BigInt(minClusterSize), BigInt(minSamples),
+                options.selection === "leaf" ? 1 : 0, options.allowSingleCluster ? 1 : 0,
+                labels, membership, outlier, nClusters, persistence, nNodes, parent, size, label,
+                birth, death, stability]) as number;
+        checkStatus(st, ctx.handle);
+        const dv = new DataView(m.HEAPU8.buffer);
+        const i64 = (ptr: number, n: number) =>
+            Array.from({length: n}, (_, j) => Number(dv.getBigInt64(ptr + j * 8, true)));
+        const k = Number(dv.getBigInt64(nNodes, true));
+        const clusters = Number(dv.getBigInt64(nClusters, true));
+        const parents = i64(parent, k), sizes = i64(size, k), treeLabels = i64(label, k);
+        const births = copyF64(birth, k), deaths = copyF64(death, k);
+        const stabilities = copyF64(stability, k);
+        return {
+            labels: i64(labels, X.rows),
+            membership: copyF64(membership, X.rows),
+            outlierScores: copyF64(outlier, X.rows),
+            nClusters: clusters,
+            persistence: copyF64(persistence, clusters),
+            tree: Array.from({length: k}, (_, j) => ({
+                parent: parents[j]!, size: sizes[j]!, label: treeLabels[j]!,
+                lambdaBirth: births[j]!, lambdaDeath: deaths[j]!, stability: stabilities[j]!,
+            })),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/** Adjusted Rand index; NaN for n<2 or identical trivial partitions. Noise is an ordinary label. */
+export function preflightAdjustedRandIndex(a: readonly (number | bigint)[],
+    b: readonly (number | bigint)[]): number {
+    if (a.length !== b.length) throw new RangeError("ARI label length mismatch");
+    validateGroupIds(a); validateGroupIds(b);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const pa = scope.i64(a), pb = scope.i64(b), out = scope.alloc(8);
+        const st = m.ccall("n4m_preflight_adjusted_rand_index", "number",
+            ["number", "number", "number", "i64", "number"],
+            [ctx.handle, pa, pb, BigInt(a.length), out]) as number;
+        checkStatus(st, ctx.handle);
+        return m.HEAPF64[out / 8]!;
     } finally {
         scope.close();
     }

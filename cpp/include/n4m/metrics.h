@@ -76,6 +76,51 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
     const int64_t* group_ids, int64_t n, int32_t k, int32_t categorical,
     double* out_four);
 
+/* HDBSCAN* on the rows of X with the Euclidean metric, ported from
+ * scikit-learn 1.9.1 sklearn.cluster.HDBSCAN (alpha=1,
+ * cluster_selection_epsilon=0, max_cluster_size=None) and, for GLOSH outlier
+ * scores and cluster persistence, scikit-learn-contrib/hdbscan 0.8.44.
+ * min_samples counts the row itself (scikit-learn convention; the contrib
+ * hdbscan value is min_samples-1). Requires X.rows>=2, X.cols>=1, finite
+ * values, min_cluster_size>=2, 1<=min_samples<=X.rows, selection_method
+ * 0=EOM or 1=leaf, allow_single_cluster 0 or 1. Workloads with
+ * rows*rows*cols above 2.5e9 return N4M_ERR_UNSUPPORTED.
+ * Tie rule: MST edges of equal mutual-reachability weight are processed in
+ * Prim insertion order (stable sort); Prim keeps the lowest row index on
+ * equal weights. EOM replaces a node by its children only when their summed
+ * stability is strictly larger.
+ * Per-row outputs (X.rows elements): labels (-1 = noise, clusters numbered
+ * 0..n_clusters-1 by increasing condensed-tree node index); membership =
+ * scikit-learn probabilities_ (a relative membership strength, NOT a
+ * probability; 0 for noise); outlier_scores = GLOSH in [0,1], NaN only when
+ * an infinite-density subtree makes it undefined.
+ * Cluster and tree outputs are caller-owned arrays of X.rows capacity (the
+ * condensed tree never exceeds X.rows-1 nodes). cluster_persistence[c] is the
+ * contrib cluster_persistence_ (stability / (members * max lambda), 1 when
+ * the max lambda is 0 or infinite). The condensed cluster tree has
+ * *n_tree_nodes nodes, node 0 is the root: tree_parent (-1 for the root),
+ * tree_size (points at birth), tree_label (selected label or -1),
+ * tree_lambda_birth (1/distance, root 0), tree_lambda_death (largest lambda
+ * at which a point or child leaves the node) and tree_stability (excess of
+ * mass before selection). Lambda is +inf at distance 0. */
+N4M_API n4m_status_t n4m_preflight_hdbscan(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, int64_t min_cluster_size,
+    int64_t min_samples, int32_t selection_method, int32_t allow_single_cluster,
+    int64_t* labels, double* membership, double* outlier_scores, int64_t* n_clusters,
+    double* cluster_persistence, int64_t* n_tree_nodes, int64_t* tree_parent,
+    int64_t* tree_size, int64_t* tree_label, double* tree_lambda_birth,
+    double* tree_lambda_death, double* tree_stability);
+
+/* Adjusted Rand index (Hubert-Arabie) between two label vectors of n
+ * elements, computed as scikit-learn adjusted_rand_score from the pair
+ * confusion counts. Every label value, including -1, is an ordinary class:
+ * callers filter noise first. *ari is NaN when n<2 or when both partitions
+ * are the same trivial partition (one class or all singletons), where
+ * scikit-learn returns 1.0 by convention. */
+N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
+    n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
+    double* ari);
+
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
                                        const double* y_pred,
