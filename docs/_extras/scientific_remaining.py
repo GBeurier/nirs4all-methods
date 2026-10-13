@@ -1649,6 +1649,70 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO
         + "docs/dev/hdbscan.md",
     ),
+    "diagnostics_permanova": _entry(
+        "PERMANOVA of one categorical term on Euclidean distances",
+        "Anderson (2001), *A new method for non-parametric multivariate analysis of variance*, "
+        "Austral Ecology 26, 32–46, https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; "
+        "McArdle & Anderson (2001), *Fitting multivariate models to community data: a comment "
+        "on distance-based redundancy analysis*, Ecology 82, 290–297, "
+        "https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; Anderson & ter Braak "
+        "(2003), *Permutation tests for multi-factorial analysis of variance*, Journal of "
+        "Statistical Computation and Simulation 73, 85–113, https://doi.org/10.1080/00949650215733.",
+        "With Euclidean distances the PERMANOVA sums of squares are traces of projections of the "
+        "centered coordinates. For a term given strata in the additive model strata + term, "
+        "$SS_{term}=SS(strata+term)-SS(strata)$ is computed from the reduced normal equations "
+        "$M_{ab}=\\delta_{ab}n_a-\\sum_s n_{as}n_{bs}/n_s$ after dropping one reference level per "
+        "connected component of the level-stratum occupancy graph, whose count $c$ gives the "
+        "identifiable df $=$ levels $-\\,c$ (0 when the term is aliased with the strata). "
+        "pseudo-$F=(SS_{term}/df_{term})/(SS_{res}/df_{res})$. The Monte Carlo test permutes rows "
+        "only inside their stratum and reports $(1+b)/(1+B)$.",
+        "Exploratory variance partition of a multivariate structure (for example PCA scores of "
+        "spectra) by categorical design factors such as instrument or campaign, with explicit "
+        "detection of factors that cannot be separated from the others.",
+        "The test assumes exchangeable rows inside each stratum: it tests the term together with "
+        "any interaction with the strata, and a stratum where the term is constant contributes "
+        "nothing. A significant result can reflect dispersion as well as location differences "
+        "(see PERMDISP). Only the Euclidean metric on the supplied coordinates is offered. "
+        "Terms above 2048 levels and workloads above 250 million operations return "
+        "`N4M_ERR_UNSUPPORTED`.",
+        "The ABI-2 symbol `n4m_stats_permanova` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsPermanova`. Draws "
+        "reuse the PCG64 generator seeded like `numpy.random.default_rng`. "
+        "`parity/generators/permanova_v1.py` writes `parity/fixtures/permanova_v1.json` (NumPy "
+        "least squares on full one-hot designs, scikit-bio `permanova`, NumPy permutation "
+        "counts), checked by `cpp/tests/test_permanova.cpp`.",
+        "https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; "
+        "https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; "
+        "https://doi.org/10.1080/00949650215733; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "parity/fixtures/permanova_v1.json",
+    ),
+    "diagnostics_permdisp": _entry(
+        "PERMDISP test of multivariate dispersion",
+        "Anderson (2006), *Distance-based tests for homogeneity of multivariate dispersions*, "
+        "Biometrics 62, 245–253, https://doi.org/10.1111/j.1541-0420.2005.00440.x.",
+        "Each row's Euclidean distance $z_i$ to its group centroid is computed, then a one-way "
+        "ANOVA $F$ compares the groups' mean distances. As in vegan `betadisper(type = "
+        "\"centroid\")` and `permutest`, the Monte Carlo test permutes the ANOVA residuals "
+        "$z_i-\\bar z_{g(i)}$ over all rows and counts permuted $F$ at least the observed one.",
+        "Reporting whether groups differ in spread, alongside a PERMANOVA whose location test "
+        "is sensitive to dispersion differences.",
+        "The residual-permutation test is approximate. Dispersion differences neither validate "
+        "nor invalidate exchangeability or a PERMANOVA result. Only centroids are offered (not "
+        "the spatial median variant). Workloads above 250 million operations return "
+        "`N4M_ERR_UNSUPPORTED`.",
+        "The ABI-2 symbol `n4m_stats_permdisp` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsPermdisp`. "
+        "SciPy `f_oneway`, scikit-bio `permdisp` and NumPy permutation counts are pinned in "
+        "`parity/fixtures/permanova_v1.json`, checked by `cpp/tests/test_permanova.cpp`.",
+        "https://doi.org/10.1111/j.1541-0420.2005.00440.x; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "parity/fixtures/permanova_v1.json",
+    ),
     "utilities_hotelling_t2": _entry(
         "Standalone PCA Hotelling T² statistic",
         "Hotelling (1931), *The Generalization of Student's Ratio*, Annals of Mathematical "

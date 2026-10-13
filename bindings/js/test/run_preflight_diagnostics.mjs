@@ -8,7 +8,7 @@ import {
     statsFactorAssociationExact, statsCorrelationExact,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex,
+    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -278,4 +278,46 @@ relNear(statsCorrelationTest(new Float64Array([2 ** -30, 2 ** -29, 2 ** 30]), ne
     "pearson", 0, 1).coefficient, Math.sqrt(3) / 2);
 assert.equal(statsCorrelationTest(new Float64Array([1, 2, 3, 4]), new Float64Array([1, -1, -1, 1]),
     "pearson", 0, 1).coefficient, 0);
+// PERMANOVA / PERMDISP: hand values of test_permanova.cpp, then the
+// permanova_v1 reference gate (NumPy lstsq, SciPy, scikit-bio, NumPy draws).
+const oneWay = statsPermanova({data: new Float64Array([1, 2, 3, 7, 8, 9]), rows: 6, cols: 1},
+    [4, 4, 4, -9, -9, -9], undefined, 999, 17);
+near(oneWay.ssTerm, 54);
+near(oneWay.pseudoF, 54);
+assert.equal(oneWay.nAtLeastObserved, 93);
+const crossed = statsPermanova({data: new Float64Array([1, 3, 5, 7, 2, 4, 6, 8]), rows: 8, cols: 1},
+    [0, 0, 1, 1, 0, 0, 1, 1], [0, 0, 0, 0, 1, 1, 1, 1], 0, 1);
+near(crossed.pseudoF, 20);
+near(crossed.ssStrata, 2);
+const aliased = statsPermanova({data: new Float64Array([1, 3, 5, 7, 2, 4, 6, 8]), rows: 8, cols: 1},
+    [0, 0, 1, 1, 0, 0, 1, 1], [0, 0, 1, 1, 0, 0, 1, 1], 999, 1);
+assert.equal(aliased.dfTerm, 0);
+assert.ok(Number.isNaN(aliased.pValue));
+const disp = statsPermdisp({data: new Float64Array([0, 2, 10, 14, 18]), rows: 5, cols: 1},
+    [7, 7, 3, 3, 3], 0, 1);
+near(disp.f, 15 / 16);
+[8 / 3, 1].forEach((v, i) => near(disp.groupMeanDistances[i], v));
+const permanovaFixture = JSON.parse(readFileSync(
+    new URL("../../../parity/fixtures/permanova_v1.json", import.meta.url), "utf8"));
+for (const c of permanovaFixture.cases) {
+    const X = {data: new Float64Array(c.X.map(hex)), rows: c.rows, cols: c.cols};
+    const got = statsPermanova(X, c.term, c.strata ?? undefined, c.n_permutations, c.seed);
+    const want = c.permanova, total = hex(want.ss_total);
+    const close = (a, b, scale = 1) => Number.isNaN(b) ? Number.isNaN(a)
+        : Math.abs(a - b) <= 1e-10 * Math.max(scale, Math.abs(b));
+    [["ssTotal", "ss_total"], ["ssStrata", "ss_strata"], ["ssTerm", "ss_term"],
+        ["ssResidual", "ss_residual"]].forEach(([k, w]) => assert.ok(close(got[k], hex(want[w]), total), c.name));
+    [["r2", "r2"], ["partialR2", "partial_r2"], ["pseudoF", "pseudo_f"]]
+        .forEach(([k, w]) => assert.ok(close(got[k], hex(want[w])), c.name));
+    assert.equal(got.dfTerm, want.df_term, c.name);
+    assert.equal(got.dfResidual, want.df_residual, c.name);
+    assert.equal(got.nAtLeastObserved, want.b, c.name);
+    assert.equal(got.nPermutationsExecuted, want.executed, c.name);
+    if (c.permdisp) {
+        const d = statsPermdisp(X, c.term, c.n_permutations, c.permdisp.seed);
+        assert.ok(close(d.f, hex(c.permdisp.f)), c.name);
+        c.permdisp.distances.map(hex).forEach((v, i) => assert.ok(close(d.distances[i], v), c.name));
+        assert.equal(d.nAtLeastObserved, c.permdisp.b, c.name);
+    }
+}
 console.log("JS/WASM Preflight diagnostics passed");
