@@ -618,7 +618,9 @@ n4m_serialization_inspect_pipeline_v1
 n4m_split_result_destroy
 n4m_splitter_run
 n4m_stats_bh_adjust
+n4m_stats_correlation_exact
 n4m_stats_correlation_test
+n4m_stats_factor_association_exact
 n4m_status_to_string
 n4m_transform_airpls_create
 n4m_transform_airpls_destroy

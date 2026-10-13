@@ -83,7 +83,8 @@ method_prefix:
   diagnostics.adjusted_rand_index: n4m_preflight_adjusted_rand_index
   diagnostics.hdbscan: n4m_cluster_hdbscan
   # Generic statistics (ABI 2.20).
-  diagnostics.correlation_test: n4m_stats_correlation_test
+  diagnostics.correlation_test: n4m_stats_correlation
+  diagnostics.factor_association_exact: n4m_stats_factor_association_exact
   diagnostics.bh_adjust: n4m_stats_bh_adjust
 
   # ---- filters ----

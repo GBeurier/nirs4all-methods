@@ -10097,6 +10097,7 @@ methods:
     subcategory: "statistics"
     since_abi: "2.20.0"
     abi_symbols:
+      - "n4m_stats_correlation_exact"
       - "n4m_stats_correlation_test"
     tu:
       - "cpp/src/c_api/c_api_preflight.cpp"
@@ -10121,11 +10122,12 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "Pearson or Spearman (average-rank) correlation of paired vectors with a seeded two-sided Monte Carlo permutation p-value (1+b)/(1+B), PCG64 draws equal to numpy.random.default_rng(seed).permutation(n); SciPy pearsonr/spearmanr parity."
+    notes: "Pearson or Spearman (average-rank) correlation of paired vectors with a seeded two-sided Monte Carlo permutation p-value (1+b)/(1+B), PCG64 draws equal to numpy.random.default_rng(seed).permutation(n); SciPy pearsonr/spearmanr parity; n4m_stats_correlation_exact enumerates the distinct arrangements for the exact p-value and the minimal attainable p-value."
     namespace: "metrics.statistics"
     leaf: "correlation_test"
     fq_name: "n4m.metrics.statistics.correlation_test"
     c_surface:
+      - "n4m_stats_correlation_exact"
       - "n4m_stats_correlation_test"
     legacy_ids:
       - "diagnostics.correlation_test"
@@ -10166,6 +10168,43 @@ methods:
       - "n4m_stats_bh_adjust"
     legacy_ids:
       - "diagnostics.bh_adjust"
+  - method_id: "diagnostics.factor_association_exact"
+    family: "diagnostics.statistics"
+    category: "diagnostics"
+    subcategory: "statistics"
+    since_abi: "2.20.0"
+    abi_symbols:
+      - "n4m_stats_factor_association_exact"
+    tu:
+      - "cpp/src/c_api/c_api_preflight.cpp"
+    headers:
+      - "cpp/include/n4m/metrics.h"
+    carry_along_tu:
+      - "cpp/src/core/common/context.cpp"
+      - "cpp/src/core/common/status.cpp"
+      - "cpp/src/core/common/matrix_view.cpp"
+      - "cpp/src/core/common/version.cpp"
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: "diagnostics.factor_association_exact"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings: {}
+    publications: []
+    notes: "Exact permutation distribution of the factor-target association statistic (eta^2 or Cramer's V^2) by enumerating the distinct arrangements of the smaller side: exact p-value, minimal attainable exact p-value and maximum statistic."
+    namespace: "metrics.statistics"
+    leaf: "factor_association_exact"
+    fq_name: "n4m.metrics.statistics.factor_association_exact"
+    c_surface:
+      - "n4m_stats_factor_association_exact"
+    legacy_ids:
+      - "diagnostics.factor_association_exact"
   - method_id: "diagnostics.adjusted_rand_index"
     family: "diagnostics.clustering"
     category: "diagnostics"

@@ -17,6 +17,19 @@ ABI 2.20.0. No model-state serialization format changes.
   `statsCorrelationTest` and `statsBhAdjust`. SciPy 1.15.3 `pearsonr` /
   `spearmanr`, statsmodels 0.15.0 `multipletests(method="fdr_bh")` and NumPy
   2.2.6 permutation counts are pinned in `cpp/tests/test_preflight.cpp`.
+- `n4m_stats_factor_association_exact` and `n4m_stats_correlation_exact`:
+  exhaustive enumeration of distinct arrangements, returning the exact
+  p-value and the minimal attainable exact p-value (JS
+  `statsFactorAssociationExact`, `statsCorrelationExact`). Brute-force SciPy
+  references are pinned in the native and JS tests.
+
+### Fixed
+
+- `n4m_preflight_factor_association` centered targets on a naive mean after
+  dividing by max|y|, so a large common offset produced a spurious
+  between-group effect (two identical groups at `1e16` gave eta^2 = 0.27).
+  Centering is now translation stable (power-of-two scaling, shifted origin,
+  residual-mean correction), with translation-invariance tests.
 
 ## [1.3.6] - 2026-10-13
 

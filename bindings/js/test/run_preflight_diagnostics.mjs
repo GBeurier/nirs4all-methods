@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import {
     loadModule, abiVersion, preflightPca, preflightRepeatability,
     preflightFactorAssociation, preflightHolmAdjust, statsCorrelationTest, statsBhAdjust,
+    statsFactorAssociationExact, statsCorrelationExact,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
     clusterHdbscan, preflightAdjustedRandIndex,
@@ -178,4 +179,17 @@ assert.ok(Number.isNaN(statsCorrelationTest(new Float64Array([1, 1, 1]),
     new Float64Array([1, 2, 3]), "pearson", 99, 1).coefficient));
 const bh = statsBhAdjust(new Float64Array([0.001, 0.2, 0.5, 0.03, 0.04, 0.049]));
 [0.006, 0.24, 0.5, 0.0735, 0.0735, 0.0735].forEach((value, i) => near(bh[i], value));
+// Translation invariance and exact enumeration (brute-force SciPy goldens).
+const same16 = preflightFactorAssociation([0, 0, 0, 1, 1, 1],
+    new Float64Array([1e16, 1e16 + 2, 1e16 + 4, 1e16, 1e16 + 2, 1e16 + 4]), false, 0, 1);
+assert.ok(Math.abs(same16.effectSize) < 1e-15 && Math.abs(same16.statistic) < 1e-15);
+const perfect = statsFactorAssociationExact([0, 0, 0, 0, 1, 1, 1, 1],
+    new Float64Array([0, 0, 0, 0, 1, 1, 1, 1]), true, 1000);
+assert.equal(perfect.nArrangements, 70);
+near(perfect.minimumPValue, 1 / 35);
+const exactRho = statsCorrelationExact(new Float64Array([1, 2, 3, 4, 5]),
+    new Float64Array([2, 4, 5, 4, 5]), "spearman", 1000);
+assert.equal(exactRho.nArrangements, 30);
+near(exactRho.pValue, 0.2);
+near(exactRho.minimumPValue, 1 / 15);
 console.log("JS/WASM Preflight diagnostics passed");

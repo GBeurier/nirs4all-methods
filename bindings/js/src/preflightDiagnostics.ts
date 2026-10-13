@@ -96,6 +96,16 @@ export interface StatsCorrelationTestResult {
     nPermutationsExecuted: number;
 }
 
+export interface StatsExactPermutationResult {
+    /** Number N of distinct arrangements enumerated. */
+    nArrangements: number;
+    /** Exact p-value #{T >= T_obs}/N; NaN when the statistic is undefined. */
+    pValue: number;
+    /** Smallest attainable exact p-value #{T >= T_max}/N. */
+    minimumPValue: number;
+    maximumStatistic: number;
+}
+
 function validateMatrix(X: Matrix): void {
     if (!Number.isSafeInteger(X.rows) || !Number.isSafeInteger(X.cols) ||
         X.rows < 1 || X.cols < 1 || X.data.length !== X.rows * X.cols) {
@@ -593,6 +603,62 @@ export function statsBhAdjust(pValues: Float64Array): Float64Array {
             [ctx.handle, input, BigInt(pValues.length), out]) as number;
         checkStatus(st, ctx.handle);
         return copyF64(out, pValues.length);
+    } finally {
+        scope.close();
+    }
+}
+
+function exactResult(out: number): StatsExactPermutationResult {
+    const r = copyF64(out, 4);
+    return { nArrangements: r[0]!, pValue: r[1]!, minimumPValue: r[2]!, maximumStatistic: r[3]! };
+}
+
+/** Exact permutation distribution of the factor-target association statistic
+ * (eta^2 or Cramer's V^2) by enumerating distinct arrangements. */
+export function statsFactorAssociationExact(factorCodes: readonly (number | bigint)[],
+    targets: Float64Array, categorical: boolean,
+    maxArrangements: number): StatsExactPermutationResult {
+    if (factorCodes.length !== targets.length || targets.length < 2 ||
+        !Number.isSafeInteger(maxArrangements) || maxArrangements < 1 || maxArrangements > 10_000_000) {
+        throw new RangeError("invalid exact association dimensions or arrangement budget");
+    }
+    validateGroupIds(factorCodes);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const codes = scope.i64(factorCodes);
+        const y = scope.alloc(targets.length * 8), out = scope.alloc(32);
+        m.HEAPF64.set(targets, y / 8);
+        const st = m.ccall("n4m_stats_factor_association_exact", "number",
+            ["number", "number", "number", "i64", "number", "i64", "number"],
+            [ctx.handle, codes, y, BigInt(targets.length), categorical ? 1 : 0,
+                BigInt(maxArrangements), out]) as number;
+        checkStatus(st, ctx.handle);
+        return exactResult(out);
+    } finally {
+        scope.close();
+    }
+}
+
+/** Exact permutation distribution of |r| (Pearson or Spearman). */
+export function statsCorrelationExact(x: Float64Array, y: Float64Array,
+    method: "pearson" | "spearman", maxArrangements: number): StatsExactPermutationResult {
+    if (x.length !== y.length || x.length < 2 || (method !== "pearson" && method !== "spearman") ||
+        !Number.isSafeInteger(maxArrangements) || maxArrangements < 1 || maxArrangements > 10_000_000) {
+        throw new RangeError("invalid exact correlation dimensions, method or arrangement budget");
+    }
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const xs = scope.alloc(x.length * 8), ys = scope.alloc(y.length * 8), out = scope.alloc(32);
+        m.HEAPF64.set(x, xs / 8);
+        m.HEAPF64.set(y, ys / 8);
+        const st = m.ccall("n4m_stats_correlation_exact", "number",
+            ["number", "number", "number", "i64", "number", "i64", "number"],
+            [ctx.handle, xs, ys, BigInt(x.length), method === "spearman" ? 1 : 0,
+                BigInt(maxArrangements), out]) as number;
+        checkStatus(st, ctx.handle);
+        return exactResult(out);
     } finally {
         scope.close();
     }

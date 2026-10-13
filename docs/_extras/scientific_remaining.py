@@ -1518,14 +1518,46 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "bounded by $1/(B+1)$ and by the number of distinct outcomes. A constant vector gives "
         "NaN and runs no permutation. Work above 250 million operations returns "
         "`N4M_ERR_UNSUPPORTED`. Correlation is not causation.",
-        "The ABI-2 symbol `n4m_stats_correlation_test` in `n4m/metrics.h` is implemented in "
-        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsCorrelationTest`. "
+        "The ABI-2 symbols `n4m_stats_correlation_test` and `n4m_stats_correlation_exact` "
+        "(exhaustive enumeration of distinct arrangements: exact p-value and minimal attainable "
+        "p-value) in `n4m/metrics.h` are implemented in `cpp/src/c_api/c_api_preflight.cpp` and "
+        "wrapped in JS/WASM by `statsCorrelationTest` and `statsCorrelationExact`. Centering "
+        "uses an exact power-of-two scaling and a shifted origin, so $r$ is translation "
+        "invariant. "
         "Draws reuse the PCG64 engine seeded like `numpy.random.default_rng`. SciPy "
         "`pearsonr`/`spearmanr` coefficients and NumPy permutation counts are pinned in "
         "`cpp/tests/test_preflight.cpp`.",
         "https://doi.org/10.1098/rspl.1895.0041; "
         "https://doi.org/10.2307/1412159; "
         "https://doi.org/10.2202/1544-6115.1585; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_preflight.cpp",
+    ),
+    "diagnostics_factor_association_exact": _entry(
+        "Exact permutation distribution of a factor-target association",
+        "No single canonical paper; exhaustive permutation tests follow Fisher (1935), *The "
+        "Design of Experiments*, Oliver & Boyd, and Good (2005), *Permutation, Parametric, and "
+        "Bootstrap Tests of Hypotheses*, Springer, https://doi.org/10.1007/b138696.",
+        "Under uniform permutation of the target over $n$ exchangeable units, each distinct "
+        "arrangement of a multiset with multiplicities $m_k$ has probability $1/N$, "
+        "$N=n!/\\prod_k m_k!$. The kernel enumerates the side (factor levels or target values) "
+        "with the smaller $N$ and evaluates eta² or Cramér's V² on each arrangement. It returns "
+        "$N$, the exact p-value $\\#\\{T\\ge T_{obs}-\\sqrt{\\epsilon}\\}/N$, the minimal "
+        "attainable exact p-value $\\#\\{T\\ge T_{max}-\\sqrt{\\epsilon}\\}/N$ and $T_{max}$.",
+        "Deciding whether a small permutation space can support a significance threshold after "
+        "multiplicity correction: the minimal attainable p-value, not $1/N$, is the resolution "
+        "of the test.",
+        "Exhaustive enumeration is limited to $N\\le 10^7$ and to 250 million operations; larger "
+        "spaces return `N4M_ERR_UNSUPPORTED`. Exchangeability of the units is assumed, as one "
+        "unrestricted block.",
+        "The ABI-2 symbol `n4m_stats_factor_association_exact` in `n4m/metrics.h` is "
+        "implemented in `cpp/src/c_api/c_api_preflight.cpp` with the same input contract as "
+        "`n4m_preflight_factor_association`, and wrapped in JS/WASM by "
+        "`statsFactorAssociationExact`. Brute-force SciPy/NumPy reference fractions are pinned in "
+        "`cpp/tests/test_preflight.cpp`.",
+        "https://doi.org/10.1007/b138696; "
         + _REPO
         + "cpp/src/c_api/c_api_preflight.cpp; "
         + _REPO

@@ -61,6 +61,7 @@ NIRS4ALL_DONOR_METHODS = {
     "diagnostics.adjusted_rand_index",
     "diagnostics.bh_adjust",
     "diagnostics.correlation_test",
+    "diagnostics.factor_association_exact",
     "diagnostics.hdbscan",
     "diagnostics.holm_adjust",
     "diagnostics.preflight_qualification",
