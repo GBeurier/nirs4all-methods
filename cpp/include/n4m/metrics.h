@@ -186,11 +186,15 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
  * a residual-mean correction, so eta^2 and F are translation invariant.
  * categorical=1 with levels * classes > 10 million cells returns
  * N4M_ERR_UNSUPPORTED before any table allocation or statistic.
- * Domain: any finite doubles. The centered copy is rescaled by powers of two
- * (exact) chosen from max|y| and then from the centered variation, so eta^2,
- * F, V and the permutation counts are scale invariant over the whole double
- * range (subnormals included) and translation invariant up to the rounding
- * of the shifted inputs themselves.
+ * Supported numerical domain D: finite targets whose nonzero |y| lie in
+ * [2^-256, 2^256] with max/min nonzero |y| <= 2^64 (exact zeros allowed;
+ * categorical class codes are labels and are not domain-checked). Inputs
+ * outside D return N4M_ERR_UNSUPPORTED with the message "input outside the
+ * supported numerical domain (...)" before any computation. Inside D the
+ * centered copy is rescaled by exact powers of two chosen from max|y| and
+ * from the centered variation, so eta^2, F, V and the permutation counts are
+ * scale invariant and translation invariant up to the rounding of the
+ * shifted inputs; F cannot overflow inside D (F <= n * 2^232).
  * Accuracy: eta^2 is a ratio of sums of O(1) scaled centered terms with no
  * subtraction of accumulated quantities; its absolute error is of order
  * n * DBL_EPSILON (equal level means give exactly 0 on dyadic data).
@@ -214,7 +218,9 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
 
 /* Holm step-down adjusted p-values for one family of m >= 1 hypotheses.
  * Inputs must lie in [0, 1]; adjusted[i] = min(1, max_{j<=rank(i)}
- * (m-j+1) p_(j)) with a stable ascending order, as R p.adjust("holm"). */
+ * (m-j+1) p_(j)) with a stable ascending order, as R p.adjust("holm").
+ * Nonzero p-values must lie in [2^-256, 1] with max/min nonzero p <= 2^64
+ * (domain D; zeros allowed), otherwise N4M_ERR_UNSUPPORTED. */
 N4M_API n4m_status_t n4m_preflight_holm_adjust(
     n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
 
@@ -237,8 +243,10 @@ N4M_API n4m_status_t n4m_preflight_holm_adjust(
  *       is NaN.
  * b counts permuted |r| >= |observed r| - sqrt(DBL_EPSILON). out_two =
  * {b, executed B}; no permutation runs when the coefficient is undefined.
- * Both vectors use the same translation- and scale-stable centering as
- * n4m_preflight_factor_association (any finite doubles; r is a ratio of sums
+ * Both vectors must lie in the same supported domain D as
+ * n4m_preflight_factor_association (each vector checked separately; outside
+ * D: N4M_ERR_UNSUPPORTED) and use its translation- and scale-stable
+ * centering (r is a ratio of sums
  * of O(1) scaled centered terms, so its absolute error is of order
  * n * DBL_EPSILON; the denominator is >= 1/4 after rescaling and never
  * underflows; exactly uncorrelated dyadic data give r = 0). */
@@ -254,7 +262,9 @@ N4M_API n4m_status_t n4m_stats_correlation_test(
  * has equal probability under uniform permutation. The statistic is eta^2 or
  * Cramer's V^2 (factor association, same input contract as
  * n4m_preflight_factor_association) or |r| (correlation, method 0 Pearson,
- * 1 Spearman). 1 <= max_arrangements <= 10000000; a larger arrangement count,
+ * 1 Spearman). 1 <= max_arrangements <= 10000000.
+ * Inputs follow the domain D of the Monte Carlo kernels (outside D:
+ * N4M_ERR_UNSUPPORTED before any computation). A larger arrangement count,
  * or 2 * count * (n + levels * classes) > 250 million operations, returns
  * N4M_ERR_UNSUPPORTED before any statistic is evaluated (and, as above, a
  * categorical table above 10 million cells is refused before allocation).
@@ -272,7 +282,8 @@ N4M_API n4m_status_t n4m_stats_correlation_exact(
 /* Benjamini-Hochberg step-up adjusted p-values for one family of m >= 1
  * hypotheses. Inputs must lie in [0, 1]; with p_(1) <= ... <= p_(m),
  * adjusted p_(i) = min(1, min_{j>=i} m p_(j) / j), as R p.adjust("BH")
- * (positive p-values, subnormal ones included, stay positive)
+ * (domain D as for Holm, otherwise N4M_ERR_UNSUPPORTED; positive p-values
+ * stay positive)
  * and statsmodels multipletests(method="fdr_bh"). Controls the false
  * discovery rate under independence or positive regression dependence. */
 N4M_API n4m_status_t n4m_stats_bh_adjust(

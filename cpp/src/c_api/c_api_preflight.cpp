@@ -28,6 +28,30 @@ constexpr long double max_hdbscan_products = 2500000000.0L;
 // Contingency-table budget of the categorical association kernels (cells).
 constexpr size_t max_table_cells = 10000000;
 
+// Supported numerical domain D (preflight robustness rule 13): finite values,
+// every nonzero |x| in [2^-256, 2^256] and, inside one input array,
+// max nonzero |x| / min nonzero |x| <= 2^64. Exact zeros are always allowed.
+// Inputs outside D are refused before any computation.
+constexpr double domain_low = 0x1p-256;
+constexpr double domain_high = 0x1p256;
+constexpr double domain_spread = 0x1p64;
+constexpr const char* domain_message =
+    "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
+    "max/min nonzero |x| <= 2^64)";
+
+// One O(n) pre-pass; inputs are already known to be finite.
+bool in_numerical_domain(const double* values, size_t n) noexcept {
+    double low = domain_high, high = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+        const double a = std::abs(values[i]);
+        if (a == 0.0) continue;
+        low = std::min(low, a);
+        high = std::max(high, a);
+    }
+    if (high == 0.0) return true;
+    return low >= domain_low && high <= domain_high && high <= low * domain_spread;
+}
+
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
     if (ctx) static_cast<Context*>(ctx)->set_error(message);
     return code;
@@ -254,6 +278,9 @@ n4m_status_t prepare_factor(n4m_context_t* ctx, const int64_t* factor_codes,
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "category codes must be exact integers");
         y += 0.0;
     }
+    // Category codes are labels; only continuous targets carry magnitudes.
+    if (!categorical && !in_numerical_domain(exact.data(), exact.size()))
+        return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     p.categorical = categorical != 0;
     p.level = dense_codes(std::vector<int64_t>(factor_codes, factor_codes + n), p.level_n);
     p.value = dense_codes(exact, p.value_n);
@@ -319,6 +346,8 @@ n4m_status_t prepare_correlation(n4m_context_t* ctx, const double* x, const doub
         xs[i] += 0.0;
         ys[i] += 0.0;
     }
+    if (!in_numerical_domain(xs.data(), xs.size()) || !in_numerical_domain(ys.data(), ys.size()))
+        return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     p.x_code = dense_codes(xs, p.x_n);
     p.y_code = dense_codes(ys, p.y_n);
     if (method == 1) {
@@ -1194,6 +1223,8 @@ N4M_API n4m_status_t n4m_preflight_holm_adjust(
         for (int64_t i = 0; i < m; ++i)
             if (!(p_values[i] >= 0.0 && p_values[i] <= 1.0))
                 return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "p-values must lie in [0, 1]");
+        if (!in_numerical_domain(p_values, static_cast<size_t>(m)))
+            return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
         std::vector<int64_t> order(static_cast<size_t>(m));
         std::iota(order.begin(), order.end(), int64_t{0});
         std::stable_sort(order.begin(), order.end(),
@@ -1300,6 +1331,8 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
         for (int64_t i = 0; i < m; ++i)
             if (!(p_values[i] >= 0.0 && p_values[i] <= 1.0))
                 return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "p-values must lie in [0, 1]");
+        if (!in_numerical_domain(p_values, static_cast<size_t>(m)))
+            return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
         std::vector<int64_t> order(static_cast<size_t>(m));
         std::iota(order.begin(), order.end(), int64_t{0});
         std::stable_sort(order.begin(), order.end(),

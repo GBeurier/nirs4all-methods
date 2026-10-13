@@ -151,10 +151,13 @@ int main() {
                 ==N4M_ERR_INVALID_ARGUMENT);
         REQUIRE(n4m_preflight_factor_association(ctx,two_levels,spread,1,0,0,1,assoc,perm_counts)
                 ==N4M_ERR_INVALID_ARGUMENT);
-        // Extreme magnitudes are scaled before sums: eta^2 stays 27/29.
-        double yh[6]={1e307,2e307,3e307,7e307,8e307,9e307};
+        // Large magnitudes inside the supported domain are scaled before
+        // sums: eta^2 stays 27/29; 1e307 lies outside D and is refused.
+        double yh[6]={1e70,2e70,3e70,7e70,8e70,9e70};
         REQUIRE(n4m_preflight_factor_association(ctx,fa,yh,6,0,0,1,assoc,perm_counts)==N4M_OK);
         REQUIRE(near(assoc[0],27.0/29.0) && near(assoc[1],54));
+        for (double& v : yh) v *= 1e237;
+        REQUIRE(n4m_preflight_factor_association(ctx,fa,yh,6,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
         // Holm (R p.adjust "holm", hand-computed): sorted 0.005,0.01,0.03,0.04
         // -> 0.02, 0.03, 0.06, max(0.04,0.06).
         double pv[4]={0.01,0.04,0.03,0.005}, adj[4];
@@ -208,8 +211,8 @@ int main() {
         REQUIRE(near(corr[4],1.0/1000.0));
         REQUIRE(n4m_stats_correlation_test(ctx,mx,my,12,1,999,17,corr,corr_counts)==N4M_OK);
         REQUIRE(relative_near(corr[0],0.9790209790209792) && corr_counts[0]==0);
-        // Scale invariance at extreme magnitudes and signed zeros.
-        double hx[5]={1e307,2e307,3e307,4e307,5e307}, hy[5]={-2e-300,-4e-300,-5e-300,-4e-300,-5e-300};
+        // Scale invariance at large and small magnitudes inside D.
+        double hx[5]={1e70,2e70,3e70,4e70,5e70}, hy[5]={-2e-70,-4e-70,-5e-70,-4e-70,-5e-70};
         REQUIRE(n4m_stats_correlation_test(ctx,hx,hy,5,0,0,1,corr,corr_counts)==N4M_OK);
         REQUIRE(relative_near(corr[0],-6.0/std::sqrt(60.0)));
         // Constant vectors: undefined coefficient, no permutation.
@@ -284,17 +287,56 @@ int main() {
             REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),classes.data(),3000,1,999,1,
                         assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
         }
-        // Magnitude sweep (robustness rule): scaling by 2^k, k from the
-        // subnormal range to 2^1000, and large translations leave eta^2, F,
-        // r, rho, the permutation counts and the exact distributions
-        // unchanged (relative 1e-12, counts exact). Data are chosen so every
-        // scaled or shifted input is exactly representable.
+        // Supported numerical domain D (rule 13): finite, nonzero |x| in
+        // [2^-256, 2^256], max/min nonzero |x| <= 2^64 per input array, exact
+        // zeros allowed. Inside D results are checked against exact
+        // references; outside D every kernel returns N4M_ERR_UNSUPPORTED.
         {
-            const int ks[] = {-1060, -1022, -500, -100, 0, 100, 500, 1000};
             const auto rel = [](double a, double b) {
                 return std::abs(a - b) <= 1e-12 * std::abs(b);
             };
-            for (int k : ks) {
+            double xz4[4]={1,2,3,4};
+            const double lo = std::ldexp(1.0,-256), hi = std::ldexp(1.0,256);
+            const double below = std::nextafter(lo, 0.0), above = std::nextafter(hi, HUGE_VAL);
+            const double sp = std::ldexp(1.0,64), sp_above = std::nextafter(sp, HUGE_VAL);
+            const double sp_inv = std::ldexp(1.0,-64), sp_inv_below = std::nextafter(sp_inv, 0.0);
+            // Boundaries on both sides, for every kernel that reads magnitudes.
+            int64_t f4b[4]={0,0,1,1};
+            const double inside[][4] = {{lo, 2*lo, 3*lo, 0.0}, {hi/4, hi/2, hi, 0.0},
+                                        {1.0, 2.0, sp, 0.0}, {-lo, 0.0, lo*sp, -lo}};
+            const double outside[][4] = {{below, 2*lo, 3*lo, 0.0}, {hi/4, hi/2, above, 0.0},
+                                         {1.0, 2.0, sp_above, 0.0}, {-lo, 0.0, 2*lo*sp, -lo}};
+            for (const auto& v : inside) {
+                double y4[4] = {v[0], v[1], v[2], v[3]};
+                REQUIRE(n4m_preflight_factor_association(ctx,f4b,y4,4,0,0,1,assoc,perm_counts)==N4M_OK);
+                REQUIRE(n4m_stats_factor_association_exact(ctx,f4b,y4,4,0,100,exact)==N4M_OK);
+                REQUIRE(n4m_stats_correlation_test(ctx,y4,xz4,4,0,0,1,corr,corr_counts)==N4M_OK);
+                REQUIRE(n4m_stats_correlation_test(ctx,xz4,y4,4,1,0,1,corr,corr_counts)==N4M_OK);
+                REQUIRE(n4m_stats_correlation_exact(ctx,y4,xz4,4,0,100,exact)==N4M_OK);
+            }
+            for (const auto& v : outside) {
+                double y4[4] = {v[0], v[1], v[2], v[3]};
+                REQUIRE(n4m_preflight_factor_association(ctx,f4b,y4,4,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_factor_association_exact(ctx,f4b,y4,4,0,100,exact)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_correlation_test(ctx,y4,xz4,4,0,0,1,corr,corr_counts)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_correlation_test(ctx,xz4,y4,4,1,0,1,corr,corr_counts)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_correlation_exact(ctx,y4,xz4,4,0,100,exact)==N4M_ERR_UNSUPPORTED);
+            }
+            double pin[2]={sp_inv,1.0}, pout[2]={sp_inv_below,1.0}, padj[2];
+            REQUIRE(n4m_preflight_holm_adjust(ctx,pin,2,padj)==N4M_OK && padj[0]==2*sp_inv);
+            REQUIRE(n4m_stats_bh_adjust(ctx,pin,2,padj)==N4M_OK && padj[0]==2*sp_inv);
+            REQUIRE(n4m_preflight_holm_adjust(ctx,pout,2,padj)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(n4m_stats_bh_adjust(ctx,pout,2,padj)==N4M_ERR_UNSUPPORTED);
+            double pzero[2]={0.0,1.0};
+            REQUIRE(n4m_preflight_holm_adjust(ctx,pzero,2,padj)==N4M_OK && padj[0]==0.0);
+            // Categorical targets are labels: codes are not domain-checked.
+            int64_t fcat[4]={0,0,1,1}; double cbig[4]={0.0,9007199254740991.0,0.0,1.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,fcat,cbig,4,1,0,1,assoc,perm_counts)==N4M_OK);
+
+            // Scale sweep inside D: 2^k data keep eta^2 = 27/29, F = 54,
+            // r = 6/sqrt(60), rho = 7/sqrt(90), the NumPy counts and the exact
+            // distributions; the same data outside D are refused.
+            for (int k : {-240, -100, 0, 100, 240}) {
                 double ys[6], xs5[5], ys5[5];
                 for (int i = 0; i < 6; ++i) ys[i] = std::ldexp(ya[i], k);
                 for (int i = 0; i < 5; ++i) {
@@ -312,9 +354,16 @@ int main() {
                 REQUIRE(n4m_stats_correlation_exact(ctx,xs5,ys5,5,0,1000,exact)==N4M_OK);
                 REQUIRE(near(exact[1],2.0/15.0) && near(exact[2],1.0/15.0));
             }
-            // Translations: 1e16 + 2y (spacing 2 = ulp) and 1e300 + y * 2^950
-            // (1e300 is a multiple of its ulp 2^944).
-            const double offsets[2][2] = {{1e16, 1.0}, {1e300, std::ldexp(1.0, 950)}};
+            for (int k : {-1060, -1022, -300, 300, 1000}) {
+                double ys[6];
+                for (int i = 0; i < 6; ++i) ys[i] = std::ldexp(ya[i], k);
+                REQUIRE(n4m_preflight_factor_association(ctx,fa,ys,6,0,999,17,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_factor_association_exact(ctx,fa,ys,6,0,1000,exact)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_correlation_test(ctx,ys,ya,6,1,999,17,corr,corr_counts)==N4M_ERR_UNSUPPORTED);
+            }
+            // Translations inside D: 1e16 + 2y (ulp 2) and 2^200 + y 2^150
+            // (ulp 2^148); 1e300 is outside D.
+            const double offsets[2][2] = {{1e16, 1.0}, {std::ldexp(1.0, 200), std::ldexp(1.0, 149)}};
             for (const auto& o : offsets) {
                 double ys[6], xs5[5];
                 for (int i = 0; i < 6; ++i) ys[i] = o[0] + 2.0 * o[1] * ya[i];
@@ -324,74 +373,43 @@ int main() {
                 REQUIRE(n4m_stats_correlation_test(ctx,xs5,cy,5,0,999,17,corr,corr_counts)==N4M_OK);
                 REQUIRE(rel(corr[0],6.0/std::sqrt(60.0)) && corr_counts[0]==133);
             }
-            // A small within-level spread next to a large between-level gap:
-            // levels {0, d} and {1}. SSW = d^2/2 is accumulated at its own
-            // scale; with d = 2^-510, F = (2/3) 2^1021 (hand value, the d terms
-            // of SSB are below rounding). With d = 2^-520, F = (2/3) 2^1041 is
-            // not representable: explicit error, never Inf or NaN with OK.
-            int64_t fl[3]={0,0,1};
-            double gap[3]={0.0,std::ldexp(1.0,-510),1.0};
-            REQUIRE(n4m_preflight_factor_association(ctx,fl,gap,3,0,0,1,assoc,perm_counts)==N4M_OK);
-            REQUIRE(assoc[1] > 0.0 && rel(assoc[1],std::ldexp(2.0/3.0,1021)));
-            gap[1]=std::ldexp(1.0,-520);
-            REQUIRE(n4m_preflight_factor_association(ctx,fl,gap,3,0,0,1,assoc,perm_counts)
-                    ==N4M_ERR_NUMERICAL_FAILURE);
-            // Holm and BH: tiny p-values (subnormal included) stay positive,
-            // keep their order and scale exactly when no cap applies.
-            for (int k : {-1060, -1022, -500, -100}) {
-                double tiny[4], h[4], b[4];
-                for (int i = 0; i < 4; ++i) tiny[i] = std::ldexp(pv[i], k);
-                REQUIRE(n4m_preflight_holm_adjust(ctx,tiny,4,h)==N4M_OK);
-                REQUIRE(n4m_stats_bh_adjust(ctx,tiny,4,b)==N4M_OK);
-                const double holm_ref[4]={0.03,0.06,0.06,0.02}, bh_ref[4]={0.02,0.04,0.04,0.02};
-                for (int i = 0; i < 4; ++i) {
-                    REQUIRE(h[i] > 0.0 && b[i] > 0.0 && h[i] >= tiny[i] && b[i] >= tiny[i]);
-                    REQUIRE(b[i] <= h[i]);
-                    if (k >= -1022) {
-                        REQUIRE(std::abs(std::ldexp(h[i],-k) - holm_ref[i]) <= 1e-12);
-                        REQUIRE(std::abs(std::ldexp(b[i],-k) - bh_ref[i]) <= 1e-12);
-                    }
-                }
-            }
-        }
-        // Mixed exponents within one vector and near-zero effects (rules 8-12),
-        // against exact dyadic or rational references.
-        {
-            const auto rel = [](double a, double b) {
-                return std::abs(a - b) <= 1e-12 * std::abs(b);
-            };
+            double far[6];
+            for (int i = 0; i < 6; ++i) far[i] = 1e300 + std::ldexp(ya[i], 950);
+            REQUIRE(n4m_preflight_factor_association(ctx,fa,far,6,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+
+            // Mixed exponents inside D, exact references. Levels {0, 2^-60}
+            // | {1}: SSW = 2^-121 from per-level residuals, F = (2/3) 2^121.
             int64_t f3[3]={0,0,1};
-            // Review P0: a within-level spread far below a huge level is kept
-            // (per-level scaling of the original values); F ~ (4/3)1e800 and
-            // ~2^2148 are not representable: explicit error, not OK + NaN.
-            double huge[3]={0.0,1e-100,1e300};
-            REQUIRE(n4m_preflight_factor_association(ctx,f3,huge,3,0,0,1,assoc,perm_counts)
-                    ==N4M_ERR_NUMERICAL_FAILURE);
-            double denorm[3]={0.0,std::ldexp(1.0,-1074),1.0};
-            REQUIRE(n4m_preflight_factor_association(ctx,f3,denorm,3,0,0,1,assoc,perm_counts)
-                    ==N4M_ERR_NUMERICAL_FAILURE);
+            double gap[3]={0.0,std::ldexp(1.0,-60),1.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,gap,3,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(rel(assoc[1],std::ldexp(2.0/3.0,121)) && rel(assoc[0],1.0));
+            // Signed mixture {-2^-30, 2^-30} | {2^30}: SSW = 2^-59,
+            // SSB = (2/3) 2^60, F = (2/3) 2^119.
+            double mixed[3]={-std::ldexp(1.0,-30),std::ldexp(1.0,-30),std::ldexp(1.0,30)};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,mixed,3,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(rel(assoc[1],std::ldexp(2.0/3.0,119)) && rel(assoc[0],1.0));
+            // The review's extreme mixtures lie outside D: explicit refusal.
+            double huge[3]={0.0,1e-100,1e300}, denorm[3]={0.0,std::ldexp(1.0,-1074),1.0};
+            double wide[3]={0.0,std::ldexp(1.0,-520),1.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,huge,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,denorm,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,wide,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
             // Truly zero within-level variance: F undefined (NaN), status OK.
             double flat[3]={5.0,5.0,7.0};
             REQUIRE(n4m_preflight_factor_association(ctx,f3,flat,3,0,0,1,assoc,perm_counts)==N4M_OK);
             REQUIRE(rel(assoc[0],1.0) && std::isnan(assoc[1]));
-            // Signed mixture {-2^-200, 2^-200} | {2^300}: SSW = 2^-399,
-            // SSB = (2/3) 2^600, F = (2/3) 2^999 exactly (hand value).
-            double mixed[3]={-std::ldexp(1.0,-200),std::ldexp(1.0,-200),std::ldexp(1.0,300)};
-            REQUIRE(n4m_preflight_factor_association(ctx,f3,mixed,3,0,0,1,assoc,perm_counts)==N4M_OK);
-            REQUIRE(rel(assoc[1],std::ldexp(2.0/3.0,999)) && rel(assoc[0],1.0));
             // Near-zero effect: {0, 2} | {d, 2+d}, d = 2^-20: eta^2 =
             // d^2/(4+d^2), F = d^2/2 (rational references).
-            int64_t f4[4]={0,0,1,1};
             const double dl = std::ldexp(1.0,-20);
             double near0[4]={0.0,2.0,dl,2.0+dl};
-            REQUIRE(n4m_preflight_factor_association(ctx,f4,near0,4,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(n4m_preflight_factor_association(ctx,f4b,near0,4,0,0,1,assoc,perm_counts)==N4M_OK);
             REQUIRE(rel(assoc[0],dl*dl/(4.0+dl*dl)) && rel(assoc[1],dl*dl/2.0));
             // Exactly zero effect: equal level means give eta^2 = F = 0.
             double zero_effect[4]={0.0,2.0,2.0,0.0};
-            REQUIRE(n4m_preflight_factor_association(ctx,f4,zero_effect,4,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(n4m_preflight_factor_association(ctx,f4b,zero_effect,4,0,0,1,assoc,perm_counts)==N4M_OK);
             REQUIRE(assoc[0]==0.0 && assoc[1]==0.0);
-            // Cramer's V at independence (review P0): a 2x9 table with one
-            // unit per cell has chi-square = V = 0 exactly.
+            // Cramer's V at independence: a 2x9 table with one unit per cell
+            // has chi-square = V = 0 exactly.
             int64_t rows18[18]; double cols18[18];
             for (int i = 0; i < 18; ++i) { rows18[i] = i / 9; cols18[i] = i % 9; }
             REQUIRE(n4m_preflight_factor_association(ctx,rows18,cols18,18,1,0,1,assoc,perm_counts)==N4M_OK);
@@ -408,24 +426,44 @@ int main() {
                 const double md = static_cast<double>(m);
                 REQUIRE(rel(assoc[0],1.0/(2.0*md+1.0)) && rel(assoc[1],4.0/(4.0*md+2.0)));
             }
-            // Correlation with mixed exponents: x = {1e-300, 2e-300, 1e300}
-            // behaves as {0, 0, 1}: r = sqrt(3)/2; ranks give rho = 1.
-            double xm[3]={1e-300,2e-300,1e300}, ym[3]={1,2,3};
+            // Correlation with mixed exponents inside D: x = {2^-30, 2^-29,
+            // 2^30} gives r = sqrt(3)/2 to O(2^-60); ranks give rho = 1.
+            double xm[3]={std::ldexp(1.0,-30),std::ldexp(1.0,-29),std::ldexp(1.0,30)}, ym[3]={1,2,3};
             REQUIRE(n4m_stats_correlation_test(ctx,xm,ym,3,0,0,1,corr,corr_counts)==N4M_OK);
             REQUIRE(rel(corr[0],std::sqrt(3.0)/2.0));
             REQUIRE(n4m_stats_correlation_test(ctx,xm,ym,3,1,0,1,corr,corr_counts)==N4M_OK);
             REQUIRE(rel(corr[0],1.0));
             // Exactly uncorrelated (dyadic): r = rho = 0.
-            double xz[4]={1,2,3,4}, yz[4]={1,-1,-1,1};
-            REQUIRE(n4m_stats_correlation_test(ctx,xz,yz,4,0,0,1,corr,corr_counts)==N4M_OK);
+            double yz[4]={1,-1,-1,1};
+            REQUIRE(n4m_stats_correlation_test(ctx,xz4,yz,4,0,0,1,corr,corr_counts)==N4M_OK);
             REQUIRE(corr[0]==0.0);
-            REQUIRE(n4m_stats_correlation_test(ctx,xz,yz,4,1,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(n4m_stats_correlation_test(ctx,xz4,yz,4,1,0,1,corr,corr_counts)==N4M_OK);
             REQUIRE(corr[0]==0.0);
-            // Huge irrelevant offset next to a near-zero slope: y = 1e300 +
-            // {0, 0, 2^945, 2^945} against x = {1, 2, 3, 4}: r = 2/sqrt(5).
-            double yo[4]={1e300,1e300,1e300+std::ldexp(1.0,945),1e300+std::ldexp(1.0,945)};
-            REQUIRE(n4m_stats_correlation_test(ctx,xz,yo,4,0,0,1,corr,corr_counts)==N4M_OK);
+            // Large offset next to a small step inside D: y = 2^200 +
+            // {0, 0, 2^150, 2^150} against x = {1, 2, 3, 4}: r = 2/sqrt(5).
+            const double o200 = std::ldexp(1.0,200), s150 = std::ldexp(1.0,150);
+            double yo[4]={o200,o200,o200+s150,o200+s150};
+            REQUIRE(n4m_stats_correlation_test(ctx,xz4,yo,4,0,0,1,corr,corr_counts)==N4M_OK);
             REQUIRE(rel(corr[0],2.0/std::sqrt(5.0)));
+            // Holm and BH: small p-values inside D scale exactly; beyond
+            // 2^-256 they are refused.
+            for (int k : {-100, -200}) {
+                double tiny[4], h[4], b[4];
+                for (int i = 0; i < 4; ++i) tiny[i] = std::ldexp(pv[i], k);
+                REQUIRE(n4m_preflight_holm_adjust(ctx,tiny,4,h)==N4M_OK);
+                REQUIRE(n4m_stats_bh_adjust(ctx,tiny,4,b)==N4M_OK);
+                const double holm_ref[4]={0.03,0.06,0.06,0.02}, bh_ref[4]={0.02,0.04,0.04,0.02};
+                for (int i = 0; i < 4; ++i) {
+                    REQUIRE(rel(std::ldexp(h[i],-k),holm_ref[i]) && rel(std::ldexp(b[i],-k),bh_ref[i]));
+                    REQUIRE(b[i] <= h[i]);
+                }
+            }
+            for (int k : {-260, -500, -1060}) {
+                double tiny[4], h[4];
+                for (int i = 0; i < 4; ++i) tiny[i] = std::ldexp(pv[i], k);
+                REQUIRE(n4m_preflight_holm_adjust(ctx,tiny,4,h)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_bh_adjust(ctx,tiny,4,h)==N4M_ERR_UNSUPPORTED);
+            }
         }
         // Benjamini-Hochberg: statsmodels 0.15.0 multipletests(fdr_bh) and
         // SciPy 1.15.3 false_discovery_control(method="bh") reference values.
