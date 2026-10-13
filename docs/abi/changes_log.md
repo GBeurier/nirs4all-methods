@@ -14,6 +14,21 @@ Hubert-Arabie ARI, NaN for fewer than two rows or identical trivial
 partitions. ABI 2.18.0 already shipped in npm `@nirs4all/methods@1.3.5`, so
 this is a minor bump; the project version is left for the release batch.
 No serialized format changes.
+## 2026-10-13 — ABI 2.19.0: noise proxy and tolerance pairs (unreleased)
+
+Add two caller-buffer operations in `n4m/metrics.h`.
+`n4m_preflight_noise_proxy_compute` smooths rows with the existing
+Savitzky-Golay engine (deriv 0, odd window >= 3, polyorder <= window-2) and
+returns, per feature, the root mean square of `x - smooth` over rows whose
+whole window is valid, divided by the residual gain
+`sqrt(sum((delta - weights)^2))` obtained from the filter's impulse response.
+Edge features are never padded (NaN, count 0). A pooled value and the gain are
+also returned. `n4m_preflight_pairs_within_tolerance` lists row pairs (within
+one matrix, i < h, or query x reference) whose RMS feature difference is at
+most a positive finite tolerance, excluding equal group IDs, and reports the
+exact total, candidate count and per-row flags even when the listing is
+truncated. Overflowing differences count as distant. No serialized format
+changes; 2.18 symbols are unchanged.
 
 ## 2026-10-12 — ABI 2.18.0: reusable Preflight diagnostics (unreleased)
 

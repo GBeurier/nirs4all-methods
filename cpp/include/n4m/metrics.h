@@ -121,6 +121,44 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
     n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
     double* ari);
 
+/* Smoothing-residual noise proxy along the feature axis. Features are assumed
+ * equally spaced. Each row is smoothed by the Methods Savitzky-Golay filter
+ * (deriv 0, odd window_length >= 3, 0 <= polyorder <= window_length-2).
+ * A residual r_ij = x_ij - smooth_ij exists only for interior features
+ * (h <= j < cols-h, h = window_length/2) whose whole window is valid in row
+ * i: edges are never padded. g = sqrt(sum_k (delta_k - w_k)^2) is the
+ * residual gain for unit white noise, w the smoothing weights. Outputs:
+ * band_noise[j] = sqrt(mean_i r_ij^2) / g, NaN when no row contributes;
+ * band_counts[j] = contributing rows; out_two[0] the same root mean square
+ * pooled over every evaluable residual cell (NaN if none) divided by g;
+ * out_two[1] = g. valid_mask is optional row-major rows x cols bytes, nonzero
+ * = valid; unmasked X must be finite and cols >= window_length. The value is
+ * a noise proxy under a locally polynomial signal, never an SNR. */
+N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const uint8_t* valid_mask,
+    int32_t window_length, int32_t polyorder, double* band_noise,
+    int64_t* band_counts, double* out_two);
+
+/* Row pairs whose root-mean-square feature difference
+ * sqrt(sum_j (q_ij - r_hj)^2 / cols) is <= tolerance (finite, > 0).
+ * reference == NULL compares query rows with each other (pairs i < h, using
+ * query_groups for both rows; reference_groups and reference_flags ignored).
+ * Otherwise every query row is compared with every reference row, and both
+ * group arrays are NULL or both non-NULL. Pairs whose rows share a group ID
+ * are excluded from candidates. Up to max_pairs pairs are written in
+ * ascending (query, reference) order to pair_indices (row-major max_pairs x
+ * 2) and pair_distances; both may be NULL only when max_pairs == 0.
+ * query_flags (query rows) and, for two matrices, reference_flags (reference
+ * rows) are set to 1 for rows in at least one pair, else 0. out_counts
+ * receives [total pairs within tolerance, candidate pairs compared]. All
+ * values must be finite. */
+N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
+    n4m_context_t* ctx, const n4m_matrix_view_t* query,
+    const n4m_matrix_view_t* reference, const int64_t* query_groups,
+    const int64_t* reference_groups, double tolerance, int64_t max_pairs,
+    int64_t* pair_indices, double* pair_distances, uint8_t* query_flags,
+    uint8_t* reference_flags, int64_t* out_counts);
+
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
                                        const double* y_pred,

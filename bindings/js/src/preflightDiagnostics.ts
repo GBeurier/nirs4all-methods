@@ -344,3 +344,109 @@ export function preflightAdjustedRandIndex(a: readonly (number | bigint)[],
         scope.close();
     }
 }
+
+export interface PreflightNoiseProxyResult {
+    /** sqrt(mean residual^2)/gain per feature; NaN at edges or without rows. */
+    bandNoise: Float64Array;
+    bandCounts: number[];
+    /** Root mean square over every evaluable residual cell, divided by gain. */
+    pooled: number;
+    /** Residual gain sqrt(sum((delta - weights)^2)) for unit white noise. */
+    gain: number;
+}
+
+export interface PreflightPairsResult {
+    /** Row-major listed pairs: [query, reference] for each listed pair. */
+    pairs: number[];
+    distances: Float64Array;
+    queryFlags: Uint8Array;
+    referenceFlags: Uint8Array;
+    totalPairs: number;
+    candidatePairs: number;
+}
+
+/** Savitzky-Golay smoothing-residual noise proxy; interior features only. */
+export function preflightNoiseProxy(X: Matrix, windowLength: number, polyorder: number,
+    validMask?: Uint8Array): PreflightNoiseProxyResult {
+    validateMatrix(X);
+    if (!Number.isInteger(windowLength) || !Number.isInteger(polyorder) ||
+        (validMask && validMask.length !== X.data.length)) {
+        throw new RangeError("invalid noise proxy window, polyorder or mask");
+    }
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const mask = validMask ? scope.alloc(validMask.length) : 0;
+        const band = scope.alloc(X.cols * 8), counts = scope.alloc(X.cols * 8);
+        const out = scope.alloc(16);
+        if (validMask) m.HEAPU8.set(validMask, mask);
+        const st = m.ccall("n4m_preflight_noise_proxy_compute", "number",
+            Array(8).fill("number"),
+            [ctx.handle, x.viewPtr, mask, windowLength, polyorder, band, counts, out]) as number;
+        checkStatus(st, ctx.handle);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            bandNoise: copyF64(band, X.cols),
+            bandCounts: Array.from({length: X.cols}, (_, j) =>
+                Number(dv.getBigInt64(counts + j * 8, true))),
+            pooled: m.HEAPF64[out / 8]!, gain: m.HEAPF64[out / 8 + 1]!,
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/**
+ * Row pairs with root-mean-square feature difference <= tolerance. Without a
+ * reference, query rows are compared with each other (i < h).
+ */
+export function preflightPairsWithinTolerance(query: Matrix, tolerance: number,
+    maxPairs: number, reference?: Matrix,
+    queryGroups?: readonly (number | bigint)[],
+    referenceGroups?: readonly (number | bigint)[]): PreflightPairsResult {
+    validateMatrix(query);
+    if (reference) validateMatrix(reference);
+    if (!Number.isSafeInteger(maxPairs) || maxPairs < 0 ||
+        (reference && reference.cols !== query.cols) ||
+        (queryGroups && queryGroups.length !== query.rows) ||
+        (reference && (queryGroups === undefined) !== (referenceGroups === undefined)) ||
+        (referenceGroups && (!reference || referenceGroups.length !== reference.rows))) {
+        throw new RangeError("invalid pair shapes, groups or listing budget");
+    }
+    if (queryGroups) validateGroupIds(queryGroups);
+    if (referenceGroups) validateGroupIds(referenceGroups);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const q = scope.matrix(query.data, query.rows, query.cols);
+        const r = reference ? scope.matrix(reference.data, reference.rows, reference.cols) : undefined;
+        const qg = queryGroups ? scope.i64(queryGroups) : 0;
+        const rg = referenceGroups ? scope.i64(referenceGroups) : 0;
+        const idx = maxPairs ? scope.alloc(maxPairs * 16) : 0;
+        const dist = maxPairs ? scope.alloc(maxPairs * 8) : 0;
+        const qf = scope.alloc(query.rows);
+        const rf = reference ? scope.alloc(reference.rows) : 0;
+        const counts = scope.alloc(16);
+        const st = m.ccall("n4m_preflight_pairs_within_tolerance", "number",
+            ["number", "number", "number", "number", "number", "number", "i64",
+                "number", "number", "number", "number", "number"],
+            [ctx.handle, q.viewPtr, r ? r.viewPtr : 0, qg, rg, tolerance, BigInt(maxPairs),
+                idx, dist, qf, rf, counts]) as number;
+        checkStatus(st, ctx.handle);
+        const dv = new DataView(m.HEAPU8.buffer);
+        const total = Number(dv.getBigInt64(counts, true));
+        const listed = Math.min(total, maxPairs);
+        return {
+            pairs: Array.from({length: listed * 2}, (_, j) => Number(dv.getBigInt64(idx + j * 8, true))),
+            distances: copyF64(dist, listed),
+            queryFlags: new Uint8Array(m.HEAPU8.slice(qf, qf + query.rows)),
+            referenceFlags: reference ? new Uint8Array(m.HEAPU8.slice(rf, rf + reference.rows))
+                : new Uint8Array(0),
+            totalPairs: total,
+            candidatePairs: Number(dv.getBigInt64(counts + 8, true)),
+        };
+    } finally {
+        scope.close();
+    }
+}
