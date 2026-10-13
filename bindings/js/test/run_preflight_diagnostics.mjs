@@ -196,8 +196,36 @@ near(exactRho.minimumPValue, 1 / 15);
 // overflow 32-bit sizes; both APIs refuse before allocating.
 const bigCodes = Array.from({length: 65536}, (_, i) => i);
 const bigClasses = Float64Array.from(bigCodes);
-assert.throws(() => statsFactorAssociationExact(bigCodes, bigClasses, true, 100000));
-assert.throws(() => preflightFactorAssociation(bigCodes, bigClasses, true, 0, 1));
+// Only the explicit status is accepted: a WASM trap (RuntimeError) fails.
+const status = (code) => (error) => error?.name === "N4mError" && error.status === code;
+assert.throws(() => statsFactorAssociationExact(bigCodes, bigClasses, true, 100000), status(10));
+assert.throws(() => preflightFactorAssociation(bigCodes, bigClasses, true, 0, 1), status(10));
 assert.ok(statsFactorAssociationExact([0, 0, 1, 1], new Float64Array([0, 0, 1, 1]), true, 10)
     .nArrangements === 6);
+// Magnitude sweep (same data and goldens as test_preflight.cpp): results
+// are scale and translation invariant; an unrepresentable F is an explicit
+// N4M_ERR_NUMERICAL_FAILURE, never Inf/NaN.
+const relNear = (a, b) => assert.ok(Math.abs(a - b) <= 1e-12 * Math.abs(b), `${a} vs ${b}`);
+for (const k of [-1060, -1022, -500, -100, 0, 100, 500, 1000]) {
+    const scale = (v, e) => v * 2 ** e;  // exact: powers of two
+    const ys = Float64Array.from([1, 2, 3, 7, 8, 9], (v) => k < -1000 ? scale(scale(v, -1000), k + 1000) : scale(v, k));
+    const sweep = preflightFactorAssociation([4, 4, 4, -9, -9, -9], ys, false, 999, 17);
+    relNear(sweep.effectSize, 27 / 29);
+    relNear(sweep.statistic, 54);
+    assert.equal(sweep.nAtLeastObserved, 93);
+    const xs = Float64Array.from([1, 2, 3, 4, 5], (v) => k < -1000 ? scale(scale(v, -1000), k + 1000) : scale(v, k));
+    const rho = statsCorrelationTest(xs, new Float64Array([2, 4, 5, 4, 5]), "spearman", 999, 17);
+    relNear(rho.coefficient, 7 / Math.sqrt(90));
+    assert.equal(rho.nAtLeastObserved, 201);
+}
+const shifted = preflightFactorAssociation([4, 4, 4, -9, -9, -9],
+    Float64Array.from([1, 2, 3, 7, 8, 9], (v) => 1e300 + 2 * v * 2 ** 950), false, 999, 17);
+relNear(shifted.effectSize, 27 / 29);
+assert.equal(shifted.nAtLeastObserved, 93);
+relNear(preflightFactorAssociation([0, 0, 1], new Float64Array([0, 2 ** -510, 1]), false, 0, 1)
+    .statistic, (2 / 3) * 2 ** 1021);
+assert.throws(() => preflightFactorAssociation([0, 0, 1], new Float64Array([0, 2 ** -520, 1]),
+    false, 0, 1), status(7));
+const tinyHolm = preflightHolmAdjust(Float64Array.from([0.01, 0.04, 0.03, 0.005], (p) => p * 2 ** -500));
+[0.03, 0.06, 0.06, 0.02].forEach((v, i) => relNear(tinyHolm[i] * 2 ** 500, v));
 console.log("JS/WASM Preflight diagnostics passed");

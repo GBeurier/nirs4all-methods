@@ -36,6 +36,14 @@ ABI 2.20.0. No model-state serialization format changes.
   out of bounds. The product is now checked and capped at 10 million cells
   before any allocation, and both the Monte Carlo and exact APIs refuse
   oversized work before evaluating any statistic.
+- Magnitude robustness of the association kernels: the centered copy is
+  also rescaled from the centered variation, SSW is computed from per-level
+  residuals at their own power-of-two scale (a 2^-510 within-level spread
+  next to a unit gap gives F = (2/3) 2^1021 instead of NaN), and an
+  unrepresentable F returns `N4M_ERR_NUMERICAL_FAILURE`. Native and WASM
+  sweeps over 2^k (k from -1060 to 1000) and translations by 1e16 and 1e300
+  check invariance of eta^2, F, r, rho, counts, exact distributions, Holm
+  and BH.
 
 ## [1.3.6] - 2026-10-13
 

@@ -27,6 +27,16 @@ the between-group sum (two identical groups `1e16 + {0, 2, 4}` gave eta^2 =
 a shift to the first target and a residual-mean correction; eta^2 and F are
 translation invariant. Permutation draws and counts are unchanged.
 
+Domain of validity (ABI 2.20 association kernels): any finite doubles. The
+centered copy is rescaled by exact powers of two chosen from max|y| and then
+from the centered variation, so eta^2, F, V, r, rho, permutation counts and
+exact distributions are invariant to scaling by 2^k over the whole double
+range (subnormals included) and to large translations (up to the rounding
+of the shifted inputs). SSW is computed from per-level residuals (each level
+centered on its own values) at their own scale, never as SST - SSB; an F
+that overflows, or underflows while SSB > 0, returns
+`N4M_ERR_NUMERICAL_FAILURE`. Holm and BH keep positive p-values positive.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged

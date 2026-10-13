@@ -284,6 +284,76 @@ int main() {
             REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),classes.data(),3000,1,999,1,
                         assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
         }
+        // Magnitude sweep (robustness rule): scaling by 2^k, k from the
+        // subnormal range to 2^1000, and large translations leave eta^2, F,
+        // r, rho, the permutation counts and the exact distributions
+        // unchanged (relative 1e-12, counts exact). Data are chosen so every
+        // scaled or shifted input is exactly representable.
+        {
+            const int ks[] = {-1060, -1022, -500, -100, 0, 100, 500, 1000};
+            const auto rel = [](double a, double b) {
+                return std::abs(a - b) <= 1e-12 * std::abs(b);
+            };
+            for (int k : ks) {
+                double ys[6], xs5[5], ys5[5];
+                for (int i = 0; i < 6; ++i) ys[i] = std::ldexp(ya[i], k);
+                for (int i = 0; i < 5; ++i) {
+                    xs5[i] = std::ldexp(cx[i], k);
+                    ys5[i] = std::ldexp(cy[i], -k / 2);
+                }
+                REQUIRE(n4m_preflight_factor_association(ctx,fa,ys,6,0,999,17,assoc,perm_counts)==N4M_OK);
+                REQUIRE(rel(assoc[0],27.0/29.0) && rel(assoc[1],54.0) && perm_counts[0]==93);
+                REQUIRE(n4m_stats_factor_association_exact(ctx,fa,ys,6,0,1000,exact)==N4M_OK);
+                REQUIRE(near(exact[0],20) && near(exact[1],0.1) && near(exact[2],0.1));
+                REQUIRE(n4m_stats_correlation_test(ctx,xs5,ys5,5,0,999,17,corr,corr_counts)==N4M_OK);
+                REQUIRE(rel(corr[0],6.0/std::sqrt(60.0)) && corr_counts[0]==133);
+                REQUIRE(n4m_stats_correlation_test(ctx,xs5,ys5,5,1,999,17,corr,corr_counts)==N4M_OK);
+                REQUIRE(rel(corr[0],7.0/std::sqrt(90.0)) && corr_counts[0]==201);
+                REQUIRE(n4m_stats_correlation_exact(ctx,xs5,ys5,5,0,1000,exact)==N4M_OK);
+                REQUIRE(near(exact[1],2.0/15.0) && near(exact[2],1.0/15.0));
+            }
+            // Translations: 1e16 + 2y (spacing 2 = ulp) and 1e300 + y * 2^950
+            // (1e300 is a multiple of its ulp 2^944).
+            const double offsets[2][2] = {{1e16, 1.0}, {1e300, std::ldexp(1.0, 950)}};
+            for (const auto& o : offsets) {
+                double ys[6], xs5[5];
+                for (int i = 0; i < 6; ++i) ys[i] = o[0] + 2.0 * o[1] * ya[i];
+                for (int i = 0; i < 5; ++i) xs5[i] = o[0] + 2.0 * o[1] * cx[i];
+                REQUIRE(n4m_preflight_factor_association(ctx,fa,ys,6,0,999,17,assoc,perm_counts)==N4M_OK);
+                REQUIRE(rel(assoc[0],27.0/29.0) && rel(assoc[1],54.0) && perm_counts[0]==93);
+                REQUIRE(n4m_stats_correlation_test(ctx,xs5,cy,5,0,999,17,corr,corr_counts)==N4M_OK);
+                REQUIRE(rel(corr[0],6.0/std::sqrt(60.0)) && corr_counts[0]==133);
+            }
+            // A small within-level spread next to a large between-level gap:
+            // levels {0, d} and {1}. SSW = d^2/2 is accumulated at its own
+            // scale; with d = 2^-510, F = (2/3) 2^1021 (hand value, the d terms
+            // of SSB are below rounding). With d = 2^-520, F = (2/3) 2^1041 is
+            // not representable: explicit error, never Inf or NaN with OK.
+            int64_t fl[3]={0,0,1};
+            double gap[3]={0.0,std::ldexp(1.0,-510),1.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,fl,gap,3,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(assoc[1] > 0.0 && rel(assoc[1],std::ldexp(2.0/3.0,1021)));
+            gap[1]=std::ldexp(1.0,-520);
+            REQUIRE(n4m_preflight_factor_association(ctx,fl,gap,3,0,0,1,assoc,perm_counts)
+                    ==N4M_ERR_NUMERICAL_FAILURE);
+            // Holm and BH: tiny p-values (subnormal included) stay positive,
+            // keep their order and scale exactly when no cap applies.
+            for (int k : {-1060, -1022, -500, -100}) {
+                double tiny[4], h[4], b[4];
+                for (int i = 0; i < 4; ++i) tiny[i] = std::ldexp(pv[i], k);
+                REQUIRE(n4m_preflight_holm_adjust(ctx,tiny,4,h)==N4M_OK);
+                REQUIRE(n4m_stats_bh_adjust(ctx,tiny,4,b)==N4M_OK);
+                const double holm_ref[4]={0.03,0.06,0.06,0.02}, bh_ref[4]={0.02,0.04,0.04,0.02};
+                for (int i = 0; i < 4; ++i) {
+                    REQUIRE(h[i] > 0.0 && b[i] > 0.0 && h[i] >= tiny[i] && b[i] >= tiny[i]);
+                    REQUIRE(b[i] <= h[i]);
+                    if (k >= -1022) {
+                        REQUIRE(std::abs(std::ldexp(h[i],-k) - holm_ref[i]) <= 1e-12);
+                        REQUIRE(std::abs(std::ldexp(b[i],-k) - bh_ref[i]) <= 1e-12);
+                    }
+                }
+            }
+        }
         // Benjamini-Hochberg: statsmodels 0.15.0 multipletests(fdr_bh) and
         // SciPy 1.15.3 false_discovery_control(method="bh") reference values.
         double bh[6];
