@@ -129,6 +129,30 @@ pre-pass refuses other inputs with `N4M_ERR_UNSUPPORTED` and the message
 2^256], max/min nonzero |x| <= 2^64)" before any computation. Inside D an F
 cannot overflow; the overflow refusal remains as a guard.
 
+## 2026-10-13 — ABI 2.20.0 (continued): one-way random-effects variance components (unreleased)
+
+Add two caller-buffer operations in `n4m/metrics.h`. Earlier symbols are
+unchanged and no serialized format changes.
+
+`n4m_stats_variance_components_reml` fits `x_ij = mu + u_i + e_ij` per feature
+by REML for balanced or unbalanced groups, singletons included, with an
+optional validity mask. It profiles `s2w` out of the restricted likelihood,
+grids `gamma = s2b/s2w` (0 and log10 in [-8, log10(1000 max(1, F))], step 1/4)
+and bisects the derivative of the profiled criterion. Per feature it writes
+`s2b`, `s2w`, ICC(1), the restricted log-likelihood (statsmodels MixedLM
+convention), group and observation counts, grid local minima and bisection
+iterations, plus a status: interior, insufficient, boundary `s2b = 0`, zero
+total variance, boundary `s2w = 0`, or not converged.
+
+`n4m_stats_variance_components_intervals` returns, at a given confidence, the
+exact chi-square interval of the within-group SD (pooled SS, N-g df), the exact
+F interval of the balanced ANOVA ICC(1,1) (Searle), and percentile intervals of
+the pooled SD and the REML ICC from a cluster bootstrap. Optional cluster IDs
+define the resampling unit (groups must nest in clusters). Replicate b uses
+`numpy.random.default_rng(seed).integers(0, U, size=(B, U))[b]`; the same draws
+serve every feature; the count of valid replicates is returned per feature.
+Bootstrap work above 2.5e9 operations returns `N4M_ERR_UNSUPPORTED`.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged

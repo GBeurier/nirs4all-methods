@@ -57,6 +57,8 @@ NIRS4ALL_DONOR_CATEGORIES = {
 # scikit-bio and R p.adjust reference values are pinned in the native contract
 # tests (cpp/tests/test_preflight.cpp, cpp/tests/test_hdbscan.cpp,
 # cpp/tests/test_permanova.cpp) and parity/fixtures/{hdbscan,permanova}_v1.json.
+# The variance components pin dense-REML, statsmodels and SciPy references
+# in cpp/tests/test_variance_components.cpp.
 NIRS4ALL_DONOR_METHODS = {
     "diagnostics.adjusted_rand_index",
     "diagnostics.bh_adjust",
@@ -68,6 +70,7 @@ NIRS4ALL_DONOR_METHODS = {
     "diagnostics.permdisp",
     "diagnostics.preflight_qualification",
     "diagnostics.regression_metrics",
+    "diagnostics.variance_components",
     "models.ensembles.moment_stack",
     "models.regularized.ridge",
 }

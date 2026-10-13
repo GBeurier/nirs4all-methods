@@ -82,6 +82,18 @@ ABI 2.20.0. No model-state serialization format changes.
   schemes, which are not Freedman-Lane, are transcribed for information only.
   The reference packages are test-only.
 
+- Public ABI 2.20.0 one-way random-effects variance components:
+  `n4m_stats_variance_components_reml` (REML for balanced and unbalanced
+  groups, explicit boundary and convergence status per feature) and
+  `n4m_stats_variance_components_intervals` (exact chi-square interval of the
+  within-group SD, exact F interval of the balanced ICC(1,1), and seeded
+  cluster-bootstrap percentile intervals of the pooled SD and REML ICC with
+  NumPy-parity PCG64 draws). Internal chi-square and F quantiles live in
+  `cpp/src/core/common/distributions.cpp`. Native tests compare with dense REML
+  score equations (NumPy 2.5.4 / SciPy 1.18.1), statsmodels 0.15.0 MixedLM,
+  balanced closed forms and SciPy quantiles. JS/WASM wrappers
+  `statsVarianceComponentsReml` and `statsVarianceComponentsIntervals`.
+
 ### Fixed
 
 - `n4m_preflight_factor_association` centered targets on a naive mean after

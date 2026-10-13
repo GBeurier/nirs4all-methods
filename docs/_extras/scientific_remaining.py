@@ -1733,6 +1733,44 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO
         + "parity/fixtures/permanova_v1.json",
     ),
+    "diagnostics_variance_components": _entry(
+        "One-way random-effects variance components (REML) and their intervals",
+        "Patterson & Thompson (1971), *Recovery of inter-block information when block sizes are "
+        "unequal*, Biometrika 58(3), 545–554, https://doi.org/10.1093/biomet/58.3.545; Harville "
+        "(1977), *Maximum Likelihood Approaches to Variance Component Estimation and to Related "
+        "Problems*, JASA 72(358), 320–338, https://doi.org/10.1080/01621459.1977.10480998; Searle "
+        "(1971), *Linear Models*, Wiley, for the exact balanced ICC interval.",
+        "For $x_{ij}=\\mu+u_i+e_{ij}$ with $u_i\\sim N(0,\\sigma_b^2)$ and "
+        "$e_{ij}\\sim N(0,\\sigma_w^2)$, REML maximises the restricted likelihood. With "
+        "$\\gamma=\\sigma_b^2/\\sigma_w^2$ and $a_i=\\gamma+1/r_i$, $\\sigma_w^2$ profiles "
+        "out as $(SSW+Q(\\gamma))/(N-1)$, $Q$ the $1/a_i$-weighted sum of squares of the group "
+        "means. The one-dimensional criterion is gridded on $\\gamma$ and its derivative bisected; "
+        "$\\gamma=0$ is kept when the derivative there is non-negative. ICC(1) is "
+        "$\\sigma_b^2/(\\sigma_b^2+\\sigma_w^2)$. Intervals: $\\sqrt{SSW/\\chi^2}$ on $N-g$ "
+        "degrees of freedom for the within SD; for balanced groups, "
+        "$F_L=F/F_{1-\\alpha/2}(g-1,N-g)$, $F_U=F\\,F_{1-\\alpha/2}(N-g,g-1)$ and "
+        "$(F_*-1)/(F_*+r-1)$; otherwise percentiles of a cluster bootstrap.",
+        "Repeatability of spectral bands from technical replicates when samples carry unequal "
+        "numbers of acquisitions, including unreplicated samples.",
+        "The model assumes normal, homoscedastic within-group errors and independent groups; the "
+        "chi-square interval of the within SD needs only the first two. The balanced exact "
+        "interval is not truncated to [0, 1]. Bootstrap percentiles are unreliable with few "
+        "resampling units; replicates without within-group degrees of freedom are counted as "
+        "invalid. Boundary estimates ($\\sigma_b^2=0$ or $\\sigma_w^2=0$) are flagged per feature.",
+        "The ABI-2 symbols `n4m_stats_variance_components_reml` and "
+        "`n4m_stats_variance_components_intervals` in `n4m/metrics.h` are implemented in "
+        "`cpp/src/c_api/c_api_variance_components.cpp` and `cpp/src/core/variance_components.cpp`, "
+        "with chi-square and F quantiles in `cpp/src/core/common/distributions.cpp`. Bootstrap "
+        "draws follow `numpy.random.default_rng(seed).integers`. `cpp/tests/test_variance_components.cpp` "
+        "pins dense-REML, statsmodels 0.15.0 and SciPy 1.18.1 references. JS/WASM wraps them as "
+        "`statsVarianceComponentsReml` and `statsVarianceComponentsIntervals`.",
+        "https://doi.org/10.1093/biomet/58.3.545; "
+        "https://doi.org/10.1080/01621459.1977.10480998; "
+        + _REPO
+        + "cpp/src/core/variance_components.cpp; "
+        + _REPO
+        + "cpp/tests/test_variance_components.cpp",
+    ),
     "utilities_hotelling_t2": _entry(
         "Standalone PCA Hotelling T² statistic",
         "Hotelling (1931), *The Generalization of Student's Ratio*, Annals of Mathematical "

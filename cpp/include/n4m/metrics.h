@@ -404,6 +404,53 @@ N4M_API n4m_status_t n4m_stats_permdisp(
     int32_t n_permutations, uint64_t seed, double* distances,
     double* group_mean_distances, double* out_six, int64_t* out_two,
     int32_t* distance_exponent);
+/* One-way random-effects variance components x_ij = mu + u_i + e_ij per
+ * feature (column of X), by REML, for balanced or unbalanced groups.
+ * group_ids has X.rows elements; valid_mask is optional row-major
+ * X.rows x X.cols bytes, nonzero = valid; unmasked X values must be finite.
+ * Every group with >= 1 valid value enters, singletons included. The
+ * restricted likelihood is maximised over gamma = s2b/s2w >= 0 after
+ * profiling s2w: a grid on gamma = 0 and log10(gamma) in
+ * [-8, log10(1000 max(1, F))] with step 1/4 (F the one-way ANOVA ratio),
+ * then bisection on its derivative to a relative width of 4 DBL_EPSILON.
+ * out is row-major X.cols x 8: [0] sigma2_between, [1] sigma2_within,
+ * [2] ICC(1) = s2b/(s2b+s2w), [3] restricted log-likelihood
+ * -(1/2)[(N-1) log 2pi + log|V| + log(1'V^-1 1) + r'V^-1 r] (statsmodels
+ * MixedLM convention), [4] groups, [5] observations, [6] local minima of
+ * the profiled criterion on the grid, [7] bisection iterations.
+ * band_status: 0 interior optimum, 1 insufficient (fewer than two groups
+ * or no within-group degree of freedom), 2 boundary sigma2_between = 0
+ * (ICC 0), 3 zero total variance (undefined), 4 boundary sigma2_within = 0
+ * with distinct group means (ICC 1, sigma2_between = sample variance of
+ * the group means, log-likelihood NaN), 5 not converged (optimum at the
+ * search bound or no derivative sign change). Undefined outputs are NaN. */
+N4M_API n4m_status_t n4m_stats_variance_components_reml(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
+    const uint8_t* valid_mask, double* out, int32_t* band_status);
+
+/* Confidence intervals at level 0 < confidence < 1 for the same model,
+ * per feature, as row-major X.cols x 8 (NaN when undefined):
+ * [0,1] within-group SD, exact chi-square interval on the pooled
+ *       within SS with N-g df: sqrt(SSW/chi2_{1-a/2}), sqrt(SSW/chi2_{a/2});
+ * [2,3] balanced ANOVA ICC(1,1), exact F interval (Searle 1971):
+ *       F=MSB/MSW, FL=F/F_{1-a/2}(g-1,N-g), FU=F*F_{1-a/2}(N-g,g-1),
+ *       bounds (F*-1)/(F*+r-1), not truncated; only when every group has
+ *       the same r >= 2 valid values;
+ * [4,5] within-group pooled SD and [6,7] REML ICC(1): percentile (type-7)
+ *       intervals of a cluster bootstrap over n_bootstrap replicates.
+ * cluster_ids (optional, X.rows elements) names the resampling unit; each
+ * group must lie in one cluster; NULL resamples groups. Units are ordered
+ * by ascending ID; replicate b draws numpy.random.default_rng(seed)
+ * .integers(0, U, size=(n_bootstrap, U))[b] and takes every group of each
+ * drawn unit with that multiplicity. The same draws serve every feature.
+ * A replicate is valid for a feature when its REML status is 0, 2 or 4;
+ * n_valid_replicates (X.cols) counts them, and the percentiles use valid
+ * replicates only. n_bootstrap = 0 skips the bootstrap. More than 2.5e9
+ * bootstrap operations return N4M_ERR_UNSUPPORTED. */
+N4M_API n4m_status_t n4m_stats_variance_components_intervals(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
+    const int64_t* cluster_ids, const uint8_t* valid_mask, double confidence,
+    int32_t n_bootstrap, uint64_t seed, double* out, int64_t* n_valid_replicates);
 
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
