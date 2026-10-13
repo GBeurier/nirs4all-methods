@@ -204,10 +204,11 @@
     "df2": 27,
     "n_groups": 3,
     "log10_distinct": "402927f4ccecfdc9",
-    "b": 413
+    "b": 413,
+    "b_if_compared_on_u_informational": 413
    },
    "informational": {
-    "skbio_permanova_pseudo_f": 1.788630278335289,
+    "skbio_permanova_pseudo_f": 1.788630278335292,
     "skbio_permdisp_f": 0.9404320631471068
    }
   },
@@ -506,7 +507,8 @@
     "df2": 33,
     "n_groups": 3,
     "log10_distinct": "402ec7b197bde76c",
-    "b": 803
+    "b": 803,
+    "b_if_compared_on_u_informational": 803
    }
   },
   {
@@ -718,7 +720,7 @@
     "executed": 999
    },
    "informational": {
-    "skbio_permanova_pseudo_f": 2.1965063366374444
+    "skbio_permanova_pseudo_f": 2.196506336637447
    }
   },
   {
@@ -1068,6 +1070,75 @@
    }
   },
   {
+   "name": "permdisp_boundary",
+   "note": "PERMDISP seed 1: F comparison (vegan) versus U comparison",
+   "rows": 8,
+   "cols": 1,
+   "X": [
+    "c08f480000000000",
+    "c08f380000000000",
+    "408f380000000000",
+    "408f480000000000",
+    "c12e8482000d1b71",
+    "c12e847dfff2e48f",
+    "412e847dfff2e48f",
+    "412e8482000d1b71"
+   ],
+   "term": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1
+   ],
+   "strata": null,
+   "seed": 0,
+   "n_permutations": 999,
+   "permanova": {
+    "ss_total": "428d1a968a484002",
+    "ss_strata": "3b7323ffffffffff",
+    "ss_term": "3be336d036e440e3",
+    "ss_residual": "428d1a968a484002",
+    "r2": "394520497c307f7d",
+    "partial_r2": "394520497c307f7d",
+    "pseudo_f": "396fb06e3a48bf3b",
+    "df_term": 1,
+    "df_residual": 6,
+    "n_levels": 2,
+    "n_strata": 1,
+    "log10_distinct": "3ffd858585bc6620",
+    "b": 999,
+    "executed": 999
+   },
+   "permdisp": {
+    "seed": 1,
+    "distances": [
+     "408f480000000000",
+     "408f380000000000",
+     "408f380000000000",
+     "408f480000000000",
+     "412e8482000d1b71",
+     "412e847dfff2e48f",
+     "412e847dfff2e48f",
+     "412e8482000d1b71"
+    ],
+    "group_mean_distances": [
+     "408f400000000000",
+     "412e848000000000"
+    ],
+    "f": "4275c8351fcb706a",
+    "df1": 1,
+    "df2": 6,
+    "n_groups": 2,
+    "log10_distinct": "3ffd858585bc6620",
+    "b": 0,
+    "b_if_compared_on_u_informational": 22
+   }
+  },
+  {
    "name": "dispersion_only",
    "note": "heteroscedastic groups with a common centre",
    "rows": 30,
@@ -1229,10 +1300,11 @@
     "df2": 27,
     "n_groups": 3,
     "log10_distinct": "40297d1e314e8f67",
-    "b": 6
+    "b": 6,
+    "b_if_compared_on_u_informational": 6
    },
    "informational": {
-    "skbio_permanova_pseudo_f": 0.245581665948893,
+    "skbio_permanova_pseudo_f": 0.24558166594889505,
     "skbio_permdisp_f": 6.372302537753446
    }
   }

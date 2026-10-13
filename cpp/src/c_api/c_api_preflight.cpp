@@ -372,21 +372,42 @@ n4m_status_t exact_distribution(n4m_context_t* ctx, std::vector<int64_t> side,
     out_four[3] = maximum;
     return N4M_OK;
 }
-// Rows of X divided by scale = max|x| (1 when X is all zero), row-major
-// n x k, so that sums of squares stay representable. False on nonfinite X.
-bool scaled_rows(const n4m_matrix_view_t& v, std::vector<double>& out, double& scale) {
-    scale = 0.0;
+// Rows of X as a row-major n x k copy, scaled by the exact power of two
+// 2^-exponent with max|x| = m 2^exponent, m in [0.5, 1), then centred per
+// column (shift to the first row, mean, residual-mean correction), so a large
+// common offset does not cost precision. Sums of squares of the copy are
+// mapped back with scalbn(ss, 2 exponent), never through scale^2.
+// False on nonfinite X; exponent 0 when X is all zero.
+bool scaled_centered_rows(const n4m_matrix_view_t& v, std::vector<double>& out, int& exponent) {
+    double max_abs = 0.0;
     for (int64_t i = 0; i < v.rows; ++i)
         for (int64_t j = 0; j < v.cols; ++j) {
             const double x = at(v, i, j);
             if (!std::isfinite(x)) return false;
-            scale = std::max(scale, std::abs(x));
+            max_abs = std::max(max_abs, std::abs(x));
         }
-    if (!(scale > 0.0)) scale = 1.0;
-    out.resize(static_cast<size_t>(v.rows) * static_cast<size_t>(v.cols));
-    for (int64_t i = 0; i < v.rows; ++i)
-        for (int64_t j = 0; j < v.cols; ++j)
-            out[static_cast<size_t>(i * v.cols + j)] = at(v, i, j) / scale;
+    exponent = 0;
+    if (max_abs > 0.0) std::frexp(max_abs, &exponent);
+    const auto n = static_cast<size_t>(v.rows), k = static_cast<size_t>(v.cols);
+    out.resize(n * k);
+    for (size_t j = 0; j < k; ++j) {
+        const auto jj = static_cast<int64_t>(j);
+        const double origin = std::ldexp(at(v, 0, jj), -exponent);
+        long double mean = 0.0L;
+        for (size_t i = 0; i < n; ++i) {
+            out[i * k + j] = std::ldexp(at(v, static_cast<int64_t>(i), jj), -exponent) - origin;
+            mean += out[i * k + j];
+        }
+        mean /= static_cast<long double>(n);
+        long double residual = 0.0L;
+        for (size_t i = 0; i < n; ++i) {
+            out[i * k + j] = static_cast<double>(out[i * k + j] - mean);
+            residual += out[i * k + j];
+        }
+        residual /= static_cast<long double>(n);
+        for (size_t i = 0; i < n; ++i)
+            out[i * k + j] = static_cast<double>(out[i * k + j] - residual);
+    }
     return true;
 }
 
@@ -1380,8 +1401,8 @@ N4M_API n4m_status_t n4m_stats_permanova(
             return fail(ctx, N4M_ERR_UNSUPPORTED,
                         "PERMANOVA permutations exceed 250 million operation budget");
         std::vector<double> x;
-        double scale = 1.0;
-        if (!scaled_rows(*X, x, scale))
+        int exponent = 0;
+        if (!scaled_centered_rows(*X, x, exponent))
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PERMANOVA input");
         // Grand and stratum means, total and between-strata SS, centered Xw.
         std::vector<long double> grand(kk, 0.0L), smean(s * kk, 0.0L);
@@ -1497,12 +1518,11 @@ N4M_API n4m_status_t n4m_stats_permanova(
         const double ss_term = r > 0 ? kernel(nullptr) : 0.0;
         const double w = static_cast<double>(within);
         const double ss_res = std::max(0.0, w - ss_term);
-        const double scale2 = scale * scale;
         for (int i = 0; i < 13; ++i) out_thirteen[i] = nan_value;
-        out_thirteen[0] = static_cast<double>(ss_total) * scale2;
-        out_thirteen[1] = static_cast<double>(ss_strata) * scale2;
-        out_thirteen[2] = ss_term * scale2;
-        out_thirteen[3] = ss_res * scale2;
+        out_thirteen[0] = std::scalbn(static_cast<double>(ss_total), 2 * exponent);
+        out_thirteen[1] = std::scalbn(static_cast<double>(ss_strata), 2 * exponent);
+        out_thirteen[2] = std::scalbn(ss_term, 2 * exponent);
+        out_thirteen[3] = std::scalbn(ss_res, 2 * exponent);
         for (int i = 0; i < 4; ++i)
             if (!std::isfinite(out_thirteen[i]))
                 return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
@@ -1522,7 +1542,10 @@ N4M_API n4m_status_t n4m_stats_permanova(
         out_thirteen[11] = log10_distinct;
         out_two[0] = 0;
         out_two[1] = 0;
-        if (n_permutations == 0 || !defined) return N4M_OK;
+        // As vegan anova.cca / permutest: count pseudo-F_perm >= F_obs - sqrt(eps).
+        const double f_observed = out_thirteen[6];
+        if (n_permutations == 0 || !std::isfinite(f_observed)) return N4M_OK;
+        const long double f_scale = static_cast<long double>(df_res) / static_cast<long double>(df_term);
         // Strata in ascending code order, members in ascending row order.
         std::vector<std::vector<int64_t>> members(s);
         for (size_t i = 0; i < nn; ++i)
@@ -1539,7 +1562,11 @@ N4M_API n4m_status_t n4m_stats_permanova(
                 for (size_t j = 0; j < idx.size(); ++j)
                     perm[static_cast<size_t>(idx[j])] = idx[static_cast<size_t>(q[j])];
             }
-            if (kernel(perm.data()) / w >= partial - tolerance) ++at_least;
+            const long double ss = kernel(perm.data());
+            const long double rest = static_cast<long double>(w) - ss;
+            const double f = rest > 0.0L ? static_cast<double>(ss / rest * f_scale)
+                                         : std::numeric_limits<double>::infinity();
+            if (f >= f_observed - tolerance) ++at_least;
         }
         out_two[0] = at_least;
         out_two[1] = n_permutations;
@@ -1575,8 +1602,8 @@ N4M_API n4m_status_t n4m_stats_permdisp(
         const auto group = dense_codes(std::vector<int64_t>(group_codes, group_codes + n), group_n);
         const size_t g = group_n.size();
         std::vector<double> x;
-        double scale = 1.0;
-        if (!scaled_rows(*X, x, scale))
+        int exponent = 0;
+        if (!scaled_centered_rows(*X, x, exponent))
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PERMDISP input");
         std::vector<long double> centroid(g * kk, 0.0L);
         for (size_t i = 0; i < nn; ++i)
@@ -1609,9 +1636,10 @@ N4M_API n4m_status_t n4m_stats_permdisp(
             resid[i] = static_cast<double>(e);
             residual += e * e;
             resid_sum += e;
-            distances[i] = z[i] * scale;
+            distances[i] = std::scalbn(z[i], exponent);
         }
-        for (size_t c = 0; c < g; ++c) group_mean_distances[c] = static_cast<double>(zmean[c]) * scale;
+        for (size_t c = 0; c < g; ++c)
+            group_mean_distances[c] = std::scalbn(static_cast<double>(zmean[c]), exponent);
         for (size_t i = 0; i < nn; ++i)
             if (!std::isfinite(distances[i]))
                 return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
@@ -1629,11 +1657,14 @@ N4M_API n4m_status_t n4m_stats_permdisp(
                                          (residual / static_cast<long double>(nn - g)));
         if (n_permutations == 0) return N4M_OK;
         // vegan permutest.betadisper: permute the ANOVA residuals of the
-        // distances; F_perm >= F_obs <=> B_perm / total >= B / (B + W).
+        // distances, refit the one-way model and count
+        // F_perm = (B_perm/(g-1)) / ((total - B_perm)/(n-g)) >= F_obs - sqrt(eps).
         const long double mean_r = resid_sum / static_cast<long double>(n);
         long double total = 0.0L;
         for (size_t i = 0; i < nn; ++i) total += (resid[i] - mean_r) * (resid[i] - mean_r);
-        const double observed = static_cast<double>(between / (between + residual));
+        const double f_observed = out_six[0];
+        const long double f_scale =
+            static_cast<long double>(nn - g) / static_cast<long double>(g - 1);
         const double tolerance = std::sqrt(std::numeric_limits<double>::epsilon());
         n4m_rng_pcg64 rng{};
         n4m_pcg64_engine_seed(&rng, seed);
@@ -1648,7 +1679,10 @@ N4M_API n4m_status_t n4m_stats_permdisp(
             long double bp = -resid_sum * resid_sum / static_cast<long double>(n);
             for (size_t c = 0; c < g; ++c)
                 bp += sums[c] * sums[c] / static_cast<long double>(group_n[c]);
-            if (static_cast<double>(bp / total) >= observed - tolerance) ++at_least;
+            const long double rest = total - bp;
+            const double f = rest > 0.0L ? static_cast<double>(bp / rest * f_scale)
+                                         : std::numeric_limits<double>::infinity();
+            if (f >= f_observed - tolerance) ++at_least;
         }
         out_two[0] = at_least;
         out_two[1] = n_permutations;
